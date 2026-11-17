@@ -41,7 +41,7 @@ type Step = { calls: Call[]; results: string[] }
 
 function field<K extends string>(value: unknown, key: K): unknown {
   if (typeof value !== "object" || value === null || !(key in value)) return undefined
-  return value[key]
+  return (value as Record<string, unknown>)[key]
 }
 
 function textOf(content: unknown): string {
@@ -118,9 +118,6 @@ function text(model: string, answer: string) {
 }
 
 const record: { steps: Step[] } = { steps: [] }
-
-/** Where the scripted model asks for the screenshot: an absolute path, so the run's own directory never matters. */
-let screenshotFile = ""
 
 const sse = (body: string) => new Response(body, { headers: { "content-type": "text/event-stream" } })
 
@@ -224,7 +221,6 @@ const hasRef = (args: unknown) => typeof field(args, "target") === "string"
 async function flow(observation: string) {
   const root = await home()
   record.steps = []
-  screenshotFile = path.join(root, "probe.png")
   const run = await cli(root, observation, [
     "run",
     "Open the fixture and click the button.",

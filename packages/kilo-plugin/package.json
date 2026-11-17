@@ -11,7 +11,8 @@
     "./request-identity": "./src/request-identity.ts",
     "./pages/auth": "./src/pages/auth.ts",
     "./plugin/git-source": "./src/plugin/git-source.ts",
-    "./browser/install": "./src/browser/install.ts"
+    "./browser/install": "./src/browser/install.ts",
+    "./browser/png": "./src/browser/png.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

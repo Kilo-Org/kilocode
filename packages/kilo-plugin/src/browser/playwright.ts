@@ -1,23 +1,32 @@
+import { createHash, randomUUID } from "node:crypto"
 import { existsSync } from "node:fs"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import type { Client, Transport } from "@modelcontextprotocol/client"
-import type { Browser, BrowserContext } from "playwright-core"
+import type { CallToolResult, Client, Transport } from "@modelcontextprotocol/client"
+import type { Browser, BrowserContext, Download, Frame, Page } from "playwright-core"
 import { Global } from "@opencode/util/global"
 import {
+  NeedsPermissionError,
   UnsupportedError,
   type BrowserBackend,
   type CallContext,
+  type CallMeta,
   type CallResult,
   type ContentBlock,
 } from "./backend"
 import { BrowserContract } from "./contract"
 import { entries as readEntries } from "./contract-shape"
 import type { Entry } from "./contract-shape"
+import * as Frames from "./frames"
 import { INSTALL_HINT, locate, type Target } from "./locate"
 import { useKiloBrowsers } from "./install"
+import { BrowserItems } from "./items"
+import { BrowserPermission } from "./permission"
+import * as Png from "./png"
 import type { Settings } from "./settings"
+
+type Item = BrowserPermission.Item
 
 /** A long action (a slow page, a download) still ends: the MCP call is bounded, and the session abort wins earlier. */
 const TIMEOUT = 180_000
@@ -62,6 +71,98 @@ function blocks(content: unknown): ContentBlock[] {
     }
     return []
   })
+}
+
+/**
+ * Sensitive step tokens. A token binds the tool, its arguments and the origin, and expires after a minute, so an
+ * approval can only replay the exact step it was asked for.
+ */
+const STEPS = new Map<string, { hash: string; expires: number; origin: string }>()
+const STEP_TTL = 60_000
+const STEP_LIMIT = 200
+
+function stepHash(tool: string, args: Record<string, unknown>, origin: string) {
+  return createHash("sha256").update(JSON.stringify({ tool, args, origin })).digest("hex")
+}
+
+function approveStep(tool: string, args: Record<string, unknown>, origin: string) {
+  const now = Date.now()
+  for (const [token, step] of STEPS) if (step.expires < now) STEPS.delete(token)
+  while (STEPS.size >= STEP_LIMIT) {
+    const oldest = STEPS.keys().next().value
+    if (oldest === undefined) break
+    STEPS.delete(oldest)
+  }
+  const token = randomUUID()
+  STEPS.set(token, { hash: stepHash(tool, args, origin), expires: now + STEP_TTL, origin })
+  return token
+}
+
+function stepApproved(tokens: readonly string[], tool: string, args: Record<string, unknown>, origin: string) {
+  const hash = stepHash(tool, args, origin)
+  return tokens.some((token) => {
+    const step = STEPS.get(token)
+    if (!step) return false
+    if (step.expires < Date.now()) {
+      STEPS.delete(token)
+      return false
+    }
+    return step.hash === hash
+  })
+}
+
+/** Hosts whose consent screens hand a session to another service. */
+const OAUTH_HOST: Record<string, true> = {
+  "accounts.google.com": true,
+  "login.microsoftonline.com": true,
+  "login.live.com": true,
+  "appleid.apple.com": true,
+  "github.com": true,
+  "gitlab.com": true,
+  "id.atlassian.com": true,
+  "login.salesforce.com": true,
+  "auth0.com": true,
+  "login.okta.com": true,
+}
+
+const OAUTH_PATH = /oauth|authorize|consent|signin-oidc|saml/i
+
+export function oauthConsent(url: string) {
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname.endsWith(".okta.com")) return OAUTH_PATH.test(parsed.pathname)
+    return OAUTH_HOST[parsed.hostname] === true && OAUTH_PATH.test(parsed.pathname)
+  } catch {
+    return false
+  }
+}
+
+/** Runs inside the page: classifies the element a step acts on. */
+function inspectElement(el: Element, kind: "fill" | "click") {
+  const attr = (name: string) => (el.getAttribute(name) || "").toLowerCase()
+  if (kind === "fill") {
+    const type = ((el as HTMLInputElement).type || "").toLowerCase()
+    const autocomplete = attr("autocomplete")
+    if (type === "password") return "password field"
+    if (autocomplete === "one-time-code") return "one-time code field"
+    if (autocomplete.startsWith("cc-")) return "payment field (" + autocomplete + ")"
+    return ""
+  }
+  const card = (node: Element) => {
+    const input = node as HTMLInputElement
+    if ((node.getAttribute("autocomplete") || "").toLowerCase().startsWith("cc-")) return true
+    const hint = [input.name, input.id, node.getAttribute("placeholder"), node.getAttribute("aria-label")]
+      .filter((value) => typeof value === "string" && value.length > 0)
+      .join(" ")
+    return /card|credit|cvv|cvc|expir/i.test(hint)
+  }
+  const form = el.closest("form")
+  if (!form) return ""
+  const submit =
+    (el.tagName === "INPUT" && (attr("type") === "submit" || attr("type") === "image")) ||
+    (el.tagName === "BUTTON" && (attr("type") === "" || attr("type") === "submit"))
+  if (submit && Array.from(form.querySelectorAll("input")).some(card)) return "submit on a payment form"
+  return ""
 }
 
 /**
@@ -149,6 +250,7 @@ async function target(settings: Settings, chromium: string): Promise<Target> {
 /**
  * The browser is launched here, not by the MCP server, so the provider owns the process and the in-memory profile:
  * two Kilo processes never contend for one Chrome profile on disk, and a crash leaves no profile or SingletonLock.
+ * Owning the page is also what lets the backend read the frame tree, measure frames and mask pixels.
  */
 async function connect(settings: Settings): Promise<Connection> {
   const out = outputDirectory()
@@ -199,12 +301,40 @@ async function connect(settings: Settings): Promise<Connection> {
   }
 }
 
-/** The URL the last result reported, so a call reaches the page MCP acted on before it saw a new tab. */
+/** Frames whose origin has no `read` grant, outermost first; a withheld frame hides its subtree. */
+export function withheldFrames(page: Page, authorized: readonly string[]): Frame[] {
+  const result: Frame[] = []
+  const visit = (frame: Frame, granted: boolean) => {
+    for (const child of frame.childFrames()) {
+      const origin = BrowserPermission.origin(child.url())
+      // about:blank and srcdoc frames inherit the parent: they hold no other origin's data.
+      const ok = granted && (origin === undefined || authorized.includes(`read:${origin}`))
+      if (!ok) {
+        result.push(child)
+        continue
+      }
+      visit(child, true)
+    }
+  }
+  visit(page.mainFrame(), true)
+  return result
+}
+
+/** The file link of a screenshot the backend deleted; the masked image replaces it. */
+function withoutScreenshotLink(text: string) {
+  return text
+    .split("\n")
+    .filter((line) => !/^- \[Screenshot[^\]]*\]\(.+\)$/.test(line.trim()))
+    .join("\n")
+}
+
 class PlaywrightBackend implements BrowserBackend {
   readonly id = "playwright" as const
   readonly contractSha = BrowserContract.sha256
   private readonly off: Array<() => void> = []
   private disposed = false
+  /** The URL the last result reported, so a call reaches the page MCP acted on before it saw a new tab. */
+  private url: string | undefined
 
   private constructor(
     private readonly conn: Connection,
@@ -231,16 +361,272 @@ class PlaywrightBackend implements BrowserBackend {
     return this.conn.tools
   }
 
+  /** The page MCP is acting on: the one whose URL the last result reported. */
+  private current(): Page | undefined {
+    const pages = this.conn.context.pages()
+    if (!pages.length) return undefined
+    const match = this.url ? pages.findLast((page) => page.url() === this.url) : undefined
+    return match ?? pages[pages.length - 1]
+  }
+
+  /** The frame a `[ref=…]` snapshot ref lives in, resolved through Playwright's aria-ref engine. */
+  private async frameOf(page: Page, ref: string): Promise<Frame | undefined> {
+    const handle = await page.locator(`aria-ref=${ref}`).elementHandle({ timeout: 2_000 }).catch(() => null)
+    if (!handle) return undefined
+    // An iframe ref points at the frame element in its parent; the grant belongs to the document it contains, so
+    // prefer the child frame when there is one.
+    const child = await handle.contentFrame().catch(() => null)
+    const frame = child ?? (await handle.ownerFrame())
+    handle.dispose()
+    return frame ?? undefined
+  }
+
+  private async inspect(page: Page, ref: string, kind: "fill" | "click"): Promise<string> {
+    const handle = await page.locator(`aria-ref=${ref}`).elementHandle({ timeout: 2_000 }).catch(() => null)
+    if (!handle) return ""
+    const reason = await handle.evaluate(inspectElement, kind).catch(() => "")
+    handle.dispose()
+    return typeof reason === "string" ? reason : ""
+  }
+
+  private async sensitive(name: string, args: Record<string, unknown>, page: Page): Promise<string[]> {
+    const reasons: string[] = []
+    if (oauthConsent(page.url())) reasons.push("OAuth sign-in page")
+    if (name === "browser_file_upload" || name === "browser_drop") reasons.push("file upload")
+    if (name === "browser_type" || name === "browser_click" || name === "browser_fill_form") {
+      const refs: string[] = []
+      if (typeof args.target === "string") refs.push(args.target)
+      if (Array.isArray(args.fields)) {
+        for (const field of args.fields) {
+          if (typeof field === "object" && field !== null && "target" in field && typeof field.target === "string") {
+            refs.push(field.target)
+          }
+        }
+      }
+      const kind = name === "browser_click" ? "click" : "fill"
+      for (const ref of refs) {
+        const reason = await this.inspect(page, ref, kind)
+        if (reason) reasons.push(reason)
+      }
+    }
+    return [...new Set(reasons)]
+  }
+
+  /** Refs of every iframe node in a snapshot text, with the origin of the frame they contain. */
+  private async frameOrigins(page: Page, text: string) {
+    const origins = new Map<string, string>()
+    for (const node of Frames.iframes(text)) {
+      const handle = await page.locator(`aria-ref=${node.ref}`).elementHandle({ timeout: 2_000 }).catch(() => null)
+      if (!handle) continue
+      const frame = await handle.contentFrame().catch(() => null)
+      handle.dispose()
+      const origin = frame && BrowserPermission.origin(frame.url())
+      if (origin) origins.set(node.ref, origin)
+    }
+    return origins
+  }
+
+  private async filter(page: Page, name: string, text: string, authorized: readonly string[]) {
+    const withheld = withheldFrames(page, authorized)
+    if (!withheld.length) return text
+    const origins = new Set(
+      withheld.map((frame) => BrowserPermission.origin(frame.url())).filter((origin): origin is string => !!origin),
+    )
+    let next = text
+    if (next.includes("### Snapshot")) {
+      // Best effort: a ref that does not resolve to a frame keeps its subtree.
+      const resolved = await this.frameOrigins(page, next)
+      next = Frames.snapshot(next, resolved, (origin) => authorized.includes(`read:${origin}`))
+    }
+    if (name === "browser_console_messages") next = Frames.consoleMessages(next, origins)
+    if (name === "browser_network_requests" || name === "browser_network_request") next = Frames.networkRequests(next, origins)
+    return next
+  }
+
+  /** Mask boxes for withheld frames, in CSS pixels of the screenshot. */
+  private async maskBoxes(page: Page, frames: Frame[], fullPage: boolean) {
+    const scroll = fullPage
+      ? await page.mainFrame().evaluate(() => ({ x: window.scrollX, y: window.scrollY }))
+      : { x: 0, y: 0 }
+    const boxes: Png.Box[] = []
+    for (const frame of frames) {
+      const handle = await frame.frameElement().catch(() => null)
+      if (!handle) throw new Error("a withheld frame could not be measured")
+      const box = await handle.boundingBox()
+      handle.dispose()
+      if (!box) continue // a frame with no box paints no pixels
+      boxes.push({ x: box.x + scroll.x, y: box.y + scroll.y, width: box.width, height: box.height })
+    }
+    return boxes
+  }
+
+  /** Mask every withheld frame's box in-place. `false` means the image must not leave the backend. */
+  private async maskFrames(page: Page, images: ContentBlock[], frames: Frame[], fullPage: boolean) {
+    const boxes = await this.maskBoxes(page, frames, fullPage)
+    for (const image of images) {
+      if (image.type !== "image") continue
+      if (image.mimeType !== "image/png") return false
+      const masked = Png.mask(Png.decode(Buffer.from(image.data, "base64")), boxes)
+      image.data = Png.encode(masked).toString("base64")
+      image.mimeType = "image/png"
+    }
+    return images.some((image) => image.type === "image")
+  }
+
+  private async outputFiles() {
+    return new Set(await fs.readdir(outputDirectory()).catch(() => []))
+  }
+
+  private async removeNewFiles(before: ReadonlySet<string>) {
+    const after = await this.outputFiles()
+    for (const name of after) {
+      if (before.has(name)) continue
+      await fs.unlink(path.join(outputDirectory(), name)).catch(() => {})
+    }
+  }
+
+  async plan(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<Item[]> {
+    const page = this.current()
+    const elements: BrowserItems.Element[] = []
+    if (page) {
+      for (const ref of BrowserItems.refs(args)) {
+        const frame = await this.frameOf(page, ref)
+        const origin = frame && BrowserPermission.origin(frame.url())
+        if (!frame || !origin) continue
+        elements.push({ ref, origin, frame: frame !== page.mainFrame() })
+      }
+    }
+    return BrowserItems.plan({
+      tool: name,
+      args,
+      page: page && BrowserPermission.origin(page.url()),
+      elements,
+      authorized: ctx.authorized ?? [],
+    })
+  }
+
   async callTool(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<CallResult> {
     // Running code in the CLI process is not a browser action we can bound, so this backend refuses it.
     if (name === "browser_run_code_unsafe") throw new UnsupportedError()
-    const result = await this.conn.client.callTool({ name, arguments: args }, { timeout: TIMEOUT, signal: ctx.signal })
+    const authorized = ctx.authorized ?? []
+    let page = this.current()
+
+    // Sensitive steps are classified on the live element, then approved one step at a time.
+    if (page) {
+      const reasons = await this.sensitive(name, args, page)
+      const origin = BrowserPermission.origin(page.url())
+      if (reasons.length && origin && !stepApproved(ctx.sensitive ?? [], name, args, origin)) {
+        throw new NeedsPermissionError(
+          [{ class: "sensitive", origin, reason: reasons.join("; ") }],
+          approveStep(name, args, origin),
+        )
+      }
+    }
+
+    // A screenshot may not leave the backend with a withheld frame visible in pixels or file.
+    const withheldBefore = page ? withheldFrames(page, authorized) : []
+    const shot = name === "browser_take_screenshot"
+    let callArgs = args
+    if (shot && withheldBefore.length) {
+      if (args.target !== undefined) {
+        return { content: [{ type: "text", text: "The screenshot is unavailable: part of the page is withheld." }], isError: true }
+      }
+      callArgs = { ...args, type: "png", scale: "css" }
+      delete callArgs.filename
+    }
+    const before = shot && withheldBefore.length ? await this.outputFiles() : undefined
+
+    const downloads: string[] = []
+    const onDownload = (download: Download) => {
+      const origin = page && BrowserPermission.origin(page.url())
+      if (origin && stepApproved(ctx.sensitive ?? [], name, args, origin)) return
+      downloads.push(download.suggestedFilename())
+      void download.cancel().catch(() => undefined)
+    }
+    let result: CallToolResult
+    this.conn.context.on("download", onDownload)
+    try {
+      result = await this.conn.client.callTool({ name, arguments: callArgs }, { timeout: TIMEOUT, signal: ctx.signal })
+      // A download starts alongside the action that triggers it; give the event a moment to surface.
+      if (page && ["browser_click", "browser_drop", "browser_press_key", "browser_navigate"].includes(name)) {
+        await page.waitForTimeout(150).catch(() => undefined)
+      }
+    } finally {
+      this.conn.context.off("download", onDownload)
+    }
+
     const content = blocks(result.content)
     for (const block of content) if (block.type === "text") block.text = await inline(block.text)
     if (!content.length && result.structuredContent !== undefined) {
       content.push({ type: "text", text: JSON.stringify(result.structuredContent, null, 2) })
     }
-    return { content, isError: result.isError === true }
+    const text = content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("\n")
+    const reported = /^- Page URL: (.+)$/m.exec(text)?.[1]?.trim()
+    if (reported) this.url = reported
+    page = this.current()
+
+    if (downloads.length) {
+      const origin = page && BrowserPermission.origin(page.url())
+      if (origin) {
+        throw new NeedsPermissionError(
+          [{ class: "sensitive", origin, reason: `download: ${downloads.join(", ")}` }],
+          approveStep(name, args, origin),
+        )
+      }
+    }
+
+    // A navigation can land on another origin through a redirect; the real origin decides.
+    if (page && (name === "browser_navigate" || name === "browser_navigate_back")) {
+      const origin = BrowserPermission.origin(page.url())
+      if (origin && !authorized.includes(`read:${origin}`) && !authorized.includes(`navigate:${origin}`)) {
+        throw new NeedsPermissionError([{ class: "navigate", origin }])
+      }
+    }
+
+    const withheld = page ? withheldFrames(page, authorized) : []
+    const viewed = page ? await this.filter(page, name, text, authorized) : text
+    const images = content.filter((block): block is Extract<ContentBlock, { type: "image" }> => block.type === "image")
+    const origin = page && BrowserPermission.origin(page.url())
+    const withheldOrigins = withheld
+      .map((frame) => BrowserPermission.origin(frame.url()))
+      .filter((value): value is string => value !== undefined)
+
+    if (withheld.length && shot) {
+      // Whatever the MCP saved was written before masking: it must not outlive the call, and its path is not an
+      // acceptable answer either, because the model would open the unmasked pixels.
+      if (before) await this.removeNewFiles(before)
+      const masked =
+        images.length > 0 && page
+          ? await this.maskFrames(page, images, withheld, args.fullPage === true).catch(() => false)
+          : false
+      if (!masked) {
+        return {
+          content: [{ type: "text", text: "The screenshot is unavailable: part of the page is withheld." }],
+          isError: true,
+          meta: { ...(origin ? { origin } : {}), ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}) },
+        }
+      }
+      // The file link points at the deleted file; the masked image is the answer.
+      return {
+        content: [{ type: "text", text: withoutScreenshotLink(viewed) }, ...images],
+        isError: result.isError === true,
+        meta: { ...(origin ? { origin } : {}), ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}) },
+      }
+    }
+
+    const meta: CallMeta = {
+      ...(this.url ? { url: this.url } : {}),
+      ...(origin ? { origin } : {}),
+      ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
+    }
+    return {
+      content: [{ type: "text", text: viewed }, ...images],
+      isError: result.isError === true,
+      meta,
+    }
   }
 
   async dispose() {

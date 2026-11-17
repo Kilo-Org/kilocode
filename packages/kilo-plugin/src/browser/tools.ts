@@ -1,10 +1,14 @@
 import { Config } from "@opencode/core/config"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
+import { Permission } from "@opencode/core/permission"
+import { Wildcard } from "@opencode/core/util/wildcard"
+import { KiloBrowserPolicy } from "@kilocode/gateway-core/browser-policy"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Tool } from "@opencode/schema/tool"
-import { Effect, Option } from "effect"
+import { Effect, Option, Result } from "effect"
 import type { JsonSchema } from "effect"
 import {
+  NeedsPermissionError,
   UNAVAILABLE_MESSAGE,
   UNSUPPORTED_MESSAGE,
   UnavailableError,
@@ -15,8 +19,12 @@ import {
 import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
 import { modeFor, observe, snapshot, split, Tracker } from "./observation"
+import { BrowserPermission } from "./permission"
 import { key, playwright } from "./playwright"
-import { resolve } from "./settings"
+import { resolve, type Settings } from "./settings"
+import { KiloGatewayAccounts } from "../gateway/accounts"
+
+type Item = BrowserPermission.Item
 
 const tracker = new Tracker()
 
@@ -38,6 +46,53 @@ const extension: BrowserBackend = {
   dispose: async () => {},
 }
 
+/** How long an organization policy is reused before the cloud is asked again. */
+const POLICY_TTL = 60_000
+const policies = new Map<string, { value: KiloBrowserPolicy.Policy | undefined; expires: number }>()
+
+/**
+ * The active organization's browser policy, read with the Gateway account of the location. A missing account, a
+ * personal account or an unreachable API is no policy, never an error.
+ */
+function policy(directory: string, endpoint?: string) {
+  const account = KiloGatewayAccounts.get(directory)
+  const id = account?.organizationID ?? undefined
+  if (!account || !id) return Effect.succeed<KiloBrowserPolicy.Policy | undefined>(undefined)
+  const cached = policies.get(id)
+  if (cached && cached.expires > Date.now()) return Effect.succeed(cached.value)
+  return KiloBrowserPolicy.get({
+    server: account.baseURL,
+    token: account.token,
+    organizationID: id,
+    ...(endpoint ? { endpoint } : { endpoint: account.baseURL }),
+  }).pipe(
+    Effect.map((value) => {
+      policies.set(id, { value, expires: Date.now() + POLICY_TTL })
+      return value
+    }),
+  )
+}
+
+/**
+ * Per-session grants: every `<class>:<origin>` pair this session approved, whether a person replied or a config rule
+ * allowed it without a prompt. Bounded so a long-lived process does not accumulate sessions that ended.
+ */
+const GRANTS = new Map<string, Set<string>>()
+const GRANT_LIMIT = 200
+
+function grantsFor(session: string) {
+  const existing = GRANTS.get(session)
+  if (existing) return existing
+  while (GRANTS.size >= GRANT_LIMIT) {
+    const oldest = GRANTS.keys().next().value
+    if (oldest === undefined) break
+    GRANTS.delete(oldest)
+  }
+  const created = new Set<string>()
+  GRANTS.set(session, created)
+  return created
+}
+
 function textOf(result: CallResult) {
   return result.content.flatMap((block) => (block.type === "text" ? [block.text] : [])).join("\n\n")
 }
@@ -47,6 +102,8 @@ function textOf(result: CallResult) {
  * setup hint out of the message and logs it for the UI.
  */
 function failure(error: unknown) {
+  // Already model-facing: a mapped failure keeps its metadata instead of being wrapped again.
+  if (error instanceof Tool.Error) return error
   if (error instanceof UnsupportedError) return new Tool.Error({ message: UNSUPPORTED_MESSAGE })
   if (error instanceof UnavailableError) {
     return new Tool.Error({ message: UNAVAILABLE_MESSAGE, metadata: { hint: error.hint } })
@@ -62,10 +119,71 @@ function settings(config: Option.Option<Config.Interface>) {
     .pipe(Effect.map((entries) => resolve(KiloConfigPolicy.browserConfig(entries))))
 }
 
+/** A rule that names the browser permission itself decides the class, so the built-in defaults stay out of its way. */
+function decided(resource: string, rules: Permission.Ruleset) {
+  return rules.some(
+    (rule) =>
+      rule.action !== "*" &&
+      Wildcard.match(BrowserPermission.permission, rule.action) &&
+      Wildcard.match(resource, rule.resource),
+  )
+}
+
 /**
- * New console errors since the previous call of this session, for diff mode. A failure to read them is not a failure
- * of the action that just ran.
+ * The built-in browser defaults, as the evaluate hook applies them: a class grant on the localhost family is allowed,
+ * every other origin asks, and a sensitive step always needs a person unless `browser.allow_sensitive` is on.
  */
+type EffectValue = "allow" | "deny" | "ask"
+
+export function evaluate(input: {
+  action: string
+  effect: EffectValue
+  resources: readonly string[]
+  rules: Permission.Ruleset
+  allowSensitive: boolean
+}): { effect: EffectValue; message?: string } {
+  if (input.effect !== "allow") return { effect: input.effect }
+  if (input.action === BrowserPermission.sensitive) {
+    if (input.allowSensitive) return { effect: "allow" }
+    return { effect: "ask", message: "A sensitive browser step needs a person to approve it." }
+  }
+  if (input.action !== BrowserPermission.permission) return { effect: "allow" }
+  const built = input.resources.every((resource) => {
+    if (decided(resource, input.rules)) return true
+    const item = BrowserPermission.parse(resource)
+    return item !== undefined && BrowserPermission.defaultGrant(item)
+  })
+  if (built) return { effect: "allow" }
+  return { effect: "ask", message: "Browser access to this origin needs approval." }
+}
+
+/** Ask for the items this session has not approved yet. Config rules answer without a prompt. */
+export function authorize(
+  items: readonly Item[],
+  context: Tool.Context,
+  allowSensitive: boolean,
+  allowed: (origin: string) => boolean,
+  permission: Option.Option<Permission.Interface>,
+) {
+  return Effect.gen(function* () {
+    const grants = grantsFor(String(context.sessionID))
+    for (const item of BrowserPermission.unique(items)) {
+      const pattern = BrowserPermission.pattern(item)
+      if (item.class !== "sensitive" && grants.has(pattern)) continue
+      // The organization allowlist grants every class on an origin without a prompt.
+      if (item.class !== "sensitive" && allowed(item.origin)) {
+        grants.add(pattern)
+        continue
+      }
+      const request = BrowserPermission.request(item, allowSensitive)
+      if (Option.isSome(permission))
+        yield* permission.value.assert({ ...request, ...Permission.invocation(context) })
+      // A sensitive step is approved per step through its token, never remembered here.
+      if (item.class !== "sensitive") grants.add(pattern)
+    }
+  })
+}
+
 function consoleErrors(active: BrowserBackend, session: string) {
   return Effect.tryPromise({
     try: (signal) => active.callTool("browser_console_messages", { level: "error" }, { signal }),
@@ -76,14 +194,38 @@ function consoleErrors(active: BrowserBackend, session: string) {
   )
 }
 
-function run(entry: Entry, args: unknown, context: Tool.Context, config: Option.Option<Config.Interface>) {
+type Deps = {
+  config: Option.Option<Config.Interface>
+  permission: Option.Option<Permission.Interface>
+  directory: string
+}
+
+function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
   return Effect.gen(function* () {
-    const browser = yield* settings(config)
+    const browser = yield* settings(deps.config)
     // The tools are not registered while the backend is off; a config edit during the session still refuses.
     if (browser.backend === "off") return yield* failure(new UnavailableError("Set browser.backend to playwright."))
 
+    const organization = yield* policy(deps.directory)
+    if (organization?.control === "off")
+      return yield* failure(new UnavailableError("Your organization turned off browser control in Kilo."))
+    const choice: Settings =
+      organization?.control === "playwright_only" ? { ...browser, backend: "playwright" } : browser
+
+    // The tool's own key first, so a config rule like `browser_click: deny` blocks it before anything runs.
+    if (Option.isSome(deps.permission)) {
+      yield* deps.permission.value.assert({
+        action: entry.name,
+        resources: ["*"],
+        save: [],
+        metadata: { tool: entry.name },
+        ...Permission.invocation(context),
+      })
+    }
+
+    // The effect's interruption signal reaches the MCP call, so cancelling the turn aborts the browser action.
     const active = yield* Effect.tryPromise({
-      try: () => (browser.backend === "extension" ? Promise.resolve(extension) : playwright.get(key(browser))),
+      try: () => (choice.backend === "extension" ? Promise.resolve(extension) : playwright.get(key(choice))),
       catch: (error) => error,
     }).pipe(
       Effect.catch((error) =>
@@ -91,15 +233,45 @@ function run(entry: Entry, args: unknown, context: Tool.Context, config: Option.
       ),
     )
     const input = typeof args === "object" && args !== null ? (args as Record<string, unknown>) : {}
-    // The effect's interruption signal reaches the MCP call, so cancelling the turn aborts the browser action.
-    const result = yield* Effect.tryPromise({
-      try: (signal) => active.callTool(entry.name, input, { signal, authorized: [], sensitive: [] }),
-      catch: (error) => error,
-    })
-    const text = textOf(result)
-    if (result.isError) return yield* failure(new Error(text || `${entry.name} failed`))
-
     const session = String(context.sessionID)
+    const grants = grantsFor(session)
+    const allowSensitive = browser.allowSensitive
+
+    // Ask, then call. A backend that discovers the real origin at action time (redirects, frames, sensitive elements,
+    // downloads) reports it as needs_permission; the call is retried once with the new grants and the step token.
+    let sensitive: string[] = []
+    let result: CallResult | undefined
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (active.plan) {
+        const planned = yield* Effect.tryPromise({
+          try: () => active.plan!(entry.name, input, { authorized: [...grants], sensitive: [...sensitive] }),
+          catch: (error) => error,
+        }).pipe(Effect.catch(() => Effect.succeed<readonly Item[]>([])))
+        yield* authorize(planned, context, allowSensitive, (origin) => KiloBrowserPolicy.allows(organization, origin), deps.permission)
+      }
+      const outcome = yield* Effect.result(
+        Effect.tryPromise({
+          try: (signal) =>
+            active.callTool(entry.name, input, { signal, authorized: [...grants], sensitive: [...sensitive] }),
+          catch: (error) => error,
+        }),
+      )
+      if (Result.isSuccess(outcome)) {
+        result = outcome.success
+        break
+      }
+      const error = outcome.failure
+      if (!(error instanceof NeedsPermissionError)) return yield* failure(error)
+      if (attempt === 1 || !error.items.length) {
+        return yield* failure(new Error("The browser page changed while permission was requested. Call the tool again."))
+      }
+      yield* authorize(error.items, context, allowSensitive, (origin) => KiloBrowserPolicy.allows(organization, origin), deps.permission)
+      sensitive = error.stepToken ? [error.stepToken] : []
+    }
+    if (!result) return yield* failure(new Error("the browser call did not settle"))
+    if (result.isError) return yield* failure(new Error(textOf(result) || `${entry.name} failed`))
+
+    const text = textOf(result)
     const next = snapshot(split(text))
     const mode = modeFor(entry.name, browser.observation)
     const errors = mode === "diff" ? yield* consoleErrors(active, session) : []
@@ -123,14 +295,17 @@ function run(entry: Entry, args: unknown, context: Tool.Context, config: Option.
       content,
       metadata: {
         browser: {
-          backend: browser.backend,
+          backend: choice.backend,
           observation: browser.observation,
           ...(next?.url ? { url: next.url } : {}),
           ...(next?.title ? { title: next.title } : {}),
+          ...(result.meta?.withheldFrames ? { withheldFrames: result.meta.withheldFrames } : {}),
         },
       },
-    }
-  }).pipe(Effect.mapError((error) => failure(error)))
+    } as Tool.Result
+  }).pipe(
+    Effect.mapError((error) => failure(error)),
+  )
 }
 
 /**
@@ -144,9 +319,28 @@ export const KiloBrowserToolsPlugin = define({
     yield* Effect.addFinalizer(() => Effect.promise(() => playwright.dispose()))
 
     const config = yield* Effect.serviceOption(Config.Service)
+    const permission = yield* Effect.serviceOption(Permission.Service)
+    // Built-in defaults and the sensitive gate, applied to every browser permission request.
+    yield* ctx.permission.hook("evaluate", (event) =>
+      Effect.gen(function* () {
+        if (event.action !== BrowserPermission.permission && event.action !== BrowserPermission.sensitive) return
+        const browser = yield* settings(config)
+        const evaluated = evaluate({
+          action: event.action,
+          effect: event.effect,
+          resources: event.resources,
+          rules: event.rules ?? [],
+          allowSensitive: browser.allowSensitive,
+        })
+        event.effect = evaluated.effect
+        if (evaluated.message !== undefined) event.message = evaluated.message
+      }),
+    )
+
     const browser = yield* settings(config)
+    const organization = yield* policy(ctx.location.directory)
     // `off` hides the tools: an agent never sees a browser tool it cannot use.
-    if (browser.backend === "off") return
+    if (browser.backend === "off" || organization?.control === "off") return
 
     yield* ctx.tool.transform((editor) => {
       for (const entry of BrowserContract.entries) {
@@ -155,7 +349,8 @@ export const KiloBrowserToolsPlugin = define({
           options: { codemode: false },
           description: entry.description,
           input: entry.inputSchema as JsonSchema.JsonSchema,
-          execute: (args: unknown, context: Tool.Context) => run(entry, args, context, config),
+          execute: (args: unknown, context: Tool.Context) =>
+            run(entry, args, context, { config, permission, directory: ctx.location.directory }),
         })
       }
     })
