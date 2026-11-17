@@ -34,6 +34,27 @@ const Retention = Schema.Struct({
 
 const ReasoningDisplay = Schema.Literals(["expanded", "preview", "headline"])
 
+// The browser bridge (SPEC: `browser.backend` / `observation` / `allow_sensitive` / `headless` / `target`). The
+// defaults live in the browser tool plugin, not here: an absent key means "use the documented default", which depends
+// on the environment (headless without a display).
+const Browser = Schema.Struct({
+  backend: Schema.Literals(["playwright", "extension", "off"]).pipe(optional).annotate({
+    description: 'Where browser tools run: the bundled Playwright browser ("playwright"), the Kilo browser extension ("extension"), or not at all ("off")',
+  }),
+  observation: Schema.Literals(["full", "diff", "none"]).pipe(optional).annotate({
+    description: "How much page state a browser action reports: the full snapshot, a diff against the previous one, or only the status, URL and title",
+  }),
+  allow_sensitive: Schema.Boolean.pipe(optional).annotate({
+    description: "Let browser steps that need a human (password fields, payment forms, file uploads, downloads) run without asking",
+  }),
+  headless: Schema.Boolean.pipe(optional).annotate({
+    description: "Run the bundled browser without a window (default: headless when no display or over SSH)",
+  }),
+  target: Schema.NullOr(Schema.String).pipe(optional).annotate({
+    description: "Browser or profile id the extension backend drives",
+  }),
+})
+
 export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   session_sync: Schema.Boolean.pipe(optional).annotate({
     description: "Synchronize signed-in Kilo sessions and required assets (default: true; global config only)",
@@ -75,6 +96,9 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
     description: "Share a board between a main session and its task subagents, including nested subagents",
   }),
   sandbox: Sandbox.pipe(optional).annotate({ description: "Sandbox configuration for agent tools" }),
+  browser: Browser.pipe(optional).annotate({
+    description: "Browser tools: where the browser runs, how much page state a call reports, and the headless choice",
+  }),
   // kilo_port(unattributed:core/v1:a4a32558d64b)
   subagent_model: Schema.NullOr(Schema.String).pipe(optional).annotate({
     description: "Default model for task-tool subagents",
@@ -134,6 +158,10 @@ const settings = {
   reasoning_display: { schema: ReasoningDisplay, expected: 'one of "expanded", "preview", "headline"' },
   shared_agent_board: { schema: Schema.Boolean, expected: "a boolean" },
   sandbox: { schema: Sandbox, expected: "an object with optional enabled, network, writable_paths and allowed_hosts" },
+  browser: {
+    schema: Browser,
+    expected: "an object with optional backend, observation, allow_sensitive, headless and target",
+  },
   subagent_model: { schema: Schema.NullOr(Schema.String), expected: "a model string or null" },
   subagent_variant: { schema: Schema.NullOr(Schema.String), expected: "a variant string or null" },
   subagent_variant_overrides: {
@@ -427,6 +455,28 @@ export function pagesConfig(entries: readonly Config.Entry[]) {
     return {
       enabled: entry.info.pages.enabled ?? value.enabled,
       destination: entry.info.pages.destination ?? value.destination,
+    }
+  }, {})
+}
+
+/** The browser settings the tool plugin resolves; the schema stays the single definition of the keys. */
+export type BrowserConfig = Schema.Schema.Type<typeof Browser>
+
+/**
+ * The `browser` key of the effective entries: each field comes from the last document that sets it, so a project
+ * that only changes `observation` keeps the global `backend`.
+ */
+export function browserConfig(entries: readonly Config.Entry[]): BrowserConfig {
+  return entries.reduce<BrowserConfig>((value, entry) => {
+    if (entry.type !== "document" || !(entry.info instanceof Info) || !entry.info.browser) return value
+    const next = entry.info.browser
+    // `null` is a value for `target`, so an unset field is the only one that defers to an earlier document.
+    return {
+      backend: next.backend !== undefined ? next.backend : value.backend,
+      observation: next.observation !== undefined ? next.observation : value.observation,
+      allow_sensitive: next.allow_sensitive !== undefined ? next.allow_sensitive : value.allow_sensitive,
+      headless: next.headless !== undefined ? next.headless : value.headless,
+      target: next.target !== undefined ? next.target : value.target,
     }
   }, {})
 }
