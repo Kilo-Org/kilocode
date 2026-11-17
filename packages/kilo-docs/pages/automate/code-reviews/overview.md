@@ -83,6 +83,30 @@ To use it:
 
 Kilo reads `REVIEW.md` from the PR/MR base branch, not the feature branch. That prevents an unreviewed change from rewriting the review policy used to evaluate itself. If the file is disabled, missing, empty, or unreadable, Kilo falls back to built-in guidance. If it is longer than 10,000 characters, Kilo truncates it and notes that in the review summary footer.
 
+### Import shared guidelines from other repositories
+
+On GitHub, `REVIEW.md` can pull in guidance files from other repositories with an `extends` list in its front matter. Use `owner/repo:path` entries so shared rules live in one repository and apply to many:
+
+```markdown
+---
+extends:
+  - acme/review-guidelines:frontend.md
+  - acme/review-guidelines:backend/api.md
+---
+Repository-specific rules.
+```
+
+Before Kilo fetches a source, an owner or admin must allow its repository under **Allowed guideline source repositories** in the Code Reviews settings. Enter one `owner/repo` per line. The list accepts up to 100 repositories, and it is empty by default, which blocks every import.
+
+- Each source must belong to the same GitHub account as the reviewed repository, and the GitHub App installation must have access to it.
+- Source paths are relative and case-sensitive, use `/`, end in `.md`, and cannot start with `/` or contain `..` segments.
+- Kilo resolves each source repository's default branch once per review and uses that commit for every file it imports.
+- Up to 10 entries resolve. Imports appear in list order, then the repository's own text, and each block is labeled `owner/repo:path`. When text conflicts, the repository's own text wins.
+- Front matter is removed from every file, an `extends` list inside an imported file is ignored, and `@` imports are left unexpanded.
+- The combined guidance replaces the default review policy, but Kilo's hard safety constraints, read-only mode, tooling restrictions, platform instructions, and output requirements still apply.
+- A queued manual review re-checks the current allowlist before it starts, so removing a source also revokes access for reviews that have not begun.
+- On GitLab, imports are unsupported and only the repository's own text applies.
+
 ### Default Sub-Agent Usage
 
 By default, Code Reviews uses sub-agents only when they materially improve coverage. After reading the diff, the reviewer estimates changed file count and changed lines, then chooses the largest tier triggered by either signal.

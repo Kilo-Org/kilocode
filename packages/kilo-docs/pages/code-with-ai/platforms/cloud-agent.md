@@ -413,7 +413,7 @@ session against a repository.
 
 ### Accessing Triggers
 
-Triggers are accessible from the main sidebar under **Webhooks / Triggers** and link to [https://app.kilo.ai/cloud/triggers](https://app.kilo.ai/cloud/triggers) for personal accounts. Organization-level trigger configurations are available through your organization's sidebar.
+Triggers are accessible from the main sidebar under **Webhooks / Triggers** and link to [https://app.kilo.ai/cloud/triggers](https://app.kilo.ai/cloud/triggers) for personal accounts. Organization-level trigger configurations are available through your organization's sidebar. You can also create, edit, pause, run, and delete triggers from the [mobile app](/docs/code-with-ai/platforms/mobile#triggers-and-webhooks).
 
 ### Activation Modes
 

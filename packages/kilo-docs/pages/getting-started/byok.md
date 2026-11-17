@@ -74,6 +74,8 @@ See [ChatGPT subscription setup](/docs/ai-providers/openai-chatgpt-plus-pro#conn
 3. Click `Add Your First Key`, select the provider, and paste your API key.
 4. Save.
 
+You can also manage personal and organization keys from the [mobile app](/docs/code-with-ai/platforms/mobile#provider-keys), including native forms for AWS Bedrock, Azure Foundry, and Google Vertex AI credentials.
+
 ### AWS Bedrock configuration
 
 AWS Bedrock requires JSON credentials. Use one of these two formats; don't mix fields from both.

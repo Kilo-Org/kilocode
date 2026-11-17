@@ -173,17 +173,30 @@ The **Profile** tab also provides your account settings:
 - **Edit profile** — set the LinkedIn and GitHub links shown on your profile. Your display name comes from your sign-in provider and is not editable here.
 - **Sign-in methods** — view the providers linked to your account, unlink one behind a confirmation, or **Link another provider**, which opens the web connected-accounts page. The server refuses to unlink your last remaining method and shows the reason inline.
 - **Sign out of all web sessions** — ends every web session on your account, behind a confirmation.
-- **Provider keys (BYOK)** — list, add, test, enable or disable, and delete provider keys. A key's value is masked as you enter it and is never shown again, and managed keys are read-only.
+- **Provider keys (BYOK)** — list, add, test, enable or disable, and delete provider keys for your account or an organization. See [Provider keys](#provider-keys).
 - **Your data** — request an export of your data, follow each export's status, enter the emailed download code, and download or share the file. This follows the same release toggle as the web, so accounts without it see a not-available state.
 - **Blocked and muted people** — review the people you have blocked or muted and **Unblock** or **Unmute** them.
 
 After you report a comment from a pull request discussion, a report receipt screen shows the report and lets you appeal once.
 
+### Provider keys
+
+Open **Provider keys (BYOK)** from the **Profile** tab for your account, or from an organization hub for that organization. See [Bring Your Own Key (BYOK)](/docs/getting-started/byok) for what a key does and how requests use it.
+
+- Any organization member can view its keys. Only an owner, admin, or billing manager can add, replace, enable or disable, test, or delete one. A member who opens the form sees the permission state instead of an input the server would reject.
+- A key row offers **Test**, **Edit**, and **Remove**. Editing means entering a new value, because the server never returns the stored one.
+- Azure Foundry, AWS Bedrock (an API key or an access key pair), and Google Vertex AI use native forms instead of a raw JSON field. The app stores the same credential JSON as the web.
+- Secret fields turn off autocorrect, suggestions, autofill, and spell check. Single-line secrets are masked. The multiline Vertex private key opens no keyboard, so paste it in.
+
+The list and the save each have pending, empty, success, retryable failure with **Retry**, and non-retryable failure states, where the screen shows the server's message and no retry.
+
 ## Integrations
 
 The **Profile** tab has a **Connected services** section, and the organization hub has an **Integrations** row; both open the **Integrations** screen for that scope. The screen reads one status for every service and shows a row per service, reading **Connected to <account>** when it is connected.
 
-**Connect** opens the web page that owns the provider's OAuth flow, because provider callbacks land on the web; the screen refetches when you return. **Disconnect** asks for confirmation first. Which services you can act on follows the web: GitHub and Slack are available to owners and admins, GitLab, Discord, and Linear to billing roles, and Bitbucket to owners and billing managers. Members see status only. Bitbucket is organization-only and reads **Manage on the web**.
+**Connect** opens the web page that owns the provider's OAuth flow, because provider callbacks land on the web; the screen refetches when you return. **Disconnect** asks for confirmation first. Which services you can act on follows the web: GitHub and Slack are available to owners and admins, GitLab, Discord, and Linear to billing roles, and Bitbucket to owners and billing managers. Members see status only.
+
+Bitbucket is organization-only and is the exception to the web hand-off: **Connect** opens a native sheet where you paste a Bitbucket workspace access token, and **Disconnect** acts in the app. When the workspace is already connected, the same sheet replaces its token, because a workspace accepts only one Kilo connection. Depending on the workspace's readiness, the sheet offers **Connect**, **Reconnect**, or **Refresh repositories**. **Connect** stays disabled until you enter a token, and the sheet then reports success, a retryable failure you can submit again, or a non-retryable failure such as losing the role required to connect.
 
 The screen shows a loading skeleton while it resolves, a retryable error with **Retry**, and an explanation when you lose the permission to act.
 
@@ -198,12 +211,22 @@ In organization scope, owners and billing managers see organization-wide usage; 
 Select an organization to open its hub, which mirrors the areas of the web sidebar that the app covers.
 
 - **Billing** — the organization's plan, subscription state (renews, cancels at period end, trial, past due, or ended), seats used and total, any scheduled seat decrease, the auto top-up amount and threshold, and the organization [Kilo Pass](#kilo-pass-and-billing). It follows the web's role rules: billing roles see it, and other roles get an access-denied message. Every money-changing action — buy seats, change plan, or set up auto top-up — opens the web page on Android and shows plain text on iOS.
-- **Settings** — one row for each area that lives on the web: usage details, providers and models, custom modes, groups, guardrails, BYOK, SSO and domain, email preferences, audit logs, request logs, integrations, sub-organizations, distribute funds, and data collection. Rows follow the web sidebar's role and plan rules, and each opens its web page.
+- **Settings** — one row for each area that lives on the web: usage details, providers and models, guardrails, SSO and domain, email preferences, request logs, integrations, sub-organizations, distribute funds, and data collection. Rows follow the web sidebar's role and plan rules, and each opens its web page.
+- **Custom modes**, **groups**, and **provider keys (BYOK)** — native screens instead of the web, described in [Organization custom modes and groups](#organization-custom-modes-and-groups) and [Provider keys](#provider-keys).
 - **Audit log** — a native read-only list of organization events with paging, shown to the same roles as the web. See [Audit Logs](/docs/collaborate/enterprise/audit-logs).
 
 You can create an organization from **Profile** or from the no-organization state. Enter a name and the app creates it with the same defaults as the web flow, then switches to the new organization. The company domain stays a web dashboard setting.
 
 An invite link for an organization (`/organizations/<id>`) opens in the app, so accepting an invite lands on the organization. Only that path is claimed — `/organizations/new`, `/organizations/create`, and any deeper organization page open in the browser.
+
+### Organization custom modes and groups
+
+The **Custom modes** and **Groups** rows in an organization hub open native screens instead of the web.
+
+- **Custom modes** — list, create, edit, and delete organization [custom modes](/docs/collaborate/teams/custom-modes-org).
+- **Groups** — list, create, edit members of, and delete [groups](/docs/collaborate/enterprise/groups). Changes are limited to the roles the server allows; a member sees groups read-only.
+
+Both screens show loading, empty, content, retryable failure, and non-retryable failure states. Delete works without editing a field first.
 
 ## Code reviewer settings
 
@@ -416,7 +439,21 @@ When a Cloud Agent session is running, its context sheet lists the sandbox's pre
 
 The same context sheet has a sandbox section that shows the sandbox's state, a detail line, and when that state was last checked. If the sandbox failed to start, the section offers a fresh start: Kilo checks for a recoverable workspace snapshot and, after you confirm, removes a snapshot that cannot be used.
 
-The **Profile** tab also has a **Triggers & webhooks** row that opens the web triggers page for the current scope.
+## Triggers and webhooks
+
+The **Profile** tab has a **Triggers & webhooks** row that opens the native triggers screens for the current scope, personal or organization. See [Triggers](/docs/code-with-ai/platforms/cloud-agent#triggers) for what triggers do and how they start sessions.
+
+- **List** — each trigger shows its inbound URL with a copy action and a pause switch that updates immediately. Selecting the row opens its detail.
+- **Create and edit** — set the name, activation (webhook, or a schedule with a time zone), repository, agent, model and reasoning effort, prompt, environment, profile, body schema, secret header and shared secret, and options.
+- **Deliveries** — inbound calls and scheduled runs; selecting a row opens the session it started.
+- **Run now** — starts a scheduled trigger immediately.
+- **Delete** — behind a destructive confirmation.
+
+The list, detail, and deliveries screens each show loading, empty, content, and failure states. A failed save separates a retryable failure from a rejected change.
+
+A stored secret is never shown again. Leaving the secret field blank keeps the stored value, and turning off authentication clears it.
+
+The app does not offer KiloClaw trigger targets, the sandbox allocation picker, or the web list's status filter.
 
 ## Notifications
 
