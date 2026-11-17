@@ -92,6 +92,9 @@ export namespace BrowserPermission {
         "*:https://127.0.0.1": "allow",
         "*:https://*.localhost": "allow",
       },
+      // Every call asks for its own tool key first. These are separate permission keys, so a
+      // config rule `browser_click: ask` overrides the default and can block one tool.
+      "browser_*": "allow",
     }
   }
 

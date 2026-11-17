@@ -114,3 +114,21 @@ describe("browser permission requests", () => {
     expect(request.metadata.browserSensitive).toBe(false)
   })
 })
+
+describe("browser tool-level permissions", () => {
+  const tool = (name: string, ...extra: Permission.Ruleset[]) =>
+    Permission.evaluate(name, "*", defaults, ...extra).action
+
+  test("every browser tool is allowed by default", () => {
+    expect(tool("browser_click")).toBe("allow")
+    expect(tool("browser_take_screenshot")).toBe("allow")
+    expect(tool("browser_navigate")).toBe("allow")
+  })
+
+  test("a tool rule can restrict one tool and leave the rest alone", () => {
+    const config = Permission.fromConfig({ browser_click: "ask", browser_type: "deny" })
+    expect(tool("browser_click", config)).toBe("ask")
+    expect(tool("browser_type", config)).toBe("deny")
+    expect(tool("browser_navigate", config)).toBe("allow")
+  })
+})

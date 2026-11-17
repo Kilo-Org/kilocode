@@ -107,6 +107,14 @@ function announce(error: UnavailableError, browser: Settings, bus: Option.Option
 
 function run(entry: Entry, args: unknown, ctx: Tool.Context, deps: Deps) {
   return Effect.gen(function* () {
+    // Every call asks for its tool key first (`browser_click: ask`), even when no browser is
+    // available: a rule can block a tool before it spawns anything, and a deny never waits.
+    yield* ctx.ask({
+      permission: entry.name,
+      patterns: ["*"],
+      always: ["*"],
+      metadata: { rules: ["*"], tool: entry.name },
+    })
     const cfg = Option.isSome(deps.config) ? yield* deps.config.value.get() : {}
     const settings = resolve(cfg)
     // Organization policy: off hides browser tools, playwright_only pins the bundled backend.
