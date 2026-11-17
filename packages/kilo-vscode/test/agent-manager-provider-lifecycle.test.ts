@@ -500,11 +500,13 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(state.getWorktree(wt.id)).toBeUndefined()
   })
 
-  it("keeps the new worktree when a queued move has not landed in time", async () => {
+  it("keeps the new worktree and reports the queued move instead of failing", async () => {
     await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
     const wt = state.getWorktrees()[0]!
     host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
     host.notifyReady = mock(() => undefined)
+    const post = mock(host.post)
+    host.post = post
     state.addSession("promoted", null)
     // The server queued the move, but the session still runs in the root when the deadline passes.
     client.session.get.mockResolvedValue({ id: "promoted", location: { directory: root } })
@@ -520,11 +522,45 @@ describe("Agent Manager worktree lifecycle", () => {
     }
 
     expect(calls).toContain("move:promoted")
-    expect(calls).toContain("post:agentManager.worktreeSetup")
+    expect(post).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "agentManager.worktreeSetup",
+        status: "ready",
+        worktreeId: wt.id,
+        message: expect.stringContaining("moves here when its current step finishes"),
+      }),
+    )
+    expect(calls).toContain("push")
     expect(calls).not.toContain("disk")
     expect(state.getWorktree(wt.id)).toBeDefined()
     expect(state.getSession("promoted")?.worktreeId).toBeNull()
     expect(host.notifyReady).not.toHaveBeenCalled()
+  })
+
+  it("clears the setup state when the promoted session was closed before it could be filed", async () => {
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    const wt = state.getWorktrees()[0]!
+    host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
+    host.notifyReady = mock(() => undefined)
+    const post = mock(host.post)
+    host.post = post
+    state.addSession("promoted", null)
+    state.closeSession("promoted", null)
+
+    await promoteLifecycleSession(ctx, host, "promoted")
+
+    expect(post).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "agentManager.worktreeSetup",
+        status: "ready",
+        projectId: ctx.id,
+        worktreeId: wt.id,
+      }),
+    )
+    expect(host.notifyReady).not.toHaveBeenCalled()
+    expect(calls).toContain("move:promoted")
+    expect(calls).not.toContain("disk")
+    expect(state.getWorktree(wt.id)).toBeDefined()
   })
 
   it("files a promoted session whose move has not settled, without admitting the handoff note", async () => {

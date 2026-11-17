@@ -243,7 +243,7 @@ describe("activateSelection — cross-project selection", () => {
       deps,
     )
 
-    expect(order).toEqual(["state", "projects", "projects", "selected"])
+    expect(order).toEqual(["state", "projects", "selected"])
     expect(calls.error).toEqual([])
   })
 
@@ -259,7 +259,7 @@ describe("activateSelection — cross-project selection", () => {
     ctx.stateManager()
     await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
     contexts.activate(extra)
-    deps.routeSession = async () => false
+    deps.routeSession = async () => "failed"
     let pushed = 0
     deps.pushState = () => pushed++
 
@@ -272,6 +272,39 @@ describe("activateSelection — cross-project selection", () => {
     expect(moved).toEqual([])
     expect(pushed).toBe(1)
     expect(calls.selected).toEqual([])
+  })
+
+  it("reports a queued move as pending without changing the worktree filing", async () => {
+    const moved: Array<[string, string | null]> = []
+    const filing = {
+      getWorktree: () => undefined,
+      getSession: (id: string) => (id === "sess1" ? { id: "sess1", worktreeId: "wt1" } : undefined),
+      moveSession: (id: string, worktreeId: string | null) => moved.push([id, worktreeId]),
+      getActiveTarget: () => undefined,
+      setActiveTarget: () => {},
+    } as unknown as WorktreeStateManager
+    const { contexts, deps, calls, extra } = setup({ state: () => filing })
+    const ctx = contexts.expand(extra)!
+    ctx.stateManager()
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    contexts.activate(extra)
+    deps.routeSession = async () => "queued"
+    const notices: string[] = []
+    deps.notify = (_kind, message) => notices.push(message)
+    let pushed = 0
+    deps.pushState = () => pushed++
+
+    await handleProjectMessage(
+      { type: "agentManager.openSessionLocally", projectId: extra, sessionId: "sess1" } as never,
+      deps,
+    )
+
+    expect(calls.error).toEqual([])
+    expect(moved).toEqual([])
+    expect(pushed).toBe(1)
+    expect(notices).toEqual(["The conversation will move to Local when its current step finishes."])
+    // The session still runs in its worktree, so the click lands on Local until the move event files it there.
+    expect(calls.selected).toEqual([extra])
   })
 
   it("restores the persisted target when the selection asks for it", async () => {

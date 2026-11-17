@@ -30,6 +30,7 @@ import type { ProjectContexts } from "./project/contexts"
 import { fileSessionLocally } from "./route-session"
 
 const OPEN_LOCALLY_FAILED = "Could not move the conversation to Local. It still runs in its worktree."
+const OPEN_LOCALLY_QUEUED = "The conversation will move to Local when its current step finishes."
 
 export interface MessageHost {
   connection: AgentManagerConnection
@@ -169,19 +170,21 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
     const client = await host.lifecycle.client().catch(() => undefined)
     // Filing a session under Local while it still runs in a worktree shows the root checkout for its files and
     // diff and hides its events from the worktree's view, so a session that could not move keeps its filing.
-    const filed = await fileSessionLocally({
+    // A queued move applies at the next step boundary; the `session.moved` event files the session then.
+    const outcome = await fileSessionLocally({
       client,
       state: ctx.peekState(),
       sessionId: m.sessionId,
       root: ctx.root,
       log: host.log,
     })
-    if (!filed) {
+    if (outcome === "failed") {
       host.post({ type: "error", message: OPEN_LOCALLY_FAILED })
       // The webview already placed the session in Local's tabs, so push the kept filing to drop it again.
       host.pushState()
       return true
     }
+    if (outcome === "queued") host.host.notify("info", OPEN_LOCALLY_QUEUED)
     host.pushState()
     return true
   }

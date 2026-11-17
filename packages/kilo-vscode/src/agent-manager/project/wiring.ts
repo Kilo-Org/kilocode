@@ -16,6 +16,7 @@ import { createSettingsHandler, type SettingsHandler } from "./settings"
 import { poolHome } from "../pool/home"
 import type { SidebarTarget } from "./route"
 import type { AgentManagerOutMessage } from "../types"
+import type { RouteOutcome } from "../route-session"
 
 export interface ProjectWiring {
   registry: ProjectRegistry
@@ -52,8 +53,8 @@ export function createProjectWiring(opts: {
   selected: (target: SidebarTarget) => void
   /** Post an outbound message to the webview. */
   post: (message: AgentManagerOutMessage) => void
-  /** Route one session to a directory inside a project; false when the server could not move it. */
-  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => Promise<boolean>
+  /** Route one session to a directory inside a project, and report a move that waits for a step boundary. */
+  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => Promise<RouteOutcome>
   /** The directory the server runs a session in, for a session another surface names without a project. */
   sessionDirectory?: (sessionId: string) => Promise<string | undefined>
 }): ProjectWiring {
@@ -94,6 +95,7 @@ export function createProjectWiring(opts: {
     sessionDirectory: opts.sessionDirectory,
     git: opts.git,
     error: (message) => opts.host.showError(message),
+    notify: (kind, message) => opts.host.notify(kind, message),
     openSettings: (tab, projectId) => opts.host.openSettings(tab, projectId),
     log: opts.log,
   }

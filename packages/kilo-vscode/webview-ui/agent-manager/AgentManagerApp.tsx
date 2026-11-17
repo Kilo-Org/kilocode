@@ -480,7 +480,12 @@ const AgentManagerContent: Component = () => {
   const runStatuses = () => registry.active().runStatuses()
   const runScriptConfigured = () => registry.active().runScriptConfigured()
   const localStats = () => registry.active().localStats()
-  const projectLive = createProjectLive({ ensure: (pid) => (pid ? registry.ensure(pid) : registry.active()) })
+  // The hydration owns the restore target; the live store tells it when that project's catalog arrives.
+  let replayCatalog: (projectId: string) => void = () => {}
+  const projectLive = createProjectLive({
+    ensure: (pid) => (pid ? registry.ensure(pid) : registry.active()),
+    onSessions: (pid) => replayCatalog(pid),
+  })
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
   const [terminalFont, setTerminalFont] = createSignal<TerminalFont>({
     fontFamily: getComputedStyle(document.documentElement).getPropertyValue("--vscode-editor-font-family").trim(),
@@ -1177,6 +1182,8 @@ const AgentManagerContent: Component = () => {
     current: () => sessions.currentSessionID(),
     settingUp: () => !!settingUpSelection(),
     sessions: () => sessions.sessions(),
+    catalog: () => projectSessionsLive()[currentProjectId() ?? ""],
+    root: () => directories.root(currentProjectId()),
     tabs: localSessionIDs,
     closed: closedSessions,
     pending: isPending,
@@ -1191,9 +1198,11 @@ const AgentManagerContent: Component = () => {
       setSelection,
       setActivePendingId,
     },
+    selection: () => selection(),
     focus: () => requestChatFocus(),
     sidebar: sidebar.hydrate,
   })
+  replayCatalog = (pid) => applyActiveState.catalog(pid)
   const applyProjectSwitch = (state: AgentManagerStateMessage): "first" | "switched" | "same" =>
     switchProject({
       id: state.projectId,

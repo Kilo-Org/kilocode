@@ -3,7 +3,7 @@ import { getErrorMessage } from "./errors"
 import { isRunningStatus } from "../session-status"
 import { LOCAL_TARGET, type AgentManagerOutMessage } from "./types"
 import { initContextState } from "./project/init"
-import { canonicalizePath, pathKey, samePath } from "./project/paths"
+import { pathKey } from "./project/paths"
 import { settleMove } from "./session-move"
 import type { ProjectContext } from "./project/context"
 import type { ManagedSession } from "./WorktreeStateManager"
@@ -425,37 +425,86 @@ export async function promoteLifecycleSession(
   // store of its directory and would never receive the session's events otherwise. The server applies a move at the
   // next step boundary, so a running session is stopped first, as Continue in Worktree does.
   await host.abort([sessionId])
-  const outcome = await host
-    .client()
-    .then(async (client) => {
-      const session = await client.session.get({ sessionID: sessionId })
-      await client.session.move({ sessionID: session.id, directory: created.result.path })
-      return { client, result: await settleMove(client, session, created.result.path) }
-    })
-    .catch((err: unknown) => {
-      host.log("Failed to move the session into the new worktree:", getErrorMessage(err))
-      return undefined
-    })
-  const landed =
-    outcome &&
-    samePath(canonicalizePath(outcome.result.session.location.directory), canonicalizePath(created.result.path))
-  if (!landed) {
-    // Ends the setup state the worktree creation started, so the new worktree does not stay "setting up".
+  let client: OpenCodeClient
+  let session: SessionInfo
+  try {
+    client = await host.client()
+    session = await client.session.get({ sessionID: sessionId })
+    await client.session.move({ sessionID: session.id, directory: created.result.path })
+  } catch (err) {
+    host.log("Failed to move the session into the new worktree:", getErrorMessage(err))
     host.post({
       type: "agentManager.worktreeSetup",
       status: "error",
       message: "Failed to move the session into the new worktree",
+      projectId: ctx.id,
       branch: created.result.branch,
       worktreeId: created.worktree.id,
     })
-    // A move the server never queued leaves the worktree unused. A queued move that did not land in time can still
-    // land later, so its worktree stays.
-    if (!outcome) await deleteLifecycleWorktree(ctx, host, created.worktree.id)
-    else host.log(`Kept worktree ${created.worktree.id}: the move of ${sessionId} is still pending`)
+    // A move the server never queued leaves the worktree unused.
+    await deleteLifecycleWorktree(ctx, host, created.worktree.id)
     host.push()
     return null
   }
-  const state = ctx.peekState()!
+
+  const result = await settleMove(client, session, created.result.path)
+  if (!result.landed) {
+    // The server accepted the move but applies it at the next step boundary, which can be minutes away. Keep the
+    // worktree and finish filing the session when the `session.moved` event reports the new directory. Reporting a
+    // failure here left the session in Local while it ran in the worktree, so it was in no tab strip.
+    host.post({
+      type: "agentManager.worktreeSetup",
+      status: "ready",
+      message: "Worktree ready. The conversation moves here when its current step finishes.",
+      projectId: ctx.id,
+      branch: created.result.branch,
+      worktreeId: created.worktree.id,
+    })
+    host.log(`Promotion of ${sessionId} is queued for worktree ${created.worktree.id}; the filing follows the move`)
+    host.push()
+    return null
+  }
+
+  await finishPromotion(ctx, host, client, sessionId, created, result.settled)
+  return null
+}
+
+/** File a promoted session under its worktree and report the worktree ready. */
+async function finishPromotion(
+  ctx: ProjectContext,
+  host: LifecycleHost,
+  client: OpenCodeClient,
+  sessionId: string,
+  created: CreateWorktreeOnDiskResult,
+  settled: boolean,
+): Promise<void> {
+  const state = ctx.peekState()
+  if (!state) {
+    host.post({
+      type: "agentManager.worktreeSetup",
+      status: "error",
+      message: "Failed to file the promoted session",
+      projectId: ctx.id,
+      branch: created.result.branch,
+      worktreeId: created.worktree.id,
+    })
+    host.log(`Could not file promoted session ${sessionId}: the project state is unavailable`)
+    return
+  }
+  if (state.isSessionClosed(sessionId)) {
+    // The user closed the session while the worktree was being prepared. The worktree is still usable; clear the
+    // setup state instead of leaving the overlay spinning.
+    host.post({
+      type: "agentManager.worktreeSetup",
+      status: "ready",
+      message: "Worktree ready. The conversation was closed before it moved.",
+      projectId: ctx.id,
+      branch: created.result.branch,
+      worktreeId: created.worktree.id,
+    })
+    host.log(`Kept worktree ${created.worktree.id}: session ${sessionId} was closed before the promotion finished`)
+    return
+  }
   if (!state.getSession(sessionId)) {
     state.addSession(sessionId, created.worktree.id)
   } else {
@@ -464,9 +513,9 @@ export async function promoteLifecycleSession(
   host.register(sessionId, created.result.path)
   // A note admitted while a drain still runs is delivered into it and starts a reply, so it waits for a settled move.
   // Without it the model still learns the new directory from the location switch the server records.
-  if (outcome.result.settled)
+  if (settled)
     await recordPromotionHandoff({
-      client: outcome.client,
+      client,
       sessionId,
       directory: created.result.path,
       branch: created.result.branch,
@@ -474,7 +523,6 @@ export async function promoteLifecycleSession(
   else host.log(`Skipped the worktree handoff note for ${sessionId}: the session is still running`)
   host.notifyReady(sessionId, created.result, created.worktree.id)
   host.log(`Promoted session ${sessionId} to worktree ${created.worktree.id}`)
-  return null
 }
 
 /** Add a new or existing session to an existing worktree. */
