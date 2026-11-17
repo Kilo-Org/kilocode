@@ -143,10 +143,21 @@ val specDir = File(
     System.getProperty("java.io.tmpdir"),
     "kilo-jetbrains-openapi-" + Integer.toHexString(projectDir.absolutePath.hashCode()),
 )
+// The hashed directory belongs to this project alone, so Sync only removes stale spec copies
+// from earlier runs. Keeping the name stable preserves openApiGenerate's up-to-date checks.
 val stageSpec = tasks.register<Sync>("stageOpenApiSpec") {
+    val path = specDir.absolutePath
     dependsOn(normalizeOpenApiSpec)
     from(generatedSpec)
     into(specDir)
+    doFirst {
+        if (path.any { it.isWhitespace() || it.code > 127 }) {
+            throw GradleException(
+                "OpenAPI spec staging directory must be ASCII-only and space-free, but is: $path. " +
+                    "Set java.io.tmpdir to a path such as C:\\Temp and retry.",
+            )
+        }
+    }
 }
 
 openApiGenerate {
