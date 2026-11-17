@@ -59,6 +59,32 @@ function blocks(content: unknown): ContentBlock[] {
   })
 }
 
+/**
+ * Playwright MCP writes an action's page snapshot to a file and returns `- [Snapshot](path)`.
+ * The model needs the snapshot itself: read the file back so every observation mode sees the page.
+ */
+async function inline(text: string): Promise<string> {
+  const lines = text.split("\n")
+  const out: string[] = []
+  for (const line of lines) {
+    const match = /^- \[Snapshot\]\((.+)\)$/.exec(line.trim())
+    if (!match) {
+      out.push(line)
+      continue
+    }
+    const file = path.isAbsolute(match[1]) ? match[1] : path.resolve(process.cwd(), match[1])
+    const body =
+      (await fs.readFile(file, "utf8").catch(() => undefined)) ??
+      (await fs.readFile(path.join(output(), path.basename(match[1])), "utf8").catch(() => undefined))
+    if (body === undefined) {
+      out.push(line)
+      continue
+    }
+    out.push("```yaml", ...body.replace(/\n$/, "").split("\n"), "```")
+  }
+  return out.join("\n")
+}
+
 type Connection = {
   client: Client
   server: Server
@@ -126,7 +152,7 @@ class PlaywrightBackend implements Backend {
   async call(name: string, args: Record<string, unknown>): Promise<CallResult> {
     const result = await this.conn.client.callTool({ name, arguments: args }, undefined, { timeout: TIMEOUT })
     const content = blocks(result.content)
-    const text = content.filter((block) => block.type === "text").map((block) => block.text)
+    for (const block of content) if (block.type === "text") block.text = await inline(block.text)
     if (!content.length && result.structuredContent !== undefined) {
       content.push({ type: "text", text: JSON.stringify(result.structuredContent, null, 2) })
     }
