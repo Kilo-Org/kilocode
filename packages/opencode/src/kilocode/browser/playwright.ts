@@ -19,8 +19,9 @@ import { INSTALL_HINT, locate } from "./locate"
 import type { Target } from "./locate"
 import * as Png from "./png"
 import { BrowserPermission } from "./permission"
-import type { Item } from "./permission"
 import type { Settings } from "./settings"
+
+type Item = BrowserPermission.Item
 
 const log = Log.create({ service: "browser.playwright" })
 
@@ -132,18 +133,19 @@ function oauthConsent(url: string) {
 
 /** Runs inside the page: classifies the element a step acts on. */
 function inspectElement(el: Element, kind: "fill" | "click") {
-  const attr = (name) => (el.getAttribute(name) || "").toLowerCase()
+  const attr = (name: string) => (el.getAttribute(name) || "").toLowerCase()
   if (kind === "fill") {
-    const type = (el.type || "").toLowerCase()
+    const type = ((el as HTMLInputElement).type || "").toLowerCase()
     const autocomplete = attr("autocomplete")
     if (type === "password") return "password field"
     if (autocomplete === "one-time-code") return "one-time code field"
     if (autocomplete.startsWith("cc-")) return "payment field (" + autocomplete + ")"
     return ""
   }
-  const card = (node) => {
+  const card = (node: Element) => {
+    const input = node as HTMLInputElement
     if (((node.getAttribute("autocomplete") || "").toLowerCase()).startsWith("cc-")) return true
-    const hint = [node.name, node.id, node.getAttribute("placeholder"), node.getAttribute("aria-label")]
+    const hint = [input.name, input.id, node.getAttribute("placeholder"), node.getAttribute("aria-label")]
       .filter((value) => typeof value === "string" && value.length > 0)
       .join(" ")
     return /card|credit|cvv|cvc|expir/i.test(hint)
@@ -261,7 +263,7 @@ class PlaywrightBackend implements Backend {
       .elementHandle({ timeout: 2_000 })
       .catch(() => null)
     if (!handle) return undefined
-    const frame = handle.ownerFrame()
+    const frame = await handle.ownerFrame()
     handle.dispose()
     return frame ?? undefined
   }

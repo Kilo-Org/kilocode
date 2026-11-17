@@ -7,6 +7,7 @@ import {
 } from "@kilocode/kilo-gateway"
 import { Effect, Option, Redacted } from "effect"
 import z from "zod"
+import { Auth } from "@/auth"
 import { CloudAuth } from "../cloud/auth"
 import { readBoundedJson } from "../cloud/response-json"
 
@@ -81,10 +82,17 @@ export namespace BrowserPolicy {
     return Effect.gen(function* () {
       const auth = yield* options.auth
         ? options.auth()
-        : CloudAuth.resolve({ env: options.env }).pipe(
-            Effect.option,
-            Effect.map((value) => (Option.isNone(value) ? undefined : value.value)),
-            Effect.catchCause(() => Effect.succeed(undefined)),
+        : Effect.serviceOption(Auth.Service).pipe(
+            Effect.flatMap((service) =>
+              Option.isNone(service)
+                ? Effect.succeed<CloudAuth.Resolved | undefined>(undefined)
+                : CloudAuth.resolve({ env: options.env }).pipe(
+                    Effect.provideService(Auth.Service, service.value),
+                    Effect.option,
+                    Effect.map((value) => (Option.isNone(value) ? undefined : value.value)),
+                  ),
+            ),
+            Effect.catchCause(() => Effect.succeed<CloudAuth.Resolved | undefined>(undefined)),
           )
       if (!auth?.organizationID) return undefined
       const organizationID = auth.organizationID

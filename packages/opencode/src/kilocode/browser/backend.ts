@@ -1,6 +1,8 @@
 import type { Entry } from "./contract-shape"
-import type { Item } from "./permission"
+import type { BrowserPermission } from "./permission"
 import type { BackendID } from "./settings"
+
+type Item = BrowserPermission.Item
 
 export type ContentBlock = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string }
 

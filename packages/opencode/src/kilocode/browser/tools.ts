@@ -1,4 +1,4 @@
-import { Effect, Either, Option, Schema } from "effect"
+import { Effect, Option, Result, Schema } from "effect"
 import z from "zod"
 import * as Log from "@opencode-ai/core/util/log"
 import { Bus } from "@/bus"
@@ -12,11 +12,12 @@ import { BrowserEvents } from "./events"
 import { extensionBackend } from "./extension"
 import { Tracker, observe, snapshot, split } from "./observation"
 import { BrowserPermission } from "./permission"
-import type { Item } from "./permission"
 import { BrowserPolicy } from "./policy"
 import { playwright } from "./playwright"
 import { resolve } from "./settings"
 import type { Settings } from "./settings"
+
+type Item = BrowserPermission.Item
 
 const log = Log.create({ service: "browser.tools" })
 
@@ -25,7 +26,7 @@ const tracker = new Tracker()
 const Args = z.record(z.string(), z.unknown())
 
 type Deps = {
-  config: Config.Interface
+  config: Option.Option<Config.Interface>
   bus: Option.Option<Bus.Interface>
 }
 
@@ -106,7 +107,8 @@ function announce(error: UnavailableError, browser: Settings, bus: Option.Option
 
 function run(entry: Entry, args: unknown, ctx: Tool.Context, deps: Deps) {
   return Effect.gen(function* () {
-    const settings = resolve(yield* deps.config.get())
+    const cfg = Option.isSome(deps.config) ? yield* deps.config.value.get() : {}
+    const settings = resolve(cfg)
     // Organization policy: off hides browser tools, playwright_only pins the bundled backend.
     const policy = yield* BrowserPolicy.get()
     const browser = policy?.control === "playwright_only" ? { ...settings, backend: "playwright" as const } : settings
@@ -127,7 +129,7 @@ function run(entry: Entry, args: unknown, ctx: Tool.Context, deps: Deps) {
     // frames, sensitive elements, downloads) reports it as needs_permission; the call is
     // retried once with the new grants and the step token.
     let sensitive: string[] = []
-    let outcome: Either.Either<CallResult, unknown> | undefined
+    let outcome: Result.Result<CallResult, unknown> | undefined
     for (let attempt = 0; attempt < 2; attempt++) {
       yield* authorize(
         yield* planned(active, entry, parsed.data, ctx),
@@ -136,11 +138,11 @@ function run(entry: Entry, args: unknown, ctx: Tool.Context, deps: Deps) {
         (origin) => BrowserPolicy.allows(policy, origin),
       )
       const call: CallContext = { session: ctx.sessionID, authorized: [...grantsFor(ctx.sessionID)], sensitive }
-      outcome = yield* Effect.either(
+      outcome = yield* Effect.result(
         Effect.tryPromise({ try: () => active.call(entry.name, parsed.data, call), catch: (error) => error }),
       )
-      if (Either.isRight(outcome)) break
-      const error = outcome.left
+      if (Result.isSuccess(outcome)) break
+      const error = outcome.failure
       if (!(error instanceof NeedsPermissionError)) return yield* Effect.die(error)
       if (attempt === 1 || !error.items.length) {
         return {
@@ -153,8 +155,8 @@ function run(entry: Entry, args: unknown, ctx: Tool.Context, deps: Deps) {
       yield* authorize(error.items, ctx, browser.allowSensitive, (origin) => BrowserPolicy.allows(policy, origin))
       sensitive = error.stepToken ? [error.stepToken] : []
     }
-    if (!outcome || Either.isLeft(outcome)) return yield* Effect.die(new Error("browser call did not settle"))
-    const result = outcome.right
+    if (!outcome || Result.isFailure(outcome)) return yield* Effect.die(new Error("browser call did not settle"))
+    const result = outcome.success
 
     const text = textOf(result)
     const next = snapshot(split(text))
@@ -164,7 +166,11 @@ function run(entry: Entry, args: unknown, ctx: Tool.Context, deps: Deps) {
       mode === "diff"
         ? yield* Effect.promise(() =>
             active
-              .call("browser_console_messages", { level: "error" }, { session: ctx.sessionID })
+              .call(
+                "browser_console_messages",
+                { level: "error" },
+                { session: ctx.sessionID, authorized: [...grantsFor(ctx.sessionID)], sensitive: [] },
+              )
               .then((console) => tracker.consoleErrors(ctx.sessionID, textOf(console))),
           ).pipe(Effect.catch(() => Effect.succeed<string[]>([])))
         : []
@@ -206,7 +212,7 @@ export const infos = Effect.all(
     Tool.define(
       entry.name,
       Effect.gen(function* () {
-        const config = yield* Config.Service
+        const config = yield* Effect.serviceOption(Config.Service)
         const bus = yield* Effect.serviceOption(Bus.Service)
         return {
           description: entry.description,

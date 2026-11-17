@@ -1,5 +1,6 @@
 import { BrowserPermission } from "./permission"
-import type { Item } from "./permission"
+
+type Item = BrowserPermission.Item
 
 /**
  * Which (class, origin) pairs a browser call needs. The Playwright backend resolves
