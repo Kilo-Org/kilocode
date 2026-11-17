@@ -156,11 +156,46 @@ function unquote(text: string) {
   return text
 }
 
-function home(text: string) {
-  if (text === "~") return os.homedir()
-  if (text.startsWith("~/") || text.startsWith("~\\")) return path.join(os.homedir(), text.slice(2))
-  return text
+// kilocode_change start - keep `..` intact so symlink resolution runs before parent segments collapse
+function glue(root: string, rest: string) {
+  if (rest.length === 0) return root
+  if (root.endsWith("/") || root.endsWith("\\")) return root + rest
+  return root + (root.includes("\\") ? "\\" : "/") + rest
 }
+
+function tilde(text: string) {
+  if (text.startsWith("~/") || text.startsWith("~\\")) return text.slice(2)
+  if (!text.startsWith("~")) return
+  const name = os.userInfo().username
+  if (text === `~${name}`) return ""
+  if (text.startsWith(`~${name}/`) || text.startsWith(`~${name}\\`)) return text.slice(name.length + 2)
+}
+
+function home(text: string) {
+  const root = os.homedir()
+  if (text === "~") return root
+  const rest = tilde(text)
+  if (rest == null) return text
+  return glue(root, rest)
+}
+
+function literal(text: string, cwd: string) {
+  const rules = [
+    ["$PWD", cwd],
+    ["${PWD}", cwd],
+    ["$HOME", os.homedir()],
+    ["${HOME}", os.homedir()],
+  ] as const
+  const hit = rules.find(
+    (rule) => text === rule[0] || text.startsWith(`${rule[0]}/`) || text.startsWith(`${rule[0]}\\`),
+  )
+  if (!hit) return
+  if (text === hit[0]) return hit[1]
+  const rest = text.slice(hit[0].length + 1)
+  if (rest.includes("$") || rest.includes("`")) return
+  return glue(hit[1], rest)
+}
+// kilocode_change end
 
 function envValue(key: string) {
   if (process.platform !== "win32") return process.env[key]
@@ -424,7 +459,11 @@ export const ShellPermission = Effect.gen(function* () {
   })
 
   const argpath = Effect.fn("ShellTool.argPath")(function* (arg: string, cwd: string, ps: boolean, shell: string) {
-    const text = ps ? expand(arg, cwd, shell) : home(unquote(arg))
+    const bare = unquote(arg)
+    // kilocode_change - single quotes are literal; `$PWD`/`$HOME` stay static and keep `..`
+    const quoted = arg.length >= 2 && arg.startsWith("'") && arg.endsWith("'")
+    const plain = quoted ? bare : (literal(bare, cwd) ?? home(bare))
+    const text = ps ? expand(arg, cwd, shell) : plain
     const file = text && prefix(text)
     if (!file || dynamic(file, ps)) return
     const next = ps ? provider(file) : file
