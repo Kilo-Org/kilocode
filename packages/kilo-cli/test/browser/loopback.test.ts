@@ -199,9 +199,28 @@ describe("loopback pairing", () => {
     return new URLSearchParams(new URL(url).hash.slice(1)).get("t")
   }
 
-  function redeem(port: number, value: string | null, origin?: string) {
-    const target = `http://127.0.0.1:${port}${pair.PairingKeyPath}?t=${value ?? ""}`
-    return fetch(target, { headers: origin === undefined ? {} : { origin } })
+  // The exact request a Chrome MV3 service worker makes: a JSON POST, which is the
+  // only pairing request that carries the extension's Origin.
+  function redeem(port: number, value: string | null, origin?: string, body?: string) {
+    return fetch(`http://127.0.0.1:${port}${pair.PairingKeyPath}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(origin === undefined ? {} : { origin }),
+      },
+      body: body ?? JSON.stringify({ t: value }),
+    })
+  }
+
+  function preflight(port: number, origin?: string) {
+    return fetch(`http://127.0.0.1:${port}${pair.PairingKeyPath}`, {
+      method: "OPTIONS",
+      headers: {
+        "access-control-request-method": "POST",
+        "access-control-request-headers": "content-type",
+        ...(origin === undefined ? {} : { origin }),
+      },
+    })
   }
 
   test("mints a token over the CLI socket and redeems it once for the key", async () => {
@@ -216,6 +235,8 @@ describe("loopback pairing", () => {
 
     const response = await redeem(hub.port, minted, extension)
     expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toBe("application/json")
+    expect(response.headers.get("cache-control")).toBe("no-store")
     expect(response.headers.get("access-control-allow-origin")).toBe(extension)
     const body = pair.KeyExchange.parse(await response.json())
     // The extension receives the durable key here, out of band, and the HMAC
@@ -229,12 +250,20 @@ describe("loopback pairing", () => {
     await hub.stop()
   })
 
-  test("refuses a redemption from a web page and keeps the token unused", async () => {
+  test("refuses a POST with no origin and keeps the token unused", async () => {
+    const hub = await startHub()
+    const minted = token((await ask(hub.entry)).url)
+    expect((await redeem(hub.port, minted)).status).toBe(403)
+    // A refused request must not consume the token the real extension is about to use.
+    expect((await redeem(hub.port, minted, extension)).status).toBe(200)
+    await hub.stop()
+  })
+
+  test("refuses a POST from a web page or an unknown extension id and keeps the token unused", async () => {
     const hub = await startHub()
     const minted = token((await ask(hub.entry)).url)
     expect((await redeem(hub.port, minted, "https://example.com")).status).toBe(403)
-    expect((await redeem(hub.port, minted)).status).toBe(403)
-    // A refused request must not consume the token the real extension is about to use.
+    expect((await redeem(hub.port, minted, `chrome-extension://${"c".repeat(32)}`)).status).toBe(403)
     expect((await redeem(hub.port, minted, extension)).status).toBe(200)
     await hub.stop()
   })
@@ -245,6 +274,44 @@ describe("loopback pairing", () => {
     const minted = token((await ask(hub.entry)).url)
     await Bun.sleep(150)
     expect((await redeem(hub.port, minted, extension)).status).toBe(404)
+    await hub.stop()
+  })
+
+  test("refuses a malformed body and keeps the token unused", async () => {
+    const hub = await startHub()
+    const minted = token((await ask(hub.entry)).url)
+    expect((await redeem(hub.port, minted, extension, "{")).status).toBe(400)
+    expect((await redeem(hub.port, minted, extension, JSON.stringify({ t: "short" }))).status).toBe(400)
+    expect((await redeem(hub.port, minted, extension, JSON.stringify({ t: 42 }))).status).toBe(400)
+    // Over the 1 KiB cap, with a body that would otherwise be a valid request.
+    expect(
+      (await redeem(hub.port, minted, extension, JSON.stringify({ t: minted, pad: "x".repeat(2_000) }))).status,
+    ).toBe(400)
+    expect((await redeem(hub.port, minted, extension)).status).toBe(200)
+    await hub.stop()
+  })
+
+  test("answers the preflight and refuses one from a foreign origin", async () => {
+    const hub = await startHub()
+    const allowed = await preflight(hub.port, extension)
+    expect(allowed.status).toBe(204)
+    expect(allowed.headers.get("access-control-allow-origin")).toBe(extension)
+    expect(allowed.headers.get("access-control-allow-methods")).toBe("POST")
+    expect(allowed.headers.get("access-control-allow-headers")).toBe("content-type")
+    expect((await preflight(hub.port, "https://example.com")).status).toBe(403)
+    expect((await preflight(hub.port)).status).toBe(403)
+    await hub.stop()
+  })
+
+  test("refuses a GET redemption", async () => {
+    const hub = await startHub()
+    const minted = token((await ask(hub.entry)).url)
+    const response = await fetch(`http://127.0.0.1:${hub.port}${pair.PairingKeyPath}?t=${minted}`, {
+      headers: { origin: extension },
+    })
+    expect(response.status).toBe(405)
+    // The token is only burned by a POST that redeems it.
+    expect((await redeem(hub.port, minted, extension)).status).toBe(200)
     await hub.stop()
   })
 

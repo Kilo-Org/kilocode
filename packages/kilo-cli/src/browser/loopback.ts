@@ -79,6 +79,52 @@ function parse(input: string): unknown {
   }
 }
 
+// The whole pairing request body is `{"t":"<16-byte token>"}`; nothing legitimate is
+// larger, so the cap is what keeps an anonymous loopback caller from making the hub
+// buffer an arbitrary amount before the origin check would even matter.
+const ExchangeBodyLimit = 1024
+
+// Anything that is not that one object with a well-formed token is malformed, and a
+// malformed request must leave the token redeemable.
+function parseExchange(input: string): string | undefined {
+  let value: unknown
+  try {
+    value = JSON.parse(input)
+  } catch {
+    return undefined
+  }
+  const parsed = pair.Redeem.safeParse(value)
+  if (!parsed.success || !pair.decode(parsed.data.t, pair.TokenBytes)) return undefined
+  return parsed.data.t
+}
+
+// Resolves with the body text, or undefined when it exceeded `limit`; the caller
+// answers 400 in both the cap and the malformed case.
+function read(request: http.IncomingMessage, limit: number): Promise<string | undefined> {
+  const { promise, resolve } = Promise.withResolvers<string | undefined>()
+  const chunks: Buffer[] = []
+  let size = 0
+  let done = false
+  const finish = (value: string | undefined) => {
+    if (done) return
+    done = true
+    resolve(value)
+  }
+  request.on("data", (chunk: Buffer) => {
+    if (done) return
+    size += chunk.length
+    if (size > limit) {
+      // Stop buffering once over the cap; the stream keeps flowing and discards.
+      finish(undefined)
+      return
+    }
+    chunks.push(chunk)
+  })
+  request.on("end", () => finish(Buffer.concat(chunks).toString("utf8")))
+  request.on("error", () => finish(undefined))
+  return promise
+}
+
 const page = `<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Kilo browser pairing</title>
@@ -175,7 +221,7 @@ export async function run(input: Run = {}): Promise<Running> {
     const url = requestUrl(request, host)
     if (!url || url.pathname !== pair.PairingPath) {
       if (url?.pathname === pair.PairingKeyPath) {
-        exchange(request, response, url)
+        exchange(request, response)
         return
       }
       response.writeHead(404, { "content-type": "text/plain; charset=utf-8" })
@@ -186,31 +232,62 @@ export async function run(input: Run = {}): Promise<Running> {
     response.end(page)
   })
 
-  // The extension's only new step: hand back the fragment token and receive the key.
-  // The origin gate is the same one the WebSocket upgrade uses, so a web page that
-  // reaches 127.0.0.1 cannot redeem a token it guessed or minted for itself.
-  function exchange(request: http.IncomingMessage, response: http.ServerResponse, url: URL) {
-    if (!trusted({ origin: request.headers.origin, host: request.headers.host, allowed })) {
-      log.warn("refusing a pairing key exchange", { origin: request.headers.origin, host: request.headers.host })
+  // The extension's only new step: hand back the fragment token in a JSON POST and
+  // receive the key. The origin gate is the same one the WebSocket upgrade uses, so
+  // a web page that reaches 127.0.0.1 cannot redeem a token it guessed or minted for
+  // itself.
+  //
+  // It is a POST because a Chrome MV3 service worker's GET carries no Origin header,
+  // and the origin is the only thing separating the extension from a web page. The
+  // JSON content type also forces a CORS preflight, so the browser asks before the
+  // body is sent.
+  function exchange(request: http.IncomingMessage, response: http.ServerResponse) {
+    const origin = request.headers.origin?.trim()
+    if (!origin || !trusted({ origin, host: request.headers.host, allowed })) {
+      log.warn("refusing a pairing key exchange", { origin, host: request.headers.host })
       response.writeHead(403, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" })
       response.end("forbidden")
       return
     }
-    const token = url.searchParams.get("t")
-    if (token === null || !redeem(token)) {
-      response.writeHead(404, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" })
-      response.end("not found")
+    // An allowlisted origin may read the status, so the extension can tell a 404
+    // (ask the CLI for a new pairing page) from a 403 (not this extension's hub).
+    const cors = { "access-control-allow-origin": origin, "cache-control": "no-store" }
+    if (request.method === "OPTIONS") {
+      response.writeHead(204, {
+        ...cors,
+        "access-control-allow-methods": "POST",
+        "access-control-allow-headers": "content-type",
+      })
+      response.end()
       return
     }
-    const body: pair.KeyExchange = { v: 1, key, ws: pair.ws(entry.port ?? port) }
-    response.writeHead(200, {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      // The extension reads this cross-origin; Chrome sends its own origin and only
-      // exposes the body when the response allows it.
-      "access-control-allow-origin": request.headers.origin ?? "null",
+    if (request.method !== "POST") {
+      response.writeHead(405, {
+        ...cors,
+        allow: "POST, OPTIONS",
+        "content-type": "text/plain; charset=utf-8",
+      })
+      response.end("method not allowed")
+      return
+    }
+    void read(request, ExchangeBodyLimit).then((text) => {
+      // An oversized body reads as malformed: the cap is exactly the reason.
+      const parsed = text === undefined ? undefined : parseExchange(text)
+      if (parsed === undefined) {
+        response.writeHead(400, { ...cors, "content-type": "text/plain; charset=utf-8" })
+        response.end("bad request")
+        return
+      }
+      // Redeeming is what burns the token, so every refusal above leaves it usable.
+      if (!redeem(parsed)) {
+        response.writeHead(404, { ...cors, "content-type": "text/plain; charset=utf-8" })
+        response.end("not found")
+        return
+      }
+      const body: pair.KeyExchange = { v: 1, key, ws: pair.ws(entry.port ?? port) }
+      response.writeHead(200, { ...cors, "content-type": "application/json" })
+      response.end(JSON.stringify(body))
     })
-    response.end(JSON.stringify(body))
   }
   // Without this, an accept-level error (EMFILE, for example) on a long-lived hub
   // reaches no listener and becomes an uncaught exception.

@@ -8,10 +8,11 @@ import os from "os"
 import path from "path"
 import z from "zod"
 import { create as createClient, type Client } from "../../src/browser/client"
+import { encode } from "../../src/browser/frame"
 import * as pair from "../../src/browser/pair"
 import * as proto from "../../src/browser/protocol"
 import { Registry } from "../../src/browser/registry"
-import { extensionHello, until } from "./fixture"
+import { extensionHello, inbox, until } from "./fixture"
 import * as raw from "./ws"
 
 // The CLI entry from source, as `bun dev` runs it; the hub child is the real CLI.
@@ -25,6 +26,7 @@ type Runtime = {
   child: ChildProcess
   hubId: string
   key: string
+  socket: string
 }
 
 const running: Runtime[] = []
@@ -100,7 +102,7 @@ async function start(): Promise<Runtime> {
   )
   // Register the child for cleanup immediately: every await below can throw, and an
   // unregistered child keeps the test process alive and hides the real error.
-  const runtime: Runtime = { root, run, data, port: free, child, hubId: "", key: "" }
+  const runtime: Runtime = { root, run, data, port: free, child, hubId: "", key: "", socket: "" }
   running.push(runtime)
   const entry = await until(async () => (await Registry.list({ dir: path.join(run, "hubs") })).at(0), 10_000)
   const file = path.join(data, "pairing.json")
@@ -115,6 +117,7 @@ async function start(): Promise<Runtime> {
   expect(entry.socket.endsWith(".sock")).toBe(process.platform !== "win32")
   runtime.hubId = entry.hubId
   runtime.key = key
+  runtime.socket = entry.socket
   return runtime
 }
 
@@ -141,7 +144,7 @@ async function dial(runtime: Runtime, origin?: string) {
 }
 
 // Runs the handshake the extension performs and leaves the socket attached.
-async function handshake(runtime: Runtime) {
+async function handshake(runtime: Runtime, key = runtime.key) {
   const socket = await dial(runtime)
   expect(socket.status).toBe(101)
   const challenge = await message(socket, proto.Challenge)
@@ -152,11 +155,11 @@ async function handshake(runtime: Runtime) {
       type: "auth",
       hubId: runtime.hubId,
       nonceE,
-      mac: pair.extensionMac(runtime.key, challenge.nonceH, nonceE),
+      mac: pair.extensionMac(key, challenge.nonceH, nonceE),
     }),
   )
   const ok = await message(socket, proto.AuthOk)
-  expect(ok.mac).toBe(pair.hubMac(runtime.key, challenge.nonceH, nonceE))
+  expect(ok.mac).toBe(pair.hubMac(key, challenge.nonceH, nonceE))
   expect(await message(socket, proto.HubHello)).toMatchObject({ type: "hub.hello", mode: "loopback", protocol: [1] })
   return { socket, challenge, nonceE }
 }
@@ -165,6 +168,29 @@ function client(run: string) {
   const created = createClient({ dir: run, timeout: 3_000, start: () => {} })
   clients.push(created)
   return created
+}
+
+// Mints a pairing token the way the CLI does: a framed request on the per-user
+// socket. The hub answers it itself, so no browser is involved.
+async function mint(runtime: Runtime) {
+  const socket = net.createConnection(runtime.socket)
+  const connected = Promise.withResolvers<void>()
+  socket.once("connect", connected.resolve)
+  socket.once("error", connected.reject)
+  await connected.promise
+  const frames = inbox(socket)
+  socket.write(encode({ type: "rpc", message: { jsonrpc: "2.0", id: 1, method: "pairing.url", params: {} } }))
+  try {
+    for (;;) {
+      const frame = await frames.take(proto.HubToCli)
+      // The hub reports its state first; only the rpc frame is the answer.
+      if (frame.type !== "rpc") continue
+      if (!proto.isResponse(frame.message)) throw new Error("expected an rpc response")
+      return proto.HubRequests["pairing.url"].result.parse(frame.message.result)
+    }
+  } finally {
+    socket.destroy()
+  }
 }
 
 async function routed(socket: raw.Socket, method: string) {
@@ -250,6 +276,41 @@ describe("loopback hub process", () => {
     const socket = await raw.connect({ port: runtime.port, path: pair.SocketPath })
     sockets.push(socket)
     expect(socket.status).toBe(403)
+  }, 30_000)
+
+  // The whole pairing path a real extension takes: the token comes from the CLI
+  // socket, a JSON POST carries the extension's Origin, and the returned key
+  // completes the WebSocket handshake.
+  test("redeems the token over POST and pairs with the returned key", async () => {
+    const runtime = await start()
+    const origin = `chrome-extension://${proto.StoreExtensionId}`
+    const { url } = await mint(runtime)
+    const token = new URLSearchParams(new URL(url).hash.slice(1)).get("t")
+    expect(token).not.toBeNull()
+
+    const response = await fetch(`http://127.0.0.1:${runtime.port}${pair.PairingKeyPath}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin },
+      body: JSON.stringify({ t: token }),
+    })
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toBe("application/json")
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(response.headers.get("access-control-allow-origin")).toBe(origin)
+    const body = pair.KeyExchange.parse(await response.json())
+    expect(body.ws).toBe(pair.ws(runtime.port))
+    expect(pair.decode(body.key, pair.KeyBytes)).toBeDefined()
+
+    // The extension proves it holds the key it just received, not the file's copy.
+    await handshake(runtime, body.key)
+
+    // Single use: the same token is not redeemable twice.
+    const again = await fetch(`http://127.0.0.1:${runtime.port}${pair.PairingKeyPath}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin },
+      body: JSON.stringify({ t: token }),
+    })
+    expect(again.status).toBe(404)
   }, 30_000)
 
   test("refuses a bad MAC", async () => {
