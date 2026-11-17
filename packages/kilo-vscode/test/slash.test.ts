@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import type { CommandInfo, ModelRef, SkillInfo } from "@opencode/client"
 import { matchSlash, mergeCatalog, parseSlash, slashQuery, type SlashEntry } from "../webview-ui/src/v2/slash"
 import { createModelDrafts } from "../webview-ui/src/v2/model-draft"
-import { reviewScopes, slashActions } from "../webview-ui/src/v2/slash-actions"
+import { reviewScopes, slashActions, worktreeAction } from "../webview-ui/src/v2/slash-actions"
 import { createSlashCatalog } from "../webview-ui/src/v2/slash-catalog"
 import { dispatchSlash, type SlashDeps } from "../webview-ui/src/v2/slash-dispatch"
 
@@ -88,6 +88,26 @@ describe("slash actions", () => {
     ])
     expect(parseSlash(list, "/caffeinate")?.entry.name).toBe("caffeinate")
     expect(parseSlash(list, "/caffenate")?.entry.name).toBe("caffeinate")
+    const entry = list[0]
+    if (entry?.kind === "action") entry.run()
+    expect(calls).toEqual([1])
+  })
+
+  test("lists update-from-base only for a worktree that supplies the handler", () => {
+    const run = () => {}
+    expect(worktreeAction(true, run)).toBe(run)
+    expect(worktreeAction(false, run)).toBeUndefined()
+    expect(worktreeAction(undefined, run)).toBeUndefined()
+    expect(worktreeAction(true, undefined)).toBeUndefined()
+  })
+
+  test("offers update-from-base with the shared worktree action description", () => {
+    const calls: number[] = []
+    const list = slashActions({ "update-from-base": () => calls.push(1) }, (key) => `t:${key}`)
+    expect(list.map((entry) => [entry.name, entry.description, entry.hints])).toEqual([
+      ["update-from-base", "t:agentManager.updateBase.title", []],
+    ])
+    expect(parseSlash(list, "/update-from-base")?.entry.name).toBe("update-from-base")
     const entry = list[0]
     if (entry?.kind === "action") entry.run()
     expect(calls).toEqual([1])

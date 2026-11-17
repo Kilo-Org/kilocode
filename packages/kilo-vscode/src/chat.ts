@@ -628,7 +628,8 @@ export function html(input: {
     "default-src 'none'",
     `style-src 'unsafe-inline' ${input.csp}`,
     `script-src 'nonce-${nonce}'${module ? " 'strict-dynamic'" : ""} 'wasm-unsafe-eval'`,
-    `worker-src ${input.csp}`,
+    // Worker scripts must be same-origin, so the webview starts them from blob URLs of the fetched scripts.
+    `worker-src ${input.csp} blob:`,
     `font-src ${input.csp}`,
     `connect-src ${input.csp}`,
     `img-src ${input.csp} data: https:`,

@@ -262,6 +262,28 @@ export function createChatFocus(deps: {
   }
 }
 
+/**
+ * Whether the composer mounted for a context takes focus, as v1's draft change did, or a visible terminal keeps it.
+ * A side terminal remembered for the context keeps focus; a main terminal or the composer takes it.
+ */
+export function createDraftFocus(deps: {
+  key: () => string
+  memory: Map<string, FocusOwner>
+  terms: { sideKey: () => string; sidesForContext: (key: string) => { id: string }[] }
+  terminalVisible: () => boolean
+}) {
+  return () => {
+    const key = deps.key()
+    const owner = deps.memory.get(key)
+    if (!owner || owner === "prompt") return true
+    if (!deps.terms.sidesForContext(deps.terms.sideKey()).some((term) => term.id === owner.terminal)) {
+      deps.memory.delete(key)
+      return true
+    }
+    return !deps.terminalVisible()
+  }
+}
+
 export function createPromptFocus(
   terms: { setActiveId: (id: undefined) => void; setFocusedId: (id: undefined) => void },
   focus: (force?: boolean) => void,

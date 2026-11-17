@@ -172,6 +172,74 @@ describe("PRStatusPoller batched GitHub queries", () => {
     poller.stop()
   })
 
+  it("finds the PR of a detached HEAD by its SHA instead of failing the bare lookup", async () => {
+    const poller = new PRStatusPoller({
+      getWorktrees: () => [],
+      getWorkspaceRoot: () => "/repo",
+      onStatus: () => undefined,
+      log: () => undefined,
+    })
+    const calls: string[][] = []
+    const internal = poller as unknown as {
+      fetchPRForBranch: (branch: string, cwd: string) => Promise<{ number: number } | null>
+      gh: (args: string[]) => Promise<{ stdout: string; stderr: string }>
+      shell: (command: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
+    }
+    internal.shell = async () => ({ stdout: refs.headRefOid, stderr: "" })
+    internal.gh = async (args) => {
+      calls.push(args)
+      if (args.at(1) === "view" && args.at(2) === "feature") throw new Error('no pull requests found for branch "feature"')
+      // gh's message for the bare form when git has no current branch.
+      if (args.at(1) === "view") throw new Error("could not determine current branch: failed to run git: not on any branch")
+      const data = { number: 4, url: "https://github.com/example/project/pull/4", state: "OPEN", ...refs }
+      return { stdout: JSON.stringify([data]), stderr: "" }
+    }
+
+    const result = await internal.fetchPRForBranch("feature", "/repo")
+
+    expect(result?.number).toBe(4)
+    expect(calls.map((args) => args.slice(0, 3))).toEqual([
+      ["pr", "view", "feature"],
+      ["pr", "view", "--json"],
+      ["pr", "list", "--state"],
+    ])
+    poller.stop()
+  })
+
+  it("reports a failed lookup of a newly selected worktree without an unhandled rejection", async () => {
+    const statuses: unknown[][] = []
+    const reported = Promise.withResolvers<void>()
+    const poller = new PRStatusPoller({
+      getWorktrees: () => [{ id: "wt1", path: process.cwd(), branch: "feature", parentBranch: "", createdAt: "" }],
+      getWorkspaceRoot: () => "/repo",
+      onStatus: (...args) => {
+        statuses.push(args)
+        reported.resolve()
+      },
+      log: () => undefined,
+    })
+    const internal = poller as unknown as {
+      active: boolean
+      gh: (args: string[]) => Promise<{ stdout: string; stderr: string }>
+    }
+    internal.active = true
+    internal.gh = async () => {
+      throw new Error("HTTP 502: Bad Gateway")
+    }
+    const unhandled: unknown[] = []
+    const record = (reason: unknown) => unhandled.push(reason)
+    process.on("unhandledRejection", record)
+
+    poller.setActiveWorktreeId("wt1")
+    await reported.promise
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    process.off("unhandledRejection", record)
+
+    expect(statuses).toEqual([["wt1", null, "fetch_failed", "feature"]])
+    expect(unhandled).toEqual([])
+    poller.stop()
+  })
+
   it("merges reviewer avatars from the GraphQL query and caches them per login", async () => {
     const poller = new PRStatusPoller({
       getWorktrees: () => [],

@@ -2,10 +2,24 @@ import { Database as SQLite } from "bun:sqlite"
 import { afterEach, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
-import { copyFile, mkdir, mkdtemp, readdir, readFile, realpath, rm, utimes, writeFile } from "node:fs/promises"
+import {
+  chmod,
+  copyFile,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  utimes,
+  writeFile,
+} from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloDatabase } from "../src/database"
+import { copyConfig } from "../src/import/config"
 import { cutoff } from "../src/import/since"
 
 const dirs: string[] = []
@@ -504,3 +518,101 @@ async function importStore(data: string, since?: number) {
   await KiloDatabase.importV1({ store: KiloDatabase.v1Store(data), file, data, since })
   return file
 }
+
+test("an existing store gets only the v1 sessions it does not have, in the project it already lists", async () => {
+  const { dir, data } = await root()
+  const store = KiloDatabase.v1Store(data)
+  const now = Date.now()
+  await windowStore(store, path.join(dir, "work"), now)
+  const file = await importStore(data, now - 7 * 86_400_000)
+  // kilo2 changed an imported session, and knows the project under its own ID.
+  read(file, (db) => {
+    db.run("UPDATE session_v2 SET title = 'kept' WHERE id = 'ses_recent'")
+    db.run("UPDATE project SET id = 'prj_v2' WHERE id = 'prj_window'")
+    db.run("UPDATE session_v2 SET project_id = 'prj_v2' WHERE project_id = 'prj_window'")
+  })
+  expect(await KiloDatabase.mergeV1({ store, file, data })).toBe(1)
+  read(file, (db) => {
+    expect(db.query("SELECT project_id FROM session_v2 WHERE id = 'ses_unrelated'").get()).toEqual({
+      project_id: "prj_v2",
+    })
+    expect(db.query("SELECT title FROM session_v2 WHERE id = 'ses_recent'").get()).toEqual({ title: "kept" })
+    expect(db.query("SELECT count(*) AS n FROM project WHERE id = 'prj_window'").get()).toEqual({ n: 0 })
+    for (const table of ["session_v2", "session_message"])
+      expect(db.query(`PRAGMA foreign_key_check(${table})`).all()).toEqual([])
+    expect(db.query("SELECT count(*) AS n FROM event_sequence WHERE aggregate_id = 'ses_unrelated'").get()).toEqual({
+      n: 1,
+    })
+  })
+  expect(await KiloDatabase.mergeV1({ store, file, data })).toBe(0)
+  expect((await readdir(data)).filter((name) => name.includes(".import"))).toEqual([])
+  // A window without v1 activity adds nothing instead of failing, so the import can run again at any time.
+  expect(await KiloDatabase.mergeV1({ store, file, data, since: now + 86_400_000 })).toBe(0)
+})
+
+test("a private store left behind by an earlier merge is removed instead of merged", async () => {
+  const { dir, data } = await root()
+  const store = KiloDatabase.v1Store(data)
+  const now = Date.now()
+  await windowStore(store, path.join(dir, "work"), now)
+  const file = await importStore(data, now - 7 * 86_400_000)
+  // A converted store of an earlier process with this PID, holding a session that is not in v1.
+  const stale = `${file}.${process.pid}.import`
+  await copyFile(file, stale)
+  read(stale, (db) => db.run("UPDATE session_v2 SET id = 'ses_stale' WHERE id = 'ses_recent'"))
+  await writeFile(`${file}.999999999.import-wal`, "")
+  expect(await KiloDatabase.mergeV1({ store, file, data })).toBe(1)
+  read(file, (db) =>
+    expect(db.query("SELECT count(*) AS n FROM session_v2 WHERE id = 'ses_stale'").get()).toEqual({ n: 0 }),
+  )
+  expect((await readdir(data)).filter((name) => name.includes(".import"))).toEqual([])
+})
+
+test("--config copies the v1 global config without overwriting kilo2 files", async () => {
+  const { dir } = await root()
+  const from = path.join(dir, "config", "kilo")
+  const to = path.join(dir, "config", "kilo2")
+  await mkdir(path.join(from, "skills", "shared"), { recursive: true })
+  await mkdir(path.join(from, "skills", "v1-only"), { recursive: true })
+  await mkdir(path.join(from, "plugins"), { recursive: true })
+  await mkdir(path.join(to, "skills", "shared"), { recursive: true })
+  await writeFile(
+    path.join(from, "kilo.jsonc"),
+    '{\n  // v1 model\n  "model": "kilo/v1",\n  "plugin": ["v1-plugin"],\n  "plugins": ["other"]\n}',
+  )
+  await writeFile(path.join(from, "skills", "shared", "SKILL.md"), "v1")
+  await writeFile(path.join(from, "skills", "v1-only", "SKILL.md"), "v1")
+  await writeFile(path.join(from, "plugins", "plugin.ts"), "")
+  await writeFile(path.join(to, "skills", "shared", "SKILL.md"), "kilo2")
+  expect(copyConfig(from, to)).toEqual(["kilo.jsonc", "skills"])
+  const copied = await readFile(path.join(to, "kilo2.jsonc"), "utf8")
+  expect(copied).toContain("// v1 model")
+  expect(copied).toContain('"model": "kilo/v1"')
+  expect(copied).not.toContain("plugin")
+  // The v1 file stays as it is.
+  expect(await readFile(path.join(from, "kilo.jsonc"), "utf8")).toContain("v1-plugin")
+  expect(await readFile(path.join(to, "skills", "shared", "SKILL.md"), "utf8")).toBe("kilo2")
+  expect(await readFile(path.join(to, "skills", "v1-only", "SKILL.md"), "utf8")).toBe("v1")
+  expect(existsSync(path.join(to, "plugins"))).toBe(false)
+  // A symlinked, read-only v1 config is read, never written through, and the copy is a writable file of its own.
+  const dotfiles = path.join(dir, "dotfiles")
+  await mkdir(dotfiles)
+  await writeFile(path.join(dotfiles, "kilo.json"), '{ "plugin": ["v1-plugin"] }')
+  await chmod(path.join(dotfiles, "kilo.json"), 0o444)
+  const linked = path.join(dir, "config", "linked")
+  await mkdir(linked)
+  // Windows needs a privilege to create a symlink, so the read-only file is linked only elsewhere.
+  if (process.platform === "win32") await copyFile(path.join(dotfiles, "kilo.json"), path.join(linked, "kilo.json"))
+  else await symlink(path.join(dotfiles, "kilo.json"), path.join(linked, "kilo.json"))
+  const fresh = path.join(dir, "config", "fresh")
+  expect(copyConfig(linked, fresh)).toEqual(["kilo.json"])
+  expect(await readFile(path.join(dotfiles, "kilo.json"), "utf8")).toContain("v1-plugin")
+  expect((await lstat(path.join(fresh, "kilo2.json"))).isSymbolicLink()).toBe(false)
+  expect(await readFile(path.join(fresh, "kilo2.json"), "utf8")).not.toContain("plugin")
+  await chmod(path.join(dotfiles, "kilo.json"), 0o644)
+  // Once kilo2 has its own config file, the v1 file stays out.
+  await rm(path.join(to, "kilo2.jsonc"))
+  await writeFile(path.join(to, "kilo2.json"), "{}")
+  expect(copyConfig(from, to)).toEqual(["skills"])
+  expect(existsSync(path.join(to, "kilo2.jsonc"))).toBe(false)
+})

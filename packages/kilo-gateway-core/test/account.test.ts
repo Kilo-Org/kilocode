@@ -1,4 +1,8 @@
 import { expect, test } from "bun:test"
+import { mkdtemp, rm } from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
+import { Effect } from "effect"
 import { KiloAccount, KiloHeaders, KiloServer } from "../src/index.js"
 
 test("normalizes the server and resolves KILO_API_URL and KILO_AI_GATEWAY_URL like main", () => {
@@ -99,6 +103,36 @@ test("reads API and OAuth auth content with team or explicit personal selection"
       KILO_AUTH_CONTENT: JSON.stringify({ kilo: { type: "oauth", key: "", access: "oauth-token", accountId: null } }),
     }),
   ).toEqual({ token: "oauth-token", organizationID: null })
+})
+
+test("reads the team of the Kilo v1 login beside the kilo2 data directory without changing it", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "kilo-v1-login-"))
+  try {
+    const data = path.join(root, "kilo2")
+    const file = path.join(root, "kilo", "auth.json")
+    const read = async (content?: unknown) => {
+      if (content !== undefined) await Bun.write(file, typeof content === "string" ? content : JSON.stringify(content))
+      const result = await Effect.runPromise(KiloAccount.v1Organization(data))
+      if (content !== undefined)
+        expect(await Bun.file(file).text()).toBe(typeof content === "string" ? content : JSON.stringify(content))
+      return result
+    }
+    const oauth = { type: "oauth", access: "v1-token", refresh: "v1-token", expires: 1 }
+    expect(await read()).toBeUndefined()
+    expect(await read({ kilo: { ...oauth, accountId: "team" } })).toBe("team")
+    // An OAuth login without a team is on the personal account.
+    expect(await read({ kilo: oauth })).toBeNull()
+    expect(await read({ kilo: { ...oauth, accountId: null } })).toBeNull()
+    expect(await read({ kilo: { type: "api", key: "v1-key" } })).toBeUndefined()
+    expect(await read({ kilo: { ...oauth, access: "", accountId: "team" } })).toBeUndefined()
+    expect(await read({ openai: oauth })).toBeUndefined()
+    expect(await read("not json")).toBeUndefined()
+    // Once the release renames the kilo2 directory to `kilo`, the login is the one in the data directory itself.
+    await Bun.write(file, JSON.stringify({ kilo: { ...oauth, accountId: "team" } }))
+    expect(await Effect.runPromise(KiloAccount.v1Organization(path.join(root, "kilo")))).toBe("team")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 })
 
 test("resolves the account server and team in v1 order", () => {
