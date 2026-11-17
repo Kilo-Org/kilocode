@@ -24,6 +24,7 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.speech.SpeechCapture
 import ai.kilocode.client.test.CopyProviderSink
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.ui.LiveBadgeIcon
 import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -1916,7 +1917,9 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         speech.doClick()
         waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
-        assertNotSame(idleIcon, speech.icon)
+        val recording = speech.icon
+        assertTrue(recording is LiveBadgeIcon)
+        assertSame(AllIcons.CodeWithMe.CwmMicOn, (recording as LiveBadgeIcon).icon)
         speech.doClick()
         waitForSend { panel.text() == "keep dictated prompt keep" }
         assertSame(idleIcon, speech.icon)
