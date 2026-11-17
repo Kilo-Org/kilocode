@@ -31149,6 +31149,9 @@
             "$ref": "#/components/schemas/EventKilocodeAgent_managerCancelled"
           },
           {
+            "$ref": "#/components/schemas/EventBrowserUnavailable"
+          },
+          {
             "$ref": "#/components/schemas/EventKilocodeNotebookRequested"
           },
           {
@@ -34293,6 +34296,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventKilocodeAgent_managerCancelled"
+              },
+              {
+                "$ref": "#/components/schemas/EventBrowserUnavailable"
               },
               {
                 "$ref": "#/components/schemas/EventKilocodeNotebookRequested"
@@ -38988,6 +38994,26 @@
           "indexing": {
             "$ref": "#/components/schemas/IndexingConfig"
           },
+          "browser": {
+            "type": "object",
+            "properties": {
+              "backend": {
+                "type": "string",
+                "enum": ["playwright", "extension", "off"]
+              },
+              "observation": {
+                "type": "string",
+                "enum": ["full", "diff", "none"]
+              },
+              "allowSensitive": {
+                "type": "boolean"
+              },
+              "target": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
           "console": {
             "type": "object",
             "properties": {
@@ -39389,6 +39415,9 @@
                 "type": "string"
               },
               "native_notebook_tools": {
+                "type": "boolean"
+              },
+              "browser_extension": {
                 "type": "boolean"
               },
               "glob_include_ignored": {
@@ -49505,6 +49534,37 @@
               }
             },
             "required": ["requestID", "sessionID", "reason"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventBrowserUnavailable": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["browser.unavailable"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "backend": {
+                "type": "string",
+                "enum": ["playwright", "extension"]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "hint": {
+                "type": "string"
+              }
+            },
+            "required": ["backend", "reason", "hint"],
             "additionalProperties": false
           }
         },
