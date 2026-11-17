@@ -3,9 +3,9 @@ import { Effect, Fiber } from "effect"
 import { KiloDevice } from "../src/index.js"
 import { fixture } from "../src/testing.js"
 
-const login = (url: string) =>
+const login = (url: string, preferred?: string | null) =>
   Effect.runPromise(
-    KiloDevice.start(url).pipe(Effect.flatMap((code) => KiloDevice.login(url, code, 1))),
+    KiloDevice.start(url).pipe(Effect.flatMap((code) => KiloDevice.login(url, code, { intervalMs: 1, preferred }))),
   )
 
 test("logs in with the device protocol and selects the backend team", async () => {
@@ -21,6 +21,25 @@ test("logs in with the device protocol and selects the backend team", async () =
     { method: "GET", path: "/api/device-auth/codes/ABCD-1234", authorization: null },
     { method: "GET", path: "/api/profile", authorization: "Bearer fixture-token" },
   ])
+})
+
+test("keeps a preferred team or Personal that the profile allows, and the backend team otherwise", async () => {
+  using backend = fixture()
+  expect((await login(backend.url, "first")).organizationID).toBe("first")
+  expect((await login(backend.url, null)).organizationID).toBeNull()
+  expect((await login(backend.url, "missing")).organizationID).toBe("selected")
+  backend.state.profile = {
+    organizations: [
+      { id: "first", name: "First" },
+      { id: "selected", name: "Selected" },
+    ],
+    selectedOrganizationId: "selected",
+    hasPersonalAccount: false,
+  }
+  expect((await login(backend.url, null)).organizationID).toBe("selected")
+  // Without a profile the login stays on the personal account, whatever the preferred team.
+  backend.state.profileStatus = 500
+  expect((await login(backend.url, "first")).organizationID).toBeNull()
 })
 
 test("starts on the personal account when the profile request fails", async () => {
@@ -82,7 +101,9 @@ test("stops polling when interrupted", async () => {
   await Effect.runPromise(
     Effect.gen(function* () {
       const code = yield* KiloDevice.start(backend.url)
-      const fiber = yield* KiloDevice.login(backend.url, code, 1).pipe(Effect.forkScoped({ startImmediately: true }))
+      const fiber = yield* KiloDevice.login(backend.url, code, { intervalMs: 1 }).pipe(
+        Effect.forkScoped({ startImmediately: true }),
+      )
       // Wait for real polling instead of a fixed time: a loaded CI runner can poll less often than the interval.
       // The deadline fails fast with the observed count, and the scope then interrupts the polling fiber.
       const deadline = Date.now() + 2_000
