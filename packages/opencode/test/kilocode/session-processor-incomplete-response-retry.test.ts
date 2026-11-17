@@ -103,15 +103,15 @@ function success() {
   ]
 }
 
-function reasoning() {
+function reasoning(reason: "unknown" | "other" = "unknown") {
   const usage = new Usage({ outputTokens: 8, reasoningTokens: 8, totalTokens: 8 })
   return [
     LLMEvent.stepStart({ index: 0 }),
     LLMEvent.reasoningStart({ id: "reasoning" }),
     LLMEvent.reasoningDelta({ id: "reasoning", text: "Investigating the problem" }),
     LLMEvent.reasoningEnd({ id: "reasoning" }),
-    LLMEvent.stepFinish({ index: 0, reason: "unknown", usage }),
-    LLMEvent.finish({ reason: "unknown", usage }),
+    LLMEvent.stepFinish({ index: 0, reason, usage }),
+    LLMEvent.finish({ reason, usage }),
   ]
 }
 
@@ -190,9 +190,7 @@ const env = (event = false) =>
   LayerNode.compile(root, [
     [LLM.node, llmNode],
     [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: event })],
-  ]).pipe(
-    Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, Bus.layer, SyncEvent.defaultLayer, reference)),
-  )
+  ]).pipe(Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, Bus.layer, SyncEvent.defaultLayer, reference)))
 
 const it = testEffect(env())
 const eventIt = testEffect(env(true))
@@ -347,6 +345,31 @@ describe("session processor incomplete response retry", () => {
     ),
   )
 
+  it.effect("retries reasoning-only responses truncated without a finish reason", () =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          const ctx = yield* setup(dir)
+          yield* ctx.test.reply(...reasoning("other"))
+          yield* ctx.test.reply(...success())
+          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+
+          try {
+            expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
+          } finally {
+            delay.mockRestore()
+          }
+
+          expect(yield* ctx.test.calls).toBe(2)
+          expect(ctx.handle.message.finish).toBe("stop")
+          const parts = yield* MessageV2.parts(ctx.msg.id)
+          expect(parts.some((part) => part.type === "reasoning")).toBe(false)
+          expect(parts.find((part) => part.type === "text")?.text).toBe("Recovered")
+        }),
+      { git: true },
+    ),
+  )
+
   it.effect("bounds reasoning-only unknown retries", () =>
     provideTmpdirProject(
       (dir) =>
@@ -406,7 +429,7 @@ describe("session processor incomplete response retry", () => {
           yield* ctx.test.reply(
             LLMEvent.stepStart({ index: 0 }),
             LLMEvent.toolInputStart({ id: "call", name: "write" }),
-            LLMEvent.toolInputDelta({ id: "call", name: "write", text: "{\"path\":" }),
+            LLMEvent.toolInputDelta({ id: "call", name: "write", text: '{"path":' }),
           )
           yield* ctx.test.reply(...success())
           const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)

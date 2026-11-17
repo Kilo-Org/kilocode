@@ -230,7 +230,10 @@ export namespace KiloSessionProcessor {
 
   // Dynamic import: app-runtime depends on this module, so a static import would
   // be circular; the annotated return type keeps the AppLayer type graph acyclic.
-  async function providerBaseURL(id: ProviderV2.ID | undefined, apiUrl: string | undefined): Promise<string | undefined> {
+  async function providerBaseURL(
+    id: ProviderV2.ID | undefined,
+    apiUrl: string | undefined,
+  ): Promise<string | undefined> {
     const url = (id ? await configured(id) : undefined) ?? apiUrl
     if (!url) return url
     // varsLoaders vars from resolveSDK are unreachable here; unexpanded names
@@ -449,7 +452,12 @@ export namespace KiloSessionProcessor {
     tool: boolean
     usage: boolean
   }) {
-    if (input.finish !== undefined && input.finish !== "unknown") return false
+    // The AI SDK reports "other" when an OpenAI-compatible stream ends without a
+    // finish_reason (truncated stream). With only reasoning emitted it is as
+    // incomplete as "unknown", so it shares the bounded recovery budget (#13062).
+    const open =
+      input.finish === undefined || input.finish === "unknown" || (input.finish === "other" && input.reasoning)
+    if (!open) return false
     if (input.text || input.tool) return false
     // Reasoning without text or tools has no actionable output. Retry it through
     // the existing bounded recovery budget instead of silently settling unknown.
