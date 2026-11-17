@@ -133,6 +133,43 @@ describe("shell permission scanner fails closed on unparsed commands", () => {
     expect(found.length).toBe(2)
   })
 
+  test("pwsh: a dot-prefixed argument after -- or a comma stays on its command (#15938)", async () => {
+    await using tmp = await tmpdir()
+    const commands = [
+      "Write-Output -- .agents/README.md",
+      "Write-Output -- .venv/Scripts/python.exe --version",
+      "git ls-files -- README.md .agents/README.md",
+      "Get-FileHash -LiteralPath package.json, .gitattributes",
+      "Write-Output x, .venv/Scripts/python.exe --version",
+      "git push origin -- .foo -f",
+      "Remove-Item -- .foo/../x",
+      "Write-Output -- .agents/README.md | Out-String",
+    ]
+    for (const command of commands) {
+      expect(patterns(await scan(tmp.path, command, "pwsh"))).toEqual([command])
+    }
+  })
+
+  test("pwsh: a dot-prefixed argument does not swallow the next statement (#15938)", async () => {
+    await using tmp = await tmpdir()
+    const found = patterns(await scan(tmp.path, "Write-Output -- .agents/README.md; Get-ChildItem", "pwsh"))
+    expect(found).toContain("Write-Output -- .agents/README.md")
+    expect(found).toContain("Get-ChildItem")
+    expect(found.some((pattern) => pattern === ".agents/README.md")).toBe(false)
+
+    const sourced = patterns(await scan(tmp.path, "Write-Output -- .agents/README.md; . ./script.ps1", "pwsh"))
+    expect(sourced).toContain("Write-Output -- .agents/README.md")
+    expect(sourced.some((pattern) => pattern.includes("./script.ps1"))).toBe(true)
+
+    const lines = patterns(await scan(tmp.path, "Write-Output hello\n.agents/foo", "pwsh"))
+    expect(lines).toContain("Write-Output hello")
+    expect(lines).toContain(".agents/foo")
+
+    const separated = patterns(await scan(tmp.path, "Write-Output hello; .agents/foo", "pwsh"))
+    expect(separated).toContain("Write-Output hello")
+    expect(separated).toContain(".agents/foo")
+  })
+
   test("pwsh: whitespace stays silent, comment-only input is checked instead of trusted", async () => {
     await using tmp = await tmpdir()
     expect(patterns(await scan(tmp.path, "   ", "pwsh"))).toEqual([])

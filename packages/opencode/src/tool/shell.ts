@@ -22,6 +22,7 @@ import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
 import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
+import { commandKey, fold, withoutCovered } from "@/kilocode/tool/shell-folded" // kilocode_change
 import { pattern } from "@/kilocode/tool/shell-pattern" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -381,7 +382,10 @@ export const ShellPermission = Effect.gen(function* () {
     }
     const kind = ShellID.toKind(Shell.name(shell))
 
-    const nodes = commands(root)
+    // kilocode_change start - a dot-prefixed argument after -- or a comma is one command (#15938)
+    const absorbed = ps ? fold(root) : undefined
+    const nodes = commands(root).filter((node) => !absorbed?.skip.has(commandKey(node)))
+    // kilocode_change end
     if (root.descendantsOfType("file_redirect").length > 0) scan.access = "unknown"
     if (nodes.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
       scan.access = "unknown"
@@ -410,12 +414,11 @@ export const ShellPermission = Effect.gen(function* () {
       }
     }
 
-    // kilocode_change start - fail closed on commands the grammar failed to parse (#12326)
-    const lost = unparsed(root, nodes.length)
-    if (lost.length > 0) scan.access = "unknown"
-    for (const pattern of lost) {
-      scan.patterns.add(pattern)
-    }
+    // kilocode_change start - fail closed on commands the grammar failed to parse (#12326, #15938)
+    const lost = withoutCovered(root, unparsed(root, commands(root).length), absorbed?.covers ?? [])
+    if (lost.length > 0 || (absorbed?.patterns.length ?? 0) > 0) scan.access = "unknown"
+    for (const text of absorbed?.patterns ?? []) scan.patterns.add(text)
+    for (const text of lost) scan.patterns.add(text)
     // kilocode_change end
 
     return scan
@@ -434,7 +437,9 @@ export const ShellPermission = Effect.gen(function* () {
           scan.access = "unknown"
         }
         yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
-        const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
+        const gitMutation =
+          commands(tree.rootNode).some((node) => mutatesGit(node.text)) ||
+          (ps && fold(tree.rootNode).patterns.some((text) => mutatesGit(text))) // kilocode_change - #15938
         if (input.escalate && gitMutation) {
           yield* ctx.ask({
             permission: "sandbox_escalation", // kilocode_change
