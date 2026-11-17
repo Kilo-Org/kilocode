@@ -404,6 +404,18 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(state.getWorktrees()).toHaveLength(0)
   })
 
+  it("does not report a failure when the worktree had no checkpoint data", async () => {
+    client.rpc = () => ({ removeSnapshot: mock(async () => ({ removed: false })) })
+    const notify = mock(host.notify)
+    host.notify = notify
+
+    await deleteWorktree()
+    await new Promise((resolve) => setImmediate(resolve))
+
+    expect(notify).not.toHaveBeenCalled()
+    expect(state.getWorktrees()).toHaveLength(0)
+  })
+
   it("completes the deletion and reports when session relocation fails", async () => {
     state.addSession("retained", state.getWorktrees()[0]!.id)
     client.session.move.mockRejectedValue(new Error("move failed"))
