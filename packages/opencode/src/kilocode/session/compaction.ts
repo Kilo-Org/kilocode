@@ -14,19 +14,16 @@ const sameModel = (
 
 export namespace KiloSessionCompaction {
   /**
-   * The compaction marker that is written but not yet started. Only messages after the last
-   * finished assistant count (the same window the prompt loop reads tasks from), and a marker
-   * whose summary assistant already exists has started or finished.
+   * The compaction marker that is written but not yet started: it sits after every assistant message, finished or not.
+   * An assistant after the marker is either its summary (started) or a reply that was created after the marker. That
+   * reply finishing moves the prompt loop's task window past the marker, so the marker is stranded and never runs.
+   * Markers written while an assistant is mid turn come after that assistant and stay pending.
    */
   export function pending(msgs: MessageV2.WithParts[]) {
-    const pivot = msgs.findLastIndex((msg) => msg.info.role === "assistant" && !!msg.info.finish)
-    const tail = msgs.slice(pivot + 1)
-    return tail.findLast(
-      (msg) =>
-        msg.info.role === "user" &&
-        msg.parts.some((part) => part.type === "compaction") &&
-        !tail.some((other) => other.info.role === "assistant" && other.info.parentID === msg.info.id),
-    )
+    const last = msgs.findLastIndex((msg) => msg.info.role === "assistant")
+    return msgs
+      .slice(last + 1)
+      .findLast((msg) => msg.info.role === "user" && msg.parts.some((part) => part.type === "compaction"))
   }
 
   /**

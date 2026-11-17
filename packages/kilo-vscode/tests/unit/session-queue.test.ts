@@ -731,12 +731,25 @@ describe("queuedCompaction", () => {
     expect(queuedCompaction(messages)?.id).toBe("c1")
   })
 
-  it("uses only a truthy finish as the pivot", () => {
+  it("does not report a marker stranded before an assistant that is not its summary", () => {
+    const stranded = [user("u1"), compact("c1"), assistant("a1", "u1")]
+    expect(queuedCompaction(stranded)).toBeUndefined()
+    expect(queuedCompaction([...stranded, compact("c2")])?.id).toBe("c2")
+  })
+
+  it.each([
+    ["unfinished", {}],
+    ["finished", { finish: "stop" }],
+  ])("reports a marker written after a %s assistant", (_name, opts) => {
+    expect(queuedCompaction([user("u1"), assistant("a1", "u1", opts), compact("c1")])?.id).toBe("c1")
+  })
+
+  it("treats a failed assistant after the marker as stranding it", () => {
     const failed = assistant("a1", "u1", {
       error: { name: "UnknownError", data: { message: "x" } },
       time: { created: 1, completed: 2 },
     })
     expect(queuedCompaction([user("u1"), compact("c0"), failed, compact("c1")])?.id).toBe("c1")
-    expect(queuedCompaction([user("u1"), compact("c0"), failed])?.id).toBe("c0")
+    expect(queuedCompaction([user("u1"), compact("c0"), failed])).toBeUndefined()
   })
 })

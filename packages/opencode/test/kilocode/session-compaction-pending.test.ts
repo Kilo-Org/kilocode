@@ -247,4 +247,97 @@ describe("pending compaction marker", () => {
       expect(visible).toContain(marker)
     }),
   )
+
+  // A /compact that lands after runLoop snapshots messages but before it inserts the next assistant leaves the marker
+  // ahead of that assistant. When it finishes the task window moves past the marker, so the marker never runs.
+  for (const [name, finish] of [
+    ["unfinished", undefined],
+    ["finished", "stop"],
+  ] as const) {
+    it.instance(
+      `a repeat after a marker stranded before a ${name} assistant writes a fresh marker`,
+      Effect.gen(function* () {
+        yield* seedProject
+        const sessions = yield* Session.Service
+        const compaction = yield* SessionCompaction.Service
+        const test = yield* TestInstance
+        const session = yield* sessions.create({})
+        const input = { sessionID: session.id, agent: "code", model: ref, auto: false }
+        const user = yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "user",
+          model: ref,
+          sessionID: session.id,
+          agent: "code",
+          time: { created: Date.now() },
+        })
+
+        yield* compaction.create(input)
+        const stranded = (yield* markers(sessions, session.id))[0].info.id
+        yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          sessionID: session.id,
+          parentID: user.id,
+          role: "assistant",
+          agent: "code",
+          mode: "code",
+          modelID: model.id,
+          providerID: model.providerID,
+          path: { cwd: test.directory, root: test.directory },
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          time: { created: Date.now() },
+          finish,
+        })
+        expect(KiloSessionCompaction.pending(yield* sessions.messages({ sessionID: session.id }))).toBeUndefined()
+
+        yield* compaction.create(input)
+        const found = yield* markers(sessions, session.id)
+        expect(found).toHaveLength(2)
+        expect(KiloSessionCompaction.pending(yield* sessions.messages({ sessionID: session.id }))?.info.id).toBe(
+          found[1].info.id,
+        )
+        expect(found[1].info.id).not.toBe(stranded)
+      }),
+    )
+  }
+
+  it.instance(
+    "a repeat still dedupes when the running assistant was created before the marker",
+    Effect.gen(function* () {
+      yield* seedProject
+      const sessions = yield* Session.Service
+      const compaction = yield* SessionCompaction.Service
+      const test = yield* TestInstance
+      const session = yield* sessions.create({})
+      const input = { sessionID: session.id, agent: "code", model: ref, auto: false }
+      const user = yield* sessions.updateMessage({
+        id: MessageID.ascending(),
+        role: "user",
+        model: ref,
+        sessionID: session.id,
+        agent: "code",
+        time: { created: Date.now() },
+      })
+      yield* sessions.updateMessage({
+        id: MessageID.ascending(),
+        sessionID: session.id,
+        parentID: user.id,
+        role: "assistant",
+        agent: "code",
+        mode: "code",
+        modelID: model.id,
+        providerID: model.providerID,
+        path: { cwd: test.directory, root: test.directory },
+        cost: 0,
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { created: Date.now() },
+      })
+
+      yield* compaction.create(input)
+      yield* compaction.create(input)
+
+      expect(yield* markers(sessions, session.id)).toHaveLength(1)
+    }),
+  )
 })
