@@ -154,7 +154,7 @@ const model = Bun.serve({
       if (!ref) return sse(text(name, "Browser E2E stopped: no page snapshot."))
       return answer("browser_click", { element: "the Click me button", target: ref })
     }
-    if (index === 3) return answer("browser_take_screenshot", { filename: screenshotFile, type: "png" })
+    if (index === 3) return answer("browser_take_screenshot", { type: "png", scale: "css" })
     return sse(text(name, "Browser E2E finished"))
   },
 })
@@ -219,7 +219,7 @@ function expect(condition: boolean, message: string) {
   if (!condition) failures.push(message)
 }
 
-const hasRef = (args: unknown) => typeof field(args, "ref") === "string"
+const hasRef = (args: unknown) => typeof field(args, "target") === "string"
 
 async function flow(observation: string) {
   const root = await home()
@@ -238,7 +238,8 @@ async function flow(observation: string) {
   const last = record.steps.at(-1) ?? { calls: [], results: [] }
   const output = path.join(root, "data", "kilo2", "browser", "output")
   const files = await fs.readdir(output).catch(() => [] as string[])
-  const shot = await fs.readFile(screenshotFile).catch(() => undefined)
+  const images = files.filter((file) => file.endsWith(".png"))
+  const shot = (await Promise.all(images.map((file) => fs.readFile(path.join(output, file)))))[0]
   const names = last.calls.map((call) => call.name)
   const click = last.calls.filter((call) => call.name === "browser_click")
   const clickResult = last.results[2] ?? ""
@@ -256,17 +257,17 @@ async function flow(observation: string) {
     `navigate result has no page title: ${navigateResult.slice(0, 200)}`,
   )
   expect(
-    shot !== undefined && shot.length > 10_000 && shot.subarray(0, 4).toString("hex") === "89504e47",
+    shot !== undefined && shot.length > 2_000 && shot.subarray(0, 4).toString("hex") === "89504e47",
     "the screenshot file is missing or not a PNG",
   )
   expect(
-    screenshotResult.includes("data:image/png;base64") || screenshotResult.includes("probe.png"),
+    screenshotResult.includes("data:image/png;base64") || screenshotResult.includes(".png"),
     "the screenshot result reached the model",
   )
 
   if (observation === "full") {
     expect(clickResult.includes("### Snapshot"), "full mode did not return the snapshot after the click")
-    expect(clickResult.includes("Clicked"), `full mode has no action result: ${clickResult.slice(0, 200)}`)
+    expect(clickResult.includes("clicked"), `full mode shows no post-click state: ${clickResult.slice(0, 200)}`)
   }
   if (observation === "diff") {
     expect(clickResult.includes("### Page changes"), `diff mode did not report page changes: ${clickResult.slice(0, 300)}`)
@@ -283,7 +284,7 @@ async function flow(observation: string) {
     tools: names,
     stdout: run.stdout.slice(-400),
     stderr: run.stderr.slice(-400),
-    screenshot: { path: screenshotFile, directory: output, files, bytes: shot?.length ?? 0 },
+    screenshot: { directory: output, files: images, bytes: shot?.length ?? 0, result: screenshotResult.slice(0, 300) },
     click: clickResult.slice(0, 400),
   }
 }

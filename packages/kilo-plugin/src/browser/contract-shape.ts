@@ -78,3 +78,4 @@ export function entries(value: unknown): Entry[] {
 export function hash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex")
 }
+
