@@ -599,7 +599,7 @@ it.live(
           const wantsTool = !toolIssued && request.tools.some((tool) => tool.name === "shell")
           if (!wantsTool) return TestLLM.text("done", "answer")
           toolIssued = true
-          return TestLLM.toolCall("call-shell", "shell", { command: "echo hi" })
+          return TestLLM.toolCall("call-shell", "shell", { description: "Prints hi", command: "echo hi" }) // kilocode_change
         })
         const models = Layer.mock(SessionRunnerModel.Service, {
           resolve: () =>

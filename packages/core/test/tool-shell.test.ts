@@ -834,9 +834,11 @@ describe("ShellTool", () => {
             }),
           )
           const command = isWindows ? helloCommand : `${helloCommand}; sleep 0.1`
+          // kilocode_change start - the shell description is required
           const inputs = ["one", "two"].map((text) =>
-            JSON.stringify({ description: `Prints ${text}`, command: command.replace("hello", text) }), // kilocode_change
+            JSON.stringify({ description: `Prints ${text}`, command: command.replace("hello", text) }),
           )
+          // kilocode_change end
           const result = yield* executeTool(registry, {
             sessionID,
             ...toolIdentity,
