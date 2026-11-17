@@ -68,8 +68,9 @@ export function createProjectHydration(opts: {
   }
 
   const hydrate = ((state: AgentManagerStateMessage) => {
-    const switched = opts.switch(state)
+    let switched: "first" | "switched" | "same" = "same"
     batch(() => {
+      switched = opts.switch(state)
       opts.restricted(state.restricted === true)
       if (state.isGitRepo !== undefined) opts.repo(state.isGitRepo)
       opts.loaded()
