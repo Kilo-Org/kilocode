@@ -12,6 +12,8 @@ export type CreateWorktreeOnDiskOptions = {
   existingBranch?: string
   name?: string
   label?: string
+  /** Quick-create marker, echoed on setup messages so the webview can replace the transient overlay. */
+  requestId?: string
   onError?: (failure: WorktreeCreationFailure) => void
 }
 
@@ -50,6 +52,7 @@ export async function createWorktreeOnDisk(
 ): Promise<CreateWorktreeOnDiskResult | null> {
   const manager = ctx.getWorktreeManager()
   const state = ctx.getStateManager()
+  const requestId = opts?.requestId
   if (!manager || !state) {
     const message = "Open a folder that contains a git repository to use worktrees"
     report(opts, { message, code: "not_git_repo" })
@@ -58,11 +61,17 @@ export async function createWorktreeOnDisk(
       status: "error",
       message,
       errorCode: "not_git_repo",
+      requestId,
     })
     return null
   }
 
-  ctx.postToWebview({ type: "agentManager.worktreeSetup", status: "creating", message: "Creating git worktree..." })
+  ctx.postToWebview({
+    type: "agentManager.worktreeSetup",
+    status: "creating",
+    message: "Creating git worktree...",
+    requestId,
+  })
 
   // Resolve effective base branch using configured default
   const effectiveBase = opts?.existingBranch
@@ -92,6 +101,7 @@ export async function createWorktreeOnDisk(
       status: "error",
       message: msg,
       errorCode,
+      requestId,
     })
     return null
   }
@@ -114,6 +124,7 @@ export async function createWorktreeOnDisk(
     message: "Setting up worktree...",
     branch: result.branch,
     worktreeId: worktree.id,
+    requestId,
   })
 
   return { worktree, result }

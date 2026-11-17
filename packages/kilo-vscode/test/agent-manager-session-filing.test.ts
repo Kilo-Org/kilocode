@@ -4,7 +4,7 @@ import * as os from "node:os"
 import * as path from "node:path"
 import type { SessionInfo } from "@opencode/client"
 import { ProjectContext } from "../src/agent-manager/project/context"
-import { pushProjectSessions } from "../src/agent-manager/project/init"
+import { pushProjectSessions, repairSessionFilings } from "../src/agent-manager/project/init"
 import type { AgentManagerOutMessage } from "../src/agent-manager/types"
 import { WorktreeStateManager } from "../src/agent-manager/WorktreeStateManager"
 
@@ -124,5 +124,34 @@ describe("Agent Manager session filing", () => {
 
     expect(state.getSession("one-run")?.worktreeId).toBe(first.id)
     expect(repairs).toBe(0)
+  })
+
+  it("repairs a filing from the full listing, not just the sidebar window", async () => {
+    const first = state.addWorktree({ branch: "one", path: one, parentBranch: "main" })
+    const second = state.addWorktree({ branch: "two", path: two, parentBranch: "main" })
+    state.addSession("older", second.id)
+
+    const changed = await repairSessionFilings(
+      ctx,
+      async (directory) => (directory === one ? [info("older", one)] : []),
+      () => undefined,
+    )
+
+    expect(changed).toBe(true)
+    expect(state.getSession("older")?.worktreeId).toBe(first.id)
+  })
+
+  it("keeps a Local filing when the full listing sees a session that runs in a worktree", async () => {
+    state.addWorktree({ branch: "one", path: one, parentBranch: "main" })
+    state.addSession("local-choice", null)
+
+    const changed = await repairSessionFilings(
+      ctx,
+      async (directory) => (directory === one ? [info("local-choice", one)] : []),
+      () => undefined,
+    )
+
+    expect(changed).toBe(false)
+    expect(state.getSession("local-choice")?.worktreeId).toBeNull()
   })
 })

@@ -430,6 +430,27 @@ describe("WorktreeStateManager", () => {
       expect(manager.getSession("sess-stopped")).toBeUndefined()
       expect(manager.isSessionClosed("sess-stopped")).toBe(true)
     })
+
+    it("does not pull a session the user moved to Local back under the worktree on every start", () => {
+      const wt = manager.addWorktree({ branch: "fix-recovered", path: "/tmp/recovered", parentBranch: "main" })
+      manager.addSession("sess-moved", null)
+      manager.setTabOrder("local", ["sess-moved"])
+      const result = restoreWorktrees(manager, [
+        {
+          branch: "fix-recovered",
+          path: "/tmp/recovered",
+          parentBranch: "main",
+          createdAt: Date.UTC(2026, 0, 1),
+          sessionId: "sess-moved",
+        },
+      ])
+
+      // The worktree's git metadata still names its first session, but the filing matches the server root now.
+      expect(result).toEqual({ worktrees: 0, sessions: 0 })
+      expect(manager.getSession("sess-moved")?.worktreeId).toBeNull()
+      expect(manager.getTabOrder()["local"]).toEqual(["sess-moved"])
+      expect(manager.getWorktree(wt.id)).toBeDefined()
+    })
   })
 
   describe("tab order", () => {

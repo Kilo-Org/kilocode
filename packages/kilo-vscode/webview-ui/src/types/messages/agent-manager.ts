@@ -273,6 +273,8 @@ export interface AgentManagerWorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
   /** Owning project; absent in single-project mode. */
   projectId?: string
+  /** Quick-create request this message belongs to, when it reports one. */
+  requestId?: string
   status: "creating" | "starting" | "ready" | "error"
   message: string
   sessionId?: string
@@ -514,6 +516,8 @@ export interface AgentManagerBranchesMessage {
   projectId?: string
   branches: BranchInfo[]
   defaultBranch: string
+  /** Why there are no branches: the folder is not a repository or its repository has no commits. */
+  errorCode?: "not_git_repo" | "no_commits"
 }
 
 /** Import tab result feedback. */
@@ -863,6 +867,8 @@ export interface CreateWorktreeRequest {
   baseBranch?: string
   branchName?: string
   variant?: string
+  /** Quick-create marker echoed on setup messages so a blocker can replace the transient overlay. */
+  requestId?: string
 }
 
 /** Delete a worktree and dissociate its sessions. */

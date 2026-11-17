@@ -130,6 +130,10 @@ export interface SessionCatalogHost {
   list(directory: string): Promise<SessionInfo[]>
   /** One backend session, for create events that carry no full record. */
   get(sessionID: string): Promise<SessionInfo | undefined>
+  /** One backend session list without the sidebar window, for the one-time filing repair. */
+  listAll(directory: string): Promise<SessionInfo[]>
+  /** File a session under the context that now runs it, after a move the server applied late. */
+  moved(sessionID: string, directory: string): void
   /** Post one message to the webview. */
   post(message: AgentManagerOutMessage): void
   /** Report one catalog failure to the output channel. */
@@ -206,6 +210,34 @@ export async function collectProjectSessions(
   }
   if (moved.length > 0) log(`Agent Manager: filed sessions under the worktree they run in: ${moved.join(", ")}`)
   return { views, moved }
+}
+
+/**
+ * Repair filings from the server directory once per context lifetime. The sidebar catalog lists only its newest
+ * window, so a session moved out of that window would keep a stale filing forever. Moves that land after a request
+ * are handled by the `session.moved` event, so this full listing runs once instead of on every state push.
+ */
+export async function repairSessionFilings(
+  ctx: ProjectContext,
+  listAll: (directory: string) => Promise<SessionInfo[]>,
+  log: (...args: unknown[]) => void,
+): Promise<boolean> {
+  const generation = ctx.generation
+  if (!ctx.peekState()) return false
+  const home = homes(ctx)
+  let changed = false
+  for (const entry of projectDirectories(ctx)) {
+    const sessions = await listAll(entry.directory).catch((err: unknown) => {
+      log(`Agent Manager: listing sessions for ${entry.directory} failed:`, err)
+      return [] as SessionInfo[]
+    })
+    if (!ctx.isCurrent(generation)) return changed
+    for (const session of sessions) {
+      if (session.parentID !== undefined && session.parentID !== null) continue
+      if (refile(ctx, session, home)) changed = true
+    }
+  }
+  return changed
 }
 
 /**

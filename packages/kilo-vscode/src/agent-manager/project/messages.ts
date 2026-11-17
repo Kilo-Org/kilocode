@@ -16,6 +16,7 @@ import { canonicalizePath, pathKey, projectIdFor, resolveProjectRoot, samePath }
 import type { SidebarTarget, SessionRef } from "./route"
 import { cloneProject, createProject, defaultParent, onboard, type Onboarding } from "./onboarding"
 import { runner } from "./prepare"
+import type { RouteOutcome } from "../route-session"
 
 const pending = new WeakSet<ProjectMessageDeps>()
 const selections = new WeakMap<ProjectMessageDeps, symbol>()
@@ -60,12 +61,22 @@ export interface ProjectMessageDeps {
   post: (message: AgentManagerOutMessage) => void
   /** Show a user-facing error. */
   error: (message: string) => void
+  /** Report a non-failing result, such as a move that waits for the current step. */
+  notify?: (kind: "info" | "warning" | "error", message: string) => void
   /** Open the Kilo Settings editor, optionally on a tab and project. */
   openSettings: (tab?: string, projectId?: string) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
   ready: (ctx: ProjectContext, options?: { warm?: boolean }) => Promise<ProjectInitResult>
-  /** Route one session to a directory inside a project; false when the server could not move it. */
-  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => Promise<boolean>
+  /**
+   * Route one session to a directory inside a project. A move the server applies at a later step boundary reports
+   * `queued`; the filing follows the `session.moved` event when it lands.
+   */
+  routeSession?: (
+    projectId: string,
+    sessionId: string,
+    directory: string,
+    generation: number,
+  ) => Promise<RouteOutcome>
   /** The directory the server runs a session in, for a session another surface names without a project. */
   sessionDirectory?: (sessionId: string) => Promise<string | undefined>
   git?: GitOps
@@ -279,17 +290,26 @@ async function openSessionLocally(projectId: string, sessionId: string, deps: Pr
     deps.log(`openSessionLocally: unknown session ${sessionId}`)
     return
   }
-  // Local reads the store of the project root, so the session must run there before it is filed there. A failed
-  // move keeps the filing, and the error says why, instead of showing a session Local cannot reach.
-  const moved = await deps.routeSession?.(projectId, sessionId, ctx.root, ctx.generation)
-  if (moved === false) {
+  // Local reads the store of the project root, so the session must run there before it is filed there. A move the
+  // server queued behind a running step is not a failure: the `session.moved` event files it under Local when the
+  // server applies it. A failed move keeps the filing, and the error says why.
+  const outcome = deps.routeSession
+    ? await deps.routeSession(projectId, sessionId, ctx.root, ctx.generation)
+    : "moved"
+  if (outcome === "failed") {
     deps.error("Could not move the conversation to Local. It still runs in its worktree.")
     deps.pushState?.(ctx)
     return
   }
+  if (outcome === "queued") {
+    deps.notify?.("info", "The conversation will move to Local when its current step finishes.")
+    // The session still runs in its worktree; open Local so it appears here when the move lands.
+    deps.pushState?.(ctx)
+    finish({ projectId, kind: "local" }, deps)
+    return
+  }
   state?.moveSession(sessionId, null)
   deps.pushState?.(ctx)
-  deps.push()
   finish({ projectId, kind: "session", sessionId }, deps)
 }
 
