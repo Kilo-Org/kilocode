@@ -632,7 +632,7 @@ class KiloHostedService internal constructor(
             "preparing" -> run {
                 val progress = item.progress
                 val distinct = event.attemptID != null && event.attemptID != progress?.attemptID
-                val failed = event.action in setOf("attempt_failed", "step_failed", "failed") || event.failure != null || event.step == "failed"
+                val failed = event.action == "attempt_failed" || event.failure != null || event.step == "failed"
                 val terminal = failed || event.action == "attempt_completed" ||
                     (event.attemptID == null && event.step == "ready")
                 if (event.attemptID?.let { it in item.retired } == true) return
@@ -702,9 +702,12 @@ class KiloHostedService internal constructor(
                         revision = revision ?: previous?.takeIf { !distinct },
                     )
                 }
-                if (event.step != null) item.detail = event.copy(
-                    message = event.message ?: item.detail?.message?.takeIf { item.detail?.step == event.step },
-                )
+                if (event.step != null &&
+                    !(item.detail?.stepKind == "setup_command" && event.stepKind != "setup_command")) {
+                    item.detail = event.copy(
+                        message = event.message ?: item.detail?.message?.takeIf { item.detail?.step == event.step },
+                    )
+                }
                 val latest = item.progress ?: event
                 val display = item.detail ?: latest
                 val closed = terminal || finished || (item.closed && !distinct)

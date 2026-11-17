@@ -273,6 +273,32 @@ class KiloHostedServiceTest {
     }
 
     @Test
+    fun `step failure remains nonterminal when the preparation attempt completes`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            val step = HostedSystemEventDto(key, "preparing", step = "session_setup_commands",
+                action = "step_failed", attemptID = "attempt_1", revision = 27, observedAt = 100.0)
+            rpc.send(step)
+            assertNull(service.state.value.failure(key))
+            assertEquals("step_failed", service.state.value.preparation(key)?.action)
+
+            rpc.send(step.copy(action = "step_completed", revision = 28, observedAt = 110.0))
+            rpc.send(step.copy(step = null, action = "attempt_completed", revision = 35, observedAt = 120.0))
+
+            assertNull(service.state.value.failure(key))
+            assertNull(service.state.value.preparation(key))
+            assertEquals("attempt_completed", service.state.value.preparations[key]?.action)
+            assertEquals("ready", service.state.value.preparations[key]?.cloudStatus)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
     fun `cloud error without code is retained until explicit preparation restart`() = runBlocking {
         val ref = HostedWorkspaceRefDto("cloud", "one")
         val key = "${ref.key}:same"
