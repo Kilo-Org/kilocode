@@ -133,7 +133,6 @@ describe("fileSessionLocally", () => {
   })
 
   it("keeps the worktree filing for a queued move and leaves the follow-up to the moved event", async () => {
-    const changed = mock(() => undefined)
     client.session.move.mockResolvedValueOnce(undefined)
     client.session.active.mockImplementation(async () => {
       setSystemTime(new Date(Date.now() + 60_000))
@@ -147,10 +146,8 @@ describe("fileSessionLocally", () => {
         sessionId: "ses_1",
         root,
         log: () => undefined,
-        changed,
       }),
     ).toBe("queued")
     expect(state.getSession("ses_1")?.worktreeId).not.toBeNull()
-    expect(changed).not.toHaveBeenCalled()
   })
 })

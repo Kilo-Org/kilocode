@@ -75,8 +75,12 @@ async function setup(options: { fail?: string; hold?: string } = {}) {
     session: {
       list: async (input: { directory?: string; parentID?: string | null; limit?: number }) => {
         const directory = input.directory ?? ""
-        listed.push(directory)
-        listInputs.push(input)
+        // The one-time filing repair asks for the full list. It is separate from the sidebar catalog and does not
+        // contribute to the catalog assertions below.
+        if (input.limit !== Number.MAX_SAFE_INTEGER) {
+          listed.push(directory)
+          listInputs.push(input)
+        }
         if (options.hold === directory) await held
         if (options.fail === directory) throw new Error(`cannot list ${directory}`)
         const base =
@@ -168,8 +172,8 @@ describe("Agent Manager project session catalog", () => {
     ])
     expect(listed).toEqual([ROOT, WORKTREE])
     expect(listInputs).toEqual([
-      { directory: ROOT, parentID: null, limit: Number.MAX_SAFE_INTEGER },
-      { directory: WORKTREE, parentID: null, limit: Number.MAX_SAFE_INTEGER },
+      { directory: ROOT, parentID: null },
+      { directory: WORKTREE, parentID: null },
     ])
     expect(ctx.hasLiveSession("root-session")).toBe(true)
     expect(ctx.hasLiveSession("wt-session")).toBe(true)

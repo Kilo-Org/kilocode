@@ -433,6 +433,7 @@ export async function promoteLifecycleSession(
       type: "agentManager.worktreeSetup",
       status: "error",
       message: "Failed to move the session into the new worktree",
+      projectId: ctx.id,
       branch: created.result.branch,
       worktreeId: created.worktree.id,
     })
@@ -451,6 +452,7 @@ export async function promoteLifecycleSession(
       type: "agentManager.worktreeSetup",
       status: "ready",
       message: "Worktree ready. The conversation moves here when its current step finishes.",
+      projectId: ctx.id,
       branch: created.result.branch,
       worktreeId: created.worktree.id,
     })
@@ -473,7 +475,32 @@ async function finishPromotion(
   settled: boolean,
 ): Promise<void> {
   const state = ctx.peekState()
-  if (!state || state.isSessionClosed(sessionId)) return
+  if (!state) {
+    host.post({
+      type: "agentManager.worktreeSetup",
+      status: "error",
+      message: "Failed to file the promoted session",
+      projectId: ctx.id,
+      branch: created.result.branch,
+      worktreeId: created.worktree.id,
+    })
+    host.log(`Could not file promoted session ${sessionId}: the project state is unavailable`)
+    return
+  }
+  if (state.isSessionClosed(sessionId)) {
+    // The user closed the session while the worktree was being prepared. The worktree is still usable; clear the
+    // setup state instead of leaving the overlay spinning.
+    host.post({
+      type: "agentManager.worktreeSetup",
+      status: "ready",
+      message: "Worktree ready. The conversation was closed before it moved.",
+      projectId: ctx.id,
+      branch: created.result.branch,
+      worktreeId: created.worktree.id,
+    })
+    host.log(`Kept worktree ${created.worktree.id}: session ${sessionId} was closed before the promotion finished`)
+    return
+  }
   if (!state.getSession(sessionId)) {
     state.addSession(sessionId, created.worktree.id)
   } else {

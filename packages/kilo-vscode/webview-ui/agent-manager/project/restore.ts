@@ -13,7 +13,7 @@ import type {
   AgentManagerSidebarTarget,
   RememberTargetMessage,
 } from "../../src/types/messages/agent-manager"
-import { LOCAL } from "../navigate"
+import { LOCAL, directoryOwner } from "../navigate"
 
 export interface RestoreDeps {
   selectLocal: () => void
@@ -24,12 +24,8 @@ export interface RestoreDeps {
   setActivePendingId: (id: string | undefined) => void
   /** The directory the server runs a session in, when the catalog already listed it. */
   directoryOf?: (sessionId: string) => string | undefined
-}
-
-/** Compare directory paths the way the host stores them, ignoring a trailing separator. */
-function sameDirectory(a: string, b: string): boolean {
-  const trim = (value: string) => (value.length > 1 ? value.replace(/[\\/]+$/, "") : value)
-  return trim(a) === trim(b)
+  /** The project root, for placing a session directory on Local. */
+  rootOf?: () => string | undefined
 }
 
 /** Restore `state.activeTarget` for the incoming project's state payload. */
@@ -46,15 +42,13 @@ export function restoreProjectTarget(state: AgentManagerStateMessage, deps: Rest
     deps.setActivePendingId(undefined)
     // A filing from an older build can name a worktree the server does not run the session in. That worktree's
     // view reads the store of its own directory, so restoring into it shows an empty panel. Follow the server
-    // directory when the catalog already knows it.
+    // directory when the catalog already knows it. `directoryOwner` returns undefined for a directory it cannot
+    // place (for example a path alias), and the filing is kept then.
     const directory = deps.directoryOf?.(target.sessionId)
-    const owner = directory ? state.worktrees.find((wt) => sameDirectory(wt.path, directory)) : undefined
-    if (owner) {
-      deps.focusManaged(owner.id, target.sessionId)
-      return
-    }
-    if (directory) {
-      deps.focusLocal(target.sessionId)
+    const owner = directory === undefined ? undefined : directoryOwner(directory, state.worktrees, deps.rootOf?.())
+    if (owner !== undefined) {
+      if (owner === null) deps.focusLocal(target.sessionId)
+      else deps.focusManaged(owner, target.sessionId)
       return
     }
     if (managed?.worktreeId && state.worktrees.some((wt) => wt.id === managed.worktreeId)) {

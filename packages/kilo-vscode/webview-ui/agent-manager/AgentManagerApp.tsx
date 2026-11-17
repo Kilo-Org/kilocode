@@ -1183,6 +1183,8 @@ const AgentManagerContent: Component = () => {
     current: () => sessions.currentSessionID(),
     settingUp: () => !!settingUpSelection(),
     sessions: () => sessions.sessions(),
+    catalog: () => projectSessionsLive()[currentProjectId() ?? ""],
+    root: () => directories.root(currentProjectId()),
     tabs: localSessionIDs,
     closed: closedSet,
     pending: isPending,

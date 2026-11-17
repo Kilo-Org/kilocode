@@ -18,6 +18,7 @@ function setup(input: {
     setSelection: (id) => calls.push(`selection:${id}`),
     setActivePendingId: () => {},
     directoryOf: () => input.directory,
+    rootOf: () => ROOT,
   }
   const state = {
     projectId: "p1",
@@ -45,6 +46,12 @@ describe("restoreProjectTarget", () => {
   it("falls back to the filing until the catalog lists the session", () => {
     expect(setup({ worktreeId: "wt1" })).toEqual(["focus-managed:wt1:s1"])
     expect(setup({ worktreeId: null })).toEqual(["focus-local:s1"])
+  })
+
+  it("keeps the filing for a directory it cannot place", () => {
+    // A path alias is not the root and not a tracked worktree path. Local would not show the session, so keep the
+    // host filing instead of forcing it into Local.
+    expect(setup({ worktreeId: "wt1", directory: "/alias/worktree" })).toEqual(["focus-managed:wt1:s1"])
   })
 
   it("restores a worktree target directly", () => {

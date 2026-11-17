@@ -20,6 +20,10 @@ export function createProjectHydration(opts: {
    * where a session runs instead of a filing an older build left behind.
    */
   sessions: () => (Parameters<typeof trackedSessionInventory>[1][number] & { location?: { directory?: string } })[]
+  /** The host catalog for the current project, which can carry directories before the stores list. */
+  catalog?: () => { id: string; location?: { directory?: string } }[] | undefined
+  /** The project root, for placing a server directory on Local. */
+  root: () => string | undefined
   tabs: () => string[]
   closed: () => Set<string>
   pending: (id: string) => boolean
@@ -60,7 +64,10 @@ export function createProjectHydration(opts: {
       if (switched !== "same") {
         restoreProjectTarget(state, {
           ...opts.restore,
-          directoryOf: (sessionId) => opts.sessions().find((item) => item.id === sessionId)?.location?.directory,
+          rootOf: opts.root,
+          directoryOf: (sessionId) =>
+            opts.catalog?.()?.find((item) => item.id === sessionId)?.location?.directory ??
+            opts.sessions().find((item) => item.id === sessionId)?.location?.directory,
         })
         opts.focus()
       }

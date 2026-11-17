@@ -48,13 +48,11 @@ export async function fileSessionLocally(input: {
   sessionId: string
   root: string
   log: (...args: unknown[]) => void
-  changed?: () => void
 }): Promise<RouteOutcome> {
   const outcome = input.client ? await routeSession(input.client, input.sessionId, input.root, input.log) : "failed"
   if (outcome === "failed") return "failed"
   if (outcome === "moved" && input.state?.getSession(input.sessionId)) {
     input.state.moveSession(input.sessionId, null)
-    input.changed?.()
   }
   return outcome
 }

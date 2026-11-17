@@ -177,7 +177,6 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
       sessionId: m.sessionId,
       root: ctx.root,
       log: host.log,
-      changed: () => host.pushState(),
     })
     if (outcome === "failed") {
       host.post({ type: "error", message: OPEN_LOCALLY_FAILED })
