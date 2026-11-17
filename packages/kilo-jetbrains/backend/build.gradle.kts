@@ -157,7 +157,7 @@ val stageSpec = tasks.register<Sync>("stageOpenApiSpec") {
         runCatching { URI(uriPath) }.exceptionOrNull()?.let { error ->
             throw GradleException(
                 "OpenAPI spec staging directory is not a valid URI path: $path. " +
-                    "Set org.gradle.jvmargs=-Djava.io.tmpdir=C:/Temp in gradle.properties and retry.",
+                    "Set java.io.tmpdir to a URI-safe path via org.gradle.jvmargs in gradle.properties and retry.",
                 error,
             )
         }
