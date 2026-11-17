@@ -303,7 +303,7 @@ export type Ui =
   | { type: "trackCostSession"; sessionID: string }
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
-  | { type: "saveImage"; dataUrl: string; filename: string }
+  | { type: "saveImage"; dataUrl: string; filename: string; sessionID?: string }
   | { type: "previewImage"; dataUrl: string; filename: string }
   | { type: "openProfile" }
   | { type: "openMarketplace" }

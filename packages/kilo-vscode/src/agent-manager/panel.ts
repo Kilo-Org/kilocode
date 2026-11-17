@@ -22,7 +22,7 @@ export function createPanel(input: {
   server: Manager
   directory: string
   trackCostSession?: (sessionID: string) => void
-  saveImageDirectory?: () => string | undefined
+  saveImageDirectory?: (sessionID?: string) => string | undefined | Promise<string | undefined>
 }) {
   return {
     /** A new panel in the active editor column. */

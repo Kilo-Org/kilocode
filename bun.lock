@@ -290,6 +290,8 @@
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
         "jsonc-parser": "3.3.1",
+        "ws": "8.21.0",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@opencode/client": "workspace:*",
@@ -298,6 +300,7 @@
         "@types/babel__core": "7.20.5",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
+        "@types/ws": "8.18.1",
         "@typescript/native": "catalog:",
         "solid-js": "catalog:",
       },
