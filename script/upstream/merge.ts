@@ -425,7 +425,8 @@ async function guards(sync: report.SyncReport) {
     }
   }
   // A directory-rename merge can leave a four-way conflict block inside a file git reports as resolved, and the
-  // marker scan only runs on conflicted files, so scan the result before anything commits it.
+  // marker scan only runs on conflicted files. This runs after the merge commit, so it reports the markers in the
+  // sync notes before the branch is pushed; the check.yml step fails the pull request on them.
   const markers = await $`git grep -nE '^(<<<<<<<|>>>>>>>)' -- .`.quiet().nothrow()
   if (markers.exitCode === 0) {
     const found = markers.stdout.toString().trim().split("\n")

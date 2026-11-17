@@ -19,7 +19,6 @@ export type Start = {
   readonly parentSessionID: SessionID
   readonly title?: string
   readonly agent?: string
-  readonly background: boolean
 }
 
 type Entry = { readonly job: KiloBackgroundJobsRpc.Job; readonly directory: string }
@@ -69,9 +68,9 @@ function prune(parent: SessionID) {
 }
 
 /**
- * The subagent jobs of each parent session. Core lists only backgrounded jobs, so the tracker records every subagent
- * the `subagent` tool starts, foreground ones included. A foreground job ends with its tool call; a background job is
- * followed in the Job registry until it settles.
+ * The subagent jobs of each parent session. Core forgets a background job once its result reaches the parent, so the
+ * tracker records every subagent the `subagent` tool starts and follows it in the Job registry until it settles. A
+ * foreground record only comes from a session that an older build ran, and `adopt` restores it as finished.
  */
 export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
   readonly directory: string
@@ -157,6 +156,7 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
         ...(agent !== undefined ? { agent } : {}),
         ...(title !== undefined ? { title } : {}),
         status: "running",
+        // The subagent tool always runs its child in the background.
         background: true,
         time: { started: running ? previous.time.started : now },
       },

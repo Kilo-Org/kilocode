@@ -69,8 +69,6 @@ export const Plugin = define({
                       parentSessionID: context.sessionID,
                       title: input.description,
                       agent: input.agent,
-                      // Upstream always runs a subagent in the background; a call only ever returns running.
-                      background: true,
                     })
                   }
                   yield* context.progress(update)
@@ -78,7 +76,7 @@ export const Plugin = define({
             }).pipe(
               Effect.tap((result) => {
                 if (started.id === undefined) return Effect.void
-                // A call that returns while its child still runs started it in the background or was moved there.
+                // The subagent tool returns while its child still runs: the child works in the background.
                 if (result.metadata?.status === "running") return tracker.background(started.id)
                 return tracker.finish(started.id, "completed")
               }),

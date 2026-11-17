@@ -497,18 +497,19 @@ jobs:
     steps:
       - name: Verify the v2 CI jobs passed
         # `unit` is skipped on purpose for a draft pull request and for a quarantine dispatch; `sdk` always runs.
-        # Upstream runs the build job only outside pull requests, so a skipped build there is expected.
+        # Upstream runs the build job only outside pull requests, so a skipped build there is expected; the draft and
+        # quarantine exit runs first because it matches on `build=skipped`.
         run: |
           unit="${{ needs.unit.result }}"
           build="${{ needs.build.result }}"
           sdk="${{ needs.sdk.result }}"
           echo "unit=$unit build=$build sdk=$sdk"
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ "$build" = "skipped" ]; then
-            build=success
-          fi
           if [ "$unit" = "skipped" ] && [ "$build" = "skipped" ] && [ "${{ github.event.pull_request.draft || (github.event_name == 'workflow_dispatch' && inputs.quarantine) }}" = "true" ]; then
             test "$sdk" = "success"
             exit 0
+          fi
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "$build" = "skipped" ]; then
+            build=success
           fi
           test "$unit" = "success"
           test "$build" = "success"
