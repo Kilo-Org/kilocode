@@ -94,6 +94,23 @@ export function edit(text: string, key: (string | number)[], value: unknown, ins
   )
 }
 
+/**
+ * Rewrites one JSON path of a native config file through the same atomic, JSONC-preserving queue as MCP entries.
+ * `update` receives the current value; returning an equal value skips the write, and `undefined` removes the key.
+ */
+export function updateValue(file: string, key: readonly string[], update: (current: unknown) => unknown) {
+  return serialized(file, async (target) => {
+    const text = await read(target)
+    const current = key.reduce<unknown>(
+      (value, part) => (value && typeof value === "object" ? (value as Record<string, unknown>)[part] : undefined),
+      parseConfig(text, file),
+    )
+    const next = update(current)
+    if (JSON.stringify(next) === JSON.stringify(current)) return
+    await save(target, text, [...key], next)
+  })
+}
+
 export function save(file: string, text: string, key: (string | number)[], value: unknown, secret = false) {
   return write(file, edit(text, key, value), secret)
 }

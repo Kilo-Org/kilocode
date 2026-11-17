@@ -1,4 +1,5 @@
 import { KiloAgentPlugin } from "./agent"
+import { KiloAgentPlugins } from "./agent-plugins"
 import { KiloAgentRemovePlugin } from "./agent/plugin"
 // The plan file, the plan_exit tool and the post-plan follow-up question live in one plugin.
 import { KiloPlanPlugin } from "./plan"
@@ -78,6 +79,7 @@ export const KiloPlugins = [
   KiloProviderUsagePlugin,
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
+  KiloAgentPlugins.Plugin,
   KiloFlowPlugin,
   KiloSessionSync.plugin,
   KiloRemote.plugin,
