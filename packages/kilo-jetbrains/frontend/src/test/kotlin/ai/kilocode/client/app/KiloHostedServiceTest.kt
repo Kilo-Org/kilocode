@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.yield
+import kotlinx.coroutines.Job
 import java.awt.EventQueue
 import javax.swing.SwingUtilities
 import kotlin.test.AfterTest
@@ -105,15 +105,17 @@ class KiloHostedServiceTest {
             service.observe(second, "three", parent)
             repeat(3) { withTimeout(WAIT) { rpc.opened.receive() } }
             val reconnected = CompletableDeferred<Boolean>()
+            lateinit var reload: Job
 
             SwingUtilities.invokeAndWait {
-                service.reload(first) {
+                reload = service.reload(first) {
                     reconnected.complete(EventQueue.isDispatchThread())
-                }
+                }!!
             }
 
             repeat(2) { withTimeout(WAIT) { rpc.closed.receive() } }
-            assertEquals(true, withTimeout(WAIT) { reconnected.await() })
+            reload.join()
+            assertEquals(true, reconnected.await())
             assertEquals(1, rpc.events.subscriptionCount.value)
 
             service.observe(first, "one", parent)
@@ -134,21 +136,24 @@ class KiloHostedServiceTest {
                 withTimeout(WAIT) { rpc.opened.receive() }
                 val gate = CompletableDeferred<Unit>()
                 val calls = mutableListOf<String>()
+                lateinit var reload: Job
 
                 SwingUtilities.invokeAndWait {
-                    service.reload(ref, close = { suspend { gate.await(); calls += "closed" } }) { calls += "reconnected" }
-                    service.reload(ref) { calls += "duplicate" }
+                    reload = service.reload(ref, close = { suspend { gate.await(); calls += "closed" } }) {
+                        calls += "reconnected"
+                    }!!
+                    assertNull(service.reload(ref) { calls += "duplicate" })
                 }
 
                 withTimeout(WAIT) { rpc.closed.receive() }
                 assertTrue(service.reloading(ref))
                 assertTrue(calls.isEmpty())
                 gate.complete(Unit)
-                withTimeout(WAIT) { while (calls.size < 2) yield() }
+                reload.join()
                 assertEquals(listOf("closed", "reconnected"), calls)
                 assertFalse(service.reloading(ref))
             } finally { Disposer.dispose(parent) }
-            }
+        }
     }
 
     @Test

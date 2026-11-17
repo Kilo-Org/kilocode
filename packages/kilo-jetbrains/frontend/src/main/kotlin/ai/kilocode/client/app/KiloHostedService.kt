@@ -23,6 +23,7 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.client.session.history.resolveGitRemoteUrl
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -49,6 +50,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.awt.EventQueue
+import kotlin.coroutines.suspendCoroutine
 
 enum class HostedReadiness { Unknown, Preparing, Ready, Failed }
 
@@ -490,9 +493,9 @@ class KiloHostedService internal constructor(
     /** Retires one workspace's hosted feeds before [reconnect] constructs replacement subscriptions. */
     fun reloading(ref: HostedWorkspaceRefDto): Boolean = synchronized(lock) { ref.key in reloads }
 
-    fun reload(ref: HostedWorkspaceRefDto, close: () -> (suspend () -> Unit) = { { } }, reconnect: () -> Unit) {
+    fun reload(ref: HostedWorkspaceRefDto, close: () -> (suspend () -> Unit) = { { } }, reconnect: () -> Unit): Job? {
         val jobs = synchronized(lock) {
-            if (!reloads.add(ref.key)) return
+            if (!reloads.add(ref.key)) return null
             revisions[ref.key] = (revisions[ref.key] ?: 0L) + 1L
             val keys = watches.filterValues { it.ref == ref }.keys
             keys.mapNotNull { key ->
@@ -514,18 +517,30 @@ class KiloHostedService internal constructor(
                 preparations = current.preparations.filterKeys { !it.startsWith(ref.key + ":") },
             )
         }
-        cs.launch {
+        return cs.launch {
             var ready = false
             try {
                 closed()
                 jobs.joinAll()
                 ready = true
             } finally {
-                withContext(NonCancellable + Dispatchers.Main) {
-                    synchronized(lock) { reloads.remove(ref.key) }
-                    if (ready && gate() && !_state.value.signedOut) reconnect() else Unit
+                withContext(NonCancellable) {
+                    onEdt {
+                        synchronized(lock) { reloads.remove(ref.key) }
+                        if (ready && gate() && !_state.value.signedOut) reconnect() else Unit
+                    }
                 }
             }
+        }
+    }
+
+    private suspend fun onEdt(action: () -> Unit) {
+        if (ApplicationManager.getApplication() != null) {
+            withContext(Dispatchers.Main) { action() }
+            return
+        }
+        suspendCoroutine<Unit> { continuation ->
+            EventQueue.invokeLater { continuation.resumeWith(runCatching(action)) }
         }
     }
 
