@@ -724,6 +724,30 @@
 
 ## [Unreleased]
 
+## [7.2.1-rc.8] - 2026-11-17
+
+### Added
+- feat(cli): expose hosted workspace and linked-pr diffs by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16198
+- feat(ci): post to Slack when upstream has a v2 release that v2 lacks by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/16222
+- feat(cli): expose hosted workspace pull request status by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16184
+
+### Fixed
+- fix(release): avoid argv limit in JetBrains pin bump PRs by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16252
+
+### Changed
+- release(jetbrains): v7.2.1-rc.7 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/16197
+- chore(deps): hono updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/16210
+- chore(deps): node-forge updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/16212
+- chore(deps): fast-xml-parser updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/16228
+- chore(jetbrains): bump the markdown-minor-patch group across 1 directory with 4 updates by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/16052
+- chore(jetbrains): bump org.jetbrains.intellij.platform from 2.19.0 to 2.20.0 in /packages/kilo-jetbrains in the intellij-minor-patch group across 1 directory by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/16048
+- docs: refresh desktop guidance by @owenprice-anaconda in https://github.com/Kilo-Org/kilocode/pull/16242
+- docs: redact desktop screenshot identifiers by @owenprice-anaconda in https://github.com/Kilo-Org/kilocode/pull/16243
+- chore(jetbrains): bump CLI pin to v7.8.30 by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16251
+- docs: auto-sync cloud-web with merged PRs (through 2026-11-17) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/16142
+- docs(kilo-docs): clarify product telemetry controls by client by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/16254
+
+
 ## [7.2.1-rc.7] - 2026-11-15
 
 ### Added
