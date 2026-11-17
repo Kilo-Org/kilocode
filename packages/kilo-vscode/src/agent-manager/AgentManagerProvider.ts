@@ -746,16 +746,22 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     await this.stateReady.catch((err) => this.log(`${where}: stateReady rejected, continuing:`, err))
   }
 
-  public onToolEvent(event: OpenCodeEvent): void {
+  public async onToolEvent(event: OpenCodeEvent): Promise<void> {
     const directory = event.location?.directory
     const request = parseToolRequest(event.data, directory)
     if (!request) return
-    const owner = directory ? this.contexts.byDirectory(directory) : undefined
-    if (owner) {
-      void this.projectScope.run(owner, () => this.startToolRequest(request))
-      return
+    if (request.mode === "local") {
+      const owner = directory ? this.contexts.byDirectory(directory) : undefined
+      return owner ? this.projectScope.run(owner, () => this.startToolRequest(request)) : this.startToolRequest(request)
     }
-    void this.startToolRequest(request)
+    const owner =
+      request.directory === undefined
+        ? this.contexts.active()
+        : await this.contexts.worktreeCaller(request.directory, this.gitOps)
+    if (owner) return this.projectScope.run(owner, () => this.startToolRequest(request))
+    this.openPanel(true)
+    await this.panel?.waitForReady()
+    this.postToWebview({ type: "error", code: "worktree_caller_unknown", message: request.directory ?? "" })
   }
 
   public async startToolRequest(req: ToolRequest): Promise<void> {

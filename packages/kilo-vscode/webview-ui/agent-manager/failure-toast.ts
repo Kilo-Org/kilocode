@@ -37,6 +37,14 @@ export function reportFailure(msg: Failure, deps: FailureToastDeps): "stale" | u
     })
     return undefined
   }
+  if (msg.type === "error" && msg.code === "worktree_caller_unknown") {
+    deps.toast({
+      variant: "error",
+      title: deps.t("agentManager.setup.failed"),
+      description: `${deps.t("agentManager.project.missing")}: ${msg.message}\n${deps.t("session.workspaceScope.alternatives")}`,
+    })
+    return undefined
+  }
   if (msg.type !== "error" || typeof msg.message !== "string" || !msg.message) return undefined
   // A request error carries its request id and is answered by the caller; an "aborted" one is a normal cancel.
   if (typeof (msg as { id?: unknown }).id === "number") return undefined

@@ -9,7 +9,9 @@
 
 import * as fs from "fs"
 import * as path from "path"
-import { canonicalizePath, projectIdFor, samePath } from "./paths"
+import { canonicalizePath, projectIdFor, resolveProjectRoot, samePath } from "./paths"
+import { runner } from "./prepare"
+import type { GitOps } from "../GitOps"
 import type { StoredProject } from "./registry"
 import { ProjectContext, type ProjectContextDeps } from "./context"
 import { avatar } from "./avatar"
@@ -110,6 +112,22 @@ export class ProjectContexts {
       if (state?.getWorktrees().some((wt) => wt.path && samePath(wt.path, dir))) return ctx
     }
     return undefined
+  }
+
+  /** A worktree start must have one owner, including projects not yet expanded in this panel. */
+  async worktreeCaller(dir: string, git: GitOps): Promise<ProjectContext | undefined> {
+    if (!path.isAbsolute(dir)) return undefined
+    const run = runner(git)
+    const root = await resolveProjectRoot(dir, run)
+    if (!root) return undefined
+    // Registry entries use the primary checkout. The pinned workspace can itself be a linked checkout.
+    const pinned = this.pinned()
+    const primary = pinned && (samePath(pinned.root, root) ? root : await resolveProjectRoot(pinned.root, run))
+    const owners = this.opts.registry
+      .list()
+      .filter((project) => samePath(project.root, root) && project.id !== pinned?.id)
+    if (pinned && primary && samePath(primary, root)) return owners.length ? undefined : pinned
+    return owners.length === 1 ? this.resolveCtx(owners[0]!.id) : undefined
   }
 
   /** The context whose state owns the worktree id. */
