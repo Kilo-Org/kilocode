@@ -366,7 +366,15 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       status: (sessionID, running) => this.onSessionStatus(sessionID, running),
       log: (err) => this.log("Failed to load worktree activity:", err),
     })
-    this.unsubEvents = this.connection.onEvent(
+    // The roots follow every session location event, including a move to a directory that is not a tracked
+    // worktree: an agent can move its own session with the `session_move` tool, and the state file's filing only
+    // follows tracked directories.
+    const stopSessionRoots = this.connection.onEvent(
+      (event) => this.sessionRoots.event(event),
+      (event) =>
+        event.type === "session.created" || event.type === "session.moved" || event.type === "session.deleted",
+    )
+    const stopSessionEvents = this.connection.onEvent(
       (event) => this.onSessionEvent(event),
       located(() =>
         [...this.contexts.values()].flatMap((ctx) => [
@@ -378,6 +386,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
         ]),
       ),
     )
+    this.unsubEvents = () => {
+      stopSessionRoots()
+      stopSessionEvents()
+    }
     this.autoApprove = createHostAutoApprove({
       client: () => this.connection.client(),
       directories: () => {
@@ -421,7 +433,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public onSessionEvent(event: OpenCodeEvent): void {
-    this.sessionRoots.event(event)
     handleSessionLifecycle(event, { busy: this.busySessions, removed: this.removedSessions })
     const running = runningFromEvent(event)
     if (!running) return
