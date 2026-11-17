@@ -445,13 +445,6 @@ class KiloAppService internal constructor(
         }
     }
 
-    /**
-     * The product telemetry decision made by `KILO_TELEMETRY_LEVEL` in the backend's environment, or
-     * null when `experimental.openTelemetry` in the global config decides. Throws when the backend
-     * cannot be reached.
-     */
-    suspend fun telemetryOverride(): Boolean? = call { telemetryOverride() }
-
     private fun setModelState(state: ModelStateDto) {
         _models.value = state
         _favorites.value = state.favorite

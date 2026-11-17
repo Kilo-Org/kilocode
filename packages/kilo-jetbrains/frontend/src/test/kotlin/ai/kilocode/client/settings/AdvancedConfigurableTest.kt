@@ -242,31 +242,6 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         assertFalse(edt { analytics(root).isSelected })
     }
 
-    fun `test usage analytics toggle is read-only when the environment decides`() {
-        ready(ConfigDto())
-        appRpc.telemetryOverride = false
-        val cfg = configurable()
-        val root = edt { cfg.createComponent() as Container }
-
-        ui.drain()
-
-        assertFalse(edt { analytics(root).isEnabled })
-        assertFalse(edt { analytics(root).isSelected })
-        assertFalse(edt { cfg.isModified })
-    }
-
-    fun `test usage analytics toggle stays read-only when the backend cannot be reached`() {
-        ready(ConfigDto())
-        appRpc.telemetryFails = true
-        val cfg = configurable()
-        val root = edt { cfg.createComponent() as Container }
-
-        ui.drain()
-
-        assertFalse(edt { analytics(root).isEnabled })
-        assertFalse(edt { cfg.isModified })
-    }
-
     fun `test apply writes usage analytics to the global config only when changed`() {
         ready(ConfigDto())
         val cfg = configurable()

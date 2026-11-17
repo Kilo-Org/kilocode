@@ -137,13 +137,12 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
     fun savedTelemetry(): Boolean = saved.telemetry
 
     /**
-     * Shows the product telemetry state. [value] is `experimental.openTelemetry` from the global
-     * config, or the decision of `KILO_TELEMETRY_LEVEL` when [locked]; the toggle is read-only then,
-     * and while the config is not loaded ([ready] false). A no-op once the user has flipped it.
+     * Shows `experimental.openTelemetry` from the global config. The toggle is read-only until the
+     * config is loaded ([ready]). A no-op once the user has flipped it.
      */
     @RequiresEdt
-    fun refreshTelemetry(value: Boolean, ready: Boolean, locked: Boolean) {
-        telemetry.isEnabled = ready && !locked
+    fun refreshTelemetry(value: Boolean, ready: Boolean) {
+        telemetry.isEnabled = ready
         if (edited) return
         saved = saved.copy(telemetry = value)
         telemetry.isSelected = value

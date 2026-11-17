@@ -42,12 +42,9 @@ class AdvancedConfigurable(
             withContext(edt) { panel.refreshIndexWorktrees(value) }
         }
         cs.launch {
-            // Without the backend's answer the toggle stays read-only rather than presenting a guess.
-            val locked = runCatching { app.telemetryOverride() }.getOrElse { return@launch }
             app.state.collect { state ->
                 val cfg = state.config
-                val value = locked ?: (cfg?.openTelemetry != false)
-                withContext(edt) { panel.refreshTelemetry(value, cfg != null, locked != null) }
+                withContext(edt) { panel.refreshTelemetry(cfg?.openTelemetry != false, cfg != null) }
             }
         }
         return panel

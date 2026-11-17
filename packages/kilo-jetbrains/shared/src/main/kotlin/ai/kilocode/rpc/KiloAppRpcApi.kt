@@ -138,12 +138,6 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
      */
     suspend fun setOrganization(organizationId: String?): ProfileDto?
 
-    /**
-     * The product telemetry decision made by `KILO_TELEMETRY_LEVEL` in the backend's environment, or
-     * null when it is unset and `experimental.openTelemetry` in the global config decides.
-     */
-    suspend fun telemetryOverride(): Boolean?
-
     /** Fire-and-forget behavior telemetry routed through the CLI server. */
     suspend fun captureTelemetry(capture: TelemetryCaptureDto)
 }

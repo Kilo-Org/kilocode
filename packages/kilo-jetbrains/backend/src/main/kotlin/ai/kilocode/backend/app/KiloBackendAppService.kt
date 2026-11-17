@@ -7,7 +7,6 @@ import ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService
 import ai.kilocode.backend.migration.LegacyMigrationDetection
 import ai.kilocode.backend.migration.LegacyMigrationStatus
 import ai.kilocode.backend.telemetry.KiloBackendTelemetry
-import ai.kilocode.backend.telemetry.KiloTelemetryPolicy
 import ai.kilocode.log.KiloLog
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
 import ai.kilocode.jetbrains.api.client.DefaultApi
@@ -27,7 +26,6 @@ import ai.kilocode.rpc.dto.HealthDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import com.intellij.util.EnvironmentUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -89,7 +87,6 @@ class KiloBackendAppService private constructor(
   private val log: KiloLog,
   private val loadTimeoutMs: Long,
   private val telemetry: () -> KiloBackendTelemetry,
-  private val env: () -> Map<String, String>,
 ) : Disposable {
 
     /** IntelliJ service injection entry point. */
@@ -99,7 +96,6 @@ class KiloBackendAppService private constructor(
       KiloLog.create(KiloBackendAppService::class.java),
         APP_LOAD_TIMEOUT_MS,
         { service() },
-        EnvironmentUtil::getEnvironmentMap,
     )
 
     companion object {
@@ -115,8 +111,7 @@ class KiloBackendAppService private constructor(
           log: KiloLog,
           loadTimeoutMs: Long = APP_LOAD_TIMEOUT_MS,
           telemetry: () -> KiloBackendTelemetry = { service() },
-          env: () -> Map<String, String> = EnvironmentUtil::getEnvironmentMap,
-        ) = KiloBackendAppService(cs, server, log, loadTimeoutMs, telemetry, env)
+        ) = KiloBackendAppService(cs, server, log, loadTimeoutMs, telemetry)
     }
 
     private val mutex = Mutex()
@@ -534,40 +529,33 @@ class KiloBackendAppService private constructor(
     }
 
     private fun captureLoad(event: String, start: Long, props: Map<String, String>) {
+        val http = connection.apiClient
+        val port = connection.port
         cs.launch {
             runCatching {
-                capture(event, props + mapOf("durationMs" to (System.currentTimeMillis() - start).toString()))
+                telemetry().capture(
+                    http,
+                    port,
+                    event,
+                    props + mapOf("durationMs" to (System.currentTimeMillis() - start).toString()),
+                )
             }.onFailure { log.info("Skipping backend load telemetry: ${it.message}") }
         }
     }
 
-    /** The telemetry decision made by an inherited `KILO_TELEMETRY_LEVEL`, or null when the config decides. */
-    fun telemetryOverride(): Boolean? = KiloTelemetryPolicy.override(env())
-
-    /**
-     * Apply a changed `experimental.openTelemetry` to the running CLI, which only reads it at startup.
-     * Skipped when an inherited `KILO_TELEMETRY_LEVEL` decides instead, as it does in the CLI.
-     */
+    /** Apply a changed `experimental.openTelemetry` to the running CLI, which only reads it at startup. */
     private suspend fun syncTelemetry(enabled: Boolean) {
-        if (telemetryOverride() != null) {
-            log.info("Telemetry config change not applied: KILO_TELEMETRY_LEVEL decides")
-            return
-        }
         runCatching {
             telemetry().setEnabled(connection.apiClient, connection.port, enabled)
         }.onFailure { log.info("Skipping telemetry setEnabled: ${it.message}") }
     }
 
-    /** Forward one telemetry event to the connected CLI. Dropped while product telemetry is off. */
-    suspend fun capture(event: String, props: Map<String, String>) {
-        if (!KiloTelemetryPolicy.enabled(env(), config?.openTelemetry)) return
-        telemetry().capture(connection.apiClient, connection.port, event, props)
-    }
-
     private fun captureBackend(event: String, props: Map<String, String>) {
+        val http = connection.apiClient
+        val port = connection.port
         cs.launch {
             runCatching {
-                capture(event, props)
+                telemetry().capture(http, port, event, props)
             }.onFailure { log.info("Skipping backend telemetry: ${it.message}") }
         }
     }

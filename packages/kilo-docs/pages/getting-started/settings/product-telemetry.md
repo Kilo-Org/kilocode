@@ -92,7 +92,7 @@ See [Desktop privacy settings](/docs/desktop/settings/general#privacy) for the s
 
 The toggle is the same preference as the [standalone CLI](#standalone-cli): it reads and writes `experimental.openTelemetry` in global Kilo config. Turning it off in the IDE also turns product telemetry off for the standalone CLI on that machine, and editing the config file changes the toggle. It is enabled by default, and a change made in the IDE applies to the plugin and its bundled Kilo CLI immediately.
 
-If `KILO_TELEMETRY_LEVEL` is set in the IDE's environment, it takes precedence as it does in the CLI, and the toggle is read-only and shows the resulting state. Restart the IDE after changing the environment variable or editing the config file by hand.
+If `KILO_TELEMETRY_LEVEL` is set in the IDE's environment, it takes precedence at startup as it does in the CLI. Restart the IDE after changing the environment variable or editing the config file by hand.
 
 The IDE's own **Data Sharing** setting covers usage statistics sent to JetBrains and does not control Kilo's product telemetry.
 

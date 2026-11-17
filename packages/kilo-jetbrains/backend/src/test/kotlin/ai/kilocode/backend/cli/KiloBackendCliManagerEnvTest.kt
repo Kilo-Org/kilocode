@@ -107,22 +107,6 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
-    fun `inherited telemetry opt-in is preserved`() {
-        val env = manager.buildEnv("pwd123", mapOf("KILO_TELEMETRY_LEVEL" to "all"))
-
-        assertEquals("all", env["KILO_TELEMETRY_LEVEL"])
-    }
-
-    @Test
-    fun `dev mode disables CLI telemetry over an inherited opt-in`() {
-        System.setProperty("idea.plugin.in.sandbox.mode", "true")
-
-        val env = manager.buildEnv("pwd123", mapOf("KILO_TELEMETRY_LEVEL" to "all"))
-
-        assertEquals("off", env["KILO_TELEMETRY_LEVEL"])
-    }
-
-    @Test
     fun `claude compatibility omits disable env var`() {
         KiloClaudeCompatSettings.set(true)
 

@@ -2,12 +2,9 @@
 
 package ai.kilocode.client.telemetry
 
-import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloAppRpcApi
-import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.serviceOrNull
 import fleet.rpc.client.durable
@@ -24,19 +21,12 @@ object Telemetry {
     }
 }
 
-/** The loaded global config, without creating the app service just to send an event. */
-private fun loaded(): ConfigDto? =
-    ApplicationManager.getApplication()?.getServiceIfCreated(KiloAppService::class.java)?.state?.value?.config
-
 @Service(Service.Level.APP)
 class KiloTelemetryService internal constructor(
     private val cs: CoroutineScope,
     private val rpc: KiloAppRpcApi?,
-    private val config: () -> ConfigDto?,
 ) {
     constructor(cs: CoroutineScope) : this(cs, null)
-
-    internal constructor(cs: CoroutineScope, rpc: KiloAppRpcApi?) : this(cs, rpc, ::loaded)
 
     companion object {
         private val LOG = KiloLog.create(KiloTelemetryService::class.java)
@@ -49,10 +39,6 @@ class KiloTelemetryService internal constructor(
     private val pending = AtomicInteger()
     private val warned = AtomicBoolean()
 
-    /** The decision of the backend environment's `KILO_TELEMETRY_LEVEL`, once it has been read. */
-    @Volatile
-    private var override: Override? = null
-
     fun send(event: String, properties: Map<String, String> = emptyMap()) {
         if (pending.incrementAndGet() > MAX_PENDING) {
             pending.decrementAndGet()
@@ -63,7 +49,6 @@ class KiloTelemetryService internal constructor(
         }
         cs.launch {
             try {
-                if (!allowed()) return@launch
                 if (KiloLog.sandbox()) {
                     val payload = KiloLog.payload(LOG) + properties
                     LOG.info("event=$event ${payload.entries.joinToString(" ") { "${it.key}=${it.value}" }}")
@@ -86,20 +71,4 @@ class KiloTelemetryService internal constructor(
             }
         }
     }
-
-    /**
-     * Whether events may be forwarded, resolved like the CLI does: the backend environment's
-     * `KILO_TELEMETRY_LEVEL` first, then `experimental.openTelemetry` from the global config. An
-     * environment that cannot be read drops the event and is read again next time.
-     */
-    private suspend fun allowed(): Boolean {
-        val known = override ?: withTimeoutOrNull(TIMEOUT_MS) {
-            val api = rpc
-            val value = if (api != null) api.telemetryOverride() else durable { KiloAppRpcApi.getInstance().telemetryOverride() }
-            Override(value).also { override = it }
-        } ?: return false
-        return known.value ?: (config()?.openTelemetry != false)
-    }
-
-    private class Override(val value: Boolean?)
 }

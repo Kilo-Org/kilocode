@@ -252,22 +252,6 @@ class FakeAppRpcApi : KiloAppRpcApi {
         indexWorktreesSaves.add(value)
     }
 
-    /** The decision of the backend environment's `KILO_TELEMETRY_LEVEL`; null when the config decides. */
-    var telemetryOverride: Boolean? = null
-
-    /** When set, [telemetryOverride] awaits this deferred, emulating a slow split-mode fetch. */
-    var telemetryGate: CompletableDeferred<Unit>? = null
-
-    /** When true, [telemetryOverride] fails, emulating an unreachable backend. */
-    var telemetryFails = false
-
-    override suspend fun telemetryOverride(): Boolean? {
-        assertNotEdt("telemetryOverride")
-        telemetryGate?.await()
-        if (telemetryFails) throw IllegalStateException("backend unreachable")
-        return telemetryOverride
-    }
-
     var backendLog: LogFileDto? = null
 
     override suspend fun backendLogFile(): LogFileDto? {
