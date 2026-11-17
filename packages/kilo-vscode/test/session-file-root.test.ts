@@ -241,6 +241,48 @@ describe("resolveSessionFile", () => {
     expect(read.calls).toEqual(["ses_child"])
   })
 
+  it("remembers a created session from its payload location", async () => {
+    const repo = project()
+    const manager = state(repo.root)
+    const read = directories({})
+
+    read.roots.event({
+      type: "session.created",
+      data: { sessionID: "ses_child", location: { directory: repo.worktree } },
+    })
+
+    expect(
+      await resolveSessionFile({
+        state: manager,
+        roots: read.roots,
+        id: "ses_child",
+        file: "src/math.ts",
+        root: repo.root,
+      }),
+    ).toBe(path.join(repo.worktree, "src", "math.ts"))
+    expect(read.calls).toEqual([])
+  })
+
+  it("keeps an in-flight read when the created event has no directory", async () => {
+    const repo = project()
+    const manager = state(repo.root)
+    const read = deferred()
+
+    const raced = resolveSessionFile({
+      state: manager,
+      roots: read.roots,
+      id: "ses_child",
+      file: "src/math.ts",
+      root: repo.root,
+    })
+    read.roots.event({ type: "session.created", data: { sessionID: "ses_child" } })
+    read.settle(0, repo.worktree)
+
+    expect(await raced).toBe(path.join(repo.worktree, "src", "math.ts"))
+    await resolveSessionFile({ state: manager, roots: read.roots, id: "ses_child", file: "src/math.ts", root: repo.root })
+    expect(read.calls).toEqual(["ses_child"])
+  })
+
   it("does not resurrect a deleted session from a read that was already running", async () => {
     const repo = project()
     const manager = state(repo.root)

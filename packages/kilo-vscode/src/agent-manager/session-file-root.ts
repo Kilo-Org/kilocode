@@ -68,20 +68,23 @@ export function createSessionRoots(read: (sessionID: string) => Promise<string |
     return request
   }
 
-  /** Follows a session that moves directories, and forgets a deleted one. */
+  /** Remembers a created session's directory, follows a move, and forgets a deleted one. */
   const event = (value: SessionEvent) => {
     const sessionID = eventSessionID(value.data)
     if (!sessionID) return
     if (value.type === "session.deleted") return forget(sessionID)
     if (value.type === "session.moved") {
-      const directory = movedDirectory(value.data)
+      const directory = eventDirectory(value.data)
       if (!directory) return
       pending.delete(sessionID)
       return remember(sessionID, directory)
     }
     if (value.type === "session.created") {
+      // Session events can arrive without an envelope location, so read the payload the event carries.
+      const directory = eventDirectory(value.data) ?? value.location?.directory
+      if (!directory) return
       pending.delete(sessionID)
-      remember(sessionID, value.location?.directory)
+      remember(sessionID, directory)
     }
   }
 
@@ -96,7 +99,8 @@ function eventSessionID(data: unknown): string | undefined {
   return typeof id === "string" ? id : undefined
 }
 
-function movedDirectory(data: unknown): string | undefined {
+/** The directory a session event carries in `data.location.directory`; the envelope location is optional. */
+function eventDirectory(data: unknown): string | undefined {
   if (typeof data !== "object" || data === null) return undefined
   const location = (data as Record<string, unknown>).location
   if (typeof location !== "object" || location === null) return undefined
