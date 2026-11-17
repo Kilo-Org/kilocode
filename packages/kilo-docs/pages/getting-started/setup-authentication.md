@@ -5,7 +5,7 @@ description: "Configure Kilo Code and connect to your AI providers"
 
 # Authentication
 
-When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started. You can sign in with your email address, ChatGPT, Google, Apple, GitHub, GitLab, Discord, LinkedIn, or Anaconda, or through your organization's single sign-on.
+When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started. You can sign in with your email address, ChatGPT, Claude, Google, Apple, GitHub, GitLab, Discord, LinkedIn, or Anaconda, or through your organization's single sign-on.
 
 ## Quick Start with Kilo Account
 
@@ -37,6 +37,10 @@ kilo auth list
 ### Sign in with ChatGPT
 
 You can use ChatGPT to sign in to Kilo, connect your subscription for model requests, or both. These are separate options and neither requires an OpenAI API key. See [using ChatGPT with Kilo](/docs/ai-providers/openai-chatgpt-plus-pro) for setup and billing details.
+
+### Sign in with Claude
+
+You can use your Claude account to sign in to Kilo. Signing in does not change who pays for model requests. To have Anthropic bill your Claude usage directly, link a Claude API organization separately; this uses API pricing, not a Claude Pro or Max subscription. See [Claude sign-in and linked billing](/docs/ai-providers/claude-linked-billing) for setup and billing details.
 
 {% callout type="tip" title="Add Credits" %}
 [Add credits to your account](https://app.kilo.ai/profile), or sign up for [Kilo Pass](https://kilo.ai/pricing/kilo-pass).
