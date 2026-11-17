@@ -337,9 +337,10 @@ export function create(input: Input = {}): Client {
     lifecycle.child = child
     // spawn reports a missing or non-executable command asynchronously, while the
     // connect() that spawned it is still polling the registry. A child that starts
-    // and then dies before registering a hub (bad arguments, port taken) is the same
-    // outage. Record it for that attempt instead of scheduling a second connect()
-    // here; the guard makes `error` followed by `close` a single failure.
+    // and then dies before a hub registers (bad arguments, port taken, crash) is the
+    // same outage. The child stays tracked until it registers or exits, so an exit
+    // after the attempt ended still resets the self-start guard; whichever attempt
+    // runs next consumes the flag.
     const restart = (detail: { error?: unknown; code?: number | null; signal?: string | null }) => {
       if (lifecycle.child !== child) return
       lifecycle.child = undefined
@@ -380,9 +381,12 @@ export function create(input: Input = {}): Client {
       }
       if (found) {
         lifecycle.tried = false
+        lifecycle.failed = false
+        lifecycle.child = undefined
         link = found
         return
       }
+      lifecycle.failed = false
       start()
       const entry = await waitForHub(Date.now() + StartTimeout)
       if (!current()) return
@@ -398,6 +402,8 @@ export function create(input: Input = {}): Client {
       }
       if (started) {
         lifecycle.tried = false
+        lifecycle.failed = false
+        lifecycle.child = undefined
         link = started
         return
       }
@@ -407,9 +413,9 @@ export function create(input: Input = {}): Client {
       if (current()) schedule("cannot connect to the browser hub")
     } finally {
       lifecycle.active = false
-      // Past this point the child is the hub's own lifetime; a later exit is not an
-      // early failure and the hub's socket close drives the reconnect.
-      lifecycle.child = undefined
+      // The child stays tracked past the attempt: a hub that registers and exits a
+      // moment later still has to reset the self-start guard, otherwise every later
+      // attempt skips start() and polls an empty registry.
     }
   }
 

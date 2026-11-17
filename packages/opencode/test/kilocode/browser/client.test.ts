@@ -10,6 +10,7 @@ import { create as createHub, type Hub } from "../../../src/kilocode/browser/hub
 import * as proto from "../../../src/kilocode/browser/protocol"
 import { Registry } from "../../../src/kilocode/browser/registry"
 import { serve } from "../../../src/kilocode/browser/socket"
+import { until as eventually } from "./fixture"
 
 const cleanups: (() => Promise<void> | void)[] = []
 const restore: (() => void)[] = []
@@ -182,6 +183,33 @@ describe("browser client", () => {
     // window and then report "no hub is reachable".
     const state = await until(target, "reconnecting")
     expect(state).toMatchObject({ kind: "reconnecting", reason: "cannot start the browser hub" })
+  })
+
+  test("a hub child that outlives the attempt still resets the self-start guard", async () => {
+    const at = await tmp()
+    // One spawn per run, recorded so the test can count them; the child outlives the
+    // attempt that started it and exits afterwards.
+    const script = path.join(at.root, "slow.cjs")
+    const spawns = path.join(at.root, "spawns")
+    await fs.writeFile(
+      script,
+      `const fs = require("node:fs")\nfs.appendFileSync(${JSON.stringify(spawns)}, "x")\nsetTimeout(() => process.exit(1), 400)\n`,
+    )
+    // An entry whose socket refuses ends the first attempt as "no hub is reachable"
+    // while the child is still alive, so no socket close can drive the next attempt.
+    const dead = Registry.Entry.parse({
+      ...Registry.empty({ hubId: randomUUID(), mode: "loopback", socket: path.join(at.root, "missing.sock") }),
+      pid: process.pid,
+    })
+    await Registry.write(dead, at.hubs)
+    const target = client({ dir: at.dir, command: [process.execPath, script] })
+
+    // The late exit has to clear `tried`; otherwise every retry skips start() and the
+    // second spawn never happens.
+    await eventually(async () => {
+      const text = await fs.readFile(spawns, "utf8").catch(() => "")
+      return text.length >= 2 ? true : undefined
+    }, 5_000)
   })
 
   test("close() stops a connect that is still waiting for a hub", async () => {
