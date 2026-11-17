@@ -97,6 +97,7 @@ const cases: Case[] = [
   { key: "websearch", disposition: "native", input: { websearch: { provider: "random" } }, path: ["websearch"], value: { provider: "random" } },
   { key: "experimental.mcp_timeout", disposition: "native", input: { experimental: { mcp_timeout: 5 } }, path: ["mcp", "timeout"], value: { catalog: 5, execution: 5 } },
   { key: "experimental.policies", disposition: "native", input: { experimental: { policies: [{ effect: "deny", action: "provider.use", resource: "openai" }] } }, path: ["policies"], value: [{ action: "provider.use", resource: "openai", effect: "deny" }] },
+  { key: "experimental.openTelemetry", disposition: "folded", input: { experimental: { openTelemetry: false } }, path: ["experimental", "openTelemetry"], value: false },
   { key: "experimental.image_generate", disposition: "native", input: { experimental: { image_generate: true } }, path: ["experimental", "image_generate"], value: true },
 
   // --- Native-invalid: v1 allowed NullOr(string) for these; v2 expects a string and skips null with a diagnostic. ---
@@ -111,7 +112,6 @@ const cases: Case[] = [
   { key: "subagent_depth", disposition: "native-unsupported", input: { subagent_depth: 2 }, path: ["subagent_depth"] },
   { key: "compaction.prune", disposition: "native-unsupported", input: { compaction: { prune: false } }, path: ["compaction", "prune"] },
   { key: "compaction.tail_turns", disposition: "native-unsupported", input: { compaction: { tail_turns: 3 } }, path: ["compaction", "tail_turns"] },
-  { key: "experimental.openTelemetry", disposition: "native-unsupported", input: { experimental: { openTelemetry: false } }, path: ["experimental", "openTelemetry"] },
   { key: "experimental.batch_tool", disposition: "native-unsupported", input: { experimental: { batch_tool: true } }, path: ["experimental", "batch_tool"] },
   { key: "experimental.disable_paste_summary", disposition: "native-unsupported", input: { experimental: { disable_paste_summary: true } }, path: ["experimental", "disable_paste_summary"] },
   { key: "experimental.primary_tools", disposition: "native-unsupported", input: { experimental: { primary_tools: true } }, path: ["experimental", "primary_tools"] },
@@ -206,9 +206,9 @@ test("the table is the complete, decided mapping", () => {
   for (const c of cases) counts[c.disposition] = (counts[c.disposition] ?? 0) + 1
   // Per-disposition totals pin the table: a dropped or re-dispositioned row changes them.
   expect(counts).toEqual({
-    folded: 19,
+    folded: 20,
     native: 27,
-    "native-unsupported": 11,
+    "native-unsupported": 10,
     "native-invalid": 3,
     refused: 4,
     dropped: 8,

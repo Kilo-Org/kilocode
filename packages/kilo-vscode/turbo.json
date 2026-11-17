@@ -1,0 +1,10 @@
+{
+  "$schema": "https://v2-8-13.turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    // The telemetry catalog test compares with the v1 source at the pin in features.json, so a re-pin reruns it.
+    "test": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/migration-tracking/progress/features.json"]
+    }
+  }
+}

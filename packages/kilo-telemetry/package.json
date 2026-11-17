@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/kilo-telemetry",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Kilo product telemetry: the PostHog client, the machine and account identity and the event catalog. The telemetry plugin in packages/kilo-plugin serves it to clients as the kilocode.telemetry RPC.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "typecheck:tsc": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@kilocode/gateway-core": "workspace:*",
+    "effect": "catalog:",
+    "posthog-node": "4.4.0"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@typescript/native": "catalog:",
+    "typescript": "catalog:"
+  }
+}

@@ -1,6 +1,7 @@
 import { showToast } from "@kilocode/kilo-ui/toast"
 import {
   createContext,
+  createEffect,
   createSignal,
   onCleanup,
   onMount,
@@ -9,6 +10,7 @@ import {
   type ParentComponent,
 } from "solid-js"
 import type { WorkStyle, WorkStyleState } from "../../../src/shared/work-style-presets"
+import { TelemetryEventName } from "../../../src/services/telemetry/types"
 import { useLanguage } from "./language"
 import { useVSCode } from "./vscode"
 import { resolveWorkStyleOnboarding } from "./work-style-state"
@@ -64,6 +66,18 @@ export const WorkStyleProvider: ParentComponent = (props) => {
   onMount(() => vscode.postMessage({ type: "requestWorkStyle" }))
   onCleanup(unsubscribe)
 
+  // One event each time the onboarding appears.
+  const shown = { acknowledged: false }
+  createEffect(() => {
+    if (loading() || !display()) {
+      shown.acknowledged = false
+      return
+    }
+    if (shown.acknowledged) return
+    shown.acknowledged = true
+    vscode.postMessage({ type: "telemetry", event: TelemetryEventName.WORK_STYLE_ONBOARDING_SHOWN })
+  })
+
   const value: WorkStyleContextValue = {
     style,
     loading,
@@ -72,6 +86,7 @@ export const WorkStyleProvider: ParentComponent = (props) => {
     apply: (choice) => {
       if (applying()) return
       setApplying(true)
+      vscode.postMessage({ type: "telemetry", event: TelemetryEventName.WORK_STYLE_SELECTED, properties: { style: choice } })
       vscode.postMessage({ type: "applyWorkStyle", style: choice })
     },
     skip: () => {

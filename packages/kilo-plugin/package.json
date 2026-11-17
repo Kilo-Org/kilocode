@@ -10,7 +10,8 @@
     "./read": "./src/read/index.ts",
     "./request-identity": "./src/request-identity.ts",
     "./pages/auth": "./src/pages/auth.ts",
-    "./plugin/git-source": "./src/plugin/git-source.ts"
+    "./plugin/git-source": "./src/plugin/git-source.ts",
+    "./telemetry": "./src/telemetry/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -22,6 +23,7 @@
     "@kilocode/gateway-core": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*",
     "@kilocode/kilo-indexing": "workspace:*",
+    "@kilocode/kilo-telemetry": "workspace:*",
     "@kilocode/sandbox": "workspace:*",
     "@opencode/ai": "workspace:*",
     "@opencode/client": "workspace:*",

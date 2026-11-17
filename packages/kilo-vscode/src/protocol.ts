@@ -145,6 +145,8 @@ export type ToHost =
   | { type: "requestWorkStyle" }
   | { type: "applyWorkStyle"; style: WorkStyle }
   | { type: "setWorkStyle"; style: WorkStyleState }
+  /** A product telemetry event; the host adds the extension properties and forwards it to the server. */
+  | { type: "telemetry"; event: string; properties?: Record<string, unknown> }
 
 /**
  * The editor-tab Integrated Browser. The tab is host-driven: it renders a browser the extension host runs, so every

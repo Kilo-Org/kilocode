@@ -48,6 +48,7 @@ import { KiloPagesPlugin } from "./pages"
 import { KiloSandbox } from "./sandbox"
 import { KiloBoard } from "./board"
 import { KiloSoulPlugin } from "./soul"
+import { KiloTelemetryPlugin } from "./telemetry"
 
 export { KiloSandbox }
 
@@ -117,6 +118,8 @@ export const KiloPlugins = [
   KiloWakeupPlugin,
   // Kilo Swarm: the shared board of a main session and its subagents.
   KiloBoard.Plugin,
+  // Product telemetry for the clients, delivered only after a client records consent.
+  KiloTelemetryPlugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */

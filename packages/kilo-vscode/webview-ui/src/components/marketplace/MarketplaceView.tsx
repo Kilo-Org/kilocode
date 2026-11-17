@@ -1,10 +1,12 @@
-import { For, Show, createSignal } from "solid-js"
+import { For, Show, createSignal, onMount } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
+import { TelemetryEventName } from "../../../../src/services/telemetry/types"
 import { createMarketplace } from "../../v2/marketplace"
-import type { MarketplaceItem, MarketplaceRecord, MarketplaceScope } from "../../v2/marketplace-data"
+import type { InstallInput, MarketplaceItem, MarketplaceRecord, MarketplaceScope } from "../../v2/marketplace-data"
 import { message } from "../../v2/scope"
 import { InstallModal } from "./InstallModal"
 import { MarketplaceListView } from "./MarketplaceListView"
@@ -14,8 +16,17 @@ import "./marketplace.css"
 
 export const MarketplaceView = () => {
   const language = useLanguage()
+  const vscode = useVSCode()
   const dialog = useDialog()
   const marketplace = createMarketplace()
+  const telemetry = (event: string, properties?: Record<string, unknown>) =>
+    vscode.postMessage({ type: "telemetry", event, properties: properties ?? {} })
+  const describe = (item: { id: string; kind: string }, name: string) => ({
+    itemId: item.id,
+    itemType: item.kind,
+    itemName: name,
+  })
+  onMount(() => telemetry(TelemetryEventName.MARKETPLACE_TAB_VIEWED))
   const [search, setSearch] = createSignal("")
   const [actionErrors, setActionErrors] = createSignal<string[]>([])
 
@@ -27,6 +38,17 @@ export const MarketplaceView = () => {
   // A repair reuses the install dialog with the record's own scope and method, so it writes the same
   // configuration the record was installed with instead of the item's first option.
   const show = (item: MarketplaceItem, existing?: MarketplaceRecord, scope?: MarketplaceScope) => {
+    if (!existing) telemetry(TelemetryEventName.MARKETPLACE_INSTALL_BUTTON_CLICKED, describe(item, item.name))
+    const install = async (target: MarketplaceItem, input: InstallInput) => {
+      const record = await marketplace.install(target, input)
+      telemetry(TelemetryEventName.MARKETPLACE_ITEM_INSTALLED, {
+        ...describe(target, target.name),
+        target: input.scope,
+        ...(Object.keys(input.params ?? {}).length > 0 && { hasParameters: true }),
+        ...(input.option && { installationMethodName: input.option }),
+      })
+      return record
+    }
     dialog.show(() => (
       <InstallModal
         item={item}
@@ -36,7 +58,7 @@ export const MarketplaceView = () => {
         mcp={marketplace.mcp}
         onClose={() => dialog.close()}
         onPreview={marketplace.preview}
-        onInstall={marketplace.install}
+        onInstall={install}
         onOpen={open}
       />
     ))
@@ -50,7 +72,15 @@ export const MarketplaceView = () => {
         onClose={() => dialog.close()}
         onConfirm={() => {
           dialog.close()
-          void marketplace.uninstall(record).catch((error) => fail(message(error)))
+          void marketplace
+            .uninstall(record)
+            .then(() =>
+              telemetry(TelemetryEventName.MARKETPLACE_ITEM_REMOVED, {
+                ...describe(record, nameOf(record)),
+                target: record.scope,
+              }),
+            )
+            .catch((error) => fail(message(error)))
         }}
       />
     ))
