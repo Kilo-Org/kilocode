@@ -145,7 +145,11 @@ export function browserOptions(state: State): DialogSelectOption<string>[] {
       category: copy("browser.command.grants"),
       title: copy("browser.grants.title"),
       value: "grants:show",
-      description: state.allowAll ? copy("browser.grants.all") : `${state.grants.length}`,
+      description: state.allowAll
+        ? copy("browser.grants.all")
+        : state.grants.length === 0
+          ? copy("browser.grants.none")
+          : `${state.grants.length}`,
     },
   ]
 }
