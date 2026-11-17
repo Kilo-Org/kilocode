@@ -66,8 +66,10 @@ export namespace KiloSessionCompaction {
             const part = marker.parts.find((item): item is MessageV2.CompactionPart => item.type === "compaction")
             if (!part || !request.auto) return
             const info = marker.info
-            if (info.role === "user" && (info.agent !== request.agent || !sameModel(info.model, request.model))) {
-              yield* session.updateMessage({ ...info, agent: request.agent, model: request.model })
+            if (info.role === "user") {
+              const agent = info.agent !== request.agent
+              const model = !sameModel(info.model, request.model)
+              if (agent || model) yield* session.updateMessage({ ...info, agent: request.agent, model: request.model })
             }
             if (part.auto && part.overflow === request.overflow) return
             yield* session.updatePart({ ...part, auto: true, overflow: request.overflow })
