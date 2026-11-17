@@ -607,7 +607,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.syncView()
   }
 
-  /** Default directory for a file the visible session saves, for example a rendered diagram. */
+  /** Default directory for a file a session saves, for example a rendered diagram. The requesting session wins. */
   public async imageDirectory(sessionID?: string): Promise<string | undefined> {
     return resolveImageDirectory({
       sessionID,
