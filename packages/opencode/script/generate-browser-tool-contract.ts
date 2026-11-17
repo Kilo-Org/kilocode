@@ -11,9 +11,8 @@
 import fs from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { createConnection } from "@playwright/mcp"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js"
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { entries, hash } from "../src/kilocode/browser/contract-shape"
 import type { Entry } from "../src/kilocode/browser/contract-shape"
 
@@ -21,18 +20,21 @@ const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const output = path.join(dir, "src/kilocode/browser/contract.generated.ts")
 const pin = "@playwright/mcp@0.0.81"
 
+// Mirrors apps/extension/scripts/generate-browser-tool-contract.mjs: the pinned server over stdio,
+// so the SHA-256 is the same value the extension vendor uses for the handshake.
 const list = async () => {
-  const server = await createConnection()
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
-  await server.connect(serverTransport)
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.join(dir, "node_modules/@playwright/mcp/cli.js"), "--headless"],
+    stderr: "ignore",
+  })
   const client = new Client({ name: "kilo-browser-tool-contract", version: "1.0.0" })
-  await client.connect(clientTransport)
+  await client.connect(transport)
   try {
     const result = await client.listTools()
     return { result, tools: entries(result) }
   } finally {
     await client.close()
-    await server.close()
   }
 }
 
