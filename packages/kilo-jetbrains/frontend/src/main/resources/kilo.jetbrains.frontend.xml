@@ -472,9 +472,10 @@
                 class="ai.kilocode.client.actions.ForkWorktreeSessionAction"/>
 
         <group id="Kilo.Worktree.RowMenu">
-            <reference ref="Kilo.HostedWorkspace.Reload"/>
             <reference ref="Kilo.HostedWorkspace.OpenInBrowser"/>
+            <reference ref="Kilo.HostedWorkspace.Reload"/>
             <separator/>
+            <reference ref="Kilo.HostedWorkspace.Delete"/>
             <reference ref="Kilo.HostedWorkspace.Dismiss"/>
             <separator/>
             <reference ref="Kilo.Worktree.Rename"/>
@@ -493,7 +494,6 @@
             <reference ref="Kilo.OpenSetupScript"/>
             <reference ref="Kilo.Worktree.RunSetupScript"/>
             <separator/>
-            <reference ref="Kilo.HostedWorkspace.Delete"/>
             <reference ref="Kilo.Worktree.Delete"/>
         </group>
 

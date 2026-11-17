@@ -26,6 +26,7 @@ import ai.kilocode.rpc.dto.HostedWorkspaceListDto
 import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -36,6 +37,7 @@ import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import kotlinx.coroutines.CoroutineScope
@@ -131,16 +133,26 @@ class ReloadHostedWorkspaceActionTest : BasePlatformTestCase() {
         assertFalse(disabled.presentation.isVisible)
     }
 
-    fun `test reload closes the editor before reconnecting and opens one replacement`() {
+    fun `test reload rebuilds inside the selected editor without changing selection`() {
         edt { openHostedWorkspace(project, dto) }
         val manager = FileEditorManager.getInstance(project)
         assertEquals(1, manager.openFiles.size)
+        val file = manager.selectedFiles.single()
+        val container = manager.getSelectedEditor(file)!!.component
+        val old = container.components.single()
 
         val event = event()
         edt { action.actionPerformed(event) }
 
-        assertTrue(coroutines.pumpUntil { edtWait { manager.openFiles.size == 1 } })
+        assertSame(file, manager.selectedFiles.single())
+        assertSame(container, manager.getSelectedEditor(file)?.component)
+        assertTrue(coroutines.pumpUntil { edtWait {
+            container.components.singleOrNull()?.let { it !== old } == true
+        } })
         assertEquals(1, manager.openFiles.size)
+        assertSame(file, manager.selectedFiles.single())
+        assertSame(container, manager.getSelectedEditor(file)?.component)
+        assertTrue(Disposer.isDisposed(old as Disposable))
         assertNotNull(KiloVirtualFileSystem.getInstance().cached(
             ai.kilocode.client.vfs.KiloPath(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(dto)),
         ))
@@ -156,6 +168,16 @@ class ReloadHostedWorkspaceActionTest : BasePlatformTestCase() {
         assertTrue(descriptor.elements("reference").any {
             it.attribute("ref") == ID && (it.parentNode as? Element)?.attribute("id") == "Kilo.Worktree.RowMenu"
         })
+        val menu = descriptor.elements("group").single { it.attribute("id") == "Kilo.Worktree.RowMenu" }
+        val order = (0 until menu.childNodes.length).mapNotNull { menu.childNodes.item(it) as? Element }.map {
+            if (it.tagName == "separator") "separator" else it.attribute("ref")
+        }
+        assertEquals(listOf(
+            "Kilo.HostedWorkspace.OpenInBrowser",
+            "Kilo.HostedWorkspace.Reload",
+            "separator",
+            "Kilo.HostedWorkspace.Delete",
+        ), order.take(4))
         assertEquals("Reload", KiloBundle.optional("action.$ID.text"))
         assertFalse(KiloBundle.optional("action.$ID.description").isNullOrBlank())
     }

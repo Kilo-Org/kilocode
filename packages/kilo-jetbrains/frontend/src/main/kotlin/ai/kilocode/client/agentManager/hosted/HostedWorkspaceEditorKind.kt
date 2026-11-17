@@ -60,7 +60,7 @@ object HostedWorkspaceEditorKind : KiloEditorKind {
 
     @RequiresEdt
     override fun preferredFocus(component: JComponent): JComponent? =
-        (component as? HostedWorkspaceEditorPanel)?.preferredFocus()
+        (component as? HostedWorkspaceEditorContainer)?.preferredFocus()
 
     @RequiresEdt
     override fun createContent(project: Project, file: KiloVirtualFile, parent: Disposable): JComponent {
@@ -77,13 +77,62 @@ object HostedWorkspaceEditorKind : KiloEditorKind {
             }
         }
         val dto = service<HostedWorkspaceCache>().get(ref)
-        return HostedWorkspaceEditorPanel(
+        return HostedWorkspaceEditorContainer(
             parent = parent,
             project = project,
             ref = ref,
             name = dto?.name,
             branch = dto?.branch,
         )
+    }
+}
+
+internal class HostedWorkspaceEditorContainer @RequiresEdt constructor(
+    parent: Disposable,
+    private val project: Project,
+    private val ref: HostedWorkspaceRefDto,
+    name: String?,
+    branch: String?,
+) : BorderLayoutPanel(), Disposable {
+    private var panel: HostedWorkspaceEditorPanel? = null
+
+    init {
+        Disposer.register(parent, this)
+        mount(name, branch)
+    }
+
+    @RequiresEdt
+    fun preferredFocus(): JComponent? = panel?.preferredFocus()
+
+    @RequiresEdt
+    fun detach(): suspend () -> Unit {
+        val old = panel ?: return {}
+        panel = null
+        remove(old)
+        Disposer.dispose(old)
+        revalidate()
+        repaint()
+        return { old.closed() }
+    }
+
+    @RequiresEdt
+    fun rebuild(dto: HostedWorkspaceDto) {
+        check(panel == null)
+        mount(dto.name, dto.branch)
+        revalidate()
+        repaint()
+    }
+
+    @RequiresEdt
+    private fun mount(name: String?, branch: String?) {
+        val next = HostedWorkspaceEditorPanel(this, project, ref, name, branch)
+        panel = next
+        addToCenter(next)
+    }
+
+    override fun dispose() {
+        panel = null
+        removeAll()
     }
 }
 
@@ -129,13 +178,14 @@ internal fun openHostedWorkspace(project: Project, dto: HostedWorkspaceDto, focu
 @RequiresEdt
 internal fun reloadHostedWorkspace(project: Project, dto: HostedWorkspaceDto) {
     var children = emptyList<Map<String, String>>()
+    var containers = emptyList<HostedWorkspaceEditorContainer>()
     project.service<KiloHostedService>().reload(dto.ref, close = {
         val vfs = project.service<KiloVfsManager>()
         val params = hostedWorkspaceParams(dto)
         val files = FileEditorManager.getInstance(project)
         val file = KiloVirtualFileSystem.getInstance().cached(KiloPath(HostedWorkspaceEditorKind.ID, params))
-        val panels = file?.let { files.getEditors(it) }
-            ?.mapNotNull { it.component as? HostedWorkspaceEditorPanel }
+        containers = file?.let { files.getEditors(it) }
+            ?.mapNotNull { it.component as? HostedWorkspaceEditorContainer }
             .orEmpty()
         val subagents = files.openFiles.mapNotNull { child ->
             val kilo = child as? KiloVirtualFile ?: return@mapNotNull null
@@ -146,15 +196,17 @@ internal fun reloadHostedWorkspace(project: Project, dto: HostedWorkspaceDto) {
             kilo.path.params to childPanels
         }
         children = subagents.map { it.first }
-        vfs.close(HostedWorkspaceEditorKind.ID, params)
+        val closed = containers.map { it.detach() }
+        if (containers.isEmpty()) vfs.close(HostedWorkspaceEditorKind.ID, params)
         subagents.forEach { (child, _) -> vfs.close(SubagentSessionEditorKind.ID, child) }
         suspend {
-            panels.forEach { it.closed() }
+            closed.forEach { it() }
             subagents.flatMap { it.second }.forEach { it.closed() }
         }
     }) {
         if (project.isDisposed) return@reload
-        openHostedWorkspace(project, dto)
+        if (containers.isEmpty()) openHostedWorkspace(project, dto)
+        else containers.forEach { it.rebuild(dto) }
         val vfs = project.service<KiloVfsManager>()
         // Child tabs are restored only after their old controller scopes have fully terminated.
         children.forEach { vfs.open(SubagentSessionEditorKind.ID, it, focus = false) }
