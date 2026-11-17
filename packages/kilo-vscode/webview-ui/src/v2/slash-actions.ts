@@ -12,6 +12,7 @@ const ACTIONS = [
   { name: "marketplace", key: "sidebar.topBar.marketplace", hints: ["extensions", "skills", "mcp"] },
   { name: "variant", key: "prompt.thinking.tooltip", hints: ["variants", "reasoning", "thinking"] },
   { name: "compact", key: "command.session.compact", hints: ["smol", "condense"] },
+  { name: "update-from-base", key: "agentManager.updateBase.title", hints: [] },
   { name: "caffeinate", key: "agentManager.caffeination.toggle", hints: ["caffenate", "keep-awake", "awake", "sleep"] },
   { name: "help", hints: [] },
   { name: "settings", key: "sidebar.topBar.settings", hints: [] },
