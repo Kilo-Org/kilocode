@@ -416,6 +416,10 @@
         <action id="Kilo.Worktree.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeAction"/>
 
+        <group id="Kilo.AgentManager.MoveTo"
+               class="ai.kilocode.client.actions.MoveAgentManagerItemGroup"
+               popup="true"/>
+
         <action id="Kilo.Worktree.Delete"
                 class="ai.kilocode.client.actions.DeleteWorktreeAction"/>
 
@@ -474,6 +478,7 @@
             <reference ref="Kilo.HostedWorkspace.Dismiss"/>
             <separator/>
             <reference ref="Kilo.Worktree.Rename"/>
+            <reference ref="Kilo.AgentManager.MoveTo"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
             <separator/>

@@ -25,11 +25,17 @@ A Kilo account is also required to use [conda environments](/docs/desktop/featur
 
 ### 3. Choose an autonomy level
 
-Choose whether you want Kilo to operate with high autonomy or review its work first, pausing to show its plan and ask for your approval before it edits files or runs commands. High autonomy is the default behavior of the Kilo Code agent.
+Choose **High autonomy** to leave existing permission overrides unchanged and otherwise use Kilo's defaults, or **Review first** to add permission prompts for file edits and commands. High autonomy isn't auto-approve: the separate **Approval mode** control determines how permission requests are answered.
 
 ### 4. Create a workspace
 
-A workspace scopes a session to one or more folders on your machine. Add the folder(s) you want the agent to work in; the agent's file access, terminal, and git operations all run inside the workspace. You can add more workspaces anytime. 
+A workspace groups one or more folders on your machine. The primary folder is the session's working directory; the agent can also access the other folders. A workspace isn't a filesystem sandbox.
+
+1. Enter a **Workspace name** and optionally choose an **Identity color**.
+2. Drop or select folders. Use **Add folder** to add more and **Make primary** to change the primary folder.
+3. Select **Create workspace**.
+
+You can skip this step and add a workspace later.
 
 ### 5. See what you can do
 
@@ -37,7 +43,7 @@ A short tour of Kilo Desktop's features finishes setup.
 
 ## Navigate the home screen
 
-When Kilo Desktop opens, you land on the New Session page in the workspace you created during setup.
+When Kilo Desktop opens, you land on the New Session page, with your workspace selected if you created one during setup.
 
 {% image src="/docs/img/desktop/quickstart-home-screen.png" alt="The Kilo Desktop home screen with the sidebar and a new session" width="800" /%}
 
@@ -68,7 +74,7 @@ The New Session page asks **What should we work on in *workspace*?** Above the m
 
 Kilo Desktop remembers your **Use** choice for each workspace. If the workspace folder isn't a git repository yet, select **Initialize Git**. See [Git integration](/docs/desktop/features/git).
 
-Send a message to start with the agent. To start without the agent, select a tool under the message box: **Terminal**, **Notebook**, **Browser**, or **Files**.
+Send a message to start with the agent. To start without the agent, select a tool under the message box: **Terminal**, **Notebook**, **Browser**, or **Files**. You can add a chat later.
 
 ### Manage sessions
 
@@ -93,8 +99,8 @@ The rest of the window is where you chat with the agent. Type a message, use `@`
 The controls around the input let you:
 
 - **Add an attachment** with the **+** button.
-- **Choose an agent** to set how it approaches your request. Pick one of the default agents: Code, Plan, Ask, Debug, or Architect. See [Using agents](/docs/code-with-ai/agents/using-agents) for what each one does.
-- **Select autonomy level** for the agent. With **Manually approve**, Kilo asks before each file edit or command; with **Automatically approve**, it proceeds on its own without requesting permission.
+- **Choose an agent** to set how it approaches your request. Pick a default agent — Code, Plan, Ask, or Debug — or a custom agent you've configured. See [Using agents](/docs/code-with-ai/agents/using-agents) for what each one does.
+- **Approval mode** controls how permission requests are answered. **Manually approve** leaves them for you; **Automatically approve** answers them for you, except requests that still require human approval.
 - **Pick a model** for the chat. The available models depend on how you're signed in and which providers you've connected. The list can include [Kilo Gateway](/docs/gateway) models, provider models you've added, or a [local model](/docs/desktop/features/local-inference) you've added. The picker labels free models **Free** and models that use your own API key **BYOK**. Use the filter to show only free models. Free models may use your data for training; see [Privacy](/docs/desktop/settings/general#privacy). Each chat keeps its own model and effort. New chats start with the model you last picked for a new chat.
 
 Below the input, an open chat shows where its changes go: **Local** or the name of its worktree. You choose this when you [start the session](#start-a-session).
@@ -115,13 +121,13 @@ Select **Pause queue** in the queue header to hold queued messages after the age
 
 ### Review a plan
 
-When the **Plan** (or **Architect**) agent writes a plan, a plan card appears in the chat with a preview. Select **View Plan** to read the full plan in a **Plan** tab beside the chat, then **Approve** it to let the agent start work. To change the plan, type your feedback and select **Refine**. Your feedback appears in the chat, and the agent revises the plan. Each revision gets its own card, and an open Plan tab switches to the newest revision once it's ready.
+When the **Plan** agent writes a plan, a plan card appears in the chat with a preview. Select **View Plan** to read the full plan in a **Plan** tab beside the chat, then **Approve** it to let the agent start work. To change the plan, type your feedback and select **Refine**. Your feedback appears in the chat, and the agent revises the plan. Each revision gets its own card, and an open Plan tab switches to the newest revision once it's ready.
 
 ### Pages and diagrams in replies
 
 When a chart, table, or mockup says more than prose, the agent can show an HTML page right in its reply. The page follows your light or dark theme, and tall pages scroll inside the frame. Hover the page to see its title and two buttons:
 
-- **Save to workspace** — saves the page as an `.html` file in the chat's workspace, named after the page title. Kilo Desktop never overwrites a file; if the name is taken, it adds a number, such as `Chart 2.html`. Select **Open** in the confirmation to view the saved page in a [Browser](/docs/desktop/features/browser) tab.
+- **Save to workspace** — available when the chat has a workspace folder. Saves the page as an `.html` file at the root of that folder (or its worktree), named after the page title. Kilo Desktop never overwrites a file; if the name is taken, it adds a number, such as `Chart 2.html`. Select **Open** in the confirmation to view the saved page in a [Browser](/docs/desktop/features/browser) tab.
 - **Open in viewer** — opens the page in the chat's **Viewer** tab.
 
 Pages can't reach the network, except to load scripts from a few public CDNs (jsDelivr, unpkg, cdnjs, Plotly, Bokeh, and HoloViz). When you click a link in a page, Kilo Desktop asks **Open *site* in your browser?** and opens it in your default browser only if you select **Open**.
@@ -173,7 +179,7 @@ By default, each tab group you open is added next to the others, and the tab gro
 
 ### Agents and tab status
 
-Select {% svgIcon src="/docs/img/desktop/bot.svg" /%} **Agents** at the top right of a session to see its chats. **Open** lists chats that have a tab; select one to jump to it, or to its window if you popped it out. **Closed** lists chats whose tab you closed; select one to reopen it as a tab.
+Select {% svgIcon src="/docs/img/desktop/bot.svg" /%} **Agents** at the top right of a session to see its chats. **Open** lists chats that have a tab; select one to jump to it, or to its window if you popped it out. **Closed** lists chats whose tab you closed; select one to reopen it as a tab. Select **New agent** to start another chat.
 
 A tab's icon shows its status: pulsing blue while it works, amber when it needs you, and a yellow dot when it has finished while you were looking elsewhere.
 

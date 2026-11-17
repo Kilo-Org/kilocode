@@ -64,7 +64,9 @@ See [Notebooks](/docs/desktop/features/notebooks) for working with notebooks in 
 
 ## Privacy
 
-The **Privacy** section has a single **Share usage analytics and crash reports** toggle. When on, it shares usage analytics and crash reports with Kilo — including from the embedded Kilo service and conda environment manager. 
+The **Privacy** section has a single **Share usage analytics and crash reports** toggle, enabled by default. Product telemetry and crash reports help us understand feature usage and diagnose problems. Turn the toggle off to disable sharing, including telemetry from the embedded Kilo service and conda environment manager. Desktop's preference takes precedence over standalone CLI telemetry settings.
+
+See [Desktop product telemetry controls](/docs/getting-started/settings/product-telemetry#kilo-desktop) for how the preference reaches running services and when to restart Desktop to ensure all embedded services use the saved choice.
 
 It also explains data handling for **free models**: because they may route your requests to providers that log prompts and outputs, don't submit personal or confidential data when using them. See [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) for details, and use the chat model picker's filter to exclude free models.
 
