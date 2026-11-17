@@ -1,4 +1,5 @@
-// `kilo browser hub` (the browser or a CLI starts it) and `kilo browser install-host`.
+// `kilo browser hub` (the browser or a CLI starts it), `kilo browser install-host`, and `kilo browser
+// install-chromium` for the Chromium the bundled Playwright backend drives.
 import { Argument, Flag } from "effect/cli"
 import { Spec } from "@opencode/cli/framework/spec"
 import { DefaultPort } from "./protocol"
@@ -33,6 +34,15 @@ export const KiloBrowserCommands = Spec.make("browser", {
     }),
     Spec.make("install-host", {
       description: "Install the native messaging host for installed browsers",
+    }),
+    Spec.make("install-chromium", {
+      description: "Download the Chromium build that matches this CLI into the Kilo data dir",
+      params: {
+        force: Flag.Boolean("force").pipe(
+          Flag.withDescription("Download again even when the matching build is already installed"),
+          Flag.withDefault(false),
+        ),
+      },
     }),
   ],
 })

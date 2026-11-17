@@ -2,9 +2,9 @@ import { Runtime } from "@opencode/cli/framework/runtime"
 import { installChromium } from "@kilocode/kilo-plugin/browser/install"
 import { Effect } from "effect"
 import { EOL } from "node:os"
-import { BrowserCommand } from "./command"
+import { KiloBrowserCommands } from "./commands"
 
-const spec = BrowserCommand.commands["install-chromium"]
+const spec = KiloBrowserCommands.commands["install-chromium"]
 
 export default Runtime.handler(
   spec,

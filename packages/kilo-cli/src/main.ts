@@ -27,7 +27,6 @@ import { CpuProfile } from "@opencode/cli/cpu-profile"
 import { ShutdownDeadline } from "@opencode/cli/shutdown-deadline"
 import { KiloApp } from "./app"
 import { AutoCommand } from "./auto/auto"
-import { BrowserCommand } from "./browser/command"
 import { ImportCommand } from "./import/import"
 import { SyncCommand } from "./sync/sync"
 import { RemoteCommand } from "./remote/remote"
@@ -69,13 +68,12 @@ const KiloCommands = {
       commands: { ...Commands.commands.service.commands, ...KiloServiceCommands },
     },
     auto: AutoCommand,
-    // Kilo: the browser the bundled Playwright backend drives (`install-chromium`).
-    browser: BrowserCommand,
+    // Kilo: the browser bridge hub, its native messaging host install, and the Chromium the bundled Playwright
+    // backend drives.
+    browser: KiloBrowserCommands,
     import: ImportCommand,
     sync: SyncCommand,
     remote: RemoteCommand,
-    // Kilo: the browser bridge hub and its native messaging host install.
-    browser: KiloBrowserCommands,
   },
 }
 
@@ -157,11 +155,12 @@ const Handlers = Runtime.handlers(KiloCommands, {
   import: {
     v1: () => import("./import/v1"),
   },
-  // Kilo: the browser bridge hub (started by the browser or by a CLI) and the native
-  // messaging host install.
+  // Kilo: the browser bridge hub (started by the browser or by a CLI), the native messaging host install, and the
+  // Chromium the bundled Playwright backend drives.
   browser: {
     hub: () => import("./browser/hub-command"),
     "install-host": () => import("./browser/install-host-command"),
+    "install-chromium": () => import("./browser/install-chromium"),
   },
   // Kilo: custom auto routers.
   auto: {
@@ -171,10 +170,6 @@ const Handlers = Runtime.handlers(KiloCommands, {
       remove: () => import("./auto/router-remove"),
     },
     eval: () => import("./auto/eval"),
-  },
-  // Kilo: the browser the bundled Playwright backend drives.
-  browser: {
-    "install-chromium": () => import("./browser/install-chromium"),
   },
 })
 
