@@ -125,6 +125,15 @@ class HostedPullRequestTest {
     }
 
     @Test
+    fun `a missing pull request title falls back to the workspace name`() {
+        val pull = checkNotNull(hostedPullRequest(summary(title = null), ref))
+        assertEquals("", pull.title)
+        assertEquals("Cloud workspace", pull.titled("Cloud workspace").title)
+        assertEquals("Fix Cloud PR", checkNotNull(hostedPullRequest(summary(), ref)).titled("Cloud workspace").title)
+        assertEquals("", pull.titled("  ").title)
+    }
+
+    @Test
     fun `only an https pull request URL is accepted`() {
         assertNull(hostedPullRequest(summary(url = "http://github.com/owner/repo/pull/42"), ref))
         assertNull(hostedPullRequest(summary(url = "javascript:alert(1)"), ref))

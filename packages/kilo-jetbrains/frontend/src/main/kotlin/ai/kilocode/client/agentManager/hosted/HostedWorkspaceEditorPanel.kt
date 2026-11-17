@@ -460,7 +460,8 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     /** Keeps the PR pill/title on the same shared header a worktree editor uses, with no changes stats. */
     @RequiresEdt
     private fun syncHeader() {
-        header.update(null, pull, title())
+        val name = title()
+        header.update(null, pull?.titled(name), name)
     }
 
     /** One label for the tab, header, and status bar, matching the tree row. */

@@ -503,7 +503,8 @@ class KiloHostedService internal constructor(
         HostedWorkspacePullRequestDto(ref, "unreachable", null)
     }
 
-    /** Shares a session feed with passive discovery and releases it with the consumer. */    fun observe(ref: HostedWorkspaceRefDto, session: String, parent: Disposable): Disposable {
+    /** Shares a session feed with passive discovery and releases it with the consumer. */
+    fun observe(ref: HostedWorkspaceRefDto, session: String, parent: Disposable): Disposable {
         val key = HostedIDs.session(ref.providerID, ref.workspaceID, session)
         val item = synchronized(lock) {
             if (gate() && !_state.value.signedOut) watch(ref, session).also { it.owners++ } else null

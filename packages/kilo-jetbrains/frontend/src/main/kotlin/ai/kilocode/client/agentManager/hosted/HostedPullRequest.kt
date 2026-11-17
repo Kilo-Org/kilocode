@@ -50,6 +50,17 @@ internal fun hostedPullRequest(pull: HostedPullRequestSummaryDto?, ref: HostedWo
     )
 }
 
+/**
+ * Keeps a header readable when Cloud could not read the PR title. A partial observation may carry a
+ * null title; falling back to the workspace name keeps the same text the header showed before the PR
+ * was linked instead of dropping to a bare number.
+ */
+internal fun WorktreePrDto.titled(fallback: String): WorktreePrDto {
+    if (title.isNotBlank()) return this
+    val name = fallback.trim()
+    return if (name.isEmpty()) this else copy(title = name)
+}
+
 /** Only pending review or pending/partial checks justify a bounded background poll. */
 internal fun hostedPullRequestPending(pull: WorktreePrDto?): Boolean =
     pull != null && (pull.review == GhReview.PENDING || pull.checks.state == GhChecks.PENDING)

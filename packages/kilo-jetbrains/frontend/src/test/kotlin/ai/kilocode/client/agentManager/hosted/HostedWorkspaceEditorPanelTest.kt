@@ -534,6 +534,38 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         }
     }
 
+    fun testMissingPullRequestTitleFallsBackToTheWorkspaceName() {
+        pull = HostedWorkspacePullRequestDto(ref, "available", HostedPullRequestSummaryDto(
+            url = "https://github.com/owner/repo/pull/42",
+            number = 42,
+            state = "open",
+            title = null,
+            headSha = "a".repeat(40),
+            lastSyncedAt = "2026-11-17T00:00:00Z",
+            review = HostedPullRequestReviewDto("approved", available = true, pending = false),
+            checks = HostedPullRequestChecksDto(3, 3, 0, 0, 0, 0, complete = true, available = true),
+            conversations = HostedPullRequestConversationsDto(0, complete = true),
+            mergeability = HostedPullRequestMergeabilityDto(true, "clean", complete = true),
+            partial = false,
+            unavailable = emptyList(),
+        ))
+        pulls.refresh(ref, revalidate = true)
+        var text = ""
+        val ok = coroutines.pumpUntil { edtWait {
+            val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
+            val title = descendants(header).filterIsInstance<SimpleColoredComponent>().single()
+            val parts = mutableListOf<String>()
+            val iter = title.iterator()
+            while (iter.hasNext()) {
+                iter.next()
+                parts += iter.fragment.toString()
+            }
+            text = parts.joinToString("")
+            text == "Selected session #42"
+        } }
+        assertTrue("header title was '$text'", ok)
+    }
+
     fun testCloudSessionTitleRefreshesFromWorkspace() {
         assertTrue(coroutines.pumpUntil { edtWait {
             descendants(panel).filterIsInstance<SessionUi>().single().title() == "Selected session"

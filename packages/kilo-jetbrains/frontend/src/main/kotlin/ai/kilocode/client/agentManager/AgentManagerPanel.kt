@@ -32,6 +32,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeTitle
 import ai.kilocode.client.agentManager.worktree.openWorktreeSession
 import ai.kilocode.client.agentManager.hosted.HostedManagementService
 import ai.kilocode.client.agentManager.hosted.HostedPullRequestService
+import ai.kilocode.client.agentManager.hosted.titled
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceCache
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDialog
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
@@ -1115,7 +1116,7 @@ class AgentManagerPanel(
             build = {
                 val disposable = Disposer.newDisposable("Hosted workspace row popup")
                 val body = WorktreeRowPopupBody(openDiff = {})
-                body.update(null, pull, row.title, null)
+                body.update(null, pull.titled(row.title), row.title, null)
                 HeaderPopupBody(body, disposable, UiStyle.Balloon.bg(), maxWidth = POPUP_WIDTH, horizontal = true)
             },
             place = { built -> place(built) },

@@ -1,5 +1,6 @@
 package ai.kilocode.client.actions
 
+import ai.kilocode.client.agentManager.hosted.HostedManagementService
 import ai.kilocode.client.agentManager.hosted.HostedPullRequestService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.telemetry.Telemetry
@@ -16,7 +17,8 @@ class RefreshCloudAction : AnAction(), DumbAware {
         Telemetry.send("Cloud Refresh Clicked", mapOf("surface" to "menu"))
         val hosted = project.service<KiloHostedService>()
         hosted.refresh(dir)
-        project.service<HostedPullRequestService>().refreshAll(hosted.state.value.items.map { it.ref }, revalidate = true)
+        val visible = project.service<HostedManagementService>().visible(hosted.state.value.items)
+        project.service<HostedPullRequestService>().refreshAll(visible.map { it.ref }, revalidate = true)
     }
 
     override fun update(e: AnActionEvent) {
