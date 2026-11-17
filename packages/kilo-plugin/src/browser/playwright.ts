@@ -174,11 +174,26 @@ function inspectElement(el: Element, kind: "fill" | "click") {
 async function readSnapshot(file: string): Promise<string | undefined> {
   const root = await fs.realpath(outputDirectory()).catch(() => undefined)
   if (!root) return undefined
-  const resolved = await fs.realpath(path.resolve(root, file)).catch(() => undefined)
-  if (!resolved || (resolved !== root && !resolved.startsWith(root + path.sep))) return undefined
+  const resolved = await snapshotFile(file, root)
+  if (!resolved) return undefined
   const stat = await fs.stat(resolved).catch(() => undefined)
   if (!stat?.isFile() || stat.size > INLINE_LIMIT) return undefined
   return fs.readFile(resolved, "utf8").catch(() => undefined)
+}
+
+/**
+ * The real path of a snapshot link, or undefined. The MCP prints the path relative to the process working directory
+ * (the CLI's project directory), so that is the base; the output directory is the fallback for a link that already
+ * points there. Either way the file must resolve inside the output directory the backend owns.
+ */
+export async function snapshotFile(file: string, root: string, cwd = process.cwd()): Promise<string | undefined> {
+  for (const base of [cwd, root]) {
+    const resolved = await fs.realpath(path.resolve(base, file)).catch(() => undefined)
+    if (!resolved) continue
+    if (resolved !== root && !resolved.startsWith(root + path.sep)) continue
+    return resolved
+  }
+  return undefined
 }
 
 /**

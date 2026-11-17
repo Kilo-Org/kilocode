@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test"
+import fs from "node:fs/promises"
+import os from "node:os"
 import path from "node:path"
 import type { Frame, Page } from "playwright-core"
 import { browsersDirectory, useKiloBrowsers } from "../../src/browser/install"
@@ -13,6 +15,7 @@ import {
   navigationTargets,
   outputBaseline,
   rememberPage,
+  snapshotFile,
   tabChoice,
   withheldFrames,
 } from "../../src/browser/playwright"
@@ -34,6 +37,27 @@ function tree(url: string, parent: Fake | null = null): Fake {
 function page(main: Fake): Page {
   return { mainFrame: () => main.node } as unknown as Page
 }
+
+describe("snapshot links", () => {
+  test("a link relative to the MCP's working directory resolves inside the output directory", async () => {
+    const base = await fs.mkdtemp(path.join(os.tmpdir(), "snapshot-link-"))
+    const cwd = path.join(base, "project")
+    const root = path.join(base, "data", "output")
+    await fs.mkdir(path.join(root, "e2e"), { recursive: true })
+    await fs.mkdir(cwd, { recursive: true })
+    const file = path.join(root, "e2e", "page.yml")
+    await fs.writeFile(file, "- heading")
+    // The MCP prints this path relative to its own cwd, not relative to the output directory.
+    const link = path.relative(cwd, file)
+    expect(await snapshotFile(link, root, cwd)).toBe(await fs.realpath(file))
+    // A link that escapes the output directory is refused, even when the file exists.
+    const outside = path.join(base, "secret.yml")
+    await fs.writeFile(outside, "secret")
+    expect(await snapshotFile(path.relative(cwd, outside), root, cwd)).toBeUndefined()
+    // The output directory alone is the wrong base for a cwd-relative link.
+    expect(await snapshotFile(link, root, root)).toBeUndefined()
+  })
+})
 
 describe("withheld frames", () => {
   test("a frame nested in a withheld frame is withheld too", () => {

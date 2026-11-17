@@ -129,11 +129,13 @@ const model = Bun.serve({
     const body: unknown = await request.json()
     const name = typeof field(body, "model") === "string" ? (field(body, "model") as string) : "local"
     const declared = field(body, "tools")
-    const tools = Array.isArray(declared) ? declared.flatMap((tool) => {
-      const fn = field(tool, "function")
-      const id = field(fn, "name")
-      return typeof id === "string" ? [id] : []
-    }) : []
+    const tools = Array.isArray(declared)
+      ? declared.flatMap((tool) => {
+          const fn = field(tool, "function")
+          const id = field(fn, "name")
+          return typeof id === "string" ? [id] : []
+        })
+      : []
     // A title or utility request carries no browser tools; it only needs an answer.
     if (!tools.some((tool) => tool.startsWith("browser_"))) return sse(text(name, "Browser E2E"))
 
@@ -163,7 +165,7 @@ const config = (observation: string) => ({
       name: "Local",
       package: "@opencode/ai/providers/openai-compatible",
       settings: { baseURL: `${model.url.origin}/v1`, apiKey: "local-key" },
-      models: { echo: { name: "Echo", limit: { context: 32000, output: 4000 } } },
+      models: { echo: { name: "Echo", limit: { context: 200_000, output: 4_000 } } },
     },
   },
   browser: { backend: "playwright", observation, headless: false },
@@ -266,12 +268,18 @@ async function flow(observation: string) {
     expect(clickResult.includes("clicked"), `full mode shows no post-click state: ${clickResult.slice(0, 200)}`)
   }
   if (observation === "diff") {
-    expect(clickResult.includes("### Page changes"), `diff mode did not report page changes: ${clickResult.slice(0, 300)}`)
+    expect(
+      clickResult.includes("### Page changes"),
+      `diff mode did not report page changes: ${clickResult.slice(0, 300)}`,
+    )
     expect(!clickResult.includes("### Snapshot"), "diff mode returned the full snapshot")
   }
   if (observation === "none") {
     expect(clickResult.includes("### Status"), `none mode did not report only the status: ${clickResult.slice(0, 300)}`)
-    expect(!clickResult.includes("### Snapshot") && !clickResult.includes("### Page changes"), "none mode returned page state")
+    expect(
+      !clickResult.includes("### Snapshot") && !clickResult.includes("### Page changes"),
+      "none mode returned page state",
+    )
   }
 
   return {
@@ -303,7 +311,10 @@ async function missingBrowser() {
     await Promise.all(logs.map((file) => fs.readFile(path.join(logDirectory, file), "utf8").catch(() => "")))
   ).join("\n")
   const reported = `${run.stdout}\n${run.stderr}\n${logged}`
-  expect(reported.includes("kilo browser install-chromium"), `no install hint in the run output or logs:\n${reported.slice(-2500)}`)
+  expect(
+    reported.includes("kilo browser install-chromium"),
+    `no install hint in the run output or logs:\n${reported.slice(-2500)}`,
+  )
 
   const installed = await cli(root, "full", ["browser", "install-chromium"], 600_000)
   expect(installed.code === 0, `install-chromium exited ${installed.code}\n${installed.stderr.slice(-2000)}`)

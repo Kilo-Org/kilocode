@@ -280,7 +280,7 @@ const config = (input: { observation?: string; allowSensitive?: boolean; rules?:
       name: "Local",
       package: "@opencode/ai/providers/openai-compatible",
       settings: { baseURL: `${model.url.origin}/v1`, apiKey: "local-key" },
-      models: { echo: { name: "Echo", limit: { context: 32000, output: 4000 } } },
+      models: { echo: { name: "Echo", limit: { context: 200_000, output: 4_000 } } },
     },
   },
   browser: {
