@@ -10,7 +10,7 @@ import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
 import { BrowserEvents } from "./events"
 import { extensionBackend } from "./extension"
-import { Tracker, observe, snapshot, split } from "./observation"
+import { Tracker, modeFor, observe, snapshot, split } from "./observation"
 import { playwright } from "./playwright"
 import { resolve } from "./settings"
 import type { Settings } from "./settings"
@@ -69,8 +69,7 @@ function run(entry: Entry, args: unknown, ctx: Tool.Context, deps: Deps) {
 
     const text = textOf(result)
     const next = snapshot(split(text))
-    // An explicit snapshot request is answered in full; diff mode is for the state after an action.
-    const mode = browser.observation === "diff" && entry.name === "browser_snapshot" ? "full" : browser.observation
+    const mode = modeFor(entry.name, browser.observation)
     const consoleErrors =
       mode === "diff"
         ? yield* Effect.promise(() =>

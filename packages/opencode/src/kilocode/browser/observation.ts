@@ -201,6 +201,14 @@ export function observe(input: {
   return { text: render(out), snapshot: next && next.lines.length ? next : input.previous ?? next }
 }
 
+/**
+ * An explicit snapshot or find asks for the page state, so every observation mode answers it in
+ * full. Observation modes trim only the state reported after an action.
+ */
+export function modeFor(tool: string, selected: Observation): Observation {
+  return tool === "browser_snapshot" || tool === "browser_find" ? "full" : selected
+}
+
 type SessionState = {
   active?: Snapshot
   tabs: Map<string, Snapshot>
