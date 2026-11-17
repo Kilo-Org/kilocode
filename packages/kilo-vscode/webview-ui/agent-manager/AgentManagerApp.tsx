@@ -2446,6 +2446,7 @@ const AgentManagerContent: Component = () => {
                       rowWhenEmpty={!!transfer.branch()}
                       onNewSession={handleNewTabForCurrentSelection}
                       worktree={!!selection() && selection() !== LOCAL}
+                      onUpdateBase={update}
                       manager={hints.manager}
                       focusOnDraftChange={focusOnDraftChange}
                       onFocusChange={focusCtl.prompt}
