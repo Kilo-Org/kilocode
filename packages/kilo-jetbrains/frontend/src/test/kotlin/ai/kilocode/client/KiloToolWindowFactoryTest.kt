@@ -15,6 +15,7 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.openapi.application.Application
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ex.ApplicationEx
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.util.Disposer
@@ -62,6 +63,19 @@ class KiloToolWindowFactoryTest : BasePlatformTestCase() {
         application {
             assertFalse(ApplicationManager.getApplication().isDisposed)
             Telemetry.send("Tool Window Setup Failed")
+        }
+    }
+
+    fun `test the fake application matches the platform application type`() {
+        val app = ApplicationManager.getApplication()
+        application {
+            // Cancellation/JFR hooks read the application as ApplicationEx from other threads.
+            val proxy = ApplicationManager.getApplication()
+            assertTrue(proxy is ApplicationEx)
+            assertTrue(proxy == proxy)
+            assertFalse(proxy == app)
+            assertEquals(System.identityHashCode(proxy), proxy.hashCode())
+            assertTrue(proxy.toString().startsWith("ApplicationEx test delegate@"))
         }
     }
 
@@ -123,16 +137,38 @@ class KiloToolWindowFactoryTest : BasePlatformTestCase() {
         block: () -> Unit,
     ) {
         val app = ApplicationManager.getApplication()
-        val delegate = object : Application by app {
-            override fun <T> getService(type: Class<T>): T? {
-                if (failure != null && type == failure.first) throw failure.second
-                if (type == KiloTelemetryService::class.java) return type.cast(telemetry())
-                return app.getService(type)
-            }
+        // Cancellation and JFR hooks reach the application from other threads through
+        // ApplicationManagerEx.getApplicationEx(), so the delegate has to implement that interface too.
+        val delegate = Proxy.newProxyInstance(
+            ApplicationEx::class.java.classLoader,
+            arrayOf(Application::class.java, ApplicationEx::class.java),
+        ) { proxy, method, args ->
+            val arguments = args ?: emptyArray()
+            when {
+                method.declaringClass == Any::class.java ->
+                    when (method.name) {
+                        "equals" -> proxy === arguments.singleOrNull()
+                        "hashCode" -> System.identityHashCode(proxy)
+                        "toString" -> "ApplicationEx test delegate@${Integer.toHexString(System.identityHashCode(proxy))}"
+                        else -> forward(app, method, arguments)
+                    }
 
-            override fun <T> getServiceIfCreated(type: Class<T>): T? =
-                if (type == KiloTelemetryService::class.java) null else app.getServiceIfCreated(type)
-        }
+                method.name == "getService" && arguments.size == 1 -> {
+                    val type = arguments[0] as Class<*>
+                    if (failure != null && type == failure.first) throw failure.second
+                    if (type == KiloTelemetryService::class.java) type.cast(telemetry())
+                    else forward(app, method, arguments)
+                }
+
+                method.name == "getServiceIfCreated" && arguments.size == 1 -> {
+                    val type = arguments[0] as Class<*>
+                    if (type == KiloTelemetryService::class.java) null
+                    else forward(app, method, arguments)
+                }
+
+                else -> forward(app, method, arguments)
+            }
+        } as Application
         val parent = Disposer.newDisposable()
         try {
             // Model the nullable lookup contract without unregistering/recreating a light service.
@@ -142,6 +178,13 @@ class KiloToolWindowFactoryTest : BasePlatformTestCase() {
             Disposer.dispose(parent)
         }
     }
+
+    private fun forward(app: Any, method: java.lang.reflect.Method, args: Array<Any?>): Any? =
+        try {
+            method.invoke(app, *args)
+        } catch (error: InvocationTargetException) {
+            throw error.targetException
+        }
 
     private fun window(): ToolWindow = Proxy.newProxyInstance(
         ToolWindow::class.java.classLoader,

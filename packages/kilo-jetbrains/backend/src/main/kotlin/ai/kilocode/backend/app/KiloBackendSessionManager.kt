@@ -4,6 +4,7 @@ import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
+import ai.kilocode.jetbrains.api.infrastructure.ClientException
 import ai.kilocode.jetbrains.api.model.GlobalSession
 import ai.kilocode.jetbrains.api.model.SessionStatus
 import ai.kilocode.rpc.dto.BackgroundJobDto
@@ -44,6 +45,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.net.HttpURLConnection
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -458,6 +460,29 @@ class KiloBackendSessionManager(
         val raw = all.firstOrNull { it.id == id }
             ?: throw IllegalArgumentException("Session $id not found")
         return dto(raw)
+    }
+
+    fun find(id: String, dir: String): SessionDto? {
+        val raw = try {
+            requireClient().sessionGet(sessionID = id, directory = dir)
+        } catch (err: ClientException) {
+            if (err.statusCode == HttpURLConnection.HTTP_NOT_FOUND) return null
+            throw err
+        }
+        return dto(
+            id = raw.id,
+            project = raw.projectID,
+            dir = raw.directory,
+            parent = raw.parentID,
+            title = raw.title,
+            version = raw.version,
+            created = raw.time.created,
+            updated = raw.time.updated,
+            archived = raw.time.archived,
+            summary = raw.summary?.let { summary(it.additions, it.deletions, it.files) },
+            revert = revertDto(raw.revert),
+            share = raw.share?.url,
+        )
     }
 
     fun delete(id: String, dir: String) {
