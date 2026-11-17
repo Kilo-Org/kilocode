@@ -1,21 +1,24 @@
 import { OpenCode, type OpenCodeClient } from "@opencode/client"
 import { KiloSettingsRpc } from "@opencode/schema/kilocode/settings"
-import { commands, window, workspace, type Disposable, type QuickPickItem } from "vscode"
 import { local } from "../local"
-import type { Manager } from "../server"
+import type { Command, Manager } from "../server"
+import { installChromium } from "./install-chromium"
 import { BrowserSettingsMigration } from "./migrate"
+import { status as readStatus, type Status } from "./status"
 
-export { BrowserSettingsMigration }
+export { BrowserSettingsMigration, type Status }
 
 /**
  * The browser tools' settings: the `browser` block of the Kilo config (backend, observation, sensitive steps, headless)
- * and the `browser` permission rules the CLI enforces (`<class>:<origin>` and per-tool keys). Every surface — these
- * editor commands, the TUI `/browser` command — writes the same keys through the same `kilocode.settings` RPC.
+ * and the `browser` permission rules the CLI enforces (`<class>:<origin>` and per-tool keys). Every surface — the
+ * Settings panel, the TUI `/browser` command — writes the same keys through the same `kilocode.settings` RPC.
  */
 export namespace BrowserSettings {
   export type Backend = "playwright" | "extension" | "off"
   export type Observation = "full" | "diff" | "none"
   export type Effect = "allow" | "ask" | "deny"
+  /** What a grant lets a call do: read the page, act on it, or navigate it. */
+  export type Class = "read" | "act" | "navigate"
 
   export type Input = {
     backend?: Backend
@@ -122,6 +125,33 @@ export namespace BrowserSettings {
   export function withoutRule(state: State, resource: string): Rule[] {
     return state.rules.filter((rule) => rule.action !== "browser" || rule.resource !== resource)
   }
+
+  /**
+   * A `<class>:<origin>` resource as its parts. An origin carries a colon of its own, so only the first one splits.
+   */
+  export function originOf(resource: string): { type: string; origin: string } | undefined {
+    const index = resource.indexOf(":")
+    if (index <= 0 || index === resource.length - 1) return undefined
+    return { type: resource.slice(0, index), origin: resource.slice(index + 1) }
+  }
+
+  /** Add one origin with every class asking, so the table lists it and each cell can be set. */
+  export function addOrigin(state: State, origin: string): Rule[] {
+    const present = new Set(
+      state.rules.flatMap((rule) => {
+        const parts = originOf(rule.resource)
+        return parts?.origin === origin ? [parts.type] : []
+      }),
+    )
+    return (["read", "act", "navigate"] as const)
+      .filter((type) => !present.has(type))
+      .reduce((rules, type) => withRule({ ...state, rules }, `${type}:${origin}`, "ask"), state.rules)
+  }
+
+  /** Drop every class rule of one origin. */
+  export function withoutOrigin(state: State, origin: string): Rule[] {
+    return state.rules.filter((rule) => rule.action !== "browser" || originOf(rule.resource)?.origin !== origin)
+  }
 }
 
 type Store = {
@@ -162,15 +192,44 @@ export function documentStore(input: { client: () => Promise<OpenCodeClient>; di
   }
 }
 
-/** Commands, and the migration that runs once on activation. */
-export function browserSettingsHost(input: {
+/** One Settings-panel edit: the `browser` block, allow-all, or one class of one origin. */
+export type Patch = {
+  browser?: BrowserSettings.Input
+  allowAll?: boolean
+  /** Add an origin with every class asking. */
+  site?: string
+  /** Drop one origin and every class rule it has. */
+  remove?: string
+  /** Set one class of one origin. */
+  cell?: { origin: string; type: BrowserSettings.Class; effect: BrowserSettings.Effect }
+}
+
+/** What the Settings panel reads and writes, and the two machine checks its status line shows. */
+export type Service = {
+  read: () => Promise<BrowserSettings.State>
+  write: (patch: Patch) => Promise<BrowserSettings.State>
+  status: () => Promise<Status>
+  install: () => Promise<{ ok: boolean; error?: string; status: Status }>
+  migrate: () => Promise<BrowserSettingsMigration.Result>
+}
+
+/**
+ * The one owner of the browser settings' file writes: the panel, and the migration that runs once on activation.
+ */
+export function browserSettingsService(input: {
   server: Manager
+  directory: () => string
+  /** `Global.Path.data` of the spawned server, where the installed Chromium and the hub registry live. */
+  data: string
+  /** The CLI the extension starts, so `install-chromium` writes where that CLI reads. */
+  command: () => Command | undefined
   state: {
     get<T>(key: string): T | undefined
     update(key: string, value: unknown): PromiseLike<void>
   }
+  env?: NodeJS.ProcessEnv
   log?: (...args: unknown[]) => void
-}): Disposable {
+}): Service {
   let cached: { url: string; client: OpenCodeClient } | undefined
   const client = async () => {
     const server = await input.server.get()
@@ -183,142 +242,53 @@ export function browserSettingsHost(input: {
     cached = { url: server.url, client: created }
     return created
   }
-  const store = documentStore({
-    client,
-    directory: () => workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(),
-  })
+  const store = documentStore({ client, directory: input.directory })
+  const current = () => readStatus({ data: input.data, env: input.env })
 
-  const report = (error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error)
-    input.log?.("failed", message)
-    void window.showErrorMessage(message)
+  const write = async (patch: Patch) => {
+    // A site edit is expressed against the rules already in the file, so the panel never has to send the whole list.
+    const state = await store.read()
+    const rules =
+      patch.site !== undefined
+        ? BrowserSettings.addOrigin(state, patch.site)
+        : patch.remove !== undefined
+          ? BrowserSettings.withoutOrigin(state, patch.remove)
+          : patch.cell
+            ? BrowserSettings.withRule(state, `${patch.cell.type}:${patch.cell.origin}`, patch.cell.effect)
+            : undefined
+    await store.write({ browser: patch.browser, allowAll: patch.allowAll, ...(rules ? { rules } : {}) })
+    return store.read()
   }
-  const pick = async <T extends string>(title: string, items: (QuickPickItem & { value: T })[]) =>
-    (await window.showQuickPick(items, { title, placeHolder: title }))?.value
 
-  const selectBackend = async () => {
-    try {
-      const state = await store.read()
-      const value = await pick("Browser backend", [
-        { label: "Bundled browser (Playwright)", description: "a Kilo-owned in-memory Chromium profile", value: "playwright" as const, picked: state.backend === "playwright" },
-        { label: "Kilo browser extension", description: "your own browser, through the extension", value: "extension" as const, picked: state.backend === "extension" },
-        { label: "Off", description: "hide the browser tools", value: "off" as const, picked: state.backend === "off" },
-      ])
-      if (!value) return
-      await store.write({ browser: { backend: value } })
-      void window.showInformationMessage(`Browser backend: ${value}`)
-    } catch (error) {
-      report(error)
+  const install = async () => {
+    const found = input.command()
+    if (!found) return { ok: false, error: "The Kilo CLI was not found.", status: current() }
+    const result = await installChromium({
+      command: found,
+      cwd: input.directory(),
+      env: input.env ?? process.env,
+      log: (text) => input.log?.(text),
+    })
+    return {
+      ok: result.ok,
+      ...(result.ok ? {} : { error: result.output.split("\n").slice(-1)[0] || "Chromium install failed." }),
+      status: current(),
     }
   }
 
-  const selectObservation = async () => {
-    try {
-      const state = await store.read()
-      const value = await pick("Browser observation", [
-        { label: "Full", description: "the page snapshot after every action", value: "full" as const, picked: state.observation === "full" },
-        { label: "Diff", description: "only what changed since the previous call", value: "diff" as const, picked: state.observation === "diff" },
-        { label: "None", description: "status, URL and title only", value: "none" as const, picked: state.observation === "none" },
-      ])
-      if (!value) return
-      await store.write({ browser: { observation: value } })
-      void window.showInformationMessage(`Browser observation: ${value}`)
-    } catch (error) {
-      report(error)
-    }
-  }
-
-  const toggleSensitive = async () => {
-    try {
-      const state = await store.read()
-      const next = !state.allow_sensitive
-      await store.write({ browser: { allow_sensitive: next } })
-      void window.showInformationMessage(
-        next
-          ? "Sensitive browser steps (passwords, payment forms, uploads) run without asking."
-          : "Sensitive browser steps ask a person before they run.",
-      )
-    } catch (error) {
-      report(error)
-    }
-  }
-
-  /** The allowlist editor: allow-all, one row per rule, and an entry to add an origin. */
-  const allowlist = async () => {
-    try {
-      const state = await store.read()
-      const chosen = await pick("Browser origin allowlist", [
-        {
-          label: state.allowAll ? "$(check) Allow all origins" : "$(circle-slash) Allow all origins",
-          description: state.allowAll ? "every origin is allowed without asking" : "an origin the rules do not cover asks",
-          value: "allow-all" as const,
-          picked: state.allowAll,
+  return {
+    read: () => store.read(),
+    write,
+    status: async () => current(),
+    install,
+    migrate: () =>
+      BrowserSettingsMigration.run({
+        state: input.state,
+        log: input.log,
+        write: async (browser) => {
+          await store.write({ browser })
         },
-        { label: "$(add) Add an origin…", description: "class:origin, for example read:https://example.com", value: "add" as const },
-        ...state.rules.map((rule) => ({
-          label: BrowserSettings.format(rule),
-          description: rule.action === "browser" ? "origin rule" : "tool rule",
-          value: `rule:${rule.action}:${rule.resource}` as const,
-        })),
-      ])
-      if (!chosen) return
-      if (chosen === "allow-all") {
-        await store.write({ allowAll: !state.allowAll })
-        return
-      }
-      if (chosen === "add") {
-        const resource = await window.showInputBox({
-          title: "Allow a browser origin",
-          prompt: "class:origin — read, act or navigate, then the origin",
-          placeHolder: "read:https://example.com",
-          validateInput: (value) =>
-            /^(read|act|navigate):https?:\/\/[^\s]+$/.test(value.trim()) ? undefined : "Use <class>:<origin>",
-        })
-        if (!resource) return
-        const effect = await pick("Effect", [
-          { label: "Allow", value: "allow" as const },
-          { label: "Ask", value: "ask" as const },
-          { label: "Deny", value: "deny" as const },
-        ])
-        if (!effect) return
-        await store.write({ rules: BrowserSettings.withRule(state, resource.trim(), effect) })
-        return
-      }
-      const [, action, ...rest] = chosen.split(":")
-      const resource = rest.join(":")
-      const rule = state.rules.find((item) => item.action === action && item.resource === resource)
-      if (!rule) return
-      const next = await pick(BrowserSettings.format(rule), [
-        { label: "Remove", value: "remove" as const },
-        { label: "Allow", value: "allow" as const, picked: rule.effect === "allow" },
-        { label: "Ask", value: "ask" as const, picked: rule.effect === "ask" },
-        { label: "Deny", value: "deny" as const, picked: rule.effect === "deny" },
-      ])
-      if (!next) return
-      await store.write({
-        rules:
-          next === "remove"
-            ? BrowserSettings.withoutRule(state, rule.resource)
-            : BrowserSettings.withRule(state, rule.resource, next),
-      })
-    } catch (error) {
-      report(error)
-    }
+      }),
   }
-
-  void BrowserSettingsMigration.run({
-    state: input.state,
-    log: input.log,
-    write: async (browser) => {
-      await store.write({ browser })
-    },
-  }).catch((error) => report(error))
-
-  const registered = [
-    commands.registerCommand("kilo-code.v2.browserSelectBackend", selectBackend),
-    commands.registerCommand("kilo-code.v2.browserSelectObservation", selectObservation),
-    commands.registerCommand("kilo-code.v2.browserToggleSensitive", toggleSensitive),
-    commands.registerCommand("kilo-code.v2.browserAllowlist", allowlist),
-  ]
-  return { dispose: () => registered.forEach((item) => item.dispose()) }
 }
+

@@ -31,6 +31,15 @@ export function resolveGlobalConfigDir(env: NodeJS.ProcessEnv, profile: string):
 }
 
 /**
+ * The data directory the spawned server writes, for files the host inspects outside the server: with the dev entry
+ * it is `<profile>/data/kilo2`, and a bundled server uses `<XDG_DATA_HOME or ~/.local/share>/kilo2`.
+ */
+export function resolveDataDir(env: NodeJS.ProcessEnv, profile: string): string {
+  const base = profile ? path.join(profile, "data") : (env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"))
+  return path.join(base, "kilo2")
+}
+
+/**
  * The real path of a file, or of its parent when the file does not exist yet. The server and host can use different
  * spellings for the same path, so both sides must be canonical before they are compared.
  */

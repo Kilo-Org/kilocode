@@ -181,3 +181,34 @@ describe("browser settings migration", () => {
     }
   })
 })
+
+describe("site rules", () => {
+  test("a resource splits at its first colon", () => {
+    expect(BrowserSettings.originOf("act:https://example.com:8443")).toEqual({
+      type: "act",
+      origin: "https://example.com:8443",
+    })
+    expect(BrowserSettings.originOf("navigate")).toBeUndefined()
+  })
+
+  test("adding a site writes every class it does not have, asking", () => {
+    const state = BrowserSettings.read({ permissions: [{ action: "browser", resource: "read:https://kilo.ai" }] })
+    expect(
+      BrowserSettings.addOrigin(state, "https://kilo.ai").map((rule) => `${rule.resource}=${rule.effect}`),
+    ).toEqual(["read:https://kilo.ai=allow", "act:https://kilo.ai=ask", "navigate:https://kilo.ai=ask"])
+  })
+
+  test("removing a site drops every class of it and nothing else", () => {
+    const state = BrowserSettings.read({
+      permissions: [
+        { action: "browser", resource: "read:https://kilo.ai" },
+        { action: "browser", resource: "act:https://kilo.ai" },
+        { action: "browser", resource: "read:https://example.com" },
+        { action: "shell", resource: "*" },
+      ],
+    })
+    expect(BrowserSettings.withoutOrigin(state, "https://kilo.ai")).toEqual([
+      { action: "browser", resource: "read:https://example.com", effect: "allow" },
+    ])
+  })
+})

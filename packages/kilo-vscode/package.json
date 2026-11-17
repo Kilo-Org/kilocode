@@ -394,26 +394,6 @@
     },
     "commands": [
       {
-        "command": "kilo-code.v2.browserSelectBackend",
-        "title": "Select Browser Backend",
-        "category": "Kilo Code (v2)"
-      },
-      {
-        "command": "kilo-code.v2.browserSelectObservation",
-        "title": "Select Browser Observation",
-        "category": "Kilo Code (v2)"
-      },
-      {
-        "command": "kilo-code.v2.browserToggleSensitive",
-        "title": "Toggle Sensitive Browser Steps",
-        "category": "Kilo Code (v2)"
-      },
-      {
-        "command": "kilo-code.v2.browserAllowlist",
-        "title": "Edit Browser Origin Allowlist",
-        "category": "Kilo Code (v2)"
-      },
-      {
         "command": "kilo-code.v2.newSession",
         "title": "New Session",
         "category": "Kilo Code (v2)",

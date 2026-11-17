@@ -7,6 +7,7 @@ import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import type { SettingsHandler } from "./agent-manager/project/settings"
+import { browserSettingsService, type Service as BrowserSettings } from "./browser-settings"
 import { applyConfigEdits, configWriteQueue, isKiloConfigFile } from "./config-file-edit"
 import { configPolicy, type PolicyDocument } from "./config-policy"
 import { fetchCustomProviderModels } from "./custom-provider-models"
@@ -14,9 +15,9 @@ import { local } from "./local"
 import { validAutocompleteSetting } from "./services/autocomplete/settings"
 import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
 import { configTargets, type ConfigEntry } from "./config-targets"
-import { resolveKiloProfile, canonicalPath } from "./settings-paths"
-import type { Manager } from "./server"
-import type { AgentManagerSettings, ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
+import { resolveKiloProfile, canonicalPath, resolveDataDir } from "./settings-paths"
+import { command, type Manager } from "./server"
+import type { AgentManagerSettings, BrowserSettingsMessage, ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
 import { MODEL_RESET_KEYS } from "./model-preferences"
 
 const NAMESPACE = "kilo-code.v2"
@@ -94,6 +95,8 @@ export function settingsHost(input: {
   server: Manager
   directory: string
   post: (message: ToWebview) => void
+  /** The browser tools' settings. A host without one builds it from this panel's context and the same factory. */
+  browserSettings?: BrowserSettings
   onReset?: () => void
   /** The Agent Manager project settings handler, owned by the provider. Absent in views without a provider. */
   agentManager?: () => SettingsHandler | undefined
@@ -101,6 +104,17 @@ export function settingsHost(input: {
   // The dev entry (`script/dev-isolated.ts`) keeps everything under `KILO_V2_PROFILE`, and `server.ts` defaults that
   // to the extension storage. A bundled server inherits the host environment and uses XDG paths directly.
   const profile = resolveKiloProfile(input.context)
+  const browser =
+    input.browserSettings ??
+    browserSettingsService({
+      server: input.server,
+      directory: () => input.directory,
+      data: resolveDataDir(process.env, profile),
+      command: () =>
+        command({ extension: input.context.extensionPath, storage: input.context.globalStorageUri.fsPath, env: process.env }),
+      state: input.context.globalState,
+      env: process.env,
+    })
 
   const listener = workspace.onDidChangeConfiguration((event) => {
     if (KILO_SETTING_KEYS.some((key) => event.affectsConfiguration(`${NAMESPACE}.${key}`)))
@@ -307,9 +321,44 @@ export function settingsHost(input: {
     })
   }
 
+  /** Read or write the browser settings, and answer with the whole state plus the machine status the panel shows. */
+  const handleBrowserSettings = async (message: BrowserSettingsMessage) => {
+    try {
+      if (message.type === "browserSettingsInstall") {
+        const result = await browser.install()
+        input.post({ type: "browserSettingsInstalled", requestId: message.requestId, ...result })
+        return
+      }
+      const state =
+        message.type === "browserSettingsWrite"
+          ? await browser.write(message.patch)
+          : await browser.read()
+      input.post({
+        type: "browserSettingsLoaded",
+        requestId: message.requestId,
+        state,
+        status: await browser.status(),
+      })
+    } catch (error) {
+      input.post({
+        type: "browserSettingsLoaded",
+        requestId: message.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
   const handle = (message: ToHost) => {
     if (message.type === "configRead") {
       void readConfig()
+      return true
+    }
+    if (
+      message.type === "browserSettingsRead" ||
+      message.type === "browserSettingsWrite" ||
+      message.type === "browserSettingsInstall"
+    ) {
+      void handleBrowserSettings(message)
       return true
     }
     if (message.type === "resetAllSettings") {

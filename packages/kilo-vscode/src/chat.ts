@@ -13,6 +13,7 @@ import {
 import { getErrorMessage } from "./agent-manager/errors"
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
+import type { Service } from "./browser-settings"
 import type { GitChanges } from "./git-changes"
 import { local } from "./local"
 import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
@@ -213,6 +214,8 @@ export function wire(input: {
   globals?: Record<string, unknown>
   /** The Agent Manager settings handler the Settings panel shares with the provider. */
   agentManager?: () => SettingsHandler
+  /** The browser tools' settings, owned by the extension activation so its migration and every panel share one store. */
+  browserSettings?: Service
   /** Opens a chat web link in the Integrated Browser. Returns false when the tab cannot take it. */
   openBrowser?: (sessionId: string, url: string) => boolean
   /** The editor tab that previews Markdown files, when this view has one. */
@@ -273,6 +276,9 @@ export function wire(input: {
           server: input.server,
           directory: input.directory,
           post,
+          // Every view that edits the browser settings gets the one store the activation migration wrote through;
+          // this host builds its own from the same factory when a view was opened without it.
+          browserSettings: input.browserSettings,
           // A reset clears the recents, usage and efforts; every open webview must drop its copy of them.
           onReset: () => {
             input.onReset?.()

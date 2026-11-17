@@ -366,6 +366,62 @@ export type Settings =
   | { type: "resetAllSettings" }
   | AgentManagerSettings
   | FetchCustomProviderModels
+  | BrowserSettingsMessage
+
+/** The browser tools' settings, read and written by the host through the `kilocode.settings` RPC. */
+export type BrowserSettingsState = {
+  backend: "playwright" | "extension" | "off"
+  observation: "full" | "diff" | "none"
+  allowSensitive: boolean
+  /** One `<class>:<origin>` rule per class of an origin; `*` is the allow-all catch-all and is not listed. */
+  rules: { action: string; resource: string; effect: "allow" | "ask" | "deny" }[]
+  allowAll: boolean
+}
+
+/** Whether the browser tools can run: a Playwright executable, and a hub the extension connected to. */
+export type BrowserSettingsStatus = {
+  playwright: { ready: boolean; target?: "chrome" | "msedge" | "chromium" }
+  extension: { connected: boolean }
+}
+
+export type BrowserSettingsPatch = {
+  browser?: {
+    backend?: BrowserSettingsState["backend"]
+    observation?: BrowserSettingsState["observation"]
+    allow_sensitive?: boolean
+    headless?: boolean
+  }
+  allowAll?: boolean
+  /** Add an origin with every class asking. */
+  site?: string
+  /** Drop one origin and every class rule it has. */
+  remove?: string
+  /** Set one class of one origin. */
+  cell?: { origin: string; type: "read" | "act" | "navigate"; effect: "allow" | "ask" | "deny" }
+}
+
+export type BrowserSettingsMessage =
+  | { type: "browserSettingsRead"; requestId: string }
+  | { type: "browserSettingsWrite"; requestId: string; patch: BrowserSettingsPatch }
+  | { type: "browserSettingsInstall"; requestId: string }
+
+/** Either the new state or the reason the host could not read or write it. */
+export type BrowserSettingsLoaded = {
+  type: "browserSettingsLoaded"
+  requestId: string
+  state?: BrowserSettingsState
+  status?: BrowserSettingsStatus
+  error?: string
+}
+
+/** The Chromium install finished; `status` is read after it, so a missing executable still shows as missing. */
+export type BrowserSettingsInstallResult = {
+  type: "browserSettingsInstalled"
+  requestId: string
+  ok: boolean
+  error?: string
+  status: BrowserSettingsStatus
+}
 
 /**
  * The Agent Manager rows of the Settings panel. The project is explicit, because the panel edits a project the
@@ -446,6 +502,8 @@ export type PromptAttachment = {
 
 export type ToWebview =
   | BrowserOut
+  | BrowserSettingsLoaded
+  | BrowserSettingsInstallResult
   | { type: "response"; id: number; status: number; statusText: string; headers: [string, string][] }
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }

@@ -3,6 +3,7 @@
 // sidebar with the settings root view.
 import type { ExtensionContext } from "vscode"
 import type { SettingsHandler } from "./agent-manager/project/settings"
+import type { Service } from "./browser-settings"
 import { editorPanel } from "./editor-panel"
 import type { SettingsNavigation, ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
@@ -18,6 +19,8 @@ export function settings(input: {
   context: ExtensionContext
   server: Manager
   directory: string
+  /** The browser tools' settings, shared with the activation migration so both write through one store. */
+  browserSettings: Service
   onReset: () => void
   /** The Agent Manager project settings handler, shared with the provider that owns the projects. */
   agentManager?: () => SettingsHandler
@@ -52,6 +55,7 @@ export function settings(input: {
     title: "Kilo Settings",
     view: "settings",
     handle,
+    browserSettings: input.browserSettings,
     onReset: input.onReset,
     agentManager: input.agentManager,
   })

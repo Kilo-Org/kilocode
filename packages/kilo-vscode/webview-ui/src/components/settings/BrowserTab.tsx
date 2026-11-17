@@ -1,12 +1,21 @@
 // Web Tools tab. Web Search maps the v2 `websearch` selection: `false` is off, a provider selection is on. The
-// Integrated Browser and Playwright automation are `kilo-code.v2.*` editor settings, so their rows write those.
-import { Component, Show } from "solid-js"
+// Integrated Browser is a `kilo-code.v2.*` editor setting, so its rows write that. The browser tools' backend,
+// observation, sensitive steps and site permissions are the `browser` config keys the CLI reads; the host owns those
+// writes, and the status line reports what this machine can start.
+import { Component, For, Show, createSignal, onMount } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "./Switch"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Button } from "@kilocode/kilo-ui/button"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { TextField } from "@kilocode/kilo-ui/text-field"
 import { useLanguage } from "../../context/language"
 import { useSettingsConfig, type KiloSettingKey } from "../../v2/settings-config"
+import { createBrowserSettings } from "../../v2/browser-settings"
+import { GRANTS, origin, sites } from "./browser-settings"
 import SettingsRow from "./SettingsRow"
+import { ActionSelect } from "./PermissionToolRow"
 import { webSearchEnabled, webSearchSelection } from "./settings-values"
 
 const WEBSEARCH = ["websearch"]
@@ -163,49 +172,306 @@ const BrowserTab: Component = () => {
         </Card>
       </div>
 
+      <BrowserTools />
+    </div>
+  )
+}
+
+const BACKENDS = ["playwright", "extension", "off"] as const
+const OBSERVATIONS = ["full", "diff", "none"] as const
+const TARGETS: Record<"chrome" | "msedge" | "chromium", string> = {
+  chrome: "Google Chrome",
+  msedge: "Microsoft Edge",
+  chromium: "Chromium",
+}
+
+const Subtitle: Component<{ text: string }> = (props) => (
+  <div
+    style={{
+      "font-size": "var(--kilo-font-size-12)",
+      color: "var(--vscode-descriptionForeground)",
+      "line-height": "1.5",
+    }}
+  >
+    {props.text}
+  </div>
+)
+
+/**
+ * The browser tools' settings and the site permission table. The state comes from the host, which owns the config
+ * file, so a row always shows what the CLI reads.
+ */
+const BrowserTools: Component = () => {
+  const language = useLanguage()
+  const browser = createBrowserSettings()
+  const [draft, setDraft] = createSignal("")
+  const [originError, setOriginError] = createSignal<"empty" | "invalid" | "duplicate">()
+  onMount(() => browser.load())
+
+  const state = () => browser.state()
+  const rows = () => sites(state()?.rules ?? [])
+  const disconnected = () => state()?.backend === "extension" && browser.status()?.extension.connected === false
+
+  const addOrigin = () => {
+    const parsed = origin(
+      draft(),
+      rows().map((row) => row.origin),
+    )
+    if ("error" in parsed) {
+      setOriginError(parsed.error)
+      return
+    }
+    setOriginError(undefined)
+    setDraft("")
+    browser.write({ site: parsed.value })
+  }
+
+  return (
+    <>
       <div>
-        <Header title={language.t("settings.webTools.browserAutomation")} />
+        <Header title={language.t("settings.browser.backend.title")} />
         <Card>
+          <div style={{ padding: "12px 0 4px" }}>
+            <div style={{ "font-weight": 500, "margin-bottom": "2px" }}>
+              {language.t("settings.browser.backend.title")}
+            </div>
+            <Subtitle text={language.t("settings.browser.backend.description")} />
+            <For each={BACKENDS}>
+              {(value) => (
+                <label
+                  style={{
+                    display: "flex",
+                    gap: "8px",
+                    "align-items": "flex-start",
+                    padding: "8px 0 0",
+                    cursor: state() ? "pointer" : "default",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="kilo-browser-backend"
+                    checked={state()?.backend === value}
+                    disabled={!state() || browser.busy()}
+                    onChange={() => browser.write({ browser: { backend: value } })}
+                    style={{ "margin-top": "3px" }}
+                  />
+                  <span>
+                    <span style={{ display: "block" }}>{language.t(`settings.browser.backend.${value}`)}</span>
+                    <Subtitle text={language.t(`settings.browser.backend.${value}.description`)} />
+                  </span>
+                </label>
+              )}
+            </For>
+          </div>
           <SettingsRow
-            title={language.t("settings.browser.enable.title")}
-            description={language.t("settings.browser.enable.description")}
+            title={language.t("settings.browser.observation.title")}
+            description={language.t("settings.browser.observation.description")}
           >
-            <Switch
-              checked={setting("browserAutomation.enabled", false)}
-              onChange={(checked) => config.setSetting("browserAutomation.enabled", checked)}
-              hideLabel
-            >
-              {language.t("settings.browser.enable.title")}
-            </Switch>
+            <Select
+              options={[...OBSERVATIONS]}
+              current={state()?.observation ?? "full"}
+              value={(value) => value}
+              label={(value) => language.t(`settings.browser.observation.${value}`)}
+              onSelect={(value) => {
+                if (!value || value === state()?.observation) return
+                browser.write({ browser: { observation: value } })
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
           </SettingsRow>
           <SettingsRow
-            title={language.t("settings.browser.systemChrome.title")}
-            description={language.t("settings.browser.systemChrome.description")}
-          >
-            <Switch
-              checked={setting("browserAutomation.useSystemChrome", true)}
-              onChange={(checked) => config.setSetting("browserAutomation.useSystemChrome", checked)}
-              hideLabel
-            >
-              {language.t("settings.browser.systemChrome.title")}
-            </Switch>
-          </SettingsRow>
-          <SettingsRow
-            title={language.t("settings.browser.headless.title")}
-            description={language.t("settings.browser.headless.description")}
+            title={language.t("settings.browser.sensitive.title")}
+            description={language.t("settings.browser.sensitive.description")}
             last
           >
             <Switch
-              checked={setting("browserAutomation.headless", false)}
-              onChange={(checked) => config.setSetting("browserAutomation.headless", checked)}
+              checked={state()?.allow_sensitive === true}
+              onChange={(checked) => browser.write({ browser: { allow_sensitive: checked } })}
               hideLabel
             >
-              {language.t("settings.browser.headless.title")}
+              {language.t("settings.browser.sensitive.title")}
             </Switch>
           </SettingsRow>
         </Card>
       </div>
-    </div>
+
+      <div>
+        <Header title={language.t("settings.browser.status.title")} />
+        <Card>
+          <SettingsRow
+            title={language.t("settings.browser.status.playwright")}
+            description={
+              disconnected() ? language.t("settings.browser.status.extension.hint") : undefined
+            }
+          >
+            <Show
+              when={!browser.status()?.playwright.ready}
+              fallback={
+                <span style={{ color: "var(--vscode-descriptionForeground)" }}>
+                  {language.t("settings.browser.status.playwright.ready", {
+                    browser: TARGETS[browser.status()?.playwright.target ?? "chromium"],
+                  })}
+                </span>
+              }
+            >
+              <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
+                <span style={{ color: "var(--vscode-errorForeground)" }}>
+                  {language.t("settings.browser.status.playwright.missing")}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  disabled={browser.installing()}
+                  onClick={() => browser.install()}
+                >
+                  <Show
+                    when={browser.installing()}
+                    fallback={language.t("settings.browser.status.playwright.install")}
+                  >
+                    <Spinner /> {language.t("settings.browser.status.playwright.installing")}
+                  </Show>
+                </Button>
+              </div>
+            </Show>
+          </SettingsRow>
+          <SettingsRow title={language.t("settings.browser.status.extension")} last>
+            <span
+              style={{
+                color: browser.status()?.extension.connected
+                  ? "var(--vscode-descriptionForeground)"
+                  : "var(--vscode-errorForeground)",
+              }}
+            >
+              {browser.status()?.extension.connected
+                ? language.t("settings.browser.status.extension.connected")
+                : language.t("settings.browser.status.extension.disconnected")}
+            </span>
+          </SettingsRow>
+        </Card>
+      </div>
+
+      <div>
+        <Header title={language.t("settings.browser.origins.title")} />
+        <Card>
+          <SettingsRow
+            title={language.t("settings.browser.origins.allowAll.title")}
+            description={language.t("settings.browser.origins.allowAll.description")}
+            last={rows().length === 0 && !browser.error()}
+          >
+            <Switch
+              checked={state()?.allowAll === true}
+              onChange={(checked) => browser.write({ allowAll: checked })}
+              hideLabel
+            >
+              {language.t("settings.browser.origins.allowAll.title")}
+            </Switch>
+          </SettingsRow>
+          <Show when={rows().length > 0}>
+            <div
+              style={{
+                display: "grid",
+                "grid-template-columns": "minmax(0, 1fr) repeat(3, auto) 32px",
+                gap: "8px",
+                "align-items": "center",
+                padding: "8px 0",
+                "border-bottom": "1px solid var(--border-weak-base)",
+              }}
+            >
+              <span data-slot="settings-row-label-subtitle">
+                {language.t("settings.browser.origins.site")}
+              </span>
+              <For each={GRANTS}>
+                {(grant) => (
+                  <span data-slot="settings-row-label-subtitle">
+                    {language.t(`settings.browser.origins.${grant}`)}
+                  </span>
+                )}
+              </For>
+              <span />
+              <For each={rows()}>
+                {(row) => (
+                  <>
+                    <span
+                      data-search-label={row.origin}
+                      style={{
+                        overflow: "hidden",
+                        "text-overflow": "ellipsis",
+                        "white-space": "nowrap",
+                      }}
+                      title={row.origin}
+                    >
+                      {row.origin}
+                    </span>
+                    <For each={GRANTS}>
+                      {(grant) => (
+                        <ActionSelect
+                          level={row[grant]}
+                          onChange={(effect) =>
+                            browser.write({ cell: { origin: row.origin, type: grant, effect } })
+                          }
+                        />
+                      )}
+                    </For>
+                    <IconButton
+                      variant="ghost"
+                      size="small"
+                      icon="close"
+                      aria-label={language.t("common.delete")}
+                      title={language.t("common.delete")}
+                      onClick={() => browser.write({ remove: row.origin })}
+                    />
+                  </>
+                )}
+              </For>
+            </div>
+          </Show>
+          <Show when={rows().length === 0}>
+            <Subtitle text={language.t("settings.browser.origins.empty")} />
+          </Show>
+          <div style={{ display: "flex", "flex-direction": "column", gap: "4px", padding: "12px 0 4px" }}>
+            <div style={{ display: "flex", gap: "8px", "align-items": "flex-start" }}>
+              <div style={{ width: "260px" }}>
+                <TextField
+                  type="text"
+                  value={draft()}
+                  placeholder={language.t("settings.browser.origins.placeholder")}
+                  label={language.t("settings.browser.origins.add")}
+                  hideLabel
+                  onChange={(value: string) => {
+                    setDraft(value)
+                    setOriginError(undefined)
+                  }}
+                  onKeyDown={(event: KeyboardEvent) => {
+                    if (event.key !== "Enter") return
+                    event.preventDefault()
+                    addOrigin()
+                  }}
+                />
+              </div>
+              <Button variant="secondary" size="small" onClick={addOrigin} disabled={browser.busy()}>
+                {language.t("common.add")}
+              </Button>
+            </div>
+            <Show when={originError()}>
+              {(reason) => (
+                <span style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-12)" }}>
+                  {language.t(`settings.browser.origins.error.${reason()}`)}
+                </span>
+              )}
+            </Show>
+            <Show when={browser.error()}>
+              {(message) => (
+                <span style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-12)" }}>
+                  {message() || language.t("settings.saveBar.saveFailed")}
+                </span>
+              )}
+            </Show>
+          </div>
+        </Card>
+      </div>
+    </>
   )
 }
 

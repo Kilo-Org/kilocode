@@ -30,9 +30,10 @@ import { createCostAlerts } from "./cost-alert"
 import { command, indexingEnvironment, manager, serverPlans, settingsEnvironment } from "./server"
 import { usePlanDir } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
+import { resolveDataDir, resolveKiloProfile } from "./settings-paths"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { BrowserBroker } from "./services/browser-automation"
-import { browserSettingsHost } from "./browser-settings"
+import { browserSettingsService } from "./browser-settings"
 import {
   integratedBrowserEnabled,
   integratedBrowserFallback,
@@ -209,12 +210,25 @@ export function activate(context: ExtensionContext) {
   const diffs = new DiffVirtualProvider(context.extensionUri)
   // The browser tools' settings: the `browser` config keys and the origin allowlist, plus the one-time move of the old
   // `kilo-code.v2.browserAutomation.*` settings into them.
-  const browserSettings = browserSettingsHost({
+  const browserSettings = browserSettingsService({
     server,
+    directory: () => workspace.workspaceFolders?.[0]?.uri.fsPath ?? directory,
+    data: resolveDataDir(process.env, resolveKiloProfile(context)),
+    command: serverCommand,
     state: context.globalState,
+    env: process.env,
     log: (...args) => output.appendLine(`Browser settings: ${args.map((item) => String(item)).join(" ")}`),
   })
-  context.subscriptions.push(browserSettings)
+  void browserSettings
+    .migrate()
+    .then((result) => {
+      if (result.error) void window.showErrorMessage(`Browser settings migration failed: ${result.error}`)
+    })
+    .catch((error: unknown) =>
+      void window.showErrorMessage(
+        `Browser settings migration failed: ${error instanceof Error ? error.message : String(error)}`,
+      ),
+    )
   const indexingService = indexingHost({
     context,
     server,
@@ -391,6 +405,7 @@ export function activate(context: ExtensionContext) {
     context,
     server,
     directory,
+    browserSettings,
     onReset: view.syncState,
     agentManager: () => agentManager.settings,
   })

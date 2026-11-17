@@ -768,9 +768,8 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportement de l'agent",
   "settings.autoApprove.title": "Approbation automatique",
   "settings.webTools.title": "Outils web",
-  "settings.webTools.description": "Configurez la recherche web.",
+  "settings.webTools.description": "Configurez la recherche web et les outils de navigateur de l'agent.",
   "settings.webTools.webSearch.enable": "Activer pour tous les fournisseurs",
-  "settings.webTools.browserAutomation": "Automatisation du navigateur",
   "settings.webTools.webSearch.title": "Recherche web",
   "settings.webTools.webSearch.description":
     "Rendez la recherche web disponible pour les modèles de tous les fournisseurs.",
@@ -900,16 +899,49 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Flux de travail",
   "settings.agentBehaviour.subtab.skills": "Compétences",
 
-  "settings.browser.description":
-    "Configurez l'automatisation de navigateur intégrée propulsée par Playwright. Kilo peut naviguer, interagir et prendre des captures d'écran de pages web dans vos sessions.",
-  "settings.browser.enable.title": "Activer l'automatisation du navigateur",
-  "settings.browser.enable.description":
-    "Activer le navigateur d'Agent Manager propre à chaque session pour les applications locales et les pages HTTPS publiques.",
-  "settings.browser.systemChrome.title": "Utiliser le Chrome système",
-  "settings.browser.systemChrome.description":
-    "Utiliser votre navigateur Chrome installé au lieu d'une instance Chromium séparée.",
-  "settings.browser.headless.title": "Mode headless",
-  "settings.browser.headless.description": "Exécuter en mode headless (sans fenêtre de navigateur visible).",
+  "settings.browser.backend.title": "Backend",
+  "settings.browser.backend.description": "Quel navigateur les outils de navigateur de l'agent pilotent.",
+  "settings.browser.backend.playwright": "Navigateur intégré (Playwright)",
+  "settings.browser.backend.playwright.description":
+    "Un profil Chromium fourni par Kilo, démarré au premier appel du navigateur.",
+  "settings.browser.backend.extension": "Extension de navigateur",
+  "settings.browser.backend.extension.description": "Votre propre navigateur, via l'extension de navigateur Kilo.",
+  "settings.browser.backend.off": "Désactivé",
+  "settings.browser.backend.off.description": "Masquer les outils de navigateur aux agents.",
+  "settings.browser.observation.title": "Observation",
+  "settings.browser.observation.description": "La part de la page que l'agent voit après chaque étape.",
+  "settings.browser.observation.full": "Instantané complet",
+  "settings.browser.observation.diff": "Seulement les changements",
+  "settings.browser.observation.none": "Statut uniquement",
+  "settings.browser.sensitive.title": "Autoriser les étapes sensibles sans demander",
+  "settings.browser.sensitive.description":
+    "Mots de passe, formulaires de paiement, pages de consentement OAuth et téléversements s'exécutent sans confirmation.",
+  "settings.browser.status.title": "État",
+  "settings.browser.status.playwright": "Playwright",
+  "settings.browser.status.playwright.ready": "Prêt, avec {{browser}}",
+  "settings.browser.status.playwright.missing": "Chromium est absent",
+  "settings.browser.status.playwright.install": "Installer",
+  "settings.browser.status.playwright.installing": "Installation…",
+  "settings.browser.status.extension": "Extension de navigateur",
+  "settings.browser.status.extension.connected": "Connectée",
+  "settings.browser.status.extension.disconnected": "Non connectée",
+  "settings.browser.status.extension.hint":
+    'Installez l\'extension de navigateur Kilo et activez « Autoriser les agents locaux », puis ouvrez une page que l\'agent peut utiliser.',
+  "settings.browser.origins.title": "Autorisations des sites",
+  "settings.browser.origins.site": "Site",
+  "settings.browser.origins.read": "Lire",
+  "settings.browser.origins.act": "Agir",
+  "settings.browser.origins.navigate": "Naviguer",
+  "settings.browser.origins.allowAll.title": "Autoriser tous les sites",
+  "settings.browser.origins.allowAll.description":
+    "Tous les sites sont autorisés sans demander. Une règle de site s'applique toujours.",
+  "settings.browser.origins.empty":
+    "Aucune règle de site pour l'instant. Chaque site hors de votre machine demande avant que l'agent le lise, l'utilise ou y navigue.",
+  "settings.browser.origins.add": "Ajouter un site",
+  "settings.browser.origins.placeholder": "https://example.com",
+  "settings.browser.origins.error.empty": "Saisissez l'origine du site",
+  "settings.browser.origins.error.invalid": "Utilisez une origine comme https://example.com",
+  "settings.browser.origins.error.duplicate": "Ce site est déjà dans la liste",
 
   "settings.language.description":
     "Choisissez la langue de l'interface de Kilo Code. \"Auto\" utilise la langue d'affichage de VS Code.",
