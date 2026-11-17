@@ -57,11 +57,7 @@ async function highlight(request: Extract<MarkdownWorkerRequest, { type: "highli
         id: request.id,
         key: request.key,
         reset: true,
-        stable: result.tokens
-          .flatMap((line, index) =>
-            index === result.tokens.length - 1 ? line : [...line, { content: "\n", offset: 0 }],
-          )
-          .map(token),
+        stable: highlightTokens(result.tokens),
         unstable: [],
       })
       return

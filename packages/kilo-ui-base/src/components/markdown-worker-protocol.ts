@@ -1,6 +1,19 @@
-import type { ThemeRegistrationResolved } from "shiki"
+import { getTokenStyleObject, stringifyTokenStyle, type ThemedToken, type ThemeRegistrationResolved } from "shiki"
 
 export type MarkdownToken = [content: string, style: string]
+
+/**
+ * The shape the code renderer consumes: one token per style run, with a newline token between lines. Every producer,
+ * the worker and the in-process highlighter, goes through this, so the renderer never sees two formats.
+ */
+export function highlightTokens(lines: ThemedToken[][]): MarkdownToken[] {
+  return lines
+    .flatMap((line, index) => (index === lines.length - 1 ? line : [...line, { content: "\n", offset: 0 }]))
+    .map((token): MarkdownToken => [
+      token.content,
+      stringifyTokenStyle(token.htmlStyle ?? getTokenStyleObject(token)),
+    ])
+}
 
 export type MarkdownWorkerRequest =
   | { type: "init"; theme: ThemeRegistrationResolved }
@@ -38,6 +51,10 @@ export function markdownBlockKey(owner: string, cacheKey: string | undefined, in
 // still grows while the reveal drains) starts without one. A per-key count would then repeat the generation the DOM
 // already shows, and the renderer would append the new tokens to the old spans instead of replacing them.
 let generations = 0
+
+export function nextMarkdownGeneration() {
+  return ++generations
+}
 
 export function applyMarkdownWorkerResponse(
   state: MarkdownWorkerState | undefined,

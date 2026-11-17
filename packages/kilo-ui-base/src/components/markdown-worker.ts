@@ -1,8 +1,13 @@
 import MarkdownShikiWorkerUrl from "./markdown-shiki.worker.ts?worker&url"
+import { getSharedHighlighter } from "@pierre/diffs" // kilocode_change
+import type { BundledLanguage } from "shiki" // kilocode_change
 import { KiloTheme } from "../context/marked" // kilocode_change
 import {
   applyMarkdownWorkerResponse,
+  highlightTokens, // kilocode_change
+  nextMarkdownGeneration, // kilocode_change
   shouldReleaseMarkdownWorkerState,
+  type MarkdownToken, // kilocode_change
   type MarkdownWorkerRequest,
   type MarkdownWorkerResponse,
   type MarkdownWorkerState,
@@ -45,6 +50,21 @@ export function highlightStreamingCode(key: string, text: string, language: stri
     transport.send({ type: "highlight", id, key, text, language, complete })
   })
 }
+
+// kilocode_change start: the worker keeps the main thread free while a block streams; a block that has stopped
+// changing can be tokenized here once. Both produce the same tokens, so a block keeps one renderer either way.
+export async function highlightInProcess(text: string, language: string) {
+  const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+  if (!highlighter.getLoadedLanguages().includes(language)) await highlighter.loadLanguage(language as BundledLanguage)
+  const result = highlighter.codeToTokens(text, { lang: language as BundledLanguage, theme: "Kilo" })
+  return {
+    language,
+    generation: nextMarkdownGeneration(),
+    stable: highlightTokens(result.tokens),
+    unstable: [] as MarkdownToken[],
+  }
+}
+// kilocode_change end
 
 export function disposeStreamingCode(key: string) {
   keys.delete(key)
