@@ -42,9 +42,34 @@ export function createProjectHydration(opts: {
     opts.catalog?.()?.find((item) => item.id === sessionId)?.location?.directory ??
     opts.sessions().find((item) => item.id === sessionId)?.location?.directory
 
-  const hydrate = ((state: AgentManagerStateMessage) =>
+  /**
+   * Finish the remembered restore when either the catalog lists its directory or a later state payload corrects its
+   * filing. The host's one-time repair can fix a filing before the catalog lists an old session, so both signals
+   * count. A state that still says the same thing keeps the wait for the next signal.
+   */
+  const replay = (projectId: string, next?: AgentManagerStateMessage) => {
+    const pending = waiting
+    if (!pending || pending.projectId !== projectId) return
+    // The user may have navigated while the catalog loaded; only finish the target they left.
+    if (opts.selection() !== pending.selection || opts.current() !== pending.sessionId) {
+      waiting = undefined
+      return
+    }
+    const source = next ?? pending.state
+    const directory = directoryOf(pending.sessionId)
+    const filed = filingOf(source, pending.sessionId)
+    if (directory === undefined && filed === filingOf(pending.state, pending.sessionId)) {
+      if (next) waiting = { ...pending, state: next }
+      return
+    }
+    waiting = undefined
+    restoreProjectTarget(source, { ...opts.restore, rootOf: opts.root, directoryOf })
+    opts.focus()
+  }
+
+  const hydrate = ((state: AgentManagerStateMessage) => {
+    const switched = opts.switch(state)
     batch(() => {
-      const switched = opts.switch(state)
       opts.restricted(state.restricted === true)
       if (state.isGitRepo !== undefined) opts.repo(state.isGitRepo)
       opts.loaded()
@@ -73,19 +98,17 @@ export function createProjectHydration(opts: {
         waiting = pendingRestore(state, directoryOf)
       }
       opts.sidebar(state.sidebarCollapsed)
-    })) as ((state: AgentManagerStateMessage) => void) & { catalog(projectId: string): void }
+    })
+    if (switched === "same") replay(state.projectId ?? "", state)
+  }) as ((state: AgentManagerStateMessage) => void) & { catalog(projectId: string): void }
 
-  hydrate.catalog = (projectId: string) => {
-    const pending = waiting
-    if (!pending || pending.projectId !== projectId) return
-    waiting = undefined
-    // The user may have navigated while the catalog loaded; only finish the target they left.
-    if (opts.selection() !== pending.selection || opts.current() !== pending.sessionId) return
-    restoreProjectTarget(pending.state, { ...opts.restore, rootOf: opts.root, directoryOf })
-    opts.focus()
-  }
+  hydrate.catalog = (projectId: string) => replay(projectId)
 
   return hydrate
+}
+
+function filingOf(state: AgentManagerStateMessage, sessionId: string): string | null | undefined {
+  return state.sessions.find((item) => item.id === sessionId)?.worktreeId
 }
 
 /** A project with no open tab and no terminal gets the empty composer. */

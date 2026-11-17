@@ -21,10 +21,11 @@ function setup() {
   let selection: string | null = null
   let current: string | undefined
   let catalog: { id: string; location?: { directory?: string } }[] = []
+  let nextSwitch: "first" | "switched" | "same" = "switched"
   const calls: string[] = []
 
   const hydrate = createProjectHydration({
-    switch: () => "switched",
+    switch: () => nextSwitch,
     restricted: () => {},
     repo: () => {},
     loaded: () => {},
@@ -75,6 +76,7 @@ function setup() {
     hydrate,
     calls,
     setCatalog: (value: { id: string; location?: { directory?: string } }[]) => (catalog = value),
+    setSwitch: (value: "first" | "switched" | "same") => (nextSwitch = value),
     selection: () => selection,
     setSelection: (value: string | null) => (selection = value),
     setCurrent: (value: string | undefined) => (current = value),
@@ -108,6 +110,24 @@ describe("createProjectHydration catalog replay", () => {
     test.hydrate.catalog("p1")
 
     expect(test.calls).toEqual(["focus-managed:wt1:s1", "focus-managed:wt1:s1"])
+  })
+
+  it("keeps waiting when the catalog omits the session and finishes on the repaired state", () => {
+    const test = setup()
+    test.hydrate(state())
+    expect(test.calls).toEqual(["focus-managed:wt1:s1"])
+
+    // The session is outside the sidebar window, so this catalog cannot place it. The wait continues.
+    test.setCatalog([])
+    test.hydrate.catalog("p1")
+    expect(test.calls).toEqual(["focus-managed:wt1:s1"])
+
+    // The host's full repair pushes a state that files the session under Local. That state must finish the restore.
+    test.setSwitch("same")
+    test.hydrate({ ...state(), sessions: [{ id: SESSION, worktreeId: null, createdAt: "" }] })
+
+    expect(test.calls).toEqual(["focus-managed:wt1:s1", "focus-local:s1"])
+    expect(test.selection()).toBe(LOCAL)
   })
 
   it("does not pull the user back after they navigated during the catalog load", () => {
