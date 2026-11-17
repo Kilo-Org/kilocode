@@ -976,12 +976,15 @@ const AgentManagerContent: Component = () => {
     if (reviewActive()) return REVIEW_TAB_ID
     return sessions.currentSessionID() ?? activePendingId()
   })
-  const visibleSession = createMemo(() =>
-    visible(
+  const visibleSession = createMemo(() => {
+    // The subagent inspector shows another session over the transcript. Reporting it while it is visible and the
+    // parent again when it closes keeps the host's viewed session from going stale.
+    if (sidePanel() === SidePanel.Subagents) return subagents.active() ?? null
+    return visible(
       sessions.currentSessionID(),
       !!terms.activeId() || reviewActive() || history() || !!overlay() || contextEmpty(),
-    ),
-  )
+    )
+  })
   reportVisibleSession(vscode, visibleSession)
   const activity = createWorktreeActivity({
     managed: managedSessions,
