@@ -78,7 +78,8 @@ export function DialogBrowser() {
 
   const status = () => {
     if (policy()?.control === "off") return "Organization policy turns browser tools off."
-    if (policy()?.control === "playwright_only") return "Organization policy keeps browser tools on the bundled Playwright browser."
+    if (policy()?.control === "playwright_only")
+      return "Organization policy keeps browser tools on the bundled Playwright browser."
     if ((config().browser?.backend ?? "playwright") === "off") return "Browser tools are off."
     if ((config().browser?.backend ?? "playwright") === "extension")
       return "Not connected. The extension backend arrives in a later release."
@@ -93,7 +94,10 @@ export function DialogBrowser() {
       const permission = { browser } as unknown as NonNullable<Config["permission"]>
       await sdk.client.global.config.update({ config: { permission } }, { throwOnError: true })
     } catch (error) {
-      toast.show({ variant: "error", message: error instanceof Error ? error.message : "Could not save the browser rules" })
+      toast.show({
+        variant: "error",
+        message: error instanceof Error ? error.message : "Could not save the browser rules",
+      })
     } finally {
       setBusy(false)
     }
@@ -214,7 +218,10 @@ function DialogBrowserClasses(props: { origin: string }) {
       await sdk.client.global.config.update({ config: { permission: { browser: rules } } }, { throwOnError: true })
       dialog.clear()
     } catch (error) {
-      toast.show({ variant: "error", message: error instanceof Error ? error.message : "Could not save the browser rules" })
+      toast.show({
+        variant: "error",
+        message: error instanceof Error ? error.message : "Could not save the browser rules",
+      })
     } finally {
       setBusy(false)
     }

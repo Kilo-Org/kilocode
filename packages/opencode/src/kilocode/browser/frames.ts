@@ -31,7 +31,11 @@ export function iframes(text: string): Ref[] {
  * `- iframe [origin withheld: <origin>]`. `origins` maps a snapshot ref to its
  * frame origin; refs absent from the map are left untouched (unresolved iframe).
  */
-export function snapshot(text: string, origins: ReadonlyMap<string, string>, granted: (origin: string) => boolean): string {
+export function snapshot(
+  text: string,
+  origins: ReadonlyMap<string, string>,
+  granted: (origin: string) => boolean,
+): string {
   const lines = text.split("\n")
   const out: string[] = []
   // Indentation of the iframe whose children are being dropped, or -1.

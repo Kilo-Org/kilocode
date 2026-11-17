@@ -53,9 +53,7 @@ describe("browser permission defaults", () => {
 
 describe("browser permission patterns", () => {
   test("an item becomes <class>:<origin>", () => {
-    expect(BrowserPermission.pattern({ class: "read", origin: "https://example.com" })).toBe(
-      "read:https://example.com",
-    )
+    expect(BrowserPermission.pattern({ class: "read", origin: "https://example.com" })).toBe("read:https://example.com")
   })
 
   test("a saved pattern parses back into the item it came from", () => {

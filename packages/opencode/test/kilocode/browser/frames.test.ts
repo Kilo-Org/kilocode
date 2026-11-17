@@ -43,7 +43,7 @@ describe("snapshot frame scoping", () => {
 
   test("the page and its own content are untouched", () => {
     const result = Frames.snapshot(snapshot, origins, granted)
-    expect(result).toContain('- Page URL: https://shop.example.com/checkout')
+    expect(result).toContain("- Page URL: https://shop.example.com/checkout")
     expect(result).toContain('- heading "Checkout" [level=1] [ref=e2]')
     expect(result).toContain('- textbox "Email" [ref=e3]')
   })

@@ -3,11 +3,7 @@ import { Effect, Redacted } from "effect"
 import { BrowserPolicy } from "@/kilocode/browser/policy"
 
 const auth = (organizationID?: string) =>
-  Effect.succeed(
-    organizationID === undefined
-      ? undefined
-      : { token: Redacted.make("test-token"), organizationID },
-  )
+  Effect.succeed(organizationID === undefined ? undefined : { token: Redacted.make("test-token"), organizationID })
 
 const respond = (body: unknown, status = 200): ((request: Request) => Promise<Response>) => {
   return async () => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })

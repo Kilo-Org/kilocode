@@ -41,11 +41,7 @@ function chunk(type: string, body: Buffer) {
 
 /** Decode a PNG into 8-bit RGB(A) pixels. Throws when the file is out of scope. */
 export function decode(png: Buffer): Image {
-  if (
-    png.length < 8 ||
-    !png.subarray(0, 8).equals(SIGNATURE) ||
-    png.subarray(12, 16).toString("ascii") !== "IHDR"
-  ) {
+  if (png.length < 8 || !png.subarray(0, 8).equals(SIGNATURE) || png.subarray(12, 16).toString("ascii") !== "IHDR") {
     throw new Error("not a PNG image")
   }
   const width = png.readUInt32BE(16)

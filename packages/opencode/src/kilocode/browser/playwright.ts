@@ -58,7 +58,8 @@ function blocks(content: unknown): ContentBlock[] {
   return content.flatMap((item): ContentBlock[] => {
     if (typeof item !== "object" || item === null) return []
     if (!("type" in item)) return []
-    if (item.type === "text" && "text" in item && typeof item.text === "string") return [{ type: "text", text: item.text }]
+    if (item.type === "text" && "text" in item && typeof item.text === "string")
+      return [{ type: "text", text: item.text }]
     if (item.type === "image" && "data" in item && typeof item.data === "string") {
       const mime = "mimeType" in item && typeof item.mimeType === "string" ? item.mimeType : "image/png"
       return [{ type: "image", data: item.data, mimeType: mime }]
@@ -144,7 +145,7 @@ function inspectElement(el: Element, kind: "fill" | "click") {
   }
   const card = (node: Element) => {
     const input = node as HTMLInputElement
-    if (((node.getAttribute("autocomplete") || "").toLowerCase()).startsWith("cc-")) return true
+    if ((node.getAttribute("autocomplete") || "").toLowerCase().startsWith("cc-")) return true
     const hint = [input.name, input.id, node.getAttribute("placeholder"), node.getAttribute("aria-label")]
       .filter((value) => typeof value === "string" && value.length > 0)
       .join(" ")
@@ -435,7 +436,10 @@ class PlaywrightBackend implements Backend {
     let callArgs = args
     if (shot && withheldBefore.length) {
       if (args.target !== undefined) {
-        return { content: [{ type: "text", text: "The screenshot is unavailable: part of the page is withheld." }], isError: true }
+        return {
+          content: [{ type: "text", text: "The screenshot is unavailable: part of the page is withheld." }],
+          isError: true,
+        }
       }
       callArgs = { ...args, type: "png", scale: "css" }
       delete callArgs.filename
@@ -467,7 +471,10 @@ class PlaywrightBackend implements Backend {
     if (!content.length && result.structuredContent !== undefined) {
       content.push({ type: "text", text: JSON.stringify(result.structuredContent, null, 2) })
     }
-    const text = content.filter((block) => block.type === "text").map((block) => block.text).join("\n")
+    const text = content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("\n")
     const reported = /^- Page URL: (.+)$/m.exec(text)?.[1]?.trim()
     if (reported) this.url = reported
     page = this.current()
@@ -498,7 +505,10 @@ class PlaywrightBackend implements Backend {
       const boxes = await this.maskBoxes(page, withheld, args.fullPage === true).catch(() => undefined)
       if (!boxes) {
         if (before) await this.removeNewFiles(before)
-        return { content: [{ type: "text", text: "The screenshot is unavailable: part of the page could not be masked." }], isError: true }
+        return {
+          content: [{ type: "text", text: "The screenshot is unavailable: part of the page could not be masked." }],
+          isError: true,
+        }
       }
       try {
         for (const image of images) {
@@ -510,17 +520,17 @@ class PlaywrightBackend implements Backend {
       } catch (error) {
         if (before) await this.removeNewFiles(before)
         log.warn("screenshot masking failed", { error: String(error) })
-        return { content: [{ type: "text", text: "The screenshot is unavailable: part of the page could not be masked." }], isError: true }
+        return {
+          content: [{ type: "text", text: "The screenshot is unavailable: part of the page could not be masked." }],
+          isError: true,
+        }
       }
       // The file on disk was written before masking; it must not outlive the call.
       if (before) await this.removeNewFiles(before)
     }
 
     return {
-      content: [
-        { type: "text", text: viewed },
-        ...images,
-      ],
+      content: [{ type: "text", text: viewed }, ...images],
       isError: result.isError === true,
     }
   }

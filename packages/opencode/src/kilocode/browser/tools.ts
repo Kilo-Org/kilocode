@@ -115,7 +115,8 @@ function run(entry: Entry, args: unknown, ctx: Tool.Context, deps: Deps) {
     if (browser.backend === "off" || policy?.control === "off")
       return yield* Effect.die(new UnavailableError("Set browser.backend to playwright in the Kilo config."))
     const parsed = Args.safeParse(args ?? {})
-    if (!parsed.success) return yield* Effect.die(new InvalidArgumentsError({ tool: entry.name, detail: "not an object" }))
+    if (!parsed.success)
+      return yield* Effect.die(new InvalidArgumentsError({ tool: entry.name, detail: "not an object" }))
 
     const active = yield* Effect.tryPromise({ try: () => backend(browser), catch: (error) => error }).pipe(
       Effect.catch((error) =>
@@ -131,11 +132,8 @@ function run(entry: Entry, args: unknown, ctx: Tool.Context, deps: Deps) {
     let sensitive: string[] = []
     let outcome: Result.Result<CallResult, unknown> | undefined
     for (let attempt = 0; attempt < 2; attempt++) {
-      yield* authorize(
-        yield* planned(active, entry, parsed.data, ctx),
-        ctx,
-        browser.allowSensitive,
-        (origin) => BrowserPolicy.allows(policy, origin),
+      yield* authorize(yield* planned(active, entry, parsed.data, ctx), ctx, browser.allowSensitive, (origin) =>
+        BrowserPolicy.allows(policy, origin),
       )
       const call: CallContext = { session: ctx.sessionID, authorized: [...grantsFor(ctx.sessionID)], sensitive }
       outcome = yield* Effect.result(

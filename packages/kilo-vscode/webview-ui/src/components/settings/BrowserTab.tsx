@@ -89,9 +89,7 @@ const BrowserTab: Component = () => {
   }
 
   const toggleClass = (value: Class) =>
-    setClasses((current) =>
-      current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
-    )
+    setClasses((current) => (current.includes(value) ? current.filter((item) => item !== value) : [...current, value]))
 
   const add = () => {
     const value = normalizeOrigin(origin())
@@ -239,7 +237,11 @@ const BrowserTab: Component = () => {
                     }}
                   />
                 </div>
-                <Button variant="secondary" onClick={add} disabled={!normalizeOrigin(origin()) || classes().length === 0}>
+                <Button
+                  variant="secondary"
+                  onClick={add}
+                  disabled={!normalizeOrigin(origin()) || classes().length === 0}
+                >
                   {t("settings.browser.allowlist.add")}
                 </Button>
               </div>
@@ -247,11 +249,7 @@ const BrowserTab: Component = () => {
                 <For each={CLASSES}>
                   {(value) => (
                     <label style={{ display: "flex", gap: "6px", "align-items": "center", cursor: "pointer" }}>
-                      <input
-                        type="checkbox"
-                        checked={classes().includes(value)}
-                        onChange={() => toggleClass(value)}
-                      />
+                      <input type="checkbox" checked={classes().includes(value)} onChange={() => toggleClass(value)} />
                       <span style={{ "font-size": "var(--kilo-font-size-12)" }}>
                         {t(`settings.browser.class.${value}` as UiI18nKey)}
                       </span>

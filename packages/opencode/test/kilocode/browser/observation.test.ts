@@ -52,7 +52,7 @@ describe("browser observation", () => {
     expect(value?.url).toBe("http://localhost:4173/login")
     expect(value?.title).toBe("Sign in")
     expect(value?.lines).toEqual([
-      '- generic [active] [ref=e1]:',
+      "- generic [active] [ref=e1]:",
       '  - heading "Sign in" [level=1] [ref=e2]',
       '  - text "Session expired" [ref=e3]',
       '  - textbox "Email" [ref=e4]',

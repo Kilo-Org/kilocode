@@ -16,9 +16,9 @@ describe("browser call items", () => {
   })
 
   test("a read tool needs read on the current page", () => {
-    expect(
-      BrowserItems.plan({ tool: "browser_snapshot", args: {}, page, elements: [], authorized: [] }),
-    ).toEqual([{ class: "read", origin: page }])
+    expect(BrowserItems.plan({ tool: "browser_snapshot", args: {}, page, elements: [], authorized: [] })).toEqual([
+      { class: "read", origin: page },
+    ])
   })
 
   test("an act tool needs act on the current page", () => {
