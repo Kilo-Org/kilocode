@@ -42,7 +42,9 @@ async function freePort() {
 
 // An isolated data and run directory, then a real hub. `allow` is written to
 // `allowed.json` before the hub reads it, which is what `install-host` produces.
-async function startHub(input: { pairingTtlMs?: number; allow?: string[] } = {}) {
+async function startHub(
+  input: { pairingTtlMs?: number; exchangeTimeoutMs?: number; idleMs?: number; allow?: string[] } = {},
+) {
   const at = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-loopback-unit-"))
   roots.push(at)
   const before = { run: process.env.KILO_BROWSER_RUN_DIR, data: process.env.KILO_BROWSER_DATA_DIR }
@@ -62,7 +64,12 @@ async function startHub(input: { pairingTtlMs?: number; allow?: string[] } = {})
   const port = await freePort()
   // `run` resolves once the hub is listening; `done` resolves when it stops, which
   // is what these tests observe.
-  const running = await run({ port, idleMs: 200, pairingTtlMs: input.pairingTtlMs })
+  const running = await run({
+    port,
+    idleMs: input.idleMs ?? 200,
+    pairingTtlMs: input.pairingTtlMs,
+    exchangeTimeoutMs: input.exchangeTimeoutMs,
+  })
   const entry = await until(async () => (await Registry.list({ dir: path.join(at, "run", "hubs") })).at(0), 10_000)
   return { at, port, entry, done: running.done, stop: running.stop }
 }
@@ -223,6 +230,49 @@ describe("loopback pairing", () => {
     })
   }
 
+  // The requests a browser would never make, so `fetch` cannot build them: a body
+  // that never ends and one that keeps streaming past the cap.
+  async function connect(port: number) {
+    const socket = net.createConnection({ host: "127.0.0.1", port })
+    sockets.push(socket)
+    // A refusal ends the connection under the test's feet.
+    socket.on("error", () => undefined)
+    const connected = Promise.withResolvers<void>()
+    socket.once("connect", connected.resolve)
+    socket.once("error", connected.reject)
+    await connected.promise
+    return socket
+  }
+
+  function head(port: number, length: number) {
+    return [
+      `POST ${pair.PairingKeyPath} HTTP/1.1`,
+      `Host: 127.0.0.1:${port}`,
+      `Origin: ${extension}`,
+      "Content-Type: application/json",
+      `Content-Length: ${length}`,
+      "",
+      "",
+    ].join("\r\n")
+  }
+
+  function status(socket: net.Socket) {
+    const { promise, resolve } = Promise.withResolvers<number>()
+    let buffered = ""
+    socket.on("data", (chunk: Buffer) => {
+      buffered += chunk.toString("latin1")
+      const line = /^HTTP\/1\.1 (\d{3})/.exec(buffered)
+      if (line?.[1] !== undefined) resolve(Number(line[1]))
+    })
+    return promise
+  }
+
+  function shut(socket: net.Socket) {
+    const { promise, resolve } = Promise.withResolvers<boolean>()
+    socket.once("close", () => resolve(true))
+    return promise
+  }
+
   test("mints a token over the CLI socket and redeems it once for the key", async () => {
     const hub = await startHub()
     const { url } = await ask(hub.entry)
@@ -288,6 +338,34 @@ describe("loopback pairing", () => {
       (await redeem(hub.port, minted, extension, JSON.stringify({ t: minted, pad: "x".repeat(2_000) }))).status,
     ).toBe(400)
     expect((await redeem(hub.port, minted, extension)).status).toBe(200)
+    await hub.stop()
+  })
+
+  test("times out a body that never ends and keeps the token unused", async () => {
+    const hub = await startHub({ exchangeTimeoutMs: 50 })
+    const minted = token((await ask(hub.entry)).url)
+    const socket = await connect(hub.port)
+    const answered = status(socket)
+    // Complete headers and a partial body, then silence: the upload never ends.
+    socket.write(`${head(hub.port, 100)}{"t":"${minted}"`)
+    expect(await answered).toBe(408)
+    expect((await redeem(hub.port, minted, extension)).status).toBe(200)
+    await hub.stop()
+  })
+
+  test("stops reading an oversized upload once it answers 400", async () => {
+    // A long idle window keeps the hub from treating the still-open upload as the
+    // end of its useful life; the connection may only close because of the refusal.
+    const hub = await startHub({ idleMs: 60_000 })
+    const socket = await connect(hub.port)
+    const answered = status(socket)
+    const ended = shut(socket)
+    socket.write(head(hub.port, 100_000))
+    socket.write("x".repeat(2_048))
+    expect(await answered).toBe(400)
+    // The upload has barely started; the server closes the connection instead of
+    // consuming the rest of it.
+    expect(await ended).toBe(true)
     await hub.stop()
   })
 

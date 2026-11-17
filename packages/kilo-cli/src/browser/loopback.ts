@@ -83,6 +83,9 @@ function parse(input: string): unknown {
 // larger, so the cap is what keeps an anonymous loopback caller from making the hub
 // buffer an arbitrary amount before the origin check would even matter.
 const ExchangeBodyLimit = 1024
+// The body is a few dozen bytes, so an upload still in flight after this long is a
+// stuck or hostile client holding a socket; the same reasoning as HandshakeTimeout.
+const ExchangeTimeout = 5_000
 
 // Anything that is not that one object with a well-formed token is malformed, and a
 // malformed request must leave the token redeemable.
@@ -98,30 +101,35 @@ function parseExchange(input: string): string | undefined {
   return parsed.data.t
 }
 
-// Resolves with the body text, or undefined when it exceeded `limit`; the caller
-// answers 400 in both the cap and the malformed case.
-function read(request: http.IncomingMessage, limit: number): Promise<string | undefined> {
-  const { promise, resolve } = Promise.withResolvers<string | undefined>()
+// Resolves with the body text, or why it was refused. A caller that is still
+// uploading after `timeout` or past `limit` is holding a loopback socket open, so the
+// request stream is closed rather than drained.
+type Read = { text: string } | "too-large" | "timeout"
+
+function read(request: http.IncomingMessage, limit: number, timeout: number): Promise<Read> {
+  const { promise, resolve } = Promise.withResolvers<Read>()
   const chunks: Buffer[] = []
   let size = 0
   let done = false
-  const finish = (value: string | undefined) => {
+  const finish = (result: Read) => {
     if (done) return
     done = true
-    resolve(value)
+    clearTimeout(timer)
+    resolve(result)
   }
+  const timer = setTimeout(() => finish("timeout"), timeout)
+  timer.unref()
   request.on("data", (chunk: Buffer) => {
     if (done) return
     size += chunk.length
     if (size > limit) {
-      // Stop buffering once over the cap; the stream keeps flowing and discards.
-      finish(undefined)
+      finish("too-large")
       return
     }
     chunks.push(chunk)
   })
-  request.on("end", () => finish(Buffer.concat(chunks).toString("utf8")))
-  request.on("error", () => finish(undefined))
+  request.on("end", () => finish({ text: Buffer.concat(chunks).toString("utf8") }))
+  request.on("error", () => finish("timeout"))
   return promise
 }
 
@@ -150,6 +158,8 @@ export type Run = {
   idleMs?: number
   // How long a minted pairing token stays redeemable; tests shorten it.
   pairingTtlMs?: number
+  // How long a pairing request may take to send its body; tests shorten it.
+  exchangeTimeoutMs?: number
 }
 
 export type Running = {
@@ -166,6 +176,7 @@ export async function run(input: Run = {}): Promise<Running> {
   const version = input.version ?? OPENCODE_VERSION
   const idleMs = input.idleMs ?? IdleExit
   const ttl = input.pairingTtlMs ?? pair.PairingTtl
+  const exchangeTimeout = input.exchangeTimeoutMs ?? ExchangeTimeout
   const key = await pair.load()
   // Same source as native mode: the persisted allowlist, which `install-host` writes
   // and a browser started from its GUI session needs, then the environment.
@@ -270,12 +281,28 @@ export async function run(input: Run = {}): Promise<Running> {
       response.end("method not allowed")
       return
     }
-    void read(request, ExchangeBodyLimit).then((text) => {
+    // A refusal that ends the upload closes the connection once the answer is out,
+    // so a slow or oversized body cannot keep the hub reading it.
+    const refuse = (status: number, message: string) => {
+      if (response.destroyed) return
+      response.once("finish", () => request.destroy())
+      response.writeHead(status, {
+        ...cors,
+        connection: "close",
+        "content-type": "text/plain; charset=utf-8",
+      })
+      response.end(message)
+    }
+    void read(request, ExchangeBodyLimit, exchangeTimeout).then((upload) => {
+      if (upload === "timeout") {
+        log.warn("refusing a pairing request that did not finish in time", { origin })
+        refuse(408, "request timeout")
+        return
+      }
       // An oversized body reads as malformed: the cap is exactly the reason.
-      const parsed = text === undefined ? undefined : parseExchange(text)
+      const parsed = upload === "too-large" ? undefined : parseExchange(upload.text)
       if (parsed === undefined) {
-        response.writeHead(400, { ...cors, "content-type": "text/plain; charset=utf-8" })
-        response.end("bad request")
+        refuse(400, "bad request")
         return
       }
       // Redeeming is what burns the token, so every refusal above leaves it usable.
