@@ -19,9 +19,7 @@ Linked billing works with **Claude API organizations** only, billed per token at
 
 To approve the link, you need the **Owner**, **Admin**, or **Billing** role in your Claude organization's [Console](https://platform.claude.com).
 
-1. Open the BYOK page where you use Kilo:
-   - **Organization:** Select the organization, then open **Bring Your Own Key (BYOK)** in the sidebar. Only organization owners and admins can link.
-   - **Personal account:** Open your personal [BYOK page](https://app.kilo.ai/byok).
+1. Open the [BYOK page](https://app.kilo.ai/byok) in Kilo. To link an organization, switch to it first; only its owners and admins can link.
 2. On the **Claude (linked billing)** card, choose **Link your Claude organization**.
 3. Sign in to Claude, set a monthly spend limit if you want one, and approve.
 4. Confirm that the card shows **Linked**.
