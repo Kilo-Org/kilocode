@@ -54,6 +54,8 @@ export function createProjectWiring(opts: {
   post: (message: AgentManagerOutMessage) => void
   /** Route one session to a directory inside a project; false when the server could not move it. */
   routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => Promise<boolean>
+  /** The directory the server runs a session in, for a session another surface names without a project. */
+  sessionDirectory?: (sessionId: string) => Promise<string | undefined>
 }): ProjectWiring {
   const registry = new ProjectRegistry(
     { read: () => opts.host.readProjects(), write: (value) => opts.host.writeProjects(value) },
@@ -89,6 +91,7 @@ export function createProjectWiring(opts: {
     selected: opts.selected,
     post: opts.post,
     routeSession: opts.routeSession,
+    sessionDirectory: opts.sessionDirectory,
     git: opts.git,
     error: (message) => opts.host.showError(message),
     openSettings: (tab, projectId) => opts.host.openSettings(tab, projectId),

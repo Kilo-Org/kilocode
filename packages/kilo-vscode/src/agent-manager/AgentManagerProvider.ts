@@ -247,6 +247,15 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
             this.log(`Failed to move session ${sessionId}:`, err)
             return false
           }),
+      sessionDirectory: (sessionId) =>
+        this.connection
+          .client()
+          .then((client) => client.session.get({ sessionID: sessionId }))
+          .then((info) => info.location.directory)
+          .catch((err: unknown) => {
+            this.log(`Failed to read session ${sessionId} before opening it:`, err)
+            return undefined
+          }),
     })
     this.contexts = wiring.contexts
     // One browser page per Agent Manager session. The sidebar editor tab uses the same broker instance.

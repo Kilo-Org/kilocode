@@ -46,6 +46,7 @@ export function applySetupMessage(
     managedSessions: () => ManagedSessionState[]
     evictLocal: (id: string) => void
     requestChatFocus: (force?: boolean) => void
+    saveTabMemory: () => void
   },
 ) {
   deps.creation.setup(msg)
@@ -61,15 +62,22 @@ export function applySetupMessage(
       )
   }
   if (!deps.isActivePayload(msg.projectId)) return
+  // The new worktree takes the selection: the context it leaves remembers its tab before the new session replaces a
+  // main terminal tab (the main surface drops the terminal once a session becomes the current one).
+  const leave = (worktree: string | null | undefined) => {
+    if (worktree && deps.selection() !== worktree) deps.saveTabMemory()
+  }
   if (msg.status === "ready" && msg.sessionId) {
-    deps.selectSession(msg.sessionId)
     const worktree = msg.worktreeId ?? deps.managedSessions().find((session) => session.id === msg.sessionId)?.worktreeId
+    leave(worktree)
+    deps.selectSession(msg.sessionId)
     if (worktree) deps.setSelection(worktree)
     deps.evictLocal(msg.sessionId)
     deps.requestChatFocus(true)
     return
   }
   if (msg.status !== "ready" && msg.status !== "error") {
+    leave(msg.worktreeId)
     if (msg.worktreeId) deps.setSelection(msg.worktreeId)
     deps.setReviewActive(false)
   }
