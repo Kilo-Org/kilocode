@@ -24,10 +24,18 @@ export namespace KiloSessionCompaction {
     )
   }
 
-  /** Runs `create` unless a marker is already pending. Serialized per session so concurrent requests cannot both write one. */
+  /**
+   * Runs `create` unless a marker is already pending. Serialized per session so concurrent requests cannot both write one.
+   * A reused marker is re-targeted so the prompt queue keeps it visible, and an automatic request upgrades a pending
+   * manual marker so the compaction still replays or continues the interrupted turn.
+   */
   export function once<E, R>(
-    session: { messages: (input: { sessionID: SessionID }) => Effect.Effect<MessageV2.WithParts[], unknown> },
+    session: {
+      messages: (input: { sessionID: SessionID }) => Effect.Effect<MessageV2.WithParts[], unknown>
+      updatePart: <T extends MessageV2.Part>(part: T) => Effect.Effect<T>
+    },
     sessionID: SessionID,
+    request: { auto: boolean; overflow?: boolean },
     create: Effect.Effect<void, E, R>,
   ) {
     return Effect.acquireUseRelease(
@@ -40,8 +48,15 @@ export namespace KiloSessionCompaction {
       (entry) =>
         entry.semaphore.withPermits(1)(
           Effect.gen(function* () {
-            if (pending(yield* session.messages({ sessionID }).pipe(Effect.orDie))) return
-            yield* create
+            const marker = pending(yield* session.messages({ sessionID }).pipe(Effect.orDie))
+            if (!marker) return yield* create
+            KiloSessionPromptQueue.retarget(sessionID, marker.info.id)
+            const part = marker.parts.find((item): item is MessageV2.CompactionPart => item.type === "compaction")
+            if (!part || !request.auto) return
+            // overflow=true (strip media) wins over false (preflight replay) and over undefined (no replay)
+            const overflow = part.overflow === true ? true : (request.overflow ?? part.overflow)
+            if (part.auto && overflow === part.overflow) return
+            yield* session.updatePart({ ...part, auto: true, overflow })
           }),
         ),
       (entry) =>

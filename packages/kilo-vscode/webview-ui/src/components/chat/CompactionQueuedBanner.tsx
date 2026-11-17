@@ -14,7 +14,9 @@ import { queuedCompaction } from "../../context/session-queue"
 export const CompactionQueuedBanner: Component = () => {
   const session = useSession()
   const language = useLanguage()
-  const queued = createMemo(() => !!queuedCompaction(session.messages(), (msg) => session.getParts(msg.id)))
+  const queued = createMemo(
+    () => !!queuedCompaction(session.messages(), (msg) => session.getParts(msg.id), session.revert() ?? undefined),
+  )
 
   return (
     <Show when={queued()}>

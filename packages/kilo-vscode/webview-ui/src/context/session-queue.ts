@@ -266,14 +266,22 @@ export function removeQueuedMessage(
 
 /**
  * The compaction marker that was written but has not started yet (no summary assistant
- * answers it). Mirrors the server-side rule so the webview derives it from persisted messages.
+ * answers it). Mirrors KiloSessionCompaction.pending on the server (src/kilocode/session/compaction.ts):
+ * the window starts after the last assistant with a truthy `finish`, and any assistant parented
+ * to the marker means it started. Keep both definitions in lockstep. Messages past the revert
+ * boundary are ignored, and synthetic session-error assistants are not persisted server
+ * messages, so they neither move the pivot nor answer a marker.
  */
-export function queuedCompaction(messages: Message[], parts?: (msg: Message) => Message["parts"]) {
-  const pivot = messages.findLastIndex(
-    (msg) => msg.role === "assistant" && (typeof msg.time?.completed === "number" || !!msg.error || !!msg.finish),
-  )
-  const tail = messages.slice(pivot + 1)
+export function queuedCompaction(
+  messages: Message[],
+  parts?: (msg: Message) => Message["parts"],
+  revert?: RevertBoundary,
+) {
+  const shown = messages.filter((msg) => !msg.sessionErrorID && visibleMessage(msg.id, revert))
+  const projected = (msg: Message) => visibleParts(msg.id, parts?.(msg) ?? msg.parts ?? [], revert)
+  const pivot = shown.findLastIndex((msg) => msg.role === "assistant" && !!msg.finish)
+  const tail = shown.slice(pivot + 1)
   return tail.findLast(
-    (msg) => isCompact(msg, parts) && !tail.some((item) => item.role === "assistant" && item.parentID === msg.id),
+    (msg) => isCompact(msg, projected) && !tail.some((item) => item.role === "assistant" && item.parentID === msg.id),
   )
 }

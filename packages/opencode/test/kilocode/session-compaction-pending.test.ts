@@ -9,6 +9,8 @@ import { Session } from "@/session/session"
 import { SessionCompaction } from "@/session/compaction"
 import { MessageID, PartID, type SessionID } from "@/session/schema"
 import { KiloSessionCompaction } from "@/kilocode/session/compaction"
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import type { MessageV2 } from "@/session/message-v2"
 import { ProviderTest } from "../fake/provider"
 import { seedProject, TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
@@ -96,6 +98,77 @@ describe("pending compaction marker", () => {
 
       yield* compaction.create(input)
       expect(yield* markers(sessions, session.id)).toHaveLength(2)
+    }),
+  )
+
+  it.instance(
+    "an auto request upgrades a pending manual marker instead of dropping the overflow metadata",
+    Effect.gen(function* () {
+      yield* seedProject
+      const sessions = yield* Session.Service
+      const compaction = yield* SessionCompaction.Service
+      const session = yield* sessions.create({})
+      const input = { sessionID: session.id, agent: "code", model: ref }
+
+      yield* compaction.create({ ...input, auto: false })
+      yield* compaction.create({ ...input, auto: true, overflow: true })
+
+      const found = yield* markers(sessions, session.id)
+      expect(found).toHaveLength(1)
+      const part = found[0].parts.find((item): item is MessageV2.CompactionPart => item.type === "compaction")
+      expect(part?.auto).toBe(true)
+      expect(part?.overflow).toBe(true)
+
+      // a later manual request must not downgrade the marker
+      yield* compaction.create({ ...input, auto: false })
+      const again = (yield* markers(sessions, session.id))[0].parts.find(
+        (item): item is MessageV2.CompactionPart => item.type === "compaction",
+      )
+      expect(again?.auto).toBe(true)
+      expect(again?.overflow).toBe(true)
+    }),
+  )
+
+  it.instance(
+    "a reused marker stays visible to a follow-up turn that did not create it",
+    Effect.gen(function* () {
+      yield* seedProject
+      const sessions = yield* Session.Service
+      const compaction = yield* SessionCompaction.Service
+      const session = yield* sessions.create({})
+      const input = { sessionID: session.id, agent: "code", model: ref }
+      const user = () =>
+        sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "user",
+          model: ref,
+          sessionID: session.id,
+          agent: "code",
+          time: { created: Date.now() },
+        })
+      const first = yield* user()
+      const followup = yield* user()
+      const skip = Effect.void
+
+      // the marker is written while the first turn runs, before the follow-up's slot starts
+      yield* KiloSessionPromptQueue.enqueue(session.id, first.id, compaction.create({ ...input, auto: false }), skip)
+      const marker = (yield* markers(sessions, session.id))[0].info.id
+
+      // handoff: the follow-up's slot starts with no extras, so scope() hides the older marker
+      const visible = yield* KiloSessionPromptQueue.enqueue(
+        session.id,
+        followup.id,
+        Effect.gen(function* () {
+          yield* compaction.create({ ...input, auto: true, overflow: true })
+          return KiloSessionPromptQueue.scope(session.id, yield* sessions.messages({ sessionID: session.id })).map(
+            (msg) => msg.info.id,
+          )
+        }),
+        Effect.succeed([]),
+      )
+
+      expect(yield* markers(sessions, session.id)).toHaveLength(1)
+      expect(visible).toContain(marker)
     }),
   )
 })

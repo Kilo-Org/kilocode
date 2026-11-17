@@ -837,7 +837,7 @@ const layer = Layer.effect(
       isOverflow,
       prune,
       process: (input) => processCompaction(input).pipe(Effect.orDie), // kilocode_change
-      create: (input) => KiloSessionCompaction.once(session, input.sessionID, create(input)), // kilocode_change - one pending marker per session
+      create: (input) => KiloSessionCompaction.once(session, input.sessionID, input, create(input)), // kilocode_change - one pending marker per session
     })
   }),
 )

@@ -714,4 +714,29 @@ describe("queuedCompaction", () => {
     expect(queuedCompaction(messages)).toBeUndefined()
     expect(queuedCompaction(messages, (msg) => compact(msg.id).parts)?.id).toBe("c1")
   })
+
+  it("ignores markers beyond the revert boundary", () => {
+    const messages = [user("u1"), assistant("a1", "u1", { finish: "stop" }), compact("c1")]
+    expect(queuedCompaction(messages, undefined, { messageID: "c1" })).toBeUndefined()
+    expect(queuedCompaction(messages, undefined, { messageID: "c2" })?.id).toBe("c1")
+  })
+
+  it("does not move the pivot or answer the marker for a synthetic session error", () => {
+    const messages = [
+      user("u1"),
+      assistant("a1", "u1", { finish: "stop" }),
+      compact("c1"),
+      assistant("e1", "c1", { sessionErrorID: "evt", error: { name: "UnknownError", data: { message: "x" } } }),
+    ]
+    expect(queuedCompaction(messages)?.id).toBe("c1")
+  })
+
+  it("uses only a truthy finish as the pivot", () => {
+    const failed = assistant("a1", "u1", {
+      error: { name: "UnknownError", data: { message: "x" } },
+      time: { created: 1, completed: 2 },
+    })
+    expect(queuedCompaction([user("u1"), compact("c0"), failed, compact("c1")])?.id).toBe("c1")
+    expect(queuedCompaction([user("u1"), compact("c0"), failed])?.id).toBe("c0")
+  })
 })
