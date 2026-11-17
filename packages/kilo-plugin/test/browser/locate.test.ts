@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { locate } from "../../src/browser/locate"
+import { KiloBinary } from "../../../kilo-cli/src/binary"
+import { INSTALL_HINT, locate } from "../../src/browser/locate"
 
 const base = { home: "/Users/kilo", env: {}, platform: "darwin" as const }
 
@@ -8,6 +9,10 @@ function exists(paths: string[]) {
 }
 
 describe("browser location", () => {
+  test("the install hint names the v2 binary's command", () => {
+    expect(INSTALL_HINT).toBe(`${KiloBinary} browser install-chromium`)
+  })
+
   test("prefers system Chrome", () => {
     const chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
     const edge = "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
