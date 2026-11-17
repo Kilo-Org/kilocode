@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 137,
-    "markedLines": 2417,
+    "files": 138,
+    "markedLines": 2434,
     "unmarkedLines": 331,
     "deletedFiles": 0
   },
@@ -235,11 +235,15 @@
     },
     "packages/core/src/tool/plugin/shell.ts": {
       "rung": 4,
-      "seam": "Two additions for the tool card. (1) Publish the running command's current output and running state while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. (2) Add the optional `description` input the model fills with a 5-10 word summary, as the first property so models write it before the command and the card can show it while the command streams, then copy it to `metadata.description` and to the background completion notice. Upstream has no title channel on a tool result, so the card shows the raw first command line, which Kilo sessions fill with a `cd <worktree> &&` prefix that identifies nothing. Both additions are optional: omitted input, every upstream default, and the rest of the result and metadata are unchanged."
+      "seam": "Two additions for the tool card. (1) Publish the running command's current output and running state while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. (2) Add a required `description` input the model fills with a 5-10 word summary, as the first property so models write it before the command and the card can show it while the command streams, then copy it to `metadata.description` and to the background completion notice. Upstream has no title channel on a tool result, so the card shows the raw first command line, which Kilo sessions fill with a `cd <worktree> &&` prefix that identifies nothing. The input is required because Claude models skipped it as an optional field (0 of 654 Opus shell calls in one day), so their cards kept showing the raw command. Every upstream default and the rest of the result and metadata are unchanged."
     },
     "packages/core/test/tool-shell.test.ts": {
       "rung": 4,
-      "seam": "Test coverage for the marked live-output progress behavior and for the optional model description. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption, plus that the description reaches result metadata and stays absent when omitted. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
+      "seam": "Test coverage for the marked live-output progress behavior and for the required model description. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption, plus that the description reaches result metadata and that a call without it is rejected. The `call` helper defaults the description to the command so the upstream notice assertions stay unchanged. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
+    },
+    "packages/sdk/test/embedded.test.ts": {
+      "rung": 4,
+      "seam": "The lazy-provisioning test's scripted model calls the real shell tool, whose `description` input Kilo makes required (see packages/core/src/tool/plugin/shell.ts), so the fixture call passes one. No seam: the fixture is the model output the test asserts on. Requiring the description adds 17 marked lines across the shell tool test and this fixture, which raises the file budget from 137 to 138 and the markedLines budget from 2417 to 2434; the unmarked-line budget is unchanged."
     },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,

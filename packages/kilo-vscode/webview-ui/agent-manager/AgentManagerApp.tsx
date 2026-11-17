@@ -215,7 +215,6 @@ import { useDisplaySettings } from "../src/v2/display-settings"
 type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
-
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
   const vscode = useBridge()
@@ -244,7 +243,6 @@ const AgentManagerContent: Component = () => {
   // Agent Manager owns worktree creation and movement, so its chat row reports transfer progress from the host.
   const transfer = createWorktreeTransfer({ project: activeProjectId })
   const repoDefaultBranch = () => repoDetectedBranch() ?? "main"
-
   const DEFAULT_SIDEBAR_WIDTH = 260
   const MIN_SIDEBAR_WIDTH = 200
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
@@ -287,7 +285,6 @@ const AgentManagerContent: Component = () => {
   }
   const [reviewActive, setReviewActive] = createSignal(false)
   const [diffStyle, setDiffStyle] = createSignal<"unified" | "split">("unified")
-
   const directories = createAppDirectories({
     projects: projectList,
     activeProjectId,
@@ -328,7 +325,6 @@ const AgentManagerContent: Component = () => {
     if (store?.connection.status() === "connected" && !store.loading()) setSessionsLoaded(true)
   })
   const sessions = appSession.sessions
-
   const to = (msg: unknown) => vscode.postMessage(msg as never)
   const onHostMessage = (callback: (message: ExtensionMessage) => void) =>
     vscode.onMessage((message) => callback(message as unknown as ExtensionMessage))
@@ -2025,7 +2021,6 @@ const AgentManagerContent: Component = () => {
       cleanupDrafts: drafts.cleanup,
     })
     const stopModifier = modifier.watch(window, isMac, setHeld)
-
     const subagent = (event: Event) => {
       const detail = (event as CustomEvent<{ sessionID?: unknown; title?: unknown; parentSessionID?: unknown }>).detail
       if (typeof detail?.sessionID !== "string") return
@@ -2035,7 +2030,6 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("agentManager.openSubagent", subagent)
     const documents = documentInspector.subscribe((message) => documentInspector.documents.onMessage(message))
-
     const terminalDispatch = createTerminalMessageHandler({
       state: terms,
       activate: termHandlers.activate,
@@ -2738,13 +2732,11 @@ const AgentManagerContent: Component = () => {
           sideCtl.toggle("tab_toolbar")
         }}
       />
-
       <Show when={restricted()}>
         <div class="am-empty-state am-restricted-state" role="status">
           <div class="am-empty-state-text">{t("agentManager.project.restricted")}</div>
         </div>
       </Show>
-
       <Show when={overlay()}>
         {(state) => (
           <div class="am-setup-overlay">
@@ -2766,7 +2758,6 @@ const AgentManagerContent: Component = () => {
           </div>
         )}
       </Show>
-
       {renderHistory()}
       <Show when={!restricted() && showDetailStack()}>
         <div class={`am-detail-stack ${history() ? "am-detail-stack-hidden" : ""}`} inert={history()}>
