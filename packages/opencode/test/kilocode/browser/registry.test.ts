@@ -1,0 +1,104 @@
+import { describe, expect, test } from "bun:test"
+import fs from "fs/promises"
+import os from "os"
+import path from "path"
+import { Registry } from "../../../src/kilocode/browser/registry"
+
+async function dir() {
+  return fs.mkdtemp(path.join(os.tmpdir(), "kilo-registry-"))
+}
+
+const hubId = "6f1c2f7e-0d3f-4b1f-8a54-9d0e7a1c2b3d"
+
+describe("hub registry", () => {
+  test("writes and reads a private entry", async () => {
+    const at = await dir()
+    await Registry.write(Registry.empty({ hubId, mode: "native", socket: "/tmp/x.sock", pid: 42 }), at)
+    const file = path.join(at, `${hubId}.json`)
+    const stat = await fs.stat(file)
+    expect(stat.isFile()).toBe(true)
+    // Windows reports 0666 for every file; 0600 is a POSIX guarantee.
+    if (process.platform !== "win32") expect(stat.mode & 0o777).toBe(0o600)
+    const entries = await Registry.list({ dir: at, alive: () => true })
+    expect(entries).toHaveLength(1)
+    expect(entries[0]?.mode).toBe("native")
+    expect(entries[0]?.socket).toBe("/tmp/x.sock")
+    await fs.rm(at, { recursive: true, force: true })
+  })
+
+  test("removes entries whose hub process is gone", async () => {
+    const at = await dir()
+    await Registry.write(Registry.empty({ hubId, mode: "loopback", socket: "/tmp/x.sock", pid: 42 }), at)
+    const entries = await Registry.list({ dir: at, alive: () => false })
+    expect(entries).toHaveLength(0)
+    expect(await fs.readdir(at)).toStrictEqual([])
+    await fs.rm(at, { recursive: true, force: true })
+  })
+
+  test("removes entries that do not parse", async () => {
+    const at = await dir()
+    await fs.writeFile(path.join(at, `${hubId}.json`), "{")
+    const entries = await Registry.list({ dir: at, alive: () => true })
+    expect(entries).toHaveLength(0)
+    expect(await fs.readdir(at)).toStrictEqual([])
+    await fs.rm(at, { recursive: true, force: true })
+  })
+
+  test("keeps stale entries when cleaning is off", async () => {
+    const at = await dir()
+    await Registry.write(Registry.empty({ hubId, mode: "native", socket: "/tmp/x.sock", pid: 42 }), at)
+    await Registry.list({ dir: at, alive: () => false, clean: false })
+    expect(await fs.readdir(at)).toHaveLength(1)
+    await fs.rm(at, { recursive: true, force: true })
+  })
+
+  test("lists native hubs before loopback hubs", async () => {
+    const at = await dir()
+    await Registry.write(
+      Registry.empty({ hubId: "11111111-1111-4111-8111-111111111111", mode: "loopback", socket: "/tmp/l" }),
+      at,
+    )
+    await Registry.write(
+      Registry.empty({ hubId: "22222222-2222-4222-8222-222222222222", mode: "native", socket: "/tmp/n" }),
+      at,
+    )
+    const entries = await Registry.list({ dir: at, alive: () => true })
+    expect(entries.map((entry) => entry.mode)).toStrictEqual(["native", "loopback"])
+    await fs.rm(at, { recursive: true, force: true })
+  })
+
+  test("removes an entry on request", async () => {
+    const at = await dir()
+    await Registry.write(Registry.empty({ hubId, mode: "native", socket: "/tmp/x.sock" }), at)
+    await Registry.remove(hubId, at)
+    expect(await fs.readdir(at)).toStrictEqual([])
+    await fs.rm(at, { recursive: true, force: true })
+  })
+
+  test("serializes concurrent writes to one entry so the last one wins intact", async () => {
+    const at = await dir()
+    const base = Registry.empty({ hubId, mode: "loopback", socket: "/tmp/x.sock" })
+    await Promise.all(
+      Array.from({ length: 20 }, (_, index) => Registry.write({ ...base, profileLabel: `profile-${index}` }, at)),
+    )
+    const entry = Registry.Entry.parse(JSON.parse(await fs.readFile(path.join(at, `${hubId}.json`), "utf8")))
+    expect(entry.profileLabel).toBe("profile-19")
+    await fs.rm(at, { recursive: true, force: true })
+  })
+
+  test("a queued write cannot recreate an entry that remove() deleted", async () => {
+    const at = await dir()
+    const entry = Registry.empty({ hubId, mode: "loopback", socket: "/tmp/x.sock" })
+    const write = Registry.write(entry, at)
+    const remove = Registry.remove(hubId, at)
+    await Promise.all([write, remove])
+    expect(await fs.readdir(at)).toStrictEqual([])
+    await fs.rm(at, { recursive: true, force: true })
+  })
+
+  test("treats the current process as alive and a missing pid as dead", () => {
+    expect(Registry.alive(process.pid)).toBe(true)
+    // Above the maximum PID on both platforms, so no process can own it.
+    expect(Registry.alive(2_147_483_647)).toBe(false)
+  })
+})

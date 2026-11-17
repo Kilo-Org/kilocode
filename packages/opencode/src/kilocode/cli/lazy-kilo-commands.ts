@@ -54,6 +54,18 @@ export const WorktreeCommand = lazy({
   load: async () => (await import("@/kilocode/cli/cmd/worktree")).WorktreeCommand,
 })
 
+export const BrowserCommand = lazy({
+  command: "browser",
+  describe: "browser bridge utilities",
+  load: async () => (await import("@/kilocode/cli/cmd/browser")).BrowserCommand,
+})
+
+export const BrowserHubCommand = lazy({
+  command: "browser-hub",
+  describe: "run the Kilo browser hub (started by the browser or the CLI)",
+  load: async () => (await import("@/kilocode/cli/cmd/browser")).BrowserHubCommand,
+})
+
 export const PtySmokeCommand = lazy({
   command: "__pty-smoke",
   describe: false,

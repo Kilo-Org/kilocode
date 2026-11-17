@@ -7,6 +7,8 @@ import { createHelpCommand } from "@/kilocode/help-command"
 import { hasLazyCommandSelection } from "@/kilocode/cli/lazy-commands"
 import {
   AutoCommand,
+  BrowserCommand,
+  BrowserHubCommand,
   CloudCommand,
   ConfigCLICommand,
   DaemonCommand,
@@ -35,6 +37,9 @@ const log = Log.create({ service: "kilocode.cli" })
 export namespace KiloCli {
   let info = false
   let narrow = false
+  // The browser hub is a transport process: the browser spawns it and it must not
+  // pay for telemetry, config, migrations, or database startup.
+  let transport = false
 
   export function workerTui(opts: { [key: string]: unknown }) {
     return !hasLazyCommandSelection() && opts.mini !== true && !opts.worktree
@@ -53,6 +58,8 @@ export namespace KiloCli {
       .command(DaemonCommand)
       .command(ConfigCLICommand)
       .command(WorktreeCommand)
+      .command(BrowserCommand)
+      .command(BrowserHubCommand)
     if (process.env.KILO_PTY_SMOKE === "1") cli.command(PtySmokeCommand)
     if (InstallationBuildKind !== "release") cli.command(DevSetupCommand).command(DevAliasCommand)
     // Safe self-reference: `cli` is a typed parameter and yargs `.command()` returns the same
@@ -72,6 +79,9 @@ export namespace KiloCli {
   export async function bootstrap(opts: { [key: string]: unknown }): Promise<void> {
     info = opts.help === true || opts.version === true
     if (info) return
+    const raw = opts._
+    transport = (Array.isArray(raw) ? raw[0] : undefined) === "browser-hub"
+    if (transport) return
     narrow = workerTui(opts)
 
     const { KiloLog } = await import("@/kilocode/log")
@@ -136,6 +146,7 @@ export namespace KiloCli {
   // Runs from the `finally` block on every exit path.
   export async function shutdown(): Promise<void> {
     if (info) return
+    if (transport) return
     const { Telemetry } = await import("@kilocode/kilo-telemetry")
     const code = typeof process.exitCode === "number" ? process.exitCode : undefined
     Telemetry.trackCliExit(code)
