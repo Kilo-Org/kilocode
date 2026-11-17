@@ -2,11 +2,14 @@ package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
 import ai.kilocode.client.app.HostedReadiness
+import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
+import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
+import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.session.controller.KILO_PROVIDER
 import ai.kilocode.rpc.dto.HostedAgentDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
@@ -19,6 +22,10 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import java.util.UUID
 
 /**
@@ -34,9 +41,27 @@ class HostedWorkspaceEditorManager(
     project: Project,
     workspace: Workspace,
     private val ref: HostedWorkspaceRefDto,
-) : WorkspaceSessionEditorManager(project, workspace) {
+    private val cs: CoroutineScope = service<SessionUiFactory>().scope(),
+) : WorkspaceSessionEditorManager(project, workspace, create = { project, workspace, manager, session, timers ->
+    val parent = cs.coroutineContext[Job]
+    SessionUi(
+        project = project,
+        workspace = workspace,
+        sessions = project.service<KiloSessionService>(),
+        app = service<KiloAppService>(),
+        cs = CoroutineScope(cs.coroutineContext + SupervisorJob(parent)),
+        ref = session,
+        manager = manager,
+        timers = timers,
+    )
+}) {
     init {
         Disposer.register(parent, this)
+        Disposer.register(this) { cs.cancel() }
+    }
+
+    suspend fun closed() {
+        cs.coroutineContext[Job]?.join()
     }
 
     override val hosted: Boolean get() = true
