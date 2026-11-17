@@ -19,6 +19,10 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
 
+## Usage analytics
+
+Standalone CLI telemetry settings do not currently provide a reliable opt-out for the plugin's managed backend. Read the [JetBrains analytics limitation](/docs/getting-started/settings/usage-analytics#jetbrains) before relying on CLI or IDE data-sharing settings to disable Kilo analytics.
+
 ## Chat and worktrees
 
 Use **Chat** for the current workspace and **Agents** to manage parallel tasks in isolated git worktrees. **+ Session** starts a conversation; **+ Worktree** opens the worktree creation dialog.

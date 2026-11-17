@@ -488,17 +488,15 @@ Add this entry to the root-level `keybindings` array:
 
 Save the file and restart Windows Terminal or open a new tab. `Shift+Enter` will now insert a newline in the Kilo prompt instead of submitting the message.
 
+### Product telemetry
+
+Product telemetry is enabled by default to help us understand feature usage and improve reliability. Disable it with `KILO_TELEMETRY_LEVEL=off`, or set `experimental.openTelemetry` to `false` in your **global** Kilo config and restart the CLI. The environment variable takes precedence over config. Project config alone does not control telemetry initialization.
+
+See [Usage analytics and crash reports](/docs/getting-started/settings/usage-analytics#standalone-cli) for complete instructions, including the different controls used by VS Code and Kilo Desktop.
+
 ### OpenTelemetry Export
 
-Kilo telemetry is enabled by default and can be disabled with `experimental.openTelemetry = false`:
-
-```jsonc
-{
-  "experimental": {
-    "openTelemetry": false,
-  },
-}
-```
+Optional OTLP export is independent of product telemetry and its opt-out settings.
 
 If `OTEL_EXPORTER_OTLP_ENDPOINT` is set, the CLI exports OpenTelemetry traces and logs to that OTLP HTTP endpoint. You can also pass `OTEL_EXPORTER_OTLP_HEADERS` as comma-separated `key=value` pairs and `OTEL_RESOURCE_ATTRIBUTES` as comma-separated resource attributes. Request spans include `http.method`, `http.path`, route params such as `session.id` and `message.id`, and internal params under the `opencode.*` namespace.
 
