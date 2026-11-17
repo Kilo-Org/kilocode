@@ -3,6 +3,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { Config } from "@opencode/core/config"
+import { Permission } from "@opencode/core/permission"
 import { Tool } from "@opencode/schema/tool"
 import { Effect, Exit, Scope } from "effect"
 import type { CallContext } from "../../src/browser/backend"
@@ -31,7 +32,10 @@ const state: World = { pages: [], calls: [], text: () => "", closed: 0 }
 
 /** A page object with the surface the backend reads: its URL, its frame tree, and a ref lookup that finds nothing. */
 class Page {
-  constructor(readonly id: string, public value: string) {}
+  constructor(
+    readonly id: string,
+    public value: string,
+  ) {}
 
   url() {
     return this.value
@@ -136,9 +140,7 @@ beforeEach(async () => {
   state.closed = 0
   state.onCall = undefined
   state.text = (name) =>
-    name === "browser_console_messages"
-      ? "### Result\n- [ERROR] boom @ https://gate.example.com/app.js"
-      : pageText
+    name === "browser_console_messages" ? "### Result\n- [ERROR] boom @ https://gate.example.com/app.js" : pageText
 })
 
 afterEach(async () => {
@@ -146,22 +148,24 @@ afterEach(async () => {
 })
 
 /** One plugin location; its scope close runs the finalizers, which is the shutdown path under test. */
-async function boot() {
+async function boot(options: { permission?: unknown } = {}) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const ctx = {
     location: { directory: "/tmp/browser-guards-test" },
     tool: {
-      transform: (fn: (typeof transforms)[number]) => Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
+      transform: (fn: (typeof transforms)[number]) =>
+        Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
     },
     permission: { hook: () => Effect.sync(() => ({ dispose: Effect.void })) },
   }
   const config = { entries: () => Effect.succeed([]) } as unknown as Config.Interface
   const scope = await Effect.runPromise(Scope.make())
+  const plugin = KiloBrowserToolsPlugin.effect(ctx as never).pipe(
+    Effect.provideService(Scope.Scope, scope),
+    Effect.provideService(Config.Service, config),
+  )
   await Effect.runPromise(
-    KiloBrowserToolsPlugin.effect(ctx as never).pipe(
-      Effect.provideService(Scope.Scope, scope),
-      Effect.provideService(Config.Service, config),
-    ),
+    options.permission ? plugin.pipe(Effect.provideService(Permission.Service, options.permission as never)) : plugin,
   )
   const tools = () => {
     const added: Tool.Info[] = []
@@ -253,6 +257,46 @@ describe("the backend's call path", () => {
     expect(two.meta?.url).toBe("https://other.example.com/")
     expect(one.meta?.url).toBe("https://gate.example.com/")
     expect(back.meta?.url).toBe("https://gate.example.com/")
+  })
+})
+
+describe("a grant a withheld result asked for", () => {
+  const rejection =
+    "This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action."
+
+  test("a refused post-action ask keeps the withheld result and says the action ran", async () => {
+    // The plan's own asks are allowed; only the ask for the origin the action landed on is refused.
+    const host = await boot({
+      permission: {
+        assert: (input: { resources: readonly string[] }) =>
+          Effect.suspend(() =>
+            input.resources.some((resource) => String(resource).includes("other.example.com"))
+              ? Effect.fail(new Error(rejection))
+              : Effect.void,
+          ),
+      },
+    })
+    const page = state.pages[0]
+    state.onCall = (name) => {
+      if (name === "browser_click") page.value = "https://other.example.com/landed"
+    }
+    const result = await host.call("browser_click", {})
+    const text = textOf(result)
+    expect(text).toContain("- Page URL: https://other.example.com/landed")
+    expect(text).toContain("the action ran")
+    expect(text).not.toContain("cannot ask the user")
+    // The click ran exactly once: the refusal never replayed it.
+    expect(state.calls.filter((call) => call.name === "browser_click").length).toBe(1)
+  })
+
+  test("a refused pre-action ask keeps the existing rejection message", async () => {
+    const host = await boot({
+      permission: { assert: () => Effect.fail(new Error(rejection)) },
+    })
+    const outcome = (await host.call("browser_snapshot", {})) as { failure?: Error }
+    expect(String(outcome.failure?.message ?? "")).toContain("cannot ask the user for permission")
+    // Nothing ran.
+    expect(state.calls).toEqual([])
   })
 })
 

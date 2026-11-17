@@ -186,6 +186,17 @@ export function authorize(
  * unless every item the plan asks for is already granted for this session. It then runs with the same authorized
  * list, so the frame filter sees the same grants a user call does.
  */
+/**
+ * What the model reads when the grant a withheld result asked for was refused. Plain and specific: the action
+ * happened, the page is somewhere else now, and only reading it is blocked - so the model must not repeat the action.
+ */
+export function withheldRefusal(origin: string): string {
+  return [
+    `Note: the action ran. The page is now on ${origin}, and reading it needs the user's permission, which was not granted.`,
+    "Do not repeat the action; ask the user to approve reading that origin, then read the page.",
+  ].join("\n")
+}
+
 function consoleErrors(active: BrowserBackend, session: string, context: Tool.Context) {
   return Effect.gen(function* () {
     if (!active.plan) return []
@@ -308,14 +319,46 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     if (!result) return yield* failure(new Error("the browser call did not settle"))
     if (result.isError) return yield* failure(new Error(textOf(result) || `${entry.name} failed`))
     // The action already ran; its result asked for a grant. Ask now, and never repeat the action for it.
-    if (result.meta?.needs?.length) {
-      yield* authorize(
-        result.meta.needs,
-        context,
-        allowSensitive,
-        (origin) => KiloBrowserPolicy.allows(organization, origin),
-        deps.permission,
+    const needs = result.meta?.needs
+    if (needs?.length) {
+      const asked = yield* Effect.result(
+        authorize(
+          needs,
+          context,
+          allowSensitive,
+          (origin) => KiloBrowserPolicy.allows(organization, origin),
+          deps.permission,
+        ),
       )
+      // Granted: read the page again rather than return the withheld placeholder. Reading has no side effect, so the
+      // action still happened once.
+      if (Result.isSuccess(asked)) {
+        const reread = yield* Effect.result(
+          Effect.tryPromise({
+            try: (signal) => active.callTool("browser_snapshot", {}, { signal, session, authorized: [...grants] }),
+            catch: (error) => error,
+          }),
+        )
+        if (Result.isSuccess(reread) && !reread.success.isError) {
+          result.content = reread.success.content
+          result.meta = reread.success.meta
+        }
+      }
+      // A refusal must never read as the action being rejected: the action ran, only its content stayed unread.
+      if (Result.isFailure(asked)) {
+        const origin = needs[0]?.origin ?? ""
+        return {
+          content: [{ type: "text", text: `${textOf(result)}\n\n${withheldRefusal(origin)}` }],
+          metadata: {
+            browser: {
+              backend: choice.backend,
+              observation: browser.observation,
+              ...(origin ? { url: origin } : {}),
+              ...(result.meta?.withheldFrames ? { withheldFrames: result.meta.withheldFrames } : {}),
+            },
+          },
+        } as Tool.Result
+      }
     }
 
     const text = textOf(result)
