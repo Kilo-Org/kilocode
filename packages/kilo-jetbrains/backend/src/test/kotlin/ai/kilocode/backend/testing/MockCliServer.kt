@@ -162,6 +162,10 @@ class MockCliServer : AutoCloseable {
     @Volatile var hostedPullRequestHandler: ((Socket, BufferedWriter) -> Unit)? = null
     data class PullRequestCall(val method: String, val path: String, val body: String, val authorization: String?)
     val hostedPullRequestCalls = CopyOnWriteArrayList<PullRequestCall>()
+    @Volatile var hostedDiff = "{}"
+    @Volatile var hostedDiffStatus = 200
+    @Volatile var hostedDiffHandler: ((Socket, BufferedWriter) -> Unit)? = null
+    val hostedDiffCalls = CopyOnWriteArrayList<PullRequestCall>()
     @Volatile var lastHostedCreateBody: String? = null
     @Volatile var lastHostedStartBody: String? = null
     @Volatile var lastHostedDeletePath: String? = null
@@ -663,6 +667,11 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/kilocode/session-host/provider" -> respond(output, 200, hostedProviders)
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+/(changes(/refresh|/file)?|pull-request-diff(/file)?)")) -> {
+                    hostedDiffCalls.add(PullRequestCall(method, path, body, authorization))
+                    val handler = hostedDiffHandler
+                    if (handler != null) handler(socket, output) else respond(output, hostedDiffStatus, hostedDiff)
+                }
                 bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+/pull-request(/refresh)?")) -> {
                     hostedPullRequestCalls.add(PullRequestCall(method, path, body, authorization))
                     val handler = hostedPullRequestHandler

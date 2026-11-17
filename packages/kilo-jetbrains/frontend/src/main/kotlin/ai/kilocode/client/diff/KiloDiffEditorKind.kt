@@ -1,6 +1,7 @@
 package ai.kilocode.client.diff
 
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
@@ -15,6 +16,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.writeIntentReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -30,6 +32,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,6 +49,7 @@ internal object KiloDiffEditorKind : KiloEditorKind {
     override val id: String = ID
 
     override fun title(params: Map<String, String>): String {
+        HostedDiffSource.parse(params)?.let { return it.comparison.title() }
         params["title"].takeIfPresent()?.let { return it }
         val comparison = KiloDiffComparison.entries.firstOrNull { it.source == params["source"] }
         return comparison?.title(params["branch"].takeIfPresent())
@@ -54,6 +60,8 @@ internal object KiloDiffEditorKind : KiloEditorKind {
     override fun presentablePath(params: Map<String, String>): String = title(params)
 
     override fun isValid(params: Map<String, String>): Boolean {
+        if (params["source"] == "hosted") return HostedDiffSource.parse(params) != null &&
+            params["directory"] == null && params["sessionId"] == null
         val dir = params["directory"].takeIfPresent() ?: return false
         if (dir.isBlank()) return false
         if (params["source"] == "branch" || params["source"] == "local") return true
@@ -85,6 +93,7 @@ internal object KiloDiffEditorKind : KiloEditorKind {
                         data.branch,
                         service.scope,
                         { done -> service.refresh(file.path.params, done) },
+                        data.hosted,
                         ::render,
                     )
                 },
@@ -139,6 +148,7 @@ internal class KiloDiffEditorService(
 
     fun load(params: Map<String, String>, parent: Disposable, done: (DiffEditorData) -> Unit) {
         val disposed = AtomicBoolean(false)
+        val source = HostedDiffSource.parse(params)
         val job = cs.launch {
             val app = service<KiloAppService>()
             app.connect()
@@ -146,20 +156,34 @@ internal class KiloDiffEditorService(
                 if (alive(disposed)) done(DiffEditorData.Connecting)
             }
             val state = app.state.first { it.status == KiloAppStatusDto.READY || it.status == KiloAppStatusDto.ERROR }
-            if (state.status == KiloAppStatusDto.ERROR) {
-                withContext(Dispatchers.Main) {
-                    if (alive(disposed)) done(DiffEditorData.Error(KiloBundle.message("session.connection.error.app")))
-                }
-                return@launch
-            }
-            val data = runCatching { fetch(params) }
+            val data = if (state.status == KiloAppStatusDto.ERROR) {
+                source?.let {
+                    HostedDiffSnapshot(it, message = KiloBundle.message("diff.editor.hosted.unavailable")).data()
+                } ?: DiffEditorData.Error(KiloBundle.message("session.connection.error.app"))
+            } else runCatching { fetch(params) }
                 .getOrElse {
                     if (it is CancellationException) throw it
                     LOG.warn("diff editor load failed source=${params["source"]} dir=${params["directory"]}", it)
-                    DiffEditorData.Error(it.message ?: it::class.java.simpleName)
+                    source?.let {
+                        HostedDiffSnapshot(it, message = KiloBundle.message("diff.editor.hosted.unavailable")).data()
+                    } ?: DiffEditorData.Error(it.message ?: it::class.java.simpleName)
                 }
-            withContext(Dispatchers.Main) {
-                if (alive(disposed)) done(data)
+            writeIntentReadAction {
+                if (alive(disposed)) done(if (source != null && !source.current(project)) HostedDiffSnapshot(
+                    source, message = KiloBundle.message("diff.editor.hosted.identity.changed"),
+                ).data() else data)
+            }
+            if (source != null) {
+                val hosted = project.service<KiloHostedService>()
+                combine(app.state, hosted.state) { state, workspace ->
+                    !source.current(state) || workspace.signedOut || !hosted.enabled()
+                }.distinctUntilChanged().collect { invalid ->
+                    if (invalid) writeIntentReadAction {
+                        if (alive(disposed) && !source.current(project)) done(HostedDiffSnapshot(
+                            source, message = KiloBundle.message("diff.editor.hosted.identity.changed"),
+                        ).data())
+                    }
+                }
             }
         }
         Disposer.register(parent) {
@@ -169,13 +193,15 @@ internal class KiloDiffEditorService(
     }
 
     fun refresh(params: Map<String, String>, done: (DiffEditorData) -> Unit) = cs.launch {
-        val data = runCatching { fetch(params) }
+        val data = runCatching {
+            HostedDiffSource.parse(params)?.let { loadHostedDiff(project, it, refresh = true) } ?: fetch(params)
+        }
             .getOrElse {
                 if (it is CancellationException) throw it
                 LOG.warn("diff editor refresh failed source=${params["source"]} dir=${params["directory"]}", it)
                 DiffEditorData.Error(it.message ?: it::class.java.simpleName)
             }
-        withContext(Dispatchers.Main) {
+        writeIntentReadAction {
             if (!project.isDisposed) done(data)
         }
     }
@@ -183,6 +209,10 @@ internal class KiloDiffEditorService(
     private fun alive(disposed: AtomicBoolean): Boolean = !project.isDisposed && !disposed.get()
 
     internal suspend fun fetch(params: Map<String, String>): DiffEditorData {
+        if (params["source"] == "hosted") {
+            val source = HostedDiffSource.parse(params) ?: return DiffEditorData.Error(KiloBundle.message("diff.editor.hosted.unavailable"))
+            return loadHostedDiff(project, source, refresh = false)
+        }
         val dir = params["directory"].takeIfPresent() ?: return DiffEditorData.Empty
         val workspace = service<KiloWorkspaceService>()
         val store = project.service<KiloInlineDiffStore>()
@@ -249,7 +279,7 @@ internal sealed interface DiffEditorData {
     data object Connecting : DiffEditorData
     data object Empty : DiffEditorData
     data class Error(val message: String) : DiffEditorData
-    data class Files(val files: List<DiffFileDto>, val branch: String? = null) : DiffEditorData
+    data class Files(val files: List<DiffFileDto>, val branch: String? = null, val hosted: HostedDiffSnapshot? = null) : DiffEditorData
 }
 
 internal fun diffParams(source: String, directory: String, sessionId: String?, title: String, branch: String? = null, token: String? = null): Map<String, String> =

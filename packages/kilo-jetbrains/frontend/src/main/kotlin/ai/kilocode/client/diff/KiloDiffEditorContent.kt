@@ -10,6 +10,7 @@ import com.intellij.diff.chains.DiffRequestProducer
 import com.intellij.diff.chains.SimpleDiffRequestChain
 import com.intellij.diff.impl.CacheDiffRequestChainProcessor
 import com.intellij.diff.impl.DiffRequestProcessorListener
+import com.intellij.diff.requests.MessageDiffRequest
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
@@ -20,6 +21,7 @@ import com.intellij.openapi.actionSystem.CommonShortcuts
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.writeIntentReadAction
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.EditorFactory
@@ -87,8 +89,9 @@ internal fun buildDiffEditor(
     branch: String? = null,
     scope: CoroutineScope,
     refresh: ((DiffEditorData) -> Unit) -> Job,
+    hosted: HostedDiffSnapshot? = null,
     replace: (DiffEditorData) -> Unit,
-): JComponent = DiffEditorView(project, params, files, parent, branch, scope, refresh, replace).component
+): JComponent = DiffEditorView(project, params, files, parent, branch, scope, refresh, hosted, replace).component
 
 internal val DIFF_FILE_KEY: Key<String> = Key.create("kilo.diff.file")
 
@@ -107,16 +110,19 @@ internal class DiffEditorView(
     branch: String?,
     private val scope: CoroutineScope,
     private val load: ((DiffEditorData) -> Unit) -> Job,
+    hosted: HostedDiffSnapshot? = null,
     private val replace: (DiffEditorData) -> Unit,
 ) : Disposable {
+    private var hosted = hosted
+    private var warning: String? = refreshWarning(hosted?.refresh)
     private val start = normalize(initial)
     private val disposed = AtomicBoolean(false)
     private val outdated = AtomicBoolean(false)
     private val refreshing = AtomicBoolean(false)
-    private val tree = buildFileTree(start)
+    private val tree = buildFileTree(start, hosted)
     private val badge = DiffStatBadge(0, 0, inset = UiStyle.Gap.PAD)
     private val splitter = OnePixelSplitter(false, 0.25f)
-    private val select = Debouncer<Int>(scope, parent) { show(it) }
+    private val select = Debouncer<Int>(scope, parent) { writeIntentReadAction { show(it) } }
     private val banner = EditorNotificationPanel(EditorNotificationPanel.Status.Warning).apply {
         text(KiloBundle.message("diff.editor.outdated"))
         createActionLabel(KiloBundle.message("diff.editor.refresh")) { refresh() }
@@ -140,11 +146,16 @@ internal class DiffEditorView(
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
         override fun update(e: AnActionEvent) {
+            if (hosted != null) {
+                e.presentation.isEnabledAndVisible = false
+                return
+            }
             val file = selectedFile()
             e.presentation.isEnabled = file != null && fileStatus(file) != FileStatus.DELETED && path(file) != null
         }
 
         override fun actionPerformed(e: AnActionEvent) {
+            if (hosted != null) return
             val file = selectedFile() ?: return
             val path = path(file) ?: return
             scope.launch { service<KiloWorkspaceService>().openFile(path) }
@@ -159,9 +170,12 @@ internal class DiffEditorView(
             if (syncing) return@addTreeSelectionListener
             val file = selectedFile() ?: return@addTreeSelectionListener
             val index = files.indexOfFirst { it.file == file.file }
-            if (index >= 0) select.request(index)
+            if (index >= 0) {
+                if (hosted != null) requested = file.file
+                select.request(index)
+            }
         }
-        openFileAction.registerCustomShortcutSet(CommonShortcuts.getEditSource(), tree)
+        if (hosted == null) openFileAction.registerCustomShortcutSet(CommonShortcuts.getEditSource(), tree)
         installMenu()
         // Tie the listener to the processor it observes, not to the long-lived parent: applyFiles
         // disposes the old processor on each refresh, and registering under parent would leak a
@@ -172,7 +186,8 @@ internal class DiffEditorView(
         processor.updateRequest()
         applyBadge(start)
         select(start.firstOrNull()?.file)
-        listen()
+        if (hosted == null) listen()
+        updateBanner()
     }
 
     override fun dispose() {
@@ -182,19 +197,23 @@ internal class DiffEditorView(
         // project scope, holding the `done` closure and through it this view, its tree, and processor.
         refreshJob?.cancel()
         refreshJob = null
+        hosted?.invalidate()
     }
 
     @RequiresEdt
-    fun applyFiles(next: List<DiffFileDto>, nextBranch: String? = branch) {
+    fun applyFiles(next: List<DiffFileDto>, nextBranch: String? = branch, nextHosted: HostedDiffSnapshot? = hosted) {
         val items = normalize(next)
-        if (same(files, items) && branch == nextBranch) return
+        if (same(files, items) && branch == nextBranch && hosted === nextHosted) return
         val path = selectedFile()?.file ?: activePath() ?: files.firstOrNull()?.file
         val index = selected(path, items)
         val old = processor
+        select.cancel()
+        if (hosted !== nextHosted) hosted?.invalidate()
+        hosted = nextHosted
         files = items
         branch = nextBranch
         requested = items.getOrNull(index)?.file
-        tree.model = buildFileModel(items)
+        tree.model = buildFileModel(items, hosted)
         expandAll(tree)
         processor = processor(items, index)
         Disposer.register(parent, processor)
@@ -205,6 +224,7 @@ internal class DiffEditorView(
         Disposer.dispose(old)
         applyBadge(items)
         select(items.getOrNull(index)?.file)
+        updateBanner()
         root.revalidate()
         root.repaint()
     }
@@ -213,7 +233,7 @@ internal class DiffEditorView(
     internal fun refresh() {
         if (disposed.get() || project.isDisposed) return
         if (!refreshing.compareAndSet(false, true)) return
-        if (params["source"] != "branch" && params["source"] != "local") saveDocuments()
+        if (hosted == null && params["source"] != "branch" && params["source"] != "local") saveDocuments()
         outdated.set(false)
         banner.isVisible = false
         root.revalidate()
@@ -222,8 +242,22 @@ internal class DiffEditorView(
         refreshJob = load { data ->
             refreshing.set(false)
             if (!disposed.get() && !project.isDisposed) {
-                if (data is DiffEditorData.Files) applyFiles(data.files, data.branch)
-                if (data !is DiffEditorData.Files) replace(data)
+                val source = hosted?.source
+                val retained = hosted?.revision != null || hosted?.head != null
+                if (source != null && !source.current(project)) {
+                    warning = null
+                    val snapshot = HostedDiffSnapshot(source, message = KiloBundle.message("diff.editor.hosted.identity.changed"))
+                    applyFiles(snapshot.files, nextHosted = snapshot)
+                } else if (source != null && (data is DiffEditorData.Error || data is DiffEditorData.Files &&
+                        (data.hosted?.source != source || retained && data.hosted?.refresh in setOf("offline", "failed")))) {
+                    warning = refreshWarning((data as? DiffEditorData.Files)?.hosted?.refresh ?: "failed")
+                    updateBanner()
+                } else {
+                    warning = refreshWarning((data as? DiffEditorData.Files)?.hosted?.refresh)
+                    if (data is DiffEditorData.Files) applyFiles(data.files, data.branch, data.hosted)
+                    if (data !is DiffEditorData.Files) replace(data)
+                    updateBanner()
+                }
             }
         }
     }
@@ -247,11 +281,13 @@ internal class DiffEditorView(
     }
 
     private fun installMenu() {
-        val group = DefaultActionGroup(
-            openFileAction,
-            Separator.getInstance(),
-            TreeAction(KiloBundle.message("diff.editor.refresh"), AllIcons.Actions.Refresh, ::refresh),
-        )
+        val group = DefaultActionGroup().apply {
+            if (hosted == null) {
+                add(openFileAction)
+                addSeparator()
+            }
+            add(TreeAction(KiloBundle.message("diff.editor.refresh"), AllIcons.Actions.Refresh, ::refresh))
+        }
         PopupHandler.installPopupMenu(tree, group, ActionPlaces.POPUP)
     }
 
@@ -302,16 +338,36 @@ internal class DiffEditorView(
     }
 
     private fun processor(next: List<DiffFileDto>, index: Int): CacheDiffRequestChainProcessor {
-        val producers = next.map { file -> producer(file) }
+        val snapshot = hosted
+        val producers = next.map { file -> producer(file) }.ifEmpty {
+            if (snapshot == null) emptyList() else listOf(object : DiffRequestProducer {
+                override fun getName(): String = snapshot.source.comparison.title()
+                override fun process(context: UserDataHolder, indicator: ProgressIndicator) = MessageDiffRequest(snapshot.message)
+            })
+        }
         val chain = SimpleDiffRequestChain.fromProducers(producers, index.coerceIn(0, (next.size - 1).coerceAtLeast(0)))
         return CacheDiffRequestChainProcessor(project, chain)
     }
 
-    private fun producer(file: DiffFileDto): DiffRequestProducer = object : DiffRequestProducer {
-        override fun getName(): String = file.file
+    private fun producer(file: DiffFileDto): DiffRequestProducer {
+        val snapshot = hosted
+        val entry = snapshot?.entry(file.file)
+        if (snapshot != null) {
+            if (entry != null) return snapshot.producer(project, entry)
+            return object : DiffRequestProducer {
+                override fun getName(): String = file.file
+                override fun process(context: UserDataHolder, indicator: ProgressIndicator) =
+                    MessageDiffRequest(KiloBundle.message("diff.editor.hosted.inconsistent")).also {
+                        it.putUserData(DIFF_FILE_KEY, file.file)
+                    }
+            }
+        }
+        return object : DiffRequestProducer {
+            override fun getName(): String = file.file
 
-        override fun process(context: UserDataHolder, indicator: ProgressIndicator) = diffRequest(project, file, branch, labels()).also {
-            it.putUserData(DIFF_FILE_KEY, file.file)
+            override fun process(context: UserDataHolder, indicator: ProgressIndicator) = diffRequest(project, file, branch, labels()).also {
+                it.putUserData(DIFF_FILE_KEY, file.file)
+            }
         }
     }
 
@@ -327,6 +383,7 @@ internal class DiffEditorView(
     }
 
     private fun path(file: DiffFileDto): String? {
+        if (hosted != null) return null
         if (fileStatus(file) == FileStatus.DELETED) return null
         val dir = params["directory"] ?: return null
         val root = clean(dir) ?: return null
@@ -357,7 +414,7 @@ internal class DiffEditorView(
     }
 
     private fun applyBadge(next: List<DiffFileDto>) {
-        badge.update(next.sumOf { it.additions }, next.sumOf { it.deletions })
+        badge.update(total(next) { it.additions }, total(next) { it.deletions })
     }
 
     private fun selected(path: String?, next: List<DiffFileDto> = files): Int {
@@ -368,7 +425,17 @@ internal class DiffEditorView(
 
     private fun same(a: List<DiffFileDto>, b: List<DiffFileDto>): Boolean = a == b
 
-    private fun normalize(files: List<DiffFileDto>): List<DiffFileDto> = files.map { file -> file.copy(file = display(file.file)) }
+    private fun normalize(files: List<DiffFileDto>): List<DiffFileDto> =
+        if (hosted != null) files else files.map { file -> file.copy(file = display(file.file)) }
+
+    @RequiresEdt
+    private fun updateBanner() {
+        val snapshot = hosted ?: return
+        banner.text((listOfNotNull(warning) + snapshot.notices + listOfNotNull(snapshot.message.takeIf { files.isEmpty() })).joinToString("  "))
+        banner.isVisible = true
+        root.revalidate()
+        root.repaint()
+    }
 
     private fun display(file: String): String {
         val dir = params["directory"] ?: return file
@@ -427,6 +494,8 @@ private class Debouncer<T>(
             withContext(Dispatchers.Main) { action(value) }
         }
     }
+
+    fun cancel() { job?.cancel() }
 }
 
 /** Centered on both axes, matching the connecting and failed states rendered into the same slot. */
@@ -434,8 +503,8 @@ private class Debouncer<T>(
 internal fun emptyChangesComponent(): JComponent =
     Centerizer(JBLabel(KiloBundle.message("diff.editor.empty")), Centerizer.TYPE.BOTH)
 
-private fun buildFileTree(files: List<DiffFileDto>): Tree {
-    val tree = DiffTree(buildFileModel(files)).apply {
+private fun buildFileTree(files: List<DiffFileDto>, hosted: HostedDiffSnapshot? = null): Tree {
+    val tree = DiffTree(buildFileModel(files, hosted)).apply {
         isRootVisible = false
         showsRootHandles = true
         isOpaque = true
@@ -462,9 +531,21 @@ private fun buildFileTree(files: List<DiffFileDto>): Tree {
     return tree
 }
 
-private fun buildFileModel(files: List<DiffFileDto>): DefaultTreeModel {
+private fun buildFileModel(files: List<DiffFileDto>, hosted: HostedDiffSnapshot? = null): DefaultTreeModel {
     val root = DefaultMutableTreeNode(Node("", "", true, null))
-    for (file in files) addFile(root, file)
+    for (file in files) {
+        val entry = hosted?.entry(file.file)
+        if (entry == null) {
+            addFile(root, file)
+            continue
+        }
+        val group = entry.group
+        val id = entry.repository?.let { "hosted:${it.path.length}:${it.path}${it.repoFullName.length}:${it.repoFullName}" }
+        val node = if (group == null) root else child(root, id.orEmpty()) ?: DefaultMutableTreeNode(
+            Node(group, id.orEmpty(), true, null),
+        ).also(root::add)
+        addFile(node, file, entry.path, entry.previous)
+    }
     compact(root)
     updateStats(root)
     return DefaultTreeModel(root)
@@ -504,7 +585,7 @@ private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>, badge: DiffStat
     }.apply {
         border = IdeBorderFactory.createBorder(SideBorder.BOTTOM)
         add(toolbar.component, BorderLayout.WEST)
-        badge.update(files.sumOf { it.additions }, files.sumOf { it.deletions })
+        badge.update(total(files) { it.additions }, total(files) { it.deletions })
         add(
             Stack.horizontal(gap = UiStyle.Gap.sm()).apply {
                 border = JBUI.Borders.empty(0, 0, 0, UiStyle.Gap.pad())
@@ -569,13 +650,14 @@ private fun bulkToggle(tree: Tree, action: () -> Unit) {
     TreeUtil.invalidateCacheAndRepaint(tree.ui)
 }
 
-private fun addFile(root: DefaultMutableTreeNode, file: DiffFileDto) {
+private fun addFile(root: DefaultMutableTreeNode, file: DiffFileDto, raw: String = file.file, previous: String? = null) {
     var node = root
-    val parts = file.file.split('/').filter { it.isNotBlank() }
+    val parts = raw.split('/').filter { it.isNotBlank() }.let { if (it.isEmpty() && raw != file.file) listOf(raw) else it }
     for ((index, part) in parts.withIndex()) {
-        val path = parts.take(index + 1).joinToString("/")
         val leaf = index == parts.lastIndex
-        val child = child(node, path) ?: DefaultMutableTreeNode(Node(part, path, !leaf, if (leaf) file else null)).also(node::add)
+        val path = if (leaf && raw != file.file) file.file else (if (raw == file.file) "" else "dir:") + parts.take(index + 1).joinToString("/")
+        val name = if (leaf && previous != null) "$part ($previous)" else part
+        val child = child(node, path) ?: DefaultMutableTreeNode(Node(name, path, !leaf, if (leaf) file else null)).also(node::add)
         node = child
     }
 }
@@ -585,7 +667,7 @@ private fun updateStats(node: DefaultMutableTreeNode): Stats {
     if (item.file != null) return Stats(item.additions, item.deletions)
     val stats = (0 until node.childCount)
         .map { updateStats(node.getChildAt(it) as? DefaultMutableTreeNode ?: return@map Stats(0, 0)) }
-        .fold(Stats(0, 0)) { acc, child -> Stats(acc.additions + child.additions, acc.deletions + child.deletions) }
+        .fold(Stats(0, 0)) { acc, child -> Stats(clamp(acc.additions.toLong() + child.additions), clamp(acc.deletions.toLong() + child.deletions)) }
     item.additions = stats.additions
     item.deletions = stats.deletions
     return stats
@@ -616,6 +698,14 @@ private fun find(node: DefaultMutableTreeNode, path: String): DefaultMutableTree
 }
 
 private data class Stats(val additions: Int, val deletions: Int)
+
+private fun total(files: List<DiffFileDto>, count: (DiffFileDto) -> Int): Int = clamp(files.sumOf { count(it).toLong() })
+private fun clamp(value: Long): Int = value.coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
+private fun refreshWarning(status: String?): String? = when (status) {
+    "offline" -> KiloBundle.message("diff.editor.hosted.offline")
+    "failed" -> KiloBundle.message("diff.editor.hosted.refresh.failed")
+    else -> null
+}
 
 private class Node(val name: String, val path: String, val dir: Boolean, val file: DiffFileDto?) {
     var additions: Int = file?.additions ?: 0

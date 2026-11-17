@@ -134,6 +134,11 @@ class HostedWorkspaceEditorManagerTest : BasePlatformTestCase() {
     }
 
     private class RecordingHosted(private val ref: HostedWorkspaceRefDto) : KiloHostedRpcApi {
+        override suspend fun workspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun refreshWorkspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspaceChangeFile(ref: HostedWorkspaceRefDto, path: String, scope: String?, expectedRevision: Long, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspacePullRequestDiff(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspacePullRequestDiffFile(ref: HostedWorkspaceRefDto, path: String, expectedHeadSha: String, organizationID: String?): Nothing = error("unused")
         override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
         override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
 

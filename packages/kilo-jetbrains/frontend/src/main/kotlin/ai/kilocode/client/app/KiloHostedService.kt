@@ -12,6 +12,11 @@ import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedAgentDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesRefreshDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangeFileResultDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffFileResultDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
@@ -502,6 +507,30 @@ class KiloHostedService internal constructor(
         log.warn("hosted workspace pull request refresh failed workspace=${ref.key}", e)
         HostedWorkspacePullRequestDto(ref, "unreachable", null)
     }
+
+    suspend fun workspaceChanges(ref: HostedWorkspaceRefDto): HostedWorkspaceChangesDto =
+        call { workspaceChanges(ref, app?.state?.value?.profile?.currentOrgId) }
+
+    suspend fun refreshWorkspaceChanges(ref: HostedWorkspaceRefDto): HostedWorkspaceChangesRefreshDto =
+        call { refreshWorkspaceChanges(ref, app?.state?.value?.profile?.currentOrgId) }
+
+    suspend fun workspaceChangeFile(
+        ref: HostedWorkspaceRefDto,
+        path: String,
+        scope: String?,
+        expectedRevision: Long,
+    ): HostedWorkspaceChangeFileResultDto =
+        call { workspaceChangeFile(ref, path, scope, expectedRevision, app?.state?.value?.profile?.currentOrgId) }
+
+    suspend fun workspacePullRequestDiff(ref: HostedWorkspaceRefDto): HostedWorkspacePullRequestDiffDto =
+        call { workspacePullRequestDiff(ref, app?.state?.value?.profile?.currentOrgId) }
+
+    suspend fun workspacePullRequestDiffFile(
+        ref: HostedWorkspaceRefDto,
+        path: String,
+        expectedHeadSha: String,
+    ): HostedWorkspacePullRequestDiffFileResultDto =
+        call { workspacePullRequestDiffFile(ref, path, expectedHeadSha, app?.state?.value?.profile?.currentOrgId) }
 
     /** Shares a session feed with passive discovery and releases it with the consumer. */
     fun observe(ref: HostedWorkspaceRefDto, session: String, parent: Disposable): Disposable {

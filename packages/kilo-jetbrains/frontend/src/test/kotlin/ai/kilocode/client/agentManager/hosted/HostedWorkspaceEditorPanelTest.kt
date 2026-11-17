@@ -641,7 +641,9 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         val header = edtWait { descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single() }
         val count = edtWait { descendants(header).size }
         edtWait {
-            assertTrue(descendants(header).filterIsInstance<HoverIcon>().isEmpty())
+            val changes = descendants(header).filterIsInstance<HoverIcon>().single()
+            assertEquals(KiloBundle.message("hosted.diff.menu"), changes.toolTipText)
+            assertTrue("Saved comparisons remain available while compute sleeps", changes.isEnabled)
             val price = descendants(header).filterIsInstance<JBLabel>().single { it.text == "$1.20/h" }
             val row = HostedWorkspaceRow(HostedWorkspaceRowData(HostedWorkspaceDto(ref), hosted.state.value.presentation(ref)))
             assertEquals(row.badges.single().text, initial.segments.single().text)
@@ -772,11 +774,19 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         rpc.list = HostedWorkspaceListDto(signedOut = true)
         hosted.refresh("/signed-out")
         assertTrue(coroutines.pumpUntil { hosted.state.value.signedOut && rpc.active == 0 })
+        assertTrue(coroutines.pumpUntil { edtWait {
+            val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
+            !descendants(header).filterIsInstance<HoverIcon>().single().isEnabled
+        } })
 
         rpc.list = HostedWorkspaceListDto(items = listOf(HostedWorkspaceDto(ref)))
         hosted.refresh("/signed-in")
 
         assertTrue(coroutines.pumpUntil { rpc.collectors > initial && rpc.active == 1 })
+        assertTrue(coroutines.pumpUntil { edtWait {
+            val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
+            descendants(header).filterIsInstance<HoverIcon>().single().isEnabled
+        } })
         emit(HostedSystemEventDto(key, "cloud.status", message = "Preparing after sign-in",
             cloudStatus = "preparing", observedAt = 500.0))
         // The progress panel mounts asynchronously after the event, so keep polling until it exists.
@@ -938,6 +948,11 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     }
 
     private class FakeHosted(private val ref: HostedWorkspaceRefDto) : KiloHostedRpcApi {
+        override suspend fun workspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun refreshWorkspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspaceChangeFile(ref: HostedWorkspaceRefDto, path: String, scope: String?, expectedRevision: Long, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspacePullRequestDiff(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspacePullRequestDiffFile(ref: HostedWorkspaceRefDto, path: String, expectedHeadSha: String, organizationID: String?): Nothing = error("unused")
         override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
         override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
 

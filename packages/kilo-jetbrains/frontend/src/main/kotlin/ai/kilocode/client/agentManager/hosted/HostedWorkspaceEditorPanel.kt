@@ -15,6 +15,7 @@ import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.HostedHistoryItem
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.active.ActiveBadgeCell
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveSelection
@@ -23,12 +24,16 @@ import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.WorktreePrDto
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.ActionGroup
+import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -65,6 +70,12 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     private val management = project.service<HostedManagementService>()
     private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val header = WorkspaceSessionHeader()
+    private val changes = HoverIcon().apply {
+        icon = AllIcons.Actions.Diff
+        toolTipText = KiloBundle.message("hosted.diff.menu")
+        accessibleContext.accessibleName = toolTipText
+        addActionListener { comparisons() }
+    }
     private val compute = ActiveBadgeCell()
     private val price = JBLabel().apply { isVisible = false }
     private val workspace = hostedWorkspaceRoot(project)
@@ -95,6 +106,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         compute.update(HostedWorkspaceStatus.LOADING.badge())
         header.addAction(compute)
         header.addAction(price)
+        header.addAction(changes)
         syncHeader()
         initialize(
             content = manager.component,
@@ -142,6 +154,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                     }
                     signedOut = false
                     applyStatus()
+                    syncHeader()
                 }
             }
         }
@@ -262,6 +275,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     override fun uiDataSnapshot(sink: DataSink) {
         snapshot(sink)
         sink[SessionManager.WORKSPACE_KEY] = workspace
+        sink[HostedWorkspaceDataKeys.WORKSPACE] = dto
     }
 
     @RequiresEdt
@@ -462,6 +476,21 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     private fun syncHeader() {
         val name = title()
         header.update(null, pull?.titled(name), name)
+        changes.isEnabled = hosted.enabled() && !hosted.state.value.signedOut &&
+            !ref.workspaceID.startsWith(HostedWorkspaceEditorKind.PENDING_PREFIX) &&
+            dto.deletionState != "deleted" && dto.deletionState != "deleting"
+    }
+
+    @RequiresEdt
+    private fun comparisons() {
+        syncHeader()
+        if (!changes.isEnabled) return
+        val group = ActionManager.getInstance().getAction("Kilo.HostedWorkspace.Comparisons") as? ActionGroup ?: return
+        JBPopupFactory.getInstance().createActionGroupPopup(
+            KiloBundle.message("hosted.diff.menu"), group,
+            com.intellij.ide.DataManager.getInstance().getDataContext(changes),
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false,
+        ).showUnderneathOf(changes)
     }
 
     /** One label for the tab, header, and status bar, matching the tree row. */

@@ -453,6 +453,21 @@
         <action id="Kilo.HostedWorkspace.OpenInBrowser"
                 class="ai.kilocode.client.actions.HostedOpenInBrowserAction"/>
 
+        <action id="Kilo.HostedWorkspace.CommittedDiff"
+                class="ai.kilocode.client.actions.HostedCommittedDiffAction"/>
+
+        <action id="Kilo.HostedWorkspace.UncommittedDiff"
+                class="ai.kilocode.client.actions.HostedUncommittedDiffAction"/>
+
+        <action id="Kilo.HostedWorkspace.PullRequestDiff"
+                class="ai.kilocode.client.actions.HostedPullRequestDiffAction"/>
+
+        <group id="Kilo.HostedWorkspace.Comparisons">
+            <reference ref="Kilo.HostedWorkspace.CommittedDiff"/>
+            <reference ref="Kilo.HostedWorkspace.UncommittedDiff"/>
+            <reference ref="Kilo.HostedWorkspace.PullRequestDiff"/>
+        </group>
+
         <action id="Kilo.HostedWorkspace.Delete"
                 class="ai.kilocode.client.actions.HostedDeleteWorkspaceAction"/>
 
@@ -474,6 +489,9 @@
         <group id="Kilo.Worktree.RowMenu">
             <reference ref="Kilo.HostedWorkspace.Refresh"/>
             <reference ref="Kilo.HostedWorkspace.OpenInBrowser"/>
+            <reference ref="Kilo.HostedWorkspace.CommittedDiff"/>
+            <reference ref="Kilo.HostedWorkspace.UncommittedDiff"/>
+            <reference ref="Kilo.HostedWorkspace.PullRequestDiff"/>
             <separator/>
             <reference ref="Kilo.HostedWorkspace.Dismiss"/>
             <separator/>
