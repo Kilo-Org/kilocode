@@ -11,7 +11,10 @@ import {
 
 export type AgentManagerFocusTarget = "prompt" | "mainTerminal" | "sideTerminal" | "other"
 
-export function forgetTerminalFocus(memory: Map<string, "prompt" | { terminal: string }>, id: string): void {
+/** What a context remembers to focus: its main surface ("prompt", the composer or main terminal) or a side terminal. */
+export type FocusOwner = "prompt" | { terminal: string }
+
+export function forgetTerminalFocus(memory: Map<string, FocusOwner>, id: string): void {
   for (const [key, owner] of memory) if (owner !== "prompt" && owner.terminal === id) memory.delete(key)
 }
 
@@ -57,6 +60,26 @@ export function sessionReplacesTerminal(
   terms: { activeId: () => string | undefined; setActiveId: (id: undefined) => void },
 ): void {
   if (session && terms.activeId()) terms.setActiveId(undefined)
+}
+
+/**
+ * The focus owner a focused terminal stands for. A side terminal is remembered by id; a main terminal is the main
+ * surface, so a later restore (window refocus, Cmd+Shift+M's own reveal) does not fall back to a side terminal that
+ * had focus before.
+ */
+export function terminalOwner(
+  id: string,
+  terms: { contextFor: (id: string) => string | undefined; sidesForContext: (key: string) => { id: string }[] },
+): FocusOwner | undefined {
+  const key = terms.contextFor(id)
+  if (!key) return undefined
+  return terms.sidesForContext(key).some((term) => term.id === id) ? { terminal: id } : "prompt"
+}
+
+/** Whether a terminal's delayed repaint may still take focus from the current owner. */
+export function repaintMayFocus(active: Element | null, host: Element): boolean {
+  if (!active || active === active.ownerDocument?.body || host.contains(active)) return true
+  return active.matches('[role="tab"]')
 }
 
 /** Resolve focus from the current DOM owner, not focus event order. */
@@ -126,10 +149,14 @@ export function createMainSurface(deps: {
     contextFor: (id: string) => string | undefined
     currentKey: () => string | undefined
     requestFocus: (id: string) => void
+    focusedId: () => string | undefined
+    sidesForContext: (key: string) => { id: string }[]
   }
   covered: () => boolean
   session: () => string | undefined
   prompt: (force: boolean) => void
+  /** Records the focus owner of the visible context, which window refocus and context switches restore. */
+  remember: (owner: FocusOwner) => void
 }) {
   const terms = deps.terms
   const terminal = () => {
@@ -139,6 +166,16 @@ export function createMainSurface(deps: {
   }
   createEffect(on(terms.currentKey, () => dropForeignTerminal(terms), { defer: true }))
   createEffect(on(deps.session, (id) => sessionReplacesTerminal(id, terms), { defer: true }))
+  createEffect(
+    on(
+      terms.focusedId,
+      (id) => {
+        const owner = id ? terminalOwner(id, terms) : undefined
+        if (owner) deps.remember(owner)
+      },
+      { defer: true },
+    ),
+  )
   return {
     terminal,
     covered: deps.covered,
@@ -180,7 +217,10 @@ export function createFocusBridge(deps: {
       report()
     },
     focus: () => {
-      if (!deps.surface.covered()) deps.post(main(true))
+      if (deps.surface.covered()) return
+      // The explicit shortcut also becomes what a restore returns to, instead of a side terminal focused earlier.
+      deps.remember()
+      deps.post(main(true))
     },
   }
 }

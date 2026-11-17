@@ -533,6 +533,7 @@ const AgentManagerContent: Component = () => {
     covered: () => history() || reviewActive(),
     session: () => sessions.currentSessionID(),
     prompt: requestChatFocus,
+    remember: (owner) => focusMemory.set(focusKey(), owner),
   })
   const focusCtl = createFocusBridge({
     prompt,
@@ -552,10 +553,9 @@ const AgentManagerContent: Component = () => {
     }
     return !terminalVisible()
   }
-  const restoreFocus = () => {
+  const restoreFocus = (owner = focusMemory.get(focusKey())) => {
     if (prompt.active()) return
     const key = focusKey()
-    const owner = focusMemory.get(key)
     if (owner && owner !== "prompt") {
       const context = terms.sideKey()
       const terminal = terms.sidesForContext(context).find((term) => term.id === owner.terminal)
@@ -582,21 +582,11 @@ const AgentManagerContent: Component = () => {
   })
   createEffect(
     on(
-      () => terms.focusedId(),
-      (id) => {
-        if (!id) return
-        const key = terms.contextFor(id)
-        if (!key || !terms.sidesForContext(key).some((term) => term.id === id)) return
-        focusMemory.set(focusKey(), { terminal: id })
-      },
-      { defer: true },
-    ),
-  )
-  createEffect(
-    on(
       focusKey,
-      (_key, previous) => {
-        if (previous !== undefined) queueMicrotask(restoreFocus)
+      (key, previous) => {
+        // Read the owner now: the restored main terminal records its own focus before the microtask runs.
+        const owner = focusMemory.get(key)
+        if (previous !== undefined) queueMicrotask(() => restoreFocus(owner))
       },
       { defer: true },
     ),

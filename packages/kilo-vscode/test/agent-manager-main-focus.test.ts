@@ -7,7 +7,9 @@ import {
   createMainFocus,
   dropForeignTerminal,
   keepsFocus,
+  repaintMayFocus,
   sessionReplacesTerminal,
+  terminalOwner,
   terminalActivation,
   terminalHasFocus,
 } from "../webview-ui/agent-manager/focus"
@@ -33,7 +35,7 @@ describe("Agent Manager main focus", () => {
 
     test.ctl.focus()
 
-    expect(test.calls).toEqual(["terminal:terminal:1", "post:mainTerminal"])
+    expect(test.calls).toEqual(["remember", "terminal:terminal:1", "post:mainTerminal"])
   })
 
   it("focuses the composer of a session main tab", () => {
@@ -41,7 +43,7 @@ describe("Agent Manager main focus", () => {
 
     test.ctl.focus()
 
-    expect(test.calls).toEqual(["prompt", "post:prompt"])
+    expect(test.calls).toEqual(["remember", "prompt", "post:prompt"])
   })
 
   it("leaves History or review and the terminal under it alone", () => {
@@ -94,6 +96,26 @@ describe("Agent Manager main focus", () => {
     expect(focus(true)).toBe("prompt")
     expect(focus()).toBe("prompt")
     expect(calls).toEqual([true, false])
+  })
+})
+
+describe("terminalOwner", () => {
+  const terms = {
+    contextFor: (id: string) => (id === "terminal:gone" ? undefined : "p:wt-1"),
+    sidesForContext: () => [{ id: "terminal:side" }],
+  }
+
+  it("remembers a side terminal by id", () => {
+    expect(terminalOwner("terminal:side", terms)).toEqual({ terminal: "terminal:side" })
+  })
+
+  it("remembers a focused main terminal as the main surface", () => {
+    // Otherwise the window refocus after Cmd+Shift+M restored the side terminal focused earlier.
+    expect(terminalOwner("terminal:main", terms)).toBe("prompt")
+  })
+
+  it("ignores a terminal that no longer exists", () => {
+    expect(terminalOwner("terminal:gone", terms)).toBeUndefined()
   })
 })
 
@@ -222,6 +244,25 @@ describe("keepsFocus", () => {
       '<div class="am-side-terminal-layer"><div class="am-terminal-host"><textarea></textarea></div></div>',
     )
     expect(keepsFocus(layer.querySelector("textarea"), doc)).toBe(false)
+  })
+})
+
+describe("repaintMayFocus", () => {
+  const window = new Window({ url: "http://localhost" })
+  const doc = window.document as unknown as Document
+  doc.body.innerHTML =
+    '<div class="main"><textarea class="xterm"></textarea></div><div class="side"><textarea></textarea></div>' +
+    '<div role="tab"></div>'
+  const host = doc.querySelector(".main")!
+
+  it("retries focus from the page body, the terminal itself or its tab", () => {
+    expect(repaintMayFocus(doc.body, host)).toBe(true)
+    expect(repaintMayFocus(doc.querySelector(".xterm"), host)).toBe(true)
+    expect(repaintMayFocus(doc.querySelector('[role="tab"]'), host)).toBe(true)
+  })
+
+  it("does not take focus back from a side terminal restored after the activation", () => {
+    expect(repaintMayFocus(doc.querySelector(".side textarea"), host)).toBe(false)
   })
 })
 

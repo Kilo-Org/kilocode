@@ -10,7 +10,13 @@ const scene = createRoot((dispose) => {
   const [active, setActive] = createSignal<string | undefined>("terminal:local")
   const [key, setKey] = createSignal<string | undefined>("p:local")
   const [session, setSession] = createSignal<string | undefined>()
-  const contexts: Record<string, string> = { "terminal:local": "p:local", "terminal:wt": "p:wt-1" }
+  const [focused, setFocused] = createSignal<string | undefined>()
+  const remembered: unknown[] = []
+  const contexts: Record<string, string> = {
+    "terminal:local": "p:local",
+    "terminal:wt": "p:wt-1",
+    "terminal:side": "p:local",
+  }
   const surface = createMainSurface({
     terms: {
       activeId: active,
@@ -18,15 +24,23 @@ const scene = createRoot((dispose) => {
       contextFor: (id: string) => contexts[id],
       currentKey: key,
       requestFocus: () => undefined,
+      focusedId: focused,
+      sidesForContext: (key: string) => (key === "p:local" ? [{ id: "terminal:side" }] : []),
     },
     covered: () => false,
     session,
     prompt: () => undefined,
+    remember: (owner) => remembered.push(owner),
   })
-  return { dispose, surface, active, setActive, setKey, setSession }
+  return { dispose, surface, active, setActive, setKey, setSession, setFocused, remembered }
 })
-const { surface, active, setActive, setKey, setSession } = scene
+const { surface, active, setActive, setKey, setSession, setFocused, remembered } = scene
 {
+  // A focused side terminal is remembered by id, a focused main terminal as the main surface.
+  setFocused("terminal:side")
+  setFocused("terminal:local")
+  assert.deepEqual(remembered, [{ terminal: "terminal:side" }, "prompt"])
+
   assert.equal(surface.terminal(), "terminal:local")
 
   setSession("ses_fork")

@@ -25,7 +25,7 @@ import { registerTerminalOutput, unregisterTerminalOutput } from "./output"
 import { registerActivity } from "./activity"
 import type { Activity } from "../v2/activity"
 import { isFocusChord, leavesTerminal } from "../chords"
-import { terminalActivation } from "../focus"
+import { repaintMayFocus, terminalActivation } from "../focus"
 import {
   APPEND_REVIEW_COMMENTS,
   takeReviewCommentsForTerminal,
@@ -519,7 +519,9 @@ export const TerminalTab: Component<Props> = (props) => {
         log("repaint fit() threw", err)
       }
       term.refresh(0, Math.max(0, term.rows - 1))
-      if (shouldFocus && document.hasFocus()) term.focus()
+      // The frame retries a focus that did not land, but never takes it back from a control that took focus since
+      // (a restored side terminal, a dialog): only from the page body, this terminal, or its tab.
+      if (shouldFocus && document.hasFocus() && repaintMayFocus(document.activeElement, host)) term.focus()
       shouldFocus = false
     }
     const scheduleRepaint = (focus = false) => {
@@ -562,7 +564,6 @@ export const TerminalTab: Component<Props> = (props) => {
         scheduleRepaint()
         return
       }
-
     })
 
     // Activation and explicit focus requests focus the terminal;
