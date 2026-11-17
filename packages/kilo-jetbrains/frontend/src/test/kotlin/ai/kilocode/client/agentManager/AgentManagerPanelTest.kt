@@ -3081,18 +3081,20 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         waitUntil { rows(panel) == 2 && calls.get() == 2 && !hosted.state.value.loading }
         assertEquals("OpenRouter API access", (row(panel, 1) as HostedWorkspaceRow).title)
 
-        repeat(5) {
+        fun rediscover() {
+            // The panel counts an omission only when its conflated state collector delivers the
+            // finished run to the EDT. Flush that hand-off first, or the next refresh supersedes the
+            // finished state before the panel sees it and the omission is never counted.
+            flush()
             val count = calls.get()
             edt { hosted.refresh(project.basePath!!) }
             waitUntil { calls.get() > count && !hosted.state.value.loading }
         }
+
+        repeat(5) { rediscover() }
         assertEquals(2, rows(panel))
 
-        repeat(HOSTED_MISS_LIMIT - 1 - 5) {
-            val count = calls.get()
-            edt { hosted.refresh(project.basePath!!) }
-            waitUntil { calls.get() > count && !hosted.state.value.loading }
-        }
+        repeat(HOSTED_MISS_LIMIT - 1 - 5) { rediscover() }
         waitUntil { rows(panel) == 1 }
         assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(createdRef.key))
     }
@@ -3399,6 +3401,10 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     private fun rowBounds(tree: ActiveTreeView, index: Int): java.awt.Rectangle =
         edt {
             (tree.parent as? javax.swing.JViewport)?.setSize(tree.width, tree.height)
+            // The native layout cache sizes rows lazily and in order. Reading a later row first
+            // stacks it on the estimated heights of rows that were never measured, so measure every
+            // row before answering with one.
+            leaves(tree).forEach { tree.regions.cell(it) }
             tree.regions.cell(leafEntry(tree, index))
         }
 
