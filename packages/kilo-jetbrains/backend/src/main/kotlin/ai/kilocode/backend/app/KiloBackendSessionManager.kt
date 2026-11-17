@@ -243,6 +243,12 @@ class KiloBackendSessionManager(
                 .build()
             val status = runCatching { httpClient.newCall(request).execute().use { it.code } }.getOrNull()
             if (status != null && status in 200..299) {
+                // The SSE session event is not consumed by this manager's cache, and a rehomed session
+                // can turn active before the next listing. Keep the activity attribution on the new
+                // directory instead of the deleted worktree path, which may already belong to a new
+                // worktree at the same name.
+                owned[id] = to
+                directories.remove(id)
                 moved++
             } else {
                 log.info("session rehome failed: id=$id status=${status ?: "no response"}")

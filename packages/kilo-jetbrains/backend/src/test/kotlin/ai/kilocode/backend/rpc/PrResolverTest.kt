@@ -712,7 +712,7 @@ class PrResolverTest {
         // The worktree was removed after its PR merged, then a generated branch name reused the same
         // directory. `gh pr view <branch>` still resolves the old merged PR through headRefName, but
         // this branch incarnation did not start at that PR's head.
-        reflog = "$SHA feature/x@{${BRANCH_START}}\n"
+        reflog = "$SHA feature/x@{${BRANCH_START}} $CREATED\n"
         val resolver = resolver(
             view = {
                 pr(
@@ -733,8 +733,32 @@ class PrResolverTest {
     }
 
     @Test
+    fun `keeps a merged pull request when the creation reflog entry has expired`() {
+        // git gc can expire a long branch's creation entry. The oldest surviving line would then look
+        // like a later start time and hide a real merged badge, so a non-creation entry must be
+        // treated as unknown rather than trusted.
+        reflog = "$SHA feature/x@{${BRANCH_START}} commit: work\n"
+        val resolver = resolver(
+            view = {
+                pr(
+                    7,
+                    "MERGED",
+                    created = BRANCH_START - 2000,
+                    closed = BRANCH_START - 1000,
+                    merged = BRANCH_START - 1000,
+                    headOid = OTHER,
+                )
+            },
+        )
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(7, assertNotNull(lookup.pr, "a truncated reflog must not hide a real PR").number)
+    }
+
+    @Test
     fun `keeps a merged pull request opened before the current branch ended`() {
-        reflog = "$SHA feature/x@{${BRANCH_START}}\n"
+        reflog = "$SHA feature/x@{${BRANCH_START}} $CREATED\n"
         val resolver = resolver(
             view = {
                 pr(
@@ -757,7 +781,7 @@ class PrResolverTest {
     fun `keeps an imported merged pull request created after the branch`() {
         // Importing an old merged PR starts the local branch at that PR's head after the merge. That
         // exact identity is what separates it from a newly created branch that merely reuses the name.
-        reflog = "$OTHER feature/x@{${BRANCH_START}}\n"
+        reflog = "$OTHER feature/x@{${BRANCH_START}} $CREATED\n"
         val resolver = resolver(
             view = {
                 pr(
@@ -778,7 +802,7 @@ class PrResolverTest {
 
     @Test
     fun `keeps an imported live pull request whose head reaches the checkout`() {
-        reflog = "$SHA feature/x@{${BRANCH_START}}\n"
+        reflog = "$SHA feature/x@{${BRANCH_START}} $CREATED\n"
         ancestor = true
         val resolver = resolver(
             view = { pr(7, "OPEN", created = BRANCH_START - 2000, closed = null, merged = null, headOid = OTHER) },
@@ -793,7 +817,7 @@ class PrResolverTest {
 
     @Test
     fun `ignores a live pull request whose head cannot reach a newly created branch`() {
-        reflog = "$SHA feature/x@{${BRANCH_START}}\n"
+        reflog = "$SHA feature/x@{${BRANCH_START}} $CREATED\n"
         ancestor = false
         val resolver = resolver(
             view = { pr(7, "OPEN", created = BRANCH_START - 2000, closed = null, merged = null, headOid = OTHER) },
@@ -889,5 +913,6 @@ class PrResolverTest {
         const val OTHER = "2222222222222222222222222222222222222222"
         const val NODE = "PR_kwDOAbCdEf"
         const val BRANCH_START = 1_800_000_000L
+        const val CREATED = "branch: Created from main"
     }
 }

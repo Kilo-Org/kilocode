@@ -262,8 +262,10 @@ internal class PrResolver(
      *   the branch. Otherwise it belongs to the previous worktree that used the name.
      * - A PR on a branch that predates it is the ordinary case and is kept unchanged.
      *
-     * When either timestamp source is unavailable this keeps the PR, so a CLI without reflogs or an
-     * older `gh` that cannot answer the fields loses no badge.
+     * The reflog is only trustworthy when its oldest surviving entry is the branch creation itself.
+     * `git gc` can expire older entries, leaving a later reset or commit as the oldest line; treating
+     * that timestamp as the branch start would hide a legitimate badged PR on a long-lived checkout.
+     * In that case, or when any timestamp is unavailable, the PR is kept so no real badge is lost.
      */
     private fun keep(
         lookup: PrLookup,
@@ -298,11 +300,15 @@ internal class PrResolver(
     private data class BranchStart(val commit: String, val time: Long)
 
     private fun branchStart(dir: Path, branch: String): BranchStart? {
-        val out = git(dir, listOf("reflog", "show", "--date=unix", "--format=%H %gd", branch))
+        val out = git(dir, listOf("reflog", "show", "--date=unix", "--format=%H %gd %gs", branch))
         if (!out.ok) return null
         val line = out.stdout.lineSequence().map { it.trim() }.lastOrNull { it.isNotEmpty() } ?: return null
-        val commit = line.substringBefore(' ').takeIf { it.isNotEmpty() } ?: return null
-        val time = line.substringAfterLast("@{", "").substringBefore("}").toLongOrNull() ?: return null
+        // Older entries may have been expired by git gc. Only the creation entry proves when this
+        // branch incarnation began; a surviving commit/reset entry would produce a false start time.
+        val parts = line.split(' ', limit = 3)
+        if (parts.size < 3 || !parts[2].contains("Created from")) return null
+        val commit = parts[0].takeIf { it.isNotEmpty() } ?: return null
+        val time = parts[1].substringAfterLast("@{", "").substringBefore("}").toLongOrNull() ?: return null
         return BranchStart(commit, time)
     }
 
