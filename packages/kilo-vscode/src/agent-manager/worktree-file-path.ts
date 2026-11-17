@@ -3,20 +3,27 @@ import * as path from "path"
 import { isAbsolutePath } from "../path-utils"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 
-/** The directory a worktree id, session id, or `local` reads files from. */
+/**
+ * The directory a worktree id, session id, or `local` reads files from.
+ *
+ * The state file names the root of a worktree, `local`, and a filed session. A session it does not file, such as a
+ * subagent, is resolved from `directory`, the directory the server runs it in. A filed session keeps its filing even
+ * when the server directory differs, because a session the user opened in Local reads the root checkout on purpose.
+ */
 export function resolveWorktreeRoot(
   state: WorktreeStateManager | undefined,
   id: string,
   root: string | undefined,
+  directory?: string,
 ): string | undefined {
   if (id === "local") return root
-  if (!state) return
-  const worktree = state.getWorktree(id)
+  const worktree = state?.getWorktree(id)
   if (worktree) return worktree.path
-  const session = state.getSession(id)
+  const session = state?.getSession(id)
   // A known session without a worktree is a local session, which reads from the project root.
-  if (!session) return undefined
-  return session.worktreeId ? state.getWorktree(session.worktreeId)?.path : root
+  if (session) return session.worktreeId ? state?.getWorktree(session.worktreeId)?.path : root
+  // An unfiled session: its server directory, which is the parent's directory for a subagent.
+  return directory
 }
 
 /**
@@ -31,10 +38,10 @@ export function resolveWorktreeFile(
   id: string,
   file: string,
   root: string | undefined,
+  directory?: string,
 ): string | undefined {
   if (isAbsolutePath(file)) return file
-  if (!state) return
-  const base = resolveWorktreeRoot(state, id, root)
+  const base = resolveWorktreeRoot(state, id, root, directory)
   if (!base) return
   try {
     const dir = fs.realpathSync(base)
