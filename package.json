@@ -61,7 +61,7 @@
       "effect": "4.0.0-beta.83",
       "ai": "6.0.235",
       "cross-spawn": "7.0.6",
-      "hono": "4.13.14",
+      "hono": "4.13.18",
       "hono-openapi": "1.1.2",
       "ipaddr.js": "2.4.0",
       "fuzzysort": "3.1.0",
@@ -212,7 +212,7 @@
     "seroval-plugins": "~1.6.11",
     "@modelcontextprotocol/sdk": {
       "express": "^5.3.0",
-      "@hono/node-server": "^2.1.5"
+      "@hono/node-server": "^2.1.7"
     },
     "friendly-words": {
       "express": "^4.22.3",
@@ -243,7 +243,11 @@
       "zod": "^4.6.6"
     },
     "@anthropic-ai/sandbox-runtime": {
-      "zod": "^4.6.6"
+      "zod": "^4.6.6",
+      "node-forge": "^1.4.3"
+    },
+    "@azure/core-xml": {
+      "fast-xml-parser": "^5.12.0"
     },
     "@joshwooding/vite-plugin-react-docgen-typescript": {
       "glob": "^14.0.2"
@@ -326,6 +330,6 @@
     "@ai-sdk/groq@3.0.45": "patches/@ai-sdk%2Fgroq@3.0.45.patch",
     "babel-plugin-module-resolver@5.0.2": "patches/babel-plugin-module-resolver@5.0.2.patch"
   },
-  "version": "7.8.28",
+  "version": "7.8.30",
   "peerDependencies": {}
 }

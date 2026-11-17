@@ -1,5 +1,7 @@
 package ai.kilocode.client.agentManager.hosted
 
+import ai.kilocode.client.actions.SpeechInputAction
+import ai.kilocode.client.agentManager.AgentManagerLayout
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
@@ -28,6 +30,7 @@ import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
@@ -35,6 +38,7 @@ import com.intellij.platform.ide.progress.runWithModalProgressBlocking
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.HyperlinkLabel
+import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBTextField
@@ -49,6 +53,7 @@ import java.awt.Container
 import javax.swing.JButton
 import javax.swing.JLabel
 import javax.swing.JList
+import javax.swing.ListCellRenderer
 
 class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     private lateinit var coroutines: TestCoroutines
@@ -58,6 +63,10 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     private lateinit var workspaces: KiloWorkspaceService
     private lateinit var selection: FakeHostedProfileSelectionStore
     private var dialog: HostedWorkspaceDialog? = null
+    private val sections = listOf(
+        AgentManagerLayout.Section("planning", "Planning", "blue"),
+        AgentManagerLayout.Section("shipping", "Shipping", "green"),
+    )
     private val profileItems = listOf(
         HostedWorkspaceProfileDto("profile-dev", "Standard", ownerType = "user"),
         HostedWorkspaceProfileDto("profile-prod", "Standard", ownerType = "organization"),
@@ -106,6 +115,22 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         edt { assertPromptCentered() }
     }
 
+    fun `test cloud dialog prompt exposes the microphone without a submit button`() {
+        open()
+        ready()
+
+        edt {
+            val buttons = descendants(prompt()).filterIsInstance<JButton>()
+            val name = KeymapUtil.createTooltipText(KiloBundle.message("prompt.speech.start"), SpeechInputAction.ID)
+            val speech = buttons.single { it.accessibleContext.accessibleName == name }
+            assertTrue(speech.isVisible)
+            assertTrue(speech.isEnabled)
+            assertTrue(prompt().isSpeechEnabled)
+            assertFalse(prompt().isSpeechActive)
+            assertFalse(buttons.contains(prompt().buttonForTest()))
+        }
+    }
+
     fun `test default cloud selections create a plan with an optional blank branch`() {
         open()
         ready()
@@ -123,6 +148,67 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
             HostedCreatePlan("Build cloud feature", null, null, "build", "kilo/gpt-5", "low"),
             created(),
         )
+    }
+
+    fun `test cloud section defaults to the supplied section and is forwarded`() {
+        open(sections = sections, section = "planning")
+        ready()
+
+        edt {
+            assertSame(sections[0], section().selectedItem)
+            submit()
+        }
+
+        assertEquals("planning", created().section)
+    }
+
+    fun `test cloud prompt send forwards the changed section`() {
+        open(sections = sections)
+        ready()
+
+        edt {
+            assertEquals(0, section().selectedIndex)
+            section().selectedItem = sections[1]
+            prompt().send()
+        }
+
+        assertEquals("shipping", created().section)
+    }
+
+    fun `test cloud root option replaces the supplied section`() {
+        open(sections = sections, section = "planning")
+        ready()
+
+        edt {
+            section().selectedIndex = 0
+            submit()
+        }
+
+        assertNull(created().section)
+    }
+
+    fun `test cloud missing initial section falls back to the localized root option`() {
+        open(sections = sections, section = "removed")
+        ready()
+
+        edt {
+            val picker = section()
+            assertEquals(0, picker.selectedIndex)
+            @Suppress("UNCHECKED_CAST")
+            val renderer = picker.renderer as ListCellRenderer<Any>
+            val sectionCell = renderer.getListCellRendererComponent(
+                JList<Any>(), picker.getItemAt(1), 1, false, false,
+            ) as SimpleColoredComponent
+            val width = requireNotNull(sectionCell.icon).iconWidth
+            val cell = renderer.getListCellRendererComponent(
+                JList<Any>(), picker.getItemAt(0), 0, false, false,
+            ) as SimpleColoredComponent
+            assertEquals(KiloBundle.message("agentManager.section.none"), cell.toString())
+            assertEquals("The root option reserves the section icon width", width, requireNotNull(cell.icon).iconWidth)
+            submit()
+        }
+
+        assertNull(created().section)
     }
 
     fun `test no profile default leaves no profile selected`() {
@@ -624,7 +710,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
                 val controls = controls()
                 assertEmpty(controls.filterIsInstance<JBCheckBox>())
                 assertEmpty(controls.filterIsInstance<JBTabs>())
-                assertEquals(2, controls.filterIsInstance<ComboBox<*>>().size)
+                assertEquals(3, controls.filterIsInstance<ComboBox<*>>().size)
                 assertEquals("kilocode", repository().getItemAt(0))
                 assertEquals(1, repository().itemCount)
                 assertEmpty(controls.filterIsInstance<JBTextField>().filter { !it.isEditable })
@@ -789,11 +875,14 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         branch: String = "",
         load: (suspend () -> HostedWorkspaceProfileListDto)? = null,
         selection: HostedProfileSelectionStore = this.selection,
+        sections: List<AgentManagerLayout.Section> = emptyList(),
+        section: String? = null,
     ) {
         dialog = edt {
             HostedWorkspaceDialog(
                 JBPanel<Nothing>(), project, "/test", "https://github.com/kilo-org/kilocode.git",
                 branch, app, workspaces, load ?: { profiles }, selection,
+                sections, section,
             )
         }
         if (load == null) {
@@ -837,7 +926,10 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         controls().filterIsInstance<ComboBox<*>>().single { it.getItemAt(0) is String }
 
     private fun profile(): ComboBox<*> =
-        controls().filterIsInstance<ComboBox<*>>().single { it.getItemAt(0) !is String }
+        controls().filterIsInstance<ComboBox<*>>().single { it !== section() && it.getItemAt(0) !is String }
+
+    private fun section(): ComboBox<*> = controls().filterIsInstance<JLabel>()
+        .single { it.text == KiloBundle.message("agentManager.section.label") }.labelFor as ComboBox<*>
 
     private fun useDefault(): HyperlinkLabel = controls().filterIsInstance<HyperlinkLabel>()
         .single { it.text == KiloBundle.message("hosted.workspace.dialog.profile.useDefault") }
