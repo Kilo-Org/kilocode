@@ -276,6 +276,28 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(state.getWorktree(id)).toBeDefined()
   })
 
+  it("lists a shared subdirectory once and blocks deletion while an unfiled child is running", async () => {
+    const id = state.getWorktrees()[0]!.id
+    const nested = path.join(worktree, "nested")
+    fs.mkdirSync(nested)
+    state.addSession("first", id)
+    state.addSession("second", id)
+    client.session.get.mockImplementation(async ({ sessionID }: { sessionID: string }) => ({
+      id: sessionID,
+      location: { directory: nested },
+    }))
+    client.session.list.mockImplementation(async ({ directory }: { directory: string }) => ({
+      data: directory === nested ? [{ id: "first" }, { id: "second" }, { id: "child", parentID: "first" }] : [],
+    }))
+    client.session.active.mockResolvedValue({ child: { type: "running" } })
+
+    await deleteWorktree()
+
+    expect(calls).toEqual(["post:error"])
+    expect(state.getWorktree(id)).toBeDefined()
+    expect(client.session.list.mock.calls.map(([input]) => input.directory)).toEqual([worktree, nested])
+  })
+
   it.each(["permission", "form"] as const)("refuses a pending %s before cleanup", async (kind) => {
     const session = state.addSession("session", state.getWorktrees()[0]!.id)
     const list = kind === "permission" ? client.permission.request.list : client.form.list
@@ -491,6 +513,8 @@ describe("Agent Manager worktree lifecycle", () => {
       const subdirectory = path.join(tree.path, "nested")
       fs.mkdirSync(subdirectory)
       const nested = await conversation("Nested transcript", undefined, subdirectory)
+      const nestedChild = await api.session.create({ parentID: nested.id })
+      expect(nestedChild.location.directory).toBe(nested.location.directory)
       saved.addSession(open.id, wt.id)
       saved.addSession(closed.id, wt.id)
       saved.addSession(nested.id, wt.id)
@@ -515,6 +539,10 @@ describe("Agent Manager worktree lifecycle", () => {
       }
       expect((await api.session.get({ sessionID: archived.id })).time.archived).toBe(time)
       expect((await api.session.get({ sessionID: child.id })).location.directory).toBe(repo)
+      expect(await api.session.get({ sessionID: nestedChild.id })).toMatchObject({
+        parentID: nested.id,
+        location: { directory: repo },
+      })
     } finally {
       await project.dispose()
       const exited = new Promise((resolve) => server.process.once("exit", resolve))

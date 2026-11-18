@@ -229,6 +229,39 @@ async function moveSessionsToRoot(
   )
 }
 
+/** List all sessions at the worktree root and in subdirectories discovered from filed sessions. */
+async function worktreeSessions(client: OpenCodeClient, directory: string, managed: ManagedSession[]): Promise<string[]> {
+  // Omit archive and parent filters to include closed tabs, archived sessions, and children.
+  const list = (directory: string) => client.session.list({ directory, limit: Number.MAX_SAFE_INTEGER })
+  const listed = new Set((await list(directory)).data.map((session) => session.id))
+  const root = pathKey(directory)
+  // The directory filter is exact. Use omitted filings to discover worktree subdirectories, but
+  // trust the server's location so a stale filing never moves a session from elsewhere.
+  const nested = await Promise.all(
+    managed
+      .filter((session) => !listed.has(session.id))
+      .map((session) =>
+        client.session.get({ sessionID: session.id }).catch((error: unknown) => {
+          if (sessionMissing(error)) return undefined
+          throw error
+        }),
+      ),
+  )
+  const directories = new Map<string, string>()
+  for (const session of nested) {
+    if (!session) continue
+    const location = session.location.directory
+    const key = pathKey(location)
+    if (key !== root && !key.startsWith(`${root}/`)) continue
+    listed.add(session.id)
+    if (location !== directory) directories.set(key, location)
+  }
+  // Subagents are never filed, so list each discovered directory to include them in the safety check and move.
+  const pages = await Promise.all([...directories.values()].map(list))
+  for (const page of pages) for (const session of page.data) listed.add(session.id)
+  return [...listed]
+}
+
 /** Delete a worktree and dissociate its sessions. */
 export async function deleteLifecycleWorktree(
   ctx: ProjectContext,
@@ -255,29 +288,9 @@ export async function deleteLifecycleWorktree(
       client.session.active(),
       client.permission.request.list({ location: { directory: worktree.path } }),
       client.form.list({ location: { directory: worktree.path } }),
-      // The server directory, not the open tab list, owns the conversations. In v2, specifying
-      // archived or parentID filters the result; omit both to include closed tabs, archived sessions and children.
-      client.session.list({
-        directory: worktree.path,
-        limit: Number.MAX_SAFE_INTEGER,
-      }),
+      worktreeSessions(client, worktree.path, managed),
     ])
-    const listed = new Set(sessions.data.map((session) => session.id))
-    const root = pathKey(worktree.path)
-    // The directory filter is exact. Check omitted filings for sessions running beneath the worktree,
-    // without interrupting or moving a session whose filing is stale and whose directory is elsewhere.
-    const nested = await Promise.all(
-      managed.filter((session) => !listed.has(session.id)).map(async (session) => {
-        const info = await client.session.get({ sessionID: session.id }).catch((error: unknown) => {
-          if (sessionMissing(error)) return undefined
-          throw error
-        })
-        if (!info) return []
-        const directory = pathKey(info.location.directory)
-        return directory === root || directory.startsWith(`${root}/`) ? [session.id] : []
-      }),
-    )
-    retained = [...listed, ...nested.flat()]
+    retained = sessions
     const running = retained.some((id) => Object.hasOwn(active, id))
     if (running || permissions.data.length > 0 || forms.data.length > 0)
       return fail("Cannot delete a worktree while a session is active or waiting for input")
