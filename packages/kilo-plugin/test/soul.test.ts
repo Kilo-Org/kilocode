@@ -261,7 +261,8 @@ describe("Kilo delegation", () => {
           system: [SystemPart.make("BASE")],
           tools: {},
         })
-        expect(withoutTools.system[0]?.text).not.toContain("Do not spawn subagents unless")
+        expect(withoutTools.system[1]?.text).toContain("# Destructive actions")
+        expect(withoutTools.system[1]?.text).not.toContain("Do not spawn subagents unless")
         expect(withoutTools.system).toHaveLength(2)
       }),
     ),

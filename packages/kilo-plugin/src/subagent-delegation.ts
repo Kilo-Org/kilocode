@@ -24,7 +24,7 @@ export const KiloSubagentDelegationPlugin = define({
           if (Option.isSome(agent) && !agent.value.data.system)
             event.system[0] = { ...template, text: template.text.replace(upstreamOptIn, "") }
         }
-        // Only offer the policy where delegation can happen; generate and compaction requests carry no tools.
+        // Only offer the policy when this request offers the tool.
         if (!("subagent" in event.tools)) return
         // The Claude Agent driver reads the instructions its provider hook already collected, not the final system parts.
         const instructions = event.options[ClaudeSystemPrompt.INSTRUCTIONS_OPTION]
