@@ -24,7 +24,7 @@ HTML files you open from [Files](/docs/desktop/features/files) — including pag
 Type a URL and press Enter to load a page; the tab has the controls you'd expect.
 
 - **Back**, **forward**, and **refresh**.
-- A menu with **Open in Default Browser**, **Hard reload**, and **Open DevTools**.
+- A menu with **Open in Default Browser**, **Hard Reload**, and **Open DevTools**.
 - **Zoom** from 25% to 500%, with a reset.
 
 Open more than one browser tab at a time; each keeps its own page as you switch between them, and its label and icon update to match the site you're on.

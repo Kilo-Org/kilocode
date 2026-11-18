@@ -1,4 +1,5 @@
 import * as Attachments from "@/kilocode/server/hosted-attachments"
+import { SessionHostPaths } from "@/kilocode/server/httpapi/groups/session-host"
 import { MAX_BODY_BYTES } from "@/kilocode/server/routes/hosted-routing"
 import { HostedFailure, type NativeRequest } from "@/kilocode/session-hosting/types"
 import * as HttpApiServer from "@/server/routes/instance/httpapi/server"
@@ -267,6 +268,26 @@ describe("hosted attachment routing", () => {
         },
       ],
     })
+    expect(fake.calls).toHaveLength(0)
+
+    const workspaceID = "worktree_00000000-0000-4000-8000-000000000001"
+    for (const [method, path] of [
+      ["GET", SessionHostPaths.workspacePullRequest],
+      ["POST", SessionHostPaths.workspacePullRequestRefresh],
+    ] as const) {
+      const target = path.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
+      const response = await api.request(`${target}?workspace=${entry.id}`, {
+        method,
+        headers: { "x-kilo-workspace": entry.id },
+      })
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({
+        id: { providerID: "kilo-cloud", workspaceID },
+        state: "signed_out",
+        pullRequest: null,
+      })
+      expect(Attachments.store.lookup(entry.id).kind).toBe("found")
+    }
     expect(fake.calls).toHaveLength(0)
   })
 

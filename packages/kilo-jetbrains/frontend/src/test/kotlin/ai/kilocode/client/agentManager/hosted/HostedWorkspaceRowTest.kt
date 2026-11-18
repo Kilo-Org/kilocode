@@ -10,10 +10,19 @@ import ai.kilocode.client.ui.active.ActiveConfig
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.ActiveListRenderer
 import ai.kilocode.client.ui.active.activeLayout
+import ai.kilocode.client.ui.PrIcons
+import ai.kilocode.client.ui.style
+import ai.kilocode.rpc.dto.GhChecks
+import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
+import ai.kilocode.rpc.dto.GhReview
+import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
+import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.CollectionListModel
@@ -195,6 +204,54 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
         }
         assertTrue(edges.first() < edges.last())
     }
+
+    fun `test linked pull request adds the worktree verdict glyphs and number pill`() {
+        val item = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "wrk_pr"), name = "Cloud PR", branch = "feature/pr")
+        val row = HostedWorkspaceRow(HostedWorkspaceRowData(
+            item,
+            HostedWorkspaceStatusDto(item.ref, "active", "active", "sandbox_ready", 100.0),
+            pull = pull(item.ref, GhState.OPEN),
+        ))
+
+        assertEquals(listOf("cloud-compute", "pr-comments", "pr-review", "pr-checks"), row.badges.map { it.id })
+        assertEquals("2", row.badges.single { it.id == "pr-comments" }.text)
+        assertSame(PrIcons.reviewApproved, row.badges.single { it.id == "pr-review" }.icon)
+        assertSame(PrIcons.checksPassed, row.badges.single { it.id == "pr-checks" }.icon)
+        val pill = row.secondaryBadges.single()
+        assertEquals("#42", pill.text)
+        assertSame(style(GhState.OPEN), pill.style)
+        assertTrue(row.search.contains("Fix Cloud PR"))
+        assertTrue(row.search.contains("#42"))
+    }
+
+    fun `test no pull request keeps the compute badge and has no number pill`() {
+        val row = row("active")
+        assertEquals(listOf("cloud-compute"), row.badges.map { it.id })
+        assertEmpty(row.secondaryBadges)
+    }
+
+    fun `test pull request badges do not depend on the selected sibling session`() {
+        val item = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "wrk_pr"), name = "Cloud PR")
+        val data = HostedWorkspaceRowData(item, null, kind = SessionActivityKind.RUNNING, pull = pull(item.ref, GhState.DRAFT))
+        val idle = HostedWorkspaceRow(data.copy(kind = null))
+        val busy = HostedWorkspaceRow(data)
+
+        assertEquals(idle.badges.map { it.id }, busy.badges.map { it.id })
+        assertEquals(idle.secondaryBadges.map { it.text }, busy.secondaryBadges.map { it.text })
+        assertSame(style(GhState.DRAFT), busy.secondaryBadges.single().style)
+    }
+
+    private fun pull(ref: HostedWorkspaceRefDto, state: GhState) = WorktreePrDto(
+        path = ref.key,
+        number = 42,
+        state = state,
+        url = "https://github.com/owner/repo/pull/42",
+        title = "Fix Cloud PR",
+        review = GhReview.APPROVED,
+        checks = GhChecksDto(GhChecks.PASSED, total = 3, passed = 3),
+        comments = GhCommentsDto(total = 2, unresolved = 2),
+        merge = GhMerge.CLEAN,
+    )
 
     private fun row(state: String, name: String = "Cloud workspace"): HostedWorkspaceRow {
         val ref = HostedWorkspaceRefDto("cloud", name.replace(' ', '_'))
