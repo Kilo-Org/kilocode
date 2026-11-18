@@ -260,11 +260,18 @@ export function hub(options: Options = {}): BrowserHub.Interface {
         onRevoked(listener) {
           let off: (() => void) | undefined
           let live = true
-          void connection().then((client) => {
-            const stop = client.on("session.revoked", (params) => listener(params))
-            if (!live) return stop()
-            off = stop
-          })
+          // A transport that could not be created leaves the caller with no subscription, never an unhandled
+          // rejection; the unsubscribe below stays safe either way.
+          const failed = () => {
+            live = false
+          }
+          connection()
+            .then((client) => {
+              const stop = client.on("session.revoked", (params) => listener(params))
+              if (!live) return stop()
+              off = stop
+            })
+            .catch(failed)
           return () => {
             live = false
             off?.()

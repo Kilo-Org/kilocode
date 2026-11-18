@@ -44,11 +44,18 @@ export function make(options: Options = {}): Port.Interface {
         onRevoked: (listener) => {
           let off: (() => void) | undefined
           let live = true
-          void connection().then((port) => {
-            const stop = port.onRevoked(listener)
-            if (!live) return stop()
-            off = stop
-          })
+          // A transport that cannot be loaded leaves the caller with no subscription; it must not surface as an
+          // unhandled rejection, and the unsubscribe stays safe either way.
+          const failed = () => {
+            live = false
+          }
+          connection()
+            .then((port) => {
+              const stop = port.onRevoked(listener)
+              if (!live) return stop()
+              off = stop
+            })
+            .catch(failed)
           return () => {
             live = false
             off?.()

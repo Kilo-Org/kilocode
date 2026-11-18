@@ -305,8 +305,9 @@ describe("extension backend over a real hub", () => {
           mac: pair.extensionMac(key, challenge.nonceH, nonceE),
         }),
       )
-      // Authenticated, then refused at the attach: no hub.hello, and the socket closes with 4403.
-      expect(await message(refused, proto.HubHello).catch(() => undefined)).toBeUndefined()
+      // The handshake itself succeeds — auth_ok arrives — and then the hub refuses the attach: the socket closes with
+      // 4403 and the first extension keeps serving. A refused MAC would have closed it 4401 and proved nothing.
+      expect((await message(refused, proto.AuthOk)).mac).toBe(pair.hubMac(key, challenge.nonceH, nonceE))
       expect(await refused.closed).toBe(4403)
       const held = await until(async () => (await Registry.list({ dir: path.join(runtime.run, "hubs") })).at(0), 5_000)
       expect(held?.profileLabel).toBe("Default")

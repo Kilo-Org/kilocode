@@ -102,6 +102,32 @@ describe("hub failures as the extension backend reads them", () => {
     }
   })
 
+  test("a subscription on a transport that cannot be created is handled, not an unhandled rejection", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-port-"))
+    const seen: unknown[] = []
+    const onRejection = (reason: unknown) => void seen.push(reason)
+    process.on("unhandledRejection", onRejection)
+    try {
+      const linked = connection({
+        dir,
+        install: () => Promise.resolve(),
+        start: () => {},
+        timeout: 300,
+        create: () => {
+          throw new Error("the transport cannot start")
+        },
+      })
+      const off = linked.port(null).onRevoked(() => {})
+      off()
+      // Give the rejected load a turn to settle.
+      await Bun.sleep(50)
+      expect(seen).toEqual([])
+    } finally {
+      process.off("unhandledRejection", onRejection)
+      await fs.rm(dir, { recursive: true, force: true })
+    }
+  })
+
   test("a code the protocol does not name is unknown, never a guessed kind", () => {
     const mapped = failure(new HubError({ code: -32099, message: "who knows" }))
     expect(mapped.kind).toBe("unknown")

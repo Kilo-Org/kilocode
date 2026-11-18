@@ -190,6 +190,8 @@ export class ExtensionBackend implements BrowserBackend {
    * there is no CLI-side resume inside the same conversation, so the refusal asks for the browser to be turned back on.
    */
   private readonly stopped = new Set<string>()
+  /** Set by `dispose()`: an evicted backend must not open a session for a call that was already in flight. */
+  private disposed = false
 
   constructor(private readonly input: { port?: BrowserHub.Port; directory: string }) {
     this.off =
@@ -222,6 +224,11 @@ export class ExtensionBackend implements BrowserBackend {
   /** A conversation the user stopped is refused before any open, so no session starts behind their back. */
   private refuse(session: string) {
     if (this.stopped.has(session)) throw new Error(STOPPED)
+  }
+
+  /** An evicted backend refuses a call that was still in flight instead of opening a session nothing will close. */
+  private live() {
+    if (this.disposed) throw new Error("The browser backend was released; the call did not run.")
   }
 
   /** The tool names this extension serves, refusing a name it does not. */
@@ -284,6 +291,7 @@ export class ExtensionBackend implements BrowserBackend {
     if (!port) throw new UnavailableError(HINT)
     const session = this.session(ctx)
     this.refuse(session)
+    this.live()
     try {
       await this.accepts(name)
       const handle = await this.handle(port, session)
@@ -312,6 +320,7 @@ export class ExtensionBackend implements BrowserBackend {
 
   /** The instance closes its browser sessions and releases the hub subscription; the connection belongs to the host. */
   async dispose() {
+    this.disposed = true
     this.off()
     const handles = [...this.sessions.keys()]
     this.handles.clear()
@@ -367,6 +376,8 @@ export class ExtensionBackend implements BrowserBackend {
 
   private async open(port: BrowserHub.Port, session: string, attempt: Promise<string>): Promise<string> {
     await this.ready(port)
+    // Anything awaited above may have outlived the backend: never open a session from a released instance.
+    this.live()
     const opened = await port.open({
       sessionId: session || "unknown",
       title: session || "Kilo agent",

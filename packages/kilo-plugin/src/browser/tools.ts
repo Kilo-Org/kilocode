@@ -361,7 +361,9 @@ function postAction(input: PostAction) {
         } as Tool.Result,
       }
     }
-    // Read needs only: read the page again rather than return the withheld placeholder. Reading has no side effect.
+    // Only a read need may read the page again: the withheld placeholder is replaced by a fresh, side-effect-free
+    // snapshot. An act or navigate need keeps the notice its action produced.
+    if (!input.needs.every((item) => item.class === "read")) return { kind: "continue" as const, result: input.result }
     const reread = yield* Effect.result(
       Effect.tryPromise({
         try: (signal) =>

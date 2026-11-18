@@ -501,6 +501,27 @@ describe("extension backend", () => {
     expect(closed).toEqual(["handle-1"])
   })
 
+  test("an evicted backend opens nothing for a call that was already in flight", async () => {
+    const ready = Promise.withResolvers<BrowserHub.Info>()
+    const hub = fake()
+    const port: BrowserHub.Port = { ...hub.port, ready: () => ready.promise }
+    const active = backend({ port, directory: "/tmp/project" })
+    const call = active.callTool("browser_snapshot", {}, ctx())
+    // The call is waiting on the tool listing when the backend is evicted.
+    await Promise.resolve()
+    await active.dispose()
+    ready.resolve({
+      protocol: [1],
+      contractSha: BrowserContract.sha256,
+      extensionVersion: "1.0.0",
+      profileLabel: "Fake profile",
+    })
+    const error = await call.catch((value: unknown) => value)
+    expect((error as Error).message).toContain("was released")
+    expect(hub.opened).toHaveLength(0)
+    expect(hub.calls).toHaveLength(0)
+  })
+
   test("dispose releases the revocation subscription and closes its browser sessions", async () => {
     let released = 0
     const closed: string[] = []

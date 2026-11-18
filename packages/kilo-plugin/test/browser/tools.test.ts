@@ -653,6 +653,30 @@ describe("browser tools over the extension backend", () => {
     expect(hub.calls.map((call) => call.name)).toEqual(["browser_click", "browser_console_messages"])
   })
 
+  test("a granted act need keeps the action's notice and issues no extra read", async () => {
+    const { service } = recorder()
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name !== "browser_click") return Promise.resolve({ content: [{ type: "text", text: "{}" }] })
+        return Promise.reject(
+          new BrowserHub.Failure({
+            kind: "permission",
+            message: "The page moved to https://example.com; its content is withheld until act is granted.",
+            items: [{ class: "act", origin: "https://example.com" }],
+            afterAction: true,
+          }),
+        )
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag).toBe("Success")
+    // An act need is not a read: the withheld notice stays, and nothing reads the page for it.
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_click"])
+    const text = JSON.stringify(result._tag === "Success" ? result.success.content : "")
+    expect(text).toContain("withheld")
+  })
+
   test("a granted post-action step is spent on the identical repeat only", async () => {
     const { asserts, service } = recorder()
     let clicks = 0
