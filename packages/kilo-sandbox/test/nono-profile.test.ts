@@ -37,7 +37,8 @@ function profile(network: Profile["network"] = { mode: "deny", allowedHosts: [] 
   }
 }
 
-describe("nono profile generation", () => {
+// The backend is macOS-only, and these fixtures use POSIX paths that do not map to Windows separators.
+describe.skipIf(process.platform === "win32")("nono profile generation", () => {
   test("denies network without leaving an allowlist behind", () => {
     const result = generate(profile(), { paths })
     expect(result.network).toEqual({ block: true })

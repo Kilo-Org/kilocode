@@ -50,10 +50,7 @@ function upstream(value: string) {
   return value
 }
 
-function entry(input: unknown, index: number): Credential {
-  if (typeof input !== "object" || input === null || Array.isArray(input))
-    throw invalid(`entry ${index} is not an object`)
-  const value = input as Record<string, unknown>
+function identity(value: Record<string, unknown>) {
   const credentialName = text(value, "name") ?? ""
   if (!name.test(credentialName))
     throw invalid(`name ${JSON.stringify(credentialName)} must use letters, digits and underscores`)
@@ -63,6 +60,10 @@ function entry(input: unknown, index: number): Credential {
   const declared = text(value, "envVar") ?? source.slice("env://".length)
   if (!variable.test(declared)) throw invalid(`envVar ${JSON.stringify(declared)} is not a shell variable name`)
   if (source !== `env://${declared}`) throw invalid(`source and envVar disagree for ${credentialName}`)
+  return { credentialName, source, declared }
+}
+
+function injection(value: Record<string, unknown>) {
   const format = text(value, "format")
   if (format !== undefined && format.split("{}").length !== 2) throw invalid(`format must contain exactly one {}`)
   const shaped = text(value, "phantom")
@@ -72,14 +73,23 @@ function entry(input: unknown, index: number): Credential {
   const injected = text(value, "header")
   if (injected !== undefined && !header.test(injected))
     throw invalid(`header ${JSON.stringify(injected)} is not a header name`)
+  return { format, shaped, injected }
+}
+
+function entry(input: unknown, index: number): Credential {
+  if (typeof input !== "object" || input === null || Array.isArray(input))
+    throw invalid(`entry ${index} is not an object`)
+  const value = input as Record<string, unknown>
+  const id = identity(value)
+  const shape = injection(value)
   return {
-    name: credentialName,
-    source,
-    envVar: declared,
+    name: id.credentialName,
+    source: id.source,
+    envVar: id.declared,
     upstream: upstream(text(value, "upstream") ?? ""),
-    ...(injected === undefined ? {} : { header: injected }),
-    ...(format === undefined ? {} : { format }),
-    ...(shaped === undefined ? {} : { phantom: shaped }),
+    ...(shape.injected === undefined ? {} : { header: shape.injected }),
+    ...(shape.format === undefined ? {} : { format: shape.format }),
+    ...(shape.shaped === undefined ? {} : { phantom: shape.shaped }),
   }
 }
 
