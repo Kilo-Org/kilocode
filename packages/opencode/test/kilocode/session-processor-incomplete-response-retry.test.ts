@@ -79,15 +79,15 @@ function model(): Provider.Model {
   } as Provider.Model
 }
 
-function empty(vercelID?: string) {
+function empty(vercelID?: string, reason: "unknown" | "other" = "unknown") {
   const usage = new Usage({})
   const providerMetadata = vercelID ? { kilo: { vercelID } } : undefined
   return [
     LLMEvent.stepStart({ index: 0 }),
     LLMEvent.reasoningStart({ id: "reasoning" }),
     LLMEvent.reasoningEnd({ id: "reasoning" }),
-    LLMEvent.stepFinish({ index: 0, reason: "unknown", usage, providerMetadata }),
-    LLMEvent.finish({ reason: "unknown", usage }),
+    LLMEvent.stepFinish({ index: 0, reason, usage, providerMetadata }),
+    LLMEvent.finish({ reason, usage }),
   ]
 }
 
@@ -367,6 +367,23 @@ describe("session processor incomplete response retry", () => {
           expect(ctx.handle.message.finish).toBe("unknown")
           expect(MessageV2.APIError.isInstance(ctx.handle.message.error)).toBe(true)
           expect(yield* MessageV2.parts(ctx.msg.id)).toEqual([])
+        }),
+      { git: true },
+    ),
+  )
+
+  // An "other" finish with nothing streamed is a provider answer, not a cut-off
+  // stream. Only reasoning-only "other" responses are replayed (#13062).
+  it.effect("does not retry an empty other finish", () =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          const ctx = yield* setup(dir)
+          yield* ctx.test.reply(...empty(undefined, "other"))
+
+          expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
+          expect(yield* ctx.test.calls).toBe(1)
+          expect(ctx.handle.message.finish).toBe("other")
         }),
       { git: true },
     ),
