@@ -124,7 +124,7 @@ export class AutocompleteTelemetry {
   /**
    * Create a new AutocompleteTelemetry instance
    * @param autocompleteType - The type of autocomplete (defaults to "inline")
-   * @param capture - The sink that receives captured events (no-op by default)
+   * @param capture - The sink that receives captured events (defaults to the consent-gated transport forwarder)
    */
   constructor(autocompleteType: AutocompleteType = "inline", capture: AutocompleteTelemetryCapture = defaultCapture) {
     this.autocompleteType = autocompleteType
