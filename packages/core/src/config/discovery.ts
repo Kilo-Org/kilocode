@@ -30,6 +30,7 @@ export interface Layout {
   readonly normalize?: (input: unknown) => unknown
   readonly commandDocuments?: (entries: readonly Entry[], documents: { commands: Info["commands"] }[]) => { commands: Info["commands"] }[]
   readonly commandMetadata?: boolean
+  readonly deferCommandSelection?: boolean
   readonly parse?: (
     input: unknown,
     normalized: Readonly<Record<string, unknown>>,

@@ -21,6 +21,7 @@ import {
 } from "@opencode/schema/session-inbox"
 import { Database } from "../database/database.js"
 import { Bus } from "../bus.js"
+import type { PublishInput } from "../bus.js" // kilocode_change(workflow-model) seam - atomic delivery events
 import { KeyedMutex } from "../effect/keyed-mutex.js"
 import { SessionEvent } from "./event.js"
 import { SessionBlob } from "./blob.js"
@@ -526,32 +527,52 @@ const publishMutation = <A, E, R>(input: PendingRef, effect: Effect.Effect<A, E,
     Effect.catchDefect((defect) => (defect instanceof LifecycleConflict ? Effect.fail(defect) : Effect.die(defect))),
   )
 
-const publish = Effect.fn("SessionInbox.publish")(function* (
+// kilocode_change start - workflow-model seam: host policy can limit a batch and attach events to one delivery
+export type Pending = Pick<typeof SessionInboxTable.$inferSelect, "id" | "type" | "payload">
+export interface DeliveryPolicy<E> {
+  readonly batchSize: (rows: readonly Pending[], after?: Pending) => number
+  /** Events committed before the delivery, such as a selection change the delivered input runs with. */
+  readonly prepare: (
+    sessionID: SessionSchema.ID,
+    row: Pending,
+  ) => Effect.Effect<readonly [PublishInput, ...PublishInput[]] | undefined, E>
+  readonly onCommitted?: () => void
+}
+// kilocode_change end
+
+const publish = Effect.fn("SessionInbox.publish")(function* <E = never>( // kilocode_change(workflow-model) seam - allow host-defined delivery events
   db: DatabaseService,
   bus: Bus.Interface,
   sessionID: SessionSchema.ID,
   rows: ReadonlyArray<typeof SessionInboxTable.$inferSelect>,
+  policy?: DeliveryPolicy<E>, // kilocode_change(workflow-model) seam - allow host-defined delivery events
 ) {
   yield* Effect.forEach(
     rows,
     (row) => {
       if (row.type !== "move" && row.type !== "user" && row.type !== "synthetic")
         return Effect.die(new LifecycleConflict({ id: row.id }))
-      return bus
-        .publish(SessionEvent.InboxDelivered, {
-          sessionID,
-          inboxID: row.id,
-        })
-        .pipe(
-          Effect.catchDefect((defect) =>
-            defect instanceof LifecycleConflict
-              ? promotedFromMessage(db, sessionID, row.id, row.delivery).pipe(
-                  Effect.flatMap((stored) => (stored !== undefined ? Effect.void : Effect.die(defect))),
-                  Effect.orDie,
-                )
-              : Effect.die(defect),
-          ),
-        )
+      // kilocode_change start - workflow-model seam: commit host events in the delivery transaction
+      const data = { sessionID, inboxID: row.id }
+      const deliver = bus.publish(SessionEvent.InboxDelivered, data)
+      const commit = policy && Effect.gen(function* () {
+        const events = yield* policy.prepare(sessionID, row)
+        if (!events) return yield* deliver
+        // The selection precedes delivery, so the transcript shows the change that the delivered input runs with.
+        yield* bus.publishAll([...events, [SessionEvent.InboxDelivered, data]])
+        policy.onCommitted?.()
+      })
+      return (commit ?? deliver).pipe(
+        Effect.catchDefect((defect) =>
+          defect instanceof LifecycleConflict
+            ? promotedFromMessage(db, sessionID, row.id, row.delivery).pipe(
+                Effect.flatMap((stored) => (stored !== undefined ? Effect.void : Effect.die(defect))),
+                Effect.orDie,
+              )
+            : Effect.die(defect),
+        ),
+      )
+      // kilocode_change end
     },
     { discard: true },
   )
@@ -564,26 +585,33 @@ const publish = Effect.fn("SessionInbox.publish")(function* (
  * Steered compaction takes priority over pending prompts, without crossing a move.
  * Only the "input" scope may fall through to one queued input.
  */
-export const promote = Effect.fn("SessionInbox.promote")(function* (
+export const promote = Effect.fn("SessionInbox.promote")(function* <E = never>( // kilocode_change(workflow-model) seam - allow host-defined delivery policy
   db: DatabaseService,
   bus: Bus.Interface,
   sessionID: SessionSchema.ID,
   scope: Promotable,
+  policy?: DeliveryPolicy<E>, // kilocode_change(workflow-model) seam - allow host-defined delivery policy
 ) {
+  // kilocode_change start - workflow-model seam: a host can shorten a batch but cannot reorder inputs or cross controls
+  const batch = (rows: Array<typeof SessionInboxTable.$inferSelect>, after?: Pending) => {
+    const items = beforeControl(rows)
+    return policy ? items.slice(0, policy.batchSize(items, after)) : items
+  }
+  // kilocode_change end
   return yield* serialized(
     sessionID,
     Effect.gen(function* () {
       const steers = yield* pendingSteers(db, sessionID)
       if (steers.length > 0 || scope === "steer") {
         if (steers.length > 0 && isControl(steers[0])) return undefined
-        return yield* publish(db, bus, sessionID, beforeControl(steers))
+        return yield* publish(db, bus, sessionID, batch(steers), policy) // kilocode_change(workflow-model) seam - apply the host delivery policy to steers
       }
 
       const queued = yield* firstQueued(db, sessionID)
       if (!queued) return 0
       if (isControl(queued)) return undefined
-      const promoted = yield* publish(db, bus, sessionID, [queued])
-      return promoted + (yield* publish(db, bus, sessionID, beforeControl(yield* pendingSteers(db, sessionID))))
+      const promoted = yield* publish(db, bus, sessionID, [queued], policy) // kilocode_change(workflow-model) seam - apply the host delivery policy to queued input
+      return promoted + (yield* publish(db, bus, sessionID, batch(yield* pendingSteers(db, sessionID), queued), policy)) // kilocode_change(workflow-model) seam - allow a host to shorten the trailing steer batch
     }),
   )
 })

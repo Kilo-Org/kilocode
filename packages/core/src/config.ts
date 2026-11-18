@@ -46,6 +46,7 @@ export interface Interface {
   readonly changes: () => Stream.Stream<Watcher.Update>
   readonly commandDocuments?: (entries: readonly Entry[], documents: { commands: Info["commands"] }[]) => { commands: Info["commands"] }[] // kilocode_change(workflow-model) seam - host command document composition
   readonly commandMetadata?: boolean // kilocode_change(workflow-model) seam - optional command metadata
+  readonly deferCommandSelection?: boolean // kilocode_change(workflow-model) seam - defer command selections to inbox delivery
   /** Updates supported global config fields while preserving unrelated JSONC content. */
   readonly update?: (patch: Patch) => Effect.Effect<void, FSUtil.Error>
   readonly reload?: () => Effect.Effect<void> // kilocode_change(indexing) seam - re-read config sources after a host write, also without a file watcher
@@ -512,6 +513,7 @@ export const layer = (options?: Options) =>
         changes: () => Stream.fromPubSub(updates),
         commandDocuments: (entries, documents) => layout.commandDocuments?.(entries, documents) ?? documents, // kilocode_change(workflow-model) seam - host command document composition
         commandMetadata: layout.commandMetadata, // kilocode_change(workflow-model) seam - optional command metadata
+        deferCommandSelection: layout.deferCommandSelection, // kilocode_change(workflow-model) seam - defer command selections to inbox delivery
         update,
         reload: () => reload().pipe(Effect.provide(context), Effect.catchCause((cause) => Effect.logError("failed to reload config", { cause }))), // kilocode_change(indexing) seam
         integration: Effect.fn("Config.integration")(function* (integrationID, document) {

@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 139,
-    "markedLines": 2470,
-    "unmarkedLines": 333,
+    "files": 143,
+    "markedLines": 2564,
+    "unmarkedLines": 385,
     "deletedFiles": 0
   },
   "files": {
@@ -143,7 +143,23 @@
     },
     "packages/core/src/config/plugin/command.ts": {
       "rung": 4,
-      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata; the seam itself is rung 3. Rung 4: each prompt an expanded config command admits carries the Kilo `injected-prompt` label from `core/src/kilocode/session/injected.ts`, so a transcript can show `/name args` instead of the template the model receives. The command editor offers only `add`, a definition's `execute` builds its own prompt, and the invocation carries no metadata channel, so no plugin hook reaches these two prompt calls. The label is UI metadata only: text, delivery, the subagent prefix and every upstream default are unchanged. The command editor cannot update a captured model, and the host cannot replace Config.node without losing server-specific options. The default callback is absent and native command behavior is unchanged."
+      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata. A second optional host knob (`deferCommandSelection`, passed through Config from the discovery layout) attaches configured agent and model overrides to the prompt for inbox delivery rather than changing the session on admission. The command editor cannot update captured definitions, and host composition cannot intercept the exact native prompt submission. Rung 4: the expanded command's prompt carries a Kilo `injected-prompt` transcript label; the command editor offers only `add` and cannot reach the template expansion. Unhosted command selection and subagent dispatch are unchanged."
+    },
+    "packages/core/src/session/prompt.ts": {
+      "rung": 3,
+      "seam": "Carry an optional internal selection through prompt preparation without treating public prompt metadata as authority over model or agent. The prompt hook can rewrite metadata but cannot add typed delivery state."
+    },
+    "packages/schema/src/session-inbox.ts": {
+      "rung": 3,
+      "seam": "An optional user-item selection carries an agent and model ref through the durable enqueue event and pending row, including queue/steer changes. Hooks and host composition cannot add fields to the shared inbox codec. The generated OpenAPI and client types reflect the additive field."
+    },
+    "packages/core/src/session/inbox.ts": {
+      "rung": 3,
+      "seam": "An optional host policy can shorten steer batches and attach durable events to the input actually promoted. The inbox commits those events with delivery and notifies the runner after commit. No plugin hook or replaceable service owns this promotion transaction. Without a policy the upstream batching and delivery path remain unchanged."
+    },
+    "packages/core/src/session/runner/llm.ts": {
+      "rung": 3,
+      "seam": "Load the optional location-scoped inbox delivery policy and refresh the execution context if its events committed. The host supplies validation and event policy; the native runner keeps ownership of the step boundary. Existing prompt and model hooks run on either side of this boundary."
     },
     "packages/core/src/plugin/command.ts": {
       "rung": 4,

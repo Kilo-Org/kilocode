@@ -101,6 +101,19 @@ export const Plugin = define({
                   yield* subagents.background(recovery)
                   return
                 }
+                // kilocode_change start - workflow-model seam: admit the selection with the prompt instead of switching the running session
+                if (config.deferCommandSelection && (agent !== undefined || model !== undefined)) {
+                  yield* sessions.prompt({
+                    ...input.prompt,
+                    sessionID: input.sessionID,
+                    text,
+                    metadata: KiloPromptInjected.command(name, input.prompt.text),
+                    delivery: input.delivery,
+                    selection: { agent, model },
+                  })
+                  return
+                }
+                // kilocode_change end
                 if (agent !== undefined) {
                   const session = yield* ctx.session.get({ sessionID: input.sessionID })
                   if (session.agent !== agent) yield* ctx.session.switchAgent({ sessionID: input.sessionID, agent })

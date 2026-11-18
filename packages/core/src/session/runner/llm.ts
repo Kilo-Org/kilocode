@@ -3,6 +3,7 @@ export * as SessionRunnerLLM from "./llm.js"
 import { Message } from "@opencode/ai/effect"
 import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { Cause, Effect, Exit, FiberMap, Layer } from "effect"
+import { Context } from "effect" // kilocode_change(workflow-model) seam - optional inbox delivery policy service
 import { Database } from "../../database/database.js"
 import { Bus } from "../../bus.js"
 import { LocationLifecycle } from "../../location-lifecycle.js"
@@ -22,7 +23,7 @@ import { SessionStore } from "../store.js"
 import { SessionMessageTable } from "../sql.js"
 import { SessionTitle } from "../title.js"
 import { toSessionError } from "../to-session-error.js"
-import { DrainResult, Service, type Interface } from "./index.js"
+import { DrainResult, Service, type Interface, type RunError } from "./index.js" // kilocode_change(workflow-model) seam - policy errors use the runner error channel
 import { Snapshot } from "../../snapshot.js"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { llmClient } from "../../effect/app-node-platform.js"
@@ -33,6 +34,17 @@ import { ToolOutput } from "../../tool-output.js"
 import { Plugin } from "../../plugin.js"
 import { PluginHooks } from "../../plugin/hooks.js"
 import { MAX_STEPS_PROMPT } from "./max-steps.js"
+// kilocode_change start - workflow-model seam: default to native delivery behavior when no policy is installed
+export class InboxDelivery extends Context.Service<
+  InboxDelivery,
+  { readonly policy?: SessionInbox.DeliveryPolicy<RunError> }
+>()("@opencode/SessionRunner/InboxDelivery") {}
+export const inboxDeliveryNode = makeLocationNode({
+  service: InboxDelivery,
+  layer: Layer.succeed(InboxDelivery, {}),
+  deps: [],
+})
+// kilocode_change end
 
 const CONTINUE_AFTER_INCOMPLETE_STREAM =
   "The previous response was interrupted. Continue from where you left off without repeating completed content."
@@ -57,6 +69,7 @@ const layer = Layer.effect(
     const jobs = yield* Job.Service
     const title = yield* SessionTitle.Service
     const steps = yield* SessionStep.make
+    const { policy } = yield* InboxDelivery // kilocode_change(workflow-model) seam - load the host delivery policy
     // Title generation starts once input is visible and must not delay model execution.
     const titles = yield* FiberMap.make<SessionSchema.ID, void, never>()
 
@@ -190,11 +203,20 @@ const layer = Layer.effect(
               const ready = yield* restore(
                 Effect.gen(function* () {
                   const selected = yield* prepareContext(sessionID)
+                  let contextChanged = false // kilocode_change(workflow-model) seam - reload context after host events commit
                   const promoted = yield* SessionInbox.promote(
                     db,
                     bus,
                     sessionID,
                     entering && !continuing ? promotable : "steer",
+                    // kilocode_change start - workflow-model seam: refresh context only after extra events are committed
+                    policy && {
+                      ...policy,
+                      onCommitted: () => {
+                        contextChanged = true
+                      },
+                    },
+                    // kilocode_change end
                   )
                   // A control admitted during context preparation owns this boundary.
                   if (promoted === undefined) return undefined
@@ -203,7 +225,7 @@ const layer = Layer.effect(
                       onlyIfMissing: true,
                     })
                   if (promoted > 0) step = 1
-                  return { _tag: "Ready" as const, context: yield* context.load(selected) }
+                  return { _tag: "Ready" as const, context: yield* context.load(contextChanged ? yield* prepareContext(sessionID) : selected) } // kilocode_change(workflow-model) seam - refresh context changed by delivery
                 }),
               )
               if (ready) return ready
@@ -467,5 +489,6 @@ export const node = makeLocationNode({
     Snapshot.node,
     ToolOutput.node,
     Database.node,
+    inboxDeliveryNode, // kilocode_change(workflow-model) seam - optional host delivery policy
   ],
 })

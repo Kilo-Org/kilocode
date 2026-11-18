@@ -29,6 +29,7 @@ export type Input = {
   skills?: PromptInput.Prompt["skills"]
   metadata?: Record<string, unknown>
   delivery?: SessionInbox.Delivery
+  selection?: SessionInbox.Selection // kilocode_change(workflow-model) seam - internal command selection, separate from caller metadata
 }
 
 export const prepare = Effect.fn("SessionPrompt.prepare")(function* (request: {
@@ -85,6 +86,7 @@ export const prepare = Effect.fn("SessionPrompt.prepare")(function* (request: {
       files,
       skills: selected?.length ? selected : undefined,
       metadata: event.metadata,
+      ...(request.input.selection === undefined ? {} : { selection: request.input.selection }), // kilocode_change(workflow-model) seam - keep the selection across pending inbox operations
     }),
     delivery: event.delivery,
   } satisfies SessionInbox.Item

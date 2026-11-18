@@ -32,6 +32,7 @@ export const layout: ConfigDiscovery.Layout = {
   normalize: KiloConfigPolicy.normalize,
   commandDocuments: KiloConfigPolicy.commandDocuments,
   commandMetadata: true,
+  deferCommandSelection: true,
   parse: KiloConfigPolicy.parse,
   walk: (input) =>
     Effect.gen(function* () {
