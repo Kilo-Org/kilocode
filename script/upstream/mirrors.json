@@ -93,7 +93,7 @@
         "The dist-tag is `kilo-v2`, never the build channel, so a v2 publish cannot replace v1's `latest` or `rc`.",
         "`targets` matches the targets `script/build.ts` builds; a target upstream adds or removes changes both scripts.",
         "The launcher exposes only `kilo2` with no `kilo` alias, and `release-env` is imported before `@opencode/script`.",
-        "Upstream's `cli/script/postinstall.mjs` is read and its copy anchor asserted, so re-read that file when upstream changes it and keep the sandbox helper copy after the binary copy."
+        "`script/postinstall.ts` asserts the copy anchor in upstream's `cli/script/postinstall.mjs`. Keep the sandbox helpers and the macOS renderer sidecar next to the launcher executable, copied from the selected platform package."
       ]
     }
   }
