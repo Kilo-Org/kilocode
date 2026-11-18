@@ -1,15 +1,13 @@
 /// <reference lib="webworker" />
 
 import { ShikiStreamTokenizer } from "@shikijs/stream"
+import { bundledLanguages, createHighlighter, type BundledLanguage } from "shiki"
 import {
-  bundledLanguages,
-  createHighlighter,
-  getTokenStyleObject,
-  stringifyTokenStyle,
-  type BundledLanguage,
-  type ThemedToken,
-} from "shiki"
-import type { MarkdownToken, MarkdownWorkerRequest, MarkdownWorkerResponse } from "./markdown-worker-protocol"
+  highlightToken,
+  highlightTokens,
+  type MarkdownWorkerRequest,
+  type MarkdownWorkerResponse,
+} from "./markdown-worker-protocol"
 import { createLatestWorkerQueue } from "./markdown-worker-queue"
 
 type Stream = {
@@ -57,11 +55,7 @@ async function highlight(request: Extract<MarkdownWorkerRequest, { type: "highli
         id: request.id,
         key: request.key,
         reset: true,
-        stable: result.tokens
-          .flatMap((line, index) =>
-            index === result.tokens.length - 1 ? line : [...line, { content: "\n", offset: 0 }],
-          )
-          .map(token),
+        stable: highlightTokens(result.tokens),
         unstable: [],
       })
       return
@@ -84,8 +78,8 @@ async function highlight(request: Extract<MarkdownWorkerRequest, { type: "highli
       id: request.id,
       key: request.key,
       reset,
-      stable: result.stable.filter((token) => token.content.length > 0).map(token),
-      unstable: result.unstable.filter((token) => token.content.length > 0).map(token),
+      stable: result.stable.filter((token) => token.content.length > 0).map(highlightToken),
+      unstable: result.unstable.filter((token) => token.content.length > 0).map(highlightToken),
     })
   } catch (error) {
     post({
@@ -99,8 +93,4 @@ async function highlight(request: Extract<MarkdownWorkerRequest, { type: "highli
 
 function post(response: MarkdownWorkerResponse) {
   self.postMessage(response)
-}
-
-function token(value: ThemedToken): MarkdownToken {
-  return [value.content, stringifyTokenStyle(value.htmlStyle ?? getTokenStyleObject(value))]
 }

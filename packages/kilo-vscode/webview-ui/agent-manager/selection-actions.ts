@@ -27,6 +27,24 @@ export function rememberSelectionTab(
   if (selection !== null) set(selection === LOCAL ? LOCAL : selection, tab)
 }
 
+/**
+ * A draft tab that becomes a real session replaces its id in the tab list. If it was the remembered tab of its
+ * context, memory must follow it, or returning to the context cannot resolve the remembered tab and falls back to
+ * the first one.
+ */
+export function replaceRememberedTab(
+  store: {
+    tabMemory: { get: (key: string) => string | undefined; set: (key: string, tab: string) => void }
+    sessionRestore: { get: (key: string) => string | undefined; set: (key: string, tab: string) => void }
+  },
+  selection: string,
+  from: string,
+  to: string,
+) {
+  if (store.tabMemory.get(selection) === from) store.tabMemory.set(selection, to)
+  if (store.sessionRestore.get(selection) === from) store.sessionRestore.set(selection, to)
+}
+
 export function createTabMemory(opts: {
   selection: () => string | null
   tab: () => string | undefined

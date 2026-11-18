@@ -2,6 +2,7 @@ import type { OpenCodeClient } from "@opencode/client"
 import { KiloBranchNameRpc } from "@opencode/schema/kilocode/branch-name"
 import { semanticBranchName } from "./branch-name"
 import { remoteRef, type WorktreeStateManager } from "./WorktreeStateManager"
+import type { WorktreeManager } from "./WorktreeManager"
 
 /** Maximum prompts considered for automatic naming before disarming. */
 const MAX_PROMPTS = 4
@@ -13,14 +14,9 @@ interface Prompt {
   modelID?: string
 }
 
-interface Manager {
-  renameBranch: (path: string, current: string, branch: string) => Promise<string>
-  hasWork: (worktreePath: string, base: string) => Promise<boolean>
-}
-
 interface Deps {
   state: () => WorktreeStateManager | undefined
-  manager: () => Manager | undefined
+  manager: () => Pick<WorktreeManager, "renameBranch" | "hasWork"> | undefined
   client: () => Promise<OpenCodeClient>
   settings: () => { enabled: boolean; prefix: string }
   push: () => void

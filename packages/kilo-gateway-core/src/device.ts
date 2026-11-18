@@ -58,11 +58,22 @@ export function start(server: string): Effect.Effect<Code, Error> {
   })
 }
 
-export function login(server: string, code: Code, intervalMs = POLL_INTERVAL_MS): Effect.Effect<Login, Error> {
+/** `preferred` is a team the login keeps (or `null` for the personal account) when its profile allows it. */
+export function login(
+  server: string,
+  code: Code,
+  options: { readonly intervalMs?: number; readonly preferred?: string | null } = {},
+): Effect.Effect<Login, Error> {
   return Effect.gen(function* () {
-    const approved = yield* poll(KiloServer.normalize(server), code.code, Date.now() + code.expiresIn * 1000, intervalMs, 0)
+    const approved = yield* poll(
+      KiloServer.normalize(server),
+      code.code,
+      Date.now() + code.expiresIn * 1000,
+      options.intervalMs ?? POLL_INTERVAL_MS,
+      0,
+    )
     const organizationID = yield* KiloProfile.get(server, approved.token).pipe(
-      Effect.map(KiloProfile.defaultOrganizationID),
+      Effect.map((profile) => KiloProfile.defaultOrganizationID(profile, options.preferred)),
       Effect.orElseSucceed(() => null),
     )
     return { ...approved, organizationID }

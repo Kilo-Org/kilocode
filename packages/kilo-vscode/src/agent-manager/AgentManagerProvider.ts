@@ -66,7 +66,14 @@ import { routeSession } from "./route-session"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
 import { documentExists, readDocument } from "../documents/document-reader"
-import { resolveWorktreeFile, resolveWorktreeRoot, sessionDirectory } from "./worktree-file-path"
+import { resolveImageDirectory } from "./save-image-directory"
+import {
+  createSessionRoots,
+  resolveSessionFile,
+  resolveSessionRoot,
+  type SessionFileLookup,
+  type SessionRoots,
+} from "./session-file-root"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
 import { HealthScheduler } from "./worktree-health"
@@ -85,7 +92,6 @@ import {
   pushProjects,
   pushState,
   requestState,
-  runStateFor,
   type ProviderStateHost,
 } from "./provider-state"
 import {
@@ -94,8 +100,6 @@ import {
   continueInActiveProject,
   diagnose,
   focusPanel,
-  getSessionDirectories,
-  getWorktreeDirectories,
   isActive,
   openAdvancedWorktree,
   postMessage,
@@ -115,7 +119,6 @@ import type { SetupScriptService } from "./SetupScriptService"
 import { PLATFORM_METADATA } from "./session-create"
 
 export class AgentManagerProvider implements Disposable, ProviderHostsSource, ProviderStateHost, ProviderApiHost {
-  public static readonly viewType = "kilo-code.v2.agentManagerPanel"
   public panel: PanelContext | undefined
   public readonly outputChannel: OutputHandle
   public readonly contexts: ProjectContexts
@@ -153,11 +156,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     if (this.contexts.active()?.id === ctx.id) this.pushState(ctx)
   })
   public closing: Promise<void> | undefined
-  public onVisibilityChange: ((visible: boolean) => void) | undefined
   public readonly panelSessions = new Set<string>()
   public readonly busySessions = new Set<string>()
   public readonly removedSessions = new Set<string>()
   public visibleSession: string | null = null
+  public readonly sessionRoots: SessionRoots
   public readonly caffeination: CaffeinationService
   readonly settings: ProjectWiring["settings"]
 
@@ -218,6 +221,17 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       ready: (sessionId, result, id) => this.notifyWorktreeReady(sessionId, result, id),
       log: (...args) => this.log(...args),
     })
+    // File links from a session the state file does not file read the directory the server runs it in.
+    this.sessionRoots = createSessionRoots((sessionId) =>
+      this.connection
+        .client()
+        .then((client) => client.session.get({ sessionID: sessionId }))
+        .then((info) => info.location.directory)
+        .catch((err: unknown) => {
+          this.log(`Failed to read session ${sessionId} for its directory:`, err)
+          return undefined
+        }),
+    )
     const semaphore = new Semaphore(3)
     this.gitOps = new GitOps({ log: (...args) => this.log(...args), semaphore, binary })
     const wiring = createProjectWiring({
@@ -347,7 +361,15 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       status: (sessionID, running) => this.onSessionStatus(sessionID, running),
       log: (err) => this.log("Failed to load worktree activity:", err),
     })
-    this.unsubEvents = this.connection.onEvent(
+    // The roots follow every session location event, including a move to a directory that is not a tracked
+    // worktree: an agent can move its own session with the `session_move` tool, and the state file's filing only
+    // follows tracked directories.
+    const stopSessionRoots = this.connection.onEvent(
+      (event) => this.sessionRoots.event(event),
+      (event) =>
+        event.type === "session.created" || event.type === "session.moved" || event.type === "session.deleted",
+    )
+    const stopSessionEvents = this.connection.onEvent(
       (event) => this.onSessionEvent(event),
       located(() =>
         [...this.contexts.values()].flatMap((ctx) => [
@@ -359,6 +381,15 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
         ]),
       ),
     )
+    // Events sent while the stream reconnects are lost, so a move or delete in that gap would leave a stale root.
+    const stopSessionRootsReset = this.connection.onState((status) => {
+      if (status === "connected") this.sessionRoots.clear()
+    })
+    this.unsubEvents = () => {
+      stopSessionRoots()
+      stopSessionRootsReset()
+      stopSessionEvents()
+    }
     this.autoApprove = createHostAutoApprove({
       client: () => this.connection.client(),
       directories: () => {
@@ -451,10 +482,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     if (!preserveFocus) focusPanelPrompt(panel, this.waitForPanelReady(panel), this.waitForPanelActive(panel))
   }
 
-  public onPanelVisibilityChange(cb: (visible: boolean) => void): void {
-    this.onVisibilityChange = cb
-  }
-
   /** Restore the Agent Manager panel from a serialized state. */
   public deserializePanel(raw: WebviewPanel): void {
     if (this.panel) {
@@ -477,7 +504,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     void this.statsPoller
     for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(panel.visible)
     void this.diffs.setVisible(panel.visible)
-    this.onVisibilityChange?.(panel.visible)
     panel.onDidChangeVisibility((visible) => {
       for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(visible)
       void this.diffs.setVisible(visible)
@@ -508,7 +534,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.panel = undefined
       void this.terminalRouter.dispose()
       this.relay.reset()
-      this.onVisibilityChange?.(false)
     })
     this.postCaffeination()
   }
@@ -606,12 +631,28 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.syncView()
   }
 
-  /** Default directory for a file the visible session saves, for example a rendered diagram. */
-  public imageDirectory(): string | undefined {
-    const id = this.visibleSession
-    const session = id ? this.state?.getSession(id) : undefined
-    const direct = session ? sessionDirectory(this.state, id, this.getRoot()) : undefined
-    return direct ?? this.diffs.activeDirectory() ?? this.getRoot()
+  /** Default directory for a file a session saves, for example a rendered diagram. The requesting session wins. */
+  public async imageDirectory(sessionID?: string): Promise<string | undefined> {
+    return resolveImageDirectory({
+      sessionID,
+      visibleSession: this.visibleSession,
+      activeDiffDirectory: () => this.diffs.activeDirectory(),
+      state: this.state,
+      root: this.getRoot(),
+      location: (id) => this.sessionLocation(id),
+    })
+  }
+
+  private async sessionLocation(sessionID: string): Promise<string | undefined> {
+    const client = await this.connection.client().catch(() => undefined)
+    if (!client) return undefined
+    return client.session.get({ sessionID }).then(
+      (info) => info.location.directory,
+      (err: unknown) => {
+        this.log(`Failed to read the directory of session ${sessionID}:`, err)
+        return undefined
+      },
+    )
   }
 
   public trackVisibleSession(id: string | null): void {
@@ -729,16 +770,20 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     await this.stateReady.catch((err) => this.log(`${where}: stateReady rejected, continuing:`, err))
   }
 
-  public onToolEvent(event: OpenCodeEvent): void {
+  public async onToolEvent(event: OpenCodeEvent): Promise<void> {
     const directory = event.location?.directory
     const request = parseToolRequest(event.data, directory)
     if (!request) return
-    const owner = directory ? this.contexts.byDirectory(directory) : undefined
-    if (owner) {
-      void this.projectScope.run(owner, () => this.startToolRequest(request))
-      return
+    if (request.mode === "local") {
+      const owner = directory ? this.contexts.byDirectory(directory) : undefined
+      return owner ? this.projectScope.run(owner, () => this.startToolRequest(request)) : this.startToolRequest(request)
     }
-    void this.startToolRequest(request)
+    const owner =
+      request.directory === undefined
+        ? this.contexts.active()
+        : await this.contexts.worktreeCaller(request.directory, this.gitOps)
+    if (owner) return this.projectScope.run(owner, () => this.startToolRequest(request))
+    this.host.showWorktreeCallerError(request.directory)
   }
 
   public async startToolRequest(req: ToolRequest): Promise<void> {
@@ -983,6 +1028,27 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     pushEmptyState(this.stateHost())
   }
 
+  /** Adds the v1 Agent Manager sessions created since `since` to the workspace and known projects after `kilo2 import v1`. */
+  public async importLegacySessions(since: number): Promise<number> {
+    this.contexts.pinned()
+    const counts = await Promise.all(
+      [...this.contexts.values()].map(async (ctx) => {
+        const init = await initContextState(ctx, (...args) => this.log(...args), { warm: false })
+        if (!init.ok) return 0
+        const client = await this.client()
+        const added = await ctx.stateManager().importLegacySessions(since, (sessionID) =>
+          client.session.get({ sessionID }).then(
+            () => true,
+            () => false,
+          ),
+        )
+        if (added > 0 && this.contexts.active()?.id === ctx.id) this.pushState(ctx)
+        return added
+      }),
+    )
+    return counts.reduce((sum, count) => sum + count, 0)
+  }
+
   public get lifecycleHost(): LifecycleHost {
     return lifecycleHost(this.hostSource())
   }
@@ -1035,10 +1101,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return this.contexts.byWorktree(worktreeId)?.id ?? this.context?.id
   }
 
-  public runStateFor(ctx: ProjectContext): ReturnType<RunController["state"]> {
-    return runStateFor(this.stateHost(), ctx)
-  }
-
   public postRunMessage(message: AgentManagerOutMessage): void {
     postRunMessage(this.stateHost(), message)
   }
@@ -1073,15 +1135,27 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.host.openFolder(target, true)
   }
 
-  public openWorktreeFile(id: string, filePath: string, line?: number, column?: number): void {
-    const target = resolveWorktreeFile(this.getStateManager(), id, filePath, this.getRoot())
+  /** A file link's id is a worktree id, `local`, or a session id, filed or not. */
+  private fileLookup(id: string): SessionFileLookup {
+    return { state: this.getStateManager(), roots: this.sessionRoots, id, root: this.getRoot() }
+  }
+
+  public async openWorktreeFile(id: string, filePath: string, line?: number, column?: number): Promise<void> {
+    await this.waitForStateReady("openWorktreeFile")
+    const target = await resolveSessionFile({ ...this.fileLookup(id), file: filePath })
     if (target) this.host.openFile(target, line, column)
+  }
+
+  public async copyFilePath(id: string, filePath: string): Promise<void> {
+    await this.waitForStateReady("copyFilePath")
+    const target = await resolveSessionFile({ ...this.fileLookup(id), file: filePath })
+    if (target) await this.host.copyToClipboard(target)
   }
 
   public async validateFiles(id: string, sessionId: string, paths: string[]): Promise<void> {
     // Session roots come from the recovered worktree state, so wait for it as the other session lookups do.
     await this.waitForStateReady("validateFiles")
-    const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
+    const root = await resolveSessionRoot(this.fileLookup(sessionId))
     // An unresolved session is not "every path missing": let the client timeout treat it as unknown.
     if (!root) return
     const existing = paths.filter((file) => documentExists(root, file))
@@ -1090,7 +1164,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public async readDocument(sessionId: string, file: string, contextKey?: string): Promise<void> {
     await this.waitForStateReady("readDocument")
-    const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
+    const root = await resolveSessionRoot(this.fileLookup(sessionId))
     const result = root ? readDocument(root, file) : { error: "The document context is no longer available." }
     this.postToWebview({ type: "agentManager.document", sessionId, file, requestedFile: file, contextKey, ...result })
   }
@@ -1141,24 +1215,12 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return waitForReady(this.api())
   }
 
-  public getSessionDirectories(): ReadonlyMap<string, string> {
-    return getSessionDirectories(this.api())
-  }
-
+  /**
+   * @knipExternal The attention notification host reveals a managed session through this entry point; that caller
+   * lands with the attention port in #15560, so the only caller is outside this branch's module graph.
+   */
   public revealSession(sessionId: string): Promise<boolean> {
     return revealSession(this.api(), sessionId)
-  }
-
-  public getWorktreeDirectories(): string[] {
-    return getWorktreeDirectories(this.api())
-  }
-
-  public workspaceRoot = () => this.getRoot()
-
-  public projectId = () => this.contexts.active()?.id
-
-  public sessionProject(): string | undefined {
-    return this.projectScope.current()?.id ?? this.contexts.active()?.id
   }
 
   public continueFromSidebar(

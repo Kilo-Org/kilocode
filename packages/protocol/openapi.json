@@ -23331,6 +23331,18 @@
         "required": ["location", "projectID"],
         "additionalProperties": false
       },
+      "Session.Inbox.Selection": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/Agent.ID"
+          },
+          "model": {
+            "$ref": "#/components/schemas/Model.Ref"
+          }
+        },
+        "additionalProperties": false
+      },
       "Session.Inbox.Synthetic": {
         "type": "object",
         "properties": {
@@ -23439,6 +23451,9 @@
           },
           "metadata": {
             "type": "object"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/Session.Inbox.Selection"
           }
         },
         "required": ["text"],

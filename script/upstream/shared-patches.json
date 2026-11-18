@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 140,
-    "markedLines": 2452,
-    "unmarkedLines": 332,
+    "files": 145,
+    "markedLines": 2590,
+    "unmarkedLines": 389,
     "deletedFiles": 0
   },
   "files": {
@@ -66,7 +66,7 @@
     },
     "package.json": {
       "rung": 3,
-      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check upstream's GUI plugin package (`packages/gui-extensions`, renamed to `packages/gui-plugins` in v2.2), which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline. Root devDependency `@types/node` (catalog version): TypeScript searches `node_modules/@types` in every parent directory before it follows a package's own dependencies, and Agent Manager worktrees live inside another checkout (`.kilo/worktrees/<name>`). Without a root copy, packages that do not declare `@types/node` (ai, cli, tui, server and others) load the parent checkout's version, so a worktree's typecheck depends on what another checkout installed. No lower rung: the root manifest decides what the root `node_modules/@types` contains, and `bunfig.toml` and the package tsconfigs are upstream files too. `patchedDependencies` registers `patches/virtua@0.49.1.patch` (Kilo-owned, the same patch as v1), which adds `VirtualizerHandle.measure()` and clamps the rendered range to the data length; the v2 VS Code transcript (packages/kilo-vscode/webview-ui/src/v2/messages.tsx) uses `measure()` to re-pin the bottom when the live turn is handed to the virtualizer. No seam: bun reads patches only from the root package.json. `overrides` raises `@xmldom/xmldom` to the patched 0.9 line for the DOCX reader, and `patchedDependencies` registers `patches/mammoth@1.12.0.patch`, which adapts mammoth to the 0.9 API. Both are the v1 dependency decisions; bun reads overrides and patches only from the root manifest. The root `workspaces.packages` list also drops the globs of product areas Kilo does not ship (`packages/data/*` from upstream v2.3.0), so the preserved `services/*` entry is the one unmarked line JSON cannot annotate.",
+      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check upstream's GUI plugin package (`packages/gui-extensions`, renamed to `packages/gui-plugins` in v2.2), which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline. Root devDependency `@types/node` (catalog version): TypeScript searches `node_modules/@types` in every parent directory before it follows a package's own dependencies, and Agent Manager worktrees live inside another checkout (`.kilo/worktrees/<name>`). Without a root copy, packages that do not declare `@types/node` (ai, cli, tui, server and others) load the parent checkout's version, so a worktree's typecheck depends on what another checkout installed. No lower rung: the root manifest decides what the root `node_modules/@types` contains, and `bunfig.toml` and the package tsconfigs are upstream files too. `patchedDependencies` registers `patches/virtua@0.49.1.patch` (Kilo-owned, the same patch as v1), which adds `VirtualizerHandle.measure()` and clamps the rendered range to the data length; the v2 VS Code transcript (packages/kilo-vscode/webview-ui/src/v2/messages.tsx) uses `measure()` to re-pin the bottom when the live turn is handed to the virtualizer. No seam: bun reads patches only from the root package.json. `overrides` raises `@xmldom/xmldom` to the patched 0.9 line for the DOCX reader, and `patchedDependencies` registers `patches/mammoth@1.12.0.patch`, which adapts mammoth to the 0.9 API. Both are the v1 dependency decisions; bun reads overrides and patches only from the root manifest. Root dependency `playwright-core` 1.57.0: the Kilo browser plugin (packages/kilo-plugin) bundles a newer `playwright-core` for its Playwright backend, and without a root copy a filtered workspace install can hoist that version to the root, so packages/kilo-vscode (which declares 1.57.0) loads the newer one and its Chromium launch tests time out. No lower rung: the root manifest decides which version the root `node_modules` holds; an `overrides` entry would also force the plugin's own version down. The root also pins `playwright-core` 1.57.0 for the VS Code tests while `@playwright/mcp@0.0.81` pins 1.64.0-alpha-2026-09-14 exactly and loads that build's `coreBundle`, which is why `packages/kilo-plugin` declares the alpha as its own dependency. Its unmarked dependency line is one of the two that raise unmarkedLines from 331 to 333. The root `workspaces.packages` list also drops the globs of product areas Kilo does not ship (`packages/data/*` from upstream v2.3.0), so the preserved `services/*` entry is the one unmarked line JSON cannot annotate.",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/package.json": {
@@ -139,7 +139,23 @@
     },
     "packages/core/src/config/plugin/command.ts": {
       "rung": 4,
-      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata; the seam itself is rung 3. Rung 4: each prompt an expanded config command admits carries the Kilo `injected-prompt` label from `core/src/kilocode/session/injected.ts`, so a transcript can show `/name args` instead of the template the model receives. The command editor offers only `add`, a definition's `execute` builds its own prompt, and the invocation carries no metadata channel, so no plugin hook reaches these two prompt calls. The label is UI metadata only: text, delivery, the subagent prefix and every upstream default are unchanged. The command editor cannot update a captured model, and the host cannot replace Config.node without losing server-specific options. The default callback is absent and native command behavior is unchanged."
+      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata. A second generic knob: when the host installs an inbox delivery policy (`SessionInbox.Policy`), configured agent and model overrides ride on the prompt and are applied at delivery instead of switching the session on admission; without an installed policy the native switch path runs. The command editor cannot update captured definitions, and host composition cannot intercept the exact native prompt submission. Rung 4: the expanded command's prompt carries a Kilo `injected-prompt` transcript label; the command editor offers only `add` and cannot reach the template expansion. Unhosted command selection and subagent dispatch are unchanged."
+    },
+    "packages/core/src/session/prompt.ts": {
+      "rung": 3,
+      "seam": "Carry an optional internal selection through prompt preparation without treating public prompt metadata as authority over model or agent. The prompt hook can rewrite metadata but cannot add typed delivery state."
+    },
+    "packages/schema/src/session-inbox.ts": {
+      "rung": 3,
+      "seam": "An optional user-item selection carries an agent and model ref through the durable enqueue event and pending row, including queue/steer changes. Hooks and host composition cannot add fields to the shared inbox codec. The generated OpenAPI and client types reflect the additive field."
+    },
+    "packages/core/src/session/inbox.ts": {
+      "rung": 3,
+      "seam": "An optional host policy can shorten steer batches and attach durable events to the input actually promoted. The inbox commits those events with delivery and notifies the runner after commit. The policy is a location-scoped `Policy` service whose presence is the only switch: without it the upstream batching and delivery path remain unchanged, and no plugin hook or replaceable service owns this promotion transaction."
+    },
+    "packages/core/src/session/runner/llm.ts": {
+      "rung": 3,
+      "seam": "Read the host-installed delivery policy from `SessionInbox.Policy` and refresh the execution context if its events committed. Validation and event policy stay in the host module; the native runner keeps ownership of the step boundary, and existing prompt and model hooks run on either side of it. Without an installed policy the runner reads nothing and behaves as upstream."
     },
     "packages/core/src/plugin/command.ts": {
       "rung": 4,
@@ -165,9 +181,13 @@
       "rung": 4,
       "seam": "Optional `workspace` restoration outcome (`restored`, `snapshots-disabled`, `unavailable`, `not-a-git-repo`) on `Session.Revert` and `Session.RevertV1`, carried across `PersistedRevert`. `Session.Info.revert`, `SessionEvent.RevertEvent.Staged` and the `session` table encoder all validate against this struct, so no plugin or host override can attach the outcome without the schema stripping it. Upstream producers omit it, leaving upstream behavior and defaults unchanged."
     },
+    "packages/core/src/credential.ts": {
+      "rung": 3,
+      "seam": "Optional per-call refresh deadline. The store owns the single-flight fiber and its file lock: a host-side timeout can return before the old flight is cleared, so an immediate reconnect can join the timed-out attempt. Bound acquisition, exchange and individual joiners without changing the default for other credential consumers. No plugin or host hook owns the pending refresh table."
+    },
     "packages/core/src/mcp/host.ts": {
       "rung": 3,
-      "seam": "Generic MCP embedding hooks (`fetch`, OAuth client identity, client document, loopback callback, registration redirect and credential binding, auth-failure predicate) for an embedding host. The `fetch` hook receives the transport URL for the attempt, so a wrapper can tell the MCP endpoint from other requests the same fetch serves. No plugin hook reaches the MCP transport, OAuth registration or connection status classification, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
+      "seam": "Generic MCP embedding hooks (`fetch`, OAuth client identity, client document, loopback callback, registration redirect, credential binding and pre-connect credential preparation, auth-failure predicate) for an embedding host. The `fetch` hook receives the transport URL for the attempt, so a wrapper can tell the MCP endpoint from other requests the same fetch serves. No plugin hook reaches the MCP transport, selected OAuth credential or connection status classification, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
     },
     "packages/core/src/mcp/client.ts": {
       "rung": 3,
@@ -187,7 +207,7 @@
     },
     "packages/core/src/mcp/oauth.ts": {
       "rung": 3,
-      "seam": "Use the optional host OAuth policy: `client_name`, `client_uri` and the initialize challenge, the client ID metadata document and the loopback callback it lists, the redirect a non-interactive registration must record, and the client-information binding that keeps a configured client's secret with the authorization server that issued it. No plugin hook reaches OAuth registration; the host supplies the policy through `Mcp.configured({ host })`. With `host` unset, defaults stay upstream's own document, callback, redirect and static client."
+      "seam": "Use the optional host OAuth policy: `client_name`, `client_uri` and the initialize challenge, the client ID metadata document and the loopback callback it lists, the redirect a non-interactive registration must record, and the client-information binding that keeps a configured client's secret with the authorization server that issued it. Only this provider knows the selected credential and bound client before the first request; the optional `beforeConnect` hook exposes them and the configured metadata loader so the host can apply its refresh deadline to discovery. No plugin hook reaches this point or OAuth registration; the host supplies the policy through `Mcp.configured({ host })`. With `host` unset, defaults stay upstream's own document, callback, redirect and static client."
     },
     "packages/core/src/tool/mcp.ts": {
       "rung": 3,
@@ -247,7 +267,7 @@
     },
     "packages/core/src/plugin/internal.ts": {
       "rung": 3,
-      "seam": "Expose the existing Location-service provider to embedder plugins. The supervisor applies it without changing pre/post order or upstream defaults. Required for account config and managed policy reads at plugin activation; the public plugin context has no config domain, and host-global registration cannot supply a Location-scoped Config service. All feature logic stays in Kilo-owned plugins."
+      "seam": "Expose the existing Location-service provider to embedder plugins. The supervisor applies it without changing pre/post order or upstream defaults. Required for account config and managed policy reads at plugin activation; the public plugin context has no config domain, and host-global registration cannot supply a Location-scoped Config service. All feature logic stays in Kilo-owned plugins. The same service list and requirement group provide the host-installed `SessionInbox.Policy` to built-in plugins, so a plugin defers behavior only when the host actually installed the policy; the service defaults to an absent policy."
     },
     "packages/core/src/plugin/supervisor.ts": {
       "rung": 3,
@@ -267,7 +287,7 @@
     },
     "packages/tui/package.json": {
       "rung": 3,
-      "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments. Also add the `@kilocode/caffeination` workspace dependency that the Kilo TUI `/caffeinate` command imports; the driver is Kilo-owned and shared with the VS Code client.",
+      "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments. Also add the `@kilocode/caffeination` workspace dependency that the Kilo TUI `/caffeinate` command imports; the driver is Kilo-owned and shared with the VS Code client. Also add the `@kilocode/kilo-i18n` workspace dependency for the copy of the Kilo TUI `/browser` command (packages/tui/src/kilocode/browser.tsx), shared with the VS Code client; its unmarked dependency line is one of the two that raise unmarkedLines from 331 to 333.",
       "unmarked": "JSON has no comments."
     },
     "packages/tui/src/component/dialog-theme-list.tsx": {

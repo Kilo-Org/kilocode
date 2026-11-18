@@ -2,6 +2,7 @@
 // request in the extension host (src/commands/toggle-auto-approve.ts on main). The webview only renders the toggle and
 // persists it, so sessions in worktrees the panel is not showing are approved while it is closed too.
 import type { OpenCodeClient, OpenCodeEvent, PermissionRequest } from "@opencode/client"
+import { canAutoApprove } from "../shared/auto-approve-eligibility"
 
 /** Cap on remembered request IDs, so a long-lived host does not grow the set forever. */
 export const RESPONDED_LIMIT = 1000
@@ -11,15 +12,8 @@ export const RESPONDED_LIMIT = 1000
  * auto-approved sandbox-escalation prompts (packages/kilo-vscode/src/commands/toggle-auto-approve.ts on main). The v2
  * permission carries the escalation as its action, and the older metadata marker stays excluded too.
  */
-export function shouldApprove(
-  request: PermissionRequest,
-  enabled: boolean,
-  responded: ReadonlySet<string>,
-): boolean {
-  if (!enabled) return false
-  if (responded.has(request.id)) return false
-  if (request.action === "sandbox_escalation") return false
-  return request.metadata?.["sandboxEscalation"] !== true
+export function shouldApprove(request: PermissionRequest, enabled: boolean, responded: ReadonlySet<string>): boolean {
+  return enabled && !responded.has(request.id) && canAutoApprove(request)
 }
 
 export type AutoApproveReply = (request: PermissionRequest) => Promise<unknown>
@@ -94,9 +88,9 @@ export function createHostAutoApprove(input: {
   log: (message: string) => void
 }) {
   const controller = createAutoApproveController((request) =>
-    input.client().then((api) =>
-      api.permission.reply({ sessionID: request.sessionID, requestID: request.id, decision: "once" }),
-    ),
+    input
+      .client()
+      .then((api) => api.permission.reply({ sessionID: request.sessionID, requestID: request.id, decision: "once" })),
   )
 
   const enabled = () => hostState?.enabled() ?? false

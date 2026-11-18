@@ -56,6 +56,7 @@ const layer = Layer.effect(
     const title = yield* SessionTitle.Service
     const steps = yield* SessionStep.make
     const pty = yield* PersistentPty.Service
+    const { policy } = yield* SessionInbox.Policy // kilocode_change(workflow-model) seam - the host-installed delivery policy
     // Title generation starts once input is visible and must not delay model execution.
     const titles = yield* FiberMap.make<SessionSchema.ID, void, never>()
 
@@ -191,11 +192,20 @@ const layer = Layer.effect(
               const ready = yield* restore(
                 Effect.gen(function* () {
                   const selected = yield* prepareContext(sessionID)
+                  let contextChanged = false // kilocode_change(workflow-model) seam - reload context after host events commit
                   const promoted = yield* SessionInbox.promote(
                     db,
                     bus,
                     sessionID,
                     entering && !continuing ? promotable : "steer",
+                    // kilocode_change start - workflow-model seam: refresh context only after extra events are committed
+                    policy && {
+                      ...policy,
+                      onCommitted: () => {
+                        contextChanged = true
+                      },
+                    },
+                    // kilocode_change end
                   )
                   // A control admitted during context preparation owns this boundary.
                   if (promoted === undefined) return undefined
@@ -204,7 +214,7 @@ const layer = Layer.effect(
                       onlyIfMissing: true,
                     })
                   if (promoted > 0) step = 1
-                  return { _tag: "Ready" as const, context: yield* context.load(selected) }
+                  return { _tag: "Ready" as const, context: yield* context.load(contextChanged ? yield* prepareContext(sessionID) : selected) } // kilocode_change(workflow-model) seam - refresh context changed by delivery
                 }),
               )
               if (ready) return ready
@@ -466,5 +476,6 @@ export const node = makeLocationNode({
     PersistentPty.node,
     ToolOutput.node,
     Database.node,
+    SessionInbox.policyNode, // kilocode_change(workflow-model) seam - the host-installed delivery policy
   ],
 })

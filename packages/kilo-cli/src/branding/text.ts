@@ -59,9 +59,22 @@ export const files: readonly string[] = [
   "core/src/tool/plugin/mcp-resource.ts",
   "core/src/tool/plugin/mcp-events.ts",
   "core/src/schedule/check.ts",
+  "core/src/tool/plugin/websearch.ts",
+  "core/src/artifact.ts",
+  "core/src/generate.ts",
+  // The claude-agent modules that name the host to the model or in an error, and no other provider module: the rules
+  // run over a whole module, and what a provider is sent (referer, title, user agent) is not host branding. In these
+  // five the wire identities are the bare `"opencode"` MCP server name, which the rules leave alone.
+  "core/src/plugin/provider/claude-agent/language-model/system-prompt.ts",
+  "core/src/plugin/provider/claude-agent/sync/catch-up.ts",
+  "core/src/plugin/provider/claude-agent/claude/sessions.ts",
+  "core/src/plugin/provider/claude-agent/tools/pending.ts",
+  "core/src/plugin/provider/claude-agent/tools/server.ts",
   "core/src/oauth/page.ts",
   "server/src/handlers/server.ts",
   "server/src/process.ts",
+  // The loader the host installs for user plugins: the error names the host a plugin has to take `effect` from.
+  "plugin/src/runtime.ts",
 ]
 
 const intercepted: ReadonlySet<string> = new Set(files)

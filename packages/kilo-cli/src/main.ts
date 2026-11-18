@@ -31,6 +31,7 @@ import { ImportCommand } from "./import/import"
 import { SyncCommand } from "./sync/sync"
 import { RemoteCommand } from "./remote/remote"
 import { KiloServiceCommands } from "./service/service"
+import { KiloBrowserCommands } from "./browser/commands"
 
 import { ensurePluginRuntime } from "./index"
 
@@ -67,6 +68,9 @@ const KiloCommands = {
       commands: { ...Commands.commands.service.commands, ...KiloServiceCommands },
     },
     auto: AutoCommand,
+    // Kilo: the browser bridge hub, its native messaging host install, and the Chromium the bundled Playwright
+    // backend drives.
+    browser: KiloBrowserCommands,
     import: ImportCommand,
     sync: SyncCommand,
     remote: RemoteCommand,
@@ -150,6 +154,13 @@ const Handlers = Runtime.handlers(KiloCommands, {
   // Kilo: manual import of an earlier Kilo installation.
   import: {
     v1: () => import("./import/v1"),
+  },
+  // Kilo: the browser bridge hub (started by the browser or by a CLI), the native messaging host install, and the
+  // Chromium the bundled Playwright backend drives.
+  browser: {
+    hub: () => import("./browser/hub-command"),
+    "install-host": () => import("./browser/install-host-command"),
+    "install-chromium": () => import("./browser/install-chromium"),
   },
   // Kilo: custom auto routers.
   auto: {

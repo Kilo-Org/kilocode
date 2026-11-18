@@ -13,6 +13,7 @@ import {
 import { getErrorMessage } from "./agent-manager/errors"
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
+import type { Service } from "./browser-settings"
 import type { GitChanges } from "./git-changes"
 import { local } from "./local"
 import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
@@ -193,7 +194,7 @@ export function wire(input: {
   view: View
   trackCostSession?: (sessionID: string) => void
   /** Directory for a saved image, when the view follows a session in another directory. */
-  saveImageDirectory?: () => string | undefined
+  saveImageDirectory?: (sessionID?: string) => string | undefined | Promise<string | undefined>
   /** The tool diff surfaces of the chat view. Settings has none. */
   diff?: ToolDiff
   /** The Changes editor tab the chat view opens. Settings has none. */
@@ -213,6 +214,8 @@ export function wire(input: {
   globals?: Record<string, unknown>
   /** The Agent Manager settings handler the Settings panel shares with the provider. */
   agentManager?: () => SettingsHandler
+  /** The browser tools' settings, owned by the extension activation so its migration and every panel share one store. */
+  browserSettings?: Service
   /** Opens a chat web link in the Integrated Browser. Returns false when the tab cannot take it. */
   openBrowser?: (sessionId: string, url: string) => boolean
   /** The editor tab that previews Markdown files, when this view has one. */
@@ -273,6 +276,9 @@ export function wire(input: {
           server: input.server,
           directory: input.directory,
           post,
+          // Every view that edits the browser settings gets the one store the activation migration wrote through;
+          // this host builds its own from the same factory when a view was opened without it.
+          browserSettings: input.browserSettings,
           // A reset clears the recents, usage and efforts; every open webview must drop its copy of them.
           onReset: () => {
             input.onReset?.()
@@ -439,7 +445,9 @@ export function wire(input: {
   // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
   const handleLeafMessage = (message: ToHost): boolean => {
     if (message.type === "saveImage") {
-      void saveImage(input.saveImageDirectory?.() ?? input.directory, message)
+      void Promise.resolve(input.saveImageDirectory?.(message.sessionID)).then((directory) =>
+        saveImage(directory ?? input.directory, message),
+      )
       return true
     }
     if (message.type === "previewImage") {
@@ -626,7 +634,8 @@ export function html(input: {
     "default-src 'none'",
     `style-src 'unsafe-inline' ${input.csp}`,
     `script-src 'nonce-${nonce}'${module ? " 'strict-dynamic'" : ""} 'wasm-unsafe-eval'`,
-    `worker-src ${input.csp}`,
+    // Worker scripts must be same-origin, so the webview starts them from blob URLs of the fetched scripts.
+    `worker-src ${input.csp} blob:`,
     `font-src ${input.csp}`,
     `connect-src ${input.csp}`,
     `img-src ${input.csp} data: https:`,

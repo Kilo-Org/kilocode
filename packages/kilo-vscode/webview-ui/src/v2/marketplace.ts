@@ -35,8 +35,6 @@ export function createMarketplace() {
   }
 }
 
-export type Marketplace = ReturnType<typeof createMarketplace>
-
 function hasWorkspace() {
   return (window as unknown as { KILO_HAS_WORKSPACE?: boolean }).KILO_HAS_WORKSPACE === true
 }

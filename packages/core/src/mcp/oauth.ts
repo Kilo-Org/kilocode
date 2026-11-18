@@ -294,6 +294,7 @@ export const connectProvider = Effect.fnUntraced(function* (input: {
   // Without onUnauthorized the transport answers a 401 with UnauthorizedError.
   if (found?.value.type !== "oauth") return { token: async () => undefined }
   const id = found.id
+  const stored = found.value // kilocode_change - the stored client the host hook receives
   const credentials = yield* Credential.Service
   const fetchFn = yield* loggedFetch({ server: input.server })
   const run = Effect.runPromiseWith(yield* Effect.context())
@@ -317,7 +318,7 @@ export const connectProvider = Effect.fnUntraced(function* (input: {
   // The token last sent. A 401 refreshes only while the row still holds it: another connection or process may
   // have refreshed it already.
   let presented: string | undefined
-  return {
+  const result: AuthProvider = { // kilocode_change - result named for the host hook below
     token: () =>
       run(
         Effect.gen(function* () {
@@ -363,6 +364,16 @@ export const connectProvider = Effect.fnUntraced(function* (input: {
         }),
       ),
   }
+  // kilocode_change start - optional host preparation before the first request
+  if (input.clientMetadata?.beforeConnect)
+    yield* input.clientMetadata.beforeConnect(
+      input.config,
+      found,
+      async () => clientFromCredential(stored),
+      (fetchFn) => configuredDiscovery({ config: input.config, fetchFn }),
+    )
+  // kilocode_change end
+  return result // kilocode_change
 })
 
 // Refreshes with the discovery the login saved, or discovers as the login did and saves the result.

@@ -423,7 +423,6 @@
   overflow: hidden;
   scrollbar-gutter: stable;
   color: var(--vscode-input-placeholderForeground, var(--text-weaker));
-  animation: prompt-hint-in 0.18s ease-out;
 }
 
 /* Same height as one text line, so keycaps never make the line taller. */
@@ -433,18 +432,6 @@
 
 .prompt-input-keys-wrap .shortcut-keys {
   height: 1.4em;
-}
-
-@keyframes prompt-hint-in {
-  from {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .prompt-input-placeholder {
-    animation: none;
-  }
 }
 
 /* Input overlay (highlight + ghost text) */

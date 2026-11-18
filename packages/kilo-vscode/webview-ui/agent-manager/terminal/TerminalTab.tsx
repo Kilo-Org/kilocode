@@ -328,7 +328,6 @@ export const TerminalTab: Component<Props> = (props) => {
       if (ws && ws.readyState !== TerminalSocket.CLOSING && ws.readyState !== TerminalSocket.CLOSED) return
       replay.attach(disconnected)
       const next = new TerminalSocket(vscode, props.terminalId)
-      next.binaryType = "arraybuffer"
       ws = next
       opened = false
       next.onopen = () => {

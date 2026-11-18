@@ -70,9 +70,7 @@ export class AutocompleteServiceManager {
 
   constructor(context: vscode.ExtensionContext, connection: Connection) {
     if (AutocompleteServiceManager._instance) {
-      throw new Error(
-        "AutocompleteServiceManager is a singleton. Use AutocompleteServiceManager.getInstance() instead.",
-      )
+      throw new Error("AutocompleteServiceManager is already initialized.")
     }
 
     this.context = context
@@ -110,10 +108,6 @@ export class AutocompleteServiceManager {
     })
 
     void this.load()
-  }
-
-  public static getInstance(): AutocompleteServiceManager | null {
-    return AutocompleteServiceManager._instance
   }
 
   public async load() {

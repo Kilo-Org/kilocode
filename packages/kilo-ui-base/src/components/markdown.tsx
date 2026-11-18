@@ -19,6 +19,7 @@ import { bundledLanguages } from "shiki"
 import { canReusePendingBlock, project, type Block, type Projection } from "./markdown-stream"
 import {
   disposeStreamingCode,
+  highlightInProcess,
   highlightStreamingCode,
   MarkdownWorkerDisposedError,
   MarkdownWorkerSupersededError,
@@ -119,13 +120,17 @@ async function code(text: string, language: string | undefined, key: string, com
     const result = await highlightStreamingCode(key, text, name, complete)
     return { language: name, generation: result.generation, stable: result.stable, unstable: result.unstable }
   } catch (error) {
-    if (
-      !(error instanceof MarkdownWorkerDisposedError) &&
-      !(error instanceof MarkdownWorkerSupersededError) &&
-      !(error instanceof MarkdownWorkerUnavailableError)
-    )
-      console.error("Markdown highlighting worker failed", error)
-    return { language: name, generation: 0, stable: [], unstable: [[text, ""] as MarkdownToken] }
+    const plain = { language: name, generation: 0, stable: [], unstable: [[text, ""] as MarkdownToken] }
+    // kilocode_change start: a superseded or disposed request is stale, and the newest one renders the block. Any
+    // other failure means this host has no worker, so a finished block is tokenized here in the same shape.
+    if (error instanceof MarkdownWorkerDisposedError || error instanceof MarkdownWorkerSupersededError) return plain
+    if (!(error instanceof MarkdownWorkerUnavailableError)) console.error("Markdown highlighting worker failed", error)
+    if (!complete) return plain
+    return highlightInProcess(text, name).catch((cause) => {
+      console.warn("Code highlight failed", name, cause)
+      return plain
+    })
+    // kilocode_change end
   }
 }
 
@@ -438,12 +443,6 @@ export function Markdown(
             const cached = completedCode.get(blockKey)
             if (block.complete && cached?.raw === block.raw && (src.streaming || cached.generation > 0)) return cached // kilocode_change - retry failed highlights only when the message settles
             const result = await code(block.src, block.language, blockKey, block.complete)
-            // kilocode_change start: defer failed worker highlights until the message settles.
-            if (!src.streaming && result.generation === 0) {
-              const html = sanitize(await Promise.resolve(marked.parse(block.raw)))
-              return { key: blockKey, mode: "full" as const, raw: block.raw, hash: checksum(block.raw) ?? "", html }
-            }
-            // kilocode_change end
             const rendered = {
               key: blockKey,
               mode: block.mode,

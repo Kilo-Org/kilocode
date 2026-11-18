@@ -66,6 +66,15 @@ export const Definition = Rpc.define({
       errors: { failed: portable(Failed) },
     },
     /**
+     * The parsed document a write to `scope` resolves to, for a settings editor that must show what is in effect.
+     * `document` is the file as JSON; `{}` when the file does not exist.
+     */
+    read: {
+      input: portable(Schema.Struct({ scope: Scope })),
+      output: portable(Schema.Struct({ scope: Scope, target: Target, document: Schema.Json })),
+      errors: { failed: portable(Failed) },
+    },
+    /**
      * Set the keys of `set` and remove the paths of `unset` in the scope's effective document. `set` values are set
      * at their leaf paths; a `null` value removes. A project `unset` also clears the path from the other project
      * documents that set it. `expected` fails a stale revision or a changed target instead of overwriting a newer

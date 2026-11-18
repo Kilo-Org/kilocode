@@ -21,7 +21,7 @@ import {
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI } from "../context/vscode"
 import { useV2 } from "./client"
-import { readListed } from "./plugin-inventory"
+import { readListed } from "../../../src/shared/plugin-inventory"
 import { visibleMessages } from "./revert"
 
 const EMPTY: readonly SessionMessageInfo[] = []

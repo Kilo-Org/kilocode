@@ -233,6 +233,7 @@ export const post = Effect.fn("BoardStore.post")(function* (
     )
   const labels = titles(line.root, target.member ? [line.current, target.member] : [line.current])
   const call = input.callID ?? ""
+  const audience = yield* availability(runtime, { sessionID: input.sessionID, to: target.id })
   return yield* locked(
     line.root,
     Effect.gen(function* () {
@@ -247,8 +248,11 @@ export const post = Effect.fn("BoardStore.post")(function* (
           existing.reply_to !== input.reply_to
         )
           return yield* fail("The trusted board tool call was retried with different arguments")
-        return enrich(message(existing, line.root), labels)
+        return { message: enrich(message(existing, line.root), labels), availability: audience }
       }
+
+      const reason = cannotPost(audience)
+      if (reason) return yield* fail(reason)
 
       if (input.reply_to && (yield* lookup(runtime, line.root, input.reply_to)) === undefined)
         return yield* fail("Reply message is not on this board")
@@ -292,7 +296,7 @@ export const post = Effect.fn("BoardStore.post")(function* (
         message_count: board.message_count + 1,
         message_bytes: board.message_bytes + bytes,
       })
-      return enrich(value, labels)
+      return { message: enrich(value, labels), availability: audience }
     }),
   )
 })
@@ -341,6 +345,12 @@ export const availability = Effect.fn("BoardStore.availability")(function* (
     ...(target === ALL ? {} : { recipientState: snapshot.sessions.get(target)?.state ?? "unknown" }),
   } satisfies Availability
 })
+
+/** Unknown is not finished: a peer without a job record may still be resumed and read the board. */
+export function cannotPost(audience: Availability) {
+  if (!audience.total) return "No other participants on this board. Use your response for status updates."
+  if (!audience.active && !audience.unknown) return "All addressed participants have finished. Use your response instead of posting."
+}
 
 export function format(value: Message) {
   return JSON.stringify({

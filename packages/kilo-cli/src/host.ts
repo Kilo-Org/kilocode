@@ -15,6 +15,7 @@ import { Flag } from "@opencode/core/flag"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
+import { KiloWorkflowDelivery } from "@opencode/core/kilocode/session/workflow-delivery"
 import { authFailure } from "@opencode/core/kilocode/mcp/auth-failure"
 import { McpClientMetadata } from "@opencode/core/kilocode/mcp/client-metadata"
 import { KiloSseProbe } from "@opencode/core/kilocode/mcp/sse-probe"
@@ -134,6 +135,7 @@ export function schedulingOverrides(overrides: string | undefined) {
  * `.kilo2`, worktree boundary).
  */
 export const overrides: LayerNode.Replacements = [
+  KiloWorkflowDelivery.override,
   LayerNodePlatform.llmClient.replace(LayerNodePlatform.llmClient.mapLayer(KiloGatewayErrors.layer)),
   SessionProjector.node.replace(SessionProjector.node.mapLayer(SessionSync.captureLayer)),
   ToolOutput.node.replace(SessionSyncOutput.node),
@@ -161,6 +163,10 @@ export const overrides: LayerNode.Replacements = [
                 Effect.map((operations) => [
                   { type: "remove" as const, target: "opencode.plan" },
                   { type: "remove" as const, target: "opencode.goal" },
+                  // The browser bridge owns the `browser_*` tool names (SPEC: the Playwright MCP contract, the same list
+                  // on both backends). The upstream desktop browser plugin registers the same names in its `browser`
+                  // namespace, so it would shadow the Kilo tools; the CLI serves the Playwright backend instead.
+                  { type: "remove" as const, target: "opencode.browser" },
                   // One scheduling surface: the wakeup plugin owns the wakeup and cron tools, so the native schedule
                   // tools (and their /schedule command) would only duplicate the prompt and the model's choice.
                   { type: "remove" as const, target: "opencode.tool.schedule" },
@@ -201,7 +207,7 @@ export const overrides: LayerNode.Replacements = [
     KiloMcpRecovery.configured({
       clientInfo: { name: "kilo", version: KiloApp.version },
       host: {
-        oauth: McpClientMetadata.oauth,
+        oauth: { ...McpClientMetadata.oauth, beforeConnect: KiloMcpRefresh.beforeConnect },
         fetch: (base, endpoint) => KiloMcpRefresh.transient(PagesAuth.wrap(KiloSseProbe.probe(base, endpoint))),
         authFailure,
         transient: KiloMcpRefresh.isTransient,

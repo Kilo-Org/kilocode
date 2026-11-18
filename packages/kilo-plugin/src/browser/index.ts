@@ -75,7 +75,13 @@ export function destination(value: string): { url: URL } | { error: string } {
   if (!local && url.protocol !== "https:") {
     return { error: "Use public HTTPS or HTTP localhost without credentials." }
   }
-  if (url.protocol === "https:" && (url.hostname === "localhost" || url.hostname.endsWith(".localhost") || url.hostname === "127.0.0.1" || url.hostname === "[::1]")) {
+  if (
+    url.protocol === "https:" &&
+    (url.hostname === "localhost" ||
+      url.hostname.endsWith(".localhost") ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "[::1]")
+  ) {
     return { error: "Use HTTP for loopback pages; HTTPS destinations must be public." }
   }
   return { url }

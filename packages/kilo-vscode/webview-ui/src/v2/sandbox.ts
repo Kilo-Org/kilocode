@@ -10,7 +10,7 @@ import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
 import { sandboxControls } from "../components/settings/sandboxing"
 import { useV2 } from "./client"
-import { readListed } from "./plugin-inventory"
+import { readListed } from "../../../src/shared/plugin-inventory"
 import { failureHandling, mergeStatus, type SandboxStatus } from "./sandbox-status"
 
 export type SandboxSupport = KiloSandboxRpc.Support
@@ -277,5 +277,3 @@ export function createSandbox(input: {
     },
   }
 }
-
-export type Sandbox = ReturnType<typeof createSandbox>

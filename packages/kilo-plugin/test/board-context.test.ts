@@ -102,7 +102,7 @@ describe("shared board notifications", () => {
         notifier.notify({
           sessionID: "ses_child",
           tool: "board_read",
-          result: { content: "read", metadata: { truncated: false, cursor: first.id } },
+          result: { content: "read", metadata: { truncated: false, cursor: first.message.id } },
         }),
       ),
     ).toBeUndefined()

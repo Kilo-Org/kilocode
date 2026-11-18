@@ -90,6 +90,7 @@ import {
   createSessionRestore,
   createTabMemory,
   rememberSelectionTab,
+  replaceRememberedTab,
   selectLocalAction,
   selectWorktreeAction,
   vacantWorktreeTab,
@@ -97,7 +98,7 @@ import {
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
 import { createProjectLive } from "./project/live"
 import { createProjectSessionsLive } from "./project/sessions-live"
-import { worktreeSessionIds as worktreeMembership, worktreeSessionTabs } from "./project/session-filter"
+import { worktreeSessionTabs } from "./project/session-filter"
 import { applyProjectSelection, createTargetRememberer } from "./project/selection"
 import { createLocalSessions } from "./project/local-tabs"
 import { persistLocalTabs, projectLocalIds, projectLocalSessions } from "./project/local-tabs"
@@ -186,7 +187,7 @@ import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
 import { defaultBindings } from "./keybind-defaults"
-import { createChatFocus, createFocusBridge, createMainSurface, createPromptFocus, forgetTerminalFocus } from "./focus"
+import { createChatFocus, createDraftFocus, createFocusBridge, createMainSurface, createPromptFocus, forgetTerminalFocus } from "./focus"
 import { createAppDiffPanelFocus } from "./diff-panel-focus"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { createSidePanel, sideHostNeeded } from "./side-panel-state"
@@ -296,7 +297,8 @@ const AgentManagerContent: Component = () => {
     openTabs: localSessionIDs,
   })
   const rootDirectory = createMemo(() => directories.root(activeProjectId() ?? currentProjectId()))
-  const appSession = createAppSession({ vscode, directories, rootDirectory })
+  const [commandProject, setCommandProject] = createSignal<string>()
+  const appSession = createAppSession({ vscode, directories, rootDirectory, commandProject })
   const panel = appSession.panel
   // The open session is visible, so its directory loads a session list before the worktree card selection settles.
   createEffect(() => {
@@ -451,6 +453,7 @@ const AgentManagerContent: Component = () => {
     hide: () => panels.close(SidePanel.Subagents),
   })
   const subagents = subagentCtl.tabs
+  createEffect(() => sessions.watch(subagents.tabs().map((tab) => tab.id)))
   const editPreview = createEditPreview({
     context: panels.session,
     matches: (id) =>
@@ -537,17 +540,7 @@ const AgentManagerContent: Component = () => {
     surface: main,
   })
   const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
-  /** Whether the composer mounted for this context takes focus, as v1's draft change did, or a visible terminal keeps it. */
-  const focusOnDraftChange = () => {
-    const key = focusKey()
-    const owner = focusMemory.get(key)
-    if (!owner || owner === "prompt") return true
-    if (!terms.sidesForContext(terms.sideKey()).some((term) => term.id === owner.terminal)) {
-      focusMemory.delete(key)
-      return true
-    }
-    return !terminalVisible()
-  }
+  const focusOnDraftChange = createDraftFocus({ key: focusKey, memory: focusMemory, terms, terminalVisible })
   const restoreFocus = (owner = focusMemory.get(focusKey())) => {
     if (prompt.active()) return
     const key = focusKey()
@@ -705,6 +698,7 @@ const AgentManagerContent: Component = () => {
     setIds: setLocalSessionIDs,
     appendOrder: appendToTabOrder,
     replaceOrder: tabOrderSync.replaceOrAppend,
+    replaceRemembered: (from, to) => replaceRememberedTab(registry.active(), LOCAL, from, to),
     activePending: activePendingId,
     setActivePending: setActivePendingId,
     setActiveTerminal: (id) => terms.setActiveId(id),
@@ -910,10 +904,8 @@ const AgentManagerContent: Component = () => {
   const activeWorktreeSessionIds = createMemo<ReadonlySet<string> | undefined>(() => {
     const sel = selection()
     if (!sel || sel === LOCAL) return undefined
-    const closed = closedSessions()
-    const ids = new Set([...worktreeMembership(sel, managedSessions())].filter((id) => !closed.has(id)))
-    for (const session of sessionsForWorktree(sel)) ids.add(session.id)
-    return ids
+    // History includes closed conversations even when there are no open tabs in this worktree.
+    return new Set(historyList().filter((session) => ownerOf(session.id) === sel).map((session) => session.id))
   })
   const activeTabs = createMemo((): SessionInfo[] => {
     const sel = selection()
@@ -984,12 +976,15 @@ const AgentManagerContent: Component = () => {
     if (reviewActive()) return REVIEW_TAB_ID
     return sessions.currentSessionID() ?? activePendingId()
   })
-  const visibleSession = createMemo(() =>
-    visible(
+  const visibleSession = createMemo(() => {
+    // The subagent inspector shows another session over the transcript. Reporting it while it is visible and the
+    // parent again when it closes keeps the host's viewed session from going stale.
+    if (sidePanel() === SidePanel.Subagents) return subagents.active() ?? null
+    return visible(
       sessions.currentSessionID(),
       !!terms.activeId() || reviewActive() || history() || !!overlay() || contextEmpty(),
-    ),
-  )
+    )
+  })
   reportVisibleSession(vscode, visibleSession)
   const activity = createWorktreeActivity({
     managed: managedSessions,
@@ -1906,6 +1901,7 @@ const AgentManagerContent: Component = () => {
             providers={appSession.providers()}
             agents={appSession.agents()}
             commands={appSession.commands()}
+            onProjectChange={setCommandProject}
           />
         </SpeechToTextStatusProvider>
       </V2Scope>
@@ -2446,6 +2442,7 @@ const AgentManagerContent: Component = () => {
                       rowWhenEmpty={!!transfer.branch()}
                       onNewSession={handleNewTabForCurrentSelection}
                       worktree={!!selection() && selection() !== LOCAL}
+                      onUpdateBase={update}
                       manager={hints.manager}
                       focusOnDraftChange={focusOnDraftChange}
                       onFocusChange={focusCtl.prompt}
@@ -2581,7 +2578,6 @@ const AgentManagerContent: Component = () => {
               worktree={activePR()!.wt}
               worktreeId={activePR()!.selected}
               activeTerminalId={terms.activeId()}
-              sessionId={activeDiffSession()}
               baseTarget={prBaseTarget()}
               onOpenDiff={remote.open}
               jump={comments.jump()}

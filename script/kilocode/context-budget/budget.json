@@ -1,0 +1,8 @@
+{
+  "maxInputTokens": 9700,
+  "directTools": [
+    "cancel_wakeup",
+    "edit", "execute", "glob", "goal", "grep", "question", "read", "schedule_wakeup", "shell",
+    "skill", "subagent", "todowrite", "webfetch", "websearch", "write"
+  ]
+}

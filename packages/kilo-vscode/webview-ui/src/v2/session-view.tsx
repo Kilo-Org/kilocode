@@ -29,10 +29,12 @@ import { transcriptChildren } from "../components/chat/background-agents"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { ErrorBanner } from "./error-banner"
+import { createInboxRefresh } from "./inbox-refresh"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
+import { createPermissionPresentation } from "./permission-presentation"
 import { PromptInput, setPromptDraft, type SendTarget } from "./prompt"
 import { createRevertQueue, EMPTY_DRAFT, redoTarget, restoredDraft, type ComposerDraft } from "./revert"
 import { sendBinding } from "./send-binding"
@@ -47,7 +49,7 @@ import { createGoal } from "./goal"
 import { createPending } from "./pending"
 import { promptInterrupt, steerInterrupts, type SendMode } from "./pending-actions"
 import { mergeCatalog, type SlashEntry } from "./slash"
-import { reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
+import { reviewScopes, slashActions, worktreeAction, type SlashHandlers } from "./slash-actions"
 import { createSlashCatalog } from "./slash-catalog"
 import { dispatchSlash } from "./slash-dispatch"
 import { TranscriptSearchProvider } from "./transcript-search"
@@ -63,10 +65,12 @@ export function SessionView(props: {
   onSession: (id: string | undefined, draftKey?: string) => void
   actions: ToolActions
   onShowHistory: () => void
-  /** True for a session in an Agent Manager worktree, which can run /review worktree. */
+  /** True for a session in an Agent Manager worktree, which can run /review worktree and /update-from-base. */
   worktree?: boolean
   /** Opens a new session draft; the /new slash action is listed only when set. */
   onNewSession?: () => void
+  /** Asks the host to merge the worktree's saved base branch; the /update-from-base action is listed only with it. */
+  onUpdateBase?: () => void
   /**
    * The row above the dock; receives whether the session has messages, the todo element it trails and the background
    * agent stack it leads.
@@ -181,7 +185,7 @@ export function SessionView(props: {
     if (!id) return []
     return transcriptChildren(v2.data.session.message.list(id))
   })
-  const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
+  const permissions = createMemo(() => family().flatMap((id) => v2.data.session.permission.list(id) ?? []))
   const forms = () => formsOf(session())
   // The same reads for a named session, for a send that outlives the tab it came from.
   function formsOf(id: string | undefined) {
@@ -191,6 +195,7 @@ export function SessionView(props: {
     )
   }
 
+  const inbox = createInboxRefresh(v2.data.session.pending.sync)
   // The session-start loader lasts until the first transcript page lands. createData reports loading only for pages it
   // adds, and an already loaded transcript must stay instant, so the view that starts the first request tracks it. A
   // newer request owns the loader, so the settle of a superseded one cannot clear it.
@@ -207,15 +212,13 @@ export function SessionView(props: {
       setStarting((value) => startingLoader(value, { session: id, loaded }))
       const settle = () => setStarting((value) => settledLoader(value, { session: id, run, attempt }))
       void messages.then(settle, settle)
-      void Promise.all([
-        v2.data.session.sync(id, { children: true }),
-        messages,
-        v2.data.session.pending.sync(id),
-      ]).catch((err: unknown) => {
-        // A session created here is known before the server has it; only a session nobody created is missing.
-        if (props.onMissing && sessionMissing(err) && !v2.data.session.get(id)) return props.onMissing(id)
-        v2.report(err)
-      })
+      void Promise.all([v2.data.session.sync(id, { children: true }), messages, inbox.sync(id)]).catch(
+        (err: unknown) => {
+          // A session created here is known before the server has it; only a session nobody created is missing.
+          if (props.onMissing && sessionMissing(err) && !v2.data.session.get(id)) return props.onMissing(id)
+          v2.report(err)
+        },
+      )
     }),
   )
   // A new session is not on the server until its create request settles, so these reads can fail. Events add
@@ -246,13 +249,16 @@ export function SessionView(props: {
   // Only a permission blocks sending, and the composer stays writable so typing remains possible.
   const blocked = () => permissions().length > 0
   const dockBlocked = () => blocked() || forms().length > 0
-  // The prompt selectors block only while a permission owns the prompt, as v1; a pending question does not.
-  const selectorsBlocked = () => permissions().length > 0
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => !blocked() && forms().length > 0
   const selection = createSelection(session, draftKey)
   const preferences = useModelPreferences()
   const autoApprove = createAutoApprove()
+  const visiblePermission = createPermissionPresentation({
+    session,
+    requests: permissions,
+    autoApprove: autoApprove.enabled,
+  })
   const sandbox = createSandbox({ session, gate: selection.created })
   const sandboxControl = {
     visible: sandbox.visible,
@@ -510,6 +516,7 @@ export function SessionView(props: {
       agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
       variant: selection.variants().length > 0 ? picker("openVariantPicker") : undefined,
       compact: id ? () => compact(id) : undefined,
+      "update-from-base": worktreeAction(props.worktree, props.onUpdateBase),
       caffeinate: () =>
         getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),
       help: () => v2.open("https://kilo.ai/docs"),
@@ -590,7 +597,7 @@ export function SessionView(props: {
 
   return (
     <TranscriptSearchProvider>
-      <div class="chat-view">
+      <div class="chat-view" data-session-id={session()}>
         {props.tabStrip}
         <Show when={session()} keyed>
           {(id) => (
@@ -633,10 +640,15 @@ export function SessionView(props: {
         </div>
         <Show when={!props.readOnly}>
           <div class="chat-input">
-            <Show when={v2.handshake() ?? v2.failure()}>
-              {(failure) => <ErrorBanner failure={failure()} onDismiss={v2.handshake() ? undefined : v2.clearError} />}
+            <Show when={v2.handshake() ?? v2.failure() ?? inbox.failure()}>
+              {(failure) => (
+                <ErrorBanner
+                  failure={failure()}
+                  onDismiss={v2.handshake() ? undefined : v2.failure() ? v2.clearError : inbox.dismiss}
+                />
+              )}
             </Show>
-            <Show when={permissions()[0]} keyed>
+            <Show when={visiblePermission()} keyed>
               {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
             </Show>
             <SessionDock
@@ -645,7 +657,7 @@ export function SessionView(props: {
               onOpenSession={(id, title) =>
                 props.actions.openSubagent ? props.actions.openSubagent(id, title) : props.actions.openSession?.(id)
               }
-              blocked={dockBlocked()}
+              blocked={!!visiblePermission() || forms().length > 0}
               actions={(todos, agents) => props.row?.(hasMessages(), todos, agents)}
               hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
               status={working.status()}
@@ -687,7 +699,7 @@ export function SessionView(props: {
                   manager={props.manager}
                   focusOnDraftChange={props.focusOnDraftChange}
                   onFocusChange={props.onFocusChange}
-                  selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
+                  selectors={<Selectors selection={selection} blocked={blocked()} />}
                   autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
                   sandbox={sandboxControl}
                   worktrees={props.worktrees}

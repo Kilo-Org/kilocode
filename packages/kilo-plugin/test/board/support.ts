@@ -43,6 +43,8 @@ export function fixture(options: { directory?: string } = {}) {
   add({ id: "ses_root", title: "Root" })
   add({ id: "ses_child", parentID: "ses_root", title: "Child" })
   add({ id: "ses_sibling", parentID: "ses_root", title: "Sibling" })
+  states.set("ses_child", { state: "running" })
+  states.set("ses_sibling", { state: "running" })
   const runtime: BoardStore.Runtime = {
     storage,
     session: (id) => Effect.sync(() => sessions.get(id)),

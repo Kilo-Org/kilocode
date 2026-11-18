@@ -1,9 +1,9 @@
 import type { JsonValue, OpenCodeClient, SessionInfo } from "@opencode/client"
 import { getErrorMessage } from "./errors"
-import { isRunningStatus } from "../session-status"
 import { LOCAL_TARGET, type AgentManagerOutMessage } from "./types"
 import { initContextState } from "./project/init"
 import { pathKey } from "./project/paths"
+import { sessionMissing } from "./prune-subagents"
 import { settleMove } from "./session-move"
 import type { ProjectContext } from "./project/context"
 import type { ManagedSession } from "./WorktreeStateManager"
@@ -196,15 +196,15 @@ export async function createLifecycleWorktree(
   return { session, ready }
 }
 
-/** Remove a worktree's snapshot repository. Teardown must still complete if removal fails. */
+/**
+ * Remove a worktree's snapshot repository. Teardown must still complete if removal fails. Resolves true when no
+ * checkpoint data is left: the repository is created lazily, so `removed: false` from the RPC means there was none.
+ */
 export async function removeWorktreeSnapshot(host: LifecycleHost, root: string, dir: string): Promise<boolean> {
   try {
     const client = await host.client()
-    const result = await client.rpc(KiloAgentManagerRpc.Definition).removeSnapshot(
-      { worktree: dir },
-      { location: { directory: root } },
-    )
-    return result.removed
+    await client.rpc(KiloAgentManagerRpc.Definition).removeSnapshot({ worktree: dir }, { location: { directory: root } })
+    return true
   } catch (error) {
     host.log(`Failed to remove worktree snapshots: ${error}`)
     return false
@@ -229,6 +229,39 @@ async function moveSessionsToRoot(
   )
 }
 
+/** List all sessions at the worktree root and in subdirectories discovered from filed sessions. */
+async function worktreeSessions(client: OpenCodeClient, directory: string, managed: ManagedSession[]): Promise<string[]> {
+  // Omit archive and parent filters to include closed tabs, archived sessions, and children.
+  const list = (directory: string) => client.session.list({ directory, limit: Number.MAX_SAFE_INTEGER })
+  const listed = new Set((await list(directory)).data.map((session) => session.id))
+  const root = pathKey(directory)
+  // The directory filter is exact. Use omitted filings to discover worktree subdirectories, but
+  // trust the server's location so a stale filing never moves a session from elsewhere.
+  const nested = await Promise.all(
+    managed
+      .filter((session) => !listed.has(session.id))
+      .map((session) =>
+        client.session.get({ sessionID: session.id }).catch((error: unknown) => {
+          if (sessionMissing(error)) return undefined
+          throw error
+        }),
+      ),
+  )
+  const directories = new Map<string, string>()
+  for (const session of nested) {
+    if (!session) continue
+    const location = session.location.directory
+    const key = pathKey(location)
+    if (key !== root && !key.startsWith(`${root}/`)) continue
+    listed.add(session.id)
+    if (location !== directory) directories.set(key, location)
+  }
+  // Subagents are never filed, so list each discovered directory to include them in the safety check and move.
+  const pages = await Promise.all([...directories.values()].map(list))
+  for (const page of pages) for (const session of page.data) listed.add(session.id)
+  return [...listed]
+}
+
 /** Delete a worktree and dissociate its sessions. */
 export async function deleteLifecycleWorktree(
   ctx: ProjectContext,
@@ -247,23 +280,18 @@ export async function deleteLifecycleWorktree(
     return null
   }
   const managed = state.getSessions(worktreeId)
-  const retained = new Set(managed.map((session) => session.id))
   let client: OpenCodeClient
+  let retained: string[]
   try {
     client = await host.client()
     const [active, permissions, forms, sessions] = await Promise.all([
       client.session.active(),
       client.permission.request.list({ location: { directory: worktree.path } }),
       client.form.list({ location: { directory: worktree.path } }),
-      client.session.list({
-        directory: worktree.path,
-        archived: true,
-        parentID: null,
-        limit: Number.MAX_SAFE_INTEGER,
-      }),
+      worktreeSessions(client, worktree.path, managed),
     ])
-    sessions.data.forEach((session) => retained.add(session.id))
-    const running = [...retained].some((id) => isRunningStatus(active[id]?.type))
+    retained = sessions
+    const running = retained.some((id) => Object.hasOwn(active, id))
     if (running || permissions.data.length > 0 || forms.data.length > 0)
       return fail("Cannot delete a worktree while a session is active or waiting for input")
   } catch (error) {
@@ -292,7 +320,7 @@ export async function deleteLifecycleWorktree(
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
   let releasePtyCleanup: () => void
   try {
-    await host.abort(managed.map((session) => session.id))
+    await host.abort(retained)
     releasePtyCleanup = await host.acquirePtyCleanup(worktree.path)
   } catch (error) {
     host.log(`Failed to stop worktree processes: ${error}`)
@@ -312,6 +340,7 @@ export async function deleteLifecycleWorktree(
     state.removeWorktree(worktreeId)
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
+    ctx.invalidateSessions()
     host.post({ type: "agentManager.worktreeDeleted", projectId: ctx.id, worktreeId })
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
@@ -602,12 +631,15 @@ export async function closeLifecycleSession(
 ): Promise<null> {
   const state = ctx.peekState()
   await host.abort([sessionId])
-  // Drop the session from state before stopping its processes. Process shutdown
-  // can be slow or unavailable, and while a closed session is still listed here
-  // any concurrent state push would restore the tab the user just closed,
-  // because a webview with no remaining real tabs looks like a reload.
-  state?.removeSession(sessionId)
-  if (state) host.push()
+  if (state) {
+    // Git metadata still names the worktree's first session after a tab is closed. Mark the close so recovery
+    // can distinguish it from a lost filing. History can still reopen it by filing it again.
+    const worktreeId =
+      state.getSession(sessionId)?.worktreeId ?? ctx.sessions().find((item) => item.id === sessionId)?.worktreeId
+    if (worktreeId) state.closeSession(sessionId, worktreeId)
+    else state.removeSession(sessionId)
+    host.push()
+  }
   host.log(`Closed session ${sessionId}`)
   return null
 }
