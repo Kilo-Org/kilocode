@@ -58,6 +58,7 @@ interface Content {
 interface FrontendAppService {
     fun getVersion(): String?
     fun getBundled(): Boolean?
+    fun telemetryConfig(): Boolean
 }
 
 @Remote(
@@ -123,4 +124,24 @@ interface ActiveList {
     fun select(key: String, scroll: Boolean): Boolean
     fun selected(): ActiveItem?
     fun focusList()
+}
+
+@Remote("javax.swing.JTree")
+interface JTreeSelection {
+    fun getPathForRow(row: Int): TreePathRef?
+    fun setSelectionPath(path: TreePathRef?)
+}
+
+@Remote("javax.swing.tree.TreePath")
+interface TreePathRef
+
+@Remote("javax.swing.JButton")
+interface JButtonRef {
+    fun doClick()
+}
+
+@Remote("com.intellij.ui.components.OnOffButton")
+interface OnOffButton {
+    fun isSelected(): Boolean
+    fun doClick()
 }

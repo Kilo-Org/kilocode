@@ -666,6 +666,7 @@ object KiloCliDataParser {
                         ?.toInt(),
                 )
             },
+            telemetry = runCatching { obj["experimental"].obj()?.flagOrNull("openTelemetry") }.getOrNull(),
         )
     }.getOrDefault(ConfigDto())
 
@@ -1173,6 +1174,9 @@ object KiloCliDataParser {
             if (retention != null) put("retention", buildJsonObject {
                 if (retention.enabled != null) put("enabled", retention.enabled)
                 if (retention.maxAgeDays != null) put("maxAgeDays", retention.maxAgeDays)
+            })
+            if (patch.telemetry != null) put("experimental", buildJsonObject {
+                put("openTelemetry", patch.telemetry)
             })
 
             if (patch.agents.isNotEmpty()) {

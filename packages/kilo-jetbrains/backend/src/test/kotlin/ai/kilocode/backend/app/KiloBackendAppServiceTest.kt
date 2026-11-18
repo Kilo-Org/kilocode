@@ -346,6 +346,30 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `startup applies the telemetry opt-out from the config file`() = runBlocking {
+        mock.config = """{"experimental":{"openTelemetry":false}}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertEquals(false, svc.config?.telemetry)
+    }
+
+    @Test
+    fun `update config patches telemetry and applies it to the running CLI`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val state = svc.updateConfig(ConfigPatchDto(telemetry = false))
+
+        assertEquals("""{"experimental":{"openTelemetry":false}}""", mock.lastConfigPatchBody)
+        assertEquals(false, appStateDto(state).config?.telemetry)
+        assertEquals(false, svc.config?.telemetry)
+    }
+
+    @Test
     fun `update config patches retention and reloads`() = runBlocking {
         val svc = create()
         svc.connect()

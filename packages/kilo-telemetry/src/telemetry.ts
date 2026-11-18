@@ -134,8 +134,10 @@ export namespace Telemetry {
 
     Client.init(options.dataPath)
 
+    // A config opt-out always wins: clients set KILO_TELEMETRY_LEVEL=all to opt in, but a user
+    // who disabled telemetry in kilo.json must stay opted out. The env var can still force off.
     const level = process.env.KILO_TELEMETRY_LEVEL
-    const enabled = level ? level === "all" : options.enabled
+    const enabled = options.enabled && level !== "off"
     Client.setEnabled(enabled)
 
     await Promise.all([Identity.getMachineId(), enabled ? refreshConda() : Promise.resolve()])

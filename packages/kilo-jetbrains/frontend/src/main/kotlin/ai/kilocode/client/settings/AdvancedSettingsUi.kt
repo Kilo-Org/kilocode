@@ -18,12 +18,13 @@ import java.awt.BorderLayout
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JPanel
 
-internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
+internal class AdvancedSettingsUi(telemetryEnabled: Boolean = true) : JPanel(BorderLayout()) {
     data class Values(
         val level: LogConfig.LogLevel,
         val mode: LogConfig.ContentMode,
         val preview: Int,
         val indexWorktrees: Boolean,
+        val telemetry: Boolean,
     )
 
     private val level = ComboBox(DefaultComboBoxModel(LogConfig.LogLevel.all.toTypedArray()))
@@ -33,14 +34,21 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
     /** Set once the user flips the toggle, so a late backend fetch cannot overwrite their choice. */
     private var touched = false
     private val indexWorktrees = SettingsToggle { touched = true }
+    private val telemetry = SettingsToggle(telemetryEnabled) {}
 
-    private var saved = current()
+    private var saved = current().copy(telemetry = telemetryEnabled)
 
     init {
         resetForm()
 
         val rows = SettingsRows().apply {
             border = JBUI.Borders.empty(UiStyle.Gap.pad(), UiStyle.Gap.lg())
+            row(TitledSeparator(KiloBundle.message("settings.advanced.telemetry.title")))
+            row(SettingsRow(
+                KiloBundle.message("settings.advanced.telemetry.enabled.title"),
+                KiloBundle.message("settings.advanced.telemetry.enabled.description"),
+                telemetry,
+            ))
             row(TitledSeparator(KiloBundle.message("settings.advanced.logging.title")))
             row(SettingsRow(
                 KiloBundle.message("logs.configuration.level.title"),
@@ -72,6 +80,7 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         if (level.selectedItem != saved.level) return true
         if (mode.selectedItem != saved.mode) return true
         if (indexWorktrees.isSelected != saved.indexWorktrees) return true
+        if (telemetry.isSelected != saved.telemetry) return true
         return preview.text.trim() != saved.preview.toString()
     }
 
@@ -88,6 +97,7 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         mode.selectedItem = saved.mode
         preview.text = saved.preview.toString()
         indexWorktrees.isSelected = saved.indexWorktrees
+        telemetry.isSelected = saved.telemetry
         touched = false
     }
 
@@ -101,10 +111,14 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         mode = mode.selectedItem as LogConfig.ContentMode,
         preview = count() ?: saved.preview,
         indexWorktrees = indexWorktrees.isSelected,
+        telemetry = telemetry.isSelected,
     )
 
     /** The index-worktrees value as of the last [sync] (or the initial fetch via [refreshIndexWorktrees]). */
     fun savedIndexWorktrees(): Boolean = saved.indexWorktrees
+
+    /** The telemetry value as of the last [sync]. */
+    fun savedTelemetry(): Boolean = saved.telemetry
 
     /**
      * Populates the toggle with the value fetched asynchronously from the backend. The fetch is a
@@ -118,7 +132,13 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         indexWorktrees.isSelected = value
     }
 
-    private fun current(): Values = Values(LogConfig.level(), LogConfig.contentMode(), LogConfig.previewMax(), indexWorktrees = false)
+    private fun current(): Values = Values(
+        LogConfig.level(),
+        LogConfig.contentMode(),
+        LogConfig.previewMax(),
+        indexWorktrees = false,
+        telemetry = true,
+    )
 
     private fun count(): Int? = preview.text.trim().toIntOrNull()
 

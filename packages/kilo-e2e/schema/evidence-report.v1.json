@@ -15,7 +15,8 @@
       "enum": [
         "session.open",
         "prompt.stream",
-        "permission.continue"
+        "permission.continue",
+        "settings.telemetry"
       ]
     },
     "lane": {

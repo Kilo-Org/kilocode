@@ -2,6 +2,7 @@ package ai.kilocode.client.settings
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
@@ -32,7 +33,8 @@ class AdvancedConfigurable(
 
     override fun createComponent(): JComponent {
         settings.applyLocal()
-        val panel = AdvancedSettingsUi()
+        val telemetry = app.state.value.config?.telemetry ?: true
+        val panel = AdvancedSettingsUi(telemetry)
         ui = panel
         val cs = newScope()
         scope = cs
@@ -53,10 +55,12 @@ class AdvancedConfigurable(
         settings.update(value.level, value.mode, value.preview)
         save(settings)
         val indexWorktreesChanged = value.indexWorktrees != panel.savedIndexWorktrees()
+        val telemetryChanged = value.telemetry != panel.savedTelemetry()
         panel.sync()
         // Runs on the app scope, not ours: OK calls apply() then disposeUIResources(), which cancels
         // this configurable's scope before a coroutine launched here could reach the RPC.
         if (indexWorktreesChanged) app.setIndexWorktreesAsync(value.indexWorktrees)
+        if (telemetryChanged) app.updateConfigAsync(ConfigPatchDto(telemetry = value.telemetry)) {}
     }
 
     override fun reset() {

@@ -15,14 +15,18 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Headful Starter/Driver adapter for K1. One named watchdog owns every wait; a failed
@@ -190,6 +194,8 @@ class JetBrainsDriverTest {
                     openSession(request, descriptor, ide, toolWindow, window, evidence)
                 } else if (isPromptStream(request)) {
                     promptStream(request, descriptor, ide, toolWindow, window, evidence)
+                } else if (request.scenario.id == "settings.telemetry") {
+                    telemetrySettings(descriptor, ide, evidence, split, testName)
                 }
             }
         } catch (error: Throwable) {
@@ -216,6 +222,79 @@ class JetBrainsDriverTest {
 
     private fun isTranscriptScenario(request: DriverRequest): Boolean =
         isTranscriptSessionOpen(request) || isPromptStream(request)
+
+    /**
+     * E2E for Advanced > Privacy > Send usage data. The switch edits the same
+     * `experimental.openTelemetry` key the CLI reads, so the assertion covers the config-file
+     * round trip and a fresh settings read after the write, not just the toggle's local state.
+     */
+    private fun telemetrySettings(
+        descriptor: FixtureDescriptor,
+        ide: KiloIdePage,
+        evidence: DriverEvidence,
+        context: IDETestContext,
+        testName: String,
+    ) {
+        val page = TelemetrySettingsPage(ide, watchdog)
+        page.open()
+        if (page.visible() && page.hasTelemetryRow()) {
+            evidence.pass("settings.advanced.visible", "Kilo Code > Advanced with the Privacy section")
+        } else {
+            evidence.fail("settings.advanced.visible", "Advanced page or telemetry row is missing")
+        }
+
+        val initial = runCatching { page.isEnabled() }.getOrElse { error ->
+            evidence.fail("settings.telemetry.toggle", actionable(error))
+            false
+        }
+        evidence.state("settings.telemetry.initial", initial)
+        if (initial) evidence.pass("settings.telemetry.toggle", "enabled by default")
+        else evidence.fail("settings.telemetry.toggle", "toggle was off before the user changed it")
+
+        captureSettingsShot(context, testName, "settings-telemetry-initial", evidence)
+        page.setEnabled(false)
+        captureSettingsShot(context, testName, "settings-telemetry-off", evidence)
+        page.apply()
+
+        val files = listOf("kilo.jsonc", "kilo.json")
+            .map { Path.of(descriptor.state.config, "kilo", it) }
+        val persisted = runCatching {
+            watchdog.value("telemetry opt-out persisted", timeout = 60.seconds) {
+                files.firstNotNullOfOrNull { file ->
+                    val value = runCatching {
+                        jsonc.parseToJsonElement(Files.readString(file)).jsonObject
+                    }.getOrNull()
+                    value?.get("experimental")?.jsonObject?.get("openTelemetry")?.jsonPrimitive?.booleanOrNull
+                        ?.takeIf { it == false }
+                        ?.let { file }
+                }
+            }
+        }.getOrElse { error ->
+            evidence.fail("settings.telemetry.persisted", actionable(error))
+            null
+        }
+        if (persisted != null) {
+            evidence.pass("settings.telemetry.persisted", persisted.fileName.toString())
+            evidence.state("settings.telemetry.file", persisted.toString())
+        }
+
+        val frontend = runCatching {
+            watchdog.value("frontend telemetry config is off", timeout = 30.seconds) {
+                ide.frontend().telemetryConfig().takeIf { !it }
+            }
+        }.getOrNull()
+        evidence.state("settings.frontend.telemetry", frontend)
+        Thread.sleep(1_000)
+        page.open()
+        val reloaded = runCatching { page.isEnabled() }.getOrNull()
+        evidence.state("settings.reopened.toggle", reloaded)
+        if (frontend == false && reloaded == false) {
+            evidence.pass("settings.telemetry.reload", "config state and reopened toggle are off")
+        } else {
+            evidence.fail("settings.telemetry.reload", "config state='$frontend', reopened toggle='$reloaded'")
+        }
+        runCatching { page.cancel() }
+    }
 
     private fun setOrigin(project: String, url: String, evidence: DriverEvidence): Boolean {
         val existing = git(project, "remote", "get-url", "origin")
@@ -631,6 +710,48 @@ class JetBrainsDriverTest {
             evidence.fail("model.seeded", actionable(error))
         }
     }
+
+    /**
+     * Starter captures the real dialog window once a heartbeat, while a driver screenshot on this
+     * headless display comes back black. Wait for a heartbeat newer than this step and copy it into
+     * the run evidence so the PR can show the actual settings page.
+     */
+    private fun captureSettingsShot(
+        context: IDETestContext,
+        testName: String,
+        name: String,
+        evidence: DriverEvidence,
+    ) {
+        // Heartbeat screenshots live under the frontend IDE test home of a split-mode run.
+        val frontend = (context as? IDERemDevTestContext)?.frontendIDEContext ?: context
+        val homes = listOf(frontend.paths.testHome, context.paths.testHome).distinct()
+        val started = System.currentTimeMillis()
+        val shot = runCatching {
+            watchdog.value("fresh Starter screenshot for $name", timeout = 2.minutes) {
+                homes.firstNotNullOfOrNull { home -> freshShot(home, started) }
+            }
+        }.getOrElse { error ->
+            evidence.fail(
+                "settings.screenshot.$name",
+                "${actionable(error)}; homes=$homes; logs=${homes.map { findLogDir(it, testName) }}",
+            )
+            return
+        }
+        val dest = evidence.artifactsDir.resolve("screenshots").resolve("$name.png")
+        Files.createDirectories(dest.parent)
+        Files.copy(shot, dest, StandardCopyOption.REPLACE_EXISTING)
+        evidence.artifact("screenshot", dest)
+        evidence.pass("settings.screenshot.$name", dest.fileName.toString())
+    }
+
+    private fun freshShot(home: Path, started: Long): Path? = runCatching {
+        Files.walk(home, 8).use { stream ->
+            stream.iterator().asSequence()
+                .filter { it.fileName.toString() == "dialog1.png" }
+                .filter { Files.getLastModifiedTime(it).toMillis() > started }
+                .maxByOrNull { Files.getLastModifiedTime(it).toMillis() }
+        }
+    }.getOrNull()
 
     private fun preflight(request: DriverRequest, evidence: DriverEvidence): Boolean {
         val inherited = System.getenv("KILO_E2E_RUN_ID")

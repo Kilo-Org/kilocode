@@ -301,7 +301,12 @@ class KiloBackendAppService private constructor(
             }
         }
         log.info("Global config patch: saved $summary")
-        val cfg = fetchConfig().value
+        patch.telemetry?.let { applyTelemetry(it) }
+        // The CLI can serve the previous config for a moment after the patch, so reflect the
+        // value we just wrote instead of letting the reopened settings read stale data.
+        val cfg = fetchConfig().value?.let { loaded ->
+            patch.telemetry?.let { loaded.copy(telemetry = it) } ?: loaded
+        }
         if (cfg == null) {
             log.warn("Global config patch: config reload failed after save $summary")
             return (_appState.value as? KiloAppState.Ready) ?: current
@@ -467,7 +472,7 @@ class KiloBackendAppService private constructor(
                     activity.start(sessions.statuses, { id -> hosted.directory(id) ?: sessions.sessionDirectory(id) }, chat.events)
                     workspaces.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     startWatchingGlobalSseEvents()
-                    setTelemetry(true)
+                    applyTelemetry(cfg?.telemetry ?: true)
                     captureBackend("Backend Connected", mapOf("portKnown" to "true"))
                     captureLoad("Backend Load Completed", start, mapOf(
                         "profileStatus" to if (prof != null) "loaded" else "not_logged_in",
@@ -540,14 +545,12 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    private fun setTelemetry(enabled: Boolean) {
+    private suspend fun applyTelemetry(enabled: Boolean) {
         val http = connection.apiClient
         val port = connection.port
-        cs.launch {
-            runCatching {
-                service<KiloBackendTelemetry>().setEnabled(http, port, enabled)
-            }.onFailure { log.info("Skipping telemetry setEnabled: ${it.message}") }
-        }
+        runCatching {
+            service<KiloBackendTelemetry>().setEnabled(http, port, enabled)
+        }.onFailure { log.info("Skipping telemetry setEnabled: ${it.message}") }
     }
 
     private fun captureBackend(event: String, props: Map<String, String>) {
@@ -722,6 +725,7 @@ class KiloBackendAppService private constructor(
         if (state !is KiloAppState.Ready || state.data !== current.data) return
         if (this.connection.state.value != connection) return
         config = cfg
+        applyTelemetry(cfg.telemetry ?: true)
         setAppReady(current.data.copy(config = cfg))
     }
 
