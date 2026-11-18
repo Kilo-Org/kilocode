@@ -13,6 +13,7 @@ import type { PRMergeMethod } from "./types"
 import { repoName, validateCloneUrl } from "./project/clone"
 import { checkoutRoot, samePath } from "./project/paths"
 import { integratedBrowserEnabled } from "../services/browser-automation/chrome-setting"
+import { t } from "../services/i18n"
 import { keybindings, watchKeybindings } from "../kilo-provider/shortcut-context"
 import { createPanel } from "./panel"
 import type { Manager } from "../server"
@@ -240,6 +241,12 @@ export class VscodeHost implements Host {
 
   showError(msg: string): void {
     void vscode.window.showErrorMessage(msg)
+  }
+
+  showWorktreeCallerError(directory?: string): void {
+    this.showError(
+      [t("agentManager.setup.failed"), directory, t("session.workspaceScope.alternatives")].filter(Boolean).join("\n"),
+    )
   }
 
   notify(kind: "info" | "warning" | "error", msg: string): void {

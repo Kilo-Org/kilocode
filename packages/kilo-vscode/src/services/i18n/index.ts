@@ -20,6 +20,9 @@ import { dict as tr } from "./autocomplete/tr"
 import { dict as uk } from "./autocomplete/uk"
 import { dict as zh } from "./autocomplete/zh"
 import { dict as zht } from "./autocomplete/zht"
+import { callerMessages } from "./worktree-caller.macro" with { type: "macro" }
+
+const caller = callerMessages()
 
 const bundles: Record<string, Record<string, string>> = {
   ar,
@@ -73,8 +76,9 @@ export function translate(
   key: keyof typeof enDict | string,
   vars?: Record<string, string | number>,
 ): string {
-  const translations: Record<string, string> = { ...en, ...(bundles[resolveLocale(locale)] ?? {}) }
-  let text = translations[key] ?? key
+  const lang = resolveLocale(locale)
+  const translations: Record<string, string> = { ...en, ...bundles[lang], ...caller[lang] }
+  let text = translations[key] ?? caller.en[key] ?? key
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
       text = text.replaceAll(`{{${k}}}`, String(v))
