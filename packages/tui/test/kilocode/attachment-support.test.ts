@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { describe, expect, test } from "bun:test"
 import { receivingModel, unsupportedAttachments, type Capabilities, type Modality } from "../../src/kilocode/attachment-support"
 
@@ -49,5 +48,33 @@ describe("receivingModel", () => {
     { name: "child without a model falls back", mode: "normal", session: { ...child, model: undefined }, expected: selected },
   ])("$name", ({ mode, session, expected }) => {
     expect(receivingModel({ mode, session, selected })).toEqual(expected)
+  })
+
+  describe("slash commands", () => {
+    const agents = [
+      { name: "vision", model: { providerID: "v", modelID: "eyes" } },
+      { name: "plain" },
+    ]
+    test.each<{ name: string; command?: { model?: string; agent?: string }; expected: { providerID: string; modelID: string } }>([
+      { name: "no command", command: undefined, expected: selected },
+      { name: "command model wins", command: { model: "c/m/x", agent: "vision" }, expected: { providerID: "c", modelID: "m/x" } },
+      { name: "command agent model", command: { agent: "vision" }, expected: { providerID: "v", modelID: "eyes" } },
+      { name: "agent without model", command: { agent: "plain" }, expected: selected },
+      { name: "unknown agent", command: { agent: "missing" }, expected: selected },
+      { name: "plain command", command: {}, expected: selected },
+    ])("$name", ({ command, expected }) => {
+      expect(receivingModel({ mode: "normal", session: undefined, selected, command, agents })).toEqual(expected)
+    })
+  })
+})
+
+describe("mcp resources", () => {
+  test.each<{ name: string; source: { type: string } | undefined; expected: Modality[] }>([
+    { name: "resource parts are skipped", source: { type: "resource" }, expected: [] },
+    { name: "file source still checked", source: { type: "file" }, expected: ["image"] },
+    { name: "no source still checked", source: undefined, expected: ["image"] },
+  ])("$name", ({ source, expected }) => {
+    const result = unsupportedAttachments([{ type: "file", mime: "image/svg+xml", source }], none)
+    expect(result.map((item) => item.modality)).toEqual(expected)
   })
 })

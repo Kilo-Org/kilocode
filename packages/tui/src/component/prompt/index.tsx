@@ -1107,10 +1107,17 @@ export function Prompt(props: PromptProps) {
       return false
     }
     // kilocode_change start - block attachments the selected model cannot read
+    const slashCommand = () => {
+      const text = store.prompt.input
+      if (steer() || !text.startsWith("/")) return undefined
+      return sync.data.command.find((x) => slashMatches(x, text.split("\n")[0].split(" ")[0].slice(1)))
+    }
     const receiver = receivingModel({
       mode: store.mode,
       session: props.sessionID ? sync.session.get(props.sessionID) : undefined,
       selected: selectedModel,
+      command: slashCommand(),
+      agents: sync.data.agent,
     })
     const capabilities = receiver
       ? sync.data.provider.find((item) => item.id === receiver.providerID)?.models[receiver.modelID]?.capabilities?.input
