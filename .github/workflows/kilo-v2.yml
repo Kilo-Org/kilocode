@@ -450,9 +450,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+
+      - name: Test Kilo metric gates
+        working-directory: script/kilocode/metrics
+        run: python3 test_check.py
+
+      # On PRs the first parent of the checked-out merge is the target branch.
+      - name: Check Kilo function complexity and file size
+        run: python3 script/kilocode/metrics/check.py HEAD^1
 
       # Turborepo runs only the package tests that turbo.json lists. The Kilo packages run here instead, so
       # adding one needs no shared upstream patch. `@kilocode/gateway-core` stays in turbo.json.
