@@ -2,7 +2,6 @@
 import {
   KiloAccount,
   KiloAutocomplete,
-  KiloCredential,
   KiloDefaults,
   KiloDevice,
   KiloErrors,
@@ -42,6 +41,7 @@ import { KiloOrganizationModes } from "./modes"
 import { KiloGatewayAccounts } from "./accounts"
 import { randomUUID } from "node:crypto"
 import { Clock, Duration, Effect, Fiber, Latch, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
+import { GatewayAccountSelection } from "./account-selection.js"
 import { GatewayCatalog } from "./catalog.js"
 import { GatewayOptions } from "./options.js"
 import { GatewayPrompt } from "./prompt.js"
@@ -56,6 +56,7 @@ const integrationID = IntegrationID.make("kilo")
 const methodID = IntegrationMethodID.make("device")
 const REFRESH_INTERVAL = Duration.minutes(5)
 const MAX_SNAPSHOTS = 10
+const LEGACY_ORGANIZATION_KEY = "organization:env"
 // How long activation waits for the first Kilo catalog. The server answers 503 when a Location's plugins take longer
 // than 5 seconds to activate, and a team catalog takes several sequential Kilo API requests.
 export const FIRST_CATALOG_WAIT = Duration.seconds(2)
@@ -71,25 +72,6 @@ const UPSTREAM_REQUEST_HEADERS = [
   "x-opencode-client",
 ]
 
-// Written by the device method. Decoded again because stored credentials are read back from the database.
-// `accountID` is the team of a Kilo v1 `auth.json` login that the upstream `import_legacy_credentials` migration
-// copied into a new database.
-const Metadata = Schema.Struct({
-  server: Schema.optional(Schema.String),
-  organizationID: Schema.optional(Schema.NullOr(Schema.String)),
-  accountID: Schema.optional(Schema.String),
-})
-const decodeMetadata = Schema.decodeUnknownOption(Metadata)
-const decodeSettings = Schema.decodeUnknownOption(
-  Schema.Struct({
-    apiKey: Schema.optional(Schema.String),
-    kilocodeToken: Schema.optional(Schema.String),
-    baseURL: Schema.optional(Schema.String),
-    kilocodeOrganizationId: Schema.optional(Schema.NullOr(Schema.String)),
-  }),
-)
-// The team choice in plugin storage. `null` is the personal account.
-const decodeSelection = Schema.decodeUnknownOption(Schema.Struct({ organizationID: Schema.NullOr(Schema.String) }))
 // The last good catalog of one personal or anonymous scope: its models and its default model.
 const decodeSnapshot = Schema.decodeUnknownOption(
   Schema.fromJsonString(
@@ -191,81 +173,50 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       yield* Fiber.interrupt(fiber)
     })
 
-    const resolveCurrentAccount = Effect.gen(function* () {
-      const settings = Option.getOrUndefined(
-        decodeSettings(
-          Object.assign(
-            {},
-            ...(yield* configService.value.entries()).flatMap((entry) =>
-              entry.type === "document" ? [entry.info.providers?.kilo?.settings ?? {}] : [],
-            ),
-          ),
-        ),
-      )
-      const envInput = KiloAccount.envToken()
-      const configuredServer = settings?.baseURL ? KiloServer.normalize(settings.baseURL) : KiloServer.aiGatewayFromEnv()
-      const content = KiloAccount.authContent()
-      const connection = content === undefined ? yield* ctx.integration.connection.active(id) : undefined
-      const credential = connection
-        ? yield* ctx.integration.connection.resolve(connection).pipe(Effect.orElseSucceed(() => undefined))
-        : undefined
-      const saved =
-        content !== undefined ? (content ?? undefined) : credential ? credentialInput(credential) : undefined
-      // v1's final provider auth patch runs after config: env > saved OAuth/key > config token > config API key.
-      const token = envInput?.token ?? saved?.token ?? settings?.kilocodeToken ?? settings?.apiKey
-      const loginServer = !envInput && saved?.server ? KiloServer.normalize(saved.server) : undefined
-      const base = settings?.baseURL || (loginServer === KiloServer.fromEnv() ? undefined : loginServer) || configuredServer
-      const key = token !== undefined
-        ? !envInput && content === undefined && saved && connection
-          ? organizationKey(connection)
-            : `organization:${GatewayCatalog.snapshotKey(KiloServer.fromToken(token) ?? base, token)}`
-        : undefined
-      const storedSelection = key ? decodeSelection(yield* ctx.storage.get(key)) : Option.none()
-      const legacy =
-        key && (envInput || content)
-          ? decodeSelection(yield* ctx.storage.get("organization:env"))
-          : Option.none()
-      const selection = Option.orElse(storedSelection, () => legacy)
-      const organizationID = Option.isSome(selection)
-        ? selection.value.organizationID
-        : saved?.organizationID === null
-          ? null
-          : saved?.organizationID || settings?.kilocodeOrganizationId
-      const account = token !== undefined
-        ? KiloAccount.resolve({
-            token,
-            server: base,
-            organizationID: organizationID === "" ? undefined : organizationID,
-          })
-        : undefined
-      // Adopt the old unscoped selection once, then keep all future choices bound to this credential identity.
-      if (key && Option.isSome(legacy) && account && KiloAccount.compatible(account)) {
-        if (Option.isNone(storedSelection)) yield* ctx.storage.set(key, legacy.value)
-        yield* ctx.storage.remove("organization:env")
-      }
-      const activeOrganization = account
-        ? account.organizationID
-        : process.env.KILO_ORG_ID || organizationID || KiloServer.organizationFromUrl(base) || null
-      if (activeOrganization !== reportedOrganization || account?.token !== reportedToken) {
+    const invalidateReportedAccount = (organizationID: string | null, token: string | undefined) =>
+      Effect.gen(function* () {
+        if (organizationID === reportedOrganization && token === reportedToken) return
         reportedOrganization = undefined
         reportedToken = undefined
         if (Option.isSome(sessionSync))
           yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID: undefined })
+      })
+
+    const readOrganizationSelection = (key: string) =>
+      ctx.storage.get(key).pipe(Effect.map((value) => Option.getOrUndefined(GatewayAccountSelection.decodeSelection(value))))
+
+    const resolveCurrentAccount = Effect.gen(function* () {
+      const input = GatewayAccountSelection.overrides(yield* config.entries(), process.env)
+      const connection = input.content === undefined ? yield* ctx.integration.connection.active(id) : undefined
+      const credential = connection
+        ? yield* ctx.integration.connection.resolve(connection).pipe(Effect.orElseSucceed(() => undefined))
+        : undefined
+      const selected = GatewayAccountSelection.selectCredential(input, connection, credential)
+      const route = GatewayAccountSelection.selectRoute(input, selected, process.env)
+      const stored = route.selectionKey ? yield* readOrganizationSelection(route.selectionKey) : undefined
+      const legacy =
+        route.selectionKey && selected.useLegacySelection
+          ? yield* readOrganizationSelection(LEGACY_ORGANIZATION_KEY)
+          : undefined
+      const scope = GatewayAccountSelection.selectOrganization(input, selected, route.base, stored ?? legacy, process.env)
+      // Adopt the old unscoped selection once, then keep all future choices bound to this credential identity.
+      if (route.selectionKey && legacy && scope.account && KiloAccount.compatible(scope.account)) {
+        if (!stored) yield* ctx.storage.set(route.selectionKey, legacy)
+        yield* ctx.storage.remove(LEGACY_ORGANIZATION_KEY)
       }
+      yield* invalidateReportedAccount(
+        GatewayAccountSelection.activeOrganization(scope, route.base, process.env),
+        scope.account?.token,
+      )
       return {
-        server: KiloServer.apiBase(configuredServer),
-        gateway: configuredServer,
-        envActive: Boolean(envInput || content !== undefined || (!saved && token !== undefined)),
-        connection: !envInput && content === undefined && saved ? connection : undefined,
-        selectionKey: key,
-        personalSelected:
-          (Option.isSome(selection) && selection.value.organizationID === null) ||
-          (!envInput && saved?.organizationID === null) ||
-          settings?.kilocodeOrganizationId === null,
-        account,
-        organizationID: account
-          ? account.organizationID
-          : process.env.KILO_ORG_ID || organizationID || KiloServer.organizationFromUrl(base) || null,
+        server: KiloServer.apiBase(input.gateway),
+        gateway: input.gateway,
+        envActive: selected.envActive,
+        connection: selected.connection,
+        selectionKey: route.selectionKey,
+        personalSelected: scope.personalSelected,
+        account: scope.account,
+        organizationID: GatewayAccountSelection.activeOrganization(scope, route.base, process.env),
       }
     })
 
@@ -277,8 +228,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           catalog.account?.server === resolved.account?.server &&
           catalog.account?.organizationID === resolved.account?.organizationID &&
           catalog.envActive === resolved.envActive &&
-          (catalog.connection ? organizationKey(catalog.connection) : undefined) ===
-            (resolved.connection ? organizationKey(resolved.connection) : undefined)
+          (catalog.connection ? GatewayAccountSelection.organizationKey(catalog.connection) : undefined) ===
+            (resolved.connection ? GatewayAccountSelection.organizationKey(resolved.connection) : undefined)
         )
           return
         KiloModes.clearCache()
@@ -1400,24 +1351,6 @@ function device(server: () => string, data: string) {
       }),
     label: (credential) => (typeof credential.metadata?.email === "string" ? credential.metadata.email : undefined),
   } satisfies IntegrationOAuthMethodRegistration
-}
-
-function organizationKey(
-  connection: { readonly type: "credential"; readonly id: string } | { readonly type: "env"; readonly name: string },
-) {
-  return `organization:${connection.type === "credential" ? connection.id : `env:${connection.name}`}`
-}
-
-function credentialInput(credential: Credential.Value): KiloAccount.Input | undefined {
-  const token = KiloCredential.token(credential)
-  if (token === undefined) return undefined
-  const metadata = Option.getOrUndefined(decodeMetadata(credential.metadata ?? {}))
-  return {
-    token,
-    server: metadata?.server,
-    // `null` is an explicit Personal choice, so only a missing team falls back to the imported one.
-    organizationID: metadata?.organizationID === undefined ? metadata?.accountID : metadata.organizationID,
-  }
 }
 
 /** `experimental.image_generate` is on only when a document sets it to `true` or a `{ model }` object. */
