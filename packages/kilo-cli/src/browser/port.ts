@@ -173,7 +173,11 @@ export function hub(options: Options = {}): BrowserHub.Interface {
       const connection = () => client(target ?? null)
       return {
         async ready(timeoutMs) {
-          const info = await (await connection()).ready(timeoutMs)
+          const info = await (await connection())
+            .ready(timeoutMs)
+            .catch((error: unknown) => {
+              throw failure(error)
+            })
           return {
             protocol: info.protocol,
             contractSha: info.contractSha,
@@ -182,13 +186,21 @@ export function hub(options: Options = {}): BrowserHub.Interface {
           }
         },
         async open(params) {
-          return (await connection()).session.open({ ...params, cliVersion: version ?? OPENCODE_VERSION })
+          return (await connection()).session.open({ ...params, cliVersion: version ?? OPENCODE_VERSION }).catch(
+            (error: unknown) => {
+              throw failure(error)
+            },
+          )
         },
         async close(sessionHandle) {
-          await (await connection()).session.close({ sessionHandle })
+          await (await connection()).session.close({ sessionHandle }).catch((error: unknown) => {
+            throw failure(error)
+          })
         },
         async list() {
-          const listed = await (await connection()).tools.list()
+          const listed = await (await connection()).tools.list().catch((error: unknown) => {
+            throw failure(error)
+          })
           return listed.tools.map((tool) => tool.name)
         },
         async call(params) {

@@ -469,16 +469,30 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
     const hub = yield* BrowserHub.Service
     // One extension backend per profile target: each holds the session handles opened on its own hub connection. The
     // backend module is loaded on the first extension call: it is not in the graph of a Playwright user's start, and a
-    // static import cannot express that.
+    // static import cannot express that. A target change evicts the least recently used backend, and an evicted one is
+    // disposed, so a session that keeps switching profiles cannot grow this map.
     const extensions = new Map<string, Promise<ExtensionBackend>>()
+    const EXTENSION_LIMIT = 4
     const extension = (target: string | null) => {
       const name = target ?? ""
       const existing = extensions.get(name)
-      if (existing) return existing
+      if (existing) {
+        // Re-insert so the map's order is the recency order the eviction below reads.
+        extensions.delete(name)
+        extensions.set(name, existing)
+        return existing
+      }
       const created = import("./extension").then((module) =>
         module.backend({ port: hub.port(target), directory: ctx.location.directory }),
       )
       extensions.set(name, created)
+      while (extensions.size > EXTENSION_LIMIT) {
+        const oldest = extensions.keys().next().value
+        if (oldest === undefined) break
+        const evicted = extensions.get(oldest)
+        extensions.delete(oldest)
+        void evicted?.then((backend) => backend.dispose()).catch(() => undefined)
+      }
       return created
     }
 

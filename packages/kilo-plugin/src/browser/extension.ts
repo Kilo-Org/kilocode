@@ -36,8 +36,8 @@ export const UPDATE_HINT = "Update the Kilo browser extension to the current ver
  */
 const READY_TIMEOUT = 5_000
 
-/** The upload chunk payload the protocol caps at 512 KiB before base64 encoding. */
-const UPLOAD_CHUNK = 512 * 1024
+/** The upload chunk payload: base64 of this is exactly the protocol's `MaxUploadChunk`, so one frame always fits. */
+const UPLOAD_CHUNK = 393_216
 
 const CLASSES: Record<string, true> = { read: true, act: true, navigate: true, sensitive: true }
 
@@ -176,14 +176,16 @@ export class ExtensionBackend implements BrowserBackend {
   private listing: Promise<Set<string> | undefined> | undefined
   /** Whether this browser accepts file bytes; undefined until the first upload says so. */
   private transfer: boolean | undefined
+  private readonly off: () => void
 
   constructor(private readonly input: { port?: BrowserHub.Port; directory: string }) {
-    input.port?.onRevoked((event) => {
-      const session = this.sessions.get(event.sessionHandle)
-      if (session === undefined) return
-      this.sessions.delete(event.sessionHandle)
-      this.handles.delete(session)
-    })
+    this.off =
+      input.port?.onRevoked((event) => {
+        const session = this.sessions.get(event.sessionHandle)
+        if (session === undefined) return
+        this.sessions.delete(event.sessionHandle)
+        this.handles.delete(session)
+      }) ?? (() => {})
   }
 
   /**
@@ -254,13 +256,20 @@ export class ExtensionBackend implements BrowserBackend {
 
   /** The instance holds only per-session state; the hub connection belongs to the host. */
   async dispose() {
+    this.off()
     this.handles.clear()
     this.sessions.clear()
   }
 
+  /** A listing is cached once it succeeds; a failed attempt is dropped so the next call asks again. */
   private names(): Promise<Set<string> | undefined> {
-    this.listing ??= this.load()
-    return this.listing
+    if (this.listing !== undefined) return this.listing
+    const pending = this.load()
+    this.listing = pending
+    pending.catch(() => {
+      if (this.listing === pending) this.listing = undefined
+    })
+    return pending
   }
 
   private async load(): Promise<Set<string> | undefined> {
@@ -301,6 +310,11 @@ export class ExtensionBackend implements BrowserBackend {
       title: session || "Kilo agent",
       cwd: this.input.directory,
     })
+    // The session ended while the extension was still opening it: close the handle instead of keeping it alive.
+    if (!this.handles.has(session)) {
+      await port.close(opened.sessionHandle).catch(() => undefined)
+      throw new Error("The session ended before its browser session opened.")
+    }
     this.sessions.set(opened.sessionHandle, session)
     return opened.sessionHandle
   }

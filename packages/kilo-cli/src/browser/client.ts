@@ -17,6 +17,14 @@ const RequestTimeout = 60_000
 const DialTimeout = 5_000
 const StartTimeout = 8_000
 
+/**
+ * Whether an extension may serve a client that selected `profile`. No selection accepts any profile; a selection
+ * accepts only the profile it names, so a browser that reconnects as another one is refused instead of adopted.
+ */
+export function accepts(profile: string | undefined, extension: { profileLabel: string }) {
+  return profile === undefined || extension.profileLabel === profile
+}
+
 export class HubError extends Error {
   readonly code: number
   readonly data: unknown
@@ -221,6 +229,16 @@ export function create(input: Input = {}): Client {
       return
     }
     if (envelope.data.type === "hub.ready") {
+      // A selected profile is a constraint on the browser, not only on the hub it was dialled through: an extension
+      // that reconnects with another profile must not serve this client's session tabs.
+      if (!accepts(input.profile, envelope.data.extension)) {
+        log.warn("the extension reports another profile than the one selected", {
+          profile: input.profile,
+          reported: envelope.data.extension.profileLabel,
+        })
+        detach("the extension reported another browser profile")
+        return
+      }
       backoff.level = 0
       lifecycle.tried = false
       set({ kind: "ready", hub: active.hub, extension: envelope.data.extension })

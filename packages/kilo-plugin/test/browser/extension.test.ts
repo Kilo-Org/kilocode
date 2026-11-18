@@ -418,11 +418,76 @@ describe("extension backend", () => {
       ["photo.png", payload.byteLength, "image/png"],
     ])
     expect(hub.chunks.map((chunk) => chunk.index)).toEqual([0, 1])
-    expect(Buffer.from(hub.chunks[0]!.data, "base64").byteLength).toBe(512 * 1024)
-    expect(Buffer.from(hub.chunks[1]!.data, "base64").byteLength).toBe(88 * 1024)
+    // The largest frame the protocol allows: base64 of 393 216 bytes is exactly its 524 288-character cap.
+    expect(hub.chunks[0]!.data.length).toBe(524_288)
+    expect(Buffer.from(hub.chunks[0]!.data, "base64").byteLength).toBe(393_216)
+    expect(Buffer.from(hub.chunks[1]!.data, "base64").byteLength).toBe(600 * 1024 - 393_216)
     expect(hub.ended).toEqual([hub.began[0]!.uploadId])
     expect(hub.calls[0]?.arguments.uploads).toEqual([hub.began[0]!.uploadId])
     expect(hub.calls[0]?.arguments.paths).toEqual([file])
+  })
+
+  test("dispose releases the revocation subscription", async () => {
+    let released = 0
+    const hub = fake()
+    const port: BrowserHub.Port = {
+      ...hub.port,
+      onRevoked: () => () => {
+        released += 1
+      },
+    }
+    const active = backend({ port, directory: "/tmp/project" })
+    await active.dispose()
+    expect(released).toBe(1)
+  })
+
+  test("a failed tool listing is retried on the next call instead of cached", async () => {
+    const hub = fake({ contractSha: "another" })
+    let listings = 0
+    const port: BrowserHub.Port = {
+      ...hub.port,
+      list: () => {
+        listings += 1
+        if (listings === 1) {
+          return Promise.reject(new BrowserHub.Failure({ kind: "unavailable", message: "the hub went away" }))
+        }
+        return Promise.resolve(BrowserContract.entries.map((entry) => entry.name))
+      },
+    }
+    const active = backend({ port, directory: "/tmp/project" })
+    const first = await active.callTool("browser_navigate", {}, ctx()).catch((value: unknown) => value)
+    expect(first).toBeInstanceOf(UnavailableError)
+    const second = await active.callTool("browser_navigate", {}, ctx())
+    expect(second.isError).toBe(false)
+    expect(listings).toBe(2)
+  })
+
+  test("a session that ends while its browser session opens closes the new handle", async () => {
+    const gate = Promise.withResolvers<void>()
+    const entering = Promise.withResolvers<void>()
+    const closed: string[] = []
+    const hub = fake()
+    const port: BrowserHub.Port = {
+      ...hub.port,
+      open: async () => {
+        entering.resolve()
+        await gate.promise
+        return { sessionHandle: "late" }
+      },
+      close: (handle) => {
+        closed.push(handle)
+        return Promise.resolve()
+      },
+    }
+    const active = backend({ port, directory: "/tmp/project" })
+    const call = active.callTool("browser_snapshot", {}, ctx({ session: "ses_late" }))
+    // The session ends while the extension is still answering the open.
+    await entering.promise
+    active.forget("ses_late")
+    gate.resolve()
+    const error = await call.catch((value: unknown) => value)
+    expect((error as Error).message).toContain("ended before its browser session opened")
+    expect(closed).toEqual(["late"])
   })
 
   test("a file that cannot be read fails before the browser sees the call", async () => {
