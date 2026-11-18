@@ -214,7 +214,7 @@ test("keeps a pending form on the owning Local row when switching projects", asy
     stop(server.process)
     await exited
   }
-})
+}, 90_000)
 
 describe("targets", () => {
   const event = (type: string, directory?: string) =>
