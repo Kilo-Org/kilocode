@@ -828,6 +828,81 @@ describe("KiloGatewayPlugin", () => {
     ),
   )
 
+  for (const outcome of ["empty", "unauthorized"] as const) {
+    it.live(`clears a warm team catalog on ${outcome} without falling back to Personal`, () =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => fixture()),
+        (backend) =>
+          withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "fixture-token" }, () =>
+            Effect.gen(function* () {
+              yield* addPlugin()
+              const rpc = yield* Rpc.Service
+              const client = rpc.client(KiloGatewayRpc.Definition)
+              const models = yield* Model.Service
+              const providers = yield* Provider.Service
+              expect(yield* client.models({})).not.toHaveLength(0)
+
+              const team = { organizationID: "selected" }
+              yield* client["organization.set"](team)
+              expect(yield* client.models({})).toHaveLength(2)
+              const requests = backend.requests.length
+              if (outcome === "empty") backend.state.teamModels = { data: [] }
+              if (outcome === "unauthorized") backend.state.teamModelsStatus = 401
+
+              const failure = { kind: "unauthorized", status: 401 } as const
+              if (outcome === "unauthorized") {
+                expect(yield* client["organization.set"](team).pipe(Effect.flip)).toMatchObject({ type: "failed" })
+                expect(yield* client.models({}).pipe(Effect.flip)).toMatchObject({ type: "failed", data: failure })
+                expect(yield* client["catalog.status"]({})).toEqual({ failure })
+              } else {
+                yield* client["organization.set"](team)
+                expect(yield* client.models({})).toEqual([])
+                expect(yield* client["catalog.status"]({})).toEqual({ failure: null })
+              }
+              expect((yield* models.available()).filter((model) => model.providerID === kilo)).toEqual([])
+              expect((yield* providers.available()).some((provider) => provider.id === kilo)).toBe(false)
+              expect(backend.requests.slice(requests).filter((request) => request.path.endsWith("/models"))).toEqual([
+                {
+                  method: "GET",
+                  path: "/api/gateway/v1/organizations/selected/models",
+                  authorization: "Bearer fixture-token",
+                  organizationID: "selected",
+                },
+              ])
+            }),
+          ),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      ),
+    )
+  }
+
+  it.live("reports a failed Personal catalog when the authenticated and public requests both return 401", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "fixture-token" }, () =>
+          Effect.gen(function* () {
+            backend.state.modelsStatus = 401
+            yield* addPlugin()
+            const rpc = yield* Rpc.Service
+            const client = rpc.client(KiloGatewayRpc.Definition)
+            const models = yield* Model.Service
+            const providers = yield* Provider.Service
+            const failure = { kind: "unauthorized", status: 401 } as const
+            expect(yield* client["catalog.status"]({})).toEqual({ failure })
+            expect(yield* client.models({}).pipe(Effect.flip)).toMatchObject({ type: "failed", data: failure })
+            expect((yield* models.available()).filter((model) => model.providerID === kilo)).toEqual([])
+            expect((yield* providers.available()).some((provider) => provider.id === kilo)).toBe(false)
+            expect(backend.requests.filter((request) => request.path.endsWith("/models"))).toEqual([
+              { method: "GET", path: "/api/gateway/v1/models", authorization: "Bearer fixture-token" },
+              { method: "GET", path: "/api/gateway/v1/models", authorization: null },
+            ])
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
   it.effect("a stale policy lookup cannot cancel the latest catalog retry", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),

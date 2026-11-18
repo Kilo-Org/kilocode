@@ -40,8 +40,9 @@ import { Provider } from "@opencode/schema/provider"
 import { Global } from "@opencode/util/global"
 import { KiloOrganizationModes } from "./modes"
 import { KiloGatewayAccounts } from "./accounts"
-import { createHash, randomUUID } from "node:crypto"
+import { randomUUID } from "node:crypto"
 import { Clock, Duration, Effect, Fiber, Latch, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
+import { GatewayCatalog } from "./catalog.js"
 import { GatewayOptions } from "./options.js"
 import { GatewayPrompt } from "./prompt.js"
 import { GatewayRouters } from "./routers.js"
@@ -108,25 +109,11 @@ const OrganizationEvent = Bus.ephemeral({
   },
 })
 
-interface Snapshot {
-  readonly models: readonly KiloModels.Model[]
-  /** Image-only models kept with the chat models they share a catalog with. */
-  readonly imageModels?: readonly KiloModels.Model[]
-  readonly defaultModelID?: string
-}
-
-interface CatalogState {
+interface CatalogState extends GatewayCatalog.View {
   readonly account?: KiloAccount.Info
   readonly organizationID?: string
   readonly connection?: ConnectionInfo
   readonly envActive: boolean
-  readonly models: readonly KiloModels.Model[]
-  /** The image-output models of the same catalog, registered on the provider as `image` models. */
-  readonly imageModels: readonly KiloModels.Model[]
-  readonly defaultModelID?: string
-  readonly failed: boolean
-  readonly failure?: KiloModels.Failure
-  readonly anonymous: boolean
   readonly skippedOfflineTest?: boolean
 }
 
@@ -160,7 +147,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     }
     const scopeCompatible = () => !catalog.organizationID && (!catalog.account || KiloAccount.compatible(catalog.account))
     const activeAccount = () => scopeCompatible() && catalog.account?.token ? catalog.account : undefined
-    const lastGood = new Map<string, Snapshot>()
+    const lastGood = new Map<string, GatewayCatalog.Snapshot>()
     const sessionMetadata = new Map<string, KiloGatewayRpc.SessionMetadata>()
     let retryFiber: Fiber.Fiber<void, never> | undefined
     let cachedProjectID: string | null | undefined
@@ -231,7 +218,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const key = token !== undefined
         ? !envInput && content === undefined && saved && connection
           ? organizationKey(connection)
-          : `organization:${snapshotKey(KiloServer.fromToken(token) ?? base, token)}`
+            : `organization:${GatewayCatalog.snapshotKey(KiloServer.fromToken(token) ?? base, token)}`
         : undefined
       const storedSelection = key ? decodeSelection(yield* ctx.storage.get(key)) : Option.none()
       const legacy =
@@ -299,7 +286,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         yield* ctx.agent.reload()
       })
 
-    const saveSnapshot = (writeKey: string, snapshot: Snapshot) =>
+    const saveSnapshot = (writeKey: string, snapshot: GatewayCatalog.Snapshot) =>
       Effect.gen(function* () {
         if (!lastGood.has(writeKey) && lastGood.size >= MAX_SNAPSHOTS) {
           const oldest = lastGood.keys().next().value
@@ -326,7 +313,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         const value = yield* ctx.storage.get(key).pipe(Effect.orElseSucceed(() => undefined))
         const decoded = typeof value === "string" ? Option.getOrUndefined(decodeSnapshot(value)) : undefined
         if (!decoded || decoded.models.length === 0) return undefined
-        const snapshot: Snapshot = {
+        const snapshot: GatewayCatalog.Snapshot = {
           models: decoded.models as readonly KiloModels.Model[],
           imageModels: (decoded.imageModels ?? []) as readonly KiloModels.Model[],
           defaultModelID: decoded.defaultModelID,
@@ -498,90 +485,13 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       )
       if (targetEpoch !== epoch) return
 
-      if (fetched._tag === "Success") {
-        const models = fetched.success.models
-        const resolvedDefault =
-          models.some((model) => model.id === defaultModelID)
-            ? defaultModelID
-            : organizationID
-              ? models[0]?.id
-              : // Only a custom server answers no personal default: keep the default on the Kilo provider as v1.
-                (defaultModelID ?? KiloDefaults.firstSorted(models.map((model) => model.id)))
-        // Key the snapshot by the actual scope of the returned data: a 401 personal fallback returns the
-        // anonymous free catalog (`anonymous === true`), so never store it under the personal token key.
-        const writeKey = organizationID
-          ? undefined
-          : snapshotKey(base, fetched.success.anonymous ? undefined : token)
-        if (writeKey && models.length > 0) {
-          yield* saveSnapshot(writeKey, {
-            models,
-            imageModels: fetched.success.imageModels,
-            defaultModelID: resolvedDefault,
-          })
-        }
-        if (targetEpoch !== epoch) return
-        catalog = {
-          account: current,
-          connection,
-          envActive,
-          models,
-          imageModels: fetched.success.imageModels,
-          defaultModelID: resolvedDefault,
-          failed: false,
-          anonymous: fetched.success.anonymous,
-        }
-        if (models.length === 0) {
-          yield* scheduleRetry({ kind: "network" }, targetEpoch, attempt)
-        }
-        return
-      }
-
-      // Team scope always fails closed on error: never fall back to personal, anonymous, or models.dev models.
-      if (organizationID) {
-        catalog = {
-          account: current,
-          connection,
-          envActive,
-          models: [],
-          imageModels: [],
-          failed: true,
-          failure: fetched.failure,
-          anonymous: false,
-        }
-        yield* scheduleRetry(fetched.failure, targetEpoch, attempt)
-        return
-      }
-
-      // Personal or anonymous scope: keep the last good Gateway catalog for this exact scope, if any.
-      // Never fall back to models.dev.
-      const stored = yield* readSnapshot(snapshotKey(base, token))
+      const outcome = yield* GatewayCatalog.settle({ base, token, organizationID }, fetched, defaultModelID, {
+        read: readSnapshot,
+        save: saveSnapshot,
+      })
       if (targetEpoch !== epoch) return
-      if (stored) {
-        catalog = {
-          account: current,
-          connection,
-          envActive,
-          models: stored.models,
-          imageModels: stored.imageModels ?? [],
-          // The stored default belongs to the stored models. `KiloDefaults.get` answers its static fallback when the
-          // Kilo API is down, so it must not replace the stored default.
-          defaultModelID: stored.defaultModelID ?? defaultModelID,
-          failed: false,
-          anonymous: token === undefined,
-        }
-      } else {
-        catalog = {
-          account: current,
-          connection,
-          envActive,
-          models: [],
-          imageModels: [],
-          failed: true,
-          failure: fetched.failure,
-          anonymous: token === undefined,
-        }
-      }
-      yield* scheduleRetry(fetched.failure, targetEpoch, attempt)
+      catalog = { account: current, connection, envActive, ...outcome.view }
+      if (outcome.retry) yield* scheduleRetry(outcome.retry, targetEpoch, attempt)
     })
 
     function scheduleRetry(failure: KiloModels.Failure, targetEpoch: number, attempt: number) {
@@ -688,7 +598,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     gateway = start.gateway
     const stored = start.organizationID
       ? undefined
-      : yield* readSnapshot(snapshotKey(start.account?.baseURL ?? gateway, start.account?.token))
+      : yield* readSnapshot(GatewayCatalog.snapshotKey(start.account?.baseURL ?? gateway, start.account?.token))
     if (stored) {
       catalog = {
         account: start.account,
@@ -1090,7 +1000,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
               organizationID,
               server: catalog.account?.server ?? server,
               ...(account?.token && organizationID === null
-                ? { identity: snapshotKey(account.server ?? server, account.token) }
+                ? { identity: GatewayCatalog.snapshotKey(account.server ?? server, account.token) }
                 : {}),
             }
           }),
@@ -1341,13 +1251,6 @@ function catalogStatus(catalog: CatalogState): KiloGatewayRpc.CatalogStatus {
 function isLoopback(server: string): boolean {
   if (!URL.canParse(server)) return false
   return LOOPBACK.has(new URL(server).hostname.toLowerCase())
-}
-
-function snapshotKey(server: string, token?: string): string {
-  const route = KiloServer.gateway(server)
-  if (token === undefined) return `catalog:anonymous:${route}`
-  const hash = createHash("sha256").update(`${route}:${token}`).digest("hex")
-  return `catalog:personal:${hash}`
 }
 
 // kilo_port(gateway:742c02b40457) v1 kilo.ts created one Kilo SDK for all models; v2 picks the dialect per model.
