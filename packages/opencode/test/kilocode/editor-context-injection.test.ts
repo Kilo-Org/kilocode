@@ -132,29 +132,24 @@ describe("injectEditorContext", () => {
     expect(blocks(second[0])).toHaveLength(1)
   })
 
-  test("keeps historical local times byte-identical across daylight saving", async () => {
-    const previous = process.env.TZ
-    process.env.TZ = "UTC"
-    try {
-      const winter = user("winter", Date.parse("2026-01-15T12:34:00Z"), undefined, undefined, "America/New_York")
-      const summer = user("summer", Date.parse("2026-07-15T12:34:00Z"), undefined, undefined, "America/New_York")
-      const first = [structuredClone(winter), structuredClone(summer)]
-      inject(first)
-      const before = await prompt(first)
-      process.env.TZ = "America/Los_Angeles"
-      const second = [structuredClone(winter), structuredClone(summer)]
-      inject(second)
+  test("uses recorded timezones and reconstructs historical blocks with a fresh cache", async () => {
+    const stored = [
+      user("winter", Date.parse("2026-01-15T12:34:00Z"), undefined, undefined, "America/New_York"),
+      user("summer", Date.parse("2026-07-15T12:34:00Z"), undefined, undefined, "America/New_York"),
+      user("west", Date.parse("2026-01-15T12:34:00Z"), undefined, undefined, "America/Los_Angeles"),
+      user("legacy", Date.parse("2026-01-15T12:34:00Z")),
+    ]
+    const first = structuredClone(stored)
+    const second = structuredClone(stored)
+    inject(first)
+    inject(second)
 
-      expect(await prompt(second)).toBe(before)
-      expect(blocks(second[0])[0].text).toContain("07:34 (America/New_York, UTC-05:00)")
-      expect(blocks(second[1])[0].text).toContain("08:34 (America/New_York, UTC-04:00)")
-      const legacy = [user("legacy", Date.parse("2026-01-15T12:34:00Z"))]
-      inject(legacy)
-      expect(blocks(legacy[0])[0].text).not.toContain("Local time:")
-    } finally {
-      if (previous === undefined) delete process.env.TZ
-      if (previous !== undefined) process.env.TZ = previous
-    }
+    expect(await prompt(second)).toBe(await prompt(first))
+    expect(blocks(second[0])[0].text).toContain("07:34 (America/New_York, UTC-05:00)")
+    expect(blocks(second[1])[0].text).toContain("08:34 (America/New_York, UTC-04:00)")
+    expect(blocks(second[2])[0].text).toContain("04:34 (America/Los_Angeles, UTC-08:00)")
+    expect(blocks(second[3])[0].text).toContain("Message time: 2026-01-15T12:34:00Z")
+    expect(blocks(second[3])[0].text).not.toContain("Local time:")
   })
 
   test("does not mistake user-authored markup for an injected block", () => {

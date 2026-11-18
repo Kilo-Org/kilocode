@@ -646,6 +646,7 @@ export const layer = Layer.effect(
               role: "user",
               agent: input.agent,
               model: { providerID: model.providerID, modelID: model.modelID },
+              editorContext: { timezone: hostTimezone() }, // kilocode_change
             }
             yield* sessions.updateMessage(userMsg)
             const userPart: SessionV1.Part = {

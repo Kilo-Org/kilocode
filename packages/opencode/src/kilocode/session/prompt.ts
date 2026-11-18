@@ -492,7 +492,6 @@ export namespace KiloSessionPrompt {
             ...msg.info.editorContext,
           },
           new Date(msg.info.time.created),
-          msg.info.editorContext?.timezone ?? "",
         )
       input.cache.blocks.set(msg.info.id, block)
       msg.parts.push({

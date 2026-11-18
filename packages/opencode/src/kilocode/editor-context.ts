@@ -45,11 +45,11 @@ export function hostTimezone(): string | undefined {
   }
 }
 
-function localTime(now: Date, zone?: string): string | undefined {
+function localTime(now: Date, tz?: string): string | undefined {
   try {
     // The CLI host timezone also governs offset-less scheduled wakeups. A remote
     // CLI host may use a different timezone from its VS Code client.
-    const tz = zone ?? hostTimezone()
+    // Legacy messages have no recorded timezone and keep their UTC-only block.
     if (!tz) return undefined
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: tz,
@@ -72,9 +72,9 @@ function localTime(now: Date, zone?: string): string | undefined {
   }
 }
 
-export function environmentDetails(ctx?: EditorContext, now = new Date(), zone?: string): string {
+export function environmentDetails(ctx?: EditorContext, now = new Date()): string {
   const lines: string[] = [`Message time: ${timestamp(now)}`]
-  const local = localTime(now, zone)
+  const local = localTime(now, ctx?.timezone)
   if (local) lines.push(`Local time: ${local}`)
   if (ctx?.directory) {
     lines.push(`Working directory: ${ctx.directory}`)
