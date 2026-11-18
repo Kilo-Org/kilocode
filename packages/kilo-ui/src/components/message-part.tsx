@@ -1236,10 +1236,12 @@ ToolRegistry.register({
 
 ToolRegistry.register({ name: "execute", render: ExecuteTool })
 
+const pathSeparator = /[/\\]/
+
 function ToolFileName(props: { path: string; directory?: string }) {
   return (
     <div data-slot="apply-patch-file-name-container">
-      <Show when={props.path.includes("/") && relativizeProjectPath(getDirectory(props.path), props.directory)}>
+      <Show when={pathSeparator.test(props.path) && relativizeProjectPath(getDirectory(props.path), props.directory)}>
         {(directory) => (
           // Keep the trailing slash next to the filename even with right-to-left truncation.
           <span data-slot="apply-patch-directory">{`\u2066${directory()}\u2069`}</span>
@@ -1298,7 +1300,7 @@ function ToolFileMeta(props: {
         <span data-slot="message-part-title-filename" classList={{ clickable: !!props.onOpen }} onClick={props.onOpen}>
           {getFilename(props.path)}
         </span>
-        <Show when={props.path.includes("/")}>
+        <Show when={pathSeparator.test(props.path)}>
           <span data-slot="message-part-directory-inline">
             {relativizeProjectPath(getDirectory(props.path), props.directory)}
           </span>

@@ -196,6 +196,21 @@ test("patch card lists every file in a multi-file patch", async () => {
   expect(card.host.querySelector('[data-slot="apply-patch-change"][data-type="removed"]')).not.toBeNull()
 })
 
+test("patch card shows the directory of a Windows-style path", async () => {
+  const card = mountTool("patch", {
+    input: { patchText: editedFile.patch },
+    metadata: { files: [{ ...editedFile, file: "C:\\repo\\src\\math.ts" }] },
+    partID: "patch-windows",
+    directory: "C:\\repo",
+    forceOpen: true,
+  })
+  mounted.push(card)
+  const directory = await waitFor(() => card.host.querySelector('[data-slot="apply-patch-directory"]'))
+
+  expect(directory.textContent).toBe("\u2066src/\u2069")
+  expect(card.host.querySelector('[data-slot="message-part-directory-inline"]')?.textContent).toBe("src/")
+})
+
 for (const [name, input] of [
   ["grep", { pattern: "marker", path: "src" }],
   ["glob", { pattern: "**/*.ts", path: "src" }],
