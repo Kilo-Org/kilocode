@@ -72,11 +72,11 @@ test("disabled telemetry writes no alias marker and a later enabled run sends th
   expect(events.filter((event) => event.event === "$create_alias")).toHaveLength(1)
 })
 
-test("normalizes KILO_TELEMETRY_LEVEL and treats unrecognized values as off", async () => {
-  expect(await run({ KILO_TELEMETRY_LEVEL: "OFF" })).toEqual([])
-  expect(await run({ KILO_TELEMETRY_LEVEL: "0" })).toEqual([])
-  expect(await run({ KILO_TELEMETRY_LEVEL: "false" })).toEqual([])
-  expect(await run({ KILO_TELEMETRY_LEVEL: "unexpected" })).toEqual([])
+test.each(["OFF", "0", "false", "unexpected"])("disables telemetry with KILO_TELEMETRY_LEVEL=%j", async (level) => {
+  expect(await run({ KILO_TELEMETRY_LEVEL: level })).toEqual([])
+})
+
+test("allows telemetry with KILO_TELEMETRY_LEVEL=ON", async () => {
   expect(await run({ KILO_TELEMETRY_LEVEL: "ON" })).not.toEqual([])
 })
 
