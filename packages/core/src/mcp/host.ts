@@ -1,8 +1,15 @@
 // kilocode_change - new file
 export * as McpHost from "./host.js"
 
-import type { FetchLike, StoredOAuthClientInformation } from "@modelcontextprotocol/client"
+import type {
+  FetchLike,
+  OAuthClientProvider,
+  OAuthDiscoveryState,
+  StoredOAuthClientInformation,
+} from "@modelcontextprotocol/client"
 import type { ConfigMCP } from "@opencode/schema/config/mcp"
+import type { Effect } from "effect"
+import type { Credential } from "../credential.js"
 
 /** OAuth settings of one remote server, as configured. Absent means every CIMD default applies. */
 export type OAuthConfig = typeof ConfigMCP.OAuth.Type
@@ -35,6 +42,13 @@ export interface OAuth {
   readonly redirectUrl?: (config: OAuthConfig | undefined) => string | undefined
   /** Credential binding for a configured `client_id`. Absent keeps the upstream static client. */
   readonly binding?: OAuthBinding
+  /** Prepares the selected stored credential before a remote transport can send its first request. */
+  readonly beforeConnect?: (
+    config: ConfigMCP.Remote,
+    credential: Credential.Info,
+    client: OAuthClientProvider["clientInformation"],
+    configuredDiscovery: (fetchFn: FetchLike) => Promise<OAuthDiscoveryState | undefined>,
+  ) => Effect.Effect<void, never, Credential.Service>
 }
 
 /**
