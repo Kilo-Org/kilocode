@@ -4,6 +4,7 @@ import { afterAll, describe, expect, mock, test } from "bun:test"
 import { OpenCode, type OpenCodeEvent } from "@opencode/client"
 import { once } from "node:events"
 import path from "node:path"
+import type { Accessor, Setter } from "solid-js"
 import { git, initGit } from "../../core/test/fixture/git"
 import { tmpdir } from "../../core/test/fixture/tmpdir"
 import { command, start, stop } from "../src/server"
@@ -14,10 +15,11 @@ mock.module("solid-js", () => import(CLIENT_SOLID))
 // The client build of the store, so store writes reach the memos of the client Solid build.
 const CLIENT_STORE = "solid-js/store/dist/store.js"
 mock.module("solid-js/store", () => import(CLIENT_STORE))
-const { createRoot } = (await import(CLIENT_SOLID)) as {
+// Keep the project signal on the same reactive runtime as the root even when another test loaded the SSR entry.
+const { createRoot, createSignal } = (await import(CLIENT_SOLID)) as {
   createRoot: <T>(fn: (dispose: () => void) => T) => T
+  createSignal: <T>(value: T) => [Accessor<T>, Setter<T>]
 }
-const { createSignal } = await import("solid-js")
 // The webview page: the event stream reconnects on page lifecycle events.
 Object.assign(globalThis, {
   window: new EventTarget(),
