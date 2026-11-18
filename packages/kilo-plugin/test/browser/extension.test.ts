@@ -286,6 +286,21 @@ describe("extension backend", () => {
     expect(result.meta?.stepToken).toBe("tok-9")
   })
 
+  test("a need in a result's _meta is marked after-action, as the wire contract says", async () => {
+    const hub = fake({
+      call: () =>
+        Promise.resolve({
+          content: [{ type: "text", text: "The page moved to https://example.com." }],
+          meta: { needs: [{ class: "act", origin: "https://example.com" }] },
+        }),
+    })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    const result = await active.callTool("browser_click", { target: "e1" }, ctx())
+    // A result with needs means the call ran and then asked: `_meta.needs` is post-action by contract.
+    expect(result.meta?.afterAction).toBe(true)
+    expect(result.meta?.needs).toEqual([{ class: "act", origin: "https://example.com" }])
+  })
+
   test("a need the CLI cannot read is refused instead of half-asked", async () => {
     const hub = fake({
       call: () =>

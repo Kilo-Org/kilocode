@@ -690,6 +690,25 @@ describe("browser tools over the extension backend", () => {
     })
   }
 
+  test("a need returned in a result's _meta is answered as an action that already ran", async () => {
+    const { service } = recorder()
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name !== "browser_click") return Promise.resolve({ content: [{ type: "text", text: "{}" }] })
+        return Promise.resolve({
+          content: [{ type: "text", text: "The page moved to https://example.com; its content is withheld." }],
+          meta: { url: "https://example.com/landed", needs: [{ class: "act", origin: "https://example.com" }] },
+        })
+      },
+    })
+    const host = await boot({ backend: "extension", observation: "none" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag).toBe("Success")
+    const text = JSON.stringify(result._tag === "Success" ? result.success.content : "")
+    expect(text).toContain("The step ran. The permission is granted; read the page again (browser_snapshot)")
+    expect(text).not.toContain("Repeat the same step")
+  })
+
   test("a granted act need that never ran asks for the step again", async () => {
     // Only the after-action producer exists on the wire today, so the other branch of the decision is exercised
     // directly: a need without the flag never ran, and repeating the step is exactly what the model should do.

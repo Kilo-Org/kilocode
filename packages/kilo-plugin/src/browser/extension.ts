@@ -124,7 +124,10 @@ function reply(value: BrowserHub.Reply): CallResult {
   if (value.meta !== undefined && meta === undefined) {
     return { content: [{ type: "text", text: UNDESCRIBABLE }], isError: true }
   }
-  return { content, isError: value.isError === true, ...(meta ? { meta } : {}) }
+  // A need carried by a result is after-action by contract: the call succeeded and then asked for a grant, so the
+  // action already ran and the model reads the page instead of repeating the step.
+  const flagged = meta?.needs === undefined ? meta : { ...meta, afterAction: true as const }
+  return { content, isError: value.isError === true, ...(flagged ? { meta: flagged } : {}) }
 }
 
 /**
