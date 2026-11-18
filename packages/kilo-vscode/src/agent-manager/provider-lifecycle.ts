@@ -3,6 +3,7 @@ import { getErrorMessage } from "./errors"
 import { LOCAL_TARGET, type AgentManagerOutMessage } from "./types"
 import { initContextState } from "./project/init"
 import { pathKey } from "./project/paths"
+import { sessionMissing } from "./prune-subagents"
 import { settleMove } from "./session-move"
 import type { ProjectContext } from "./project/context"
 import type { ManagedSession } from "./WorktreeStateManager"
@@ -261,7 +262,22 @@ export async function deleteLifecycleWorktree(
         limit: Number.MAX_SAFE_INTEGER,
       }),
     ])
-    retained = sessions.data.map((session) => session.id)
+    const listed = new Set(sessions.data.map((session) => session.id))
+    const root = pathKey(worktree.path)
+    // The directory filter is exact. Check omitted filings for sessions running beneath the worktree,
+    // without interrupting or moving a session whose filing is stale and whose directory is elsewhere.
+    const nested = await Promise.all(
+      managed.filter((session) => !listed.has(session.id)).map(async (session) => {
+        const info = await client.session.get({ sessionID: session.id }).catch((error: unknown) => {
+          if (sessionMissing(error)) return undefined
+          throw error
+        })
+        if (!info) return []
+        const directory = pathKey(info.location.directory)
+        return directory === root || directory.startsWith(`${root}/`) ? [session.id] : []
+      }),
+    )
+    retained = [...listed, ...nested.flat()]
     const running = retained.some((id) => Object.hasOwn(active, id))
     if (running || permissions.data.length > 0 || forms.data.length > 0)
       return fail("Cannot delete a worktree while a session is active or waiting for input")

@@ -262,6 +262,20 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(state.getWorktree(id)).toBeDefined()
   })
 
+  it("refuses deletion when a filed session is running in a worktree subdirectory", async () => {
+    const id = state.getWorktrees()[0]!.id
+    state.addSession("nested", id)
+    const nested = path.join(worktree, "nested")
+    fs.mkdirSync(nested)
+    client.session.get.mockResolvedValue({ id: "nested", location: { directory: nested } })
+    client.session.active.mockResolvedValue({ nested: { type: "running" } })
+
+    await deleteWorktree()
+
+    expect(calls).toEqual(["post:error"])
+    expect(state.getWorktree(id)).toBeDefined()
+  })
+
   it.each(["permission", "form"] as const)("refuses a pending %s before cleanup", async (kind) => {
     const session = state.addSession("session", state.getWorktrees()[0]!.id)
     const list = kind === "permission" ? client.permission.request.list : client.form.list
@@ -382,9 +396,13 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(calls).toEqual(["abort:closed"])
   })
 
-  it("moves only sessions the server lists in the worktree, not a stale filing", async () => {
+  it("does not interrupt or move a stale filing in a similarly named sibling directory", async () => {
     const first = state.addSession("first", state.getWorktrees()[0]!.id)
     const stale = state.addSession("stale", state.getWorktrees()[0]!.id)
+    const sibling = `${worktree}-sibling`
+    fs.mkdirSync(sibling)
+    client.session.get.mockResolvedValue({ id: stale.id, location: { directory: sibling } })
+    client.session.active.mockResolvedValue({ [stale.id]: { type: "running" } })
     client.session.list.mockResolvedValue({
       data: [{ id: first.id }, { id: "archived" }, { id: "child", parentID: first.id }],
       location: { directory: worktree },
@@ -414,13 +432,15 @@ describe("Agent Manager worktree lifecycle", () => {
       directory: worktree,
       limit: Number.MAX_SAFE_INTEGER,
     })
+    expect(client.session.get).toHaveBeenCalledTimes(1)
+    expect(client.session.get).toHaveBeenCalledWith({ sessionID: stale.id })
     expect(client.session.move).toHaveBeenCalledWith({ sessionID: first.id, directory: ctx.root })
     expect(client.session.move).not.toHaveBeenCalledWith({ sessionID: stale.id, directory: ctx.root })
     expect(state.getWorktrees()).toHaveLength(0)
     expect(state.getSessions()).toHaveLength(0)
   })
 
-  it("reopens both conversations in Local History after closing one tab and deleting their worktree", async () => {
+  it("reopens worktree conversations from Local History after deletion, including closed and nested sessions", async () => {
     const repo = path.join(fs.realpathSync(root), "repo")
     fs.mkdirSync(repo)
     const git = simpleGit(repo)
@@ -450,14 +470,13 @@ describe("Agent Manager worktree lifecycle", () => {
         await Promise.all(ids.map((sessionID) => api.session.interrupt({ sessionID })))
       }
       const time = Date.now()
-      const location = { directory: tree.path }
-      const conversation = (title: string, archived?: number) =>
+      const conversation = (title: string, archived?: number, directory = tree.path) =>
         api.experimental.session.import({
-          location,
+          location: { directory },
           info: {
             id: Session.ID.create(),
             projectID: "global",
-            location,
+            location: { directory },
             title,
             cost: 0,
             tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
@@ -469,8 +488,12 @@ describe("Agent Manager worktree lifecycle", () => {
       const closed = await conversation("Closed transcript")
       const archived = await conversation("Archived transcript", time)
       const child = await api.session.create({ parentID: closed.id })
+      const subdirectory = path.join(tree.path, "nested")
+      fs.mkdirSync(subdirectory)
+      const nested = await conversation("Nested transcript", undefined, subdirectory)
       saved.addSession(open.id, wt.id)
       saved.addSession(closed.id, wt.id)
+      saved.addSession(nested.id, wt.id)
       await closeLifecycleSession(project, host, closed.id)
       expect(saved.getSession(closed.id)).toBeUndefined()
       const list = async (directory: string) => (await api.session.list({ directory, parentID: null })).data
@@ -481,7 +504,7 @@ describe("Agent Manager worktree lifecycle", () => {
       expect(fs.existsSync(tree.path)).toBe(false)
       await pushProjectSessions(project, list, host.post, host.log)
       const history = project.sessions().filter((entry) => entry.worktreeId === null)
-      expect(history.map((entry) => entry.id).sort()).toEqual([open.id, closed.id, archived.id].sort())
+      expect(history.map((entry) => entry.id).sort()).toEqual([open.id, closed.id, archived.id, nested.id].sort())
       for (const entry of history) {
         expect(
           await fileSessionLocally({ client: api, state: saved, sessionId: entry.id, root: repo, log: host.log }),
