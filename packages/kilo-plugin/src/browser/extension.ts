@@ -197,9 +197,9 @@ export class ExtensionBackend implements BrowserBackend {
         if (session === undefined) return
         this.sessions.delete(event.sessionHandle)
         this.handles.delete(session)
-        // Every revocation reason ends this session's use of the browser: the user pressed Stop all, turned the local
-        // agents off, or the browser went away and released its tabs.
-        this.stopped.add(session)
+        // Only the user's own decisions stop the conversation. A disconnect is the browser going away (a network drop,
+        // an extension reload): the handle is dropped and the next call reopens when the extension is back.
+        if (event.reason === "user_stop" || event.reason === "switch_off") this.stopped.add(session)
       }) ?? (() => {})
   }
 

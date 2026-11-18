@@ -285,7 +285,8 @@ describe("extension backend over a real hub", () => {
     try {
       expect((await client.ready(3_000)).profileLabel).toBe("Default")
 
-      // The hub answers an attach from a second extension with 4403 while the first one still holds the hub.
+      // The hub answers a *fully authenticated* second extension with 4403 while the first one holds it: the key is
+      // the one the hub stored, so the handshake itself succeeds and the refusal is the attach, not a bad MAC.
       const refused = await raw.connect({
         port: runtime.port,
         path: pair.SocketPath,
@@ -293,9 +294,20 @@ describe("extension backend over a real hub", () => {
       })
       sockets.push(refused)
       expect(refused.status).toBe(101)
-      // The attach answer: the hub hands out a challenge but refuses to serve a second extension, and it keeps
-      // reporting the first one's profile until that socket is gone.
-      expect((await message(refused, proto.Challenge)).type).toBe("challenge")
+      const challenge = await message(refused, proto.Challenge)
+      const nonceE = pair.nonce()
+      const key = await pair.load(path.join(runtime.data, "pairing.json"))
+      refused.send(
+        JSON.stringify({
+          type: "auth",
+          hubId: runtime.hubId,
+          nonceE,
+          mac: pair.extensionMac(key, challenge.nonceH, nonceE),
+        }),
+      )
+      // Authenticated, then refused at the attach: no hub.hello, and the socket closes with 4403.
+      expect(await message(refused, proto.HubHello).catch(() => undefined)).toBeUndefined()
+      expect(await refused.closed).toBe(4403)
       const held = await until(async () => (await Registry.list({ dir: path.join(runtime.run, "hubs") })).at(0), 5_000)
       expect(held?.profileLabel).toBe("Default")
 

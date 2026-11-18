@@ -397,8 +397,8 @@ describe("extension backend", () => {
     expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1"])
   })
 
-  test("every revocation reason stops its own conversation", async () => {
-    for (const reason of ["user_stop", "switch_off", "disconnect"]) {
+  test("only the user's own decisions stop a conversation: a disconnect reopens", async () => {
+    for (const reason of ["user_stop", "switch_off"] as const) {
       const hub = fake()
       const active = backend({ port: hub.port, directory: "/tmp/project" })
       await active.callTool("browser_snapshot", {}, ctx())
@@ -407,6 +407,14 @@ describe("extension backend", () => {
       expect((error as Error).message).toBe(STOPPED)
       expect(hub.opened).toHaveLength(1)
     }
+    // A disconnect is the browser going away, not the user: the next call opens a new session.
+    const hub = fake()
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
+    hub.revoke({ sessionHandle: "handle-1", reason: "disconnect" })
+    expect((await active.callTool("browser_snapshot", {}, ctx())).isError).toBe(false)
+    expect(hub.opened).toHaveLength(2)
+    expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1", "handle-2"])
   })
 
   test("another conversation and a new one are unaffected by a stop", async () => {
