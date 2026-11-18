@@ -34,14 +34,25 @@ async function measure(dir: string, sources: Map<string, string>): Promise<Findi
     .cwd(dir)
     .quiet()
     .nothrow()
-  if (result.exitCode > 1) throw new Error(result.stderr.toString() || `Oxlint exited ${result.exitCode}`)
-  const report: Report = result.json()
+  const report = parseReport(result.stdout.toString(), result.stderr.toString(), result.exitCode)
   if (report.number_of_files !== sources.size) throw new Error("Oxlint did not measure the complete snapshot")
   return report.diagnostics.map(({ filename, code, message, labels }) => {
     const match = /^(.+) has a complexity of (\d+)\. Maximum allowed is 20\.$/.exec(message)
     if (code !== "eslint(complexity)" || !match || !labels[0]) throw new Error(`${filename}: ${message}`)
     return { file: filename.replaceAll("\\", "/"), label: match[1]!, score: Number(match[2]), ...labels[0].span }
   })
+}
+
+// Oxlint writes its report to stdout. A broken install or config writes only stderr,
+// so surface that instead of a JSON parse error that hides the cause.
+function parseReport(stdout: string, stderr: string, exitCode: number): Report {
+  try {
+    return JSON.parse(stdout)
+  } catch {
+    throw new Error(
+      `Oxlint exited ${exitCode} without a report: ${stderr.trim() || stdout.trim().slice(0, 200) || "no output"}`,
+    )
+  }
 }
 
 // With zero context Git reports exactly the replaced ranges. An empty range is
