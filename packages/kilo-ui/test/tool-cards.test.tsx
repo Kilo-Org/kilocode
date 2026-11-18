@@ -161,6 +161,7 @@ test("patch card renders a single file with its diff", async () => {
 
   expect(card.host.querySelector('[data-component="apply-patch-tool"]')).not.toBeNull()
   expect(card.host.querySelector('[data-slot="message-part-title-text"]')?.textContent).toBe("Patch")
+  expect(card.host.querySelector('[data-slot="apply-patch-directory"]')?.textContent).toBe("\u2066src/\u2069")
   expect(card.host.querySelector('[data-slot="apply-patch-filename"]')?.textContent).toBe("math.ts")
   expect(card.host.querySelector('[data-component="apply-patch-file-diff"] [data-component="file"]')).not.toBeNull()
 })
@@ -168,7 +169,7 @@ test("patch card renders a single file with its diff", async () => {
 test("patch card lists every file in a multi-file patch", async () => {
   const card = mountTool("patch", {
     input: { patchText: patchedFiles.map((file) => file.patch).join("") },
-    metadata: { files: patchedFiles },
+    metadata: { files: [patchedFiles[0], { ...patchedFiles[1], file: "/repo/legacy.ts" }] },
     partID: "patch-multi",
     directory: "/repo",
     forceOpen: true,
@@ -178,6 +179,10 @@ test("patch card lists every file in a multi-file patch", async () => {
 
   const names = [...card.host.querySelectorAll('[data-slot="apply-patch-filename"]')].map((node) => node.textContent)
   expect(names).toEqual(["math.ts", "legacy.ts"])
+  const directories = [...card.host.querySelectorAll('[data-slot="apply-patch-directory"]')].map(
+    (node) => node.textContent,
+  )
+  expect(directories).toEqual(["\u2066src/\u2069"])
   expect(card.host.querySelector('[data-slot="basic-tool-tool-subtitle"]')?.textContent).toContain("2 files")
   expect(card.host.querySelector('[data-slot="apply-patch-change"][data-type="removed"]')).not.toBeNull()
 })

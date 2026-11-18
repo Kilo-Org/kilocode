@@ -1236,6 +1236,20 @@ ToolRegistry.register({
 
 ToolRegistry.register({ name: "execute", render: ExecuteTool })
 
+function ToolFileName(props: { path: string; directory?: string }) {
+  return (
+    <div data-slot="apply-patch-file-name-container">
+      <Show when={props.path.includes("/") && relativizeProjectPath(getDirectory(props.path), props.directory)}>
+        {(directory) => (
+          // Keep the trailing slash next to the filename even with right-to-left truncation.
+          <span data-slot="apply-patch-directory">{`\u2066${directory()}\u2069`}</span>
+        )}
+      </Show>
+      <span data-slot="apply-patch-filename">{getFilename(props.path)}</span>
+    </div>
+  )
+}
+
 function ToolFileAccordion(props: {
   path: string
   directory?: string
@@ -1257,14 +1271,7 @@ function ToolFileAccordion(props: {
             <div data-slot="apply-patch-trigger-content">
               <div data-slot="apply-patch-file-info" classList={{ clickable: !!props.onOpen }} onClick={props.onOpen}>
                 <FileIcon node={{ path: props.path, type: "file" }} />
-                <div data-slot="apply-patch-file-name-container">
-                  <Show when={props.path.includes("/")}>
-                    <span data-slot="apply-patch-directory">
-                      {relativizeProjectPath(getDirectory(props.path), props.directory)}
-                    </span>
-                  </Show>
-                  <span data-slot="apply-patch-filename">{getFilename(props.path)}</span>
-                </div>
+                <ToolFileName path={props.path} directory={props.directory} />
               </div>
               <div data-slot="apply-patch-trigger-actions">
                 {props.actions}
@@ -1724,14 +1731,7 @@ ToolRegistry.register({
                                 onClick={props.actions?.openFile ? openFile(file) : undefined}
                               >
                                 <FileIcon node={{ path: file.file, type: "file" }} />
-                                <div data-slot="apply-patch-file-name-container">
-                                  <Show when={file.file.includes("/")}>
-                                    <span data-slot="apply-patch-directory">
-                                      {relativizeProjectPath(getDirectory(file.file), props.directory)}
-                                    </span>
-                                  </Show>
-                                  <span data-slot="apply-patch-filename">{getFilename(file.file)}</span>
-                                </div>
+                                <ToolFileName path={file.file} directory={props.directory} />
                               </div>
                               <div data-slot="apply-patch-trigger-actions">
                                 {changes(file)}
