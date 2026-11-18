@@ -69,6 +69,38 @@ export function useKiloBrowsers() {
  * Extract an archive into a sibling staging directory, verify the browser executable is there, and only then replace
  * the installed directory. A failed or interrupted extraction leaves the working browser untouched.
  */
+/** True when the process exists (EPERM still means it does, owned by another user). */
+function running(pid: number) {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM"
+  }
+}
+
+/**
+ * Remove backups and staging directories left by installs that are no longer running: a killed install (another pid)
+ * must not keep a full Chromium copy on disk. A live pid's directory is someone's active install and stays, unless it
+ * is older than an hour.
+ */
+export async function cleanStaleInstalls(directory: string, now = Date.now()) {
+  const parent = path.dirname(directory)
+  const prefix = `${path.basename(directory)}.`
+  for (const name of await fs.readdir(parent).catch(() => [] as string[])) {
+    if (!name.startsWith(prefix)) continue
+    const rest = name.slice(prefix.length)
+    const kind = rest.startsWith("backup-") ? "backup" : rest.startsWith("staging-") ? "staging" : undefined
+    if (kind === undefined) continue
+    const pid = Number(rest.slice(kind.length + 1))
+    const target = path.join(parent, name)
+    const stat = await fs.stat(target).catch(() => undefined)
+    const old = stat !== undefined && stat.mtimeMs < now - 60 * 60 * 1000
+    if (!old && Number.isInteger(pid) && running(pid)) continue
+    await fs.rm(target, { recursive: true, force: true }).catch(() => undefined)
+  }
+}
+
 export async function installArchive(input: {
   directory: string
   archive: string
@@ -76,14 +108,18 @@ export async function installArchive(input: {
   executable: string
   /** The move into place; a test can make it fail to prove the rollback. */
   swap?: (from: string, to: string) => Promise<void>
+  /** Moving the installed directory aside; a test can make it fail with a busy browser. */
+  moveAside?: (from: string, to: string) => Promise<void>
 }): Promise<string> {
   const staging = `${input.directory}.staging-${process.pid}`
   const backup = `${input.directory}.backup-${process.pid}`
   const relative = path.relative(input.directory, input.executable)
+  // Leftovers from installs that died (any pid) are cleared before this one names its own.
+  await cleanStaleInstalls(input.directory)
+  // Our own names are reused: a previous run in this process may have left them.
   await fs.rm(staging, { recursive: true, force: true })
-  await fs.mkdir(staging, { recursive: true })
-  // A backup from an install that was killed keeps its browser; the next install starts from a clean name.
   await fs.rm(backup, { recursive: true, force: true }).catch(() => undefined)
+  await fs.mkdir(staging, { recursive: true })
   try {
     await input.extract(input.archive, { dir: staging })
     const staged = path.join(staging, relative)
@@ -94,10 +130,20 @@ export async function installArchive(input: {
     await fs.writeFile(path.join(staging, "INSTALLATION_COMPLETE"), "")
     // Move the old install aside, put the verified one in place, and only then drop the old copy. If the move into
     // place fails, the old directory is restored and the real error is what the caller sees.
-    const moved = await fs.rename(input.directory, backup).then(
-      () => true,
-      () => false,
-    )
+    // A running browser can hold the installed directory (EBUSY/EPERM on Windows). That is the real cause of a failed
+    // install, so it is reported instead of the ENOTEMPTY from the move that follows.
+    const installed = await fs.stat(input.directory).catch(() => undefined)
+    let moved = false
+    if (installed) {
+      try {
+        await (input.moveAside ?? fs.rename)(input.directory, backup)
+        moved = true
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code ?? "unknown"
+        const hint = code === "EBUSY" || code === "EPERM" ? " Close the browser and run install-chromium again." : ""
+        throw new Error(`Could not move the installed Chromium aside (${code}).${hint}`)
+      }
+    }
     try {
       await (input.swap ?? fs.rename)(staging, input.directory)
     } catch (error) {
