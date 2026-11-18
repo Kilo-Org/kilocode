@@ -527,6 +527,14 @@ jobs:
         working-directory: packages/kilo-vscode
         run: bun test
 
+      - name: Install Chromium for the VS Code accessibility gate
+        working-directory: packages/kilo-vscode
+        run: bun run playwright-core install --with-deps --only-shell chromium
+
+      - name: Test VS Code webview accessibility
+        working-directory: packages/kilo-vscode
+        run: bun run test:accessibility
+
       # Fails when Kilo plugin activation grows past packages/kilo-cli/startup-budget.json (#15244).
       - name: Startup ratchet
         working-directory: packages/kilo-cli

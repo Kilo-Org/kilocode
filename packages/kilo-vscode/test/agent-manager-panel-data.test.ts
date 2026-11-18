@@ -4,22 +4,17 @@ import { afterAll, describe, expect, mock, test } from "bun:test"
 import { OpenCode, type OpenCodeEvent } from "@opencode/client"
 import { once } from "node:events"
 import path from "node:path"
-import type { Accessor, Setter } from "solid-js"
 import { git, initGit } from "../../core/test/fixture/git"
 import { tmpdir } from "../../core/test/fixture/tmpdir"
 import { command, start, stop } from "../src/server"
 
-// The package resolves the server build of Solid outside a renderer, where effects never run.
+// Another test may have loaded Solid's server build. Await its replacement so project switches notify the panel.
 const CLIENT_SOLID = "solid-js/dist/solid.js"
-mock.module("solid-js", () => import(CLIENT_SOLID))
+await mock.module("solid-js", () => import(CLIENT_SOLID))
 // The client build of the store, so store writes reach the memos of the client Solid build.
 const CLIENT_STORE = "solid-js/store/dist/store.js"
-mock.module("solid-js/store", () => import(CLIENT_STORE))
-// Keep the project signal on the same reactive runtime as the root even when another test loaded the SSR entry.
-const { createRoot, createSignal } = (await import(CLIENT_SOLID)) as {
-  createRoot: <T>(fn: (dispose: () => void) => T) => T
-  createSignal: <T>(value: T) => [Accessor<T>, Setter<T>]
-}
+await mock.module("solid-js/store", () => import(CLIENT_STORE))
+const { createRoot, createSignal } = await import("solid-js")
 // The webview page: the event stream reconnects on page lifecycle events.
 Object.assign(globalThis, {
   window: new EventTarget(),
@@ -194,10 +189,10 @@ test("keeps a pending form on the owning Local row when switching projects", asy
 
         setActive(second.projectID)
         panel.show([bravo])
-        expect(await api.session.form.list({ sessionID: first.id })).toEqual([form])
-        expect(await api.session.form.list({ sessionID: second.id })).toEqual([])
         expect(rows.project(second.projectID, null)).toBe("idle")
         expect(rows.project(first.projectID, null)).toBe("waiting")
+        expect(await api.session.form.list({ sessionID: first.id })).toEqual([form])
+        expect(await api.session.form.list({ sessionID: second.id })).toEqual([])
 
         setActive(first.projectID)
         expect(rows.project(first.projectID, null)).toBe("waiting")
