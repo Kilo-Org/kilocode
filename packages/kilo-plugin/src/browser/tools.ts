@@ -5,9 +5,10 @@ import { Wildcard } from "@opencode/core/util/wildcard"
 import { KiloBrowserPolicy } from "@kilocode/gateway-core/browser-policy"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Tool } from "@opencode/schema/tool"
-import { Effect, Option, Result, Stream } from "effect"
+import { Effect, Option, Result, Scope, Stream } from "effect"
 import type { JsonSchema } from "effect"
 import {
+  IncompatibleError,
   NeedsPermissionError,
   UNAVAILABLE_MESSAGE,
   UNSUPPORTED_MESSAGE,
@@ -18,6 +19,8 @@ import {
 } from "./backend"
 import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
+import type { ExtensionBackend } from "./extension"
+import { BrowserHub } from "./hub"
 import { modeFor, observe, snapshot, split, Tracker } from "./observation"
 import { BrowserPermission } from "./permission"
 import { key, persistStep, playwright } from "./playwright"
@@ -27,24 +30,6 @@ import { KiloGatewayAccounts } from "../gateway/accounts"
 type Item = BrowserPermission.Item
 
 const tracker = new Tracker()
-
-/** The hint the UI shows for the extension backend until the browser hub is wired (part C). */
-const EXTENSION_HINT =
-  'Install the Kilo browser extension, turn on "Allow local agents", then set browser.backend to "extension".'
-
-/**
- * The extension backend. The hub, the pairing and the transport are part C; until then the tools exist so the tool
- * list is the same on every backend and every call reports the browser as unavailable, with a setup hint for the UI.
- */
-const extension: BrowserBackend = {
-  id: "extension",
-  contractSha: BrowserContract.sha256,
-  listTools: async () => BrowserContract.entries,
-  callTool: async () => {
-    throw new UnavailableError(EXTENSION_HINT)
-  },
-  dispose: async () => {},
-}
 
 /** The policy cache key: one gateway answering for another's organization is not the same policy. */
 export function policyKey(server: string, organizationID: string) {
@@ -105,16 +90,31 @@ function textOf(result: CallResult) {
 
 /**
  * Model-facing failures: a tool error the model can act on, never a transport state. An unavailable backend keeps its
- * setup hint out of the message and logs it for the UI.
+ * setup hint out of the message and logs it for the UI; an inaccessible browser protocol keeps its update notice there
+ * too, and a call that may have run carries the marker instead of asserting it did not.
  */
 function failure(error: unknown) {
   // Already model-facing: a mapped failure keeps its metadata instead of being wrapped again.
   if (error instanceof Tool.Error) return error
   if (error instanceof UnsupportedError) return new Tool.Error({ message: UNSUPPORTED_MESSAGE })
   if (error instanceof UnavailableError) {
-    return new Tool.Error({ message: UNAVAILABLE_MESSAGE, metadata: { hint: error.hint } })
+    return new Tool.Error({
+      message: UNAVAILABLE_MESSAGE,
+      metadata: { hint: error.hint, ...(error.effectsUncertain ? { effectsUncertain: true } : {}) },
+    })
+  }
+  if (error instanceof IncompatibleError) {
+    return new Tool.Error({ message: error.message, metadata: { hint: error.hint } })
   }
   return new Tool.Error({ message: error instanceof Error ? error.message : String(error) })
+}
+
+/**
+ * The backend a call runs on. An organization that allows browser control only through the bundled Playwright browser
+ * overrides the configured choice, so no extension call can happen under that policy.
+ */
+export function forced(browser: Settings, control: KiloBrowserPolicy.Policy["control"] | undefined): Settings {
+  return control === "playwright_only" ? { ...browser, backend: "playwright" } : browser
 }
 
 /** Read the config per call, so an observation or headless change applies without a restart. */
@@ -206,9 +206,11 @@ export function withheldRefusal(origin: string): string {
 }
 
 /**
- * Console data for diff mode. The internal call is a real read: it plans like a user call, and it returns nothing
- * unless every item the plan asks for is already granted for this session. It then runs with the same authorized
- * list, so the frame filter sees the same grants a user call does.
+ * Console data for diff mode. The internal call is a real read and must never prompt: a backend that can plan is
+ * checked first and the read runs only when every item the plan asks for is already granted for this session. A
+ * backend that learns the real origin at action time (the extension) cannot plan; it filters by the grants it is
+ * given, and a refusal is swallowed, so it never prompts either. Either way the read runs with the session's own
+ * authorized list, so the frame filter sees the same grants a user call does.
  */
 function consoleErrors(
   active: BrowserBackend,
@@ -217,7 +219,6 @@ function consoleErrors(
   permission: Option.Option<Permission.Interface>,
 ) {
   return Effect.gen(function* () {
-    if (!active.plan) return []
     // The per-tool rule is the same one a user call obeys: a deny or an ask skips the console section silently.
     if (Option.isSome(permission)) {
       // `Effect.try` covers a permission service that does not implement the query at all.
@@ -237,19 +238,14 @@ function consoleErrors(
       if (!permitted) return []
     }
     const grants = grantsFor(session)
-    const planned = yield* Effect.tryPromise({
-      try: () =>
-        active.plan!(
-          "browser_console_messages",
-          { level: "error" },
-          {
-            session,
-            authorized: [...grants],
-          },
-        ),
-      catch: () => [],
-    })
-    if (planned.some((item) => !grants.has(BrowserPermission.pattern(item)))) return []
+    const plan = active.plan?.bind(active)
+    if (plan) {
+      const planned = yield* Effect.tryPromise({
+        try: () => plan("browser_console_messages", { level: "error" }, { session, authorized: [...grants] }),
+        catch: () => [],
+      })
+      if (planned.some((item) => !grants.has(BrowserPermission.pattern(item)))) return []
+    }
     const result = yield* Effect.tryPromise({
       try: (signal) =>
         active.callTool("browser_console_messages", { level: "error" }, { signal, session, authorized: [...grants] }),
@@ -263,6 +259,8 @@ type Deps = {
   config: Option.Option<Config.Interface>
   permission: Option.Option<Permission.Interface>
   directory: string
+  /** The backend a call runs on, resolved per call so a config change applies without a restart. */
+  backend: (choice: Settings) => Promise<BrowserBackend>
 }
 
 function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
@@ -274,8 +272,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     const organization = yield* policy(deps.directory)
     if (organization?.control === "off")
       return yield* failure(new UnavailableError("Your organization turned off browser control in Kilo."))
-    const choice: Settings =
-      organization?.control === "playwright_only" ? { ...browser, backend: "playwright" } : browser
+    const choice = forced(browser, organization?.control)
 
     // The tool's own key first, so a config rule like `browser_click: deny` blocks it before anything runs.
     if (Option.isSome(deps.permission)) {
@@ -288,9 +285,9 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
       })
     }
 
-    // The effect's interruption signal reaches the MCP call, so cancelling the turn aborts the browser action.
+    // The effect's interruption signal reaches the browser call, so cancelling the turn aborts the browser action.
     const active = yield* Effect.tryPromise({
-      try: () => (choice.backend === "extension" ? Promise.resolve(extension) : playwright.get(key(choice))),
+      try: () => deps.backend(choice),
       catch: (error) => error,
     }).pipe(
       Effect.catch((error) =>
@@ -460,16 +457,37 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
 
 /**
  * Every browser tool of the pinned Playwright MCP contract, registered once per location. The input schema is the
- * contract's own JSON Schema, so the model sees the upstream tool definition unchanged on every backend.
+ * contract's own JSON schema, so the model sees the upstream tool definition unchanged on every backend.
  */
-export const KiloBrowserToolsPlugin = define({
+export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
   id: "kilocode.browser-tools",
   effect: Effect.fn("KiloBrowserToolsPlugin")(function* (ctx) {
+    const hub = yield* BrowserHub.Service
+    // One extension backend per profile target: each holds the session handles opened on its own hub connection. The
+    // backend module is loaded on the first extension call: it is not in the graph of a Playwright user's start, and a
+    // static import cannot express that.
+    const extensions = new Map<string, Promise<ExtensionBackend>>()
+    const extension = (target: string | null) => {
+      const name = target ?? ""
+      const existing = extensions.get(name)
+      if (existing) return existing
+      const created = import("./extension").then((module) =>
+        module.backend({ port: hub.port(target), directory: ctx.location.directory }),
+      )
+      extensions.set(name, created)
+      return created
+    }
+
     // The bundled browser lives as long as this location: the finalizer runs when the server shuts down.
     yield* Effect.addFinalizer(() =>
       Effect.promise(async () => {
         tracker.clear()
         await playwright.dispose()
+        await Promise.all(
+          [...extensions.values()].map((pending) =>
+            pending.then((backend) => backend.dispose()).catch(() => undefined),
+          ),
+        )
       }),
     )
 
@@ -481,6 +499,9 @@ export const KiloBrowserToolsPlugin = define({
           if (event.type !== "session.deleted") return
           tracker.forget(event.data.sessionID)
           playwright.forgetSession(event.data.sessionID)
+          for (const pending of extensions.values()) {
+            void pending.then((backend) => backend.forget(event.data.sessionID)).catch(() => undefined)
+          }
           forgetGrants(event.data.sessionID)
         }),
       ),
@@ -512,6 +533,8 @@ export const KiloBrowserToolsPlugin = define({
     if (browser.backend === "off" || organization?.control === "off") return
 
     yield* ctx.tool.transform((editor) => {
+      const backend = (choice: Settings): Promise<BrowserBackend> =>
+        choice.backend === "extension" ? extension(choice.target) : playwright.get(key(choice))
       for (const entry of BrowserContract.entries) {
         editor.add({
           name: entry.name,
@@ -519,7 +542,7 @@ export const KiloBrowserToolsPlugin = define({
           description: entry.description,
           input: entry.inputSchema as JsonSchema.JsonSchema,
           execute: (args: unknown, context: Tool.Context) =>
-            run(entry, args, context, { config, permission, directory: ctx.location.directory }),
+            run(entry, args, context, { config, permission, directory: ctx.location.directory, backend }),
         })
       }
     })

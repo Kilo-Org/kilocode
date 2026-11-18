@@ -70,14 +70,31 @@ export class NeedsPermissionError extends Error {
 
 /**
  * Raised for a tool call when no browser can serve it. The message is model-facing; `hint` is the setup step the UI
- * shows, never the model.
+ * shows, never the model. `effectsUncertain` marks a call that may have run before the backend lost the browser; the
+ * model text stays the plain unavailable message, and the tool metadata carries the marker.
  */
 export class UnavailableError extends Error {
   readonly hint: string
+  readonly effectsUncertain: boolean
 
-  constructor(hint: string, message = UNAVAILABLE_MESSAGE) {
+  constructor(hint: string, message = UNAVAILABLE_MESSAGE, input?: { effectsUncertain?: boolean }) {
     super(message)
     this.name = "BrowserUnavailableError"
+    this.hint = hint
+    this.effectsUncertain = input?.effectsUncertain === true
+  }
+}
+
+/**
+ * Raised when the browser side speaks a protocol this CLI cannot drive. The message is model-facing; `hint` is the
+ * update notice the UI shows.
+ */
+export class IncompatibleError extends Error {
+  readonly hint: string
+
+  constructor(message: string, hint: string) {
+    super(message)
+    this.name = "BrowserIncompatibleError"
     this.hint = hint
   }
 }

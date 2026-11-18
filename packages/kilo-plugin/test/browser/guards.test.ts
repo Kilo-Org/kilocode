@@ -9,6 +9,7 @@ import { Effect, Exit, Queue, Scope, Stream } from "effect"
 import { NeedsPermissionError } from "../../src/browser/backend"
 import type { CallContext } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
+import { BrowserHub } from "../../src/browser/hub"
 import * as Png from "../../src/browser/png"
 import { key, outputDirectory, playwright } from "../../src/browser/playwright"
 import { resolve } from "../../src/browser/settings"
@@ -208,6 +209,10 @@ async function boot(options: { permission?: unknown; events?: unknown } = {}) {
   const plugin = KiloBrowserToolsPlugin.effect(ctx as never).pipe(
     Effect.provideService(Scope.Scope, scope),
     Effect.provideService(Config.Service, config),
+    // These guards run against the Playwright backend; the extension transport is never reached.
+    Effect.provideService(BrowserHub.Service, {
+      port: () => ({ ready: () => Promise.reject(new Error("no extension in this test")) }) as never,
+    }),
   )
   await Effect.runPromise(
     options.permission ? plugin.pipe(Effect.provideService(Permission.Service, options.permission as never)) : plugin,

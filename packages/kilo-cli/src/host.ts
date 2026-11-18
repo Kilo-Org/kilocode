@@ -1,6 +1,7 @@
 export * as KiloHost from "./host"
 
 import { KiloPlugins, KiloPostPlugins, KiloRemote, KiloSandbox, KiloSessionSync } from "@kilocode/kilo-plugin"
+import { BrowserHub } from "@kilocode/kilo-plugin/browser/hub"
 import { PagesAuth } from "@kilocode/kilo-plugin/pages/auth"
 import { PluginGitSource } from "@kilocode/kilo-plugin/plugin/git-source"
 import { networkHttpLayer } from "@kilocode/sandbox"
@@ -39,6 +40,7 @@ import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { Context, Duration, Effect, Layer, type Scope } from "effect"
 import { KiloApp } from "./app"
+import { BrowserHub as KiloBrowserHub } from "./browser-hub"
 import { KiloGatewayErrors } from "./gateway-errors"
 import { KiloPluginNpm } from "./plugin-npm"
 import { KiloGatewayModel } from "./gateway-model"
@@ -71,6 +73,7 @@ const plugins = makeGlobalNode({
         Schedule.Service,
         KiloSessionSync.Service,
         KiloRemote.Service,
+        BrowserHub.Service,
         SessionStore.Service,
       )(
         yield* Effect.context<
@@ -81,6 +84,7 @@ const plugins = makeGlobalNode({
           | Schedule.Service
           | KiloSessionSync.Service
           | KiloRemote.Service
+          | BrowserHub.Service
           | SessionStore.Service
         >(),
       )
@@ -93,6 +97,7 @@ const plugins = makeGlobalNode({
           | Schedule.Service
           | KiloSessionSync.Service
           | KiloRemote.Service
+          | BrowserHub.Service
           | SessionStore.Service
           | Scope.Scope
         >,
@@ -116,7 +121,17 @@ const plugins = makeGlobalNode({
       yield* Effect.forEach(KiloPostPlugins, (plugin) => register(plugin, "post"))
     }),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
-  deps: [Bus.node, FSUtil.node, Global.node, Npm.node, Schedule.node, SessionSync.node, Remote.node, SessionStore.node],
+  deps: [
+    Bus.node,
+    FSUtil.node,
+    Global.node,
+    Npm.node,
+    Schedule.node,
+    SessionSync.node,
+    Remote.node,
+    KiloBrowserHub.node,
+    SessionStore.node,
+  ],
 })
 
 /**
