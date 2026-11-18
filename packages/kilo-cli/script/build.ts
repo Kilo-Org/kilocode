@@ -250,7 +250,11 @@ export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash
       ? await stageBubblewrap(item.arch as "arm64" | "x64", path.join(outdir, name, "bin")) // kilo_port(sandbox:ea078ae48b40)
       : undefined
   // Kilo: macOS targets ship the pinned nono next to the executable, with its version and digest embedded.
-  const nono = item.os === "darwin" ? await stageNono(item.os, item.arch, path.join(outdir, name, "bin")) : undefined
+  // KILO_SKIP_BUNDLED_NONO=1 skips the download for an offline build.
+  const nono =
+    item.os === "darwin" && process.env.KILO_SKIP_BUNDLED_NONO !== "1"
+      ? await stageNono(item.os, item.arch, path.join(outdir, name, "bin"))
+      : undefined
   const result = await Bun.build({
     // Kilo: the host entry instead of the upstream CLI entry. It imports the upstream commands and handlers.
     // Upstream's second entrypoint lands next to index.js, where Image.Photon resolves "./photon-worker.js".
@@ -388,7 +392,7 @@ export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash
       {
         name: `@kilocode/${name}`,
         version: Script.version,
-        license: item.os === "linux" ? "SEE LICENSE IN LICENSE" : "MIT",
+        license: item.os === "linux" || nono ? "SEE LICENSE IN LICENSE" : "MIT",
         repository: { type: "git", url: "git+https://github.com/Kilo-Org/kilocode.git" },
         os: [item.os],
         cpu: [item.arch],

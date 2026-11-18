@@ -79,7 +79,11 @@ export async function stageNono(osName: string, arch: "arm64" | "x64", dir: stri
   const name = target(osName, arch)
   if (!name) return undefined
   const entry = (JSON.parse(readFileSync(manifest, "utf8")) as Manifest).targets[name]
-  if (!entry) throw new Error(`No nono pin for ${name}; record it with bun run nono:pin --record --target ${name}`)
+  if (!entry) {
+    throw new Error(
+      `No nono pin for ${name}; record it with bun run --cwd packages/kilo-sandbox nono:pin --record --target ${name}`,
+    )
+  }
   const work = path.join(cache, entry.tag, name)
   mkdirSync(work, { recursive: true })
   const archive = path.join(work, entry.asset)

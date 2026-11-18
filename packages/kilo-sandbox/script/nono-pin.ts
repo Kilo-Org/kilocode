@@ -14,6 +14,15 @@ import os from "node:os"
 import path from "node:path"
 import { root, target, version } from "../src/nono-binary"
 
+// A standalone run has no host to provide the app directory, and the host always resolves `kilo2`, so staging
+// must target the same directory even when the shell carries another value.
+process.env.OPENCODE_APP_DIR_NAME = "kilo2"
+
+// `bun dev` isolates XDG_STATE_HOME under its dev profile (script/dev-isolated.ts), and that launcher is the only
+// source host that can select the nono backend, so staging defaults to the same root. KILO_NONO_STATE wins.
+const dev = path.resolve(import.meta.dir, "../../kilo-cli/.kilo-v2-dev")
+process.env.KILO_NONO_STATE ??= path.join(process.env.KILO_V2_PROFILE ?? dev, "state", "kilo2", "sandbox")
+
 interface Entry {
   readonly tag: string
   readonly asset: string
@@ -75,9 +84,12 @@ function extract(archive: string, into: string) {
 
 async function record(tag: string, name: string) {
   const info = await release(tag)
-  const asset = info.assets.find(
-    (candidate) => candidate.name.includes(name) && /\.(tar\.gz|zip)$/.test(candidate.name),
-  )
+  // The filter accepts only the archive this script can unpack, and the pick is stable if a release ever
+  // publishes a second asset containing the same target.
+  const assets = info.assets
+    .filter((candidate) => candidate.name.includes(name) && candidate.name.endsWith(".tar.gz"))
+    .sort((left, right) => left.name.localeCompare(right.name))
+  const asset = assets.find((candidate) => candidate.name === `nono-${name}.tar.gz`) ?? assets[0]
   if (!asset) throw new Error(`Release ${tag} has no asset for ${name}`)
   const dir = mkdtempSync(path.join(os.tmpdir(), "kilo-nono-pin-"))
   try {
@@ -111,12 +123,11 @@ async function record(tag: string, name: string) {
   }
 }
 
-async function stage() {
-  const name = platform()
+async function stage(name: string) {
   const entry = manifest().targets[name]
   if (!entry) {
     throw new Error(
-      `No pin recorded for ${name}. Run \`bun run nono:pin --record --tag v${version}\` once and commit ${path.basename(file)}.`,
+      `No pin recorded for ${name}. Run \`bun run nono:pin --record --tag v${version} --target ${name}\` once and commit ${path.basename(file)}.`,
     )
   }
   if (entry.tag !== `v${version}`) throw new Error(`Recorded pin is ${entry.tag}, but this build expects v${version}`)
@@ -147,7 +158,8 @@ async function stage() {
 
 const args = process.argv.slice(2)
 let tag = `v${version}`
-let name = platform()
+// Resolved after the flags: `--target` must work on a host whose own platform has no nono target.
+let name = ""
 let record_ = false
 
 while (args.length > 0) {
@@ -160,8 +172,9 @@ while (args.length > 0) {
 }
 
 try {
-  if (record_) await record(tag, name)
-  else await stage()
+  const selected = name || platform()
+  if (record_) await record(tag, selected)
+  else await stage(selected)
 } catch (cause) {
   console.error(cause instanceof Error ? cause.message : cause)
   process.exit(1)
