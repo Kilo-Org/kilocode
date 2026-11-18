@@ -875,6 +875,8 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.description":
     'A telemetria é controlada pela configuração de telemetria integrada do VS Code. Para desativá-la, vá para Configurações > Telemetria > Nível de Telemetria e defina como "off". Reinicie o VS Code para aplicar a alteração.',
   "settings.aboutKiloCode.telemetry.openSettings": "Abrir Configurações de Telemetria",
+  "settings.aboutKiloCode.telemetry.toggle": "Enable telemetry",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Could not update telemetry setting",
 
   "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",

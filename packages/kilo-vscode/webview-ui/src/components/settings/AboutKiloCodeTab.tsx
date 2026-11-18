@@ -1,6 +1,7 @@
 import { Component, createSignal, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Switch } from "@kilocode/kilo-ui/switch"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
@@ -18,9 +19,12 @@ export interface AboutKiloCodeTabProps {
 const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   const language = useLanguage()
   const vscode = useVSCode()
-  const { updateConfig, updateGlobalConfig } = useConfig()
+  const { updateConfig, updateGlobalConfig, globalConfig } = useConfig()
   const [importing, setImporting] = createSignal(false)
   const [exporting, setExporting] = createSignal(false)
+  const [telemetry, setTelemetry] = createSignal<boolean | null>(null)
+  const [telemetrySaving, setTelemetrySaving] = createSignal(false)
+  const telemetryEnabled = () => telemetry() ?? (globalConfig().experimental?.openTelemetry !== false)
   let epoch = 0
 
   const open = (url: string) => {
@@ -61,7 +65,37 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
     URL.revokeObjectURL(url)
   }
   window.addEventListener("message", handler)
-  onCleanup(() => window.removeEventListener("message", handler))
+
+  const telemetryHandler = (event: MessageEvent) => {
+    const msg = event.data as ExtensionMessage
+    if (msg.type === "telemetryState") {
+      setTelemetry(msg.enabled)
+      return
+    }
+    if (msg.type !== "telemetryLevelResult") return
+    setTelemetrySaving(false)
+    if (msg.ok && typeof msg.enabled === "boolean") {
+      setTelemetry(msg.enabled)
+      return
+    }
+    setTelemetry(null)
+    showToast({
+      variant: "error",
+      title: msg.error ?? language.t("settings.aboutKiloCode.telemetry.saveFailed"),
+    })
+  }
+  window.addEventListener("message", telemetryHandler)
+  onCleanup(() => {
+    window.removeEventListener("message", handler)
+    window.removeEventListener("message", telemetryHandler)
+  })
+
+  const setTelemetryLevel = (enabled: boolean) => {
+    if (telemetrySaving()) return
+    setTelemetrySaving(true)
+    setTelemetry(enabled)
+    vscode.postMessage({ type: "setTelemetryLevel", enabled })
+  }
 
   // ----- Export -----
   const handleExport = () => {
@@ -250,14 +284,9 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         >
           {language.t("settings.aboutKiloCode.telemetry.description")}
         </p>
-        <Button
-          variant="secondary"
-          size="small"
-          onClick={() => vscode.postMessage({ type: "openVSCodeSettings", query: "telemetry.telemetryLevel" })}
-        >
-          <Icon name="settings-gear" />
-          {language.t("settings.aboutKiloCode.telemetry.openSettings")}
-        </Button>
+        <Switch checked={telemetryEnabled()} onChange={setTelemetryLevel} hideLabel>
+          {language.t("settings.aboutKiloCode.telemetry.toggle")}
+        </Switch>
       </div>
 
       {/* CLI Server */}
