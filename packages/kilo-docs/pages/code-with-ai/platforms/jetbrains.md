@@ -82,7 +82,7 @@ Search covers the conversation's user and assistant prose, including inline code
 
 ## Cloud sessions
 
-When you are signed in to Kilo, the **Agents** tool window lists your repository-scoped Cloud workspaces in the same list as local worktrees, where you can group them with [sections](#sections). Kilo discovers them automatically and shows passive compute and activity status; opening a workspace does not start or wake it.
+When you are signed in to Kilo, the **Agents** tool window lists your repository-scoped Cloud workspaces in the same list as local worktrees, where you can group them with [sections](#sections). Kilo discovers them automatically and shows passive compute and activity status; opening a workspace does not start or wake it. When a workspace's branch has a pull request, its row also shows the same `#number` pill and conversation, review, and check badges as a local worktree, and the workspace editor header shows the pull request state, its title, and the review and check verdicts. Selecting a badge opens the pull request, its review conversation, or its checks on GitHub.
 
 Use the tool window's **Add** menu to create work. **Local Worktree Task** opens the local worktree dialog, and **Cloud Task** opens the New Cloud Workspace dialog, which uses this repository and lets you set an optional branch or ref, an optional Cloud profile, an initial prompt, and a **Section** to place the workspace in (defaulting to the current selection's section). Its prompt supports voice input. **New Section** creates a [section](#sections) to organize the list. An empty prompt creates an empty workspace that you add sessions to later. Creating a Cloud workspace requires signing in to Kilo.
 
