@@ -260,6 +260,42 @@ test.skipIf(!mac)("rejects a staged binary that does not match the recorded dige
   }
 })
 
+/** Runs the packaged branch: the build define is a global in a source run, and the sibling is next to the executable. */
+function packaged(define: string | undefined, run: () => void) {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "kilo-nono-packaged-"))
+  const sibling = path.join(dir, "nono")
+  writeFileSync(sibling, readFileSync(fake))
+  chmodSync(sibling, 0o755)
+  const before = (globalThis as Record<string, unknown>).KILO_NONO_SHA256
+  const execPath = process.execPath
+  if (define !== undefined) (globalThis as Record<string, unknown>).KILO_NONO_SHA256 = define
+  Object.defineProperty(process, "execPath", { value: path.join(dir, "kilo"), configurable: true })
+  delete process.env.KILO_NONO_PATH
+  try {
+    run()
+  } finally {
+    if (before === undefined) delete (globalThis as Record<string, unknown>).KILO_NONO_SHA256
+    else (globalThis as Record<string, unknown>).KILO_NONO_SHA256 = before
+    Object.defineProperty(process, "execPath", { value: execPath, configurable: true })
+    process.env.KILO_NONO_PATH = fake
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+test.skipIf(!mac)("accepts the packaged binary next to the executable", () => {
+  packaged(digest(fake), () => {
+    expect(backend.backendSupport({ mode: "deny", allowedHosts: [] })).toEqual({ available: true })
+  })
+})
+
+test.skipIf(!mac)("rejects a packaged binary that does not match the embedded digest", () => {
+  packaged("0".repeat(64), () => {
+    const support = backend.backendSupport({ mode: "deny", allowedHosts: [] })
+    expect(support.available).toBe(false)
+    expect(support.available ? "" : support.reason).toContain("does not match the recorded binary pin")
+  })
+})
+
 test.skipIf(!mac)("reports an unusable state directory instead of throwing", () => {
   const blocker = path.join(state, "blocker")
   writeFileSync(blocker, "not a directory")

@@ -16,7 +16,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "typecheck:tsc": "tsc --noEmit",
-    "test": "bun test --timeout 30000"
+    "test": "bun test --timeout 30000",
+    "nono:pin": "bun script/nono-pin.ts"
   },
   "dependencies": {
     "@anthropic-ai/sandbox-runtime": "0.0.63",

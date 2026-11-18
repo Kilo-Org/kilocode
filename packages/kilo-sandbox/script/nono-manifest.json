@@ -1,0 +1,22 @@
+{
+  "targets": {
+    "aarch64-apple-darwin": {
+      "tag": "v0.82.0",
+      "asset": "nono-v0.82.0-aarch64-apple-darwin.tar.gz",
+      "url": "https://github.com/nolabs-ai/nono/releases/download/v0.82.0/nono-v0.82.0-aarch64-apple-darwin.tar.gz",
+      "sha256": "a11760b1d5e947152d1fdc6497b2aba2e4185061a56390b2f1137c83cef3b5a4",
+      "binary_sha256": "418db9c56c2473e9de9df841a78ecbff378001530a74452e50f340285f864632",
+      "license_url": "https://raw.githubusercontent.com/nolabs-ai/nono/v0.82.0/LICENSE",
+      "license_sha256": "7310e9389f298b89bb2f90ac4b6081ed5b6a1c4a7b8547df5d52966a57cb0929"
+    },
+    "x86_64-apple-darwin": {
+      "tag": "v0.82.0",
+      "asset": "nono-v0.82.0-x86_64-apple-darwin.tar.gz",
+      "url": "https://github.com/nolabs-ai/nono/releases/download/v0.82.0/nono-v0.82.0-x86_64-apple-darwin.tar.gz",
+      "sha256": "e3bfed8b5eb7e6332ffc9fc5e88ef72338ea7a9bc8a7f0700479aab395bcf635",
+      "binary_sha256": "9825ec8257fa37b798137d7b15e63d63f623d08806b9b4021e60db6c0faec556",
+      "license_url": "https://raw.githubusercontent.com/nolabs-ai/nono/v0.82.0/LICENSE",
+      "license_sha256": "7310e9389f298b89bb2f90ac4b6081ed5b6a1c4a7b8547df5d52966a57cb0929"
+    }
+  }
+}

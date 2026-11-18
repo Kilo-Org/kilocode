@@ -6,6 +6,6 @@
     "types": ["bun"],
     "noUncheckedIndexedAccess": false
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "include": ["src/**/*.ts", "test/**/*.ts", "script/**/*.ts"],
   "exclude": ["node_modules"]
 }

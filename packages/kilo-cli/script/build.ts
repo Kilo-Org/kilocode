@@ -40,6 +40,7 @@ import { copyTreeSitterWasms } from "./tree-sitter"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
 import { stageBubblewrap } from "./kilocode/bubblewrap" // kilo_port(sandbox:7d95c6cc13bc)
+import { stageNono } from "./kilocode/nono"
 
 const dir = path.resolve(import.meta.dirname, "..")
 // Kilo: internal releases use `kilo2`, separate from v1. The upstream target names stay the build's internal names.
@@ -248,6 +249,8 @@ export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash
     item.os === "linux" && process.env.KILO_SKIP_BUNDLED_BWRAP !== "1"
       ? await stageBubblewrap(item.arch as "arm64" | "x64", path.join(outdir, name, "bin")) // kilo_port(sandbox:ea078ae48b40)
       : undefined
+  // Kilo: macOS targets ship the pinned nono next to the executable, with its version and digest embedded.
+  const nono = item.os === "darwin" ? await stageNono(item.os, item.arch, path.join(outdir, name, "bin")) : undefined
   const result = await Bun.build({
     // Kilo: the host entry instead of the upstream CLI entry. It imports the upstream commands and handlers.
     // Upstream's second entrypoint lands next to index.js, where Image.Photon resolves "./photon-worker.js".
@@ -321,6 +324,8 @@ export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash
       KILO_SANDBOX_NETWORK_RELAY_PATH: item.os === "linux" ? JSON.stringify(KiloSandboxNetwork.relay) : "undefined",
       KILO_SANDBOX_SECCOMP_PATH: item.os === "linux" ? JSON.stringify(KiloSandboxNetwork.seccomp) : "undefined",
       KILO_BWRAP_SHA256: bwrap ? `'${bwrap}'` : "undefined",
+      KILO_NONO_VERSION: nono ? JSON.stringify(nono.version) : "undefined",
+      KILO_NONO_SHA256: nono ? JSON.stringify(nono.digest) : "undefined",
     },
   })
 
@@ -364,6 +369,16 @@ export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash
     await Bun.write(path.join(outdir, name, "LICENSE"), content.join("\n\n---\n\n"))
   }
   if (item.os !== "linux") await Bun.write(path.join(outdir, name, "LICENSE"), license)
+
+  // Kilo: a macOS package ships nono, so its LICENSE carries nono's notice and license text.
+  if (nono) {
+    const content = await Promise.all([
+      Bun.file(path.resolve(import.meta.dirname, "../../../LICENSE")).text(),
+      Bun.file(path.join(bin, "licenses/nono/NOTICE")).text(),
+      Bun.file(path.join(bin, "licenses/nono/LICENSE")).text(),
+    ])
+    await Bun.write(path.join(outdir, name, "LICENSE"), content.join("\n\n---\n\n"))
+  }
 
   // Kilo: the platform packages have the same names as v1's. script/publish.ts publishes them with the `kilo-v2` npm
   // dist-tag, so v1's `latest` and `rc` tags do not change.

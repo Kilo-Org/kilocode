@@ -47,6 +47,8 @@ jobs:
             host: ubuntu-24.04
           - target: darwin-arm64
             host: macos-15
+          - target: darwin-x64
+            host: macos-15-intel
     runs-on: ${{ matrix.host }}
     timeout-minutes: 30
     steps:
