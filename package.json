@@ -136,6 +136,7 @@
   "dependencies": {
     "@opencode/plugin": "workspace:*",
     "@opencode/script": "workspace:*",
+    "playwright-core": "1.57.0",
     "typescript": "catalog:"
   },
   "repository": {

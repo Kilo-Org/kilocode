@@ -30,6 +30,8 @@ import { KiloSkillPlugin } from "./skill"
 import { KiloSkillConfigPlugin } from "./skill/config"
 import { KiloTodoPlugin } from "./todo"
 import { KiloBrowserToolPlugin } from "./browser"
+// The browser tool family: the pinned Playwright MCP contract, backed by the bundled browser or the extension.
+import { KiloBrowserToolsPlugin } from "./browser/tools"
 import { KiloChartPlugin } from "./chart"
 import { KiloWriteToolPlugin } from "./tool-write"
 // kilo_port(notebook:91a426486dc8) v1 registered the notebook tools and service from the shared server.
@@ -91,6 +93,8 @@ export const KiloPlugins = [
   KiloTodoPlugin,
   KiloWriteToolPlugin,
   KiloBrowserToolPlugin,
+  // The `browser_*` tools of the pinned Playwright MCP contract, over the configured backend.
+  KiloBrowserToolsPlugin,
   KiloNotebookPlugin,
   // The chart tool and its skill, for the VS Code chat that draws the chart. It registers nothing elsewhere.
   KiloChartPlugin,

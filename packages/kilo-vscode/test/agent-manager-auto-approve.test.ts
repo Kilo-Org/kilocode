@@ -149,6 +149,11 @@ describe("host auto-approve sweep", () => {
     expect(shouldApprove(escalation, true, new Set())).toBe(false)
     expect(shouldApprove(normal, true, new Set())).toBe(true)
   })
+
+  test("never approves a sensitive browser step, whose action carries it", () => {
+    const sensitive = { id: "per_browser", sessionID: "ses_1", action: "browser_sensitive", resources: [] } as never
+    expect(shouldApprove(sensitive, true, new Set())).toBe(false)
+  })
 })
 
 function temporaryWorkspace() {
