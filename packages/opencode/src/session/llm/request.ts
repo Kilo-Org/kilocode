@@ -152,12 +152,9 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
         : undefined,
       topP: input.agent.topP ?? ProviderTransform.topP(input.model),
       topK: ProviderTransform.topK(input.model),
-      // kilocode_change start - gpt-5 via @ai-sdk/openai-compatible proxies (e.g. LiteLLM)
-      // rejects `max_tokens`; OpenAI requires `max_completion_tokens` and the compatible
-      // SDK cannot rename the field, so drop the cap and let the upstream default apply.
-      // Claude on first-party routes requests its full output limit, see KiloLLM.outputTokens.
+      // kilocode_change start - The compatible SDK sends this cap as `max_tokens`, rejected by GPT-5/6 proxy routes.
       maxOutputTokens:
-        input.model.api.npm === "@ai-sdk/openai-compatible" && input.model.api.id.toLowerCase().includes("gpt-5")
+        KiloLLM.needsMaxCompletionTokens(input.model)
           ? undefined
           : KiloLLM.outputTokens({ model: input.model, options, max: input.flags.outputTokenMax, small: input.small }),
       // kilocode_change end
