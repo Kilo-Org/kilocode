@@ -13,7 +13,7 @@ export class TelemetryProxy {
   private password: string | undefined
   private provider: TelemetryPropertiesProvider | undefined
   private readonly change = new vscode.EventEmitter<void>()
-  private pending = Promise.resolve(true)
+  private pending = Promise.resolve()
   private revision = 0
 
   readonly onChange = this.change.event
@@ -36,7 +36,7 @@ export class TelemetryProxy {
     if (this.url === url && this.password === password) return
     this.url = url
     this.password = password
-    this.pending = Promise.resolve(true)
+    this.pending = Promise.resolve()
     this.setHostEnabled(vscode.env.isTelemetryEnabled)
   }
 
@@ -71,9 +71,10 @@ export class TelemetryProxy {
     const password = this.password
     if (!url || !password) return
     // Apply successive VS Code changes in order, and skip requests for a replaced backend.
+    // A failed update must not poison later reads: level() still asks the CLI for the truth.
     this.pending = this.pending.then(async () => {
-      if (url !== this.url || password !== this.password) return false
-      return (await this.request("/telemetry/setEnabled", enabled))?.ok ?? false
+      if (url !== this.url || password !== this.password) return
+      await this.request("/telemetry/setEnabled", enabled)
     })
     this.revision++
     this.change.fire()
@@ -83,7 +84,8 @@ export class TelemetryProxy {
   async level(): Promise<boolean | null> {
     if (!vscode.env.isTelemetryEnabled) return false
     const revision = this.revision
-    if (!(await this.pending) || revision !== this.revision) return null
+    await this.pending
+    if (revision !== this.revision) return null
     const enabled = await this.read(await this.request("/telemetry/level"))
     return revision === this.revision ? enabled : null
   }
