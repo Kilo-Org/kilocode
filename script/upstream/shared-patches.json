@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 143,
+    "files": 144,
     "markedLines": 2566,
-    "unmarkedLines": 385,
+    "unmarkedLines": 386,
     "deletedFiles": 0
   },
   "files": {
@@ -63,6 +63,11 @@
     "CONTRIBUTING.md": {
       "rung": 4,
       "seam": "Development setup names the exact Bun version from `packageManager` (3 lines). Documentation for contributors of this repository; `bun run build` and `install:alpha` fail on another Bun version. No seam: the contributor guide is a single upstream-owned file and has no Kilo-owned equivalent that GitHub shows. Goes away when the Kilo docs replace CONTRIBUTING.md."
+    },
+    "LICENSE": {
+      "rung": 4,
+      "seam": "The repository license must include the Kilo copyright notice alongside OpenCode's. Neither a runtime hook nor a host or build override can put that notice in copies of the source tree.",
+      "unmarked": "The MIT license is plain text; retain the exact copyright notice without adding a tooling annotation."
     },
     "README.md": {
       "rung": 4,

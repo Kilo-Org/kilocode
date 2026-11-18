@@ -36,6 +36,7 @@ on:
         default: false
   pull_request:
     paths:
+      - LICENSE
       - .github/workflows/kilo-v2-publish.yml
       - packages/kilo-cli/script/build.ts
       - packages/kilo-cli/script/publish.ts
@@ -46,6 +47,7 @@ on:
       - script/kilocode/client-manifest.ts
       - script/kilocode/release-env.ts
       - packages/kilo-vscode/package.json
+      - packages/kilo-vscode/LICENSE
       - packages/kilo-vscode/README.md
       - packages/kilo-vscode/.vscodeignore
       - packages/kilo-vscode/script/**
@@ -351,6 +353,7 @@ jobs:
           set -euo pipefail
           for target in $VSIX_TARGETS; do
             bun run package --target="$target"
+            unzip -p "out/kilo-vscode-$target.vsix" extension/LICENSE.txt | cmp - ../../LICENSE
           done
 
       # Keep the packages for the publish job and for inspection when a later publish fails.
