@@ -324,7 +324,9 @@ export class WorktreeManager {
       refFormat,
       commit,
       this.repoUsesLfs(),
-      this.resolveRemote(),
+      // A new branch resolves its remote when selecting its start point. Only
+      // an existing branch needs this lookup to identify its tracking ref.
+      params.existingBranch ? this.resolveRemote() : undefined,
     ])
     if (usesLfs && !(await this.checkLfsAvailable())) {
       throw new Error(

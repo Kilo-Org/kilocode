@@ -4,7 +4,7 @@ import type { OpenCodeClient, SessionInfo } from "@opencode/client"
 import type { AgentManagerConnection } from "./connection"
 import type { AgentManagerOutMessage } from "./types"
 import { getErrorMessage } from "./errors"
-import { prepareDirectory, startSession } from "./mcp-warmup"
+import { prepareDirectory } from "./mcp-warmup"
 import { sessionCreateBody } from "./session-create"
 import type { CreationBoot } from "./provider-lifecycle"
 
@@ -47,14 +47,11 @@ export async function createSessionInWorktree(
   })
 
   try {
-    void prepareDirectory(client, worktreePath).catch((err) => host.log("Worktree preparation failed:", err))
-    const metadata = await boot?.metadata()
-    const created = await startSession(
-      client,
-      worktreePath,
-      () => client.session.create(sessionCreateBody({ directory: worktreePath, model, agent, metadata })),
-      (...args) => host.log(...args),
+    void prepareDirectory(client, worktreePath, (...args) => host.log(...args)).catch((err) =>
+      host.log("Worktree preparation failed:", err),
     )
+    const metadata = await boot?.metadata()
+    const created = await client.session.create(sessionCreateBody({ directory: worktreePath, model, agent, metadata }))
     timing?.mark("session")
     return created
   } catch (error) {
