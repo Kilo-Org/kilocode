@@ -10,6 +10,7 @@ import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import com.intellij.platform.rpc.RemoteApiProviderService
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.Flow
  * Session Host. No provider origin, credential, or Cloud transport is exposed here.
  */
 @Rpc
+@Suppress("TooManyFunctions")
 interface KiloHostedRpcApi : RemoteApi<Unit> {
     companion object {
         suspend fun getInstance(): KiloHostedRpcApi =
@@ -43,6 +45,15 @@ interface KiloHostedRpcApi : RemoteApi<Unit> {
 
     /** Passive compute/billing status. Reads never wake compute. */
     suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceStatusDto
+
+    /** Passive PR evidence. Absence of available evidence is not authoritative PR absence. */
+    suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspacePullRequestDto
+
+    /** Explicit observation refresh, preserving cached evidence and cooldown metadata on failure. */
+    suspend fun refreshWorkspacePullRequest(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDto
 
     /** Authorized, sanitized profile choices for workspace creation. */
     suspend fun workspaceProfiles(organizationID: String?): HostedWorkspaceProfileListDto
