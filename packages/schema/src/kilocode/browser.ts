@@ -20,7 +20,25 @@ export const Playwright = Schema.Struct({
 })
 export type Playwright = typeof Playwright.Type
 
-export const Status = Schema.Struct({ playwright: Playwright })
+/** The backend the tools run on. */
+export const Backend = Schema.Literals(["playwright", "extension", "off"])
+export type Backend = typeof Backend.Type
+
+/** The organization's browser policy, as the cloud API answers it. */
+export const Organization = Schema.Struct({
+  control: Schema.Literals(["allow", "playwright_only", "off"]),
+  /** Origins the organization grants every class on without a prompt. */
+  origins: Schema.Array(Schema.String),
+})
+export type Organization = typeof Organization.Type
+
+export const Status = Schema.Struct({
+  playwright: Playwright,
+  /** The backend in force: the config's choice, narrowed by the organization policy. */
+  backend: Backend,
+  /** Omitted while the organization sets no policy for the signed-in account. */
+  organization: optional(Organization),
+})
 export type Status = typeof Status.Type
 
 export const Definition = Rpc.define({

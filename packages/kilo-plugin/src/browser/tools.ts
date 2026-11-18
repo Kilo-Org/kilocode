@@ -213,6 +213,17 @@ function consoleErrors(active: BrowserBackend, session: string, context: Tool.Co
   }).pipe(Effect.catch(() => Effect.succeed<string[]>([])))
 }
 
+/**
+ * The backend in force, after the organization policy: `off` hides the tools, `playwright_only` pins the bundled
+ * browser, and `allow` (or no policy) keeps the config's own choice. The settings status and the call path both read
+ * this one answer.
+ */
+function effective(browser: Settings, organization: KiloBrowserPolicy.Policy | undefined): Settings["backend"] {
+  if (organization?.control === "off") return "off"
+  if (organization?.control === "playwright_only") return "playwright"
+  return browser.backend
+}
+
 type Deps = {
   config: Option.Option<Config.Interface>
   permission: Option.Option<Permission.Interface>
@@ -228,8 +239,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     const organization = yield* policy(deps.directory)
     if (organization?.control === "off")
       return yield* failure(new UnavailableError("Your organization turned off browser control in Kilo."))
-    const choice: Settings =
-      organization?.control === "playwright_only" ? { ...browser, backend: "playwright" } : browser
+    const choice: Settings = { ...browser, backend: effective(browser, organization) }
 
     // The tool's own key first, so a config rule like `browser_click: deny` blocks it before anything runs.
     if (Option.isSome(deps.permission)) {
@@ -381,15 +391,20 @@ export const KiloBrowserToolsPlugin = define({
     const browser = yield* settings(config)
     const organization = yield* policy(ctx.location.directory)
 
-    // What a settings editor shows before it offers a backend: whether the Playwright one has a browser to start. Read
-    // through the same `locate` check the backend runs, so the dialog never calls it ready when a call would fail.
+    // What a settings editor shows before it offers a backend: whether the Playwright one has a browser to start, the
+    // backend after the organization policy, and the policy itself. The Playwright answer is read through the same
+    // `locate` check the backend runs, so the dialog never calls it ready when a call would fail.
+    const backend = effective(browser, organization)
+    const organizationStatus = organization
+      ? { organization: { control: organization.control, origins: [...organization.origins] } }
+      : {}
     yield* ctx.rpc
       .register(KiloBrowserRpc.Definition, {
         status: () =>
           Effect.promise(() =>
             readiness().then(
-              (playwright) => ({ playwright }),
-              () => ({ playwright: { ready: false } }),
+              (playwright) => ({ playwright, backend, ...organizationStatus }),
+              () => ({ playwright: { ready: false }, backend, ...organizationStatus }),
             ),
           ),
       })

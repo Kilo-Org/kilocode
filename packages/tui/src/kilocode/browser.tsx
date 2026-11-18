@@ -27,11 +27,16 @@ const copy = (key: keyof typeof dict) => dict[key] ?? key
 const BACKENDS: readonly Backend[] = ["playwright", "extension", "off"]
 const OBSERVATIONS: readonly Observation[] = ["full", "diff", "none"]
 
+/** The location the settings RPC answers for: the TUI's own project, the same one every other Kilo command reads. */
+const located = (context: Plugin.Context) => ({
+  location: context.location ?? context.data.location.default(),
+})
+
 /** The document the writer targets, read through the settings RPC. */
 async function document(context: Plugin.Context) {
   const client = context.client
   const settings = client.rpc(KiloSettingsRpc.Definition)
-  const location = { location: { directory: context.location?.directory ?? process.cwd() } }
+  const location = located(context)
   const read = await settings.read({ scope: "global" }, location)
   return { settings, location, target: read.target, document: read.document }
 }
@@ -41,7 +46,7 @@ async function document(context: Plugin.Context) {
  * not a ready backend, so it reads as unavailable instead of claiming the tools work.
  */
 async function playwrightReady(context: Plugin.Context) {
-  const location = { location: { directory: context.location?.directory ?? process.cwd() } }
+  const location = located(context)
   try {
     const status = context.client.rpc(KiloBrowserRpc.Definition)
     return (await status.status({}, location)).playwright.ready
@@ -63,6 +68,21 @@ function rules(documentValue: unknown): Rule[] {
   })
 }
 
+/**
+ * The rules in force, in document order with last-match-wins: a later rule for the same pattern replaces the earlier
+ * one, so the list is what the CLI's evaluator would apply rather than the raw file. Catch-all (`*`) rules stay in the
+ * list; the caller decides which of them is the effective allow-all.
+ */
+function effective(rules: readonly Rule[]): Rule[] {
+  const out: Rule[] = []
+  for (const rule of rules) {
+    const index = out.findIndex((item) => item.resource === rule.resource)
+    if (index < 0) out.push(rule)
+    else out[index] = rule
+  }
+  return out
+}
+
 /** The state as the command shows it. Defaults follow the browser plugin's: playwright, diff, not sensitive. */
 export function readState(documentValue: unknown): State {
   const input =
@@ -72,20 +92,23 @@ export function readState(documentValue: unknown): State {
       ? ((documentValue as { browser?: Record<string, unknown> }).browser ?? {})
       : {}
   const all = rules(documentValue)
-  const browser = all.filter((rule) => rule.action === "browser")
+  const browser = effective(all.filter((rule) => rule.action === "browser"))
+  // Last-match-wins for the catch-all as well: only the last `*` rule decides whether every origin is allowed.
+  const catchAll = browser.filter((rule) => rule.resource === "*").at(-1)
   return {
     backend: BACKENDS.includes(input.backend as Backend) ? (input.backend as Backend) : "playwright",
     observation: OBSERVATIONS.includes(input.observation as Observation) ? (input.observation as Observation) : "diff",
     allowSensitive: input.allow_sensitive === true,
-    grants: browser.filter((rule) => rule.resource !== "*"),
-    allowAll: browser.some((rule) => rule.resource === "*" && rule.effect === "allow"),
+    grants: browser,
+    allowAll: catchAll?.effect === "allow",
   }
 }
 
 /** The line one grant reads as, and the CLI's own spelling of it. */
 export function grantLine(rule: Rule) {
   if (rule.action !== "browser") return `${rule.action} → ${rule.effect}`
-  if (rule.resource === "*") return copy("browser.grants.all")
+  if (rule.resource === "*")
+    return rule.effect === "allow" ? copy("browser.grants.all") : `${copy("browser.grants.all")} → ${rule.effect}`
   const index = rule.resource.indexOf(":")
   if (index < 0) return `${rule.resource} → ${rule.effect}`
   return `${rule.resource.slice(0, index)} on ${rule.resource.slice(index + 1)} → ${rule.effect}`

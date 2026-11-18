@@ -36,10 +36,45 @@ describe("/browser state", () => {
     })
   })
 
-  test("the catch-all rule is the allow-all state, not a grant", () => {
+  test("the catch-all rule is shown, and the allow-all state follows it", () => {
     const state = readState({ permissions: [{ action: "browser", resource: "*", effect: "allow" }] })
     expect(state.allowAll).toBe(true)
-    expect(state.grants).toEqual([])
+    expect(state.grants).toEqual([{ action: "browser", resource: "*", effect: "allow" }])
+  })
+
+  test("a catch-all that is not an allow is kept and reads as its effect", () => {
+    const state = readState({ permissions: [{ action: "browser", resource: "*", effect: "ask" }] })
+    expect(state.allowAll).toBe(false)
+    expect(state.grants).toEqual([{ action: "browser", resource: "*", effect: "ask" }])
+    expect(grantLine({ action: "browser", resource: "*", effect: "deny" })).toBe("every origin allowed → deny")
+  })
+
+  test("the last catch-all decides allow-all, as the CLI's evaluator does", () => {
+    const later = readState({
+      permissions: [
+        { action: "browser", resource: "*", effect: "allow" },
+        { action: "browser", resource: "*", effect: "deny" },
+      ],
+    })
+    expect(later.allowAll).toBe(false)
+    expect(later.grants).toEqual([{ action: "browser", resource: "*", effect: "deny" }])
+    const raised = readState({
+      permissions: [
+        { action: "browser", resource: "*", effect: "deny" },
+        { action: "browser", resource: "*", effect: "allow" },
+      ],
+    })
+    expect(raised.allowAll).toBe(true)
+  })
+
+  test("a later rule for the same origin wins over the earlier one", () => {
+    const state = readState({
+      permissions: [
+        { action: "browser", resource: "read:https://example.com", effect: "allow" },
+        { action: "browser", resource: "read:https://example.com", effect: "deny" },
+      ],
+    })
+    expect(state.grants).toEqual([{ action: "browser", resource: "read:https://example.com", effect: "deny" }])
   })
 
   test("a grant reads as its class and origin", () => {
@@ -80,7 +115,8 @@ const settings = (document: unknown) => (url: URL) => {
       },
     })
   }
-  if (url.pathname === "/api/rpc/kilocode.browser/status") return json({ output: { playwright: { ready: true } } })
+  if (url.pathname === "/api/rpc/kilocode.browser/status")
+    return json({ output: { playwright: { ready: true }, backend: "playwright" } })
   return undefined
 }
 
@@ -141,7 +177,7 @@ test("/browser reports the backend unavailable when no browser is installed", as
     height: 40,
     fetch: async (url) =>
       url.pathname === "/api/rpc/kilocode.browser/status"
-        ? json({ output: { playwright: { ready: false } } })
+        ? json({ output: { playwright: { ready: false }, backend: "playwright" } })
         : settings({})(url),
   })
   await app.ready
@@ -153,6 +189,28 @@ test("/browser reports the backend unavailable when no browser is installed", as
     (frame) => frame.includes("Browser settings") && frame.includes("Sensitive steps:"),
   )
   expect(frame).toContain("Backend: Bundled browser (Playwright) — unavailable")
+}, 30000)
+
+// The settings RPC answers for a location. The command must ask for the TUI's own project, the same location every
+// other Kilo command reads, not whatever directory the process happened to start in.
+test("/browser reads the settings for the TUI's location, not the process directory", async () => {
+  const asked: string[] = []
+  await using app = await createAppFixture({
+    width: 100,
+    height: 40,
+    fetch: async (url) => {
+      if (url.pathname.startsWith("/api/rpc/kilocode.")) asked.push(url.searchParams.get("location[directory]") ?? "")
+      return settings({})(url)
+    },
+  })
+  await app.ready
+  await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
+  await app.mockInput.typeText("/browser")
+  await app.waitForFrame((frame) => frame.includes("Show the browser backend"))
+  app.mockInput.pressEnter()
+  await app.waitForFrame((frame) => frame.includes("Browser settings") && frame.includes("Sensitive steps:"))
+  expect(asked.length).toBeGreaterThan(0)
+  expect(new Set(asked)).toEqual(new Set([directory]))
 }, 30000)
 
 // A write sends the changed key alone: the block's other keys keep their values server-side, so an unrelated value the
