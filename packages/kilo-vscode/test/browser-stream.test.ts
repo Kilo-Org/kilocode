@@ -3,15 +3,14 @@ import { EventEmitter } from "node:events"
 import { chromium, type Browser, type Page } from "playwright-core"
 import { BrowserStream } from "../src/services/browser-automation/browser-stream"
 import { source, type BrowserCursor, type BrowserFrame, type BrowserInteraction } from "../src/shared/browser-stream"
-import { chromiumProbe, executable } from "./fixtures/chromium"
+import { executable, hookTimeout, launchTimeout } from "./fixtures/chromium"
 
 const streams: BrowserStream[] = []
 const pages: Page[] = []
 const view = { width: 640, height: 480, revision: 1, active: true }
-const probe = executable ? await chromiumProbe() : ({ state: "missing" } as const)
 
-// A browser that died after launch, or that the probe already failed, leaves ordinary cleanup under Chromium's
-// "Target page, context or browser has been closed". Treat that as done so one dead browser cannot fail every test.
+// A browser that died after launch leaves ordinary cleanup under Chromium's "Target page, context or browser has
+// been closed". Treat that as done so one dead browser cannot fail every cleanup.
 function closed(error: unknown) {
   return /has been closed|Browser has been closed/i.test(error instanceof Error ? error.message : String(error))
 }
@@ -535,27 +534,18 @@ describe("BrowserStream protocol lifecycle", () => {
   })
 })
 
-test.skipIf(probe.state !== "failed")("BrowserStream Chromium launches", () => {
-  if (probe.state === "failed") expect.unreachable(probe.reason)
-})
-
-describe.skipIf(probe.state !== "ready")("BrowserStream Chromium", () => {
+describe.skipIf(!executable)("BrowserStream Chromium", () => {
   let browser: Browser
 
   beforeAll(async () => {
-    browser = await launch()
-  }, 25000)
-
-  async function launch() {
-    const config = {
+    browser = await chromium.launch({
       executablePath: executable,
       headless: true,
       chromiumSandbox: true,
       args: ["--force-device-scale-factor=2"],
-      timeout: 10000,
-    }
-    return chromium.launch(config).catch(() => chromium.launch(config))
-  }
+      timeout: launchTimeout,
+    })
+  }, hookTimeout)
 
   afterAll(async () => {
     await browser?.close().catch((error: unknown) => {

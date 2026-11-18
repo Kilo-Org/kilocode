@@ -17,7 +17,7 @@ await mock.module("solid-js", () => import(CLIENT_SOLID))
 // The client build of the store, so store writes reach the memos of the client Solid build.
 const CLIENT_STORE = "solid-js/store/dist/store.js"
 await mock.module("solid-js/store", () => import(CLIENT_STORE))
-const { createRoot, createSignal } = await import("solid-js")
+const { createEffect, createRoot, createSignal } = await import("solid-js")
 // The webview page: the event stream reconnects on page lifecycle events.
 Object.assign(globalThis, {
   window: new EventTarget(),
@@ -146,6 +146,24 @@ async function until(check: () => boolean, attempts = 100) {
   throw new Error("condition not reached")
 }
 
+// Observe the real panel store. Only a missing update should hit the deadline; a wrong badge fails immediately.
+function when(label: string, check: () => boolean) {
+  return new Promise<void>((resolve, reject) => {
+    createRoot((dispose) => {
+      const timer = setTimeout(() => {
+        dispose()
+        reject(new Error(`Panel never observed ${label}`))
+      }, 30_000)
+      createEffect(() => {
+        if (!check()) return
+        clearTimeout(timer)
+        dispose()
+        resolve()
+      })
+    })
+  })
+}
+
 test("keeps a pending form on the owning Local row when switching projects", async () => {
   await using storage = await tmpdir("kilo-vscode-project-waiting-")
   const alpha = path.join(storage.path, "Alpha")
@@ -182,13 +200,16 @@ test("keeps a pending form on the owning Local row when switching projects", asy
           active,
           activityFor: sessions.activityFor,
         })
-        await until(() => panel.connection.status() === "connected")
+        await when("server.connected", () => panel.connection.status() === "connected")
         const form = await api.session.form.create({
           sessionID: first.id,
           title: "Which color?",
           fields: [{ key: "color", type: "string", required: true }],
         })
-        await until(() => rows.project(first.projectID, null) === "waiting", 300)
+        const forms = panel.store(alpha).data.session.form
+        const pending = () => forms.list(first.id)?.some((item) => item.id === form.id) ?? false
+        await when("Alpha's pending form", pending)
+        expect(rows.project(first.projectID, null)).toBe("waiting")
 
         setActive(second.projectID)
         panel.show([bravo])
@@ -200,8 +221,9 @@ test("keeps a pending form on the owning Local row when switching projects", asy
         setActive(first.projectID)
         expect(rows.project(first.projectID, null)).toBe("waiting")
         await api.session.form.reply({ sessionID: first.id, formID: form.id, answer: { color: "Blue" } })
+        await when("Alpha's form reply", () => !pending())
+        expect(rows.project(first.projectID, null)).toBe("idle")
         expect(await api.session.form.list({ sessionID: first.id })).toEqual([])
-        await until(() => rows.project(first.projectID, null) === "idle", 300)
         setActive(second.projectID)
         expect(rows.project(first.projectID, null)).toBe("idle")
         expect(rows.project(second.projectID, null)).toBe("idle")

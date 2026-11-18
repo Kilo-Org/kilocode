@@ -13,6 +13,7 @@ import { BrowserNetwork } from "../../src/services/browser-automation/browser-ne
 import { BrowserProxy } from "../../src/services/browser-automation/browser-proxy"
 import { options } from "../../src/services/browser-automation/browser-runtime"
 import { cert, key } from "./browser-network-tls"
+import { hookTimeout, launchTimeout } from "./chromium"
 
 const executable = process.env.CHROME_PATH
 if (!executable) throw new Error("The browser-network wrapper must provide CHROME_PATH")
@@ -121,9 +122,9 @@ describe("BrowserNetwork Chromium", () => {
   before(
     async () => {
       gateway = await BrowserProxy.start("deny")
-      browser = await launch()
+      browser = await launch(true, [], launchTimeout)
     },
-    { timeout: 20000 },
+    { timeout: hookTimeout },
   )
 
   after(async () => {

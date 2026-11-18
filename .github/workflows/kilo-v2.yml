@@ -523,13 +523,14 @@ jobs:
         working-directory: packages/kilo-vscode
         run: bun run knip
 
+      # BrowserStream inspects isolated-world listeners through CDP; use full Chromium, not the headless shell.
+      - name: Install Chromium for the VS Code browser tests
+        working-directory: packages/kilo-vscode
+        run: bun run playwright-core install --with-deps --no-shell chromium
+
       - name: Test the VS Code extension
         working-directory: packages/kilo-vscode
-        run: bun test
-
-      - name: Install Chromium for the VS Code accessibility gate
-        working-directory: packages/kilo-vscode
-        run: bun run playwright-core install --with-deps --only-shell chromium
+        run: CHROME_PATH=$(node -p 'require("playwright-core").chromium.executablePath()') bun test
 
       - name: Test VS Code webview accessibility
         working-directory: packages/kilo-vscode
