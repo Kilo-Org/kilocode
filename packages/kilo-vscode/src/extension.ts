@@ -30,8 +30,11 @@ import { createCostAlerts } from "./cost-alert"
 import { command, indexingEnvironment, manager, serverPlans, settingsEnvironment } from "./server"
 import { usePlanDir } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
+import { resolveDataDir, resolveKiloProfile, resolveStateDir } from "./settings-paths"
 import { registerAutocompleteProvider } from "./services/autocomplete"
-import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
+import { BrowserBroker } from "./services/browser-automation"
+import { browserSettingsService } from "./browser-settings"
+import { cancelChromiumInstall } from "./browser-settings/install-chromium"
 import {
   integratedBrowserEnabled,
   integratedBrowserFallback,
@@ -118,7 +121,10 @@ export function activate(context: ExtensionContext) {
       ...(agentManagerRef
         ? [...agentManagerRef.contexts.values()].flatMap((project) => [
             project.root,
-            ...(project.peekState()?.getWorktrees().map((worktree) => worktree.path) ?? []),
+            ...(project
+              .peekState()
+              ?.getWorktrees()
+              .map((worktree) => worktree.path) ?? []),
           ])
         : []),
     ],
@@ -189,7 +195,6 @@ export function activate(context: ExtensionContext) {
       connection.started(started)
       alerts.start(started)
       autocomplete.started()
-      void automation.started()
       // Consent lives in globalState; a fresh server starts without it, so re-send it for the workspace project.
       void indexing?.sync()
     },
@@ -198,7 +203,6 @@ export function activate(context: ExtensionContext) {
       connection.stopped()
       alerts.stop()
       autocomplete.stopped()
-      automation.stopped()
     },
     onError: (error) => {
       output.appendLine(error.message)
@@ -208,13 +212,29 @@ export function activate(context: ExtensionContext) {
     },
   })
   const diffs = new DiffVirtualProvider(context.extensionUri)
-  // Registers the optional Playwright MCP server in the v2 server. It is independent from the Integrated Browser.
-  const automation = new BrowserAutomationService({
+  // The browser tools' settings: the `browser` config keys and the origin allowlist, plus the one-time move of the old
+  // `kilo-code.v2.browserAutomation.*` settings into them.
+  const browserSettings = browserSettingsService({
     server,
-    log: (...args) => output.appendLine(`Browser automation: ${args.map((item) => String(item)).join(" ")}`),
+    directory: () => workspace.workspaceFolders?.[0]?.uri.fsPath ?? directory,
+    data: resolveDataDir(process.env, resolveKiloProfile(context)),
+    state: resolveStateDir(process.env, resolveKiloProfile(context)),
+    command: serverCommand,
+    store: context.globalState,
+    env: process.env,
+    log: (...args) => output.appendLine(`Browser settings: ${args.map((item) => String(item)).join(" ")}`),
   })
-  void automation.syncWithSettings()
-  context.subscriptions.push({ dispose: () => automation.dispose() })
+  void browserSettings
+    .migrate()
+    .then((result) => {
+      if (result.error) void window.showErrorMessage(`Browser settings migration failed: ${result.error}`)
+    })
+    .catch(
+      (error: unknown) =>
+        void window.showErrorMessage(
+          `Browser settings migration failed: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+    )
   const indexingService = indexingHost({
     context,
     server,
@@ -281,7 +301,8 @@ export function activate(context: ExtensionContext) {
   })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
   agentManagerRef = agentManager
-  agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
+  agentManager.onBrowserDebug = (...args) =>
+    output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
   // Temporary import of Kilo v1 data for internal users. A machine with a v1 store is offered it at startup until the
   // user imports or chooses "Don't Ask Again"; closing the notification only postpones it to the next start.
   const importFromV1 = async (days: number) => {
@@ -363,8 +384,7 @@ export function activate(context: ExtensionContext) {
       trusted: () => workspace.isTrusted,
       // The tab serves the session the sidebar shows, and keeps serving a session whose tab is still open.
       resolve: (route) =>
-        editorTabOwns(route.sessionId) &&
-        samePath(canonicalizePath(route.directory), canonicalizePath(directory))
+        editorTabOwns(route.sessionId) && samePath(canonicalizePath(route.directory), canonicalizePath(directory))
           ? { sessionId: route.sessionId, directory: route.directory }
           : undefined,
       directory: () => directory,
@@ -391,6 +411,7 @@ export function activate(context: ExtensionContext) {
     context,
     server,
     directory,
+    browserSettings,
     onReset: view.syncState,
     agentManager: () => agentManager.settings,
   })
@@ -460,9 +481,8 @@ export function activate(context: ExtensionContext) {
     { dispose: () => diffs.dispose() },
     diffCatalog,
     changes,
-    commands.registerCommand(
-      "kilo-code.v2.showChanges",
-      (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => changes.openFromCommand(arg),
+    commands.registerCommand("kilo-code.v2.showChanges", (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) =>
+      changes.openFromCommand(arg),
     ),
     window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
       deserializeWebviewPanel: async (panel, state) => changes.deserializePanel(panel, state),
@@ -590,5 +610,6 @@ function browserTheme(): "dark" | "light" {
 }
 
 export function deactivate() {
+  cancelChromiumInstall()
   return shutdownExtension?.()
 }

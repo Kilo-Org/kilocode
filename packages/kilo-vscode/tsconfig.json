@@ -24,6 +24,7 @@
     "src/shared",
     "test/fixtures/agent-stack-render.tsx",
     "test/fixtures/browser-panel-render.tsx",
+    "test/fixtures/browser-settings-render.tsx",
     "test/fixtures/cold-location-mocked.tsx",
     "test/fixtures/cold-location-stores.tsx",
     "test/fixtures/composer-focus-switch.tsx",

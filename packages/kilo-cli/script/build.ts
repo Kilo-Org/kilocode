@@ -142,6 +142,24 @@ const wsReexportPlugin: BunPlugin = {
   },
 }
 
+// Kilo: playwright-core's bundled `lib/coreBundle.js` lazily requires two optional packages that it does not depend
+// on: `chromium-bidi` (only the BiDi-over-CDP path) and `electron` (only the Electron launcher). A Bun build cannot
+// resolve either, and the Chromium/CDP path this CLI uses never reaches them, so both resolve to a module that throws
+// if it is ever loaded, which keeps a missing package a clear error instead of a silently dead code path.
+const playwrightOptionalPlugin: BunPlugin = {
+  name: "playwright-optional-deps",
+  setup(build) {
+    build.onResolve({ filter: /^(chromium-bidi|electron)(\/|$)/ }, (args) => ({
+      path: args.path,
+      namespace: "playwright-optional",
+    }))
+    build.onLoad({ filter: /.*/, namespace: "playwright-optional" }, (args) => ({
+      contents: `throw Object.assign(new Error(${JSON.stringify(args.path)} + " is not bundled in this build"), { code: "MODULE_NOT_FOUND" })`,
+      loader: "js",
+    }))
+  },
+}
+
 for (const item of targets) {
   const opencodePty = await resolveOpencodePty({
     platform: item.os,
@@ -225,6 +243,8 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       opencodePtyPlugin,
       pluginRuntimePlugin,
       wsReexportPlugin,
+      // Kilo: the optional playwright-core requires (see playwrightOptionalPlugin).
+      playwrightOptionalPlugin,
       simulationGraphPlugin,
       modelsSnapshot,
     ],

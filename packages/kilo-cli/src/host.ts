@@ -161,6 +161,10 @@ export const overrides: LayerNode.Replacements = [
                 Effect.map((operations) => [
                   { type: "remove" as const, target: "opencode.plan" },
                   { type: "remove" as const, target: "opencode.goal" },
+                  // The browser bridge owns the `browser_*` tool names (SPEC: the Playwright MCP contract, the same list
+                  // on both backends). The upstream desktop browser plugin registers the same names in its `browser`
+                  // namespace, so it would shadow the Kilo tools; the CLI serves the Playwright backend instead.
+                  { type: "remove" as const, target: "opencode.browser" },
                   // One scheduling surface: the wakeup plugin owns the wakeup and cron tools, so the native schedule
                   // tools (and their /schedule command) would only duplicate the prompt and the model's choice.
                   { type: "remove" as const, target: "opencode.tool.schedule" },
