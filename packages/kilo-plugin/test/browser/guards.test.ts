@@ -196,6 +196,7 @@ async function boot(options: { permission?: unknown; events?: unknown } = {}) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const ctx = {
     location: { directory: "/tmp/browser-guards-test" },
+    skill: { transform: () => Effect.void },
     // The status RPC the settings dialog reads; the tests here never call it.
     rpc: { register: () => Effect.succeed({ events: { emit: () => Effect.void }, dispose: Effect.void }) },
     tool: {
@@ -223,7 +224,7 @@ async function boot(options: { permission?: unknown; events?: unknown } = {}) {
     Effect.runPromise(
       Effect.result(
         tools()
-          .find((tool) => tool.name === name)!
+          .find((tool) => `${tool.options?.namespace}_${tool.name}` === name)!
           .execute(input, {
             sessionID: session as never,
             agent: "code" as never,
