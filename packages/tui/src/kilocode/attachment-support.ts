@@ -1,4 +1,6 @@
 // kilocode_change - new file
+import { KiloSteer } from "./steer"
+
 export type Modality = "image" | "audio" | "video" | "pdf"
 
 export type Capabilities = Record<Modality, boolean>
@@ -30,4 +32,21 @@ export function unsupportedAttachments(
     if (!modality || capabilities[modality]) return []
     return [{ filename: part.filename, modality }]
   })
+}
+
+type ModelRef = { providerID: string; modelID: string }
+
+/**
+ * The model that will read the attachments of this submit, or undefined when none are sent.
+ * Shell mode sends only the command, so it has no receiver. A subagent steer runs on the
+ * child session's own model, any other prompt or slash command on the selected model.
+ */
+export function receivingModel(input: {
+  mode: string
+  session: Parameters<typeof KiloSteer.prompt>[0]
+  selected: ModelRef
+}): ModelRef | undefined {
+  if (input.mode === "shell" && !KiloSteer.steering(input.session)) return undefined
+  const steer = KiloSteer.prompt(input.session)
+  return ("model" in steer ? steer.model : undefined) ?? input.selected
 }
