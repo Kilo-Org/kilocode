@@ -2,6 +2,7 @@ import { batch, createSignal } from "solid-js"
 import { Effect, Fiber } from "effect"
 import type { CliRenderer, ThemeMode } from "@opentui/core"
 import type { TuiInput } from "../app"
+import { isLocationNotFoundError } from "@opencode/client"
 
 export * as InteractiveStartup from "./interactive-startup"
 
@@ -10,7 +11,7 @@ export function transport(fetch: typeof globalThis.fetch, wait?: (signal?: Abort
   let ready = false
   return (async (request, init) => {
     if (!ready) {
-      await wait(init?.signal ?? undefined)
+      await wait(init?.signal ?? (request instanceof Request ? request.signal : undefined))
       ready = true
     }
     return fetch(request, init)
@@ -31,7 +32,20 @@ export function workspace<A extends { directory: string }, E>(input: TuiInput, l
       !input.args.newSessionID &&
       !process.env.OPENCODE_ROUTE &&
       !process.env.OPENCODE_STORY
-    const pending = early ? yield* Effect.forkChild(locate, { startImmediately: true }) : undefined
+    // A deleted location can be changed from Home. A dead or unauthorized server is a startup error,
+    // not a usable workspace; preserve that failure rather than stranding the editor.
+    const pending = early
+      ? yield* Effect.forkChild(
+          locate.pipe(
+            Effect.catchIf(
+              (error) =>
+                isLocationNotFoundError(error) || (error instanceof Error && isLocationNotFoundError(error.cause)),
+              () => Effect.succeed({ directory: process.cwd() }),
+            ),
+          ),
+          { startImmediately: true },
+        )
+      : undefined
     const [confirmed, setConfirmed] = createSignal(!early)
     const [directory, setDirectory] = createSignal(pending ? process.cwd() : (yield* locate).directory)
     return {
@@ -61,7 +75,7 @@ export function workspace<A extends { directory: string }, E>(input: TuiInput, l
         const detection = renderer.waitForThemeMode(1000)
         return {
           mode: (local ? renderer.themeMode : await detection) ?? "dark",
-          detecting: local ? detection : undefined,
+          detecting: local ? detection.catch(() => null) : undefined,
         } as const
       },
     }

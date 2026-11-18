@@ -10,6 +10,7 @@ it.effect(
   "publishes the bound endpoint while requests still wait for route readiness",
   Effect.gen(function* () {
     const stdout = yield* Queue.unbounded<Uint8Array>()
+    yield* Queue.offer(stdout, new TextEncoder().encode("plugin activated\n"))
     yield* Queue.offer(stdout, line({ bound: url }))
     const lease = yield* privateLease(Stream.fromQueue(stdout), true)
     expect(lease.url).toBe(url)
@@ -23,6 +24,7 @@ it.effect(
       await expect(request).rejects.toThrow()
     })
 
+    yield* Queue.offer(stdout, new TextEncoder().encode('{"url":null}\n{"message":"listening"}\n'))
     yield* Queue.offer(stdout, line({ url }))
     yield* Effect.promise(() => whenReady())
   }),
@@ -42,7 +44,7 @@ it.effect(
 it.effect(
   "reports startup failure when stdout closes before the endpoint is announced",
   Effect.gen(function* () {
-    const failure = yield* Effect.flip(privateLease(Stream.empty, true))
+    const failure = yield* Effect.flip(privateLease(Stream.make(new TextEncoder().encode("not ready\n")), true))
     expect(failure.message).toBe("Standalone server exited before reporting readiness")
   }),
 )

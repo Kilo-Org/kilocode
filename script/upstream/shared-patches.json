@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 149,
-    "markedLines": 2638,
+    "files": 150,
+    "markedLines": 2644,
     "unmarkedLines": 385,
     "deletedFiles": 0
   },
@@ -605,6 +605,10 @@
     "packages/tui/src/context/data.tsx": {
       "rung": 3,
       "seam": "Forward the directory as an accessor so the existing store accepts the server-confirmed initial location without remounting the composer."
+    },
+    "packages/tui/src/context/location.tsx": {
+      "rung": 3,
+      "seam": "Expose the current location sync's terminal failure after retries to the early Home editor. Only a typed missing directory is a location-unavailable error for existing consumers."
     },
     "packages/tui/src/context/runtime.tsx": {
       "rung": 3,

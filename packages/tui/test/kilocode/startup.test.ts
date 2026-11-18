@@ -4,13 +4,37 @@ import { createData } from "@opencode/client/solid"
 import { RGBA } from "@opentui/core"
 import { resolveThemeDocument } from "@opencode/theme/tui"
 import { createGlobalEmitter } from "@solid-primitives/event-bus"
-import { createRoot } from "solid-js"
+import { createRoot, createSignal } from "solid-js"
 import { InteractiveStartup } from "../../src/kilocode/interactive-startup"
-import { submissionCatalogsLoaded } from "../../src/kilocode/pending-submission"
+import { initialCatalogWait, submissionCatalogsLoaded } from "../../src/kilocode/pending-submission"
 import { startupTheme } from "../../src/kilocode/startup-theme"
 import { getOpenCodeTheme } from "../../src/theme"
 import { agent } from "../fixture/local"
 import { createApi, createFetch, directory, json } from "../fixture/tui-client"
+
+test.each(["loaded", "failed", "stalled"])("startup releases submission when a catalog is %s", (outcome) => {
+  const deadline = new AbortController()
+  const [loaded, setLoaded] = createSignal(false)
+  const [failure, setFailure] = createSignal<{ cause: unknown }>()
+  const errors: unknown[] = []
+  const cause = new Error("model list unavailable")
+  const gate = createRoot((dispose) => ({
+    dispose,
+    waiting: initialCatalogWait(loaded, failure, (err) => errors.push(err), deadline.signal),
+  }))
+  try {
+    expect(gate.waiting()).toBe(true)
+    if (outcome === "loaded") setLoaded(true)
+    if (outcome === "failed") setFailure({ cause })
+    deadline.abort(cause)
+    expect(gate.waiting()).toBe(false)
+    setLoaded(false)
+    expect(gate.waiting()).toBe(false)
+    expect(errors).toEqual(outcome === "loaded" ? [] : [cause])
+  } finally {
+    gate.dispose()
+  }
+})
 
 test("the startup submit gate stays closed while agents are still loading", async () => {
   const location = { directory }
