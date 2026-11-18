@@ -15,6 +15,7 @@ import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import com.intellij.openapi.components.service
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.Flow
  * Backend implementation of hosted workspace discovery. All calls cross the local CLI's Session
  * Host and its opaque attachment; nothing here talks to a provider directly.
  */
+@Suppress("TooManyFunctions")
 class KiloHostedRpcApiImpl internal constructor(
     private val appOverride: KiloBackendAppService? = null,
 ) : KiloHostedRpcApi {
@@ -64,6 +66,22 @@ class KiloHostedRpcApiImpl internal constructor(
     override suspend fun workspaceProfiles(organizationID: String?): HostedWorkspaceProfileListDto {
         app.requireReady()
         return app.hosted.workspaceProfiles(organizationID ?: organization())
+    }
+
+    override suspend fun workspacePullRequest(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDto {
+        app.requireReady()
+        return app.hosted.workspacePullRequest(ref, organizationID ?: organization())
+    }
+
+    override suspend fun refreshWorkspacePullRequest(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDto {
+        app.requireReady()
+        return app.hosted.refreshWorkspacePullRequest(ref, organizationID ?: organization())
     }
 
     override suspend fun setPersonalDefaultProfile(profileID: String): HostedProfileDefaultDto {

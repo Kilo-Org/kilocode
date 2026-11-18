@@ -99,6 +99,12 @@ Kilo chat uses only the first folder in your VS Code workspace. When a window ha
 
 Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.
 
+## Product telemetry
+
+Product telemetry helps us understand feature usage and improve reliability. To disable it, set **Telemetry: Telemetry Level** to **off** in VS Code's user settings. The change applies right away. This editor-wide preference controls the extension and its managed Kilo backend, including the sidebar and Agent Manager. It takes precedence over standalone CLI telemetry settings in `kilo.jsonc` or the environment.
+
+See [VS Code product telemetry settings](/docs/getting-started/settings/product-telemetry#vs-code) for the JSON setting and full instructions.
+
 ## Interface Language
 
 The extension UI follows VS Code's display language by default. Override it with the `kilo-code.new.language` setting (for example `en`, `de`, `ja`, or `fa`). Right-to-left languages such as Arabic and Persian switch the layout direction automatically.

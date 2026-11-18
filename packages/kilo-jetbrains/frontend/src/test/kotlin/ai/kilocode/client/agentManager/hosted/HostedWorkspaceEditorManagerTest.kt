@@ -33,6 +33,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 
 /**
  * The blank New Session panel hands its first prompt to [HostedWorkspaceEditorManager.createSession],
@@ -126,6 +127,11 @@ class HostedWorkspaceEditorManagerTest : BasePlatformTestCase() {
         assertTrue(rpc.starts.isEmpty())
     }
 
+    fun `test disposing manager completes its workspace session scope`() {
+        edt { Disposer.dispose(manager) }
+        runBlocking { withTimeout(5_000) { manager.closed() } }
+    }
+
     private fun <T> edt(block: () -> T): T {
         var result: T? = null
         com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait { result = block() }
@@ -134,6 +140,9 @@ class HostedWorkspaceEditorManagerTest : BasePlatformTestCase() {
     }
 
     private class RecordingHosted(private val ref: HostedWorkspaceRefDto) : KiloHostedRpcApi {
+        override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+
         val starts = mutableListOf<Pair<HostedWorkspaceRefDto, HostedStartSessionDto>>()
         val session = HostedWorkspaceSessionDto(
             id = HostedIDs.session(ref.providerID, ref.workspaceID, "ses_new"),

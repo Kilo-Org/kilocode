@@ -99,6 +99,31 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
+    fun `worktree sessions move to the project root`() = runBlocking {
+        mock.recentSessions = """[
+            {"id":"ses_a","slug":"a","projectID":"p","directory":"/worktree","title":"A","version":"1","time":{"created":1,"updated":1}},
+            {"id":"ses_b","slug":"b","projectID":"p","directory":"/worktree","title":"B","version":"1","time":{"created":1,"updated":1}}
+        ]"""
+        val app = setup()
+        ready(app)
+        app.sessions.setDirectory("ses_a", "/stale-override")
+
+        val moved = app.sessions.rehome("/worktree", "/root")
+
+        assertEquals(2, moved)
+        assertTrue(mock.moveSessionBodies.any { it.contains("\"sessionID\":\"ses_a\"") })
+        assertTrue(mock.moveSessionBodies.any { it.contains("\"sessionID\":\"ses_b\"") })
+        assertTrue(mock.moveSessionBodies.all { it.contains("\"directory\":\"/root\"") })
+        assertTrue(mock.moveSessionBodies.all { it.contains("\"moveChanges\":false") })
+        val path = mock.lastExperimentalSessionPath ?: error("missing experimental session request")
+        assertTrue(path.contains("roots=false"), path)
+        assertTrue(path.contains("archived=true"), path)
+        assertTrue(URLDecoder.decode(path, "UTF-8").contains("directory=/worktree"), path)
+        // A session turned active before the next listing must not be attributed to the old path.
+        assertEquals("/root", app.sessions.sessionDirectory("ses_a"))
+    }
+
+    @Test
     fun `session manager throws when not started`() = runBlocking<Unit> {
         val app = setup()
         // Don't connect — manager is not started
