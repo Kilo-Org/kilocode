@@ -24,6 +24,7 @@ import kotlinx.coroutines.cancel
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JLabel
+import javax.swing.plaf.basic.BasicComboBoxUI
 
 class AgentEditDialogTest : BasePlatformTestCase() {
     private lateinit var scope: CoroutineScope
@@ -74,6 +75,120 @@ class AgentEditDialogTest : BasePlatformTestCase() {
             val result = d.result()
             assertEquals("kilo/gpt-5", result.model)
             assertEquals("high", result.variant)
+            true
+        }
+    }
+
+    fun `test variant selector offers the selected model variants`() {
+        val agent = draft().copy(model = "kilo/gpt-5", variant = "high")
+        val items = listOf(
+            item("gpt-5", variants = listOf("high", "low")),
+            item("claude-5"),
+        )
+        val d = open(agent, items)
+
+        edt {
+            val root = d.centerComponent()
+            val combo = field<ComboBox<*>>(root, title("variant"))
+            assertEquals(2, combo.itemCount)
+            assertEquals("high", combo.selectedItem)
+            assertEquals("high", d.result().variant)
+            true
+        }
+    }
+
+    fun `test variant selector accepts a custom named variant`() {
+        val agent = draft().copy(model = "kilo/gpt-5")
+        val items = listOf(item("gpt-5", variants = listOf("high", "low")))
+        val d = open(agent, items)
+
+        val result = edt {
+            val root = d.centerComponent()
+            val combo = field<ComboBox<*>>(root, title("variant"))
+            combo.editor.item = "high-x"
+            combo.selectedItem = "high-x"
+            d.result()
+        }
+
+        assertEquals("high-x", result.variant)
+    }
+
+    fun `test variant selector keeps a saved value without matching items`() {
+        val agent = draft().copy(model = "kilo/gpt-5", variant = "high")
+        val d = open(agent)
+
+        edt {
+            val root = d.centerComponent()
+            val combo = field<ComboBox<*>>(root, title("variant"))
+            assertEquals(0, combo.itemCount)
+            assertEquals("high", combo.selectedItem)
+            assertEquals("high", d.result().variant)
+            true
+        }
+    }
+
+    fun `test variant selector reconciles a stale value on model switch`() {
+        val agent = draft().copy(model = "kilo/gpt-5", variant = "high")
+        val items = listOf(
+            item("gpt-5", variants = listOf("high", "low")),
+            item("claude-5", variants = listOf("thinking")),
+        )
+        val d = open(agent, items)
+
+        val result = edt {
+            descendants(d.centerComponent()).filterIsInstance<ModelSettingPicker>()
+                .first().picker.onSelect.invoke(items[1])
+            d.result()
+        }
+
+        assertEquals("thinking", result.variant)
+    }
+
+    fun `test variant selector keeps free text when the new model has no variants`() {
+        val agent = draft().copy(model = "kilo/gpt-5", variant = "high")
+        val items = listOf(
+            item("gpt-5", variants = listOf("high", "low")),
+            item("claude-5"),
+        )
+        val d = open(agent, items)
+
+        val result = edt {
+            descendants(d.centerComponent()).filterIsInstance<ModelSettingPicker>()
+                .first().picker.onSelect.invoke(items[1])
+            d.result()
+        }
+
+        assertEquals("high", result.variant)
+    }
+
+    fun `test variant selector keeps a custom variant when the same model is re-picked`() {
+        val agent = draft().copy(model = "kilo/gpt-5", variant = "custom")
+        val items = listOf(item("gpt-5", variants = listOf("high", "low")))
+        val d = open(agent, items)
+
+        val result = edt {
+            descendants(d.centerComponent()).filterIsInstance<ModelSettingPicker>()
+                .first().picker.onSelect.invoke(items[0])
+            d.result()
+        }
+
+        assertEquals("custom", result.variant)
+    }
+
+    fun `test variant picker editor survives a dropped editor during layout`() {
+        val agent = draft().copy(model = "kilo/gpt-5", variant = "high")
+        val items = listOf(item("gpt-5", variants = listOf("high", "low")))
+        val d = open(agent, items)
+
+        edt {
+            val combo = field<ComboBox<*>>(d.centerComponent(), title("variant"))
+            val ui = combo.ui as BasicComboBoxUI
+            ui.removeEditor()
+
+            combo.preferredSize
+
+            val comp = combo.editor.editorComponent
+            assertTrue(combo.components.any { it === comp })
             true
         }
     }
@@ -200,8 +315,17 @@ class AgentEditDialogTest : BasePlatformTestCase() {
 
     private fun draft() = AgentEditDraft(name = "code", mode = KiloCliParser.MODE_PRIMARY, native = false)
 
-    private fun open(agent: AgentEditDraft): AgentEditDialog {
-        val d = edt { AgentEditDialog(agent, app, emptyList<ModelPicker.Item>()) }
+    private fun item(id: String, provider: String = "kilo", variants: List<String> = emptyList()) =
+        ModelPicker.Item(
+            id = id,
+            display = id,
+            provider = provider,
+            providerName = provider,
+            variants = variants,
+        )
+
+    private fun open(agent: AgentEditDraft, items: List<ModelPicker.Item> = emptyList()): AgentEditDialog {
+        val d = edt { AgentEditDialog(agent, app, items) }
         dialog = d
         return d
     }
