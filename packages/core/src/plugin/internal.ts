@@ -65,6 +65,7 @@ import { WebSearch } from "../websearch.js"
 import { Ripgrep } from "../ripgrep.js"
 import { Schedule } from "../schedule.js"
 import { Session } from "../session.js"
+import { SessionInbox } from "../session/inbox.js" // kilocode_change(workflow-model) seam - built-in plugins read the installed delivery policy
 import { SessionCompaction } from "../session/compaction.js"
 import { SessionInstructions } from "../session/instructions.js"
 import { SubagentJob } from "../session/subagent-job.js"
@@ -163,6 +164,7 @@ const services = [
   Session.Service,
   SessionCompaction.Service,
   SessionInstructions.Service,
+  SessionInbox.Policy, // kilocode_change(workflow-model) seam - built-in plugins read the installed delivery policy
   SubagentJob.Service,
   SharedCache.Service,
   Shell.Service,
@@ -223,6 +225,7 @@ export const requirements = LayerNode.group([
   Schedule.node,
   Session.node,
   SessionCompaction.node,
+  SessionInbox.policyNode, // kilocode_change(workflow-model) seam - build the delivery policy for the plugin context
   SessionInstructions.node,
   SubagentJob.node,
   SharedCache.node,

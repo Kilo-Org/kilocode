@@ -277,5 +277,3 @@ export function createSandbox(input: {
     },
   }
 }
-
-export type Sandbox = ReturnType<typeof createSandbox>

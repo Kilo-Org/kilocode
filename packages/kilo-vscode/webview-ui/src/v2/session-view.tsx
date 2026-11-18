@@ -34,6 +34,7 @@ import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
+import { createPermissionPresentation } from "./permission-presentation"
 import { PromptInput, setPromptDraft, type SendTarget } from "./prompt"
 import { createRevertQueue, EMPTY_DRAFT, redoTarget, restoredDraft, type ComposerDraft } from "./revert"
 import { sendBinding } from "./send-binding"
@@ -184,7 +185,7 @@ export function SessionView(props: {
     if (!id) return []
     return transcriptChildren(v2.data.session.message.list(id))
   })
-  const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
+  const permissions = createMemo(() => family().flatMap((id) => v2.data.session.permission.list(id) ?? []))
   const forms = () => formsOf(session())
   // The same reads for a named session, for a send that outlives the tab it came from.
   function formsOf(id: string | undefined) {
@@ -248,13 +249,16 @@ export function SessionView(props: {
   // Only a permission blocks sending, and the composer stays writable so typing remains possible.
   const blocked = () => permissions().length > 0
   const dockBlocked = () => blocked() || forms().length > 0
-  // The prompt selectors block only while a permission owns the prompt, as v1; a pending question does not.
-  const selectorsBlocked = () => permissions().length > 0
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => !blocked() && forms().length > 0
   const selection = createSelection(session, draftKey)
   const preferences = useModelPreferences()
   const autoApprove = createAutoApprove()
+  const visiblePermission = createPermissionPresentation({
+    session,
+    requests: permissions,
+    autoApprove: autoApprove.enabled,
+  })
   const sandbox = createSandbox({ session, gate: selection.created })
   const sandboxControl = {
     visible: sandbox.visible,
@@ -644,7 +648,7 @@ export function SessionView(props: {
                 />
               )}
             </Show>
-            <Show when={permissions()[0]} keyed>
+            <Show when={visiblePermission()} keyed>
               {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
             </Show>
             <SessionDock
@@ -653,7 +657,7 @@ export function SessionView(props: {
               onOpenSession={(id, title) =>
                 props.actions.openSubagent ? props.actions.openSubagent(id, title) : props.actions.openSession?.(id)
               }
-              blocked={dockBlocked()}
+              blocked={!!visiblePermission() || forms().length > 0}
               actions={(todos, agents) => props.row?.(hasMessages(), todos, agents)}
               hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
               status={working.status()}
@@ -695,7 +699,7 @@ export function SessionView(props: {
                   manager={props.manager}
                   focusOnDraftChange={props.focusOnDraftChange}
                   onFocusChange={props.onFocusChange}
-                  selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
+                  selectors={<Selectors selection={selection} blocked={blocked()} />}
                   autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
                   sandbox={sandboxControl}
                   worktrees={props.worktrees}

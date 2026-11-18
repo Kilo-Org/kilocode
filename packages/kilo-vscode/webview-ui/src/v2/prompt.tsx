@@ -80,6 +80,7 @@ import { composeReviewPrompt, mergePromptMetadata, mergeReviewComments } from ".
 import { other, sendMode, sendShortcuts, type SendMode } from "./pending-actions"
 import { PromptHint } from "./prompt-hint"
 import { recommend, type ManagerContext } from "./shortcut-hint"
+import { createHintActivity } from "./shortcut-hint-activity"
 import { parseSlash, type SlashEntry } from "./slash"
 import { createSlashMenu, SlashMenu } from "./slash-menu"
 import { GoalHeader } from "../components/chat/goal/GoalHeader"
@@ -505,14 +506,22 @@ export function PromptInput(props: {
     window.removeEventListener("focus", onWindowFocus)
     window.removeEventListener("blur", onWindowBlur)
   })
+  const hintsEnabled = () =>
+    kiloSettings()["showShortcutHints"] !== false &&
+    !props.disabled &&
+    v2.connection.status() === "connected" &&
+    speech.state() !== "recording" &&
+    !text()
+  const manager = createMemo(() => (hintsEnabled() ? props.manager?.() : undefined))
+  const activity = createHintActivity(
+    () => props.running,
+    createMemo(() => manager()?.waiting),
+  )
   // One memo for every reader, so the placeholder and the keycap copy share one recommendation instead of rebuilding
   // the Agent Manager context once per reader.
   const suggestion = createMemo(
     () => {
-      if (kiloSettings()["showShortcutHints"] === false) return undefined
-      if (props.disabled || v2.connection.status() !== "connected") return undefined
-      // A recording prompt sends on the next Enter, so it suggests nothing else.
-      if (speech.state() === "recording") return undefined
+      if (!hintsEnabled()) return undefined
       // While the agent runs, the hint teaches the delivery Enter does not do.
       const alternate = other(runningDelivery())
       return recommend({
@@ -520,13 +529,15 @@ export function PromptInput(props: {
         alternate: { binding: sendShortcuts(runningDelivery())[alternate], label: alternate },
         focused: focused(),
         away: away(),
-        draft: !!text(),
+        draft: false,
         // A pending question is not running work, so it does not offer queueing.
-        busy: props.running && !props.questioning,
+        busy: activity.busy() && !props.questioning,
         selection: v2.selection(),
         tabs: props.tabs,
-        // A thunk: a hidden hint must not build the Agent Manager context.
-        manager: props.manager,
+        manager: () => {
+          const state = manager()
+          return state && { ...state, waiting: activity.waiting() }
+        },
       })
     },
     undefined,
@@ -544,7 +555,7 @@ export function PromptInput(props: {
       return { before: parts.at(0) ?? "", after: parts.at(1) ?? "", binding: next.binding }
     },
     undefined,
-    // Recreate the overlay only when the visible tip changes, so its fade-in runs once per tip.
+    // Keep the existing overlay when only the suggestion changes.
     { equals: (a, b) => a?.before === b?.before && a?.after === b?.after && a?.binding === b?.binding },
   )
   // The keycap copy above draws the suggested shortcut, so the native placeholder stays the plain help text. An empty
@@ -1448,8 +1459,8 @@ export function PromptInput(props: {
               <br />
             </Show>
           </div>
-          <Show when={keycaps()} keyed>
-            {(caps) => <PromptHint before={caps.before} binding={caps.binding} after={caps.after} />}
+          <Show when={keycaps()}>
+            {(caps) => <PromptHint before={caps().before} binding={caps().binding} after={caps().after} />}
           </Show>
           <textarea
             ref={(el) => (refs.input = el)}

@@ -12,4 +12,5 @@ export declare class LlamaTokenizer {
   public decode(tokenIds: number[], add_bos_token?: boolean, add_preceding_space?: boolean): string
   runTests(tests?: (tokenizer: LlamaTokenizer) => boolean): void
 }
+/** @knipExternal The import that Knip counts resolves to the adjacent JavaScript implementation. */
 export declare const llamaTokenizer: LlamaTokenizer
