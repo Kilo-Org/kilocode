@@ -66,7 +66,7 @@ export interface ProviderHostsSource {
   log(...args: unknown[]): void
   openPanel(preserveFocus?: boolean): void
   waitForStateReady(where: string): Promise<void>
-  onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null>
+  onCreateWorktree(baseBranch?: string, branchName?: string, requestId?: string): Promise<null>
   onDeleteWorktree(id: string): Promise<null>
   onRemoveStaleWorktree(id: string, keepSessions: boolean): Promise<null>
   recover(message: RecoveryMessage): Promise<null>
@@ -90,7 +90,8 @@ export interface ProviderHostsSource {
   sendRepoInfo(): Promise<void>
   sendDiffBranches(sessionId: string, scope?: string, projectId?: string): Promise<void>
   openWorktreeDirectory(id: string): void
-  openWorktreeFile(id: string, file: string, line?: number, column?: number): void
+  openWorktreeFile(id: string, file: string, line?: number, column?: number): Promise<void>
+  copyFilePath(id: string, file: string): Promise<void>
   readDocument(sessionId: string, file: string, contextKey?: string): Promise<void>
   validateFiles(id: string, sessionId: string, paths: string[]): Promise<void>
   runKey(id: string): string
@@ -127,7 +128,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     pushState: (ctx) => p.pushState(ctx),
     waitForStateReady: (where) => p.waitForStateReady(where),
     openPanel: (preserve) => p.openPanel(preserve),
-    onCreateWorktree: (baseBranch, branchName) => p.onCreateWorktree(baseBranch, branchName),
+    onCreateWorktree: (baseBranch, branchName, requestId) => p.onCreateWorktree(baseBranch, branchName, requestId),
     onDeleteWorktree: (id) => p.onDeleteWorktree(id),
     onRemoveStaleWorktree: (id, keep) => p.onRemoveStaleWorktree(id, keep),
     recover: (message) => p.recover(message),
@@ -145,6 +146,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     sendDiffBranches: (id, scope, project) => p.sendDiffBranches(id, scope, project),
     openWorktreeDirectory: (id) => p.openWorktreeDirectory(id),
     openWorktreeFile: (id, file, line, column) => p.openWorktreeFile(id, file, line, column),
+    copyFilePath: (id, file) => p.copyFilePath(id, file),
     readDocument: (sessionId, file, contextKey) => p.readDocument(sessionId, file, contextKey),
     validateFiles: (id, sessionId, paths) => p.validateFiles(id, sessionId, paths),
     runKey: (id) => p.runKey(id),

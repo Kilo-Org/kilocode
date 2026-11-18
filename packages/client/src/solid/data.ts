@@ -1247,7 +1247,9 @@ export function createData(config: CreateDataInput) {
           (store.session.pending[event.data.sessionID] ?? []).filter((item) => item.id < event.data.to),
         )
         message.update(event.data.sessionID, (draft, index) => {
-          const position = draft.findIndex((item) => item.id >= event.data.to)
+          // kilocode_change start - session-revert: cut at the boundary's position; a queued prompt keeps its admission ID, so it can sort before steps delivered ahead of it
+          const position = index.get(event.data.to) ?? draft.findIndex((item) => item.id >= event.data.to)
+          // kilocode_change end
           if (position === -1) return
           for (const item of draft.splice(position)) index.delete(item.id)
         })

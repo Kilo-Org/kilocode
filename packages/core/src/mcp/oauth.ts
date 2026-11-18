@@ -15,8 +15,12 @@ import {
   type StoredOAuthClientInformation,
   type StoredOAuthTokens,
 } from "@modelcontextprotocol/client"
-import { OAuthMetadataSchema, OpenIdProviderDiscoveryMetadataSchema } from "@modelcontextprotocol/core"
-import { Cause, Deferred, Effect } from "effect"
+import {
+  OAuthMetadataSchema,
+  OAuthTokensSchema,
+  OpenIdProviderDiscoveryMetadataSchema,
+} from "@modelcontextprotocol/core"
+import { Cause, Data, Deferred, Effect, Option, Schema } from "effect"
 import { FetchHttpClient } from "effect/http"
 import type { ServerResponse } from "node:http"
 import type { AddressInfo } from "node:net"
@@ -25,12 +29,37 @@ import { Credential } from "../credential.js"
 import { OauthCallbackPage } from "../oauth/page.js"
 import type { Integration } from "../integration.js"
 import { ErrorSummary } from "../util/error-summary.js"
+import type { McpHost } from "./host.js" // kilocode_change - embedding hooks
 
 /** Client ID Metadata Document: servers that support CIMD accept this URL as the client_id without registration. */
 export const CLIENT_METADATA_URL = "https://opencode.ai/oauth/opencode/client.json"
 
 // Refresh tokens rotate, so concurrent refreshes of the same token share one request or the second gets invalid_grant.
 const refreshes = new Map<string, ReturnType<FetchLike>>()
+
+/** Sends one refresh request whose body carries `token`, in place of the in-process share. */
+type Refresh = (send: FetchLike, url: string | URL, init: RequestInit, token: string) => ReturnType<FetchLike>
+
+// Providers backed by a stored credential refresh under its cross-process lock; see connectProvider.
+const lockedRefreshes = new WeakMap<OAuthClientProvider, Refresh>()
+
+const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
+
+class RefreshRejected extends Data.TaggedError("McpOAuth.RefreshRejected")<{
+  readonly status: number
+  readonly headers: Headers
+  readonly body: string
+}> {}
+
+// The SDK takes a refresh failure it cannot classify (network error, timeout, 5xx) as a lost login and
+// starts a new authorization, which a connection reports as needs_auth until the user signs in again.
+// temporarily_unavailable is an OAuth error the SDK surfaces as is, so the attempt fails and the
+// credential stays for the next one.
+const unavailable = (reason: string) =>
+  Response.json(
+    { error: "temporarily_unavailable", error_description: `Could not refresh the OAuth token: ${reason}` },
+    { status: 503 },
+  )
 
 const refreshKey = (url: string | URL, init: RequestInit | undefined) => {
   if (!(init?.body instanceof URLSearchParams) || init.body.get("grant_type") !== "refresh_token") return undefined
@@ -43,12 +72,14 @@ const refreshKey = (url: string | URL, init: RequestInit | undefined) => {
 const share = (pending: ReturnType<FetchLike>) => pending.then((response) => response.clone() as typeof response)
 
 // Requests use `FetchHttpClient.Fetch`, which an embedder can replace, rather than the global fetch.
-const sender = Effect.gen(function* () {
+const sender = Effect.fnUntraced(function* (refresh?: Refresh) {
   const fetch = yield* FetchHttpClient.Fetch
   const base: FetchLike = (url, init) => fetch(url, { ...init, timeout: false } as BunFetchRequestInit)
   const send: FetchLike = (url, init) => {
     const key = refreshKey(url, init)
     if (key === undefined) return base(url, init)
+    if (refresh && init?.body instanceof URLSearchParams)
+      return refresh(base, url, init, init.body.get("refresh_token") ?? "")
     const current = refreshes.get(key)
     if (current) return share(current)
     const pending = base(url, init).finally(() => {
@@ -60,10 +91,14 @@ const sender = Effect.gen(function* () {
   return send
 })
 
-export const loggedFetch = (fields: { readonly server: string; readonly directory?: string }) =>
+/** Pass the connection's provider so a stored credential's refresh runs under the credential lock. */
+export const loggedFetch = (
+  fields: { readonly server: string; readonly directory?: string },
+  provider?: OAuthClientProvider,
+) =>
   Effect.gen(function* () {
     const run = Effect.runPromiseWith(yield* Effect.context())
-    const send = yield* sender
+    const send = yield* sender(provider && lockedRefreshes.get(provider))
     const request: FetchLike = (url, init) => {
       const grant = init?.body instanceof URLSearchParams ? init.body.get("grant_type") : undefined
       const operation = grant === "refresh_token" ? "refresh" : grant === "authorization_code" ? "exchange" : undefined
@@ -150,6 +185,7 @@ interface Options {
     readonly open: (url: URL) => void | Promise<void>
   }
   readonly clientMetadataUrl?: string
+  readonly clientMetadata?: McpHost.OAuth // kilocode_change - embedding OAuth client identity
   readonly discovery?: OAuthDiscoveryState
   readonly invalidate?: OAuthClientProvider["invalidateCredentials"]
 }
@@ -159,7 +195,10 @@ const provider = (options: Options): OAuthClientProvider => {
   const client = oauth?.client_id ? { client_id: oauth.client_id, client_secret: oauth.client_secret } : undefined
   const redirect = options.redirect
   // A missing redirectUrl selects the client-credentials grant in the SDK, so connect still names one.
-  const redirectUrl = redirect?.url ?? oauth?.redirect_uri ?? "http://127.0.0.1/callback"
+  // kilocode_change start - a non-interactive registration records the loopback a later login will use
+  const redirectUrl =
+    redirect?.url ?? oauth?.redirect_uri ?? options.clientMetadata?.redirectUrl?.(oauth) ?? "http://127.0.0.1/callback"
+  // kilocode_change end
   const refuse = (what: string) => new UnauthorizedError(`MCP server "${options.config.url}" requires ${what}`)
   const identity = new URL(options.config.url)
   identity.hash = ""
@@ -190,21 +229,38 @@ const provider = (options: Options): OAuthClientProvider => {
     ...(redirect ? { state: () => redirect.state } : {}),
     clientMetadata: {
       redirect_uris: [redirectUrl],
-      client_name: "opencode",
-      client_uri: "https://opencode.ai",
+      // kilocode_change start - OAuth client identity from the embedding host
+      client_name: options.clientMetadata?.name ?? "opencode",
+      client_uri: options.clientMetadata?.uri ?? "https://opencode.ai",
+      // kilocode_change end
       logo_uri: "https://opencode.ai/web-app-manifest-512x512.png",
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
       token_endpoint_auth_method: client?.client_secret ? "client_secret_post" : "none",
       ...(oauth?.scope ? { scope: oauth.scope } : {}),
     },
+    // kilocode_change start - a configured client honors its stored issuer binding
+    // kilocode_change(mcp:3232794a3fe3)
     clientInformation: async () => {
+      const binding = client && options.clientMetadata?.binding
+      if (binding)
+        return binding.present({
+          id: client.client_id,
+          secret: client.client_secret,
+          stored: await options.store.clientInformation(),
+        })
+      // kilocode_change end
       if (client) return client
       const stored = await options.store.clientInformation()
       if (!stored && !redirect) throw refuse("a login before it can register a client")
       return stored
     },
-    saveClientInformation: (info) => options.store.saveClientInformation(info),
+    // kilocode_change start - never persist a configured client's secret, only its binding
+    saveClientInformation: (info) => {
+      const binding = client && options.clientMetadata?.binding
+      return options.store.saveClientInformation(binding ? binding.persist({ id: client.client_id, info }) : info)
+    },
+    // kilocode_change end
     tokens: () => options.store.tokens(),
     saveTokens: (tokens) => options.store.saveTokens(tokens),
     redirectToAuthorization: (url) => {
@@ -289,12 +345,23 @@ const toTokens = (credential: Credential.OAuth): StoredOAuthTokens => {
 export const connectProvider = Effect.fnUntraced(function* (input: {
   readonly config: typeof ConfigMCP.Remote.Type
   readonly credential: Credential.Info | undefined
+  readonly clientMetadata?: McpHost.OAuth // kilocode_change - embedding OAuth client identity
 }) {
   const credentials = yield* Credential.Service
   const run = Effect.runPromiseWith(yield* Effect.context())
-  const fetch = yield* sender
+  const fetch = yield* sender()
   const found = input.credential
-  if (!found || found.value.type !== "oauth") return provider({ config: input.config, store: memoryStore(), fetch })
+  // kilocode_change start - embedding OAuth client identity and the hosted client document
+  const clientMetadataUrl = input.clientMetadata?.document?.(input.config.oauth || undefined)
+  if (!found || found.value.type !== "oauth")
+    return provider({
+      config: input.config,
+      store: memoryStore(),
+      fetch,
+      clientMetadata: input.clientMetadata,
+      ...(clientMetadataUrl ? { clientMetadataUrl } : {}),
+    })
+  // kilocode_change end
   const id = found.id
   const methodID = found.value.methodID
   const read = async () => {
@@ -303,9 +370,63 @@ export const connectProvider = Effect.fnUntraced(function* (input: {
   }
   // Refresh tokens rotate and the row is shared across connections: only drop it while it still holds ours.
   let presented = found.value.refresh
-  return provider({
+  // Every process and Location sharing the database refreshes this row one at a time. A caller holding a
+  // refresh token the row no longer has gets the stored tokens instead of spending it: servers that rotate
+  // refresh tokens revoke the grant on reuse.
+  const refresh: Refresh = (send, url, init, token) =>
+    run(
+      credentials
+        .refresh(id, {
+          stale: (current) => current.refresh === token,
+          refresh: (current) =>
+            Effect.gen(function* () {
+              // The body is read here so the refresh time limit also covers a server that stalls after its headers.
+              const { response, body } = yield* Effect.tryPromise({
+                try: async (signal) => {
+                  const response = await send(url, { ...init, signal })
+                  return { response, body: await response.text() }
+                },
+                catch: (error) => error,
+              })
+              const parsed = OAuthTokensSchema.safeParse(
+                response.ok ? Option.getOrUndefined(decodeJson(body)) : undefined,
+              )
+              if (!parsed.success)
+                return yield* new RefreshRejected({ status: response.status, headers: response.headers, body })
+              // The SDK ignores an issuer in the token response; keep the one this credential was stamped with.
+              const issuer = current.metadata?.issuer
+              return toCredential({
+                methodID,
+                serverUrl: input.config.url,
+                tokens: {
+                  refresh_token: token,
+                  ...parsed.data,
+                  issuer: typeof issuer === "string" ? issuer : undefined,
+                },
+                client: clientFromCredential(current),
+              })
+            }),
+        })
+        .pipe(
+          Effect.map((value) =>
+            value
+              ? Response.json(toTokens(value))
+              : // The credential was signed out meanwhile; the SDK drops it and reports needs_auth.
+                Response.json({ error: "invalid_grant" }, { status: 400 }),
+          ),
+          Effect.catch((error) => {
+            if (!(error instanceof RefreshRejected))
+              return Effect.succeed(unavailable(error instanceof Error ? error.message : String(error)))
+            if (error.status === 429 || error.status >= 500) return Effect.succeed(unavailable(`HTTP ${error.status}`))
+            return Effect.succeed(new Response(error.body, { status: error.status, headers: error.headers }))
+          }),
+        ),
+    )
+  const result = provider({
     config: input.config,
     fetch,
+    clientMetadata: input.clientMetadata, // kilocode_change - embedding OAuth client identity
+    ...(clientMetadataUrl ? { clientMetadataUrl } : {}), // kilocode_change - the host's client document
     invalidate: async (scope) => {
       if (scope === "verifier" || scope === "discovery") return
       const oauth = await read()
@@ -322,6 +443,8 @@ export const connectProvider = Effect.fnUntraced(function* (input: {
       },
       saveTokens: async (tokens) => {
         const previous = await read()
+        // Another connection rotated past the token this one presented; its tokens win.
+        if (previous && previous.refresh !== presented && previous.refresh !== (tokens.refresh_token ?? "")) return
         const value = toCredential({
           methodID,
           serverUrl: input.config.url,
@@ -344,6 +467,14 @@ export const connectProvider = Effect.fnUntraced(function* (input: {
       saveCodeVerifier: async () => {},
     },
   })
+  lockedRefreshes.set(result, refresh)
+  // kilocode_change start - optional host preparation before the first request
+  if (input.clientMetadata?.beforeConnect)
+    yield* input.clientMetadata.beforeConnect(input.config, found, result.clientInformation, (fetchFn) =>
+      configuredDiscovery({ config: input.config, fetchFn }),
+    )
+  // kilocode_change end
+  return result
 })
 
 export const authorize = (input: {
@@ -351,6 +482,7 @@ export const authorize = (input: {
   readonly config: typeof ConfigMCP.Remote.Type
   readonly integrationID: Integration.ID
   readonly methodID: Integration.MethodID
+  readonly clientMetadata?: McpHost.OAuth // kilocode_change - embedding OAuth client identity
 }) =>
   Effect.gen(function* () {
     const fields = { server: input.name, methodID: input.methodID, oauthAttemptID: crypto.randomUUID() }
@@ -366,11 +498,21 @@ export const authorize = (input: {
     const previous = (yield* credentials.list(input.integrationID)).at(-1)?.value
     if (previous?.type === "oauth") {
       const client = clientFromCredential(previous)
-      if (client) yield* Effect.promise(() => store.saveClientInformation(client))
+      // kilocode_change start - a configured client keeps only its binding, including rows from older builds
+      const id = oauth?.client_id
+      const binding = id && input.clientMetadata?.binding
+      if (client)
+        yield* Effect.promise(() =>
+          store.saveClientInformation(binding ? binding.persist({ id, info: client }) : client),
+        )
+      // kilocode_change end
     }
     const code = yield* Deferred.make<{ code: string; iss: string | undefined; response?: ServerResponse }, Error>()
     const redirect = oauth?.redirect_uri ? new URL(oauth.redirect_uri) : undefined
-    const redirectPath = redirect?.pathname ?? "/callback"
+    // kilocode_change start - the host may pin the loopback its hosted document lists
+    const callback = input.clientMetadata?.callback?.(oauth)
+    const redirectPath = redirect?.pathname ?? callback?.path ?? "/callback"
+    // kilocode_change end
     const state = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url")
 
     // Lazy so runtimes without a loopback listener (workerd) never evaluate node:http.
@@ -412,13 +554,15 @@ export const authorize = (input: {
     })
 
     // callback_port, else the port pinned by redirect_uri, else ephemeral; a mismatch strands the browser.
+    // kilocode_change start - a host callback owns the port, so a configured redirect still beats callback_port
     const redirectPort = Number(redirect?.port) || undefined
     const port = yield* Effect.callback<number, Error>((resume) => {
       server.once("error", (error) => resume(Effect.fail(error)))
-      server.listen(oauth?.callback_port ?? redirectPort ?? 0, "127.0.0.1", () => {
+      server.listen(callback?.port ?? oauth?.callback_port ?? redirectPort ?? 0, "127.0.0.1", () => {
         resume(Effect.succeed((server.address() as AddressInfo).port))
       })
     })
+    // kilocode_change end
     yield* Effect.addFinalizer(() => Effect.sync(() => server.close()))
 
     // The server's 401 names where its resource metadata lives and which scopes it wants; without it
@@ -435,7 +579,13 @@ export const authorize = (input: {
           jsonrpc: "2.0",
           id: 0,
           method: "initialize",
-          params: { protocolVersion: LATEST_PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: "opencode" } },
+          // kilocode_change start - embedding OAuth client identity
+          params: {
+            protocolVersion: LATEST_PROTOCOL_VERSION,
+            capabilities: {},
+            clientInfo: { name: input.clientMetadata?.name ?? "opencode" },
+          },
+          // kilocode_change end
         }),
         signal,
       }),
@@ -458,17 +608,26 @@ export const authorize = (input: {
       !oauth?.redirect_uri &&
       discovery.authorizationServerMetadata?.client_id_metadata_document_supported === true &&
       (discovery.authorizationServerMetadata.token_endpoint_auth_methods_supported?.includes("none") ?? false)
-    yield* Effect.logInfo("mcp oauth client registration selected", {
-      ...fields,
-      registration: oauth?.client_id ? "static" : cimd ? "cimd" : "dcr",
-    })
+    // kilocode_change start - a host owns the client document; upstream keeps its own
+    const document = oauth?.client_id ? undefined : input.clientMetadata?.document?.(oauth)
+    const clientDocument = input.clientMetadata ? document : cimd ? CLIENT_METADATA_URL : undefined
+    const registration = oauth?.client_id
+      ? "static"
+      : clientDocument && discovery.authorizationServerMetadata?.client_id_metadata_document_supported
+        ? "cimd"
+        : "dcr"
+    yield* Effect.logInfo("mcp oauth client registration selected", { ...fields, registration })
+    // kilocode_change end
 
     let authorizationUrl: URL | undefined
     const oauthProvider = provider({
       config: input.config,
       store,
       fetch: fetchFn,
-      clientMetadataUrl: cimd ? CLIENT_METADATA_URL : undefined,
+      clientMetadata: input.clientMetadata, // kilocode_change - embedding OAuth client identity
+      // kilocode_change start - the host may name the hosted client metadata document
+      clientMetadataUrl: clientDocument,
+      // kilocode_change end
       discovery: { ...discovery, resourceMetadataUrl: resourceMetadataUrl?.toString() },
       redirect: {
         url: oauth?.redirect_uri ?? `http://127.0.0.1:${port}${redirectPath}`,
@@ -550,7 +709,8 @@ export const authorize = (input: {
       submit: (pasted: string) =>
         Effect.gen(function* () {
           const text = pasted.trim()
-          if (!URL.canParse(text)) return yield* Effect.fail(new Error("Paste the full URL from the browser's address bar"))
+          if (!URL.canParse(text))
+            return yield* Effect.fail(new Error("Paste the full URL from the browser's address bar"))
           const url = new URL(text)
           if (url.searchParams.get("state") !== state)
             return yield* Effect.fail(new Error("This URL belongs to a different sign-in"))

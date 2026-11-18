@@ -6,8 +6,11 @@ import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { ToHost } from "../../../../src/protocol"
 import {
+  isChatReference,
   isCIReviewComment,
+  isLocalReviewComment,
   isPRReviewComment,
+  type ChatReferenceData,
   type ReviewCommentEntry,
 } from "../../../../src/shared/review-comments"
 import { PRAvatar } from "../../../agent-manager/pr/PRAvatar"
@@ -16,7 +19,7 @@ import { getVSCodeAPI } from "../../context/vscode"
 import { fileName } from "./prompt-input-utils"
 import { PromptRowActions } from "./PromptRowActions"
 import { PromptShowMore } from "./PromptShowMore"
-import { useReviewCommentActions } from "./review-actions"
+import { REVEAL_CHAT_REFERENCE, useReviewCommentActions } from "./review-actions"
 
 interface ReviewCommentsProps {
   comments: ReviewCommentEntry[]
@@ -24,6 +27,8 @@ interface ReviewCommentsProps {
   variant?: "draft" | "message"
   onRemove?: (id: string) => void
   onClear?: (ids: string[]) => void
+  /** Sends the draft with its chat references at once. Only the chat group offers it. */
+  onSend?: () => void
 }
 
 /** Rows rendered before the "show more" toggle takes over. */
@@ -32,7 +37,7 @@ const PREVIEW = 3
 const SCROLL = 6
 
 export const ReviewComments: Component<ReviewCommentsProps> = (props) => (
-  <For each={["local", "pr", "ci"] as const}>
+  <For each={["local", "pr", "ci", "chat"] as const}>
     {(source) => {
       const comments = createMemo(() =>
         props.comments.filter((item) =>
@@ -40,7 +45,9 @@ export const ReviewComments: Component<ReviewCommentsProps> = (props) => (
             ? isPRReviewComment(item)
             : source === "ci"
               ? isCIReviewComment(item)
-              : !isPRReviewComment(item) && !isCIReviewComment(item),
+              : source === "chat"
+                ? isChatReference(item)
+                : isLocalReviewComment(item),
         ),
       )
       return (
@@ -52,7 +59,7 @@ export const ReviewComments: Component<ReviewCommentsProps> = (props) => (
   </For>
 )
 
-function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
+function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" | "chat" }) {
   const language = useLanguage()
   const actions = useReviewCommentActions()
   const [open, setOpen] = createSignal(true)
@@ -60,20 +67,25 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
   const [full, setFull] = createSignal<string[]>([])
 
   const author = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? item.author : "")
-  const side = (item: ReviewCommentEntry) =>
-    isPRReviewComment(item) || isCIReviewComment(item) ? "" : item.side === "deletions" ? "-" : "+"
-  const line = (item: ReviewCommentEntry) => (!isCIReviewComment(item) && item.line ? `${side(item)}${item.line}` : "")
+  const side = (item: ReviewCommentEntry) => (isLocalReviewComment(item) ? (item.side === "deletions" ? "-" : "+") : "")
+  const line = (item: ReviewCommentEntry) =>
+    (isLocalReviewComment(item) || isPRReviewComment(item)) && item.line ? `${side(item)}${item.line}` : ""
   const body = (item: ReviewCommentEntry) =>
     isPRReviewComment(item) || isCIReviewComment(item) ? item.body : item.comment
   const snippet = (item: ReviewCommentEntry) => {
     if (isCIReviewComment(item)) return undefined
+    if (isChatReference(item)) return item.quote
     return isPRReviewComment(item) ? item.diffHunk : item.selectedText
   }
-  const file = (item: ReviewCommentEntry) => (isCIReviewComment(item) ? undefined : item.file)
+  const file = (item: ReviewCommentEntry) =>
+    isLocalReviewComment(item) || isPRReviewComment(item) ? item.file : undefined
   const label = (item: ReviewCommentEntry) => {
     if (isCIReviewComment(item)) return item.title
+    if (isChatReference(item)) return `“${item.quote}”`
     return item.file ? fileName(item.file) : `@${author(item)}`
   }
+  const showInChat = (item: ChatReferenceData) =>
+    window.dispatchEvent(new CustomEvent<ChatReferenceData>(REVEAL_CHAT_REFERENCE, { detail: item }))
   const outdated = (item: ReviewCommentEntry) => isPRReviewComment(item) && item.outdated === true
 
   const files = createMemo(() => new Set(props.comments.map(file).filter(Boolean)).size)
@@ -85,7 +97,8 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
     setFull((prev) => (prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]))
 
   const reveal = (item: ReviewCommentEntry) => {
-    if (isCIReviewComment(item) || !item.file) return
+    if (!isLocalReviewComment(item) && !isPRReviewComment(item)) return
+    if (!item.file) return
     // An outdated PR thread is anchored to a line that has since moved, so
     // jumping there lands on unrelated code. Open the file at the top instead.
     const at = outdated(item) || (isPRReviewComment(item) && item.side === "deletions") ? undefined : item.line
@@ -118,7 +131,15 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
         >
           <Icon name={open() ? "chevron-down" : "chevron-right"} size="small" />
           <Icon
-            name={props.source === "pr" ? "github" : props.source === "ci" ? "checklist" : "comment"}
+            name={
+              props.source === "pr"
+                ? "github"
+                : props.source === "ci"
+                  ? "checklist"
+                  : props.source === "chat"
+                    ? "reply"
+                    : "comment"
+            }
             size="small"
           />
           <span class="prompt-review-comments-title">
@@ -127,7 +148,9 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
                 ? "agentManager.pr.checks.feedback"
                 : props.source === "pr"
                   ? "agentManager.review.prCount"
-                  : "agentManager.review.inlineCount",
+                  : props.source === "chat"
+                    ? "chat.reply.count"
+                    : "agentManager.review.inlineCount",
               { count: props.comments.length },
             )}
           </span>
@@ -140,6 +163,11 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
         <Show when={props.onClear}>
           <Button variant="ghost" size="small" onClick={() => props.onClear?.(props.comments.map((item) => item.id))}>
             {language.t("agentManager.review.clearAll")}
+          </Button>
+        </Show>
+        <Show when={props.source === "chat" && props.onSend}>
+          <Button variant="primary" size="small" onClick={() => props.onSend?.()}>
+            {language.t("chat.reply.sendAll")}
           </Button>
         </Show>
       </div>
@@ -156,7 +184,18 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
                   <span class="prompt-review-row-icon">
                     <Show
                       when={isPRReviewComment(item) && item}
-                      fallback={<Icon name={isCIReviewComment(item) ? "checklist" : "comment"} size="small" />}
+                      fallback={
+                        <Icon
+                          name={
+                            isCIReviewComment(item)
+                              ? "checklist"
+                              : isChatReference(item) && !item.comment
+                                ? "reply"
+                                : "comment"
+                          }
+                          size="small"
+                        />
+                      }
                     >
                       {(comment) => <PRAvatar author={comment().author} avatar={comment().avatar} />}
                     </Show>
@@ -177,7 +216,7 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
                         <span class="prompt-review-row-badge">{language.t("agentManager.pr.comment.outdated")}</span>
                       </Show>
                     </span>
-                    <Show when={!full().includes(item.id)}>
+                    <Show when={!full().includes(item.id) && body(item)}>
                       <span class="prompt-review-row-preview">{body(item)}</span>
                     </Show>
                   </button>
@@ -194,6 +233,19 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
                       />
                     </Tooltip>
                   </Show>
+                  <Show when={isChatReference(item) && item}>
+                    {(reference) => (
+                      <Tooltip value={language.t("chat.reply.showInChat")} placement="top">
+                        <IconButton
+                          icon="arrow-up"
+                          size="small"
+                          variant="ghost"
+                          aria-label={language.t("chat.reply.showInChat")}
+                          onClick={() => showInChat(reference())}
+                        />
+                      </Tooltip>
+                    )}
+                  </Show>
                   <PromptRowActions
                     onOpen={file(item) ? () => reveal(item) : undefined}
                     onRemove={props.onRemove ? () => props.onRemove?.(item.id) : undefined}
@@ -203,11 +255,13 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
                 <Show when={full().includes(item.id)}>
                   <div class="prompt-review-row-detail">
                     <Show when={file(item)}>{(path) => <code class="prompt-review-row-path">{path()}</code>}</Show>
-                    <div class="prompt-review-row-text">
-                      <Show when={isPRReviewComment(item) || isCIReviewComment(item)} fallback={body(item)}>
-                        <Markdown text={body(item)} />
-                      </Show>
-                    </div>
+                    <Show when={body(item)}>
+                      <div class="prompt-review-row-text">
+                        <Show when={isPRReviewComment(item) || isCIReviewComment(item)} fallback={body(item)}>
+                          <Markdown text={body(item)} />
+                        </Show>
+                      </div>
+                    </Show>
                     <For each={isPRReviewComment(item) ? item.replies : undefined}>
                       {(reply) => (
                         <div class="prompt-review-row-reply">

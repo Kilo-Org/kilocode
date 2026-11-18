@@ -7,8 +7,8 @@ import {
   WORKTREE_MENTION_ENTRIES,
   type WorktreeMention,
 } from "../webview-ui/agent-manager/worktree-mention"
-import type { WorktreeReference } from "../webview-ui/src/utils/prompt-mention-drop"
-import type { SessionSearchItem } from "../webview-ui/src/utils/prompt-mention-drop"
+import type { SessionSearchItem, WorktreeReference } from "../webview-ui/src/hooks/file-mention-utils"
+import type { InMessage, OutMessage } from "../webview-ui/agent-manager/v2/bridge"
 
 const CHAT: SessionSearchItem = { id: "ses_chat", title: "Fix auth bug", updated: 10 }
 const WORKTREE: WorktreeReference = {
@@ -21,6 +21,7 @@ const WORKTREE: WorktreeReference = {
   disabled: false,
 }
 
+/** Textarea stub whose value and selection mutate like a real prompt box. */
 function area(initial: string, cursor = initial.length) {
   const state = { value: initial, start: cursor, end: cursor }
   return {
@@ -45,16 +46,31 @@ function area(initial: string, cursor = initial.length) {
   } as unknown as HTMLTextAreaElement
 }
 
-function harness(worktrees: WorktreeReference[] = [WORKTREE], sessions: SessionSearchItem[] = []) {
+function harness(worktrees: WorktreeReference[] = [WORKTREE], directory?: string) {
+  const posted: OutMessage[] = []
+  const handlers = new Set<(message: InMessage) => void>()
+  const ctx = {
+    postMessage: (message: OutMessage) => posted.push(message),
+    onMessage: (handler: (message: InMessage) => void) => {
+      handlers.add(handler)
+      return () => handlers.delete(handler)
+    },
+  }
   const dispose: { fn?: () => void } = {}
   const mention = createRoot((root) => {
     dispose.fn = root
     return useWorktreeMention(
+      ctx,
       () => worktrees,
-      () => sessions,
+      () => directory,
     )
   })
-  return { mention, dispose }
+  const sessions = (list: SessionSearchItem[]) => {
+    for (const handler of handlers) {
+      handler({ type: "sessionSearchResult", sessions: list, requestId: "worktree-mention-session-1" })
+    }
+  }
+  return { mention, posted, sessions, dispose }
 }
 
 function pick(mention: WorktreeMention, type: string) {
@@ -62,9 +78,9 @@ function pick(mention: WorktreeMention, type: string) {
 }
 
 describe("buildWorktreeMentionResults", () => {
-  it("lists only the worktree-independent entries for a bare @", () => {
-    expect(WORKTREE_MENTION_ENTRIES.map((entry) => entry.type)).toEqual(["past-chats", "worktrees"])
-    expect(buildWorktreeMentionResults("").map((entry) => entry.type)).toEqual(["past-chats", "worktrees"])
+  it("lists only the three worktree-independent entries for a bare @", () => {
+    expect(WORKTREE_MENTION_ENTRIES.map((entry) => entry.type)).toEqual(["model", "past-chats", "worktrees"])
+    expect(buildWorktreeMentionResults("").map((entry) => entry.type)).toEqual(["model", "past-chats", "worktrees"])
   })
 
   it("never offers file, folder, terminal or git changes", () => {
@@ -86,15 +102,15 @@ describe("buildWorktreeMentionFiles", () => {
   it("builds a session: attachment for a mentioned past chat", () => {
     const files = buildWorktreeMentionFiles("@Fix auth bug ", new Map([[CHAT.title, CHAT]]), [])
     expect(files).toHaveLength(1)
-    expect(files[0]!.url).toBe("session:ses_chat")
-    expect(files[0]!.source.text.value).toBe("@Fix auth bug")
+    expect(files[0]!.uri).toBe("session:ses_chat")
+    expect(files[0]!.mention.text).toBe("@Fix auth bug")
   })
 
   it("builds a data: metadata attachment for a mentioned worktree", () => {
     const files = buildWorktreeMentionFiles(`@${WORKTREE.path}`, new Map(), [WORKTREE])
     expect(files).toHaveLength(1)
-    expect(files[0]!.url.startsWith("data:text/plain")).toBe(true)
-    expect(files[0]!.source.path).toBe(WORKTREE.path)
+    expect(files[0]!.uri.startsWith("data:text/plain")).toBe(true)
+    expect(files[0]!.mention.text).toBe(`@${WORKTREE.path}`)
   })
 
   it("produces no attachment for a model reference or unmatched text", () => {
@@ -104,20 +120,32 @@ describe("buildWorktreeMentionFiles", () => {
 })
 
 describe("useWorktreeMention", () => {
-  it("opens on a bare @ with the two entries", () => {
-    const { mention, dispose } = harness()
+  it("searches past chats in the project the dialog creates in", () => {
+    const { mention, posted, dispose } = harness([WORKTREE], "/projects/api")
+    mention.onInput("@", 1)
+    expect(posted.find((message) => message.type === "requestSessionSearch")).toMatchObject({
+      directory: "/projects/api",
+    })
+    dispose.fn?.()
+  })
+
+  it("opens on a bare @ with the three entries and requests past chats once", () => {
+    const { mention, posted, dispose } = harness()
     mention.onInput("@", 1)
     expect(mention.showMention()).toBe(true)
-    expect(mention.mentionResults().map((entry) => entry.type)).toEqual(["past-chats", "worktrees"])
+    expect(mention.mentionResults().map((entry) => entry.type)).toEqual(["model", "past-chats", "worktrees"])
+    expect(posted.filter((message) => message.type === "requestSessionSearch")).toHaveLength(1)
+
     mention.onInput("@m", 2)
-    expect(mention.showMention()).toBe(true)
+    expect(posted.filter((message) => message.type === "requestSessionSearch")).toHaveLength(1)
     dispose.fn?.()
   })
 
   it("inserts a past chat as @title and attaches its session id", () => {
-    const { mention, dispose } = harness([WORKTREE], [CHAT])
+    const { mention, sessions, dispose } = harness()
     const input = area("@Fix", 4)
     mention.onInput("@Fix", 4)
+    sessions([CHAT])
 
     const result = pick(mention, "session")
     expect(result).toBeDefined()
@@ -126,7 +154,7 @@ describe("useWorktreeMention", () => {
     expect(input.value).toBe("@Fix auth bug ")
     expect(mention.mentionedSessions().get("Fix auth bug")?.id).toBe("ses_chat")
     expect(mention.highlightTokens().has("Fix auth bug")).toBe(true)
-    expect(mention.parseAttachments(input.value).map((file) => file.url)).toEqual(["session:ses_chat"])
+    expect(mention.parseAttachments(input.value).map((file) => file.uri)).toEqual(["session:ses_chat"])
     dispose.fn?.()
   })
 
@@ -140,7 +168,7 @@ describe("useWorktreeMention", () => {
     expect(mention.highlightTokens().has(WORKTREE.path)).toBe(true)
     const files = mention.parseAttachments(input.value)
     expect(files).toHaveLength(1)
-    expect(files[0]!.url.startsWith("data:text/plain")).toBe(true)
+    expect(files[0]!.uri.startsWith("data:text/plain")).toBe(true)
     dispose.fn?.()
   })
 
@@ -163,10 +191,26 @@ describe("useWorktreeMention", () => {
     dispose.fn?.()
   })
 
+  it("inserts a model token as plain text with no attachment", () => {
+    const { mention, dispose } = harness()
+    const input = area("@", 1)
+    mention.onInput("@", 1)
+    const model = pick(mention, "model")!
+    mention.selectMention(model, input, () => {})
+    expect(mention.modelPicker()).toBe(true)
+
+    mention.selectModelReference("provider", "model-x")
+    expect(input.value).toBe("@provider/model-x ")
+    expect(mention.highlightTokens().has("provider/model-x")).toBe(true)
+    expect(mention.parseAttachments(input.value)).toEqual([])
+    dispose.fn?.()
+  })
+
   it("closes the menu once prose follows a completed mention", () => {
-    const { mention, dispose } = harness([WORKTREE], [CHAT])
+    const { mention, sessions, dispose } = harness()
     const input = area("@Fix", 4)
     mention.onInput("@Fix", 4)
+    sessions([CHAT])
     mention.selectMention(pick(mention, "session")!, input, () => {})
 
     mention.onInput("@Fix auth bug and then", 21)

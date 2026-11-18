@@ -126,3 +126,35 @@ body.vscode-reduce-motion .session-goal-menu {
     transition: none;
   }
 }
+
+/* A described synthetic input, such as the kickoff of a goal, in the transcript. */
+.vscode-session-turn.vscode-session-notice {
+  --icon-base: currentColor;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-12);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.vscode-session-notice [data-component="icon"] {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Goal mode labels the send button, so it needs room for the text next to its icon. */
+.prompt-goal-start[data-component="icon-button"] {
+  width: auto;
+  gap: 4px;
+  padding-inline: 4px;
+  font-size: var(--kilo-font-size-12);
+  white-space: nowrap;
+  color: var(--vscode-foreground);
+}
+
+/* The icon button's disabled color is meant for a lone icon and makes the label unreadable. */
+.prompt-goal-start[data-component="icon-button"]:disabled {
+  color: var(--vscode-disabledForeground, var(--text-weak));
+}

@@ -1,6 +1,7 @@
 import { HEADER_FEATURE, HEADER_ORGANIZATIONID, resolveKiloGatewayBaseUrl } from "../../gateway"
 import { MAX_ITEM_TOKENS } from "../constants"
 import type { EmbedderInfo, EmbeddingResponse, IEmbedder } from "../interfaces/embedder"
+import { EMBEDDING_MODEL_UNAVAILABLE, isAccountWideValidationError } from "../shared/validation-helpers"
 import { Log } from "../../util/log"
 import { OpenAICompatibleEmbedder } from "./openai-compatible"
 
@@ -33,7 +34,7 @@ export class KiloEmbedder implements IEmbedder {
       input.apiKey,
       this.model,
       MAX_ITEM_TOKENS,
-      { headers, dimensions: input.dimensions },
+      { headers, dimensions: input.dimensions, embedderType: "kilo" },
     )
   }
 
@@ -63,5 +64,33 @@ export class KiloEmbedder implements IEmbedder {
 
   get embedderInfo(): EmbedderInfo {
     return { name: "kilo" }
+  }
+}
+
+/** The result of checking whether the Gateway actually serves a catalog model. */
+export type KiloEmbeddingModelProbe = {
+  valid: boolean
+  /** The route answered, but not with an embedding for this model: another catalog model may work. */
+  modelUnavailable: boolean
+  /** The account or the connection failed, so another catalog model cannot succeed. */
+  accountWide: boolean
+  error?: string
+}
+
+/** Check one catalog model against the Gateway, so a stale catalog default can be replaced before the engine starts. */
+export async function probeKiloEmbeddingModel(input: {
+  apiKey: string
+  baseUrl?: string
+  organizationId?: string
+  modelId: string
+  dimensions?: number
+}): Promise<KiloEmbeddingModelProbe> {
+  const result = await new KiloEmbedder(input)
+    .validateConfiguration()
+    .catch((err) => ({ valid: false, error: err instanceof Error ? err.message : String(err) }))
+  return {
+    ...result,
+    modelUnavailable: result.error === EMBEDDING_MODEL_UNAVAILABLE,
+    accountWide: isAccountWideValidationError(result.error),
   }
 }

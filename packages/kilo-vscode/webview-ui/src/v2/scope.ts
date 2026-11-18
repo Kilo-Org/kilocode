@@ -2,13 +2,19 @@
 // extension tests can load it.
 import type { OpenCodeClient } from "@opencode/client"
 import { createClientConnection, createData } from "@opencode/client/solid"
-import { createEffect, createSignal, on, type Accessor } from "solid-js"
+import { createEffect, createSignal, on, onCleanup, type Accessor } from "solid-js"
 import { createConnectionMetadata, type ConnectionMetadata } from "./connection-metadata"
+import { toFailure, type Failure } from "./error"
 import type { events } from "./events"
 import { createKiloModels } from "./kilo-models"
+import { createModelDrafts } from "./model-draft"
+import { createWakeups } from "./wakeups"
 
 type Connection = ReturnType<typeof createClientConnection>
 type Events = ReturnType<typeof events>
+
+/** Retry delays for a failed session list; a longer window than the handshake covers a server that is restarted. */
+const LIST_RETRY = [1_000, 3_000, 10_000] as const
 
 /**
  * The data of one directory over a shared client and event stream: the sidebar has one, the Agent Manager one per
@@ -35,6 +41,11 @@ export function createV2Scope(input: {
   /** Opens an external URL through the host. */
   /** Opens a web link. `external` (shift-click) asks for the system browser instead of the Integrated Browser. */
   open: (url: string, external?: boolean) => void
+  /**
+   * Whether a Session holds a future wakeup. A panel with several directories supplies one store for all of them; a
+   * single-directory scope reads its own directory instead.
+   */
+  scheduled?: (sessionID: string) => boolean
 }) {
   const api = input.api
   const directory = input.directory
@@ -43,14 +54,14 @@ export function createV2Scope(input: {
   // The host inlines the extension version; the server handshake reports the server version separately.
   const extensionVersion =
     typeof window === "undefined" ? "" : ((window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? "")
-  const [error, setError] = createSignal("")
+  const [failure, setFailure] = createSignal<Failure>()
   const [loading, setLoading] = createSignal(true)
   const data = createData({
     api: () => api,
     directory,
     connection,
     event: input.event,
-    onError: (err) => setError(message(err)),
+    onError: (err) => setFailure(toFailure(err)),
   })
   const metadata =
     input.shared ??
@@ -67,8 +78,58 @@ export function createV2Scope(input: {
     models: () => data.location.model.list(),
     cache: metadata.kiloModelsCache,
   })
+  // The composer's model drafts live with the directory, not the chat view, so an effort change survives the history
+  // view and an Agent Manager worktree switch, as the TUI keeps them app-wide. The echo of a commit, or any client
+  // switching the session to the same model, makes a draft redundant.
+  const drafts = createModelDrafts()
+  onCleanup(input.event.on("session.model.selected", (event) => drafts.settle(event.data.sessionID, event.data.model)))
+  onCleanup(input.event.on("session.deleted", (event) => drafts.drop(event.data.sessionID)))
   const visible = input.visible ?? (() => true)
-  const state = { listed: false }
+  // Settings scopes draw no sessions, so only a chat scope that was not given a shared store reads its own directory.
+  const wakeups =
+    input.scheduled || !chat
+      ? undefined
+      : createWakeups({
+          api,
+          directories: () => [directory],
+          connected: () => connection.status() === "connected",
+        })
+  const state = {
+    listed: false,
+    retry: undefined as ReturnType<typeof setTimeout> | undefined,
+    reported: undefined as Failure | undefined,
+  }
+  onCleanup(() => clearTimeout(state.retry))
+  // A failed read must not leave the list empty for the life of the connection: it releases the latch so the next
+  // connected or visible transition retries, and a short backoff covers one bad response on a healthy connection.
+  const list = (attempt = 0) => {
+    clearTimeout(state.retry)
+    state.listed = true
+    setLoading(true)
+    void api.session
+      .list({ directory, parentID: null, order: "desc", limit: 50 })
+      .then((response) => {
+        response.data.forEach(data.session.remember)
+        // Clear the failure this list reported, not one a later action owns.
+        const reported = state.reported
+        if (reported === undefined) return
+        state.reported = undefined
+        setFailure((current) => (current === reported ? undefined : current))
+      })
+      .catch((err: unknown) => {
+        const failure = toFailure(err)
+        state.listed = false
+        state.reported = failure
+        setFailure(failure)
+        const delay = LIST_RETRY[attempt]
+        if (delay === undefined) return
+        state.retry = setTimeout(() => {
+          if (state.listed || connection.status() !== "connected" || !visible()) return
+          list(attempt + 1)
+        }, delay)
+      })
+      .finally(() => setLoading(false))
+  }
   createEffect(
     on(connection.status, (status) => {
       if (status !== "connected") state.listed = false
@@ -83,13 +144,7 @@ export function createV2Scope(input: {
           return
         }
         if (status !== "connected" || !show || state.listed) return
-        state.listed = true
-        setLoading(true)
-        void api.session
-          .list({ directory, parentID: null, order: "desc", limit: 50 })
-          .then((response) => response.data.forEach(data.session.remember))
-          .catch((err: unknown) => setError(message(err)))
-          .finally(() => setLoading(false))
+        list()
       },
     ),
   )
@@ -105,13 +160,18 @@ export function createV2Scope(input: {
     version: metadata.version,
     extensionVersion,
     handshake: metadata.handshake,
-    error,
+    /** The last failure this window reported; undefined once it is dismissed. */
+    failure,
     /** Why the Kilo Gateway catalog failed to load; undefined while it is usable or loading. */
     kiloFailure: metadata.kiloFailure,
     /** The Kilo Gateway model metadata and the account team, for the model pickers. */
     kiloModels,
-    setError,
-    report: (err: unknown) => setError(message(err)),
+    /** The composer's uncommitted model and effort per session; the next prompt commits it. */
+    drafts,
+    /** Whether a Session holds a future wakeup, shown as `scheduled` instead of idle. */
+    scheduled: input.scheduled ?? wakeups?.scheduled ?? (() => false),
+    clearError: () => setFailure(undefined),
+    report: (err: unknown) => setFailure(toFailure(err)),
     open: input.open,
     onCommand: input.onCommand,
   }
@@ -124,8 +184,4 @@ export function sessionMissing(error: unknown) {
   return error instanceof Error && error.name === "SessionNotFoundError"
 }
 
-export function message(error: unknown) {
-  if (error instanceof Error) return error.message
-  if (typeof error === "object" && error !== null && "message" in error) return String(error.message)
-  return String(error)
-}
+export { message } from "./error"

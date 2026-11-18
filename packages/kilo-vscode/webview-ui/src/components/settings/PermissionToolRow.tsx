@@ -2,6 +2,7 @@ import { Component, Show, createMemo } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 
 import { useLanguage } from "../../context/language"
+import { displayResource } from "../../v2/permission-rules"
 import type { PermissionLevel, PermissionRuleset } from "./permission-utils"
 
 type LevelValue = PermissionLevel | "inherit"
@@ -66,7 +67,10 @@ export const SimpleToolRow: Component<{
           >
             {language.t("settings.autoApprove.exceptions")} ({exceptions().length}):{" "}
             {exceptions()
-              .map((item) => `${language.t(`settings.autoApprove.level.${item.effect}`)} ${item.resource}`)
+              .map(
+                (item) =>
+                  `${language.t(`settings.autoApprove.level.${item.effect}`)} ${displayResource(item.action, item.resource)}`,
+              )
               .join(", ")}
           </div>
         </Show>

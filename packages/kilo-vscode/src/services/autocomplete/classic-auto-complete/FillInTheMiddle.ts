@@ -6,7 +6,7 @@ import type {
   FillInAtCursorSuggestion,
 } from "../types"
 import { getProcessedSnippets } from "./getProcessedSnippets"
-import { getTemplateForModel } from "../continuedev/core/autocomplete/templating/AutocompleteTemplate"
+import { codestralMultifileFimTemplate } from "../continuedev/core/autocomplete/templating/AutocompleteTemplate"
 import { generateFim } from "../fim"
 import type { AutocompleteConnection } from "../connection"
 
@@ -18,7 +18,7 @@ export class FimPromptBuilder {
   /**
    * Build complete FIM prompt with all necessary data
    */
-  async getFimPrompts(autocompleteInput: AutocompleteInput, modelName: string): Promise<FimAutocompletePrompt> {
+  async getFimPrompts(autocompleteInput: AutocompleteInput): Promise<FimAutocompletePrompt> {
     const { filepathUri, helper, snippetsWithUris, workspaceDirs } = await getProcessedSnippets(
       autocompleteInput,
       autocompleteInput.filepath,
@@ -32,11 +32,9 @@ export class FimPromptBuilder {
     const prunedPrefixRaw = helper.prunedPrefix
     const prunedSuffix = helper.prunedSuffix
 
-    const template = getTemplateForModel(modelName)
-
     let formattedPrefix = prunedPrefixRaw
-    if (template.compilePrefixSuffix && prunedSuffix) {
-      const [compiledPrefix] = template.compilePrefixSuffix(
+    if (prunedSuffix) {
+      const [compiledPrefix] = codestralMultifileFimTemplate.compilePrefixSuffix(
         prunedPrefixRaw,
         prunedSuffix,
         filepathUri,

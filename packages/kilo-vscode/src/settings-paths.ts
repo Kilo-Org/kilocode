@@ -31,6 +31,28 @@ export function resolveGlobalConfigDir(env: NodeJS.ProcessEnv, profile: string):
 }
 
 /**
+ * The data directory the spawned server writes, for files the host inspects outside the server: with the dev entry
+ * it is `<profile>/data/kilo2`, and a bundled server uses `<XDG_DATA_HOME or ~/.local/share>/kilo2`.
+ */
+export function resolveDataDir(env: NodeJS.ProcessEnv, profile: string): string {
+  const base = profile ? path.join(profile, "data") : (env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"))
+  return path.join(base, "kilo2")
+}
+
+/**
+ * The state directory the spawned server writes, for the files that describe live processes: with the dev entry it is
+ * `<profile>/state/kilo2`, and a bundled server uses `<XDG_STATE_HOME or ~/.local/state>/kilo2`. Mirrors
+ * `packages/util/src/global-roots.ts` and the app directory `packages/kilo-cli/src/env.ts` fixes; the browser hub
+ * registry lives under it (`packages/kilo-cli/src/browser/paths.ts`).
+ */
+export function resolveStateDir(env: NodeJS.ProcessEnv, profile: string): string {
+  const base = profile
+    ? path.join(profile, "state")
+    : (env.XDG_STATE_HOME ?? path.join(os.homedir(), ".local", "state"))
+  return path.join(base, "kilo2")
+}
+
+/**
  * The real path of a file, or of its parent when the file does not exist yet. The server and host can use different
  * spellings for the same path, so both sides must be canonical before they are compared.
  */

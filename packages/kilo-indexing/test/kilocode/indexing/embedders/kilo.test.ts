@@ -54,4 +54,21 @@ describe("KiloEmbedder", () => {
 
     expect((seen[0] as { baseURL: string }).baseURL).toBe("https://example.test/api/gateway/")
   })
+
+  // The Gateway answers one embeddings route for every model, so a refusal names the model, not a broken URL.
+  test("reports an unavailable model for a 404 instead of an invalid endpoint", async () => {
+    mockEmbeddingsCreate.mockRejectedValue(
+      Object.assign(new Error("Model mistralai/mistral-embed-2312 not found"), { status: 404 }),
+    )
+
+    const embedder = new KiloEmbedder({
+      apiKey: "kilo-token",
+      modelId: "mistralai/mistral-embed-2312",
+    })
+
+    expect(await embedder.validateConfiguration()).toEqual({
+      valid: false,
+      error: "The specified embedding model is not available.",
+    })
+  })
 })

@@ -1,4 +1,4 @@
-// Public provider surface (focus, reveal, sidebar entry points, diagnostics, shutdown) split out of
+// Public provider surface (focus, sidebar entry points, diagnostics, shutdown) split out of
 // AgentManagerProvider so the class file stays readable. Every function receives the provider as a host value.
 import type { ProjectContext } from "./project/context"
 import type { ProjectContexts } from "./project/contexts"
@@ -13,6 +13,8 @@ import type { WorktreeDiffController } from "./worktree-diff-controller"
 import type { DiffSourceCatalog } from "../diff/sources/catalog"
 import type { CaffeinationService } from "../services/caffeination"
 import type { BranchNamingController } from "./branch-naming"
+import type { PRStatusPoller } from "./PRStatusPoller"
+import type { RunController } from "./run/controller"
 import type { AgentManagerOutMessage } from "./types"
 import type { CreateWorktreeOnDiskOptions, CreateWorktreeOnDiskResult } from "./worktree-create"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
@@ -30,7 +32,7 @@ export interface ProviderApiHost {
   readonly host: Host
   readonly outputChannel: OutputHandle
   readonly gitOps: GitOps
-  readonly prBridge: { poller: { paused(): string[]; stop(): void } }
+  readonly prBridge: { poller: { paused: PRStatusPoller["paused"]; stop(): void } }
   readonly statsPoller: { paused(): string[]; stop(): void }
   readonly diffs: WorktreeDiffController
   readonly diffCatalog: DiffSourceCatalog
@@ -42,7 +44,7 @@ export interface ProviderApiHost {
   readonly scripts: { dispose(): Promise<void> }
   readonly caffeination: CaffeinationService
   readonly orchestration: { dispose(): void }
-  readonly run: { dispose(): void }
+  readonly run: { dispose: RunController["dispose"] }
   readonly activity: { dispose(): void }
   readonly unsubTool: () => void
   readonly unsubEvents: () => void
@@ -61,7 +63,7 @@ export interface ProviderApiHost {
   getWorktreeManager(): WorktreeManager | undefined
   createWorktreeOnDisk(opts?: CreateWorktreeOnDiskOptions): Promise<CreateWorktreeOnDiskResult | null>
   runSetupScriptForWorktree(path: string, branch: string | undefined, id: string): Promise<void>
-  onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null>
+  onCreateWorktree(baseBranch?: string, branchName?: string, requestId?: string): Promise<null>
   onDeleteWorktree(id: string): Promise<null>
   registerWorktreeSession(sessionId: string, directory: string): void
   notifyWorktreeReady(
@@ -114,10 +116,6 @@ export function revealSession(p: ProviderApiHost, sessionId: string): Promise<bo
     ready: () => waitForReady(p),
     post: (message) => p.panel?.postMessage(message),
   })
-}
-
-export function getWorktreeDirectories(p: ProviderApiHost): string[] {
-  return p.getStateManager()?.getWorktrees().map((wt) => wt.path) ?? []
 }
 
 export async function continueFromSidebar(
@@ -175,15 +173,29 @@ function worktreeContext(p: ProviderApiHost, root: string): ContinueContext {
     getStateManager: () => p.getStateManager(),
     registerWorktreeSession: (sid, dir) => p.registerWorktreeSession(sid, dir),
     notifyReady: (sid, result, wid) => p.notifyWorktreeReady(sid, result, wid),
+    notifyForked: (session, from, wid) =>
+      p.postToWebview({
+        type: "agentManager.sessionForked",
+        projectId: p.context?.id,
+        sessionId: session.id,
+        forkedFromId: from,
+        worktreeId: wid,
+        session,
+      }),
     log: (...args) => p.log(...args),
   }
 }
 
-export async function createFromSidebar(p: ProviderApiHost, baseBranch?: string, branchName?: string): Promise<void> {
+export async function createFromSidebar(
+  p: ProviderApiHost,
+  baseBranch?: string,
+  branchName?: string,
+  requestId?: string,
+): Promise<void> {
   p.openPanel()
   if (!p.panel || !(await p.waitForPanelReady(p.panel))) return
   await p.waitForStateReady("createFromSidebar")
-  await p.onCreateWorktree(baseBranch, branchName)
+  await p.onCreateWorktree(baseBranch, branchName, requestId)
 }
 
 export async function openAdvancedWorktree(p: ProviderApiHost): Promise<void> {

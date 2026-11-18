@@ -7,6 +7,7 @@ import { FetchHttpClient } from "effect/http"
 import { Environment } from "../environment/index.js"
 import { KeyedMutex } from "../effect/keyed-mutex.js"
 import type { McpClient } from "./client.js"
+import type { McpHost } from "./host.js" // kilocode_change - embedding hooks
 
 export type Failure = Extract<Mcp.Status, { readonly status: "failed" | "needs_auth" }>
 
@@ -51,6 +52,7 @@ export interface Input {
    */
   readonly shared?: boolean
   readonly clientInfo?: { readonly name: string; readonly version: string }
+  readonly host?: McpHost.Host // kilocode_change - embedding transport and OAuth hooks
   /** Read on every attempt, so a credential change applies to the next one. */
   readonly authProvider: Effect.Effect<OAuthClientProvider | undefined>
   readonly elicitation: McpClient.ElicitationHandler
@@ -120,7 +122,6 @@ export function make(input: Input): Connection {
 
   const refreshPrompts = (client: McpClient.Connection) =>
     client.prompts().pipe(
-      Effect.orElseSucceed(() => []),
       Effect.map((prompts) => {
         state.prompts = prompts
       }),
@@ -184,6 +185,7 @@ export function make(input: Input): Connection {
         authProvider,
         elicitation: input.elicitation,
         clientInfo: input.clientInfo,
+        host: input.host, // kilocode_change - embedding transport hooks
         roots: !input.shared,
       }).pipe(
         Effect.flatMap(
@@ -215,12 +217,19 @@ export function make(input: Input): Connection {
       yield* Scope.close(scope, Exit.void)
       state.scope = undefined
       const error = Cause.squash(result.cause)
+      // kilocode_change start - seam: the host may classify a remote authentication failure
+      const message = error instanceof Error ? error.message : String(error)
+      const authFailure =
+        config.type === "remote" &&
+        config.oauth !== false &&
+        input.host?.authFailure?.(message) === true // kilocode_change(mcp:8821b728d322)
       yield* input.events.failed(
-        error instanceof McpClient.NeedsAuthError
-          ? { status: "needs_auth", error: error.message }
-          : { status: "failed", error: error instanceof Error ? error.message : String(error) },
+        error instanceof McpClient.NeedsAuthError || authFailure
+          ? { status: "needs_auth", error: message }
+          : { status: "failed", error: message },
         error instanceof McpClient.ConnectError && error.answered === true,
       )
+      // kilocode_change end
     }).pipe(
       Effect.ensuring(input.events.settled),
       Effect.annotateLogs({ server: input.name, directory: input.directory, connectionID: crypto.randomUUID() }),

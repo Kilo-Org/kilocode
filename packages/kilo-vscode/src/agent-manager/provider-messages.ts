@@ -17,7 +17,6 @@ import { normalizeBaseBranch } from "./base-branch"
 import { handleBaseUpdate } from "./base-update"
 import { pushFixes } from "../kilo-provider/push-fixes-settings"
 import { composeDiffId, normalizeScope } from "./diff-scope"
-import { resolveWorktreeFile } from "./worktree-file-path"
 import type { LifecycleHost } from "./provider-lifecycle"
 import type { BranchNamingController } from "./branch-naming"
 import type { WorktreeImporter } from "./worktree-importer"
@@ -27,6 +26,10 @@ import type { ScriptTerminalManager } from "./ScriptTerminalManager"
 import type { RunController } from "./run/controller"
 import type { RecoveryMessage } from "./worktree-recovery"
 import type { ProjectContexts } from "./project/contexts"
+import { fileSessionLocally } from "./route-session"
+
+const OPEN_LOCALLY_FAILED = "Could not move the conversation to Local. It still runs in its worktree."
+const OPEN_LOCALLY_QUEUED = "The conversation will move to Local when its current step finishes."
 
 export interface MessageHost {
   connection: AgentManagerConnection
@@ -50,7 +53,7 @@ export interface MessageHost {
   pushState: (ctx?: ProjectContext) => void
   waitForStateReady: (where: string) => Promise<void>
   openPanel: (preserveFocus?: boolean) => void
-  onCreateWorktree: (baseBranch?: string, branchName?: string) => Promise<null>
+  onCreateWorktree: (baseBranch?: string, branchName?: string, requestId?: string) => Promise<null>
   onDeleteWorktree: (worktreeId: string) => Promise<null>
   onRemoveStaleWorktree: (worktreeId: string, keepSessions: boolean) => Promise<null>
   recover: (message: RecoveryMessage) => Promise<null>
@@ -75,7 +78,8 @@ export interface MessageHost {
   sendRepoInfo: () => Promise<void>
   sendDiffBranches: (sessionId: string, scope?: string, projectId?: string) => Promise<void>
   openWorktreeDirectory: (worktreeId: string) => void
-  openWorktreeFile: (id: string, filePath: string, line?: number, column?: number) => void
+  openWorktreeFile: (id: string, filePath: string, line?: number, column?: number) => Promise<void>
+  copyFilePath: (id: string, filePath: string) => Promise<void>
   readDocument: (sessionId: string, file: string, contextKey?: string) => Promise<void>
   validateFiles: (id: string, sessionId: string, paths: string[]) => Promise<void>
   runKey: (worktreeId: string) => string
@@ -119,7 +123,7 @@ async function shouldWaitForState(m: AgentManagerInMessage, ctx: ProjectContext,
 
 async function handleWorktree(m: AgentManagerInMessage, ctx: ProjectContext, host: MessageHost): Promise<boolean> {
   if (m.type === "agentManager.createWorktree") {
-    await host.onCreateWorktree(m.baseBranch, m.branchName)
+    await host.onCreateWorktree(m.baseBranch, m.branchName, m.requestId)
     return true
   }
   if (m.type === "agentManager.deleteWorktree") {
@@ -163,11 +167,25 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
     return true
   }
   if (m.type === "agentManager.openLocally") {
-    const state = ctx.peekState()
-    if (state?.getSession(m.sessionId)) {
-      state.moveSession(m.sessionId, null)
+    const client = await host.lifecycle.client().catch(() => undefined)
+    // Filing a session under Local while it still runs in a worktree shows the root checkout for its files and
+    // diff and hides its events from the worktree's view, so a session that could not move keeps its filing.
+    // A queued move applies at the next step boundary; the `session.moved` event files the session then.
+    const outcome = await fileSessionLocally({
+      client,
+      state: ctx.peekState(),
+      sessionId: m.sessionId,
+      root: ctx.root,
+      log: host.log,
+    })
+    if (outcome === "failed") {
+      host.post({ type: "error", message: OPEN_LOCALLY_FAILED })
+      // The webview already placed the session in Local's tabs, so push the kept filing to drop it again.
       host.pushState()
+      return true
     }
+    if (outcome === "queued") host.host.notify("info", OPEN_LOCALLY_QUEUED)
+    host.pushState()
     return true
   }
   if (m.type === "agentManager.continueInWorktree") {
@@ -358,7 +376,7 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
     return true
   }
   if (m.type === "agentManager.openFile") {
-    host.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
+    void host.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
     return true
   }
   if (m.type === "agentManager.openExternal") {
@@ -374,8 +392,7 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
     return true
   }
   if (m.type === "agentManager.copyFilePath") {
-    const target = resolveWorktreeFile(host.state(), m.sessionId, m.filePath, host.context()?.root)
-    if (target) void Promise.resolve(host.host.copyToClipboard(target))
+    void host.copyFilePath(m.sessionId, m.filePath)
     return true
   }
   return false

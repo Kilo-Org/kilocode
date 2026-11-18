@@ -4,7 +4,7 @@
  * The extension host owns the real PTY socket and relays its frames, so the
  * webview never opens a network connection and needs no ticket URL. This
  * adapter mirrors the small `WebSocket` surface `TerminalTab` uses:
- * `binaryType`, `readyState`, `send`, `close` and the `on*` handlers.
+ * `readyState`, `send`, `close` and the `on*` handlers. Binary frames are always delivered as array buffers.
  */
 
 import type { InMessage, VSCodeContext } from "../v2/bridge"
@@ -27,7 +27,6 @@ export class TerminalSocket {
   static readonly CLOSING = 2
   static readonly CLOSED = 3
 
-  binaryType: "blob" | "arraybuffer" = "blob"
   readyState = TerminalSocket.CONNECTING
   onopen: (() => void) | null = null
   onmessage: ((event: TerminalSocketMessageEvent) => void) | null = null

@@ -1,0 +1,61 @@
+import { expect, test } from "bun:test"
+import { createContextRequests } from "../webview-ui/src/hooks/context-requests"
+
+test("context requests settle by ID, time out, and preserve cleanup semantics", async () => {
+  const ctx = createContextRequests("context", 5, "Timed out")
+  const first = ctx.request(() => {}).catch((err: Error) => err.message)
+  const second = ctx.request((id) => ctx.settle(id, (req) => req.resolve("second")))
+  await expect(second).resolves.toBe("second")
+  ctx.settle("context-2", () => {
+    throw new Error("Late settlement")
+  })
+  expect(ctx.pending()).toBe(true)
+  await expect(first).resolves.toBe("Timed out")
+  expect(ctx.pending()).toBe(false)
+
+  for (const reset of [false, true]) {
+    const result = ctx.request(() => {}).catch((err: Error) => err.message)
+    ctx.dispose("Cancelled", reset)
+    await expect(result).resolves.toBe("Cancelled")
+    expect(ctx.pending()).toBe(!reset)
+  }
+})
+
+test("a synchronous send failure settles the request immediately", async () => {
+  const ctx = createContextRequests("sync", 10_000, "Timed out")
+  const failure = new Error("send failed")
+  const result = ctx
+    .request(() => {
+      throw failure
+    })
+    .catch((err: Error) => err)
+  await expect(result).resolves.toBe(failure)
+  // Not pending until the timeout: the composer gates Send on this flag.
+  expect(ctx.pending()).toBe(false)
+})
+
+test("a drained composer keeps an open request until it settles, then stops listening", async () => {
+  const ctx = createContextRequests("drain", 10_000, "Timed out")
+  let id = ""
+  const result = ctx.request((value) => (id = value))
+  const done: string[] = []
+  ctx.drain(() => done.push("done"))
+  expect(done).toEqual([])
+  ctx.settle(id, (req) => req.resolve("diff"))
+  await expect(result).resolves.toBe("diff")
+  expect(done).toEqual(["done"])
+
+  ctx.drain(() => done.push("idle"))
+  expect(done).toEqual(["done", "idle"])
+})
+
+test("request IDs stay unique across composers, so a drained composer never settles another one's request", () => {
+  const ids: string[] = []
+  const first = createContextRequests("unique", 10_000, "Timed out")
+  const second = createContextRequests("unique", 10_000, "Timed out")
+  void first.request((id) => ids.push(id)).catch(() => undefined)
+  void second.request((id) => ids.push(id)).catch(() => undefined)
+  expect(new Set(ids).size).toBe(2)
+  first.dispose("done")
+  second.dispose("done")
+})

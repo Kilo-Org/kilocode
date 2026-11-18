@@ -15,6 +15,7 @@ function scene() {
   const states = new Set<(state: Status) => void>()
   let connection: Status = "connected"
   let active: Record<string, unknown> = {}
+  let wakeups: { sessionID: string; pending: number }[] = []
   const driver: CaffeinationDriver = {
     available: true,
     start(pid) {
@@ -34,6 +35,9 @@ function scene() {
           list: async () => ({ data: [{ id: "ses_1" }] }),
           active: async () => active,
         },
+        rpc: () => ({
+          pending: async () => ({ sessions: wakeups }),
+        }),
       }),
       onEvent: (listener: (event: Event) => void) => {
         events.add(listener)
@@ -53,6 +57,9 @@ function scene() {
     stops,
     active: (value: Record<string, unknown>) => {
       active = value
+    },
+    wakeups: (value: { sessionID: string; pending: number }[]) => {
+      wakeups = value
     },
     send: (event: Event) => events.forEach((listener) => listener(event)),
     connect: (state: Status) => {
@@ -80,6 +87,19 @@ describe("caffeination service", () => {
     await flush()
     expect(app.stops).toEqual(["stop"])
     expect(app.service.getState()).toMatchObject({ enabled: true, active: false })
+    await app.service.dispose()
+  })
+
+  test("holds the inhibitor while a wakeup is pending", async () => {
+    const app = scene()
+    app.wakeups([{ sessionID: "ses_1", pending: 1 }])
+    await app.service.setEnabled(true)
+    expect(app.starts).toEqual([process.pid])
+
+    app.wakeups([])
+    await app.service.refresh()
+    await flush()
+    expect(app.stops).toEqual(["stop"])
     await app.service.dispose()
   })
 

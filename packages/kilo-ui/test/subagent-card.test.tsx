@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, expect, test } from "bun:test"
+import type { SessionMessageAssistantTool } from "@opencode/client"
+import { createSignal } from "solid-js"
+import { ToolRegistry, type ToolProps } from "../src/components/message-part"
+import { ToolChildSessionProvider, type ToolChildSession } from "../src/components/tool-child-session"
 import { resetToolOpenState } from "../src/components/tool-open-state"
-import { mountTool, type Mounted } from "./harness"
+import { mountRich, mountTool, waitFor, type Mounted } from "./harness"
 
 let mounted: Mounted[] = []
 
@@ -91,4 +95,88 @@ test("open prefers the client's subagent surface and passes the description", ()
   card.host.querySelector<HTMLElement>('[data-slot="task-tool-open"]')?.click()
 
   expect(calls).toEqual(["subagent:ses_child:Find usages"])
+})
+
+const childTool = {
+  type: "tool",
+  id: "child-tool-1",
+  name: "read",
+  state: { status: "completed", input: { path: "packages/child.ts" }, content: [] },
+} as unknown as SessionMessageAssistantTool
+
+function mountChildCard(child: ToolChildSession, props: Partial<ToolProps> = {}) {
+  const Renderer = ToolRegistry.render("subagent")
+  if (!Renderer) throw new Error("No renderer registered for subagent")
+  const merged: ToolProps = {
+    input: { agent: "explore", description: "Find usages", prompt: "go" },
+    metadata: { sessionID: "ses_child", status: "running" },
+    tool: "subagent",
+    partID: "subagent-child",
+    output: "",
+    status: "running",
+    attachments: [],
+    ...props,
+  }
+  return mountRich(() => (
+    <ToolChildSessionProvider value={child}>
+      <Renderer {...merged} />
+    </ToolChildSessionProvider>
+  ))
+}
+
+test("a child board post shows the recipient from its result title", async () => {
+  const boardPost = {
+    type: "tool",
+    id: "child-board-post",
+    name: "board_post",
+    state: {
+      status: "completed",
+      input: { to: "main", type: "RESULT", body: "Reply from the child" },
+      content: [{ type: "text", text: "{}" }],
+      metadata: { title: "RESULT to main" },
+    },
+    time: { created: 1, completed: 2 },
+  } as unknown as SessionMessageAssistantTool
+  const card = mountChildCard(
+    { tools: () => [boardPost], running: () => false, load: () => {} },
+    {
+      input: { agent: "general", description: "child reply test", prompt: "post" },
+      metadata: { sessionID: "ses_child", status: "completed" },
+      status: "completed",
+      partID: "subagent-board",
+      forceOpen: true,
+    },
+  )
+  mounted.push(card)
+
+  const row = await waitFor(() => card.host.querySelector('[data-slot="task-tool-item"]'))
+  expect(row.querySelector('[data-slot="task-tool-title"]')?.textContent).toBe("board_post")
+  expect(row.querySelector('[data-slot="task-tool-subtitle"]')?.textContent).toBe("RESULT to main")
+})
+
+test("a card asks for the child history again when its cached tools disappear", async () => {
+  const [tools, setTools] = createSignal<SessionMessageAssistantTool[]>([])
+  const loads: string[] = []
+  const card = mountChildCard({
+    tools: () => tools(),
+    running: () => true,
+    load: (id) => {
+      loads.push(id)
+      // The real loader fetches asynchronously.
+      void Promise.resolve().then(() => setTools([childTool]))
+    },
+  })
+  mounted.push(card)
+  const starting = () => card.host.querySelector('[data-slot="task-tool-item"][data-state="starting"]')
+  const tool = () => card.host.querySelector('[data-slot="task-tool-item"]:not([data-state="starting"])')
+
+  await waitFor(tool)
+  expect(loads).toEqual(["ses_child"])
+
+  // The inspector releases a subagent when its tab closes, which empties the cached history under the open card.
+  setTools([])
+  await waitFor(starting)
+  await waitFor(() => loads.length === 2)
+  await waitFor(tool)
+  expect(loads).toEqual(["ses_child", "ses_child"])
 })

@@ -1,11 +1,11 @@
 import fs from "node:fs/promises"
 import path from "node:path"
-import { expect } from "bun:test"
+import { expect, setDefaultTimeout } from "bun:test" // kilocode_change
 import { OpenCode } from "@opencode/client"
 import { Effect } from "effect"
 import { tmpdirScoped } from "../../core/test/fixture/tmpdir"
 import { it } from "../../core/test/lib/effect"
-import { ServerFetch } from "../src/fetch"
+import { serveRoutes } from "./fixture/routes"
 
 const client = (handler: (request: Request) => Promise<Response>) =>
   OpenCode.make({
@@ -14,6 +14,11 @@ const client = (handler: (request: Request) => Promise<Response>) =>
       preconnect: fetch.preconnect,
     }),
   })
+
+// kilocode_change start - the test boots three Locations, and each activates every built-in plugin. That takes about
+// 0.5 s on a fast machine and more than 5 s on the shared Windows CI runner.
+setDefaultTimeout(30_000)
+// kilocode_change end
 
 it.live("manages local and plugin-backed artifacts through /api/experimental/artifacts when enabled", () =>
   Effect.gen(function* () {
@@ -81,14 +86,16 @@ export default {
       )
     })
 
-    const handler = yield* ServerFetch.make({
+    const server = yield* serveRoutes({
       app: { version: "test" },
       database: { path: path.join(dir, "opencode.db") },
       config: { directory: global, project: true, claude: false },
       models: { fetch: false },
       fs: { filewatcher: false },
     })
+    const handler = server.handler
     const api = client(handler)
+    yield* server.pluginsLoaded(enabled)
 
     yield* Effect.promise(async () => {
       // Disabled location returns ForbiddenError

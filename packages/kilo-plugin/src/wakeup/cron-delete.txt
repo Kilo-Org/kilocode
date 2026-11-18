@@ -1,0 +1,1 @@
+Delete a scheduled cron task by its id. Call cron_list first to find the id. Deleting an id that is already gone is safe: the tool reports it and does not fail.

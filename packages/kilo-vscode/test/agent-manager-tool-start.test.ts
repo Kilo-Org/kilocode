@@ -7,6 +7,7 @@ import type { CreateWorktreeResult } from "../src/agent-manager/WorktreeManager"
 import { handleToolEvent } from "../src/agent-manager/tool-project"
 import { createSessionInWorktree } from "../src/agent-manager/provider-session"
 import { AgentManagerProvider } from "../src/agent-manager/AgentManagerProvider"
+import { PLATFORM_METADATA } from "../src/agent-manager/session-create"
 import type { AgentManagerConnection } from "../src/agent-manager/connection"
 import type { Host, PanelContext } from "../src/agent-manager/host"
 
@@ -74,7 +75,7 @@ function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
       calls.push("setup")
     }),
     createSessionInWorktree: mock(async () => session("ses-wt")),
-    sessionMetadata: mock(async () => ({ kilocode: { platform: "agent-manager" } })),
+    sessionMetadata: mock(async () => PLATFORM_METADATA),
     registerWorktreeSession: mock(() => {
       calls.push("registerWorktreeSession")
     }),
@@ -215,8 +216,38 @@ describe("agent manager tool start", () => {
       { worktreeID: "wt-target", mode: "worktree" },
       { worktreeID: "wt-target", versions: true },
       { worktreeID: "wt-target", tasks: [{ prompt: "Fix", branchName: "" }] },
+      { worktreeID: "wt-target", tasks: [{ prompt: "Fix", baseBranch: "main" }] },
     ])
       expect(parseToolRequest({ ...input, ...fields })).toBeUndefined()
+  })
+
+  it("keeps a worktree base branch from the start event", () => {
+    expect(parseToolRequest({ mode: "worktree", tasks: [{ name: "Base", baseBranch: " main " }] })?.tasks).toEqual([
+      { name: "Base", baseBranch: " main " },
+    ])
+    expect(parseToolRequest({ mode: "worktree", tasks: [{ name: "Base", baseBranch: "  " }] })?.tasks).toEqual([
+      { name: "Base" },
+    ])
+  })
+
+  it("creates the worktree from the requested base branch", async () => {
+    const client = {
+      session: {
+        create: mock(async () => session("ses-local")),
+        prompt: mock(async () => undefined),
+      },
+    }
+    const c = deps({ getClient: () => client as never })
+    await startFromTool(c, {
+      requestID: "am-base",
+      mode: "worktree",
+      tasks: [{ name: "Release fix", baseBranch: " release/1.0 " }],
+    })
+    expect(c.createWorktree).toHaveBeenCalledWith(expect.objectContaining({ baseBranch: "release/1.0" }))
+
+    const omitted = deps({ getClient: () => client as never })
+    await startFromTool(omitted, { requestID: "am-default", mode: "worktree", tasks: [{ name: "Default" }] })
+    expect(omitted.createWorktree).toHaveBeenCalledWith(expect.objectContaining({ baseBranch: undefined }))
   })
 
   it("targets a non-caller worktree without creating or cleaning it", async () => {
@@ -253,7 +284,7 @@ describe("agent manager tool start", () => {
     expect(c.sessionMetadata).toHaveBeenCalledWith(client, wt.path)
     expect(client.session.create).toHaveBeenCalledWith({
       location: { directory: wt.path },
-      metadata: { kilocode: { platform: "agent-manager" } },
+      metadata: PLATFORM_METADATA,
       model: { id: "model", providerID: "test", variant: "high" },
     })
     expect(state.addSession).toHaveBeenCalledWith("ses-target", wt.id)
@@ -359,7 +390,7 @@ describe("agent manager tool start", () => {
     expect(panel?.waitForReady).toHaveBeenCalled()
     expect(client.session.create).toHaveBeenCalledWith({
       location: { directory: "/repo" },
-      metadata: { kilocode: { platform: "agent-manager" } },
+      metadata: PLATFORM_METADATA,
       model: { id: "reasoning/model", providerID: "test", variant: "high" },
     })
     expect(client.session.prompt).toHaveBeenCalledWith({ sessionID: "ses-local", text: "Do work" })
@@ -739,7 +770,7 @@ describe("agent manager worktree session creation", () => {
     expect(created?.id).toBe("ses-wt")
     expect(create).toHaveBeenCalledWith({
       location: { directory: "/repo/.kilo/worktrees/wt-1" },
-      metadata: { kilocode: { platform: "agent-manager" } },
+      metadata: PLATFORM_METADATA,
       agent: "candidate",
       model: { id: "reasoning/model", providerID: "test", variant: "high" },
     })
@@ -846,7 +877,7 @@ describe("agent manager provider tool routing", () => {
 
     expect(create).toHaveBeenCalledWith({
       location: { directory: "/repo/.kilo/worktrees/wt-1" },
-      metadata: { kilocode: { platform: "agent-manager" } },
+      metadata: PLATFORM_METADATA,
       agent: "candidate",
       model: { id: "reasoning/model", providerID: "test", variant: "high" },
     })

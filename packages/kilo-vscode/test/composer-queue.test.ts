@@ -62,4 +62,18 @@ describe("composer queue", () => {
     expect(first.calls).toEqual([["attach", ["a"]]])
     expect(second.calls).toEqual([["submit", "later", []]])
   })
+
+  test("carries the metadata of a host request to the composer", () => {
+    const queue = createComposerQueue()
+    const calls: unknown[] = []
+    queue.ready({
+      attach: () => undefined,
+      submit: (text, items, metadata) => calls.push([text, items.length, metadata]),
+    })
+
+    const metadata = { kilo: { injected: { title: "Explain selected code" } } }
+    queue.push({ type: "submit", text: "Explain the selection", items: [item], metadata })
+
+    expect(calls).toEqual([["Explain the selection", 1, metadata]])
+  })
 })

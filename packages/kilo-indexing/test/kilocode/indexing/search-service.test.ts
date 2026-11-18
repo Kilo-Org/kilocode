@@ -47,6 +47,30 @@ const config = (fileExtensions?: string[]) =>
   })
 
 describe("CodeIndexSearchService worktree search", () => {
+  test("searches a complete index even when the watcher reports an error", async () => {
+    const state = new CodeIndexStateManager()
+    state.setSystemState("Error", "File watching is unavailable, so changes are only picked up when indexing restarts.")
+    state.setSearchable(true)
+    const service = new CodeIndexSearchService(
+      config([".ts"]),
+      state,
+      embedder([]),
+      store([result("src/hit.ts", 0.9)], []),
+    )
+
+    const results = await service.searchIndex("query")
+
+    expect(results.map((item) => item.payload?.filePath)).toEqual(["src/hit.ts"])
+  })
+
+  test("refuses search after a scan that never completed", async () => {
+    const state = new CodeIndexStateManager()
+    state.setSystemState("Error", "Failed during initial scan: unavailable")
+    const service = new CodeIndexSearchService(config([".ts"]), state, embedder([]), store([], []))
+
+    await expect(service.searchIndex("query")).rejects.toThrow("Code index is not ready for search")
+  })
+
   test("filters stale results using one vector query", async () => {
     const limits: number[] = []
     const state = new CodeIndexStateManager()

@@ -3,6 +3,28 @@
   "name": "kilo-code-v2",
   "displayName": "Kilo Code (v2 preview)",
   "description": "Kilo Code on the Kilo v2 server",
+  "icon": "assets/icon.png",
+  "author": {
+    "name": "Kilo Code"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "kilo",
+    "kilo code",
+    "ai",
+    "agent",
+    "coding agent",
+    "chat",
+    "autocomplete"
+  ],
+  "galleryBanner": {
+    "color": "#FFFFFF",
+    "theme": "light"
+  },
   "publisher": "kilocode",
   "version": "0.0.1",
   "private": true,
@@ -24,7 +46,8 @@
     "onWebviewPanel:kilo-code.v2.marketplacePanel",
     "onWebviewPanel:kilo-code.v2.agentManagerPanel",
     "onWebviewPanel:kilo-code.v2.documentsPanel",
-    "onWebviewPanel:kilo-code.v2.subagentPanel"
+    "onWebviewPanel:kilo-code.v2.subagentPanel",
+    "onWebviewPanel:kilo-code.v2.DiffViewerPanel"
   ],
   "contributes": {
     "configurationDefaults": {
@@ -124,6 +147,19 @@
             "فارسی"
           ]
         },
+        "kilo-code.v2.chat.sendWhileRunning": {
+          "type": "string",
+          "enum": [
+            "steer",
+            "queue"
+          ],
+          "enumDescriptions": [
+            "Enter steers the running turn: the message reaches the agent after the current step. Alt+Enter queues it.",
+            "Enter queues the message for after the turn. Alt+Enter steers the running turn."
+          ],
+          "default": "steer",
+          "markdownDescription": "What Enter does when you send a message while the agent works. Alt+Enter does the other, and Cmd+Enter (Ctrl+Enter) stops the agent and sends."
+        },
         "kilo-code.v2.chat.shiftTabCyclesVariant": {
           "type": "boolean",
           "default": true,
@@ -169,7 +205,12 @@
         },
         "kilo-code.v2.agentWorkStyle": {
           "type": "string",
-          "enum": ["unset", "human-in-the-loop", "autonomous", "skipped"],
+          "enum": [
+            "unset",
+            "human-in-the-loop",
+            "autonomous",
+            "skipped"
+          ],
           "enumDescriptions": [
             "No work style chosen yet; the onboarding picker is shown for a project with no sessions.",
             "Review first: ask before edits and commands, and expand tool details.",
@@ -258,19 +299,11 @@
           "type": "string",
           "enum": [
             "mistralai/codestral-2508",
-            "inception/mercury-edit-2",
-            "inception/mercury-next-edit",
-            "codestral-2508",
-            "mercury-edit-2",
-            "mercury-next-edit"
+            "codestral-2508"
           ],
           "enumDescriptions": [
             "Codestral via Kilo Gateway",
-            "Mercury Edit 2 (FIM) via Kilo Gateway",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via Kilo Gateway",
-            "Codestral via your connected Mistral provider API key",
-            "Mercury Edit 2 (FIM) via your connected Inception provider API key",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via your connected Inception provider API key"
+            "Codestral via your connected Mistral provider API key"
           ],
           "markdownDescription": "Model to use for inline autocomplete suggestions. If unset, the recommended default is used."
         },
@@ -278,13 +311,11 @@
           "type": "string",
           "enum": [
             "kilo",
-            "mistral",
-            "inception"
+            "mistral"
           ],
           "enumDescriptions": [
             "Use autocomplete models through Kilo Gateway",
-            "Use autocomplete models through your connected Mistral provider API key",
-            "Use autocomplete models through your connected Inception provider API key"
+            "Use autocomplete models through your connected Mistral provider API key"
           ],
           "markdownDescription": "Provider to use for inline autocomplete suggestions. If unset, Kilo Gateway is used."
         },
@@ -363,21 +394,6 @@
           "default": "integrated",
           "scope": "application",
           "description": "Choose where web links open from Kilo chats. Requires the Integrated Browser."
-        },
-        "kilo-code.v2.browserAutomation.enabled": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
-        },
-        "kilo-code.v2.browserAutomation.useSystemChrome": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Use your system's installed Chrome browser instead of downloading a separate Chromium instance."
-        },
-        "kilo-code.v2.browserAutomation.headless": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
         }
       }
     },
@@ -431,6 +447,11 @@
       {
         "command": "kilo-code.v2.restartServer",
         "title": "Restart Server",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.importV1",
+        "title": "Import Sessions and Config from Kilo v1",
         "category": "Kilo Code (v2)"
       },
       {
@@ -970,6 +991,11 @@
           "command": "kilo-code.v2.settings",
           "when": "view == kilo-code.v2.chat",
           "group": "navigation@5"
+        },
+        {
+          "command": "kilo-code.v2.importV1",
+          "when": "view == kilo-code.v2.chat",
+          "group": "kilo@1"
         }
       ],
       "scm/title": [
@@ -1055,8 +1081,10 @@
     "snapshot:install": "bun script/snapshot.ts install",
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
-    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/webview-ui/diff-viewer packages/kilo-vscode/webview-ui/documents packages/kilo-vscode/webview-ui/diff-virtual packages/kilo-vscode/webview-ui/settings packages/kilo-vscode/script packages/kilo-vscode/test",
-    "test": "bun test"
+    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui packages/kilo-vscode/script packages/kilo-vscode/test",
+    "knip": "knip --treat-config-hints-as-errors",
+    "test": "bun test --timeout 30000",
+    "test:accessibility": "bun test ./test/browser/accessibility.ts"
   },
   "dependencies": {
     "@kilocode/caffeination": "workspace:*",
@@ -1087,6 +1115,7 @@
     "jsonc-parser": "3.3.1",
     "lru-cache": "11.5.2",
     "marked": "catalog:",
+    "minimatch": "10.2.6",
     "playwright-core": "1.57.0",
     "quick-lru": "7.3.0",
     "simple-git": "4.0.2",
@@ -1109,9 +1138,12 @@
     "@types/ws": "8.18.1",
     "@typescript/native": "catalog:",
     "@vscode/vsce": "^4.0.0",
+    "axe-core": "4.11.1",
     "babel-preset-solid": "1.9.15",
     "esbuild": "0.27.2",
     "happy-dom": "20.8.9",
+    "knip": "5.85.0",
+    "ovsx": "1.3.0",
     "qrcode": "^1.5.4"
   }
 }

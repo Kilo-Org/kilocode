@@ -120,6 +120,8 @@ function start(directory: string, worktree: string) {
           canonical: AbsolutePath.make(directory),
         },
       }),
+      // The recall plugin registers its `@` past-chat prompt hook on the same activation.
+      session: { hook: () => Effect.succeed({ dispose: Effect.void }) },
       permission: {
         assert: () => Effect.void,
         hook: () => Effect.die("unused permission.hook"),
@@ -146,9 +148,7 @@ function start(directory: string, worktree: string) {
         hook: () => Effect.die("unused tool.hook"),
       },
     })
-    yield* Effect.scoped(
-      KiloRecallPlugin.effect(ctx).pipe(Effect.provideService(SessionStore.Service, store)),
-    )
+    yield* Effect.scoped(KiloRecallPlugin.effect(ctx).pipe(Effect.provideService(SessionStore.Service, store)))
     return captured.tools[0]!
   })
 }

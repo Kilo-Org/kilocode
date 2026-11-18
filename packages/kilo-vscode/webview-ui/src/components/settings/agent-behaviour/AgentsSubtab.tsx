@@ -8,6 +8,7 @@ import { KiloAgentRpc } from "@opencode/schema/kilocode/agent"
 import { Component, For, Show, createEffect, createMemo, createSignal, on } from "solid-js"
 import { useLanguage } from "../../../context/language"
 import { useV2 } from "../../../v2/client"
+import type { Delivery } from "../../../v2/pending-actions"
 import { useSettingsConfig } from "../../../v2/settings-config"
 import SettingsRow from "../SettingsRow"
 import Switch from "../Switch"
@@ -28,6 +29,8 @@ import { MAX_IMPORT_SIZE, parseImport, type ImportError } from "./mode-io"
 
 type View = "list" | "create" | "edit"
 
+const DELIVERY_OPTIONS: Delivery[] = ["steer", "queue"]
+
 interface Option {
   value: string
   label: string
@@ -38,6 +41,7 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
   const v2 = useV2()
   const config = useSettingsConfig()
   const dialog = useDialog()
+  const delivery = (): Delivery => (config.setting("chat.sendWhileRunning") === "queue" ? "queue" : "steer")
   const rpc = v2.api.rpc(KiloAgentRpc.Definition)
   const location = { directory: v2.directory }
 
@@ -272,6 +276,24 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
               label={(option: Option) => option.label}
               onSelect={(option: Option | undefined) => {
                 if (option) chooseDefault(option.value)
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.sendWhileRunning.title")}
+            description={language.t("settings.agentBehaviour.sendWhileRunning.description")}
+          >
+            <Select
+              options={DELIVERY_OPTIONS}
+              current={delivery()}
+              value={(option: Delivery) => option}
+              label={(option: Delivery) => language.t(`settings.agentBehaviour.sendWhileRunning.${option}`)}
+              onSelect={(option: Delivery | undefined) => {
+                if (!option || option === delivery()) return
+                config.setSetting("chat.sendWhileRunning", option)
               }}
               variant="secondary"
               size="small"

@@ -5,19 +5,22 @@ import type { Entry } from "@opencode/schema/config"
 import { ConfigCommand } from "@opencode/schema/config/command"
 import { AppProcess } from "@opencode/util/process"
 import path from "path"
-import { Effect, Option, Schema } from "effect"
+import { Effect, Option, Result, SchemaIssue, SchemaParser } from "effect" // kilocode_change(workflow-model) seam - optional delivery policy
 import { ChildProcess } from "effect/process"
 import { Agent } from "../../agent.js"
 import { Config } from "../../config.js"
 import { Location } from "../../location.js"
 import { Session } from "../../session.js"
 import { SubagentJob } from "../../session/subagent-job.js"
+import { SessionInbox } from "../../session/inbox.js" // kilocode_change(workflow-model) seam - the installed delivery policy defers command selection
 import { ShellSelect } from "../../shell/select.js"
 import { FSUtil } from "@opencode/util/fs-util"
 import { ConfigMarkdown } from "../markdown.js"
 import { ConfigEntryObserver } from "./entry-observer.js"
+import { KiloPromptInjected } from "../../kilocode/session/injected.js" // kilocode_change(injected-prompt) - label an expanded command template in the transcript
 
-const decodeCommand = Schema.decodeUnknownOption(ConfigCommand.Info)
+const decodeCommand = SchemaParser.decodeUnknownResult(ConfigCommand.Info)
+const formatIssue = SchemaIssue.makeFormatterDefault()
 
 export const Plugin = define({
   id: "opencode.config.command",
@@ -36,6 +39,7 @@ export const Plugin = define({
     const sessions = yield* Session.Service
     const agents = yield* Agent.Service
     const subagents = yield* SubagentJob.Service
+    const delivery = Option.getOrUndefined(yield* Effect.serviceOption(SessionInbox.Policy)) // kilocode_change(workflow-model) seam - defer command selection only when the host installed a delivery policy
     const load = Effect.fn("ConfigCommandPlugin.load")(function* () {
       const entries = yield* config.entries() // kilocode_change(workflow-model) seam - compose discovered command documents
       return yield* Effect.forEach(entries, loadEntry).pipe(Effect.map((documents) => config.commandDocuments?.(entries, documents.flat()) ?? documents.flat())) // kilocode_change(workflow-model) seam - compose discovered command documents
@@ -85,6 +89,7 @@ export const Plugin = define({
                     ...input.prompt,
                     sessionID: child.id,
                     text: ["You are a subagent spawned by another session.", text].join("\n"),
+                    metadata: KiloPromptInjected.command(name, input.prompt.text), // kilocode_change(injected-prompt) - "/name args" title
                     resume: false,
                   })
                   const recovery = {
@@ -98,6 +103,19 @@ export const Plugin = define({
                   yield* subagents.background(recovery)
                   return
                 }
+                // kilocode_change start - workflow-model seam: admit the selection with the prompt instead of switching the running session
+                if (delivery?.policy && (agent !== undefined || model !== undefined)) {
+                  yield* sessions.prompt({
+                    ...input.prompt,
+                    sessionID: input.sessionID,
+                    text,
+                    metadata: KiloPromptInjected.command(name, input.prompt.text),
+                    delivery: input.delivery,
+                    selection: { agent, model },
+                  })
+                  return
+                }
+                // kilocode_change end
                 if (agent !== undefined) {
                   const session = yield* ctx.session.get({ sessionID: input.sessionID })
                   if (session.agent !== agent) yield* ctx.session.switchAgent({ sessionID: input.sessionID, agent })
@@ -107,6 +125,7 @@ export const Plugin = define({
                   ...input.prompt,
                   sessionID: input.sessionID,
                   text,
+                  metadata: KiloPromptInjected.command(name, input.prompt.text), // kilocode_change(injected-prompt) - "/name args" title
                   delivery: input.delivery,
                 })
               }).pipe(Effect.asVoid),
@@ -127,7 +146,7 @@ function loadDirectory(fs: FSUtil.Interface, directory: string) {
       .pipe(Effect.orElseSucceed(() => [] as string[]))
     return yield* Effect.forEach(files.toSorted(), (filepath) =>
       fs.readFileStringSafe(filepath).pipe(
-        Effect.map((content) => (content === undefined ? undefined : decode(directory, filepath, content))),
+        Effect.flatMap((content) => (content === undefined ? Effect.undefined : decode(directory, filepath, content))),
         Effect.orElseSucceed(() => undefined),
       ),
     ).pipe(
@@ -138,20 +157,30 @@ function loadDirectory(fs: FSUtil.Interface, directory: string) {
   })
 }
 
-function decode(directory: string, filepath: string, content: string) {
+const decode = Effect.fnUntraced(function* (directory: string, filepath: string, content: string) {
   const markdown = ConfigMarkdown.parseOption(content)
-  if (!markdown) return
-  const info = Option.getOrUndefined(decodeCommand({ ...markdown.data, template: markdown.content.trim() }))
-  if (!info) return
+  if (!markdown) {
+    yield* Effect.logWarning("command file skipped", { filepath, reason: "markdown" })
+    return
+  }
+  const info = decodeCommand({ ...markdown.data, template: markdown.content.trim() })
+  if (Result.isFailure(info)) {
+    yield* Effect.logWarning("command file skipped", {
+      filepath,
+      reason: "frontmatter",
+      issue: formatIssue(info.failure),
+    })
+    return
+  }
   return {
     name: path
       .relative(directory, filepath)
       .replaceAll("\\", "/")
       .replace(/^(command|commands)\//, "")
       .replace(/\.md$/, ""),
-    info,
+    info: info.success,
   }
-}
+})
 
 function evaluateTemplate(
   template: string,

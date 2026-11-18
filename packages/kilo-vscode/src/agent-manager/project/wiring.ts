@@ -16,6 +16,7 @@ import { createSettingsHandler, type SettingsHandler } from "./settings"
 import { poolHome } from "../pool/home"
 import type { SidebarTarget } from "./route"
 import type { AgentManagerOutMessage } from "../types"
+import type { RouteOutcome } from "../route-session"
 
 export interface ProjectWiring {
   registry: ProjectRegistry
@@ -52,8 +53,10 @@ export function createProjectWiring(opts: {
   selected: (target: SidebarTarget) => void
   /** Post an outbound message to the webview. */
   post: (message: AgentManagerOutMessage) => void
-  /** Route one session to a directory inside a project (override + project route). */
-  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
+  /** Route one session to a directory inside a project, and report a move that waits for a step boundary. */
+  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => Promise<RouteOutcome>
+  /** The directory the server runs a session in, for a session another surface names without a project. */
+  sessionDirectory?: (sessionId: string) => Promise<string | undefined>
 }): ProjectWiring {
   const registry = new ProjectRegistry(
     { read: () => opts.host.readProjects(), write: (value) => opts.host.writeProjects(value) },
@@ -89,8 +92,10 @@ export function createProjectWiring(opts: {
     selected: opts.selected,
     post: opts.post,
     routeSession: opts.routeSession,
+    sessionDirectory: opts.sessionDirectory,
     git: opts.git,
     error: (message) => opts.host.showError(message),
+    notify: (kind, message) => opts.host.notify(kind, message),
     openSettings: (tab, projectId) => opts.host.openSettings(tab, projectId),
     log: opts.log,
   }

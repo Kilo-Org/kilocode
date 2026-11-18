@@ -30,11 +30,6 @@ const DIFF = ["diff", "--no-ext-diff", "--no-textconv", "--no-color", "--find-re
 const cache = new Map<string, Entry>()
 let bytes = 0
 
-export function clearContextCache(): void {
-  cache.clear()
-  bytes = 0
-}
-
 function cached(key: string) {
   const entry = cache.get(key)
   if (!entry) return undefined

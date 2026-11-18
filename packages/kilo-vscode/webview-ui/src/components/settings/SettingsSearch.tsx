@@ -32,8 +32,8 @@ const SettingsSearch: Component<SettingsSearchProps> = (props) => {
 
   createEffect(() => {
     if (!props.focusRequest) return
-    // Kobalte focus handling and the VS Code panel reveal can steal focus
-    // shortly after the shortcut fires, so retry like the chat search does.
+    // The VS Code panel reveal can take focus shortly after the shortcut fires,
+    // so retry like the chat search does.
     const focus = () => inputRef?.focus({ preventScroll: true })
     focus()
     queueMicrotask(focus)
@@ -44,6 +44,16 @@ const SettingsSearch: Component<SettingsSearchProps> = (props) => {
       setTimeout(focus, 50)
     })
   })
+
+  const onPointerDown = (event: PointerEvent) => {
+    // The box is the click target around the field. A click on the icon or the padding belongs in the input, and
+    // the default action would move focus to the box and blur the field again. A click on the input keeps the
+    // caret position the browser sets, and a click on the clear button keeps its own focus and click.
+    if (event.target === inputRef) return
+    if (event.target instanceof Element && event.target.closest("button")) return
+    event.preventDefault()
+    inputRef?.focus({ preventScroll: true })
+  }
 
   const onKeyDown = (event: KeyboardEvent) => {
     // A CJK IME uses Enter and the arrow keys to pick glyphs; they must not drive the search.
@@ -74,8 +84,14 @@ const SettingsSearch: Component<SettingsSearchProps> = (props) => {
   }
 
   return (
-    <div data-component="settings-search" data-open={props.query.length > 0}>
-      <div data-slot="settings-search-box">
+    <div
+      data-component="settings-search"
+      data-open={props.query.length > 0}
+      // Kobalte's tab list runs collection focus handling on the whole rail, and on the first focus entry it moves
+      // focus to the selected tab trigger. The field manages its own focus and keys, so the list must not see it.
+      onFocusIn={(event) => event.stopPropagation()}
+    >
+      <div data-slot="settings-search-box" onPointerDown={onPointerDown}>
         <Icon name="magnifying-glass" size="small" />
         <input
           ref={inputRef}

@@ -116,6 +116,13 @@ export class ScriptTerminalManager {
     return block(target, this.blocked, this.creates.get(target))
   }
 
+  /** Stop the Run and Setup terminals of a removed project. */
+  async closeProject(projectId: string): Promise<void> {
+    const entries = [...this.entries.values()].filter((entry) => entry.projectId === projectId)
+    const results = await Promise.all(entries.map((entry) => this.close(entry.terminalId, true)))
+    if (results.some((result) => !result)) this.deps.log(`Failed to close script terminals of project ${projectId}`)
+  }
+
   async closeDirectory(directory: string): Promise<void> {
     const target = directoryKey(directory)
     const entries = [...this.entries.values()].filter((entry) => directoryKey(entry.cwd) === target)

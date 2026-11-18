@@ -54,6 +54,7 @@ export const MarketplaceListView = (props: Props) => {
     agent: kindLabel(language.t, "agent"),
     skill: kindLabel(language.t, "skill"),
     mcp: kindLabel(language.t, "mcp"),
+    plugin: kindLabel(language.t, "plugin"),
   })
 
   const allKinds = createMemo(() => {
@@ -61,7 +62,7 @@ export const MarketplaceListView = (props: Props) => {
       ...props.items.map((item) => item.kind),
       ...props.records.map((record) => record.kind),
     ])
-    return (["agent", "skill", "mcp"] as const).filter((kind) => available.has(kind))
+    return (["agent", "skill", "mcp", "plugin"] as const).filter((kind) => available.has(kind))
   })
   const allCategories = createMemo(() =>
     Array.from(new Set(props.items.flatMap((item) => (item.category ? [item.category] : [])))).sort(),

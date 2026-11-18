@@ -1,6 +1,7 @@
 import type { SessionPromptInput } from "@opencode/client/effect/api"
 import type { PromptAttachment } from "../../../src/protocol"
 import { fileName } from "../components/chat/prompt-input-utils"
+import type { MentionFile } from "../hooks/context-mention-utils"
 import { convertToMentionPath } from "../utils/path-mentions"
 
 type PromptFile = NonNullable<SessionPromptInput["files"]>[number]
@@ -67,6 +68,15 @@ export function toPromptFiles(items: readonly PromptAttachment[]): PromptFile[] 
     ...(item.description ? { description: item.description } : {}),
     ...(item.source ? { source: { type: "uri" as const, uri: item.source } } : {}),
   }))
+}
+
+/** The files of one send: the composer chips, then what the `@` mentions attach. Undefined when there are none. */
+export function promptFiles(
+  items: readonly PromptAttachment[],
+  mentions: readonly MentionFile[],
+): PromptFile[] | undefined {
+  const files = [...toPromptFiles(items), ...mentions]
+  return files.length ? files : undefined
 }
 
 /** The decoded UTF-8 text of a text `data:` URL, for chip previews. */

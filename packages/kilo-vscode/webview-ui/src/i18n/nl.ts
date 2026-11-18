@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Voltooid (gemeld door het model)",
+  "session.goal.complete": "Voltooid",
   "session.goal.blocked": "Geblokkeerd",
   "session.goal.restart": "Doel opnieuw starten",
   ...anacondaDesktopDict,
@@ -313,6 +313,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
   "ui.permission.noChanges": "Geen wijzigingen.",
   "ui.permission.reject": "Weigeren",
+  "ui.permission.allowAllSites": "Alle sites toestaan",
   "ui.permission.feedbackPlaceholder": "Vertel Kilo wat het anders moet doen",
   "ui.permission.feedbackHint": "Enter om te weigeren, Esc om te annuleren",
   "ui.permission.doomLoop.prompt": "Mogelijke lus gedetecteerd voor het hulpmiddel {{tool}}. Doorgaan met uitvoeren?",
@@ -652,8 +653,6 @@ export const dict = {
 
   "common.retry": "Opnieuw proberen",
   "common.refresh": "Vernieuwen",
-  "common.reload": "Herladen",
-  "common.reloadDescription": "Herlaad configuratie, vaardigheden, agents en opdrachten vanaf schijf",
 
   "profile.title": "Profiel",
   "profile.notLoggedIn": "Niet ingelogd",
@@ -710,9 +709,8 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent Gedrag",
   "settings.autoApprove.title": "Automatisch Goedkeuren",
   "settings.webTools.title": "Webtools",
-  "settings.webTools.description": "Configureer het zoeken op internet.",
+  "settings.webTools.description": "Configureer het zoeken op internet en de browsergereedschappen van de agent.",
   "settings.webTools.webSearch.enable": "Inschakelen voor alle providers",
-  "settings.webTools.browserAutomation": "Browserautomatisering",
   "settings.webTools.webSearch.title": "Zoeken op internet",
   "settings.webTools.webSearch.description": "Maak zoeken op internet beschikbaar voor modellen van alle providers.",
   "settings.checkpoints.title": "Controlepunten",
@@ -876,16 +874,49 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Workflows",
   "settings.agentBehaviour.subtab.skills": "Skills",
 
-  "settings.browser.description":
-    "Configureer ingebouwde browserautomatisering mogelijk gemaakt door Playwright. Kilo kan in je sessies door webpagina's navigeren, ermee werken en schermafbeeldingen maken.",
-  "settings.browser.enable.title": "Browserautomatisering inschakelen",
-  "settings.browser.enable.description":
-    "Schakel de sessiegebonden browser van Agent Manager in voor lokale applicaties en openbare HTTPS-pagina's.",
-  "settings.browser.systemChrome.title": "Gebruik Systeem Chrome",
-  "settings.browser.systemChrome.description":
-    "Gebruik je geïnstalleerde Chrome-browser in plaats van een aparte Chromium-instantie.",
-  "settings.browser.headless.title": "Headless Modus",
-  "settings.browser.headless.description": "Draai in headless modus (geen zichtbaar browservenster).",
+  "settings.browser.backend.title": "Backend",
+  "settings.browser.backend.description": "Welke browser de browsergereedschappen van de agent aansturen.",
+  "settings.browser.backend.playwright": "Meegeleverde browser (Playwright)",
+  "settings.browser.backend.playwright.description":
+    "Een Chromium-profiel van Kilo, gestart bij de eerste browseraanroep.",
+  "settings.browser.backend.extension": "Browserextensie",
+  "settings.browser.backend.extension.description": "Je eigen browser, via de Kilo-browserextensie.",
+  "settings.browser.backend.off": "Uit",
+  "settings.browser.backend.off.description": "Verberg de browsergereedschappen voor agents.",
+  "settings.browser.observation.title": "Observatie",
+  "settings.browser.observation.description": "Hoeveel van de pagina een agent na elke stap ziet.",
+  "settings.browser.observation.full": "Volledige momentopname",
+  "settings.browser.observation.diff": "Alleen wat veranderde",
+  "settings.browser.observation.none": "Alleen status",
+  "settings.browser.sensitive.title": "Gevoelige stappen toestaan zonder te vragen",
+  "settings.browser.sensitive.description":
+    "Wachtwoorden, betaalformulieren, OAuth-toestemmingspagina's en uploads lopen zonder bevestiging.",
+  "settings.browser.status.title": "Status",
+  "settings.browser.status.playwright": "Playwright",
+  "settings.browser.status.playwright.ready": "Gereed, gebruikt {{browser}}",
+  "settings.browser.status.playwright.missing": "Chromium ontbreekt",
+  "settings.browser.status.playwright.install": "Installeren",
+  "settings.browser.status.playwright.installing": "Installeren…",
+  "settings.browser.status.extension": "Browserextensie",
+  "settings.browser.status.extension.connected": "Verbonden",
+  "settings.browser.status.extension.disconnected": "Niet verbonden",
+  "settings.browser.status.extension.hint":
+    'Installeer de Kilo-browserextensie en zet "Lokale agents toestaan" aan, open dan een pagina die de agent mag gebruiken.',
+  "settings.browser.origins.title": "Sitetoestemmingen",
+  "settings.browser.origins.site": "Site",
+  "settings.browser.origins.read": "Lezen",
+  "settings.browser.origins.act": "Handelen",
+  "settings.browser.origins.navigate": "Navigeren",
+  "settings.browser.origins.allowAll.title": "Alle sites toestaan",
+  "settings.browser.origins.allowAll.description":
+    "Elke site is toegestaan zonder te vragen. Een siteregel geldt nog steeds.",
+  "settings.browser.origins.empty":
+    "Nog geen siteregels. Elke site buiten je machine vraagt voordat een agent hem leest, gebruikt of ernaartoe navigeert.",
+  "settings.browser.origins.add": "Site toevoegen",
+  "settings.browser.origins.placeholder": "https://example.com",
+  "settings.browser.origins.error.empty": "Voer de oorsprong van de site in",
+  "settings.browser.origins.error.invalid": "Gebruik een oorsprong zoals https://example.com",
+  "settings.browser.origins.error.duplicate": "Deze site staat al in de lijst",
 
   "settings.language.description": 'Kies de taal voor de Kilo Code UI. "Auto" gebruikt je VS Code schermtaal.',
   "settings.language.auto": "Auto (VS Code taal)",
@@ -1538,6 +1569,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systeembrowser",
   "settings.experimental.browserLinks.integrated": "Geïntegreerde browser",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
+  "chat.reply.toolbar": "Geselecteerde tekst",
+  "chat.reply.quote": "Citeren",
+  "chat.reply.quoteHint": "Citeer in je antwoord",
+  "chat.reply.commentHint": "Deze passage becommentariëren",
+  "chat.reply.copy": "Kopiëren",
+  "chat.reply.sendHint": "Dit commentaar nu naar Kilo sturen",
+  "chat.reply.commentLater": "Bewaren voor je volgende bericht",
+  "chat.reply.count": "Antwoorden ({{count}})",
+  "chat.reply.sendAll": "Alles sturen",
+  "chat.reply.showInChat": "In chat tonen",
   "browserTab.noSession":
     "Open de browser vanuit een sessie om een lokale applicatie of een openbare HTTPS-pagina te bekijken.",
   "browserTab.disabled":

@@ -283,11 +283,11 @@ function download(url: string, filename: string) {
   link.remove()
 }
 
-function save(url: string, filename: string) {
+function save(url: string, filename: string, sessionID?: string) {
   const event = new CustomEvent("kilo:save-image", {
     bubbles: true,
     cancelable: true,
-    detail: { dataUrl: url, filename },
+    detail: { dataUrl: url, filename, sessionID },
   })
   window.dispatchEvent(event)
   if (event.defaultPrevented) return
@@ -347,6 +347,8 @@ function renderActions(el: HTMLDivElement, pre: HTMLPreElement, source: string, 
   const sourceText = pre.querySelector("code")?.textContent ?? source
   const sourceSvg = () => serialize(svg)
   const sourceSvgUrl = () => dataUrl("image/svg+xml", sourceSvg())
+  // The diagram saves into the folder of the session that renders it, which the transcript marks on its root.
+  const sessionID = el.closest("[data-session-id]")?.getAttribute("data-session-id") || undefined
 
   actions.set(
     el,
@@ -356,8 +358,8 @@ function renderActions(el: HTMLDivElement, pre: HTMLPreElement, source: string, 
       onCopySource: () => copyText(sourceText),
       onCopySvg: () => copySvg(svg),
       onCopyPng: () => copyPng(svg),
-      onDownloadSvg: () => save(sourceSvgUrl(), "mermaid-diagram.svg"),
-      onDownloadPng: async () => save(await png(svg), "mermaid-diagram.png"),
+      onDownloadSvg: () => save(sourceSvgUrl(), "mermaid-diagram.svg", sessionID),
+      onDownloadPng: async () => save(await png(svg), "mermaid-diagram.png", sessionID),
     }),
   )
 }

@@ -13,7 +13,6 @@ interface Props {
   worktree?: WorktreeState
   worktreeId: string
   activeTerminalId?: string
-  sessionId?: string
   baseTarget?: BaseUpdateTarget
   onOpenDiff?: (comment: PRComment) => void
   jump?: number
@@ -97,7 +96,7 @@ export function PRPanelHost(props: Props) {
           })
         }
         onOpenExternal={() => openUrl(vscode.postMessage, props.worktreeId, props.pr.url)}
-        onOpenFile={(file, line) => openFile(vscode.postMessage, props.sessionId, file, line)}
+        onOpenFile={(file, line) => openFile(vscode.postMessage, props.worktreeId, file, line)}
         onOpenDiff={props.onOpenDiff}
         onOpenUrl={(url) => openUrl(vscode.postMessage, props.worktreeId, url)}
       />

@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./autocomplete": "./src/autocomplete.ts",
     "./embedding-catalog": "./src/embedding-catalog.ts",
-    "./testing": "./src/testing.ts"
+    "./testing": "./src/testing.ts",
+    "./browser-policy": "./src/browser-policy.ts"
   },
   "files": [
     "dist"

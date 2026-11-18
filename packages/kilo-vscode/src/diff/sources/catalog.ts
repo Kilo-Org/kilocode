@@ -50,14 +50,38 @@ export class DiffSourceCatalog implements vscode.Disposable {
    */
   private readonly sessionFetch: SessionDiffFetch = async ({ sessionID }) => {
     const client = await this.connection.client()
-    const [oldest, newest] = await Promise.all([
+    const [session, oldest, newest] = await Promise.all([
+      client.session?.get?.({ sessionID }).catch(() => undefined),
       client.message.list({ sessionID, type: "user", order: "asc", limit: 1 }),
       client.message.list({ sessionID, type: "user", order: "desc", limit: 1 }),
     ])
     const from = oldest.data[0]?.id
-    if (from === undefined) return []
-    const last = newest.data[0]?.id
+    const boundary = session?.revert?.messageID
+    if (from === undefined || (boundary && from >= boundary)) return []
+    const last = boundary ? await this.newestBeforeBoundary(client, sessionID, boundary) : newest.data[0]?.id
+    if (last === undefined) return []
     return await client.session.diff({ sessionID, from, to: last === from ? undefined : last })
+  }
+
+  /**
+   * The newest message a staged revert keeps, cached per session and boundary. Finding it pages user messages, and the
+   * session diff is polled, so the same staged revert must not walk the transcript on every tick.
+   */
+  private readonly revertLast = new Map<string, string | undefined>()
+
+  private async newestBeforeBoundary(
+    client: Awaited<ReturnType<AgentManagerConnection["client"]>>,
+    sessionID: string,
+    boundary: string,
+  ): Promise<string | undefined> {
+    const key = `${sessionID}:${boundary}`
+    if (this.revertLast.has(key)) return this.revertLast.get(key)
+    const last = await newestBeforeBoundary(client, sessionID, boundary)
+    // The boundary is gone once the revert commits, which changes the key. A bounded map keeps a long session list
+    // from growing here.
+    if (this.revertLast.size >= 32) this.revertLast.clear()
+    this.revertLast.set(key, last)
+    return last
   }
 
   /** A turn diff starts at the user message that opened the turn. */
@@ -203,4 +227,34 @@ export class DiffSourceCatalog implements vscode.Disposable {
 
 function isDocument(entry: ConfigEntry): entry is Extract<ConfigEntry, { type: "document" }> {
   return entry.type === "document"
+}
+
+async function newestBeforeBoundary(
+  client: Awaited<ReturnType<AgentManagerConnection["client"]>>,
+  sessionID: string,
+  boundary: string,
+): Promise<string | undefined> {
+  // Transcript order decides: a queued prompt keeps the ID of its admission, so it can sort before the prompts that
+  // were delivered ahead of it. The first user message after the boundary in newest-first order is the newest one
+  // the revert keeps.
+  // A boundary that is not a user message falls back to ID order.
+  let cursor: string | undefined
+  let seen = false
+  let older: string | undefined
+  for (let pageIndex = 0; pageIndex < 20; pageIndex++) {
+    const page = await client.message.list({
+      sessionID,
+      type: "user",
+      limit: 200,
+      ...(cursor ? { cursor } : { order: "desc" }),
+    })
+    for (const item of page.data) {
+      if (seen) return item.id
+      if (item.id === boundary) seen = true
+      else if (!older && item.id < boundary) older = item.id
+    }
+    if (!page.cursor.next || (!seen && older)) return seen ? undefined : older
+    cursor = page.cursor.next
+  }
+  return undefined
 }

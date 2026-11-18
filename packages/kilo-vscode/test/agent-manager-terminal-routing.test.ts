@@ -675,4 +675,93 @@ describe("Agent Manager terminal routing", () => {
     ])
     await router.dispose()
   })
+
+  function fleet(gate?: Promise<void>) {
+    const messages: AgentManagerOutMessage[] = []
+    const released: string[] = []
+    const live = new Set<string>()
+    let count = 0
+    let project = "prj-1"
+    const client: FakeClient = {
+      pty: {
+        create: async ({ title }: { title: string }) => {
+          const id = `pty-${++count}`
+          await gate
+          live.add(id)
+          return { data: { id, title } }
+        },
+        remove: async ({ ptyID }: { ptyID: string }) => {
+          live.delete(ptyID)
+        },
+        update: async () => ({ data: {} }),
+        connect: tokens(),
+      },
+    }
+    const router = new TerminalRouter({
+      connection: connection(client),
+      getRoot: () => "/workspace",
+      getWorktreePath: (id) => `/workspace/.kilo/worktrees/${id}`,
+      getProjectId: () => project,
+      log: () => undefined,
+      post: (message) => messages.push(message),
+      closed: (terminalId) => released.push(terminalId),
+      getTerminalFont: () => font,
+    })
+    const create = async (createId: string, worktreeId: string | null, placement: "tab" | "side" = "tab") => {
+      router.handle({ type: "agentManager.terminal.create", createId, placement, worktreeId })
+      await until(() =>
+        messages.some((message) => message.type === "agentManager.terminal.created" && message.terminalId === createId),
+      )
+    }
+    const closed = () =>
+      messages.flatMap((message) => (message.type === "agentManager.terminal.closed" ? [message.terminalId] : []))
+    return { router, live, released, messages, create, closed, project: (id: string) => (project = id) }
+  }
+
+  it("closes a terminal whose create was still in flight when its project was removed", async () => {
+    const gate = Promise.withResolvers<void>()
+    const test = fleet(gate.promise)
+    test.router.handle({ type: "agentManager.terminal.create", createId: "late", placement: "tab", worktreeId: null })
+    await wait()
+
+    await test.router.closeProject("prj-1")
+    gate.resolve()
+    await until(() => test.router["creates"].size === 0)
+
+    expect(test.live.size).toBe(0)
+    expect(test.messages.some((message) => message.type === "agentManager.terminal.created")).toBe(false)
+    // The webview created an optimistic tab for this request and needs the answer to drop it again.
+    expect(test.messages.at(-1)).toEqual({ type: "agentManager.terminal.cancelled", createId: "late" })
+    await test.router.dispose()
+  })
+
+  it("drops the tabs of every terminal in a deleted worktree directory", async () => {
+    const test = fleet()
+    await test.create("tab", "wt-1")
+    await test.create("side", "wt-1", "side")
+    await test.create("other", "wt-2")
+    await test.create("local", null)
+
+    await test.router.closeDirectory("/workspace/.kilo/worktrees/wt-1")
+
+    expect(test.closed().sort()).toEqual(["side", "tab"])
+    expect(test.released.sort()).toEqual(["side", "tab"])
+    expect(test.live.size).toBe(2)
+    await test.router.dispose()
+  })
+
+  it("closes the terminals of a removed project and keeps the others", async () => {
+    const test = fleet()
+    await test.create("one", null)
+    await test.create("two", "wt-1", "side")
+    test.project("prj-2")
+    await test.create("three", null)
+
+    await test.router.closeProject("prj-1")
+
+    expect(test.closed().sort()).toEqual(["one", "two"])
+    expect(test.released.sort()).toEqual(["one", "two"])
+    expect([...test.live]).toEqual(["pty-3"])
+    await test.router.dispose()
+  })
 })

@@ -197,15 +197,9 @@ export const EmbeddingCatalog = Schema.Struct({
 export type EmbeddingCatalog = typeof EmbeddingCatalog.Type
 
 export const FimTarget = Schema.Struct({
-  provider: Schema.Literals(["kilo", "inception", "mistral"]),
+  provider: Schema.Literals(["kilo", "mistral"]),
   model: Schema.String,
   url: Schema.optional(Schema.String),
-})
-
-export const EditTarget = Schema.Struct({
-  provider: Schema.Literals(["kilo", "inception"]),
-  model: Schema.String,
-  url: Schema.String,
 })
 
 // One FIM completion. The server sends the provider request with `stream: true` and returns the collected text, so
@@ -224,31 +218,6 @@ export const FimResult = Schema.Struct({
   cost: Schema.Finite,
   inputTokens: Schema.Finite,
   outputTokens: Schema.Finite,
-})
-
-// One Next Edit request. Clients send structured editor context; the server builds the Mercury prompt.
-export const EditRequest = Schema.Struct({
-  provider: Schema.optional(Schema.String),
-  model: Schema.optional(Schema.String),
-  maxTokens: Schema.optional(Schema.Finite),
-  currentFilePath: Schema.String,
-  currentFileContent: Schema.String,
-  cursorLine: Schema.Finite,
-  cursorCharacter: Schema.Finite,
-  editableRegionStartLine: Schema.Finite,
-  editableRegionEndLine: Schema.Finite,
-  recentlyViewedSnippets: Schema.Array(Schema.Struct({ filepath: Schema.String, content: Schema.String })),
-  editDiffHistory: Schema.Array(Schema.String),
-})
-
-export const EditResult = Schema.Struct({
-  content: Schema.String,
-  usage: Schema.optional(
-    Schema.Struct({
-      prompt_tokens: Schema.optional(Schema.Finite),
-      completion_tokens: Schema.optional(Schema.Finite),
-    }),
-  ),
 })
 
 export const ModelEntry = Schema.Struct({
@@ -353,7 +322,7 @@ export const RouterEvalConfig = Schema.Struct({
 export type RouterEvalConfig = typeof RouterEvalConfig.Type
 
 // The TUI, VS Code, and JetBrains clients use this contract for account/profile, balance, Kilo Pass,
-// BYOK, coding plans, team modes, notifications, the catalog failure reason, media and embedding models, and FIM/edit
+// BYOK, coding plans, team modes, notifications, the catalog failure reason, media and embedding models, and FIM
 // routing.
 export const Definition = Rpc.define({
   id: "kilocode.gateway",
@@ -444,19 +413,9 @@ export const Definition = Rpc.define({
       output: portable(FimTarget),
       errors: Failure,
     },
-    "autocomplete.editTarget": {
-      input: portable(Schema.Struct({ provider: Schema.optional(Schema.String), model: Schema.optional(Schema.String) })),
-      output: portable(EditTarget),
-      errors: Failure,
-    },
     "autocomplete.fim": {
       input: portable(FimRequest),
       output: portable(FimResult),
-      errors: AutocompleteFailure,
-    },
-    "autocomplete.edit": {
-      input: portable(EditRequest),
-      output: portable(EditResult),
       errors: AutocompleteFailure,
     },
     "session.metadata": {

@@ -1,6 +1,11 @@
 import { describe, expect, it, mock } from "bun:test"
+import { execFileSync } from "node:child_process"
+import * as fs from "node:fs"
+import * as os from "node:os"
+import * as path from "node:path"
 import {
   abortSession,
+  continueInWorktree,
   forkSession,
   registerSession,
   type ContinueContext,
@@ -31,6 +36,7 @@ function ctx(overrides: Partial<ContinueContext> = {}): ContinueContext {
     getStateManager: () => undefined,
     registerWorktreeSession: noop,
     notifyReady: noop,
+    notifyForked: noop,
     log,
     ...overrides,
   }
@@ -63,19 +69,24 @@ describe("continue-in-worktree steps", () => {
     if (!forked.ok) expect(forked.error).toBe("Not connected to CLI backend")
   })
 
-  it("forks, moves into the worktree directory, and records the handoff", async () => {
-    const fork = mock(async () => session("forked"))
-    const move = mock(async () => undefined)
-    const synthetic = mock(async () => undefined)
+  it("forks, moves into the worktree directory, and records the handoff after the move settles", async () => {
+    const calls: string[] = []
+    const fork = mock(async () => ({ id: "forked", location: { directory: "/tmp/test" } }))
+    const move = mock(async () => void calls.push("move"))
+    const get = mock(async () => ({ id: "forked", location: { directory: "/tmp/wt" } }))
+    const active = mock(async () => ({}))
+    const synthetic = mock(async () => void calls.push("handoff"))
     const forked = await forkSession(
       ctx({
-        client: async () => ({ session: { fork, move, synthetic } }) as never,
+        client: async () => ({ session: { fork, move, get, active, synthetic } }) as never,
       }),
       "session-1",
       "/tmp/wt",
     )
 
     expect(forked.ok).toBe(true)
+    if (forked.ok) expect(forked.value.location.directory).toBe("/tmp/wt")
+    expect(calls).toEqual(["move", "handoff"])
     expect(fork).toHaveBeenCalledWith({ sessionID: "session-1" })
     expect(move).toHaveBeenCalledWith({ sessionID: "forked", directory: "/tmp/wt" })
     expect(synthetic).toHaveBeenCalledWith(
@@ -98,15 +109,17 @@ describe("continue-in-worktree steps", () => {
     expect(forked).toEqual({ ok: false, error: "Failed to fork session: fork failed" })
   })
 
-  it("registers the forked session in state and notifies readiness", () => {
+  it("registers the forked session in state and hands it to the panel", () => {
     const addSession = mock(() => undefined)
     const register = mock(() => undefined)
     const ready = mock(() => undefined)
+    const forked = mock(() => undefined)
     registerSession(
       ctx({
         getStateManager: () => ({ addSession }) as never,
         registerWorktreeSession: register,
         notifyReady: ready,
+        notifyForked: forked,
       }),
       session("forked"),
       result("/tmp/wt"),
@@ -116,5 +129,74 @@ describe("continue-in-worktree steps", () => {
     expect(addSession).toHaveBeenCalledWith("forked", "wt-1")
     expect(register).toHaveBeenCalledWith("forked", "/tmp/wt")
     expect(ready).toHaveBeenCalledWith("forked", expect.objectContaining({ path: "/tmp/wt" }), "wt-1")
+    expect(forked).toHaveBeenCalledWith(expect.objectContaining({ id: "forked" }), "session-1", "wt-1")
+  })
+
+  it("continues from the directory the session runs in, not the project root", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "am-continue-"))
+    const run = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, stdio: "pipe" })
+    try {
+      run(root, "init", "-q", "-b", "main")
+      fs.writeFileSync(path.join(root, "a.txt"), "a\n")
+      run(root, "add", "-A")
+      run(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init")
+      const worktree = path.join(root, "wt")
+      run(root, "worktree", "add", "-q", "-b", "feature", worktree)
+      const create = mock(async (_opts: { baseBranch: string; baseRef: string }) => null)
+      const progress = mock((_status: string, _detail?: string, _error?: string) => {})
+
+      await continueInWorktree(
+        ctx({
+          root,
+          client: async () =>
+            ({
+              session: {
+                interrupt: async () => undefined,
+                get: async () => ({ id: "session-1", location: { directory: worktree } }),
+              },
+            }) as never,
+          createWorktreeOnDisk: create,
+        }),
+        "session-1",
+        progress,
+      )
+
+      expect(create.mock.calls[0]?.[0].baseBranch).toBe("feature")
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("continues from the project root when the server cannot report the session directory", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "am-continue-"))
+    const run = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, stdio: "pipe" })
+    try {
+      run(root, "init", "-q", "-b", "main")
+      fs.writeFileSync(path.join(root, "a.txt"), "a\n")
+      run(root, "add", "-A")
+      run(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init")
+      run(root, "worktree", "add", "-q", "-b", "feature", path.join(root, "wt"))
+      const create = mock(async (_opts: { baseBranch: string; baseRef: string }) => null)
+
+      await continueInWorktree(
+        ctx({
+          root,
+          client: async () =>
+            ({
+              session: {
+                interrupt: async () => undefined,
+                get: () => Promise.reject(new Error("not found")),
+              },
+            }) as never,
+          createWorktreeOnDisk: create,
+        }),
+        "session-1",
+        () => {},
+      )
+
+      expect(create.mock.calls[0]?.[0].baseBranch).toBe("main")
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
   })
 })

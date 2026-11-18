@@ -33,6 +33,7 @@ export const StatusText: Component<{ text: string }> = (props) => {
   let line: HTMLSpanElement | undefined
   let frame: number | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
+  let size: string | undefined
 
   const settle = () => {
     if (frame !== undefined) cancelAnimationFrame(frame)
@@ -66,7 +67,9 @@ export const StatusText: Component<{ text: string }> = (props) => {
         if (next === label()) return
         // Read the box before the swap: mid-glide this is the animated width, so a
         // status change during a glide continues from where the box actually is.
-        const from = measure(box)
+        // The resize observer keeps that width, so a swap during a burst of new
+        // transcript rows does not force a synchronous layout of all of them.
+        const from = size ?? measure(box)
         const prev = label()
         settle()
         setLabel(next)
@@ -76,18 +79,19 @@ export const StatusText: Component<{ text: string }> = (props) => {
         setOld(prev)
         setLock(true)
         setWidth(from)
-        // Apply the lock now, so the release below transitions from a length.
-        void box?.offsetWidth
-        // The line is `justify-self: start` and never wraps, so it keeps its
-        // natural width inside the locked box and can be measured directly. The
-        // frame also guarantees the swapped DOM is laid out before it is read.
+        // The lock is styled in the next frame, so the release one frame later
+        // transitions from a length. The line is `justify-self: start` and never
+        // wraps, so it keeps its natural width inside the locked box and can be
+        // measured directly once the swapped DOM is laid out.
         frame = requestAnimationFrame(() => {
-          frame = undefined
-          const next = measure(line)
-          setLock(false)
-          setWidth(next)
-          check()
-          timer = setTimeout(settle, SWAP)
+          frame = requestAnimationFrame(() => {
+            frame = undefined
+            const next = measure(line)
+            setLock(false)
+            setWidth(next)
+            check()
+            timer = setTimeout(settle, SWAP)
+          })
         })
       },
       { defer: true },
@@ -102,7 +106,11 @@ export const StatusText: Component<{ text: string }> = (props) => {
   onMount(() => {
     const el = box
     if (!el || typeof ResizeObserver === "undefined") return
-    const observer = new ResizeObserver(check)
+    const observer = new ResizeObserver((entries) => {
+      const width = entries.at(-1)?.borderBoxSize?.[0]?.inlineSize
+      size = width === undefined ? undefined : `${Math.ceil(width)}px`
+      check()
+    })
     observer.observe(el)
     onCleanup(() => observer.disconnect())
     check()

@@ -4,6 +4,7 @@ import { Config } from "@opencode/schema/config"
 import { ConfigCommand } from "@opencode/schema/config/command"
 import { ConfigModel } from "@opencode/schema/config/model"
 import { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
+import { KiloPagesRpc } from "@opencode/schema/kilocode/pages"
 import { optional } from "@opencode/schema/schema"
 import { Effect, Option, Schema } from "effect"
 import type { Interface } from "../../config.js"
@@ -32,6 +33,30 @@ const Retention = Schema.Struct({
 })
 
 const ReasoningDisplay = Schema.Literals(["expanded", "preview", "headline"])
+
+// The browser bridge (SPEC: `browser.backend` / `observation` / `allow_sensitive` / `headless` / `target`). The
+// defaults live in the browser tool plugin, not here: an absent key means "use the documented default", which depends
+// on the environment (headless without a display).
+const Browser = Schema.Struct({
+  backend: Schema.Literals(["playwright", "extension", "off"]).pipe(optional).annotate({
+    description:
+      'Where browser tools run: the bundled Playwright browser ("playwright"), the Kilo browser extension ("extension"), or not at all ("off")',
+  }),
+  observation: Schema.Literals(["full", "diff", "none"]).pipe(optional).annotate({
+    description:
+      'How much page state a browser action reports: the full snapshot, a diff against the previous one (default "diff"), or only the status, URL and title',
+  }),
+  allow_sensitive: Schema.Boolean.pipe(optional).annotate({
+    description:
+      "Let browser steps that need a human (password fields, payment forms, file uploads, downloads) run without asking",
+  }),
+  headless: Schema.Boolean.pipe(optional).annotate({
+    description: "Run the bundled browser without a window (default: headless when no display or over SSH)",
+  }),
+  target: Schema.NullOr(Schema.String).pipe(optional).annotate({
+    description: "Browser or profile id the extension backend drives",
+  }),
+})
 
 export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   session_sync: Schema.Boolean.pipe(optional).annotate({
@@ -74,6 +99,9 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
     description: "Share a board between a main session and its task subagents, including nested subagents",
   }),
   sandbox: Sandbox.pipe(optional).annotate({ description: "Sandbox configuration for agent tools" }),
+  browser: Browser.pipe(optional).annotate({
+    description: "Browser tools: where the browser runs, how much page state a call reports, and the headless choice",
+  }),
   // kilo_port(unattributed:core/v1:a4a32558d64b)
   subagent_model: Schema.NullOr(Schema.String).pipe(optional).annotate({
     description: "Default model for task-tool subagents",
@@ -106,6 +134,7 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
     .annotate({ description: "Configuration for AI-generated commit messages" }),
   // kilo_port(indexing:fe813c19ebaf) kilo_port(indexing:987c9e6c9e85) kilo_port(indexing:854fbb30ce6c)
   indexing: KiloIndexingRpc.Config.pipe(optional),
+  pages: KiloPagesRpc.Config.pipe(optional),
 }) {}
 
 // The recognized top-level keys: the full v2 schema without the derived `workflow_models` (built from model-only
@@ -116,8 +145,11 @@ const decode = Schema.decodeUnknownOption(Info, { errors: "all", onExcessPropert
 const policy = Schema.Struct({ hide_prompt_training_models: Schema.optional(Schema.Boolean) })
 const privacy = Schema.Struct({ privacy_mode: Schema.optional(Schema.Boolean) })
 const sync = Schema.Struct({ session_sync: Schema.optional(Schema.Boolean) })
-const commit = Schema.Struct({ commit_message: Schema.optional(Schema.Struct({ prompt: Schema.optional(Schema.String) })) })
+const commit = Schema.Struct({
+  commit_message: Schema.optional(Schema.Struct({ prompt: Schema.optional(Schema.String) })),
+})
 const indexing = Schema.Struct({ indexing: Schema.optional(KiloIndexingRpc.Config) })
+const pages = Schema.Struct({ pages: Schema.optional(KiloPagesRpc.Config) })
 const sandboxSetting = Schema.Struct({ sandbox: Schema.optional(Sandbox) })
 const decodeModel = Schema.decodeUnknownOption(ConfigModel.Selection)
 
@@ -131,6 +163,10 @@ const settings = {
   reasoning_display: { schema: ReasoningDisplay, expected: 'one of "expanded", "preview", "headline"' },
   shared_agent_board: { schema: Schema.Boolean, expected: "a boolean" },
   sandbox: { schema: Sandbox, expected: "an object with optional enabled, network, writable_paths and allowed_hosts" },
+  browser: {
+    schema: Browser,
+    expected: "an object with optional backend, observation, allow_sensitive, headless and target",
+  },
   subagent_model: { schema: Schema.NullOr(Schema.String), expected: "a model string or null" },
   subagent_variant: { schema: Schema.NullOr(Schema.String), expected: "a variant string or null" },
   subagent_variant_overrides: {
@@ -169,7 +205,8 @@ const skipExcess = new Set(["workflow_models", ...Object.keys(refused)])
 const refusedExperimental = {
   semantic_indexing: "ignored retired experimental.semantic_indexing; use indexing.enabled instead",
   codebase_search: "ignored retired experimental.codebase_search",
-  shared_agent_board: "ignored retired experimental.shared_agent_board; use the top-level shared_agent_board key instead",
+  shared_agent_board:
+    "ignored retired experimental.shared_agent_board; use the top-level shared_agent_board key instead",
 } as const
 
 /** Report the v1 keys this build accepts from neither the canonical nor the Kilo schema. */
@@ -185,7 +222,11 @@ function refusedSettings(input: unknown, report?: (diagnostic: ConfigNormalize.D
 function modelOnly(value: unknown) {
   if (!record(value) || !("model" in value) || Object.keys(value).some((key) => key !== "model" && key !== "variant"))
     return
-  if (value.variant !== undefined && (typeof value.variant !== "string" || !value.variant || value.variant.includes("#"))) return
+  if (
+    value.variant !== undefined &&
+    (typeof value.variant !== "string" || !value.variant || value.variant.includes("#"))
+  )
+    return
   const model =
     typeof value.model === "string" && !value.model.includes("#") && value.variant
       ? `${value.model}#${value.variant}`
@@ -255,12 +296,20 @@ export function parse(
       kind: "invalid",
       message: "ignored invalid indexing; expected the codebase indexing settings object",
     })
+  const pagesField = Schema.decodeUnknownOption(pages)(input)
+  if (Option.isNone(pagesField))
+    report?.({
+      path: ["pages"],
+      kind: "invalid",
+      message: "ignored invalid pages; expected an object with optional enabled and destination (pages or pages-dev)",
+    })
   const sandboxField = Schema.decodeUnknownOption(sandboxSetting)(input)
   if (Option.isNone(sandboxField))
     report?.({
       path: ["sandbox"],
       kind: "invalid",
-      message: "ignored invalid sandbox; expected an object with optional enabled, network, writable_paths and allowed_hosts",
+      message:
+        "ignored invalid sandbox; expected an object with optional enabled, network, writable_paths and allowed_hosts",
     })
   // Managed policy splitting clears optional fields with undefined; the encoded schema requires omitted keys.
   return Option.getOrUndefined(
@@ -273,7 +322,9 @@ export function parse(
           ...Option.getOrElse(message, () => ({})),
           ...Option.getOrElse(synchronization, () => ({})),
           ...Option.getOrElse(indexingField, () => ({})),
+          ...Option.getOrElse(pagesField, () => ({})),
           ...Option.getOrElse(sandboxField, () => ({})),
+          ...compactionSettings(input, normalized, report),
           ...displaySettings(input, report),
           ...decodedSettings,
           workflow_models: models && Object.keys(models).length ? models : undefined,
@@ -281,6 +332,35 @@ export function parse(
       ),
     ),
   )
+}
+
+/**
+ * A v1 `compaction.threshold_percent` becomes the v2 `buffer`: the share of the window kept free before automatic
+ * compaction. An explicit v2 `buffer` (or its `reserved` alias, which normalization folds into `buffer`) wins, because
+ * it is the later spelling of the same setting.
+ */
+function compactionSettings(
+  input: unknown,
+  normalized: Readonly<Record<string, unknown>>,
+  report?: (diagnostic: ConfigNormalize.Diagnostic) => void,
+) {
+  if (!record(input) || !record(input.compaction)) return {}
+  if (!("threshold_percent" in input.compaction)) return {}
+  const native = record(normalized.compaction) ? normalized.compaction : {}
+  if (native.buffer !== undefined) return {}
+  const percent = input.compaction.threshold_percent
+  if (percent === null) return {}
+  if (typeof percent !== "number" || !Number.isFinite(percent) || percent <= 0 || percent > 100) {
+    report?.({
+      path: ["compaction", "threshold_percent"],
+      kind: "invalid",
+      message: "ignored invalid compaction.threshold_percent; expected a percentage from 1 to 100",
+    })
+    return {}
+  }
+  const reserved = 100 - percent
+  // The buffer percentage accepts 1 to 99, so a fractional limit above 99 keeps the smallest valid reserve instead.
+  return { compaction: { ...native, buffer: reserved === 0 ? 0 : reserved < 1 ? "1%" : `${reserved}%` } }
 }
 
 /** The display layouts, ignoring an invalid value with a diagnostic instead of failing the whole document. */
@@ -292,7 +372,11 @@ function displaySettings(input: unknown, report?: (diagnostic: ConfigNormalize.D
       if (input[key] === undefined) return []
       const value = Option.getOrUndefined(decodeLayout(input[key]))
       if (value === undefined)
-        report?.({ path: [key], kind: "invalid", message: `ignored invalid ${key}; expected "expanded" or "collapsed"` })
+        report?.({
+          path: [key],
+          kind: "invalid",
+          message: `ignored invalid ${key}; expected "expanded" or "collapsed"`,
+        })
       return value === undefined ? [] : [[key, value]]
     }),
   )
@@ -302,11 +386,15 @@ function workflowModels(input: Record<string, unknown>) {
   const legacy = record(input.command) ? input.command : {}
   const native = record(input.commands) ? input.commands : {}
   const names = new Set([...Object.keys(legacy), ...Object.keys(native)])
-  return Object.fromEntries([...names].flatMap((name) => {
-    const command = native[name]
-    const model = modelOnly(command) ?? (record(command) && typeof command.template === "string" ? undefined : modelOnly(legacy[name]))
-    return model ? [[name, model]] : []
-  }))
+  return Object.fromEntries(
+    [...names].flatMap((name) => {
+      const command = native[name]
+      const model =
+        modelOnly(command) ??
+        (record(command) && typeof command.template === "string" ? undefined : modelOnly(legacy[name]))
+      return model ? [[name, model]] : []
+    }),
+  )
 }
 
 /** Apply scoped model-only entries to the winning discovered definitions, without copying their templates. */
@@ -346,7 +434,9 @@ export function fromEntries(entries: readonly Config.Entry[]) {
  * turn off a `true` elsewhere (a global `true` stays on under a project `false`), so disabling clears every `true`.
  */
 export function privacyMode(entries: readonly Config.Entry[]) {
-  return entries.some((entry) => entry.type === "document" && entry.info instanceof Info && entry.info.privacy_mode === true)
+  return entries.some(
+    (entry) => entry.type === "document" && entry.info instanceof Info && entry.info.privacy_mode === true,
+  )
 }
 
 /** The custom commit message prompt of the effective entries: the last document that sets one wins, and empty means none. */
@@ -377,6 +467,39 @@ export function indexingConfig(entries: readonly Config.Entry[]) {
       }),
     ) as KiloIndexingRpc.Config
   }, undefined)
+}
+
+/** The `pages` key of the effective entries: for each field the last document that sets it wins. */
+export function pagesConfig(entries: readonly Config.Entry[]) {
+  return entries.reduce<{ enabled?: boolean; destination?: KiloPagesRpc.Destination }>((value, entry) => {
+    if (entry.type !== "document" || !(entry.info instanceof Info) || !entry.info.pages) return value
+    return {
+      enabled: entry.info.pages.enabled ?? value.enabled,
+      destination: entry.info.pages.destination ?? value.destination,
+    }
+  }, {})
+}
+
+/** The browser settings the tool plugin resolves; the schema stays the single definition of the keys. */
+export type BrowserConfig = Schema.Schema.Type<typeof Browser>
+
+/**
+ * The `browser` key of the effective entries: each field comes from the last document that sets it, so a project
+ * that only changes `observation` keeps the global `backend`.
+ */
+export function browserConfig(entries: readonly Config.Entry[]): BrowserConfig {
+  return entries.reduce<BrowserConfig>((value, entry) => {
+    if (entry.type !== "document" || !(entry.info instanceof Info) || !entry.info.browser) return value
+    const next = entry.info.browser
+    // `null` is a value for `target`, so an unset field is the only one that defers to an earlier document.
+    return {
+      backend: next.backend !== undefined ? next.backend : value.backend,
+      observation: next.observation !== undefined ? next.observation : value.observation,
+      allow_sensitive: next.allow_sensitive !== undefined ? next.allow_sensitive : value.allow_sensitive,
+      headless: next.headless !== undefined ? next.headless : value.headless,
+      target: next.target !== undefined ? next.target : value.target,
+    }
+  }, {})
 }
 
 export const get = (config: Interface) => config.entries().pipe(Effect.map(fromEntries))

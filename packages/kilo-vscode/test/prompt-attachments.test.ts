@@ -7,6 +7,7 @@ import {
   imageAttachment,
   mergeAttachments,
   pasteDrafts,
+  promptFiles,
   toPromptFiles,
 } from "../webview-ui/src/v2/prompt-attachments"
 
@@ -166,6 +167,22 @@ describe("toPromptFiles", () => {
     expect(file).toEqual({ uri: "data:image/png;base64,AA", name: "a.png" })
     expect(file?.source).toBeUndefined()
     expect(file?.description).toBeUndefined()
+  })
+})
+
+describe("promptFiles", () => {
+  it("sends the chips first, then the files the @ mentions attach", () => {
+    const chip = imageAttachment({ id: "1", filename: "a.png", mime: "image/png", dataUrl: "data:image/png;base64,AA" })
+    const mention = {
+      uri: "file:///work/app/src/a.ts",
+      name: "src/a.ts",
+      mention: { text: "@src/a.ts", start: 4, end: 13 },
+    }
+    expect(promptFiles([chip], [mention])).toEqual([{ uri: "data:image/png;base64,AA", name: "a.png" }, mention])
+  })
+
+  it("is undefined when there is nothing to attach", () => {
+    expect(promptFiles([], [])).toBeUndefined()
   })
 })
 

@@ -10,6 +10,7 @@
 import { Component, For, Show, createMemo, createEffect, createSignal, on, onCleanup } from "solid-js"
 import { Portal } from "solid-js/web"
 import { useV2 } from "../../v2/client"
+import { visibleMessages } from "../../v2/revert"
 import { timelineBars } from "../../utils/timeline/bars"
 import { geometry, hit, navigate } from "../../utils/timeline/geometry"
 import { dispatchTimelineHighlight, same, type TimelineHighlight } from "../../utils/timeline/highlight"
@@ -31,7 +32,8 @@ export const TaskTimeline: Component<TaskTimelineProps> = (props) => {
   const [active, setActive] = createSignal(-1)
   const [tip, setTip] = createSignal<{ text: string; x: number; y: number }>()
 
-  const messages = () => v2.data.session.message.list(props.sessionID)
+  const messages = () =>
+    visibleMessages(v2.data.session.message.list(props.sessionID), v2.data.session.get(props.sessionID)?.revert)
   const parts = createMemo(() => timelineParts(messages()))
   const bars = createMemo(() => timelineBars(parts()))
   const layout = createMemo(() => geometry(bars(), MAX_HEIGHT))

@@ -16,7 +16,6 @@ type Call = {
 const calls: Call[] = []
 
 let fimReply: Reply = { status: 200, body: { output: { text: "hello", cost: 0.1, inputTokens: 1, outputTokens: 2 } } }
-let editReply: Reply = { status: 200, body: { output: { content: "edited" } } }
 let balanceReply: Reply = { status: 200, body: { output: { balance: 12.5 } } }
 
 const json = (body: unknown, status = 200) =>
@@ -37,7 +36,6 @@ const server = Bun.serve({
       return new Response("", { status: 200, headers: { "content-type": "text/event-stream" } })
     }
     if (url.pathname === "/api/rpc/kilocode.gateway/autocomplete.fim") return json(fimReply.body, fimReply.status)
-    if (url.pathname === "/api/rpc/kilocode.gateway/autocomplete.edit") return json(editReply.body, editReply.status)
     if (url.pathname === "/api/rpc/kilocode.gateway/balance") return json(balanceReply.body, balanceReply.status)
     return json({ _tag: "RpcError", type: "failed", message: "unknown route" }, 400)
   },
@@ -60,7 +58,6 @@ describe("createConnection", () => {
   beforeEach(() => {
     calls.length = 0
     fimReply = { status: 200, body: { output: { text: "hello", cost: 0.1, inputTokens: 1, outputTokens: 2 } } }
-    editReply = { status: 200, body: { output: { content: "edited" } } }
     balanceReply = { status: 200, body: { output: { balance: 12.5 } } }
   })
 
@@ -84,23 +81,6 @@ describe("createConnection", () => {
     const result = await connection.fim(request)
 
     expect(result).toEqual({ text: "hello", cost: 0.1, inputTokens: 1, outputTokens: 2 })
-  })
-
-  it("returns the edit result on success", async () => {
-    const connection = create()
-
-    const result = await connection.edit({
-      currentFilePath: "/repo/file.ts",
-      currentFileContent: "",
-      cursorLine: 0,
-      cursorCharacter: 0,
-      editableRegionStartLine: 0,
-      editableRegionEndLine: 0,
-      recentlyViewedSnippets: [],
-      editDiffHistory: [],
-    })
-
-    expect(result).toEqual({ content: "edited", usage: undefined })
   })
 
   it("maps a `request` RPC error to AutocompleteRequestError with the status and message", async () => {

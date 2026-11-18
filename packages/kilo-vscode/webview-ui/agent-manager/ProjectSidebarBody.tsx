@@ -1,5 +1,6 @@
 import { For, Show, createMemo, createSignal, onCleanup, type Component } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { CountUp, createCountStart } from "@kilocode/kilo-ui/count-up"
 import {
   DragDropProvider,
   DragDropSensors,
@@ -30,7 +31,14 @@ import { baseUpdateTarget } from "./base-update-target"
 import { useBaseUpdate } from "./update-from-base"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
-import { buildTopLevelItems, sortWorktrees, isGroupEnd, isGroupStart, isGrouped } from "./section-helpers"
+import {
+  buildTopLevelItems,
+  sortWorktrees,
+  isGroupEnd,
+  isGroupStart,
+  isGrouped,
+  type TopLevelItem,
+} from "./section-helpers"
 import type { WorktreeDelete } from "./worktree-delete"
 import { outsideSidebar, sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
@@ -99,7 +107,17 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   // Membership keeps pinned members: pinning does not remove a worktree from its section.
   const memberCount = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId).length
   const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId && !wt.pinned))
-  const top = createMemo(() => buildTopLevelItems(sections(), ungrouped(), sorted(), order()))
+  // <For> keys rows by reference: a fresh wrapper per recompute would remount every row, restarting its spinner.
+  const wrappers = new WeakMap<object, TopLevelItem>()
+  const top = createMemo(() =>
+    buildTopLevelItems(sections(), ungrouped(), sorted(), order()).map((item) => {
+      const owner = item.kind === "worktree" ? item.wt : item.section
+      const found = wrappers.get(owner)
+      if (found) return found
+      wrappers.set(owner, item)
+      return item
+    }),
+  )
   const sidebarOrder = createMemo(() => projectSidebarOrder(top(), sorted(), sections(), members))
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
@@ -116,6 +134,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
       />
     ))
   const localState = () => props.activityFor(null)
+  const localStart = createCountStart(() => props.local !== undefined)
 
   const row = (id: string) =>
     projectWorktreeRow({
@@ -251,7 +270,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     if (wt.pinned) post({ type: "agentManager.setWorktreePinned", worktreeId: wt.id, pinned: false })
   }
 
-  const renderWorktree = (worktree: WorktreeState, idx: () => number, list: WorktreeState[]) => {
+  const renderWorktree = (worktree: WorktreeState, idx: () => number, list: () => WorktreeState[]) => {
     const label = () => firstOrderedTitle(sessions(worktree.id), store.tabOrder()[worktree.id], worktree.branch)
     const subtitle = () => (label() !== worktree.branch ? worktree.branch : undefined)
     const values = () => row(worktree.id)
@@ -284,8 +303,8 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           navHint={values().navHint}
           sessions={store.managedSessions().filter((session) => session.worktreeId === worktree.id).length}
           grouped={isGrouped(worktree)}
-          groupStart={isGroupStart(worktree, idx(), list)}
-          groupEnd={isGroupEnd(worktree, idx(), list)}
+          groupStart={isGroupStart(worktree, idx(), list())}
+          groupEnd={isGroupEnd(worktree, idx(), list())}
           groupSize={worktree.groupId ? sorted().filter((item) => item.groupId === worktree.groupId).length : 0}
           renaming={renaming() === worktree.id}
           renameValue={name()}
@@ -379,16 +398,24 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           >
             <div class="am-worktree-stats">
               <Show when={props.local!.behind}>
-                <span class="am-worktree-behind">↓{props.local!.behind}</span>
+                <span class="am-worktree-behind">
+                  ↓<CountUp value={props.local!.behind} from={localStart()} />
+                </span>
               </Show>
               <Show when={props.local!.ahead}>
-                <span class="am-worktree-commits">↑{props.local!.ahead}</span>
+                <span class="am-worktree-commits">
+                  ↑<CountUp value={props.local!.ahead} from={localStart()} />
+                </span>
               </Show>
               <Show when={props.local!.additions}>
-                <span class="am-stat-additions">+{props.local!.additions}</span>
+                <span class="am-stat-additions">
+                  +<CountUp value={props.local!.additions} from={localStart()} />
+                </span>
               </Show>
               <Show when={props.local!.deletions}>
-                <span class="am-stat-deletions">−{props.local!.deletions}</span>
+                <span class="am-stat-deletions">
+                  −<CountUp value={props.local!.deletions} from={localStart()} />
+                </span>
               </Show>
             </div>
           </Show>
@@ -426,17 +453,16 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
                       </span>
                       <span class="am-pinned-label">{props.t("agentManager.worktree.pinned")}</span>
                     </div>
-                    <For each={pinned()}>{(wt, idx) => renderWorktree(wt, idx, pinned())}</For>
+                    <For each={pinned()}>{(wt, idx) => renderWorktree(wt, idx, pinned)}</For>
                   </div>
                 </Show>
                 <For each={top()}>
                   {(item, index) => {
                     if (item.kind === "worktree") {
-                      const list = ungrouped()
-                      return renderWorktree(item.wt, () => list.indexOf(item.wt), list)
+                      return renderWorktree(item.wt, () => ungrouped().indexOf(item.wt), ungrouped)
                     }
                     const section = item.section
-                    const list = members(section.id)
+                    const list = () => members(section.id)
                     return (
                       <SectionHeader
                         section={section}
@@ -461,7 +487,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
                       >
                         <Show when={!section.collapsed}>
                           <div class="am-section-group-body">
-                            <For each={list}>{(wt, wtIndex) => renderWorktree(wt, wtIndex, list)}</For>
+                            <For each={list()}>{(wt, wtIndex) => renderWorktree(wt, wtIndex, list)}</For>
                           </div>
                         </Show>
                       </SectionHeader>

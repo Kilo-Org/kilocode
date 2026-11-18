@@ -114,6 +114,7 @@ const KEY_TAB_OVERRIDES: Record<string, string> = {
 /** Agent Behaviour rows rendered without opening a separate editor or dialog. */
 const AGENT_BEHAVIOUR_SUBTABS: Record<string, string> = {
   "settings.agentBehaviour.defaultAgent.title": "agents",
+  "settings.agentBehaviour.sendWhileRunning.title": "agents",
   "settings.agentBehaviour.sharedAgentBoard.title": "agents",
   "settings.agentBehaviour.claudeCompat.title": "rules",
   "settings.agentBehaviour.mcp.timeout.startup.title": "mcpServers",
@@ -134,12 +135,10 @@ const EXCLUDED_KEYS = new Set([
   "settings.experimental.codeMode.title",
   "settings.experimental.continueOnDeny.title",
   "settings.experimental.globIncludeIgnored.title",
-  "settings.experimental.imageGeneration.title",
   "settings.experimental.imageGenerationModel.title",
   "settings.experimental.mcpTimeout.title",
   "settings.experimental.remote.title",
   "settings.context.compaction.title",
-  "settings.context.compactionLimit.title",
   "settings.context.prune.title",
   "settings.context.memory.title",
   "settings.context.memory.autoSave.title",
@@ -280,9 +279,4 @@ export function createHighlighter(query: string): Highlighter {
       .split(pattern)
       .filter((part) => part.length > 0)
       .map((part) => ({ text: part, match: tokens.includes(part.toLowerCase()) }))
-}
-
-/** Split `text` into plain and query-matched segments for highlighting. */
-export function highlightSegments(text: string, query: string): SearchSegment[] {
-  return createHighlighter(query)(text)
 }

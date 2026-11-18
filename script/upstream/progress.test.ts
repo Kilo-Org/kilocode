@@ -3,8 +3,10 @@ import {
   apiLiterals,
   areaOf,
   canon,
+  cellRecord,
   classify,
   compare,
+  countedFeatures,
   featureOf,
   grid,
   history,
@@ -17,6 +19,7 @@ import {
   placement,
   proofByCell,
   scanImports,
+  snapshotSummary,
   squarify,
 } from "./progress"
 
@@ -292,14 +295,110 @@ test("placement counts new marked lines in shared files by rung and new kilo_por
     ["packages/core/src/added.ts", "// kilocode_change - new file\nexport const added = 1\n"],
   ])
   const place = placement(diff, contents, rungs)
-  expect(place).toEqual({ marked: { plugin: 0, host: 0, seam: 4, patch: 3 }, ports: 2 })
+  expect(place).toEqual({ marked: { plugin: 0, host: 0, seam: 4, patch: 3 }, ports: 2, owned: 3 })
 
   const summary = (coreImports: number) => ({ done: 0, total: 1, percent: 0, dropped: 0, coreImports, sharedPatches: { seam: 13, patch: 1 } })
   const head = { summary: summary(2), coreImports: ["@opencode/core/bus", "@opencode/core/variant"] }
   const out = compare({ summary: summary(1), coreImports: ["@opencode/core/variant"] }, head, place)
   expect(out).toContain("**Placement:** 7 new marked lines in shared files (4 seam, 3 patch), 2 new `kilo_port` annotations, 1 new core-internal import (`@opencode/core/bus`).")
   expect(out).toContain("**Ratchets:** 2 core-internal imports (base 1); shared patches by rung 13 seam, 1 patch (base 13 seam, 1 patch).")
-  expect(compare({}, head, { marked: { plugin: 0, host: 0, seam: 0, patch: 0 }, ports: 0 })).toContain(
+  expect(compare({}, head, { marked: { plugin: 0, host: 0, seam: 0, patch: 0 }, ports: 0, owned: 0 })).toContain(
     "**Placement:** 0 new marked lines in shared files, 0 new `kilo_port` annotations, core-internal imports not compared (the base map has no import list).",
   )
+})
+
+test("compare says when Kilo-owned code moved but no cell changed", () => {
+  const quiet = compare({}, { summary: { done: 0, total: 1, percent: 0, dropped: 0 } }, { marked: { plugin: 0, host: 0, seam: 0, patch: 0 }, ports: 0, owned: 42 })
+  expect(quiet).toContain("No cell closed, although the PR adds 42 lines in Kilo-owned files.")
+  expect(quiet).toContain("If it ports v1 behavior, add a done-proof or a disposition for each cell; v2-only work needs none.")
+  expect(compare({}, { summary: { done: 0, total: 1, percent: 0, dropped: 0 } }, { marked: { plugin: 0, host: 0, seam: 0, patch: 0 }, ports: 0, owned: 0 })).toContain(
+    "No change to the progress map.",
+  )
+  const proved = compare({ summary: { done: 0, total: 1, percent: 0, dropped: 0 }, done: [] }, { summary: { done: 1, total: 1, percent: 100, dropped: 0 }, done: ["module:a"] }, { marked: { plugin: 0, host: 0, seam: 0, patch: 0 }, ports: 1, owned: 42 })
+  expect(proved).toContain("1 cells closed")
+  expect(proved).not.toContain("No cell closed")
+})
+
+test("compare and history count only non-excluded feature boxes and ignore legacy unattributed entries", async () => {
+  const kinds = (moduleDone: number, moduleTotal: number, patchDone = 0, patchTotal = 0) => ({
+    module: { done: moduleDone, total: moduleTotal },
+    api: { done: 0, total: 0 },
+    patch: { done: patchDone, total: patchTotal },
+    test: { done: 0, total: 0 },
+  })
+  const legacyBase = {
+    summary: { done: 68, total: 1100, percent: 6.2, dropped: 5 },
+    features: [
+      { feature: "gateway", done: 10, total: 20, dropped: 2, kinds: kinds(10, 20) },
+      { feature: "console", done: 0, total: 80, dropped: 0, kinds: kinds(0, 80) },
+      { feature: "docs", done: 0, total: 500, dropped: 0, kinds: kinds(0, 500), excluded: "Docs site" },
+      { feature: "unattributed:session", done: 58, total: 500, dropped: 3, kinds: kinds(0, 0, 58, 500) },
+    ],
+    done: ["module:gateway/a.ts", "patch:unattributed:session:0123456789ab"],
+    dropped: ["patch:unattributed:session:ffffffffffff"],
+  }
+  const head = {
+    summary: { done: 15, total: 20, percent: 75, dropped: 2 },
+    features: [
+      { feature: "gateway", done: 15, total: 20, dropped: 2, kinds: kinds(15, 20) },
+      { feature: "console", done: 0, total: 80, dropped: 0, kinds: kinds(0, 80), excluded: "Out of scope" },
+      { feature: "docs", done: 0, total: 500, dropped: 0, kinds: kinds(0, 500), excluded: "Docs site" },
+    ],
+    done: ["module:gateway/a.ts", "module:gateway/b.ts"],
+    dropped: ["patch:gateway:0123456789ab", "patch:unattributed:session:ffffffffffff", "patch:unattributed:session:0123456789ab"],
+  }
+
+  expect(countedFeatures(legacyBase, { console: "Out of scope" }).map((f) => f.feature)).toEqual(["gateway"])
+  expect(snapshotSummary(legacyBase, { console: "Out of scope" })).toEqual({ done: 10, total: 20, percent: 50, dropped: 2 })
+
+  const delta = compare(legacyBase, head)
+  expect(delta).toContain("10% → 75%")
+  expect(delta).toContain("| console | 0/80 | excluded | -80 modules total |")
+  expect(delta).toContain("| gateway | 10/20 | 15/20 | +5 modules done |")
+  expect(delta).not.toContain("unattributed:")
+  expect(delta).not.toContain("cells reopened")
+  expect(delta).toContain("1 cells dropped")
+  expect(delta).toContain("`patch:gateway:0123456789ab`")
+
+  const points = await history(
+    JSON.stringify(head) + "\n",
+    async (args) => {
+      if (args[0] === "rev-parse") return "resolved"
+      if (args[0] === "log") return "sha1 2026-11-01"
+      return JSON.stringify(legacyBase)
+    },
+    "origin/v2",
+    { console: "Out of scope" },
+  )
+  expect(points).toEqual([{ date: "2026-11-01", done: 10, total: 20, percent: 50 }])
+})
+
+test("a feature excluded between two snapshots does not look like reopened cells", () => {
+  const kinds = () => ({ module: { done: 1, total: 2 }, api: { done: 0, total: 0 }, patch: { done: 0, total: 0 }, test: { done: 0, total: 0 } })
+  const cell = { kind: "module" as const, feature: "console", source: "packages/kilo-console/src/App.tsx" }
+  const cells = [{ id: "module:packages/kilo-console/src/App.tsx", ...cell, v2: "packages/kilo-console/src/App.tsx" }]
+  // The snapshot record keeps the cell even though `console` is excluded, so both snapshots list it.
+  expect(cellRecord(cells).done).toEqual(["module:packages/kilo-console/src/App.tsx"])
+
+  const base = { features: [{ feature: "console", done: 1, total: 2, dropped: 0, kinds: kinds() }], ...cellRecord(cells) }
+  const head = { features: [{ feature: "console", done: 1, total: 2, dropped: 0, kinds: kinds(), excluded: "Out of scope" }], ...cellRecord(cells) }
+  const delta = compare(base, head)
+  expect(delta).not.toContain("cells reopened")
+  expect(delta).toContain("| console | 1/2 | excluded | -1 module done, -2 modules total |")
+})
+
+test("the snapshot cell record drops unattributed cells but keeps excluded ones", () => {
+  const record = cellRecord([
+    // an excluded feature keeps its done cell, so it never looks reopened
+    { id: "module:a", kind: "module", feature: "console", source: "a", v2: "a" },
+    { id: "patch:gateway:0123456789ab", kind: "patch", feature: "gateway", source: "b:1", v2: "c.ts:1", rung: 1 },
+    // unattributed hunks belong to no feature, so they stay out of the record and out of `summary`
+    { id: "patch:unattributed:session:ffffffffffff", kind: "patch", feature: "unattributed:session", source: "d:1", state: "dropped" },
+    { id: "patch:unattributed:session:0123456789ab", kind: "patch", feature: "unattributed:session", source: "e:1", v2: "f.ts:1", rung: 1 },
+  ])
+  expect(record).toEqual({
+    done: ["module:a", "patch:gateway:0123456789ab"],
+    dropped: [],
+    landed: { "patch:gateway:0123456789ab": "plugin" },
+  })
 })

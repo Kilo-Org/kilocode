@@ -211,7 +211,9 @@ export function createLocalTabs(): LocalTabsValue {
   )
 
   const activity = (id: string) =>
-    isPendingTab(id) ? "idle" : sessionActivity(v2.data, id, v2.connection.status() === "connected")
+    isPendingTab(id)
+      ? "idle"
+      : sessionActivity(v2.data, id, v2.connection.status() === "connected", v2.scheduled(id))
 
   let timer: ReturnType<typeof setTimeout> | undefined
   const persist = () => {

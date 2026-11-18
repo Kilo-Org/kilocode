@@ -55,6 +55,17 @@ export type {
 
 export type { SessionInfo }
 
+/**
+ * A file the first prompt of a new worktree attaches. An `@` mention keeps its name and span, so the transcript
+ * highlights it.
+ */
+export type InitialFile = {
+  mime: string
+  url: string
+  name?: string
+  mention?: { start: number; end: number; text: string }
+}
+
 export interface ProjectSessionInfo extends SessionInfo {
   worktreeId: string | null
 }
@@ -230,15 +241,6 @@ export interface ModelAllocation {
   variant?: string
 }
 
-export type ContinueInWorktreeStatus =
-  | "capturing"
-  | "creating"
-  | "setup"
-  | "transferring"
-  | "forking"
-  | "done"
-  | "error"
-
 /** Sidebar target a selection message resolves to. */
 export type AgentManagerSidebarTarget =
   | { projectId: string; kind: "local" }
@@ -262,6 +264,8 @@ export interface AgentManagerWorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
   /** Owning project; absent in single-project mode. */
   projectId?: string
+  /** Quick-create request this message belongs to, when it reports one. */
+  requestId?: string
   status: "creating" | "starting" | "ready" | "error"
   message: string
   sessionId?: string
@@ -431,6 +435,12 @@ export interface AgentManagerTerminalErrorMessage {
   message: string
 }
 
+/** A create request whose PTY was closed before it could become a tab, for example because its project was removed. */
+export interface AgentManagerTerminalCancelledMessage {
+  type: "agentManager.terminal.cancelled"
+  createId: string
+}
+
 /** Provider-owned script terminal (Run/Setup). Full snapshots replace only these terminal kinds. */
 export type ScriptTerminalKind = "run" | "setup"
 
@@ -497,6 +507,8 @@ export interface AgentManagerBranchesMessage {
   projectId?: string
   branches: BranchInfo[]
   defaultBranch: string
+  /** Why there are no branches: the folder is not a repository or its repository has no commits. */
+  errorCode?: "not_git_repo" | "no_commits"
 }
 
 /** Import tab result feedback. */
@@ -757,7 +769,7 @@ export interface AgentManagerSendInitialMessage {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
 }
 
 /** Host request for the focused element, so prompts can be routed to the panel. */
@@ -790,6 +802,7 @@ export type AgentManagerExtensionMessage =
   | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
+  | AgentManagerTerminalCancelledMessage
   | AgentManagerScriptTerminalsMessage
   | AgentManagerTerminalSocketOpenedMessage
   | AgentManagerTerminalSocketMessage
@@ -845,6 +858,8 @@ export interface CreateWorktreeRequest {
   baseBranch?: string
   branchName?: string
   variant?: string
+  /** Quick-create marker echoed on setup messages so a blocker can replace the transient overlay. */
+  requestId?: string
 }
 
 /** Delete a worktree and dissociate its sessions. */
@@ -905,9 +920,18 @@ export interface OpenSessionLocallyRequest {
   sessionId: string
 }
 
+/** Open a session in the context of the directory the server runs it in. */
+export interface OpenSessionRequest {
+  type: "agentManager.openSession"
+  projectId?: string
+  sessionId: string
+}
+
 /** Add a new session to an existing worktree. */
 export interface AddSessionToWorktreeRequest {
   type: "agentManager.addSessionToWorktree"
+  /** The project that owns the worktree; the active project when omitted. */
+  projectId?: string
   worktreeId: string
   sessionId?: string
 }
@@ -1173,7 +1197,7 @@ export interface CreateMultiVersionRequest {
   providerID?: string
   modelID?: string
   agent?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
   baseBranch?: string
   branchName?: string
   /** Per-version model allocations for multi-model comparison mode. */
@@ -1465,6 +1489,7 @@ export type AgentManagerWebviewMessage =
   | PromoteSessionRequest
   | OpenLocallyRequest
   | OpenSessionLocallyRequest
+  | OpenSessionRequest
   | AddSessionToWorktreeRequest
   | ForkSessionRequest
   | CloseSessionRequest

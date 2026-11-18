@@ -4,9 +4,6 @@ import os from "node:os"
 import path from "node:path"
 import { KiloLogo } from "../src/branding/logo-art"
 
-// TODO(rebrand, #15324): Before merging a rebrand PR, refresh its verification evidence with the current
-// head/base, generated progress totals and test results. Recheck CI, including the automated reviewer;
-// pending/running check status belongs in the PR, not in a permanent runtime-bug claim.
 const repo = path.resolve(import.meta.dir, "../../..")
 const binary = process.argv[2] && path.resolve(process.argv[2])
 const unicode = process.env.KILO_UNICODE_LOGO ?? "0"

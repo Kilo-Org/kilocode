@@ -22,7 +22,7 @@ export function createPanel(input: {
   server: Manager
   directory: string
   trackCostSession?: (sessionID: string) => void
-  saveImageDirectory?: () => string | undefined
+  saveImageDirectory?: (sessionID?: string) => string | undefined | Promise<string | undefined>
 }) {
   return {
     /** A new panel in the active editor column. */
@@ -87,6 +87,16 @@ export function createPanel(input: {
         }
         if (item.type === "agentManagerFocusChanged") {
           sideTerminal(item.target === "sideTerminal")
+          return true
+        }
+        // `@terminal` reads the panel's own terminal tabs in the webview. It asks here only when the selection has
+        // none, and the panel has no VS Code terminal to fall back to.
+        if (message.type === "requestTerminalContext") {
+          void panel.webview.postMessage({
+            type: "terminalContextError",
+            requestId: message.requestId,
+            error: "No terminal is associated with this session",
+          } satisfies ToWebview)
           return true
         }
         // Focus can return straight to the side terminal, so the panel reports its current focus target again.

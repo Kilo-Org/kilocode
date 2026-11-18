@@ -1,15 +1,8 @@
 import type { ResponseMetaData } from "./types"
 import type { AutocompleteConnection } from "./connection"
-import { getAutocompleteModel, getAutocompleteModelById } from "../../shared/autocomplete-models"
+import { getAutocompleteModelById } from "../../shared/autocomplete-models"
 
 const FIM_MAX_TOKENS = 256
-
-/** The FIM model of a selection. A Next Edit model falls back to its FIM sibling where Next Edit does not apply. */
-export function fimModel(provider?: string, model?: string) {
-  const info = getAutocompleteModel(provider, model)
-  if (info.kind !== "edit") return info
-  return getAutocompleteModelById(info.fimModelID)
-}
 
 /**
  * One FIM completion through the server. The server collects the provider stream, so `onChunk` receives the whole

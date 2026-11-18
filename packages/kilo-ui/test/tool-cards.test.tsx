@@ -161,6 +161,7 @@ test("patch card renders a single file with its diff", async () => {
 
   expect(card.host.querySelector('[data-component="apply-patch-tool"]')).not.toBeNull()
   expect(card.host.querySelector('[data-slot="message-part-title-text"]')?.textContent).toBe("Patch")
+  expect(card.host.querySelector('[data-slot="apply-patch-directory"]')?.textContent).toBe("\u2066src/\u2069")
   expect(card.host.querySelector('[data-slot="apply-patch-filename"]')?.textContent).toBe("math.ts")
   expect(card.host.querySelector('[data-component="apply-patch-file-diff"] [data-component="file"]')).not.toBeNull()
 })
@@ -168,7 +169,16 @@ test("patch card renders a single file with its diff", async () => {
 test("patch card lists every file in a multi-file patch", async () => {
   const card = mountTool("patch", {
     input: { patchText: patchedFiles.map((file) => file.patch).join("") },
-    metadata: { files: patchedFiles },
+    metadata: {
+      files: [
+        patchedFiles[0],
+        {
+          ...patchedFiles[1],
+          file: "legacy.ts",
+          patch: "--- a/legacy.ts\n+++ /dev/null\n@@ -1,1 +0,0 @@\n-export const LEGACY = true\n",
+        },
+      ],
+    },
     partID: "patch-multi",
     directory: "/repo",
     forceOpen: true,
@@ -178,8 +188,27 @@ test("patch card lists every file in a multi-file patch", async () => {
 
   const names = [...card.host.querySelectorAll('[data-slot="apply-patch-filename"]')].map((node) => node.textContent)
   expect(names).toEqual(["math.ts", "legacy.ts"])
+  const directories = [...card.host.querySelectorAll('[data-slot="apply-patch-directory"]')].map(
+    (node) => node.textContent,
+  )
+  expect(directories).toEqual(["\u2066src/\u2069"])
   expect(card.host.querySelector('[data-slot="basic-tool-tool-subtitle"]')?.textContent).toContain("2 files")
   expect(card.host.querySelector('[data-slot="apply-patch-change"][data-type="removed"]')).not.toBeNull()
+})
+
+test("patch card shows the directory of a Windows-style path", async () => {
+  const card = mountTool("patch", {
+    input: { patchText: editedFile.patch },
+    metadata: { files: [{ ...editedFile, file: "C:\\repo\\src\\math.ts" }] },
+    partID: "patch-windows",
+    directory: "C:\\repo",
+    forceOpen: true,
+  })
+  mounted.push(card)
+  const directory = await waitFor(() => card.host.querySelector('[data-slot="apply-patch-directory"]'))
+
+  expect(directory.textContent).toBe("\u2066src/\u2069")
+  expect(card.host.querySelector('[data-slot="message-part-directory-inline"]')?.textContent).toBe("src/")
 })
 
 for (const [name, input] of [
@@ -345,6 +374,31 @@ test("a completed write card replaces the provisional counts with the final diff
   expect(counts(card.host)).toEqual({ additions: "+2", deletions: "-0" })
 })
 
+test("an edit card keeps its file expanded when the final diff names the file relatively", async () => {
+  const input = { path: "/repo/src/math.ts", oldString: 'export const VERSION = "1.2.3"', newString: "y" }
+  const [item, setItem] = createSignal<SessionMessageAssistantTool>(
+    liveTool("edit", { status: "running", input, metadata: {} }),
+  )
+  const card = mountRich(() => (
+    <ContentPart item={item()} message={liveMessage} index={0} directory="/repo" forceOpen />
+  ))
+  mounted.push(card)
+  await waitFor(() => card.host.querySelector('[data-component="edit-content"]'))
+
+  setItem(
+    liveTool("edit", {
+      status: "completed",
+      input,
+      content: [{ type: "text", text: "Edited src/math.ts" }],
+      metadata: { files: [editedFile] },
+    }),
+  )
+
+  await waitFor(() => card.host.querySelector('[data-slot="diff-changes-additions"]')?.textContent === "+1")
+  const content = await waitFor(() => card.host.querySelector('[data-component="edit-content"]'))
+  expect(content.closest('[data-slot="accordion-item"]')?.hasAttribute("data-expanded")).toBe(true)
+})
+
 type StreamingTool = Extract<SessionMessageAssistantTool, { state: { status: "streaming" } }>
 
 test("a streaming write card recounts when the tool input grows", async () => {
@@ -361,4 +415,65 @@ test("a streaming write card recounts when the tool input grows", async () => {
   setStore("item", "state", "input", (text) => text + "\\ntwo\\nthree")
 
   await waitFor(() => card.host.querySelector('[data-slot="diff-changes-additions"]')?.textContent === "+3")
+})
+
+test("the shell card titles itself with the model description, not the command", async () => {
+  const card = mountTool("shell", {
+    input: { command: "cd /work/tree && bun test", description: "Runs the unit tests" },
+    partID: "shell-description",
+    output: "ok",
+  })
+  mounted.push(card)
+
+  const summary = await waitFor(() => card.host.querySelector('[data-slot="shell-submessage-value"]'))
+  expect(summary.textContent).toBe("Runs the unit tests")
+})
+
+test("the shell card drops a leading cd prefix when the model gives no description", async () => {
+  const card = mountTool("shell", {
+    input: { command: "cd /work/tree && bun run check", workdir: "/work/tree" },
+    partID: "shell-command",
+    output: "ok",
+  })
+  mounted.push(card)
+
+  const summary = await waitFor(() => card.host.querySelector('[data-slot="shell-submessage-value"]'))
+  expect(summary.textContent).toBe("bun run check")
+})
+
+test("the shell card falls back to the description stored with the result", async () => {
+  const card = mountTool("shell", {
+    input: { command: "cd /work/tree && bun test" },
+    metadata: { description: "Runs the unit tests" },
+    partID: "shell-result-description",
+    output: "ok",
+  })
+  mounted.push(card)
+
+  const summary = await waitFor(() => card.host.querySelector('[data-slot="shell-submessage-value"]'))
+  expect(summary.textContent).toBe("Runs the unit tests")
+})
+
+test("the shell card peels chained cd prefixes", async () => {
+  const card = mountTool("shell", {
+    input: { command: "cd /work/tree && cd packages/core && bun test" },
+    partID: "shell-chained-cd",
+    output: "ok",
+  })
+  mounted.push(card)
+
+  const summary = await waitFor(() => card.host.querySelector('[data-slot="shell-submessage-value"]'))
+  expect(summary.textContent).toBe("bun test")
+})
+
+test("the shell card keeps a title when the first line is only a cd prefix", async () => {
+  const card = mountTool("shell", {
+    input: { command: "cd /work/tree &&\nbun test" },
+    partID: "shell-prefix-only",
+    output: "ok",
+  })
+  mounted.push(card)
+
+  const summary = await waitFor(() => card.host.querySelector('[data-slot="shell-submessage-value"]'))
+  expect(summary.textContent).toBe("cd /work/tree &&")
 })

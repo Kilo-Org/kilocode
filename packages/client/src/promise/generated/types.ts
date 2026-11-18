@@ -122,8 +122,6 @@ export type SessionStructuredError = {
   retryAfterMs?: number
 }
 
-export type SessionGenerateResponse = { data: { text: string } }
-
 export type SessionInterruptResponse = { interrupted: boolean }
 
 export type FormID = string
@@ -464,6 +462,8 @@ export type SessionMessageCompactionRunning = {
 
 export type UsageLimitsBudgetModel = { providerID: ProviderID; modelID: string; name: string; spent?: MoneyUSD }
 
+export type SessionGenerateResponse = { data: { text: string; tokens: TokenUsageInfo; cost: MoneyUSD } }
+
 export type FileSystemEntry = { path: RelativePath; type: "file" | "directory" }
 
 export type SessionRevert = {
@@ -471,6 +471,7 @@ export type SessionRevert = {
   partID?: string
   snapshot?: SnapshotID
   files?: Array<FileDiffInfo>
+  workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
 }
 
 export type GenerateImageOutput2 = { type: "image"; data: PromptBase64; mime: string; name?: string }
@@ -1031,6 +1032,8 @@ export type ReferenceSource = ReferenceLocalSource | ReferenceGitSource
 
 export type WorktreeList = Array<WorktreeDirectory>
 
+export type SessionInboxSelection = { agent?: AgentID; model?: ModelRef }
+
 export type SessionMessageModelSelected = {
   id: SessionMessageID
   metadata?: { [x: string]: JsonValue }
@@ -1117,14 +1120,6 @@ export type GenerateImageResult = {
   native?: GenerateNative
 }
 
-export type SessionInboxUserPayload = {
-  text: string
-  files?: Array<PromptFileAttachment>
-  agents?: Array<PromptAgentAttachment>
-  skills?: Array<PromptSkillAttachment>
-  metadata?: { [x: string]: JsonValue }
-}
-
 export type SessionMessageUser = {
   id: SessionMessageID
   metadata?: { [x: string]: JsonValue }
@@ -1134,14 +1129,6 @@ export type SessionMessageUser = {
   agents?: Array<PromptAgentAttachment>
   skills?: Array<PromptSkillAttachment>
   type: "user"
-}
-
-export type SessionInboxUserPayload1 = {
-  text: string
-  files?: Array<PromptFileAttachment>
-  agents?: Array<PromptAgentAttachment>
-  skills?: Array<PromptSkillAttachment>
-  metadata?: { [x: string]: any }
 }
 
 export type SessionMessageToolStateCompleted = {
@@ -1659,7 +1646,7 @@ export type SessionUsageRecorded = {
   type: "session.usage.recorded"
   durable: { aggregateID: string; seq: EventSeq; version: 1 }
   location?: LocationRef
-  data: { sessionID: SessionID; source: "title" | "compaction"; cost: MoneyUSD; tokens: TokenUsageInfo }
+  data: { sessionID: SessionID; source: "title" | "compaction" | "generate"; cost: MoneyUSD; tokens: TokenUsageInfo }
 }
 
 export type LocationShutdown = {
@@ -1686,7 +1673,7 @@ export type CredentialUpdated = {
   metadata?: { [x: string]: any }
   type: "credential.updated"
   location?: LocationRef
-  data: {}
+  data: { integrationID: IntegrationID; credentialID: CredentialID }
 }
 
 export type CredentialSwitched = {
@@ -2259,6 +2246,24 @@ export type ReferenceInfo = {
   source: ReferenceSource
 }
 
+export type SessionInboxUserPayload = {
+  text: string
+  files?: Array<PromptFileAttachment>
+  agents?: Array<PromptAgentAttachment>
+  skills?: Array<PromptSkillAttachment>
+  metadata?: { [x: string]: JsonValue }
+  selection?: SessionInboxSelection
+}
+
+export type SessionInboxUserPayload1 = {
+  text: string
+  files?: Array<PromptFileAttachment>
+  agents?: Array<PromptAgentAttachment>
+  skills?: Array<PromptSkillAttachment>
+  metadata?: { [x: string]: any }
+  selection?: SessionInboxSelection
+}
+
 export type SessionMessageCompaction =
   | SessionMessageCompactionRunning
   | SessionMessageCompactionCompleted
@@ -2559,8 +2564,9 @@ export type ConfigEntry =
           media_blob?: boolean
           schedules?: boolean
           artifacts?: boolean
-          part_rows?: boolean
           codemode_vm?: boolean
+          console_watches?: boolean
+          part_rows?: boolean
           image_generate?: boolean | { model?: string | { providerID: string; model: string; variant?: string } }
           subagent_depth?: number
           location_idle_timeout?: string | false
@@ -2590,15 +2596,6 @@ export type UsageLimitsInfo = {
 
 export type GenerateImageResponse = { data: GenerateImageResult }
 
-export type SessionInboxUser = {
-  id: SessionMessageID
-  sessionID: SessionID
-  time: { created: number }
-  type: "user"
-  payload: SessionInboxUserPayload
-  delivery: SessionInboxDelivery
-}
-
 export type SessionMessageAssistantTool = {
   type: "tool"
   id: string
@@ -2614,12 +2611,6 @@ export type SessionMessageAssistantTool = {
 }
 
 export type FormFields = [FormField, ...Array<FormField>]
-
-export type SessionInboxItem =
-  | { type: "user"; payload: SessionInboxUserPayload1; delivery: SessionInboxDelivery }
-  | { type: "synthetic"; payload: SessionInboxSyntheticPayload1; delivery: SessionInboxDelivery }
-  | { type: "compaction"; payload: SessionInboxCompactionPayload; delivery: SessionInboxDelivery }
-  | { type: "move"; payload: SessionInboxMovePayload1; delivery: SessionInboxDelivery }
 
 export type SessionMessageAssistantTool1 = {
   type: "tool"
@@ -2672,6 +2663,21 @@ export type ScheduleInfo = {
   time: { created: number; updated: number }
 }
 
+export type SessionInboxUser = {
+  id: SessionMessageID
+  sessionID: SessionID
+  time: { created: number }
+  type: "user"
+  payload: SessionInboxUserPayload
+  delivery: SessionInboxDelivery
+}
+
+export type SessionInboxItem =
+  | { type: "user"; payload: SessionInboxUserPayload1; delivery: SessionInboxDelivery }
+  | { type: "synthetic"; payload: SessionInboxSyntheticPayload1; delivery: SessionInboxDelivery }
+  | { type: "compaction"; payload: SessionInboxCompactionPayload; delivery: SessionInboxDelivery }
+  | { type: "move"; payload: SessionInboxMovePayload1; delivery: SessionInboxDelivery }
+
 export type AgentInfo = {
   id: AgentID
   name: string
@@ -2690,8 +2696,6 @@ export type SessionsResponse = {
   data: Array<SessionInfo>
   cursor: { previous?: SessionsCursor | null; next?: SessionsCursor | null }
 }
-
-export type SessionInboxInfo = SessionInboxUser | SessionInboxSynthetic | SessionInboxCompaction | SessionInboxMove
 
 export type SessionMessageAssistant = {
   id: SessionMessageID
@@ -2728,6 +2732,17 @@ export type IntegrationKeyMethod = { type: "key"; label?: string; form?: FormFie
 
 export type IntegrationExternalMethod = { id: IntegrationMethodID; type: "external"; label: string; form?: FormFields }
 
+export type SessionMessageAssistantContentEncoded =
+  | SessionMessageAssistantText1
+  | SessionMessageAssistantReasoning1
+  | SessionMessageAssistantTool1
+
+export type GenerateDecisionsResponse = { data: GenerateDecisionResult }
+
+export type FormInfo1 = { id: FormID; sessionID: string; title: string; metadata?: FormMetadata1; fields: FormFields1 }
+
+export type SessionInboxInfo = SessionInboxUser | SessionInboxSynthetic | SessionInboxCompaction | SessionInboxMove
+
 export type SessionInboxEnqueued = {
   id: EventID
   created: number
@@ -2737,15 +2752,6 @@ export type SessionInboxEnqueued = {
   location?: LocationRef
   data: { sessionID: SessionID; inboxID: SessionMessageID; item: SessionInboxItem }
 }
-
-export type SessionMessageAssistantContentEncoded =
-  | SessionMessageAssistantText1
-  | SessionMessageAssistantReasoning1
-  | SessionMessageAssistantTool1
-
-export type GenerateDecisionsResponse = { data: GenerateDecisionResult }
-
-export type FormInfo1 = { id: FormID; sessionID: string; title: string; metadata?: FormMetadata1; fields: FormFields1 }
 
 export type SessionMessageInfo =
   | SessionMessageAgentSelected
@@ -3532,7 +3538,11 @@ export type SessionGenerateInput = { readonly sessionID: string; readonly prompt
 
 export type SessionGenerateOutput = SessionGenerateResponse["data"]
 
-export type SessionInterruptInput = { readonly sessionID: string; readonly resume?: boolean | undefined }
+export type SessionInterruptInput = {
+  readonly sessionID: string
+  readonly resume?: boolean | undefined
+  readonly steer?: boolean | undefined
+}
 
 export type SessionInterruptOutput = SessionInterruptResponse
 
@@ -3854,6 +3864,7 @@ export type ExperimentalSessionImportInput = {
         readonly moved?: boolean
         readonly more?: true
       }>
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
     readonly location: { readonly directory: string }
   }
@@ -3962,7 +3973,12 @@ export type ExperimentalGenerateDecisionsInput = {
     | { readonly type: "file"; readonly data: string; readonly mime: string; readonly name?: string }
   >
   readonly questions: ReadonlyArray<
-    | { readonly type: "predicate"; readonly name: string; readonly instructions: string }
+    | {
+        readonly type: "predicate"
+        readonly name: string
+        readonly instructions: string
+        readonly criteria?: { readonly true?: string; readonly false?: string }
+      }
     | {
         readonly type: "choice"
         readonly name: string

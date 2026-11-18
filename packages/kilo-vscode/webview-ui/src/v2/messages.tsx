@@ -1,7 +1,7 @@
 // The v2 transcript: a virtualized, turn-based list with load-earlier, the last
 // live turn as a direct tail, queued prompts outside the virtual window and
 // scroll-to-bottom.
-import type { SessionInboxUser } from "@opencode/client"
+import type { FormInfo, SessionInboxUser } from "@opencode/client"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { ToolActions, UserMessagePending } from "@kilocode/kilo-ui/message-part"
@@ -9,13 +9,16 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { type Component, createEffect, createMemo, createSignal, For, on, onCleanup, Show, type JSX } from "solid-js"
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
 import { KiloNotifications } from "../components/chat/KiloNotifications"
+import { RevertBanner } from "../components/chat/RevertBanner"
 import { useLanguage } from "../context/language"
 import { useNotificationsOptional } from "../context/notifications"
 import { useVSCode } from "../context/vscode"
 import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
-import { instructionFilesByRead } from "./instruction-files"
+import { collectInstructionFiles } from "./instruction-files"
+import { QuestionDock } from "./question"
+import { revertedCount, visibleMessages } from "./revert"
 import type { Selection } from "./selectors"
 import { sessionStarting } from "./session-loading"
 import {
@@ -25,6 +28,7 @@ import {
   retainTurn,
   shiftedScroll,
   transcriptRows,
+  withoutReportedNotices,
   type TranscriptHold,
   type TranscriptPartition,
   type TranscriptRow,
@@ -46,6 +50,10 @@ import { buildSearchPattern, searchMatches } from "./transcript-search-match"
 import { UserMessage } from "./user"
 import { Welcome } from "./welcome"
 import { PromptRail } from "./prompt-rail"
+import { TranscriptReply } from "./transcript-reply"
+import type { ReplyHandler } from "./append-ready"
+import { partFeedback } from "../../../src/shared/browser-feedback"
+import { isChatReference } from "../../../src/shared/review-comments"
 import { capacity, historyAction, promptItems, railEntries, type PromptRailItem } from "./prompt-rail-data"
 
 /**
@@ -84,6 +92,11 @@ export function MessageList(props: {
   onShowHistory: () => void
   /** Forks the session before a user message, when the surface can fork. */
   onForkMessage?: (sessionID: string, messageID: string) => void
+  /** Reverts the session to a user message and restores its prompt. */
+  onRevertMessage?: (sessionID: string, messageID: string) => void
+  revertDisabled?: boolean
+  onRedo?: () => void
+  onRedoAll?: () => void
   /** Replaces the welcome screen of an empty session, for example with the Agent Manager introduction. */
   empty?: () => JSX.Element
   /** Selects the model a notification offers; without it the header shows no model action. */
@@ -94,6 +107,10 @@ export function MessageList(props: {
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
   /** The delivery state and controls of a user message the server has not handed to the model yet. */
   pending?: (messageID: string) => UserMessagePending | undefined
+  /** Quotes and comments on selected answer text through the composer. Missing where there is no composer. */
+  reply?: ReplyHandler
+  /** The question awaiting an answer, appended to the transcript so it scrolls with it as in v1. */
+  question?: () => FormInfo | undefined
 }) {
   const v2 = useV2()
   const vscode = useVSCode()
@@ -119,12 +136,22 @@ export function MessageList(props: {
       .list(id)
       .flatMap((item): SessionInboxUser[] => (item.type === "user" && item.delivery === "queue" ? [item] : []))
   }
-  const messages = () => {
+  const revert = () => (props.session ? v2.data.session.get(props.session)?.revert : undefined)
+  const allMessages = () => {
     const all = props.session ? v2.data.session.message.list(props.session) : []
     const ids = new Set(queued().map((item) => item.id))
     return ids.size === 0 ? all : all.filter((message) => !ids.has(message.id))
   }
-  const instructionFiles = createMemo(() => instructionFilesByRead(messages(), v2.directory))
+  const messages = createMemo(() => visibleMessages(allMessages(), revert()))
+  const revertCount = createMemo(() => revertedCount(allMessages(), revert()))
+  const instructions = createMemo(() => collectInstructionFiles(messages(), v2.directory))
+  const sentReferences = createMemo(() =>
+    messages().flatMap((message) =>
+      message.type === "user"
+        ? (partFeedback(message.metadata, message.text)?.review?.comments.filter(isChatReference) ?? [])
+        : [],
+    ),
+  )
   const working = () => !!props.session && v2.data.session.status(props.session) === "running"
   const loadingOlder = () => !!props.session && v2.data.session.message.loading(props.session)
   // The server always returns a next cursor, so a page shorter than the limit is what proves the start is loaded.
@@ -132,7 +159,7 @@ export function MessageList(props: {
     !!props.session &&
     v2.data.session.message.more(props.session) &&
     !v2.data.session.message.startLoaded(props.session)
-  const empty = () => !props.session || (messages().length === 0 && queued().length === 0)
+  const empty = () => !props.session || (messages().length === 0 && queued().length === 0 && !revert())
   // The open session shows its loader instead of the welcome screen until the first transcript page lands.
   const starting = () =>
     sessionStarting({
@@ -142,10 +169,16 @@ export function MessageList(props: {
       queued: queued().length,
     })
   const autoScroll = createAutoScroll({ working })
+  createEffect(on(revert, () => autoScroll.resume(), { defer: true }))
   props.onScrollToBottomReady?.(() => autoScroll.resume())
   onCleanup(() => props.onScrollToBottomReady?.(undefined))
 
-  const rows = createMemo<TranscriptRow[]>((previous) => transcriptRows(messages(), previous))
+  // An instruction load a read card reports is shown there, so its transcript
+  // notice row would repeat the same line. The row is dropped after the rows are
+  // built, so the turn grouping still sees the instruction message.
+  const rows = createMemo<TranscriptRow[]>((previous) =>
+    withoutReportedNotices(transcriptRows(messages(), previous), instructions().reported),
+  )
   // A run that waits on a permission reports idle while its last step can still
   // change, so an unfinished last step also keeps its turn live.
   const activeTurn = () => {
@@ -776,11 +809,14 @@ export function MessageList(props: {
           row={row()}
           session={props.session ?? ""}
           actions={props.actions}
-          instructionFiles={(partID) => instructionFiles().get(partID)}
+          instructionFiles={(partID) => instructions().byRead.get(partID)}
           highlight={() => highlight()}
           searchActive={activeKey() === key}
           onViewTurnChanges={props.onViewTurnChanges}
           onForkMessage={row().message.id === firstUser() ? undefined : props.onForkMessage}
+          onRevertMessage={props.onRevertMessage}
+          revertDisabled={props.revertDisabled}
+          onSelectSession={props.onSelectSession}
           pending={props.pending}
         />
       ) as HTMLElement
@@ -816,7 +852,11 @@ export function MessageList(props: {
         <div
           ref={autoScroll.contentRef}
           data-slot="message-list-content"
-          class={empty() && !starting() ? "message-list-content-empty" : "message-list-content"}
+          // A pending question keeps the transcript lane: the empty layout centers its children in a row, which
+          // would put the dock beside the welcome screen and drop its max-width and centering.
+          class={
+            empty() && !starting() && !props.question?.() ? "message-list-content-empty" : "message-list-content"
+          }
         >
           <Show when={starting()}>
             <div class="message-list-loading" role="status">
@@ -901,11 +941,25 @@ export function MessageList(props: {
                   </Show>
                   <For each={directKeys()}>{(key) => <Row id={key} />}</For>
                 </div>
+                <Show when={revert()}>
+                  {(info) => (
+                    <RevertBanner
+                      revert={info()}
+                      count={revertCount()}
+                      busy={props.revertDisabled}
+                      onRedo={() => props.onRedo?.()}
+                      onRedoAll={() => props.onRedoAll?.()}
+                    />
+                  )}
+                </Show>
                 <For each={partition().queued}>
                   {(row) => (
                     <div class="message-list-queued" data-queued="true" data-row-key={row.key}>
                       <UserMessage
                         message={{ ...row.item.payload, id: row.item.id, type: "user", time: row.item.time }}
+                        sessionID={props.session}
+                        actions={props.actions}
+                        onSelectSession={props.onSelectSession}
                         pending={props.pending?.(row.item.id)}
                       />
                     </div>
@@ -913,6 +967,11 @@ export function MessageList(props: {
                 </For>
               </>
             )}
+          </Show>
+          {/* Outside the loaded-transcript gate: a pending question must stay answerable while the first page
+              loads, and the server only asks one once the session has messages. */}
+          <Show when={props.question?.()} keyed>
+            {(form) => <QuestionDock form={form} />}
           </Show>
         </div>
       </div>
@@ -940,6 +999,9 @@ export function MessageList(props: {
         prepending={() => prepending().value}
         seeking={() => Boolean(seek())}
       />
+      <Show when={props.reply}>
+        {(reply) => <TranscriptReply root={scrollEl} reply={reply()} sent={sentReferences} />}
+      </Show>
       <Show when={!empty() && autoScroll.userScrolled()}>
         <IconButton
           icon="arrow-down-to-line"

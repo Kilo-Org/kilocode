@@ -3,20 +3,27 @@ import * as path from "path"
 import { isAbsolutePath } from "../path-utils"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 
-/** The directory a worktree id, session id, or `local` reads files from. */
+/**
+ * The directory a worktree id, session id, or `local` reads files from.
+ *
+ * A session runs in exactly one directory on the server, `directory`. When it is known it wins: the state file never
+ * files a subagent, and a filing can lag behind the server after a move the host missed or one an older build left
+ * behind. Without it, a filed session falls back to its filing.
+ */
 export function resolveWorktreeRoot(
   state: WorktreeStateManager | undefined,
   id: string,
   root: string | undefined,
+  directory?: string,
 ): string | undefined {
   if (id === "local") return root
-  if (!state) return
-  const worktree = state.getWorktree(id)
+  const worktree = state?.getWorktree(id)
   if (worktree) return worktree.path
-  const session = state.getSession(id)
-  // A known session without a worktree is a local session, which reads from the project root.
+  if (directory) return directory
+  const session = state?.getSession(id)
   if (!session) return undefined
-  return session.worktreeId ? state.getWorktree(session.worktreeId)?.path : root
+  // A known session without a worktree is a local session, which reads from the project root.
+  return session.worktreeId ? state?.getWorktree(session.worktreeId)?.path : root
 }
 
 /**
@@ -31,10 +38,10 @@ export function resolveWorktreeFile(
   id: string,
   file: string,
   root: string | undefined,
+  directory?: string,
 ): string | undefined {
   if (isAbsolutePath(file)) return file
-  if (!state) return
-  const base = resolveWorktreeRoot(state, id, root)
+  const base = resolveWorktreeRoot(state, id, root, directory)
   if (!base) return
   try {
     const dir = fs.realpathSync(base)

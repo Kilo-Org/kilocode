@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Завершено (за повідомленням моделі)",
+  "session.goal.complete": "Завершено",
   "session.goal.blocked": "Заблоковано",
   "session.goal.restart": "Перезапустити ціль",
   ...anacondaDesktopDict,
@@ -312,6 +312,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
   "ui.permission.noChanges": "Змін немає.",
   "ui.permission.reject": "Відхилити",
+  "ui.permission.allowAllSites": "Дозволити всі сайти",
   "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",
   "ui.permission.feedbackHint": "Enter для відхилення, Esc для скасування",
   "ui.permission.doomLoop.prompt":
@@ -651,8 +652,6 @@ export const dict = {
 
   "common.retry": "Спробувати ще раз",
   "common.refresh": "Оновити",
-  "common.reload": "Перезавантажити",
-  "common.reloadDescription": "Перезавантажити конфігурацію, навички, агентів та команди з диска",
 
   "profile.title": "Профіль",
   "profile.notLoggedIn": "Не увійшов",
@@ -709,9 +708,8 @@ export const dict = {
   "settings.agentBehaviour.title": "Поведінка агента",
   "settings.autoApprove.title": "Автоматичне схвалення",
   "settings.webTools.title": "Вебінструменти",
-  "settings.webTools.description": "Налаштуйте вебпошук.",
+  "settings.webTools.description": "Налаштуйте вебпошук і браузерні інструменти агента.",
   "settings.webTools.webSearch.enable": "Увімкнути для всіх постачальників",
-  "settings.webTools.browserAutomation": "Автоматизація браузера",
   "settings.webTools.webSearch.title": "Вебпошук",
   "settings.webTools.webSearch.description": "Зробіть вебпошук доступним для моделей усіх постачальників.",
   "settings.checkpoints.title": "Контрольні точки",
@@ -873,16 +871,48 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Робочі процеси",
   "settings.agentBehaviour.subtab.skills": "Навички",
 
-  "settings.browser.description":
-    "Налаштуйте вбудовану автоматизацію браузера на основі Playwright. Kilo може переходити веб-сторінками, взаємодіяти з ними та робити знімки екрана у ваших сесіях.",
-  "settings.browser.enable.title": "Увімкнути автоматизацію браузера",
-  "settings.browser.enable.description":
-    "Увімкнути прив'язаний до сесії браузер Agent Manager для локальних програм і загальнодоступних HTTPS-сторінок.",
-  "settings.browser.systemChrome.title": "Використовувати системний Chrome",
-  "settings.browser.systemChrome.description":
-    "Використовувати встановлений браузер Chrome замість окремого екземпляра Chromium.",
-  "settings.browser.headless.title": "Безголовий режим",
-  "settings.browser.headless.description": "Запускати в безголовому режимі (без видимого вікна браузера).",
+  "settings.browser.backend.title": "Бекенд",
+  "settings.browser.backend.description": "Яким браузером керують браузерні інструменти агента.",
+  "settings.browser.backend.playwright": "Вбудований браузер (Playwright)",
+  "settings.browser.backend.playwright.description":
+    "Профіль Chromium від Kilo, що запускається при першому виклику браузера.",
+  "settings.browser.backend.extension": "Розширення браузера",
+  "settings.browser.backend.extension.description": "Ваш власний браузер через розширення Kilo.",
+  "settings.browser.backend.off": "Вимкнено",
+  "settings.browser.backend.off.description": "Приховати браузерні інструменти від агентів.",
+  "settings.browser.observation.title": "Спостереження",
+  "settings.browser.observation.description": "Яку частину сторінки агент бачить після кожного кроку.",
+  "settings.browser.observation.full": "Повний знімок",
+  "settings.browser.observation.diff": "Лише зміни",
+  "settings.browser.observation.none": "Лише стан",
+  "settings.browser.sensitive.title": "Дозволяти чутливі кроки без запитання",
+  "settings.browser.sensitive.description":
+    "Паролі, платіжні форми, сторінки згоди OAuth і завантаження виконуються без підтвердження.",
+  "settings.browser.status.title": "Стан",
+  "settings.browser.status.playwright": "Playwright",
+  "settings.browser.status.playwright.ready": "Готово, використовується {{browser}}",
+  "settings.browser.status.playwright.missing": "Chromium не встановлено",
+  "settings.browser.status.playwright.install": "Встановити",
+  "settings.browser.status.playwright.installing": "Встановлення…",
+  "settings.browser.status.extension": "Розширення браузера",
+  "settings.browser.status.extension.connected": "Підключено",
+  "settings.browser.status.extension.disconnected": "Не підключено",
+  "settings.browser.status.extension.hint":
+    "Встановіть розширення браузера Kilo і ввімкніть «Дозволяти локальних агентів», потім відкрийте сторінку, яку агент може використовувати.",
+  "settings.browser.origins.title": "Дозволи сайтів",
+  "settings.browser.origins.site": "Сайт",
+  "settings.browser.origins.read": "Читання",
+  "settings.browser.origins.act": "Дія",
+  "settings.browser.origins.navigate": "Перехід",
+  "settings.browser.origins.allowAll.title": "Дозволити всі сайти",
+  "settings.browser.origins.allowAll.description": "Усі сайти дозволені без запиту. Правило сайту все одно діє.",
+  "settings.browser.origins.empty":
+    "Правил для сайтів ще немає. Кожен сайт поза вашою машиною запитує дозвіл, перш ніж агент прочитає, використає або перейде на нього.",
+  "settings.browser.origins.add": "Додати сайт",
+  "settings.browser.origins.placeholder": "https://example.com",
+  "settings.browser.origins.error.empty": "Вкажіть origin сайту",
+  "settings.browser.origins.error.invalid": "Використовуйте origin як https://example.com",
+  "settings.browser.origins.error.duplicate": "Цей сайт уже в списку",
 
   "settings.language.description":
     '"Автоматично" використовує мову відображення VS Code. Виберіть мову для інтерфейсу Kilo Code.',
@@ -1526,6 +1556,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Системний браузер",
   "settings.experimental.browserLinks.integrated": "Вбудований браузер",
   "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
+  "chat.reply.toolbar": "Виділений текст",
+  "chat.reply.quote": "Цитувати",
+  "chat.reply.quoteHint": "Цитувати у відповіді",
+  "chat.reply.commentHint": "Прокоментувати цей фрагмент",
+  "chat.reply.copy": "Копіювати",
+  "chat.reply.sendHint": "Надіслати цей коментар до Kilo зараз",
+  "chat.reply.commentLater": "Зберегти для наступного повідомлення",
+  "chat.reply.count": "Відповіді ({{count}})",
+  "chat.reply.sendAll": "Надіслати все",
+  "chat.reply.showInChat": "Показати в чаті",
   "browserTab.noSession":
     "Відкрийте браузер із сеансу, щоб переглянути локальний застосунок або загальнодоступну HTTPS-сторінку.",
   "browserTab.disabled": "Вбудований браузер вимкнено. Увімкніть його в Налаштуваннях Kilo > Експериментальні.",

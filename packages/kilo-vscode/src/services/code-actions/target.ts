@@ -1,20 +1,18 @@
 import { commands } from "vscode"
+import type { AgentManagerProvider } from "../../agent-manager/AgentManagerProvider"
 import type { PromptAttachment, ToWebview } from "../../protocol"
 
 type ChatView = {
   post(message: ToWebview): Promise<boolean> | unknown
 }
 
-type AgentPanel = {
-  isActive(): boolean
-  focusPanel(): void
-  waitForReady(): Promise<boolean>
-  postMessage(message: unknown): void
-}
+type AgentPanel = Pick<AgentManagerProvider, "isActive" | "focusPanel" | "waitForReady" | "postMessage">
 
 export type ChatTarget = {
   attach(items: PromptAttachment[]): Promise<void>
-  prompt(text: string, items?: PromptAttachment[]): Promise<void>
+  /** Sends a prompt Kilo composed. `injectedTitle` labels it in the transcript. */
+  prompt(text: string, items?: PromptAttachment[], injectedTitle?: string): Promise<void>
+  /** Focuses the sidebar chat composer. */
   focus(): Promise<void>
   /** Toggles the transcript search of the chat the user focused last. */
   search(): Promise<void>
@@ -54,8 +52,8 @@ export function createChatTarget(input: { view: ChatView; agentManager: AgentPan
     await input.view.post({ type: "appendContext", items })
   }
 
-  const prompt = async (text: string, items?: PromptAttachment[]) => {
-    const message: ToWebview = items ? { type: "startPrompt", text, items } : { type: "startPrompt", text }
+  const prompt = async (text: string, items?: PromptAttachment[], injectedTitle?: string) => {
+    const message: ToWebview = { type: "startPrompt", text, items, injectedTitle }
     if (preferAgentManager()) {
       input.agentManager.focusPanel()
       if (!(await input.agentManager.waitForReady())) return
@@ -66,12 +64,9 @@ export function createChatTarget(input: { view: ChatView; agentManager: AgentPan
     await input.view.post(message)
   }
 
+  // Cmd+Shift+A is the sidebar chat's shortcut, also while the Agent Manager is open: the Agent Manager has its own,
+  // Cmd+Shift+M, and the composer hints name each surface's key.
   const focus = async () => {
-    if (preferAgentManager()) {
-      input.agentManager.focusPanel()
-      input.agentManager.postMessage({ type: "action", action: "focusInput" })
-      return
-    }
     await showChat()
     await input.view.post({ type: "command", name: "focusPrompt" })
   }

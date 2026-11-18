@@ -1,5 +1,6 @@
 // A model picker for settings: the shared ModelSelector over the v2 model catalog, plus a variant picker when the
 // selected model has variants. `clearable` adds a clear control that calls `onChange` with undefined.
+import type { ModelInfo } from "@opencode/client"
 import { Component, Show, createMemo } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useLanguage } from "../../context/language"
@@ -23,6 +24,8 @@ export interface ModelPickerProps {
   showVariants?: boolean
   preserveVariantOnReselect?: boolean
   showUnavailableVariant?: boolean
+  /** The catalog to pick from. Defaults to the location chat catalog, which excludes image models. */
+  models?: () => ModelInfo[] | undefined
   modelLabel?: string
   variantLabel?: string
   clearButtonLabel?: string
@@ -33,17 +36,31 @@ export interface ModelPickerProps {
 const ModelPicker: Component<ModelPickerProps> = (props) => {
   const v2 = useV2()
   const language = useLanguage()
-  const models = () => v2.data.location.model.list()
+  // A supplied catalog is authoritative: while it loads (undefined), the picker must not fall back to chat models.
+  const models = () => (props.models ? props.models() : v2.data.location.model.list())
   const providers = () => v2.data.location.provider.list()
 
   const selected = createMemo(() =>
     models()?.find((model) => model.providerID === props.value?.providerID && model.id === props.value?.modelID),
   )
   const variants = createMemo(() => selected()?.variants.map((variant) => variant.id) ?? [])
+  const showVariantControl = createMemo(
+    () =>
+      props.showVariants !== false &&
+      (variants().length > 0 || (!!props.showUnavailableVariant && !!props.value?.variant)),
+  )
 
-  // The row wraps in a narrow panel, so the variant and clear controls move below the model instead of being cut off.
+  // Allow the variant control to wrap. Without it, truncate the model label before moving the clear button.
   return (
-    <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap", "min-width": 0 }}>
+    <div
+      style={{
+        display: "flex",
+        gap: "8px",
+        "align-items": "center",
+        "flex-wrap": showVariantControl() ? "wrap" : "nowrap",
+        "min-width": 0,
+      }}
+    >
       <div style={{ "min-width": 0, "max-width": "100%" }}>
         <ModelSelectorBase
           models={models()}
@@ -68,12 +85,7 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
           }}
         />
       </div>
-      <Show
-        when={
-          props.showVariants !== false &&
-          (variants().length > 0 || (props.showUnavailableVariant && props.value?.variant))
-        }
-      >
+      <Show when={showVariantControl()}>
         <ThinkingSelectorBase
           variants={variants()}
           value={props.value?.variant}

@@ -345,16 +345,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "ServiceUnavailableError",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableErrorEncoded"
-                }
-              }
-            }
           }
         },
         "description": "Retrieve currently registered agents.",
@@ -3800,7 +3790,7 @@
             }
           }
         },
-        "description": "Generate transient text from the current session context without mutating session history.",
+        "description": "Generate transient text from the current session context without mutating session history. Its tokens and cost count toward the session's totals.",
         "summary": "Generate text from session context",
         "requestBody": {
           "content": {
@@ -4001,6 +3991,15 @@
               "enum": ["true", "false"]
             },
             "required": false
+          },
+          {
+            "name": "steer",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            },
+            "required": false
           }
         ],
         "security": [],
@@ -4046,7 +4045,7 @@
             }
           }
         },
-        "description": "Interrupt active execution owned by this OpenCode process. Returns interrupted=true when an active execution was interrupted and false for the idle no-op. When resume=true, execution resumes pending steering input and next-in-line control items (manual compaction, moves) while queued prompts remain parked.",
+        "description": "Interrupt active execution owned by this OpenCode process. Returns interrupted=true when an active execution was interrupted and false for the idle no-op. When resume=true, execution resumes pending steering input and next-in-line control items (manual compaction, moves) while queued prompts remain parked. When steer=true the interruption was issued to deliver a prompt: a running compaction is never cancelled for it, and the prompt is delivered at the boundary after the compaction.",
         "summary": "Interrupt session execution"
       }
     },
@@ -16720,10 +16719,13 @@
               "artifacts": {
                 "type": "boolean"
               },
-              "part_rows": {
+              "codemode_vm": {
                 "type": "boolean"
               },
-              "codemode_vm": {
+              "console_watches": {
+                "type": "boolean"
+              },
+              "part_rows": {
                 "type": "boolean"
               },
               "image_generate": {
@@ -19096,6 +19098,18 @@
           },
           "instructions": {
             "type": "string"
+          },
+          "criteria": {
+            "type": "object",
+            "properties": {
+              "true": {
+                "type": "string"
+              },
+              "false": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
           }
         },
         "required": ["type", "name", "instructions"],
@@ -23267,6 +23281,18 @@
         "required": ["location", "projectID"],
         "additionalProperties": false
       },
+      "Session.Inbox.Selection": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/Agent.ID"
+          },
+          "model": {
+            "$ref": "#/components/schemas/Model.Ref"
+          }
+        },
+        "additionalProperties": false
+      },
       "Session.Inbox.Synthetic": {
         "type": "object",
         "properties": {
@@ -23375,6 +23401,9 @@
           },
           "metadata": {
             "type": "object"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/Session.Inbox.Selection"
           }
         },
         "required": ["text"],
@@ -24380,6 +24409,10 @@
             "items": {
               "$ref": "#/components/schemas/FileDiff.Info"
             }
+          },
+          "workspace": {
+            "type": "string",
+            "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
           }
         },
         "required": ["messageID"],
@@ -24454,9 +24487,15 @@
             "properties": {
               "text": {
                 "type": "string"
+              },
+              "tokens": {
+                "$ref": "#/components/schemas/TokenUsage.Info"
+              },
+              "cost": {
+                "$ref": "#/components/schemas/Money.USD"
               }
             },
-            "required": ["text"],
+            "required": ["text", "tokens", "cost"],
             "additionalProperties": false
           }
         },
@@ -24468,7 +24507,7 @@
         "properties": {
           "interrupted": {
             "type": "boolean",
-            "description": "Whether an active execution owned by this OpenCode process was interrupted."
+            "description": "Whether an active execution owned by this OpenCode process was interrupted. False also when there was nothing a steer may stop."
           }
         },
         "required": ["interrupted"],
@@ -26350,9 +26389,17 @@
             "$ref": "#/components/schemas/Location.Ref"
           },
           "data": {
-            "not": {
-              "type": "null"
-            }
+            "type": "object",
+            "properties": {
+              "integrationID": {
+                "$ref": "#/components/schemas/Integration.ID"
+              },
+              "credentialID": {
+                "$ref": "#/components/schemas/Credential.ID"
+              }
+            },
+            "required": ["integrationID", "credentialID"],
+            "additionalProperties": false
           }
         },
         "required": ["id", "created", "type", "data"],
@@ -30184,7 +30231,7 @@
               },
               "source": {
                 "type": "string",
-                "enum": ["title", "compaction"]
+                "enum": ["title", "compaction", "generate"]
               },
               "cost": {
                 "$ref": "#/components/schemas/Money.USD"

@@ -1,7 +1,9 @@
 export * as SessionInbox from "./session-inbox.js"
 
 import { Schema } from "effect"
+import { Agent } from "./agent.js" // kilocode_change(workflow-model) seam - durable selection for pending input
 import { Location } from "./location.js"
+import { Model } from "./model.js" // kilocode_change(workflow-model) seam - durable selection for pending input
 import { Project } from "./project.js"
 import { Attachment, Prompt } from "./prompt.js"
 import { DateTimeUtcFromMillis, optional, RelativePath } from "./schema.js"
@@ -11,10 +13,18 @@ import { SessionMessage } from "./session-message.js"
 export const Delivery = Schema.Literals(["steer", "queue"]).annotate({ identifier: "Session.Inbox.Delivery" })
 export type Delivery = typeof Delivery.Type
 
+// kilocode_change start - workflow-model seam: optional selection applied only when the input is delivered
+export interface Selection extends Schema.Schema.Type<typeof Selection> {}
+export const Selection = Schema.Struct({ agent: Agent.ID.pipe(optional), model: Model.Ref.pipe(optional) }).annotate({
+  identifier: "Session.Inbox.Selection",
+})
+// kilocode_change end
+
 export interface UserPayload extends Schema.Schema.Type<typeof UserPayload> {}
 export const UserPayload = Schema.Struct({
   ...Prompt.fields,
   metadata: Schema.Record(Schema.String, Schema.Unknown).pipe(optional),
+  selection: Selection.pipe(optional), // kilocode_change(workflow-model) seam - durable selection for pending input
 }).annotate({ identifier: "Session.Inbox.UserPayload" })
 
 /** A {@link UserPayload} whose files may stay on the server, for clients that opt into `experimental-media-uri`. */

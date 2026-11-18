@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+// kilo_mirror: packages/cli/script/build.ts
 // Builds the Kilo host (packages/kilo-cli/src/index.ts) into a standalone `kilo2` executable for internal releases.
 //
 // Mirror of packages/cli/script/build.ts (v2.2.6). That script compiles the upstream entry as `opencode` and takes
@@ -23,6 +24,7 @@ import { embed } from "@opencode/script/highlights"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import type { BunPlugin } from "bun"
 import cliPackage from "../../cli/package.json"
+import indexingPackage from "../../kilo-indexing/package.json"
 import { buildAppArchive } from "../../cli/script/app-assets"
 import { verifyArtifact, verifySimulationGraph } from "../../cli/script/verify-artifact"
 import { resolveOpencodePty } from "../../cli/script/opencode-pty"
@@ -99,8 +101,15 @@ const targets =
       : allTargets
 if (!targets.length) throw new Error(`Unknown build target: ${requestedTarget}`)
 
-if (!skipInstall)
+if (!skipInstall) {
   await $`bun install --os="*" --cpu="*" --libc="*" @opentui/core@${cliPackage.dependencies["@opentui/core"]} @opencode/pty@${cliPackage.dependencies["@opencode/pty"]}`
+  // Kilo: a platform binding is an optional dependency of @parcel/watcher, so a normal install links only the host's
+  // into the package's own node_modules. A cross-compiled build needs every target's package, and publish builds
+  // every target in one run.
+  await $`bun install --no-save --os="*" --cpu="*" --libc="*" @parcel/watcher@${indexingPackage.dependencies["@parcel/watcher"]}`.cwd(
+    path.resolve(dir, "../kilo-indexing"),
+  )
+}
 const appArchive = path.join(dir, ".cache", "bun-app-archive.bin")
 await Bun.write(appArchive, await buildAppArchive(Script.channel, Script.version, { skipBuild: skipWebUi }))
 const appAssetsPlugin: BunPlugin = {
@@ -128,6 +137,24 @@ const wsReexportPlugin: BunPlugin = {
     build.onLoad({ filter: /platform-node-shared[/\\]dist[/\\]NodeWS\.js$/ }, () => ({
       contents:
         'export { createWebSocketStream, extension, Receiver, Sender, subprotocol, WebSocket, WebSocketServer } from "ws"',
+      loader: "js",
+    }))
+  },
+}
+
+// Kilo: playwright-core's bundled `lib/coreBundle.js` lazily requires two optional packages that it does not depend
+// on: `chromium-bidi` (only the BiDi-over-CDP path) and `electron` (only the Electron launcher). A Bun build cannot
+// resolve either, and the Chromium/CDP path this CLI uses never reaches them, so both resolve to a module that throws
+// if it is ever loaded, which keeps a missing package a clear error instead of a silently dead code path.
+const playwrightOptionalPlugin: BunPlugin = {
+  name: "playwright-optional-deps",
+  setup(build) {
+    build.onResolve({ filter: /^(chromium-bidi|electron)(\/|$)/ }, (args) => ({
+      path: args.path,
+      namespace: "playwright-optional",
+    }))
+    build.onLoad({ filter: /.*/, namespace: "playwright-optional" }, (args) => ({
+      contents: `throw Object.assign(new Error(${JSON.stringify(args.path)} + " is not bundled in this build"), { code: "MODULE_NOT_FOUND" })`,
       loader: "js",
     }))
   },
@@ -162,11 +189,29 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     },
   }
   const parcelWatcherPackage = `@parcel/watcher-${item.os}-${item.arch}${item.os === "linux" ? `-${item.abi ?? "glibc"}` : ""}`
+  // The platform package is not resolvable from this workspace by name (it is a nested optional dependency), so
+  // resolve it from @parcel/watcher's own directory and inject that path.
+  const parcelWatcherBinding = Bun.resolveSync(
+    parcelWatcherPackage,
+    path.dirname(Bun.resolveSync("@parcel/watcher/package.json", path.resolve(dir, "../kilo-indexing"))),
+  )
   const parcelWatcherPlugin: BunPlugin = {
     name: "parcel-watcher-binding",
     setup(build) {
       build.onLoad({ filter: /filesystem[/\\]watcher-binding\.ts$/ }, () => ({
-        contents: `export default () => require(${JSON.stringify(parcelWatcherPackage)})`,
+        contents: `export default () => require(${JSON.stringify(parcelWatcherBinding)})`,
+        loader: "js",
+      }))
+    },
+  }
+  // Kilo: the codebase indexing watcher resolves its own binding module. Without this rewrite the compiled worker
+  // asks for the platform package at run time with no node_modules next to the executable, so the watcher silently
+  // never subscribes (the index stops updating until a restart).
+  const parcelWatcherIndexingPlugin: BunPlugin = {
+    name: "parcel-watcher-indexing-binding",
+    setup(build) {
+      build.onLoad({ filter: /indexing[/\\]processors[/\\]watcher-binding\.ts$/ }, () => ({
+        contents: `export default () => require(${JSON.stringify(parcelWatcherBinding)})`,
         loader: "js",
       }))
     },
@@ -194,9 +239,12 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       appAssetsPlugin,
       solidPlugin,
       parcelWatcherPlugin,
+      parcelWatcherIndexingPlugin,
       opencodePtyPlugin,
       pluginRuntimePlugin,
       wsReexportPlugin,
+      // Kilo: the optional playwright-core requires (see playwrightOptionalPlugin).
+      playwrightOptionalPlugin,
       simulationGraphPlugin,
       modelsSnapshot,
     ],
@@ -239,6 +287,9 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       "process.env.OPENCODE_APP_DIR_NAME": JSON.stringify(directory),
       ...(highlights ? { OPENCODE_RELEASE_HIGHLIGHTS: JSON.stringify(highlights) } : {}),
       OPENCODE_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "undefined",
+      // Kilo: the codebase indexing watcher names the linux binding package with this value, as OPENCODE_LIBC does
+      // for the core watcher. Without it a musl build asks for the glibc binding it does not embed.
+      KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "undefined",
       // FFF_LIBC selects the fff native lib variant: "musl" or "gnu".
       FFF_LIBC: item.os === "linux" ? `'${item.abi ?? "gnu"}'` : "undefined",
       ...(item.os === "linux" ? { "process.env.OPENTUI_LIBC": JSON.stringify(item.abi ?? "glibc") } : {}),

@@ -48,7 +48,11 @@ export function aliasOf(keyPath: string[]): string[][] {
   if (keyPath[0] === "mcp" && keyPath[1] === "servers" && keyPath.length >= 3) return [["mcp", ...keyPath.slice(2)]]
   if (keyPath[0] === "compaction") {
     if (keyPath[1] === "keep") return [["compaction", "preserve_recent_tokens"]]
-    if (keyPath[1] === "buffer" && keyPath.length === 2) return [["compaction", "reserved"]]
+    if (keyPath[1] === "buffer" && keyPath.length === 2)
+      return [
+        ["compaction", "reserved"],
+        ["compaction", "threshold_percent"],
+      ]
     return []
   }
   if (keyPath[0] === "policies")

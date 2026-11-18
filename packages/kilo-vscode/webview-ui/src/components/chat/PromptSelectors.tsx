@@ -19,6 +19,7 @@ interface Props {
   agent?: JSX.Element
   model?: JSX.Element
   variant?: JSX.Element
+  ref?: (el: HTMLDivElement) => void
 }
 
 const TRIGGER = "[data-slot='popover-trigger']"
@@ -168,7 +169,15 @@ export const PromptSelectors: Component<Props> = (props) => {
   }
 
   return (
-    <div class="prompt-selectors" ref={root} onPointerOver={onPointerOver} onKeyDown={onKeyDown}>
+    <div
+      class="prompt-selectors"
+      ref={(el) => {
+        root = el
+        props.ref?.(el)
+      }}
+      onPointerOver={onPointerOver}
+      onKeyDown={onKeyDown}
+    >
       <div class="prompt-selector" data-part="agent">
         {props.agent}
       </div>

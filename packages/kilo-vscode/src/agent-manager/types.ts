@@ -17,6 +17,7 @@ import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { OrphanDirectory, WorktreeHealth } from "./worktree-reconcile"
 import type { RunStatus } from "./run/manager"
+import type { InitialFile } from "./multi-version"
 import type { TerminalFont } from "./terminal-font"
 import type { ProjectSnapshot } from "./project/contexts"
 import type { ProjectSessionView } from "./project/session-view"
@@ -157,6 +158,8 @@ interface WorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
   /** Owning project, when available. */
   projectId?: string
+  /** Quick-create request this message belongs to, when it reports one. */
+  requestId?: string
   status: "creating" | "starting" | "ready" | "error"
   message: string
   sessionId?: string
@@ -260,6 +263,12 @@ interface TerminalErrorMessage {
   message: string
 }
 
+/** A create request whose PTY was closed before it could become a tab, for example because its project was removed. */
+interface TerminalCancelledMessage {
+  type: "agentManager.terminal.cancelled"
+  createId: string
+}
+
 interface TerminalFontChangedMessage {
   type: "agentManager.terminal.fontChanged"
   font: TerminalFont
@@ -296,6 +305,12 @@ interface ErrorOutMessage {
   projectId?: string
   worktreeId?: string
 }
+
+/**
+ * Sidebar id the panel uses for its Local workspace. A session that runs outside every worktree is filed under Local,
+ * so it reads from the store of the project root that receives its events.
+ */
+export const LOCAL_TARGET = "local"
 
 interface SessionAddedMessage {
   type: "agentManager.sessionAdded"
@@ -352,7 +367,7 @@ interface SendInitialMessage {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
 }
 
 interface BranchesMessage {
@@ -360,6 +375,8 @@ interface BranchesMessage {
   projectId?: string
   branches: (BranchListItem & { isCheckedOut?: boolean })[]
   defaultBranch: string
+  /** Why there are no branches: the folder is not a repository or its repository has no commits. */
+  errorCode?: WorktreeSetupErrorCode
 }
 
 interface ImportResultMessage {
@@ -628,6 +645,7 @@ export type AgentManagerOutMessage =
   | TerminalRestartedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
+  | TerminalCancelledMessage
   | TerminalFontChangedMessage
   | ScriptTerminalsMessage
   | TerminalSocketOpenedMessage
@@ -644,6 +662,8 @@ interface CreateWorktreeIn {
   branchName?: string
   /** Target project. Must match the active project when present; mismatches are dropped. */
   projectId?: string
+  /** Quick-create marker echoed on setup messages so a blocker can replace the transient overlay. */
+  requestId?: string
 }
 
 /** Request the current project catalog. */
@@ -769,6 +789,7 @@ interface OpenLocallyIn {
 
 interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
+  projectId?: string
   worktreeId: string
   sessionId?: string
 }
@@ -776,6 +797,13 @@ interface AddSessionToWorktreeIn {
 /** Move a session back to the project root and open it in the local tabs. */
 interface OpenSessionLocallyIn {
   type: "agentManager.openSessionLocally"
+  projectId?: string
+  sessionId: string
+}
+
+/** Open a session in the context of the directory the server runs it in, filing it where that directory lives. */
+interface OpenSessionIn {
+  type: "agentManager.openSession"
   projectId?: string
   sessionId: string
 }
@@ -848,7 +876,7 @@ interface CreateMultiVersionIn {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
   baseBranch?: string
   branchName?: string
   modelAllocations?: Array<{ providerID: string; modelID: string; count: number; variant?: string }>
@@ -1380,6 +1408,7 @@ export type AgentManagerInMessage =
   | PromoteSessionIn
   | OpenLocallyIn
   | OpenSessionLocallyIn
+  | OpenSessionIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
   | PersistSessionIn

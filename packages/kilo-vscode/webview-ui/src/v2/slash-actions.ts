@@ -12,13 +12,21 @@ const ACTIONS = [
   { name: "marketplace", key: "sidebar.topBar.marketplace", hints: ["extensions", "skills", "mcp"] },
   { name: "variant", key: "prompt.thinking.tooltip", hints: ["variants", "reasoning", "thinking"] },
   { name: "compact", key: "command.session.compact", hints: ["smol", "condense"] },
+  { name: "update-from-base", key: "agentManager.updateBase.title", hints: [] },
   { name: "caffeinate", key: "agentManager.caffeination.toggle", hints: ["caffenate", "keep-awake", "awake", "sleep"] },
   { name: "help", hints: [] },
   { name: "settings", key: "sidebar.topBar.settings", hints: [] },
-  { name: "reload", key: "common.reloadDescription", hints: ["refresh"] },
 ] as const
 
 export type SlashActionName = (typeof ACTIONS)[number]["name"]
+
+/**
+ * The handler a surface passes for the worktree-only action. Local and the sidebar have no saved base to merge from,
+ * so the entry stays out of their menu: only a worktree session whose surface supplies the handler lists it.
+ */
+export function worktreeAction(worktree: boolean | undefined, run: (() => void) | undefined) {
+  return worktree === true ? run : undefined
+}
 
 export type SlashHandlers = Partial<Record<SlashActionName, () => void>>
 

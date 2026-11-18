@@ -1,0 +1,112 @@
+/* Quote and comment on selected answer text (see v2/transcript-reply.tsx). The toolbar and the comment card are Kilo
+   popovers (data-component="popover-content") with Kilo buttons and text field, laid out like the diff review comment
+   form. This file only positions them and adds the highlight colors, which follow VS Code's comment range colors. */
+
+::highlight(kilo-reply-quote) {
+  background-color: var(--vscode-editor-inactiveSelectionBackground, rgba(127, 127, 127, 0.25));
+}
+
+::highlight(kilo-reply-comment) {
+  background-color: var(--vscode-editorCommentsWidget-rangeBackground, rgba(0, 122, 204, 0.12));
+  text-decoration: underline;
+  text-decoration-color: var(--vscode-editorCommentsWidget-unresolvedBorder, var(--vscode-focusBorder));
+  text-underline-offset: 3px;
+}
+
+::highlight(kilo-reply-sent) {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--vscode-editorCommentsWidget-resolvedBorder, var(--vscode-descriptionForeground));
+  text-underline-offset: 3px;
+}
+
+::highlight(kilo-reply-active) {
+  background-color: var(--vscode-editorCommentsWidget-rangeActiveBackground, rgba(0, 122, 204, 0.25));
+}
+
+::highlight(kilo-reply-flash) {
+  background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 190, 0, 0.35));
+}
+
+[data-component="popover-content"].transcript-reply-bar,
+[data-component="popover-content"].transcript-reply-card {
+  position: fixed;
+  /* Above the transcript and its rail, below Kilo tooltips (1000) so the button hints stay readable. */
+  z-index: 900;
+  visibility: hidden;
+}
+
+[data-component="popover-content"].transcript-reply-bar[data-placed],
+[data-component="popover-content"].transcript-reply-card[data-placed] {
+  visibility: visible;
+  animation: popover-open 0.15s ease-out;
+}
+
+[data-component="popover-content"].transcript-reply-bar {
+  min-width: 0;
+  max-width: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+}
+
+[data-component="popover-content"].transcript-reply-card {
+  width: min(320px, calc(100vw - 16px));
+}
+
+.transcript-reply-card [data-slot="popover-header"] {
+  padding: 8px 8px 0 12px;
+}
+
+.transcript-reply-card [data-slot="popover-description"] {
+  padding: 2px 12px 0;
+  color: var(--text-weak);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.transcript-reply-card [data-slot="popover-body"] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+
+.transcript-reply-card [data-component="input"] {
+  width: 100%;
+}
+
+.transcript-reply-card textarea[data-slot="input-input"] {
+  min-height: 56px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.transcript-reply-card-text {
+  color: var(--text-base);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.transcript-reply-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.transcript-reply-card-gap {
+  flex: 1;
+}
+
+.prompt-review-comments[data-source="chat"] .prompt-review-row-label {
+  font-weight: 400;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-component="popover-content"].transcript-reply-bar[data-placed],
+  [data-component="popover-content"].transcript-reply-card[data-placed] {
+    animation: none;
+  }
+}

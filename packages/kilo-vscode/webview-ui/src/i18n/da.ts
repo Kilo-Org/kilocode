@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Fuldført (rapporteret af modellen)",
+  "session.goal.complete": "Fuldført",
   "session.goal.blocked": "Blokeret",
   "session.goal.restart": "Genstart mål",
   ...anacondaDesktopDict,
@@ -310,6 +310,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
   "ui.permission.noChanges": "Ingen ændringer.",
   "ui.permission.reject": "Afvis",
+  "ui.permission.allowAllSites": "Tillad alle websteder",
   "ui.permission.feedbackPlaceholder": "Fortæl Kilo, hvad den skal gøre anderledes",
   "ui.permission.feedbackHint": "Enter for at afvise, Esc for at annullere",
   "ui.permission.doomLoop.prompt": "Der blev registreret en mulig løkke for værktøjet {{tool}}. Fortsæt kørslen?",
@@ -699,8 +700,6 @@ export const dict = {
 
   "common.retry": "Prøv igen",
   "common.refresh": "Opdatér",
-  "common.reload": "Genindlæs",
-  "common.reloadDescription": "Genindlæs konfiguration, færdigheder, agenter og kommandoer fra disken",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Ikke logget ind",
@@ -757,9 +756,8 @@ export const dict = {
   "settings.agentBehaviour.title": "Agentadfærd",
   "settings.autoApprove.title": "Automatisk godkendelse",
   "settings.webTools.title": "Webværktøjer",
-  "settings.webTools.description": "Konfigurer websøgning.",
+  "settings.webTools.description": "Konfigurer websøgning og agentens browserværktøjer.",
   "settings.webTools.webSearch.enable": "Aktivér for alle udbydere",
-  "settings.webTools.browserAutomation": "Browserautomatisering",
   "settings.webTools.webSearch.title": "Websøgning",
   "settings.webTools.webSearch.description": "Gør websøgning tilgængelig for modeller fra alle udbydere.",
   "settings.checkpoints.title": "Kontrolpunkter",
@@ -884,16 +882,49 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Arbejdsgange",
   "settings.agentBehaviour.subtab.skills": "Færdigheder",
 
-  "settings.browser.description":
-    "Konfigurér indbygget browserautomatisering drevet af Playwright. Kilo kan navigere, interagere med og tage skærmbilleder af websider i dine sessioner.",
-  "settings.browser.enable.title": "Aktivér browserautomatisering",
-  "settings.browser.enable.description":
-    "Aktivér den sessionsspecifikke browser i Agent Manager til lokale applikationer og offentlige HTTPS-sider.",
-  "settings.browser.systemChrome.title": "Brug system-Chrome",
-  "settings.browser.systemChrome.description":
-    "Brug din installerede Chrome-browser i stedet for en separat Chromium-instans.",
-  "settings.browser.headless.title": "Headless-tilstand",
-  "settings.browser.headless.description": "Kør i headless-tilstand (intet synligt browservindue).",
+  "settings.browser.backend.title": "Backend",
+  "settings.browser.backend.description": "Hvilken browser agentens browserværktøjer styrer.",
+  "settings.browser.backend.playwright": "Indbygget browser (Playwright)",
+  "settings.browser.backend.playwright.description":
+    "En Chromium-profil ejet af Kilo, startet ved det første browserkald.",
+  "settings.browser.backend.extension": "Browserudvidelse",
+  "settings.browser.backend.extension.description": "Din egen browser, via Kilo-browserudvidelsen.",
+  "settings.browser.backend.off": "Fra",
+  "settings.browser.backend.off.description": "Skjul browserværktøjerne for agenter.",
+  "settings.browser.observation.title": "Observation",
+  "settings.browser.observation.description": "Hvor meget af siden agenten ser efter hvert skridt.",
+  "settings.browser.observation.full": "Fuldt snapshot",
+  "settings.browser.observation.diff": "Kun det ændrede",
+  "settings.browser.observation.none": "Kun status",
+  "settings.browser.sensitive.title": "Tillad følsomme trin uden at spørge",
+  "settings.browser.sensitive.description":
+    "Adgangskoder, betalingsformularer, OAuth-samtykkesider og uploads kører uden bekræftelse.",
+  "settings.browser.status.title": "Status",
+  "settings.browser.status.playwright": "Playwright",
+  "settings.browser.status.playwright.ready": "Klar, bruger {{browser}}",
+  "settings.browser.status.playwright.missing": "Chromium mangler",
+  "settings.browser.status.playwright.install": "Installer",
+  "settings.browser.status.playwright.installing": "Installerer…",
+  "settings.browser.status.extension": "Browserudvidelse",
+  "settings.browser.status.extension.connected": "Forbundet",
+  "settings.browser.status.extension.disconnected": "Ikke forbundet",
+  "settings.browser.status.extension.hint":
+    'Installer Kilo-browserudvidelsen og slå "Tillad lokale agenter" til, og åbn derefter en side, agenten må bruge.',
+  "settings.browser.origins.title": "Tilladelser pr. websted",
+  "settings.browser.origins.site": "Websted",
+  "settings.browser.origins.read": "Læs",
+  "settings.browser.origins.act": "Handl",
+  "settings.browser.origins.navigate": "Naviger",
+  "settings.browser.origins.allowAll.title": "Tillad alle websteder",
+  "settings.browser.origins.allowAll.description":
+    "Alle websteder er tilladt uden at spørge. En webstedsregel gælder stadig.",
+  "settings.browser.origins.empty":
+    "Ingen webstedsregler endnu. Ethvert websted uden for din maskine spørger, før agenten læser, bruger eller navigerer det.",
+  "settings.browser.origins.add": "Tilføj et websted",
+  "settings.browser.origins.placeholder": "https://example.com",
+  "settings.browser.origins.error.empty": "Angiv webstedets oprindelse",
+  "settings.browser.origins.error.invalid": "Brug en oprindelse som https://example.com",
+  "settings.browser.origins.error.duplicate": "Dette websted er allerede på listen",
 
   "settings.language.description": 'Vælg sproget til Kilo Code-brugerfladen. "Auto" bruger VS Codes visningssprog.',
   "settings.language.auto": "Auto (VS Code-sprog)",
@@ -1508,6 +1539,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systembrowser",
   "settings.experimental.browserLinks.integrated": "Integreret browser",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
+  "chat.reply.toolbar": "Markeret tekst",
+  "chat.reply.quote": "Citer",
+  "chat.reply.quoteHint": "Citér i dit svar",
+  "chat.reply.commentHint": "Kommentér dette afsnit",
+  "chat.reply.copy": "Kopier",
+  "chat.reply.sendHint": "Send denne kommentar til Kilo nu",
+  "chat.reply.commentLater": "Gem til din næste besked",
+  "chat.reply.count": "Svar ({{count}})",
+  "chat.reply.sendAll": "Send alle",
+  "chat.reply.showInChat": "Vis i chatten",
   "browserTab.noSession":
     "Åbn browseren fra en session for at forhåndsvise en lokal applikation eller en offentlig HTTPS-side.",
   "browserTab.disabled": "Den integrerede browser er deaktiveret. Aktivér den i Kilo-indstillinger > Eksperimentel.",

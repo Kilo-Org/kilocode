@@ -163,10 +163,9 @@ describe("registerCodeActions", () => {
     selectCode()
 
     await state.handlers.get("kilo-code.v2.addToContext")?.()
-    await state.handlers.get("kilo-code.v2.focusChatInput")?.()
 
     expect(state.posts).toEqual([])
-    expect(state.agentPosts.map((post) => (post as { type: string }).type)).toEqual(["appendContext", "action"])
+    expect(state.agentPosts.map((post) => (post as { type: string }).type)).toEqual(["appendContext"])
   })
 
   it("sends the explain prompt to the sidebar focused last while the Agent Manager is active", async () => {
@@ -260,13 +259,16 @@ describe("registerCodeActions", () => {
     expect((state.agentPosts[0] as { type: string }).type).toBe("startPrompt")
   })
 
-  it("focuses the Agent Manager input", async () => {
+  it("focuses the sidebar prompt while the Agent Manager is active and focused last", async () => {
+    // Cmd+Shift+A belongs to the sidebar chat; the Agent Manager has Cmd+Shift+M.
     const state = setup({ agentActive: true })
+    chatFocus.gained("agentManager")
 
     await state.handlers.get("kilo-code.v2.focusChatInput")?.()
 
-    expect(state.executed).toEqual([])
-    expect(state.agentPosts).toEqual([{ type: "action", action: "focusInput" }])
+    expect(state.agentPosts).toEqual([])
+    expect(state.executed).toEqual([["kilo-code.v2.chat.focus"]])
+    expect(state.posts).toEqual([{ type: "command", name: "focusPrompt" }])
   })
 
   it("focuses the sidebar prompt", async () => {
@@ -303,7 +305,14 @@ describe("registerCodeActions", () => {
 
     await state.handlers.get("kilo-code.v2.generateTerminalCommand")?.()
 
-    expect(state.posts).toEqual([{ type: "startPrompt", text: "Generate a terminal command: find . -name '*.ts'" }])
+    expect(state.posts).toEqual([
+      {
+        type: "startPrompt",
+        text: "Generate a terminal command: find . -name '*.ts'",
+        items: undefined,
+        injectedTitle: "Generate terminal command",
+      },
+    ])
   })
 
   it("does nothing when the terminal command input is cancelled", async () => {
@@ -334,8 +343,6 @@ describe("registerCodeActions", () => {
     await state.handlers.get("kilo-code.v2.terminalExplainCommand")?.({ selection: "git status" })
 
     expect((state.posts[0] as { text: string }).text).toContain("Fix this terminal command:\n```\ngit statsu\n```")
-    expect((state.posts[1] as { text: string }).text).toContain(
-      "Explain this terminal command:\n```\ngit status\n```",
-    )
+    expect((state.posts[1] as { text: string }).text).toContain("Explain this terminal command:\n```\ngit status\n```")
   })
 })

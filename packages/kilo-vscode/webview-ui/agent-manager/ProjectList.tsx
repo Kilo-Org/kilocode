@@ -57,7 +57,7 @@ interface Props {
   busy: (projectId: string, id: string) => boolean
   blocked: (projectId: string, id: string) => boolean
   activityFor: (projectId: string, worktreeId: string | null) => Activity
-  sessionActivity: (id: string, info?: Pick<ProjectSessionInfo, "outcome" | "time">) => Activity
+  sessionActivity: (id: string, info?: Pick<ProjectSessionInfo, "outcome" | "time" | "revert">) => Activity
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
@@ -312,7 +312,7 @@ export const ProjectList: Component<Props> = (props) => {
       onRemove={(projectId) => vscode.postMessage({ type: "agentManager.removeProject", projectId })}
       onHistory={props.onHistory}
       onNew={newWorktree}
-      onCreate={(projectId) => vscode.postMessage({ type: "agentManager.createWorktree", projectId })}
+      onCreate={(projectId) => props.onCreate?.(projectId)}
       onSection={(projectId) => newSection(projectId)}
       onSettings={(projectId) => vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId })}
       bindings={props.bindings}

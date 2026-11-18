@@ -57,6 +57,7 @@ const layer = Layer.effect(
     const jobs = yield* Job.Service
     const title = yield* SessionTitle.Service
     const steps = yield* SessionStep.make
+    const { policy } = yield* SessionInbox.Policy // kilocode_change(workflow-model) seam - the host-installed delivery policy
     // Title generation starts once input is visible and must not delay model execution.
     const titles = yield* FiberMap.make<SessionSchema.ID, void, never>()
 
@@ -132,7 +133,10 @@ const layer = Layer.effect(
                   Effect.gen(function* () {
                     yield* plugins.awaitActivation
                     const selected = yield* context.select(sessionID)
-                    const model = yield* context.resolveModel(selected.session)
+                    const model = yield* context.resolveModel(selected.session, {
+                      kind: "compaction",
+                      agent: selected.agent.id,
+                    })
                     // Preview updates without admitting them after the already-delivered compaction marker.
                     const history = yield* SessionHistory.preview(db, sessionID, selected.instructions, model.ref)
                     return yield* compaction.compact({
@@ -187,11 +191,20 @@ const layer = Layer.effect(
               const ready = yield* restore(
                 Effect.gen(function* () {
                   const selected = yield* prepareContext(sessionID)
+                  let contextChanged = false // kilocode_change(workflow-model) seam - reload context after host events commit
                   const promoted = yield* SessionInbox.promote(
                     db,
                     bus,
                     sessionID,
                     entering && !continuing ? promotable : "steer",
+                    // kilocode_change start - workflow-model seam: refresh context only after extra events are committed
+                    policy && {
+                      ...policy,
+                      onCommitted: () => {
+                        contextChanged = true
+                      },
+                    },
+                    // kilocode_change end
                   )
                   // A control admitted during context preparation owns this boundary.
                   if (promoted === undefined) return undefined
@@ -200,7 +213,7 @@ const layer = Layer.effect(
                       onlyIfMissing: true,
                     })
                   if (promoted > 0) step = 1
-                  return { _tag: "Ready" as const, context: yield* context.load(selected) }
+                  return { _tag: "Ready" as const, context: yield* context.load(contextChanged ? yield* prepareContext(sessionID) : selected) } // kilocode_change(workflow-model) seam - refresh context changed by delivery
                 }),
               )
               if (ready) return ready
@@ -237,6 +250,7 @@ const layer = Layer.effect(
       let initial: SessionContext.Loaded | undefined = first
       let recoverOverflow = true
       let recoverContinuation = true
+      let retryAttempt: number | undefined
       while (true) {
         // Reuse boundary preparation once; retries refresh context without delivering more input.
         const loaded = initial ?? (yield* prepareContext(sessionID).pipe(Effect.flatMap(context.load)))
@@ -294,6 +308,7 @@ const layer = Layer.effect(
             // A tool call can arrive during a reload; its permission check reads the session's agent.
             executeTool: (call) => plugins.awaitActivation.pipe(Effect.andThen(prepared.executeTool(call))),
           },
+          retryAttempt,
           retry: (cause, error, proposed) =>
             retry.decide({
               cause,
@@ -312,6 +327,7 @@ const layer = Layer.effect(
               : Effect.succeed(false),
           ),
         })
+        retryAttempt = undefined
         const completed = yield* SessionStep.Outcome.$match(outcome, {
           Completed: Effect.fnUntraced(function* (outcome) {
             // The Session is about to go idle, which leaves the background summary time to finish.
@@ -321,13 +337,16 @@ const layer = Layer.effect(
               )
             return outcome.needsContinuation
           }),
-          Retry: (outcome) =>
-            retry.wait({
+          Retry: Effect.fnUntraced(function* (outcome) {
+            retryAttempt = outcome.decision.attempt
+            yield* retry.wait({
               decision: outcome.decision,
               error: outcome.error,
               assistantMessageID,
-            }),
+            })
+          }),
           Continue: Effect.fnUntraced(function* (outcome) {
+            retryAttempt = outcome.decision.attempt
             yield* retry.wait({
               decision: outcome.decision,
               error: outcome.error,
@@ -458,5 +477,6 @@ export const node = makeLocationNode({
     Snapshot.node,
     ToolOutput.node,
     Database.node,
+    SessionInbox.policyNode, // kilocode_change(workflow-model) seam - the host-installed delivery policy
   ],
 })

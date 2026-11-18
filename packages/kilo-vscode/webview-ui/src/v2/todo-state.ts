@@ -29,13 +29,16 @@ export function todoState(
   messages: ReadonlyArray<SessionMessageInfo>,
   revert?: { messageID: string; partID?: string },
 ) {
-  const user = messages.findLast((message) => message.type === "user" && visible(message.id, revert))?.id
+  const cut = boundary(messages, revert)
+  const user = messages.findLast(
+    (message, index) => message.type === "user" && side(message.id, index, cut, revert) === "before",
+  )?.id
   // Walk from the newest message so a long transcript stops at the latest write
   // instead of rescanning the whole history on every streaming update.
   for (let index = messages.length - 1; index >= 0; index--) {
     const message = messages[index]
     if (message.type !== "assistant") continue
-    const parts = active(message, revert)
+    const parts = active(message, side(message.id, index, cut, revert), revert)
     for (let part = parts.length - 1; part >= 0; part--) {
       const item = parts[part]
       if (item.type !== "tool" || item.name !== "todowrite" || item.state.status !== "completed") continue
@@ -52,26 +55,38 @@ export function hasTodoWrite(
   messages: ReadonlyArray<SessionMessageInfo>,
   revert?: { messageID: string; partID?: string },
 ) {
+  const cut = boundary(messages, revert)
   for (let index = messages.length - 1; index >= 0; index--) {
     const message = messages[index]
     if (message.type !== "assistant") continue
-    if (active(message, revert).some((part) => part.type === "tool" && part.name === "todowrite")) return true
+    const parts = active(message, side(message.id, index, cut, revert), revert)
+    if (parts.some((part) => part.type === "tool" && part.name === "todowrite")) return true
   }
   return false
 }
 
-function visible(messageID: string, revert: { messageID: string } | undefined) {
-  return !revert || messageID < revert.messageID
+// Message IDs are minted at admission, so a queued prompt delivered after later steps sorts before them. Transcript
+// position decides when the boundary is loaded; the ID order is only a fallback for a boundary outside the window.
+function boundary(messages: ReadonlyArray<SessionMessageInfo>, revert: { messageID: string } | undefined) {
+  if (!revert) return -1
+  return messages.findIndex((message) => message.id === revert.messageID)
+}
+
+function side(messageID: string, index: number, cut: number, revert: { messageID: string } | undefined) {
+  if (!revert) return "before"
+  if (cut >= 0) return index < cut ? "before" : index === cut ? "boundary" : "after"
+  if (messageID < revert.messageID) return "before"
+  return messageID === revert.messageID ? "boundary" : "after"
 }
 
 function active(
   message: Extract<SessionMessageInfo, { type: "assistant" }>,
+  position: "before" | "boundary" | "after",
   revert: { messageID: string; partID?: string } | undefined,
 ) {
-  if (!revert) return message.content
-  if (message.id < revert.messageID) return message.content
-  if (message.id > revert.messageID) return []
-  if (!revert.partID) return []
+  if (position === "before") return message.content
+  if (position === "after") return []
+  if (!revert?.partID) return []
   // Keep the parts before the reverted one. The content order is the real
   // order; part IDs are not guaranteed to sort by time.
   const index = message.content.findIndex((part) => part.type === "tool" && part.id === revert.partID)

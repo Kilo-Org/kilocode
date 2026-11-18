@@ -9,7 +9,8 @@ type Sample = { message: SessionMessageAssistant }
 const windows: Record<string, [number, number, number]> = {
   sample_docs_lookup: [1200, 1260, 1400],
   edit: [1400, 1480, 1600],
-  shell: [1600, 1760, 2000],
+  execute: [1600, 1680, 1800],
+  shell: [1800, 1880, 2000],
 }
 
 // Frames are reconciled by part identity, so streaming never replaces mounted
@@ -19,6 +20,16 @@ export function previewFrame(sample: Sample, elapsed: number, reduced = false, c
   const stamp = sample.message.time.created
   const text = (value: string, start: number, end: number) =>
     value.slice(0, Math.ceil(value.length * Math.min(1, Math.max(0, (elapsed - start) / (end - start)))))
+  // Mirror what the server streams while arguments arrive: a command types in, while the other fields appear once
+  // they are complete. The card parses the partial JSON and shows only the fields that are whole.
+  const streaming = (input: Record<string, unknown>, start: number, run: number) => {
+    const visible: Record<string, unknown> = {}
+    if (typeof input.command === "string")
+      visible.command = reduced ? input.command : text(input.command, start, run - 40)
+    if (typeof input.description === "string" && elapsed >= run - 30) visible.description = input.description
+    if (typeof input.path === "string" && elapsed >= (start + run) / 2) visible.path = input.path
+    return JSON.stringify(visible)
+  }
   frame.message.time = {
     ...frame.message.time,
     completed: elapsed >= 2500 ? stamp + 2500 : undefined,
@@ -38,7 +49,7 @@ export function previewFrame(sample: Sample, elapsed: number, reduced = false, c
       if (elapsed < start) continue
       const completed = part.state
       if (elapsed < run) {
-        part.state = { status: "streaming", input: "" }
+        part.state = { status: "streaming", input: streaming(completed.input, start, run) }
         part.time = { created: stamp + start }
       } else if (elapsed < end) {
         part.state = { status: "running", input: completed.input, metadata: completed.metadata ?? {} }

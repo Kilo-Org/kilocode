@@ -1463,6 +1463,21 @@ describe("WorktreeManager.listBranches", () => {
       expect(b.isLocal).toBe(true)
     }
   })
+
+  it("rejects a folder that is not a repository instead of reporting no commits", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-plain-"))
+    tempDirs.push(root)
+
+    await expect(createManager(root).listBranches()).rejects.toThrow("not a git repository")
+  })
+
+  it("reports a repository with no commits", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-empty-"))
+    tempDirs.push(root)
+    gitExec(["git", "init", "-b", "main", root])
+
+    await expect(createManager(root).listBranches()).rejects.toThrow("no commits yet")
+  })
 })
 
 // ---------------------------------------------------------------------------

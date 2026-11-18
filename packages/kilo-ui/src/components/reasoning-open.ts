@@ -2,7 +2,6 @@ export type ReasoningDisplay = "expanded" | "preview" | "headline"
 
 export type ReasoningOpenInput = {
   mode: ReasoningDisplay
-  streamed: boolean
   userOpened: boolean
   userCollapsed: boolean
 }
@@ -10,13 +9,13 @@ export type ReasoningOpenInput = {
 /**
  * Initial/derived open state for a reasoning block.
  *
- * `userCollapsed` always wins. Each mode follows its own display rule so a
- * block that mounts before the resolved mode arrives can re-derive once the
- * config loads.
+ * The mode alone decides, so a block renders the same whether or not the transcript was mounted while
+ * it streamed; only an explicit user choice differs per block. `userCollapsed` always wins, and each
+ * mode is re-derived when the resolved mode arrives so a block that mounts before the config loads
+ * still follows the configured layout.
  */
 export function reasoningOpenState(input: ReasoningOpenInput): boolean {
   if (input.userCollapsed) return false
   if (input.mode === "headline") return input.userOpened
-  if (input.mode === "preview") return input.streamed || input.userOpened
   return true
 }

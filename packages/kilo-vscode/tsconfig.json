@@ -22,10 +22,22 @@
   ],
   "exclude": [
     "src/shared",
+    "test/browser/sidebar-search.tsx",
+    "test/fixtures/agent-stack-render.tsx",
     "test/fixtures/browser-panel-render.tsx",
+    "test/fixtures/browser-settings-render.tsx",
+    "test/fixtures/cold-location-mocked.tsx",
+    "test/fixtures/cold-location-stores.tsx",
+    "test/fixtures/composer-focus-switch.tsx",
+    "test/fixtures/display-preview-render.tsx",
+    "test/fixtures/error-banner-render.tsx",
     "test/fixtures/marketplace-render.tsx",
     "test/fixtures/marketplace-install-modal.tsx",
     "test/fixtures/prompt-rail-render.tsx",
-    "test/fixtures/prompt-toolbar-flicker.tsx"
+    "test/fixtures/pr-panel-file-target.tsx",
+    "test/fixtures/prompt-toolbar-flicker.tsx",
+    "test/fixtures/revert-banner-render.tsx",
+    "test/fixtures/settings-search-focus.tsx",
+    "test/fixtures/terminal-tab-selection.tsx"
   ]
 }

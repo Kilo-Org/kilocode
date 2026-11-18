@@ -6,7 +6,7 @@ function scene() {
   const projection = feed({
     paths: () => ["/repo"],
     watching: () => true,
-    load: async () => new Set<string>(),
+    load: async () => ({ running: new Set<string>() }),
     post: (busy) => posted.push(busy),
   })
   const send = (type: string, data: Record<string, unknown>) =>
@@ -27,6 +27,20 @@ describe("caffeination feed", () => {
     expect(posted.at(-1)).toBe(true)
 
     send("session.status", { sessionID: "ses_1", status: { type: "idle" } })
+    expect(posted.at(-1)).toBe(false)
+  })
+
+  test("holds while a wakeup is pending and releases when it fires", () => {
+    const { posted, send } = scene()
+
+    send("rpc.kilocode.wakeup.changed", { sessionID: "ses_1", pending: 1 })
+    expect(posted.at(-1)).toBe(true)
+
+    // An idle status does not release a session that still has a scheduled wakeup.
+    send("session.status", { sessionID: "ses_1", status: { type: "idle" } })
+    expect(posted.at(-1)).toBe(true)
+
+    send("rpc.kilocode.wakeup.changed", { sessionID: "ses_1", pending: 0 })
     expect(posted.at(-1)).toBe(false)
   })
 

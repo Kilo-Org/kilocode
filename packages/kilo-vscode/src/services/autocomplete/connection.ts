@@ -16,22 +16,6 @@ export type FimInput = {
 
 export type FimResult = { text: string; cost: number; inputTokens: number; outputTokens: number }
 
-export type EditInput = {
-  provider?: string
-  model?: string
-  maxTokens?: number
-  currentFilePath: string
-  currentFileContent: string
-  cursorLine: number
-  cursorCharacter: number
-  editableRegionStartLine: number
-  editableRegionEndLine: number
-  recentlyViewedSnippets: { filepath: string; content: string }[]
-  editDiffHistory: string[]
-}
-
-export type EditResult = { content: string; usage?: { prompt_tokens?: number; completion_tokens?: number } }
-
 export interface AutocompleteConnection {
   /** True while the Kilo server runs. */
   connected(): boolean
@@ -39,7 +23,6 @@ export interface AutocompleteConnection {
   /** Credential or team changes on the server, which can lift an authentication or credit failure. */
   onAuthChange(listener: () => void): () => void
   fim(input: FimInput, signal?: AbortSignal): Promise<FimResult>
-  edit(input: EditInput, signal?: AbortSignal): Promise<EditResult>
   /** The Kilo credit balance, or undefined when it cannot be read. */
   balance(): Promise<number | undefined>
 }
@@ -97,17 +80,8 @@ export function createConnection(input: { server: Manager; directory: string }) 
     async fim(request: FimInput, signal?: AbortSignal) {
       const client = await rpc()
       return client["autocomplete.fim"](request, { location, signal }).catch((error: unknown) => {
-        throw failure("FIM", error, signal)
+        throw failure(error, signal)
       })
-    },
-    async edit(request: EditInput, signal?: AbortSignal) {
-      const client = await rpc()
-      return client["autocomplete.edit"](request, { location, signal }).then(
-        (result) => ({ content: result.content, usage: result.usage }),
-        (error: unknown) => {
-          throw failure("Edit", error, signal)
-        },
-      )
     },
     async balance() {
       const client = await rpc().catch(() => undefined)
@@ -144,7 +118,7 @@ export type Connection = ReturnType<typeof createConnection>
 const AUTH_EVENTS: string[] = ["credential.updated", "credential.switched", `rpc.${KiloGatewayRpc.Definition.id}.organization`]
 
 /** An RPC failure as an error the backoff can classify: `request` carries the status, `unauthorized` is a 401. */
-function failure(kind: "FIM" | "Edit", error: unknown, signal?: AbortSignal) {
+function failure(error: unknown, signal?: AbortSignal) {
   if (signal?.aborted) return error
   if (typeof error !== "object" || error === null || !("type" in error) || !("message" in error)) return error
   const data = "data" in error ? error.data : undefined
@@ -155,10 +129,10 @@ function failure(kind: "FIM" | "Edit", error: unknown, signal?: AbortSignal) {
         ? 401
         : null
   const detail = String(error.message)
-  // A provider failure already reads `<kind> request failed: <status> <body>`; keep it as it is.
-  if (detail.startsWith(`${kind} request failed`)) return new AutocompleteRequestError(detail, status)
+  // A provider failure already reads `FIM request failed: <status> <body>`; keep it as it is.
+  if (detail.startsWith("FIM request failed")) return new AutocompleteRequestError(detail, status)
   return new AutocompleteRequestError(
-    status === null ? `${kind} request failed: ${detail}` : `${kind} request failed: ${status} ${detail}`,
+    status === null ? `FIM request failed: ${detail}` : `FIM request failed: ${status} ${detail}`,
     status,
   )
 }

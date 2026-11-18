@@ -46,6 +46,20 @@ items:
       - name: Composer API Key
         key: COMPOSER_API_KEY
 `
+const PLUGINS = `
+items:
+  - id: kilo-plugin
+    name: Kilo Plugin
+    description: Demo
+    content: kilo-plugin@1.2.3
+  - id: git-plugin
+    description: From a repository
+    content: " git:https://github.com/Kilo-Org/example.git@main "
+  - id: no-content
+    description: skipped
+  - id: not-a-string
+    content: 42
+`
 const tarball = (files: Record<string, string>) => new Bun.Archive(files, { compress: "gzip" }).bytes()
 const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), "kilo-marketplace-"))
 const install = async (input: { root: string; id: string; archive: Uint8Array; fingerprints?: readonly string[] }) =>
@@ -94,22 +108,51 @@ describe("Kilo marketplace catalog", () => {
     expect(composer.item.options.map((option) => option.name)).toEqual(["Default"])
     expect(composer.item.parameters[0]).toMatchObject({ key: "COMPOSER_API_KEY", optional: false })
   })
-  test("fetches only Kilo skills and MCP catalog endpoints", async () => {
+  test("normalizes plugin specs and skips entries without one", () => {
+    const entries = KiloMarketplaceRegistry.parse("plugin", PLUGINS)
+    expect(entries.map((entry) => entry.item.id)).toEqual(["kilo-plugin", "git-plugin"])
+    expect(entries[0].item).toMatchObject({
+      registry: "kilo",
+      kind: "plugin",
+      name: "Kilo Plugin",
+      plugin: { spec: "kilo-plugin@1.2.3" },
+    })
+    // A spec is trimmed so the written config entry is exactly the package.
+    expect(entries[1].item.plugin).toEqual({ spec: "git:https://github.com/Kilo-Org/example.git@main" })
+    // Plugins are package specs, not payloads or archives.
+    expect(entries.every((entry) => entry.archive === undefined && entry.payloads.length === 0)).toBe(true)
+  })
+  test("fetches only Kilo skill, MCP and plugin catalog endpoints", async () => {
     const requests: string[] = []
     using server = Bun.serve({
       port: 0,
       fetch(request) {
-        requests.push(new URL(request.url).pathname)
-        return new Response(new URL(request.url).pathname.endsWith("/skills") ? SKILLS : MCPS)
+        const pathname = new URL(request.url).pathname
+        requests.push(pathname)
+        if (pathname.endsWith("/skills")) return new Response(SKILLS)
+        if (pathname.endsWith("/plugins")) return new Response(PLUGINS)
+        return new Response(MCPS)
       },
     })
     const catalog = KiloMarketplaceRegistry.make({ server: server.url.origin })
-    const [skills, mcps] = await Promise.all([catalog.list("skill"), catalog.list("mcp")])
+    const [skills, mcps, plugins] = await Promise.all([
+      catalog.list("skill"),
+      catalog.list("mcp"),
+      catalog.list("plugin"),
+    ])
     expect(skills).toHaveLength(1)
     expect(skills.every((entry) => entry.archive?.endsWith(".tar.gz"))).toBe(true)
     expect(mcps).toHaveLength(2)
     expect(mcps.every((entry) => entry.item.options.length > 0)).toBe(true)
-    expect(requests.toSorted()).toEqual(["/api/marketplace/mcps", "/api/marketplace/skills"])
+    expect(plugins.map((entry) => entry.item.plugin?.spec)).toEqual([
+      "kilo-plugin@1.2.3",
+      "git:https://github.com/Kilo-Org/example.git@main",
+    ])
+    expect(requests.toSorted()).toEqual([
+      "/api/marketplace/mcps",
+      "/api/marketplace/plugins",
+      "/api/marketplace/skills",
+    ])
   })
 })
 

@@ -18,7 +18,7 @@ interface HighlightRegistry {
   delete: (name: string) => void
 }
 
-function highlightApi(): { registry: HighlightRegistry; ctor: HighlightCtor } | undefined {
+export function highlightApi(): { registry: HighlightRegistry; ctor: HighlightCtor } | undefined {
   const g = globalThis as unknown as { CSS?: { highlights?: HighlightRegistry }; Highlight?: HighlightCtor }
   if (!g.CSS?.highlights || typeof g.Highlight !== "function") return undefined
   return { registry: g.CSS.highlights, ctor: g.Highlight }

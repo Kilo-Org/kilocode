@@ -7,6 +7,7 @@ import type { IndexingProject, IndexingSettings, ToHost, ToWebview } from "../..
 import { getVSCodeAPI, useVSCode } from "./vscode"
 import { formatIndexingLabel, indexingButtonVisible, indexingEventSelected, indexingTone } from "./indexing-utils"
 import { useV2 } from "../v2/client"
+import { readListed } from "../../../src/shared/plugin-inventory"
 import { kiloSettings } from "../v2/kilo-settings"
 import { indexingUpdate, type IndexingScope } from "../components/settings/indexing-tab-state"
 
@@ -64,14 +65,22 @@ export const IndexingProvider: ParentComponent = (props) => {
   const [host, setHost] = createSignal<IndexingSettings>(emptySettings)
   const [showButton, setShowButton] = createSignal<boolean | undefined>(undefined)
   // A failed read leaves the last known values in place, and an edit waits for a successful read because
-  // `config.update` replaces the whole `indexing` key.
-  const state = { loaded: false }
+  // `config.update` replaces the whole `indexing` key. `read` drops the answers of a superseded refresh.
+  const state = { loaded: false, read: 0 }
 
   const project = createMemo(() => host().projects.find((item) => item.id === host().projectId))
   const directory = () => project()?.directory
   const rpc = () => v2.api.rpc(KiloIndexingRpc.Definition)
   const location = () => (directory() ? { location: { directory: directory() } } : undefined)
   const post = (message: ToHost) => getVSCodeAPI().postMessage(message as never)
+  // The webview connects before the server has registered its plugins, so a first read can find no indexing RPC.
+  const listed = <T,>(token: number, read: () => Promise<T>) =>
+    readListed({
+      api: v2.api,
+      directory: directory() ?? v2.directory,
+      active: () => token === state.read && v2.connection.status() === "connected",
+      read,
+    })
 
   const shown = () => showButton() ?? host().showButtonWhenDisabled
   const visible = createMemo(() =>
@@ -81,27 +90,33 @@ export const IndexingProvider: ParentComponent = (props) => {
   const projectId = () => host().projectId
 
   const readStatus = async () => {
+    const token = state.read
     try {
-      const next = await rpc().status({}, location())
-      setStatus(next)
+      const next = await listed(token, () => rpc().status({}, location()))
+      if (token === state.read) setStatus(next)
     } catch (error) {
+      if (token !== state.read) return
       console.error("Indexing status read failed", error)
       setStatus(initial)
     } finally {
-      setLoading(false)
+      if (token === state.read) setLoading(false)
     }
   }
 
   const readConfig = async () => {
+    const token = state.read
     try {
-      setSettings(await rpc().config({}, location()))
+      const next = await listed(token, () => rpc().config({}, location()))
+      if (token !== state.read) return
+      setSettings(next)
       state.loaded = true
     } catch (error) {
-      console.error("Indexing config read failed", error)
+      if (token === state.read) console.error("Indexing config read failed", error)
     }
   }
 
   const refresh = () => {
+    state.read++
     state.loaded = false
     setLoading(true)
     return Promise.all([readStatus(), readConfig()])
@@ -112,7 +127,8 @@ export const IndexingProvider: ParentComponent = (props) => {
     if (message.type === "indexingSettingsLoaded") {
       setHost(message.settings)
       setShowButton(undefined)
-      void refresh()
+      // Before the connection is up, the connection effect reads once it is.
+      if (v2.connection.status() === "connected") void refresh()
       return
     }
     if (message.type === "indexingStatusLoaded") {

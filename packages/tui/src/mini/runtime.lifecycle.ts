@@ -17,6 +17,7 @@ import {
   type ScrollbackWriter,
 } from "@opentui/core"
 import { isFallbackTitle } from "@opencode/util/session-title-fallback"
+import { registerMiniParsers } from "../kilocode/mini-parsers" // kilocode_change(cli) - mini has no session-route parser registration
 import { setTerminalTitle } from "../util/renderer"
 import { monoSnapshot } from "./mono"
 import { entrySplash, exitSplash } from "./splash"
@@ -154,6 +155,7 @@ function queueSplash(
 // scrollback commits and footer repaints happen in the same frame. After
 // the entry splash, RunFooter takes over the footer region.
 export async function createRuntimeLifecycle(input: LifecycleInput): Promise<Lifecycle> {
+  registerMiniParsers() // kilocode_change(cli) - highlight every language the TUI supports
   const footerTask = import("./footer")
   const tuiConfig = await input.tuiConfig
   const miniSettings = resolveMiniSettings(tuiConfig)

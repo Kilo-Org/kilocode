@@ -24,6 +24,7 @@ export function rowSearchText(row: TranscriptRow): { text: string; ranges: Searc
   // real Markdown renderer, which hides link/image URLs, so strip those there
   // to keep the match count aligned with the visible characters.
   if (row.type === "user") return { text: row.message.text, ranges: [] }
+  if (row.type === "notice") return { text: row.text, ranges: [] }
   if (row.type !== "assistant") return { text: "", ranges: [] }
   const chunks: string[] = []
   const ranges: SearchTextRange[] = []

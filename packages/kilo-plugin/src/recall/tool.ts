@@ -212,7 +212,8 @@ function read(
   })
 }
 
-function rootDirectories(runtime: Runtime): Effect.Effect<ReadonlyArray<string>, Tool.Error> {
+/** The project directory, its canonical path and its worktrees: the family whose sessions may be read. */
+export function rootDirectories(runtime: Pick<Runtime, "project" | "worktrees">): Effect.Effect<ReadonlyArray<string>> {
   return runtime.worktrees().pipe(
     Effect.orElseSucceed(() => [] as ReadonlyArray<string>),
     Effect.map((worktrees) => [
@@ -221,7 +222,7 @@ function rootDirectories(runtime: Runtime): Effect.Effect<ReadonlyArray<string>,
   )
 }
 
-function inside(roots: ReadonlyArray<string>, directory: string) {
+export function inside(roots: ReadonlyArray<string>, directory: string) {
   const target = FSUtil.resolve(directory)
   return roots.some((root) => FSUtil.contains(root, target))
 }

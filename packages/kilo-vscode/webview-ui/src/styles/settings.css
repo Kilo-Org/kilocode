@@ -13,6 +13,18 @@
   .settings-session-preview {
     position: sticky;
     top: 0;
+    /* The controls make the column taller than the pane. Fill the column, but cap it at the visible pane so the
+       sticky card never grows past the viewport; 65px is the settings header plus the pane's top and bottom padding. */
+    align-self: stretch;
+    max-height: calc(100vh - 65px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .settings-session-preview-body {
+    flex: 1;
+    min-height: 0;
+    height: auto;
   }
 }
 

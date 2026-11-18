@@ -92,7 +92,10 @@ function derive(tokens: Tokens.Generic[]): Block[] {
 
 export function canReusePendingBlock(current: Pick<Block, "mode" | "raw"> | undefined, next: Block) {
   if (!current || current.mode !== next.mode) return false
-  if (next.mode === "code") return next.raw.startsWith(current.raw)
+  // kilocode_change start: a growing live tail keeps its rendered HTML until the parse lands a microtask later.
+  // Painting the escaped fallback in between doubled the DOM writes and forced layouts of every streamed frame.
+  if (next.mode === "code" || next.mode === "live") return next.raw.startsWith(current.raw)
+  // kilocode_change end
   return current.raw === next.raw
 }
 
@@ -128,7 +131,8 @@ export function project(previous: Projection | undefined, text: string, live: bo
   const tail = previous.blocks.at(-1)
   const suffix = text.slice(previous.text.length)
   if (!suffix || !tail) return { text, blocks: stream(text, live) }
-  if (tail.mode === "code" && !tail.complete && !closesFence(tail.raw, suffix))
+  // kilocode_change - the fence line is still streaming until its newline, so the info string can still grow
+  if (tail.mode === "code" && !tail.complete && tail.raw.includes("\n") && !closesFence(tail.raw, suffix))
     return {
       text,
       blocks: [

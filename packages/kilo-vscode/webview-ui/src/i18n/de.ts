@@ -60,7 +60,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Abgeschlossen (vom Modell gemeldet)",
+  "session.goal.complete": "Abgeschlossen",
   "session.goal.blocked": "Blockiert",
   "session.goal.restart": "Ziel neu starten",
   ...anacondaDesktopDict,
@@ -319,6 +319,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Regeln für automatische Genehmigung verwalten",
   "ui.permission.noChanges": "Keine Änderungen.",
   "ui.permission.reject": "Ablehnen",
+  "ui.permission.allowAllSites": "Alle Websites erlauben",
   "ui.permission.feedbackPlaceholder": "Teile Kilo mit, was es anders machen soll",
   "ui.permission.feedbackHint": "Enter zum Ablehnen, Esc zum Abbrechen",
   "ui.permission.doomLoop.prompt": "Potenzielle Schleife beim Tool {{tool}} erkannt. Weiter ausführen?",
@@ -711,8 +712,6 @@ export const dict = {
 
   "common.retry": "Erneut versuchen",
   "common.refresh": "Aktualisieren",
-  "common.reload": "Neu laden",
-  "common.reloadDescription": "Konfiguration, Skills, Agents und Befehle vom Datenträger neu laden",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Nicht angemeldet",
@@ -769,9 +768,8 @@ export const dict = {
   "settings.agentBehaviour.title": "Agentenverhalten",
   "settings.autoApprove.title": "Automatisch genehmigen",
   "settings.webTools.title": "Web-Tools",
-  "settings.webTools.description": "Konfigurieren Sie die Websuche.",
+  "settings.webTools.description": "Konfigurieren Sie die Websuche und die Browser-Werkzeuge des Agenten.",
   "settings.webTools.webSearch.enable": "Für alle Anbieter aktivieren",
-  "settings.webTools.browserAutomation": "Browserautomatisierung",
   "settings.webTools.webSearch.title": "Websuche",
   "settings.webTools.webSearch.description": "Machen Sie die Websuche für Modelle aller Anbieter verfügbar.",
   "settings.checkpoints.title": "Prüfpunkte",
@@ -900,16 +898,49 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Workflows",
   "settings.agentBehaviour.subtab.skills": "Fähigkeiten",
 
-  "settings.browser.description":
-    "Integrierte Browser-Automatisierung auf Basis von Playwright konfigurieren. Kilo kann in Ihren Sitzungen Webseiten aufrufen, mit ihnen interagieren und Screenshots erstellen.",
-  "settings.browser.enable.title": "Browser-Automatisierung aktivieren",
-  "settings.browser.enable.description":
-    "Den sitzungsgebundenen Browser im Agent Manager für lokale Anwendungen und öffentliche HTTPS-Seiten aktivieren.",
-  "settings.browser.systemChrome.title": "System-Chrome verwenden",
-  "settings.browser.systemChrome.description":
-    "Verwenden Sie Ihren installierten Chrome-Browser anstelle einer separaten Chromium-Instanz.",
-  "settings.browser.headless.title": "Headless-Modus",
-  "settings.browser.headless.description": "Im Headless-Modus ausführen (kein sichtbares Browserfenster).",
+  "settings.browser.backend.title": "Backend",
+  "settings.browser.backend.description": "Welcher Browser die Browser-Werkzeuge des Agenten steuert.",
+  "settings.browser.backend.playwright": "Mitgelieferter Browser (Playwright)",
+  "settings.browser.backend.playwright.description":
+    "Ein Chromium-Profil von Kilo, gestartet beim ersten Browser-Aufruf.",
+  "settings.browser.backend.extension": "Browser-Erweiterung",
+  "settings.browser.backend.extension.description": "Ihr eigener Browser, über die Kilo-Browser-Erweiterung.",
+  "settings.browser.backend.off": "Aus",
+  "settings.browser.backend.off.description": "Die Browser-Werkzeuge vor Agenten verbergen.",
+  "settings.browser.observation.title": "Beobachtung",
+  "settings.browser.observation.description": "Wie viel der Seite ein Agent nach jedem Schritt sieht.",
+  "settings.browser.observation.full": "Vollständiger Snapshot",
+  "settings.browser.observation.diff": "Nur die Änderungen",
+  "settings.browser.observation.none": "Nur Status",
+  "settings.browser.sensitive.title": "Sensible Schritte ohne Nachfrage erlauben",
+  "settings.browser.sensitive.description":
+    "Passwörter, Zahlungsformulare, OAuth-Zustimmungsseiten und Uploads laufen ohne Bestätigung.",
+  "settings.browser.status.title": "Status",
+  "settings.browser.status.playwright": "Playwright",
+  "settings.browser.status.playwright.ready": "Bereit, nutzt {{browser}}",
+  "settings.browser.status.playwright.missing": "Chromium fehlt",
+  "settings.browser.status.playwright.install": "Installieren",
+  "settings.browser.status.playwright.installing": "Wird installiert…",
+  "settings.browser.status.extension": "Browser-Erweiterung",
+  "settings.browser.status.extension.connected": "Verbunden",
+  "settings.browser.status.extension.disconnected": "Nicht verbunden",
+  "settings.browser.status.extension.hint":
+    'Installieren Sie die Kilo-Browser-Erweiterung und aktivieren Sie „Lokale Agenten erlauben", dann öffnen Sie eine Seite, die der Agent nutzen darf.',
+  "settings.browser.origins.title": "Website-Berechtigungen",
+  "settings.browser.origins.site": "Website",
+  "settings.browser.origins.read": "Lesen",
+  "settings.browser.origins.act": "Handeln",
+  "settings.browser.origins.navigate": "Navigieren",
+  "settings.browser.origins.allowAll.title": "Alle Websites erlauben",
+  "settings.browser.origins.allowAll.description":
+    "Jede Website ist ohne Nachfrage erlaubt. Eine Website-Regel gilt weiterhin.",
+  "settings.browser.origins.empty":
+    "Noch keine Website-Regeln. Jede Website außerhalb Ihres Rechners fragt nach, bevor ein Agent sie liest, nutzt oder aufruft.",
+  "settings.browser.origins.add": "Website hinzufügen",
+  "settings.browser.origins.placeholder": "https://example.com",
+  "settings.browser.origins.error.empty": "Geben Sie den Ursprung der Website ein",
+  "settings.browser.origins.error.invalid": "Verwenden Sie einen Ursprung wie https://example.com",
+  "settings.browser.origins.error.duplicate": "Diese Website steht bereits in der Liste",
 
   "settings.language.description":
     'Wählen Sie die Sprache für die Kilo Code Oberfläche. „Auto" verwendet die VS Code Anzeigesprache.',
@@ -1540,6 +1571,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systembrowser",
   "settings.experimental.browserLinks.integrated": "Integrierter Browser",
   "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
+  "chat.reply.toolbar": "Ausgewählter Text",
+  "chat.reply.quote": "Zitieren",
+  "chat.reply.quoteHint": "In deiner Antwort zitieren",
+  "chat.reply.commentHint": "Diese Stelle kommentieren",
+  "chat.reply.copy": "Kopieren",
+  "chat.reply.sendHint": "Diesen Kommentar jetzt an Kilo senden",
+  "chat.reply.commentLater": "Für deine nächste Nachricht speichern",
+  "chat.reply.count": "Antworten ({{count}})",
+  "chat.reply.sendAll": "Alle senden",
+  "chat.reply.showInChat": "Im Chat anzeigen",
   "browserTab.noSession":
     "Öffne den Browser aus einer Sitzung, um eine lokale Anwendung oder eine öffentliche HTTPS-Seite anzuzeigen.",
   "browserTab.disabled":

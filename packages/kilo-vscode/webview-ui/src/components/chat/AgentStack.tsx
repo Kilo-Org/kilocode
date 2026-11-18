@@ -6,12 +6,12 @@
  * must read in both states: this stack leads the working spinner and the actions row alike, and stands alone when a
  * surface has no actions.
  *
- * The stack shows the agents of the current run: active ones, and finished ones dimmed until the next user message.
- * A click opens a panel at the stack to open, stop, or stop all agents, and to clear finished ones. Active agents come
- * first and carry the actions. Finished ones sit below, the latest first, with their final status.
+ * The stack shows every background agent of the session the user did not clear: active ones, and finished ones dimmed.
+ * Finished agents stay across follow-up messages and when the user comes back to the session, until the user clears
+ * them. A click opens a panel at the stack to open, stop, or stop all agents, and to clear finished ones. Active agents
+ * come first and carry the actions. Finished ones sit below, the latest first, with their final status.
  *
- * It appears after a short delay and stays for a short time after the last agent finishes, so agents that finish
- * quickly do not make it flicker.
+ * It appears after a short delay, so a session switch that reloads the agents does not make it flicker.
  */
 
 import {
@@ -49,52 +49,9 @@ export type AgentStackInput = {
   session: Accessor<string | undefined>
   /** The background agents of the session that the user did not clear. */
   agents: Accessor<BackgroundAgent[]>
-  /** The latest user message, which starts a run. */
-  boundary: Accessor<string | undefined>
-  /** The child sessions the current run started. */
-  started: Accessor<ReadonlySet<string>>
   open?: (sessionID: string, title?: string) => void
   stop: (sessionID: string) => void
   dismiss: (ids: string[]) => void
-}
-
-/**
- * The background agents of the current run.
- *
- * A run starts with each user message. The dock shows what the run started, finished agents included, so an agent
- * that finished while the user looked away, or too fast to notice, still shows its status without a scroll back
- * through the transcript. Agents that are still running stay from earlier runs. Finished agents of earlier runs belong
- * to the transcript.
- */
-function useRunAgents(input: AgentStackInput) {
-  // Agents seen active in this run. They stay after they finish.
-  const [kept, setKept] = createSignal<ReadonlySet<string>>(new Set())
-  createEffect(on(input.session, () => setKept(new Set<string>()), { defer: true }))
-  createEffect(
-    on(
-      input.boundary,
-      () =>
-        setKept(
-          new Set(
-            untrack(input.agents)
-              .filter(busy)
-              .map((agent) => agent.id),
-          ),
-        ),
-      { defer: true },
-    ),
-  )
-  createEffect(() => {
-    const ids = input
-      .agents()
-      .filter(busy)
-      .map((agent) => agent.id)
-    if (ids.every((id) => untrack(kept).has(id))) return
-    setKept((prev) => new Set([...prev, ...ids]))
-  })
-  return createMemo(() =>
-    input.agents().filter((agent) => busy(agent) || kept().has(agent.id) || input.started().has(agent.id)),
-  )
 }
 
 export function useAgentStack(input: AgentStackInput) {
@@ -104,7 +61,17 @@ export function useAgentStack(input: AgentStackInput) {
   const timers = new Map<string, ReturnType<typeof setTimeout>>()
   let enter: ReturnType<typeof setTimeout> | undefined
 
-  const agents = useRunAgents(input)
+  // The list is reconciled in place, so read the fields projected into the stack: an in-place update then reruns what
+  // depends on the list, while each agent keeps its store identity for keyed rows.
+  const agents = createMemo(() =>
+    input.agents().map((agent) => {
+      void agent.status
+      void agent.waiting
+      void agent.description
+      void agent.agent
+      return agent
+    }),
+  )
   const live = createMemo(() => agents().filter(busy))
   // The panel holds the stack open, so it does not vanish under the pointer.
   const [hold, setHold] = createSignal(false)
@@ -119,12 +86,12 @@ export function useAgentStack(input: AgentStackInput) {
     setShown(false)
   }
 
-  createEffect(on(input.session, reset, { defer: true }))
-
-  // Avatars keep their place. A finished agent dims in place and stays for the run. An agent that leaves the run
-  // collapses, then leaves the DOM.
+  // Avatars keep their place. A finished agent dims in place and stays until the user clears it. A cleared agent
+  // collapses, then leaves the DOM. A session switch starts over in the same effect, so the reset cannot run after
+  // the new session's agents landed in the same update and leave the stack empty.
   createEffect(
-    on(agents, (list) => {
+    on([input.session, agents] as const, ([session, list], previous) => {
+      if (previous && previous[0] !== session) reset()
       const merged = mergePromptAgents(untrack(items), live())
       const known = new Set(merged.map((item) => item.id))
       const done = list.filter((agent) => !busy(agent) && !known.has(agent.id))

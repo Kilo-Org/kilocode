@@ -98,15 +98,22 @@ export function subagentBackground(part: SessionMessageAssistantTool): boolean {
   return part.state.status === "completed" && part.state.metadata?.status === "running"
 }
 
-/** The child sessions the current run started: subagent parts after the latest user message. */
-export function runChildren(messages: readonly SessionMessageInfo[]): string[] {
-  const start = messages.findLastIndex((message) => message.type === "user")
-  return [...new Set(tools(messages.slice(start + 1)).flatMap((part) => subagentChild(part) ?? []))]
-}
-
 /** Every child session the transcript started, in spawn order. */
 export function transcriptChildren(messages: readonly SessionMessageInfo[]): string[] {
   return [...new Set(tools(messages).flatMap((part) => subagentChild(part) ?? []))]
+}
+
+/**
+ * The child sessions that only the turns hidden by a staged revert started. A child that a kept turn started, and a
+ * reverted turn resumed, stays.
+ */
+export function revertedChildren(
+  messages: readonly SessionMessageInfo[],
+  visible: readonly SessionMessageInfo[],
+): string[] {
+  const shown = new Set(visible)
+  const kept = new Set(transcriptChildren(visible))
+  return transcriptChildren(messages.filter((message) => !shown.has(message))).filter((id) => !kept.has(id))
 }
 
 /**

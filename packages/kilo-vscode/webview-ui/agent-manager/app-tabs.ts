@@ -8,13 +8,16 @@ import { addPendingTab, openSessionTab, replacePendingTab } from "../src/utils/l
 import { LOCAL } from "./navigate"
 import { PENDING_PREFIX } from "./tab-ids"
 
-export const isPendingTab = (id: string) => id.startsWith(PENDING_PREFIX)
-
 export function createLocalTabPlacement(opts: {
   ids: () => string[]
   setIds: (next: string[] | ((prev: string[]) => string[])) => void
   appendOrder: (key: string, id: string) => void
   replaceOrder: (key: string, oldId: string, id: string) => void
+  /**
+   * A draft promoted to a real session keeps the context's remembered tab: the draft was the visible tab when the
+   * user left, and it no longer exists under its old id. Without this, returning falls back to the leftmost tab.
+   */
+  replaceRemembered: (from: string, to: string) => void
   activePending: () => string | undefined
   setActivePending: (id: string | undefined) => void
   setActiveTerminal: (id: undefined) => void
@@ -23,7 +26,7 @@ export function createLocalTabPlacement(opts: {
   setSelection: (id: string) => void
   setReviewActive: (open: boolean) => void
   focus: () => void
-  closed: () => Set<string>
+  resume: (id: string) => void
 }) {
   const addPending = () => {
     const id = `${PENDING_PREFIX}${crypto.randomUUID()}`
@@ -37,13 +40,16 @@ export function createLocalTabPlacement(opts: {
   }
 
   const place = (id: string, pending: string | undefined, active: string | undefined) => {
-    opts.closed().delete(id)
+    opts.resume(id)
     const existing = opts.ids().includes(id)
     const next = pending
       ? replacePendingTab({ ids: opts.ids(), active }, pending, id)
       : openSessionTab({ ids: opts.ids(), active }, id)
     opts.setIds(next.ids)
-    if (pending) opts.replaceOrder(LOCAL, pending, id)
+    if (pending) {
+      opts.replaceOrder(LOCAL, pending, id)
+      opts.replaceRemembered(pending, id)
+    }
     if (!pending && !existing) opts.appendOrder(LOCAL, id)
     if (pending && pending === active) opts.setActivePending(undefined)
   }
@@ -92,12 +98,16 @@ export function newTabForSelection(opts: {
   selection: string | null
   addPending: () => string
   postToWorktree: (worktreeId: string) => void
+  /** Leave an active terminal tab, which covers the session area, so the new session shows when it opens. */
+  clearTerminal: () => void
 }): "ready" | "pending" {
   if (opts.selection === LOCAL) {
     opts.addPending()
     return "ready"
   }
-  if (opts.selection) opts.postToWorktree(opts.selection)
+  if (!opts.selection) return "pending"
+  opts.clearTerminal()
+  opts.postToWorktree(opts.selection)
   return "pending"
 }
 
@@ -113,32 +123,33 @@ export function closeSessionTab(opts: {
   selectSession: (id: string) => void
   forgetFocus: (id: string) => void
   local: Set<string>
-  closed: Set<string>
+  dismiss: (id: string) => void
   removeLocal: (id: string) => void
   postClose: (id: string) => void
   restoreFocus: () => void
 }) {
   const pending = opts.isPending(opts.sessionId)
-  if (opts.isActive) {
-    const next = opts.next
-    if (next && opts.isPending(next)) {
-      opts.setActivePending(next)
-      opts.clearSession()
+  batch(() => {
+    // Remember the close before clearing the shown session: a state push that still lists the tab must not restore it.
+    if (!pending) opts.dismiss(opts.sessionId)
+    if (opts.isActive) {
+      const next = opts.next
+      if (next && opts.isPending(next)) {
+        opts.setActivePending(next)
+        opts.clearSession()
+      }
+      if (next && !opts.isPending(next)) {
+        opts.setActivePending(undefined)
+        opts.selectSession(next)
+      }
+      if (!next) {
+        opts.setActivePending(undefined)
+        opts.clearSession()
+      }
     }
-    if (next && !opts.isPending(next)) {
-      opts.setActivePending(undefined)
-      opts.selectSession(next)
-    }
-    if (!next) {
-      opts.setActivePending(undefined)
-      opts.clearSession()
-    }
-  }
-  opts.forgetFocus(opts.sessionId)
-  if (pending || opts.local.has(opts.sessionId)) {
-    if (!pending) opts.closed.add(opts.sessionId)
-    opts.removeLocal(opts.sessionId)
-  }
+    opts.forgetFocus(opts.sessionId)
+    if (pending || opts.local.has(opts.sessionId)) opts.removeLocal(opts.sessionId)
+  })
   if (opts.notify !== false) opts.postClose(opts.sessionId)
   opts.restoreFocus()
 }

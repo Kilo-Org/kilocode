@@ -42,6 +42,7 @@ import { Environment } from "../environment/index.js"
 import { FileAccess } from "../file-access.js"
 import { FileMutation } from "../file-mutation.js"
 import { FileWrite } from "../file-write.js"
+import { Flag } from "../flag.js"
 import { Formatter } from "../formatter.js"
 import { Generate } from "../generate.js"
 import { Form } from "../form.js"
@@ -64,6 +65,7 @@ import { WebSearch } from "../websearch.js"
 import { Ripgrep } from "../ripgrep.js"
 import { Schedule } from "../schedule.js"
 import { Session } from "../session.js"
+import { SessionInbox } from "../session/inbox.js" // kilocode_change(workflow-model) seam - built-in plugins read the installed delivery policy
 import { SessionCompaction } from "../session/compaction.js"
 import { SessionInstructions } from "../session/instructions.js"
 import { SubagentJob } from "../session/subagent-job.js"
@@ -120,7 +122,7 @@ import { WellKnownPlugin } from "../wellknown/plugin.js"
 const services = [
   Agent.Service,
   // Activation clears the ambient context, so built-ins see the configured build channel only through this.
-  App.Metadata,
+  App.Service,
   FetchHttpClient.Fetch,
   Artifact.Service,
   AppProcess.Service,
@@ -134,6 +136,7 @@ const services = [
   FileAccess.Service,
   FileMutation.Service,
   FileWrite.Service,
+  Flag.Service,
   Formatter.Service,
   Generate.Service,
   LocationWatcherPolicy.Service,
@@ -161,6 +164,7 @@ const services = [
   Session.Service,
   SessionCompaction.Service,
   SessionInstructions.Service,
+  SessionInbox.Policy, // kilocode_change(workflow-model) seam - built-in plugins read the installed delivery policy
   SubagentJob.Service,
   SharedCache.Service,
   Shell.Service,
@@ -193,6 +197,7 @@ export const requirements = LayerNode.group([
   FileAccess.node,
   FileMutation.node,
   FileWrite.node,
+  Flag.node,
   Formatter.node,
   Generate.node,
   LocationWatcherPolicy.node,
@@ -220,6 +225,7 @@ export const requirements = LayerNode.group([
   Schedule.node,
   Session.node,
   SessionCompaction.node,
+  SessionInbox.policyNode, // kilocode_change(workflow-model) seam - build the delivery policy for the plugin context
   SessionInstructions.node,
   SubagentJob.node,
   SharedCache.node,

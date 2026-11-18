@@ -6,6 +6,8 @@ test("Gateway modes override built-in agents before config, and post-config step
     "kilocode.handshake",
     "kilo.agent",
     "kilocode.plan",
+    "kilocode.goal",
+    "kilocode.request-identity",
     "kilocode.gateway",
     "kilocode.provider-usage",
     "kilocode.openai",
@@ -20,17 +22,23 @@ test("Gateway modes override built-in agents before config, and post-config step
     "kilocode.tool-todo",
     "kilocode.tool-write",
     "kilocode.tool-browser",
+    "kilocode.browser-tools",
     "kilocode.tool-notebook",
+    "kilocode.chart",
     "kilocode.commit-message",
     "kilocode.privacy",
     "kilocode.settings",
     "kilocode.branch-name",
     "kilocode.agent-manager",
     "kilocode.background-jobs",
+    "kilocode.session-drain",
+    "kilocode.subagent-background",
     "kilocode.recall",
     "kilocode.indexing",
+    "kilocode.pages",
     "kilocode.review",
     "kilocode.question",
+    "kilocode.wakeup",
     "kilocode.board",
   ])
   expect(KiloPostPlugins.map((plugin) => plugin.id)).toEqual([
@@ -38,7 +46,10 @@ test("Gateway modes override built-in agents before config, and post-config step
     "kilo.agent.ceiling",
     "kilocode.gateway.options",
     "kilocode.gateway.opencode-free-tier",
+    "kilocode.request-identity.referer",
     "kilocode.sandbox",
+    "kilocode.subagent-delegation",
+    "kilocode.soul",
   ])
   expect([...KiloPlugins, ...KiloPostPlugins].every((plugin) => typeof plugin.effect === "function")).toBe(true)
 })

@@ -17,8 +17,8 @@ import {
 export interface PasteCollapse {
   /** Collapsed blocks in the current text, in text order. */
   pastes: Accessor<PasteRange[]>
-  /** Split the current text for the highlight overlay, chips included. */
-  segments: (text: string) => PromptSegment[]
+  /** Split the current text for the highlight overlay, chips and the given `@` mention tokens included. */
+  segments: (text: string, mentions?: Set<string>) => PromptSegment[]
   /** The text with every collapsed block restored to its full content. */
   plainText: (text: string) => string
   /** Restore collapsed blocks for arbitrary text paired with stored backing. */
@@ -284,7 +284,7 @@ export function usePasteCollapse(opts: { enabled: Accessor<boolean>; text: Acces
 
   return {
     pastes,
-    segments: (text) => buildPromptSegments(text, pastes()),
+    segments: (text, mentions) => buildPromptSegments(text, pastes(), mentions),
     plainText: (text) => expandPastes(text, pastes()),
     plainTextFor,
     paste,

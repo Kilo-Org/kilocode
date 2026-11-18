@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Завершено (по сообщению модели)",
+  "session.goal.complete": "Завершено",
   "session.goal.blocked": "Заблокировано",
   "session.goal.restart": "Перезапустить цель",
   ...anacondaDesktopDict,
@@ -308,6 +308,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.noChanges": "Изменений нет.",
   "ui.permission.reject": "Отклонить",
+  "ui.permission.allowAllSites": "Разрешить все сайты",
   "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
   "ui.permission.feedbackHint": "Enter для отклонения, Esc для отмены",
   "ui.permission.doomLoop.prompt":
@@ -697,8 +698,6 @@ export const dict = {
 
   "common.retry": "Повторить",
   "common.refresh": "Обновить",
-  "common.reload": "Перезагрузить",
-  "common.reloadDescription": "Перезагрузить конфигурацию, навыки, агентов и команды с диска",
 
   "profile.title": "Профиль",
   "profile.notLoggedIn": "Не авторизован",
@@ -755,9 +754,8 @@ export const dict = {
   "settings.agentBehaviour.title": "Поведение агента",
   "settings.autoApprove.title": "Автоодобрение",
   "settings.webTools.title": "Веб-инструменты",
-  "settings.webTools.description": "Настройте веб-поиск.",
+  "settings.webTools.description": "Настройте веб-поиск и браузерные инструменты агента.",
   "settings.webTools.webSearch.enable": "Включить для всех провайдеров",
-  "settings.webTools.browserAutomation": "Автоматизация браузера",
   "settings.webTools.webSearch.title": "Веб-поиск",
   "settings.webTools.webSearch.description": "Сделайте веб-поиск доступным для моделей всех провайдеров.",
   "settings.checkpoints.title": "Контрольные точки",
@@ -882,16 +880,49 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Рабочие процессы",
   "settings.agentBehaviour.subtab.skills": "Навыки",
 
-  "settings.browser.description":
-    "Настройте встроенную автоматизацию браузера на основе Playwright. Kilo может переходить по веб-страницам, взаимодействовать с ними и делать скриншоты в ваших сессиях.",
-  "settings.browser.enable.title": "Включить автоматизацию браузера",
-  "settings.browser.enable.description":
-    "Включить привязанный к сеансу браузер Agent Manager для локальных приложений и общедоступных HTTPS-страниц.",
-  "settings.browser.systemChrome.title": "Использовать системный Chrome",
-  "settings.browser.systemChrome.description":
-    "Использовать установленный браузер Chrome вместо отдельного экземпляра Chromium.",
-  "settings.browser.headless.title": "Безголовый режим",
-  "settings.browser.headless.description": "Запуск в безголовом режиме (без видимого окна браузера).",
+  "settings.browser.backend.title": "Бэкенд",
+  "settings.browser.backend.description": "Каким браузером управляют браузерные инструменты агента.",
+  "settings.browser.backend.playwright": "Встроенный браузер (Playwright)",
+  "settings.browser.backend.playwright.description":
+    "Профиль Chromium от Kilo, запускаемый при первом вызове браузера.",
+  "settings.browser.backend.extension": "Расширение браузера",
+  "settings.browser.backend.extension.description": "Ваш собственный браузер через расширение Kilo.",
+  "settings.browser.backend.off": "Выключено",
+  "settings.browser.backend.off.description": "Скрыть браузерные инструменты от агентов.",
+  "settings.browser.observation.title": "Наблюдение",
+  "settings.browser.observation.description": "Какую часть страницы агент видит после каждого шага.",
+  "settings.browser.observation.full": "Полный снимок",
+  "settings.browser.observation.diff": "Только изменения",
+  "settings.browser.observation.none": "Только состояние",
+  "settings.browser.sensitive.title": "Разрешать чувствительные шаги без вопроса",
+  "settings.browser.sensitive.description":
+    "Пароли, платёжные формы, страницы согласия OAuth и загрузки выполняются без подтверждения.",
+  "settings.browser.status.title": "Состояние",
+  "settings.browser.status.playwright": "Playwright",
+  "settings.browser.status.playwright.ready": "Готово, используется {{browser}}",
+  "settings.browser.status.playwright.missing": "Chromium не установлен",
+  "settings.browser.status.playwright.install": "Установить",
+  "settings.browser.status.playwright.installing": "Установка…",
+  "settings.browser.status.extension": "Расширение браузера",
+  "settings.browser.status.extension.connected": "Подключено",
+  "settings.browser.status.extension.disconnected": "Не подключено",
+  "settings.browser.status.extension.hint":
+    "Установите расширение браузера Kilo и включите «Разрешить локальных агентов», затем откройте страницу, которую агент может использовать.",
+  "settings.browser.origins.title": "Разрешения сайтов",
+  "settings.browser.origins.site": "Сайт",
+  "settings.browser.origins.read": "Чтение",
+  "settings.browser.origins.act": "Действие",
+  "settings.browser.origins.navigate": "Переход",
+  "settings.browser.origins.allowAll.title": "Разрешить все сайты",
+  "settings.browser.origins.allowAll.description":
+    "Все сайты разрешены без запроса. Правило сайта по-прежнему действует.",
+  "settings.browser.origins.empty":
+    "Правил для сайтов пока нет. Любой сайт вне вашей машины запрашивает разрешение, прежде чем агент прочитает, использует или откроет его.",
+  "settings.browser.origins.add": "Добавить сайт",
+  "settings.browser.origins.placeholder": "https://example.com",
+  "settings.browser.origins.error.empty": "Укажите origin сайта",
+  "settings.browser.origins.error.invalid": "Используйте origin вида https://example.com",
+  "settings.browser.origins.error.duplicate": "Этот сайт уже в списке",
 
   "settings.language.description": "Выберите язык интерфейса Kilo Code. «Авто» использует язык отображения VS Code.",
   "settings.language.auto": "Авто (язык VS Code)",
@@ -1508,6 +1539,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Системный браузер",
   "settings.experimental.browserLinks.integrated": "Встроенный браузер",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
+  "chat.reply.toolbar": "Выделенный текст",
+  "chat.reply.quote": "Цитировать",
+  "chat.reply.quoteHint": "Цитировать в ответе",
+  "chat.reply.commentHint": "Прокомментировать этот фрагмент",
+  "chat.reply.copy": "Копировать",
+  "chat.reply.sendHint": "Отправить этот комментарий в Kilo сейчас",
+  "chat.reply.commentLater": "Сохранить для следующего сообщения",
+  "chat.reply.count": "Ответы ({{count}})",
+  "chat.reply.sendAll": "Отправить все",
+  "chat.reply.showInChat": "Показать в чате",
   "browserTab.noSession":
     "Откройте браузер из сеанса, чтобы просмотреть локальное приложение или публичную HTTPS-страницу.",
   "browserTab.disabled": "Встроенный браузер отключён. Включите его в Настройках Kilo > Экспериментальные.",

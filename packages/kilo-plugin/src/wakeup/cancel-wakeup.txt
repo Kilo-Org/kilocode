@@ -1,0 +1,1 @@
+List or cancel this session's pending wakeups. action list shows id, due time and reason; action cancel removes that id. Cancelling an id that is already gone is safe. For cron tasks use cron_list and cron_delete. Do not poll with this tool: the harness resumes the session when a wakeup fires.

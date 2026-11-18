@@ -13,6 +13,7 @@ import {
 import { getErrorMessage } from "./agent-manager/errors"
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
+import type { Service } from "./browser-settings"
 import type { GitChanges } from "./git-changes"
 import { local } from "./local"
 import { dismissNotification, dismissedNotifications, syncDismissedNotifications } from "./notifications"
@@ -49,6 +50,7 @@ import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { indexingHost } from "./indexing/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 import { chatFocus } from "./services/code-actions/target"
+import { createMentionHost, isMentionRequest } from "./kilo-provider/mention-requests"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
@@ -68,7 +70,7 @@ export type ChatWorktree = {
   /** Moves a conversation into a new worktree, reporting each step. */
   continue: (sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>
   /** Creates a worktree, then opens the Agent Manager. */
-  create: (baseBranch?: string, branchName?: string) => Promise<void>
+  create: (baseBranch?: string, branchName?: string, requestId?: string) => Promise<void>
   /** Opens the Agent Manager worktree dialog. */
   advanced: () => Promise<void>
   /** The current branch of the workspace, for the New Worktree menu. */
@@ -192,7 +194,7 @@ export function wire(input: {
   view: View
   trackCostSession?: (sessionID: string) => void
   /** Directory for a saved image, when the view follows a session in another directory. */
-  saveImageDirectory?: () => string | undefined
+  saveImageDirectory?: (sessionID?: string) => string | undefined | Promise<string | undefined>
   /** The tool diff surfaces of the chat view. Settings has none. */
   diff?: ToolDiff
   /** The Changes editor tab the chat view opens. Settings has none. */
@@ -212,6 +214,8 @@ export function wire(input: {
   globals?: Record<string, unknown>
   /** The Agent Manager settings handler the Settings panel shares with the provider. */
   agentManager?: () => SettingsHandler
+  /** The browser tools' settings, owned by the extension activation so its migration and every panel share one store. */
+  browserSettings?: Service
   /** Opens a chat web link in the Integrated Browser. Returns false when the tab cannot take it. */
   openBrowser?: (sessionId: string, url: string) => boolean
   /** The editor tab that previews Markdown files, when this view has one. */
@@ -243,6 +247,8 @@ export function wire(input: {
     log: (message, error) => console.error(`Kilo indexing: ${message}`, error),
   })
   const detachIndexing = indexing.attach(post)
+  // The composer's `@` menu: file and past-chat search, the file picker, terminal output and git changes.
+  const mentions = createMentionHost({ server: input.server, directory: input.directory, post })
   // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
   // Agent Manager side by side.
   const others = (message: ToWebview) => surfaces.forEach((target) => target !== post && target(message))
@@ -270,6 +276,9 @@ export function wire(input: {
           server: input.server,
           directory: input.directory,
           post,
+          // Every view that edits the browser settings gets the one store the activation migration wrote through;
+          // this host builds its own from the same factory when a view was opened without it.
+          browserSettings: input.browserSettings,
           // A reset clears the recents, usage and efforts; every open webview must drop its copy of them.
           onReset: () => {
             input.onReset?.()
@@ -436,7 +445,9 @@ export function wire(input: {
   // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
   const handleLeafMessage = (message: ToHost): boolean => {
     if (message.type === "saveImage") {
-      void saveImage(input.saveImageDirectory?.() ?? input.directory, message)
+      void Promise.resolve(input.saveImageDirectory?.(message.sessionID)).then((directory) =>
+        saveImage(directory ?? input.directory, message),
+      )
       return true
     }
     if (message.type === "previewImage") {
@@ -499,6 +510,7 @@ export function wire(input: {
       return
     }
     if (input.handle?.(message) || speech.handle(message)) return
+    if (isMentionRequest(message)) return mentions.handle(message)
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "sidebar.session") return setSidebarSession(message.sessionId)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
@@ -622,7 +634,8 @@ export function html(input: {
     "default-src 'none'",
     `style-src 'unsafe-inline' ${input.csp}`,
     `script-src 'nonce-${nonce}'${module ? " 'strict-dynamic'" : ""} 'wasm-unsafe-eval'`,
-    `worker-src ${input.csp}`,
+    // Worker scripts must be same-origin, so the webview starts them from blob URLs of the fetched scripts.
+    `worker-src ${input.csp} blob:`,
     `font-src ${input.csp}`,
     `connect-src ${input.csp}`,
     `img-src ${input.csp} data: https:`,
@@ -708,7 +721,7 @@ export function routeWorktreeMessage(
     return true
   }
   if (message.type === "agentManager.createWorktree") {
-    void worktree?.create(message.baseBranch, message.branchName).catch((error: unknown) => {
+    void worktree?.create(message.baseBranch, message.branchName, message.requestId).catch((error: unknown) => {
       post({ type: "continueInWorktreeProgress", status: "error", error: getErrorMessage(error) })
     })
     return true

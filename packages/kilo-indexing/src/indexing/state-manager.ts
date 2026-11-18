@@ -9,6 +9,7 @@ export class CodeIndexStateManager {
   private _totalFiles = 0
   private _percent = 0
   private _gitBranch?: string
+  private _searchable = false
   private _manifest?: {
     totalFiles: number
     totalChunks: number
@@ -20,6 +21,18 @@ export class CodeIndexStateManager {
 
   public get state(): IndexingState {
     return this._systemStatus
+  }
+
+  /**
+   * True once a scan finished, so the store holds a complete index. The file watcher can still be unavailable, and
+   * the status then stays `Error`; searching that index is valid, so a watcher failure alone does not block search.
+   */
+  public get searchable(): boolean {
+    return this._searchable
+  }
+
+  public setSearchable(searchable: boolean): void {
+    this._searchable = searchable
   }
 
   public getCurrentStatus() {

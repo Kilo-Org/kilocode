@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Completo (según el modelo)",
+  "session.goal.complete": "Completo",
   "session.goal.blocked": "Bloqueado",
   "session.goal.restart": "Reiniciar objetivo",
   ...anacondaDesktopDict,
@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Gestionar reglas de aprobación automática",
   "ui.permission.noChanges": "Sin cambios.",
   "ui.permission.reject": "Rechazar",
+  "ui.permission.allowAllSites": "Permitir todos los sitios",
   "ui.permission.feedbackPlaceholder": "Dile a Kilo qué debe hacer de otra forma",
   "ui.permission.feedbackHint": "Enter para rechazar, Esc para cancelar",
   "ui.permission.doomLoop.prompt": "Se detectó un posible bucle en la herramienta {{tool}}. ¿Continuar ejecutando?",
@@ -706,8 +707,6 @@ export const dict = {
 
   "common.retry": "Reintentar",
   "common.refresh": "Actualizar",
-  "common.reload": "Recargar",
-  "common.reloadDescription": "Recargar configuración, habilidades, agentes y comandos desde el disco",
 
   "profile.title": "Perfil",
   "profile.notLoggedIn": "No conectado",
@@ -764,9 +763,8 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportamiento del agente",
   "settings.autoApprove.title": "Aprobación automática",
   "settings.webTools.title": "Herramientas web",
-  "settings.webTools.description": "Configura la búsqueda web.",
+  "settings.webTools.description": "Configura la búsqueda web y las herramientas de navegador del agente.",
   "settings.webTools.webSearch.enable": "Habilitar para todos los proveedores",
-  "settings.webTools.browserAutomation": "Automatización del navegador",
   "settings.webTools.webSearch.title": "Búsqueda web",
   "settings.webTools.webSearch.description": "Permite que los modelos de todos los proveedores usen la búsqueda web.",
   "settings.checkpoints.title": "Puntos de control",
@@ -893,16 +891,49 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Flujos de trabajo",
   "settings.agentBehaviour.subtab.skills": "Habilidades",
 
-  "settings.browser.description":
-    "Configura la automatización de navegador integrada basada en Playwright. Kilo puede navegar, interactuar y capturar pantallas de páginas web en tus sesiones.",
-  "settings.browser.enable.title": "Activar automatización del navegador",
-  "settings.browser.enable.description":
-    "Activar el navegador de Agent Manager específico de cada sesión para aplicaciones locales y páginas HTTPS públicas.",
-  "settings.browser.systemChrome.title": "Usar Chrome del sistema",
-  "settings.browser.systemChrome.description":
-    "Usar el navegador Chrome instalado en lugar de una instancia separada de Chromium.",
-  "settings.browser.headless.title": "Modo headless",
-  "settings.browser.headless.description": "Ejecutar en modo headless (sin ventana de navegador visible).",
+  "settings.browser.backend.title": "Backend",
+  "settings.browser.backend.description": "Qué navegador controlan las herramientas de navegador del agente.",
+  "settings.browser.backend.playwright": "Navegador integrado (Playwright)",
+  "settings.browser.backend.playwright.description":
+    "Un perfil de Chromium de Kilo, iniciado en la primera llamada al navegador.",
+  "settings.browser.backend.extension": "Extensión de navegador",
+  "settings.browser.backend.extension.description": "Tu propio navegador, mediante la extensión de navegador de Kilo.",
+  "settings.browser.backend.off": "Desactivado",
+  "settings.browser.backend.off.description": "Ocultar las herramientas de navegador a los agentes.",
+  "settings.browser.observation.title": "Observación",
+  "settings.browser.observation.description": "Cuánto de la página ve el agente tras cada paso.",
+  "settings.browser.observation.full": "Captura completa",
+  "settings.browser.observation.diff": "Solo lo que cambió",
+  "settings.browser.observation.none": "Solo el estado",
+  "settings.browser.sensitive.title": "Permitir pasos sensibles sin preguntar",
+  "settings.browser.sensitive.description":
+    "Contraseñas, formularios de pago, páginas de consentimiento OAuth y subidas se ejecutan sin confirmación.",
+  "settings.browser.status.title": "Estado",
+  "settings.browser.status.playwright": "Playwright",
+  "settings.browser.status.playwright.ready": "Listo, usando {{browser}}",
+  "settings.browser.status.playwright.missing": "Falta Chromium",
+  "settings.browser.status.playwright.install": "Instalar",
+  "settings.browser.status.playwright.installing": "Instalando…",
+  "settings.browser.status.extension": "Extensión de navegador",
+  "settings.browser.status.extension.connected": "Conectada",
+  "settings.browser.status.extension.disconnected": "No conectada",
+  "settings.browser.status.extension.hint":
+    'Instala la extensión de navegador de Kilo y activa "Permitir agentes locales", luego abre una página que el agente pueda usar.',
+  "settings.browser.origins.title": "Permisos de sitios",
+  "settings.browser.origins.site": "Sitio",
+  "settings.browser.origins.read": "Leer",
+  "settings.browser.origins.act": "Actuar",
+  "settings.browser.origins.navigate": "Navegar",
+  "settings.browser.origins.allowAll.title": "Permitir todos los sitios",
+  "settings.browser.origins.allowAll.description":
+    "Todos los sitios están permitidos sin preguntar. Una regla de sitio sigue aplicándose.",
+  "settings.browser.origins.empty":
+    "Aún no hay reglas de sitios. Cada sitio fuera de tu equipo pregunta antes de que un agente lo lea, use o navegue.",
+  "settings.browser.origins.add": "Añadir un sitio",
+  "settings.browser.origins.placeholder": "https://example.com",
+  "settings.browser.origins.error.empty": "Introduce el origen del sitio",
+  "settings.browser.origins.error.invalid": "Usa un origen como https://example.com",
+  "settings.browser.origins.error.duplicate": "Este sitio ya está en la lista",
 
   "settings.language.description":
     'Elige el idioma de la interfaz de Kilo Code. "Auto" utiliza el idioma de visualización de VS Code.',
@@ -1530,6 +1561,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Navegador del sistema",
   "settings.experimental.browserLinks.integrated": "Navegador integrado",
   "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
+  "chat.reply.toolbar": "Texto seleccionado",
+  "chat.reply.quote": "Citar",
+  "chat.reply.quoteHint": "Citar en tu respuesta",
+  "chat.reply.commentHint": "Comentar este fragmento",
+  "chat.reply.copy": "Copiar",
+  "chat.reply.sendHint": "Enviar este comentario a Kilo ahora",
+  "chat.reply.commentLater": "Guardar para tu próximo mensaje",
+  "chat.reply.count": "Respuestas ({{count}})",
+  "chat.reply.sendAll": "Enviar todo",
+  "chat.reply.showInChat": "Mostrar en el chat",
   "browserTab.noSession":
     "Abre el navegador desde una sesión para previsualizar una aplicación local o una página HTTPS pública.",
   "browserTab.disabled": "El navegador integrado está desactivado. Actívalo en Ajustes de Kilo > Experimental.",

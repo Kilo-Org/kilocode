@@ -12,11 +12,6 @@ describe("FIM target", () => {
       model: "mistralai/codestral-2508",
       url: gateway,
     })
-    expect(KiloAutocomplete.resolveFimTarget("kilo", "inception/mercury-edit-2", server)).toEqual({
-      provider: "kilo",
-      model: "inception/mercury-edit-2",
-      url: gateway,
-    })
   })
 
   test("routes explicit provider models directly to the provider", () => {
@@ -24,20 +19,23 @@ describe("FIM target", () => {
       provider: "mistral",
       model: "codestral-2508",
     })
+  })
+
+  test("sends a retired direct provider selection to the default Gateway model", () => {
     expect(KiloAutocomplete.resolveFimTarget("inception", "mercury-edit-2", server)).toEqual({
-      provider: "inception",
-      model: "mercury-edit-2",
-      url: "https://api.inceptionlabs.ai/v1/fim/completions",
+      provider: "kilo",
+      model: "mistralai/codestral-2508",
+      url: gateway,
     })
   })
 
-  test("passes Gateway model IDs through and defaults to Codestral 2501", () => {
+  test("passes Gateway model IDs through and defaults to Codestral 2508", () => {
     expect(KiloAutocomplete.resolveFimTarget(undefined, undefined, server)).toEqual({
       provider: "kilo",
-      model: "mistralai/codestral-2501",
+      model: "mistralai/codestral-2508",
       url: gateway,
     })
-    for (const model of ["mistralai/codestral-2508", "inception/mercury-edit", "custom/fim-model"]) {
+    for (const model of ["mistralai/codestral-2508", "custom/fim-model"]) {
       expect(KiloAutocomplete.resolveFimTarget(undefined, model, server)).toEqual({ provider: "kilo", model, url: gateway })
       expect(KiloAutocomplete.resolveFimTarget("kilo", model, server)).toEqual({ provider: "kilo", model, url: gateway })
     }

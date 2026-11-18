@@ -18,6 +18,7 @@ import { SessionProjector } from "@opencode/core/session/projector"
 import { Global } from "@opencode/util/global"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { SessionSync } from "../src/session-sync"
+import { loadPlugins } from "./lib/plugins"
 
 // The reference Kilo RPC end to end: the contract in @opencode/schema, the handlers in the Gateway plugin of
 // packages/kilo-plugin, the plugin registered by the host overrides, and the call through the generated client's
@@ -27,7 +28,8 @@ const boot =
   (
     env: Record<string, string>,
     body: (rpc: ReturnType<typeof gateway>, backend: ReturnType<typeof fixture>) => Promise<void>,
-    options: { syncBackground?: boolean } = {},
+    // `data` is the server's global data directory, where a new store looks for an `auth.json` to import.
+    options: { syncBackground?: boolean; awaitActivation?: boolean; data?: string } = {},
   ) =>
   async () => {
   using backend = fixture()
@@ -88,6 +90,9 @@ const boot =
                   })),
                   deps: [Database.node, Bus.node, SessionProjector.node, Credential.node, Global.node],
                 })),
+                ...(options.data
+                  ? [Global.node.replace(Global.layerWith({ config: directory, data: options.data }))]
+                  : []),
               ],
             ).pipe(Layer.provide(HttpServer.layerServices)),
           )
@@ -104,7 +109,14 @@ const boot =
               { preconnect: fetch.preconnect },
             ),
           })
-          yield* Effect.promise(() => body(gateway(client, directory, backend.url, syncOrganizations, syncScopes), backend))
+          // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
+          const ready = loadPlugins(context, directory)
+          // A test that asserts intermediate activation state opts out and awaits `gateway.ready()` itself once its
+          // fixture is in place.
+          if (options.awaitActivation !== false) yield* ready
+          yield* Effect.promise(() =>
+            body(gateway(client, directory, backend.url, syncOrganizations, syncScopes, ready), backend),
+          )
         }),
       ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
     )
@@ -136,14 +148,18 @@ function gateway(
   server: string,
   syncOrganizations: (string | null)[],
   syncScopes: (string | null | undefined)[],
+  ready: Effect.Effect<void, unknown>,
 ) {
   return {
+    client,
     rpc: client.rpc(KiloGatewayRpc.Definition),
     sync: client.rpc(KiloSessionSyncRpc.Definition),
     options: { location: { directory } },
     server,
     syncOrganizations,
     syncScopes,
+    // Waits for the Location's plugins to finish registering, so a one-shot caller can dispatch the RPC.
+    ready: () => Effect.runPromise(ready),
   }
 }
 
@@ -195,6 +211,92 @@ test(
   30_000,
 )
 
+// The team a Kilo v1 login on this machine used last, in v1's `auth.json`. The backend selects another one.
+const v1Login = (access: string) =>
+  JSON.stringify({ kilo: { type: "oauth", access, refresh: access, expires: 4_102_444_800_000, accountId: "first" } })
+
+for (const hasPersonalAccount of [true, false])
+  test(`a new store keeps the team of an imported Kilo v1 login (Personal: ${hasPersonalAccount})`, async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "kilo-v1-import-"))
+    // Once the release renames the kilo2 data directory to `kilo`, it is v1's own, and a new store imports v1's
+    // auth.json through the upstream `import_legacy_credentials` migration.
+    const data = path.join(root, "kilo")
+    const auth = v1Login("fixture-token")
+    await Bun.write(path.join(data, "auth.json"), auth)
+    try {
+      await boot(
+        {},
+        async (gateway, backend) => {
+          backend.state.profile = {
+            user: { email: "profile@example.test" },
+            organizations: [
+              { id: "first", name: "First" },
+              { id: "selected", name: "Selected" },
+            ],
+            selectedOrganizationId: "selected",
+            hasPersonalAccount,
+          }
+          await gateway.ready()
+          await until(
+            () => backend.requests.some((request) => request.path.endsWith("/models")),
+            "the imported login loads its catalog",
+          )
+          expect(
+            backend.requests.filter((request) => request.path.endsWith("/models")).map((request) => request.path),
+          ).toEqual(["/api/gateway/v1/organizations/first/models"])
+          expect(await gateway.rpc.authStatus({}, gateway.options)).toEqual({
+            authenticated: true,
+            organizationID: "first",
+            server: gateway.server,
+          })
+        },
+        { data, awaitActivation: false },
+      )()
+      expect(await Bun.file(path.join(data, "auth.json")).text()).toBe(auth)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  }, 30_000)
+
+test("a device sign-in starts on the team of the Kilo v1 login beside the kilo2 data directory", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "kilo-v1-signin-"))
+  const file = path.join(root, "kilo", "auth.json")
+  const auth = v1Login("v1-token")
+  await Bun.write(file, auth)
+  try {
+    await boot(
+      {},
+      async (gateway, backend) => {
+        backend.state.pending = 0
+        const input = { ...gateway.options, integrationID: "kilo" }
+        const attempt = await gateway.client.integration.oauth.connect({ ...input, methodID: "device" })
+        await eventually(
+          () => gateway.client.integration.oauth.status({ ...input, attemptID: attempt.data.attemptID }),
+          (status) => status.data.status !== "pending",
+          "the device sign-in completes",
+        )
+        expect((await gateway.client.credential.list()).map((credential) => credential.value)).toEqual([
+          expect.objectContaining({
+            access: "fixture-token",
+            metadata: expect.objectContaining({ organizationID: "first" }),
+          }),
+        ])
+        expect(
+          await eventually(
+            () => gateway.rpc.authStatus({}, gateway.options),
+            (status) => status.authenticated,
+            "the Gateway uses the new login",
+          ),
+        ).toEqual({ authenticated: true, organizationID: "first", server: gateway.server })
+      },
+      { data: path.join(root, "kilo2") },
+    )()
+    expect(await Bun.file(file).text()).toBe(auth)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}, 30_000)
+
 test(
   "automatic sync enrollment follows the Gateway selection and pauses on an organization switch",
   boot({ KILO_API_KEY: "fixture-token" }, async (gateway) => {
@@ -231,15 +333,21 @@ test(
       selectedOrganizationId: "selected",
       hasPersonalAccount: false,
     }
-    const starting = gateway.rpc.authStatus({}, gateway.options)
+    // The server no longer waits for plugins in rpc.call, so this one-shot caller awaits activation before it calls.
+    // Activation registers the RPC and starts the login's catalog resolution, which blocks on the pending profile, so
+    // no organization resolves yet.
+    await gateway.ready()
     try {
       await until(() => backend.requests.some((request) => request.path === "/api/profile"), "the unresolved profile request reaches the peer")
       expect(gateway.syncScopes.length).toBeGreaterThan(0)
       expect(gateway.syncScopes.every((scope) => scope === undefined)).toBe(true)
       expect(gateway.syncOrganizations).toEqual([])
+      // rpc.call no longer waits for the login's catalog resolution, so authStatus reports no organization yet.
+      // Before upstream v2.2.7 this call waited and returned the organization.
+      expect(await gateway.rpc.authStatus({}, gateway.options)).toMatchObject({ authenticated: true, organizationID: null })
       profileReady.resolve()
-      expect(await starting).toMatchObject({ authenticated: true, organizationID: "selected" })
       await until(() => gateway.syncOrganizations.includes("selected"), "automatic organization enrollment reaches the peer")
+      expect(await gateway.rpc.authStatus({}, gateway.options)).toMatchObject({ authenticated: true, organizationID: "selected" })
       const directory = gateway.options.location.directory
       const status = await gateway.sync.status({ directory }, gateway.options)
       expect(status).toMatchObject({ enabled: true, tenant: { type: "organization", id: "selected" } })
@@ -248,9 +356,8 @@ test(
       expect(gateway.syncScopes.filter((scope) => scope !== undefined)).toEqual(["selected"])
     } finally {
       profileReady.resolve()
-      await starting.catch(() => undefined)
     }
-  }, { syncBackground: true }),
+  }, { syncBackground: true, awaitActivation: false }),
   30_000,
 )
 
@@ -309,14 +416,10 @@ test(
       inputTokens: 5,
       outputTokens: 2,
     })
-    expect(await gateway.rpc["autocomplete.edit"]({ ...edit }, gateway.options)).toEqual({
-      content: "fixture edit",
-      usage: { prompt_tokens: 7, completion_tokens: 3 },
-    })
     backend.state.fimHang = true
     const abort = new AbortController()
     const pending = gateway.rpc["autocomplete.fim"]({ prefix: "", suffix: "" }, { ...gateway.options, signal: abort.signal })
-    await until(() => backend.state.autocompleteRequests.length >= 3, "the hung FIM request reached the fixture")
+    await until(() => backend.state.autocompleteRequests.length >= 2, "the hung FIM request reached the fixture")
     abort.abort()
     expect(await pending.then(() => false, () => true)).toBe(true)
     await until(() => backend.state.fimAborted === 1, "the fixture saw the aborted FIM request")
@@ -344,13 +447,10 @@ async function until(condition: () => boolean, what: string, timeout = 5_000) {
   throw new Error(`Timed out waiting until ${what}`)
 }
 
-const edit = {
-  currentFilePath: "src/index.ts",
-  currentFileContent: "export const value = 1\n",
-  cursorLine: 0,
-  cursorCharacter: 0,
-  editableRegionStartLine: 0,
-  editableRegionEndLine: 0,
-  recentlyViewedSnippets: [],
-  editDiffHistory: [],
+async function eventually<A>(read: () => Promise<A>, done: (value: A) => boolean, what: string, timeout = 10_000) {
+  for (const start = Date.now(); Date.now() - start < timeout; await Bun.sleep(10)) {
+    const value = await read()
+    if (done(value)) return value
+  }
+  throw new Error(`Timed out waiting until ${what}`)
 }

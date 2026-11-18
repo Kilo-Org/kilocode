@@ -1,5 +1,6 @@
 // The providers every Kilo webview mounts: theme, dialogs, the VS Code API, language, the model picker preferences
-// and toasts. The chat adds the rich-content providers; the Settings and Profile panels do not load them.
+// and toasts. The chat adds the rich-content providers, and the Display settings tab adds them for its preview; the
+// other Settings and Profile panels do not load them.
 // The host pushes `kilo-code.v2.*` changes here, so the language and the font size follow without a reload.
 import { onCleanup, type ParentComponent } from "solid-js"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"

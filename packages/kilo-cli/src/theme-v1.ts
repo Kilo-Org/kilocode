@@ -1,3 +1,4 @@
+// kilo_mirror: packages/tui/src/theme/v1.ts
 import type { ThemeV1Json } from "../../tui/src/theme/v1"
 import aura from "../../tui/src/theme/assets/aura.json" with { type: "json" }
 import ayu from "../../tui/src/theme/assets/ayu.json" with { type: "json" }

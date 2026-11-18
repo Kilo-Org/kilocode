@@ -1,13 +1,10 @@
 import { Mcp } from "@opencode/schema/mcp"
 import type { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
-import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
-import { applyEdits, modify, parse, type ParseError } from "jsonc-parser"
+import { Option, Schema } from "effect"
+import { MarketplaceConfig } from "./config"
 export * as MarketplaceMcp from "./mcp"
 
-import { createHash, randomUUID } from "node:crypto"
-import fs from "node:fs/promises"
-import path from "node:path"
-import { Option, Schema } from "effect"
+export { configFile, resolveFile } from "./config"
 
 // Translate catalog templates to native Mcp.ServerConfig, stored under mcp.servers.<id>.
 export class McpError extends Error {
@@ -92,30 +89,6 @@ function optionalRecord(key: string, value: unknown) {
   return entries.length > 0 ? { [key]: Object.fromEntries(entries) } : {}
 }
 
-export async function configFile(directory: string, global: boolean) {
-  const checked = async (file: string) => {
-    if (global) return file
-    const target = await resolveFile(file)
-    // Repository-controlled symlinks cannot authorize writes outside the project's native config locations.
-    if (!KiloConfigFiles.writeCandidates(await resolveFile(directory), false).includes(target))
-      throw new McpError("conflict", `Project MCP config resolves outside its native config locations: ${file}`)
-    return file
-  }
-  for (const candidate of KiloConfigFiles.writeCandidates(directory, global)) {
-    if (
-      await fs.stat(candidate).then(
-        (info) => info.isFile(),
-        (error: NodeJS.ErrnoException) => {
-          if (error.code === "ENOENT") return false
-          throw error
-        },
-      )
-    )
-      return checked(candidate)
-  }
-  return checked(path.join(directory, KiloConfigFiles.newFile))
-}
-
 export function write(input: {
   file: string
   name: string
@@ -124,25 +97,25 @@ export function write(input: {
   fingerprints?: readonly string[]
   secret?: boolean
 }) {
-  return serialized(input.file, async (file) => {
-    const text = await read(file)
+  return MarketplaceConfig.serialized(input.file, async (file) => {
+    const text = await MarketplaceConfig.read(file)
     check(text, input.file, input.name, input.replace ? input.fingerprints : [])
-    await save(file, text, ["mcp", "servers", input.name], input.server, input.secret)
+    await MarketplaceConfig.save(file, text, ["mcp", "servers", input.name], input.server, input.secret)
   })
 }
 
 export function remove(input: { file: string; name: string; fingerprints?: readonly string[] }) {
-  return serialized(input.file, async (file) => {
-    const text = await read(file)
+  return MarketplaceConfig.serialized(input.file, async (file) => {
+    const text = await MarketplaceConfig.read(file)
     if (entry(text, input.file, input.name) === undefined) return
     check(text, input.file, input.name, input.fingerprints)
-    await save(file, text, ["mcp", "servers", input.name], undefined)
+    await MarketplaceConfig.save(file, text, ["mcp", "servers", input.name], undefined)
   })
 }
 
 export async function preflight(input: { file: string; name: string; fingerprints?: readonly string[] }) {
-  return serialized(input.file, async (file) => {
-    check(await read(file), input.file, input.name, input.fingerprints)
+  return MarketplaceConfig.serialized(input.file, async (file) => {
+    check(await MarketplaceConfig.read(file), input.file, input.name, input.fingerprints)
   })
 }
 
@@ -154,91 +127,17 @@ function check(text: string, file: string, name: string, fingerprints: readonly 
 }
 
 export async function fingerprint(file: string, name: string) {
-  return serialized(file, async (target) => {
-    const value = entry(await read(target), file, name)
+  return MarketplaceConfig.serialized(file, async (target) => {
+    const value = entry(await MarketplaceConfig.read(target), file, name)
     return value === undefined ? undefined : serverFingerprint(value)
   })
 }
 
 export function serverFingerprint(value: unknown): string {
-  function normalized(value: unknown): unknown {
-    if (Array.isArray(value)) return value.map(normalized)
-    if (value && typeof value === "object") {
-      return Object.fromEntries(
-        Object.entries(value)
-          .toSorted(([a], [b]) => a.localeCompare(b))
-          .map(([key, value]) => [key, normalized(value)]),
-      )
-    }
-    return value
-  }
-  return createHash("sha256")
-    .update(JSON.stringify(normalized(value)))
-    .digest("hex")
-}
-
-// Canonical aliases share an atomic read-modify-write queue. Other processes are not covered.
-const queues = new Map<string, Promise<unknown>>()
-async function serialized<A>(file: string, task: (file: string) => Promise<A>) {
-  const target = await resolveFile(path.resolve(file))
-  const run = (queues.get(target) ?? Promise.resolve()).catch(() => undefined).then(() => task(target))
-  queues.set(target, run)
-  return run.finally(() => {
-    if (queues.get(target) === run) queues.delete(target)
-  })
-}
-
-export async function resolveFile(file: string): Promise<string> {
-  return fs.realpath(file).catch(async (error: NodeJS.ErrnoException) => {
-    if (error.code !== "ENOENT") throw error
-    const info = await fs.lstat(file).catch((error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") return undefined
-      throw error
-    })
-    if (info?.isSymbolicLink())
-      return resolveFile(path.resolve(await resolveFile(path.dirname(file)), await fs.readlink(file)))
-    if (info) return fs.realpath(file)
-    return path.join(await resolveFile(path.dirname(file)), path.basename(file))
-  })
-}
-
-async function read(file: string) {
-  return fs.readFile(file, "utf8").catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") return "{}"
-    throw error
-  })
+  return MarketplaceConfig.fingerprintValue(value)
 }
 
 function entry(text: string, file: string, name: string) {
-  const errors: ParseError[] = []
-  const data = parse(text, errors, { allowTrailingComma: true })
-  if (errors.length > 0) throw new McpError("invalid_params", `${file} is not valid JSON; fix it first`)
+  const data = MarketplaceConfig.parseConfig(text, file) as { mcp?: { servers?: Record<string, unknown> } } | undefined
   return data?.mcp?.servers?.[name]
-}
-
-// Preserve JSONC comments and formatting, replacing the target atomically for native config watchers.
-async function save(file: string, text: string, key: string[], value: unknown, secret = false) {
-  const next = applyEdits(text, modify(text, key, value, { formattingOptions: { tabSize: 2, insertSpaces: true } }))
-  const mode = await fs.stat(file).then(
-    (info) => (secret ? 0o600 : info.mode & 0o7777),
-    (error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") return 0o600
-      throw error
-    },
-  )
-  await fs.mkdir(path.dirname(file), { recursive: true })
-  const temporary = `${file}.${randomUUID()}.tmp`
-  try {
-    await fs.writeFile(temporary, next, { mode: 0o600, flag: "wx" })
-    await fs.chmod(temporary, mode)
-    await fs.rename(temporary, file)
-  } catch (error) {
-    const cleanup = await Promise.allSettled([fs.rm(temporary, { force: true })])
-    if (cleanup[0].status === "rejected") {
-      throw new AggregateError([error, cleanup[0].reason], `MCP config write and temporary cleanup failed at ${file}`, {
-        cause: error,
-      })
-    }
-    throw error
-  }
 }

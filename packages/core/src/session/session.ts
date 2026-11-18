@@ -326,8 +326,10 @@ export const make = Effect.fn("Session.make")(function* () {
       ),
   )
   const interrupt = Effect.fn("Session.interrupt")(
-    (sessionID: SessionSchema.ID, options?: { readonly resume?: boolean }) =>
+    // kilocode_change start - steer: forward the steer flag so a steered interruption cannot cancel a compaction.
+    (sessionID: SessionSchema.ID, options?: { readonly resume?: boolean; readonly steer?: boolean }) =>
       Effect.uninterruptible(execution.interrupt(sessionID, options)),
+    // kilocode_change end
   )
   const stage = Effect.fn("Session.revert.stage")(function* (
     sessionID: SessionSchema.ID,

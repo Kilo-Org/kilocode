@@ -9,6 +9,7 @@ import { mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 // Custom auto routers end to end (ADR 0005, v1 #15183): the host, the Gateway plugin, the session `route` hook, and
 // the `routers.*` RPC methods are real. Only the HTTP peers are local: the Kilo API and routing worker fixture, and
@@ -69,6 +70,9 @@ test("registers a client model and routes a custom router request to it", async 
     })
     expect(local.requests.map((request) => request.model)).toContain("echo")
     expect(local.requests[0]?.authorization).toBe("Bearer local-key")
+    const codeRequest = local.requests.find((request) => request.body.includes('"name":"subagent"'))
+    expect(codeRequest?.body).toContain("# Kilo delegation")
+    expect(codeRequest?.body).toContain("Prefer background subagents")
     // The prompt's title request also reaches the router, so pick the code-mode decide body instead of the first.
     const decide = backend.state.customRouterBodies.find(
       (item) => item.path === "/v1/decide" && (item.body as { mode?: string }).mode === "code",
@@ -161,6 +165,8 @@ async function run(
               { preconnect: fetch.preconnect },
             ),
           })
+          // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
+          yield* loadPlugins(context, directory)
           // Wait for the catalog activation that a real client waits for.
           yield* Effect.promise(() => client.rpc(KiloGatewayRpc.Definition).models({}, { location: { directory } }))
           yield* Effect.promise(() => body(client, directory))

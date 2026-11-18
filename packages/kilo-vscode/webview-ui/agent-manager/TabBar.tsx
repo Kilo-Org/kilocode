@@ -1,6 +1,7 @@
 import { For, Show, type Component, type JSX } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { CountUp } from "@kilocode/kilo-ui/count-up"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import {
@@ -187,10 +188,16 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     <Show when={hasChanges()}>
                       <span class="am-diff-toggle-stats">
                         <Show when={stats()!.files > 0}>
-                          <span class="am-stat-files">{stats()!.files}f</span>
+                          <span class="am-stat-files">
+                            <CountUp value={stats()!.files} />f
+                          </span>
                         </Show>
-                        <span class="am-stat-additions">+{stats()!.additions}</span>
-                        <span class="am-stat-deletions">−{stats()!.deletions}</span>
+                        <span class="am-stat-additions">
+                          +<CountUp value={stats()!.additions} />
+                        </span>
+                        <span class="am-stat-deletions">
+                          −<CountUp value={stats()!.deletions} />
+                        </span>
                       </span>
                     </Show>
                   </IconButton>

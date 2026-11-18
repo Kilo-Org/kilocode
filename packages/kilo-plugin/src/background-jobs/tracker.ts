@@ -2,15 +2,17 @@ import type { Job } from "@opencode/core/job"
 import type { Session } from "@opencode/core/session"
 import { KiloBackgroundJobsRpc } from "@opencode/schema/kilocode/background-jobs"
 import { SessionID } from "@opencode/schema/session-id"
-import { Clock, Effect, Option, Schema } from "effect"
+import { Clock, DateTime, Effect, Option, Schema } from "effect"
 
 type Jobs = Pick<Job.Interface, "get" | "wait" | "background" | "cancel" | "backgroundJobs">
-type Sessions = Pick<Session.Interface, "list" | "interrupt">
+type Sessions = Pick<Session.Interface, "list" | "interrupt" | "messages" | "active" | "inbox">
 type Publish = (event: KiloBackgroundJobsRpc.Changed) => Effect.Effect<void>
 type Finished = Exclude<KiloBackgroundJobsRpc.Status, "running">
 
 /** Finished jobs kept per parent session. Running jobs are always kept. */
 const FINISHED = 50
+/** Settled children remembered per parent session, so adopting them again does not rescan the transcript. */
+const SETTLED = 200
 
 export type Start = {
   readonly sessionID: SessionID
@@ -27,14 +29,43 @@ type Entry = { readonly job: KiloBackgroundJobsRpc.Job; readonly directory: stri
 const records = new Map<string, Entry>()
 // The publisher of the newest plugin generation of each Location directory.
 const publishers = new Map<string, Publish>()
+// Settled children the tracker leaves alone, by job ID to parent session ID. A job the prune dropped would otherwise
+// come back from its completion message on the next list, and a finished foreground child has no completion message to
+// restore, so remembering both keeps `adopt` from scanning the parent transcript for them again. Bounded per parent.
+const settled = new Map<string, string>()
 
 const decodeSession = Schema.decodeUnknownOption(SessionID)
+
+// The metadata core writes on the synthetic message that delivers a background subagent's result to its parent.
+const decodeCompletion = Schema.decodeUnknownOption(
+  Schema.Struct({
+    source: Schema.Literal("subagent"),
+    childID: Schema.String,
+    agent: Schema.optional(Schema.String),
+    state: Schema.Literals(["completed", "error", "cancelled"]),
+  }),
+)
+
+type Completion = {
+  readonly status: Finished
+  readonly agent?: string
+  readonly title?: string
+  readonly completed: number
+  /** Position in the parent transcript, higher for a later completion. Timestamps can tie, the transcript order cannot. */
+  readonly order: number
+}
 
 function prune(parent: SessionID) {
   const finished = [...records.values()].filter(
     (entry) => entry.job.parentSessionID === parent && entry.job.status !== "running",
   )
-  finished.slice(0, -FINISHED).forEach((entry) => records.delete(entry.job.id))
+  finished.slice(0, -FINISHED).forEach((entry) => {
+    records.delete(entry.job.id)
+    settled.set(entry.job.id, entry.job.parentSessionID)
+  })
+  // Every settled child of one parent, newest last: a re-set key keeps its original position, so the oldest go first.
+  const remembered = [...settled].filter(([, session]) => session === parent)
+  remembered.slice(0, -SETTLED).forEach(([id]) => settled.delete(id))
 }
 
 /**
@@ -111,6 +142,8 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
 
   const start = Effect.fn("KiloBackgroundJobs.start")(function* (job: Start) {
     const now = yield* Clock.currentTimeMillis
+    // A child that runs again is no longer settled, so a later restart can adopt its new completion message.
+    settled.delete(job.sessionID)
     const previous = records.get(job.sessionID)?.job
     const running = previous?.status === "running"
     const agent = job.agent ?? previous?.agent
@@ -138,21 +171,57 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
     yield* follow(id)
   })
 
-  // Subagents the tool did not start in this process: jobs restored after a restart, or started by a command.
+  // Subagents the tool did not start in this process: jobs restored after a restart, or started by a command. A
+  // finished background subagent is restored from the completion message core delivered to its parent, so the
+  // session keeps its finished agents across a restart.
   const adopt = Effect.fn("KiloBackgroundJobs.adopt")(function* (parent: SessionID) {
+    const missing = (yield* childrenOf(parent)).filter((child) => !records.has(child.id) && !settled.has(child.id))
+    if (missing.length === 0) return
     const listed = yield* input.jobs.backgroundJobs
     const backgrounded = new Map(
       listed.flatMap((item) =>
         item.kind === "subagent" && item.sessionID === parent ? [[item.childSessionID as string, item] as const] : [],
       ),
     )
-    const children = yield* childrenOf(parent)
+    const finished = yield* completions(parent)
+    // Oldest completion first, so the prune keeps the newest finished jobs.
+    const children = missing.toSorted((a, b) => (finished.get(a.id)?.order ?? 0) - (finished.get(b.id)?.order ?? 0))
     yield* Effect.forEach(
-      children.filter((child) => !records.has(child.id)),
+      children,
       Effect.fnUntraced(function* (child) {
         const info = yield* input.jobs.get(child.id)
         const item = backgrounded.get(child.id)
-        if (info?.status !== "running" && item?.status !== "running") return
+        const done = finished.get(child.id)
+        if (info?.status !== "running" && item?.status !== "running") {
+          if (!done) {
+            // A background child keeps its row in `jobs.backgroundJobs` until the parent receives its completion, so a
+            // row proves a completion may still land and the child must stay adoptable. Without a row, a completion can
+            // also still be queued or being written by a parent run, so settle the child only once the parent is idle
+            // with an empty inbox. Every later list then skips the transcript scan for a foreground child.
+            if (item) return
+            const active = yield* input.sessions.active
+            const queued = yield* input.sessions.inbox(parent).pipe(Effect.orElseSucceed((): readonly unknown[] => []))
+            if (active.has(parent) || queued.length > 0) return
+            settled.set(child.id, parent)
+            prune(parent)
+            return
+          }
+          const agent = done.agent ?? child.agent
+          const title = done.title ?? child.title
+          return yield* save({
+            directory: input.directory,
+            job: {
+              id: child.id,
+              parentSessionID: parent,
+              sessionID: child.id,
+              ...(agent ? { agent } : {}),
+              ...(title ? { title } : {}),
+              status: done.status,
+              background: true,
+              time: { started: DateTime.toEpochMillis(child.time.created), completed: done.completed },
+            },
+          })
+        }
         const now = yield* Clock.currentTimeMillis
         const agent = item?.agent ?? child.agent
         yield* save({
@@ -217,7 +286,29 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
     Effect.sync(() => {
       for (const entry of records.values())
         if (entry.job.id === sessionID || entry.job.parentSessionID === sessionID) records.delete(entry.job.id)
+      for (const [id, parent] of settled) if (id === sessionID || parent === sessionID) settled.delete(id)
     })
+
+  // The latest completion core delivered to the parent for each background child, newest first.
+  const completions = (parent: SessionID) =>
+    input.sessions.messages({ sessionID: parent, type: "synthetic", order: "desc" }).pipe(
+      Effect.map((messages) => {
+        const found = new Map<string, Completion>()
+        messages.forEach((message, index) => {
+          const done = decodeCompletion(message.metadata)
+          if (Option.isNone(done) || found.has(done.value.childID)) return
+          found.set(done.value.childID, {
+            status: done.value.state,
+            agent: done.value.agent,
+            title: message.type === "synthetic" ? message.description : undefined,
+            completed: DateTime.toEpochMillis(message.time.created),
+            order: messages.length - index,
+          })
+        })
+        return found
+      }),
+      Effect.orElseSucceed(() => new Map<string, Completion>()),
+    )
 
   const childrenOf = (parent: SessionID) => {
     const page = (cursor?: Parameters<Sessions["list"]>[0]): Effect.Effect<Session.Info[]> =>

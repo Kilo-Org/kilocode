@@ -44,6 +44,14 @@ const description = (shell?: string) =>
   ].join(" ")
 
 export const Input = Schema.Struct({
+  // kilocode_change start - model-written summary shown instead of the raw command in the tool card.
+  // Required: models such as Claude skip an optional summary, so their cards showed bare `cd <worktree> && ...` rows.
+  // It comes first: models write arguments in schema order, so the card can show it before the command streams.
+  description: Schema.String.annotate({
+    description:
+      "A clear, concise description of what this command does in 5-10 words, shown as the title of the tool card. Examples: 'Shows working tree status', 'Runs the core package tests', 'Installs package dependencies'.",
+  }),
+  // kilocode_change end
   command: Schema.String.annotate({ description: "Shell command string to execute" }),
   workdir: Schema.optionalKey(Schema.String).annotate({
     description:
@@ -79,19 +87,20 @@ const LIVE_OUTPUT_LIMIT = 30_000
 const LIVE_OUTPUT_INTERVAL = Duration.millis(100)
 // kilocode_change end
 
-const resultMessages = (output: Output) => {
-  const notice = output.status === "running" ? BACKGROUND_INSTRUCTION : ShellResult.notice(output)
+const resultMessages = (output: Output, timeout?: number) => {
+  const notice = output.status === "running" ? BACKGROUND_INSTRUCTION : ShellResult.notice(output, timeout)
   return [...(output.output ? [output.output] : []), ...(notice ? [notice] : [])]
 }
 
-const toolResult = (output: Output) => {
+const toolResult = (output: Output, timeout?: number, description?: string) => { // kilocode_change - carries the description
   return {
     output,
-    content: resultMessages(output).map((text) => ({ type: "text" as const, text })),
+    content: resultMessages(output, timeout).map((text) => ({ type: "text" as const, text })),
     metadata: {
       status: output.status,
       ...ShellResult.metadata(output),
       ...(output.shellID !== undefined ? { shellID: output.shellID } : {}),
+      ...(description ? { description } : {}), // kilocode_change - keep the summary for clients without the input
     },
   }
 }
@@ -152,20 +161,21 @@ export const Plugin = {
         id: string,
         shellID: string,
         command: string,
+        description: string | undefined, // kilocode_change
         settled: Deferred.Deferred<Output>,
       ) {
         const info = (yield* jobs.wait({ id })).info
         if (!info || info.status === "running") return
         const output = info.status === "completed" ? yield* Deferred.await(settled) : undefined
         const text = output
-          ? resultMessages(output).join("\n\n")
+          ? (info.output ?? "")
           : info.status === "error"
             ? (info.error ?? "Command failed")
             : "Cancelled"
         yield* sessions.synthetic({
           ...(info.notificationID ? { id: info.notificationID } : {}),
           sessionID,
-          description: command,
+          description: description || command, // kilocode_change - prefer the model's description over the raw command
           ...ShellResult.notification({
             jobID: id,
             shellID,
@@ -188,10 +198,10 @@ export const Plugin = {
           description: description(),
           input: Input,
           output: Output,
-          execute: (input, context) =>
-            Effect.gen(function* () {
-              const timeout = input.background === true ? (input.timeout ?? 0) : (input.timeout ?? DEFAULT_TIMEOUT_MS)
-              let finalTimeout = timeout
+          execute: (input, context) => {
+            const timeout = input.background === true ? (input.timeout ?? 0) : (input.timeout ?? DEFAULT_TIMEOUT_MS)
+            let finalTimeout = timeout
+            return Effect.gen(function* () {
               const info = yield* shell.create(
                 {
                   command: input.command,
@@ -252,17 +262,10 @@ export const Plugin = {
               const run = Effect.gen(function* () {
                 const result = yield* shell.result(info)
                 if (!result.capture) return yield* new Shell.NotFoundError({ id: info.id })
-                const output = ShellResult.output(result)
-                return {
-                  ...output,
-                  output: output.timeout
-                    ? `${output.output}\n\nCommand exceeded timeout of ${finalTimeout} ms. Retry with a larger timeout if the command is expected to take longer.`
-                    : output.output,
-                  status: "completed" as const,
-                }
+                return { ...ShellResult.output(result), status: "completed" as const }
               }).pipe(
                 Effect.tap((output) => Deferred.succeed(settled, output)),
-                Effect.map((output) => resultMessages(output).join("\n\n")),
+                Effect.map((output) => resultMessages(output, finalTimeout).join("\n\n")),
                 Effect.onInterrupt(() => shell.remove(info.id).pipe(Effect.ignore)),
               )
               const job = yield* jobs.start({
@@ -274,6 +277,9 @@ export const Plugin = {
                 recovery: {
                   kind: "shell",
                   sessionID: context.sessionID,
+                  // kilocode_change start - carry the summary so the restart notice matches the completion notice
+                  ...(input.description ? { description: input.description } : {}),
+                  // kilocode_change end
                   shellID: info.id,
                   command: info.command,
                 },
@@ -282,7 +288,7 @@ export const Plugin = {
 
               if (input.background === true) {
                 yield* jobs.background(job.id)
-                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, settled)
+                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, input.description, settled) // kilocode_change
                 yield* stop // kilocode_change
                 return backgroundResult(info.id, info.file)
               }
@@ -292,7 +298,8 @@ export const Plugin = {
                 .pipe(Effect.onInterrupt(() => jobs.cancel(job.id).pipe(Effect.ignore)))
               if (result?.type === "backgrounded") {
                 yield* shell.timeout(info.id, 0)
-                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, settled)
+                finalTimeout = 0
+                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, input.description, settled) // kilocode_change
                 yield* stop // kilocode_change
                 return backgroundResult(info.id, info.file)
               }
@@ -303,11 +310,18 @@ export const Plugin = {
 
               return yield* Deferred.await(settled).pipe(Effect.ensuring(stop)) // kilocode_change
             }).pipe(
-              Effect.map(toolResult),
+              // Shell spans, including the job that waits for a backgrounded command, name the call that started them.
+              Effect.annotateSpans({
+                "gen_ai.tool.call.id": context.id,
+                ...(input.background === true ? { "opencode.shell.background": true } : {}),
+              }),
+              Effect.map((output) => toolResult(output, finalTimeout, input.description)), // kilocode_change
+
               Effect.mapError(
                 (error) => new ToolFailure({ message: `Unable to execute command: ${input.command}`, error }),
               ),
-            ),
+            )
+          },
         }),
       )
       .pipe(Effect.orDie)

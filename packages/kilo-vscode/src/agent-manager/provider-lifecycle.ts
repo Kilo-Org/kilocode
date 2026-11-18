@@ -1,8 +1,10 @@
 import type { JsonValue, OpenCodeClient, SessionInfo } from "@opencode/client"
 import { getErrorMessage } from "./errors"
-import { isRunningStatus } from "../session-status"
-import type { AgentManagerOutMessage } from "./types"
+import { LOCAL_TARGET, type AgentManagerOutMessage } from "./types"
 import { initContextState } from "./project/init"
+import { pathKey } from "./project/paths"
+import { sessionMissing } from "./prune-subagents"
+import { settleMove } from "./session-move"
 import type { ProjectContext } from "./project/context"
 import type { ManagedSession } from "./WorktreeStateManager"
 import type { WorktreeManager } from "./WorktreeManager"
@@ -128,14 +130,18 @@ export interface LifecycleHost {
 export async function createLifecycleWorktree(
   ctx: ProjectContext,
   host: LifecycleHost,
-  opts: { baseBranch?: string; branchName?: string },
+  opts: { baseBranch?: string; branchName?: string; requestId?: string },
 ): Promise<{ session: SessionInfo; ready: Promise<void> } | null> {
   const timing = Timing.start(`create ${opts.branchName ?? "worktree"}`, host.log)
 
   await initContextState(ctx, host.log)
   timing.mark("context")
 
-  const created = await host.createOnDisk({ baseBranch: opts.baseBranch, branchName: opts.branchName })
+  const created = await host.createOnDisk({
+    baseBranch: opts.baseBranch,
+    branchName: opts.branchName,
+    requestId: opts.requestId,
+  })
   timing.mark("create")
   if (!created) {
     timing.end()
@@ -190,15 +196,15 @@ export async function createLifecycleWorktree(
   return { session, ready }
 }
 
-/** Remove a worktree's snapshot repository. Teardown must still complete if removal fails. */
+/**
+ * Remove a worktree's snapshot repository. Teardown must still complete if removal fails. Resolves true when no
+ * checkpoint data is left: the repository is created lazily, so `removed: false` from the RPC means there was none.
+ */
 export async function removeWorktreeSnapshot(host: LifecycleHost, root: string, dir: string): Promise<boolean> {
   try {
     const client = await host.client()
-    const result = await client.rpc(KiloAgentManagerRpc.Definition).removeSnapshot(
-      { worktree: dir },
-      { location: { directory: root } },
-    )
-    return result.removed
+    await client.rpc(KiloAgentManagerRpc.Definition).removeSnapshot({ worktree: dir }, { location: { directory: root } })
+    return true
   } catch (error) {
     host.log(`Failed to remove worktree snapshots: ${error}`)
     return false
@@ -223,6 +229,39 @@ async function moveSessionsToRoot(
   )
 }
 
+/** List all sessions at the worktree root and in subdirectories discovered from filed sessions. */
+async function worktreeSessions(client: OpenCodeClient, directory: string, managed: ManagedSession[]): Promise<string[]> {
+  // Omit archive and parent filters to include closed tabs, archived sessions, and children.
+  const list = (directory: string) => client.session.list({ directory, limit: Number.MAX_SAFE_INTEGER })
+  const listed = new Set((await list(directory)).data.map((session) => session.id))
+  const root = pathKey(directory)
+  // The directory filter is exact. Use omitted filings to discover worktree subdirectories, but
+  // trust the server's location so a stale filing never moves a session from elsewhere.
+  const nested = await Promise.all(
+    managed
+      .filter((session) => !listed.has(session.id))
+      .map((session) =>
+        client.session.get({ sessionID: session.id }).catch((error: unknown) => {
+          if (sessionMissing(error)) return undefined
+          throw error
+        }),
+      ),
+  )
+  const directories = new Map<string, string>()
+  for (const session of nested) {
+    if (!session) continue
+    const location = session.location.directory
+    const key = pathKey(location)
+    if (key !== root && !key.startsWith(`${root}/`)) continue
+    listed.add(session.id)
+    if (location !== directory) directories.set(key, location)
+  }
+  // Subagents are never filed, so list each discovered directory to include them in the safety check and move.
+  const pages = await Promise.all([...directories.values()].map(list))
+  for (const page of pages) for (const session of page.data) listed.add(session.id)
+  return [...listed]
+}
+
 /** Delete a worktree and dissociate its sessions. */
 export async function deleteLifecycleWorktree(
   ctx: ProjectContext,
@@ -241,23 +280,18 @@ export async function deleteLifecycleWorktree(
     return null
   }
   const managed = state.getSessions(worktreeId)
-  const retained = new Set(managed.map((session) => session.id))
   let client: OpenCodeClient
+  let retained: string[]
   try {
     client = await host.client()
     const [active, permissions, forms, sessions] = await Promise.all([
       client.session.active(),
       client.permission.request.list({ location: { directory: worktree.path } }),
       client.form.list({ location: { directory: worktree.path } }),
-      client.session.list({
-        directory: worktree.path,
-        archived: true,
-        parentID: null,
-        limit: Number.MAX_SAFE_INTEGER,
-      }),
+      worktreeSessions(client, worktree.path, managed),
     ])
-    sessions.data.forEach((session) => retained.add(session.id))
-    const running = [...retained].some((id) => isRunningStatus(active[id]?.type))
+    retained = sessions
+    const running = retained.some((id) => Object.hasOwn(active, id))
     if (running || permissions.data.length > 0 || forms.data.length > 0)
       return fail("Cannot delete a worktree while a session is active or waiting for input")
   } catch (error) {
@@ -286,7 +320,7 @@ export async function deleteLifecycleWorktree(
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
   let releasePtyCleanup: () => void
   try {
-    await host.abort(managed.map((session) => session.id))
+    await host.abort(retained)
     releasePtyCleanup = await host.acquirePtyCleanup(worktree.path)
   } catch (error) {
     host.log(`Failed to stop worktree processes: ${error}`)
@@ -306,6 +340,7 @@ export async function deleteLifecycleWorktree(
     state.removeWorktree(worktreeId)
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
+    ctx.invalidateSessions()
     host.post({ type: "agentManager.worktreeDeleted", projectId: ctx.id, worktreeId })
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
@@ -376,6 +411,21 @@ export async function removeStaleLifecycleWorktree(
   }
   host.forgetName(worktreeId)
   const kept = keepSessions ? state.getSessions(worktreeId) : []
+  // Local reads its sessions from the store of the project root, and the server runs a session only in its own
+  // directory: a kept session must move to the root, or it stays in the dead directory and every prompt fails.
+  // An `unregistered` worktree still has its directory, so a kept session can be running: stop it first, as a delete
+  // does, so the move does not land in the middle of a drain.
+  if (kept.length > 0) {
+    const ids = kept.map((session) => session.id)
+    const client = await host.client().catch((error: unknown) => {
+      host.log(`Failed to move kept sessions to Local: ${error}`)
+      return undefined
+    })
+    if (client) {
+      await host.abort(ids)
+      await moveSessionsToRoot(client, host, ctx.root, ids)
+    }
+  }
   // Detach before removing the row: removeWorktree() deletes the sessions that still point at it.
   for (const session of kept) state.moveSession(session.id, null)
   const orphaned = state.removeWorktree(worktreeId)
@@ -400,29 +450,108 @@ export async function promoteLifecycleSession(
   // Run setup script for new worktree (blocks until complete, shows in overlay)
   await host.runSetup(created.result.path, created.result.branch, created.worktree.id)
 
-  const state = ctx.peekState()!
+  // File the session under the worktree only once the server runs it there: the worktree's view reads from the
+  // store of its directory and would never receive the session's events otherwise. The server applies a move at the
+  // next step boundary, so a running session is stopped first, as Continue in Worktree does.
+  await host.abort([sessionId])
+  let client: OpenCodeClient
+  let session: SessionInfo
+  try {
+    client = await host.client()
+    session = await client.session.get({ sessionID: sessionId })
+    await client.session.move({ sessionID: session.id, directory: created.result.path })
+  } catch (err) {
+    host.log("Failed to move the session into the new worktree:", getErrorMessage(err))
+    host.post({
+      type: "agentManager.worktreeSetup",
+      status: "error",
+      message: "Failed to move the session into the new worktree",
+      projectId: ctx.id,
+      branch: created.result.branch,
+      worktreeId: created.worktree.id,
+    })
+    // A move the server never queued leaves the worktree unused.
+    await deleteLifecycleWorktree(ctx, host, created.worktree.id)
+    host.push()
+    return null
+  }
+
+  const result = await settleMove(client, session, created.result.path)
+  if (!result.landed) {
+    // The server accepted the move but applies it at the next step boundary, which can be minutes away. Keep the
+    // worktree and finish filing the session when the `session.moved` event reports the new directory. Reporting a
+    // failure here left the session in Local while it ran in the worktree, so it was in no tab strip.
+    host.post({
+      type: "agentManager.worktreeSetup",
+      status: "ready",
+      message: "Worktree ready. The conversation moves here when its current step finishes.",
+      projectId: ctx.id,
+      branch: created.result.branch,
+      worktreeId: created.worktree.id,
+    })
+    host.log(`Promotion of ${sessionId} is queued for worktree ${created.worktree.id}; the filing follows the move`)
+    host.push()
+    return null
+  }
+
+  await finishPromotion(ctx, host, client, sessionId, created, result.settled)
+  return null
+}
+
+/** File a promoted session under its worktree and report the worktree ready. */
+async function finishPromotion(
+  ctx: ProjectContext,
+  host: LifecycleHost,
+  client: OpenCodeClient,
+  sessionId: string,
+  created: CreateWorktreeOnDiskResult,
+  settled: boolean,
+): Promise<void> {
+  const state = ctx.peekState()
+  if (!state) {
+    host.post({
+      type: "agentManager.worktreeSetup",
+      status: "error",
+      message: "Failed to file the promoted session",
+      projectId: ctx.id,
+      branch: created.result.branch,
+      worktreeId: created.worktree.id,
+    })
+    host.log(`Could not file promoted session ${sessionId}: the project state is unavailable`)
+    return
+  }
+  if (state.isSessionClosed(sessionId)) {
+    // The user closed the session while the worktree was being prepared. The worktree is still usable; clear the
+    // setup state instead of leaving the overlay spinning.
+    host.post({
+      type: "agentManager.worktreeSetup",
+      status: "ready",
+      message: "Worktree ready. The conversation was closed before it moved.",
+      projectId: ctx.id,
+      branch: created.result.branch,
+      worktreeId: created.worktree.id,
+    })
+    host.log(`Kept worktree ${created.worktree.id}: session ${sessionId} was closed before the promotion finished`)
+    return
+  }
   if (!state.getSession(sessionId)) {
     state.addSession(sessionId, created.worktree.id)
   } else {
     state.moveSession(sessionId, created.worktree.id)
   }
-
   host.register(sessionId, created.result.path)
-  try {
-    const client = await host.client()
-    await client.session.move({ sessionID: sessionId, directory: created.result.path })
+  // A note admitted while a drain still runs is delivered into it and starts a reply, so it waits for a settled move.
+  // Without it the model still learns the new directory from the location switch the server records.
+  if (settled)
     await recordPromotionHandoff({
       client,
       sessionId,
       directory: created.result.path,
       branch: created.result.branch,
-    })
-  } catch (err) {
-    host.log("Failed to record worktree promotion handoff:", getErrorMessage(err))
-  }
+    }).catch((err: unknown) => host.log("Failed to record worktree promotion handoff:", getErrorMessage(err)))
+  else host.log(`Skipped the worktree handoff note for ${sessionId}: the session is still running`)
   host.notifyReady(sessionId, created.result, created.worktree.id)
   host.log(`Promoted session ${sessionId} to worktree ${created.worktree.id}`)
-  return null
 }
 
 /** Add a new or existing session to an existing worktree. */
@@ -451,12 +580,29 @@ export async function addSessionToLifecycleWorktree(
   }
 
   if (sessionId) {
-    if (state.getSession(sessionId)) state.moveSession(sessionId, worktreeId)
-    else state.addSession(sessionId, worktreeId)
-    host.register(sessionId, worktree.path)
+    // The server runs a session in its own directory, and only the store of that directory receives its events.
+    // Tracking it under another worktree points that worktree's view at a store that never sees the session, so its
+    // prompts look unsent. File it under the worktree that owns its directory, or under Local for the project root.
+    // A failed read or a directory outside the project keeps the requested worktree, as before.
+    const info = await client.session.get({ sessionID: sessionId }).catch(() => undefined)
+    const directory = info?.location.directory
+    const root = directory !== undefined && pathKey(directory) === pathKey(ctx.root)
+    const owner = root ? undefined : ((directory ? state.findWorktreeByPath(directory) : undefined) ?? worktree)
+    if (owner?.id !== worktreeId) host.log(`Session ${sessionId} runs in ${directory}, not ${worktree.path}`)
+    if (!owner) {
+      if (state.getSession(sessionId)) state.moveSession(sessionId, null)
+      else state.addSession(sessionId, null)
+      host.push()
+      host.post({ type: "agentManager.sessionAdded", projectId: ctx.id, sessionId, worktreeId: LOCAL_TARGET })
+      host.log(`Added existing session ${sessionId} to Local`)
+      return null
+    }
+    if (state.getSession(sessionId)) state.moveSession(sessionId, owner.id)
+    else state.addSession(sessionId, owner.id)
+    host.register(sessionId, owner.path)
     host.push()
-    host.post({ type: "agentManager.sessionAdded", sessionId, worktreeId })
-    host.log(`Added existing session ${sessionId} to worktree ${worktreeId}`)
+    host.post({ type: "agentManager.sessionAdded", projectId: ctx.id, sessionId, worktreeId: owner.id })
+    host.log(`Added existing session ${sessionId} to worktree ${owner.id}`)
     return null
   }
 
@@ -472,7 +618,7 @@ export async function addSessionToLifecycleWorktree(
   state.addSession(session.id, worktreeId)
   host.register(session.id, worktree.path)
   host.push()
-  host.post({ type: "agentManager.sessionAdded", sessionId: session.id, worktreeId })
+  host.post({ type: "agentManager.sessionAdded", projectId: ctx.id, sessionId: session.id, worktreeId })
   host.log(`Added session ${session.id} to worktree ${worktreeId}`)
   return null
 }
@@ -485,12 +631,15 @@ export async function closeLifecycleSession(
 ): Promise<null> {
   const state = ctx.peekState()
   await host.abort([sessionId])
-  // Drop the session from state before stopping its processes. Process shutdown
-  // can be slow or unavailable, and while a closed session is still listed here
-  // any concurrent state push would restore the tab the user just closed,
-  // because a webview with no remaining real tabs looks like a reload.
-  state?.removeSession(sessionId)
-  if (state) host.push()
+  if (state) {
+    // Git metadata still names the worktree's first session after a tab is closed. Mark the close so recovery
+    // can distinguish it from a lost filing. History can still reopen it by filing it again.
+    const worktreeId =
+      state.getSession(sessionId)?.worktreeId ?? ctx.sessions().find((item) => item.id === sessionId)?.worktreeId
+    if (worktreeId) state.closeSession(sessionId, worktreeId)
+    else state.removeSession(sessionId)
+    host.push()
+  }
   host.log(`Closed session ${sessionId}`)
   return null
 }

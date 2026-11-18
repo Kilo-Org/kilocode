@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@opencode/tui",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "@kilocode/caffeination": "workspace:*",
+    "@kilocode/kilo-i18n": "workspace:*",
     "@opencode/client": "workspace:*",
     "@opencode/core": "workspace:*",
     "@opencode/latex": "workspace:*",

@@ -30,8 +30,11 @@ import { createCostAlerts } from "./cost-alert"
 import { command, indexingEnvironment, manager, serverPlans, settingsEnvironment } from "./server"
 import { usePlanDir } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
+import { resolveDataDir, resolveKiloProfile, resolveStateDir } from "./settings-paths"
 import { registerAutocompleteProvider } from "./services/autocomplete"
-import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
+import { BrowserBroker } from "./services/browser-automation"
+import { browserSettingsService } from "./browser-settings"
+import { cancelChromiumInstall } from "./browser-settings/install-chromium"
 import {
   integratedBrowserEnabled,
   integratedBrowserFallback,
@@ -53,12 +56,18 @@ import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
 import { indexingHost, type IndexingHost } from "./indexing/host"
+import { importV1, summarize, v1Store } from "./import-v1"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { gitChanges } from "./git-changes"
+import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { tabShortcutTarget } from "./tab-shortcuts"
 
 let shutdownExtension: (() => Promise<void>) | undefined
 
+/** globalState key of the temporary Kilo v1 import offer: "imported" or "declined" once answered. */
+const V1_IMPORT = "kilo-code.v2.importV1"
+
+/** @knipExternal VS Code calls this through the extension's manifest main. */
 export function activate(context: ExtensionContext) {
   const output = window.createOutputChannel("Kilo Code (v2)")
   const storage = context.globalStorageUri.fsPath
@@ -113,7 +122,10 @@ export function activate(context: ExtensionContext) {
       ...(agentManagerRef
         ? [...agentManagerRef.contexts.values()].flatMap((project) => [
             project.root,
-            ...(project.peekState()?.getWorktrees().map((worktree) => worktree.path) ?? []),
+            ...(project
+              .peekState()
+              ?.getWorktrees()
+              .map((worktree) => worktree.path) ?? []),
           ])
         : []),
     ],
@@ -184,7 +196,6 @@ export function activate(context: ExtensionContext) {
       connection.started(started)
       alerts.start(started)
       autocomplete.started()
-      void automation.started()
       // Consent lives in globalState; a fresh server starts without it, so re-send it for the workspace project.
       void indexing?.sync()
     },
@@ -193,7 +204,6 @@ export function activate(context: ExtensionContext) {
       connection.stopped()
       alerts.stop()
       autocomplete.stopped()
-      automation.stopped()
     },
     onError: (error) => {
       output.appendLine(error.message)
@@ -203,13 +213,29 @@ export function activate(context: ExtensionContext) {
     },
   })
   const diffs = new DiffVirtualProvider(context.extensionUri)
-  // Registers the optional Playwright MCP server in the v2 server. It is independent from the Integrated Browser.
-  const automation = new BrowserAutomationService({
+  // The browser tools' settings: the `browser` config keys and the origin allowlist, plus the one-time move of the old
+  // `kilo-code.v2.browserAutomation.*` settings into them.
+  const browserSettings = browserSettingsService({
     server,
-    log: (...args) => output.appendLine(`Browser automation: ${args.map((item) => String(item)).join(" ")}`),
+    directory: () => workspace.workspaceFolders?.[0]?.uri.fsPath ?? directory,
+    data: resolveDataDir(process.env, resolveKiloProfile(context)),
+    state: resolveStateDir(process.env, resolveKiloProfile(context)),
+    command: serverCommand,
+    store: context.globalState,
+    env: process.env,
+    log: (...args) => output.appendLine(`Browser settings: ${args.map((item) => String(item)).join(" ")}`),
   })
-  void automation.syncWithSettings()
-  context.subscriptions.push({ dispose: () => automation.dispose() })
+  void browserSettings
+    .migrate()
+    .then((result) => {
+      if (result.error) void window.showErrorMessage(`Browser settings migration failed: ${result.error}`)
+    })
+    .catch(
+      (error: unknown) =>
+        void window.showErrorMessage(
+          `Browser settings migration failed: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+    )
   const indexingService = indexingHost({
     context,
     server,
@@ -224,6 +250,7 @@ export function activate(context: ExtensionContext) {
   const connection = createAgentManagerConnection({ server })
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
+  context.subscriptions.push({ dispose: disposeGitChangesTarget })
   registerAutocompleteProvider(context, autocomplete)
   // The Changes editor tab diffs the workspace, the staged and unstaged tree, a session, or one turn. Its catalog
   // reads server session diffs through the same connection as the Agent Manager.
@@ -249,8 +276,8 @@ export function activate(context: ExtensionContext) {
     gitStats: (onStats) => gitChanges({ directory, onStats }),
     worktree: {
       continue: (sessionId, progress) => agentManagerRef?.continueFromSidebar(sessionId, progress) ?? Promise.resolve(),
-      create: (baseBranch, branchName) =>
-        agentManagerRef?.createFromSidebar(baseBranch, branchName) ?? Promise.resolve(),
+      create: (baseBranch, branchName, requestId) =>
+        agentManagerRef?.createFromSidebar(baseBranch, branchName, requestId) ?? Promise.resolve(),
       advanced: () => agentManagerRef?.openAdvancedWorktree() ?? Promise.resolve(),
       branch: () => agentManagerRef?.workspaceBranch() ?? Promise.resolve(undefined),
     },
@@ -271,11 +298,85 @@ export function activate(context: ExtensionContext) {
     server,
     directory,
     trackCostSession: alerts.track,
-    saveImageDirectory: () => agentManagerRef?.imageDirectory(),
+    saveImageDirectory: (sessionID) => agentManagerRef?.imageDirectory(sessionID),
   })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
   agentManagerRef = agentManager
-  agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
+  agentManager.onBrowserDebug = (...args) =>
+    output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
+  // Temporary import of Kilo v1 data for internal users. A machine with a v1 store is offered it at startup until the
+  // user imports or chooses "Don't Ask Again"; closing the notification only postpones it to the next start.
+  const importFromV1 = async (days: number) => {
+    const found = serverCommand()
+    if (!found) return void window.showErrorMessage(l10n.t("No Kilo v2 server found."))
+    const result = await window.withProgress(
+      { location: ProgressLocation.Notification, title: l10n.t("Importing from Kilo v1…"), cancellable: true },
+      async (_progress, token) => {
+        const abort = new AbortController()
+        token.onCancellationRequested(() => abort.abort())
+        const run = await importV1({
+          command: found,
+          cwd: directory,
+          env: process.env,
+          days,
+          log: (text) => output.append(text),
+          signal: abort.signal,
+        })
+        if (!run.ok || abort.signal.aborted) return { ...run, ok: false, cancelled: abort.signal.aborted, sessions: 0 }
+        // The CLI imported every v1 session updated in the window, which includes every session created in it.
+        const sessions = await agentManager
+          .importLegacySessions(Date.now() - days * 86_400_000)
+          .catch((error: unknown) => {
+            output.appendLine(`Agent Manager v1 import failed: ${String(error)}`)
+            return 0
+          })
+        return { ...run, cancelled: false, sessions }
+      },
+    )
+    if (result.cancelled) return
+    if (!result.ok) {
+      const show = l10n.t("Show Output")
+      const message = result.output.split("\n").at(-1) || l10n.t("The Kilo v1 import failed.")
+      if ((await window.showErrorMessage(message, show)) === show) output.show()
+      return
+    }
+    await context.globalState.update(V1_IMPORT, "imported")
+    const summary = summarize(result.output)
+    void window.showInformationMessage(
+      [
+        l10n.t("Imported {0} Kilo v1 sessions and {1} Agent Manager sessions.", summary.sessions, result.sessions),
+        ...(summary.config.length > 0 ? [l10n.t("Copied {0}.", summary.config.join(", "))] : []),
+      ].join(" "),
+    )
+  }
+  const pickV1Timespan = async () =>
+    (
+      await window.showQuickPick(
+        [
+          { label: l10n.t("Last 2 weeks"), days: 14 },
+          { label: l10n.t("Last week"), days: 7 },
+          { label: l10n.t("Last 4 weeks"), days: 28 },
+          { label: l10n.t("Last 3 months"), days: 90 },
+        ],
+        { placeHolder: l10n.t("How far back should Kilo import your v1 sessions?") },
+      )
+    )?.days
+  const offerV1Import = async () => {
+    if (context.globalState.get(V1_IMPORT) || !v1Store(process.env) || !serverCommand()) return
+    const recent = l10n.t("Import Last 2 Weeks")
+    const other = l10n.t("Other Timespan…")
+    const never = l10n.t("Don't Ask Again")
+    const choice = await window.showInformationMessage(
+      l10n.t("Bring your Kilo v1 sessions, Agent Manager sessions, skills and config into Kilo v2?"),
+      recent,
+      other,
+      never,
+    )
+    if (choice === never) return void context.globalState.update(V1_IMPORT, "declined")
+    const days = choice === recent ? 14 : choice === other ? await pickV1Timespan() : undefined
+    if (days) await importFromV1(days)
+  }
+  void offerV1Import()
   browserTab = new BrowserTabProvider(
     context.extensionUri,
     { browser: broker, version: (context.extension.packageJSON as { version?: string }).version },
@@ -284,8 +385,7 @@ export function activate(context: ExtensionContext) {
       trusted: () => workspace.isTrusted,
       // The tab serves the session the sidebar shows, and keeps serving a session whose tab is still open.
       resolve: (route) =>
-        editorTabOwns(route.sessionId) &&
-        samePath(canonicalizePath(route.directory), canonicalizePath(directory))
+        editorTabOwns(route.sessionId) && samePath(canonicalizePath(route.directory), canonicalizePath(directory))
           ? { sessionId: route.sessionId, directory: route.directory }
           : undefined,
       directory: () => directory,
@@ -312,6 +412,7 @@ export function activate(context: ExtensionContext) {
     context,
     server,
     directory,
+    browserSettings,
     onReset: view.syncState,
     agentManager: () => agentManager.settings,
   })
@@ -342,10 +443,14 @@ export function activate(context: ExtensionContext) {
   void clearLegacyTerminalDestination().catch((error: unknown) =>
     output.appendLine(`Terminal destination cleanup failed: ${String(error)}`),
   )
-  // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
-  // The panel receives an action, so an open dialog handles it before the session behind the dialog.
+  // The cycle keybindings act on the focused composer: the sidebar when it has focus, else the Agent Manager panel.
+  // The sidebar focus is the precise signal, as for the shared tab shortcuts: the panel stays the selected editor tab
+  // while the user moves focus to the sidebar. The panel receives an action, so an open dialog handles it before the
+  // session behind the dialog.
   const cycle = async (name: "cycleAgentMode" | "cyclePreviousAgentMode") => {
-    if (agentManager.isActive()) return agentManager.postMessage({ type: "action", action: name })
+    const target = tabShortcutTarget(view.focused(), agentManager.isActive())
+    if (target === "sidebar") return view.post({ type: "command", name })
+    if (target === "agentManager") return agentManager.postMessage({ type: "action", action: name })
     await commands.executeCommand("kilo-code.v2.chat.focus")
     await view.post({ type: "command", name })
   }
@@ -377,12 +482,11 @@ export function activate(context: ExtensionContext) {
     { dispose: () => diffs.dispose() },
     diffCatalog,
     changes,
-    commands.registerCommand(
-      "kilo-code.v2.showChanges",
-      (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => changes.openFromCommand(arg),
+    commands.registerCommand("kilo-code.v2.showChanges", (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) =>
+      changes.openFromCommand(arg),
     ),
     window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
-      deserializeWebviewPanel: async (panel) => changes.deserializePanel(panel),
+      deserializeWebviewPanel: async (panel, state) => changes.deserializePanel(panel, state),
     }),
     window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
       webviewOptions: { retainContextWhenHidden: true },
@@ -443,6 +547,10 @@ export function activate(context: ExtensionContext) {
     ),
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
+    commands.registerCommand("kilo-code.v2.importV1", async () => {
+      const days = await pickV1Timespan()
+      if (days) await importFromV1(days)
+    }),
     commands.registerCommand("kilo-code.v2.openBrowser", () => browserTab?.openFor(sidebarSession())),
     // Claude Code compatibility and the extra CA certificates are server start environment, so a change needs a new
     // server. The next request starts one with the current settings.
@@ -489,8 +597,11 @@ export function activate(context: ExtensionContext) {
   )
   shutdownExtension = () => shutdown.run(() => server.stop())
 
-  // `bun run extension` opens a development host: show the chat right away.
-  if (context.extensionMode === ExtensionMode.Development) void commands.executeCommand("kilo-code.v2.chat.focus")
+  // `bun run extension` opens a development host: open the Agent Manager panel and show the chat right away.
+  if (context.extensionMode === ExtensionMode.Development) {
+    agentManager.openPanel(true)
+    void commands.executeCommand("kilo-code.v2.chat.focus")
+  }
 }
 
 /** Current IDE color scheme, so the Integrated Browser matches the editor theme. */
@@ -499,6 +610,8 @@ function browserTheme(): "dark" | "light" {
   return kind === ColorThemeKind.Light || kind === ColorThemeKind.HighContrastLight ? "light" : "dark"
 }
 
+/** @knipExternal VS Code calls this through the extension's manifest main. */
 export function deactivate() {
+  cancelChromiumInstall()
   return shutdownExtension?.()
 }

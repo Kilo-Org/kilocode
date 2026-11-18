@@ -35,6 +35,7 @@ export type KiloSettingKey =
   | "language"
   | "chat.shiftTabCyclesVariant"
   | "chat.limitContentWidth"
+  | "chat.sendWhileRunning"
   | "showShortcutHints"
   | "showTokenThroughput"
   | "showAutoApprovalReason"
@@ -55,9 +56,6 @@ export type KiloSettingKey =
   | "integratedBrowser"
   | "agentManager.browser.useSystemChrome"
   | "agentManager.browser.openLinksIn"
-  | "browserAutomation.enabled"
-  | "browserAutomation.useSystemChrome"
-  | "browserAutomation.headless"
   | "experimental.nativeNotebookTools"
   | "experimental.conversationPromptHistory"
 

@@ -55,7 +55,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "完成（模型回報）",
+  "session.goal.complete": "完成",
   "session.goal.blocked": "受阻",
   "session.goal.restart": "重新開始目標",
   ...anacondaDesktopDict,
@@ -293,6 +293,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "管理自動核准規則",
   "ui.permission.noChanges": "無變更。",
   "ui.permission.reject": "拒絕",
+  "ui.permission.allowAllSites": "允許所有網站",
   "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",
   "ui.permission.feedbackHint": "按 Enter 拒絕，按 Esc 取消",
   "ui.permission.doomLoop.prompt": "偵測到 {{tool}} 工具可能陷入迴圈。是否繼續執行？",
@@ -631,8 +632,6 @@ export const dict = {
 
   "common.retry": "重試",
   "common.refresh": "重新整理",
-  "common.reload": "重新載入",
-  "common.reloadDescription": "重新載入磁碟上的設定、技能、智慧代理和命令",
 
   "profile.title": "個人資料",
   "profile.notLoggedIn": "尚未登入",
@@ -689,9 +688,8 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent 行為",
   "settings.autoApprove.title": "自動核准",
   "settings.webTools.title": "網路工具",
-  "settings.webTools.description": "設定網頁搜尋。",
+  "settings.webTools.description": "設定網頁搜尋和代理的瀏覽器工具。",
   "settings.webTools.webSearch.enable": "為所有供應商啟用",
-  "settings.webTools.browserAutomation": "瀏覽器自動化",
   "settings.webTools.webSearch.title": "網頁搜尋",
   "settings.webTools.webSearch.description": "讓所有供應商的模型都可使用網頁搜尋。",
   "settings.checkpoints.title": "檢查點",
@@ -808,15 +806,45 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "工作流程",
   "settings.agentBehaviour.subtab.skills": "Skills",
 
-  "settings.browser.description":
-    "設定由 Playwright 提供支援的內建瀏覽器自動化。Kilo 可以在你的工作階段中瀏覽網頁、與網頁互動，並擷取螢幕截圖。",
-  "settings.browser.enable.title": "啟用瀏覽器自動化",
-  "settings.browser.enable.description":
-    "啟用工作階段專屬的 Agent Manager 瀏覽器，用於本機應用程式和公開的 HTTPS 頁面。",
-  "settings.browser.systemChrome.title": "使用系統 Chrome",
-  "settings.browser.systemChrome.description": "使用已安裝的 Chrome 瀏覽器，而非獨立的 Chromium 實例。",
-  "settings.browser.headless.title": "無頭模式",
-  "settings.browser.headless.description": "以無頭模式執行（無可見瀏覽器視窗）。",
+  "settings.browser.backend.title": "後端",
+  "settings.browser.backend.description": "代理的瀏覽器工具所驅動的瀏覽器。",
+  "settings.browser.backend.playwright": "內建瀏覽器（Playwright）",
+  "settings.browser.backend.playwright.description": "由 Kilo 擁有的 Chromium 設定檔，於首次瀏覽器呼叫時啟動。",
+  "settings.browser.backend.extension": "瀏覽器擴充功能",
+  "settings.browser.backend.extension.description": "透過 Kilo 瀏覽器擴充功能使用你自己的瀏覽器。",
+  "settings.browser.backend.off": "關閉",
+  "settings.browser.backend.off.description": "對代理隱藏瀏覽器工具。",
+  "settings.browser.observation.title": "觀察",
+  "settings.browser.observation.description": "每一步之後代理能看到多少頁面。",
+  "settings.browser.observation.full": "完整快照",
+  "settings.browser.observation.diff": "僅變更內容",
+  "settings.browser.observation.none": "僅狀態",
+  "settings.browser.sensitive.title": "不需詢問即可執行敏感步驟",
+  "settings.browser.sensitive.description": "密碼、付款表單、OAuth 同意頁面與上傳會在沒有確認的情況下執行。",
+  "settings.browser.status.title": "狀態",
+  "settings.browser.status.playwright": "Playwright",
+  "settings.browser.status.playwright.ready": "就緒，使用 {{browser}}",
+  "settings.browser.status.playwright.missing": "缺少 Chromium",
+  "settings.browser.status.playwright.install": "安裝",
+  "settings.browser.status.playwright.installing": "正在安裝…",
+  "settings.browser.status.extension": "瀏覽器擴充功能",
+  "settings.browser.status.extension.connected": "已連線",
+  "settings.browser.status.extension.disconnected": "未連線",
+  "settings.browser.status.extension.hint":
+    "安裝 Kilo 瀏覽器擴充功能並開啟「允許本機代理」，然後開啟代理可使用的頁面。",
+  "settings.browser.origins.title": "網站權限",
+  "settings.browser.origins.site": "網站",
+  "settings.browser.origins.read": "讀取",
+  "settings.browser.origins.act": "操作",
+  "settings.browser.origins.navigate": "導覽",
+  "settings.browser.origins.allowAll.title": "允許所有網站",
+  "settings.browser.origins.allowAll.description": "所有網站不需詢問即可存取。網站規則仍然有效。",
+  "settings.browser.origins.empty": "尚無網站規則。你機器以外的每個網站都會在代理讀取、使用或導覽前詢問。",
+  "settings.browser.origins.add": "新增網站",
+  "settings.browser.origins.placeholder": "https://example.com",
+  "settings.browser.origins.error.empty": "請輸入網站來源",
+  "settings.browser.origins.error.invalid": "請使用類似 https://example.com 的來源",
+  "settings.browser.origins.error.duplicate": "此網站已在清單中",
 
   "settings.language.description": "選擇 Kilo Code 介面的語言。「自動」使用 VS Code 的顯示語言。",
   "settings.language.auto": "自動（VS Code 語言）",
@@ -1056,7 +1084,8 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。在 kilo2.json 中新增 MCP 伺服器，或請代理為您新增。",
   "settings.agentBehaviour.workflows.description":
     "工作流程是在您的設定或命令 Markdown 檔案中定義的自訂命令。您可以為每個工作流程設定模型與推理變體。",
-  "settings.agentBehaviour.workflows.empty": "找不到自訂命令。請將命令新增至 kilo2.json 或 .kilo2/command 中的 Markdown 檔案。",
+  "settings.agentBehaviour.workflows.empty":
+    "找不到自訂命令。請將命令新增至 kilo2.json 或 .kilo2/command 中的 Markdown 檔案。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "範本",
   "settings.agentBehaviour.workflows.model": "模型",
@@ -1069,13 +1098,11 @@ export const dict = {
   "settings.sandboxing.enabled.description":
     "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",
 
-  "settings.autoApprove.description":
-    "定義工具的執行權限。大多數工具預設為允許。Bash 預設為詢問。",
+  "settings.autoApprove.description": "定義工具的執行權限。大多數工具預設為允許。Bash 預設為詢問。",
   "settings.autoApprove.maxCost.title": "工作階段費用提醒",
   "settings.autoApprove.maxCost.description":
     "當工作階段花費超過此美元金額後，在繼續前提醒。請使用整數美元；留空則停用。",
-  "settings.autoApprove.maxCost.v2Description":
-    "當工作階段費用達到此美元金額時顯示非封鎖提醒。留空則停用。",
+  "settings.autoApprove.maxCost.v2Description": "當工作階段費用達到此美元金額時顯示非封鎖提醒。留空則停用。",
   "settings.autoApprove.level.allow": "允許",
   "settings.autoApprove.level.ask": "詢問",
   "settings.autoApprove.level.deny": "拒絕",
@@ -1136,8 +1163,7 @@ export const dict = {
   "settings.context.compactionLimit.title": "自動壓縮限制",
   "settings.context.compactionLimit.description": "當上下文達到模型視窗的此百分比時進行壓縮。留空則僅使用安全緩衝區。",
   "settings.context.compactionKeep.title": "保留最近 Token",
-  "settings.context.compactionKeep.description":
-    "壓縮上下文時依原樣保留的最近 Token 數量。留空則保留 15,000 個。",
+  "settings.context.compactionKeep.description": "壓縮上下文時依原樣保留的最近 Token 數量。留空則保留 15,000 個。",
   "settings.context.compactionBuffer.title": "壓縮緩衝區",
   "settings.context.compactionBuffer.description":
     "壓縮前在模型上下文上限以下保留的 Token 數量。留空則保留 15%（至少 16,000 個）。",
@@ -1430,6 +1456,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "系統瀏覽器",
   "settings.experimental.browserLinks.integrated": "整合瀏覽器",
   "chat.search.searchingHistory": "正在搜尋較早的訊息…",
+  "chat.reply.toolbar": "選取的文字",
+  "chat.reply.quote": "引用",
+  "chat.reply.quoteHint": "在回覆中引用",
+  "chat.reply.commentHint": "對此段落留言",
+  "chat.reply.copy": "複製",
+  "chat.reply.sendHint": "立即將此留言傳送給 Kilo",
+  "chat.reply.commentLater": "儲存至下一則訊息",
+  "chat.reply.count": "回覆 ({{count}})",
+  "chat.reply.sendAll": "全部傳送",
+  "chat.reply.showInChat": "在聊天中顯示",
   "browserTab.noSession": "從工作階段開啟瀏覽器以預覽本機應用程式或公開 HTTPS 頁面。",
   "browserTab.disabled": "整合瀏覽器已停用。請在 Kilo 設定 > 實驗性中啟用。",
 } satisfies Partial<Record<Keys, string>>

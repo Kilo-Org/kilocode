@@ -58,6 +58,16 @@ export function extract(source: string, target: string, since: number, onProgres
   if (!reader.unchanged()) throw changed(source)
 }
 
+/** Whether `source` holds a session updated at or after `since`, read without changing the source. */
+export function hasRecent(source: string, since: number) {
+  const reader = openReadonly(source)
+  try {
+    return reader.db.query("SELECT 1 FROM session WHERE time_updated >= ? LIMIT 1").get(since) !== null
+  } finally {
+    reader.db.close()
+  }
+}
+
 /**
  * The sessions to import: every session updated at or after `since`, plus all its ancestors and descendants through
  * `parent_id`, so a subagent tree stays complete when only its root or only one of its children is recent.

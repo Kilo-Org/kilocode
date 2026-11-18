@@ -250,6 +250,22 @@ describe("todoState", () => {
     expect(todoVisible(todoStats(state.items), state.last, state.user)).toBe(false)
   })
 
+  it("keeps writes of steps delivered before a reverted queued prompt", () => {
+    // The queued prompt msg_2 was admitted before the step msg_3 ran, so its ID sorts first; position decides.
+    const messages = [user("msg_1"), write("msg_3", [item("1", "pending")]), user("msg_2"), write("msg_4", [])]
+    const state = todoState(messages, { messageID: "msg_2" })
+    expect(state.items).toEqual([item("1", "pending")])
+    expect(state.last).toBe("msg_3")
+    expect(state.user).toBe("msg_1")
+    expect(hasTodoWrite(messages.slice(0, 3), { messageID: "msg_2" })).toBe(true)
+  })
+
+  it("restores the newer list when the revert clears", () => {
+    const messages = [user("msg_1"), write("msg_2", [item("1", "pending")]), user("msg_3"), write("msg_4", [])]
+    expect(todoState(messages, { messageID: "msg_3" }).items).toEqual([item("1", "pending")])
+    expect(todoState(messages).items).toEqual([])
+  })
+
   it("treats a reverted write as absent when deciding whether to page older history", () => {
     const messages = [write("msg_1", [item("1", "pending")])]
     expect(hasTodoWrite(messages)).toBe(true)

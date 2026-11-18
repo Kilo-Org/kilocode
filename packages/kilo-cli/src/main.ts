@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+// kilo_mirror: packages/cli/src/index.ts
 // The Kilo host entry (U-E0-01, #15172). Mirror of packages/cli/src/index.ts (v2.2.6): the same layers and the
 // upstream command handlers, with Kilo's composition added: KILO_* environment translation and the `kilo2` app
 // directory (./env, imported first), Kilo's app name, and a serve handler (./serve) that gives the server the Kilo
@@ -13,11 +14,12 @@ import { Commands } from "@opencode/cli/commands/commands"
 import { Runtime } from "@opencode/cli/framework/runtime"
 import { Observability } from "@opencode/util/observability"
 import { KiloUpdater } from "./updater"
+import { KiloPluginNpm } from "./plugin-npm"
 import { OPENCODE_CHANNEL, OPENCODE_LOCAL, OPENCODE_VERSION } from "@opencode/cli/version"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
 import { AppProcess } from "@opencode/util/process"
-import { KiloTheme } from "./theme"
+import { KiloCliConfig } from "./cli-config"
 import { Npm } from "@opencode/util/npm"
 import { EffectFlock } from "@opencode/util/effect-flock"
 import { Heap } from "@opencode/cli/heap"
@@ -28,6 +30,8 @@ import { AutoCommand } from "./auto/auto"
 import { ImportCommand } from "./import/import"
 import { SyncCommand } from "./sync/sync"
 import { RemoteCommand } from "./remote/remote"
+import { KiloServiceCommands } from "./service/service"
+import { KiloBrowserCommands } from "./browser/commands"
 
 import { ensurePluginRuntime } from "./index"
 
@@ -60,8 +64,13 @@ const KiloCommands = {
     service: {
       ...Commands.commands.service,
       spec: Commands.commands.service.spec.pipe(Command.withAlias("daemon")),
+      // Kilo: `install` and `uninstall` manage the OS login unit that starts the background server.
+      commands: { ...Commands.commands.service.commands, ...KiloServiceCommands },
     },
     auto: AutoCommand,
+    // Kilo: the browser bridge hub, its native messaging host install, and the Chromium the bundled Playwright
+    // backend drives.
+    browser: KiloBrowserCommands,
     import: ImportCommand,
     sync: SyncCommand,
     remote: RemoteCommand,
@@ -73,7 +82,8 @@ let terminated = false
 const Handlers = Runtime.handlers(KiloCommands, {
   $: () => import("@opencode/cli/commands/handlers/default"),
   upgrade: () => import("./upgrade"),
-  uninstall: () => import("@opencode/cli/commands/handlers/uninstall"),
+  // Kilo: the wrapper removes the login unit before the upstream uninstall.
+  uninstall: () => import("./commands/uninstall"),
   acp: () => import("@opencode/cli/commands/handlers/acp"),
   api: () => import("@opencode/cli/commands/handlers/api"),
   auth: {
@@ -110,7 +120,8 @@ const Handlers = Runtime.handlers(KiloCommands, {
   pair: () => import("@opencode/cli/commands/handlers/pair"),
   reload: () => import("@opencode/cli/commands/handlers/reload"),
   session: {
-    list: () => import("@opencode/cli/commands/handlers/session/list"),
+    // Kilo: the mirror adds the scheduled-wakeup status field. kilo_port(wakeup:9d6803e786ab)
+    list: () => import("./commands/session-list"),
     delete: () => import("@opencode/cli/commands/handlers/session/delete"),
     export: () => import("@opencode/cli/commands/handlers/session/export"),
     import: () => import("@opencode/cli/commands/handlers/session/import"),
@@ -118,11 +129,16 @@ const Handlers = Runtime.handlers(KiloCommands, {
   service: {
     start: () => import("@opencode/cli/commands/handlers/service/start"),
     restart: () => import("@opencode/cli/commands/handlers/service/restart"),
-    status: () => import("@opencode/cli/commands/handlers/service/status"),
-    stop: () => import("@opencode/cli/commands/handlers/service/stop"),
+    // Kilo: the wrapper adds the login unit state.
+    status: () => import("./service/status"),
+    // Kilo: the wrapper stops the login unit first, so its restart policy cannot start the server again.
+    stop: () => import("./service/stop"),
     get: () => import("@opencode/cli/commands/handlers/service/get"),
     set: () => import("@opencode/cli/commands/handlers/service/set"),
     unset: () => import("@opencode/cli/commands/handlers/service/unset"),
+    // Kilo: the OS login unit.
+    install: () => import("./service/install"),
+    uninstall: () => import("./service/uninstall"),
   },
   // Kilo: the server gets the Kilo plugins and service overrides.
   serve: () => import("./serve"),
@@ -138,6 +154,13 @@ const Handlers = Runtime.handlers(KiloCommands, {
   // Kilo: manual import of an earlier Kilo installation.
   import: {
     v1: () => import("./import/v1"),
+  },
+  // Kilo: the browser bridge hub (started by the browser or by a CLI), the native messaging host install, and the
+  // Chromium the bundled Playwright backend drives.
+  browser: {
+    hub: () => import("./browser/hub-command"),
+    "install-host": () => import("./browser/install-host-command"),
+    "install-chromium": () => import("./browser/install-chromium"),
   },
   // Kilo: custom auto routers.
   auto: {
@@ -188,7 +211,7 @@ Effect.gen(function* () {
     }).pipe(Effect.andThen(Effect.failCause(cause))),
   ),
   Effect.annotateLogs({ role: "cli" }),
-  Effect.provide(KiloTheme.layer),
+  Effect.provide(KiloCliConfig.layer),
   Effect.provide(KiloUpdater.layer),
   Effect.provide(
     LayerNode.compile(LayerNode.group([Global.node, AppProcess.node, Npm.node, EffectFlock.node]), {
@@ -198,6 +221,8 @@ Effect.gen(function* () {
         Global.node.replace(
           Global.layerWith(process.env.OPENCODE_CONFIG_DIR ? { config: process.env.OPENCODE_CONFIG_DIR } : {}),
         ),
+        // Kilo: the TUI resolves configured plugin targets itself, so a `git:` spec must not reach npm there.
+        Npm.node.replace(KiloPluginNpm.node),
       ],
     }),
   ),

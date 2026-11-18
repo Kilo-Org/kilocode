@@ -21,6 +21,7 @@ import {
   mergeModelUsage,
   modelLabel,
   modelUsage,
+  revertedMembers,
   sessionSubtree,
   sessionUsage,
   sumCost,
@@ -101,6 +102,40 @@ const catalogModel = (input: { id: string; providerID?: string; name?: string; c
   status: "active",
   enabled: true,
   limit: { context: input.context ?? 200000, output: 8000 },
+})
+
+describe("revertedMembers", () => {
+  const transcript: Record<string, SessionMessageInfo[]> = {
+    root: [
+      user("msg_1"),
+      assistant({ id: "msg_2", cost: 1, tokens: tokens(10, 5), content: [childTool("t1", "kept")] }),
+      user("msg_3"),
+      assistant({ id: "msg_4", cost: 2, tokens: tokens(20, 8), content: [childTool("t2", "gone"), childTool("t3", "kept")] }),
+    ],
+  }
+  const family = [
+    session("root", { cost: 3, tokens: tokens(30, 13), revert: { messageID: "msg_3" } }),
+    session("kept", { parentID: "root", cost: 4 }),
+    session("gone", { parentID: "root", cost: 5 }),
+    session("nested", { parentID: "gone", cost: 6 }),
+  ]
+  const messages = (id: string) => transcript[id] ?? []
+
+  test("drops children only reverted turns started, with their subagents, and the hidden steps' usage", () => {
+    const members = revertedMembers(family, messages)
+    expect(members.map((member) => member.id)).toEqual(["root", "kept"])
+    expect(sumCost(members)).toBe(5)
+    expect(members[0]?.tokens).toEqual(tokens(10, 5))
+  })
+
+  test("keeps every member and its totals without a staged revert", () => {
+    const members = revertedMembers(
+      family.map((member) => ({ ...member, revert: undefined })),
+      messages,
+    )
+    expect(members.map((member) => member.id)).toEqual(["root", "kept", "gone", "nested"])
+    expect(sumCost(members)).toBe(18)
+  })
 })
 
 describe("sessionSubtree", () => {

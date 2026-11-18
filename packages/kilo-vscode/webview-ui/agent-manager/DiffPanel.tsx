@@ -1,6 +1,7 @@
 import { type Component, createMemo, Show, type JSXElement } from "solid-js"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { CountUp } from "@kilocode/kilo-ui/count-up"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { DiffStyleSelect } from "../diff-viewer/InlineSelect"
@@ -125,8 +126,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
               />
               <span class="am-diff-header-stats">
                 <span>{t("session.review.filesChanged", { count: totals().files })}</span>
-                <span class="am-diff-header-adds">+{totals().additions}</span>
-                <span class="am-diff-header-dels">-{totals().deletions}</span>
+                <span class="am-diff-header-adds">
+                  +<CountUp value={totals().additions} />
+                </span>
+                <span class="am-diff-header-dels">
+                  -<CountUp value={totals().deletions} />
+                </span>
                 <Show when={totals().collapsed > 0}>
                   <span class="am-diff-header-collapsed">
                     {totals().large > 0

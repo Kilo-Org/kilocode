@@ -7,8 +7,10 @@ import { SidePanel } from "../webview-ui/agent-manager/side-panel-layout"
 import {
   createTabMemory,
   rememberSelectionTab,
+  replaceRememberedTab,
   selectLocalAction,
   selectWorktreeAction,
+  vacantWorktreeTab,
   type SelectionActionDeps,
 } from "../webview-ui/agent-manager/selection-actions"
 
@@ -359,5 +361,78 @@ describe("rememberSelectionTab", () => {
     rememberSelectionTab((selection, tab) => calls.push([selection, tab]), "local", "ses-a2")
 
     expect(calls).toEqual([["local", "ses-a2"]])
+  })
+})
+
+describe("vacantWorktreeTab", () => {
+  const vacant = {
+    selection: "wt-1",
+    current: undefined,
+    pending: undefined,
+    terminal: undefined,
+    review: false,
+    history: false,
+    tabs: ["ses-a", "ses-b"],
+    remembered: undefined,
+  }
+
+  it("fills a worktree that shows nothing with its first tab", () => {
+    expect(vacantWorktreeTab(vacant)).toBe("ses-a")
+  })
+
+  it("prefers the remembered tab while the worktree still has it", () => {
+    expect(vacantWorktreeTab({ ...vacant, remembered: "ses-b" })).toBe("ses-b")
+    expect(vacantWorktreeTab({ ...vacant, remembered: "ses-gone" })).toBe("ses-a")
+  })
+
+  it("keeps whatever the worktree already shows", () => {
+    expect(vacantWorktreeTab({ ...vacant, current: "ses-b" })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, pending: "pending:1" })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, terminal: "terminal:1" })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, review: true })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, history: true })).toBeUndefined()
+  })
+
+  it("leaves Local, no selection and a worktree without tabs alone", () => {
+    expect(vacantWorktreeTab({ ...vacant, selection: "local" })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, selection: null })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, tabs: [] })).toBeUndefined()
+  })
+})
+
+describe("replaceRememberedTab", () => {
+  const store = (memory: Record<string, string>, restore: Record<string, string>) => ({
+    tabMemory: {
+      get: (key: string) => memory[key],
+      set: (key: string, tab: string) => {
+        memory[key] = tab
+      },
+    },
+    sessionRestore: {
+      get: (key: string) => restore[key],
+      set: (key: string, tab: string) => {
+        restore[key] = tab
+      },
+    },
+  })
+
+  it("moves both memories from the draft to the session", () => {
+    const memory = { local: "pending:a" }
+    const restore = { local: "pending:a" }
+
+    replaceRememberedTab(store(memory, restore), "local", "pending:a", "ses_new")
+
+    expect(memory.local).toBe("ses_new")
+    expect(restore.local).toBe("ses_new")
+  })
+
+  it("leaves memories that point elsewhere or belong to another context alone", () => {
+    const memory = { local: "ses_old", "wt-1": "pending:a" }
+    const restore = { local: "ses_old" }
+
+    replaceRememberedTab(store(memory, restore), "local", "pending:a", "ses_new")
+
+    expect(memory).toEqual({ local: "ses_old", "wt-1": "pending:a" })
+    expect(restore).toEqual({ local: "ses_old" })
   })
 })

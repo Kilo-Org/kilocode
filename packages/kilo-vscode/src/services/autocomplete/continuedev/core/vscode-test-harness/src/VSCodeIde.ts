@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import * as URI from "uri-js"
-import type { DocumentSymbol, FileStatsMap, IDE, IdeInfo, Location, Range, RangeInFile, SignatureHelp } from "../.."
-import { executeGotoProvider, executeSignatureHelpProvider, executeSymbolProvider } from "./autocomplete/lsp"
+import type { IDE, Location, Range, RangeInFile, SignatureHelp } from "../.."
+import { executeGotoProvider, executeSignatureHelpProvider } from "./autocomplete/lsp"
 
 async function stat(uri: vscode.Uri): Promise<vscode.FileStat | null> {
   try {
@@ -33,23 +33,9 @@ async function readFile(uri: vscode.Uri): Promise<Uint8Array | null> {
   }
 }
 
-function documentIsCode(uri: vscode.Uri): boolean {
-  return uri.scheme === "file" || uri.scheme === "vscode-remote"
-}
-
 export class VsCodeIde implements IDE {
   private static MAX_BYTES = 100000
   constructor(_context: vscode.ExtensionContext) {}
-  getIdeInfo(): Promise<IdeInfo> {
-    return Promise.resolve({
-      ideType: "vscode",
-      // name: vscode.env.appName,
-      // version: vscode.version,
-      // remoteName: vscode.env.remoteName || "local",
-      // extensionVersion: getExtensionVersion(),
-      // isPrerelease: isExtensionPrerelease(),
-    })
-  }
 
   async getClipboardContent(): Promise<{ text: string; copiedAt: string }> {
     return {
@@ -58,40 +44,12 @@ export class VsCodeIde implements IDE {
     }
   }
 
-  getUniqueId(): Promise<string> {
-    return Promise.resolve(vscode.env.machineId)
-  }
-
   private _workspaceDirectories: vscode.Uri[] | undefined = undefined
   async getWorkspaceDirs(): Promise<string[]> {
     if (!this._workspaceDirectories) {
       this._workspaceDirectories = vscode.workspace.workspaceFolders?.map((folder) => folder.uri)
     }
     return this._workspaceDirectories?.map((uri) => uri.toString()) ?? []
-  }
-
-  async fileExists(fileUri: string): Promise<boolean> {
-    try {
-      await stat(vscode.Uri.file(fileUri))
-      return true
-    } catch {
-      console.error(`File does not exist: ${fileUri}`)
-      return false
-    }
-  }
-
-  async writeFile(path: string, contents: string): Promise<void> {
-    await vscode.workspace.fs.writeFile(vscode.Uri.file(path), Buffer.from(contents))
-  }
-
-  async saveFile(fileUri: string): Promise<void> {
-    console.log(`Saving file: ${fileUri}`)
-    const uri = vscode.Uri.parse(fileUri)
-    vscode.window.visibleTextEditors.forEach(async (editor) => {
-      if (areEqualURIs(uri, editor.document.uri)) {
-        await editor.document.save()
-      }
-    })
   }
 
   async readFile(fileUri: string): Promise<string> {
@@ -149,41 +107,6 @@ export class VsCodeIde implements IDE {
     ].slice(0, range.end.character)}`
   }
 
-  async getOpenFiles(): Promise<string[]> {
-    return vscode.window.tabGroups.all
-      .flatMap((group) => group.tabs)
-      .filter(
-        (tab) => tab.input instanceof vscode.TabInputText && documentIsCode((tab.input as vscode.TabInputText).uri),
-      )
-      .map((tab) => (tab.input as vscode.TabInputText).uri.toString())
-  }
-
-  async getCurrentFile(): Promise<undefined | { isUntitled: boolean; path: string; contents: string }> {
-    if (!vscode.window.activeTextEditor) {
-      return undefined
-    }
-    return {
-      isUntitled: vscode.window.activeTextEditor.document.isUntitled,
-      path: vscode.window.activeTextEditor.document.uri.toString(),
-      contents: vscode.window.activeTextEditor.document.getText(),
-    }
-  }
-
-  async getFileStats(files: string[]): Promise<FileStatsMap> {
-    const pathToLastModified: FileStatsMap = {}
-    await Promise.all(
-      files.map(async (file) => {
-        const statx = await stat(vscode.Uri.parse(file))
-        pathToLastModified[file] = {
-          lastModified: statx!.mtime,
-          size: statx!.size,
-        }
-      }),
-    )
-
-    return pathToLastModified
-  }
-
   async gotoDefinition(location: Location): Promise<RangeInFile[]> {
     const result = await executeGotoProvider({
       uri: vscode.Uri.parse(location.filepath),
@@ -212,26 +135,6 @@ export class VsCodeIde implements IDE {
       line: location.position.line,
       character: location.position.character,
       name: "vscode.executeSignatureHelpProvider",
-    })
-
-    return result
-  }
-
-  async getReferences(location: Location): Promise<RangeInFile[]> {
-    const result = await executeGotoProvider({
-      uri: vscode.Uri.parse(location.filepath),
-      line: location.position.line,
-      character: location.position.character,
-      name: "vscode.executeReferenceProvider",
-    })
-
-    return result
-  }
-
-  async getDocumentSymbols(textDocumentIdentifier: string): Promise<DocumentSymbol[]> {
-    const result = await executeSymbolProvider({
-      uri: vscode.Uri.parse(textDocumentIdentifier),
-      name: "vscode.executeDocumentSymbolProvider",
     })
 
     return result

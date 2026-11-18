@@ -10,7 +10,7 @@ import {
 } from "../src/index.js"
 import { fixture } from "../src/testing.js"
 
-describe("Enterprise account, tRPC, modes, notifications, media, and FIM/edit", () => {
+describe("Enterprise account, tRPC, modes, notifications, media, and FIM", () => {
   test("fetches balance, Kilo Pass, BYOK entries, and Coding Plans via tRPC", async () => {
     using backend = fixture()
     expect(await Effect.runPromise(KiloProfile.balance(backend.url, "token", "selected"))).toEqual({
@@ -162,7 +162,7 @@ describe("Enterprise account, tRPC, modes, notifications, media, and FIM/edit", 
     expect(await Effect.runPromise(KiloModes.get(backend.url, "first-token", "selected"))).toHaveLength(1)
   })
 
-  test("resolves FIM and Next Edit targets and extracts fenced edit bodies", async () => {
+  test("resolves FIM targets", async () => {
     expect(KiloAutocomplete.resolveFimTarget("kilo", "mistralai/codestral-2508", "https://api.kilo.ai")).toEqual({
       provider: "kilo",
       model: "mistralai/codestral-2508",
@@ -172,20 +172,7 @@ describe("Enterprise account, tRPC, modes, notifications, media, and FIM/edit", 
       provider: "mistral",
       model: "codestral-2508",
     })
-    expect(KiloAutocomplete.resolveEditTarget("kilo", "inception/mercury-next-edit", "https://api.kilo.ai")).toEqual({
-      provider: "kilo",
-      model: "inception/mercury-edit-2",
-      url: "https://api.kilo.ai/api/gateway/edit/completions",
-    })
-    expect(KiloAutocomplete.resolveEditTarget("kilo", "mistralai/codestral-2508", "https://api.kilo.ai")).toEqual({
-      provider: "kilo",
-      model: "mistralai/codestral-2508",
-      url: "",
-    })
     expect(KiloAutocomplete.resolveFimTarget("kilo", "mistralai/codestral-2508", "https://ai-gateway.kilo.ai/api/v1"))
       .toMatchObject({ url: "https://ai-gateway.kilo.ai/api/v1/fim/completions" })
-    expect(
-      KiloAutocomplete.extractFencedBody("```ts\n<|code_to_edit|>\nconst x = 1\n<|/code_to_edit|>\n```"),
-    ).toBe("const x = 1")
   })
 })

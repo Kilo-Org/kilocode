@@ -1,9 +1,11 @@
 #!/usr/bin/env bun
 // Builds one platform's VSIX. The extension starts the bundled `bin/kilo2`, so the matching
-// executable from packages/kilo-cli/dist is copied next to the FFmpeg helper before packaging.
+// executable and its sandbox helpers from packages/kilo-cli/dist are copied next to the FFmpeg
+// helper before packaging.
 // Usage: bun run package [-- --target=<vscode-target>]
+// KILO_VSCODE_VERSION stamps the VSIX version. KILO_VSCODE_PRE_RELEASE=true marks it as a pre-release.
 import { chmodSync, existsSync } from "node:fs"
-import { copyFile, mkdir, rm } from "node:fs/promises"
+import { cp, mkdir, readdir, rm } from "node:fs/promises"
 import path from "node:path"
 
 export const root = path.resolve(import.meta.dir, "..")
@@ -30,13 +32,17 @@ export function resolveTarget(requested?: string): Target {
   return target
 }
 
-/** The built CLI executable the package copies into `bin/`. */
-export function binary(target: Target): string {
-  const config = targets[target]
-  return path.join(cli, config.dist, "bin", config.binary)
+/** The built CLI bin directory the package copies into `bin/`. */
+export function cliBin(target: Target): string {
+  return path.join(cli, targets[target].dist, "bin")
 }
 
-/** Builds the production extension and places the matching CLI binary in `bin/`. */
+/** The built CLI executable the package copies into `bin/`. */
+export function binary(target: Target): string {
+  return path.join(cliBin(target), targets[target].binary)
+}
+
+/** Builds the production extension and places the matching CLI binary and helpers in `bin/`. */
 export async function prepare(target: Target): Promise<void> {
   const config = targets[target]
   const source = binary(target)
@@ -57,28 +63,44 @@ export async function prepare(target: Target): Promise<void> {
   })
   if ((await build.exited) !== 0) throw new Error("Extension build failed")
 
-  const bundled = path.join(bin, config.binary)
-  await copyFile(source, bundled)
-  if (config.binary !== "kilo2.exe") chmodSync(bundled, 0o755)
+  // The CLI bin also carries the sandbox worker, relay, seccomp helper and bundled Bubblewrap. Copy
+  // the whole directory, not only the executable, and keep the FFmpeg helper the build placed there.
+  const sourceBin = cliBin(target)
+  for (const entry of await readdir(sourceBin)) {
+    await cp(path.join(sourceBin, entry), path.join(bin, entry), { recursive: true, force: true })
+  }
+  if (!target.startsWith("win32")) {
+    for (const name of ["kilo2", "bwrap", "kilo-sandbox-seccomp"]) {
+      const file = path.join(bin, name)
+      if (existsSync(file)) chmodSync(file, 0o755)
+    }
+  }
 }
 
 /** Packages the prepared build for one VS Code target. */
-export async function packageTarget(target: Target): Promise<string> {
-  const name = process.platform === "win32" ? "vsce.cmd" : "vsce"
-  const vsce = [
-    path.join(root, "node_modules", ".bin", name),
-    path.resolve(root, "..", "..", "node_modules", ".bin", name),
-  ].find((file) => existsSync(file))
-  if (!vsce) throw new Error("vsce is missing. Run bun install first.")
+export async function packageTarget(
+  target: Target,
+  options: { version?: string; preRelease?: boolean } = {},
+): Promise<string> {
+  const pkg = (await Bun.file(path.join(root, "package.json")).json()) as { version: string }
+  const version = options.version ?? process.env.KILO_VSCODE_VERSION ?? pkg.version
+  const preRelease = options.preRelease ?? process.env.KILO_VSCODE_PRE_RELEASE === "true"
 
   await mkdir(out, { recursive: true })
   const output = path.join(out, `kilo-vscode-${target}.vsix`)
-  console.log(`Packaging ${output}`)
-  const pack = Bun.spawn(
-    [vsce, "package", "--target", target, "--no-dependencies", "--skip-license", "--out", output],
-    { cwd: root, env: { ...process.env, npm_config_ignore_scripts: "true" }, stdout: "inherit", stderr: "inherit" },
-  )
-  if ((await pack.exited) !== 0) throw new Error("vsce package failed")
+  console.log(`Packaging ${output} as ${version}${preRelease ? " (pre-release)" : ""}`)
+
+  const { createVSIX } = await import("@vscode/vsce")
+  await createVSIX({
+    cwd: root,
+    packagePath: output,
+    version,
+    target,
+    preRelease,
+    updatePackageJson: false,
+    dependencies: false,
+    skipLicense: true,
+  })
   return output
 }
 

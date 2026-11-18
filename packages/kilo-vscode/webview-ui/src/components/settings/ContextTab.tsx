@@ -6,7 +6,7 @@ import { useLanguage } from "../../context/language"
 import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
 import PatternList from "./PatternList"
-import { tokenEdit } from "./context-tokens"
+import { limitEdit, limitFromBuffer, tokenEdit } from "./context-tokens"
 import type { SettingsTabProps } from "./tabs"
 
 const ContextTab: Component<SettingsTabProps> = (props) => {
@@ -28,29 +28,49 @@ const ContextTab: Component<SettingsTabProps> = (props) => {
     return typeof value === "number" && Number.isFinite(value) ? String(value) : ""
   }
 
-  const tokenField = (path: string[]) => {
+  // A field commits on blur or Enter, never per keystroke. `read` supplies the stored value when nothing is drafted.
+  const field = (read: () => string, apply: (input: string) => void) => {
     const [draft, setDraft] = createSignal<string>()
     const commit = () => {
       const input = draft()
       if (input === undefined) return
       setDraft(undefined)
-      const edit = tokenEdit(input)
-      if (!edit) return
-      if (edit.type === "unset") {
-        if (tokens(path)) clear(path)
-        return
-      }
-      if (String(edit.value) !== tokens(path)) write(path, edit.value)
+      apply(input)
     }
     const keyDown = (event: KeyboardEvent) => {
       if (event.key !== "Enter") return
       event.preventDefault()
       commit()
     }
-    return { value: () => draft() ?? tokens(path), setDraft, commit, keyDown }
+    return { value: () => draft() ?? read(), setDraft, commit, keyDown }
   }
-  const keep = tokenField(["compaction", "keep", "tokens"])
-  const buffer = tokenField(["compaction", "buffer"])
+
+  const applyTokens = (path: string[]) => (input: string) => {
+    const edit = tokenEdit(input)
+    if (!edit) return
+    if (edit.type === "unset") {
+      if (tokens(path)) clear(path)
+      return
+    }
+    if (String(edit.value) !== tokens(path)) write(path, edit.value)
+  }
+
+  // The limit is the v1 setting users know: the share of the window at which compaction runs. v2 keeps its
+  // complement as `compaction.buffer`, so the two fields are the percentage and token forms of one key.
+  const applyLimit = (input: string) => {
+    const edit = limitEdit(input)
+    if (!edit) return
+    if (edit.type === "unset") {
+      if (limitFromBuffer(config.value(["compaction", "buffer"]))) clear(["compaction", "buffer"])
+      return
+    }
+    if (edit.value !== config.value(["compaction", "buffer"])) write(["compaction", "buffer"], edit.value)
+  }
+
+  const limit = () => limitFromBuffer(config.value(["compaction", "buffer"]))
+  const keep = field(() => tokens(["compaction", "keep", "tokens"]), applyTokens(["compaction", "keep", "tokens"]))
+  const buffer = field(() => tokens(["compaction", "buffer"]), applyTokens(["compaction", "buffer"]))
+  const limitField = field(limit, applyLimit)
 
   return (
     <div>
@@ -63,6 +83,28 @@ const ContextTab: Component<SettingsTabProps> = (props) => {
           <Switch checked={auto()} onChange={(checked) => write(["compaction", "auto"], checked)} hideLabel>
             {language.t("settings.context.autoCompaction.title")}
           </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.context.compactionLimit.title")}
+          description={language.t("settings.context.compactionLimit.description")}
+        >
+          <div style={{ display: "flex", "align-items": "center", gap: "6px", width: "160px" }}>
+            <TextField
+              type="number"
+              inputMode="decimal"
+              min="0.001"
+              max="100"
+              step="any"
+              value={limitField.value()}
+              placeholder="80"
+              onChange={(value) => limitField.setDraft(value)}
+              onBlur={limitField.commit}
+              onKeyDown={limitField.keyDown}
+              hideLabel
+              label={language.t("settings.context.compactionLimit.title")}
+            />
+            <span style={{ color: "var(--text-weak-base, var(--vscode-descriptionForeground))" }}>%</span>
+          </div>
         </SettingsRow>
         <SettingsRow
           title={language.t("settings.context.compactionKeep.title")}

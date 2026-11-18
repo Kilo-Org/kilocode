@@ -535,7 +535,7 @@ export const createLLMEventPublisher = (bus: Pick<Bus.Interface, "publish">, inp
           rawFinish: event.reason.raw,
           native: KiloSessionUsage.native(event.usage, input.model.providerID, native(event.providerMetadata)), // kilocode_change(gateway)
           usage: event.usage,
-          providerCost: KiloSessionUsage.providerCost(event.usage, input.model.providerID, event.providerMetadata), // kilocode_change(gateway)
+          providerCost: KiloSessionUsage.providerCost(event.usage, input.model.providerID), // kilocode_change(gateway)
         }
         if (event.reason.normalized === "content-filter") {
           providerFailed = true

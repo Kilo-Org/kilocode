@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "bun run src/index.ts",
     "build": "bun run script/build.ts",
+    "branding:audit": "bun run script/branding-audit.ts",
     "startup": "bun run script/startup.ts",
     "test": "bun test --timeout 30000",
     "test:ci": "bun ../../script/kilocode/test/test-runner.ts --ci",
@@ -37,7 +38,9 @@
     "babel-preset-solid": "1.9.12",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
-    "jsonc-parser": "3.3.1"
+    "jsonc-parser": "3.3.1",
+    "ws": "8.21.0",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@opencode/client": "workspace:*",
@@ -46,6 +49,7 @@
     "@types/babel__core": "7.20.5",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
+    "@types/ws": "8.18.1",
     "@typescript/native": "catalog:",
     "solid-js": "catalog:"
   }

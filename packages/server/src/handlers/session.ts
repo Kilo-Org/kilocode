@@ -583,7 +583,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
       .handle(
         "session.generate",
         Effect.fn(function* (ctx) {
-          const text = yield* session
+          const result = yield* session
             .generate({ sessionID: ctx.params.sessionID, prompt: ctx.payload.prompt })
             .pipe(
               Effect.mapError((error) =>
@@ -592,7 +592,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                   : new ServiceUnavailableError({ message: error.message, service: "session generation" }),
               ),
             )
-          return { data: { text } }
+          return { data: result }
         }),
       )
       .handle(
@@ -608,7 +608,14 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
         "session.interrupt",
         Effect.fn(function* (ctx) {
           yield* requireSession(ctx.params.sessionID)
-          return { interrupted: yield* session.interrupt(ctx.params.sessionID, { resume: ctx.query.resume }) }
+          // kilocode_change start - steer: forward the flag; a steered interruption never cancels a compaction.
+          return {
+            interrupted: yield* session.interrupt(ctx.params.sessionID, {
+              resume: ctx.query.resume,
+              steer: ctx.query.steer,
+            }),
+          }
+          // kilocode_change end
         }),
       )
       .handle(

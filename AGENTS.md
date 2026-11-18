@@ -9,7 +9,8 @@ This checkout is Kilo-Org/kilocode, a fork of OpenCode. The rules in this sectio
 - **Running the CLI.** Only through `bun dev` (`script/dev-isolated.ts`, isolated profile; `KILO_V2_PROFILE=$(mktemp -d)` for a fresh one). Never `bun run dev:live`, `opencode` or `bun run --cwd packages/cli`: they use the installed OpenCode data and service. This replaces "Live TUI Testing" below, including `dev:live` for TUI stories.
 - **Placement.** Plugin first, then host. Kilo server plugins go into `KiloPlugins` (`packages/kilo-plugin/src/index.ts`); the host (`packages/kilo-cli`) registers them. An edit in a shared upstream file carries a `kilocode_change(<feature>)` marker and an entry in `script/upstream/shared-patches.json`. Load the `v2-migration` and `v2-feature-placement` skills (`.kilo/skills/`) before any migration change.
 - **Direction.** Kilo is the host, OpenCode is a library. Code moves from upstream files into Kilo-owned files, never the reverse: a Kilo-owned mirror beats a seam, and a patch never changes an upstream default.
-- **Checks.** `bun run check` from the root; `bun typecheck` and `bun test` from package directories. Never run tests from the root.
+- **Localization.** Kilo UI copy is a key in `packages/kilo-i18n/src/en.ts` rendered through `t(...)`, never a literal string. A change that adds or edits English copy updates the same key in every other locale in `packages/kilo-i18n/src/` in the same change, following `packages/kilo-i18n/AGENTS.md`; an English-only key or a stale value is an incomplete change. Dictionaries ported from v1 under `packages/kilo-vscode/webview-ui/` follow the same rule. Never hand-translate upstream's `packages/ui/src/i18n/`: upstream syncs those files, and the "English source strings only" rule in `packages/ui/AGENTS.md` applies to upstream copy, not to Kilo dictionaries.
+- **Checks.** Run both root checks: `bun script/kilocode/metrics/check.ts` enforces the Kilo product TS/TSX ratchet (new functions at most 20 complexity, new files at most 1,000 lines, existing excess cannot grow); `bun run check` runs lint and type checks separately. Where limits overlap, the stricter one applies. Run `bun typecheck` and `bun test` from package directories. Never run tests from the root.
 - **Principles.** Before any v2 change, read `migration-tracking/principles.md`; it overrides any other doc.
 - **References.** Plan: `migration-tracking/plan.md`. Live state: issue #15297 and its epics. Procedure: the skills in `.kilo/skills/`. Known upstream failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
 <!-- kilocode_change end - agents-md -->
@@ -60,7 +61,7 @@ Valid types are `feat`, `fix`, `docs`, `chore`, `refactor`, and `test`. Scopes a
 
 Examples: `fix(tui): simplify thinking toggle styling`, `docs: update contributing guide`, `chore(sdk): regenerate types`.
 
-For user-facing `feat`, `fix` and `perf` PRs, add a small looping animated SVG of the change under `### Visual` in the PR body (a `svg` code block, 240×72, for example a dock growing out of the composer or spinners turning in step). Draw with `currentColor` and opacity so it works in light and dark, make the unanimated state a good still (it is shown under reduced motion), animate with CSS or SMIL only, and keep it under 8 KB with no scripts or external references. The desktop beta's "What's new" dialog shows it.
+For behavior changes, add the proof to the PR body (`## Proof`, the sections the template calls "How did you verify your code works?" and "Screenshots / recordings"): embed screenshots or a recording with Markdown image syntax (`![label](url)`) and host them outside the repository, never commit them; with no UI or no way to capture one, paste concrete output from a real `bun dev` run (CLI/TUI transcript, captured RPC/HTTP response, or the resulting config diff). <!-- kilocode_change - agents-md: replace upstream desktop beta SVG rule with real PR proof -->
 
 ## Style Guide
 
@@ -217,6 +218,14 @@ const table = sqliteTable("session", {
 - During focused iteration, run `bun typecheck` from the affected package directory (for example, `packages/core`). Never run `tsc` directly.
 - Local `typecheck` scripts use `bun check`. CI and package publishing run `typecheck:tsc`, which uses the official TypeScript compiler (`@typescript/native`). When the two disagree, `tsc` is the source of truth; reproduce with `bun run typecheck:tsc` from the package directory.
 - `bun check` aims to match TypeScript 7.1, not the `7.0.2` that `process.versions.typescript` reports (oven-sh/bun#46536). When `bun check` and `tsc` from the pinned `@typescript/native` report different errors, file a minimal, dependency-free repro at https://github.com/oven-sh/bun/issues, with the output of both. `bun check` writes no declaration files, so declaration-emit errors such as TS5088 or TS2883 are expected to appear only in `tsc`; do not report those.
+
+## Plugin Loading
+
+- Plugins load asynchronously. Server handlers never wait for them (`Plugin.awaitActivation`), never retry until something appears, and never turn slow plugins into a timeout or 503. This applies to reads and to actions such as `rpc.call` and `vcs.init`.
+- Temporary exception: endpoints that list or use providers managed policy can deny (`model.list`, `model.default`, `provider.list`, `generate.*`, `voice.*` and `websearch.query`) wait through `awaitPlugins` in `packages/server/src/location.ts`, because policy is applied by the last plugin to activate and is missing until then. Don't add new waits; this goes away once a plugin batch becomes visible only when it ends.
+- The server answers with what is loaded now: lists may be empty or partial on a cold Location, and an action whose model, provider or RPC hasn't loaded yet fails with not-found. That is expected, not a bug to fix on the server.
+- Clients are responsible for making sure what they need is loaded before they call. Long-lived clients refresh on the matching `*.updated` event (`model.updated`, `agent.updated`, `skill.updated`, `integration.updated`, `plugin.updated`, ...). One-shot clients (CLI commands, ACP, SDK callers) wait on their side, for example by polling `plugin.list` or the entry they need. See `packages/cli/src/services/plugin-startup.ts`.
+- Running the hooks that are registered and waiting for their result is fine (for example `hooks.trigger("session", "http.request", ...)`). What is not allowed is waiting for plugins to load first: if the plugin that adds a hook hasn't loaded yet, the call runs without that hook.
 
 ## Session Core
 

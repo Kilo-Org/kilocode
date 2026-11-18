@@ -11,6 +11,7 @@ export const Revert = Schema.Struct({
   partID: Schema.String.pipe(optional),
   snapshot: Snapshot.ID.pipe(optional),
   files: Schema.Array(FileDiff.Info).pipe(optional),
+  workspace: Schema.Literals(["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]).pipe(optional), // kilocode_change(unattributed:schema/revert:c364602c45ad)
 }).annotate({ identifier: "Session.Revert" })
 
 const FileDiffV1 = Schema.Struct({
@@ -28,6 +29,7 @@ export const RevertV1 = Schema.Struct({
   snapshot: Schema.String.pipe(optional),
   diff: Schema.String.pipe(optional),
   files: Schema.Array(FileDiffV1).pipe(optional),
+  workspace: Schema.Literals(["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]).pipe(optional), // kilocode_change(session-revert) - keep persisted workspace outcome across legacy decode
 }).annotate({ identifier: "Session.RevertV1" })
 
 const PersistedCurrent = Revert.pipe(
@@ -74,6 +76,7 @@ export const PersistedRevert = Schema.Union([PersistedCurrent, PersistedLegacy])
             deletions: file.deletions,
             patch: file.patch,
           })),
+          workspace: persisted.revert.workspace, // kilocode_change(session-revert) - preserve legacy workspace outcome
         })
       },
       encode: (revert): { readonly source: "current"; readonly revert: Revert } => ({

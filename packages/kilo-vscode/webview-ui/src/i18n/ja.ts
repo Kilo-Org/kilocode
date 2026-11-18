@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "完了（モデルによる報告）",
+  "session.goal.complete": "完了",
   "session.goal.blocked": "ブロック中",
   "session.goal.restart": "目標を再開",
   ...anacondaDesktopDict,
@@ -311,6 +311,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
   "ui.permission.noChanges": "変更はありません。",
   "ui.permission.reject": "拒否",
+  "ui.permission.allowAllSites": "すべてのサイトを許可",
   "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
   "ui.permission.feedbackHint": "Enter で拒否、Esc でキャンセル",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
@@ -694,8 +695,6 @@ export const dict = {
 
   "common.retry": "再試行",
   "common.refresh": "更新",
-  "common.reload": "再読み込み",
-  "common.reloadDescription": "ディスクから設定、スキル、エージェント、コマンドを再読み込みします",
 
   "profile.title": "プロフィール",
   "profile.notLoggedIn": "ログインしていません",
@@ -752,9 +751,8 @@ export const dict = {
   "settings.agentBehaviour.title": "エージェントの動作",
   "settings.autoApprove.title": "自動承認",
   "settings.webTools.title": "ウェブツール",
-  "settings.webTools.description": "ウェブ検索を設定します。",
+  "settings.webTools.description": "ウェブ検索とエージェントのブラウザツールを設定します。",
   "settings.webTools.webSearch.enable": "すべてのプロバイダーで有効化",
-  "settings.webTools.browserAutomation": "ブラウザ自動化",
   "settings.webTools.webSearch.title": "ウェブ検索",
   "settings.webTools.webSearch.description": "すべてのプロバイダーのモデルでウェブ検索を利用できるようにします。",
   "settings.checkpoints.title": "チェックポイント",
@@ -880,16 +878,49 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "ワークフロー",
   "settings.agentBehaviour.subtab.skills": "スキル",
 
-  "settings.browser.description":
-    "Playwrightを利用した組み込みブラウザ自動化を設定します。Kiloはセッション内でWebページのナビゲーション、操作、スクリーンショット撮影を行えます。",
-  "settings.browser.enable.title": "ブラウザ自動化を有効にする",
-  "settings.browser.enable.description":
-    "ローカルアプリケーションと公開 HTTPS ページ向けに、セッション単位の Agent Manager ブラウザを有効にします。",
-  "settings.browser.systemChrome.title": "システムChromeを使用",
-  "settings.browser.systemChrome.description":
-    "別のChromiumインスタンスの代わりに、インストール済みのChromeブラウザを使用します。",
-  "settings.browser.headless.title": "ヘッドレスモード",
-  "settings.browser.headless.description": "ヘッドレスモードで実行します（ブラウザウィンドウは表示されません）。",
+  "settings.browser.backend.title": "バックエンド",
+  "settings.browser.backend.description": "エージェントのブラウザツールが操作するブラウザです。",
+  "settings.browser.backend.playwright": "同梱ブラウザ（Playwright）",
+  "settings.browser.backend.playwright.description":
+    "最初のブラウザ呼び出しで起動する、Kilo 専用の Chromium プロファイルです。",
+  "settings.browser.backend.extension": "ブラウザ拡張機能",
+  "settings.browser.backend.extension.description": "Kilo ブラウザ拡張機能経由で、お使いのブラウザを使います。",
+  "settings.browser.backend.off": "オフ",
+  "settings.browser.backend.off.description": "エージェントからブラウザツールを隠します。",
+  "settings.browser.observation.title": "観測",
+  "settings.browser.observation.description": "各ステップ後にエージェントがページのどこまで見るかです。",
+  "settings.browser.observation.full": "完全なスナップショット",
+  "settings.browser.observation.diff": "変更点のみ",
+  "settings.browser.observation.none": "状態のみ",
+  "settings.browser.sensitive.title": "確認なしで機密ステップを許可",
+  "settings.browser.sensitive.description":
+    "パスワード、支払いフォーム、OAuth 同意ページ、アップロードが確認なしで実行されます。",
+  "settings.browser.status.title": "状態",
+  "settings.browser.status.playwright": "Playwright",
+  "settings.browser.status.playwright.ready": "準備完了（{{browser}}）",
+  "settings.browser.status.playwright.missing": "Chromium がありません",
+  "settings.browser.status.playwright.install": "インストール",
+  "settings.browser.status.playwright.installing": "インストール中…",
+  "settings.browser.status.extension": "ブラウザ拡張機能",
+  "settings.browser.status.extension.connected": "接続済み",
+  "settings.browser.status.extension.disconnected": "未接続",
+  "settings.browser.status.extension.hint":
+    "Kilo ブラウザ拡張機能をインストールし、「ローカルエージェントを許可」をオンにして、エージェントが使えるページを開いてください。",
+  "settings.browser.origins.title": "サイトの権限",
+  "settings.browser.origins.site": "サイト",
+  "settings.browser.origins.read": "読み取り",
+  "settings.browser.origins.act": "操作",
+  "settings.browser.origins.navigate": "移動",
+  "settings.browser.origins.allowAll.title": "すべてのサイトを許可",
+  "settings.browser.origins.allowAll.description":
+    "すべてのサイトが確認なしで許可されます。サイトのルールは引き続き適用されます。",
+  "settings.browser.origins.empty":
+    "サイトのルールはまだありません。このマシン以外のサイトは、エージェントが読み取り・操作・移動する前に確認します。",
+  "settings.browser.origins.add": "サイトを追加",
+  "settings.browser.origins.placeholder": "https://example.com",
+  "settings.browser.origins.error.empty": "サイトのオリジンを入力してください",
+  "settings.browser.origins.error.invalid": "https://example.com のようなオリジンを使ってください",
+  "settings.browser.origins.error.duplicate": "このサイトはすでに一覧にあります",
 
   "settings.language.description": "Kilo Code UIの言語を選択します。「自動」はVS Codeの表示言語を使用します。",
   "settings.language.auto": "自動（VS Code言語）",
@@ -1415,7 +1446,8 @@ export const dict = {
   "task.backgroundAgents.openAll": "すべてのバックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
-  "task.backgroundAgents.promoteFailed": "このエージェントをバックグラウンドで続行できませんでした。すでに完了している可能性があります。",
+  "task.backgroundAgents.promoteFailed":
+    "このエージェントをバックグラウンドで続行できませんでした。すでに完了している可能性があります。",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",
   "task.backgroundAgents.needsInput": "入力が必要",
   "task.backgroundAgents.clearFinished": "完了済みを消去",
@@ -1502,6 +1534,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "システムブラウザー",
   "settings.experimental.browserLinks.integrated": "統合ブラウザー",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
+  "chat.reply.toolbar": "選択したテキスト",
+  "chat.reply.quote": "引用",
+  "chat.reply.quoteHint": "返信で引用する",
+  "chat.reply.commentHint": "この箇所にコメント",
+  "chat.reply.copy": "コピー",
+  "chat.reply.sendHint": "このコメントを今すぐ Kilo に送信",
+  "chat.reply.commentLater": "次のメッセージ用に保存",
+  "chat.reply.count": "返信 ({{count}})",
+  "chat.reply.sendAll": "すべて送信",
+  "chat.reply.showInChat": "チャットで表示",
   "browserTab.noSession": "セッションからブラウザを開いて、ローカルアプリまたは公開 HTTPS ページをプレビューします。",
   "browserTab.disabled": "統合ブラウザは無効になっています。Kilo 設定 > 実験的機能で有効にしてください。",
 }

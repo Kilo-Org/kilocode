@@ -6,7 +6,7 @@ The technical rules of the Kilo v2 migration. This page overrides any other docu
 
 Kilo is the host, OpenCode is a library. Code moves from upstream files into Kilo-owned files (`packages/kilo-*`, `src/kilocode/`, `test/kilocode/`), never back. A proposal that adds or widens a `kilocode_change` line in an upstream file in order to remove or shrink Kilo-owned code is rejected.
 
-A Kilo-owned mirror of an upstream file (the host entry, a replaced tool) is allowed, and preferred over a seam in that file. Name the mirror in the PR.
+A Kilo-owned mirror of an upstream file (the host entry, a replaced tool) is allowed, and preferred over a seam in that file. Register it in `script/upstream/mirrors.json` with the upstream SHA last verified, why it is a copy and the invariants a re-merge must keep, start the copy with `// kilo_mirror: <upstream path>`, and name it in the PR.
 
 A patch adds to upstream and never changes an upstream default. Upstream's own tests pass unchanged against the code without the host, and are never edited to fit a Kilo value. A Kilo value belongs in the host, behind a generic knob that keeps upstream's default.
 
@@ -35,6 +35,7 @@ Every client (VS Code, JetBrains, Kilo Desktop, other consumers) is a new packag
 - Runtime config uses `kilo2.json` and `kilo2.jsonc` (project roots and ancestors up to the worktree root, or to the filesystem root outside version control; global directories) and the project directory `.kilo2`. Contents use the v2 schema; explicit config paths still accept any filename. The CLI creates `kilo2.json`; the server's global writer creates `kilo2.jsonc` if neither file exists.
 - The platform-managed system directory (`/etc/kilo`, `/Library/Application Support/kilo`, `%ProgramData%\kilo`) is the exception to the isolation: it keeps the stable product names `kilo.json` and `kilo.jsonc`, because an administrator deploys it once and the policy must keep applying across internal renames (#15326).
 - There is no fallback to v1 `kilo.json`, `kilo.jsonc`, `.kilo` or `.kilocode`, nor to OpenCode config.
+- Opt-in exception to both rules above: `KILO_USE_RELEASE_CONFIG=1` switches the config file and directory names to `kilo.json`, `kilo.jsonc` and `.kilo` for reads and writes, in project and global directories, so a Cloud Agent reads a repository's existing `.kilo` config. It is a switch, not a fallback: `.kilo2` is then not read. The app directories, the database and the Agent Manager state (`.kilo2/agent-manager.json`) keep `kilo2`. It becomes the default at the release rename, and the variable is then removed.
 - The repository's own `.kilo/` contributor tooling (skills, agents, commands) stays where it is.
 
 ## 5. Behavioral reference

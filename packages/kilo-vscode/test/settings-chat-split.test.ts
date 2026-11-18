@@ -27,6 +27,8 @@ function makeScope(input: { chat: boolean }) {
         return { data: [] }
       },
     },
+    // The Location's plugins are registered, so the handshake is read at once.
+    plugin: { list: async () => ({ data: [{ id: "kilocode.handshake" }] }) },
     rpc: () => ({
       get: async () => {
         calls.push("handshake")
@@ -41,6 +43,8 @@ function makeScope(input: { chat: boolean }) {
         return []
       },
       authStatus: async () => undefined,
+      events: { on: () => () => {} },
+      pending: async () => ({ sessions: [] }),
     }),
   } as unknown as OpenCodeClient
   const [status] = createSignal<Status>("connected")

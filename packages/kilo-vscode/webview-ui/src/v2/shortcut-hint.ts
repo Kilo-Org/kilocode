@@ -6,7 +6,16 @@
  * never teaches something that does nothing. Ported from v1's `utils/shortcut-hint.ts`.
  */
 
-export type HintLabel = "addSelection" | "waiting" | "type" | "sessions" | "queue" | "changes" | "pr" | "newWorktree"
+export type HintLabel =
+  | "addSelection"
+  | "waiting"
+  | "type"
+  | "sessions"
+  | "queue"
+  | "steer"
+  | "changes"
+  | "pr"
+  | "newWorktree"
 
 export interface Hint {
   binding: string
@@ -30,8 +39,8 @@ export interface ManagerContext {
 export interface HintContext {
   /** Formatted shortcut labels by binding name. */
   bindings: Record<string, string>
-  /** The keyboard that queues a prompt while the agent runs. */
-  queue: string
+  /** The key and delivery of the send Enter does not do while the agent runs: ⌥↵ to queue, or to steer. */
+  alternate: { binding: string; label: "queue" | "steer" }
   /** The prompt textarea has focus. */
   focused: boolean
   /** Focus is outside this webview, for example in an editor or terminal. */
@@ -89,8 +98,8 @@ export function recommend(ctx: HintContext): Hint | undefined {
   // Focus is somewhere else: show how to get back to the prompt.
   if (!ctx.focused) return hint(am ? kb.agentManagerOpen : kb.focusChatInput, "type")
 
-  // The agent runs: queueing is the one send Enter cannot do, and the Send tooltip covers the other two.
-  if (ctx.busy) return { binding: ctx.queue, label: "queue" }
+  // The agent runs: the alternate delivery is the one send Enter cannot do, and the Send tooltip covers the other two.
+  if (ctx.busy) return ctx.alternate
 
   if (!am) return sessions(kb, am, ctx.tabs)
   // Nothing to review and nowhere else to go: creating a worktree is the way to run a second task. Same key as the

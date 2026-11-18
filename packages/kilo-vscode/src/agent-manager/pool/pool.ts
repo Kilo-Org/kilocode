@@ -435,12 +435,16 @@ export class WorktreePool {
   }
 
   private async collect(dir: string, keep: boolean): Promise<void> {
-    if (!fs.existsSync(dir)) return
     const known = new Set(this.slots.map((slot) => normalizePath(slot.path)))
-    const entries = await fs.promises.readdir(dir, { withFileTypes: true })
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith(".kilo-delete-")) continue
-      const slotPath = path.join(dir, entry.name)
+    const names = await subdirs(dir).catch((err: NodeJS.ErrnoException) => {
+      // A concurrent sweep removing the directory can report EPERM on Windows rather than ENOENT.
+      if (err.code !== "EPERM" && err.code !== "EACCES") throw err
+      this.deps.log(`worktree pool: cannot scan ${dir}: ${err}`)
+      return []
+    })
+    for (const name of names) {
+      if (name.startsWith(".kilo-delete-")) continue
+      const slotPath = path.join(dir, name)
       if (known.has(normalizePath(slotPath))) continue
       const meta = await this.readMeta(slotPath)
       if (!meta?.pooled) continue

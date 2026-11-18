@@ -138,7 +138,7 @@ Settings are read-only on v2 until a Kilo settings RPC exists. It replaces the v
 | kilo.profile | `GET /kilo/profile` | kilocode.gateway.profile, balance, kiloPass | Three RPC calls; v1 returned one combined object |
 | kilo.organization.set | `POST /kilo/organization` `{ organizationId }` | kilocode.gateway.organization.set | Body `{ "input": { "organizationID": ... } }`. The RPC event `rpc.kilocode.gateway.organization` follows |
 | kilo.fim | `POST /kilo/fim` (SSE response) | needs Kilo RPC | FIM producer: [#15314]. `kilocode.gateway.autocomplete.fimTarget` exists and returns the target only |
-| kilo.edit | `POST /kilo/edit` | needs Kilo RPC | Next-edit producer: [#15314]. `kilocode.gateway.autocomplete.editTarget` returns the target only |
+| kilo.edit | `POST /kilo/edit` | removed | Next Edit and the Mercury models are retired; v2 has no replacement |
 | kilo.cloudSessions | `GET /kilo/cloud-sessions` | needs Kilo RPC | Cloud session import: [#15306] |
 | kilo.cloud.session.get | `GET /kilo/cloud/session/{id}` | needs Kilo RPC | [#15306] |
 | kilo.cloud.session.import | `POST /kilo/cloud/session/import` | needs Kilo RPC | [#15306] |

@@ -11,7 +11,7 @@ const assistant = (id: string, content: unknown[]) =>
 const user = { id: "user-1", type: "user", text: "hello" } as unknown as SessionMessageInfo
 
 function data(options?: { root?: (id: string) => string; more?: () => boolean }) {
-  const calls = { sync: [] as string[], loadMore: [] as string[], evict: [] as string[] }
+  const calls = { sync: [] as string[], loadMore: [] as string[], evict: [] as string[], invalidate: [] as string[] }
   return {
     calls,
     session: {
@@ -20,16 +20,19 @@ function data(options?: { root?: (id: string) => string; more?: () => boolean })
         sync: async (id: string) => {
           calls.sync.push(id)
         },
+        invalidate: (id: string) => {
+          calls.invalidate.push(id)
+        },
         more: options?.more ?? (() => false),
         loadMore: async (id: string) => {
           calls.loadMore.push(id)
         },
+        evict: (id: string) => {
+          calls.evict.push(id)
+        },
       },
       status: () => "idle",
       root: options?.root ?? ((id: string) => id.split("/")[0]!),
-      evict: (id: string) => {
-        calls.evict.push(id)
-      },
     },
   }
 }
@@ -94,6 +97,30 @@ describe("createChildSessions", () => {
     expect(input.calls.sync).toEqual(["p/child", "p/other", "p/other"])
   })
 
+  test("loads a child again after its cached history is released", async () => {
+    let present = true
+    const input = data()
+    input.session.message.list = () =>
+      present ? [user, assistant("a-1", [toolPart("t-1")])] : []
+    const children = createChildSessions({ data: input, report: () => {} })
+    await children.load("p/child")
+    expect(input.calls.sync).toEqual(["p/child"])
+    // The inspector releases a subagent when its tab closes; the parent card keeps showing that child. The release
+    // drops the cached messages and their sync marker, so the next request fetches them again.
+    present = false
+    await children.load("p/child")
+    expect(input.calls.sync).toEqual(["p/child", "p/child"])
+  })
+
+  test("fetches an empty first read and does not invalidate it again", async () => {
+    const input = data()
+    input.session.message.list = () => []
+    const children = createChildSessions({ data: input, report: () => {} })
+    await children.load("p/child")
+    await children.load("p/child")
+    expect(input.calls.invalidate).toEqual(["p/child"])
+  })
+
   test("re-syncs loaded children after a reconnect", async () => {
     const input = data()
     const children = createChildSessions({ data: input, report: () => {} })
@@ -114,35 +141,32 @@ describe("createChildSessions", () => {
     expect(children.loaded.size).toBe(2)
   })
 
-  test("releases a child tree when the root changes or the session closes", async () => {
+  test("releases the viewed session when the root changes", async () => {
     const input = data()
     const children = createChildSessions({ data: input, report: () => {} })
     await children.load("p/one")
-    children.switchTo("p/one", "q")
-    expect(input.calls.evict).toEqual(["q"])
-    expect(children.loaded.size).toBe(0)
-    await children.load("p/one")
-    children.switchTo("other", "p/one")
-    expect(input.calls.evict).toEqual(["q", "p"])
-    await children.load("p/one")
-    children.switchTo(undefined, "p")
-    expect(input.calls.evict).toEqual(["q", "p", "p"])
-    expect(children.loaded.size).toBe(0)
-  })
-
-  test("evicts the previous root when no child was loaded", () => {
-    const input = data()
-    const children = createChildSessions({ data: input, report: () => {} })
     children.switchTo("q", "p")
-    expect(input.calls.evict).toEqual(["p"])
-    children.switchTo(undefined, "q")
-    expect(input.calls.evict).toEqual(["p", "q"])
+    expect(input.calls.evict).toEqual(["p", "p/one"])
+    expect(children.loaded.size).toBe(0)
   })
 
-  test("release evicts the open session when no child was loaded", () => {
+  test("keeps a child view from releasing its parent transcript", () => {
     const input = data()
     const children = createChildSessions({ data: input, report: () => {} })
+    // The Agent Manager inspector shows a subagent in the same store as the parent chat. Closing or switching that
+    // view must release the child, never the tree root the parent chat is still rendering.
+    children.release("p/child")
+    expect(input.calls.evict).toEqual(["p/child"])
+    children.switchTo("q", "p/child")
+    expect(input.calls.evict).toEqual(["p/child", "p/child"])
+  })
+
+  test("release evicts the viewed session and the children it loaded", async () => {
+    const input = data()
+    const children = createChildSessions({ data: input, report: () => {} })
+    await children.load("p/one")
     children.release("p")
-    expect(input.calls.evict).toEqual(["p"])
+    expect(input.calls.evict).toEqual(["p", "p/one"])
+    expect(children.loaded.size).toBe(0)
   })
 })

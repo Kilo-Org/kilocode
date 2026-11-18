@@ -2,6 +2,7 @@
 // and the todo chip. The sidebar shows every action; the Agent Manager panel omits New Session and Changes because its
 // tab bar and diff panel own them.
 import { Button } from "@kilocode/kilo-ui/button"
+import { CountUp, createCountStart } from "@kilocode/kilo-ui/count-up"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -33,6 +34,7 @@ export function SessionActionsRow(props: {
   agents?: JSX.Element
 }) {
   const language = useLanguage()
+  const start = createCountStart(() => props.stats !== undefined)
   const worktreeTooltip = language.t("sidebar.session.newWorktree.tooltip")
   const advancedTooltip = language.t("sidebar.session.configureWorktree.tooltip")
   const moveTooltip = () => {
@@ -155,8 +157,12 @@ export function SessionActionsRow(props: {
             >
               <Icon name="layers" size="small" />
               <Show when={props.stats?.files}>
-                <span class="session-diff-add">+{props.stats!.additions}</span>
-                <span class="session-diff-del">-{props.stats!.deletions}</span>
+                <span class="session-diff-add">
+                  +<CountUp value={props.stats!.additions} from={start()} />
+                </span>
+                <span class="session-diff-del">
+                  -<CountUp value={props.stats!.deletions} from={start()} />
+                </span>
                 <span class="session-move-dot" aria-hidden="true" />
               </Show>
             </Button>

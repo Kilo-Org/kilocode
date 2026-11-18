@@ -12,6 +12,7 @@ import { mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 // The kilocode.commit-message RPC through the real host and the generated client. A stand-in Generate service
 // records the request and answers, so the test needs no model; the Kilo API is a local stand-in too.
@@ -91,6 +92,7 @@ const boot =
               ),
             })
             const methods = client.rpc(KiloCommitMessageRpc.Definition)
+            yield* loadPlugins(context, directory)
             yield* Effect.promise(() =>
               body({
                 directory,

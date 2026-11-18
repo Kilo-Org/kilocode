@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Ukończony (według modelu)",
+  "session.goal.complete": "Ukończony",
   "session.goal.blocked": "Zablokowany",
   "session.goal.restart": "Uruchom cel ponownie",
   ...anacondaDesktopDict,
@@ -312,6 +312,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
   "ui.permission.noChanges": "Brak zmian.",
   "ui.permission.reject": "Odrzuć",
+  "ui.permission.allowAllSites": "Zezwalaj na wszystkie witryny",
   "ui.permission.feedbackPlaceholder": "Powiedz Kilo, co zrobić inaczej",
   "ui.permission.feedbackHint": "Enter, aby odrzucić, Esc, aby anulować",
   "ui.permission.doomLoop.prompt": "Wykryto potencjalną pętlę dla narzędzia {{tool}}. Kontynuować działanie?",
@@ -657,8 +658,6 @@ export const dict = {
 
   "common.retry": "Ponów",
   "common.refresh": "Odśwież",
-  "common.reload": "Przeładuj",
-  "common.reloadDescription": "Przeładuj konfigurację, umiejętności, agentów i polecenia z dysku",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Nie zalogowano",
@@ -715,9 +714,8 @@ export const dict = {
   "settings.agentBehaviour.title": "Zachowanie agenta",
   "settings.autoApprove.title": "Automatyczne zatwierdzanie",
   "settings.webTools.title": "Narzędzia internetowe",
-  "settings.webTools.description": "Skonfiguruj wyszukiwanie w sieci.",
+  "settings.webTools.description": "Skonfiguruj wyszukiwanie w sieci i narzędzia przeglądarki agenta.",
   "settings.webTools.webSearch.enable": "Włącz dla wszystkich dostawców",
-  "settings.webTools.browserAutomation": "Automatyzacja przeglądarki",
   "settings.webTools.webSearch.title": "Wyszukiwanie w sieci",
   "settings.webTools.webSearch.description": "Udostępnij wyszukiwanie w sieci modelom wszystkich dostawców.",
   "settings.checkpoints.title": "Punkty kontrolne",
@@ -843,16 +841,49 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Przepływy pracy",
   "settings.agentBehaviour.subtab.skills": "Umiejętności",
 
-  "settings.browser.description":
-    "Skonfiguruj wbudowaną automatyzację przeglądarki opartą na Playwright. Kilo może nawigować po stronach internetowych, wchodzić z nimi w interakcję i robić zrzuty ekranu w Twoich sesjach.",
-  "settings.browser.enable.title": "Włącz automatyzację przeglądarki",
-  "settings.browser.enable.description":
-    "Włącz przeglądarkę Agent Manager przypisaną do sesji dla lokalnych aplikacji i publicznych stron HTTPS.",
-  "settings.browser.systemChrome.title": "Użyj systemowego Chrome",
-  "settings.browser.systemChrome.description":
-    "Użyj zainstalowanej przeglądarki Chrome zamiast oddzielnej instancji Chromium.",
-  "settings.browser.headless.title": "Tryb headless",
-  "settings.browser.headless.description": "Uruchom w trybie headless (bez widocznego okna przeglądarki).",
+  "settings.browser.backend.title": "Backend",
+  "settings.browser.backend.description": "Którą przeglądarką sterują narzędzia przeglądarki agenta.",
+  "settings.browser.backend.playwright": "Wbudowana przeglądarka (Playwright)",
+  "settings.browser.backend.playwright.description":
+    "Profil Chromium należący do Kilo, uruchamiany przy pierwszym wywołaniu przeglądarki.",
+  "settings.browser.backend.extension": "Rozszerzenie przeglądarki",
+  "settings.browser.backend.extension.description": "Twoja własna przeglądarka, przez rozszerzenie Kilo.",
+  "settings.browser.backend.off": "Wyłączone",
+  "settings.browser.backend.off.description": "Ukryj narzędzia przeglądarki przed agentami.",
+  "settings.browser.observation.title": "Obserwacja",
+  "settings.browser.observation.description": "Jak dużo strony agent widzi po każdym kroku.",
+  "settings.browser.observation.full": "Pełny zrzut",
+  "settings.browser.observation.diff": "Tylko zmiany",
+  "settings.browser.observation.none": "Tylko status",
+  "settings.browser.sensitive.title": "Zezwalaj na wrażliwe kroki bez pytania",
+  "settings.browser.sensitive.description":
+    "Hasła, formularze płatności, strony zgody OAuth i przesyłanie plików działają bez potwierdzenia.",
+  "settings.browser.status.title": "Status",
+  "settings.browser.status.playwright": "Playwright",
+  "settings.browser.status.playwright.ready": "Gotowe, używa {{browser}}",
+  "settings.browser.status.playwright.missing": "Brak Chromium",
+  "settings.browser.status.playwright.install": "Zainstaluj",
+  "settings.browser.status.playwright.installing": "Instalowanie…",
+  "settings.browser.status.extension": "Rozszerzenie przeglądarki",
+  "settings.browser.status.extension.connected": "Połączone",
+  "settings.browser.status.extension.disconnected": "Nie połączono",
+  "settings.browser.status.extension.hint":
+    'Zainstaluj rozszerzenie przeglądarki Kilo i włącz „Zezwalaj na lokalnych agentów", następnie otwórz stronę, której agent może użyć.',
+  "settings.browser.origins.title": "Uprawnienia witryn",
+  "settings.browser.origins.site": "Witryna",
+  "settings.browser.origins.read": "Odczyt",
+  "settings.browser.origins.act": "Działanie",
+  "settings.browser.origins.navigate": "Nawigacja",
+  "settings.browser.origins.allowAll.title": "Zezwalaj na wszystkie witryny",
+  "settings.browser.origins.allowAll.description":
+    "Każda witryna jest dozwolona bez pytania. Reguła witryny nadal obowiązuje.",
+  "settings.browser.origins.empty":
+    "Brak reguł witryn. Każda witryna poza Twoją maszyną pyta, zanim agent ją odczyta, użyje lub na nią przejdzie.",
+  "settings.browser.origins.add": "Dodaj witrynę",
+  "settings.browser.origins.placeholder": "https://example.com",
+  "settings.browser.origins.error.empty": "Podaj origin witryny",
+  "settings.browser.origins.error.invalid": "Użyj originu takiego jak https://example.com",
+  "settings.browser.origins.error.duplicate": "Ta witryna jest już na liście",
 
   "settings.language.description": 'Wybierz język interfejsu Kilo Code. „Auto" używa języka wyświetlania VS Code.',
   "settings.language.auto": "Auto (język VS Code)",
@@ -1516,6 +1547,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Przeglądarka systemowa",
   "settings.experimental.browserLinks.integrated": "Zintegrowana przeglądarka",
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
+  "chat.reply.toolbar": "Zaznaczony tekst",
+  "chat.reply.quote": "Cytuj",
+  "chat.reply.quoteHint": "Zacytuj w odpowiedzi",
+  "chat.reply.commentHint": "Skomentuj ten fragment",
+  "chat.reply.copy": "Kopiuj",
+  "chat.reply.sendHint": "Wyślij ten komentarz do Kilo teraz",
+  "chat.reply.commentLater": "Zapisz na następną wiadomość",
+  "chat.reply.count": "Odpowiedzi ({{count}})",
+  "chat.reply.sendAll": "Wyślij wszystko",
+  "chat.reply.showInChat": "Pokaż w czacie",
   "browserTab.noSession":
     "Otwórz przeglądarkę z sesji, aby wyświetlić podgląd lokalnej aplikacji lub publicznej strony HTTPS.",
   "browserTab.disabled": "Zintegrowana przeglądarka jest wyłączona. Włącz ją w Ustawieniach Kilo > Eksperymentalne.",

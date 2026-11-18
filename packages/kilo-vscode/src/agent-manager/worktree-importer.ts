@@ -25,7 +25,13 @@ export class WorktreeImporter {
   async branches(projectId?: string): Promise<void> {
     const manager = this.host.manager()
     if (!manager) {
-      this.host.post({ type: "agentManager.branches", projectId, branches: [], defaultBranch: "main" })
+      this.host.post({
+        type: "agentManager.branches",
+        projectId,
+        branches: [],
+        defaultBranch: "main",
+        errorCode: "not_git_repo",
+      })
       return
     }
 
@@ -56,7 +62,16 @@ export class WorktreeImporter {
       })
     } catch (error) {
       this.host.log(`Failed to list branches: ${error}`)
-      this.host.post({ type: "agentManager.branches", projectId, branches: [], defaultBranch: "main" })
+      const code = classifyWorktreeError(error instanceof Error ? error.message : String(error))
+      // Only the two setup blockers the dialog explains; other failures keep today's empty list.
+      const errorCode = code === "not_git_repo" || code === "no_commits" ? code : undefined
+      this.host.post({
+        type: "agentManager.branches",
+        projectId,
+        branches: [],
+        defaultBranch: "main",
+        ...(errorCode ? { errorCode } : {}),
+      })
     }
   }
 

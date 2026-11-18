@@ -2,6 +2,7 @@ import { describe, expect, it, mock } from "bun:test"
 import type { SessionInfo } from "@opencode/client"
 import { forkText } from "../src/agent-manager/fork-handoff"
 import { forkSession, type ForkContext } from "../src/agent-manager/fork-session"
+import { PLATFORM_METADATA } from "../src/agent-manager/session-create"
 
 const noop = () => {}
 
@@ -55,6 +56,8 @@ describe("agent manager fork session", () => {
 
   it("moves the fork into the selected worktree and reports its new location", async () => {
     const move = mock(async () => undefined)
+    const get = mock(async () => session("forked", "/repo/.kilo/worktrees/feature"))
+    const active = mock(async () => ({}))
     const synthetic = mock(async () => undefined)
     const register = mock(() => undefined)
     const addSession = mock(() => undefined)
@@ -63,7 +66,7 @@ describe("agent manager fork session", () => {
 
     await forkSession(
       ctx(
-        { session: { fork: mock(async () => session("forked")), move, synthetic } },
+        { session: { fork: mock(async () => session("forked")), move, get, active, synthetic } },
         { state: state as never, directory: "/repo", registerWorktreeSession: register, notifyForked: notify },
       ),
       "source",
@@ -115,7 +118,7 @@ describe("agent manager fork session", () => {
       title: "Empty",
       agent: "code",
       model: { id: "model", providerID: "provider" },
-      metadata: { kilocode: { platform: "agent-manager" } },
+      metadata: PLATFORM_METADATA,
       location: { directory: "/repo" },
     }))
     const create = mock(async () => session("forked"))
@@ -145,7 +148,7 @@ describe("agent manager fork session", () => {
       title: "Empty",
       agent: "code",
       model: { id: "model", providerID: "provider" },
-      metadata: { kilocode: { platform: "agent-manager" } },
+      metadata: PLATFORM_METADATA,
     })
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ id: "forked" }), "source", undefined)
     expect(postError).not.toHaveBeenCalled()

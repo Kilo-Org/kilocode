@@ -3,6 +3,8 @@ export * as McpClient from "./client.js"
 import { pathToFileURL } from "node:url"
 import {
   Client,
+  OAuthError,
+  OAuthErrorCode,
   ProtocolError,
   SdkError,
   SdkErrorCode,
@@ -31,6 +33,7 @@ import { ConfigMCP } from "@opencode/schema/config/mcp"
 import type { Session } from "@opencode/schema/session"
 import { isRecord } from "@opencode/util/record"
 import { McpStdio } from "./stdio.js"
+import type { McpHost } from "./host.js" // kilocode_change - embedding hooks
 
 const DEFAULT_STARTUP_TIMEOUT = 30_000
 const DEFAULT_CATALOG_TIMEOUT = 30_000
@@ -196,6 +199,7 @@ export interface ConnectOptions {
   readonly clientInfo?: Implementation
   /** False declares no roots and leaves `roots/list` unanswered, for a connection no one directory owns. */
   readonly roots?: boolean
+  readonly host?: McpHost.Host // kilocode_change - embedding transport hooks
 }
 
 /**
@@ -234,6 +238,11 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
       ? `${describe(error)}: ${lastError}`
       : describe(error)
 
+  // kilocode_change start - host classification of a failure that will pass, such as a token refresh that could
+  // not reach its authorization server. Omitting the hook keeps upstream's own rule.
+  const transient = (error: unknown) => options.host?.transient?.(error) === true || isTransient(error)
+  // kilocode_change end
+
   // Two more attempts, 250 ms and 1 s later, while the failure is transient and the deadline has not passed.
   const retrying = <A, E>(what: string, effect: Effect.Effect<A, E>, deadline = Infinity) =>
     Effect.retry(
@@ -241,7 +250,8 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
       Schedule.max([Schedule.exponential("250 millis", 4), Schedule.recurs(2)]).pipe(
         Schedule.setInputType<E>(),
         Schedule.while(({ input, now, duration }) =>
-          !isTransient(input) || now + Duration.toMillis(duration) >= deadline
+          // kilocode_change - consult the host predicate alongside upstream's own rule
+          !transient(input) || now + Duration.toMillis(duration) >= deadline // kilocode_change
             ? Effect.succeed(false)
             : Effect.logWarning(`retrying ${what}`, { server, error: describe(input) }).pipe(Effect.as(true)),
         ),
@@ -339,13 +349,14 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
       return yield* initialize(transport)
     }
     const { McpOAuth } = yield* Effect.promise(() => import("./oauth.js"))
-    const fetch = yield* McpOAuth.loggedFetch({ server, directory: options.directory })
+    const baseFetch = yield* McpOAuth.loggedFetch({ server, directory: options.directory }, options.authProvider) // kilocode_change - embedding transport hook
     // Servers that bundle their own Code Mode (Cloudflare and others) expose raw tools when asked
     // with ?codemode=false, which is what our Code Mode wants. The configured URL stays the OAuth identity.
     const url = new URL(config.url)
     const addedCodemode = config.codemode !== false && !url.searchParams.has("codemode") && !rejectsUnknownQuery(url)
     if (addedCodemode) url.searchParams.set("codemode", "false")
     const open = Effect.fnUntraced(function* (url: URL) {
+      const fetch = options.host?.fetch?.(baseFetch, url.href) ?? baseFetch // kilocode_change(unattributed:mcp:6d0c29d2df2a) - embedding transport hook
       session.transport = new StreamableHTTPClientTransport(url, {
         requestInit: config.headers ? { headers: config.headers } : undefined,
         authProvider: options.authProvider,
@@ -419,9 +430,9 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
       instructions: client.getInstructions()?.trim() || undefined,
       // Tool lists skip the SDK response cache: it re-stringifies every list, and on the first tools/call
       // re-parses it and compiles an output validator for every listed tool. Each call passes its own
-      // checked definition instead, so only that tool's outputSchema is compiled and modern Mcp-Param-*
-      // header mirroring still sees the schema. Tools are relisted on connect, list_changed and a stale
-      // header declaration; the SDK cache never relisted an expired list before a call either.
+      // checked definition instead, so modern Mcp-Param-* header mirroring still sees the input schema.
+      // Tools are relisted on connect, list_changed and a stale header declaration; the SDK cache never
+      // relisted an expired list before a call either.
       tools: () =>
         advertised("tools")
           ? list("list MCP tools", (signal) =>
@@ -522,11 +533,13 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
                 onprogress: () => {},
                 // Always passed, even for a tool we haven't listed, so the SDK never falls back to listing
                 // and caching the raw tools itself. Its types are narrower than what it reads (JSON values,
-                // a string `$schema`); ours keep the server's values.
-                toolDefinition: (listed.get(input.name) ?? {
-                  name: input.name,
-                  inputSchema: { type: "object" },
-                }) as CallToolRequestOptions["toolDefinition"],
+                // a string `$schema`); ours keep the server's values. Leaving out `outputSchema` skips the
+                // SDK's output check: servers return results that miss or break their own schema (Zoom
+                // answers a 204 with nothing), and failing the call would report a completed action as failed.
+                toolDefinition: {
+                  ...(listed.get(input.name) ?? { name: input.name, inputSchema: { type: "object" } }),
+                  outputSchema: undefined,
+                } as CallToolRequestOptions["toolDefinition"],
               },
             ),
           catch: (error) => error,
@@ -569,7 +582,9 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
       server,
       message: `${error.message}; the server supports ${error.supported.join(", ")}. Set "protocol" for this server to one of those or to "legacy".`,
     })
-  return yield* new ConnectError({ server, message: explain(error), answered: !repeats(error) })
+  // kilocode_change start - a host-transient failure was not answered by the server, so it is never a refusal
+  return yield* new ConnectError({ server, message: explain(error), answered: !repeats(error) && !transient(error) })
+  // kilocode_change end
 })
 
 // Connecting again would fail the same way: the server could not be spawned or reached, did not answer in
@@ -581,6 +596,8 @@ function repeats(error: unknown): boolean {
     (error instanceof SdkError && error.code === SdkErrorCode.RequestTimeout) ||
     // Refused credentials, even without OAuth: any connection with them would be refused the same way.
     (error instanceof SdkHttpError && (error.status === 401 || error.status === 403)) ||
+    // The authorization server could not refresh the token for now; see McpOAuth.
+    (error instanceof OAuthError && error.code === OAuthErrorCode.TemporarilyUnavailable) ||
     isTransient(error) ||
     PlatformError.isPlatformError(error)
   )

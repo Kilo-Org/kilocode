@@ -114,7 +114,7 @@ export const layer = (options?: Options) =>
                   ? (background.error ?? "Command failed")
                   : "Command cancelled"
           return {
-            description: recovery.command,
+            description: recovery.description ?? recovery.command, // kilocode_change - prefer the model's summary
             ...ShellResult.notification({
               jobID: background.id,
               shellID: recovery.shellID,

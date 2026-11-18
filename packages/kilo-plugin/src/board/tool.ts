@@ -41,8 +41,9 @@ const Post = Schema.Struct({
 export function makeTools(runtime: Runtime) {
   const read: Tool.Info<typeof Read> = {
     name: "board_read",
-    // Native calls, so clients render board posts and reads and detect board use by tool name.
-    options: { codemode: false },
+    // Direct calls keep the client rendering and board detection; the same tool is also callable as
+    // `tools.board_read` inside `execute`, because a Code Mode program cannot reach a direct tool.
+    options: { direct: true },
     description: READ_DESCRIPTION.trim(),
     input: Read,
     execute: (params, context) =>
@@ -81,7 +82,7 @@ export function makeTools(runtime: Runtime) {
 
   const post: Tool.Info<typeof Post> = {
     name: "board_post",
-    options: { codemode: false },
+    options: { direct: true },
     description: POST_DESCRIPTION.trim(),
     input: Post,
     execute: (params, context) =>
@@ -97,7 +98,7 @@ export function makeTools(runtime: Runtime) {
           source: { type: "tool", messageID: context.messageID, id: context.id },
         })
         const reply = params.reply_to?.trim()
-        const message = yield* BoardStore.post(runtime.store, {
+        const { message, availability } = yield* BoardStore.post(runtime.store, {
           sessionID: context.sessionID,
           messageID: context.messageID,
           callID: context.id,
@@ -107,10 +108,6 @@ export function makeTools(runtime: Runtime) {
           ...(reply ? { reply_to: reply } : {}),
         }).pipe(Effect.mapError(toolError))
         yield* runtime.changed(context.sessionID)
-        const availability = yield* BoardStore.availability(runtime.store, {
-          sessionID: context.sessionID,
-          to: message.to,
-        }).pipe(Effect.mapError(toolError))
         const warning = warn(availability)
         return {
           content: JSON.stringify({

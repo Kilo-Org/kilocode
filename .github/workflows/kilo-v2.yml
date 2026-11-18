@@ -164,6 +164,11 @@ jobs:
       - name: Count shared upstream patches
         run: bun script/check-shared-patches.ts
 
+      - name: Check the mirror registry
+        # Structure only: every `// kilo_mirror:` copy is registered and marked. Drift against the
+        # pinned release belongs to the sync, which runs `bun script/check-mirrors.ts --drift`.
+        run: bun script/check-mirrors.ts
+
   # The generated map files change with every merge, so parallel PRs that commit them always conflict and go stale.
   # PRs change only the inputs (code, done-proofs, features.json, dispositions.json); this job validates them.
   # `progress-commit` regenerates the map on v2 and opens or updates the bot PR.
@@ -351,8 +356,9 @@ jobs:
 
   progress-comment:
     name: migration progress comment
-    # Same-repository pull requests only: a fork PR gets a read-only token and cannot comment.
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    # Same-repository feature pull requests only: a fork PR gets a read-only token and cannot comment,
+    # and the map bot PR's own body already carries the delta.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != 'progress-map-update'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -377,9 +383,10 @@ jobs:
         env:
           REPO: ${{ github.repository }}
         run: |
-          # Both maps are generated here, because PRs do not commit the map and a base branch can carry a stale one.
+          # Both maps are generated with the PR's script so counting-rule changes compare like with like,
+          # while each checkout supplies its own features.json, dispositions.json and tracked files.
           git worktree add --detach ../base HEAD^1
-          bun ../base/script/upstream/progress.ts
+          bun script/upstream/progress.ts --root ../base
           cp ../base/migration-tracking/progress/progress.json base.json
           bun script/upstream/progress.ts
           git diff -U0 --no-color HEAD^1 HEAD > pr.diff
@@ -443,9 +450,25 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+
+      - name: Test Kilo metric gates
+        working-directory: script/kilocode/metrics
+        run: bun test check.test.ts
+
+      # On PRs the first parent of the checked-out merge is the target branch.
+      - name: Check Kilo function complexity and file size
+        run: bun script/kilocode/metrics/check.ts HEAD^1
+
+      - name: Check first-request token budget and direct tool inventory
+        run: |
+          python3 -m venv "$RUNNER_TEMP/context-budget"
+          "$RUNNER_TEMP/context-budget/bin/pip" install -r script/kilocode/context-budget/requirements.txt
+          "$RUNNER_TEMP/context-budget/bin/python" script/kilocode/context-budget/check.py
 
       # Turborepo runs only the package tests that turbo.json lists. The Kilo packages run here instead, so
       # adding one needs no shared upstream patch. `@kilocode/gateway-core` stays in turbo.json.
@@ -480,12 +503,13 @@ jobs:
         working-directory: packages/kilo-plugin
         run: bun test
 
-      - name: Test the Kilo Flows plugin
-        working-directory: packages/kilo-flows-plugin
-        run: bun test
-
       # The Kilo host suite is the slowest one in CI. `check-test` shards it on Linux and Windows through its
       # `test:ci` task, so this job no longer runs it a second time.
+
+      # Hard-fails when a user-visible OpenCode string (CLI/TUI, packages/{server,core,plugin,kilo-plugin}/src modules and prompts) or the opencode tool namespace is not rebranded.
+      - name: Audit branding coverage
+        working-directory: packages/kilo-cli
+        run: bun run branding:audit
 
       - name: Typecheck the VS Code extension
         working-directory: packages/kilo-vscode
@@ -495,9 +519,21 @@ jobs:
         working-directory: packages/kilo-vscode
         run: bun run lint
 
+      - name: Check the VS Code extension for dead code (Knip)
+        working-directory: packages/kilo-vscode
+        run: bun run knip
+
       - name: Test the VS Code extension
         working-directory: packages/kilo-vscode
         run: bun test
+
+      - name: Install Chromium for the VS Code accessibility gate
+        working-directory: packages/kilo-vscode
+        run: bun run playwright-core install --with-deps --only-shell chromium
+
+      - name: Test VS Code webview accessibility
+        working-directory: packages/kilo-vscode
+        run: bun run test:accessibility
 
       # Fails when Kilo plugin activation grows past packages/kilo-cli/startup-budget.json (#15244).
       - name: Startup ratchet

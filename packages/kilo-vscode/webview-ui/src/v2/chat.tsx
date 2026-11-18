@@ -14,6 +14,7 @@ import {
   Switch,
 } from "solid-js"
 import type { GitChangesStats, ToHost, ToWebview } from "../../../src/protocol"
+import { injectedMetadata } from "../../../src/shared/injected-prompt"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useWorkStyle } from "../context/work-style"
@@ -31,6 +32,7 @@ import { createReviewAppendQueue } from "./review-queue"
 import { createComposerQueue } from "./composer"
 import { createPlanOpener } from "./open-plan"
 import { openSubagent } from "./open-subagent"
+import { takesHandoff, trackPlanAnswers } from "./plan-handoff"
 import { showTabStrip } from "../utils/local-tabs"
 import { focusPrompt } from "../utils/tab-navigation"
 
@@ -78,10 +80,20 @@ export function Chat() {
     requestAnimationFrame(focusPrompt)
   }
   // The plan handoff creates a new session on the server and asks the client to show it. The TUI and the
-  // VS Code sidebar both consume this event, so the new Code session opens in the active view.
+  // VS Code sidebar both consume this event; the new Code session opens in the webview that shows the plan session,
+  // so a plan in the Agent Manager does not open its session here.
+  trackPlanAnswers({
+    directory: v2.directory,
+    sessions: tabs.ids,
+    forms: (id) => v2.data.session.form.list(id),
+    created: (handler) => v2.data.on("form.created", handler),
+    replied: (handler) => v2.data.on("form.replied", handler),
+    cancelled: (handler) => v2.data.on("form.cancelled", handler),
+  })
   onCleanup(
     v2.data.on("tui.session.select", (event) => {
       if (event.location && event.location.directory !== v2.directory) return
+      if (!takesHandoff(v2.directory)) return
       open(event.data.sessionID)
     }),
   )
@@ -175,7 +187,12 @@ export function Chat() {
       }
       if (item.type === "startPrompt") {
         setView("chat")
-        composerQueue.push({ type: "submit", text: item.text, items: item.items ?? [] })
+        composerQueue.push({
+          type: "submit",
+          text: item.text,
+          items: item.items ?? [],
+          metadata: item.injectedTitle ? injectedMetadata(item.injectedTitle) : undefined,
+        })
         return
       }
       if (item.type !== "appendReviewComments") return
@@ -277,9 +294,14 @@ export function Chat() {
   )
   createEffect(() => planOpener.flush(session()))
 
-  const startWorktree = () => vscode.postMessage({ type: "agentManager.createWorktree" } satisfies ToHost as never)
+  const startWorktree = () =>
+    vscode.postMessage({ type: "agentManager.createWorktree", requestId: crypto.randomUUID() } satisfies ToHost as never)
   const startWorktreeFromBranch = (branch: string) =>
-    vscode.postMessage({ type: "agentManager.createWorktree", baseBranch: branch } satisfies ToHost as never)
+    vscode.postMessage({
+      type: "agentManager.createWorktree",
+      baseBranch: branch,
+      requestId: crypto.randomUUID(),
+    } satisfies ToHost as never)
   const showAdvancedWorktree = () => vscode.postMessage({ type: "openAdvancedWorktree" } satisfies ToHost as never)
   const moveToWorktree = () => {
     const id = session()
@@ -335,6 +357,10 @@ export function Chat() {
           onReviewAppendReady={reviewQueue.ready}
           onComposerReady={composerQueue.ready}
           draftKey={tabs.active()}
+          // v1's sidebar focused the prompt whenever its draft key changed, so a switched session or a new tab type
+          // straight into the composer. The Agent Manager mounts the same composer per worktree and passes its own
+          // predicate, which also keeps a visible terminal in control.
+          focusOnDraftChange={() => true}
           onMissing={(id) => tabs.close(id)}
           tabs={showTabStrip(tabs.ids())}
           tabStrip={

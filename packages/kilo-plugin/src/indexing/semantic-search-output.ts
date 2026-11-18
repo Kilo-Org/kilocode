@@ -31,7 +31,7 @@ export function reason(status?: IndexingStatus): string {
   if (status.state === "Disabled") {
     return `Codebase indexing is disabled for this project, so nothing was searched.${suffix}`
   }
-  if (status.state === "Error") return `Codebase indexing failed, so nothing was searched.${suffix}`
+  if (status.state === "Error") return `Codebase indexing reported a problem, so results may be incomplete.${suffix}`
   if (status.state === "In Progress") {
     return `The index is still building (${status.percent}%, ${status.processedFiles}/${status.totalFiles} files), so results are incomplete.`
   }

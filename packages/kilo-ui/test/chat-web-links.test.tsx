@@ -68,8 +68,12 @@ test("shift-click asks for the system browser without a second external open", a
   const opened: Array<{ url: string; external?: boolean }> = []
   const card = part("[Kilo](https://kilo.ai/files)", (url, external) => opened.push({ url, external }))
 
+  // The event must be cancelable: a real click is, and `preventDefault()` is a no-op on a non-cancelable one, in
+  // which case the DOM follows the href and navigates the test window to the live site.
   const link = await waitFor(() => card.host.querySelector<HTMLAnchorElement>("a[href]"))
-  const seen = await windowClicks(() => link.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true })))
+  const seen = await windowClicks(() =>
+    link.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true, cancelable: true })),
+  )
 
   expect(opened).toEqual([{ url: "https://kilo.ai/files", external: true }])
   expect(seen).toBe(0)

@@ -1,6 +1,5 @@
 import { longestCommonSubsequence } from "../../util/lcs.js"
 import { lineIsRepeated } from "../util/textSimilarity.js"
-import { removePrefixOverlap } from "./removePrefixOverlap.js"
 
 function rewritesLineAbove(completion: string, prefix: string): boolean {
   const lineAbove = prefix
@@ -130,20 +129,6 @@ export function postprocessCompletion({
     if (suffix.length === 0 && prefix.endsWith("\n\n") && completion.startsWith("\n")) {
       // Remove a single leading \n from the completion
       completion = completion.slice(1)
-    }
-  }
-
-  if (llm.model.includes("mercury")) {
-    completion = removePrefixOverlap(completion, prefix)
-
-    // If completion starts with multiple whitespaces, but the cursor is at the
-    // end of the line then it should probably be on a new line
-    if (
-      (completion.startsWith("  ") || completion.startsWith("\t")) &&
-      !prefix.endsWith("\n") &&
-      (suffix.startsWith("\n") || suffix.trim().length === 0)
-    ) {
-      completion = "\n" + completion
     }
   }
 

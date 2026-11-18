@@ -41,7 +41,8 @@ const sample: { message: SessionMessageAssistant } = {
       { type: "reasoning", text: reasoning, time: { created: stamp } },
       tool("sample_docs_lookup", 1200, 1260, 1400),
       tool("edit", 1400, 1480, 1600),
-      tool("shell", 1600, 1760, 2000),
+      tool("execute", 1600, 1680, 1800),
+      tool("shell", 1800, 1880, 2000),
       answer,
     ],
   },
@@ -76,7 +77,8 @@ describe("session preview playback", () => {
     for (const [name, start, run, end] of [
       ["sample_docs_lookup", 1200, 1260, 1400],
       ["edit", 1400, 1480, 1600],
-      ["shell", 1600, 1760, 2000],
+      ["execute", 1600, 1680, 1800],
+      ["shell", 1800, 1880, 2000],
     ] as const) {
       expect(toolPart(previewFrame(sample, start - 1), name)).toBeUndefined()
       const pending = toolPart(previewFrame(sample, start), name)
@@ -96,6 +98,19 @@ describe("session preview playback", () => {
       ])
       expect(complete?.time).toEqual({ created: stamp + start, ran: stamp + run, completed: stamp + end })
     }
+  })
+
+  test("types the command while its arguments stream", () => {
+    const command = (elapsed: number) => {
+      const part = toolPart(previewFrame(sample, elapsed), "shell")
+      if (part?.state.status !== "streaming") return undefined
+      return (JSON.parse(part.state.input) as { command?: string }).command
+    }
+    expect(command(1800)).toBe("")
+    const typing = command(1830) ?? ""
+    expect(typing.length).toBeGreaterThan(0)
+    expect("sample".startsWith(typing)).toBe(true)
+    expect(command(1879)).toBe("sample")
   })
 
   test("streams the answer, completes the message, and holds a final frame before the replay", () => {

@@ -21,6 +21,7 @@
     "browser-tab/index.tsx",
     "diff-viewer/index.tsx",
     "diff-virtual/index.tsx",
-    "src/assets.d.ts"
+    "src/assets.d.ts",
+    "../test/browser/sidebar-search.tsx"
   ]
 }

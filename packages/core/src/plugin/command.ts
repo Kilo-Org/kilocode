@@ -7,6 +7,7 @@ import { Location } from "../location.js"
 import { Mcp } from "../mcp/index.js"
 import PROMPT_INITIALIZE from "./command/initialize.txt"
 import PROMPT_REVIEW from "./command/review.txt"
+import { KiloPromptInjected } from "../kilocode/session/injected.js" // kilocode_change(injected-prompt) - label an expanded command template in the transcript
 
 export const Plugin = define({
   id: "opencode.command",
@@ -35,6 +36,7 @@ export const Plugin = define({
               ...input.prompt,
               sessionID: input.sessionID,
               text: append(PROMPT_INITIALIZE.replace("${path}", location.project.directory), input.prompt.text),
+              metadata: KiloPromptInjected.command("init", input.prompt.text), // kilocode_change(injected-prompt) - "/name args" title
               delivery: input.delivery,
             })
             .pipe(Effect.asVoid),
@@ -48,6 +50,7 @@ export const Plugin = define({
               ...input.prompt,
               sessionID: input.sessionID,
               text: append(PROMPT_REVIEW.replace("${path}", location.project.directory), input.prompt.text),
+              metadata: KiloPromptInjected.command("review", input.prompt.text), // kilocode_change(injected-prompt) - "/name args" title
               delivery: input.delivery,
             })
             .pipe(Effect.asVoid),
@@ -74,6 +77,7 @@ export const Plugin = define({
                   .map((message) => promptMessageText(message.content))
                   .join("\n")
                   .trim(),
+                metadata: KiloPromptInjected.command(mcpCommandName(prompt.server, prompt.name), input.prompt.text), // kilocode_change(injected-prompt) - "/name args" title
                 delivery: input.delivery,
               })
             }).pipe(Effect.asVoid),

@@ -182,7 +182,11 @@ export const DiffViewerApp: Component = () => {
   }
 
   const handlers: Record<string, (msg: DiffViewerMessage) => void> = {
-    "diffViewer.context": (msg) => resetContext(String(msg.key ?? "")),
+    "diffViewer.context": (msg) => {
+      resetContext(String(msg.key ?? ""))
+      // VS Code restores this state after a window reload, and the host attaches the panel to it again.
+      if (msg.restore) vscode.setState({ ...vscode.getState<Record<string, unknown>>(), diffViewer: msg.restore })
+    },
     "diffViewer.prComments": applyPRComments,
     "diffViewer.focusComment": (msg) => setFocus({ id: String(msg.id), file: String(msg.file) }),
     "diffViewer.diffs": (msg) => {

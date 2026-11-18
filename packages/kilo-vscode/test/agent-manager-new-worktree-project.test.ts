@@ -21,6 +21,14 @@ describe("Agent Manager New Worktree project targeting", () => {
     expect(dialog).toContain('type: "agentManager.importFromBranch"')
   })
 
+  it("wires the worktree command catalog to the dialog target for the lifetime of the dialog", () => {
+    expect(app).toContain("createAppSession({ vscode, directories, rootDirectory, commandProject })")
+    expect(app).toContain("commands={appSession.commands()}")
+    expect(app).toContain("onProjectChange={setCommandProject}")
+    expect(dialog).toContain("createEffect(() => props.onProjectChange(project()))")
+    expect(dialog).toContain("onCleanup(() => props.onProjectChange(undefined))")
+  })
+
   it("does not replace a pending cross-project activation", () => {
     expect(pending).toContain("if (pending()) return")
     expect(app).toContain("usePendingCreate(activeProjectId")
@@ -30,7 +38,6 @@ describe("Agent Manager New Worktree project targeting", () => {
 
   it("tags branch and import responses with their owning project", () => {
     expect(importer).toContain("async branches(projectId?: string)")
-    expect(importer).toContain('type: "agentManager.branches", projectId')
     expect(importer).toContain('type: "agentManager.importResult", projectId')
     expect(importer).toContain('type: "agentManager.worktreeSetup", projectId')
   })

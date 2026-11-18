@@ -1,7 +1,6 @@
-import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
-
 const STATE_FILE = "agent-manager.json"
-const STATE_DIRECTORIES = [KiloConfigFiles.directories[0], ".kilo"]
+// The v2 state stays in `.kilo2` with KILO_USE_RELEASE_CONFIG (packages/kilo-vscode/src/agent-manager/constants.ts).
+const STATE_DIRECTORIES = [".kilo2", ".kilo"]
 
 export const MESSAGE =
   "Do not edit Agent Manager state directly. Use the agent_manager tool: call action=list to read section and session IDs, then call action=move with the returned IDs."

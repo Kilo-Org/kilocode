@@ -2231,10 +2231,15 @@ body.am-wt-dragging-active * {
 
 .am-sidebar-search [data-slot="list-header"] {
   padding: 7px 8px 4px;
-  color: var(--text-weaker);
+  color: var(--text-weak);
   font-size: var(--kilo-font-size-10);
   font-weight: 600;
   letter-spacing: 0.06em;
+
+  /* The scroll shadow is decorative and invisible until the header sticks. */
+  &[data-stuck="false"]::after {
+    visibility: hidden;
+  }
 }
 
 .am-sidebar-search [data-slot="list-item"] {
@@ -3496,6 +3501,22 @@ body.am-wt-dragging-active * {
   padding: 0 20px;
 }
 
+/* A project that cannot hold worktrees yet. It sits outside the scrolling form so Create's reason stays visible. */
+.am-nv-branch-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 0 20px 12px;
+  color: var(--text-warning, #f59e0b);
+  line-height: 1.4;
+}
+
+.am-nv-branch-warning [data-component="icon"] {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 /* Starting point group: origin and worktree name read as one unit. */
 .am-nv-start {
   display: flex;
@@ -3781,6 +3802,14 @@ body.am-wt-dragging-active * {
   height: 100%;
   max-height: none;
   overflow-y: auto;
+}
+
+/* The container is sized by adjustHeight, as in v1. A content-sized textarea
+   grows past it while adjustHeight measures, which resets its scroll to the top
+   and leaves the caret below the visible text. */
+.am-nv-dialog .am-prompt-input:not(:placeholder-shown) {
+  field-sizing: fixed;
+  height: 100%;
 }
 
 .am-nv-config-label {
@@ -6217,32 +6246,16 @@ body.vscode-high-contrast-light {
   background: transparent;
 }
 
-.am-subagent-header {
+/* The tab strip is the panel's only chrome row: the inspector strip sits where
+   a title header used to, so the transcript starts one row higher. The close
+   action stays on the far edge, away from the tab close buttons. */
+.am-subagent-close {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  height: 32px;
-  padding: 0 4px 0 8px;
+  align-self: center;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border-weak-base);
-  background: var(--surface-base);
-}
-
-.am-subagent-heading {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 6px;
-  color: var(--text-base);
-  font-size: var(--font-size-small);
-  font-weight: 600;
-}
-
-.am-subagent-count {
-  color: var(--text-weak);
-  font-size: var(--kilo-font-size-10);
-  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  padding-left: 4px;
 }
 
 .am-subagent-chat {

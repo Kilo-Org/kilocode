@@ -95,6 +95,42 @@ function context(
   return ctx
 }
 
+/** The part of a PanelContext a reload restores. The injected GitOps and log handles stay with the provider. */
+function restorable(ctx: PanelContext): PanelContext {
+  return { ...ctx, git: undefined, log: undefined }
+}
+
+/** The context a restored panel saved in its webview state, or undefined when the state predates it. */
+export function restoredContext(state: unknown): PanelContext | undefined {
+  if (!state || typeof state !== "object" || !("diffViewer" in state)) return undefined
+  const saved = state.diffViewer
+  if (!saved || typeof saved !== "object") return undefined
+  const value = saved as Record<string, unknown>
+  const text = (item: unknown) => (typeof item === "string" ? item : undefined)
+  return {
+    workspaceRoot: getWorkspaceRoot(),
+    sessionId: text(value.sessionId),
+    dir: text(value.dir),
+    comment: savedComment(value.comment),
+    beside: value.beside === true || undefined,
+    initialSourceId: text(value.initialSourceId),
+    initialFile: text(value.initialFile),
+    initialMarkdown: typeof value.initialMarkdown === "boolean" ? value.initialMarkdown : undefined,
+    hidePicker: value.hidePicker === true || undefined,
+    baseBranchOverride: text(value.baseBranchOverride),
+    strictDir: value.strictDir === true || undefined,
+    baseBranch: text(value.baseBranch),
+  }
+}
+
+/** The saved PR comment, when the state carries one the review flow can reopen. */
+function savedComment(value: unknown): PRReviewCommentData | undefined {
+  if (!value || typeof value !== "object") return undefined
+  const record = value as Record<string, unknown>
+  if (typeof record.id !== "string" || record.origin !== "pr") return undefined
+  return value as PRReviewCommentData
+}
+
 export interface DiffViewerProviderOptions {
   sessionIdProvider?: () => string | undefined
   sessionDirectoryProvider?: (sessionId: string) => string | undefined
@@ -199,7 +235,7 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
       return
     }
 
-    this.createPanel()
+    this.createPanel(this.ctx)
   }
 
   /**
@@ -215,11 +251,18 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
   }
 
   /**
-   * Called when VS Code restores a serialized panel after a restart. State is not persisted, so discard the panel
-   * instead of rewiring it.
+   * Called when VS Code restores a serialized panel after a window reload. The webview saved the context it showed,
+   * so the panel attaches to the same session and turn again. A panel from before that state existed has nothing to
+   * show and closes.
    */
-  deserializePanel(panel: vscode.WebviewPanel): void {
-    panel.dispose()
+  deserializePanel(panel: vscode.WebviewPanel, state: unknown): void {
+    // The restore can arrive after the panel was already opened in this window. The open one keeps the provider.
+    if (this.panel) return panel.dispose()
+    const ctx = restoredContext(state)
+    if (!ctx) return panel.dispose()
+    this.focusPending = !!ctx.comment
+    this.baseBranchOverride = ctx.baseBranchOverride
+    this.attach(panel, ctx)
   }
 
   dispose(): void {
@@ -232,39 +275,45 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
     this.output.dispose()
   }
 
-  private createPanel(): void {
+  private createPanel(ctx: PanelContext): void {
     const panel = vscode.window.createWebviewPanel(
       DiffViewerProvider.viewType,
       "Changes",
-      this.ctx?.beside ? vscode.ViewColumn.Beside : vscode.ViewColumn.One,
+      ctx.beside ? vscode.ViewColumn.Beside : vscode.ViewColumn.One,
       {
         enableScripts: true,
         retainContextWhenHidden: true,
         localResourceRoots: [this.input.context.extensionUri],
       },
     )
+    this.attach(panel, ctx)
+  }
+
+  /** Wires a panel the provider created or VS Code restored to the context it shows. */
+  private attach(panel: vscode.WebviewPanel, ctx: PanelContext): void {
     panel.iconPath = {
       light: vscode.Uri.joinPath(this.input.context.extensionUri, "assets", "icons", "kilo-light.svg"),
       dark: vscode.Uri.joinPath(this.input.context.extensionUri, "assets", "icons", "kilo-dark.svg"),
     }
     this.panel = panel
+    this.ctx = ctx
     this.post = (message) => void panel.webview.postMessage(message)
     this.surface = wire({
       context: this.input.context,
       server: this.input.server,
-      directory: this.ctx?.dir ?? this.input.directory,
+      directory: ctx.dir ?? this.input.directory,
       webview: panel.webview,
       view: "diffViewer",
       handle: (message) => this.onMessage(message as unknown as Record<string, unknown>),
     })
 
     this.controller = new SourceController(
-      (id, ctx) => this.input.catalog.build(id, ctx),
-      (ctx) => this.input.catalog.listAvailable(ctx),
+      (id, context) => this.input.catalog.build(id, context),
+      (context) => this.input.catalog.listAvailable(context),
       (message) => this.send(message as Record<string, unknown>),
     )
     this.controller.setVisible(panel.visible).catch((err) => this.log("Failed to update diff visibility:", err))
-    if (this.ctx) this.controller.setContext(this.ctx)
+    this.controller.setContext(ctx)
 
     panel.onDidChangeViewState(() =>
       this.controller?.setVisible(panel.visible).catch((err) => this.log("Failed to update diff visibility:", err)),
@@ -272,7 +321,7 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
     panel.onDidChangeViewState((state) => this.prPolling.setVisible(state.webviewPanel.visible))
     panel.onDidDispose(() => this.onPanelDisposed())
     this.openContext(false)
-    this.prPolling.sync(this.ctx, this.ctx?.initialSourceId, panel.visible)
+    this.prPolling.sync(ctx, ctx.initialSourceId, panel.visible)
   }
 
   private onPanelDisposed(): void {
@@ -476,7 +525,7 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
       this.resetView()
       this.send({ type: "diffViewer.prComments", comments: [] })
     }
-    this.send({ type: "diffViewer.context", key: this.contextKey(this.ctx) })
+    this.send({ type: "diffViewer.context", key: this.contextKey(this.ctx), restore: restorable(this.ctx) })
     this.send({ type: "diffViewer.initialFile", file: this.ctx.initialFile })
     if (this.ctx.initialMarkdown !== undefined)
       this.send({ type: "diffViewer.initialMarkdown", render: this.ctx.initialMarkdown })
