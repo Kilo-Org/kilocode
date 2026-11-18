@@ -4,6 +4,7 @@ import type { Backend, Launch, Support } from "./backend"
 import type { PathRule, Profile } from "./profile"
 import { base } from "./seatbelt-base"
 import { networkPolicy } from "./seatbelt-network"
+import { shellCommand } from "./shell"
 import type { ProxyRuntime } from "./proxy"
 
 const executable = "/usr/bin/sandbox-exec"
@@ -20,10 +21,6 @@ function filter(rule: PathRule, key: string) {
 
 function escape(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
-function quote(value: string) {
-  return `'${value.replaceAll("'", `'\\''`)}'`
 }
 
 function exclude(rule: PathRule, key: string) {
@@ -62,8 +59,7 @@ function policy(profile: Profile, proxy?: ProxyRuntime) {
 export function generate(profile: Profile, launch: Launch, proxy?: ProxyRuntime): Launch {
   const generated = policy(profile, proxy)
   const args = ["-p", generated.value, ...generated.params.map((param) => `-D${param.key}=${param.value}`)]
-  const command = launch.shell ? (typeof launch.shell === "string" ? launch.shell : "/bin/sh") : launch.command
-  const commandArgs = launch.shell ? ["-c", [launch.command, ...launch.args.map(quote)].join(" ")] : launch.args
+  const { command, args: commandArgs } = shellCommand(launch)
   args.push("--", command, ...commandArgs)
   return {
     ...launch,

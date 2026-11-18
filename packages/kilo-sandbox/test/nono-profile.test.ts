@@ -3,7 +3,7 @@ import { unlinkSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { load, parse } from "../src/nono-credentials"
-import { generate } from "../src/nono-profile"
+import { generate, restoreEnvironment } from "../src/nono-profile"
 import type { Profile } from "../src/profile"
 
 const paths = { data: "/tmp/kilo-data", config: "/tmp/kilo-config" }
@@ -289,5 +289,19 @@ describe("nono credential file", () => {
     })
     expect(() => parse(credential(`${"a".repeat(65)}{}`))).toThrow()
     expect(parse(credential(`${"a".repeat(64)}{}`))).toHaveLength(1)
+  })
+})
+
+// Restoring the child's loader and XDG variables is platform independent, so it runs everywhere.
+describe("restoreEnvironment", () => {
+  test("returns only the loader and XDG variables that are set", () => {
+    expect(restoreEnvironment({ NODE_OPTIONS: "-r ./hook.js", XDG_CACHE_HOME: "/cache", OTHER: "kept-out" })).toEqual({
+      NODE_OPTIONS: "-r ./hook.js",
+      XDG_CACHE_HOME: "/cache",
+    })
+  })
+
+  test("returns nothing when the launch carries none of them", () => {
+    expect(restoreEnvironment({ PATH: "/usr/bin:/bin" })).toEqual({})
   })
 })

@@ -8,7 +8,7 @@ function code(cause: unknown) {
   return typeof cause.code === "string" ? cause.code : undefined
 }
 
-function resolve(input: string, seen = new Set<string>()) {
+export function resolvePath(input: string, seen = new Set<string>()) {
   const target = path.resolve(input)
   if (seen.has(target)) throw Object.assign(new Error("Symlink cycle"), { code: "ELOOP" })
   seen.add(target)
@@ -24,7 +24,7 @@ function resolve(input: string, seen = new Set<string>()) {
       try {
         if (lstatSync(ancestor).isSymbolicLink()) {
           const link = readlinkSync(ancestor)
-          return resolve(path.resolve(path.dirname(ancestor), link, ...suffix), seen)
+          return resolvePath(path.resolve(path.dirname(ancestor), link, ...suffix), seen)
         }
       } catch (error) {
         if (code(error) !== "ENOENT" && code(error) !== "ENOTDIR") throw error
@@ -53,11 +53,11 @@ function attempt(input: string, method: string, fn: () => string): Effect.Effect
 }
 
 export function canonicalize(input: string): Effect.Effect<string, PlatformError.PlatformError> {
-  return attempt(input, "canonicalize", () => resolve(input))
+  return attempt(input, "canonicalize", () => resolvePath(input))
 }
 
 export function canonicalizeEntry(input: string): Effect.Effect<string, PlatformError.PlatformError> {
-  return attempt(input, "canonicalizeEntry", () => path.join(resolve(path.dirname(input)), path.basename(input)))
+  return attempt(input, "canonicalizeEntry", () => path.join(resolvePath(path.dirname(input)), path.basename(input)))
 }
 
 function normalizeRule(rule: PathRule) {

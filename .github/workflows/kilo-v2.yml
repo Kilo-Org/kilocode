@@ -140,6 +140,12 @@ jobs:
         working-directory: packages/server
         run: bun run test ./test/pty-socket.test.ts ./test/pty-transport.test.ts ./test/persistent-pty.test.ts ./test/process.test.ts
 
+      # The nono backend is macOS-only, so its launch path runs only here. The suite uses a fixture binary and a
+      # generated profile, so it needs no staged nono.
+      - name: Run sandbox nono tests
+        working-directory: packages/kilo-sandbox
+        run: bun run test ./test/nono-backend.test.ts ./test/nono-profile.test.ts
+
   shared:
     name: shared upstream patches
     runs-on: ubuntu-24.04

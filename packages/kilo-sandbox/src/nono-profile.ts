@@ -55,8 +55,20 @@ export interface Inputs {
   readonly cwd?: string
 }
 
+const loader = ["NODE_OPTIONS", "PYTHONPATH", "PYTHONHOME", "GOFLAGS", "LD_LIBRARY_PATH"]
+
 /** nono's own XDG roots must not reach the child; the profile restores the user's values when they existed. */
 const xdg = ["XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME"]
+
+/** Variables nono strips or redirects that the child gets back from the original environment. */
+export function restoreEnvironment(env: Readonly<Record<string, string | undefined>>) {
+  return Object.fromEntries(
+    [...loader, ...xdg].flatMap((key) => {
+      const value = env[key]
+      return value === undefined ? [] : [[key, value] as [string, string]]
+    }),
+  )
+}
 
 /**
  * nono grants write access to every temporary directory by default. Kilo grants only its own temp directory, so
