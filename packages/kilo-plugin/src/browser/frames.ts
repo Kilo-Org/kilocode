@@ -81,7 +81,6 @@ export function consoleMessages(text: string, withheld: ReadonlySet<string>, all
     .join("\n")
 }
 
-/** Network lines expose request URLs; a withheld origin's traffic leaves with its frame. */
 /** The same attribution rule for the numbered request list. */
 export function networkRequests(text: string, withheld: ReadonlySet<string>, allowed?: ReadonlySet<string>): string {
   return text

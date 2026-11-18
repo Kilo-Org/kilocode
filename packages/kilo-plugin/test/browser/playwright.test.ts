@@ -7,6 +7,7 @@ import { BrowserContract } from "../../src/browser/contract"
 import { browsersDirectory, useKiloBrowsers } from "../../src/browser/install"
 import {
   Backends,
+  contained,
   FILE_TITLES,
   outputFile,
   snapshotBody,
@@ -121,15 +122,15 @@ describe("url-taking tools", () => {
 describe("output directory", () => {
   test("a relative file name resolves under the output directory, not the process cwd", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
-    expect(insideOutput("page.png", directory)).toBe(path.join(directory, "page.png"))
-    expect(insideOutput("nested/page.png", directory)).toBe(path.join(directory, "nested", "page.png"))
+    expect(insideOutput("page.png", directory)).toBe(path.resolve(directory, "page.png"))
+    expect(insideOutput("nested/page.png", directory)).toBe(path.resolve(directory, "nested", "page.png"))
     expect(() => insideOutput("../page.png", directory)).toThrow("output directory")
   })
 
   test("a result file is written by the backend from the filtered text, and the name never reaches the MCP", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
     const file = outputFile("browser_snapshot", { filename: "nested/page.yml", other: 1 }, directory)
-    expect(file?.path).toBe(path.join(directory, "nested", "page.yml"))
+    expect(file?.path).toBe(path.resolve(directory, "nested/page.yml"))
     // The MCP's arguments no longer carry the name, so it cannot write an unfiltered copy.
     expect(file?.args).toEqual({ other: 1 })
     // Only the tools whose result can be a file take a name; a screenshot keeps its own path.
@@ -162,18 +163,32 @@ describe("output directory", () => {
       if (name === "browser_run_code_unsafe") continue
       if (name === "browser_take_screenshot") {
         expect(screenshotPath(name, { filename: "shots/a.png" }, directory)).toBe(
-          path.join(directory, "shots", "a.png"),
+          path.resolve(directory, "shots", "a.png"),
         )
         continue
       }
       expect(FILE_TITLES[name], `${name} has no file title`).toBeDefined()
       const file = outputFile(name, { filename: "nested/out.txt" }, directory)
-      expect(file?.path).toBe(path.join(directory, "nested", "out.txt"))
+      expect(file?.path).toBe(path.resolve(directory, "nested/out.txt"))
       // The MCP never receives the name.
       expect(file?.args).toEqual({})
       // Its file is baselined, so a refused or failed call cannot leave it behind.
       expect(outputBaseline(name)).toBe(true)
     }
+  })
+
+  test("containment is separator- and case-correct on win32 and posix", () => {
+    const win = "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\kilo\\data\\kilo2\\browser\\output"
+    expect(contained(`${win}\\page.png`, win, path.win32)).toBe(true)
+    // A drive-letter or directory case difference is the same directory on Windows.
+    expect(contained(`${win.toLowerCase()}\\nested\\page.png`, win, path.win32)).toBe(true)
+    expect(contained(`${win}\\..\\escape.png`, win, path.win32)).toBe(false)
+    expect(contained("D:\\other\\page.png", win, path.win32)).toBe(false)
+    // A sibling with the same prefix is not inside.
+    expect(contained(`${win}-other\\page.png`, win, path.win32)).toBe(false)
+    expect(contained("/tmp/out/page.png", "/tmp/out", path.posix)).toBe(true)
+    expect(contained("/tmp/out-other/page.png", "/tmp/out", path.posix)).toBe(false)
+    expect(contained("/tmp/out", "/tmp/out", path.posix)).toBe(true)
   })
 
   test("a snapshot file body is the YAML block the MCP writes", () => {
@@ -186,13 +201,13 @@ describe("output directory", () => {
   test("a nested screenshot name resolves inside the output directory", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
     expect(screenshotPath("browser_take_screenshot", { filename: "nested/shot.png" }, directory)).toBe(
-      path.join(directory, "nested", "shot.png"),
+      path.resolve(directory, "nested", "shot.png"),
     )
   })
 
   test("a file name outside the backend's directory is refused", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
-    expect(insideOutput(path.join(directory, "page.png"), directory)).toBe(path.join(directory, "page.png"))
+    expect(insideOutput(path.join(directory, "page.png"), directory)).toBe(path.resolve(directory, "page.png"))
     expect(() => insideOutput(path.join(path.sep, "tmp", "elsewhere.png"), directory)).toThrow("output directory")
     expect(() => insideOutput("../../page.png", directory)).toThrow("output directory")
   })
@@ -201,7 +216,7 @@ describe("output directory", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
     // The path the model asked for is resolved up front; the MCP never writes it.
     expect(screenshotPath("browser_take_screenshot", { filename: path.join(directory, "shot.png") }, directory)).toBe(
-      path.join(directory, "shot.png"),
+      path.resolve(directory, "shot.png"),
     )
     expect(() => screenshotPath("browser_take_screenshot", { filename: "../../shot.png" }, directory)).toThrow(
       "output directory",

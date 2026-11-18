@@ -5,12 +5,12 @@ import path from "node:path"
 import { Config } from "@opencode/core/config"
 import { Permission } from "@opencode/core/permission"
 import { Tool } from "@opencode/schema/tool"
-import { Effect, Exit, Scope, Stream } from "effect"
+import { Effect, Exit, Queue, Scope, Stream } from "effect"
 import type { CallContext } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { key, outputDirectory, playwright } from "../../src/browser/playwright"
 import { resolve } from "../../src/browser/settings"
-import { KiloBrowserToolsPlugin } from "../../src/browser/tools"
+import { grantsFor, KiloBrowserToolsPlugin } from "../../src/browser/tools"
 
 /**
  * The backend's own call path, over a stand-in browser and MCP client. The helpers above are pure; these drive
@@ -150,7 +150,7 @@ afterEach(async () => {
 })
 
 /** One plugin location; its scope close runs the finalizers, which is the shutdown path under test. */
-async function boot(options: { permission?: unknown } = {}) {
+async function boot(options: { permission?: unknown; events?: unknown } = {}) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const ctx = {
     location: { directory: "/tmp/browser-guards-test" },
@@ -158,7 +158,7 @@ async function boot(options: { permission?: unknown } = {}) {
       transform: (fn: (typeof transforms)[number]) =>
         Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
     },
-    event: { subscribe: () => Stream.empty },
+    event: { subscribe: () => options.events ?? Stream.empty },
     permission: { hook: () => Effect.sync(() => ({ dispose: Effect.void })) },
   }
   const config = { entries: () => Effect.succeed([]) } as unknown as Config.Interface
@@ -354,6 +354,38 @@ describe("a result file the MCP would write", () => {
     expect(body).not.toContain("pay.example.net")
     expect(body).toContain("https://gate.example.com/app.js:1")
     expect(state.calls[0]?.args.filename).toBeUndefined()
+  })
+})
+
+describe("a granted post-action ask", () => {
+  test("returns the re-read page, and the action still ran once", async () => {
+    const host = await boot({ permission: { assert: () => Effect.void } })
+    const page = state.pages[0]
+    state.onCall = (name) => {
+      if (name === "browser_click") page.value = "https://other.example.com/landed"
+    }
+    const result = await host.call("browser_click", {})
+    const text = textOf(result)
+    // The placeholder is replaced by a fresh read of the page, so the model sees real content.
+    expect(text).toContain('button "Go"')
+    expect(text).not.toContain("The page moved to")
+    // Reading has no side effect: the click ran once and the re-read is a snapshot.
+    expect(state.calls.filter((call) => call.name === "browser_click").length).toBe(1)
+    expect(state.calls.filter((call) => call.name === "browser_snapshot").length).toBe(1)
+  })
+})
+
+describe("a deleted session", () => {
+  test("releases its grants", async () => {
+    const queue = await Effect.runPromise(Queue.unbounded<never>())
+    await boot({ events: Stream.fromQueue(queue) })
+    grantsFor("ses_event").add("read:https://shop.example.com")
+    await Effect.runPromise(Queue.offer(queue, { type: "session.deleted", data: { sessionID: "ses_event" } } as never))
+    // The subscription is forked; give it a bounded moment to drain.
+    for (let attempt = 0; attempt < 50 && grantsFor("ses_event").size > 0; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    }
+    expect(grantsFor("ses_event").size).toBe(0)
   })
 })
 

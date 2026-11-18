@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto"
-import { existsSync } from "node:fs"
+import { existsSync, realpathSync } from "node:fs"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -190,7 +190,7 @@ export async function snapshotFile(file: string, root: string, cwd = process.cwd
   for (const base of [cwd, root]) {
     const resolved = await fs.realpath(path.resolve(base, file)).catch(() => undefined)
     if (!resolved) continue
-    if (resolved !== root && !resolved.startsWith(root + path.sep)) continue
+    if (!contained(resolved, root)) continue
     return resolved
   }
   return undefined
@@ -460,16 +460,38 @@ async function saveOutput(file: { tool: string; path: string }, text: string) {
 }
 
 /**
- * Refuse a file name that does not resolve inside the browser output directory. The MCP resolves a relative name
- * against the workspace root, so a result file written there could not be redacted, baselined or deleted here.
+ * Resolve a file name inside the browser output directory, refusing one that escapes it. A relative name resolves
+ * against that directory, never the process working directory.
  */
 export function insideOutput(filename: string, directory = outputDirectory()): string {
   // A relative name belongs to the output directory: the model never means the process working directory.
-  const resolved = path.resolve(directory, filename)
-  if (resolved !== directory && !resolved.startsWith(directory + path.sep)) {
-    throw new Error("The file name must stay inside the browser output directory.")
+  const base = canonical(path.resolve(directory))
+  const resolved = path.resolve(base, filename)
+  // The parent may exist under a different spelling (8.3 short name, drive-letter case), so canonicalize it too.
+  const target = path.join(canonical(path.dirname(resolved)), path.basename(resolved))
+  if (!contained(target, base)) throw new Error("The file name must stay inside the browser output directory.")
+  return target
+}
+
+/** The real path when the file exists, so containment compares what the filesystem reports. */
+function canonical(value: string): string {
+  try {
+    return realpathSync.native(value)
+  } catch {
+    return value
   }
-  return resolved
+}
+
+/**
+ * True when `target` is `root` or below it, on either platform's spelling. `startsWith(root + "/")` is wrong on
+ * win32 (backslashes, drive-letter case, 8.3 names) and would refuse or admit the wrong paths; `path.relative` is
+ * the only correct containment test, and win32 compares case-insensitively.
+ */
+export function contained(target: string, root: string, flavour: typeof path = path): boolean {
+  const fold = (value: string) => (flavour === path.win32 ? value.toLowerCase() : value)
+  const relative = flavour.relative(fold(root), fold(target))
+  if (relative === "") return true
+  return !relative.startsWith("..") && !flavour.isAbsolute(relative)
 }
 
 /**

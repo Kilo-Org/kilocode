@@ -80,7 +80,7 @@ function policy(directory: string, endpoint?: string) {
 const GRANTS = new Map<string, Set<string>>()
 const GRANT_LIMIT = 200
 
-function grantsFor(session: string) {
+export function grantsFor(session: string) {
   const existing = GRANTS.get(session)
   if (existing) return existing
   while (GRANTS.size >= GRANT_LIMIT) {
@@ -181,15 +181,12 @@ export function authorize(
   })
 }
 
-/**
- * Console data for diff mode. The internal call is a real read: it plans like a user call, and it returns nothing
- * unless every item the plan asks for is already granted for this session. It then runs with the same authorized
- * list, so the frame filter sees the same grants a user call does.
- */
-/**
- * What the model reads when the grant a withheld result asked for was refused. Plain and specific: the action
- * happened, the page is somewhere else now, and only reading it is blocked - so the model must not repeat the action.
- */
+/** Release a session's grants when it is deleted. */
+export function forgetGrants(session: string) {
+  GRANTS.delete(session)
+}
+
+/** The note that says the action already ran and only reading its page was refused. */
 export function withheldRefusal(origin: string): string {
   return [
     `Note: the action ran. The page is now on ${origin}, and reading it needs the user's permission, which was not granted.`,
@@ -197,6 +194,11 @@ export function withheldRefusal(origin: string): string {
   ].join("\n")
 }
 
+/**
+ * Console data for diff mode. The internal call is a real read: it plans like a user call, and it returns nothing
+ * unless every item the plan asks for is already granted for this session. It then runs with the same authorized
+ * list, so the frame filter sees the same grants a user call does.
+ */
 function consoleErrors(active: BrowserBackend, session: string, context: Tool.Context) {
   return Effect.gen(function* () {
     if (!active.plan) return []
@@ -419,6 +421,7 @@ export const KiloBrowserToolsPlugin = define({
           if (event.type !== "session.deleted") return
           tracker.forget(event.data.sessionID)
           playwright.forgetSession(event.data.sessionID)
+          forgetGrants(event.data.sessionID)
         }),
       ),
       Effect.forkScoped({ startImmediately: true }),
