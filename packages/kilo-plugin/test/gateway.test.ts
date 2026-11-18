@@ -1922,7 +1922,7 @@ describe("KiloGatewayPlugin", () => {
     ),
   )
 
-  it.live("keeps saved auth above config and replaces saved auth with KILO_AUTH_CONTENT", () =>
+  it.live("prefers env, saved auth, config token, then config API key; auth content replaces saved auth", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),
       (backend) =>
@@ -1933,30 +1933,43 @@ describe("KiloGatewayPlugin", () => {
               label: "saved",
               value: Credential.Key.make({ type: "key", key: "saved-token" }),
             })
-            yield* (yield* Config.Test).setEntries([
+            const config = yield* Config.Test
+            const apiKey = new Document({
+              type: "document",
+              info: Schema.decodeUnknownSync(Info)({ providers: { kilo: { settings: { apiKey: "config-key" } } } }),
+            })
+            yield* config.setEntries([
+              apiKey,
               new Document({
                 type: "document",
-                info: Schema.decodeUnknownSync(Info)({ providers: { kilo: { settings: { apiKey: "config-token" } } } }),
+                info: Schema.decodeUnknownSync(Info)({
+                  providers: { kilo: { settings: { kilocodeToken: "config-token" } } },
+                }),
               }),
             ])
-            for (const [content, expected] of [
-              [undefined, "saved-token"],
-              [
-                JSON.stringify({ kilo: { type: "oauth", access: "injected-token", accountId: "first" } }),
-                "injected-token",
-              ],
-              ["{}", "config-token"],
-            ] as const) {
-              yield* withEnv({ KILO_AUTH_CONTENT: content }, () =>
+            const injected = JSON.stringify({ kilo: { type: "oauth", access: "injected-token", accountId: "first" } })
+            const probe = (expected: string, overrides: { KILO_API_KEY?: string; KILO_AUTH_CONTENT?: string } = {}) =>
+              withEnv(overrides, () =>
                 Effect.scoped(
                   Effect.gen(function* () {
                     yield* addPlugin()
-                    yield* (yield* Rpc.Service).call("kilocode.gateway", "profile", {})
-                    expect(backend.requests.at(-1)?.authorization).toBe(`Bearer ${expected}`)
+                    const rpc = yield* Rpc.Service
+                    yield* rpc.call("kilocode.gateway", "profile", {})
+                    expect(backend.requests.at(-1)).toMatchObject({
+                      path: "/api/profile",
+                      authorization: `Bearer ${expected}`,
+                    })
                   }),
                 ),
               )
-            }
+            yield* probe("env-token", { KILO_API_KEY: "env-token" })
+            yield* probe("env-token", { KILO_API_KEY: "env-token", KILO_AUTH_CONTENT: injected })
+            yield* probe("saved-token")
+            yield* probe("saved-token", { KILO_AUTH_CONTENT: "invalid-json" })
+            yield* probe("injected-token", { KILO_AUTH_CONTENT: injected })
+            yield* probe("config-token", { KILO_AUTH_CONTENT: "{}" })
+            yield* config.setEntries([apiKey])
+            yield* probe("config-key", { KILO_AUTH_CONTENT: "{}" })
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),
@@ -2264,12 +2277,14 @@ describe("KiloGatewayPlugin", () => {
                     organizationID: legacy.organizationID,
                   })
                   expect(yield* host.storage.get("organization:env")).toBeUndefined()
+                  expect((yield* host.storage.scan({ prefix: "organization:" })).entries).toHaveLength(1)
                 })),
               )
               yield* withEnv(legacy.next, () =>
                 Effect.scoped(Effect.gen(function* () {
                   yield* addPlugin()
                   expect(yield* rpc.call("kilocode.gateway", "profile", {})).toMatchObject({ organizationID: "first" })
+                  expect((yield* host.storage.scan({ prefix: "organization:" })).entries).toHaveLength(1)
                 })),
               )
               if (legacy.name === "team") {
@@ -2290,6 +2305,7 @@ describe("KiloGatewayPlugin", () => {
                     organizationID: legacy.organizationID,
                   })
                   expect(yield* host.storage.get("organization:env")).toBeUndefined()
+                  expect((yield* host.storage.scan({ prefix: "organization:" })).entries).toHaveLength(1)
                 })),
               )
             }),
@@ -2331,6 +2347,52 @@ describe("KiloGatewayPlugin", () => {
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),
     ),
+  )
+
+  it.live("routes a saved login to its own server unless config or the token supplies a server", () =>
+    Effect.gen(function* () {
+      const backends = yield* Effect.acquireRelease(
+        Effect.sync(() => ({ api: fixture(), login: fixture(), configured: fixture() })),
+        (backends) => Effect.sync(() => Object.values(backends).forEach((backend) => backend[Symbol.dispose]())),
+      )
+      yield* withEnv({ ...env, KILO_API_URL: backends.api.url }, () =>
+        Effect.gen(function* () {
+          const credentials = yield* Credential.Service
+          yield* credentials.create({ integrationID, label: "saved", value: oauth({ server: backends.login.url }) })
+          const config = yield* Config.Test
+          const rpc = yield* Rpc.Service
+          const probe = (backend: ReturnType<typeof fixture>, token: string) =>
+            Effect.scoped(
+              Effect.gen(function* () {
+                yield* addPlugin()
+                expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({
+                  authenticated: true,
+                  server: backend.url,
+                  organizationID: null,
+                })
+                expect(backend.requests.filter((request) => request.path.endsWith("/models"))).toContainEqual({
+                  method: "GET",
+                  path: "/api/openrouter/models",
+                  authorization: `Bearer ${token}`,
+                })
+              }),
+            )
+          yield* probe(backends.login, "token")
+          yield* config.setEntries([
+            new Document({
+              type: "document",
+              info: Schema.decodeUnknownSync(Info)({
+                providers: { kilo: { settings: { baseURL: backends.configured.url } } },
+              }),
+            }),
+          ])
+          yield* probe(backends.configured, "token")
+          const token = `${backends.login.url}/api:embedded-token`
+          yield* withEnv({ KILO_API_KEY: token }, () => probe(backends.login, token))
+          expect(backends.api.requests).toEqual([])
+        }),
+      )
+    }),
   )
 
   it.live("uses the API app root for account and device calls while preserving the inference base", () =>
@@ -2476,20 +2538,35 @@ describe("KiloGatewayPlugin", () => {
               hasPersonalAccount: false,
               selectedOrganizationId: "first",
             }
-            yield* (yield* Credential.Service).create({
+            const credentials = yield* Credential.Service
+            const saved = yield* credentials.create({
               integrationID,
               label: "team-only-key",
               value: Credential.Key.make({ type: "key", key: "team-key" }),
             })
-            yield* addPlugin()
             const rpc = yield* Rpc.Service
-            expect(yield* rpc.call("kilocode.gateway", "profile", {})).toMatchObject({ organizationID: "first" })
+            yield* Effect.scoped(Effect.gen(function* () {
+              yield* addPlugin()
+              expect(yield* rpc.call("kilocode.gateway", "profile", {})).toMatchObject({ organizationID: "first" })
+              expect(
+                yield* rpc.call("kilocode.gateway", "organization.set", { organizationID: null }).pipe(Effect.flip),
+              ).toMatchObject({ type: "failed" })
+            }))
             expect(
-              backend.requests.filter((request) => request.path.includes("models")).map((request) => request.path),
+              backend.requests.filter((request) => request.path.endsWith("/models")).map((request) => request.path),
             ).toEqual(["/api/gateway/v1/organizations/first/models"])
-            expect(
-              yield* rpc.call("kilocode.gateway", "organization.set", { organizationID: null }).pipe(Effect.flip),
-            ).toMatchObject({ type: "failed" })
+
+            // Unlike an unset selection, a stored Personal choice must not auto-enroll in a team.
+            const plugin = yield* Plugin.Service
+            const host = yield* PluginHost.make(plugin, "test")
+            yield* host.storage.set(`organization:${saved.id}`, { organizationID: null })
+            yield* addPlugin()
+            expect(yield* rpc.call("kilocode.gateway", "models", {}).pipe(Effect.flip)).toMatchObject({
+              type: "failed",
+              data: { kind: "personal_unavailable" },
+            })
+            expect(backend.requests.filter((request) => request.path.endsWith("/models"))).toHaveLength(1)
+            expect(yield* host.storage.get(`organization:${saved.id}`)).toEqual({ organizationID: null })
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),

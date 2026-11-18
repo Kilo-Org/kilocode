@@ -16,6 +16,7 @@ import { sql } from "drizzle-orm"
 import path from "node:path"
 import { Store } from "./store"
 import { Assets } from "./assets"
+import { admitChange } from "./packet-admission"
 import { settings } from "./settings"
 import {
   Failure,
@@ -439,13 +440,28 @@ export const make = Effect.fn("SessionSync.make")(function* (
       )
     const rows = yield* Store.dirty(db, session.id)
     if (!rows.length) return
-    let changeBytes = 2
     // The exact outer packet uses fewer than 128 nodes, independently of its scalar IDs.
-    let changeNodes = 128
+    let size = { bytes: 2, nodes: 128 }
     const changes: Change[] = []
     const blobs = new Map<string, BlobRef>()
     let through = session.acknowledged
     for (const row of rows) {
+      const candidate = yield* collectChange(c.directory, row)
+      const admission = admitChange(size, changes.length, row.op, candidate.changes)
+      if (admission.type === "finish") break
+      if (admission.type === "reject") return yield* admission.error
+      changes.push(...candidate.changes)
+      size = admission.size
+      for (const ref of candidate.blobs) blobs.set(ref.hash, ref)
+      through = row.position
+    }
+    if (!changes.length || through <= session.acknowledged)
+      return yield* fail("position_conflict", "The local captured position is behind its acknowledged position")
+    return yield* Store.freeze(db, session, changes, through, [...blobs.values()])
+  })
+
+  const collectChange = (directory: string, row: Store.Dirty) =>
+    Effect.gen(function* () {
       if (!row.id || row.id.length > 256)
         return yield* fail("entity_id_limit", "A native portable entity exceeds the service identity limit")
       if (row.op === "remove") {
@@ -461,73 +477,29 @@ export const make = Effect.fn("SessionSync.make")(function* (
             "unclassified_removal",
             "A native entity was removed without a portable semantic cause; synchronization is paused",
           )
-        const removals: Change[] = [
+        const changes: Change[] = [
           ...(yield* Assets.remove(db, row)),
           { op: "remove", kind: row.kind, id: row.id, cause: row.cause },
         ]
-        const bytes = changeBytes + Buffer.byteLength(JSON.stringify(removals)) - 2 + (changes.length ? 1 : 0)
-        const nodes = jsonNodes(removals, limits.jsonBatchDepth - 1, limits.jsonBatchNodes)
-        if (nodes === undefined)
-          return yield* fail("packet_too_large", "One portable removal exceeds the service JSON budget")
-        if (
-          changes.length &&
-          (changes.length + removals.length > limits.changes ||
-            bytes > limits.batch - 4096 ||
-            changeNodes + nodes - 1 > limits.jsonBatchNodes)
-        )
-          break
-        if (removals.length > limits.changes || bytes > limits.batch - 4096)
-          return yield* fail("packet_too_large", "One portable removal exceeds the service packet limit")
-        changes.push(...removals)
-        changeBytes = bytes
-        changeNodes += nodes - 1
-        through = row.position
-        continue
+        return { changes, blobs: [] }
       }
       const value = yield* Effect.try({
         try: () => Store.value(row),
         catch: (error) =>
           error instanceof Failure ? error : fail("invalid_state", "A captured native entity cannot be serialized"),
       })
-      const assets = yield* Assets.collect(db, global, c.directory, row, value)
+      const assets = yield* Assets.collect(db, global, directory, row, value)
       const encoded = JSON.stringify(value)
       const blob =
         Buffer.byteLength(encoded) > limits.inline || jsonNodes(value) === undefined
           ? yield* Assets.body(db, global, row, Buffer.from(encoded))
           : undefined
-      const addition: Change[] = [
+      const changes: Change[] = [
         ...assets.changes,
         blob ? { op: "put", kind: row.kind, id: row.id, blob } : { op: "put", kind: row.kind, id: row.id, value },
       ]
-      if (addition.length > limits.changes)
-        return yield* fail("asset_limit", "One native entity requires more assets than the service packet limit")
-      // Leave room for envelope/identities; an oversized next entity starts the next immutable packet.
-      const bytes = changeBytes + Buffer.byteLength(JSON.stringify(addition)) - 2 + (changes.length ? 1 : 0)
-      const nodes = jsonNodes(addition, limits.jsonBatchDepth - 1, limits.jsonBatchNodes)
-      if (nodes === undefined || (changeNodes + nodes - 1 > limits.jsonBatchNodes && !changes.length))
-        return yield* fail("packet_too_large", "One portable entity and its assets exceed the service JSON budget")
-      if (
-        changes.length &&
-        (changes.length + addition.length > limits.changes ||
-          bytes > limits.batch - 4096 ||
-          changeNodes + nodes - 1 > limits.jsonBatchNodes)
-      )
-        break
-      if (bytes > limits.batch - 4096)
-        return yield* fail(
-          "packet_too_large",
-          "One portable entity and its asset mappings exceed the service packet limit",
-        )
-      changes.push(...addition)
-      changeBytes = bytes
-      changeNodes += nodes - 1
-      for (const ref of [...assets.blobs, ...(blob ? [blob] : [])]) blobs.set(ref.hash, ref)
-      through = row.position
-    }
-    if (!changes.length || through <= session.acknowledged)
-      return yield* fail("position_conflict", "The local captured position is behind its acknowledged position")
-    return yield* Store.freeze(db, session, changes, through, [...blobs.values()])
-  })
+      return { changes, blobs: blob ? [...assets.blobs, blob] : assets.blobs }
+    })
 
   const upload = Effect.fn("SessionSync.upload")(function* (session: Store.SessionRow, c: Store.Consent) {
     if (session.error_code === "unclassified_removal")

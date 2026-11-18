@@ -50,6 +50,22 @@ export interface IndexingConfigInput {
  * rest of the indexing engine expects.
  */
 export class CodeIndexConfigManager {
+  private static readonly embedderRequirements = new Map(
+    Object.entries({
+      // Kilo needs a dimension to index, even though its embedder can be constructed without one.
+      kilo: (cfg) => !!(cfg.kiloOptions?.apiKey && cfg.modelId && cfg.currentModelDimension),
+      openai: (cfg) => !!cfg.openAiOptions?.apiKey,
+      ollama: (cfg) => !!cfg.ollamaOptions?.baseUrl,
+      "openai-compatible": (cfg) => !!cfg.openAiCompatibleOptions?.baseUrl,
+      gemini: (cfg) => !!cfg.geminiOptions?.apiKey,
+      mistral: (cfg) => !!cfg.mistralOptions?.apiKey,
+      "vercel-ai-gateway": (cfg) => !!cfg.vercelAiGatewayOptions?.apiKey,
+      bedrock: (cfg) => !!cfg.bedrockOptions?.region,
+      openrouter: (cfg) => !!cfg.openRouterOptions?.apiKey,
+      voyage: (cfg) => !!cfg.voyageOptions?.apiKey,
+    } satisfies Record<EmbedderProvider, (config: CodeIndexConfigManager) => boolean>),
+  )
+
   private enabled = false
   private embedderProvider: EmbedderProvider = "openai"
   private vectorStoreProvider: "lancedb" | "qdrant" = DEFAULT_VECTOR_STORE
@@ -162,24 +178,9 @@ export class CodeIndexConfigManager {
   }
 
   public isConfigured(): boolean {
-    const provider = this.embedderProvider
-    const qdrant = this.qdrantUrl
-    const isLancedb = this.vectorStoreProvider === "lancedb"
-    // LanceDB doesn't need a qdrant URL; qdrant does
-    const hasStore = isLancedb || !!qdrant
-
-    if (provider === "kilo")
-      return !!(this.kiloOptions?.apiKey && this.modelId && this.currentModelDimension && hasStore)
-    if (provider === "openai") return !!(this.openAiOptions?.apiKey && hasStore)
-    if (provider === "ollama") return !!(this.ollamaOptions?.baseUrl && hasStore)
-    if (provider === "openai-compatible") return !!(this.openAiCompatibleOptions?.baseUrl && hasStore)
-    if (provider === "gemini") return !!(this.geminiOptions?.apiKey && hasStore)
-    if (provider === "mistral") return !!(this.mistralOptions?.apiKey && hasStore)
-    if (provider === "vercel-ai-gateway") return !!(this.vercelAiGatewayOptions?.apiKey && hasStore)
-    if (provider === "bedrock") return !!(this.bedrockOptions?.region && hasStore)
-    if (provider === "openrouter") return !!(this.openRouterOptions?.apiKey && hasStore)
-    if (provider === "voyage") return !!(this.voyageOptions?.apiKey && hasStore)
-    return false
+    const hasStore = this.vectorStoreProvider === "lancedb" || !!this.qdrantUrl
+    const meetsRequirements = CodeIndexConfigManager.embedderRequirements.get(this.embedderProvider)
+    return meetsRequirements?.(this) === true && hasStore
   }
 
   doesConfigChangeRequireRestart(prev: PreviousConfigSnapshot): boolean {
