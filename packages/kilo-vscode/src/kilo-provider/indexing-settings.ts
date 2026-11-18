@@ -1,4 +1,4 @@
-import { workspace, type Disposable } from "vscode"
+import { workspace } from "vscode"
 import type { IndexingProject } from "../protocol"
 
 const NAMESPACE = "kilo-code.v2.indexing"
@@ -14,14 +14,6 @@ export function buildIndexingSettingsMessage(consent = false, projects: Indexing
       projectId,
     },
   }
-}
-
-export function watchIndexingConfig(post: () => void): Disposable {
-  return workspace.onDidChangeConfiguration((event) => {
-    if (event.affectsConfiguration(NAMESPACE)) {
-      post()
-    }
-  })
 }
 
 export function validIndexingSetting(key: string, value: unknown) {

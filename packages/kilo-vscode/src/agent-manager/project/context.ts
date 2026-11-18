@@ -66,7 +66,6 @@ export class ProjectContext {
   private last: ProjectInitResult | undefined
   private phase: ProjectLifecycle = "cold"
   private version = 0
-  private mutation: Promise<unknown> = Promise.resolve()
   private live = new Set<string>()
   private listed = 0
   private views: readonly ProjectSessionView[] = []
@@ -155,20 +154,6 @@ export class ProjectContext {
     this.phase = "suspended"
   }
 
-  /** Serialize repository mutations and pin them to this context generation. */
-  run<T>(operation: (generation: number) => Promise<T>): Promise<T> {
-    const generation = this.version
-    const run = async () => {
-      if (!this.isCurrent(generation)) throw new Error(`Project ${this.id} is no longer available.`)
-      const result = await operation(generation)
-      if (!this.isCurrent(generation)) throw new Error(`Project ${this.id} changed while the operation was running.`)
-      return result
-    }
-    const next = this.mutation.then(run, run)
-    this.mutation = next.catch(() => undefined)
-    return next
-  }
-
   stateManager(): WorktreeStateManager {
     this.state ??= (this.deps.state ?? ((root, log) => new WorktreeStateManager(root, log)))(this.root, (msg) =>
       this.deps.log(`[StateManager] ${msg}`),
@@ -215,10 +200,6 @@ export class ProjectContext {
     return this.setup
   }
 
-  setLiveSessions(ids: Iterable<string>): void {
-    this.live = new Set(ids)
-  }
-
   hasLiveSession(id: string): boolean {
     return this.live.has(id)
   }
@@ -252,11 +233,6 @@ export class ProjectContext {
     this.live.delete(id)
   }
 
-  /** Mark that the backend session list was just collected for this context. */
-  markSessionsListed(): void {
-    this.listed = Date.now()
-  }
-
   /** Whether the last backend session listing is still fresh enough to reuse. */
   sessionsListedFresh(ms: number): boolean {
     return this.listed > 0 && Date.now() - this.listed < ms
@@ -273,7 +249,6 @@ export class ProjectContext {
     disposeOrphanSizes(this)
     await this.init?.catch((err) => this.deps.log(`dispose: initialization failed: ${err}`))
     await this.pool
-    await this.mutation.catch((err) => this.deps.log(`dispose: mutation failed: ${err}`))
     await this.worktrees?.settle().catch((err) => this.deps.log(`dispose: worktree bookkeeping failed: ${err}`))
     await this.state?.flush().catch((err) => this.deps.log(`dispose: state flush failed: ${err}`))
     this.live.clear()

@@ -9,7 +9,7 @@ const root = SessionID.make("ses_root")
 const post = (
   board: ReturnType<typeof fixture>,
   input: Partial<Parameters<typeof BoardStore.post>[1]> & { messageID: string },
-) => BoardStore.post(board.runtime, { sessionID: "ses_root", to: "ALL", type: "INFO", body: "note", ...input })
+) => BoardStore.post(board.runtime, { sessionID: "ses_root", to: "ALL", type: "INFO", body: "note", ...input }).pipe(Effect.map((result) => result.message))
 
 describe("BoardStore", () => {
   test("observes without creating a board and pages the latest messages in time order", async () => {
@@ -253,7 +253,7 @@ describe("BoardStore", () => {
     expect(result.observedAt).toBe(100)
     expect(result.participants).toEqual([
       { id: "main", sessionID: "ses_root", label: "Root", state: "unknown" },
-      { id: "ses_child", sessionID: "ses_child", label: "Child", state: "unknown", self: true },
+      { id: "ses_child", sessionID: "ses_child", label: "Child", state: "running", self: true },
       { id: "ses_sibling", sessionID: "ses_sibling", label: "Sibling", state: "running" },
       { id: "ses_nested", sessionID: "ses_nested", label: "Nested", agent: "explore", state: "completed" },
     ])

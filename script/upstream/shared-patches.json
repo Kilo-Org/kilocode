@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 145,
-    "markedLines": 2542,
-    "unmarkedLines": 333,
+    "files": 149,
+    "markedLines": 2638,
+    "unmarkedLines": 385,
     "deletedFiles": 0
   },
   "files": {
@@ -25,7 +25,7 @@
     },
     "packages/cli/src/commands/handlers/default.ts": {
       "rung": 3,
-      "seam": "Pass the optional model flag into the existing TUI Args.model input. The root handler's private run() options cannot be supplied by the server host or a TUI plugin. Omitted input preserves the upstream behavior. Only supply terminalHandoff when preflight.begin actually claimed the terminal; otherwise finish was a no-op. This keeps active update UI sequential when a host overlaps startup."
+      "seam": "Pass the optional model flag into the existing TUI Args.model input. The root handler's private run() options cannot be supplied by the server host or a TUI plugin. Omitted input preserves the upstream behavior."
     },
     ".github/actions/setup-bun/action.yml": {
       "rung": 3,
@@ -143,7 +143,23 @@
     },
     "packages/core/src/config/plugin/command.ts": {
       "rung": 4,
-      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata; the seam itself is rung 3. Rung 4: each prompt an expanded config command admits carries the Kilo `injected-prompt` label from `core/src/kilocode/session/injected.ts`, so a transcript can show `/name args` instead of the template the model receives. The command editor offers only `add`, a definition's `execute` builds its own prompt, and the invocation carries no metadata channel, so no plugin hook reaches these two prompt calls. The label is UI metadata only: text, delivery, the subagent prefix and every upstream default are unchanged. The command editor cannot update a captured model, and the host cannot replace Config.node without losing server-specific options. The default callback is absent and native command behavior is unchanged."
+      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata. A second generic knob: when the host installs an inbox delivery policy (`SessionInbox.Policy`), configured agent and model overrides ride on the prompt and are applied at delivery instead of switching the session on admission; without an installed policy the native switch path runs. The command editor cannot update captured definitions, and host composition cannot intercept the exact native prompt submission. Rung 4: the expanded command's prompt carries a Kilo `injected-prompt` transcript label; the command editor offers only `add` and cannot reach the template expansion. Unhosted command selection and subagent dispatch are unchanged."
+    },
+    "packages/core/src/session/prompt.ts": {
+      "rung": 3,
+      "seam": "Carry an optional internal selection through prompt preparation without treating public prompt metadata as authority over model or agent. The prompt hook can rewrite metadata but cannot add typed delivery state."
+    },
+    "packages/schema/src/session-inbox.ts": {
+      "rung": 3,
+      "seam": "An optional user-item selection carries an agent and model ref through the durable enqueue event and pending row, including queue/steer changes. Hooks and host composition cannot add fields to the shared inbox codec. The generated OpenAPI and client types reflect the additive field."
+    },
+    "packages/core/src/session/inbox.ts": {
+      "rung": 3,
+      "seam": "An optional host policy can shorten steer batches and attach durable events to the input actually promoted. The inbox commits those events with delivery and notifies the runner after commit. The policy is a location-scoped `Policy` service whose presence is the only switch: without it the upstream batching and delivery path remain unchanged, and no plugin hook or replaceable service owns this promotion transaction."
+    },
+    "packages/core/src/session/runner/llm.ts": {
+      "rung": 3,
+      "seam": "Read the host-installed delivery policy from `SessionInbox.Policy` and refresh the execution context if its events committed. Validation and event policy stay in the host module; the native runner keeps ownership of the step boundary, and existing prompt and model hooks run on either side of it. Without an installed policy the runner reads nothing and behaves as upstream."
     },
     "packages/core/src/plugin/command.ts": {
       "rung": 4,
@@ -255,7 +271,7 @@
     },
     "packages/core/src/plugin/internal.ts": {
       "rung": 3,
-      "seam": "Expose the existing Location-service provider to embedder plugins. The supervisor applies it without changing pre/post order or upstream defaults. Required for account config and managed policy reads at plugin activation; the public plugin context has no config domain, and host-global registration cannot supply a Location-scoped Config service. All feature logic stays in Kilo-owned plugins."
+      "seam": "Expose the existing Location-service provider to embedder plugins. The supervisor applies it without changing pre/post order or upstream defaults. Required for account config and managed policy reads at plugin activation; the public plugin context has no config domain, and host-global registration cannot supply a Location-scoped Config service. All feature logic stays in Kilo-owned plugins. The same service list and requirement group provide the host-installed `SessionInbox.Policy` to built-in plugins, so a plugin defers behavior only when the host actually installed the policy; the service defaults to an absent policy."
     },
     "packages/core/src/plugin/supervisor.ts": {
       "rung": 3,
@@ -271,7 +287,7 @@
     },
     "packages/server/src/process.ts": {
       "rung": 3,
-      "seam": "`ServerProcess.start` takes `overrides` (service replacements) and passes them to `createRoutes`, which already takes them (as `ServerFetch.BootOptions.overrides` does for the embedded server). Three lines, no Kilo value. Rungs 1 and 2 cannot supply it: the process server built its routes without replacements, so a host could not register plugins (`SdkPlugins`) or replace services in the server the CLI spawns. Optional bound-address notification allows the private TUI to edit before routes are ready; it does not change authorization, dispatch or service readiness."
+      "seam": "`ServerProcess.start` takes `overrides` (service replacements) and passes them to `createRoutes`, which already takes them (as `ServerFetch.BootOptions.overrides` does for the embedded server). Three lines, no Kilo value. Rungs 1 and 2 cannot supply it: the process server built its routes without replacements, so a host could not register plugins (`SdkPlugins`) or replace services in the server the CLI spawns."
     },
     "packages/tui/package.json": {
       "rung": 3,
@@ -284,7 +300,7 @@
     },
     "packages/tui/src/context/theme.tsx": {
       "rung": 4,
-      "seam": "Add an optional `persist` argument to `Themes.set`, with upstream's persist-on-set default, so the picker can preview without writing cli.json. Theme state lives in the TUI process; neither the plugin API nor host composition can reach this provider, and a seam would need the same argument plus a new plugin surface for one consumer. While initial terminal detection is pending, the opted-in host renders the initial surfaces with the terminal default colors and updates the existing editor in place."
+      "seam": "Add an optional `persist` argument to `Themes.set`, with upstream's persist-on-set default, so the picker can preview without writing cli.json. Theme state lives in the TUI process; neither the plugin API nor host composition can reach this provider, and a seam would need the same argument plus a new plugin surface for one consumer."
     },
     "packages/tui/test/context/theme.test.tsx": {
       "rung": 4,
@@ -319,32 +335,16 @@
       "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Also declare `app.header` for plugin status above the main view; existing slots are below the view or inside the session composer/sidebar, so none can supply a process-wide header indicator. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. Two generic lines with no Kilo value."
     },
     "packages/tui/src/app.tsx": {
-      "rung": 4,
-      "seam": "Render the optional `app.header` slot above the main view and session tabs. Existing slots cannot place a process-wide status indicator at the top of both home and session screens, and server host composition cannot alter the TUI layout. Without a claim it renders nothing. Also allow a host to use the explicit theme lock before first render and overlap local workspace discovery with terminal negotiation. Plugins mount too late and the host does not own the renderer. Without opt-in, preserve sequential startup; automatic mode always uses the renderer's normal detection and timeout. Private workspace, transport and theme orchestration live in tui/src/kilocode/interactive-startup.ts; the app only provides its lifecycle boundaries."
+      "rung": 3,
+      "seam": "Render the optional `app.header` slot above the main view and session tabs. Existing slots cannot place a process-wide status indicator at the top of both home and session screens, and server host composition cannot alter the TUI layout. One generic line; without a claim it renders nothing and preserves upstream defaults."
     },
     "packages/tui/src/mini/runtime.lifecycle.ts": {
       "rung": 4,
       "seam": "Call the Kilo-owned `registerMiniParsers` before the mini renderer starts, so fenced code in mini highlights the languages the full TUI supports instead of only OpenTUI's bundled JavaScript, TypeScript, Markdown and Zig. The full TUI registers the same upstream parser config at module load in `tui/src/routes/session/index.tsx`; mini has no equivalent call, so a Kotlin fence renders as plain text. This is a defect fix in upstream's mini lifecycle. Rung 1 has no hook for the CLI frontend's parser registry, rung 2 cannot reach it from `packages/kilo-cli` because the parser config is a package-local module rather than an exported surface, and rung 3 would add a host knob on `MiniHost` for one call. The marked lines only import and call `tui/src/kilocode/mini-parsers.ts`; no Kilo value changes."
     },
-    "packages/tui/src/component/prompt/index.tsx": {
-      "rung": 3,
-      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. On first Home render, reveal the confirmed agent label while the model catalog is pending."
-    },
-    "packages/tui/src/component/startup-loading.tsx": {
-      "rung": 3,
-      "seam": "Share the existing startup status copy with the Home submit-readiness feedback."
-    },
-    "packages/tui/src/context/runtime.tsx": {
-      "rung": 3,
-      "seam": "Optional workspace readiness for an already mounted local Home. Server plugins cannot attach before the frontend is mounted."
-    },
-    "packages/tui/src/context/data.tsx": {
-      "rung": 3,
-      "seam": "Forward the directory as an accessor so the existing store accepts the server-confirmed initial location without remounting the composer."
-    },
     "packages/tui/src/routes/home.tsx": {
-      "rung": 4,
-      "seam": "Render the `home.bottom` plugin slot directly below the home prompt (the v1 `home_bottom` position). Without a claim it renders nothing, so the upstream home screen is unchanged. Rungs 1 and 2 cannot add a slot boundary to the home route. One generic line with no Kilo value; the Kilo news banner lives in tui/src/kilocode/kilo-news.tsx. Guard submission, including --prompt, on workspace, plugin, command, model and form state while local Home accepts early edits."
+      "rung": 3,
+      "seam": "Render the `home.bottom` plugin slot directly below the home prompt (the v1 `home_bottom` position). Without a claim it renders nothing, so the upstream home screen is unchanged. Rungs 1 and 2 cannot add a slot boundary to the home route. One generic line with no Kilo value; the Kilo news banner lives in tui/src/kilocode/kilo-news.tsx."
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
@@ -594,13 +594,29 @@
       "rung": 4,
       "seam": "Kilo registers an additional builtin TUI plugin, so the Plugins dialog can scroll past `opencode.diffs`. The test waits for the reveal instead of requiring that row in the first frame after ctrl+a; the same row, filter and toggle assertions stay. The test must stay next to the upstream session-panel harness because it drives the real dialog and keymap."
     },
-    "packages/cli/src/services/standalone.ts": {
-      "rung": 4,
-      "seam": "An opted-in private TUI lease receives the real bound URL before route readiness, with a separate scoped readiness wait. Other stdio owners retain their original single ready line; a server plugin cannot change process negotiation."
+    "packages/tui/src/component/prompt/index.tsx": {
+      "rung": 3,
+      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. On first Home render, reveal the confirmed agent label while the model catalog is pending."
+    },
+    "packages/tui/src/component/startup-loading.tsx": {
+      "rung": 3,
+      "seam": "Share the existing startup status copy with the Home submit-readiness feedback."
+    },
+    "packages/tui/src/context/data.tsx": {
+      "rung": 3,
+      "seam": "Forward the directory as an accessor so the existing store accepts the server-confirmed initial location without remounting the composer."
+    },
+    "packages/tui/src/context/runtime.tsx": {
+      "rung": 3,
+      "seam": "Optional workspace readiness for an already mounted local Home. Server plugins cannot attach before the frontend is mounted."
     },
     "packages/cli/src/services/server-connection.ts": {
       "rung": 3,
       "seam": "Forward the optional private TUI lease and its readiness wait. Managed and remote connections retain their discovery and reconnect paths."
+    },
+    "packages/cli/src/services/standalone.ts": {
+      "rung": 4,
+      "seam": "An opted-in private TUI lease receives the real bound URL before route readiness, with a separate scoped readiness wait. Other stdio owners retain their original single ready line; a server plugin cannot change process negotiation."
     }
   }
 }
