@@ -59,14 +59,14 @@ export function inbox(stream: NodeJS.ReadableStream): Inbox {
   }
 }
 
-export function extensionHello(input: { profileLabel?: string } = {}): proto.ExtHello {
+export function extensionHello(input: { profileLabel?: string; contractSha?: string } = {}): proto.ExtHello {
   return {
     type: "ext.hello",
     protocol: [1],
     extensionVersion: "1.0.0",
     browser: { name: "Chrome", version: "140.0.0.0" },
     profileLabel: input.profileLabel ?? "Default",
-    contractSha: "deadbeef",
+    contractSha: input.contractSha ?? "deadbeef",
     capabilities: {
       trustedInput: true,
       console: true,

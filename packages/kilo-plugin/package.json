@@ -12,6 +12,9 @@
     "./pages/auth": "./src/pages/auth.ts",
     "./plugin/git-source": "./src/plugin/git-source.ts",
     "./browser/install": "./src/browser/install.ts",
+    "./browser/backend": "./src/browser/backend.ts",
+    "./browser/extension": "./src/browser/extension.ts",
+    "./browser/hub": "./src/browser/hub.ts",
     "./browser/png": "./src/browser/png.ts"
   },
   "scripts": {

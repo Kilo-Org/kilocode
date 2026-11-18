@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
 import { Config } from "@opencode/core/config"
-import type { Permission } from "@opencode/core/permission"
+import { Permission } from "@opencode/core/permission"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Document } from "@opencode/schema/config"
 import { Tool } from "@opencode/schema/tool"
@@ -8,7 +8,10 @@ import { Skill } from "@opencode/schema/skill"
 import { Effect, Exit, Option, Scope, Stream } from "effect"
 import { UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
-import { KiloBrowserToolsPlugin, authorize } from "../../src/browser/tools"
+import { EXTENSION_HINT } from "../../src/browser/extension"
+import { BrowserHub } from "../../src/browser/hub"
+import { resetSteps } from "../../src/browser/steps"
+import { authorize, effective, granted, KiloBrowserToolsPlugin, resetGrants, trim } from "../../src/browser/tools"
 import { KiloGatewayAccounts } from "../../src/gateway/accounts"
 
 // The status RPC asks the backend whether a browser exists. The test machine needs none: a fake execute path that is
@@ -20,12 +23,80 @@ type Browser = NonNullable<KiloConfigPolicy.BrowserConfig>
 const closers: (() => Promise<void>)[] = []
 afterEach(async () => {
   await Promise.all(closers.splice(0).map((close) => close()))
+  // The grant and step caches are module-level, so one test's grants must never answer the next test's ask.
+  resetGrants()
+  resetSteps()
 })
+
+/** A hub the tool layer can drive: it records the calls and answers with the scripted reply. */
+function fakeHub(options: { call?: (input: BrowserHub.CallInput) => Promise<BrowserHub.Reply> } = {}) {
+  const calls: BrowserHub.CallInput[] = []
+  const opened: { sessionId: string; title: string; cwd: string }[] = []
+  const began: BrowserHub.Upload[] = []
+  let handles = 0
+  const port: BrowserHub.Port = {
+    reported: () => Promise.resolve(undefined),
+    ready: () =>
+      Promise.resolve({
+        protocol: [1],
+        contractSha: BrowserContract.sha256,
+        extensionVersion: "1.0.0",
+        profileLabel: "Fake profile",
+      }),
+    open: (input) => {
+      opened.push(input)
+      handles += 1
+      return Promise.resolve({ sessionHandle: `handle-${handles}` })
+    },
+    close: () => Promise.resolve(),
+    list: () => Promise.resolve(BrowserContract.entries.map((entry) => entry.name)),
+    call: (input) => {
+      calls.push(input)
+      if (options.call) return options.call(input)
+      return Promise.resolve({
+        content: [{ type: "text", text: "- Page URL: http://localhost:3000\n- Page Title: Local" }],
+      })
+    },
+    begin: (input) => {
+      began.push(input)
+      return Promise.resolve()
+    },
+    chunk: () => Promise.resolve(),
+    end: () => Promise.resolve(),
+    onRevoked: () => () => {},
+  }
+  return { calls, opened, began, service: { port: () => port } satisfies BrowserHub.Interface }
+}
+
+/** No extension is reachable: the backend reports the model-facing unavailable error. */
+function unreachable(): BrowserHub.Interface {
+  return {
+    port: () =>
+      ({
+        ready: () => Promise.reject(new BrowserHub.Failure({ kind: "unavailable", message: "no extension is connected" })),
+        reported: () => Promise.resolve(undefined),
+        onRevoked: () => () => {},
+      }) as never,
+  }
+}
+
+/** A stand-in permission service that records what it was asked. */
+function recorder() {
+  const asserts: { action: string; resources: readonly string[]; save?: readonly string[] }[] = []
+  const service = {
+    assert: (input: { action: string; resources: readonly string[]; save?: readonly string[] }) =>
+      Effect.sync(() => void asserts.push(input)),
+  } as unknown as Permission.Interface
+  return { asserts, service: Option.some(service) }
+}
 
 /** The plugin against a stand-in tool editor and a config document holding one `browser` block. */
 type Hook = (event: Record<string, unknown>) => Effect.Effect<void, unknown>
 
-async function boot(browser?: Browser) {
+async function boot(
+  browser?: Browser | (() => Browser),
+  options: { hub?: BrowserHub.Interface; permission?: Option.Option<Permission.Interface> } = {},
+) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const hooks: Hook[] = []
   const skills: Skill.Info[] = []
@@ -60,31 +131,46 @@ async function boot(browser?: Browser) {
     },
   }
   const config = {
+    // A function is read per call, the way the plugin reads the config: a test can change a setting mid-session.
     entries: () =>
       Effect.succeed(
-        browser === undefined ? [] : [new Document({ type: "document", info: new KiloConfigPolicy.Info({ browser }) })],
+        browser === undefined
+          ? []
+          : [
+              new Document({
+                type: "document",
+                info: new KiloConfigPolicy.Info({ browser: typeof browser === "function" ? browser() : browser }),
+              }),
+            ],
       ),
   } as unknown as Config.Interface
   const scope = await Effect.runPromise(Scope.make())
   closers.push(() => Effect.runPromise(Scope.close(scope, Exit.void)))
+  const provided = KiloBrowserToolsPlugin.effect(ctx as never).pipe(
+    Effect.provideService(Scope.Scope, scope),
+    Effect.provideService(Config.Service, config),
+    Effect.provideService(BrowserHub.Service, options.hub ?? unreachable()),
+  )
+  const permission = options.permission ?? Option.none()
   await Effect.runPromise(
-    KiloBrowserToolsPlugin.effect(ctx as never).pipe(
-      Effect.provideService(Scope.Scope, scope),
-      Effect.provideService(Config.Service, config),
-    ),
+    Option.isSome(permission)
+      ? provided.pipe(Effect.provideService(Permission.Service, permission.value))
+      : provided,
   )
   const tools = () => {
     const added: Tool.Info[] = []
     transforms.forEach((fn) => fn({ add: (tool) => added.push(tool) }))
     return added
   }
-  const call = (name: string, input: unknown = {}) =>
+  // The registry flattens the `browser` namespace, so a test names a tool the way a call does: `browser_click` and
+  // `click` both reach the tool registered as `click`, and the backend still receives `browser_click`.
+  const call = (name: string, input: unknown = {}, session = "ses_browser") =>
     Effect.runPromise(
       Effect.result(
         tools()
-          .find((tool) => tool.name === name)!
+          .find((tool) => tool.name === (name.startsWith("browser_") ? name.slice("browser_".length) : name))!
           .execute(input, {
-            sessionID: "ses_browser" as never,
+            sessionID: session as never,
             agent: "code" as never,
             messageID: "msg_browser" as never,
             id: "call_browser" as never,
@@ -128,6 +214,7 @@ describe("browser tools", () => {
         Effect.timeout("2 seconds"),
         Effect.provideService(Scope.Scope, scope),
         Effect.provideService(Config.Service, config),
+        Effect.provideService(BrowserHub.Service, unreachable()),
       ),
     )
     const added: Tool.Info[] = []
@@ -168,13 +255,16 @@ describe("browser tools", () => {
     expect(host.registrations).toEqual(["kilocode.browser"])
   })
 
-  test("the extension backend answers every call with the model-facing unavailable error and a hint", async () => {
+  test("the extension backend answers every call with the actionable setup step the model can relay", async () => {
     const host = await boot({ backend: "extension" })
     const result = await host.call("click", { target: "e1" })
     expect(result._tag).toBe("Failure")
     const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
-    expect(error?.message).toBe(UNAVAILABLE_MESSAGE)
-    expect(String(error?.metadata?.hint)).toContain("Kilo browser extension")
+    // The metadata hint never reaches a `run --format json` caller, so the message carries the same instruction.
+    expect(error?.message).toBe(
+      'The browser is not available right now. Install the Kilo browser extension and turn on "Allow local agents" in its settings, or set browser.backend to "playwright".',
+    )
+    expect(error?.metadata?.hint).toBe(EXTENSION_HINT)
   })
 })
 
@@ -410,5 +500,413 @@ describe("browser permission hook", () => {
     expect(
       await host.evaluate({ action: "browser", effect: "deny", resources: ["read:http://localhost:3000"], rules: [] }),
     ).toMatchObject({ effect: "deny" })
+  })
+})
+
+describe("browser tools over the extension backend", () => {
+  const page = (url: string, title: string, lines: string[] = []) =>
+    ["### Page", `- Page URL: ${url}`, `- Page Title: ${title}`, "", "### Snapshot", "```yaml", ...lines, "```"].join(
+      "\n",
+    )
+
+  test("a call reaches the extension and the metadata names its backend and page", async () => {
+    const hub = fakeHub({
+      call: () =>
+        Promise.resolve({
+          content: [{ type: "text", text: page("http://localhost:3000", "Local", ["- button \"Send\""]) }],
+          meta: { withheldFrames: ["https://ads.example.com"] },
+        }),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service })
+    const result = await host.call("browser_navigate", { url: "http://localhost:3000" })
+    expect(result._tag).toBe("Success")
+    const answer = result._tag === "Success" ? (result.success as Tool.Result) : undefined
+    expect(answer?.metadata?.browser).toMatchObject({
+      backend: "extension",
+      observation: "diff",
+      url: "http://localhost:3000",
+      title: "Local",
+      withheldFrames: ["https://ads.example.com"],
+    })
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_navigate", "browser_console_messages"])
+    expect(hub.opened).toHaveLength(1)
+  })
+
+  test("a needs_permission answer asks and retries once with the grant it approved", async () => {
+    const { asserts, service } = recorder()
+    let attempts = 0
+    const hub = fakeHub({
+      call: (input) => {
+        attempts += 1
+        if (attempts === 1) {
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "needs permission",
+              items: [{ class: "read", origin: "https://example.com" }],
+            }),
+          )
+        }
+        expect(input.authorized).toEqual([{ class: "read", origin: "https://example.com" }])
+        return Promise.resolve({ content: [{ type: "text", text: page("https://example.com", "Example") }] })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag).toBe("Success")
+    // The tool's own key first, then the grant the extension asked for.
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser"])
+    expect(asserts[1]).toMatchObject({ resources: ["read:https://example.com"] })
+    expect(hub.calls).toHaveLength(2)
+  })
+
+  test("a post-action need asks, reads the page again and never repeats the action", async () => {
+    const { asserts, service } = recorder()
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name === "browser_click") {
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "The page moved to https://example.com; its content is withheld until read is granted.",
+              items: [{ class: "read", origin: "https://example.com" }],
+              afterAction: true,
+            }),
+          )
+        }
+        return Promise.resolve({ content: [{ type: "text", text: page("https://example.com", "Example", ["- link \"Hi\""]) }] })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag).toBe("Success")
+    // Exactly one click: the action ran once, and the read that follows is a snapshot.
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_click", "browser_snapshot"])
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser"])
+    const answer = result._tag === "Success" ? (result.success as Tool.Result) : undefined
+    expect(JSON.stringify(answer?.content)).toContain("Hi")
+  })
+
+  test("a dropped connection fails the call with the unavailable message and the uncertainty marker", async () => {
+    const hub = fakeHub({
+      call: () =>
+        Promise.reject(
+          new BrowserHub.Failure({
+            kind: "unavailable",
+            message: "The browser connection dropped: the hub closed the connection",
+            uncertain: true,
+          }),
+        ),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag).toBe("Failure")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    expect(error?.message).toBe(`${UNAVAILABLE_MESSAGE} ${EXTENSION_HINT}`)
+    expect(error?.metadata).toMatchObject({ hint: EXTENSION_HINT, effectsUncertain: true })
+  })
+
+  test("browser_snapshot diff mode compares the extension's snapshots", async () => {
+    let index = 0
+    const hub = fakeHub({
+      call: () => {
+        index += 1
+        const lines = index === 1 ? ["- button \"Send\""] : ["- button \"Pay\"", "- text \"Thanks\""]
+        return Promise.resolve({ content: [{ type: "text", text: page("http://localhost:3000", "Local", lines) }] })
+      },
+    })
+    const host = await boot({ backend: "extension", observation: "diff" }, { hub: hub.service })
+    await host.call("browser_click", { target: "e1" })
+    const second = await host.call("browser_click", { target: "e2" })
+    expect(second._tag).toBe("Success")
+    const text = JSON.stringify(second._tag === "Success" ? second.success.content : "")
+    expect(text).toContain("Page changes")
+    expect(text).toContain("changed 1")
+  })
+
+  test("the diff console section comes from the extension's own console read, never a prompt", async () => {
+    const asserts: { action: string }[] = []
+    const service = {
+      assert: (input: { action: string }) => Effect.sync(() => void asserts.push(input)),
+      allows: () => Effect.succeed(true),
+    } as unknown as Permission.Interface
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name === "browser_console_messages") {
+          return Promise.resolve({
+            content: [{ type: "text", text: "### Result\n- [ERROR] boom @ https://example.com/app.js" }],
+          })
+        }
+        return Promise.resolve({
+          content: [{ type: "text", text: page("https://example.com", "Example", ['- button "Send"']) }],
+        })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: Option.some(service) })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag).toBe("Success")
+    const text = JSON.stringify(result._tag === "Success" ? result.success.content : "")
+    expect(text).toContain("Console errors")
+    expect(text).toContain("boom")
+    // The console read is a read: it asks for nothing beyond the tool's own key.
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_click"])
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_click", "browser_console_messages"])
+  })
+
+  // A granted act or navigate need is the model's own next step. Whether the step already ran decides the wording, in
+  // every observation mode: `afterAction` means it ran, so the page is read again and the step is never repeated.
+  for (const observation of ["none", "diff"] as const) {
+    test(`a granted act need that already ran tells the model to read, not repeat, in ${observation} mode`, async () => {
+      const { asserts, service } = recorder()
+      const hub = fakeHub({
+        call: (input) => {
+          if (input.name !== "browser_click") return Promise.resolve({ content: [{ type: "text", text: "{}" }] })
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "The page moved to https://example.com; its content is withheld until act is granted.",
+              items: [{ class: "act", origin: "https://example.com" }],
+              afterAction: true,
+              meta: { url: "https://example.com/landed", withheldFrames: ["https://frame.example.com"] },
+            }),
+          )
+        },
+      })
+      const host = await boot({ backend: "extension", observation }, { hub: hub.service, permission: service })
+      const result = await host.call("browser_click", { target: "e1" })
+      expect(result._tag).toBe("Success")
+      expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser"])
+      expect(asserts[1]).toMatchObject({ resources: ["act:https://example.com"] })
+      expect(hub.calls.map((call) => call.name)).toEqual(["browser_click"])
+      const answer = result._tag === "Success" ? (result.success as Tool.Result) : undefined
+      const text = JSON.stringify(answer?.content)
+      expect(text).toContain("The step ran. The permission is granted; read the page again (browser_snapshot)")
+      expect(text).not.toContain("Repeat the same step")
+      // The result's own page state survives: the real URL and the withheld frames, not the grant origin.
+      expect(answer?.metadata?.browser).toMatchObject({
+        url: "https://example.com/landed",
+        withheldFrames: ["https://frame.example.com"],
+      })
+    })
+  }
+
+  test("a need returned in a result's _meta is answered as an action that already ran", async () => {
+    const { service } = recorder()
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name !== "browser_click") return Promise.resolve({ content: [{ type: "text", text: "{}" }] })
+        return Promise.resolve({
+          content: [{ type: "text", text: "The page moved to https://example.com; its content is withheld." }],
+          meta: { url: "https://example.com/landed", needs: [{ class: "act", origin: "https://example.com" }] },
+        })
+      },
+    })
+    const host = await boot({ backend: "extension", observation: "none" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag).toBe("Success")
+    const text = JSON.stringify(result._tag === "Success" ? result.success.content : "")
+    expect(text).toContain("The step ran. The permission is granted; read the page again (browser_snapshot)")
+    expect(text).not.toContain("Repeat the same step")
+  })
+
+  test("a granted act need that never ran asks for the step again", async () => {
+    // Only the after-action producer exists on the wire today, so the other branch of the decision is exercised
+    // directly: a need without the flag never ran, and repeating the step is exactly what the model should do.
+    const settled = granted({
+      needs: [{ class: "act", origin: "https://example.com" }],
+      result: { content: [{ type: "text", text: "Acting on this page needs approval." }], isError: false },
+      active: {} as never,
+      entry: {} as never,
+      input: {},
+      session: "ses_branches",
+      grants: new Set<string>(),
+      allowSensitive: false,
+      observation: "none",
+      backend: "extension",
+      context: {} as never,
+      permission: Option.none(),
+      organization: undefined,
+    })
+    const text = JSON.stringify(settled.kind === "result" ? settled.result.content : "")
+    expect(text).toContain("Approved. Repeat the same step to perform it.")
+    expect(text).not.toContain("The step ran")
+    expect(settled.kind === "result" ? settled.result.metadata?.browser : undefined).toMatchObject({
+      url: "https://example.com",
+    })
+  })
+
+  test("a mixed read and act need is granted but never re-read", async () => {
+    const { asserts, service } = recorder()
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name !== "browser_click") return Promise.resolve({ content: [{ type: "text", text: "{}" }] })
+        return Promise.reject(
+          new BrowserHub.Failure({
+            kind: "permission",
+            message: "The page changed; its content is withheld until both classes are granted.",
+            items: [
+              { class: "read", origin: "https://example.com" },
+              { class: "act", origin: "https://example.com" },
+            ],
+            afterAction: true,
+          }),
+        )
+      },
+    })
+    const host = await boot({ backend: "extension", observation: "diff" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag).toBe("Success")
+    // `every`: one act item is enough to keep the notice, so a mixed need must not read the page either.
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_click"])
+    const asked = asserts.filter((entry) => entry.action === "browser").flatMap((entry) => entry.resources ?? [])
+    expect(asked).toEqual(["read:https://example.com", "act:https://example.com"])
+    const text = JSON.stringify(result._tag === "Success" ? result.success.content : "")
+    // The mixed need carried afterAction, so it ran: the model is told to read, never to repeat.
+    expect(text).toContain("read the page again")
+    expect(text).not.toContain("Repeat the same step")
+  })
+
+  test("a granted post-action step is spent on the identical repeat only", async () => {
+    const { asserts, service } = recorder()
+    let clicks = 0
+    const downloads: (string | undefined)[] = []
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name !== "browser_click") return Promise.resolve({ content: [{ type: "text", text: "{}" }] })
+        clicks += 1
+        downloads.push(input.sensitive?.[0])
+        if (clicks === 1) {
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "A download started (report.pdf) and was stopped: it needs the user's permission.",
+              items: [{ class: "sensitive", origin: "https://example.com", reason: "download: report.pdf" }],
+              stepToken: "tok-1",
+              afterAction: true,
+            }),
+          )
+        }
+        return Promise.resolve({ content: [{ type: "text", text: "- file report.pdf" }] })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+
+    // 1. The click runs once; the result says the download needs approval.
+    const first = await host.call("browser_click", { target: "e1" })
+    expect(first._tag).toBe("Success")
+    expect(clicks).toBe(1)
+    expect(JSON.stringify(first._tag === "Success" ? first.success.content : "")).toContain(
+      "Approved. Repeat the same step to receive the file.",
+    )
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser_sensitive"])
+
+    // 2. The grant above triggered no call of its own.
+    expect(clicks).toBe(1)
+
+    // 3. The model repeats the step: it carries the extension's token.
+    await host.call("browser_click", { target: "e1" })
+    expect(clicks).toBe(2)
+    expect(downloads[1]).toBe("tok-1")
+
+    // 4. A later repeat without a fresh grant carries no token.
+    await host.call("browser_click", { target: "e1" })
+    expect(clicks).toBe(3)
+    expect(downloads[2]).toBeUndefined()
+  })
+
+  test("another session's repeat never carries the token", async () => {
+    const { service } = recorder()
+    let clicks = 0
+    const seen: (string | undefined)[] = []
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name !== "browser_click") return Promise.resolve({ content: [{ type: "text", text: "{}" }] })
+        clicks += 1
+        seen.push(input.sensitive?.[0])
+        if (clicks === 1) {
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "A download started (report.pdf) and was stopped: it needs the user's permission.",
+              items: [{ class: "sensitive", origin: "https://example.com", reason: "download: report.pdf" }],
+              stepToken: "tok-1",
+              afterAction: true,
+            }),
+          )
+        }
+        return Promise.resolve({ content: [{ type: "text", text: "- file report.pdf" }] })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    await host.call("browser_click", { target: "e1" })
+    await host.call("browser_click", { target: "e1" }, "ses_other")
+    expect(seen[1]).toBeUndefined()
+  })
+
+  test("the per-target backends are bounded through the plugin and an evicted one is disposed", async () => {
+    let target = "a"
+    const released: string[] = []
+    const closed: string[] = []
+    const base = fakeHub()
+    const ports = new Map<string, BrowserHub.Port>()
+    const service: BrowserHub.Interface = {
+      port: (name) => {
+        const label = name ?? ""
+        const existing = ports.get(label)
+        if (existing) return existing
+        let handles = 0
+        const port: BrowserHub.Port = {
+          ...base.service.port(),
+          open: () => {
+            handles += 1
+            return Promise.resolve({ sessionHandle: `${label}-${handles}` })
+          },
+          close: (handle) => {
+            closed.push(handle)
+            return Promise.resolve()
+          },
+          onRevoked: () => () => {
+            released.push(label)
+          },
+        }
+        ports.set(label, port)
+        return port
+      },
+    }
+    const host = await boot(() => ({ backend: "extension", target }), { hub: service })
+    // Five targets through the real plugin wiring: the fifth call evicts the least recently used one.
+    for (const label of ["a", "b", "c", "d", "e"]) {
+      target = label
+      await host.call("browser_snapshot")
+    }
+    expect([...ports.keys()]).toEqual(["a", "b", "c", "d", "e"])
+    expect(released).toEqual(["a"])
+    // The evicted backend closed the browser session it had opened.
+    expect(closed).toEqual(["a-1"])
+  })
+
+  test("one effective backend serves the calls and the status: off wins, a Playwright pin forces it", () => {
+    const extension = { backend: "extension" as const, observation: "diff" as const, allowSensitive: false, target: null, headless: true }
+    const allowed = { control: "allow" as const, origins: [] }
+    const pinned = { control: "playwright_only" as const, origins: [] }
+    const off = { control: "off" as const, origins: [] }
+    // Without a policy the config decides, including the extension.
+    expect(effective(extension, undefined)).toBe("extension")
+    expect(effective(extension, allowed)).toBe("extension")
+    // A Playwright pin forces the bundled browser, so no extension call can happen under it.
+    expect(effective(extension, pinned)).toBe("playwright")
+    // The user's own off wins over everything, and an organization's off is the same refusal.
+    expect(effective({ ...extension, backend: "off" }, allowed)).toBe("off")
+    expect(effective({ ...extension, backend: "off" }, pinned)).toBe("off")
+    expect(effective(extension, off)).toBe("off")
+  })
+
+  test("no reachable extension still yields the actionable error through the tool layer", async () => {
+    const host = await boot({ backend: "extension" })
+    const result = await host.call("browser_snapshot")
+    expect(result._tag).toBe("Failure")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    expect(error?.message).toBe(`${UNAVAILABLE_MESSAGE} ${EXTENSION_HINT}`)
+    expect(error?.metadata).toMatchObject({ hint: EXTENSION_HINT })
   })
 })

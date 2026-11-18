@@ -20,6 +20,16 @@ export const Playwright = Schema.Struct({
 })
 export type Playwright = typeof Playwright.Type
 
+/** The extension backend's readiness, read from the hub connection: the extension reports itself when it connects. */
+export const Extension = Schema.Struct({
+  ready: Schema.Boolean,
+  /** Omitted while no extension is connected. */
+  profileLabel: optional(Schema.String),
+  contractSha: optional(Schema.String),
+  extensionVersion: optional(Schema.String),
+})
+export type Extension = typeof Extension.Type
+
 /** The backend the tools run on. */
 export const Backend = Schema.Literals(["playwright", "extension", "off"])
 export type Backend = typeof Backend.Type
@@ -34,6 +44,8 @@ export type Organization = typeof Organization.Type
 
 export const Status = Schema.Struct({
   playwright: Playwright,
+  /** The extension backend: connected or not, so an editor never guesses from the config alone. */
+  extension: optional(Extension),
   /** The backend in force: the config's choice, narrowed by the organization policy. */
   backend: Backend,
   /** Omitted while the organization sets no policy for the signed-in account. */

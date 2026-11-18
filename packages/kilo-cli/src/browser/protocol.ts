@@ -162,6 +162,19 @@ export const ResultMeta = z.object({
   origin: z.string().optional(),
   withheldFrames: z.array(z.string()).optional(),
   effectsUncertain: z.boolean().optional(),
+  // Grants the result needs after the action ran. The CLI asks for them and never repeats the action.
+  needs: z
+    .array(
+      z
+        .object({
+          class: z.string(),
+          origin: z.string(),
+          frame: z.boolean().optional(),
+          reason: z.string().optional(),
+        })
+        .loose(),
+    )
+    .optional(),
 })
 
 export const ToolResult = z
