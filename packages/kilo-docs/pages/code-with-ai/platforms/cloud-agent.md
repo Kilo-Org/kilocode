@@ -56,6 +56,10 @@ If a compute billing check fails, follow the recovery action next to the compose
 
 Automatic commit and push depends on your session settings. If it is disabled, review, commit, and push the changes you want to keep.
 
+## Favorite models
+
+In the Cloud Agent model pickers — the new-session panel and the session composer — select the star on a model row to add it to a leading **Favorites** group that spans providers, so the models you use most stay at the top. The star is keyboard reachable: Tab to it, then press Enter or Space to toggle it without selecting the model. Stars are saved to your account and shared with the [mobile app](/docs/code-with-ai/platforms/mobile), so a favorite you set in one appears in the other.
+
 ## Choosing where sessions run
 
 A Cloud Agent session runs in a sandbox, the environment that provides its compute. Sandbox selection is enabled for accounts enrolled in paid Cloud Agent billing, for Vercel BYOC enrollments, and for accounts Kilo enables directly; a paid enrollment covers the sizes it includes, so a size that is not enrolled stays unavailable. Personal and organization enrollment are separate: personal billing does not enable an organization's members. When your account can select a sandbox, the new-session page shows a **Sandbox** field. You can set a default sandbox for your owner account (personal or organization) and override it per repository so you do not have to pick each time. If Kilo cannot check your eligibility, the settings stay readable with your saved values and offer a retry instead of clearing the choice.
@@ -247,6 +251,16 @@ When the remote branch has changes, Kilo keeps your local commits instead of dis
 Deleting a parent worktree keeps its branch and its children's base branches. Kilo warns when stacked children exist, and the children remain usable after the parent worktree is deleted.
 
 A Cloud Agent with child-session permission can create the stack for you when you ask it to build a pull request stack. It launches the first layer, then stacks the next layer on that worktree after the parent pushes.
+
+### Workspace artifacts
+
+Files an agent saves in `/artifacts` belong to the workspace, not only to the chat that wrote them. Every sibling chat in the workspace sees the same files, and they stay listable and downloadable after the sandbox stops. Open the workspace's **Artifacts** view to browse, download, or delete them. With the sandbox stopped, the view keeps the list and shows an offline notice instead of an error.
+
+- Only the session's owner, or an authorized organization member, can list, download, or delete a workspace's artifacts.
+- Deleting a file removes it from the workspace immediately; a running sandbox may keep its own copy.
+- Files expire from the view 14 days after their last change.
+
+A replacement sandbox restores `/artifacts` only when the workspace starts from a tail snapshot. Outside that coverage, saved files remain available to download, but the sandbox's `/artifacts` folder may be empty.
 
 ## Reviewing changes
 

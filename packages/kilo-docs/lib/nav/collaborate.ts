@@ -63,6 +63,10 @@ export const CollaborateNav: NavSection[] = [
         children: "Model Access Controls",
       },
       {
+        href: "/collaborate/enterprise/advanced-policies",
+        children: "Advanced Policies",
+      },
+      {
         href: "/collaborate/enterprise/ai-guardrails",
         children: "AI Guardrails",
       },
