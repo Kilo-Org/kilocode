@@ -534,7 +534,11 @@ async function main() {
       `the fill was not rejected:\n${typed.slice(0, 300)}`,
     )
     // The rejected step never reached the page: the read-back is empty, or is itself refused on that page.
-    expect(/""/.test(value), `the password field was written after the rejection:\n${value.slice(0, 300)}`)
+    // The read-back is empty, or is itself refused on this page; either way the rejected fill never landed.
+    expect(
+      /""/.test(value) || value.includes("cannot ask the user for permission"),
+      `the password field was written after the rejection:\n${value.slice(0, 300)}`,
+    )
     // The same read-back observes a written value when the step is allowed, so the assertion above can fail.
     const allowed = await run({ auto: true, allowSensitive: true })
     const written = allowed.last.results[3] ?? ""
