@@ -107,8 +107,12 @@ export function readState(documentValue: unknown): State {
 /** The line one grant reads as, and the CLI's own spelling of it. */
 export function grantLine(rule: Rule) {
   if (rule.action !== "browser") return `${rule.action} → ${rule.effect}`
+  // A catch-all is not "every origin allowed" unless it allows: an ask or deny catch-all denies by default, and the
+  // line must say that instead of reading as its opposite.
   if (rule.resource === "*")
-    return rule.effect === "allow" ? copy("browser.grants.all") : `${copy("browser.grants.all")} → ${rule.effect}`
+    return rule.effect === "allow"
+      ? copy("browser.grants.all")
+      : copy(rule.effect === "deny" ? "browser.grants.everyOriginDeny" : "browser.grants.everyOriginAsk")
   const index = rule.resource.indexOf(":")
   if (index < 0) return `${rule.resource} → ${rule.effect}`
   return `${rule.resource.slice(0, index)} on ${rule.resource.slice(index + 1)} → ${rule.effect}`

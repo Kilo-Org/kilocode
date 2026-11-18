@@ -163,6 +163,8 @@ export const dict = {
   "browser.grants.title": "Dozvole preglednika za izvore",
   "browser.grants.none": "Još nema pravila za izvore",
   "browser.grants.all": "svi izvori dozvoljeni",
+  "browser.grants.everyOriginAsk": "svi izvori → pitaj",
+  "browser.grants.everyOriginDeny": "svi izvori → blokiraj",
   "browser.grants.editHint":
     "Uredite pravila u Kilo Code postavkama, na kartici Web alati, u odjeljku Dozvole za sajtove.",
   "browser.state.ready": "spremno",

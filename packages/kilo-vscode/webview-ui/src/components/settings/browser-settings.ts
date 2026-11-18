@@ -72,7 +72,11 @@ function portOf(scheme: string, host: string, port: string): string | undefined 
   // A wildcard host has no URL to parse, so its numeric port is bounded here; a leading zero could never match.
   if (host.includes("*")) {
     if (port.length > 1 && port.startsWith("0")) return null
-    return Number(port) <= 65535 ? port : null
+    if (Number(port) > 65535) return null
+    // The CLI matches origins as a URL spells them, and a URL drops the scheme's default port. A wildcard host has no
+    // URL of its own, so the same default is dropped here; keeping it would make the rule match nothing.
+    if ((scheme === "https" && port === "443") || (scheme === "http" && port === "80")) return undefined
+    return port
   }
   try {
     return new URL(`${scheme}://${host}:${port}`).port || undefined

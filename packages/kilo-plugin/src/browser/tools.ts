@@ -227,9 +227,11 @@ function consoleErrors(active: BrowserBackend, session: string, context: Tool.Co
 /**
  * The backend in force, after the organization policy: `off` hides the tools, `playwright_only` pins the bundled
  * browser, and `allow` (or no policy) keeps the config's own choice. The settings status and the call path both read
- * this one answer.
+ * this one answer. The policy can take a backend away but never turn one on: a config set to `off` stays off under a
+ * `playwright_only` pin, which is what the call path refuses.
  */
 function effective(browser: Settings, organization: KiloBrowserPolicy.Policy | undefined): Settings["backend"] {
+  if (browser.backend === "off") return "off"
   if (organization?.control === "off") return "off"
   if (organization?.control === "playwright_only") return "playwright"
   return browser.backend

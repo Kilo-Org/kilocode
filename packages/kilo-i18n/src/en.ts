@@ -186,6 +186,8 @@ export const dict = {
   "browser.grants.title": "Browser origin grants",
   "browser.grants.none": "No origin rules yet",
   "browser.grants.all": "every origin allowed",
+  "browser.grants.everyOriginAsk": "every origin → ask",
+  "browser.grants.everyOriginDeny": "every origin → deny",
   "browser.grants.editHint": "Edit the rules in the Kilo Code settings, Web Tools tab, under Site permissions.",
   "browser.state.ready": "ready",
   "browser.state.unavailable": "unavailable",

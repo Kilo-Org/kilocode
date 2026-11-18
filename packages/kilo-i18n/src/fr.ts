@@ -160,6 +160,8 @@ export const dict = {
   "browser.grants.title": "Autorisations d'origine du navigateur",
   "browser.grants.none": "Aucune règle d'origine",
   "browser.grants.all": "toutes les origines autorisées",
+  "browser.grants.everyOriginAsk": "toutes les origines → demander",
+  "browser.grants.everyOriginDeny": "toutes les origines → refuser",
   "browser.grants.editHint":
     "Modifiez les règles dans les paramètres de Kilo Code, onglet Outils web, sous Autorisations des sites.",
   "browser.state.ready": "prêt",

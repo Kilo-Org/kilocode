@@ -155,6 +155,8 @@ export const dict = {
   "browser.grants.title": "ブラウザのオリジン許可",
   "browser.grants.none": "オリジンのルールはまだありません",
   "browser.grants.all": "すべてのオリジンを許可",
+  "browser.grants.everyOriginAsk": "すべてのオリジン → 確認",
+  "browser.grants.everyOriginDeny": "すべてのオリジン → 拒否",
   "browser.grants.editHint": "VS Code のブラウザコマンドまたは Kilo 設定でルールを編集してください。",
   "browser.state.ready": "準備完了",
   "browser.state.unavailable": "利用不可",

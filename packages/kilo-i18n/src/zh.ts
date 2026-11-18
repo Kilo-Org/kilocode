@@ -148,6 +148,8 @@ export const dict = {
   "browser.grants.title": "浏览器来源权限",
   "browser.grants.none": "尚无来源规则",
   "browser.grants.all": "允许所有来源",
+  "browser.grants.everyOriginAsk": "所有来源 → 询问",
+  "browser.grants.everyOriginDeny": "所有来源 → 拒绝",
   "browser.grants.editHint": "在 Kilo Code 设置的网络工具选项卡中，于站点权限下编辑规则。",
   "browser.state.ready": "就绪",
   "browser.state.unavailable": "不可用",

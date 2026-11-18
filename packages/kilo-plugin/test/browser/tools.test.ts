@@ -240,6 +240,22 @@ describe("browser status RPC", () => {
     }
   })
 
+  test("a playwright_only pin never turns a config that is off back on", async () => {
+    policies(() => ({ browserControl: "playwright_only" }))
+    const restore = account("org_status_pin_off")
+    try {
+      const host = await boot({ backend: "off" })
+      const status = (await host.status()) as { backend: string; organization?: unknown }
+      // The organization policy restricts, it does not enable: with the config off, status and the call path both
+      // say the browser is off.
+      expect(status.backend).toBe("off")
+      expect(status.organization).toEqual({ control: "playwright_only", origins: [] })
+      expect(host.tools()).toEqual([])
+    } finally {
+      restore()
+    }
+  })
+
   test("without a policy the status keeps the config's backend", async () => {
     const host = await boot({ backend: "extension" })
     const status = (await host.status()) as { backend: string; organization?: unknown }

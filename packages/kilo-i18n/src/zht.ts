@@ -147,6 +147,8 @@ export const dict = {
   "browser.grants.title": "瀏覽器來源權限",
   "browser.grants.none": "尚無來源規則",
   "browser.grants.all": "允許所有來源",
+  "browser.grants.everyOriginAsk": "所有來源 → 詢問",
+  "browser.grants.everyOriginDeny": "所有來源 → 拒絕",
   "browser.grants.editHint": "在 Kilo Code 設定的網路工具索引標籤中，於網站權限下編輯規則。",
   "browser.state.ready": "就緒",
   "browser.state.unavailable": "無法使用",

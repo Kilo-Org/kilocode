@@ -188,6 +188,11 @@ describe("the origin field", () => {
     expect(origin("https://example.com:443")).toEqual({ value: "https://example.com" })
     expect(origin("http://example.com:80")).toEqual({ value: "http://example.com" })
     expect(origin("http://localhost:80")).toEqual({ value: "http://localhost" })
+    // A wildcard host has no URL to parse, but the CLI matches origins as a URL spells them: its default port is
+    // dropped too, or the rule would never match.
+    expect(origin("https://*.example.com:443")).toEqual({ value: "https://*.example.com" })
+    expect(origin("http://*.example.com:80")).toEqual({ value: "http://*.example.com" })
+    expect(origin("https://*.localhost:80")).toEqual({ value: "https://*.localhost:80" })
     // A port that is not the scheme's default still names a different origin, and stays.
     expect(origin("https://example.com:80")).toEqual({ value: "https://example.com:80" })
     expect(origin("http://example.com:443")).toEqual({ value: "http://example.com:443" })

@@ -157,6 +157,8 @@ export const dict = {
   "browser.grants.title": "Tilladelser for browseroprindelser",
   "browser.grants.none": "Ingen oprindelsesregler endnu",
   "browser.grants.all": "alle oprindelser tilladt",
+  "browser.grants.everyOriginAsk": "alle oprindelser → spørg",
+  "browser.grants.everyOriginDeny": "alle oprindelser → afvis",
   "browser.grants.editHint":
     "Rediger reglerne i Kilo Code-indstillingerne på fanen Webværktøjer under Tilladelser pr. websted.",
   "browser.state.ready": "klar",

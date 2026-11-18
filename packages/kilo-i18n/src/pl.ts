@@ -159,6 +159,8 @@ export const dict = {
   "browser.grants.title": "Uprawnienia przeglądarki dla źródeł",
   "browser.grants.none": "Brak reguł dla źródeł",
   "browser.grants.all": "wszystkie źródła dozwolone",
+  "browser.grants.everyOriginAsk": "wszystkie źródła → pytaj",
+  "browser.grants.everyOriginDeny": "wszystkie źródła → odmów",
   "browser.grants.editHint":
     "Edytuj reguły w ustawieniach Kilo Code, na karcie Narzędzia internetowe, w sekcji Uprawnienia witryn.",
   "browser.state.ready": "gotowa",

@@ -153,6 +153,8 @@ export const dict = {
   "browser.grants.title": "أذونات مصادر المتصفح",
   "browser.grants.none": "لا توجد قواعد للمصادر بعد",
   "browser.grants.all": "كل المصادر مسموح بها",
+  "browser.grants.everyOriginAsk": "كل مصدر → سؤال",
+  "browser.grants.everyOriginDeny": "كل مصدر → رفض",
   "browser.grants.editHint": "حرّر القواعد في أوامر متصفح VS Code أو إعدادات Kilo.",
   "browser.state.ready": "جاهز",
   "browser.state.unavailable": "غير متاح",

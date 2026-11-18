@@ -158,6 +158,8 @@ export const dict = {
   "browser.grants.title": "Tillatelser for nettleseropphav",
   "browser.grants.none": "Ingen opphavsregler ennå",
   "browser.grants.all": "alle opphav tillatt",
+  "browser.grants.everyOriginAsk": "alle opphav → spør",
+  "browser.grants.everyOriginDeny": "alle opphav → avslå",
   "browser.grants.editHint":
     "Rediger reglene i Kilo Code-innstillingene på fanen Nettverktøy under Nettstedstillatelser.",
   "browser.state.ready": "klar",

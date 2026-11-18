@@ -159,6 +159,8 @@ export const dict = {
   "browser.grants.title": "Tarayıcı kaynak izinleri",
   "browser.grants.none": "Henüz kaynak kuralı yok",
   "browser.grants.all": "tüm kaynaklara izin verildi",
+  "browser.grants.everyOriginAsk": "tüm kaynaklar → sor",
+  "browser.grants.everyOriginDeny": "tüm kaynaklar → reddet",
   "browser.grants.editHint":
     "Kuralları Kilo Code ayarlarında, Web Araçları sekmesinde, Site izinleri altında düzenleyin.",
   "browser.state.ready": "hazır",

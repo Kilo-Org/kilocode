@@ -160,6 +160,8 @@ export const dict = {
   "browser.grants.title": "Разрешения браузера для источников",
   "browser.grants.none": "Правил для источников пока нет",
   "browser.grants.all": "все источники разрешены",
+  "browser.grants.everyOriginAsk": "все источники → спросить",
+  "browser.grants.everyOriginDeny": "все источники → запретить",
   "browser.grants.editHint":
     "Измените правила в настройках Kilo Code, на вкладке «Веб-инструменты», в разделе «Разрешения сайтов».",
   "browser.state.ready": "готов",

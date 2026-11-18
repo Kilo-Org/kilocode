@@ -46,7 +46,8 @@ describe("/browser state", () => {
     const state = readState({ permissions: [{ action: "browser", resource: "*", effect: "ask" }] })
     expect(state.allowAll).toBe(false)
     expect(state.grants).toEqual([{ action: "browser", resource: "*", effect: "ask" }])
-    expect(grantLine({ action: "browser", resource: "*", effect: "deny" })).toBe("every origin allowed → deny")
+    expect(grantLine({ action: "browser", resource: "*", effect: "deny" })).toBe("every origin → deny")
+    expect(grantLine({ action: "browser", resource: "*", effect: "ask" })).toBe("every origin → ask")
   })
 
   test("the last catch-all decides allow-all, as the CLI's evaluator does", () => {

@@ -161,6 +161,8 @@ export const dict = {
   "browser.grants.title": "Machtigingen voor browseroorsprongen",
   "browser.grants.none": "Nog geen oorsprongsregels",
   "browser.grants.all": "alle oorsprongen toegestaan",
+  "browser.grants.everyOriginAsk": "alle oorsprongen → vragen",
+  "browser.grants.everyOriginDeny": "alle oorsprongen → weigeren",
   "browser.grants.editHint":
     "Bewerk de regels in de Kilo Code-instellingen, op het tabblad Webtools, onder Sitetoestemmingen.",
   "browser.state.ready": "gereed",
