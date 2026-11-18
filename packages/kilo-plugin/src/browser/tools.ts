@@ -199,9 +199,32 @@ export function withheldRefusal(origin: string): string {
  * unless every item the plan asks for is already granted for this session. It then runs with the same authorized
  * list, so the frame filter sees the same grants a user call does.
  */
-function consoleErrors(active: BrowserBackend, session: string, context: Tool.Context) {
+function consoleErrors(
+  active: BrowserBackend,
+  session: string,
+  context: Tool.Context,
+  permission: Option.Option<Permission.Interface>,
+) {
   return Effect.gen(function* () {
     if (!active.plan) return []
+    // The per-tool rule is the same one a user call obeys: a deny or an ask skips the console section silently.
+    if (Option.isSome(permission)) {
+      // `Effect.try` covers a permission service that does not implement the query at all.
+      const queried = Effect.try({
+        try: () =>
+          permission.value.allows({
+            action: "browser_console_messages",
+            resources: [],
+            ...Permission.invocation(context),
+          } as never),
+        catch: () => Effect.succeed(false),
+      })
+      const permitted = yield* queried.pipe(
+        Effect.flatten,
+        Effect.catch(() => Effect.succeed(false)),
+      )
+      if (!permitted) return []
+    }
     const grants = grantsFor(session)
     const planned = yield* Effect.tryPromise({
       try: () =>
@@ -366,7 +389,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     const text = textOf(result)
     const next = snapshot(split(text))
     const mode = modeFor(entry.name, browser.observation)
-    const errors = mode === "diff" ? yield* consoleErrors(active, session, context) : []
+    const errors = mode === "diff" ? yield* consoleErrors(active, session, context, deps.permission) : []
     const previous = mode === "diff" ? tracker.previous(session, entry.name, next?.url) : undefined
     const viewed = observe({ mode, text, previous, consoleErrors: errors })
     if (viewed.snapshot) tracker.record(session, viewed.snapshot)

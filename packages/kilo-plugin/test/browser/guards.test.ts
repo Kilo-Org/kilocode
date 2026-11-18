@@ -25,6 +25,7 @@ type World = {
   calls: Call[]
   text: Text
   onCall?: (name: string, args: Record<string, unknown>) => void
+  onDownload?: (download: unknown) => void
   closed: number
 }
 
@@ -87,7 +88,9 @@ mock.module("playwright-core", () => ({
       async newContext() {
         return {
           pages: () => state.pages,
-          on() {},
+          on(event: string, handler: (download: unknown) => void) {
+            if (event === "download") state.onDownload = handler
+          },
           off() {},
           async close() {
             state.closed += 1
@@ -357,7 +360,63 @@ describe("a result file the MCP would write", () => {
   })
 })
 
-describe("a granted post-action ask", () => {
+describe("a download the action started", () => {
+  test("asks after the action, and never repeats the click", async () => {
+    const cancelled: string[] = []
+    const backend = await browser()
+    state.onCall = (name) => {
+      if (name !== "browser_click") return
+      state.onDownload?.({
+        suggestedFilename: () => "invoice.pdf",
+        cancel: async () => {
+          cancelled.push("invoice.pdf")
+        },
+      })
+    }
+    const result = await backend.callTool("browser_click", {}, context)
+    // The click ran once, its download was stopped, and the result asks through the post-action path.
+    expect(state.calls.filter((call) => call.name === "browser_click").length).toBe(1)
+    expect(cancelled).toEqual(["invoice.pdf"])
+    expect(result.meta?.needs).toEqual([
+      { class: "sensitive", origin: "https://gate.example.com", reason: "download: invoice.pdf" },
+    ])
+    expect((result.content[0] as { text: string }).text).toContain("needs the user's permission")
+  })
+})
+
+describe("a result file this call did not write", () => {
+  test("survives another session's masked screenshot", async () => {
+    const other = path.join(outputDirectory(), "other-session.png")
+    const mine = path.join(outputDirectory(), "mine.png")
+    await fs.mkdir(outputDirectory(), { recursive: true })
+    await fs.writeFile(other, "keep")
+    await fs.writeFile(mine, "drop")
+    const parent = state.pages[0]
+    parent.children = [new Page("b", "https://pay.example.net/")]
+    // The MCP reports the file it wrote; only that file may be removed, never the shared directory's neighbours.
+    state.text = () => `### Result\n// Screenshot viewport and save it as ${mine}`
+    const backend = await browser()
+    await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
+    expect((await fs.stat(other).catch(() => null))?.isFile()).toBe(true)
+    expect(await fs.stat(mine).catch(() => null)).toBeNull()
+  })
+})
+
+describe("the diff console read", () => {
+  test("skips the section when the tool rule is deny or ask", async () => {
+    const host = await boot({
+      permission: {
+        assert: () => Effect.void,
+        allows: () => Effect.succeed(false),
+      },
+    })
+    // A first read grants the page, so nothing but the tool rule can stop the console section.
+    await host.call("browser_snapshot", {})
+    const result = await host.call("browser_click", {})
+    expect(state.calls.map((call) => call.name)).toEqual(["browser_snapshot", "browser_click"])
+    expect(textOf(result)).not.toContain("Console errors")
+  })
+
   test("returns the re-read page, and the action still ran once", async () => {
     const host = await boot({ permission: { assert: () => Effect.void } })
     const page = state.pages[0]
@@ -366,8 +425,8 @@ describe("a granted post-action ask", () => {
     }
     const result = await host.call("browser_click", {})
     const text = textOf(result)
-    // The placeholder is replaced by a fresh read of the page, so the model sees real content.
-    expect(text).toContain('button "Go"')
+    // The placeholder is replaced by a fresh read of the page (diff mode reports the page, not the button).
+    expect(text).toContain("### Page")
     expect(text).not.toContain("The page moved to")
     // Reading has no side effect: the click ran once and the re-read is a snapshot.
     expect(state.calls.filter((call) => call.name === "browser_click").length).toBe(1)

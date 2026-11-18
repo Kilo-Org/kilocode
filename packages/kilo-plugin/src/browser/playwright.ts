@@ -187,10 +187,12 @@ async function readSnapshot(file: string): Promise<string | undefined> {
  * points there. Either way the file must resolve inside the output directory the backend owns.
  */
 export async function snapshotFile(file: string, root: string, cwd = process.cwd()): Promise<string | undefined> {
+  // The boundary is canonicalized too: a temp directory may be spelled with a short name or another drive case.
+  const boundary = await fs.realpath(root).catch(() => root)
   for (const base of [cwd, root]) {
     const resolved = await fs.realpath(path.resolve(base, file)).catch(() => undefined)
     if (!resolved) continue
-    if (!contained(resolved, root)) continue
+    if (!contained(resolved, boundary)) continue
     return resolved
   }
   return undefined
@@ -455,8 +457,7 @@ export function snapshotBody(text: string): string {
 /** Write a result file from the filtered text, so a withheld frame never reaches the copy on disk. */
 async function saveOutput(file: { tool: string; path: string }, text: string) {
   const body = file.tool === "browser_snapshot" ? snapshotBody(text) : text
-  await fs.mkdir(path.dirname(file.path), { recursive: true })
-  await fs.writeFile(file.path, body)
+  await writeConfined(file.path, body)
 }
 
 /**
@@ -468,7 +469,8 @@ export function insideOutput(filename: string, directory = outputDirectory()): s
   const base = canonical(path.resolve(directory))
   const resolved = path.resolve(base, filename)
   // The parent may exist under a different spelling (8.3 short name, drive-letter case), so canonicalize it too.
-  const target = path.join(canonical(path.dirname(resolved)), path.basename(resolved))
+  // `canonical` resolves the final component too, so a symlink at the target name is checked by its destination.
+  const target = canonical(path.join(canonical(path.dirname(resolved)), path.basename(resolved)))
   if (!contained(target, base)) throw new Error("The file name must stay inside the browser output directory.")
   return target
 }
@@ -491,7 +493,34 @@ export function contained(target: string, root: string, flavour: typeof path = p
   const fold = (value: string) => (flavour === path.win32 ? value.toLowerCase() : value)
   const relative = flavour.relative(fold(root), fold(target))
   if (relative === "") return true
-  return !relative.startsWith("..") && !flavour.isAbsolute(relative)
+  if (flavour.isAbsolute(relative)) return false
+  // The first path segment decides: `..` is an escape, `..foo` is an ordinary name.
+  const [first] = relative.split(flavour.sep)
+  return first !== ".."
+}
+
+/**
+ * The files the MCP itself wrote for a screenshot. It prints the path relative to its own working directory, so it is
+ * resolved the same way a snapshot link is, and only a path inside the output directory is returned.
+ */
+export function screenshotWrites(text: string, directory = outputDirectory()): string[] {
+  const boundary = canonical(path.resolve(directory))
+  const found: string[] = []
+  for (const line of text.split("\n")) {
+    const printed = /save it as (.+)$/.exec(line.trim())?.[1]?.trim()
+    if (!printed) continue
+    const resolved = canonical(path.resolve(process.cwd(), printed))
+    if (contained(resolved, boundary)) found.push(resolved)
+  }
+  return [...new Set(found)]
+}
+
+/** Write a file this backend owns, refusing a symbolic link at the target name and creating its parent. */
+async function writeConfined(file: string, body: string | Uint8Array) {
+  const existing = await fs.lstat(file).catch(() => undefined)
+  if (existing?.isSymbolicLink()) throw new Error("The file name must not be a symbolic link.")
+  await fs.mkdir(path.dirname(file), { recursive: true })
+  await fs.writeFile(file, body)
 }
 
 /**
@@ -774,16 +803,9 @@ class PlaywrightBackend implements BrowserBackend {
     return images.some((image) => image.type === "image")
   }
 
-  private async outputFiles() {
-    return new Set(await fs.readdir(outputDirectory()).catch(() => []))
-  }
-
-  private async removeNewFiles(before: ReadonlySet<string>) {
-    const after = await this.outputFiles()
-    for (const name of after) {
-      if (before.has(name)) continue
-      await fs.unlink(path.join(outputDirectory(), name)).catch(() => {})
-    }
+  /** Delete the files this call wrote, and nothing else: the output directory is shared by every session. */
+  private async removeWritten(files: readonly string[]) {
+    for (const file of files) await fs.unlink(file).catch(() => {})
   }
 
   async plan(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<Item[]> {
@@ -845,6 +867,8 @@ class PlaywrightBackend implements BrowserBackend {
     // to a file the backend cannot inspect, and a frame that starts loading during the call cannot leave one behind.
     const withheldBefore = page ? withheldFrames(page, authorized) : []
     const shot = name === "browser_take_screenshot"
+    // Every file this call writes is tracked by path: another session's file in the shared directory must survive.
+    const written: string[] = []
     let callArgs = args
     if (shot) {
       if (args.target !== undefined && withheldBefore.length) {
@@ -864,12 +888,9 @@ class PlaywrightBackend implements BrowserBackend {
     // the file from the filtered text instead, so the name is removed from the arguments the MCP sees.
     const file = shot ? undefined : outputFile(name, args)
     if (file) callArgs = file.args
-    if (save) await fs.mkdir(path.dirname(save), { recursive: true })
+    if (save) written.push(save)
     // What the call meant to act on, so a landing elsewhere is visible after it ran.
     const planned = plannedOrigin(name, args, page && BrowserPermission.origin(page.url()))
-    // The withheld set is read again after the call, so the baseline cannot depend on a frame being withheld now.
-    const before = outputBaseline(name) ? await this.outputFiles() : undefined
-
     const downloads: string[] = []
     const onDownload = (download: Download) => {
       const site = page && BrowserPermission.site(page.url())
@@ -900,17 +921,6 @@ class PlaywrightBackend implements BrowserBackend {
       .join("\n")
     this.track(session, name, args, pagesBefore)
     page = this.current(session)
-
-    if (downloads.length) {
-      const site = page && BrowserPermission.site(page.url())
-      if (site) {
-        throw new NeedsPermissionError(
-          [{ class: "sensitive", origin: site, reason: `download: ${downloads.join(", ")}` }],
-          approveStep(name, args, site),
-        )
-      }
-      throw new Error("A download was refused: the page has no URL to bind the approval to.")
-    }
 
     // A navigation tool may not land on a scheme without an http(s) origin; the same refusal as its target.
     if (page && (name === "browser_navigate" || name === "browser_navigate_back" || name === "browser_tabs")) {
@@ -950,7 +960,7 @@ class PlaywrightBackend implements BrowserBackend {
 
     if (scoped.refused) {
       // A file the refused call wrote must not outlive the call either.
-      if (before) await this.removeNewFiles(before)
+      await this.removeWritten(written)
       return {
         content: [{ type: "text", text: viewed }],
         isError: true,
@@ -961,15 +971,36 @@ class PlaywrightBackend implements BrowserBackend {
       }
     }
 
+    if (downloads.length && page) {
+      // The click already ran. A download cannot be resumed after it was stopped, so the action is never repeated:
+      // the result says the download needs approval and the user retries the step after approving.
+      const site = BrowserPermission.site(page.url())
+      if (!site) throw new Error("A download was refused: the page has no URL to bind the approval to.")
+      return {
+        content: [
+          {
+            type: "text",
+            text: `${viewed}\n\nA download started (${downloads.join(", ")}) and was stopped: it needs the user's permission. The action already ran once and is never repeated; after approving, ask for the step again to receive the file.`,
+          },
+        ],
+        isError: false,
+        meta: {
+          ...(origin ? { origin } : {}),
+          needs: [{ class: "sensitive", origin: site, reason: `download: ${downloads.join(", ")}` }],
+        },
+      }
+    }
+
     if (file && !scoped.refused) {
       await saveOutput(file, viewed)
+      written.push(file.path)
       viewed = `${viewed}\n\n${file.link}`
     }
 
     if (withheld.length && shot) {
       // Whatever the MCP saved was written before masking: it must not outlive the call, and its path is not an
-      // acceptable answer either, because the model would open the unmasked pixels.
-      if (before) await this.removeNewFiles(before)
+      // acceptable answer either, because the model would open the unmasked pixels. Only this call's own file goes.
+      await this.removeWritten([...written, ...screenshotWrites(text)])
       const masked =
         images.length > 0 && page && args.target === undefined
           ? await this.maskFrames(page, images, withheld, args.fullPage === true).catch(() => false)
@@ -985,7 +1016,7 @@ class PlaywrightBackend implements BrowserBackend {
         }
       }
       // The model still gets the file it asked for, written from the masked image.
-      if (save && images[0]) await fs.writeFile(save, Buffer.from(images[0].data, "base64"))
+      if (save && images[0]) await writeConfined(save, Buffer.from(images[0].data, "base64"))
       // The file link points at the deleted file; the masked image is the answer.
       return {
         content: [{ type: "text", text: withoutScreenshotLink(viewed) }, ...images],
@@ -1002,7 +1033,7 @@ class PlaywrightBackend implements BrowserBackend {
       ...(origin ? { origin } : {}),
       ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
     }
-    if (save && images[0]) await fs.writeFile(save, Buffer.from(images[0].data, "base64"))
+    if (save && images[0]) await writeConfined(save, Buffer.from(images[0].data, "base64"))
     return {
       content: [{ type: "text", text: viewed }, ...images],
       isError: result.isError === true,

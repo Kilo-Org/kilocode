@@ -189,6 +189,29 @@ describe("output directory", () => {
     expect(contained("/tmp/out/page.png", "/tmp/out", path.posix)).toBe(true)
     expect(contained("/tmp/out-other/page.png", "/tmp/out", path.posix)).toBe(false)
     expect(contained("/tmp/out", "/tmp/out", path.posix)).toBe(true)
+    // Only a `..` segment escapes: `..foo` is an ordinary name.
+    expect(contained("/tmp/out/..foo", "/tmp/out", path.posix)).toBe(true)
+    expect(contained("/tmp/out/../x", "/tmp/out", path.posix)).toBe(false)
+    expect(contained("/tmp/out/a/../../x", "/tmp/out", path.posix)).toBe(false)
+    expect(contained("C:\\out\\..foo", "C:\\out", path.win32)).toBe(true)
+    expect(contained("C:\\out\\..\\x", "C:\\out", path.win32)).toBe(false)
+    expect(contained("C:\\out\\a\\..\\..\\x", "C:\\out", path.win32)).toBe(false)
+  })
+
+  test("a symlink target is resolved before containment, and a symlink is never written", async () => {
+    const base = await fs.mkdtemp(path.join(os.tmpdir(), "output-link-"))
+    const root = path.join(base, "output")
+    const outside = path.join(base, "outside")
+    await fs.mkdir(root, { recursive: true })
+    await fs.mkdir(outside, { recursive: true })
+    await fs.writeFile(path.join(outside, "secret.yml"), "secret")
+    await fs.symlink(path.join(outside, "secret.yml"), path.join(root, "escape.yml"))
+    // The name is inside the directory, but the target is not.
+    expect(() => insideOutput("escape.yml", root)).toThrow("output directory")
+    // A link that stays inside resolves to its target.
+    await fs.writeFile(path.join(root, "real.yml"), "- real")
+    await fs.symlink(path.join(root, "real.yml"), path.join(root, "alias.yml"))
+    expect(insideOutput("alias.yml", root)).toBe(await fs.realpath(path.join(root, "real.yml")))
   })
 
   test("a snapshot file body is the YAML block the MCP writes", () => {
