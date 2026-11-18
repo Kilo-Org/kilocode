@@ -32,6 +32,8 @@ const state: World = { pages: [], calls: [], text: () => "", closed: 0 }
 
 /** A page object with the surface the backend reads: its URL, its frame tree, and a ref lookup that finds nothing. */
 class Page {
+  children: Page[] = []
+
   constructor(
     readonly id: string,
     public value: string,
@@ -46,7 +48,7 @@ class Page {
   }
 
   childFrames(): Page[] {
-    return []
+    return this.children
   }
 
   parentFrame(): null {
@@ -240,9 +242,10 @@ describe("the backend's call path", () => {
     )
     expect(state.calls).toEqual([])
     expect(error instanceof Error ? error.message : String(error)).toContain("output directory")
-    const inside = path.join(outputDirectory(), "page.png")
-    await backend.callTool("browser_snapshot", { filename: inside }, context)
-    expect(state.calls[0]?.args.filename).toBe(inside)
+    // Inside the directory the backend writes the file itself, from the filtered text; the MCP never sees the name.
+    await backend.callTool("browser_snapshot", { filename: "page.yml" }, context)
+    expect(state.calls[0]?.args.filename).toBeUndefined()
+    expect((await fs.stat(path.join(outputDirectory(), "page.yml")).catch(() => null))?.isFile()).toBe(true)
   })
 
   test("the current page is tracked per session, not taken from tool text", async () => {
@@ -300,6 +303,57 @@ describe("a grant a withheld result asked for", () => {
     expect(String(outcome.failure?.message ?? "")).toContain("cannot ask the user for permission")
     // Nothing ran.
     expect(state.calls).toEqual([])
+  })
+})
+
+describe("a result file the MCP would write", () => {
+  const snapshotText = [
+    "### Page",
+    "- Page URL: https://gate.example.com/",
+    "- Page Title: Gate",
+    "### Snapshot",
+    "```yaml",
+    "- generic [ref=e1]:",
+    "  - iframe [ref=e2]:",
+    '    - heading "IFRAME-MARKER" [level=1]',
+    '  - heading "Gate" [level=1]',
+    "```",
+  ].join("\n")
+
+  test("a saved snapshot holds the filtered snapshot, not the withheld frame", async () => {
+    const parent = state.pages[0]
+    parent.children = [new Page("b", "https://pay.example.net/")]
+    state.text = () => snapshotText
+    const backend = await browser()
+    await backend.callTool("browser_snapshot", { filename: "nested/dir/snap.yml" }, context)
+    const body = await fs.readFile(path.join(outputDirectory(), "nested", "dir", "snap.yml"), "utf8")
+    expect(body).not.toContain("IFRAME-MARKER")
+    expect(body).toContain('heading "Gate"')
+    expect(state.calls[0]?.args.filename).toBeUndefined()
+  })
+
+  test("a saved console file holds the filtered console, not a withheld origin's line", async () => {
+    const parent = state.pages[0]
+    parent.children = [new Page("b", "https://pay.example.net/")]
+    state.text = () =>
+      [
+        "### Result",
+        "Total messages: 2 (Errors: 1, Warnings: 0)",
+        "",
+        "[LOG] page @ https://gate.example.com/app.js:1",
+        "[ERROR] card declined @ https://pay.example.net/checkout.js:8",
+      ].join("\n")
+    const backend = await browser()
+    // The page origin is granted; only the withheld frame's line may not reach the file.
+    await backend.callTool(
+      "browser_console_messages",
+      { level: "error", filename: "console/run.log" },
+      { ...context, authorized: ["read:https://gate.example.com"] },
+    )
+    const body = await fs.readFile(path.join(outputDirectory(), "console", "run.log"), "utf8")
+    expect(body).not.toContain("pay.example.net")
+    expect(body).toContain("https://gate.example.com/app.js:1")
+    expect(state.calls[0]?.args.filename).toBeUndefined()
   })
 })
 

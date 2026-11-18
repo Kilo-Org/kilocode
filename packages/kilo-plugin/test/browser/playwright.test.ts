@@ -6,7 +6,8 @@ import type { Frame, Page } from "playwright-core"
 import { browsersDirectory, useKiloBrowsers } from "../../src/browser/install"
 import {
   Backends,
-  forwardFilename,
+  outputFile,
+  snapshotBody,
   frameOrigin,
   insideOutput,
   screenshotPath,
@@ -123,20 +124,26 @@ describe("output directory", () => {
     expect(() => insideOutput("../page.png", directory)).toThrow("output directory")
   })
 
-  test("a forwarded file name is rewritten to its absolute path inside the output directory", () => {
+  test("a result file is written by the backend from the filtered text, and the name never reaches the MCP", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
-    // The MCP resolves a relative name against the workspace root, so only the rewritten absolute name is safe.
-    expect(forwardFilename("browser_snapshot", { filename: "page.yml" }, directory)).toEqual({
-      filename: path.join(directory, "page.yml"),
-    })
-    expect(forwardFilename("browser_snapshot", {}, directory)).toEqual({})
-    // A screenshot is written by the backend itself, so its name is not forwarded.
-    expect(forwardFilename("browser_take_screenshot", { filename: "shot.png" }, directory)).toEqual({
-      filename: "shot.png",
-    })
-    expect(() => forwardFilename("browser_console_messages", { filename: "../out.log" }, directory)).toThrow(
+    const file = outputFile("browser_snapshot", { filename: "nested/page.yml", other: 1 }, directory)
+    expect(file?.path).toBe(path.join(directory, "nested", "page.yml"))
+    // The MCP's arguments no longer carry the name, so it cannot write an unfiltered copy.
+    expect(file?.args).toEqual({ other: 1 })
+    // Only the tools whose result can be a file take a name; a screenshot keeps its own path.
+    expect(outputFile("browser_click", { filename: "x.yml" }, directory)).toBeUndefined()
+    expect(outputFile("browser_take_screenshot", { filename: "shot.png" }, directory)).toBeUndefined()
+    expect(outputFile("browser_snapshot", {}, directory)).toBeUndefined()
+    expect(() => outputFile("browser_console_messages", { filename: "../out.log" }, directory)).toThrow(
       "output directory",
     )
+  })
+
+  test("a snapshot file body is the YAML block the MCP writes", () => {
+    const text = ["### Page", "- Page URL: https://a.example/", "### Snapshot", "```yaml", "- heading", "```"].join(
+      "\n",
+    )
+    expect(snapshotBody(text)).toBe("- heading\n")
   })
 
   test("a nested screenshot name resolves inside the output directory", () => {

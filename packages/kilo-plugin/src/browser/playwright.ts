@@ -413,20 +413,44 @@ export function screenshotPath(
   return filename === "" ? undefined : insideOutput(filename, directory)
 }
 
+/** The tools whose result the MCP can write to a file, with the link title it uses. */
+const FILE_TITLES: Record<string, string> = {
+  browser_snapshot: "Snapshot",
+  browser_console_messages: "Console",
+  browser_network_requests: "Network",
+  browser_network_request: "Request",
+}
+
 /**
- * The arguments a call forwards. The MCP resolves a file-writing `filename` against the workspace root, so a relative
- * name is rewritten to its absolute path inside the output directory the backend owns. A screenshot is written by
- * the backend itself, so its name is left for `screenshotPath`.
+ * The file a call asks for, and the arguments to run it with. The MCP's copy of that file is written before any
+ * filtering and would keep a withheld frame's content, so the backend writes the file itself from the filtered text:
+ * the name is removed from the arguments the MCP sees.
  */
-export function forwardFilename(
+export function outputFile(
   name: string,
   args: Record<string, unknown>,
   directory = outputDirectory(),
-): Record<string, unknown> {
-  if (name === "browser_take_screenshot") return args
+): { tool: string; path: string; link: string; args: Record<string, unknown> } | undefined {
+  const title = FILE_TITLES[name]
+  if (!title) return undefined
   const filename = typeof args.filename === "string" ? args.filename.trim() : ""
-  if (filename === "") return args
-  return { ...args, filename: insideOutput(filename, directory) }
+  if (filename === "") return undefined
+  const target = insideOutput(filename, directory)
+  const { filename: _omitted, ...rest } = args
+  return { tool: name, path: target, link: `- [${title}](${target})`, args: rest }
+}
+
+/** The body the MCP writes for a snapshot: the YAML block, without the section heading or the fences. */
+export function snapshotBody(text: string): string {
+  const block = /```yaml\n([\s\S]*?)\n```/.exec(text)
+  return block ? `${block[1]}\n` : text
+}
+
+/** Write a result file from the filtered text, so a withheld frame never reaches the copy on disk. */
+async function saveOutput(file: { tool: string; path: string }, text: string) {
+  const body = file.tool === "browser_snapshot" ? snapshotBody(text) : text
+  await fs.mkdir(path.dirname(file.path), { recursive: true })
+  await fs.writeFile(file.path, body)
 }
 
 /**
@@ -808,11 +832,11 @@ class PlaywrightBackend implements BrowserBackend {
     // backend owns: only a path that stays inside the output directory is accepted. A screenshot is written from the
     // image the backend holds, so masking is applied to the file as well.
     const save = screenshotPath(name, args)
-    // A rewritten name is absolute, so the MCP writes inside the directory this backend baselines and deletes.
-    if (!shot) callArgs = forwardFilename(name, callArgs)
+    // The MCP never writes a result file: it would hold the withheld frames' content unfiltered. The backend writes
+    // the file from the filtered text instead, so the name is removed from the arguments the MCP sees.
+    const file = shot ? undefined : outputFile(name, args)
+    if (file) callArgs = file.args
     if (save) await fs.mkdir(path.dirname(save), { recursive: true })
-    const forwarded = typeof callArgs.filename === "string" ? callArgs.filename : undefined
-    if (forwarded) await fs.mkdir(path.dirname(forwarded), { recursive: true })
     // What the call meant to act on, so a landing elsewhere is visible after it ran.
     const planned = plannedOrigin(name, args, page && BrowserPermission.origin(page.url()))
     // The withheld set is read again after the call, so the baseline cannot depend on a frame being withheld now.
@@ -889,7 +913,7 @@ class PlaywrightBackend implements BrowserBackend {
 
     const withheld = page ? withheldFrames(page, authorized) : []
     const scoped = page ? await this.filter(page, name, text, authorized) : { text, refused: false }
-    const viewed = scoped.text
+    let viewed = scoped.text
     const images = content.filter((block): block is Extract<ContentBlock, { type: "image" }> => block.type === "image")
     const origin = page && BrowserPermission.origin(page.url())
     const withheldOrigins = withheld
@@ -907,6 +931,11 @@ class PlaywrightBackend implements BrowserBackend {
           ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
         },
       }
+    }
+
+    if (file && !scoped.refused) {
+      await saveOutput(file, viewed)
+      viewed = `${viewed}\n\n${file.link}`
     }
 
     if (withheld.length && shot) {
