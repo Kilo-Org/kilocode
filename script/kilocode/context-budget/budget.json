@@ -1,7 +1,7 @@
 {
-  "maxInputTokens": 10160,
+  "maxInputTokens": 9700,
   "directTools": [
-    "board_post", "board_read", "cancel_wakeup", "cron_create", "cron_delete", "cron_list",
+    "board_post", "board_read", "cancel_wakeup",
     "edit", "execute", "glob", "goal", "grep", "question", "read", "schedule_wakeup", "shell",
     "skill", "subagent", "todowrite", "webfetch", "websearch", "write"
   ]
