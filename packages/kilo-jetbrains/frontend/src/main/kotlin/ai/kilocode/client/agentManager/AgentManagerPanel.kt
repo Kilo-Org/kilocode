@@ -228,7 +228,6 @@ class AgentManagerPanel(
             SECTION, group, element = { row -> (row as? AgentManagerLayout.Section)?.key },
             alternate = ActiveMenu(
                 AgentManagerKeys.ELEMENT, group, element = { row -> (row as? AgentManagerRow)?.element },
-                // Mask legacy keys so a background row cannot inherit another row's selected DTO.
             ),
         ),
         reorder = ActiveReorder(
