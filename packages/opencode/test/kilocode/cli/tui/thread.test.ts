@@ -245,6 +245,51 @@ describe("kilo tui thread", () => {
     }
   })
 
+  test("forwards auto-approve flags to daemon-attached sessions", async () => {
+    await using root = await tmpdir()
+    using server = Bun.serve({
+      port: 0,
+      fetch: () => new Response(null, { status: 404 }),
+    })
+    const url = new URL(server.url)
+    const daemon = spyOn(DaemonClient, "maybe").mockResolvedValue({
+      url: url.origin,
+      headers: {},
+      state: {
+        pid: process.pid,
+        hostname: url.hostname,
+        port: Number(url.port),
+        url: url.origin,
+        username: "kilo",
+        password: "test",
+        token: "test",
+        version: "test",
+        startedAt: new Date().toISOString(),
+        log: path.join(root.path, "daemon.log"),
+      },
+    })
+    const base = { port: 0, hostname: "127.0.0.1", mdns: false, "mdns-domain": "kilo.local", cors: [] }
+    const started: Array<boolean | undefined> = []
+    const start: Parameters<typeof KiloTuiThreadDaemon.attach>[0]["start"] = async (input) => {
+      started.push(input.args.auto)
+    }
+    const attach = (args: Parameters<typeof KiloTuiThreadDaemon.attach>[0]["args"]) =>
+      KiloTuiThreadDaemon.attach({ args, cwd: root.path, input: async () => undefined, start })
+
+    try {
+      await attach({ ...base, auto: true })
+      await attach({ ...base, yolo: true })
+      await attach({ ...base, "dangerously-skip-permissions": true })
+      await attach(base)
+    } finally {
+      daemon.mockRestore()
+    }
+
+    expect(started).toHaveLength(4)
+    expect(started.slice(0, 3)).toEqual([true, true, true])
+    expect(started[3]).toBeFalsy()
+  })
+
   test("imports cloud fork before validating daemon session", async () => {
     const seen: string[] = []
     const started: string[] = []
