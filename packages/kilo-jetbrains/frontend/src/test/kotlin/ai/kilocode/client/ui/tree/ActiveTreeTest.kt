@@ -457,7 +457,7 @@ class ActiveTreeTest : BasePlatformTestCase() {
             }
             view.drop()
             assertEquals(ActiveMove("a", 0, if (empty) 0 else 1, keys(entry), "section", null), moves.single())
-            assertTrue("A successful drop leaves the receiving section expanded", view.isExpanded(path))
+            assertFalse("A successful drop restores the receiving section's collapsed state", view.isExpanded(path))
         }
     }
 

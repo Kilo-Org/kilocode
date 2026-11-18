@@ -289,7 +289,7 @@ class ActiveTreeColorTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test always selected rows keep the selection background and ignore hover`() {
+    fun `test fixed section background ignores hover and selection adds only a bottom line`() {
         val keys = listOf("Tree.selectionBackground", "Tree.selectionInactiveBackground")
         val previous = keys.associateWith(UIManager::get)
         try {
@@ -318,6 +318,17 @@ class ActiveTreeColorTest : BasePlatformTestCase() {
             assertEquals(inactive, hovered.selectionColor)
             assertEquals(inactive, hovered.backdrop)
             assertEquals(inactive, hovered.pillBackground)
+            unchanged(before, paint(view))
+
+            tree.select(header.key)
+            val frame = requireNotNull(view.regions.frame(header))
+            val y = frame.y + frame.height - UiStyle.Gap.xs() - 1
+            val line = Rectangle(frame.x, y, frame.width, 1)
+            val selected = paint(view)
+            solid(before, line, inactive)
+            solid(selected, line, UIUtil.getTreeBackground(true, true))
+            unchanged(before, selected, listOf(line))
+            tree.clearSelection()
             unchanged(before, paint(view))
 
             move(view, plain)

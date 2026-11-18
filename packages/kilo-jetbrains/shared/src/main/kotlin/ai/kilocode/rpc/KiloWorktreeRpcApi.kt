@@ -74,8 +74,14 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
      * so it may have opened a pull request — this is what `maxAge = 0` would otherwise cost: the
      * named paths re-run their lookup while all the others still answer from cache, instead of the
      * whole repository paying a fresh `gh` fan-out to refresh one row.
+     * [excluded] names hidden worktrees that must not be checked or returned.
      */
-    suspend fun prStatus(directory: String, maxAge: Long? = null, fresh: List<String> = emptyList()): WorktreePrListDto
+    suspend fun prStatus(
+        directory: String,
+        maxAge: Long? = null,
+        fresh: List<String> = emptyList(),
+        excluded: List<String> = emptyList(),
+    ): WorktreePrListDto
 
     /**
      * Single-directory branch status for the chat branch/PR dock: current branch, worktree flag,

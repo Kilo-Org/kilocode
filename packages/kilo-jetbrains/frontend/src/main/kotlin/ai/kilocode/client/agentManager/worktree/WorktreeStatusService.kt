@@ -66,6 +66,7 @@ class WorktreeStatusService internal constructor(
     private var want: Want? = null
     /** Worktree activity as of the previous snapshot, so an agent that stopped can be spotted. */
     private var kinds = emptyMap<String, SessionActivityKind>()
+    private val exclusions = mutableListOf<() -> Set<String>>()
     private var refs = 0
     private var lastPr = 0L
     private var github = KiloPluginSettings.getGithub()
@@ -107,10 +108,13 @@ class WorktreeStatusService internal constructor(
         val paths: Set<String>,
     )
 
-    fun attach(): AutoCloseable {
+    @RequiresEdt(generateAssertion = false)
+    fun attach(excluded: (() -> Set<String>)? = null): AutoCloseable {
+        if (excluded != null) exclusions.add(excluded)
         refs++
         if (refs == 1) start()
         return AutoCloseable {
+            if (excluded != null) exclusions.remove(excluded)
             refs = (refs - 1).coerceAtLeast(0)
             if (refs == 0) stop()
         }
@@ -435,10 +439,13 @@ class WorktreeStatusService internal constructor(
     }
 
     private fun loadPr(maxAge: Long? = null, fresh: List<String> = emptyList()) {
+        // Take the visibility snapshot on the EDT, before starting the background lookup.
+        val excluded = exclusions.map { it() }.reduceOrNull { left, right -> left intersect right }.orEmpty()
+        val paths = fresh.filterNot(excluded::contains)
         val gen = ++generation
         val job = cs.launch {
             val dir = project.kiloRoot() ?: return@launch
-            runCatching { service<KiloWorktreeService>().prStatus(dir, maxAge, fresh) }
+            runCatching { service<KiloWorktreeService>().prStatus(dir, maxAge, paths, excluded.toList()) }
                 .onSuccess { dto ->
                     // KiloWorktreeService.prStatus swallows the cancellation and answers with an
                     // empty DTO, so a lookup cancelled by a disable still lands here — and after a
@@ -448,7 +455,7 @@ class WorktreeStatusService internal constructor(
                     if (gen != generation) return@onSuccess
                     LOG.info(
                         "worktree PR refresh done items=${dto.items.size} value=${dto.availability} " +
-                            "maxAge=${maxAge ?: "default"} fresh=${fresh.size}",
+                            "maxAge=${maxAge ?: "default"} fresh=${paths.size} excluded=${excluded.size}",
                     )
                     // A spent GitHub budget carries no pull request data and says nothing about the
                     // pull requests themselves, so the rows keep what they had and the banner explains
@@ -456,7 +463,8 @@ class WorktreeStatusService internal constructor(
                     // for up to an hour over something the user cannot act on. A gh that timed out is
                     // in exactly the same position: it answered nothing about these pull requests.
                     if (dto.availability != GhAvailability.RATE_LIMITED && dto.availability != GhAvailability.TIMEOUT) {
-                        prFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) }
+                        prFlow.value = prFlow.value.filterKeys(excluded::contains) +
+                            dto.items.associateBy { normalizeWorktreePath(it.path) }
                     }
                     ghFlow.value = dto.availability
                     service<GhStatusCoordinator>().report(project, dto.availability)
