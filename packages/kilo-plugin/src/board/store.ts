@@ -251,7 +251,7 @@ export const post = Effect.fn("BoardStore.post")(function* (
         return { message: enrich(message(existing, line.root), labels), availability: audience }
       }
 
-      const reason = cannotPost(audience, target.id === line.root)
+      const reason = cannotPost(audience)
       if (reason) return yield* fail(reason)
 
       if (input.reply_to && (yield* lookup(runtime, line.root, input.reply_to)) === undefined)
@@ -346,11 +346,10 @@ export const availability = Effect.fn("BoardStore.availability")(function* (
   } satisfies Availability
 })
 
-/** Unknown is not finished: a child may need to leave a finding for its waiting coordinator. */
-export function cannotPost(audience: Availability, allowUnknownCoordinator: boolean) {
+/** Unknown is not finished: a peer without a job record may still be resumed and read the board. */
+export function cannotPost(audience: Availability) {
   if (!audience.total) return "No other participants on this board. Use your response for status updates."
   if (!audience.active && !audience.unknown) return "All addressed participants have finished. Use your response instead of posting."
-  if (!audience.active && !allowUnknownCoordinator) return "No addressed participant is known to be active. Use your response or address a waiting coordinator directly."
 }
 
 export function format(value: Message) {

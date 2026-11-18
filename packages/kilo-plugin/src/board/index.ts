@@ -181,14 +181,16 @@ export const Plugin = define({
         yield* annotate(event)
         if (state.visible && ("board_read" in event.tools || "board_post" in event.tools)) {
           const audience = yield* BoardStore.availability(store, { sessionID: event.sessionID, to: "ALL" }).pipe(Effect.option)
-          const session = yield* store.session(event.sessionID)
-          if (Option.isNone(audience) || BoardStore.cannotPost(audience.value, !!session?.parentID)) {
+          if (Option.isNone(audience)) {
+            // A failed probe keeps the tools: a transient lookup error must not silently disable coordination.
+            yield* Effect.logWarning("shared agent board audience unavailable", { "session.id": event.sessionID })
+          } else if (!audience.value.total) {
             delete event.tools.board_post
-            if (Option.isNone(audience) || !audience.value.total) {
-              delete event.tools.board_read
-              // Code Mode's shared catalog still lists the tools. State the session-specific constraint.
-              event.system.push({ type: "text", text: BoardContext.solo })
-            }
+            delete event.tools.board_read
+            // Code Mode's shared catalog still lists the tools. State the session-specific constraint.
+            event.system.push({ type: "text", text: BoardContext.solo })
+          } else if (BoardStore.cannotPost(audience.value)) {
+            delete event.tools.board_post
           }
         }
         if (!state.visible || !("board_read" in event.tools)) {

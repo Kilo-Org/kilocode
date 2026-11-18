@@ -242,15 +242,18 @@ describe("shared board tools", () => {
     expect(Object.keys((await request()).tools as object)).toContain("board_post")
     const identity = { messageID: "msg_note", id: "call_note" }
     const sent = content(await host.call("board_post", note, root, identity))
+    // An unknown state is not a finished one: a resumed peer may still read the board.
     host.active.clear()
-    await expect(host.call("board_post", note)).rejects.toThrow("known to be active")
+    expect(content(await host.call("board_post", note)).warning).toContain("unknown")
     // A waiting root can still receive a directed finding from its worker.
     expect(content(await host.call("board_post", { ...note, to: "main" }, "ses_child")).warning).toContain("unknown")
     host.jobs.set("ses_child", { id: "ses_child", type: "subagent", status: "completed", started_at: 1 })
-    expect(Object.keys((await request()).tools as object)).toEqual(["board_read"])
+    const finished = await request()
+    expect(Object.keys(finished.tools as object)).toEqual(["board_read"])
+    expect(finished.system).toEqual([{ type: "text", text: BoardContext.readOnly }])
     await expect(host.call("board_post", note)).rejects.toThrow("finished")
     expect(content(await host.call("board_post", note, root, identity)).id).toBe(sent.id)
-    expect(content(await host.call("board_read", {})).messages).toHaveLength(2)
+    expect(content(await host.call("board_read", {})).messages).toHaveLength(3)
   })
 
   test("adds the instructions only to requests that offer board_read", async () => {
