@@ -25,9 +25,13 @@ internal class HostedWorkspaceCache {
 
     fun title(ref: HostedWorkspaceRefDto): String? = titles[ref.key]
 
+    fun putTitle(ref: HostedWorkspaceRefDto, title: String?) {
+        if (title.isNullOrBlank()) titles.remove(ref.key) else titles[ref.key] = title
+    }
+
     fun put(dto: HostedWorkspaceDto, title: String? = null) {
         items[dto.ref.key] = dto.copy(sessions = emptyList(), sessionCursor = null)
-        if (title != null) titles[dto.ref.key] = title else titles.remove(dto.ref.key)
+        putTitle(dto.ref, title)
     }
 
     fun remove(ref: HostedWorkspaceRefDto) {

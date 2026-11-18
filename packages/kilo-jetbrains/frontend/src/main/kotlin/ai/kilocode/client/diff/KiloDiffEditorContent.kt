@@ -1,5 +1,6 @@
 package ai.kilocode.client.diff
 
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceCache
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -352,7 +353,9 @@ internal class DiffEditorView(
         val snapshot = hosted
         val producers = next.map { file -> producer(file) }.ifEmpty {
             if (snapshot == null) emptyList() else listOf(object : DiffRequestProducer {
-                override fun getName(): String = snapshot.source.comparison.title()
+                override fun getName(): String = snapshot.source.comparison.title(
+                    service<HostedWorkspaceCache>().title(snapshot.source.ref),
+                )
                 override fun process(context: UserDataHolder, indicator: ProgressIndicator) = MessageDiffRequest(snapshot.message)
             })
         }

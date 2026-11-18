@@ -237,6 +237,23 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         assertEquals(listOf("https://github.com/kilo/test/pull/123"), browser.urls)
     }
 
+    fun `test primary pull override keeps verdicts on their default browser actions`() {
+        val browser = installBrowser()
+        var opens = 0
+        val view = edt { PrHeaderView(openPull = { opens++ }, pullHint = "Show published changes", openDiff = null) }
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
+
+        edt {
+            val titleArea = hovers(view).single { SwingUtilities.isDescendingFrom(title(view), it) }
+            assertEquals("Show published changes", titleArea.toolTipText)
+            click(title(view))
+            click(hovers(view).single { SwingUtilities.isDescendingFrom(glyph(view, PrIcons.checksFailed), it) })
+        }
+
+        assertEquals(1, opens)
+        assertEquals(listOf("https://github.com/kilo/test/pull/123/checks"), browser.urls)
+    }
+
     fun `test the title hover pill hugs the title instead of the whole header`() {
         val view = edt { PrHeaderView {} }
         edt { view.update(files = 0, additions = 0, deletions = 0, pull = pull(GhState.OPEN), name = "feature-x") }

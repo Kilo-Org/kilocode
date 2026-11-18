@@ -1,5 +1,6 @@
 package ai.kilocode.client.diff
 
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceCache
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.plugin.KiloBundle
@@ -93,6 +94,7 @@ class HostedDiffRequestsTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        service<HostedWorkspaceCache>().clear()
         Disposer.register(testRootDisposable) { scope.cancel() }
         val state = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto(email, currentOrgId = source.organization))
         connection = FakeAppRpcApi().also { it.state.value = state }
@@ -114,6 +116,8 @@ class HostedDiffRequestsTest : BasePlatformTestCase() {
         assertFalse(KiloDiffEditorKind.isValid(params + ("directory" to "/fake")))
         assertFalse(params == source.copy(comparison = HostedDiffComparison.UNCOMMITTED).params())
         assertFalse(params == source.copy(organization = "other").params())
+        service<HostedWorkspaceCache>().putTitle(source.ref, "Task overview")
+        assertEquals(params, source.params())
         assertEquals(listOf("PR base", "PR head"), HostedDiffComparison.PULL_REQUEST.labels().toList())
     }
 
@@ -129,12 +133,20 @@ class HostedDiffRequestsTest : BasePlatformTestCase() {
     }
 
     fun `test hosted tab names distinguish workspaces and comparisons`() {
-        val titles = listOf(ref, ref.copy(workspaceID = "two")).flatMap { workspace ->
+        val workspaces = listOf(ref to "Task overview", ref.copy(workspaceID = "two") to "feature/two")
+        val cache = service<HostedWorkspaceCache>()
+        val titles = workspaces.flatMap { (workspace, label) ->
+            cache.putTitle(workspace, label)
             HostedDiffComparison.entries.map { comparison ->
                 val params = source.copy(ref = workspace, comparison = comparison).params()
                 val title = KiloDiffEditorKind.title(params)
-                assertTrue(title.contains(workspace.key))
-                assertTrue(title.contains(comparison.title()))
+                val expected = when (comparison) {
+                    HostedDiffComparison.COMMITTED -> KiloDiffComparison.BASE.title(label)
+                    HostedDiffComparison.UNCOMMITTED -> KiloDiffComparison.LOCAL.title(label)
+                    HostedDiffComparison.PULL_REQUEST -> KiloBundle.message("diff.editor.hosted.pr.title.named", label)
+                }
+                assertEquals(expected, title)
+                assertFalse(title.contains(workspace.key))
                 title
             }
         }

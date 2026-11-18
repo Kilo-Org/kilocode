@@ -20,7 +20,12 @@ internal enum class HostedDiffComparison(val key: String, val scope: String?) {
     PULL_REQUEST("pr", null),
     ;
 
-    fun title(): String = KiloBundle.message("diff.editor.hosted.$key.title")
+    fun title(name: String?): String = when (this) {
+        COMMITTED -> KiloDiffComparison.BASE.title(name)
+        UNCOMMITTED -> KiloDiffComparison.LOCAL.title(name)
+        PULL_REQUEST -> name?.takeIf { it.isNotBlank() }?.let { KiloBundle.message("diff.editor.hosted.pr.title.named", it) }
+            ?: KiloBundle.message("diff.editor.hosted.pr.title")
+    }
 
     fun labels(): Pair<String, String> = when (this) {
         COMMITTED -> diffLabels("branch")
@@ -84,12 +89,29 @@ internal data class HostedDiffSource(
 }
 
 @RequiresEdt
-internal fun openHostedDiff(project: Project, ref: HostedWorkspaceRefDto, comparison: HostedDiffComparison) {
+internal fun openHostedDiff(
+    project: Project,
+    ref: HostedWorkspaceRefDto,
+    comparison: HostedDiffComparison,
+) {
     if (project.isDisposed) return
     val state = service<KiloAppService>().state.value
     val account = state.profile?.email?.takeIf { it.isNotBlank() } ?: return
     val source = HostedDiffSource(ref, comparison, HostedDiffSource.account(account), state.profile?.currentOrgId)
     if (!source.current(project)) return
     ensureDiffEditorKind()
-    project.service<KiloVfsManager>().open(KiloDiffEditorKind.ID, source.params())
+    val manager = project.service<KiloVfsManager>()
+    manager.open(KiloDiffEditorKind.ID, source.params())
+    manager.updatePresentation(KiloDiffEditorKind.ID, source.params())
+}
+
+internal fun refreshHostedDiffTitles(project: Project, ref: HostedWorkspaceRefDto) {
+    if (project.isDisposed) return
+    val state = service<KiloAppService>().state.value
+    val account = state.profile?.email?.takeIf { it.isNotBlank() } ?: return
+    val manager = project.service<KiloVfsManager>()
+    HostedDiffComparison.entries.forEach { comparison ->
+        val source = HostedDiffSource(ref, comparison, HostedDiffSource.account(account), state.profile?.currentOrgId)
+        manager.updatePresentation(KiloDiffEditorKind.ID, source.params())
+    }
 }

@@ -1,5 +1,6 @@
 package ai.kilocode.client.diff
 
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceCache
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloSessionService
@@ -50,7 +51,7 @@ internal object KiloDiffEditorKind : KiloEditorKind {
 
     override fun title(params: Map<String, String>): String {
         HostedDiffSource.parse(params)?.let {
-            return KiloBundle.message("diff.editor.hosted.title", it.ref.key, it.comparison.title())
+            return it.comparison.title(service<HostedWorkspaceCache>().title(it.ref))
         }
         params["title"].takeIfPresent()?.let { return it }
         val comparison = KiloDiffComparison.entries.firstOrNull { it.source == params["source"] }

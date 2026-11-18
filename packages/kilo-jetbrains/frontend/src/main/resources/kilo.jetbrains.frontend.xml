@@ -450,21 +450,6 @@
         <action id="Kilo.HostedWorkspace.Reload"
                 class="ai.kilocode.client.actions.ReloadHostedWorkspaceAction"/>
 
-        <action id="Kilo.HostedWorkspace.CommittedDiff"
-                class="ai.kilocode.client.actions.HostedCommittedDiffAction"/>
-
-        <action id="Kilo.HostedWorkspace.UncommittedDiff"
-                class="ai.kilocode.client.actions.HostedUncommittedDiffAction"/>
-
-        <action id="Kilo.HostedWorkspace.PullRequestDiff"
-                class="ai.kilocode.client.actions.HostedPullRequestDiffAction"/>
-
-        <group id="Kilo.HostedWorkspace.Comparisons">
-            <reference ref="Kilo.HostedWorkspace.CommittedDiff"/>
-            <reference ref="Kilo.HostedWorkspace.UncommittedDiff"/>
-            <reference ref="Kilo.HostedWorkspace.PullRequestDiff"/>
-        </group>
-
         <action id="Kilo.WorktreeSession.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
 

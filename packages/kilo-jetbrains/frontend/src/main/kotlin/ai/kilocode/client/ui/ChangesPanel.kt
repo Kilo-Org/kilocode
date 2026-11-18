@@ -41,6 +41,7 @@ internal class ChangesPanel @RequiresEdt constructor(
     private val mode: Mode,
     onBase: (() -> Unit)? = null,
     onLocal: (() -> Unit)? = null,
+    private val persistent: Boolean = false,
 ) : JPanel(BorderLayout()) {
     internal enum class Mode { COMPACT, FULL }
 
@@ -145,7 +146,7 @@ internal class ChangesPanel @RequiresEdt constructor(
                 State(localFiles, localAdditions, localDeletions, base = base, local = true)
             else -> State(files, additions, deletions, base = base, conflict = conflict)
         }
-        if (state == next) return
+        if (state == next && (!persistent || isVisible)) return
         state = next
         // A compact summary sits inside a row that already prints the file count and the +/- lines, so
         // its tooltip only has to say what a click does. The full form is the one that can be squeezed
@@ -159,17 +160,18 @@ internal class ChangesPanel @RequiresEdt constructor(
         // A conflict is the one thing no form of the summary can print, so whichever one is showing says it
         // in the tooltip: the marker on the badge reports that something is wrong without saying what.
         val tip = if (next.conflict) conflictTooltip(counts, base) else counts
-        this.base.update(next.files, next.additions, next.deletions, tip, next.conflict)
+        this.base.update(next.files, next.additions, next.deletions, tip, next.conflict, persistent)
         local?.update(
             next.localFiles, next.localAdditions, next.localDeletions,
             KiloBundle.message("worktree.dirty.tooltip", next.localFiles, next.localAdditions, next.localDeletions),
+            persistent = persistent,
         )
         this.ahead?.let { counter(it, next.ahead) }
         this.behind?.let { counter(it, next.behind) }
-        val right = next.files > 0 || next.ahead > 0 || next.behind > 0
-        val fence = next.localFiles > 0 && right
+        val right = persistent || next.files > 0 || next.ahead > 0 || next.behind > 0
+        val fence = persistent || next.localFiles > 0 && right
         separator?.let { if (it.isVisible != fence) it.isVisible = fence }
-        val visible = right || next.localFiles > 0
+        val visible = persistent || right || next.localFiles > 0
         if (isVisible != visible) isVisible = visible
         val tooltip = tip.takeIf { mode == Mode.COMPACT && next.files > 0 }
         if (toolTipText != tooltip) toolTipText = tooltip
@@ -299,16 +301,17 @@ internal class ChangesPanel @RequiresEdt constructor(
         }
 
         @RequiresEdt
-        fun update(files: Int, additions: Int, deletions: Int, tip: String, conflict: Boolean = false) {
+        fun update(files: Int, additions: Int, deletions: Int, tip: String, conflict: Boolean = false,
+            persistent: Boolean = false) {
             val text = KiloBundle.message(if (files == 1) "session.changes.count.one" else "session.changes.count.other", files)
             if (count.text != text) count.text = text
-            if (count.isVisible != (files > 0)) count.isVisible = files > 0
+            if (count.isVisible != (persistent || files > 0)) count.isVisible = persistent || files > 0
             stat.update(additions, deletions)
             stat.conflict = conflict
             val lines = files > 0 && (additions > 0 || deletions > 0)
             if (stat.isVisible != lines) stat.isVisible = lines
-            if (isVisible != (files > 0)) isVisible = files > 0
-            val tooltip = tip.takeIf { files > 0 }
+            if (isVisible != (persistent || files > 0)) isVisible = persistent || files > 0
+            val tooltip = tip.takeIf { persistent || files > 0 }
             visit(this) { if (it is JComponent && it.toolTipText != tooltip) it.toolTipText = tooltip }
             val name = tooltip?.let { StringUtil.stripHtml(it, " ") }
             if (getAccessibleContext().accessibleName != name) getAccessibleContext().accessibleName = name

@@ -41,10 +41,12 @@ class OpenHostedWorkspaceInBrowserActionTest : BasePlatformTestCase() {
 
     fun `test duplicate Cloud row browser and management actions are gone`() {
         val descriptor = PluginDescriptor.frontend()
-        listOf("OpenInBrowser", "Delete", "Dismiss").map { "Kilo.HostedWorkspace.$it" }.forEach { id ->
+        listOf("OpenInBrowser", "Delete", "Dismiss", "CommittedDiff", "UncommittedDiff", "PullRequestDiff")
+            .map { "Kilo.HostedWorkspace.$it" }.forEach { id ->
             assertTrue(descriptor.elements("action").none { it.attribute("id") == id })
             assertTrue(descriptor.elements("reference").none { it.attribute("ref") == id })
         }
+        assertTrue(descriptor.elements("group").none { it.attribute("id") == "Kilo.HostedWorkspace.Comparisons" })
     }
 
     fun `test remove from ide action is gone`() {

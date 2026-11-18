@@ -2,7 +2,7 @@ package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.actions.CopySessionPrRefAction
-import ai.kilocode.client.actions.hostedWorkspaceBrowserUrl
+import ai.kilocode.client.actions.openHostedWorkspaceInBrowser
 import ai.kilocode.client.agentManager.worktree.CreateFailure
 import ai.kilocode.client.agentManager.worktree.CreateKind
 import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
@@ -43,6 +43,7 @@ import ai.kilocode.client.agentManager.hosted.hostedRepository
 import ai.kilocode.client.agentManager.hosted.hostedWorkspaceParams
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRemoval
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceStatus
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceTitle
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRowData
 import ai.kilocode.client.agentManager.hosted.hostedWorkspaceRow
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
@@ -862,9 +863,7 @@ class AgentManagerPanel(
                 when (command) {
                     AgentManagerCommand.BROWSER -> {
                         val org = service<KiloAppService>().state.value.profile?.currentOrgId
-                        val session = current.dto.sessions.maxByOrNull { it.updated }?.nativeSessionID
-                        Telemetry.send("Cloud Open In Browser Clicked", mapOf("surface" to "workspace_row"))
-                        BrowserUtil.browse(hostedWorkspaceBrowserUrl(current.dto.ref, org, session))
+                        openHostedWorkspaceInBrowser(current.dto, org, "workspace_row")
                     }
                     AgentManagerCommand.RELOAD -> {
                         Telemetry.send("Cloud Workspace Reloaded", mapOf("surface" to "workspace_row"))
@@ -874,6 +873,7 @@ class AgentManagerPanel(
                     AgentManagerCommand.BASE_DIFF, AgentManagerCommand.UNCOMMITTED_DIFF -> {
                         val comparison = if (command == AgentManagerCommand.BASE_DIFF) HostedDiffComparison.COMMITTED else HostedDiffComparison.UNCOMMITTED
                         Telemetry.send("Cloud Diff Opened", mapOf("comparison" to comparison.name.lowercase()))
+                        service<HostedWorkspaceCache>().put(current.dto, HostedWorkspaceTitle.text(current.dto))
                         openHostedDiff(project, current.dto.ref, comparison)
                     }
                     AgentManagerCommand.COPY_BRANCH -> current.dto.branch?.let { copy(it, "copy_branch_name") }

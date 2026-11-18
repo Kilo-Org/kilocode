@@ -1,14 +1,10 @@
 package ai.kilocode.client.actions
 
+import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.project.DumbAware
+import com.intellij.ide.BrowserUtil
 import java.net.URLEncoder
-
-abstract class HostedWorkspaceAction : AnAction(), DumbAware {
-    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
-}
 
 internal fun hostedWorkspaceBrowserUrl(
     ref: HostedWorkspaceRefDto,
@@ -25,4 +21,10 @@ internal fun hostedWorkspaceBrowserUrl(
         }
     }.joinToString("&")
     return "$base?$query"
+}
+
+internal fun openHostedWorkspaceInBrowser(dto: HostedWorkspaceDto, organizationID: String?, surface: String) {
+    val session = dto.sessions.maxByOrNull { it.updated }?.nativeSessionID
+    Telemetry.send("Cloud Open In Browser Clicked", mapOf("surface" to surface))
+    BrowserUtil.browse(hostedWorkspaceBrowserUrl(dto.ref, organizationID, session))
 }

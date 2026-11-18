@@ -47,11 +47,14 @@ internal class PrHeaderView @RequiresEdt constructor(
     stacked: Boolean = false,
     private val fallback: Boolean = false,
     private val handlers: PrBadgeActions? = null,
+    private val openPull: (() -> Unit)? = null,
+    private val pullHint: String? = null,
+    persistentChanges: Boolean = false,
     openDiff: (() -> Unit)?,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
     private val status = JBLabel()
     private val title = SimpleColoredComponent()
-    private val changes = ChangesPanel(mode, onBase = openDiff, onLocal = onLocal)
+    private val changes = ChangesPanel(mode, onBase = openDiff, onLocal = onLocal, persistent = persistentChanges)
     // Unresolved review conversations, review verdict, then CI verdict, between the state pill and the
     // title: the same order and the same glyphs the worktree rows show, so a header and its row do not
     // disagree about what a PR is waiting on.
@@ -155,6 +158,11 @@ internal class PrHeaderView @RequiresEdt constructor(
     }
 
     @RequiresEdt
+    fun setChangeActions(onBase: (() -> Unit)?, onLocal: (() -> Unit)?) {
+        changes.setActions(onBase, onLocal)
+    }
+
+    @RequiresEdt
     fun update(
         files: Int,
         additions: Int,
@@ -186,7 +194,9 @@ internal class PrHeaderView @RequiresEdt constructor(
 
     @RequiresEdt
     private fun applyPr(pull: WorktreePrDto?, name: String) {
-        val actions = handlers ?: PrBadgeActions.browser(pull)
+        val actions = handlers ?: PrBadgeActions.browser(pull).let { defaults ->
+            if (openPull == null) defaults else defaults.copy(open = openPull)
+        }
         if (pull == null) {
             syncPr(fallback && name.isNotBlank())
             syncStatus(null)
@@ -198,7 +208,8 @@ internal class PrHeaderView @RequiresEdt constructor(
         syncPr(true)
         val trimmed = pull.title.trim()
         val body = trimmed.takeIf { it.isNotBlank() }
-        val tip = prTooltip(pull, name.takeIf { it.isNotBlank() && it != trimmed }, actions.open != null)
+        val tip = pullHint?.takeIf { actions.open != null } ?:
+            prTooltip(pull, name.takeIf { it.isNotBlank() && it != trimmed }, actions.open != null)
         syncStatus(pull.state)
         syncTitle("#${pull.number}", body, tip)
         syncClick(actions.open)
