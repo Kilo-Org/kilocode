@@ -1518,6 +1518,13 @@ export interface TelemetryStateMessage {
   enabled: boolean
 }
 
+export interface TelemetryLevelResultMessage {
+  type: "telemetryLevelResult"
+  ok: boolean
+  enabled?: boolean
+  error?: string
+}
+
 // ============================================
 // Marketplace Messages
 // ============================================
@@ -2020,6 +2027,7 @@ export type ExtensionMessage =
   | ClearPendingPromptsMessage
   | ExtensionDataReadyMessage
   | TelemetryStateMessage
+  | TelemetryLevelResultMessage
   | RemoteStatusMessage
   | ValidateFilesResultMessage
   | ClipboardWriteResultMessage

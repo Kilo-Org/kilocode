@@ -27,7 +27,6 @@ import {
   TelemetryProxy,
   type TelemetryPropertiesProvider,
   pushTelemetryState,
-  watchTelemetryState,
 } from "./services/telemetry"
 import {
   sessionToWebview,
@@ -558,7 +557,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private shortcutHintsConfigDisposable: vscode.Disposable | null = null
   private workspaceFoldersDisposable: vscode.Disposable | null = null
   private shortcutContextDisposable: vscode.Disposable | null = null
-  private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
   private view: vscode.WebviewView | undefined
@@ -771,7 +769,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       editorName: vscode.env.appName,
       vscodeVersion: vscode.version,
       machineId: vscode.env.machineId,
-      vscodeIsTelemetryEnabled: vscode.env.isTelemetryEnabled,
     }
   }
 
@@ -876,7 +873,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Always push connection state first so the UI can render appropriately.
     this.postConnectionState()
-    pushTelemetryState((m) => this.postMessage(m))
+    const telemetryLevel = await TelemetryProxy.getInstance().level()
+    if (telemetryLevel !== null) pushTelemetryState((m) => this.postMessage(m), telemetryLevel)
 
     // Re-send ready so the webview can recover after refresh.
     if (serverInfo) {
@@ -1268,8 +1266,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.workspaceFoldersDisposable = vscode.workspace.onDidChangeWorkspaceFolders(() => this.sendWorkspaceScope())
     this.shortcutContextDisposable?.dispose()
     this.shortcutContextDisposable = watchShortcutContext(this.extensionContext, (msg) => this.postMessage(msg))
-    this.telemetryStateDisposable?.dispose()
-    this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
       if (this.acknowledge(message)) return
       const intercepted = await interceptMessage(message, {
@@ -1567,6 +1563,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "toggleSandbox":
           await this.handleToggleSandbox(message)
           break
+        case "setTelemetryLevel": {
+          const enabled = await TelemetryProxy.getInstance().setLevel(message.enabled)
+          if (enabled === null) {
+            this.postMessage({ type: "telemetryLevelResult", ok: false, error: "Could not update telemetry" })
+            break
+          }
+          pushTelemetryState((m) => this.postMessage(m), enabled)
+          this.postMessage({ type: "telemetryLevelResult", ok: true, enabled })
+          this.fetchAndSendConfig().catch((e) => console.error("[Kilo New] fetchAndSendConfig failed:", e))
+          break
+        }
         case "requestConfig":
           this.fetchAndSendConfig().catch((e) => console.error("[Kilo New] fetchAndSendConfig failed:", e))
           break
@@ -6356,7 +6363,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.shortcutHintsConfigDisposable?.dispose()
     this.workspaceFoldersDisposable?.dispose()
     this.shortcutContextDisposable?.dispose()
-    this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()
     this.inputs.dispose()
