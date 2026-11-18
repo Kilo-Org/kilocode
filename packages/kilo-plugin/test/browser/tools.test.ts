@@ -207,13 +207,16 @@ describe("browser tools", () => {
     expect(host.tools().length).toBe(26)
   })
 
-  test("the extension backend answers every call with the model-facing unavailable error and a hint", async () => {
+  test("the extension backend answers every call with the actionable setup step the model can relay", async () => {
     const host = await boot({ backend: "extension" })
     const result = await host.call("browser_click", { target: "e1" })
     expect(result._tag).toBe("Failure")
     const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
-    expect(error?.message).toBe(UNAVAILABLE_MESSAGE)
-    expect(String(error?.metadata?.hint)).toContain("Kilo browser extension")
+    // The metadata hint never reaches a `run --format json` caller, so the message carries the same instruction.
+    expect(error?.message).toBe(
+      'The browser is not available right now. Install the Kilo browser extension and turn on "Allow local agents" in its settings, or set browser.backend to "playwright".',
+    )
+    expect(error?.metadata?.hint).toBe(EXTENSION_HINT)
   })
 })
 
@@ -457,7 +460,7 @@ describe("browser tools over the extension backend", () => {
     const result = await host.call("browser_click", { target: "e1" })
     expect(result._tag).toBe("Failure")
     const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
-    expect(error?.message).toBe(UNAVAILABLE_MESSAGE)
+    expect(error?.message).toBe(`${UNAVAILABLE_MESSAGE} ${EXTENSION_HINT}`)
     expect(error?.metadata).toMatchObject({ hint: EXTENSION_HINT, effectsUncertain: true })
   })
 
@@ -605,12 +608,12 @@ describe("browser tools over the extension backend", () => {
     expect(forced(settings, undefined)).toBe(settings)
   })
 
-  test("no reachable extension still yields the model-facing error through the tool layer", async () => {
+  test("no reachable extension still yields the actionable error through the tool layer", async () => {
     const host = await boot({ backend: "extension" })
     const result = await host.call("browser_snapshot")
     expect(result._tag).toBe("Failure")
     const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
-    expect(error?.message).toBe(UNAVAILABLE_MESSAGE)
+    expect(error?.message).toBe(`${UNAVAILABLE_MESSAGE} ${EXTENSION_HINT}`)
     expect(error?.metadata).toMatchObject({ hint: EXTENSION_HINT })
   })
 })

@@ -21,9 +21,9 @@ import { takeStep } from "./steps"
 /** The protocol version this CLI speaks. An extension that does not list it cannot be driven safely. */
 export const PROTOCOL = 1
 
-/** The setup step the UI shows while no extension is reachable. */
+/** The setup step the UI shows while no extension is reachable, and the action the model relays to the user. */
 export const EXTENSION_HINT =
-  'Install the Kilo browser extension, turn on "Allow local agents", then set browser.backend to "extension".'
+  'Install the Kilo browser extension and turn on "Allow local agents" in its settings, or set browser.backend to "playwright".'
 
 const HINT = EXTENSION_HINT
 

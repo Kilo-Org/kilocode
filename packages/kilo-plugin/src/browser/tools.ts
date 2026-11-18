@@ -91,8 +91,9 @@ function textOf(result: CallResult) {
 
 /**
  * Model-facing failures: a tool error the model can act on, never a transport state. An unavailable backend keeps its
- * setup hint out of the message and logs it for the UI; an inaccessible browser protocol keeps its update notice there
- * too, and a call that may have run carries the marker instead of asserting it did not.
+ * setup step in the message as well as in the metadata: `run --format json` and other non-interactive hosts surface
+ * only the message, so the hint would otherwise never reach the user. An inaccessible protocol keeps its update notice
+ * in the metadata the UI reads, and a call that may have run carries the marker instead of asserting it did not.
  */
 function failure(error: unknown) {
   // Already model-facing: a mapped failure keeps its metadata instead of being wrapped again.
@@ -100,7 +101,7 @@ function failure(error: unknown) {
   if (error instanceof UnsupportedError) return new Tool.Error({ message: UNSUPPORTED_MESSAGE })
   if (error instanceof UnavailableError) {
     return new Tool.Error({
-      message: UNAVAILABLE_MESSAGE,
+      message: error.hint ? `${UNAVAILABLE_MESSAGE} ${error.hint}` : UNAVAILABLE_MESSAGE,
       metadata: { hint: error.hint, ...(error.effectsUncertain ? { effectsUncertain: true } : {}) },
     })
   }
