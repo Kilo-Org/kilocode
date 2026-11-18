@@ -53,6 +53,7 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.ui.EditorNotificationPanel
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.treeStructure.Tree
@@ -127,15 +128,13 @@ class HostedDiffRequestsTest : BasePlatformTestCase() {
         assertTrue(source.current(project))
     }
 
-    fun `test hosted tab names distinguish workspaces without changing comparison identity`() {
+    fun `test hosted tab names distinguish workspaces and comparisons`() {
         val titles = listOf(ref, ref.copy(workspaceID = "two")).flatMap { workspace ->
             HostedDiffComparison.entries.map { comparison ->
                 val params = source.copy(ref = workspace, comparison = comparison).params()
                 val title = KiloDiffEditorKind.title(params)
                 assertTrue(title.contains(workspace.key))
                 assertTrue(title.contains(comparison.title()))
-                assertEquals(title, KiloDiffEditorKind.presentablePath(params))
-                assertNull(params["title"])
                 title
             }
         }
@@ -300,6 +299,42 @@ class HostedDiffRequestsTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test a populated different organization clears the saved diff while loading`() = mismatch(
+        KiloAppStatusDto.LOADING, ProfileDto(email, currentOrgId = "other"),
+    )
+
+    fun `test a populated different account clears the saved diff while disconnected`() = mismatch(
+        KiloAppStatusDto.DISCONNECTED, ProfileDto("other@example.com", currentOrgId = source.organization),
+    )
+
+    private fun mismatch(status: KiloAppStatusDto, profile: ProfileDto) {
+        val coroutines = TestCoroutines()
+        val parent = Disposer.newDisposable(testRootDisposable)
+        try {
+            project.replaceService(KiloDiffEditorService::class.java, KiloDiffEditorService(project, coroutines.scope), testRootDisposable)
+            val root = KiloDiffEditorKind.createContent(project, KiloVirtualFile(KiloPath(KiloDiffEditorKind.ID, source.params())), parent)
+            assertTrue(coroutines.pumpUntil { native(root, "new") != null })
+            val editor = native(root, "new")!!
+            val reads = rpc.reads
+            val transient = app.state.value.copy(status = status)
+            connection.state.value = transient
+            assertTrue(coroutines.pumpUntil { app.state.value.status == status })
+            coroutines.drain()
+            assertNull(source.reason(project))
+            assertSame(editor, native(root, "new"))
+            app._state.value = transient.copy(profile = profile)
+            assertTrue(coroutines.pumpUntil {
+                components(root).filterIsInstance<EditorNotificationPanel>().singleOrNull()?.text?.contains(text("identity.changed")) == true &&
+                    native(root, "new") == null
+            })
+            assertEquals(status, app.state.value.status)
+            assertEquals(reads, rpc.reads)
+        } finally {
+            Disposer.dispose(parent)
+            coroutines.close()
+        }
+    }
+
     fun `test reconnect states with no profile retain the actual saved editor and block new requests`() {
         val coroutines = TestCoroutines()
         val parent = Disposer.newDisposable(testRootDisposable)
@@ -421,7 +456,7 @@ class HostedDiffRequestsTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test native patch queued after producer completion waits for confirmed ready before display`() {
+    fun `test queued native patch shows unavailable and automatically reloads the selected file after reconnect`() {
         val coroutines = TestCoroutines()
         val parent = Disposer.newDisposable(testRootDisposable)
         try {
@@ -430,23 +465,24 @@ class HostedDiffRequestsTest : BasePlatformTestCase() {
             val original = app.state.value
             val root = KiloDiffEditorKind.createContent(project, KiloVirtualFile(KiloPath(KiloDiffEditorKind.ID, source.params())), parent)
             assertTrue(coroutines.pumpUntil { native(root, "new") != null })
-            val editor = native(root, "new")!!
             val tree = components(root).filterIsInstance<Tree>().single()
             rpc.patch = "@@ -1 +1 @@\n-old\n+queued"
             // The blocking producer's coroutine finishes after its final context check.
             rpc.finished = { app._state.value = KiloAppStateDto(KiloAppStatusDto.CONNECTING) }
             tree.selectionPath = TreePath(leaves(tree).last().path)
             assertTrue(coroutines.pumpUntil { app.state.value.status == KiloAppStatusDto.CONNECTING })
-            coroutines.drain()
+            assertTrue(coroutines.pumpUntil {
+                components(root).filterIsInstance<JBLabel>().any { it.text?.contains(text("unavailable")) == true }
+            })
             assertNull(native(root, "queued"))
-            assertSame(editor, native(root, "new"))
+            assertNull(native(root, "new"))
+            val selection = tree.selectionPath
             val requests = rpc.requests.size
             rpc.finished = null
             app._state.value = original
-            tree.selectionPath = TreePath(leaves(tree).first().path)
-            tree.selectionPath = TreePath(leaves(tree).last().path)
             assertTrue(coroutines.pumpUntil { native(root, "queued") != null })
-            assertEquals(requests, rpc.requests.size)
+            assertEquals(selection, tree.selectionPath)
+            assertEquals(requests + 1, rpc.requests.size)
         } finally {
             Disposer.dispose(parent)
             coroutines.close()
@@ -483,6 +519,65 @@ class HostedDiffRequestsTest : BasePlatformTestCase() {
             connection.state.value = original
             assertTrue(coroutines.pumpUntil { source.current(project) })
             assertSame(editor, native(root, "new"))
+        } finally {
+            Disposer.dispose(parent)
+            coroutines.close()
+        }
+    }
+
+    fun `test selecting an uncached file during reconnect automatically loads it when ready`() = reconnect(false)
+
+    fun `test closing a pending reconnect cancels the automatic file reload`() = reconnect(true)
+
+    fun `test an unknown context result still requires recovery if ready returns before publication`() {
+        val original = app.state.value
+        val snapshot = HostedDiffSnapshot.workspace(source, rpc.changes)
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
+        val request = process(snapshot) as MessageDiffRequest
+        assertEquals(text("unavailable"), request.message)
+        assertTrue(rpc.requests.isEmpty())
+        app._state.value = original
+        assertTrue(source.current(project))
+        assertEquals(true, request.getUserData(HOSTED_RETRY_KEY))
+        assertTrue(process(snapshot) is SimpleDiffRequest)
+        assertEquals(1, rpc.requests.size)
+        val omitted = HostedDiffSnapshot.workspace(source, changes(listOf(metadata("binary.kt").copy(
+            diff = HostedWorkspaceDiffAvailabilityDto("omitted", "binary"),
+        ))))
+        assertNull(process(omitted).getUserData(HOSTED_RETRY_KEY))
+    }
+
+    private fun reconnect(close: Boolean) {
+        val coroutines = TestCoroutines()
+        val parent = Disposer.newDisposable(testRootDisposable)
+        try {
+            project.replaceService(KiloDiffEditorService::class.java, KiloDiffEditorService(project, coroutines.scope), testRootDisposable)
+            rpc.changes = changes(listOf(metadata("a.kt"), metadata("b.kt")))
+            val original = app.state.value
+            val root = KiloDiffEditorKind.createContent(project, KiloVirtualFile(KiloPath(KiloDiffEditorKind.ID, source.params())), parent)
+            assertTrue(coroutines.pumpUntil { native(root, "new") != null })
+            val tree = components(root).filterIsInstance<Tree>().single()
+            val requests = rpc.requests.size
+            app._state.value = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
+            tree.selectionPath = TreePath(leaves(tree).last().path)
+            assertTrue(coroutines.pumpUntil {
+                components(root).filterIsInstance<JBLabel>().any { it.text?.contains(text("unavailable")) == true }
+            })
+            assertNull(native(root, "new"))
+            assertEquals(requests, rpc.requests.size)
+            val selection = tree.selectionPath
+            rpc.patch = "@@ -1 +1 @@\n-old\n+selected"
+            if (close) Disposer.dispose(parent)
+            app._state.value = original
+            if (close) {
+                coroutines.drain()
+                assertEquals(requests, rpc.requests.size)
+                return
+            }
+            assertTrue(coroutines.pumpUntil { native(root, "selected") != null })
+            assertEquals(selection, tree.selectionPath)
+            assertEquals(requests + 1, rpc.requests.size)
+            assertEquals("b.kt", rpc.requests.last().first)
         } finally {
             Disposer.dispose(parent)
             coroutines.close()

@@ -59,9 +59,11 @@ internal data class HostedDiffSource(
         val hosted = project.service<KiloHostedService>()
         if (hosted.state.value.signedOut || state.progress?.profile == ProfileStatusDto.NOT_LOGGED_IN) return "signedOut"
         if (!hosted.enabled()) return "unavailable"
-        if (state.status != KiloAppStatusDto.READY) return null
-        if (state.profile?.email.isNullOrBlank()) return "signedOut"
-        return "identity.changed".takeUnless { current(state) }
+        val profile = state.profile ?: return "signedOut".takeIf { state.status == KiloAppStatusDto.READY }
+        if (profile.email.isBlank()) return "signedOut"
+        return "identity.changed".takeUnless {
+            Companion.account(profile.email) == account && profile.currentOrgId == organization
+        }
     }
 
     companion object {

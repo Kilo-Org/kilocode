@@ -15,10 +15,13 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.runBlockingCancellable
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.UserDataHolder
 import com.intellij.util.concurrency.annotations.RequiresBackgroundThread
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
+
+internal val HOSTED_RETRY_KEY: Key<Boolean> = Key.create("kilo.diff.hosted.retry")
 
 internal data class HostedDiffEntry(
     val path: String,
@@ -61,7 +64,7 @@ internal class HostedDiffSnapshot(
         @RequiresBackgroundThread
         override fun process(context: UserDataHolder, indicator: ProgressIndicator): DiffRequest = runBlockingCancellable {
             indicator.checkCanceled()
-            if (!source.current(project)) return@runBlockingCancellable message(entry, source.reason(project) ?: "unavailable")
+            if (!source.current(project)) return@runBlockingCancellable unavailable(project, entry)
             if (!valid.get()) return@runBlockingCancellable message(entry, stale())
             val request = try {
                 request(project, entry)
@@ -73,7 +76,7 @@ internal class HostedDiffSnapshot(
                 message(entry, "unavailable")
             }
             indicator.checkCanceled()
-            if (!source.current(project)) return@runBlockingCancellable message(entry, source.reason(project) ?: "unavailable")
+            if (!source.current(project)) return@runBlockingCancellable unavailable(project, entry)
             if (!valid.get()) return@runBlockingCancellable message(entry, stale())
             request.also { it.putUserData(DIFF_FILE_KEY, entry.key) }
         }
@@ -126,6 +129,13 @@ internal class HostedDiffSnapshot(
         MessageDiffRequest(entry.path, KiloBundle.message("diff.editor.hosted.$key")).also {
             it.putUserData(DIFF_FILE_KEY, entry.key)
         }
+
+    private fun unavailable(project: Project, entry: HostedDiffEntry): DiffRequest {
+        val reason = source.reason(project)
+        return message(entry, reason ?: "unavailable").apply {
+            if (reason == null) putUserData(HOSTED_RETRY_KEY, true)
+        }
+    }
 
     private fun stale(): String = if (source.comparison == HostedDiffComparison.PULL_REQUEST) "pr.stale" else "file.stale"
 

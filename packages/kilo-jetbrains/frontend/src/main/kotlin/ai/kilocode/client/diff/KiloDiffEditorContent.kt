@@ -1,5 +1,7 @@
 package ai.kilocode.client.diff
 
+import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.DiffStatBadge
@@ -56,9 +58,12 @@ import com.intellij.util.ui.Centerizer
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -354,11 +359,47 @@ internal class DiffEditorView(
         val chain = SimpleDiffRequestChain.fromProducers(producers, index.coerceIn(0, (next.size - 1).coerceAtLeast(0)))
         if (snapshot == null) return CacheDiffRequestChainProcessor(project, chain)
         return object : CacheDiffRequestChainProcessor(project, chain) {
+            private var retry: Job? = null
+
             @RequiresEdt
             override fun applyRequest(request: DiffRequest, force: Boolean, policy: ScrollToPolicy?) {
                 // Recheck the EDT handoff after the background producer has completed.
-                if (snapshot.entries.isNotEmpty() && !snapshot.source.current(this@DiffEditorView.project)) return
+                if (snapshot.entries.isNotEmpty() &&
+                    (!snapshot.source.current(this@DiffEditorView.project) || request.getUserData(HOSTED_RETRY_KEY) == true)) {
+                    val reason = snapshot.source.reason(this@DiffEditorView.project) ?: "unavailable"
+                    val message = MessageDiffRequest(request.title, KiloBundle.message("diff.editor.hosted.$reason")).apply {
+                        putUserData(DIFF_FILE_KEY, request.getUserData(DIFF_FILE_KEY))
+                    }
+                    super.applyRequest(message, force, policy)
+                    if (retry != null) return
+                    retry = scope.launch(start = CoroutineStart.LAZY) {
+                        val state = combine(service<KiloAppService>().state,
+                            this@DiffEditorView.project.service<KiloHostedService>().state) { app, _ ->
+                            !this@DiffEditorView.project.isDisposed && snapshot.source.current(app) &&
+                                snapshot.source.reason(this@DiffEditorView.project, app) == null
+                        }
+                        while (true) {
+                            state.first { it }
+                            val done = writeIntentReadAction {
+                                if (isDisposed) return@writeIntentReadAction true
+                                if (!snapshot.source.current(this@DiffEditorView.project)) return@writeIntentReadAction false
+                                retry = null
+                                updateRequest(true, false, null)
+                                true
+                            }
+                            if (done) return@launch
+                        }
+                    }
+                    retry?.start()
+                    return
+                }
                 super.applyRequest(request, force, policy)
+            }
+
+            @RequiresEdt
+            override fun onDispose() {
+                retry?.cancel()
+                super.onDispose()
             }
         }
     }
