@@ -198,6 +198,24 @@ const Subtitle: Component<{ text: string }> = (props) => (
 )
 
 /**
+ * A status row before the host has answered: the read's failure once it is known, so a failed first read never leaves
+ * the row claiming it is still loading.
+ */
+const StatusPlaceholder: Component<{ error?: string }> = (props) => {
+  const language = useLanguage()
+  return (
+    <Show
+      when={!props.error}
+      fallback={
+        <span style={{ color: "var(--vscode-errorForeground)" }}>{language.t("settings.browser.status.failed")}</span>
+      }
+    >
+      <span style={{ color: "var(--vscode-descriptionForeground)" }}>{language.t("common.loading")}</span>
+    </Show>
+  )
+}
+
+/**
  * The browser tools' settings and the site permission table. The state comes from the host, which owns the config
  * file, so a row always shows what the CLI reads.
  */
@@ -324,12 +342,7 @@ const BrowserTools: Component = () => {
         <Header title={language.t("settings.browser.status.title")} />
         <Card>
           <SettingsRow title={language.t("settings.browser.status.playwright")}>
-            <Show
-              when={browser.status()}
-              fallback={
-                <span style={{ color: "var(--vscode-descriptionForeground)" }}>{language.t("common.loading")}</span>
-              }
-            >
+            <Show when={browser.status()} fallback={<StatusPlaceholder error={browser.error()} />}>
               {(status) => (
                 <Show
                   when={status().playwright.ready}
@@ -368,12 +381,7 @@ const BrowserTools: Component = () => {
             description={disconnected() ? language.t("settings.browser.status.extension.hint") : undefined}
             last
           >
-            <Show
-              when={browser.status()}
-              fallback={
-                <span style={{ color: "var(--vscode-descriptionForeground)" }}>{language.t("common.loading")}</span>
-              }
-            >
+            <Show when={browser.status()} fallback={<StatusPlaceholder error={browser.error()} />}>
               {(status) => (
                 <span
                   style={{
@@ -389,6 +397,13 @@ const BrowserTools: Component = () => {
               )}
             </Show>
           </SettingsRow>
+          <Show when={!browser.status() && browser.error()}>
+            <div style={{ display: "flex", gap: "8px", "align-items": "center", padding: "8px 0 4px" }}>
+              <Button variant="secondary" size="small" disabled={browser.busy()} onClick={() => browser.load()}>
+                {language.t("common.retry")}
+              </Button>
+            </div>
+          </Show>
           <Show when={browser.installing() && browser.progress()}>
             {(line) => <Subtitle text={line().split("\n").filter(Boolean).slice(-1)[0] ?? ""} />}
           </Show>
@@ -465,7 +480,11 @@ const BrowserTools: Component = () => {
             </div>
           </Show>
           <Show when={rows().length === 0}>
-            <Subtitle text={language.t("settings.browser.origins.empty")} />
+            <Subtitle
+              text={language.t(
+                state()?.allowAll ? "settings.browser.origins.empty.allowed" : "settings.browser.origins.empty",
+              )}
+            />
           </Show>
           <div style={{ display: "flex", "flex-direction": "column", gap: "4px", padding: "12px 0 4px" }}>
             <div style={{ display: "flex", gap: "8px", "align-items": "flex-start" }}>

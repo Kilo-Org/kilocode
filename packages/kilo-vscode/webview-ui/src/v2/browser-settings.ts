@@ -29,7 +29,13 @@ export function createBrowserSettings() {
     const message = raw as unknown as ToWebview
     if (message.type === "browserSettingsLoaded") {
       if (!tracker.accepts(message.requestId)) return
-      if (tracker.kindOf(message.requestId) === "write") setWriting(false)
+      // Every attempt ends on its own reply, whichever operation it was: a read or a write answers with the state, and
+      // an install the host could not start answers with this message instead of `browserSettingsInstalled`.
+      const operation = tracker.kindOf(message.requestId)
+      if (operation === "install") {
+        setInstalling(false)
+        setProgress(undefined)
+      } else if (operation === "write") setWriting(false)
       else setReading(false)
       setError(message.error)
       if (message.state) setState(message.state)

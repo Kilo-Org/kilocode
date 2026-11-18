@@ -115,6 +115,74 @@ assert.equal(radios()[0]?.checked, false, "a failed write rolls the radio back t
 assert.equal(radios()[2]?.checked, true, "the saved backend stays selected")
 assert.ok(text().includes("the file is read-only"), "the failure is shown")
 
+/** A button by its visible label, so the assertions name what the user presses. */
+const button = (where: HTMLElement, label: string) =>
+  [...where.querySelectorAll<HTMLButtonElement>("button")].find((node) => node.textContent?.trim() === label)
+
+// An install the host cannot start answers with the load message, not the installed one; the attempt must still end.
+const install = button(root, "Install")
+assert.ok(install, "a missing browser offers the install")
+install.click()
+await wait(10)
+const installing = request("browserSettingsInstall")
+assert.ok(installing, "the click asks the host to install")
+assert.equal(button(root, "Install"), undefined, "the button shows the install is running")
+post({ type: "browserSettingsLoaded", requestId: installing?.requestId, error: "the download failed" }, window)
+await wait(10)
+const again = button(root, "Install")
+assert.ok(again, "a failed install ends the attempt")
+assert.equal(again?.disabled, false, "the install can be tried again")
+assert.ok(text().includes("the download failed"), "the install failure is shown")
+
 dispose()
 root.remove()
+
+// A first read that fails must not leave the status rows claiming to be loading, and it offers a retry.
+const second = document.createElement("div")
+document.body.append(second)
+const secondText = () => second.textContent ?? ""
+const disposeSecond = render(
+  () => (
+    <DialogProvider>
+      <VSCodeProvider>
+        <LanguageProvider>
+          <V2Scope value={scope}>
+            <SettingsConfigProvider>
+              <BrowserTab />
+            </SettingsConfigProvider>
+          </V2Scope>
+        </LanguageProvider>
+      </VSCodeProvider>
+    </DialogProvider>
+  ),
+  second,
+)
+await wait(50)
+const reads = () => posted.filter((message) => message.type === "browserSettingsRead")
+const first = reads().at(-1)
+post({ type: "browserSettingsLoaded", requestId: first?.requestId, error: "the config is unreadable" }, window)
+await wait(10)
+assert.ok(secondText().includes("Browser status unavailable"), "a failed first read shows an error state")
+assert.ok(!secondText().includes("Loading"), "neither status row is left loading")
+const retry = button(second, "Retry")
+assert.ok(retry, "the error state offers a retry")
+const before = reads().length
+retry.click()
+await wait(10)
+assert.equal(reads().length, before + 1, "the retry reads again")
+post(
+  {
+    type: "browserSettingsLoaded",
+    requestId: reads().at(-1)?.requestId,
+    state: { backend: "playwright", observation: "diff", allowSensitive: false, rules: [], allowAll: false },
+    status: { playwright: { ready: true, target: "chrome" }, extension: { connected: true } },
+  },
+  window,
+)
+await wait(10)
+assert.ok(secondText().includes("Connected"), "the retried read fills the rows")
+assert.ok(!secondText().includes("Browser status unavailable"), "the error state clears with the reply")
+
+disposeSecond()
+second.remove()
 await window.happyDOM.close()

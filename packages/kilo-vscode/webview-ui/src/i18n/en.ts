@@ -909,6 +909,7 @@ export const dict = {
   "settings.browser.status.extension.disconnected": "Not connected",
   "settings.browser.status.extension.hint":
     'Install the Kilo browser extension and turn on "Allow local agents", then open a page the agent may use.',
+  "settings.browser.status.failed": "Browser status unavailable",
   "settings.browser.origins.title": "Site permissions",
   "settings.browser.origins.site": "Site",
   "settings.browser.origins.read": "Read",
@@ -918,6 +919,7 @@ export const dict = {
   "settings.browser.origins.allowAll.description": "Every site is allowed without asking. A site rule still applies.",
   "settings.browser.origins.empty":
     "No site rules yet. Every site outside your machine asks before an agent reads, uses or navigates it.",
+  "settings.browser.origins.empty.allowed": "No site rules yet. Every site is allowed without asking.",
   "settings.browser.origins.add": "Add a site",
   "settings.browser.origins.placeholder": "https://example.com",
   "settings.browser.origins.error.empty": "Enter a site origin",

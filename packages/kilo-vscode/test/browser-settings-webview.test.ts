@@ -1,14 +1,33 @@
 import { describe, expect, test } from "bun:test"
 import { BrowserPermission } from "../../kilo-plugin/src/browser/permission"
+import { Wildcard } from "../../core/src/util/wildcard"
 import { origin, parse, sites } from "../webview-ui/src/components/settings/browser-settings"
 import { defaultAllow } from "../src/shared/browser-permissions"
 import { requestTracker } from "../webview-ui/src/v2/browser-settings-requests"
 
-const rule = (resource: string, effect: "allow" | "ask" | "deny" = "allow") => ({
+const rule = (resource: string, effect: Effect = "allow"): TestRule => ({
   action: "browser",
   resource,
   effect,
 })
+
+type Grant = "read" | "act" | "navigate"
+type Effect = "allow" | "ask" | "deny"
+type TestRule = { action: string; resource: string; effect: Effect }
+
+/**
+ * The CLI's own resolution, assembled from its pieces: a rule decides the class only when its action matches
+ * `browser` and its resource matches `<class>:<origin>`, the last such rule wins (`core/src/permission.ts`), and a
+ * class no rule decides keeps the plugin's built-in default (`kilo-plugin/src/browser/tools.ts`).
+ */
+function cli(rules: TestRule[], grant: Grant, origin: string): Effect {
+  const resource = `${grant}:${origin}`
+  const matched = rules.filter(
+    (item) => item.action !== "*" && Wildcard.match("browser", item.action) && Wildcard.match(resource, item.resource),
+  )
+  if (matched.length === 0) return defaultAllow(origin) ? "allow" : "ask"
+  return matched[matched.length - 1]!.effect
+}
 
 describe("site table", () => {
   test("one row per origin, in the order the rules name it", () => {
@@ -67,6 +86,59 @@ describe("site table", () => {
   })
 })
 
+describe("the site table follows the CLI's resolution", () => {
+  const cases: { name: string; rules: TestRule[]; expected?: Record<string, Record<Grant, Effect>> }[] = [
+    {
+      name: "a catch-all written after an origin rule overrides it",
+      rules: [rule("read:https://example.com"), rule("act:https://example.com"), rule("*", "deny")],
+      expected: { "https://example.com": { read: "deny", act: "deny", navigate: "deny" } },
+    },
+    {
+      name: "an origin rule written after a catch-all still wins",
+      rules: [rule("*", "deny"), rule("read:https://example.com", "allow")],
+      expected: { "https://example.com": { read: "allow", act: "deny", navigate: "deny" } },
+    },
+    {
+      name: "a class catch-all resolves a later origin rule",
+      rules: [rule("read:*", "deny"), rule("read:https://example.com", "allow")],
+      expected: { "https://example.com": { read: "allow", act: "ask", navigate: "ask" } },
+    },
+    {
+      name: "a localhost origin keeps the default where no rule names the class",
+      rules: [rule("act:http://localhost:3000", "deny")],
+      expected: { "http://localhost:3000": { read: "allow", act: "deny", navigate: "allow" } },
+    },
+    {
+      name: "a wildcard host rule resolves the origins it matches",
+      rules: [rule("read:http://*.localhost:*", "deny"), rule("read:http://app.localhost", "allow")],
+      expected: {
+        "http://*.localhost:*": { read: "deny", act: "ask", navigate: "ask" },
+        "http://app.localhost": { read: "allow", act: "allow", navigate: "allow" },
+      },
+    },
+  ]
+
+  for (const item of cases) {
+    test(item.name, () => {
+      const rows = sites(item.rules)
+      for (const row of rows) {
+        for (const grant of ["read", "act", "navigate"] as const) {
+          expect({ origin: row.origin, grant, effect: row[grant] }).toEqual({
+            origin: row.origin,
+            grant,
+            effect: cli(item.rules, grant, row.origin),
+          })
+        }
+      }
+      if (item.expected) expect(Object.fromEntries(rows.map((row) => [row.origin, row]))).toMatchObject(item.expected)
+    })
+  }
+
+  test("a catch-all alone is the toggle, so the table stays empty", () => {
+    expect(sites([rule("*", "deny"), rule("*", "allow")])).toEqual([])
+  })
+})
+
 describe("resource parts", () => {
   test("the first colon splits the class from the origin", () => {
     expect(parse("read:https://example.com:8443")).toEqual({
@@ -120,6 +192,21 @@ describe("the origin field", () => {
     expect(origin("https://example.com:80")).toEqual({ value: "https://example.com:80" })
     expect(origin("http://example.com:443")).toEqual({ value: "http://example.com:443" })
     expect(origin("http://example.com:8080")).toEqual({ value: "http://example.com:8080" })
+  })
+
+  test("a port above 65535 is refused, because no origin can use it", () => {
+    expect(origin("https://example.com:65536")).toEqual({ error: "invalid" })
+    expect(origin("http://localhost:99999")).toEqual({ error: "invalid" })
+    expect(origin("http://*.localhost:70000")).toEqual({ error: "invalid" })
+    expect(origin("https://example.com:65535")).toEqual({ value: "https://example.com:65535" })
+    expect(origin("http://localhost:65535")).toEqual({ value: "http://localhost:65535" })
+  })
+
+  test("a leading zero is normalized like the URL parser's port", () => {
+    expect(origin("http://localhost:0443")).toEqual({ value: "http://localhost:443" })
+    expect(origin("https://example.com:0443")).toEqual({ value: "https://example.com" })
+    expect(origin("https://example.com:08443")).toEqual({ value: "https://example.com:8443" })
+    expect(origin("http://*.localhost:0999")).toEqual({ error: "invalid" })
   })
 
   test("the default port form matches the listed origin", () => {
