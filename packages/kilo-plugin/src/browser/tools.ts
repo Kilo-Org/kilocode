@@ -361,9 +361,29 @@ function postAction(input: PostAction) {
         } as Tool.Result,
       }
     }
-    // Only a read need may read the page again: the withheld placeholder is replaced by a fresh, side-effect-free
-    // snapshot. An act or navigate need keeps the notice its action produced.
-    if (!input.needs.every((item) => item.class === "read")) return { kind: "continue" as const, result: input.result }
+    // Only a read need may read the page again. An act or navigate need is the model's own next step to take: the
+    // answer keeps the notice and the URL, and says so plainly, because the observation mode may not keep them.
+    if (!input.needs.every((item) => item.class === "read")) {
+      const origin = input.needs[0]?.origin ?? ""
+      return {
+        kind: "result" as const,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: `${textOf(input.result)}\n\nApproved. The permission is granted: repeat the same step to perform it.`,
+            },
+          ],
+          metadata: {
+            browser: {
+              backend: input.backend,
+              observation: input.observation,
+              ...(origin ? { url: origin } : {}),
+            },
+          },
+        } as Tool.Result,
+      }
+    }
     const reread = yield* Effect.result(
       Effect.tryPromise({
         try: (signal) =>

@@ -104,8 +104,13 @@ describe("hub failures as the extension backend reads them", () => {
 
   test("a subscription on a transport that cannot be created is handled, not an unhandled rejection", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-port-"))
+    // Only our own transport failure counts: another test file in this process may reject for its own reasons.
     const seen: unknown[] = []
-    const onRejection = (reason: unknown) => void seen.push(reason)
+    const ours = (reason: unknown) =>
+      reason instanceof BrowserHub.Failure || /transport cannot start/.test(String((reason as Error)?.message ?? ""))
+    const onRejection = (reason: unknown) => {
+      if (ours(reason)) seen.push(reason)
+    }
     process.on("unhandledRejection", onRejection)
     try {
       const linked = connection({

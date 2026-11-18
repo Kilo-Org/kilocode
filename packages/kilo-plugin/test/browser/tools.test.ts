@@ -653,28 +653,67 @@ describe("browser tools over the extension backend", () => {
     expect(hub.calls.map((call) => call.name)).toEqual(["browser_click", "browser_console_messages"])
   })
 
-  test("a granted act need keeps the action's notice and issues no extra read", async () => {
-    const { service } = recorder()
+  // A granted act or navigate need is the model's own next step: the answer must say so in every observation mode,
+  // because the mode may drop the notice the action produced.
+  for (const observation of ["none", "diff"] as const) {
+    test(`a granted act need answers with its notice and repeat guidance in ${observation} mode`, async () => {
+      const { asserts, service } = recorder()
+      const hub = fakeHub({
+        call: (input) => {
+          if (input.name !== "browser_click") return Promise.resolve({ content: [{ type: "text", text: "{}" }] })
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "The page moved to https://example.com; its content is withheld until act is granted.",
+              items: [{ class: "act", origin: "https://example.com" }],
+              afterAction: true,
+            }),
+          )
+        },
+      })
+      const host = await boot({ backend: "extension", observation }, { hub: hub.service, permission: service })
+      const result = await host.call("browser_click", { target: "e1" })
+      expect(result._tag).toBe("Success")
+      // The ask happened, for the class the browser named.
+      expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser"])
+      expect(asserts[1]).toMatchObject({ resources: ["act:https://example.com"] })
+      // No extra read, and the answer keeps the notice, the URL and the guidance whatever the mode would do.
+      expect(hub.calls.map((call) => call.name)).toEqual(["browser_click"])
+      const answer = result._tag === "Success" ? (result.success as Tool.Result) : undefined
+      const text = JSON.stringify(answer?.content)
+      expect(text).toContain("withheld")
+      expect(text).toContain("Approved. The permission is granted: repeat the same step to perform it.")
+      expect(answer?.metadata?.browser).toMatchObject({ url: "https://example.com" })
+    })
+  }
+
+  test("a mixed read and act need is granted but never re-read", async () => {
+    const { asserts, service } = recorder()
     const hub = fakeHub({
       call: (input) => {
         if (input.name !== "browser_click") return Promise.resolve({ content: [{ type: "text", text: "{}" }] })
         return Promise.reject(
           new BrowserHub.Failure({
             kind: "permission",
-            message: "The page moved to https://example.com; its content is withheld until act is granted.",
-            items: [{ class: "act", origin: "https://example.com" }],
+            message: "The page changed; its content is withheld until both classes are granted.",
+            items: [
+              { class: "read", origin: "https://example.com" },
+              { class: "act", origin: "https://example.com" },
+            ],
             afterAction: true,
           }),
         )
       },
     })
-    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const host = await boot({ backend: "extension", observation: "diff" }, { hub: hub.service, permission: service })
     const result = await host.call("browser_click", { target: "e1" })
     expect(result._tag).toBe("Success")
-    // An act need is not a read: the withheld notice stays, and nothing reads the page for it.
+    // `every`: one act item is enough to keep the notice, so a mixed need must not read the page either.
     expect(hub.calls.map((call) => call.name)).toEqual(["browser_click"])
+    const asked = asserts.filter((entry) => entry.action === "browser").flatMap((entry) => entry.resources ?? [])
+    expect(asked).toEqual(["read:https://example.com", "act:https://example.com"])
     const text = JSON.stringify(result._tag === "Success" ? result.success.content : "")
-    expect(text).toContain("withheld")
+    expect(text).toContain("repeat the same step to perform it")
   })
 
   test("a granted post-action step is spent on the identical repeat only", async () => {
