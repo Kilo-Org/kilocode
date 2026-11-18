@@ -258,4 +258,67 @@ describe("registerCodeActions", () => {
     expect(state.events).toEqual(["wait"])
     expect(state.posts).toEqual([])
   })
+
+  describe("fixCode", () => {
+    function emptySelection() {
+      const seen: unknown[] = []
+      api.window.activeTextEditor = {
+        selection: { isEmpty: true, start: { line: 0 }, end: { line: 0 } },
+        document: {
+          uri: vscode.Uri.file("/repo/src/file.ts"),
+          getText: (selection: unknown) => {
+            seen.push(selection)
+            return "const value = 1"
+          },
+        },
+      }
+      api.languages.getDiagnostics = () => []
+      return seen
+    }
+
+    it("uses the quick fix range when the editor selection is empty", async () => {
+      const state = setup()
+      const seen = emptySelection()
+      const range = new vscode.Range(new vscode.Position(2, 0), new vscode.Position(4, 0))
+      const diagnostics = [{ source: "eslint", message: "Missing semicolon" }] as never
+
+      await state.commands.get("kilo-code.new.fixCode")?.(range, diagnostics)
+
+      expect(seen).toEqual([range])
+      const post = state.posts.at(0) as { type: string; text: string }
+      expect(post.type).toBe("triggerTask")
+      expect(post.text).toContain("src/file.ts:3-5")
+      expect(post.text).toContain("[eslint] Missing semicolon")
+    })
+
+    it("passes the code action diagnostics through the prompt", async () => {
+      const state = setup()
+      emptySelection()
+      const range = new vscode.Range(new vscode.Position(2, 0), new vscode.Position(4, 0))
+      api.languages.getDiagnostics = () => [{ range: { intersection: () => ({}) } }]
+      const given = [{ message: "Type error" }] as never
+
+      await state.commands.get("kilo-code.new.fixCode")?.(range, given)
+
+      expect((state.posts.at(0) as { text: string }).text).toContain("[Error] Type error")
+    })
+
+    it("falls back to the editor selection and live diagnostics without arguments", async () => {
+      const state = setup()
+      api.languages.getDiagnostics = () => [{ range: { intersection: () => ({}) } }]
+
+      await state.commands.get("kilo-code.new.fixCode")?.()
+
+      expect((state.posts.at(0) as { text: string }).text).toContain("src/file.ts:3-5")
+    })
+
+    it("does nothing when the selection is empty and no range is passed", async () => {
+      const state = setup()
+      emptySelection()
+
+      await state.commands.get("kilo-code.new.fixCode")?.()
+
+      expect(state.posts).toEqual([])
+    })
+  })
 })

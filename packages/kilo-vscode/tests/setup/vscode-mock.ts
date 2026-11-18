@@ -174,6 +174,9 @@ const mockVscode = {
       public start: { line: number; character: number },
       public end: { line: number; character: number },
     ) {}
+    get isEmpty() {
+      return this.start.line === this.end.line && this.start.character === this.end.character
+    }
   },
   InlineCompletionItem: class {
     constructor(

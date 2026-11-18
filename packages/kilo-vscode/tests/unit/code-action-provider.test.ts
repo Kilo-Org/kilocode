@@ -95,6 +95,14 @@ describe("KiloCodeActionProvider", () => {
         const fix = result.find((a) => a.title === "Fix with Kilo Code")
         expect(fix?.command?.command).toBe("kilo-code.new.fixCode")
       })
+
+      it("passes the range and diagnostics as Fix command arguments", () => {
+        const range = makeRange(false)
+        const context = makeContext(2)
+        const result = provider.provideCodeActions({} as never, range as never, context as never)
+        const fix = result.find((a) => a.title === "Fix with Kilo Code")
+        expect(fix?.command?.arguments).toEqual([range, context.diagnostics])
+      })
     })
   })
 })
