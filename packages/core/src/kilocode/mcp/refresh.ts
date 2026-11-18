@@ -1,6 +1,64 @@
 export * as KiloMcpRefresh from "./refresh.js"
 
 import type { FetchLike } from "@modelcontextprotocol/client"
+import { Clock, Effect } from "effect"
+import { FetchHttpClient } from "effect/http"
+import { Credential } from "../../credential.js"
+import type { McpHost } from "../../mcp/host.js"
+
+const due = (value: Credential.OAuth, now: number) =>
+  Boolean(value.refresh) && value.expires !== 0 && value.expires <= now + 30_000
+
+/** A resource may answer an expired token with 403, which never starts the SDK's 401 refresh flow. */
+export const beforeConnect: NonNullable<McpHost.OAuth["beforeConnect"]> = Effect.fnUntraced(
+  function* (config, row, client) {
+    const clock = yield* Clock.Clock
+    if (row.value.type !== "oauth" || !due(row.value, clock.currentTimeMillisUnsafe())) return
+    const credentials = yield* Credential.Service
+    const fetch = yield* FetchHttpClient.Fetch
+    yield* credentials
+      .refresh(row.id, {
+        timeoutMs: config.timeout?.startup ?? 30_000,
+        stale: due,
+        refresh: (value) =>
+          Effect.tryPromise(async (signal) => {
+            const info = await client()
+            const issuer = value.metadata?.issuer ?? info?.issuer
+            if (!info || typeof issuer !== "string" || !issuer || (info.issuer && info.issuer !== issuer))
+              throw new Error("Missing or mismatched MCP OAuth issuer binding")
+            const { discoverAuthorizationServerMetadata, refreshAuthorization, resourceUrlFromServerUrl } =
+              await import("@modelcontextprotocol/client")
+            const fetchFn: FetchLike = (url, init) => {
+              signal.throwIfAborted()
+              return fetch(url, { ...init, signal })
+            }
+            const metadata = await discoverAuthorizationServerMetadata(issuer, { fetchFn })
+            const tokens = await refreshAuthorization(issuer, {
+              metadata,
+              clientInformation: info,
+              refreshToken: value.refresh,
+              resource: resourceUrlFromServerUrl(config.url),
+              fetchFn,
+            })
+            return Credential.OAuth.make({
+              ...value,
+              access: tokens.access_token,
+              refresh: tokens.refresh_token ?? value.refresh,
+              expires: tokens.expires_in === undefined ? 0 : clock.currentTimeMillisUnsafe() + tokens.expires_in * 1000,
+              metadata: {
+                ...value.metadata,
+                issuer,
+                tokenType: tokens.token_type,
+                ...(tokens.scope !== undefined && { scope: tokens.scope }),
+              },
+            })
+          }),
+      })
+      .pipe(
+        Effect.catch(() => Effect.logDebug("mcp oauth pre-connect refresh unavailable", { credentialID: row.id })),
+      )
+  },
+)
 
 /**
  * The MCP SDK treats a token refresh that fails on the network, or with a 5xx, as a rejected credential: it
