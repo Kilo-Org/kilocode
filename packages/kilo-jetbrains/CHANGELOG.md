@@ -724,6 +724,18 @@
 
 ## [Unreleased]
 
+## [7.2.1-rc.8] - 2026-11-17
+
+### Added
+
+- Cloud sessions now show status for the pull request linked to a hosted workspace, keeping partial or temporarily unavailable results distinct from having no pull request.
+- Cloud sessions can review workspace changes: committed, uncommitted, and pull-request-published diffs are shown separately, with revision-checked file reads, an explicit refresh, and verified linked pull request patches in the native diff editor.
+
+### Changed
+
+- Bundled Kilo Core CLI updated to 7.8.30.
+- Markdown rendering libraries updated to 0.32.0.
+
 ## [7.2.1-rc.7] - 2026-11-15
 
 ### Added

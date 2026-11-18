@@ -2535,6 +2535,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         )
         val calls = java.util.concurrent.CopyOnWriteArrayList<String?>()
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+            override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?): HostedWorkspaceListDto {
                 calls += repositoryUrl
@@ -2652,6 +2654,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         var deleted = false
         val calls = java.util.concurrent.CopyOnWriteArrayList<String?>()
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+            override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?): HostedWorkspaceListDto {
                 calls += repositoryUrl
@@ -2772,6 +2776,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val calls = java.util.concurrent.atomic.AtomicInteger()
         var createdOnce = false
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+            override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?): HostedWorkspaceListDto {
                 val call = calls.incrementAndGet()
@@ -2851,6 +2857,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         var fail = false
         val calls = java.util.concurrent.atomic.AtomicInteger()
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+            override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?): HostedWorkspaceListDto {
                 calls.incrementAndGet()
@@ -2938,6 +2946,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             sessions = listOf(HostedWorkspaceSessionDto(key, "same")),
         )
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+            override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
                 HostedWorkspaceListDto(listOf(item))
@@ -2986,6 +2996,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val ref = HostedWorkspaceRefDto("cloud", "booting")
         val item = HostedWorkspaceDto(ref, name = "Cloud booting")
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+            override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
                 HostedWorkspaceListDto(listOf(item))
@@ -3042,6 +3054,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val created = HostedWorkspaceDto(createdRef, name = "Created", sessions = listOf(session))
         val calls = java.util.concurrent.atomic.AtomicInteger()
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+            override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
                 HostedWorkspaceListDto().also { calls.incrementAndGet() }
@@ -3105,6 +3119,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         )
         val created = HostedWorkspaceDto(createdRef, name = "Created", sessions = listOf(session))
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+            override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
                 HostedWorkspaceListDto()
@@ -3156,6 +3172,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val created = HostedWorkspaceDto(createdRef, name = "Discovered", sessions = listOf(session))
         var createdOnce = false
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+            override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
                 HostedWorkspaceListDto(if (createdOnce) listOf(created) else emptyList())
@@ -3211,6 +3229,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         var createdOnce = false
         var signedOut = false
         val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+            override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
             override suspend fun providers(): List<HostedProviderDto> = emptyList()
             override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
                 HostedWorkspaceListDto(if (createdOnce && !signedOut) listOf(created) else emptyList(), signedOut = signedOut)
