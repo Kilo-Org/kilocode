@@ -48,6 +48,8 @@ export function subagentPanels(input: {
 
   return {
     open,
+    /** True when the tab of this subagent session is on screen. */
+    visible: (sessionID: string) => panels.get(sessionID)?.visible === true,
     dispose: () => {
       serializer.dispose()
       for (const panel of [...panels.values()]) panel.dispose()

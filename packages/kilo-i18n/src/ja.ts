@@ -136,4 +136,17 @@ export const dict = {
   "ui.tool.chart": "グラフ",
   "ui.tool.chart.invalid": "グラフの設定が無効です — type と data を含める必要があります",
   "ui.tool.chart.failed": "グラフを描画できませんでした",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo がタスクを完了しました。",
+  "attention.question": "Kilo が入力を待っています。",
+  "attention.permission": "Kilo が許可を求めています。",
+  "attention.error": "エラーにより Kilo がタスクを停止しました。",
+  "attention.show": "表示",
+  "attention.workspace": "ワークスペース",
+  "attention.session": "セッション",
+  "attention.test": "これは Kilo Code のテスト通知です。",
+  "attention.unsupported": "このプラットフォームでは OS 通知はサポートされていません。",
+  "attention.identity":
+    "このエディターの通知 ID を特定できなかったため、ネイティブ通知は利用できません。VS Code の通知は引き続き利用できます。",
 }

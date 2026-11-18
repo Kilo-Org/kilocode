@@ -140,4 +140,17 @@ export const dict = {
   "ui.tool.chart": "Диаграмма",
   "ui.tool.chart.invalid": "Недопустимая конфигурация диаграммы — должны быть указаны тип и данные",
   "ui.tool.chart.failed": "Не удалось отобразить диаграмму",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo завершил задачу.",
+  "attention.question": "Kilo ждёт вашего ответа.",
+  "attention.permission": "Kilo требуется разрешение.",
+  "attention.error": "Kilo остановил задачу из-за ошибки.",
+  "attention.show": "Показать",
+  "attention.workspace": "Рабочая область",
+  "attention.session": "Сессия",
+  "attention.test": "Это тестовое уведомление от Kilo Code.",
+  "attention.unsupported": "Уведомления операционной системы не поддерживаются на этой платформе.",
+  "attention.identity":
+    "Не удалось определить идентификатор уведомлений этого редактора, поэтому нативные уведомления недоступны. Уведомления VS Code продолжают работать.",
 }

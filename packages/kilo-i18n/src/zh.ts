@@ -129,4 +129,16 @@ export const dict = {
   "ui.tool.chart": "图表",
   "ui.tool.chart.invalid": "图表配置无效 — 必须包含 type 和 data",
   "ui.tool.chart.failed": "图表渲染失败",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo 已完成任务。",
+  "attention.question": "Kilo 需要你的输入。",
+  "attention.permission": "Kilo 需要授权。",
+  "attention.error": "Kilo 因错误停止了任务。",
+  "attention.show": "查看",
+  "attention.workspace": "工作区",
+  "attention.session": "会话",
+  "attention.test": "这是来自 Kilo Code 的测试通知。",
+  "attention.unsupported": "此平台不支持操作系统通知。",
+  "attention.identity": "无法确定此编辑器的通知标识，因此原生通知不可用。VS Code 通知仍然有效。",
 }

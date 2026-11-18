@@ -81,6 +81,16 @@ describe("settings search targets", () => {
     expect(result).toMatchObject({ tab: "context", tabOnly: false })
   })
 
+  test.each([
+    ["sound", "settings.notifications.enable.title"],
+    ["sounds", "settings.notifications.sounds"],
+    ["os notifications", "settings.notifications.os.title"],
+    ["vs code notifications", "settings.notifications.workbench.title"],
+  ])("finds the Notifications row for %s", (query, titleKey) => {
+    const result = searchSettings(query, translate).find((item) => item.titleKey === titleKey)
+    expect(result).toMatchObject({ tab: "notifications", tabOnly: false })
+  })
+
   test("does not index agent dialog and editor rows that cannot be revealed", () => {
     const keys = SETTINGS_ENTRIES.map((entry) => entry.titleKey)
     expect(keys).not.toContain("settings.agentBehaviour.removeMcp.title")

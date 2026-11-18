@@ -139,4 +139,17 @@ export const dict = {
   "ui.tool.chart": "Diagram",
   "ui.tool.chart.invalid": "Ugyldig diagramkonfigurasjon — må inneholde type og data",
   "ui.tool.chart.failed": "Diagrammet kunne ikke vises",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo har fullført oppgaven.",
+  "attention.question": "Kilo trenger innspill fra deg.",
+  "attention.permission": "Kilo trenger tillatelse.",
+  "attention.error": "Kilo stoppet oppgaven på grunn av en feil.",
+  "attention.show": "Vis",
+  "attention.workspace": "Arbeidsområde",
+  "attention.session": "Økt",
+  "attention.test": "Dette er et testvarsel fra Kilo Code.",
+  "attention.unsupported": "Operativsystemvarsler støttes ikke på denne plattformen.",
+  "attention.identity":
+    "Klarte ikke å fastslå varslingsidentiteten til denne editoren, så native varsler er utilgjengelige. VS Code-varsler fungerer fortsatt.",
 }

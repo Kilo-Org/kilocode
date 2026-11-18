@@ -140,4 +140,17 @@ export const dict = {
   "ui.tool.chart": "Diagramm",
   "ui.tool.chart.invalid": "Ungültige Diagrammkonfiguration — muss Typ und Daten enthalten",
   "ui.tool.chart.failed": "Diagramm konnte nicht gerendert werden",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo hat die Aufgabe abgeschlossen.",
+  "attention.question": "Kilo benötigt deine Eingabe.",
+  "attention.permission": "Kilo benötigt eine Berechtigung.",
+  "attention.error": "Kilo hat die Aufgabe wegen eines Fehlers gestoppt.",
+  "attention.show": "Anzeigen",
+  "attention.workspace": "Arbeitsbereich",
+  "attention.session": "Sitzung",
+  "attention.test": "Dies ist eine Testbenachrichtigung von Kilo Code.",
+  "attention.unsupported": "Betriebssystem-Benachrichtigungen werden auf dieser Plattform nicht unterstützt.",
+  "attention.identity":
+    "Die Benachrichtigungsidentität dieses Editors konnte nicht ermittelt werden, daher sind native Benachrichtigungen nicht verfügbar. VS Code-Benachrichtigungen funktionieren weiterhin.",
 }

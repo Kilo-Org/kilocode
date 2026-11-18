@@ -364,6 +364,10 @@ export type Settings =
   | { type: "openFile"; path: string }
   | { type: "openVSCodeSettings"; query: string }
   | { type: "resetAllSettings" }
+  /** Plays the sound a choice of the Notifications tab plays when a task completes. */
+  | { type: "attentionTestSound"; sound: string }
+  /** Sends a real native notification, answered with `attentionTestOSResult`. */
+  | { type: "attentionTestOS" }
   | AgentManagerSettings
   | FetchCustomProviderModels
 
@@ -504,6 +508,7 @@ export type ToWebview =
       file?: ConfigFileContent & { scope: ConfigScope }
     }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
+  | { type: "attentionTestOSResult"; ok: boolean; error?: string }
   | { type: "indexingSettingsLoaded"; settings: IndexingSettings }
   | { type: "indexingStatusLoaded"; status: KiloIndexingRpc.Status; projectId?: string }
   | {

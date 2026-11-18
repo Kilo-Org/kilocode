@@ -137,4 +137,17 @@ export const dict = {
   "ui.tool.chart": "แผนภูมิ",
   "ui.tool.chart.invalid": "การกำหนดค่าแผนภูมิไม่ถูกต้อง — ต้องมีชนิดและข้อมูล",
   "ui.tool.chart.failed": "แสดงแผนภูมิไม่สำเร็จ",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo ทำงานเสร็จแล้ว",
+  "attention.question": "Kilo ต้องการข้อมูลจากคุณ",
+  "attention.permission": "Kilo ต้องการสิทธิ์",
+  "attention.error": "Kilo หยุดงานเนื่องจากข้อผิดพลาด",
+  "attention.show": "แสดง",
+  "attention.workspace": "พื้นที่ทำงาน",
+  "attention.session": "เซสชัน",
+  "attention.test": "นี่คือการแจ้งเตือนทดสอบจาก Kilo Code",
+  "attention.unsupported": "แพลตฟอร์มนี้ไม่รองรับการแจ้งเตือนของระบบปฏิบัติการ",
+  "attention.identity":
+    "ไม่สามารถระบุข้อมูลประจำตัวการแจ้งเตือนของตัวแก้ไขนี้ได้ การแจ้งเตือนแบบเนทีฟจึงไม่พร้อมใช้งาน การแจ้งเตือนของ VS Code ยังคงทำงานได้",
 }

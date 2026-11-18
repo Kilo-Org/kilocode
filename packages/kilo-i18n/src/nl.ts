@@ -141,4 +141,17 @@ export const dict = {
   "ui.tool.chart": "Grafiek",
   "ui.tool.chart.invalid": "Ongeldige grafiekconfiguratie — moet type en data bevatten",
   "ui.tool.chart.failed": "Grafiek kon niet worden weergegeven",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo heeft de taak voltooid.",
+  "attention.question": "Kilo heeft je invoer nodig.",
+  "attention.permission": "Kilo heeft toestemming nodig.",
+  "attention.error": "Kilo heeft de taak gestopt vanwege een fout.",
+  "attention.show": "Tonen",
+  "attention.workspace": "Werkruimte",
+  "attention.session": "Sessie",
+  "attention.test": "Dit is een testmelding van Kilo Code.",
+  "attention.unsupported": "Meldingen van het besturingssysteem worden op dit platform niet ondersteund.",
+  "attention.identity":
+    "De meldingsidentiteit van deze editor kon niet worden bepaald, dus native meldingen zijn niet beschikbaar. VS Code-meldingen werken nog steeds.",
 }

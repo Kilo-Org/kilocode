@@ -143,4 +143,17 @@ export const dict = {
   "ui.tool.chart": "Grafikon",
   "ui.tool.chart.invalid": "Nevažeća konfiguracija grafikona — mora sadržavati tip i podatke",
   "ui.tool.chart.failed": "Prikaz grafikona nije uspio",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo je završio zadatak.",
+  "attention.question": "Kilo čeka tvoj unos.",
+  "attention.permission": "Kilo treba dozvolu.",
+  "attention.error": "Kilo je zaustavio zadatak zbog greške.",
+  "attention.show": "Prikaži",
+  "attention.workspace": "Radni prostor",
+  "attention.session": "Sesija",
+  "attention.test": "Ovo je probno obavještenje iz Kilo Code.",
+  "attention.unsupported": "Obavještenja operativnog sistema nisu podržana na ovoj platformi.",
+  "attention.identity":
+    "Nije bilo moguće utvrditi identitet obavještenja ovog uređivača, pa nativna obavještenja nisu dostupna. VS Code obavještenja i dalje rade.",
 }
