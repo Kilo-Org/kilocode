@@ -25,6 +25,7 @@ import ai.kilocode.client.speech.SpeechCapture
 import ai.kilocode.client.speech.SpeechInput
 import ai.kilocode.client.speech.SpeechInputState
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.LiveBadgeIcon
 import ai.kilocode.client.ui.editor.EditorFolds
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
@@ -154,6 +155,8 @@ class PromptPanel(
         private val SHIELD_FILLED_ICON: Icon = IconLoader.getIcon("/icons/shield-filled.svg", PromptPanel::class.java)
         private val WAND_ICON: Icon = IconLoader.getIcon("/icons/wand-sparkles.svg", PromptPanel::class.java)
         private val SPEECH_ICON: Icon = AllIcons.CodeWithMe.CwmMicOn
+        private val SPEECH_RECORDING_ICON: Icon =
+            LiveBadgeIcon(SPEECH_ICON, JBUI.CurrentTheme.IconBadge.ERROR)
         private val SPEECH_ERROR_ICON: Icon = AllIcons.CodeWithMe.CwmMicOff
         private val MENTION_KEY = DefaultLanguageHighlighterColors.METADATA
         private val COMMAND_KEY = DefaultLanguageHighlighterColors.KEYWORD
@@ -980,7 +983,8 @@ class PromptPanel(
     private fun speechIcon(state: SpeechInputState): Icon = when (state) {
         SpeechInputState.STARTING, SpeechInputState.TRANSCRIBING -> SpinnerIcon.icon
         SpeechInputState.ERROR -> SPEECH_ERROR_ICON
-        SpeechInputState.IDLE, SpeechInputState.RECORDING -> SPEECH_ICON
+        SpeechInputState.RECORDING -> SPEECH_RECORDING_ICON
+        SpeechInputState.IDLE -> SPEECH_ICON
     }
 
     @RequiresEdt

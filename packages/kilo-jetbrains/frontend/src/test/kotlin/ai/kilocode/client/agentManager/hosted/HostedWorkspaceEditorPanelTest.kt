@@ -42,11 +42,17 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileEditor.FileEditorManager
 import ai.kilocode.rpc.KiloHostedRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.HostedAgentDto
 import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
 import ai.kilocode.rpc.dto.HostedDeleteResultDto
 import ai.kilocode.rpc.dto.HostedMutationResultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
+import ai.kilocode.rpc.dto.HostedPullRequestChecksDto
+import ai.kilocode.rpc.dto.HostedPullRequestConversationsDto
+import ai.kilocode.rpc.dto.HostedPullRequestMergeabilityDto
+import ai.kilocode.rpc.dto.HostedPullRequestReviewDto
+import ai.kilocode.rpc.dto.HostedPullRequestSummaryDto
 import ai.kilocode.rpc.dto.HostedRepositoryDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
@@ -55,6 +61,7 @@ import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
@@ -62,6 +69,8 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.client.ui.PrIcons
+import ai.kilocode.client.ui.stateLabel
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
@@ -100,7 +109,9 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     private lateinit var rpc: FakeHosted
     private lateinit var sessions: FakeSessionRpcApi
     private lateinit var hosted: KiloHostedService
+    private lateinit var pulls: HostedPullRequestService
     private lateinit var panel: HostedWorkspaceEditorPanel
+    private var pull: HostedWorkspacePullRequestDto? = null
     private val ref = HostedWorkspaceRefDto("cloud", "workspace")
     private val key get() = "${ref.key}:selected"
 
@@ -113,6 +124,17 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
         project.replaceService(KiloSessionService::class.java,
             KiloSessionService(project, coroutines.scope, sessions), testRootDisposable)
+        pull = null
+        pulls = HostedPullRequestService(
+            coroutines.scope,
+            read = { pull ?: HostedWorkspacePullRequestDto(it, "unavailable", null) },
+            revalidate = { pull ?: HostedWorkspacePullRequestDto(it, "unavailable", null) },
+            pause = { kotlinx.coroutines.delay(Long.MAX_VALUE) },
+            clock = { 0L },
+            identity = null,
+            signedOut = null,
+        )
+        project.replaceService(HostedPullRequestService::class.java, pulls, testRootDisposable)
         val app = ApplicationManager.getApplication()
         app.replaceService(KiloAppService::class.java, KiloAppService(coroutines.scope, FakeAppRpcApi().also {
             it.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
@@ -470,6 +492,78 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             iter.next()
             assertEquals(SimpleTextAttributes.STYLE_PLAIN, iter.textAttributes.style)
         }
+    }
+
+    fun testLinkedPullRequestUsesTheSharedHeaderPillVerdictsAndTitle() {
+        pull = HostedWorkspacePullRequestDto(ref, "available", HostedPullRequestSummaryDto(
+            url = "https://github.com/owner/repo/pull/42",
+            number = 42,
+            state = "open",
+            title = "Fix Cloud PR",
+            headSha = "a".repeat(40),
+            lastSyncedAt = "2026-11-17T00:00:00Z",
+            review = HostedPullRequestReviewDto("approved", available = true, pending = false),
+            checks = HostedPullRequestChecksDto(3, 3, 0, 0, 0, 0, complete = true, available = true),
+            conversations = HostedPullRequestConversationsDto(2, complete = true),
+            mergeability = HostedPullRequestMergeabilityDto(true, "clean", complete = true),
+            partial = false,
+            unavailable = emptyList(),
+        ))
+        pulls.refresh(ref, revalidate = true)
+        var text = ""
+        val ok = coroutines.pumpUntil { edtWait {
+            val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
+            val title = descendants(header).filterIsInstance<SimpleColoredComponent>().single()
+            val parts = mutableListOf<String>()
+            val iter = title.iterator()
+            while (iter.hasNext()) {
+                iter.next()
+                parts += iter.fragment.toString()
+            }
+            text = parts.joinToString("")
+            text == "Fix Cloud PR #42"
+        } }
+        assertTrue("header title was '$text', pull=${pulls.pulls.value[ref.key]}", ok)
+
+        edtWait {
+            val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
+            val icons = descendants(header).filterIsInstance<JBLabel>().mapNotNull { it.icon }
+            assertTrue(icons.any { (it as? FilledBadgeIcon)?.text == stateLabel(GhState.OPEN) })
+            assertTrue(icons.any { it === PrIcons.reviewApproved })
+            assertTrue(icons.any { it === PrIcons.checksPassed })
+        }
+    }
+
+    fun testMissingPullRequestTitleFallsBackToTheWorkspaceName() {
+        pull = HostedWorkspacePullRequestDto(ref, "available", HostedPullRequestSummaryDto(
+            url = "https://github.com/owner/repo/pull/42",
+            number = 42,
+            state = "open",
+            title = null,
+            headSha = "a".repeat(40),
+            lastSyncedAt = "2026-11-17T00:00:00Z",
+            review = HostedPullRequestReviewDto("approved", available = true, pending = false),
+            checks = HostedPullRequestChecksDto(3, 3, 0, 0, 0, 0, complete = true, available = true),
+            conversations = HostedPullRequestConversationsDto(0, complete = true),
+            mergeability = HostedPullRequestMergeabilityDto(true, "clean", complete = true),
+            partial = false,
+            unavailable = emptyList(),
+        ))
+        pulls.refresh(ref, revalidate = true)
+        var text = ""
+        val ok = coroutines.pumpUntil { edtWait {
+            val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
+            val title = descendants(header).filterIsInstance<SimpleColoredComponent>().single()
+            val parts = mutableListOf<String>()
+            val iter = title.iterator()
+            while (iter.hasNext()) {
+                iter.next()
+                parts += iter.fragment.toString()
+            }
+            text = parts.joinToString("")
+            text == "Selected session #42"
+        } }
+        assertTrue("header title was '$text'", ok)
     }
 
     fun testCloudSessionTitleRefreshesFromWorkspace() {
@@ -844,6 +938,9 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     }
 
     private class FakeHosted(private val ref: HostedWorkspaceRefDto) : KiloHostedRpcApi {
+        override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+
         val events = MutableSharedFlow<HostedSystemEventDto>(replay = 16)
         var collectors = 0
         var active = 0
