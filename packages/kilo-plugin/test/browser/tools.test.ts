@@ -162,11 +162,13 @@ async function boot(
     transforms.forEach((fn) => fn({ add: (tool) => added.push(tool) }))
     return added
   }
+  // The registry flattens the `browser` namespace, so a test names a tool the way a call does: `browser_click` and
+  // `click` both reach the tool registered as `click`, and the backend still receives `browser_click`.
   const call = (name: string, input: unknown = {}, session = "ses_browser") =>
     Effect.runPromise(
       Effect.result(
         tools()
-          .find((tool) => tool.name === name)!
+          .find((tool) => tool.name === (name.startsWith("browser_") ? name.slice("browser_".length) : name))!
           .execute(input, {
             sessionID: session as never,
             agent: "code" as never,
