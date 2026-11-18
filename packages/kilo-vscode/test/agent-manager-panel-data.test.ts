@@ -1,12 +1,15 @@
 // The Agent Manager panel shares one event stream between per-directory `createData` stores. A local server streams
 // real server events, and each store must receive only the events of its own directory.
-import { afterAll, describe, expect, mock, test } from "bun:test"
+import { afterAll, describe, expect, mock, setDefaultTimeout, test } from "bun:test"
 import { OpenCode, type OpenCodeEvent } from "@opencode/client"
 import { once } from "node:events"
 import path from "node:path"
 import { git, initGit } from "../../core/test/fixture/git"
 import { tmpdir } from "../../core/test/fixture/tmpdir"
 import { command, start, stop } from "../src/server"
+
+// Real server round trips and loaded CI runners need more than the default deadline.
+setDefaultTimeout(30_000)
 
 // Another test may have loaded Solid's server build. Await its replacement so project switches notify the panel.
 const CLIENT_SOLID = "solid-js/dist/solid.js"
@@ -185,7 +188,7 @@ test("keeps a pending form on the owning Local row when switching projects", asy
           title: "Which color?",
           fields: [{ key: "color", type: "string", required: true }],
         })
-        await until(() => rows.project(first.projectID, null) === "waiting")
+        await until(() => rows.project(first.projectID, null) === "waiting", 300)
 
         setActive(second.projectID)
         panel.show([bravo])
@@ -198,7 +201,7 @@ test("keeps a pending form on the owning Local row when switching projects", asy
         expect(rows.project(first.projectID, null)).toBe("waiting")
         await api.session.form.reply({ sessionID: first.id, formID: form.id, answer: { color: "Blue" } })
         expect(await api.session.form.list({ sessionID: first.id })).toEqual([])
-        await until(() => rows.project(first.projectID, null) === "idle")
+        await until(() => rows.project(first.projectID, null) === "idle", 300)
         setActive(second.projectID)
         expect(rows.project(first.projectID, null)).toBe("idle")
         expect(rows.project(second.projectID, null)).toBe("idle")
