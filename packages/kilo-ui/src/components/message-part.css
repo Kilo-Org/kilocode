@@ -106,8 +106,13 @@
   }
 }
 
-/* Prevent long filenames in apply-patch accordion from hiding diff changes */
 [data-component="accordion"][data-scope="apply-patch"] {
+  [data-slot="apply-patch-file-name-container"] {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  /* Prevent long filenames in apply-patch accordion from hiding diff changes */
   [data-slot="apply-patch-filename"] {
     flex-shrink: 1;
     min-width: 0;
