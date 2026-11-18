@@ -98,7 +98,7 @@ export function makeTools(runtime: Runtime) {
           source: { type: "tool", messageID: context.messageID, id: context.id },
         })
         const reply = params.reply_to?.trim()
-        const message = yield* BoardStore.post(runtime.store, {
+        const { message, availability } = yield* BoardStore.post(runtime.store, {
           sessionID: context.sessionID,
           messageID: context.messageID,
           callID: context.id,
@@ -108,10 +108,6 @@ export function makeTools(runtime: Runtime) {
           ...(reply ? { reply_to: reply } : {}),
         }).pipe(Effect.mapError(toolError))
         yield* runtime.changed(context.sessionID)
-        const availability = yield* BoardStore.availability(runtime.store, {
-          sessionID: context.sessionID,
-          to: message.to,
-        }).pipe(Effect.mapError(toolError))
         const warning = warn(availability)
         return {
           content: JSON.stringify({
