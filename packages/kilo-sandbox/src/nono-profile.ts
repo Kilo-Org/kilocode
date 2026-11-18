@@ -60,14 +60,14 @@ const xdg = ["XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "XDG_DATA_HO
 
 /**
  * nono grants write access to every temporary directory by default. Kilo grants only its own temp directory, so
- * the broader groups are excluded and the Kilo temp directory is added back as a grant.
+ * the broader write groups are excluded and the Kilo temp directory is added back as a grant.
  */
-const broader = ["system_write_macos", "system_write_linux"]
+const broaderWriteGroups = ["system_write_macos", "system_write_linux"]
 
 /** Commands expect these even with writes otherwise restricted; Kilo's Seatbelt policy grants them too. */
-const devices = ["/dev/null", "/dev/zero", "/dev/random", "/dev/urandom", "/dev/tty"]
+const deviceFiles = ["/dev/null", "/dev/zero", "/dev/random", "/dev/urandom", "/dev/tty"]
 
-const secrets = [
+const credentialPaths = [
   "$HOME/.ssh",
   "$HOME/.gnupg",
   "$HOME/.aws",
@@ -185,7 +185,7 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
           ),
         ]
   const denied = [
-    ...secrets,
+    ...credentialPaths,
     ...profile.filesystem.denyWrite.map((rule) => rule.path),
     ...(paths.config === undefined ? [] : [paths.config]),
     ...(paths.data === undefined
@@ -207,11 +207,11 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
   return {
     extends: "default",
     meta: { name: "kilo", description: "Kilo sandbox profile" },
-    groups: { exclude: [...broader, ...(inputs.exclude ?? [])] },
+    groups: { exclude: [...broaderWriteGroups, ...(inputs.exclude ?? [])] },
     workdir: { access: access(profile, reads, inputs.cwd) },
     filesystem: {
       allow: [...new Set(allow(allowWrite))],
-      allow_file: [...new Set([...files(allowWrite), ...devices])],
+      allow_file: [...new Set([...files(allowWrite), ...deviceFiles])],
       read: [...new Set([...allow(reads), ...(temporary === undefined ? [] : [temporary])])],
       read_file: [...new Set(files(reads))],
       deny: [...new Set(denied)],
