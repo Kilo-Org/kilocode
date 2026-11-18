@@ -2,7 +2,7 @@ export * as SessionInbox from "./inbox.js"
 
 import { and, asc, eq, or } from "drizzle-orm"
 import { Context, DateTime, Effect, Layer, Schema } from "effect"
-import { makeGlobalNode } from "@opencode/util/effect/app-node"
+import { makeGlobalNode, makeLocationNode } from "@opencode/util/effect/app-node" // kilocode_change(workflow-model) seam - location-scoped delivery policy node
 import {
   Compaction,
   CompactionPayload,
@@ -30,6 +30,7 @@ import { SessionSchema } from "./schema.js"
 import { SessionStored } from "./stored.js"
 import { SessionInboxTable, SessionMessageTable } from "./sql.js"
 import { SessionHistory } from "./history.js"
+import type { RunError } from "./runner/index.js" // kilocode_change(workflow-model) seam - policy errors join the runner channel
 
 type DatabaseService = Database.Interface["db"]
 
@@ -538,6 +539,11 @@ export interface DeliveryPolicy<E> {
   ) => Effect.Effect<readonly [PublishInput, ...PublishInput[]] | undefined, E>
   readonly onCommitted?: () => void
 }
+/** The installed delivery policy; without one, native delivery applies and commands select immediately. */
+export class Policy extends Context.Service<Policy, { readonly policy?: DeliveryPolicy<RunError> }>()(
+  "@opencode/SessionInbox/Policy",
+) {}
+export const policyNode = makeLocationNode({ service: Policy, layer: Layer.succeed(Policy, {}), deps: [] })
 // kilocode_change end
 
 const publish = Effect.fn("SessionInbox.publish")(function* <E = never>( // kilocode_change(workflow-model) seam - allow host-defined delivery events

@@ -7,9 +7,8 @@ import { Agent } from "../../agent.js"
 import type { PublishInput } from "../../bus.js"
 import { Model } from "../../model.js"
 import { AgentNotFoundError } from "../../session/error.js"
-import type { SessionInbox } from "../../session/inbox.js"
+import { SessionInbox } from "../../session/inbox.js"
 import { SessionEvent } from "../../session/event.js"
-import { SessionRunnerLLM } from "../../session/runner/llm.js"
 import { SessionRunnerModel } from "../../session/runner/model.js"
 import { SessionStore } from "../../session/store.js"
 import { SessionStored } from "../../session/stored.js"
@@ -17,17 +16,17 @@ import { SessionStored } from "../../session/stored.js"
 const decode = Schema.decodeUnknownSync(Schema.Struct({ selection: SessionStored.UserPayload.fields.selection }))
 const selectionFor = (row: SessionInbox.Pending) => (row.type === "user" ? decode(row.payload).selection : undefined)
 
-export const override: LayerNode.Replacement = SessionRunnerLLM.inboxDeliveryNode.replace(
+export const override: LayerNode.Replacement = SessionInbox.policyNode.replace(
   makeLocationNode({
-    service: SessionRunnerLLM.InboxDelivery,
+    service: SessionInbox.Policy,
     deps: [Agent.node, Model.node, SessionStore.node],
     layer: Layer.effect(
-      SessionRunnerLLM.InboxDelivery,
+      SessionInbox.Policy,
       Effect.gen(function* () {
         const agents = yield* Agent.Service
         const models = yield* Model.Service
         const store = yield* SessionStore.Service
-        return SessionRunnerLLM.InboxDelivery.of({
+        return SessionInbox.Policy.of({
           policy: {
             batchSize(rows, after) {
               // Prompts with distinct selections must not be delivered to the same model step.

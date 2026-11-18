@@ -28,6 +28,7 @@ import { Provider } from "@opencode/core/provider"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Session } from "@opencode/core/session"
 import { SessionExecution } from "@opencode/core/session/execution"
+import { SessionInbox } from "@opencode/core/session/inbox"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { SubagentJob } from "@opencode/core/session/subagent-job"
 import { ShellSelect } from "@opencode/core/shell/select"
@@ -159,6 +160,7 @@ function commandLayer(project: string, global: string) {
       FSUtil.node,
       AppProcess.node,
       Location.node,
+      Model.node,
       ShellSelect.node,
       Session.node,
       Job.node,
@@ -166,6 +168,7 @@ function commandLayer(project: string, global: string) {
       Agent.node,
     ]),
     [
+      KiloWorkflowDelivery.override,
       Config.node.replace(Config.configured({ system: false })),
       ConfigDiscovery.node.replace(layout),
       Location.node.replace(
@@ -246,6 +249,11 @@ describe("workflow model discovery", () => {
             session: {
               switchModel: () => Effect.die("A pending workflow must not switch the model"),
             },
+          }),
+        ).pipe(
+          // A command defers its selection when the host installed a delivery policy.
+          Effect.provideService(SessionInbox.Policy, {
+            policy: { batchSize: () => 1, prepare: () => Effect.undefined },
           }),
         )
         yield* Effect.sleep("10 millis")
@@ -374,10 +382,12 @@ const startWorkflowSession = Effect.fnUntraced(function* () {
             models: { original: {}, first: {}, second: {} },
           },
         },
+        agents: { reviewer: { mode: "all" } },
         commands: {
           first: { template: "First $ARGUMENTS", model: "test/first#high" },
           second: { template: "Second $ARGUMENTS", model: "test/second" },
           missing: { template: "Missing", model: "test/does-not-exist" },
+          review: { template: "Review $ARGUMENTS", agent: "reviewer" },
         },
       }),
     ),
@@ -493,6 +503,56 @@ workflows.live(
       expect((yield* llm.requests()).map((request) => String(request.model.id))).toEqual(["second"])
       expect((yield* sessions.get(id)).model).toMatchObject(model("second"))
     }),
+)
+
+workflows.live("applies a command's agent when the command is delivered", () =>
+  Effect.gen(function* () {
+    const { sessions, id } = yield* startWorkflowSession()
+    const llm = yield* TestLLM.Test
+    const gate = yield* llm.gate()
+    yield* sessions.prompt({ sessionID: id, text: "Current task" })
+    yield* gate.started
+    yield* sessions.command({ sessionID: id, command: "review", text: "changes", delivery: "queue" })
+    expect((yield* sessions.get(id)).agent).toBe(Agent.ID.make("build"))
+    yield* gate.release
+    yield* sessions.wait(id)
+    expect((yield* sessions.get(id)).agent).toBe(Agent.ID.make("reviewer"))
+    const messages = yield* sessions.context(id)
+    // One switch, committed with the input it runs, and the first step under the new agent.
+    expect(messages.filter((message) => message.type === "agent-switched").map((message) => message.agent)).toEqual([
+      Agent.ID.make("reviewer"),
+    ])
+    expect(
+      messages.flatMap((message) => {
+        if (message.type === "agent-switched") return ["switch"]
+        if (message.type === "user") return [`user:${message.text}`]
+        return []
+      }),
+    ).toEqual(["user:Current task", "switch", "user:Review changes"])
+    expect(messages.filter((message) => message.type === "assistant").map((message) => message.agent)).toEqual([
+      Agent.ID.make("build"),
+      Agent.ID.make("reviewer"),
+    ])
+  }),
+)
+
+workflows.live("leaves an unavailable command agent pending without changing the session", () =>
+  Effect.gen(function* () {
+    const { sessions, id } = yield* startWorkflowSession()
+    const llm = yield* TestLLM.Test
+    yield* sessions.prompt({
+      sessionID: id,
+      text: "Needs a missing agent",
+      selection: { agent: Agent.ID.make("ghost") },
+      delivery: "queue",
+    })
+    yield* sessions.wait(id)
+    const session = yield* sessions.get(id)
+    expect(session.outcome).toBe("failed")
+    expect(session.agent).toBe(Agent.ID.make("build"))
+    expect(yield* sessions.inbox(id)).toHaveLength(1)
+    expect(yield* llm.requests()).toEqual([])
+  }),
 )
 
 workflows.live("passes the workflow model and variant to a subagent without changing its parent", () =>

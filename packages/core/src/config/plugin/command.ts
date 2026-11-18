@@ -5,13 +5,14 @@ import type { Entry } from "@opencode/schema/config"
 import { ConfigCommand } from "@opencode/schema/config/command"
 import { AppProcess } from "@opencode/util/process"
 import path from "path"
-import { Effect, Result, SchemaIssue, SchemaParser } from "effect"
+import { Effect, Option, Result, SchemaIssue, SchemaParser } from "effect" // kilocode_change(workflow-model) seam - optional delivery policy
 import { ChildProcess } from "effect/process"
 import { Agent } from "../../agent.js"
 import { Config } from "../../config.js"
 import { Location } from "../../location.js"
 import { Session } from "../../session.js"
 import { SubagentJob } from "../../session/subagent-job.js"
+import { SessionInbox } from "../../session/inbox.js" // kilocode_change(workflow-model) seam - the installed delivery policy defers command selection
 import { ShellSelect } from "../../shell/select.js"
 import { FSUtil } from "@opencode/util/fs-util"
 import { ConfigMarkdown } from "../markdown.js"
@@ -38,6 +39,7 @@ export const Plugin = define({
     const sessions = yield* Session.Service
     const agents = yield* Agent.Service
     const subagents = yield* SubagentJob.Service
+    const delivery = Option.getOrUndefined(yield* Effect.serviceOption(SessionInbox.Policy)) // kilocode_change(workflow-model) seam - defer command selection only when the host installed a delivery policy
     const load = Effect.fn("ConfigCommandPlugin.load")(function* () {
       const entries = yield* config.entries() // kilocode_change(workflow-model) seam - compose discovered command documents
       return yield* Effect.forEach(entries, loadEntry).pipe(Effect.map((documents) => config.commandDocuments?.(entries, documents.flat()) ?? documents.flat())) // kilocode_change(workflow-model) seam - compose discovered command documents
@@ -102,7 +104,7 @@ export const Plugin = define({
                   return
                 }
                 // kilocode_change start - workflow-model seam: admit the selection with the prompt instead of switching the running session
-                if (config.deferCommandSelection && (agent !== undefined || model !== undefined)) {
+                if (delivery?.policy && (agent !== undefined || model !== undefined)) {
                   yield* sessions.prompt({
                     ...input.prompt,
                     sessionID: input.sessionID,
