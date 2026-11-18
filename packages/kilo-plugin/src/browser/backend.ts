@@ -17,6 +17,8 @@ export type CallMeta = {
   needs?: readonly Item[]
   /** The browser's step token for a post-action need; remembered once the user grants, sent on the identical repeat. */
   stepToken?: string
+  /** The action already ran and only its content was withheld: the step is never repeated, the page is read again. */
+  afterAction?: true
 }
 
 export type CallResult = { content: ContentBlock[]; isError: boolean; meta?: CallMeta }

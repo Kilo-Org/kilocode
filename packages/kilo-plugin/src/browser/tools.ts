@@ -363,27 +363,7 @@ function postAction(input: PostAction) {
     }
     // Only a read need may read the page again. An act or navigate need is the model's own next step to take: the
     // answer keeps the notice and the URL, and says so plainly, because the observation mode may not keep them.
-    if (!input.needs.every((item) => item.class === "read")) {
-      const origin = input.needs[0]?.origin ?? ""
-      return {
-        kind: "result" as const,
-        result: {
-          content: [
-            {
-              type: "text",
-              text: `${textOf(input.result)}\n\nApproved. The permission is granted: repeat the same step to perform it.`,
-            },
-          ],
-          metadata: {
-            browser: {
-              backend: input.backend,
-              observation: input.observation,
-              ...(origin ? { url: origin } : {}),
-            },
-          },
-        } as Tool.Result,
-      }
-    }
+    if (!input.needs.every((item) => item.class === "read")) return granted(input)
     const reread = yield* Effect.result(
       Effect.tryPromise({
         try: (signal) =>
@@ -397,6 +377,40 @@ function postAction(input: PostAction) {
     }
     return { kind: "continue" as const, result: input.result }
   })
+}
+
+/**
+ * A granted need that still needs the model: an act or navigate grant is the model's own next step, and whether the
+ * step already ran decides the wording. `afterAction` means the browser did it and withheld the content, so repeating
+ * it would run the action twice; a need without it never ran, so the step is repeated.
+ */
+export function granted(input: PostAction) {
+  const ran = input.result.meta?.afterAction === true
+  const origin = input.needs[0]?.origin ?? ""
+  const url = input.result.meta?.url ?? origin
+  return {
+    kind: "result" as const,
+    result: {
+      content: [
+        {
+          type: "text",
+          text: `${textOf(input.result)}\n\n${
+            ran
+              ? "The step ran. The permission is granted; read the page again (browser_snapshot) to see the result."
+              : "Approved. Repeat the same step to perform it."
+          }`,
+        },
+      ],
+      metadata: {
+        browser: {
+          backend: input.backend,
+          observation: input.observation,
+          ...(url ? { url } : {}),
+          ...(input.result.meta?.withheldFrames ? { withheldFrames: input.result.meta.withheldFrames } : {}),
+        },
+      },
+    } as Tool.Result,
+  }
 }
 
 /** The model-facing answer for one call: the observation mode, the images, and the metadata the UI reads. */

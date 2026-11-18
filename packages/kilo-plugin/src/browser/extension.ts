@@ -277,12 +277,13 @@ export class ExtensionBackend implements BrowserBackend {
     const items = needs(error.items)
     if (items === undefined) return undefined
     const meta = finishMeta({ ...(error.meta ?? {}), ...(items.length ? { needs: items } : {}) }, error.stepToken)
+    const flagged = meta === undefined ? undefined : { ...meta, afterAction: true as const }
     return {
       content: [
         { type: "text", text: error.message || "The action ran; its content is withheld until the user approves." },
       ],
       isError: false,
-      ...(meta ? { meta } : {}),
+      ...(flagged ? { meta: flagged } : {}),
     }
   }
 

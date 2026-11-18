@@ -11,7 +11,7 @@ import { BrowserContract } from "../../src/browser/contract"
 import { EXTENSION_HINT } from "../../src/browser/extension"
 import { BrowserHub } from "../../src/browser/hub"
 import { resetSteps } from "../../src/browser/steps"
-import { authorize, effective, KiloBrowserToolsPlugin, resetGrants, trim } from "../../src/browser/tools"
+import { authorize, effective, granted, KiloBrowserToolsPlugin, resetGrants, trim } from "../../src/browser/tools"
 import { KiloGatewayAccounts } from "../../src/gateway/accounts"
 
 // The status RPC asks the backend whether a browser exists. The test machine needs none: a fake execute path that is
@@ -653,10 +653,10 @@ describe("browser tools over the extension backend", () => {
     expect(hub.calls.map((call) => call.name)).toEqual(["browser_click", "browser_console_messages"])
   })
 
-  // A granted act or navigate need is the model's own next step: the answer must say so in every observation mode,
-  // because the mode may drop the notice the action produced.
+  // A granted act or navigate need is the model's own next step. Whether the step already ran decides the wording, in
+  // every observation mode: `afterAction` means it ran, so the page is read again and the step is never repeated.
   for (const observation of ["none", "diff"] as const) {
-    test(`a granted act need answers with its notice and repeat guidance in ${observation} mode`, async () => {
+    test(`a granted act need that already ran tells the model to read, not repeat, in ${observation} mode`, async () => {
       const { asserts, service } = recorder()
       const hub = fakeHub({
         call: (input) => {
@@ -667,6 +667,7 @@ describe("browser tools over the extension backend", () => {
               message: "The page moved to https://example.com; its content is withheld until act is granted.",
               items: [{ class: "act", origin: "https://example.com" }],
               afterAction: true,
+              meta: { url: "https://example.com/landed", withheldFrames: ["https://frame.example.com"] },
             }),
           )
         },
@@ -674,18 +675,46 @@ describe("browser tools over the extension backend", () => {
       const host = await boot({ backend: "extension", observation }, { hub: hub.service, permission: service })
       const result = await host.call("browser_click", { target: "e1" })
       expect(result._tag).toBe("Success")
-      // The ask happened, for the class the browser named.
       expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser"])
       expect(asserts[1]).toMatchObject({ resources: ["act:https://example.com"] })
-      // No extra read, and the answer keeps the notice, the URL and the guidance whatever the mode would do.
       expect(hub.calls.map((call) => call.name)).toEqual(["browser_click"])
       const answer = result._tag === "Success" ? (result.success as Tool.Result) : undefined
       const text = JSON.stringify(answer?.content)
-      expect(text).toContain("withheld")
-      expect(text).toContain("Approved. The permission is granted: repeat the same step to perform it.")
-      expect(answer?.metadata?.browser).toMatchObject({ url: "https://example.com" })
+      expect(text).toContain("The step ran. The permission is granted; read the page again (browser_snapshot)")
+      expect(text).not.toContain("Repeat the same step")
+      // The result's own page state survives: the real URL and the withheld frames, not the grant origin.
+      expect(answer?.metadata?.browser).toMatchObject({
+        url: "https://example.com/landed",
+        withheldFrames: ["https://frame.example.com"],
+      })
     })
   }
+
+  test("a granted act need that never ran asks for the step again", async () => {
+    // Only the after-action producer exists on the wire today, so the other branch of the decision is exercised
+    // directly: a need without the flag never ran, and repeating the step is exactly what the model should do.
+    const settled = granted({
+      needs: [{ class: "act", origin: "https://example.com" }],
+      result: { content: [{ type: "text", text: "Acting on this page needs approval." }], isError: false },
+      active: {} as never,
+      entry: {} as never,
+      input: {},
+      session: "ses_branches",
+      grants: new Set<string>(),
+      allowSensitive: false,
+      observation: "none",
+      backend: "extension",
+      context: {} as never,
+      permission: Option.none(),
+      organization: undefined,
+    })
+    const text = JSON.stringify(settled.kind === "result" ? settled.result.content : "")
+    expect(text).toContain("Approved. Repeat the same step to perform it.")
+    expect(text).not.toContain("The step ran")
+    expect(settled.kind === "result" ? settled.result.metadata?.browser : undefined).toMatchObject({
+      url: "https://example.com",
+    })
+  })
 
   test("a mixed read and act need is granted but never re-read", async () => {
     const { asserts, service } = recorder()
@@ -713,7 +742,9 @@ describe("browser tools over the extension backend", () => {
     const asked = asserts.filter((entry) => entry.action === "browser").flatMap((entry) => entry.resources ?? [])
     expect(asked).toEqual(["read:https://example.com", "act:https://example.com"])
     const text = JSON.stringify(result._tag === "Success" ? result.success.content : "")
-    expect(text).toContain("repeat the same step to perform it")
+    // The mixed need carried afterAction, so it ran: the model is told to read, never to repeat.
+    expect(text).toContain("read the page again")
+    expect(text).not.toContain("Repeat the same step")
   })
 
   test("a granted post-action step is spent on the identical repeat only", async () => {

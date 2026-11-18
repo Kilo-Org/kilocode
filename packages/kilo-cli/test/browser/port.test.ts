@@ -104,10 +104,11 @@ describe("hub failures as the extension backend reads them", () => {
 
   test("a subscription on a transport that cannot be created is handled, not an unhandled rejection", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-port-"))
-    // Only our own transport failure counts: another test file in this process may reject for its own reasons.
+    // Only the rejection this test triggers counts: another test file in this process may reject for its own reasons,
+    // so the marker is unique to this case rather than any failure of the same class.
+    const marker = "kilo-port-subscription-marker-2f7c"
     const seen: unknown[] = []
-    const ours = (reason: unknown) =>
-      reason instanceof BrowserHub.Failure || /transport cannot start/.test(String((reason as Error)?.message ?? ""))
+    const ours = (reason: unknown) => String((reason as Error)?.message ?? "").includes(marker)
     const onRejection = (reason: unknown) => {
       if (ours(reason)) seen.push(reason)
     }
@@ -119,7 +120,7 @@ describe("hub failures as the extension backend reads them", () => {
         start: () => {},
         timeout: 300,
         create: () => {
-          throw new Error("the transport cannot start")
+          throw new Error(marker)
         },
       })
       const off = linked.port(null).onRevoked(() => {})
