@@ -43,6 +43,7 @@ import { KiloWakeupPlugin } from "./wakeup"
 import { KiloAgentManagerPlugin } from "./agent-manager"
 import { KiloBackgroundJobs } from "./background-jobs"
 import { KiloSessionDrain } from "./session-drain"
+import { KiloSubagentDelegationPlugin } from "./subagent-delegation"
 import { KiloRecallPlugin } from "./recall"
 import { KiloIndexingPlugin } from "./indexing"
 import { KiloPagesPlugin } from "./pages"
@@ -130,6 +131,8 @@ export const KiloPostPlugins = [
   KiloRequestIdentity.Referer,
   // The sandbox wraps every tool, so it registers after the config plugins and their tools.
   KiloSandbox.Plugin,
+  // Applies after model templates and before the persona becomes the first system part.
+  KiloSubagentDelegationPlugin,
   // Leads the system prompt with the Kilo persona, after every plugin that replaces the first system part.
   KiloSoulPlugin,
 ] as const

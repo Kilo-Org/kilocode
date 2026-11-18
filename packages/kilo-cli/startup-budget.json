@@ -47,6 +47,7 @@
     "kilocode.gateway.opencode-free-tier": 10,
     "kilocode.request-identity.referer": 10,
     "kilocode.sandbox": 10,
+    "kilocode.subagent-delegation": 10,
     "kilocode.soul": 10
   },
   "overhead": 75,
