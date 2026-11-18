@@ -59,6 +59,7 @@ export interface Interface {
     input: {
       readonly stale: (current: OAuth, now: number) => boolean
       readonly refresh: (current: OAuth) => Effect.Effect<OAuth, unknown>
+      readonly timeoutMs?: number // kilocode_change(mcp) seam - deadline for acquiring, performing or joining this refresh
     },
   ) => Effect.Effect<OAuth | undefined, unknown>
   /**
@@ -139,15 +140,26 @@ const layer = Layer.effect(
           Effect.orDie,
         )
 
-    const lock = (id: ID, operation: Effect.Effect<OAuth | undefined, unknown>) =>
+    const lock = (id: ID, operation: Effect.Effect<OAuth | undefined, unknown>, timeoutMs?: number) => // kilocode_change(mcp) seam
       Effect.uninterruptibleMask((restore) =>
         Effect.gen(function* () {
           const current = pending.get(id)
+          // kilocode_change start - mcp seam: a shorter waiter does not cancel the owner
+          if (current && timeoutMs !== undefined)
+            return yield* restore(Fiber.join(current).pipe(Effect.timeout(timeoutMs)))
+          // kilocode_change end
           if (current) return yield* restore(Fiber.join(current))
           // The global scope owns the operation, not the first Session or Location waiting for it.
           // The file lock extends this to other processes sharing the database.
           const fiber = yield* operation.pipe(
-            flock.withLock(`credential-refresh:${id}`),
+            // kilocode_change start - mcp seam: bound the owner, including file-lock acquisition, before clearing pending
+            timeoutMs === undefined
+              ? flock.withLock(`credential-refresh:${id}`)
+              : (body) =>
+                  Effect.scoped(
+                    flock.acquire(`credential-refresh:${id}`, undefined, { timeoutMs }).pipe(Effect.andThen(body)),
+                  ).pipe(Effect.timeout(timeoutMs)),
+            // kilocode_change end
             Effect.ensuring(Effect.sync(() => pending.delete(id))),
             Effect.forkIn(scope),
           )
@@ -167,7 +179,7 @@ const layer = Layer.effect(
               yield* Effect.logInfo("credential refresh skipped", { credentialID: id, reason: "already_refreshed" })
               return current.value
             }
-            const value = yield* input.refresh(current.value).pipe(Effect.timeout("30 seconds"))
+            const value = yield* input.refresh(current.value).pipe(Effect.timeout(input.timeoutMs ?? "30 seconds")) // kilocode_change(mcp) seam
             const latest = yield* service.get(id)
             if (latest?.value.type !== "oauth") return undefined
             if (latest.value.access !== current.value.access || latest.value.refresh !== current.value.refresh) {
@@ -180,6 +192,7 @@ const layer = Layer.effect(
             yield* service.update(id, { value })
             return value
           }),
+          input.timeoutMs, // kilocode_change(mcp) seam
         ),
       ),
       all: () => rows(),

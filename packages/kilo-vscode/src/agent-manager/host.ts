@@ -132,6 +132,9 @@ export interface Host {
   /** Show an error notification. */
   showError(msg: string): void
 
+  /** Report a rejected delegation even if the Agent Manager panel is closed. */
+  showWorktreeCallerError(directory?: string): void
+
   /** Show an info, warning, or error notification. */
   notify(kind: "info" | "warning" | "error", msg: string): void
 
