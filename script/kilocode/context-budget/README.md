@@ -4,6 +4,8 @@ The `kilo packages` PR check captures the default CLI coding agent's first `Hi` 
 
 `budget.json` is the review boundary: exact direct tool names plus a ceiling on the **whole rendered request**, including system instructions, skill listings, tool schemas and Code Mode discovery. A small margin accommodates platform, date and temporary path differences. Prefer on-demand discovery before increasing either budget. Tighten the baseline when removing tools or materially reducing context. Intentional increases should explain the before/after and why the extra default context is necessary. The check never updates the baseline.
 
+See [the ratchet policy](AGENTS.md): ask a human maintainer **before** widening the budget or weakening the check. A justification in the PR is not approval.
+
 To reproduce from the repository root after `bun install --frozen-lockfile`:
 
 ```sh

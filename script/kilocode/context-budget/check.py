@@ -98,7 +98,13 @@ def main():
     if names != allowed:
         print(f"Added: {sorted(names - allowed)}; removed: {sorted(allowed - names)}")
     if names != allowed or delta > 0:
-        raise SystemExit("Context budget changed. Prefer discovery; justify any budget edit in the PR.")
+        raise SystemExit(
+            "Remove stale allowlist entries for tools that are no longer direct. For new actions, use on-demand "
+            "discovery; move workflow guidance into a skill.\n"
+            "Do NOT raise the token ceiling, allowlist a new direct tool, or weaken the check to make CI pass. "
+            "If an exception is necessary, show the before/after counts and ask a human maintainer for explicit "
+            "approval before editing the budget or check."
+        )
 
 
 if __name__ == "__main__":
