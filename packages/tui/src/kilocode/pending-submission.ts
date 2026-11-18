@@ -16,8 +16,20 @@ export function usePendingSubmission(location: () => LocationRef) {
       !plugins.ready() ||
       !local.model.ready ||
       !local.model.catalogReady ||
-      data.location.command.list(location()) === undefined ||
-      data.session.form.list("global", location()) === undefined)
+      !submissionCatalogsLoaded(data, location()))
       ? startupMessage(plugins.ready())
       : undefined
+}
+
+type Data = ReturnType<typeof useData>
+
+export function submissionCatalogsLoaded(
+  data: { location: Pick<Data["location"], "agent" | "command">; session: Pick<Data["session"], "form"> },
+  location: LocationRef,
+) {
+  return (
+    data.location.agent.list(location) !== undefined &&
+    data.location.command.list(location) !== undefined &&
+    data.session.form.list("global", location) !== undefined
+  )
 }
