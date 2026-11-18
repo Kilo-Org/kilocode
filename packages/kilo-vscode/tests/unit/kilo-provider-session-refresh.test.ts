@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, spyOn } from "bun:test"
 import {
   loadSessions,
   loadMoreSessions,
@@ -6,6 +6,7 @@ import {
   type SessionRefreshContext,
 } from "../../src/kilo-provider-utils"
 import { createSessionPageState } from "../../src/kilo-provider/session-page"
+import { TelemetryProxy } from "../../src/services/telemetry"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
@@ -165,6 +166,33 @@ describe("KiloProvider pending session refresh", () => {
     expect(sent).not.toContainEqual(expect.objectContaining({ type: "migrationState" }))
     for (const type of ["skipLegacyMigration", "clearLegacyData", "finalizeLegacyMigration"]) {
       expect(internal.handleMigrationMessage({ type })).toBe(false)
+    }
+  })
+
+  it("posts ready and finishes syncing while telemetry consent is still loading", async () => {
+    const connection = createConnection(createClient())
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    const pending = Promise.withResolvers<boolean>()
+    const received = Promise.withResolvers<unknown>()
+    const spy = spyOn(TelemetryProxy.getInstance(), "level").mockReturnValue(pending.promise)
+    internal.isWebviewReady = true
+    internal.webview = {
+      postMessage: async (message) => {
+        sent.push(message)
+        if ((message as { type: string }).type === "telemetryState") received.resolve(message)
+      },
+    }
+
+    try {
+      await internal.syncWebviewState("webviewReady")
+      expect(sent).toContainEqual(expect.objectContaining({ type: "ready" }))
+      expect(sent).not.toContainEqual(expect.objectContaining({ type: "telemetryState" }))
+      pending.resolve(true)
+      expect(await received.promise).toEqual({ type: "telemetryState", enabled: true })
+    } finally {
+      spy.mockRestore()
     }
   })
 

@@ -1,3 +1,4 @@
+import * as vscode from "vscode"
 import { TelemetryEventName, type TelemetryPropertiesProvider } from "./types"
 import { buildTelemetryPayload, buildTelemetryAuthHeader } from "./telemetry-proxy-utils"
 
@@ -11,6 +12,11 @@ export class TelemetryProxy {
   private url: string | undefined
   private password: string | undefined
   private provider: TelemetryPropertiesProvider | undefined
+  private readonly change = new vscode.EventEmitter<void>()
+  private pending = Promise.resolve(true)
+  private revision = 0
+
+  readonly onChange = this.change.event
 
   private constructor() {}
 
@@ -27,8 +33,11 @@ export class TelemetryProxy {
    * Configure the CLI server connection. Must be called before capture() will send events.
    */
   configure(url: string, password: string) {
+    if (this.url === url && this.password === password) return
     this.url = url
     this.password = password
+    this.pending = Promise.resolve(true)
+    this.setHostEnabled(vscode.env.isTelemetryEnabled)
   }
 
   setProvider(provider: TelemetryPropertiesProvider) {
@@ -37,10 +46,10 @@ export class TelemetryProxy {
 
   /**
    * Fire-and-forget capture. Enriches with provider properties, then POSTs to CLI.
-   * Consent is decided by the CLI core from the Kilo config; clients must not gate it.
+   * Check the editor opt-out immediately while the CLI also applies its own consent checks.
    */
   capture(event: TelemetryEventName, properties?: Record<string, unknown>) {
-    if (!this.url || !this.password) return
+    if (!vscode.env.isTelemetryEnabled || !this.url || !this.password) return
 
     const built = buildTelemetryPayload(event, properties, this.provider?.getTelemetryProperties())
     if (!built) return
@@ -57,20 +66,26 @@ export class TelemetryProxy {
     }).catch((err) => console.error("[Kilo New] Telemetry capture failed:", err))
   }
 
-  /** Read the core's configured telemetry level, or null when the CLI is unavailable. */
+  setHostEnabled(enabled: boolean) {
+    const url = this.url
+    const password = this.password
+    if (!url || !password) return
+    // Apply successive VS Code changes in order, and skip requests for a replaced backend.
+    this.pending = this.pending.then(async () => {
+      if (url !== this.url || password !== this.password) return false
+      return (await this.request("/telemetry/setEnabled", enabled))?.ok ?? false
+    })
+    this.revision++
+    this.change.fire()
+  }
+
+  /** Read effective telemetry consent, or null when the CLI is unavailable. */
   async level(): Promise<boolean | null> {
-    if (!this.url || !this.password) return null
-    try {
-      const res = await fetch(`${this.url}/telemetry/level`, {
-        headers: { Authorization: buildTelemetryAuthHeader(this.password) },
-      })
-      if (!res.ok) return null
-      const body = (await res.json()) as { enabled?: unknown }
-      return typeof body.enabled === "boolean" ? body.enabled : null
-    } catch (err) {
-      console.error("[Kilo New] Telemetry level read failed:", err)
-      return null
-    }
+    if (!vscode.env.isTelemetryEnabled) return false
+    const revision = this.revision
+    if (!(await this.pending) || revision !== this.revision) return null
+    const enabled = await this.read(await this.request("/telemetry/level"))
+    return revision === this.revision ? enabled : null
   }
 
   /**
@@ -78,23 +93,41 @@ export class TelemetryProxy {
    * `experimental.openTelemetry` and applies it to the running telemetry client.
    */
   async setLevel(enabled: boolean): Promise<boolean | null> {
+    const value = await this.read(await this.request("/telemetry/level", enabled))
+    if (value !== null) {
+      this.revision++
+      this.change.fire()
+    }
+    return value
+  }
+
+  private async request(path: string, enabled?: boolean): Promise<Response | null> {
     if (!this.url || !this.password) return null
     try {
-      const res = await fetch(`${this.url}/telemetry/level`, {
-        method: "POST",
-        headers: {
-          Authorization: buildTelemetryAuthHeader(this.password),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ enabled }),
+      const auth = buildTelemetryAuthHeader(this.password)
+      return await fetch(`${this.url}${path}`, {
+        signal: AbortSignal.timeout(5000),
+        ...(enabled === undefined
+          ? { headers: { Authorization: auth } }
+          : {
+              method: "POST",
+              headers: { Authorization: auth, "Content-Type": "application/json" },
+              body: JSON.stringify({ enabled }),
+            }),
       })
-      if (!res.ok) return null
-      const body = (await res.json()) as { enabled?: unknown }
-      return typeof body.enabled === "boolean" ? body.enabled : enabled
     } catch (err) {
-      console.error("[Kilo New] Telemetry level write failed:", err)
+      console.error("[Kilo New] Telemetry request failed:", path, err)
       return null
     }
+  }
+
+  private async read(res: Response | null): Promise<boolean | null> {
+    if (!res?.ok) return null
+    const body = (await res.json().catch((err) => {
+      console.error("[Kilo New] Invalid telemetry response:", err)
+      return null
+    })) as { enabled?: unknown } | null
+    return typeof body?.enabled === "boolean" ? body.enabled : null
   }
 
   /**

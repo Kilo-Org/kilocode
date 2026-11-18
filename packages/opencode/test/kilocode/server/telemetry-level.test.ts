@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { Global } from "@opencode-ai/core/global"
 import { ConfigProvider, Layer } from "effect"
 import { HttpRouter } from "effect/unstable/http"
+import { parse } from "jsonc-parser"
+import path from "node:path"
 import { HttpApiApp } from "../../../src/server/routes/instance/httpapi/server"
 import { ServerAuth } from "../../../src/server/auth"
 import { resetDatabase } from "../../fixture/db"
@@ -12,6 +15,7 @@ const original = {
   username: Flag.KILO_SERVER_USERNAME,
   envPassword: process.env.KILO_SERVER_PASSWORD,
   envUsername: process.env.KILO_SERVER_USERNAME,
+  level: process.env.KILO_TELEMETRY_LEVEL,
 }
 
 afterEach(async () => {
@@ -21,6 +25,8 @@ afterEach(async () => {
   else process.env.KILO_SERVER_PASSWORD = original.envPassword
   if (original.envUsername === undefined) delete process.env.KILO_SERVER_USERNAME
   else process.env.KILO_SERVER_USERNAME = original.envUsername
+  if (original.level === undefined) delete process.env.KILO_TELEMETRY_LEVEL
+  else process.env.KILO_TELEMETRY_LEVEL = original.level
   await disposeAllInstances()
   await resetDatabase()
 })
@@ -45,46 +51,50 @@ function app(password: string) {
     { disableLogger: true },
   ).handler
   return (input: string, init?: RequestInit) =>
-    handler(
-      new Request(new URL(input, "http://localhost"), init),
-      HttpApiApp.context,
-    )
+    handler(new Request(new URL(input, "http://localhost"), init), HttpApiApp.context)
 }
 
 describe("telemetry level", () => {
-  test("persists the config value and reads it back", async () => {
-    await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
-    const password = "secret"
-    const request = app(password)
-    const auth = ServerAuth.header({ username: "kilo", password }) ?? ""
-    const route = (path: string) => `${path}?directory=${encodeURIComponent(tmp.path)}`
-    const headers = { authorization: auth, "content-type": "application/json" }
+  test.each(["", "off"])(
+    "persists the preference and honors the effective environment level (%j)",
+    async (env) => {
+      process.env.KILO_TELEMETRY_LEVEL = env
+      await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
+      const password = "secret"
+      const request = app(password)
+      const auth = ServerAuth.header({ username: "kilo", password }) ?? ""
+      const route = (path: string) => `${path}?directory=${encodeURIComponent(tmp.path)}`
+      const headers = { authorization: auth, "content-type": "application/json" }
+      const get = () => request(route("/telemetry/level"), { headers })
+      const post = (path: string, enabled: boolean) =>
+        request(route(path), { method: "POST", headers, body: JSON.stringify({ enabled }) })
 
-    const off = await request(route("/telemetry/level"), {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ enabled: false }),
-    })
-    expect(off.status).toBe(200)
-    expect(await off.json()).toEqual({ enabled: false })
+      const off = await post("/telemetry/level", false)
+      expect(off.status).toBe(200)
+      expect(await off.json()).toEqual({ enabled: false })
+      expect((await post("/telemetry/setEnabled", true)).status).toBe(200)
+      expect(await (await get()).json()).toEqual({ enabled: false })
 
-    const read = await request(route("/telemetry/level"), { headers })
-    expect(read.status).toBe(200)
-    expect(await read.json()).toEqual({ enabled: false })
+      expect((await post("/telemetry/setEnabled", false)).status).toBe(200)
+      const on = await post("/telemetry/level", true)
+      expect(on.status).toBe(200)
+      expect(await on.json()).toEqual({ enabled: false })
+      expect(parse(await Bun.file(path.join(Global.Path.config, "kilo.jsonc")).text())).toMatchObject({
+        experimental: { openTelemetry: true },
+      })
 
-    const on = await request(route("/telemetry/level"), {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ enabled: true }),
-    })
-    expect(on.status).toBe(200)
-    expect(await on.json()).toEqual({ enabled: true })
-  })
+      expect((await post("/telemetry/setEnabled", true)).status).toBe(200)
+      const read = await get()
+      expect(read.status).toBe(200)
+      expect(await read.json()).toEqual({ enabled: env !== "off" })
+    },
+    20_000,
+  )
 
   test("requires auth", async () => {
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
     const request = app("secret")
     const res = await request(`/telemetry/level?directory=${encodeURIComponent(tmp.path)}`)
     expect(res.status).toBe(401)
-  })
+  }, 20_000)
 })

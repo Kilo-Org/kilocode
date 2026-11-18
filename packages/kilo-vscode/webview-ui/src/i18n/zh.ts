@@ -832,10 +832,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "遥测",
   "settings.aboutKiloCode.telemetry.description":
-    '遥测由 VS Code 的内置遥测设置控制。若要将其禁用，请转到「设置」>「遥测」>「遥测级别」并将其设置为 "off"。重启 VS Code 以应用更改。',
-  "settings.aboutKiloCode.telemetry.openSettings": "打开遥测设置",
-  "settings.aboutKiloCode.telemetry.toggle": "Enable telemetry",
-  "settings.aboutKiloCode.telemetry.saveFailed": "Could not update telemetry setting",
+    "使用此开关更改 Kilo 的遥测设置。如果 VS Code 或运行环境禁用了遥测，遥测将保持关闭。",
+  "settings.aboutKiloCode.telemetry.toggle": "启用遥测",
+  "settings.aboutKiloCode.telemetry.saveFailed": "无法更新遥测设置",
 
   "settings.agentBehaviour.subtab.agents": "代理",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 服务器",

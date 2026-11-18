@@ -166,6 +166,7 @@ export class ServerManager {
           ...resolveTreeSitterEnv(this.context.extensionPath),
           ...bwrapEnv,
           ...extraEnv,
+          KILO_TELEMETRY_HOST_DISABLED: vscode.env.isTelemetryEnabled ? "0" : "1",
           KILO_EXPERIMENTAL_CLAUDE_MIGRATION: claudeMigration,
         },
         stdio: ["ignore", "pipe", "pipe"],

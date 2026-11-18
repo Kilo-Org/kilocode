@@ -847,10 +847,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":
-    'يتم التحكم في Telemetry بواسطة إعداد Telemetry المدمج في VS Code. لتعطيله، انتقل إلى الإعدادات > Telemetry > Telemetry Level واضبطه على "off". أعد تشغيل VS Code لتطبيق التغيير.',
-  "settings.aboutKiloCode.telemetry.openSettings": "فتح إعدادات Telemetry",
-  "settings.aboutKiloCode.telemetry.toggle": "Enable telemetry",
-  "settings.aboutKiloCode.telemetry.saveFailed": "Could not update telemetry setting",
+    "استخدم هذا المفتاح لتغيير إعداد القياس عن بُعد في Kilo. يظل القياس عن بُعد معطّلًا إذا عطّله VS Code أو عطّلته بيئة التشغيل.",
+  "settings.aboutKiloCode.telemetry.toggle": "تفعيل القياس عن بُعد",
+  "settings.aboutKiloCode.telemetry.saveFailed": "تعذّر تحديث إعداد القياس عن بُعد",
 
   "settings.agentBehaviour.subtab.agents": "الوكلاء",
   "settings.agentBehaviour.subtab.mcpServers": "خوادم MCP",

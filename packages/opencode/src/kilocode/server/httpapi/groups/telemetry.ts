@@ -59,33 +59,33 @@ export const TelemetryApi = HttpApi.make("telemetry")
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "telemetry.setEnabled",
-            summary: "Set PostHog telemetry enabled state",
+            summary: "Set host telemetry permission",
             description:
-              "Update the PostHog client's opt-in/out state at runtime without changing config. Prefer telemetry.level for user-facing settings.",
+              "Apply the host editor's telemetry permission at runtime without changing config. This cannot override a config or environment opt-out. Use telemetry.setLevel for the Kilo preference.",
           }),
         ),
         HttpApiEndpoint.get("level", TelemetryPaths.level, {
           query: WorkspaceRoutingQuery,
-          success: described(TelemetryLevelResult, "Configured telemetry level"),
+          success: described(TelemetryLevelResult, "Effective telemetry level"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "telemetry.level",
-            summary: "Get configured telemetry level",
-            description: "Read experimental.openTelemetry from the global Kilo config.",
+            summary: "Get effective telemetry level",
+            description: "Read whether global Kilo config, the host editor, and the environment all allow telemetry.",
           }),
         ),
         HttpApiEndpoint.post("setLevel", TelemetryPaths.level, {
           query: WorkspaceRoutingQuery,
           payload: TelemetryLevelPayload,
-          success: described(TelemetryLevelResult, "Telemetry level saved"),
+          success: described(TelemetryLevelResult, "Effective telemetry level after saving the preference"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "telemetry.setLevel",
-            summary: "Set configured telemetry level",
+            summary: "Save the Kilo telemetry preference",
             description:
-              "Persist experimental.openTelemetry to the global Kilo config and apply it to the running telemetry client. Clients should call this instead of forcing KILO_TELEMETRY_LEVEL or calling setEnabled directly.",
+              "Persist experimental.openTelemetry to the global Kilo config and apply it to the running telemetry client. Return the effective level, which can still be off due to a host or environment opt-out.",
           }),
         ),
       )

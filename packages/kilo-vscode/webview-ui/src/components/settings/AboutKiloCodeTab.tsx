@@ -24,7 +24,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   const [exporting, setExporting] = createSignal(false)
   const [telemetry, setTelemetry] = createSignal<boolean | null>(null)
   const [telemetrySaving, setTelemetrySaving] = createSignal(false)
-  const telemetryEnabled = () => telemetry() ?? (globalConfig().experimental?.openTelemetry !== false)
+  const telemetryEnabled = () => telemetry() ?? globalConfig().experimental?.openTelemetry !== false
   let epoch = 0
 
   const open = (url: string) => {
@@ -68,20 +68,15 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
 
   const telemetryHandler = (event: MessageEvent) => {
     const msg = event.data as ExtensionMessage
-    if (msg.type === "telemetryState") {
-      setTelemetry(msg.enabled)
-      return
-    }
     if (msg.type !== "telemetryLevelResult") return
     setTelemetrySaving(false)
     if (msg.ok && typeof msg.enabled === "boolean") {
       setTelemetry(msg.enabled)
       return
     }
-    setTelemetry(null)
     showToast({
       variant: "error",
-      title: msg.error ?? language.t("settings.aboutKiloCode.telemetry.saveFailed"),
+      title: language.t("settings.aboutKiloCode.telemetry.saveFailed"),
     })
   }
   window.addEventListener("message", telemetryHandler)
@@ -93,7 +88,6 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   const setTelemetryLevel = (enabled: boolean) => {
     if (telemetrySaving()) return
     setTelemetrySaving(true)
-    setTelemetry(enabled)
     vscode.postMessage({ type: "setTelemetryLevel", enabled })
   }
 
@@ -284,7 +278,12 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         >
           {language.t("settings.aboutKiloCode.telemetry.description")}
         </p>
-        <Switch checked={telemetryEnabled()} onChange={setTelemetryLevel} hideLabel>
+        <Switch
+          checked={telemetryEnabled()}
+          onChange={setTelemetryLevel}
+          disabled={telemetrySaving() || props.connectionState !== "connected"}
+          hideLabel
+        >
           {language.t("settings.aboutKiloCode.telemetry.toggle")}
         </Switch>
       </div>

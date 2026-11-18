@@ -848,10 +848,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "تله‌متری",
   "settings.aboutKiloCode.telemetry.description":
-    "تله‌متری توسط تنظیمات داخلی تله‌متری VS Code کنترل می‌شود. برای غیرفعال کردن آن، به Settings > Telemetry > Telemetry Level بروید و آن را روی «off» تنظیم کنید. VS Code را مجدداً راه‌اندازی کنید تا تغییر اعمال شود.",
-  "settings.aboutKiloCode.telemetry.openSettings": "باز کردن تنظیمات تله‌متری",
-  "settings.aboutKiloCode.telemetry.toggle": "Enable telemetry",
-  "settings.aboutKiloCode.telemetry.saveFailed": "Could not update telemetry setting",
+    "با این کلید می‌توانید تنظیم تله‌متری Kilo را تغییر دهید. اگر VS Code یا محیط اجرا تله‌متری را غیرفعال کند، تله‌متری غیرفعال می‌ماند.",
+  "settings.aboutKiloCode.telemetry.toggle": "فعال کردن تله‌متری",
+  "settings.aboutKiloCode.telemetry.saveFailed": "به‌روزرسانی تنظیم تله‌متری ممکن نبود",
 
   "settings.agentBehaviour.subtab.agents": "عوامل",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",

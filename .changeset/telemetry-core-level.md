@@ -3,4 +3,4 @@
 "kilo-code": minor
 ---
 
-Add a core telemetry level API and use it from VS Code, so telemetry follows `experimental.openTelemetry` without client-side overrides.
+Change the Kilo telemetry preference from VS Code's About tab or the core telemetry API. Telemetry stays off if Kilo config, VS Code, or the environment disables it.

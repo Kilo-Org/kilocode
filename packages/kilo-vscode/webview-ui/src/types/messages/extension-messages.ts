@@ -1522,7 +1522,6 @@ export interface TelemetryLevelResultMessage {
   type: "telemetryLevelResult"
   ok: boolean
   enabled?: boolean
-  error?: string
 }
 
 // ============================================

@@ -20387,7 +20387,7 @@ export type TelemetryLevelError = TelemetryLevelErrors[keyof TelemetryLevelError
 
 export type TelemetryLevelResponses = {
   /**
-   * Configured telemetry level
+   * Effective telemetry level
    */
   200: {
     enabled: boolean
@@ -20419,7 +20419,7 @@ export type TelemetrySetLevelError = TelemetrySetLevelErrors[keyof TelemetrySetL
 
 export type TelemetrySetLevelResponses = {
   /**
-   * Telemetry level saved
+   * Effective telemetry level after saving the preference
    */
   200: {
     enabled: boolean

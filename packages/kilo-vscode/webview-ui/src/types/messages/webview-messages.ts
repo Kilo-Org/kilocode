@@ -289,11 +289,6 @@ export interface OpenProfilePanelRequest {
   type: "openProfilePanel"
 }
 
-export interface OpenVSCodeSettingsRequest {
-  type: "openVSCodeSettings"
-  query: string
-}
-
 export interface OpenConfigFileRequest {
   type: "openConfigFile"
   scope: "local" | "global"
@@ -1797,7 +1792,6 @@ export type WebviewMessage =
   | SetAgentManagerDefaultBaseBranchMessage
   | ConfigureAgentManagerSetupScriptMessage
   | OpenProfilePanelRequest
-  | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest
   | OpenMarketplacePanelRequest
   | OpenAgentManagerRequest

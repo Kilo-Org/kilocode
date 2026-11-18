@@ -144,6 +144,8 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   })
 
+  context.subscriptions.push(vscode.env.onDidChangeTelemetryEnabled((enabled) => telemetry.setHostEnabled(enabled)))
+
   for (const folder of vscode.workspace.workspaceFolders ?? []) {
     void markWorkspace(folder.uri.fsPath, (msg) => console.warn(`[Kilo New] ${msg}`))
   }
