@@ -76,8 +76,9 @@ export function createSessions(input: {
     setCurrentSessionID: setCurrent,
     selectSession: (sessionID: string) => setCurrent(sessionID),
     clearCurrentSession: () => setCurrent(undefined),
-    activityFor(sessionID: string, info?: Outcome): Activity {
-      const item = scope(sessionID)
+    activityFor(sessionID: string, info?: Outcome, directory?: string): Activity {
+      // Background rows name their own directory. The active project's stores may know execution status but not forms.
+      const item = directory === undefined ? scope(sessionID) : input.panel.find(directory)
       if (!item) return info ? activityOf(info) : "idle"
       const live = sessionActivity(item.data, sessionID, connected(), item.scheduled(sessionID))
       // Without a loaded session record the store only knows live events; the host catalog keeps the finished state.
