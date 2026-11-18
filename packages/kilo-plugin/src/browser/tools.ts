@@ -5,6 +5,7 @@ import { Wildcard } from "@opencode/core/util/wildcard"
 import { KiloBrowserPolicy } from "@kilocode/gateway-core/browser-policy"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Tool } from "@opencode/schema/tool"
+import { KiloBrowserRpc } from "@opencode/schema/kilocode/browser"
 import { Effect, Option, Result, Scope, Stream } from "effect"
 import type { JsonSchema } from "effect"
 import {
@@ -23,7 +24,7 @@ import type { ExtensionBackend } from "./extension"
 import { BrowserHub } from "./hub"
 import { modeFor, observe, snapshot, split, Tracker } from "./observation"
 import { BrowserPermission } from "./permission"
-import { key, persistStep, playwright } from "./playwright"
+import { key, persistStep, playwright, readiness } from "./playwright"
 import { resolve, type Settings } from "./settings"
 import { rememberStep } from "./steps"
 import { KiloGatewayAccounts } from "../gateway/accounts"
@@ -123,13 +124,6 @@ export function trim<T extends { dispose(): Promise<void> }>(extensions: Map<str
     extensions.delete(oldest)
     void evicted?.then((backend) => backend.dispose()).catch(() => undefined)
   }
-}
-
-/** The backend a call runs on. An organization that allows browser control only through the bundled Playwright browser
- * overrides the configured choice, so no extension call can happen under that policy.
- */
-export function forced(browser: Settings, control: KiloBrowserPolicy.Policy["control"] | undefined): Settings {
-  return control === "playwright_only" ? { ...browser, backend: "playwright" } : browser
 }
 
 /** Read the config per call, so an observation or headless change applies without a restart. */
@@ -270,6 +264,19 @@ function consoleErrors(
   }).pipe(Effect.catch(() => Effect.succeed<string[]>([])))
 }
 
+/**
+ * The backend in force, after the organization policy: `off` hides the tools, `playwright_only` pins the bundled
+ * browser, and `allow` (or no policy) keeps the config's own choice. The settings status and the call path both read
+ * this one answer. The policy can take a backend away but never turn one on: a config set to `off` stays off under a
+ * `playwright_only` pin, which is what the call path refuses.
+ */
+export function effective(browser: Settings, organization: KiloBrowserPolicy.Policy | undefined): Settings["backend"] {
+  if (browser.backend === "off") return "off"
+  if (organization?.control === "off") return "off"
+  if (organization?.control === "playwright_only") return "playwright"
+  return browser.backend
+}
+
 type Deps = {
   config: Option.Option<Config.Interface>
   permission: Option.Option<Permission.Interface>
@@ -287,7 +294,9 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     const organization = yield* policy(deps.directory)
     if (organization?.control === "off")
       return yield* failure(new UnavailableError("Your organization turned off browser control in Kilo."))
-    const choice = forced(browser, organization?.control)
+    // One function decides the backend for a call and for the status RPC: the user's `off` wins, an organization that
+    // allows Playwright only forces it, and otherwise the config decides, including the extension.
+    const choice: Settings = { ...browser, backend: effective(browser, organization) }
 
     // The tool's own key first, so a config rule like `browser_click: deny` blocks it before anything runs.
     if (Option.isSome(deps.permission)) {
@@ -555,6 +564,47 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
 
     const browser = yield* settings(config)
     const organization = yield* policy(ctx.location.directory)
+
+    // What a settings editor shows before it offers a backend: whether the Playwright one has a browser to start, the
+    // backend after the organization policy, and the policy itself. The Playwright answer is read through the same
+    // `locate` check the backend runs, so the dialog never calls it ready when a call would fail.
+    const backend = effective(browser, organization)
+    const organizationStatus = organization
+      ? { organization: { control: organization.control, origins: [...organization.origins] } }
+      : {}
+    // Both answers are what a call would find: the same `locate` check for Playwright, and the hub connection's own
+    // report for the extension, connected or not. Neither starts a browser or a hub.
+    const extensionStatus = (): Promise<KiloBrowserRpc.Extension> =>
+      hub
+        .port(browser.target)
+        .reported()
+        .then(
+          (info): KiloBrowserRpc.Extension =>
+            info === undefined
+              ? { ready: false }
+              : {
+                  ready: true,
+                  profileLabel: info.profileLabel,
+                  contractSha: info.contractSha,
+                  extensionVersion: info.extensionVersion,
+                },
+          () => ({ ready: false }),
+        )
+    yield* ctx.rpc
+      .register(KiloBrowserRpc.Definition, {
+        status: () =>
+          Effect.promise(async () => ({
+            playwright: await readiness().then(
+              (value) => value,
+              () => ({ ready: false as const }),
+            ),
+            extension: await extensionStatus(),
+            backend,
+            ...organizationStatus,
+          })),
+      })
+      .pipe(Effect.orDie)
+
     // `off` hides the tools: an agent never sees a browser tool it cannot use.
     if (browser.backend === "off" || organization?.control === "off") return
 

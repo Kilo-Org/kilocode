@@ -92,6 +92,8 @@ export namespace BrowserHub {
     /** The tool names the extension serves for its own contract. */
     list(): Promise<readonly string[]>
     call(input: CallInput): Promise<Reply>
+    /** The connected extension as it reported itself, or undefined when none is connected. Never creates a connection. */
+    reported(): Promise<Info | undefined>
     begin(input: Upload): Promise<void>
     /** One base64 chunk, at most `MaxUploadChunk` bytes of payload. */
     chunk(input: { uploadId: string; index: number; data: string }): Promise<void>

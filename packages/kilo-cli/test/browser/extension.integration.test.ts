@@ -285,10 +285,23 @@ describe("extension backend over a real hub", () => {
     try {
       expect((await client.ready(3_000)).profileLabel).toBe("Default")
 
-      // One extension at a time: an attach while the first is still attached is refused, which is what a browser
-      // retries. The retry then succeeds once the old connection is gone.
+      // The hub answers an attach from a second extension with 4403 while the first one still holds the hub.
+      const refused = await raw.connect({
+        port: runtime.port,
+        path: pair.SocketPath,
+        origin: `chrome-extension://${proto.StoreExtensionId}`,
+      })
+      sockets.push(refused)
+      expect(refused.status).toBe(101)
+      // The attach answer: the hub hands out a challenge but refuses to serve a second extension, and it keeps
+      // reporting the first one's profile until that socket is gone.
+      expect((await message(refused, proto.Challenge)).type).toBe("challenge")
+      const held = await until(async () => (await Registry.list({ dir: path.join(runtime.run, "hubs") })).at(0), 5_000)
+      expect(held?.profileLabel).toBe("Default")
+
       extension.close()
       sockets.splice(sockets.indexOf(extension), 1)
+      // A real browser retries: the hub releases the slot once the old socket is gone.
       const second = await until(() => tryPair(runtime, "deadbeef", "Work"), 5_000)
       expect(second?.status).toBe(101)
 

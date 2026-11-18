@@ -22,6 +22,24 @@ type Document = { readonly path: string; readonly info: unknown }
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value)
 
+/** The failure both halves of the RPC report for a document that resolves outside its scope. */
+const outsideScope = (scope: KiloSettingsRpc.Scope, file: string) => `${file} is outside the ${scope} config scope`
+
+/**
+ * True when `child` is `parent` or below it, on either platform's spelling. A `startsWith(parent + "/")` test is
+ * wrong on win32 (backslashes, drive-letter case, 8.3 names); `path.relative` is the containment test, and win32
+ * compares case-insensitively, so both sides are folded there. Callers pass paths `fs.resolve` canonicalized (realpath
+ * on both sides), which is what makes a symlink or a short name compare as the file it really is.
+ */
+export function within(parent: string, child: string, flavour: typeof path = path): boolean {
+  const fold = (value: string) => (flavour === path.win32 ? value.toLowerCase() : value)
+  const relative = flavour.relative(fold(parent), fold(child))
+  if (relative === "") return true
+  if (flavour.isAbsolute(relative)) return false
+  // The first path segment decides: `..` is an escape, `..foo` is an ordinary name.
+  return relative.split(flavour.sep)[0] !== ".."
+}
+
 /** Whether `parts` resolves to a defined value in a document, for the project-wide unset scan. */
 function hasPath(input: unknown, parts: readonly string[]) {
   let current: unknown = input
@@ -89,9 +107,9 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
     })
 
     const isConfigFile = (file: string) => KiloConfigFiles.names.includes(path.basename(file))
-    const inGlobal = (file: string) => FSUtil.contains(globalDirectory, file)
-    const inSystem = (file: string) => FSUtil.contains(systemDir, file)
-    const inProject = (file: string) => FSUtil.contains(boundary, file) && !inGlobal(file) && !inSystem(file)
+    const inGlobal = (file: string) => within(globalDirectory, file)
+    const inSystem = (file: string) => within(systemDir, file)
+    const inProject = (file: string) => within(boundary, file) && !inGlobal(file) && !inSystem(file)
     const inScope = (scope: KiloSettingsRpc.Scope, file: string) =>
       scope === "global" ? inGlobal(file) : inProject(file)
 
@@ -135,6 +153,42 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
       .register(KiloSettingsRpc.Definition, {
         target: (input, context) =>
           readTarget(input.scope).pipe(
+            Effect.flatMap((target) =>
+              inScope(input.scope, target.path)
+                ? Effect.succeed(target)
+                : Effect.fail(
+                    context.error("failed", outsideScope(input.scope, target.path), {
+                      message: `Outside scope: ${target.path}`,
+                    }),
+                  ),
+            ),
+            Effect.catchTag("KiloConfigWriterError", (error) =>
+              Effect.fail(context.error("failed", error.message, { message: error.message })),
+            ),
+          ),
+        // What a settings editor shows: the file it would write, parsed. A missing file is an empty document. The
+        // scope guard `write` applies runs here too, so a target that resolves outside its scope is never read.
+        read: (input, context) =>
+          Effect.gen(function* () {
+            const target = yield* readTarget(input.scope)
+            if (!inScope(input.scope, target.path))
+              return yield* Effect.fail(
+                context.error("failed", outsideScope(input.scope, target.path), {
+                  message: `Outside scope: ${target.path}`,
+                }),
+              )
+            if (!target.exists) return { scope: input.scope, target, document: {} }
+            const text = yield* fs
+              .readFileString(target.path)
+              .pipe(Effect.mapError((error) => context.error("failed", error.message, { message: error.message })))
+            const errors: ParseError[] = []
+            const document = parse(text, errors, { allowTrailingComma: true })
+            if (errors.length > 0)
+              return yield* Effect.fail(
+                context.error("failed", `${target.path} is not valid JSON or JSONC`, { message: "Invalid JSONC" }),
+              )
+            return { scope: input.scope, target, document: document ?? {} }
+          }).pipe(
             Effect.catchTag("KiloConfigWriterError", (error) =>
               Effect.fail(context.error("failed", error.message, { message: error.message })),
             ),
@@ -145,7 +199,7 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
             const { file, documents } = yield* resolveFile(scope)
             if (!inScope(scope, file))
               return yield* Effect.fail(
-                context.error("failed", `${file} is outside the ${scope} config scope`, { message: `Outside scope: ${file}` }),
+                context.error("failed", outsideScope(scope, file), { message: `Outside scope: ${file}` }),
               )
             const before = yield* writer.revision(file)
             const current: KiloSettingsRpc.Target = {
@@ -171,8 +225,7 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
                 }),
               )
 
-            const invalid = (message: string) =>
-              Effect.fail(context.error("invalid", message, { message, path: file }))
+            const invalid = (message: string) => Effect.fail(context.error("invalid", message, { message, path: file }))
             const unknown = KiloConfigValidate.unknownKeys(input.set ?? {})
             if (unknown.length > 0)
               return yield* invalid(`Unrecognized key${unknown.length === 1 ? "" : "s"}: ${unknown.join(", ")}`)
@@ -235,7 +288,12 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
             let revision: string | null = before?.hash ?? null
             for (const edit of applicable) {
               const result = yield* writer
-                .write({ target: { ...writeTarget(scope), file }, path: edit.path, value: edit.value, expectedRevision: revision })
+                .write({
+                  target: { ...writeTarget(scope), file },
+                  path: edit.path,
+                  value: edit.value,
+                  expectedRevision: revision,
+                })
                 .pipe(Effect.catchTag("KiloConfigWriterError", guard))
               revision = result.revision
             }

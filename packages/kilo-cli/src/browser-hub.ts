@@ -28,6 +28,13 @@ export function make(options: Options = {}): Port.Interface {
         open: async (input) => (await connection()).open(input),
         close: async (handle) => (await connection()).close(handle),
         list: async () => (await connection()).list(),
+        reported: async () => {
+          // A transport that was never loaded cannot be connected, and asking must not start one.
+          const loaded = ports.get(target ?? "")
+          if (loaded === undefined) return undefined
+          const port = await loaded.catch(() => undefined)
+          return port ? port.reported() : undefined
+        },
         call: async (input) => (await connection()).call(input),
         begin: async (input) => (await connection()).begin(input),
         chunk: async (input) => (await connection()).chunk(input),

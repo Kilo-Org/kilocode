@@ -291,6 +291,37 @@ async function target(settings: Settings, chromium: string): Promise<Target> {
   )
 }
 
+export type Readiness = { ready: boolean; target?: "chrome" | "msedge" | "chromium" }
+
+/** How `readiness` finds a browser; a test supplies its own so it needs no installed build. */
+export type Locator = () => Target | undefined | Promise<Target | undefined>
+
+/**
+ * The real lookup: the same `locate` order as `target`, over the bundled playwright-core build. The Kilo browser
+ * directory must be in place before playwright-core is imported, its registry reads the variable once.
+ */
+async function located(): Promise<Target | undefined> {
+  useKiloBrowsers()
+  const { chromium } = await import("playwright-core")
+  return locate({
+    platform: process.platform,
+    home: os.homedir(),
+    env: process.env,
+    exists: existsSync,
+    chromium: chromium.executablePath(),
+  })
+}
+
+/**
+ * What a call would launch, without starting anything: the same `locate` order as `target`, so a settings editor never
+ * reports the backend ready when `browser_*` would refuse to start.
+ */
+export async function readiness(find: Locator = located): Promise<Readiness> {
+  const target = await find()
+  if (!target) return { ready: false }
+  return { ready: true, target: "channel" in target ? target.channel : "chromium" }
+}
+
 /**
  * The browser is launched here, not by the MCP server, so the provider owns the process and the in-memory profile:
  * two Kilo processes never contend for one Chrome profile on disk, and a crash leaves no profile or SingletonLock.

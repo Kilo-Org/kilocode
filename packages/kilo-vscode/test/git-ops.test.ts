@@ -396,24 +396,30 @@ describe("GitOps", () => {
       })
     })
 
-    it("limits patch to selected files", async () => {
-      await withRepo(async (cwd) => {
+    it("applies only selected files when the worktree has commits beyond the base", async () => {
+      await withRepo(async (local) => {
         const git = new GitOps({ log: () => undefined })
-        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
-        await fs.writeFile(nodePath.join(cwd, "b.txt"), "one\n", "utf8")
-        runGit(cwd, ["add", "-A"])
-        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+        const commit = ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit"]
+        await fs.writeFile(nodePath.join(local, "picked.txt"), "base picked\n")
+        await fs.writeFile(nodePath.join(local, "unpicked.txt"), "base unpicked\n")
+        runGit(local, ["add", "-A"])
+        runGit(local, [...commit, "-m", "base"])
+        const base = runGit(local, ["rev-parse", "HEAD"])
+        const index = runGit(local, ["ls-files", "--stage", "--", "unpicked.txt"])
+        const source = nodePath.join(local, "source")
+        runGit(local, ["worktree", "add", "--detach", source, base])
+        await fs.writeFile(nodePath.join(source, "unpicked.txt"), "committed unpicked\n")
+        runGit(source, [...commit, "-am", "change unchecked file"])
+        await fs.writeFile(nodePath.join(source, "picked.txt"), "working picked\n")
+        await fs.writeFile(nodePath.join(source, "new.txt"), "new\n")
 
-        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
-        await fs.writeFile(nodePath.join(cwd, "b.txt"), "two\n", "utf8")
-        await fs.writeFile(nodePath.join(cwd, "c.txt"), "new\n", "utf8")
-
-        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
-        const patch = await git.buildWorktreePatch(cwd, branch, ["a.txt", "c.txt"])
-
-        expect(patch).toContain("a/a.txt")
-        expect(patch).toContain("a/c.txt")
-        expect(patch).not.toContain("a/b.txt")
+        const patch = await git.buildWorktreePatch(source, base, ["picked.txt", "new.txt"])
+        expect(patch).not.toContain("unpicked.txt")
+        expect((await git.applyPatch(local, patch)).ok).toBe(true)
+        expect(runGit(local, ["diff", "--cached", "--name-only"])).toBe("new.txt\npicked.txt")
+        expect(await fs.readFile(nodePath.join(local, "picked.txt"), "utf8")).toBe("working picked\n")
+        expect(await fs.readFile(nodePath.join(local, "unpicked.txt"), "utf8")).toBe("base unpicked\n")
+        expect(runGit(local, ["ls-files", "--stage", "--", "unpicked.txt"])).toBe(index)
       })
     })
 
@@ -435,6 +441,33 @@ describe("GitOps", () => {
         expect(patch).not.toContain("b.txt")
         expect(patch).not.toContain("passwd")
         expect(patch).not.toContain("secret")
+        expect(await git.buildWorktreePatch(cwd, branch, ["../outside"])).toBe("")
+      })
+    })
+
+    it("preserves committed renames and deletions for selected files and for apply-all", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        const commit = ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit"]
+        await fs.writeFile(nodePath.join(cwd, ".gitignore"), "*.log\n")
+        await fs.writeFile(nodePath.join(cwd, "original.txt"), "rename me\n")
+        await fs.writeFile(nodePath.join(cwd, "deleted.txt"), "delete me\n")
+        runGit(cwd, ["add", "."])
+        runGit(cwd, [...commit, "-m", "base"])
+        const base = runGit(cwd, ["rev-parse", "HEAD"])
+        runGit(cwd, ["mv", "original.txt", "renamed.log"])
+        runGit(cwd, ["rm", "deleted.txt"])
+        runGit(cwd, [...commit, "-m", "rename and delete"])
+        await fs.writeFile(nodePath.join(cwd, "extra.txt"), "untracked\n")
+
+        const selected = await git.buildWorktreePatch(cwd, base, ["original.txt", "renamed.log", "deleted.txt"])
+        const all = await git.buildWorktreePatch(cwd, base)
+        for (const patch of [selected, all]) {
+          expect(patch).toContain("rename from original.txt\nrename to renamed.log")
+          expect(patch).toContain("diff --git a/deleted.txt b/deleted.txt\ndeleted file mode")
+        }
+        expect(selected).not.toContain("extra.txt")
+        expect(all).toContain("diff --git a/extra.txt b/extra.txt")
       })
     })
   })

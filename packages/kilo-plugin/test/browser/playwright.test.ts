@@ -22,6 +22,7 @@ import {
   navigationTargets,
   plannedOrigin,
   prunePages,
+  readiness,
   rememberPage,
   snapshotFile,
   tabChoice,
@@ -488,6 +489,24 @@ describe("browser install location", () => {
       if (previous === undefined) delete process.env.PLAYWRIGHT_BROWSERS_PATH
       else process.env.PLAYWRIGHT_BROWSERS_PATH = previous
     }
+  })
+})
+
+describe("browser readiness", () => {
+  test("a system channel is ready and names it", async () => {
+    expect(await readiness(() => ({ channel: "chrome" }))).toEqual({ ready: true, target: "chrome" })
+    expect(await readiness(() => ({ channel: "msedge" }))).toEqual({ ready: true, target: "msedge" })
+  })
+
+  test("the Chromium the CLI installed is ready as the bundled build", async () => {
+    expect(await readiness(async () => ({ executablePath: "/tmp/kilo/chromium" }))).toEqual({
+      ready: true,
+      target: "chromium",
+    })
+  })
+
+  test("no located browser is not ready, without a target", async () => {
+    expect(await readiness(() => undefined)).toEqual({ ready: false })
   })
 })
 

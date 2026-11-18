@@ -58,6 +58,7 @@ function fake(
   }
   const port: BrowserHub.Port = {
     ready: () => (options.ready ? options.ready() : Promise.resolve(info)),
+    reported: () => Promise.resolve(undefined),
     open: (input) => {
       opened.push(input)
       handles += 1

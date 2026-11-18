@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, mock, test } from "bun:test"
 import { Config } from "@opencode/core/config"
 import { Permission } from "@opencode/core/permission"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
@@ -10,7 +10,12 @@ import { BrowserContract } from "../../src/browser/contract"
 import { EXTENSION_HINT } from "../../src/browser/extension"
 import { BrowserHub } from "../../src/browser/hub"
 import { resetSteps } from "../../src/browser/steps"
-import { authorize, forced, KiloBrowserToolsPlugin, resetGrants, trim } from "../../src/browser/tools"
+import { authorize, effective, KiloBrowserToolsPlugin, resetGrants, trim } from "../../src/browser/tools"
+import { KiloGatewayAccounts } from "../../src/gateway/accounts"
+
+// The status RPC asks the backend whether a browser exists. The test machine needs none: a fake execute path that is
+// never there keeps readiness deterministic.
+mock.module("playwright-core", () => ({ chromium: { executablePath: () => "/nonexistent/kilo/chromium" } }))
 
 type Browser = NonNullable<KiloConfigPolicy.BrowserConfig>
 
@@ -29,6 +34,7 @@ function fakeHub(options: { call?: (input: BrowserHub.CallInput) => Promise<Brow
   const began: BrowserHub.Upload[] = []
   let handles = 0
   const port: BrowserHub.Port = {
+    reported: () => Promise.resolve(undefined),
     ready: () =>
       Promise.resolve({
         protocol: [1],
@@ -67,6 +73,7 @@ function unreachable(): BrowserHub.Interface {
     port: () =>
       ({
         ready: () => Promise.reject(new BrowserHub.Failure({ kind: "unavailable", message: "no extension is connected" })),
+        reported: () => Promise.resolve(undefined),
         onRevoked: () => () => {},
       }) as never,
   }
@@ -91,8 +98,19 @@ async function boot(
 ) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const hooks: Hook[] = []
+  const registrations: string[] = []
+  const statuses: (() => Effect.Effect<unknown>)[] = []
   const ctx = {
     location: { directory: "/tmp/browser-tools-test" },
+    // The status RPC the settings dialog reads; `status` below calls the handler the plugin registers.
+    rpc: {
+      register: (definition: { id: string }, handlers: { status: () => Effect.Effect<unknown> }) =>
+        Effect.sync(() => {
+          registrations.push(definition.id)
+          statuses.push(handlers.status)
+          return { events: { emit: () => Effect.void }, dispose: Effect.void }
+        }),
+    },
     tool: {
       transform: (fn: (typeof transforms)[number]) =>
         Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
@@ -154,7 +172,12 @@ async function boot(
     )
   const evaluate = (event: Record<string, unknown>) =>
     Effect.runPromise(Effect.forEach(hooks, (callback) => callback(event), { discard: true })).then(() => event)
-  return { tools, call, evaluate }
+  const status = () => {
+    const handler = statuses[0]
+    if (!handler) throw new Error("the plugin registered no status RPC")
+    return Effect.runPromise(handler())
+  }
+  return { tools, call, evaluate, registrations, status }
 }
 
 describe("browser tools", () => {
@@ -169,6 +192,8 @@ describe("browser tools", () => {
           Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
       },
       event: { subscribe: () => Stream.never },
+      // The plugin registers the status RPC before it decides whether to hide the tools.
+      rpc: { register: () => Effect.sync(() => ({ events: { emit: () => Effect.void }, dispose: Effect.void })) },
       permission: { hook: () => Effect.sync(() => ({ dispose: Effect.void })) },
     }
     const config = { entries: () => Effect.succeed([]) } as unknown as Config.Interface
@@ -215,6 +240,11 @@ describe("browser tools", () => {
     expect(host.tools().length).toBe(26)
   })
 
+  test("registers the browser status RPC even when the backend is off", async () => {
+    const host = await boot({ backend: "off" })
+    expect(host.registrations).toEqual(["kilocode.browser"])
+  })
+
   test("the extension backend answers every call with the actionable setup step the model can relay", async () => {
     const host = await boot({ backend: "extension" })
     const result = await host.call("browser_click", { target: "e1" })
@@ -225,6 +255,100 @@ describe("browser tools", () => {
       'The browser is not available right now. Install the Kilo browser extension and turn on "Allow local agents" in its settings, or set browser.backend to "playwright".',
     )
     expect(error?.metadata?.hint).toBe(EXTENSION_HINT)
+  })
+})
+
+describe("browser status RPC", () => {
+  const fetch = globalThis.fetch
+
+  /** Answer the organization policy endpoint, and record the paths the server asked. */
+  function policies(answer: (org: string) => unknown) {
+    const asked: string[] = []
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input))
+      asked.push(url.pathname)
+      return new Response(JSON.stringify(answer(url.pathname.split("/").at(-2) ?? "")), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    }) as typeof globalThis.fetch
+    return asked
+  }
+
+  /** The signed-in account whose organization policy the plugin reads. */
+  function account(org: string) {
+    return KiloGatewayAccounts.register(
+      "/tmp/browser-tools-test",
+      () => ({ baseURL: "https://api.kilo.ai", token: "token", organizationID: org }) as never,
+    )
+  }
+
+  afterEach(() => {
+    globalThis.fetch = fetch
+  })
+
+  test("the status names the backend the organization policy leaves", async () => {
+    const asked = policies(() => ({
+      browserControl: "playwright_only",
+      browserAllowedOrigins: ["https://example.com", "https://app.example.com"],
+    }))
+    const restore = account("org_status_pin")
+    const previous = process.env.KILO_API_URL
+    process.env.KILO_API_URL = "https://api.kilo.ai"
+    try {
+      const host = await boot({ backend: "extension" })
+      const status = (await host.status()) as {
+        backend: string
+        organization?: unknown
+        playwright: { ready: boolean }
+      }
+      expect(status.backend).toBe("playwright")
+      expect(status.organization).toEqual({
+        control: "playwright_only",
+        origins: ["https://example.com", "https://app.example.com"],
+      })
+      expect(asked).toContain("/api/organizations/org_status_pin/browser-policy")
+    } finally {
+      if (previous === undefined) delete process.env.KILO_API_URL
+      else process.env.KILO_API_URL = previous
+      restore()
+    }
+  })
+
+  test("a policy that turns browser control off reads as the off backend", async () => {
+    policies(() => ({ browserControl: "off" }))
+    const restore = account("org_status_off")
+    try {
+      const host = await boot({ backend: "playwright" })
+      const status = (await host.status()) as { backend: string; organization?: unknown }
+      expect(status.backend).toBe("off")
+      expect(status.organization).toEqual({ control: "off", origins: [] })
+    } finally {
+      restore()
+    }
+  })
+
+  test("a playwright_only pin never turns a config that is off back on", async () => {
+    policies(() => ({ browserControl: "playwright_only" }))
+    const restore = account("org_status_pin_off")
+    try {
+      const host = await boot({ backend: "off" })
+      const status = (await host.status()) as { backend: string; organization?: unknown }
+      // The organization policy restricts, it does not enable: with the config off, status and the call path both
+      // say the browser is off.
+      expect(status.backend).toBe("off")
+      expect(status.organization).toEqual({ control: "playwright_only", origins: [] })
+      expect(host.tools()).toEqual([])
+    } finally {
+      restore()
+    }
+  })
+
+  test("without a policy the status keeps the config's backend", async () => {
+    const host = await boot({ backend: "extension" })
+    const status = (await host.status()) as { backend: string; organization?: unknown }
+    expect(status.backend).toBe("extension")
+    expect(status.organization).toBeUndefined()
   })
 })
 
@@ -638,11 +762,20 @@ describe("browser tools over the extension backend", () => {
     expect(closed).toEqual(["a-1"])
   })
 
-  test("an organization that allows Playwright only cannot select the extension", () => {
-    const settings = { backend: "extension" as const, observation: "diff" as const, allowSensitive: false, target: null, headless: true }
-    expect(forced(settings, "playwright_only").backend).toBe("playwright")
-    expect(forced(settings, "allow")).toBe(settings)
-    expect(forced(settings, undefined)).toBe(settings)
+  test("one effective backend serves the calls and the status: off wins, a Playwright pin forces it", () => {
+    const extension = { backend: "extension" as const, observation: "diff" as const, allowSensitive: false, target: null, headless: true }
+    const allowed = { control: "allow" as const, origins: [] }
+    const pinned = { control: "playwright_only" as const, origins: [] }
+    const off = { control: "off" as const, origins: [] }
+    // Without a policy the config decides, including the extension.
+    expect(effective(extension, undefined)).toBe("extension")
+    expect(effective(extension, allowed)).toBe("extension")
+    // A Playwright pin forces the bundled browser, so no extension call can happen under it.
+    expect(effective(extension, pinned)).toBe("playwright")
+    // The user's own off wins over everything, and an organization's off is the same refusal.
+    expect(effective({ ...extension, backend: "off" }, allowed)).toBe("off")
+    expect(effective({ ...extension, backend: "off" }, pinned)).toBe("off")
+    expect(effective(extension, off)).toBe("off")
   })
 
   test("no reachable extension still yields the actionable error through the tool layer", async () => {

@@ -210,6 +210,21 @@ export function hub(options: Options = {}): BrowserHub.Interface {
           })
           return listed.tools.map((tool) => tool.name)
         },
+        async reported() {
+          // No client yet means nothing is connected; asking here must not start a hub.
+          const created = clients.get(target ?? "")
+          if (created === undefined) return undefined
+          const client = await created.catch(() => undefined)
+          if (client === undefined) return undefined
+          const state = client.state()
+          if (state.kind !== "ready") return undefined
+          return {
+            protocol: state.extension.protocol,
+            contractSha: state.extension.contractSha,
+            extensionVersion: state.extension.extensionVersion,
+            profileLabel: state.extension.profileLabel,
+          }
+        },
         async call(params) {
           try {
             const answer = await (await connection()).tools.call(
