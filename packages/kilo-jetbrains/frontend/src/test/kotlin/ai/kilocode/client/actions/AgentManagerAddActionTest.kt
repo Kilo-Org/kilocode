@@ -3,8 +3,6 @@ package ai.kilocode.client.actions
 import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.SidePanelMode
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceIcons
-import ai.kilocode.client.plugin.KiloBundle
-import com.intellij.codeInsight.hint.HintUtil
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
 import com.intellij.openapi.actionSystem.AnAction
@@ -18,11 +16,7 @@ import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.util.JDOMUtil
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
-import javax.swing.JLabel
-import javax.swing.SwingConstants
-import javax.swing.UIManager
 
 @Suppress("UnstableApiUsage")
 class AgentManagerAddActionTest : BasePlatformTestCase() {
@@ -82,37 +76,12 @@ class AgentManagerAddActionTest : BasePlatformTestCase() {
         assertFalse(event.presentation.isEnabled)
     }
 
-    fun `test add hint has no planned-feature copy`() {
-        val hint = ai.kilocode.client.plugin.KiloBundle.message("agentManager.add.hint")
+    fun `test add popup has no footer advertisement`() {
+        val popup = AgentManagerAddAction().popup(DataContext.EMPTY_CONTEXT)
+        Disposer.register(testRootDisposable, popup)
 
-        assertFalse(hint.contains("<hr"))
-        assertFalse(hint.contains("coming soon", ignoreCase = true))
-        assertEquals("Move tasks between local and Cloud anytime.", hint)
-    }
-
-    fun `test popup hint fits on one line without clipping`() {
-        val offset = UIManager.get("Popup.Advertiser.fontSizeOffset")
-        try {
-            for (value in listOf(0, -8)) {
-                UIManager.put("Popup.Advertiser.fontSizeOffset", value)
-                val popup = AgentManagerAddAction().popup(DataContext.EMPTY_CONTEXT)
-                Disposer.register(testRootDisposable, popup)
-                val content = popup.content
-                val footer = (content.layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH) as JLabel
-                val hint = HintUtil.createAdComponent(KiloBundle.message("agentManager.add.hint"),
-                    JBUI.CurrentTheme.Advertiser.border(), SwingConstants.LEFT)
-
-                content.size = content.preferredSize
-                content.doLayout()
-
-                assertTrue(footer.text.startsWith("<html>"))
-                assertFalse(footer.text.contains("<div"))
-                assertEquals(hint.preferredSize.height, footer.preferredSize.height)
-                assertTrue(footer.width >= hint.preferredSize.width)
-            }
-        } finally {
-            UIManager.put("Popup.Advertiser.fontSizeOffset", offset)
-        }
+        val footer = (popup.content.layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH)
+        assertNull("The Add menu must not show advisory copy", footer)
     }
 
     fun `test add group items carry branch and cloud icons`() {

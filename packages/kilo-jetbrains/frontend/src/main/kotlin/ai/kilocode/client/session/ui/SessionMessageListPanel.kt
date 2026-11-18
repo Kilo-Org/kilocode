@@ -28,6 +28,7 @@ import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.failureText
 import ai.kilocode.rpc.dto.HostedSystemEventDto
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.client.util.EdtDrain
 import ai.kilocode.client.util.edtLater
 import com.intellij.openapi.application.ApplicationManager
@@ -616,7 +617,20 @@ class SessionMessageListPanel(
     private fun tail(): String? = turnViews.values.lastOrNull()?.messageIds()?.lastOrNull()
 
     /** Failure the transcript already explains for the tail message, or null when it explains nothing. */
-    private fun explained(): String? = tail()?.let { failureText(model.message(it)?.info?.error) }
+    private fun explained(): String? = tail()?.let { id ->
+        val item = model.message(id)
+        failureText(item?.info?.error) ?: item?.terminal?.let(::terminalText)
+    }
+
+    private fun terminalText(event: ChatEventDto.MessageTerminal): String? = when (event.status) {
+        "failed" -> when {
+            !event.accepted -> KiloBundle.message("session.cloud.message.failed.notAccepted")
+            event.delivery != "sent" -> KiloBundle.message("session.cloud.message.failed.notSent")
+            else -> KiloBundle.message("session.cloud.message.failed")
+        }
+        "interrupted" -> KiloBundle.message("session.cloud.message.interrupted")
+        else -> null
+    }
 
     /** Apply failure visibility policy to every turn. */
     private fun syncFailures(): Boolean {
@@ -642,8 +656,8 @@ class SessionMessageListPanel(
      * - a turn whose final message succeeded says nothing, because a failure it recovered from is not
      *   that turn's outcome.
      *
-     * Native errors and the Retry footer describe the tail. Cloud prompt failures never introduce
-     * global retry or execution actions.
+     * Native errors and the Retry footer describe the tail. A failed Cloud prompt offers send-again
+     * only while it is the exact transcript tail; older correlated cards stay passive.
      */
     private fun syncFailures(view: TurnView): Boolean {
         val live = turnViews.values.lastOrNull() === view
@@ -653,10 +667,11 @@ class SessionMessageListPanel(
         for (id in ids) {
             val msg = msgToView[id] ?: continue
             val item = model.message(id)
-            val status = item?.terminal?.status
+            val terminal = item?.terminal
+            val status = terminal?.status
             val error = when (status) {
-                "failed" -> MessageErrorDto("CloudMessageFailed", KiloBundle.message("session.cloud.message.failed"))
-                "interrupted" -> MessageErrorDto("CloudMessageInterrupted", KiloBundle.message("session.cloud.message.interrupted"))
+                "failed" -> item.info.error ?: MessageErrorDto("CloudMessageFailed", terminalText(terminal))
+                "interrupted" -> MessageErrorDto("CloudMessageInterrupted", terminalText(terminal))
                 else -> item?.info?.error?.takeIf { live && id == last }
             }
             changed = msg.syncError(error) || changed
