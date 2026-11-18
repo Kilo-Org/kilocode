@@ -98,7 +98,7 @@ import {
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
 import { createProjectLive } from "./project/live"
 import { createProjectSessionsLive } from "./project/sessions-live"
-import { worktreeSessionIds as worktreeMembership, worktreeSessionTabs } from "./project/session-filter"
+import { worktreeSessionTabs } from "./project/session-filter"
 import { applyProjectSelection, createTargetRememberer } from "./project/selection"
 import { createLocalSessions } from "./project/local-tabs"
 import { persistLocalTabs, projectLocalIds, projectLocalSessions } from "./project/local-tabs"
@@ -903,10 +903,8 @@ const AgentManagerContent: Component = () => {
   const activeWorktreeSessionIds = createMemo<ReadonlySet<string> | undefined>(() => {
     const sel = selection()
     if (!sel || sel === LOCAL) return undefined
-    const closed = closedSessions()
-    const ids = new Set([...worktreeMembership(sel, managedSessions())].filter((id) => !closed.has(id)))
-    for (const session of sessionsForWorktree(sel)) ids.add(session.id)
-    return ids
+    // History includes closed conversations even when there are no open tabs in this worktree.
+    return new Set(historyList().filter((session) => ownerOf(session.id) === sel).map((session) => session.id))
   })
   const activeTabs = createMemo((): SessionInfo[] => {
     const sel = selection()

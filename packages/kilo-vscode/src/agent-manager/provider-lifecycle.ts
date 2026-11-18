@@ -1,6 +1,5 @@
 import type { JsonValue, OpenCodeClient, SessionInfo } from "@opencode/client"
 import { getErrorMessage } from "./errors"
-import { isRunningStatus } from "../session-status"
 import { LOCAL_TARGET, type AgentManagerOutMessage } from "./types"
 import { initContextState } from "./project/init"
 import { pathKey } from "./project/paths"
@@ -247,23 +246,23 @@ export async function deleteLifecycleWorktree(
     return null
   }
   const managed = state.getSessions(worktreeId)
-  const retained = new Set(managed.map((session) => session.id))
   let client: OpenCodeClient
+  let retained: string[]
   try {
     client = await host.client()
     const [active, permissions, forms, sessions] = await Promise.all([
       client.session.active(),
       client.permission.request.list({ location: { directory: worktree.path } }),
       client.form.list({ location: { directory: worktree.path } }),
+      // The server directory, not the open tab list, owns the conversations. In v2, specifying
+      // archived or parentID filters the result; omit both to include closed tabs, archived sessions and children.
       client.session.list({
         directory: worktree.path,
-        archived: true,
-        parentID: null,
         limit: Number.MAX_SAFE_INTEGER,
       }),
     ])
-    sessions.data.forEach((session) => retained.add(session.id))
-    const running = [...retained].some((id) => isRunningStatus(active[id]?.type))
+    retained = sessions.data.map((session) => session.id)
+    const running = retained.some((id) => Object.hasOwn(active, id))
     if (running || permissions.data.length > 0 || forms.data.length > 0)
       return fail("Cannot delete a worktree while a session is active or waiting for input")
   } catch (error) {
@@ -292,7 +291,7 @@ export async function deleteLifecycleWorktree(
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
   let releasePtyCleanup: () => void
   try {
-    await host.abort(managed.map((session) => session.id))
+    await host.abort(retained)
     releasePtyCleanup = await host.acquirePtyCleanup(worktree.path)
   } catch (error) {
     host.log(`Failed to stop worktree processes: ${error}`)
@@ -312,6 +311,7 @@ export async function deleteLifecycleWorktree(
     state.removeWorktree(worktreeId)
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
+    ctx.invalidateSessions()
     host.post({ type: "agentManager.worktreeDeleted", projectId: ctx.id, worktreeId })
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
@@ -602,12 +602,15 @@ export async function closeLifecycleSession(
 ): Promise<null> {
   const state = ctx.peekState()
   await host.abort([sessionId])
-  // Drop the session from state before stopping its processes. Process shutdown
-  // can be slow or unavailable, and while a closed session is still listed here
-  // any concurrent state push would restore the tab the user just closed,
-  // because a webview with no remaining real tabs looks like a reload.
-  state?.removeSession(sessionId)
-  if (state) host.push()
+  if (state) {
+    // Git metadata still names the worktree's first session after a tab is closed. Mark the close so recovery
+    // can distinguish it from a lost filing. History can still reopen it by filing it again.
+    const worktreeId =
+      state.getSession(sessionId)?.worktreeId ?? ctx.sessions().find((item) => item.id === sessionId)?.worktreeId
+    if (worktreeId) state.closeSession(sessionId, worktreeId)
+    else state.removeSession(sessionId)
+    host.push()
+  }
   host.log(`Closed session ${sessionId}`)
   return null
 }

@@ -50,9 +50,10 @@ export async function fileSessionLocally(input: {
   log: (...args: unknown[]) => void
 }): Promise<RouteOutcome> {
   const outcome = input.client ? await routeSession(input.client, input.sessionId, input.root, input.log) : "failed"
-  if (outcome === "failed") return "failed"
-  if (outcome === "moved" && input.state?.getSession(input.sessionId)) {
-    input.state.moveSession(input.sessionId, null)
-  }
+  if (outcome !== "moved" || !input.state) return outcome
+  const filed = input.state.getSession(input.sessionId)
+  // History can open an unfiled conversation. The panel needs a filing while its Local store loads the session.
+  if (!filed) input.state.addSession(input.sessionId, null)
+  else if (filed.worktreeId !== null) input.state.moveSession(input.sessionId, null)
   return outcome
 }

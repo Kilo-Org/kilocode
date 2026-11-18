@@ -131,17 +131,23 @@ describe("Agent Manager opening an existing session", () => {
 
   it("files a closed worktree session where it runs when the sidebar search selects it", async () => {
     await readyProject()
+    state.closeSession("live", worktreeId)
     contexts.pinned()!.setSessions([{ ...info("live", worktree), worktreeId: worktreeId }])
+
+    const target = { projectId, kind: "session", sessionId: "live" } as const
+    await handleProjectMessage({ type: "agentManager.rememberTarget", projectId, target }, deps)
+    expect(state.getActiveTarget()).toBeUndefined()
 
     await handleProjectMessage(
       {
         type: "agentManager.activateSelection",
-        target: { projectId, kind: "session", sessionId: "live" },
+        target,
       } as AgentManagerInMessage,
       deps,
     )
 
     expect(state.getSession("live")?.worktreeId).toBe(worktreeId)
+    expect(state.isSessionClosed("live")).toBe(false)
     expect(calls.pushState).toBe(1)
     expect(calls.selected).toEqual([{ projectId, kind: "session", sessionId: "live" }])
     expect(calls.error).toEqual([])
