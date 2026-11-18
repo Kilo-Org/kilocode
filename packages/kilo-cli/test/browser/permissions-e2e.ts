@@ -435,13 +435,20 @@ async function main() {
       `the snapshot did not withhold the frame:\n${snapshot.slice(0, 400)}`,
     )
     expect(!snapshot.includes(MARKER), "the withheld frame's marker reached the snapshot")
-    // No path to unmasked pixels leaves the backend for a page with a withheld frame: the file link is dropped and the
-    // file itself is gone (the masked image is the only copy, and a unit test covers the blacking out).
-    expect(!shot.includes("[Screenshot"), `the screenshot link was returned:\n${shot.slice(0, 300)}`)
-    expect(
-      files.filter((file) => file.endsWith(".png")).length === 0,
-      `an unmasked screenshot was left on disk: ${files}`,
-    )
+    // No path to unmasked pixels leaves the backend: the MCP's capture file is gone, and the one persisted PNG is
+    // the masked image the result links to.
+    const pngs = files.filter((file) => file.endsWith(".png"))
+    expect(!files.some((file) => file.startsWith(".mcp-")), `the MCP capture file survived: ${files}`)
+    expect(pngs.length === 1, `expected exactly one persisted screenshot: ${files}`)
+    expect(shot.includes(`[Screenshot]`), `the result does not link to the saved image:\n${shot.slice(0, 300)}`)
+    if (pngs.length === 1) {
+      const image = Png.decode(await fs.readFile(path.join(result.root, "data", "kilo2", "browser", "output", pngs[0])))
+      const at = (8 * image.width + 8) * image.channels
+      const inside = [image.data[at], image.data[at + 1], image.data[at + 2]]
+      output.inside = inside
+      // The frame box is masked black, so the persisted image cannot show its red page.
+      expect(inside[0] < 40 && inside[1] < 40 && inside[2] < 40, `the persisted image is not masked: ${inside}`)
+    }
     return output
   }
 

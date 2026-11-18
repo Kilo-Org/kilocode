@@ -339,6 +339,11 @@ async function connect(settings: Settings): Promise<Connection> {
   }
 }
 
+/** The MCP's screenshot file name, `page-<timestamp>.png`. */
+function autoShotName() {
+  return `page-${new Date().toISOString().replace(/[:.]/g, "-")}.png`
+}
+
 /** Frames whose origin has no `read` grant, outermost first; a withheld frame hides its subtree. */
 export function withheldFrames(page: Page, authorized: readonly string[]): Frame[] {
   const result: Frame[] = []
@@ -856,8 +861,8 @@ class PlaywrightBackend implements BrowserBackend {
     // Every file this call writes is tracked by path: another session's file in the shared directory must survive.
     const written: string[] = []
     let callArgs = args
-    // The MCP writes into a file this backend names, so the path is ours: never derived from tool output, never a
-    // shared `page-<timestamp>.png` another session could own. The bytes are read back here and the file removed.
+    // The MCP writes into a file this backend names, so the capture path is ours: never derived from tool output. The
+    // bytes are read back and the capture removed once the final PNG is persisted.
     const capture = shot ? path.join(outputDirectory(), `.mcp-${randomUUID()}.png`) : undefined
     if (shot) {
       if (args.target !== undefined && withheldBefore.length) {
@@ -872,7 +877,9 @@ class PlaywrightBackend implements BrowserBackend {
     // A file name the model supplies is resolved by the MCP against the workspace root, outside the directory this
     // backend owns: only a path that stays inside the output directory is accepted. A screenshot is written from the
     // image the backend holds, so masking is applied to the file as well.
-    const save = screenshotPath(name, args)
+    // The caller's name when given, otherwise a name in the MCP's own style: an allowed screenshot always leaves a
+    // file that the result can link to.
+    const save = shot ? (screenshotPath(name, args) ?? path.join(outputDirectory(), autoShotName())) : undefined
     // The MCP never writes a result file: it would hold the withheld frames' content unfiltered. The backend writes
     // the file from the filtered text instead, so the name is removed from the arguments the MCP sees.
     const file = shot ? undefined : outputFile(name, args)
@@ -1021,11 +1028,11 @@ class PlaywrightBackend implements BrowserBackend {
           },
         }
       }
-      // The model still gets the file it asked for, written from the masked image.
+      // The masked image is persisted as the answer, and the result links to that file.
       if (save && images[0]) await writeConfined(save, Buffer.from(images[0].data, "base64"))
-      // The file link points at the deleted file; the masked image is the answer.
+      const link = save ? `- [Screenshot](${save})` : undefined
       return {
-        content: [{ type: "text", text: withoutScreenshotLink(viewed) }, ...images],
+        content: [{ type: "text", text: [withoutScreenshotLink(viewed), link].filter(Boolean).join("\n") }, ...images],
         isError: result.isError === true,
         meta: {
           ...(origin ? { origin } : {}),
@@ -1039,7 +1046,10 @@ class PlaywrightBackend implements BrowserBackend {
       ...(origin ? { origin } : {}),
       ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
     }
-    if (save && images[0]) await writeConfined(save, Buffer.from(images[0].data, "base64"))
+    if (save && images[0]) {
+      await writeConfined(save, Buffer.from(images[0].data, "base64"))
+      viewed = `${viewed}\n- [Screenshot](${save})`
+    }
     return {
       content: [{ type: "text", text: viewed }, ...images],
       isError: result.isError === true,

@@ -8,6 +8,7 @@ import { Tool } from "@opencode/schema/tool"
 import { Effect, Exit, Queue, Scope, Stream } from "effect"
 import type { CallContext } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
+import * as Png from "../../src/browser/png"
 import { key, outputDirectory, playwright } from "../../src/browser/playwright"
 import { resolve } from "../../src/browser/settings"
 import { key as backendKey, persistStep } from "../../src/browser/playwright"
@@ -125,6 +126,13 @@ mock.module("@modelcontextprotocol/client", () => ({
     async callTool(request: { name: string; arguments: Record<string, unknown> }) {
       state.calls.push({ name: request.name, args: request.arguments })
       state.onCall?.(request.name, request.arguments)
+      // A real screenshot call writes the file the backend named; the pixel data comes from a 2x2 image.
+      const file = request.arguments.filename
+      if (request.name === "browser_take_screenshot" && typeof file === "string") {
+        const image = Png.encode({ width: 2, height: 2, channels: 3, data: Buffer.alloc(12, 200) })
+        await fs.mkdir(path.dirname(file), { recursive: true })
+        await fs.writeFile(file, image)
+      }
       return { content: [{ type: "text", text: state.text(request.name, request.arguments) }], isError: false }
     }
     async close() {}
@@ -384,6 +392,39 @@ describe("a download the action started", () => {
       { class: "sensitive", origin: "https://gate.example.com", reason: "download: invoice.pdf" },
     ])
     expect((result.content[0] as { text: string }).text).toContain("needs the user's permission")
+  })
+})
+
+describe("a screenshot this backend allows", () => {
+  test("without a name leaves exactly one PNG and links to it", async () => {
+    const backend = await browser()
+    const result = await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
+    const files = (await fs.readdir(outputDirectory())).filter((file) => file.endsWith(".png"))
+    expect(files.length).toBe(1)
+    expect(files[0]).toMatch(/^page-.+\.png$/)
+    const text = (result.content[0] as { text: string }).text
+    expect(text).toContain(`- [Screenshot](${path.join(outputDirectory(), files[0])})`)
+    // The capture file the MCP wrote is gone.
+    expect((await fs.readdir(outputDirectory())).some((file) => file.startsWith(".mcp-"))).toBe(false)
+  })
+
+  test("with a name lands at that name", async () => {
+    const backend = await browser()
+    await backend.callTool("browser_take_screenshot", { type: "png", scale: "css", filename: "shots/a.png" }, context)
+    expect((await fs.stat(path.join(outputDirectory(), "shots", "a.png")).catch(() => null))?.isFile()).toBe(true)
+  })
+
+  test("refused when a frame is withheld leaves no PNG", async () => {
+    const parent = state.pages[0]
+    parent.children = [new Page("b", "https://pay.example.net/")]
+    // The output directory is shared by the suite: start from no picture so only this call's writes are measured.
+    for (const file of await fs.readdir(outputDirectory()).catch(() => [] as string[]))
+      if (file.endsWith(".png")) await fs.unlink(path.join(outputDirectory(), file)).catch(() => undefined)
+    const backend = await browser()
+    const result = await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
+    // The withheld frame cannot be measured on the stand-in page, so the image never leaves the backend.
+    expect(result.isError).toBe(true)
+    expect((await fs.readdir(outputDirectory())).filter((file) => file.endsWith(".png"))).toEqual([])
   })
 })
 
