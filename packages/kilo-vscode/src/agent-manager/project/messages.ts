@@ -337,8 +337,8 @@ function rememberTarget(projectId: string, target: SidebarTarget, deps: ProjectM
   if (target.kind === "worktree" && !state.getWorktree(target.worktreeId)) return
   if (
     target.kind === "session" &&
-    !state.getSession(target.sessionId) &&
-    !deps.contexts.get(projectId)?.hasLiveSession(target.sessionId)
+    (state.isSessionClosed(target.sessionId) ||
+      (!state.getSession(target.sessionId) && !deps.contexts.get(projectId)?.hasLiveSession(target.sessionId)))
   )
     return
   state.setActiveTarget(target)
