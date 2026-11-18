@@ -759,9 +759,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
         ? this.contexts.active()
         : await this.contexts.worktreeCaller(request.directory, this.gitOps)
     if (owner) return this.projectScope.run(owner, () => this.startToolRequest(request))
-    this.openPanel(true)
-    await this.panel?.waitForReady()
-    this.postToWebview({ type: "error", code: "worktree_caller_unknown", message: request.directory ?? "" })
+    this.host.showWorktreeCallerError(request.directory)
   }
 
   public async startToolRequest(req: ToolRequest): Promise<void> {

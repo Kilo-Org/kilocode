@@ -5,6 +5,7 @@ import * as os from "os"
 import * as path from "path"
 import type { OpenCodeClient } from "@opencode/client"
 import { AgentManagerProvider } from "../src/agent-manager/AgentManagerProvider"
+import { VscodeHost } from "../src/agent-manager/vscode-host"
 import type { AgentManagerConnection } from "../src/agent-manager/connection"
 import type { Host, PanelContext } from "../src/agent-manager/host"
 import { canonicalizePath, projectIdFor } from "../src/agent-manager/project/paths"
@@ -97,6 +98,7 @@ function providerFor(workspace: string, projects: string[]) {
     isTrusted: () => true,
     openDocument: async () => undefined,
     showError: () => undefined,
+    showWorktreeCallerError: VscodeHost.prototype.showWorktreeCallerError,
     notify: () => undefined,
     openFile: () => undefined,
     refreshGit: () => undefined,
@@ -122,10 +124,8 @@ function inventory(root: string) {
 }
 
 async function delegate(provider: AgentManagerProvider, directory: string, branchName: string) {
-  const errors: { code?: string; message: string }[] = []
-  provider.postToWebview = (message) => {
-    if (message.type === "error") errors.push({ code: message.code, message: message.message })
-  }
+  const errors: string[] = []
+  provider.host.showError = (message) => errors.push(message)
   await provider.onToolEvent({
     id: branchName,
     created: Date.now(),
@@ -168,8 +168,12 @@ describe("tool worktree project routing", () => {
       const nested = path.join(b, "unregistered")
       git(b, "init", "-q", nested)
       const after = inventory(b)
+      provider.panel = undefined
       for (const dir of [nested, path.join(b, "missing")]) {
-        expect(await delegate(provider, dir, "unknown")).toEqual([{ code: "worktree_caller_unknown", message: dir }])
+        const errors = await delegate(provider, dir, "unknown")
+        expect(errors).toHaveLength(1)
+        expect(errors[0]).toContain(dir)
+        expect(errors[0]).toContain("add it as a project in Agent Manager")
       }
       expect(inventory(b)).toEqual(after)
       expect(inventory(a)).toEqual(before)
@@ -178,21 +182,30 @@ describe("tool worktree project routing", () => {
     }
   }, 30_000)
 
-  it("rejects a checkout owned by both a pinned linked project and its registered primary", async () => {
+  it("distinguishes the pinned linked checkout from its registered primary and rejects an ambiguous sibling", async () => {
     const root = repo("ambiguous", "main")
     const linked = path.join(root, "linked")
     git(root, "worktree", "add", "-q", "-b", "linked", linked)
+    const sibling = path.join(root, "sibling")
+    git(root, "worktree", "add", "-q", "-b", "sibling", sibling)
     const provider = providerFor(linked, [root])
     provider.openPanel = () => undefined
-    const before = inventory(root)
+    provider.pushState = () => undefined
     try {
-      const dir = path.join(linked, "component")
-      expect(await delegate(provider, dir, "ambiguous")).toEqual([{ code: "worktree_caller_unknown", message: dir }])
+      expect(await delegate(provider, linked, "from-pinned")).toEqual([])
+      expect(fs.existsSync(path.join(linked, ".kilo", "worktrees", "from-pinned", "component", "marker"))).toBe(true)
+      expect(await delegate(provider, path.join(root, "component"), "from-primary")).toEqual([])
+      expect(fs.existsSync(path.join(root, ".kilo", "worktrees", "from-primary", "component", "marker"))).toBe(true)
+      const managed = path.join(linked, ".kilo", "worktrees", "from-pinned", "component")
+      expect(await delegate(provider, managed, "from-managed")).toEqual([])
+      expect(fs.existsSync(path.join(linked, ".kilo", "worktrees", "from-managed", "component", "marker"))).toBe(true)
+      const before = inventory(root)
+      expect(await delegate(provider, sibling, "ambiguous")).toEqual([expect.stringContaining(sibling)])
       expect(inventory(root)).toEqual(before)
     } finally {
       await provider.dispose()
     }
-  })
+  }, 30_000)
 })
 
 describe("sidebar worktree project routing", () => {
