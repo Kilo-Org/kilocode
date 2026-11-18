@@ -1,0 +1,2 @@
+Jinja2==3.1.6
+tokenizers==0.23.3

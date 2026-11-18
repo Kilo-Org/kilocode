@@ -2,14 +2,14 @@
  * The session boundary of the Agent Manager.
  *
  * One panel relay serves every store. The sessions layer reads the root sessions of the active project's directories,
- * and the model, agent, provider and command catalogs come from the store of the project root. First prompts and model
- * switches of host-created worktree sessions are written through the v2 client of that worktree's store.
+ * and the model, agent and provider catalogs come from the active project root. The New Worktree command catalog
+ * follows the dialog's target instead. First prompts and model switches use the v2 client of the worktree's store.
  */
 import type { AgentInfo, CommandInfo, ModelInfo, ProviderInfo } from "@opencode/client"
 import { createEffect, createMemo, on, onCleanup, type Accessor } from "solid-js"
 import type { AgentManagerSendInitialMessage } from "../src/types/messages/agent-manager"
 import type { V2 } from "../src/v2/scope"
-import type { VSCodeContext } from "./v2/vscode"
+import type { VSCodeContext } from "./v2/bridge"
 import type { AppDirectories } from "./app-directories"
 import { createPanelData } from "./v2/panel-data"
 import { createSessions } from "./v2/sessions"
@@ -21,6 +21,7 @@ export function createAppSession(opts: {
   directories: AppDirectories
   /** Root of the applied project, whose store holds the catalogs. */
   rootDirectory: Accessor<string | undefined>
+  commandProject: Accessor<string | undefined>
 }) {
   const panel = createPanelData({
     post: (message) => opts.vscode.postMessage(message),
@@ -57,14 +58,28 @@ export function createAppSession(opts: {
           store.data.location.agent.sync(),
           store.data.location.model.sync(),
           store.data.location.provider.sync(),
-          store.data.location.command.sync(),
           store.data.location.config.sync(),
         ]).catch(store.report)
       },
     ),
   )
 
-  createEffect(() => panel.retain([...opts.directories.retained(), ...sessions.followed()]))
+  const commandStore = createMemo(() => {
+    const directory = opts.directories.root(opts.commandProject())
+    return directory ? panel.store(directory) : undefined
+  })
+  createEffect(
+    on([commandStore, panel.connection.status], ([store, status]) => {
+      if (store && status === "connected") void store.data.location.command.sync().catch(store.report)
+    }),
+  )
+
+  createEffect(() => {
+    const directory = commandStore()?.directory
+    const retained = [...opts.directories.retained(), ...sessions.followed()]
+    if (directory) retained.push(directory)
+    panel.retain(retained)
+  })
 
   // A restored worktree folder loads again; its store failed while the folder was gone.
   reloadRestoredDirectories(panel, opts.directories)
@@ -73,7 +88,7 @@ export function createAppSession(opts: {
   const providers = (): ProviderInfo[] => rootStore()?.data.location.provider.list() ?? []
   const agents = (): AgentInfo[] =>
     (rootStore()?.data.location.agent.list() ?? []).filter((agent) => agent.mode !== "subagent" && !agent.hidden)
-  const commands = (): CommandInfo[] => rootStore()?.data.location.command.list() ?? []
+  const commands = (): CommandInfo[] => commandStore()?.data.location.command.list() ?? []
 
   const storeFor = (directory: string | undefined): V2 | undefined => {
     if (directory) return panel.store(directory)
