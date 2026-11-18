@@ -215,7 +215,14 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
       ...(inputs.secret ?? []),
     ]),
   ]
-  const set = { ...(inputs.restore ?? {}), ...profile.environment.set }
+  // A masked credential name must not come back through a restored loader variable or the profile's own set map.
+  // The XDG roots stay: the child gets the user's values back, and the deny list only hides nono's own roots from it.
+  const masked = new Set([...(inputs.secret ?? []), ...provided.flatMap((route) => aliases(route.envVar))])
+  const set = Object.fromEntries(
+    Object.entries({ ...(inputs.restore ?? {}), ...profile.environment.set }).filter(
+      ([key]) => !masked.has(key),
+    ),
+  )
   return {
     extends: "default",
     meta: { name: "kilo", description: "Kilo sandbox profile" },

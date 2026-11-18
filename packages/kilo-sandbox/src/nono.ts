@@ -68,25 +68,26 @@ function write(profile: NonoProfile) {
   return file
 }
 
-function secrets(launch: Launch, routes: ReadonlyArray<Credential>) {
+function secrets(launch: Launch, routes: ReadonlyArray<Credential>, active: ReadonlySet<string>) {
   const env = launch.environment ?? {}
   return routes.flatMap((route) => {
     const value = env[route.envVar]
-    const named = aliases(route.envVar).filter((alias) => alias !== route.envVar)
+    const named = aliases(route.envVar).filter((alias) => alias !== route.envVar && !active.has(alias))
     if (value === undefined || value.length === 0) return named
     return [
       ...named,
       ...Object.entries(env)
-        .filter(([key, candidate]) => key !== route.envVar && candidate === value)
+        .filter(([key, candidate]) => !active.has(key) && candidate === value)
         .map(([key]) => key),
     ]
   })
 }
 
 function database() {
-  const file = process.env.OPENCODE_DB
+  const file = process.env.OPENCODE_DB || undefined
   if (!file) return []
-  return [file, `${file}-wal`, `${file}-shm`]
+  const resolved = path.resolve(file)
+  return [resolved, `${resolved}-wal`, `${resolved}-shm`]
 }
 
 let loaded: { readonly key: string; readonly value: ReadonlyArray<Credential> } | undefined
@@ -125,7 +126,13 @@ const backend: Backend = {
             }
           }
           // A route that is not emitted cannot mint a placeholder, so its real value must not reach the child.
-          const masked = new Set(secrets(launch, configured))
+          const masked = new Set(
+            secrets(
+              launch,
+              configured,
+              new Set(active.map((route) => route.envVar)),
+            ),
+          )
           for (const route of configured) if (!active.includes(route)) masked.add(route.envVar)
           const generated = generate(profile, {
             credentials: active,

@@ -174,6 +174,17 @@ describe.skipIf(process.platform === "win32")("nono profile generation", () => {
     })
   })
 
+  test("keeps restored XDG roots and drops masked names", () => {
+    const kept = generate(profile(), { paths, restore: { XDG_CONFIG_HOME: "/u/.config" } })
+    expect(kept.environment?.set_vars.XDG_CONFIG_HOME).toBe("/u/.config")
+    const dropped = generate(profile(), {
+      paths,
+      restore: { NODE_OPTIONS: "--max-old-space-size=4096" },
+      secret: ["NODE_OPTIONS"],
+    })
+    expect(dropped.environment?.set_vars.NODE_OPTIONS).toBeUndefined()
+  })
+
   test("excludes the default write groups and keeps any extra exclusions", () => {
     expect(generate(profile(), { paths }).groups).toEqual({
       exclude: ["system_write_macos", "system_write_linux"],

@@ -196,6 +196,29 @@ test.skipIf(!mac)("masks a credential the profile cannot route", async () => {
   }
 })
 
+test.skipIf(!mac)("keeps a masked credential name out of the child environment", async () => {
+  writeFileSync(
+    credentials,
+    JSON.stringify({
+      credentials: [{ name: "options", source: "env://NODE_OPTIONS", upstream: "https://example.com" }],
+    }),
+  )
+  process.env.KILO_NONO_CREDENTIALS = credentials
+  try {
+    const result = await prepare(undefined, { ...launch.environment, NODE_OPTIONS: "--max-old-space-size=4096" })
+    const profile = generated(result)
+    expect(profile.environment.deny_vars).toContain("NODE_OPTIONS")
+    expect(profile.environment.set_vars.NODE_OPTIONS).toBeUndefined()
+  } finally {
+    delete process.env.KILO_NONO_CREDENTIALS
+  }
+})
+
+test.skipIf(!mac)("restores the user's XDG roots to the child", async () => {
+  const result = await prepare(undefined, { ...launch.environment, XDG_CONFIG_HOME: "/Users/poc/.config" })
+  expect(generated(result).environment.set_vars.XDG_CONFIG_HOME).toBe("/Users/poc/.config")
+})
+
 test.skipIf(!mac)("refuses to launch when a routed credential has no value", async () => {
   writeFileSync(
     credentials,
@@ -267,6 +290,31 @@ test.skipIf(!mac)("masks known aliases and equal-valued variables for a routed c
     expect(profile.environment.deny_vars).toEqual(expect.arrayContaining(["GH_TOKEN", "GITHUB_OAUTH_TOKEN", "OTHER"]))
     expect(profile.environment.deny_vars).not.toContain("GITHUB_TOKEN")
     expect(profile.network.credentials).toEqual(["github"])
+  } finally {
+    delete process.env.KILO_NONO_CREDENTIALS
+  }
+})
+
+test.skipIf(!mac)("keeps every active credential variable when routes share a value", async () => {
+  writeFileSync(
+    credentials,
+    JSON.stringify({
+      credentials: [
+        { name: "one", source: "env://DEMO_A", upstream: "https://example.com" },
+        { name: "two", source: "env://DEMO_B", upstream: "https://example.com" },
+      ],
+    }),
+  )
+  process.env.KILO_NONO_CREDENTIALS = credentials
+  try {
+    const result = await prepare(
+      { mode: "proxy", allowedHosts: ["example.com:443"] },
+      { ...launch.environment, DEMO_A: "shared", DEMO_B: "shared", OTHER: "shared" },
+    )
+    const profile = generated(result)
+    expect(profile.environment.deny_vars).not.toContain("DEMO_A")
+    expect(profile.environment.deny_vars).not.toContain("DEMO_B")
+    expect(profile.environment.deny_vars).toContain("OTHER")
   } finally {
     delete process.env.KILO_NONO_CREDENTIALS
   }
