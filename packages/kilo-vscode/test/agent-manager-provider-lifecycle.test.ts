@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, mock, setSystemTime } from
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
+import { OpenCode } from "@opencode/client"
+import { Session } from "@opencode/schema/session"
+import { SessionMessage } from "@opencode/schema/session-message"
+import { simpleGit } from "simple-git"
 import { ProjectContext } from "../src/agent-manager/project/context"
+import { pushProjectSessions } from "../src/agent-manager/project/init"
 import {
   addSessionToLifecycleWorktree,
   closeLifecycleSession,
@@ -13,6 +18,10 @@ import {
   type LifecycleHost,
 } from "../src/agent-manager/provider-lifecycle"
 import { WorktreeStateManager } from "../src/agent-manager/WorktreeStateManager"
+import { WorktreeManager } from "../src/agent-manager/WorktreeManager"
+import { fileSessionLocally } from "../src/agent-manager/route-session"
+import { restoreWorktrees } from "../src/agent-manager/state-recovery"
+import { command, start, stop } from "../src/server"
 
 describe("Agent Manager worktree lifecycle", () => {
   let root: string
@@ -228,9 +237,10 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(state.getWorktree(id)).toBeUndefined()
   })
 
-  it.each(["busy", "retry"] as const)("refuses a %s session before cleanup", async (status) => {
+  it("refuses a running session before cleanup", async () => {
     const session = state.addSession("session", state.getWorktrees()[0]!.id)
-    client.session.active.mockResolvedValue({ [session.id]: { type: status } })
+    client.session.list.mockResolvedValue({ data: [session] })
+    client.session.active.mockResolvedValue({ [session.id]: { type: "running" } })
 
     await deleteWorktree()
 
@@ -239,6 +249,53 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(client.session.active).toHaveBeenCalled()
     expect(client.permission.request.list).toHaveBeenCalledWith({ location: { directory: worktree } })
     expect(client.form.list).toHaveBeenCalledWith({ location: { directory: worktree } })
+  })
+
+  it("refuses deletion when an unfiled child in the worktree is running", async () => {
+    const id = state.getWorktrees()[0]!.id
+    client.session.list.mockResolvedValue({ data: [{ id: "child", parentID: "parent" }] })
+    client.session.active.mockResolvedValue({ child: { type: "running" } })
+
+    await deleteWorktree()
+
+    expect(calls).toEqual(["post:error"])
+    expect(state.getWorktree(id)).toBeDefined()
+  })
+
+  it("refuses deletion when a filed session is running in a worktree subdirectory", async () => {
+    const id = state.getWorktrees()[0]!.id
+    state.addSession("nested", id)
+    const nested = path.join(worktree, "nested")
+    fs.mkdirSync(nested)
+    client.session.get.mockResolvedValue({ id: "nested", location: { directory: nested } })
+    client.session.active.mockResolvedValue({ nested: { type: "running" } })
+
+    await deleteWorktree()
+
+    expect(calls).toEqual(["post:error"])
+    expect(state.getWorktree(id)).toBeDefined()
+  })
+
+  it("lists a shared subdirectory once and blocks deletion while an unfiled child is running", async () => {
+    const id = state.getWorktrees()[0]!.id
+    const nested = path.join(worktree, "nested")
+    fs.mkdirSync(nested)
+    state.addSession("first", id)
+    state.addSession("second", id)
+    client.session.get.mockImplementation(async ({ sessionID }: { sessionID: string }) => ({
+      id: sessionID,
+      location: { directory: nested },
+    }))
+    client.session.list.mockImplementation(async ({ directory }: { directory: string }) => ({
+      data: directory === nested ? [{ id: "first" }, { id: "second" }, { id: "child", parentID: "first" }] : [],
+    }))
+    client.session.active.mockResolvedValue({ child: { type: "running" } })
+
+    await deleteWorktree()
+
+    expect(calls).toEqual(["post:error"])
+    expect(state.getWorktree(id)).toBeDefined()
+    expect(client.session.list.mock.calls.map(([input]) => input.directory)).toEqual([worktree, nested])
   })
 
   it.each(["permission", "form"] as const)("refuses a pending %s before cleanup", async (kind) => {
@@ -312,10 +369,11 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(state.getWorktrees()).toHaveLength(1)
   })
 
-  it("closes a session by interrupting it before dropping its state", async () => {
+  it("keeps the first worktree tab closed on restart and lets History reopen it", async () => {
     const worktree = state.getWorktrees()[0]!
     state.addSession("closed", worktree.id)
     state.setTabOrder(worktree.id, ["closed", "other"])
+    state.setActiveTarget({ projectId: ctx.id, kind: "session", sessionId: "closed" })
 
     await closeLifecycleSession(ctx, host, "closed")
 
@@ -328,6 +386,23 @@ describe("Agent Manager worktree lifecycle", () => {
     const saved = JSON.parse(fs.readFileSync(path.join(root, ".kilo2", "agent-manager.json"), "utf8"))
     expect(saved.sessions.closed).toBeUndefined()
     expect(saved.tabOrder[worktree.id]).toEqual(["other"])
+
+    const restored = new ProjectContext(ctx.id, root, true, { log: host.log })
+    try {
+      const loaded = restored.stateManager()
+      await loaded.load()
+      expect(loaded.isSessionClosed("closed")).toBe(true)
+      expect(loaded.getActiveTarget()).toEqual({ projectId: ctx.id, kind: "worktree", worktreeId: worktree.id })
+      restoreWorktrees(loaded, [{ ...worktree, sessionId: "closed", createdAt: Date.parse(worktree.createdAt) }])
+      expect(loaded.getSession("closed")).toBeUndefined()
+
+      // Selecting the conversation in History explicitly adds it back to its worktree.
+      await addSessionToLifecycleWorktree(restored, host, worktree.id, "closed")
+      expect(loaded.getSession("closed")?.worktreeId).toBe(worktree.id)
+      expect(loaded.isSessionClosed("closed")).toBe(false)
+    } finally {
+      await restored.dispose()
+    }
   })
 
   it("still interrupts a closed session when the project has no state", async () => {
@@ -343,11 +418,15 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(calls).toEqual(["abort:closed"])
   })
 
-  it("moves retained and discovered sessions to the exact project root without deleting them", async () => {
+  it("does not interrupt or move a stale filing in a similarly named sibling directory", async () => {
     const first = state.addSession("first", state.getWorktrees()[0]!.id)
-    const second = state.addSession("second", state.getWorktrees()[0]!.id)
+    const stale = state.addSession("stale", state.getWorktrees()[0]!.id)
+    const sibling = `${worktree}-sibling`
+    fs.mkdirSync(sibling)
+    client.session.get.mockResolvedValue({ id: stale.id, location: { directory: sibling } })
+    client.session.active.mockResolvedValue({ [stale.id]: { type: "running" } })
     client.session.list.mockResolvedValue({
-      data: [{ id: "archived" }, { id: "child" }],
+      data: [{ id: first.id }, { id: "archived" }, { id: "child", parentID: first.id }],
       location: { directory: worktree },
     })
 
@@ -358,11 +437,10 @@ describe("Agent Manager worktree lifecycle", () => {
       "diff",
       "run:remove",
       "run:clear",
-      `abort:${first.id},${second.id}`,
+      `abort:${first.id},archived,child`,
       "pty",
       "disk",
       `move:${first.id}`,
-      `move:${second.id}`,
       "move:archived",
       "move:child",
       "pr",
@@ -374,16 +452,104 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(client.session.remove).not.toHaveBeenCalled()
     expect(client.session.list).toHaveBeenCalledWith({
       directory: worktree,
-      archived: true,
-      parentID: null,
       limit: Number.MAX_SAFE_INTEGER,
     })
-    for (const session of [first, second]) {
-      expect(client.session.move).toHaveBeenCalledWith({ sessionID: session.id, directory: ctx.root })
-    }
+    expect(client.session.get).toHaveBeenCalledTimes(1)
+    expect(client.session.get).toHaveBeenCalledWith({ sessionID: stale.id })
+    expect(client.session.move).toHaveBeenCalledWith({ sessionID: first.id, directory: ctx.root })
+    expect(client.session.move).not.toHaveBeenCalledWith({ sessionID: stale.id, directory: ctx.root })
     expect(state.getWorktrees()).toHaveLength(0)
     expect(state.getSessions()).toHaveLength(0)
   })
+
+  it("reopens worktree conversations from Local History after deletion, including closed and nested sessions", async () => {
+    const repo = path.join(fs.realpathSync(root), "repo")
+    fs.mkdirSync(repo)
+    const git = simpleGit(repo)
+    await git.init(["-b", "main"])
+    await git.raw([
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "init",
+    ])
+    const manager = new WorktreeManager(repo, host.log, undefined, undefined, 0)
+    const tree = await manager.createWorktree({ branchName: "history" })
+    const project = new ProjectContext("history", repo, true, { log: host.log, worktrees: () => manager })
+    const saved = project.stateManager()
+    const wt = saved.addWorktree({ branch: tree.branch, path: tree.path, parentBranch: "main" })
+    const found = command({ extension: path.resolve(import.meta.dir, ".."), storage: root, env: {} })
+    if (!found) throw new Error("dev entry not found")
+    const server = await start({ command: found, cwd: repo, env: process.env })
+    try {
+      const api = OpenCode.make({ baseUrl: server.url, headers: { authorization: server.authorization } })
+      host.client = async () => api
+      host.abort = async (ids) => {
+        await Promise.all(ids.map((sessionID) => api.session.interrupt({ sessionID })))
+      }
+      const time = Date.now()
+      const conversation = (title: string, archived?: number, directory = tree.path) =>
+        api.experimental.session.import({
+          location: { directory },
+          info: {
+            id: Session.ID.create(),
+            projectID: "global",
+            location: { directory },
+            title,
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            time: { created: time, updated: time, archived },
+          },
+          messages: [{ id: SessionMessage.ID.create(), type: "user", text: title, time: { created: time } }],
+        })
+      const open = await conversation("Open transcript")
+      const closed = await conversation("Closed transcript")
+      const archived = await conversation("Archived transcript", time)
+      const child = await api.session.create({ parentID: closed.id })
+      const subdirectory = path.join(tree.path, "nested")
+      fs.mkdirSync(subdirectory)
+      const nested = await conversation("Nested transcript", undefined, subdirectory)
+      const nestedChild = await api.session.create({ parentID: nested.id })
+      expect(nestedChild.location.directory).toBe(nested.location.directory)
+      saved.addSession(open.id, wt.id)
+      saved.addSession(closed.id, wt.id)
+      saved.addSession(nested.id, wt.id)
+      await closeLifecycleSession(project, host, closed.id)
+      expect(saved.getSession(closed.id)).toBeUndefined()
+      const list = async (directory: string) => (await api.session.list({ directory, parentID: null })).data
+      await pushProjectSessions(project, list, host.post, host.log)
+      expect(project.sessions().find((entry) => entry.id === closed.id)?.worktreeId).toBe(wt.id)
+
+      await deleteLifecycleWorktree(project, host, wt.id)
+      expect(fs.existsSync(tree.path)).toBe(false)
+      await pushProjectSessions(project, list, host.post, host.log)
+      const history = project.sessions().filter((entry) => entry.worktreeId === null)
+      expect(history.map((entry) => entry.id).sort()).toEqual([open.id, closed.id, archived.id, nested.id].sort())
+      for (const entry of history) {
+        expect(
+          await fileSessionLocally({ client: api, state: saved, sessionId: entry.id, root: repo, log: host.log }),
+        ).toBe("moved")
+        expect(saved.getSession(entry.id)?.worktreeId).toBeNull()
+        const transcript = await api.message.list({ sessionID: entry.id, type: "user" })
+        expect(transcript.data).toMatchObject([{ type: "user", text: entry.title }])
+      }
+      expect((await api.session.get({ sessionID: archived.id })).time.archived).toBe(time)
+      expect((await api.session.get({ sessionID: child.id })).location.directory).toBe(repo)
+      expect(await api.session.get({ sessionID: nestedChild.id })).toMatchObject({
+        parentID: nested.id,
+        location: { directory: repo },
+      })
+    } finally {
+      await project.dispose()
+      const exited = new Promise((resolve) => server.process.once("exit", resolve))
+      stop(server.process)
+      await exited
+    }
+  }, 120_000)
 
   it("reports a snapshot cleanup failure without undoing the deletion", async () => {
     state.addSession("retained", state.getWorktrees()[0]!.id)
@@ -417,7 +583,8 @@ describe("Agent Manager worktree lifecycle", () => {
   })
 
   it("completes the deletion and reports when session relocation fails", async () => {
-    state.addSession("retained", state.getWorktrees()[0]!.id)
+    const retained = state.addSession("retained", state.getWorktrees()[0]!.id)
+    client.session.list.mockResolvedValue({ data: [retained] })
     client.session.move.mockRejectedValue(new Error("move failed"))
 
     await deleteWorktree()
