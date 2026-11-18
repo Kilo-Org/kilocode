@@ -9,6 +9,7 @@ import net from "node:net"
 import os from "os"
 import path from "path"
 import { randomUUID } from "node:crypto"
+import { create as createClient, HubError } from "../../src/browser/client"
 import { encode } from "../../src/browser/frame"
 import * as pair from "../../src/browser/pair"
 import { hub } from "../../src/browser/port"
@@ -128,8 +129,11 @@ async function mint(runtime: Runtime) {
   }
 }
 
-/** The whole pairing path a browser takes: redeem the token over an origin-bearing POST, then authenticate with it. */
-async function pairExtension(runtime: Runtime, contractSha: string) {
+/**
+ * The whole pairing path a browser takes: redeem the token over an origin-bearing POST, then authenticate with it.
+ * `profile` is the label the extension reports in `ext.hello`.
+ */
+async function pairExtension(runtime: Runtime, contractSha: string, profile = "Default") {
   const origin = `chrome-extension://${proto.StoreExtensionId}`
   const { url } = await mint(runtime)
   const token = new URLSearchParams(new URL(url).hash.slice(1)).get("t")
@@ -158,7 +162,7 @@ async function pairExtension(runtime: Runtime, contractSha: string) {
   const ok = await message(socket, proto.AuthOk)
   expect(ok.mac).toBe(pair.hubMac(body.key, challenge.nonceH, nonceE))
   expect(await message(socket, proto.HubHello)).toMatchObject({ type: "hub.hello", mode: "loopback" })
-  socket.send(JSON.stringify(extensionHello({ profileLabel: "Default", contractSha })))
+  socket.send(JSON.stringify(extensionHello({ profileLabel: profile, contractSha })))
   return socket
 }
 
@@ -260,6 +264,35 @@ describe("extension backend over a real hub", () => {
     expect(retried.params.authorized).toEqual([{ class: "read", origin: "https://example.com" }])
     answer(extension, retried, { content: [{ type: "text", text: snapshot("https://example.com", "Example") }] })
     expect((await retrying).isError).toBe(false)
+  }, 30_000)
+
+  test("a selected profile drops the link when the extension comes back as another profile", async () => {
+    const runtime = await start()
+    const extension = await pairExtension(runtime, "deadbeef", "Default")
+    const client = createClient({ dir: runtime.run, profile: "Default", start: () => {}, timeout: 2_000 })
+    try {
+      expect((await client.ready(3_000)).profileLabel).toBe("Default")
+
+      // The browser goes away and reconnects as a different profile: the hub accepts only one extension at a time.
+      extension.close()
+      sockets.splice(sockets.indexOf(extension), 1)
+      await until(async () => {
+        try {
+          await pairExtension(runtime, "deadbeef", "Work")
+          return true
+        } catch {
+          return undefined
+        }
+      }, 5_000)
+
+      // The client refuses it: the link drops, a rediscovery is scheduled, and a call fails closed.
+      await until(() => (client.state().kind === "reconnecting" ? true : undefined), 5_000)
+      const call = await client.tools.list().catch((value: unknown) => value)
+      expect(call).toBeInstanceOf(HubError)
+      expect((call as HubError).code).toBe(proto.ErrorCodes.browser_unavailable)
+    } finally {
+      client.close()
+    }
   }, 30_000)
 
   test("a disconnect in the middle of a call fails it as uncertain and never replays it", async () => {

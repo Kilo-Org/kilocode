@@ -111,7 +111,20 @@ function failure(error: unknown) {
 }
 
 /**
- * The backend a call runs on. An organization that allows browser control only through the bundled Playwright browser
+ * Keep a per-target backend map at most `limit` entries: the least recently used are dropped and disposed, so a
+ * session that keeps switching profiles cannot grow it.
+ */
+export function trim<T extends { dispose(): Promise<void> }>(extensions: Map<string, Promise<T>>, limit: number) {
+  while (extensions.size > limit) {
+    const oldest = extensions.keys().next().value
+    if (oldest === undefined) return
+    const evicted = extensions.get(oldest)
+    extensions.delete(oldest)
+    void evicted?.then((backend) => backend.dispose()).catch(() => undefined)
+  }
+}
+
+/** The backend a call runs on. An organization that allows browser control only through the bundled Playwright browser
  * overrides the configured choice, so no extension call can happen under that policy.
  */
 export function forced(browser: Settings, control: KiloBrowserPolicy.Policy["control"] | undefined): Settings {
@@ -486,13 +499,7 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
         module.backend({ port: hub.port(target), directory: ctx.location.directory }),
       )
       extensions.set(name, created)
-      while (extensions.size > EXTENSION_LIMIT) {
-        const oldest = extensions.keys().next().value
-        if (oldest === undefined) break
-        const evicted = extensions.get(oldest)
-        extensions.delete(oldest)
-        void evicted?.then((backend) => backend.dispose()).catch(() => undefined)
-      }
+      trim(extensions, EXTENSION_LIMIT)
       return created
     }
 

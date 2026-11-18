@@ -10,7 +10,7 @@ import { BrowserContract } from "../../src/browser/contract"
 import { EXTENSION_HINT } from "../../src/browser/extension"
 import { BrowserHub } from "../../src/browser/hub"
 import { resetSteps } from "../../src/browser/steps"
-import { authorize, forced, KiloBrowserToolsPlugin, resetGrants } from "../../src/browser/tools"
+import { authorize, forced, KiloBrowserToolsPlugin, resetGrants, trim } from "../../src/browser/tools"
 
 type Browser = NonNullable<KiloConfigPolicy.BrowserConfig>
 
@@ -583,6 +583,19 @@ describe("browser tools over the extension backend", () => {
     await host.call("browser_click", { target: "e1" })
     await host.call("browser_click", { target: "e1" }, "ses_other")
     expect(seen[1]).toBeUndefined()
+  })
+
+  test("the per-target backends are bounded and an evicted one is disposed", async () => {
+    const disposed: string[] = []
+    const backends = new Map<string, Promise<{ dispose: () => Promise<void> }>>()
+    for (const target of ["a", "b", "c", "d", "e"]) {
+      backends.set(target, Promise.resolve({ dispose: () => Promise.resolve(void disposed.push(target)) }))
+    }
+    trim(backends, 4)
+    expect([...backends.keys()]).toEqual(["b", "c", "d", "e"])
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(disposed).toEqual(["a"])
   })
 
   test("an organization that allows Playwright only cannot select the extension", () => {

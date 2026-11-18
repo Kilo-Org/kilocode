@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test"
+import { BrowserHub } from "@kilocode/kilo-plugin/browser/hub"
+import fs from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
 import { HubError } from "../../src/browser/client"
 import * as proto from "../../src/browser/protocol"
-import { failure } from "../../src/browser/port"
+import { failure, hub as connection } from "../../src/browser/port"
 
 const codes = Object.fromEntries(
   (Object.keys(proto.ErrorCodes) as proto.ErrorName[]).map((name) => [name, proto.ErrorCodes[name]]),
@@ -64,6 +68,18 @@ describe("hub failures as the extension backend reads them", () => {
     const mapped = failure(hub("needs_permission", { items: "everything" }))
     expect(mapped.kind).toBe("permission")
     expect(mapped.items).toEqual([])
+  })
+
+  test("a transport failure from ready is the backend's own failure, not a raw error", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-port-"))
+    try {
+      const linked = connection({ dir, install: () => Promise.resolve(), start: () => {}, timeout: 300 })
+      const error = await linked.port(null).ready(300).catch((value: unknown) => value)
+      expect(error).toBeInstanceOf(BrowserHub.Failure)
+      expect((error as BrowserHub.Failure).kind).toBe("unavailable")
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
   })
 
   test("a code the protocol does not name is unknown, never a guessed kind", () => {
