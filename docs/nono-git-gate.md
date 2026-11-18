@@ -28,8 +28,8 @@ the sandbox.
 ## What nono provides, and what it does not
 
 A profile can grant write access to a subtree (`filesystem.allow`) and block a path (`filesystem.deny`). The
-block covers **reads and writes**. There is no write-only deny, and the profile schema has no read-only path
-list.
+block covers **reads and writes**. Read grants (`filesystem.read`, `read_file`) exist, but grants are
+additive: no rule subtracts write from an enclosing `allow`, so there is no write-only deny.
 
 Measured with the pinned binary: a profile that grants `<workspace>` write and denies `<workspace>/.git`:
 
@@ -115,7 +115,7 @@ or how the rest of the policy is translated.
 > affects reads; it is validated when the path is inside a writable grant; it applies on macOS and Linux with
 > equivalent behaviour, or the profile fails to start when the platform cannot express it.
 >
-> **Evidence.** nono 0.82.0, macOS 14/arm64: `deny .git` → `cat .git/config` exit 1; no deny → write to
+> **Evidence.** nono 0.82.0, Darwin 27.0.0 arm64: `deny .git` → `cat .git/config` exit 1; no deny → write to
 > `.git/new` succeeds. Happy to test a preview build and report results.
 
 ## Showing the feature without this gate
@@ -134,8 +134,8 @@ The demo does not need `.git` writes to be blocked. Show, in this order:
 6. **The known gap, stated plainly.** Writing to `.git` still succeeds; it is tracked upstream and blocks the
    provider switch, not the rest of the feature.
 
-Run the probe matrix with `bun run poc` in `packages/kilo-sandbox` on the development branch; it prints one row
-per probe with `PASS`, `FAIL` or `NOTE`.
+Each probe above is run by hand against the pinned binary and recorded as `PASS`, `FAIL` or `NOTE`. No probe
+harness ships with this series.
 
 ## Exit criteria
 
@@ -153,5 +153,3 @@ and the acceptance matrix records `.git`, submodules and worktrees as passing.
 ## References
 
 - nono: <https://github.com/nolabs-ai/nono>
-- Design and decisions: the nono design document, added by the documentation PR in this series
-- Probe harness: `packages/kilo-sandbox/script/nono-poc.ts`
