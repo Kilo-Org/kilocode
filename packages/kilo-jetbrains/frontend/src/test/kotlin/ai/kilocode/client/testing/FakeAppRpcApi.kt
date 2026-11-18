@@ -182,6 +182,24 @@ class FakeAppRpcApi : KiloAppRpcApi {
         return next
     }
 
+    var telemetryLevels = mutableListOf<Boolean>()
+    var telemetryLevelGate: CompletableDeferred<Unit>? = null
+    var telemetryLevelError: Throwable? = null
+    var telemetryLevelAttempts = 0
+        private set
+
+    override suspend fun setTelemetryLevel(enabled: Boolean): KiloAppStateDto {
+        assertNotEdt("setTelemetryLevel")
+        telemetryLevelAttempts += 1
+        telemetryLevelGate?.await()
+        telemetryLevelError?.let { throw it }
+        telemetryLevels.add(enabled)
+        val current = state.value
+        val next = current.copy(config = (current.config ?: ConfigDto()).copy(telemetry = enabled))
+        state.value = next
+        return next
+    }
+
     override suspend fun retentionStatus(): RetentionStatusDto {
         assertNotEdt("retentionStatus")
         retentionStatusCalls.incrementAndGet()

@@ -7,7 +7,6 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.log.LogConfig
 import ai.kilocode.rpc.dto.ConfigDto
-import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import com.intellij.openapi.options.ConfigurationException
@@ -237,21 +236,21 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
 
         edt { cfg.apply() }
         coroutines.drain()
-        assertEquals(emptyList<ConfigPatchDto>(), appRpc.configPatches)
+        assertEquals(emptyList<Boolean>(), appRpc.telemetryLevels)
 
         edt {
             telemetryToggle(root).doClick()
             cfg.apply()
         }
 
-        assertTrue(coroutines.pumpUntil { appRpc.configPatches.isNotEmpty() })
-        assertEquals(listOf(ConfigPatchDto(telemetry = false)), appRpc.configPatches)
+        assertTrue(coroutines.pumpUntil { appRpc.telemetryLevels.isNotEmpty() })
+        assertEquals(listOf(false), appRpc.telemetryLevels)
         assertFalse(edt { cfg.isModified })
     }
 
     fun `test telemetry save survives dialog dispose on ok`() {
         val gate = CompletableDeferred<Unit>()
-        appRpc.configUpdateGate = gate
+        appRpc.telemetryLevelGate = gate
         val cfg = configurable()
         val root = edt { cfg.createComponent() as Container }
 
@@ -259,13 +258,13 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
             telemetryToggle(root).doClick()
             cfg.apply()
         }
-        assertTrue(coroutines.pumpUntil { appRpc.configUpdateAttempts == 1 })
+        assertTrue(coroutines.pumpUntil { appRpc.telemetryLevelAttempts == 1 })
 
         edt { cfg.disposeUIResources() }
         gate.complete(Unit)
 
-        assertTrue(coroutines.pumpUntil { appRpc.configPatches.isNotEmpty() })
-        assertEquals(listOf(ConfigPatchDto(telemetry = false)), appRpc.configPatches)
+        assertTrue(coroutines.pumpUntil { appRpc.telemetryLevels.isNotEmpty() })
+        assertEquals(listOf(false), appRpc.telemetryLevels)
     }
 
     fun `test telemetry toggle refreshes from a later app state`() {
@@ -281,7 +280,7 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
 
     fun `test telemetry refresh does not overwrite an in-flight write`() {
         val gate = CompletableDeferred<Unit>()
-        appRpc.configUpdateGate = gate
+        appRpc.telemetryLevelGate = gate
         val cfg = configurable()
         val root = edt { cfg.createComponent() as Container }
 
@@ -289,7 +288,7 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
             telemetryToggle(root).doClick()
             cfg.apply()
         }
-        assertTrue(coroutines.pumpUntil { appRpc.configUpdateAttempts == 1 })
+        assertTrue(coroutines.pumpUntil { appRpc.telemetryLevelAttempts == 1 })
 
         // A stale pre-write state (still true) must not flip the toggle while the write is pending.
         app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = true))
@@ -297,11 +296,11 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         assertFalse(edt { telemetryToggle(root).isSelected })
 
         gate.complete(Unit)
-        assertTrue(coroutines.pumpUntil { appRpc.configPatches.isNotEmpty() })
+        assertTrue(coroutines.pumpUntil { appRpc.telemetryLevels.isNotEmpty() })
     }
 
     fun `test failed telemetry write reverts the toggle`() {
-        appRpc.configUpdateError = IllegalStateException("write failed")
+        appRpc.telemetryLevelError = IllegalStateException("write failed")
         val cfg = configurable()
         val root = edt { cfg.createComponent() as Container }
 
@@ -312,7 +311,7 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
 
         assertTrue(coroutines.pumpUntil { edt { telemetryToggle(root).isSelected } })
         assertFalse(edt { cfg.isModified })
-        assertTrue(appRpc.configPatches.isEmpty())
+        assertTrue(appRpc.telemetryLevels.isEmpty())
     }
 
     private fun configurable() = AdvancedConfigurable(settings, { it.applyLocal() }, app) { ui.scope }

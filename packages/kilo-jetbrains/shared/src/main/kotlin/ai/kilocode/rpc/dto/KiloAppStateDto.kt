@@ -167,8 +167,6 @@ data class ConfigPatchDto(
     val snapshot: Boolean? = null,
     /** Machine-wide session retention policy. */
     val retention: RetentionPatchDto? = null,
-    /** Whether the CLI sends telemetry, written as `experimental.openTelemetry`. */
-    val telemetry: Boolean? = null,
 )
 
 @Serializable

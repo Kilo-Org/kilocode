@@ -1175,9 +1175,6 @@ object KiloCliDataParser {
                 if (retention.enabled != null) put("enabled", retention.enabled)
                 if (retention.maxAgeDays != null) put("maxAgeDays", retention.maxAgeDays)
             })
-            if (patch.telemetry != null) put("experimental", buildJsonObject {
-                put("openTelemetry", patch.telemetry)
-            })
 
             if (patch.agents.isNotEmpty()) {
                 put("agent", buildJsonObject {

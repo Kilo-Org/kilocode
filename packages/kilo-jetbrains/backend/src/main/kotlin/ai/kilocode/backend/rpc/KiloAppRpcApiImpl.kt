@@ -110,6 +110,11 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
         return appStateDto(app.updateConfig(patch), app.capabilities.value)
     }
 
+    override suspend fun setTelemetryLevel(enabled: Boolean): KiloAppStateDto {
+        app.requireReady()
+        return appStateDto(app.setTelemetryLevel(enabled), app.capabilities.value)
+    }
+
     override suspend fun retentionStatus(): RetentionStatusDto = app.retention.status()
 
     override suspend fun runRetention(force: Boolean): RetentionStatusDto = app.retention.run(force)

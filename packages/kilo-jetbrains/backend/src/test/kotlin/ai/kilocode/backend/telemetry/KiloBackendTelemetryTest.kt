@@ -35,16 +35,16 @@ class KiloBackendTelemetryTest {
     }
 
     @Test
-    fun `set enabled posts to telemetry endpoint`() = runBlocking {
+    fun `set level posts to the core telemetry level endpoint`() = runBlocking {
         val server = MockWebServer()
-        server.enqueue(MockResponse().setBody("{}"))
+        server.enqueue(MockResponse().setBody("""{"enabled":true}"""))
         server.start()
         val http = KiloBackendHttpClients.api("secret")
         try {
-            KiloBackendTelemetry().setEnabled(http, server.port, true)
+            KiloBackendTelemetry().setLevel(http, server.port, true)
 
             val req = server.takeRequest()
-            assertEquals("/telemetry/setEnabled", req.path)
+            assertEquals("/telemetry/level", req.path)
             assertTrue(req.body.readUtf8().contains("enabled"))
         } finally {
             KiloBackendHttpClients.shutdown(http)

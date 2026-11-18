@@ -3,7 +3,6 @@ package ai.kilocode.client.settings
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.rpc.dto.ConfigPatchDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
@@ -72,7 +71,7 @@ class AdvancedConfigurable(
         // this configurable's scope before a coroutine launched here could reach the RPC.
         if (indexWorktreesChanged) app.setIndexWorktreesAsync(value.indexWorktrees)
         if (telemetryChanged) {
-            app.updateConfigAsync(ConfigPatchDto(telemetry = value.telemetry)) { state ->
+            app.setTelemetryLevelAsync(value.telemetry) { state ->
                 if (state?.config?.telemetry != value.telemetry) {
                     ApplicationManager.getApplication().invokeLater {
                         KiloNotifications.error(

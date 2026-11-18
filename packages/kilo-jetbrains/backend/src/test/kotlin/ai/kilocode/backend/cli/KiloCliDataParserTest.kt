@@ -2950,19 +2950,6 @@ class KiloCliDataParserTest {
         }
 
         @Test
-        fun `buildConfigPatch - telemetry writes experimental openTelemetry`() {
-            assertEquals(
-                "{\"experimental\":{\"openTelemetry\":false}}",
-                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(telemetry = false)),
-            )
-            assertEquals(
-                "{\"experimental\":{\"openTelemetry\":true}}",
-                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(telemetry = true)),
-            )
-            assertEquals("{}", KiloCliDataParser.buildConfigPatch(ConfigPatchDto()))
-        }
-
-        @Test
         fun `buildConfigPatch - shared_agent_board set true`() {
             val patch = ConfigPatchDto(shared_agent_board = true)
 

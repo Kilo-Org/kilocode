@@ -31,18 +31,15 @@ class KiloBackendTelemetry(
         post(http, port, "telemetry/capture", body)
     }
 
-    suspend fun setEnabled(http: OkHttpClient?, port: Int, enabled: Boolean) {
+    /** Persist and apply telemetry consent through the CLI core. */
+    suspend fun setLevel(http: OkHttpClient?, port: Int, enabled: Boolean) {
+        if (http == null || port <= 0) throw IllegalStateException("CLI is not connected")
         val body = JsonObject(mapOf("enabled" to JsonPrimitive(enabled))).toString()
-        if (KiloDevMode.enabled()) {
-            log.info(body)
-            return
-        }
-        if (http == null || port <= 0) return
-        post(http, port, "telemetry/setEnabled", body)
+        if (!post(http, port, "telemetry/level", body)) throw IllegalStateException("Could not save telemetry setting")
     }
 
-    private suspend fun post(http: OkHttpClient, port: Int, path: String, body: String) {
-        withContext(Dispatchers.IO) {
+    private suspend fun post(http: OkHttpClient, port: Int, path: String, body: String): Boolean {
+        return withContext(Dispatchers.IO) {
             try {
                 val client = http.newBuilder()
                     .callTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
@@ -55,9 +52,11 @@ class KiloBackendTelemetry(
                     .build()
                 client.newCall(req).execute().use { res ->
                     if (!res.isSuccessful) log.warn("telemetry $path failed: HTTP ${res.code}")
+                    res.isSuccessful
                 }
             } catch (e: Exception) {
                 log.warn("telemetry $path failed: ${e.message}", e)
+                false
             }
         }
     }
