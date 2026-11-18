@@ -1107,17 +1107,25 @@ export function Prompt(props: PromptProps) {
       return false
     }
     // kilocode_change start - block attachments the selected model cannot read
-    const slashCommand = () => {
-      const text = store.prompt.input
-      if (steer() || !text.startsWith("/")) return undefined
-      return sync.data.command.find((x) => slashMatches(x, text.split("\n")[0].split(" ")[0].slice(1)))
-    }
+    const inputText = expandTrackedPastedText(
+      store.prompt.input,
+      input.extmarks.getAllForTypeId(promptPartTypeId).flatMap((extmark) => {
+        const partIndex = store.extmarkToPartIndex.get(extmark.id)
+        const part = partIndex === undefined ? undefined : store.prompt.parts[partIndex]
+        if (part?.type !== "text") return []
+        return [{ start: extmark.start, end: extmark.end, text: part.text }]
+      }),
+    )
+    // Same condition as the slash command branch below; the server routes those, so the guard skips them
+    const slash =
+      !steer() &&
+      inputText.startsWith("/") &&
+      sync.data.command.some((x) => slashMatches(x, inputText.split("\n")[0].split(" ")[0].slice(1)))
     const receiver = receivingModel({
       mode: store.mode,
       session: props.sessionID ? sync.session.get(props.sessionID) : undefined,
       selected: selectedModel,
-      command: slashCommand(),
-      agents: sync.data.agent,
+      slash,
     })
     const capabilities = receiver
       ? sync.data.provider.find((item) => item.id === receiver.providerID)?.models[receiver.modelID]?.capabilities?.input
@@ -1186,16 +1194,7 @@ export function Prompt(props: PromptProps) {
       sessionID = res.data.id
     }
 
-    const inputText = expandTrackedPastedText(
-      store.prompt.input,
-      input.extmarks.getAllForTypeId(promptPartTypeId).flatMap((extmark) => {
-        const partIndex = store.extmarkToPartIndex.get(extmark.id)
-        const part = partIndex === undefined ? undefined : store.prompt.parts[partIndex]
-        if (part?.type !== "text") return []
-        return [{ start: extmark.start, end: extmark.end, text: part.text }]
-      }),
-    )
-
+    // kilocode_change - inputText is expanded before the attachment guard above
     // Filter out text parts (pasted content) since they're now expanded inline
     const nonTextParts = store.prompt.parts.filter((part) => part.type !== "text")
 

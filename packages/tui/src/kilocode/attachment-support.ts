@@ -42,35 +42,23 @@ function isResource(source: unknown): boolean {
 
 type ModelRef = { providerID: string; modelID: string }
 
-type CommandRef = { model?: string; agent?: string }
-type AgentRef = { name: string; model?: ModelRef }
-
 /**
- * The model that will read the attachments of this submit, or undefined when none are sent.
- * Shell mode sends only the command, so it has no receiver. A subagent steer runs on the
- * child session's own model. A slash command follows the server's order in
- * SessionPrompt.command: command model, then the command agent's model, then the selection.
- * Any other prompt uses the selected model.
+ * The model that will read the attachments of this submit, or undefined when the guard
+ * does not apply. Shell mode sends only the command, so it has no receiver. Slash commands
+ * are routed by the server (command model, command agent, subtask handling), so they are
+ * not checked. A subagent steer runs on the child session's own model. Any other prompt
+ * uses the selected model.
  */
 export function receivingModel(input: {
   mode: string
   session: Parameters<typeof KiloSteer.prompt>[0]
   selected: ModelRef
-  command?: CommandRef
-  agents?: ReadonlyArray<AgentRef>
+  slash: boolean
 }): ModelRef | undefined {
+  if (input.slash) return undefined
   const steering = KiloSteer.steering(input.session)
   if (input.mode === "shell" && !steering) return undefined
   const steered = steering ? input.session?.model : undefined
   if (steered) return { providerID: steered.providerID, modelID: steered.id }
-  if (!input.command || steering) return input.selected
-  if (input.command.model) return parseModel(input.command.model)
-  const agent = input.command.agent ? input.agents?.find((item) => item.name === input.command?.agent) : undefined
-  return agent?.model ? { providerID: agent.model.providerID, modelID: agent.model.modelID } : input.selected
-}
-
-// Same split as Provider.parseModel: the model id may itself contain slashes.
-function parseModel(model: string): ModelRef {
-  const [providerID, ...rest] = model.split("/")
-  return { providerID, modelID: rest.join("/") }
+  return input.selected
 }
