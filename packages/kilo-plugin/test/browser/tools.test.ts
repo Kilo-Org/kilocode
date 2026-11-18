@@ -4,6 +4,7 @@ import type { Permission } from "@opencode/core/permission"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Document } from "@opencode/schema/config"
 import { Tool } from "@opencode/schema/tool"
+import { Skill } from "@opencode/schema/skill"
 import { Effect, Exit, Option, Scope, Stream } from "effect"
 import { UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
@@ -27,10 +28,15 @@ type Hook = (event: Record<string, unknown>) => Effect.Effect<void, unknown>
 async function boot(browser?: Browser) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const hooks: Hook[] = []
+  const skills: Skill.Info[] = []
   const registrations: string[] = []
   const statuses: (() => Effect.Effect<unknown>)[] = []
   const ctx = {
     location: { directory: "/tmp/browser-tools-test" },
+    skill: {
+      transform: (fn: (editor: { add: (skill: Skill.Info) => void }) => void) =>
+        Effect.sync(() => fn({ add: (skill) => skills.push(skill) })),
+    },
     // The status RPC the settings dialog reads; `status` below calls the handler the plugin registers.
     rpc: {
       register: (definition: { id: string }, handlers: { status: () => Effect.Effect<unknown> }) =>
@@ -93,7 +99,7 @@ async function boot(browser?: Browser) {
     if (!handler) throw new Error("the plugin registered no status RPC")
     return Effect.runPromise(handler())
   }
-  return { tools, call, evaluate, registrations, status }
+  return { tools, skills, call, evaluate, registrations, status }
 }
 
 describe("browser tools", () => {
@@ -103,6 +109,7 @@ describe("browser tools", () => {
     const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
     const ctx = {
       location: { directory: "/tmp/browser-tools-event-test" },
+      skill: { transform: () => Effect.void },
       tool: {
         transform: (fn: (typeof transforms)[number]) =>
           Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
@@ -127,27 +134,28 @@ describe("browser tools", () => {
     transforms.forEach((fn) => fn({ add: (tool) => added.push(tool) }))
     const names = added.map((tool) => tool.name)
     expect(transforms.length).toBeGreaterThan(0)
-    expect(names).toContain("browser_navigate")
-    expect(names).toContain("browser_snapshot")
+    expect(names).toContain("navigate")
+    expect(names).toContain("snapshot")
   })
 
   test("registers the whole pinned contract with the vendored schemas", async () => {
     const host = await boot()
     const tools = host.tools()
-    expect(tools.map((tool) => tool.name)).toEqual(BrowserContract.entries.map((entry) => entry.name))
+    expect(host.skills.map((skill) => skill.id)).toEqual([Skill.ID.make("browser-automation")])
     expect(tools.length).toBe(26)
     for (const [index, tool] of tools.entries()) {
       const entry = BrowserContract.entries[index]
       expect(tool.description).toBe(entry.description)
       expect(tool.input).toEqual(entry.inputSchema)
-      // Direct tools: the model calls `browser_click`, not a Code Mode wrapper.
-      expect(tool.options).toEqual({ codemode: false })
+      expect(`${tool.options?.namespace}_${tool.name}`).toBe(entry.name)
+      expect(tool.options).toEqual({ namespace: "browser", codemode: true })
     }
   })
 
   test("backend off hides every browser tool", async () => {
     const host = await boot({ backend: "off" })
     expect(host.tools()).toEqual([])
+    expect(host.skills).toEqual([])
   })
 
   test("an absent browser block keeps the tools on the default backend", async () => {
@@ -162,7 +170,7 @@ describe("browser tools", () => {
 
   test("the extension backend answers every call with the model-facing unavailable error and a hint", async () => {
     const host = await boot({ backend: "extension" })
-    const result = await host.call("browser_click", { target: "e1" })
+    const result = await host.call("click", { target: "e1" })
     expect(result._tag).toBe("Failure")
     const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
     expect(error?.message).toBe(UNAVAILABLE_MESSAGE)

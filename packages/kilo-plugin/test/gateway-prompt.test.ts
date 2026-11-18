@@ -61,13 +61,10 @@ describe("GatewayPrompt", () => {
     expect(GatewayPrompt.render({ id: "router", prompt: "beast" }, [])).toStartWith(SessionSystemPrompt.render(GPT, []))
   })
 
-  test("keeps explicit Trinity serial tooling and GPT55 proactive delegation", () => {
+  test("keeps explicit Trinity serial tooling", () => {
     const trinity = GatewayPrompt.render({ id: "router", prompt: "trinity" }, [])
     expect(trinity).toContain("Use exactly one tool call per assistant message")
     expect(trinity).not.toContain("Run independent tool calls in parallel")
-    const gpt = GatewayPrompt.render({ id: "router", prompt: "gpt55" }, ["subagent"])
-    expect(gpt).toContain("Use the subagent tool proactively")
-    expect(gpt).not.toContain("Do not spawn subagents unless")
   })
 
   test("carries Gemini workflow and library checks without Anthropic guidance", () => {

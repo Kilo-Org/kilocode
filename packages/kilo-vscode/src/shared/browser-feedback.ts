@@ -310,12 +310,3 @@ export function partFeedback(metadata: unknown, content: string): FeedbackView |
   if (!review && !browserFeedback) return undefined
   return { review, browserFeedback, body }
 }
-
-export function parseFeedback(
-  metadata: { review?: unknown; browserFeedback?: unknown },
-  content: string,
-): Pick<FeedbackView, "review" | "browserFeedback"> | undefined {
-  const parsed = partFeedback({ kilo: metadata }, content)
-  if (!parsed) return undefined
-  return { review: parsed.review, browserFeedback: parsed.browserFeedback }
-}

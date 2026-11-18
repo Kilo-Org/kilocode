@@ -2,7 +2,7 @@ import type { EmbedderProvider } from "./interfaces/manager"
 import type { CodeIndexConfig, PreviousConfigSnapshot } from "./interfaces/config"
 import { DEFAULT_SEARCH_MIN_SCORE, DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_VECTOR_STORE } from "./constants"
 import { getDefaultModelId, getModelDimension, getModelScoreThreshold } from "./model-registry"
-import { isEmbeddingProfileEqual, resolveEmbeddingProfile } from "./embedding-profile"
+import { requiresIndexingRestart } from "./restart-policy"
 import { resolveFileExtensions } from "./shared/supported-extensions"
 
 /**
@@ -140,23 +140,23 @@ export class CodeIndexConfigManager {
       lancedbVectorStoreDirectory: this.lancedbVectorStoreDirectory,
       modelId: this.modelId,
       modelDimension: this.modelDimension,
-      kiloApiKey: this.kiloOptions?.apiKey ?? "",
-      kiloBaseUrl: this.kiloOptions?.baseUrl ?? "",
-      kiloOrganizationId: this.kiloOptions?.organizationId ?? "",
-      openAiKey: this.openAiOptions?.apiKey ?? "",
-      ollamaBaseUrl: this.ollamaOptions?.baseUrl ?? "",
-      openAiCompatibleBaseUrl: this.openAiCompatibleOptions?.baseUrl ?? "",
-      openAiCompatibleApiKey: this.openAiCompatibleOptions?.apiKey ?? "",
-      geminiApiKey: this.geminiOptions?.apiKey ?? "",
-      mistralApiKey: this.mistralOptions?.apiKey ?? "",
-      vercelAiGatewayApiKey: this.vercelAiGatewayOptions?.apiKey ?? "",
-      bedrockRegion: this.bedrockOptions?.region ?? "",
-      bedrockProfile: this.bedrockOptions?.profile ?? "",
-      openRouterApiKey: this.openRouterOptions?.apiKey ?? "",
-      openRouterSpecificProvider: this.openRouterOptions?.specificProvider ?? "",
-      voyageApiKey: this.voyageOptions?.apiKey ?? "",
-      qdrantUrl: this.qdrantUrl ?? "",
-      qdrantApiKey: this.qdrantApiKey ?? "",
+      kiloApiKey: this.kiloOptions?.apiKey,
+      kiloBaseUrl: this.kiloOptions?.baseUrl,
+      kiloOrganizationId: this.kiloOptions?.organizationId,
+      openAiKey: this.openAiOptions?.apiKey,
+      ollamaBaseUrl: this.ollamaOptions?.baseUrl,
+      openAiCompatibleBaseUrl: this.openAiCompatibleOptions?.baseUrl,
+      openAiCompatibleApiKey: this.openAiCompatibleOptions?.apiKey,
+      geminiApiKey: this.geminiOptions?.apiKey,
+      mistralApiKey: this.mistralOptions?.apiKey,
+      vercelAiGatewayApiKey: this.vercelAiGatewayOptions?.apiKey,
+      bedrockRegion: this.bedrockOptions?.region,
+      bedrockProfile: this.bedrockOptions?.profile,
+      openRouterApiKey: this.openRouterOptions?.apiKey,
+      openRouterSpecificProvider: this.openRouterOptions?.specificProvider,
+      voyageApiKey: this.voyageOptions?.apiKey,
+      qdrantUrl: this.qdrantUrl,
+      qdrantApiKey: this.qdrantApiKey,
       fileExtensions: [...this.fileExtensions],
     }
   }
@@ -183,80 +183,7 @@ export class CodeIndexConfigManager {
   }
 
   doesConfigChangeRequireRestart(prev: PreviousConfigSnapshot): boolean {
-    const nowConfigured = this.isConfigured()
-
-    const prevEnabled = prev.enabled ?? false
-    const prevConfigured = prev.configured ?? false
-    const prevProvider = prev.embedderProvider ?? "openai"
-
-    // Enable/disable transitions
-    if ((!prevEnabled || !prevConfigured) && this.enabled && nowConfigured) return true
-    if (prevEnabled && !this.enabled) return true
-    if ((!prevEnabled || !prevConfigured) && (!this.enabled || !nowConfigured)) return false
-    if (!this.enabled) return false
-
-    // Provider change
-    if (prevProvider !== this.embedderProvider) return true
-
-    // Vector store provider change
-    if ((prev.vectorStoreProvider ?? DEFAULT_VECTOR_STORE) !== this.vectorStoreProvider) return true
-
-    // LanceDB path change
-    if (
-      this.vectorStoreProvider === "lancedb" &&
-      (prev.lancedbVectorStoreDirectory ?? "") !== (this.lancedbVectorStoreDirectory ?? "")
-    )
-      return true
-
-    // Auth changes
-    if ((prev.kiloApiKey ?? "") !== (this.kiloOptions?.apiKey ?? "")) return true
-    if ((prev.kiloBaseUrl ?? "") !== (this.kiloOptions?.baseUrl ?? "")) return true
-    if ((prev.kiloOrganizationId ?? "") !== (this.kiloOptions?.organizationId ?? "")) return true
-    if ((prev.openAiKey ?? "") !== (this.openAiOptions?.apiKey ?? "")) return true
-    if ((prev.ollamaBaseUrl ?? "") !== (this.ollamaOptions?.baseUrl ?? "")) return true
-    if (
-      (prev.openAiCompatibleBaseUrl ?? "") !== (this.openAiCompatibleOptions?.baseUrl ?? "") ||
-      (prev.openAiCompatibleApiKey ?? "") !== (this.openAiCompatibleOptions?.apiKey ?? "")
-    )
-      return true
-    if ((prev.geminiApiKey ?? "") !== (this.geminiOptions?.apiKey ?? "")) return true
-    if ((prev.mistralApiKey ?? "") !== (this.mistralOptions?.apiKey ?? "")) return true
-    if ((prev.vercelAiGatewayApiKey ?? "") !== (this.vercelAiGatewayOptions?.apiKey ?? "")) return true
-    if (
-      (prev.bedrockRegion ?? "") !== (this.bedrockOptions?.region ?? "") ||
-      (prev.bedrockProfile ?? "") !== (this.bedrockOptions?.profile ?? "")
-    )
-      return true
-    if ((prev.openRouterApiKey ?? "") !== (this.openRouterOptions?.apiKey ?? "")) return true
-    if ((prev.openRouterSpecificProvider ?? "") !== (this.openRouterOptions?.specificProvider ?? "")) return true
-    if ((prev.voyageApiKey ?? "") !== (this.voyageOptions?.apiKey ?? "")) return true
-
-    // Qdrant connection changes
-    if ((prev.qdrantUrl ?? "") !== (this.qdrantUrl ?? "") || (prev.qdrantApiKey ?? "") !== (this.qdrantApiKey ?? ""))
-      return true
-
-    if (prev.fileExtensions.join("\0") !== this.fileExtensions.join("\0")) return true
-
-    if (this.hasEmbeddingProfileChanged(prevProvider, prev.modelId, prev.modelDimension)) return true
-
-    return false
-  }
-
-  private hasEmbeddingProfileChanged(
-    prevProvider: EmbedderProvider,
-    prevModelId?: string,
-    prevModelDimension?: number,
-  ): boolean {
-    const prev = resolveEmbeddingProfile(prevProvider, prevModelId, prevModelDimension)
-    const cur = resolveEmbeddingProfile(this.embedderProvider, this.modelId, this.modelDimension)
-
-    if (prev && cur) return !isEmbeddingProfileEqual(prev, cur)
-
-    const prevId = prevModelId ?? getDefaultModelId(prevProvider)
-    const curId = this.modelId ?? getDefaultModelId(this.embedderProvider)
-    if (prevProvider === this.embedderProvider && prevId === curId) return false
-
-    return true
+    return requiresIndexingRestart(prev, this.captureSnapshot())
   }
 
   public getConfig(): CodeIndexConfig {

@@ -1,7 +1,7 @@
 import fs from "fs/promises"
 import path from "path"
 import { describe, expect, test } from "bun:test"
-import { DateTime, Effect, Fiber, Layer, Stream } from "effect"
+import { Effect, Fiber, Layer, Stream } from "effect"
 import { LanguageModel } from "@opencode/ai/effect"
 import { OpenAIChat } from "@opencode/ai/protocols/openai-chat"
 import { TestLLM } from "@opencode/ai/testing"
@@ -19,6 +19,7 @@ import { Watcher } from "@opencode/core/filesystem/watcher"
 import { Job } from "@opencode/core/job"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
+import { KiloWorkflowDelivery } from "@opencode/core/kilocode/session/workflow-delivery"
 import { Location } from "@opencode/core/location"
 import { LocationServiceMap } from "@opencode/core/location-service-map"
 import { Mcp } from "@opencode/core/mcp/index"
@@ -27,13 +28,12 @@ import { Provider } from "@opencode/core/provider"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Session } from "@opencode/core/session"
 import { SessionExecution } from "@opencode/core/session/execution"
+import { SessionInbox } from "@opencode/core/session/inbox"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { SubagentJob } from "@opencode/core/session/subagent-job"
 import { ShellSelect } from "@opencode/core/shell/select"
 import { WellKnown } from "@opencode/core/wellknown"
 import { Event } from "@opencode/schema/config"
-import { SessionInbox } from "@opencode/schema/session-inbox"
-import { SessionMessage } from "@opencode/schema/session-message"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
@@ -160,6 +160,7 @@ function commandLayer(project: string, global: string) {
       FSUtil.node,
       AppProcess.node,
       Location.node,
+      Model.node,
       ShellSelect.node,
       Session.node,
       Job.node,
@@ -167,6 +168,7 @@ function commandLayer(project: string, global: string) {
       Agent.node,
     ]),
     [
+      KiloWorkflowDelivery.override,
       Config.node.replace(Config.configured({ system: false })),
       ConfigDiscovery.node.replace(layout),
       Location.node.replace(
@@ -236,9 +238,6 @@ describe("workflow model discovery", () => {
       yield* Effect.gen(function* () {
         const command = yield* Command.Service
         const bus = yield* Bus.Service
-        const models: { providerID: string; id: string; variant?: string }[] = []
-        const prompts: string[] = []
-        const labels: unknown[] = []
         yield* ConfigCommandPlugin.Plugin.effect(
           host({
             command: {
@@ -248,24 +247,13 @@ describe("workflow model discovery", () => {
             },
             event: { subscribe: () => bus.subscribe(Event.Updated) },
             session: {
-              switchModel: (input) =>
-                Effect.sync(() => {
-                  models.push(input.model)
-                }),
-              prompt: (input) =>
-                Effect.sync(() => {
-                  prompts.push(input.text)
-                  labels.push(input.metadata)
-                  return SessionInbox.User.make({
-                    id: SessionMessage.ID.make("msg_test"),
-                    sessionID: input.sessionID,
-                    time: { created: DateTime.makeUnsafe(0) },
-                    type: "user",
-                    payload: { text: input.text },
-                    delivery: input.delivery ?? "steer",
-                  })
-                }),
+              switchModel: () => Effect.die("A pending workflow must not switch the model"),
             },
+          }),
+        ).pipe(
+          // A command defers its selection when the host installed a delivery policy.
+          Effect.provideService(SessionInbox.Policy, {
+            policy: { batchSize: () => 1, prepare: () => Effect.undefined },
           }),
         )
         yield* Effect.sleep("10 millis")
@@ -275,23 +263,31 @@ describe("workflow model discovery", () => {
           model: { providerID: "test", model: "global", variant: "high" },
         })
         expect(yield* command.get("orphan")).toBeUndefined()
-        const execute = command.execute({
-          name: "review",
-          invocation: { sessionID: Session.ID.make("ses_test"), prompt: { text: "changes" }, delivery: "queue" },
+        const sessions = yield* Session.Service
+        const session = yield* sessions.create({ location: { directory: AbsolutePath.make(project) } })
+        const execute = Effect.gen(function* () {
+          yield* command.execute({
+            name: "review",
+            invocation: { sessionID: session.id, prompt: { text: "changes" }, delivery: "queue" },
+          })
+          const item = (yield* sessions.inbox(session.id)).at(-1)
+          if (item?.type !== "user") return yield* Effect.die("Expected a pending workflow prompt")
+          return item.payload
         })
-        yield* execute
-        expect(models).toEqual([{ providerID: "test", id: "global", variant: "high" }])
-        expect(prompts).toEqual(["Project changes"])
-        // The transcript shows `/review changes` instead of the expanded template.
-        expect(labels).toEqual([{ kilo: { injected: { title: "/review changes" } } }])
+        expect(yield* execute).toMatchObject({
+          selection: { model: { providerID: "test", id: "global", variant: "high" } },
+          text: "Project changes",
+          metadata: { kilo: { injected: { title: "/review changes" } } },
+        })
 
         yield* Effect.promise(() =>
           fs.writeFile(projectConfigFile, JSON.stringify({ commands: { review: { model: "test/project#medium" } } })),
         )
         yield* changed({ type: "create", path: projectConfigFile }, (info) => info?.model?.model === "project")
-        yield* execute
-        expect(models.at(-1)).toEqual({ providerID: "test", id: "project", variant: "medium" })
-        expect(prompts.at(-1)).toBe("Project changes")
+        expect(yield* execute).toMatchObject({
+          selection: { model: { providerID: "test", id: "project", variant: "medium" } },
+          text: "Project changes",
+        })
         yield* Effect.promise(() => fs.unlink(projectConfigFile))
         yield* changed({ type: "delete", path: projectConfigFile }, (info) => info?.model?.model === "global")
 
@@ -299,16 +295,18 @@ describe("workflow model discovery", () => {
           fs.writeFile(projectFile, "---\ndescription: Edited review\nmodel: test/file#low\n---\nEdited $ARGUMENTS"),
         )
         yield* changed({ type: "update", path: projectFile }, (info) => info?.template === "Edited $ARGUMENTS")
-        yield* execute
-        expect(prompts.at(-1)).toBe("Edited changes")
-        expect(models.at(-1)).toEqual({ providerID: "test", id: "global", variant: "high" })
+        expect(yield* execute).toMatchObject({
+          selection: { model: { providerID: "test", id: "global", variant: "high" } },
+          text: "Edited changes",
+        })
 
         yield* Effect.promise(() =>
           fs.writeFile(configFile, JSON.stringify({ commands: { orphan: config.commands.orphan } })),
         )
         yield* changed({ type: "update", path: configFile }, (info) => info?.model?.model === "file")
-        yield* execute
-        expect(models.at(-1)).toEqual({ providerID: "test", id: "file", variant: "low" })
+        expect(yield* execute).toMatchObject({
+          selection: { model: { providerID: "test", id: "file", variant: "low" } },
+        })
 
         yield* Effect.promise(() => fs.writeFile(configFile, JSON.stringify(config)))
         yield* changed({ type: "update", path: configFile }, (info) => info?.model?.model === "global")
@@ -339,10 +337,11 @@ describe("workflow model discovery", () => {
 })
 
 const llmLayer = TestLLM.testLayer({ fallback: TestLLM.text("Review complete", "review") })
-const subagent = testEffect(
+const workflows = testEffect(
   Layer.merge(
     llmLayer,
     AppNodeBuilder.build(LayerNode.group([Session.node, LocationServiceMap.node]), [
+      KiloWorkflowDelivery.override,
       Global.node.replace(tempGlobalLayer),
       Config.node.replace(Config.configured({ system: false })),
       ConfigDiscovery.node.replace(layout),
@@ -368,7 +367,195 @@ const subagent = testEffect(
   ),
 )
 
-subagent.live("passes the workflow model and variant to a subagent without changing its parent", () =>
+const model = (id: string) => Model.Ref.make({ id: Model.ID.make(id), providerID: Provider.ID.make("test") })
+
+const startWorkflowSession = Effect.fnUntraced(function* () {
+  const tmp = yield* tmpdirScoped()
+  yield* Effect.promise(() =>
+    fs.writeFile(
+      path.join(tmp.path, "kilo2.json"),
+      JSON.stringify({
+        providers: {
+          test: {
+            package: "@opencode/ai/providers/openai-compatible",
+            settings: { apiKey: "test-key", baseURL: "http://localhost:9/v1" },
+            models: { original: {}, first: {}, second: {} },
+          },
+        },
+        agents: { reviewer: { mode: "all" } },
+        commands: {
+          first: { template: "First $ARGUMENTS", model: "test/first#high" },
+          second: { template: "Second $ARGUMENTS", model: "test/second" },
+          missing: { template: "Missing", model: "test/does-not-exist" },
+          review: { template: "Review $ARGUMENTS", agent: "reviewer" },
+        },
+      }),
+    ),
+  )
+  const sessions = yield* Session.Service
+  const session = yield* sessions.create({
+    location: { directory: AbsolutePath.make(tmp.path) },
+    agent: Agent.ID.make("build"),
+    model: model("original"),
+    title: "Workflow test",
+  })
+  return { sessions, id: session.id }
+})
+
+for (const delivery of ["queue", "steer", "queue then steer", "steer then queue"] as const) {
+  workflows.live(`keeps the running model and delivers workflows in order (${delivery})`, () =>
+    Effect.gen(function* () {
+      const { sessions, id } = yield* startWorkflowSession()
+      const llm = yield* TestLLM.Test
+      // The first step uses a tool: a queued command must not change the continuation's model either.
+      yield* llm.push(TestLLM.toolCall("workflow_test", "not_a_registered_tool", {}))
+      const gate = yield* llm.gate()
+      yield* sessions.prompt({ sessionID: id, text: "Finish the current task" })
+      yield* gate.started
+      const firstDelivery = delivery.startsWith("queue") ? "queue" : "steer"
+      for (const command of ["first", "second"])
+        yield* sessions.command({ sessionID: id, command, text: "changes", delivery: firstDelivery })
+      const pending = yield* sessions.inbox(id)
+      expect(pending).toHaveLength(2)
+      if (delivery === "queue then steer") {
+        for (const item of pending) yield* sessions.steerInbox({ sessionID: id, inboxID: item.id })
+      }
+      if (delivery === "steer then queue") {
+        for (const item of pending) yield* sessions.queueInbox({ sessionID: id, inboxID: item.id })
+      }
+      expect((yield* sessions.get(id)).model).toMatchObject(model("original"))
+      yield* gate.release
+      yield* sessions.wait(id)
+      const steered = delivery === "steer" || delivery === "queue then steer"
+      expect((yield* llm.requests()).map((request) => String(request.model.id))).toEqual(
+        steered ? ["original", "first", "second"] : ["original", "original", "first", "second"],
+      )
+      const messages = yield* sessions.context(id)
+      expect(messages.filter((message) => message.type === "user").map((message) => message.text)).toEqual([
+        "Finish the current task",
+        "First changes",
+        "Second changes",
+      ])
+      expect(messages.filter((message) => message.type === "model-switched").map((message) => message.model)).toEqual([
+        { ...model("first"), variant: Model.VariantID.make("high") },
+        model("second"),
+      ])
+      // Each selection commits with the input it runs, and the transcript shows the switch before that input.
+      expect(
+        messages.flatMap((message) => {
+          if (message.type === "model-switched") return ["switch"]
+          if (message.type === "user") return [`user:${message.text}`]
+          return []
+        }),
+      ).toEqual(["user:Finish the current task", "switch", "user:First changes", "switch", "user:Second changes"])
+      expect((yield* sessions.get(id)).model).toMatchObject(model("second"))
+      expect(yield* sessions.inbox(id)).toEqual([])
+    }),
+  )
+}
+
+workflows.live("cancels a queued workflow and leaves the model alone when command admission fails", () =>
+  Effect.gen(function* () {
+    const { sessions, id } = yield* startWorkflowSession()
+    const llm = yield* TestLLM.Test
+    const gate = yield* llm.gate()
+    yield* sessions.prompt({ sessionID: id, text: "Current task" })
+    yield* gate.started
+    yield* sessions.command({ sessionID: id, command: "first", text: "cancel this", delivery: "queue" })
+    const [item] = yield* sessions.inbox(id)
+    if (!item) return yield* Effect.die("Expected the workflow in the inbox")
+    yield* sessions.cancelInbox({ sessionID: id, inboxID: item.id })
+    const failed = yield* sessions
+      .command({
+        sessionID: id,
+        command: "second",
+        text: "bad attachment",
+        files: [{ uri: "not-a-file-uri" }],
+        delivery: "queue",
+      })
+      .pipe(Effect.result)
+    expect(failed._tag).toBe("Failure")
+    expect(yield* sessions.inbox(id)).toEqual([])
+    expect((yield* sessions.get(id)).model).toMatchObject(model("original"))
+    yield* gate.release
+    yield* sessions.wait(id)
+    expect((yield* llm.requests()).map((request) => String(request.model.id))).toEqual(["original"])
+  }),
+)
+
+workflows.live(
+  "leaves an unavailable workflow pending without changing the model, and can recover after cancellation",
+  () =>
+    Effect.gen(function* () {
+      const { sessions, id } = yield* startWorkflowSession()
+      const llm = yield* TestLLM.Test
+      yield* sessions.command({ sessionID: id, command: "missing", text: "", delivery: "queue" })
+      yield* sessions.wait(id)
+      const session = yield* sessions.get(id)
+      expect(session.outcome).toBe("failed")
+      expect(session.model).toMatchObject(model("original"))
+      const [item] = yield* sessions.inbox(id)
+      if (!item) return yield* Effect.die("Expected the failed workflow to remain cancellable")
+      expect(yield* llm.requests()).toEqual([])
+      yield* sessions.cancelInbox({ sessionID: id, inboxID: item.id })
+      yield* sessions.command({ sessionID: id, command: "second", text: "retry", delivery: "queue" })
+      yield* sessions.wait(id)
+      expect((yield* llm.requests()).map((request) => String(request.model.id))).toEqual(["second"])
+      expect((yield* sessions.get(id)).model).toMatchObject(model("second"))
+    }),
+)
+
+workflows.live("applies a command's agent when the command is delivered", () =>
+  Effect.gen(function* () {
+    const { sessions, id } = yield* startWorkflowSession()
+    const llm = yield* TestLLM.Test
+    const gate = yield* llm.gate()
+    yield* sessions.prompt({ sessionID: id, text: "Current task" })
+    yield* gate.started
+    yield* sessions.command({ sessionID: id, command: "review", text: "changes", delivery: "queue" })
+    expect((yield* sessions.get(id)).agent).toBe(Agent.ID.make("build"))
+    yield* gate.release
+    yield* sessions.wait(id)
+    expect((yield* sessions.get(id)).agent).toBe(Agent.ID.make("reviewer"))
+    const messages = yield* sessions.context(id)
+    // One switch, committed with the input it runs, and the first step under the new agent.
+    expect(messages.filter((message) => message.type === "agent-switched").map((message) => message.agent)).toEqual([
+      Agent.ID.make("reviewer"),
+    ])
+    expect(
+      messages.flatMap((message) => {
+        if (message.type === "agent-switched") return ["switch"]
+        if (message.type === "user") return [`user:${message.text}`]
+        return []
+      }),
+    ).toEqual(["user:Current task", "switch", "user:Review changes"])
+    expect(messages.filter((message) => message.type === "assistant").map((message) => message.agent)).toEqual([
+      Agent.ID.make("build"),
+      Agent.ID.make("reviewer"),
+    ])
+  }),
+)
+
+workflows.live("leaves an unavailable command agent pending without changing the session", () =>
+  Effect.gen(function* () {
+    const { sessions, id } = yield* startWorkflowSession()
+    const llm = yield* TestLLM.Test
+    yield* sessions.prompt({
+      sessionID: id,
+      text: "Needs a missing agent",
+      selection: { agent: Agent.ID.make("ghost") },
+      delivery: "queue",
+    })
+    yield* sessions.wait(id)
+    const session = yield* sessions.get(id)
+    expect(session.outcome).toBe("failed")
+    expect(session.agent).toBe(Agent.ID.make("build"))
+    expect(yield* sessions.inbox(id)).toHaveLength(1)
+    expect(yield* llm.requests()).toEqual([])
+  }),
+)
+
+workflows.live("passes the workflow model and variant to a subagent without changing its parent", () =>
   Effect.gen(function* () {
     const tmp = yield* tmpdirScoped()
     const directory = path.join(tmp.path, ".kilo2", "commands")

@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 139,
-    "markedLines": 2470,
-    "unmarkedLines": 333,
+    "files": 143,
+    "markedLines": 2566,
+    "unmarkedLines": 385,
     "deletedFiles": 0
   },
   "files": {
@@ -143,7 +143,23 @@
     },
     "packages/core/src/config/plugin/command.ts": {
       "rung": 4,
-      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata; the seam itself is rung 3. Rung 4: each prompt an expanded config command admits carries the Kilo `injected-prompt` label from `core/src/kilocode/session/injected.ts`, so a transcript can show `/name args` instead of the template the model receives. The command editor offers only `add`, a definition's `execute` builds its own prompt, and the invocation carries no metadata channel, so no plugin hook reaches these two prompt calls. The label is UI metadata only: text, delivery, the subagent prefix and every upstream default are unchanged. The command editor cannot update a captured model, and the host cannot replace Config.node without losing server-specific options. The default callback is absent and native command behavior is unchanged."
+      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata. A second generic knob: when the host installs an inbox delivery policy (`SessionInbox.Policy`), configured agent and model overrides ride on the prompt and are applied at delivery instead of switching the session on admission; without an installed policy the native switch path runs. The command editor cannot update captured definitions, and host composition cannot intercept the exact native prompt submission. Rung 4: the expanded command's prompt carries a Kilo `injected-prompt` transcript label; the command editor offers only `add` and cannot reach the template expansion. Unhosted command selection and subagent dispatch are unchanged."
+    },
+    "packages/core/src/session/prompt.ts": {
+      "rung": 3,
+      "seam": "Carry an optional internal selection through prompt preparation without treating public prompt metadata as authority over model or agent. The prompt hook can rewrite metadata but cannot add typed delivery state."
+    },
+    "packages/schema/src/session-inbox.ts": {
+      "rung": 3,
+      "seam": "An optional user-item selection carries an agent and model ref through the durable enqueue event and pending row, including queue/steer changes. Hooks and host composition cannot add fields to the shared inbox codec. The generated OpenAPI and client types reflect the additive field."
+    },
+    "packages/core/src/session/inbox.ts": {
+      "rung": 3,
+      "seam": "An optional host policy can shorten steer batches and attach durable events to the input actually promoted. The inbox commits those events with delivery and notifies the runner after commit. The policy is a location-scoped `Policy` service whose presence is the only switch: without it the upstream batching and delivery path remain unchanged, and no plugin hook or replaceable service owns this promotion transaction."
+    },
+    "packages/core/src/session/runner/llm.ts": {
+      "rung": 3,
+      "seam": "Read the host-installed delivery policy from `SessionInbox.Policy` and refresh the execution context if its events committed. Validation and event policy stay in the host module; the native runner keeps ownership of the step boundary, and existing prompt and model hooks run on either side of it. Without an installed policy the runner reads nothing and behaves as upstream."
     },
     "packages/core/src/plugin/command.ts": {
       "rung": 4,
@@ -255,7 +271,7 @@
     },
     "packages/core/src/plugin/internal.ts": {
       "rung": 3,
-      "seam": "Expose the existing Location-service provider to embedder plugins. The supervisor applies it without changing pre/post order or upstream defaults. Required for account config and managed policy reads at plugin activation; the public plugin context has no config domain, and host-global registration cannot supply a Location-scoped Config service. All feature logic stays in Kilo-owned plugins."
+      "seam": "Expose the existing Location-service provider to embedder plugins. The supervisor applies it without changing pre/post order or upstream defaults. Required for account config and managed policy reads at plugin activation; the public plugin context has no config domain, and host-global registration cannot supply a Location-scoped Config service. All feature logic stays in Kilo-owned plugins. The same service list and requirement group provide the host-installed `SessionInbox.Policy` to built-in plugins, so a plugin defers behavior only when the host actually installed the policy; the service defaults to an absent policy."
     },
     "packages/core/src/plugin/supervisor.ts": {
       "rung": 3,

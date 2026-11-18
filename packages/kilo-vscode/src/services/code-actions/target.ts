@@ -1,16 +1,12 @@
 import { commands } from "vscode"
+import type { AgentManagerProvider } from "../../agent-manager/AgentManagerProvider"
 import type { PromptAttachment, ToWebview } from "../../protocol"
 
 type ChatView = {
   post(message: ToWebview): Promise<boolean> | unknown
 }
 
-type AgentPanel = {
-  isActive(): boolean
-  focusPanel(): void
-  waitForReady(): Promise<boolean>
-  postMessage(message: unknown): void
-}
+type AgentPanel = Pick<AgentManagerProvider, "isActive" | "focusPanel" | "waitForReady" | "postMessage">
 
 export type ChatTarget = {
   attach(items: PromptAttachment[]): Promise<void>

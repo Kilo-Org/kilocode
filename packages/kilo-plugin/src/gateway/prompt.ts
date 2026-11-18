@@ -50,7 +50,7 @@ export function render(model: Pick<KiloModels.Model, "id" | "family" | "prompt">
               : undefined)
   const templates: Record<KiloModels.Prompt, string> = {
     codex: `${ASTRA}\n\n${EDITING}`,
-    gpt55: `${tools.includes("subagent") ? ASTRA.replace("Do not spawn subagents unless the user or applicable AGENTS.md/skill instructions explicitly ask for subagents, delegation, or parallel agent work.", "Use the subagent tool proactively for focused independent subtasks. Run independent subtasks in parallel.") : ASTRA}\n\n${EDITING}`,
+    gpt55: `${ASTRA}\n\n${EDITING}`,
     beast: `${GPT}\n\n# Persistence and research
 - Continue until the request is complete. Verify the result and fix failures you introduced before stopping.
 - When the task depends on current third-party APIs or packages, check their documentation with available web tools.`,
