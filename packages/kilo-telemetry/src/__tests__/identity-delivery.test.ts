@@ -71,6 +71,19 @@ test("disabled telemetry writes no alias marker and a later enabled run sends th
   expect(events.filter((event) => event.event === "$create_alias")).toHaveLength(1)
 })
 
+test("normalizes KILO_TELEMETRY_LEVEL and treats unrecognized values as off", async () => {
+  expect(await run({ KILO_TELEMETRY_LEVEL: "OFF" })).toEqual([])
+  expect(await run({ KILO_TELEMETRY_LEVEL: "0" })).toEqual([])
+  expect(await run({ KILO_TELEMETRY_LEVEL: "false" })).toEqual([])
+  expect(await run({ KILO_TELEMETRY_LEVEL: "unexpected" })).toEqual([])
+  expect(await run({ KILO_TELEMETRY_LEVEL: "ON" })).not.toEqual([])
+})
+
+test("a config opt-out wins over a client that sets KILO_TELEMETRY_LEVEL=all", async () => {
+  expect(await run({ KILO_TELEMETRY_LEVEL: "all", TEST_CONFIG_ENABLED: "0" })).toEqual([])
+  expect((await readdir(dir)).filter((file) => file.startsWith("telemetry-alias-"))).toEqual([])
+})
+
 test.each(["corrupt", "unreadable"])("an alias marker that is %s does not suppress the alias", async (kind) => {
   await run()
   const name = (await readdir(dir)).find((file) => file.startsWith("telemetry-alias-"))
