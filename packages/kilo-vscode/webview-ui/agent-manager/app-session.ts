@@ -131,5 +131,3 @@ export function createAppSession(opts: {
     sendInitial,
   }
 }
-
-export type AppSession = ReturnType<typeof createAppSession>

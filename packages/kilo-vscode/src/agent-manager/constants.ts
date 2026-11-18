@@ -10,9 +10,6 @@ import * as path from "node:path"
  */
 export const MAX_MULTI_VERSIONS = 4
 
-/** Keep baseline snapshots without interrupting concurrently started agents. */
-export const SNAPSHOT_INITIALIZATION = "wait" as const
-
 /** Kilo config directory name (project-level and inside worktrees). */
 export const KILO_DIR = ".kilo"
 /**

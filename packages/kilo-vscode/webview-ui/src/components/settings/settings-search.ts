@@ -280,8 +280,3 @@ export function createHighlighter(query: string): Highlighter {
       .filter((part) => part.length > 0)
       .map((part) => ({ text: part, match: tokens.includes(part.toLowerCase()) }))
 }
-
-/** Split `text` into plain and query-matched segments for highlighting. */
-export function highlightSegments(text: string, query: string): SearchSegment[] {
-  return createHighlighter(query)(text)
-}

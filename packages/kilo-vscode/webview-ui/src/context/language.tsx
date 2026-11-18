@@ -49,12 +49,40 @@ const base = { ...appEn, ...uiEn, ...kiloEn }
 const english: Record<string, string> = { ...base, ...amEn }
 const cache: Partial<Record<Locale, Record<string, string>>> = { en: english }
 const loads: Partial<Record<Locale, Promise<Record<string, string> | undefined>>> = {}
-type Dictionary = { default: (base: Record<string, string>) => Record<string, string> }
+type Dictionary = (base: Record<string, string>) => Record<string, string>
+
+// Literal imports keep the loaders lazy while letting Knip follow each dictionary.
+const dictionaries: Record<Exclude<Locale, "en">, () => Promise<Dictionary>> = {
+  ar: () => import("./language-dictionaries/ar").then(dictionaryExport),
+  br: () => import("./language-dictionaries/br").then(dictionaryExport),
+  bs: () => import("./language-dictionaries/bs").then(dictionaryExport),
+  da: () => import("./language-dictionaries/da").then(dictionaryExport),
+  de: () => import("./language-dictionaries/de").then(dictionaryExport),
+  es: () => import("./language-dictionaries/es").then(dictionaryExport),
+  fa: () => import("./language-dictionaries/fa").then(dictionaryExport),
+  fr: () => import("./language-dictionaries/fr").then(dictionaryExport),
+  it: () => import("./language-dictionaries/it").then(dictionaryExport),
+  ja: () => import("./language-dictionaries/ja").then(dictionaryExport),
+  ko: () => import("./language-dictionaries/ko").then(dictionaryExport),
+  nl: () => import("./language-dictionaries/nl").then(dictionaryExport),
+  no: () => import("./language-dictionaries/no").then(dictionaryExport),
+  pl: () => import("./language-dictionaries/pl").then(dictionaryExport),
+  ru: () => import("./language-dictionaries/ru").then(dictionaryExport),
+  th: () => import("./language-dictionaries/th").then(dictionaryExport),
+  tr: () => import("./language-dictionaries/tr").then(dictionaryExport),
+  uk: () => import("./language-dictionaries/uk").then(dictionaryExport),
+  zh: () => import("./language-dictionaries/zh").then(dictionaryExport),
+  zht: () => import("./language-dictionaries/zht").then(dictionaryExport),
+}
+
+function dictionaryExport(module: { default: Dictionary }) {
+  return module.default
+}
 
 function load(locale: Locale) {
   if (locale === "en") return Promise.resolve(english)
-  return (loads[locale] ??= (import(`./language-dictionaries/${locale}.ts`) as Promise<Dictionary>)
-    .then((module) => (cache[locale] ??= module.default(base)))
+  return (loads[locale] ??= dictionaries[locale]()
+    .then((dictionary) => (cache[locale] ??= dictionary(base)))
     .catch((err) => {
       delete loads[locale]
       console.error("[Kilo New] Failed to load language", { locale, err })

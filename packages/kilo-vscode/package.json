@@ -1077,7 +1077,9 @@
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
     "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui packages/kilo-vscode/script packages/kilo-vscode/test",
-    "test": "bun test --timeout 30000"
+    "knip": "knip --treat-config-hints-as-errors",
+    "test": "bun test --timeout 30000",
+    "test:accessibility": "bun test ./test/browser/accessibility.ts"
   },
   "dependencies": {
     "@kilocode/caffeination": "workspace:*",
@@ -1131,9 +1133,11 @@
     "@types/ws": "8.18.1",
     "@typescript/native": "catalog:",
     "@vscode/vsce": "^4.0.0",
+    "axe-core": "4.11.1",
     "babel-preset-solid": "1.9.15",
     "esbuild": "0.27.2",
     "happy-dom": "20.8.9",
+    "knip": "5.85.0",
     "ovsx": "1.3.0",
     "qrcode": "^1.5.4"
   }

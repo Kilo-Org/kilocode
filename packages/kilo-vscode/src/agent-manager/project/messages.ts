@@ -13,31 +13,13 @@ import type { ProjectRegistry } from "./registry"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import type { ProjectContexts } from "./contexts"
 import { canonicalizePath, pathKey, projectIdFor, resolveProjectRoot, samePath } from "./paths"
-import type { SidebarTarget, SessionRef } from "./route"
+import type { SidebarTarget } from "./route"
 import { cloneProject, createProject, defaultParent, onboard, type Onboarding } from "./onboarding"
 import { runner } from "./prepare"
 import type { RouteOutcome } from "../route-session"
 
 const pending = new WeakSet<ProjectMessageDeps>()
 const selections = new WeakMap<ProjectMessageDeps, symbol>()
-
-/** Route one session to a directory inside a project via the shared session provider. */
-export function routeProjectSession(
-  sessions:
-    | {
-        setSessionDirectory(id: string, directory: string): void
-        registerSessionRoute?(ref: SessionRef, directory: string, generation: number): void
-      }
-    | undefined,
-  projectId: string,
-  sessionId: string,
-  directory: string,
-  generation: number,
-): void {
-  if (!sessions) return
-  sessions.setSessionDirectory(sessionId, directory)
-  sessions.registerSessionRoute?.({ projectId, sessionId }, directory, generation)
-}
 
 export interface ProjectMessageDeps {
   registry: ProjectRegistry

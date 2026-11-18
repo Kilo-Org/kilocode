@@ -450,9 +450,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+
+      - name: Test Kilo metric gates
+        working-directory: script/kilocode/metrics
+        run: bun test check.test.ts
+
+      # On PRs the first parent of the checked-out merge is the target branch.
+      - name: Check Kilo function complexity and file size
+        run: bun script/kilocode/metrics/check.ts HEAD^1
 
       - name: Check first-request token budget and direct tool inventory
         run: |
@@ -509,9 +519,21 @@ jobs:
         working-directory: packages/kilo-vscode
         run: bun run lint
 
+      - name: Check the VS Code extension for dead code (Knip)
+        working-directory: packages/kilo-vscode
+        run: bun run knip
+
       - name: Test the VS Code extension
         working-directory: packages/kilo-vscode
         run: bun test
+
+      - name: Install Chromium for the VS Code accessibility gate
+        working-directory: packages/kilo-vscode
+        run: bun run playwright-core install --with-deps --only-shell chromium
+
+      - name: Test VS Code webview accessibility
+        working-directory: packages/kilo-vscode
+        run: bun run test:accessibility
 
       # Fails when Kilo plugin activation grows past packages/kilo-cli/startup-budget.json (#15244).
       - name: Startup ratchet

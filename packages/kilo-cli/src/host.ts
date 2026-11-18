@@ -16,6 +16,7 @@ import { Flag } from "@opencode/core/flag"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
+import { KiloWorkflowDelivery } from "@opencode/core/kilocode/session/workflow-delivery"
 import { authFailure } from "@opencode/core/kilocode/mcp/auth-failure"
 import { McpClientMetadata } from "@opencode/core/kilocode/mcp/client-metadata"
 import { KiloSseProbe } from "@opencode/core/kilocode/mcp/sse-probe"
@@ -149,6 +150,7 @@ export function schedulingOverrides(overrides: string | undefined) {
  * `.kilo2`, worktree boundary).
  */
 export const overrides: LayerNode.Replacements = [
+  KiloWorkflowDelivery.override,
   LayerNodePlatform.llmClient.replace(LayerNodePlatform.llmClient.mapLayer(KiloGatewayErrors.layer)),
   SessionProjector.node.replace(SessionProjector.node.mapLayer(SessionSync.captureLayer)),
   ToolOutput.node.replace(SessionSyncOutput.node),

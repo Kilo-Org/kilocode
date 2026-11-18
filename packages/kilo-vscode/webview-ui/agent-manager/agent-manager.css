@@ -2231,10 +2231,15 @@ body.am-wt-dragging-active * {
 
 .am-sidebar-search [data-slot="list-header"] {
   padding: 7px 8px 4px;
-  color: var(--text-weaker);
+  color: var(--text-weak);
   font-size: var(--kilo-font-size-10);
   font-weight: 600;
   letter-spacing: 0.06em;
+
+  /* The scroll shadow is decorative and invisible until the header sticks. */
+  &[data-stuck="false"]::after {
+    visibility: hidden;
+  }
 }
 
 .am-sidebar-search [data-slot="list-item"] {

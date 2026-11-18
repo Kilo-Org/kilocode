@@ -52,7 +52,7 @@ it.effect("reads and posts the board directly and inside a Code Mode execute", (
           ),
           (data) => Effect.succeed({ data, cursor: {} }),
         ),
-      active: Effect.sync(() => new Set<string>()),
+      active: Effect.sync(() => new Set<string>(["ses_child"])),
     } as unknown as Session.Interface
     const jobs = { get: () => Effect.sync(() => undefined) } as unknown as Job.Interface
     const ctx = host({

@@ -187,20 +187,6 @@ export class ProjectRegistry {
     return true
   }
 
-  setLabel(id: string, label: string | undefined): Promise<boolean> {
-    return this.run(() => this.doSetLabel(id, label))
-  }
-
-  private async doSetLabel(id: string, label: string | undefined): Promise<boolean> {
-    const current = this.fresh()
-    if (!current.projects.find((p) => p.id === id)) return false
-    await this.write(
-      current.projects.map((p) => (p.id === id ? { ...p, label } : p)),
-      current.pinnedExpanded,
-    )
-    return true
-  }
-
   /**
    * Apply a new catalog order. Unknown ids are ignored. Projects that are not
    * in `ids` (for example added by another window) keep their relative order

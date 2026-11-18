@@ -14,6 +14,7 @@ out/**
 .gitignore
 .vscodeignore
 bunfig.toml
+knip.json
 
 # The package ships the bundled host and webview, the CLI binary and the assets both need.
 !dist/**
