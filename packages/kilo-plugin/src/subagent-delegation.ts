@@ -1,6 +1,7 @@
 import { SystemPart } from "@opencode/ai/effect"
 import { ClaudeSystemPrompt } from "@opencode/core/plugin/provider/claude-agent/language-model/system-prompt"
 import { define } from "@opencode/plugin/effect/plugin"
+import type { SessionHooks } from "@opencode/plugin/effect/session"
 import { Effect, Option } from "effect"
 
 const upstreamOptIn = /(?:^|\n{2,})# Delegation\n\nDo not spawn subagents unless[^\n]+\.(?=\n|$)/
@@ -13,29 +14,28 @@ const guidance = `# Kilo delegation
 export const KiloSubagentDelegationPlugin = define({
   id: "kilocode.subagent-delegation",
   effect: Effect.fn("KiloSubagentDelegationPlugin")(function* (ctx) {
-    yield* ctx.session.hook("context", (event) =>
+    const hook = (event: SessionHooks["context"]) =>
       Effect.gen(function* () {
-        if (!("subagent" in event.tools)) return
         const template = event.system[0]
-        // Remove the known conflict without rewriting custom prompts. The explicit precedence above also covers renamed or reworded model templates.
+        // All three request kinds render the same model template, so remove the known conflict everywhere to keep
+        // their prompts consistent. A custom agent prompt keeps its own wording either way.
         if (template && upstreamOptIn.test(template.text)) {
           const agent = yield* ctx.agent.get({ agentID: event.agent }).pipe(Effect.option)
           if (Option.isSome(agent) && !agent.value.data.system)
             event.system[0] = { ...template, text: template.text.replace(upstreamOptIn, "") }
         }
-
-        const text =
-          "board_post" in event.tools && "board_read" in event.tools
-            ? `${guidance}\n- Use the shared board to exchange material findings and blockers while background work is in progress, rather than waiting for final results or polling.`
-            : guidance
+        // Only offer the policy where delegation can happen; generate and compaction requests carry no tools.
+        if (!("subagent" in event.tools)) return
         // The Claude Agent driver reads the instructions its provider hook already collected, not the final system parts.
         const instructions = event.options[ClaudeSystemPrompt.INSTRUCTIONS_OPTION]
         if (typeof instructions === "string") {
-          event.options[ClaudeSystemPrompt.INSTRUCTIONS_OPTION] = [instructions, text].filter(Boolean).join("\n\n")
+          event.options[ClaudeSystemPrompt.INSTRUCTIONS_OPTION] = [instructions, guidance].filter(Boolean).join("\n\n")
           return
         }
-        event.system.push(SystemPart.make(text))
-      }),
-    )
+        event.system.push(SystemPart.make(guidance))
+      })
+    yield* ctx.session.hook("context", hook)
+    yield* ctx.session.hook("compaction", hook)
+    yield* ctx.session.hook("generate", hook)
   }),
 })

@@ -201,7 +201,7 @@ describe("Kilo delegation", () => {
     ),
   )
 
-  it.live("preserves custom restrictions and adds board guidance only when usable", () =>
+  it.live("preserves custom restrictions and only offers delegation where the tool exists", () =>
     gateway(
       Effect.gen(function* () {
         const host = yield* start()
@@ -222,7 +222,8 @@ describe("Kilo delegation", () => {
           tools: { subagent: tool, board_read: tool, board_post: tool },
         })
         expect(request.system[1]?.text).toBe(custom)
-        expect(request.system[2]?.text).toContain("Use the shared board to exchange material findings and blockers")
+        expect(request.system[2]?.text).toContain("Prefer background subagents")
+        expect(request.system[2]?.text).not.toContain("shared board")
 
         const withoutSubagent = yield* hooks.trigger("session", "context", {
           ...input,
@@ -230,6 +231,38 @@ describe("Kilo delegation", () => {
           tools: { board_read: tool, board_post: tool },
         })
         expect(withoutSubagent.system).toEqual([soul, SystemPart.make(custom)])
+      }),
+    ),
+  )
+
+  it.live("applies the same template and policy to compaction and generate requests", () =>
+    gateway(
+      Effect.gen(function* () {
+        const host = yield* start()
+        yield* host.agent.transform((editor) => editor.update("code", (agent) => void (agent.system = undefined)))
+        const session = yield* host.session.create({ title: "Delegation request kinds" })
+        const hooks = yield* PluginHooks.Service
+        const input = {
+          sessionID: session.id,
+          agent: code,
+          model: { providerID: Provider.ID.make("openai"), id: Model.ID.make("gpt-6.2-sol") },
+          messages: [],
+          options: {},
+          tools: { subagent: tool },
+        }
+        for (const name of ["compaction", "generate"] as const) {
+          const request = yield* hooks.trigger("session", name, { ...input, system: [SystemPart.make("BASE")] })
+          expect(request.system[1]?.text).toContain("# Destructive actions")
+          expect(request.system[1]?.text).not.toContain("Do not spawn subagents unless")
+          expect(request.system.at(-1)?.text).toContain("Prefer background subagents")
+        }
+        const withoutTools = yield* hooks.trigger("session", "generate", {
+          ...input,
+          system: [SystemPart.make("BASE")],
+          tools: {},
+        })
+        expect(withoutTools.system[0]?.text).not.toContain("Do not spawn subagents unless")
+        expect(withoutTools.system).toHaveLength(2)
       }),
     ),
   )
