@@ -35,6 +35,8 @@ export const Plugin = define({
     const state = { visible: yield* enabled }
     /** Sessions whose latest model request offered board_read. */
     const exposed = new Set<string>()
+    /** Sessions whose last audience probe failed, so a persistent failure logs once per streak. */
+    const probeFailed = new Set<string>()
     /** Sessions retrying a failed model call, from `session.status`. */
     const retrying = new Set<string>()
     const emit = yield* Ref.make<(event: KiloBoardRpc.Changed) => Effect.Effect<void>>(() => Effect.void)
@@ -179,12 +181,45 @@ export const Plugin = define({
     yield* ctx.session.hook("context", (event) =>
       Effect.gen(function* () {
         yield* annotate(event)
+        if (state.visible && ("board_read" in event.tools || "board_post" in event.tools)) {
+          const audience = yield* BoardStore.availability(store, { sessionID: event.sessionID, to: "ALL" }).pipe(
+            Effect.tap(() => Effect.sync(() => probeFailed.delete(event.sessionID))),
+            Effect.tapError((error) =>
+              Effect.sync(() => {
+                const first = !probeFailed.has(event.sessionID)
+                probeFailed.add(event.sessionID)
+                return first
+              }).pipe(
+                Effect.flatMap((first) =>
+                  first
+                    ? Effect.logWarning("shared agent board audience unavailable", {
+                        "session.id": event.sessionID,
+                        "error.message": error.message,
+                      })
+                    : Effect.void,
+                ),
+              ),
+            ),
+            Effect.option,
+          )
+          if (Option.isNone(audience)) {
+            // A failed probe keeps the tools: a transient lookup error must not silently disable coordination.
+            yield* Effect.logWarning("shared agent board audience unavailable", { "session.id": event.sessionID })
+          } else if (!audience.value.total) {
+            delete event.tools.board_post
+            delete event.tools.board_read
+            // Code Mode's shared catalog still lists the tools. State the session-specific constraint.
+            event.system.push({ type: "text", text: BoardContext.solo })
+          } else if (BoardStore.cannotPost(audience.value)) {
+            delete event.tools.board_post
+          }
+        }
         if (!state.visible || !("board_read" in event.tools)) {
           exposed.delete(event.sessionID)
           return
         }
         exposed.add(event.sessionID)
-        event.system.push({ type: "text", text: BoardContext.instructions })
+        event.system.push({ type: "text", text: "board_post" in event.tools ? BoardContext.instructions : BoardContext.readOnly })
       }),
     )
     yield* ctx.session.hook("compaction", annotate)
@@ -212,6 +247,7 @@ export const Plugin = define({
           if (event.type === "session.deleted") {
             exposed.delete(event.data.sessionID)
             retrying.delete(event.data.sessionID)
+            probeFailed.delete(event.data.sessionID)
             notifier.forget(event.data.sessionID)
             const markers = yield* flagged(event.data.sessionID)
             yield* Effect.forEach(markers.keys(), (id) => ctx.storage.remove(`notice/${event.data.sessionID}/${id}`), {
