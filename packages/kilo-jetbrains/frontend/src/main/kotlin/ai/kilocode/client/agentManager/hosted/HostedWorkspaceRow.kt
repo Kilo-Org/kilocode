@@ -6,8 +6,11 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.ActiveSection
+import ai.kilocode.client.ui.prGlyphBadges
+import ai.kilocode.client.ui.prNumberBadge
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
+import ai.kilocode.rpc.dto.WorktreePrDto
 import javax.swing.Icon
 
 /** A Cloud workspace row in the Agent Manager tree, distinct from local worktrees. */
@@ -16,6 +19,7 @@ internal data class HostedWorkspaceRowData(
     val status: HostedWorkspaceStatusDto?,
     val kind: SessionActivityKind? = null,
     val progress: String? = null,
+    val pull: WorktreePrDto? = null,
 )
 
 internal class HostedWorkspaceRow(
@@ -39,11 +43,26 @@ internal class HostedWorkspaceRow(
     override val inlineBadges: Boolean get() = true
     override val section: String get() = KiloBundle.message("worktree.section.cloud")
     override val search: String
-        get() = (listOfNotNull(dto.name, dto.repositoryUrl, dto.branch, dto.ref.providerID, dto.ref.workspaceID) +
-            dto.sessions.mapNotNull { it.title }).joinToString(" ")
+        get() = (listOfNotNull(
+            dto.name,
+            dto.repositoryUrl,
+            dto.branch,
+            dto.ref.providerID,
+            dto.ref.workspaceID,
+            data.pull?.title,
+            data.pull?.let { "#${it.number}" },
+        ) + dto.sessions.mapNotNull { it.title }).joinToString(" ")
     override val progress: String? get() = data.progress
     override val badges: List<ActiveBadge>
-        get() = if (data.progress == null) listOf(HostedWorkspaceStatus.of(status).badge()) else emptyList()
+        get() = if (data.progress == null) {
+            listOf(HostedWorkspaceStatus.of(status).badge()) + prGlyphBadges(data.pull)
+        } else {
+            emptyList()
+        }
+
+    /** The `#<number>` pill below the title, matching a worktree row's secondary line. */
+    override val secondaryBadges: List<ActiveBadge>
+        get() = if (data.progress == null) listOfNotNull(prNumberBadge(data.pull)) else emptyList()
 
     override fun equals(other: Any?): Boolean {
         val row = other as? HostedWorkspaceRow ?: return false
