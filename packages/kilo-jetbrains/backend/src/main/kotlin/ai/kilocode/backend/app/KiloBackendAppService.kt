@@ -125,6 +125,8 @@ class KiloBackendAppService private constructor(
     private var migrationForceRequested = false
     private val loadLock = Any()
     private val rev = AtomicLong()
+    /** Last consent value written by this client, held until a config refresh confirms it. */
+    private var pendingTelemetry: Boolean? = null
 
     private val _appState = MutableStateFlow<KiloAppState>(KiloAppState.Disconnected)
     val appState: StateFlow<KiloAppState> = _appState.asStateFlow()
@@ -301,7 +303,10 @@ class KiloBackendAppService private constructor(
             }
         }
         log.info("Global config patch: saved $summary")
-        patch.telemetry?.let { applyTelemetry(it) }
+        patch.telemetry?.let {
+            pendingTelemetry = it
+            applyTelemetry(it)
+        }
         // The CLI can serve the previous config for a moment after the patch, so reflect the
         // value we just wrote instead of letting the reopened settings read stale data.
         val cfg = fetchConfig().value?.let { loaded ->
@@ -472,7 +477,7 @@ class KiloBackendAppService private constructor(
                     activity.start(sessions.statuses, { id -> hosted.directory(id) ?: sessions.sessionDirectory(id) }, chat.events)
                     workspaces.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     startWatchingGlobalSseEvents()
-                    applyTelemetry(cfg?.telemetry ?: true)
+                    cs.launch { applyTelemetry(cfg?.telemetry) }
                     captureBackend("Backend Connected", mapOf("portKnown" to "true"))
                     captureLoad("Backend Load Completed", start, mapOf(
                         "profileStatus" to if (prof != null) "loaded" else "not_logged_in",
@@ -545,12 +550,21 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    private suspend fun applyTelemetry(enabled: Boolean) {
+    private suspend fun applyTelemetry(enabled: Boolean?) {
+        // Unset config means "follow the CLI's env/init decision"; posting true here would also
+        // override an explicit KILO_TELEMETRY_LEVEL=off opt-out.
+        if (enabled == null) return
+        val env = System.getenv("KILO_TELEMETRY_LEVEL")?.trim()?.lowercase()
+        if (enabled && env != null && env !in setOf("all", "on", "true", "1")) return
         val http = connection.apiClient
         val port = connection.port
-        runCatching {
+        try {
             service<KiloBackendTelemetry>().setEnabled(http, port, enabled)
-        }.onFailure { log.info("Skipping telemetry setEnabled: ${it.message}") }
+        } catch (cancel: CancellationException) {
+            throw cancel
+        } catch (error: Exception) {
+            log.info("Skipping telemetry setEnabled: ${error.message}")
+        }
     }
 
     private fun captureBackend(event: String, props: Map<String, String>) {
@@ -724,9 +738,19 @@ class KiloBackendAppService private constructor(
         val state = _appState.value
         if (state !is KiloAppState.Ready || state.data !== current.data) return
         if (this.connection.state.value != connection) return
-        config = cfg
-        applyTelemetry(cfg.telemetry ?: true)
-        setAppReady(current.data.copy(config = cfg))
+        // A refresh can observe the config file before the CLI reflects our own patch. Keep the
+        // locally written consent value until a refresh confirms it instead of reverting it.
+        val pending = pendingTelemetry
+        val merged = if (pending != null && cfg.telemetry != pending) {
+            log.info("Ignoring stale telemetry refresh: pending=$pending loaded=${cfg.telemetry}")
+            cfg.copy(telemetry = pending)
+        } else {
+            if (pending != null) pendingTelemetry = null
+            cfg
+        }
+        config = merged
+        cs.launch { applyTelemetry(merged.telemetry) }
+        setAppReady(current.data.copy(config = merged))
     }
 
     private fun setAppReady(data: AppData) {
@@ -894,6 +918,7 @@ class KiloBackendAppService private constructor(
         stopRuntime()
         profile = null
         config = null
+        pendingTelemetry = null
         notifications = emptyList()
         _capabilities.value = false
         _appState.value = KiloAppState.Disconnected

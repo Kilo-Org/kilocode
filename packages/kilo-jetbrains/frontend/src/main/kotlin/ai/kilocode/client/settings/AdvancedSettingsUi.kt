@@ -33,8 +33,10 @@ internal class AdvancedSettingsUi(telemetryEnabled: Boolean = true) : JPanel(Bor
 
     /** Set once the user flips the toggle, so a late backend fetch cannot overwrite their choice. */
     private var touched = false
+    private var telemetryTouched = false
+    private var telemetryPending: Boolean? = null
     private val indexWorktrees = SettingsToggle { touched = true }
-    private val telemetry = SettingsToggle(telemetryEnabled) {}
+    private val telemetry = SettingsToggle(telemetryEnabled) { telemetryTouched = true }
 
     private var saved = current().copy(telemetry = telemetryEnabled)
 
@@ -99,6 +101,7 @@ internal class AdvancedSettingsUi(telemetryEnabled: Boolean = true) : JPanel(Bor
         indexWorktrees.isSelected = saved.indexWorktrees
         telemetry.isSelected = saved.telemetry
         touched = false
+        telemetryTouched = false
     }
 
     fun sync() {
@@ -130,6 +133,32 @@ internal class AdvancedSettingsUi(telemetryEnabled: Boolean = true) : JPanel(Bor
         if (touched) return
         saved = saved.copy(indexWorktrees = value)
         indexWorktrees.isSelected = value
+    }
+
+    /** Hold the just-written value until the backend state catches up with it. */
+    @RequiresEdt
+    fun markTelemetryPending(value: Boolean) {
+        telemetryPending = value
+    }
+
+    /** Refresh consent from the backend without discarding a choice or an in-flight write. */
+    @RequiresEdt
+    fun refreshTelemetry(value: Boolean) {
+        if (telemetryTouched) return
+        val pending = telemetryPending
+        if (pending != null && value != pending) return
+        if (pending != null) telemetryPending = null
+        saved = saved.copy(telemetry = value)
+        telemetry.isSelected = value
+    }
+
+    /** Revert the toggle after the config write failed, so the panel does not claim a saved value. */
+    @RequiresEdt
+    fun restoreTelemetry(value: Boolean) {
+        telemetryPending = null
+        saved = saved.copy(telemetry = value)
+        telemetry.isSelected = value
+        telemetryTouched = false
     }
 
     private fun current(): Values = Values(

@@ -268,6 +268,53 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         assertEquals(listOf(ConfigPatchDto(telemetry = false)), appRpc.configPatches)
     }
 
+    fun `test telemetry toggle refreshes from a later app state`() {
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = true))
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = false))
+
+        assertTrue(ui.pumpUntil { edt { !telemetryToggle(root).isSelected } })
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test telemetry refresh does not overwrite an in-flight write`() {
+        val gate = CompletableDeferred<Unit>()
+        appRpc.configUpdateGate = gate
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        edt {
+            telemetryToggle(root).doClick()
+            cfg.apply()
+        }
+        assertTrue(coroutines.pumpUntil { appRpc.configUpdateAttempts == 1 })
+
+        // A stale pre-write state (still true) must not flip the toggle while the write is pending.
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = true))
+        ui.drain()
+        assertFalse(edt { telemetryToggle(root).isSelected })
+
+        gate.complete(Unit)
+        assertTrue(coroutines.pumpUntil { appRpc.configPatches.isNotEmpty() })
+    }
+
+    fun `test failed telemetry write reverts the toggle`() {
+        appRpc.configUpdateError = IllegalStateException("write failed")
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        edt {
+            telemetryToggle(root).doClick()
+            cfg.apply()
+        }
+
+        assertTrue(coroutines.pumpUntil { edt { telemetryToggle(root).isSelected } })
+        assertFalse(edt { cfg.isModified })
+        assertTrue(appRpc.configPatches.isEmpty())
+    }
+
     private fun configurable() = AdvancedConfigurable(settings, { it.applyLocal() }, app) { ui.scope }
 
     private fun telemetryToggle(root: Container): SettingsToggle = toggles(root).first()
