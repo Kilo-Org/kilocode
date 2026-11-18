@@ -247,6 +247,7 @@ export const Plugin = define({
           if (event.type === "session.deleted") {
             exposed.delete(event.data.sessionID)
             retrying.delete(event.data.sessionID)
+            probeFailed.delete(event.data.sessionID)
             notifier.forget(event.data.sessionID)
             const markers = yield* flagged(event.data.sessionID)
             yield* Effect.forEach(markers.keys(), (id) => ctx.storage.remove(`notice/${event.data.sessionID}/${id}`), {
