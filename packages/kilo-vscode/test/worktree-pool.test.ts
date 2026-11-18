@@ -5,6 +5,7 @@ import fs from "node:fs/promises"
 import { existsSync, readFileSync } from "node:fs"
 import { simpleGit } from "simple-git"
 import { WorktreeManager } from "../src/agent-manager/WorktreeManager"
+import { poolDir } from "../src/agent-manager/pool/home"
 import { pathKey } from "../src/agent-manager/project/paths"
 import { failure } from "./setup/failure"
 
@@ -465,6 +466,26 @@ describe("WorktreeManager pool home", () => {
 
     expect(await fs.readFile(path.join(result.path, "work.txt"), "utf-8")).toBe("uncommitted")
     expect((await simpleGit(result.path).raw(["symbolic-ref", "--short", "HEAD"])).trim()).toBe(result.branch)
+  })
+
+  it("still cleans legacy slots when it cannot scan the repository's pool directory", async () => {
+    const root = await createTempRepo()
+    const legacy = await legacySlot(root)
+    const shared = poolDir(home, root)
+    const logs: string[] = []
+    // Windows chmod cannot deny readdir. Use a file at the directory path there (and when running as root).
+    const canDenyRead = process.platform !== "win32" && process.getuid?.() !== 0
+    await fs.mkdir(home)
+    if (canDenyRead) await fs.mkdir(shared, { mode: 0o300 })
+    else await fs.writeFile(shared, "not a directory")
+
+    try {
+      await createManager(root, 0, 0, logs).reconcilePool()
+      expect(existsSync(legacy)).toBe(false)
+      if (canDenyRead) expect(logs.some((line) => line.includes(`cannot scan ${shared}`))).toBe(true)
+    } finally {
+      if (canDenyRead) await fs.chmod(shared, 0o700)
+    }
   })
 
   it("removes pool home slots when the pool is disabled", async () => {

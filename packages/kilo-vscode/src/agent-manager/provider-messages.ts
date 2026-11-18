@@ -17,7 +17,6 @@ import { normalizeBaseBranch } from "./base-branch"
 import { handleBaseUpdate } from "./base-update"
 import { pushFixes } from "../kilo-provider/push-fixes-settings"
 import { composeDiffId, normalizeScope } from "./diff-scope"
-import { resolveWorktreeFile } from "./worktree-file-path"
 import type { LifecycleHost } from "./provider-lifecycle"
 import type { BranchNamingController } from "./branch-naming"
 import type { WorktreeImporter } from "./worktree-importer"
@@ -79,7 +78,8 @@ export interface MessageHost {
   sendRepoInfo: () => Promise<void>
   sendDiffBranches: (sessionId: string, scope?: string, projectId?: string) => Promise<void>
   openWorktreeDirectory: (worktreeId: string) => void
-  openWorktreeFile: (id: string, filePath: string, line?: number, column?: number) => void
+  openWorktreeFile: (id: string, filePath: string, line?: number, column?: number) => Promise<void>
+  copyFilePath: (id: string, filePath: string) => Promise<void>
   readDocument: (sessionId: string, file: string, contextKey?: string) => Promise<void>
   validateFiles: (id: string, sessionId: string, paths: string[]) => Promise<void>
   runKey: (worktreeId: string) => string
@@ -376,7 +376,7 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
     return true
   }
   if (m.type === "agentManager.openFile") {
-    host.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
+    void host.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
     return true
   }
   if (m.type === "agentManager.openExternal") {
@@ -392,8 +392,7 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
     return true
   }
   if (m.type === "agentManager.copyFilePath") {
-    const target = resolveWorktreeFile(host.state(), m.sessionId, m.filePath, host.context()?.root)
-    if (target) void Promise.resolve(host.host.copyToClipboard(target))
+    void host.copyFilePath(m.sessionId, m.filePath)
     return true
   }
   return false

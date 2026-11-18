@@ -90,7 +90,8 @@ export interface ProviderHostsSource {
   sendRepoInfo(): Promise<void>
   sendDiffBranches(sessionId: string, scope?: string, projectId?: string): Promise<void>
   openWorktreeDirectory(id: string): void
-  openWorktreeFile(id: string, file: string, line?: number, column?: number): void
+  openWorktreeFile(id: string, file: string, line?: number, column?: number): Promise<void>
+  copyFilePath(id: string, file: string): Promise<void>
   readDocument(sessionId: string, file: string, contextKey?: string): Promise<void>
   validateFiles(id: string, sessionId: string, paths: string[]): Promise<void>
   runKey(id: string): string
@@ -145,6 +146,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     sendDiffBranches: (id, scope, project) => p.sendDiffBranches(id, scope, project),
     openWorktreeDirectory: (id) => p.openWorktreeDirectory(id),
     openWorktreeFile: (id, file, line, column) => p.openWorktreeFile(id, file, line, column),
+    copyFilePath: (id, file) => p.copyFilePath(id, file),
     readDocument: (sessionId, file, contextKey) => p.readDocument(sessionId, file, contextKey),
     validateFiles: (id, sessionId, paths) => p.validateFiles(id, sessionId, paths),
     runKey: (id) => p.runKey(id),
