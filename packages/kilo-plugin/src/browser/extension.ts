@@ -31,6 +31,12 @@ const HINT = EXTENSION_HINT
 export const UPDATE_HINT = "Update the Kilo browser extension to the current version, then retry."
 
 /**
+ * What a call in a stopped conversation reports. The stop is sticky for that conversation: the model is told the user
+ * stopped it, so it can ask for the browser to be turned back on or for a new session.
+ */
+export const STOPPED = "The user stopped this browser session."
+
+/**
  * How long a call waits for a connected extension before reporting it unavailable. A just-started hub and a
  * reconnect take a moment; a user without the extension should not wait out the transport's own timeout.
  */
@@ -154,7 +160,7 @@ export function map(error: unknown): Error {
     case "taken":
       return new Error("Another Kilo surface took over the tab. The action did not run; try again.")
     case "stopped":
-      return new Error("The user stopped this browser session.")
+      return new Error(STOPPED)
     case "unsupported":
       return new UnsupportedError()
     case "blocked":
@@ -177,6 +183,12 @@ export class ExtensionBackend implements BrowserBackend {
   /** Whether this browser accepts file bytes; undefined until the first upload says so. */
   private transfer: boolean | undefined
   private readonly off: () => void
+  /**
+   * Tool sessions the browser ended. The stop is sticky for that conversation: re-opening a session silently would
+   * undo the user's Stop all, so a call refuses instead. A new conversation starts with a fresh id and is unaffected;
+   * there is no CLI-side resume inside the same conversation, so the refusal asks for the browser to be turned back on.
+   */
+  private readonly stopped = new Set<string>()
 
   constructor(private readonly input: { port?: BrowserHub.Port; directory: string }) {
     this.off =
@@ -185,6 +197,9 @@ export class ExtensionBackend implements BrowserBackend {
         if (session === undefined) return
         this.sessions.delete(event.sessionHandle)
         this.handles.delete(session)
+        // Every revocation reason ends this session's use of the browser: the user pressed Stop all, turned the local
+        // agents off, or the browser went away and released its tabs.
+        this.stopped.add(session)
       }) ?? (() => {})
   }
 
@@ -201,6 +216,8 @@ export class ExtensionBackend implements BrowserBackend {
   async callTool(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<CallResult> {
     const port = this.input.port
     if (!port) throw new UnavailableError(HINT)
+    // Refused before any open: a conversation the user stopped must not start a new browser session behind them.
+    if (this.stopped.has(ctx.session ?? "")) throw new Error(STOPPED)
     try {
       const names = await this.names()
       if (names !== undefined && !names.has(name)) throw new UnsupportedError()
@@ -249,6 +266,8 @@ export class ExtensionBackend implements BrowserBackend {
     const handle = [...this.sessions].find(([, value]) => value === session)?.[0]
     const pending = this.handles.get(session)
     this.handles.delete(session)
+    // A deleted conversation cannot be resumed, so its stop needs no remembering.
+    this.stopped.delete(session)
     if (handle === undefined) return
     this.sessions.delete(handle)
     void pending?.then((value) => this.input.port?.close(value).catch(() => undefined))
@@ -260,6 +279,7 @@ export class ExtensionBackend implements BrowserBackend {
     const handles = [...this.sessions.keys()]
     this.handles.clear()
     this.sessions.clear()
+    this.stopped.clear()
     await Promise.all(handles.map((handle) => this.input.port?.close(handle).catch(() => undefined)))
   }
 

@@ -10,7 +10,7 @@ import {
   UnsupportedError,
 } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
-import { backend, EXTENSION_HINT, grants, map, needs, UPDATE_HINT } from "../../src/browser/extension"
+import { backend, EXTENSION_HINT, grants, map, needs, STOPPED, UPDATE_HINT } from "../../src/browser/extension"
 import { BrowserHub } from "../../src/browser/hub"
 import { rememberStep, resetSteps, takeStep } from "../../src/browser/steps"
 
@@ -385,14 +385,39 @@ describe("extension backend", () => {
     expect((error as UnavailableError).effectsUncertain).toBe(true)
   })
 
-  test("a revoked session drops its handle and reopens on the next call", async () => {
+  test("a stop is sticky: the next call fails stopped and opens no session", async () => {
     const hub = fake()
     const active = backend({ port: hub.port, directory: "/tmp/project" })
     await active.callTool("browser_snapshot", {}, ctx())
     hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
-    await active.callTool("browser_snapshot", {}, ctx())
-    expect(hub.opened).toHaveLength(2)
-    expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1", "handle-2"])
+    const error = await active.callTool("browser_navigate", {}, ctx()).catch((value: unknown) => value)
+    expect((error as Error).message).toBe(STOPPED)
+    // Refused before opening: no second session.open reaches the extension.
+    expect(hub.opened).toHaveLength(1)
+    expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1"])
+  })
+
+  test("every revocation reason stops its own conversation", async () => {
+    for (const reason of ["user_stop", "switch_off", "disconnect"]) {
+      const hub = fake()
+      const active = backend({ port: hub.port, directory: "/tmp/project" })
+      await active.callTool("browser_snapshot", {}, ctx())
+      hub.revoke({ sessionHandle: "handle-1", reason })
+      const error = await active.callTool("browser_snapshot", {}, ctx()).catch((value: unknown) => value)
+      expect((error as Error).message).toBe(STOPPED)
+      expect(hub.opened).toHaveLength(1)
+    }
+  })
+
+  test("another conversation and a new one are unaffected by a stop", async () => {
+    const hub = fake()
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx({ session: "ses_stopped" }))
+    hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+    // Another conversation, and the new conversation the user starts next, both work normally.
+    expect((await active.callTool("browser_snapshot", {}, ctx({ session: "ses_other" }))).isError).toBe(false)
+    expect((await active.callTool("browser_snapshot", {}, ctx({ session: "ses_fresh" }))).isError).toBe(false)
+    expect(hub.opened.map((value) => value.sessionId)).toEqual(["ses_stopped", "ses_other", "ses_fresh"])
   })
 
   test("a deleted session closes its handle and forgets it", async () => {
