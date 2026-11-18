@@ -55,6 +55,14 @@ const framed = `<!doctype html>
   <h1 style="position:fixed;left:400px;top:0">Browser E2E</h1>
 </body></html>`
 
+/** The files a run wrote: the output directory plus the backend's own `.auto/` screenshots. */
+async function written(root: string) {
+  const output = path.join(root, "data", "kilo2", "browser", "output")
+  const auto = await fs.readdir(path.join(output, ".auto")).catch(() => [] as string[])
+  const files = await fs.readdir(output).catch(() => [] as string[])
+  return [...files, ...auto.map((file) => `.auto/${file}`)]
+}
+
 /** Every value the fixture page reported from its password field. */
 const recorded: string[] = []
 
@@ -454,9 +462,7 @@ async function main() {
     const result = await run({})
     const snapshot = result.last.results[1] ?? ""
     const shot = result.last.results[2] ?? ""
-    const files = await fs
-      .readdir(path.join(result.root, "data", "kilo2", "browser", "output"))
-      .catch(() => [] as string[])
+    const files = await written(result.root)
     output.snapshot = snapshot.slice(0, 300)
     output.shot = shot.slice(0, 300)
     output.files = files
@@ -487,9 +493,7 @@ async function main() {
     const snapshot = result.last.results[1] ?? ""
     const targeted = result.last.results[2] ?? ""
     const after = result.last.results[3] ?? ""
-    const files = (await fs.readdir(path.join(result.root, "data", "kilo2", "browser", "output"))).filter((file) =>
-      file.endsWith(".png"),
-    )
+    const files = (await written(result.root)).filter((file) => file.endsWith(".png"))
     output.withheld = snapshot.slice(0, 300)
     output.targeted = targeted.slice(0, 300)
     output.after = after.slice(0, 400)
@@ -628,9 +632,7 @@ async function main() {
     const kept = await run({ allowSensitive: true })
     const stoppedText = stopped.last.results[2] ?? ""
     const keptText = kept.last.results[2] ?? ""
-    const files = await fs
-      .readdir(path.join(kept.root, "data", "kilo2", "browser", "output"))
-      .catch(() => [] as string[])
+    const files = await written(kept.root)
     output.stopped = stoppedText.slice(0, 300)
     output.kept = keptText.slice(0, 300)
     output.files = files

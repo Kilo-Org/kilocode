@@ -498,11 +498,11 @@ describe("a screenshot this backend allows", () => {
   test("without a name leaves exactly one PNG and links to it", async () => {
     const backend = await browser()
     const result = await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
-    const files = (await fs.readdir(outputDirectory())).filter((file) => file.endsWith(".png"))
+    const files = (await fs.readdir(path.join(outputDirectory(), ".auto"))).filter((file) => file.endsWith(".png"))
     expect(files.length).toBe(1)
-    expect(files[0]).toMatch(/^page-.+\.png$/)
+    expect(files[0]).toMatch(/^shot-.+\.png$/)
     const text = (result.content[0] as { text: string }).text
-    expect(text).toContain(`- [Screenshot](${path.join(outputDirectory(), files[0])})`)
+    expect(text).toContain(`- [Screenshot](${path.join(outputDirectory(), ".auto", files[0])})`)
     // The capture file the MCP wrote is gone.
     expect((await fs.readdir(outputDirectory())).some((file) => file.startsWith(".mcp-"))).toBe(false)
   })
@@ -549,7 +549,9 @@ describe("a refused screenshot", () => {
     const backend = await browser()
     await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
     await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
-    const names = (await fs.readdir(outputDirectory())).filter((file) => /^page-.+-[0-9a-f]{6}\.png$/.test(file))
+    const names = (await fs.readdir(path.join(outputDirectory(), ".auto"))).filter((file) =>
+      /^shot-.+-[0-9a-f]{6}\.png$/.test(file),
+    )
     expect(names.length).toBeGreaterThanOrEqual(2)
     expect(new Set(names).size).toBe(names.length)
   })
