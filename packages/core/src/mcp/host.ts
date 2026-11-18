@@ -1,7 +1,12 @@
 // kilocode_change - new file
 export * as McpHost from "./host.js"
 
-import type { FetchLike, OAuthClientProvider, StoredOAuthClientInformation } from "@modelcontextprotocol/client"
+import type {
+  FetchLike,
+  OAuthClientProvider,
+  OAuthDiscoveryState,
+  StoredOAuthClientInformation,
+} from "@modelcontextprotocol/client"
 import type { ConfigMCP } from "@opencode/schema/config/mcp"
 import type { Effect } from "effect"
 import type { Credential } from "../credential.js"
@@ -42,6 +47,7 @@ export interface OAuth {
     config: ConfigMCP.Remote,
     credential: Credential.Info,
     client: OAuthClientProvider["clientInformation"],
+    configuredDiscovery: (fetchFn: FetchLike) => Promise<OAuthDiscoveryState | undefined>,
   ) => Effect.Effect<void, never, Credential.Service>
 }
 

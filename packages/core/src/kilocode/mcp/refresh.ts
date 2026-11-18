@@ -1,7 +1,7 @@
 export * as KiloMcpRefresh from "./refresh.js"
 
 import type { FetchLike } from "@modelcontextprotocol/client"
-import { Clock, Effect } from "effect"
+import { Cause, Clock, Effect } from "effect"
 import { FetchHttpClient } from "effect/http"
 import { Credential } from "../../credential.js"
 import type { McpHost } from "../../mcp/host.js"
@@ -11,7 +11,7 @@ const due = (value: Credential.OAuth, now: number) =>
 
 /** A resource may answer an expired token with 403, which never starts the SDK's 401 refresh flow. */
 export const beforeConnect: NonNullable<McpHost.OAuth["beforeConnect"]> = Effect.fnUntraced(
-  function* (config, row, client) {
+  function* (config, row, client, configuredDiscovery) {
     const clock = yield* Clock.Clock
     if (row.value.type !== "oauth" || !due(row.value, clock.currentTimeMillisUnsafe())) return
     const credentials = yield* Credential.Service
@@ -32,7 +32,11 @@ export const beforeConnect: NonNullable<McpHost.OAuth["beforeConnect"]> = Effect
               signal.throwIfAborted()
               return fetch(url, { ...init, signal })
             }
-            const metadata = await discoverAuthorizationServerMetadata(issuer, { fetchFn })
+            const configured = (await configuredDiscovery(fetchFn))?.authorizationServerMetadata
+            // Match the SDK's issuer-echo check, including its single trailing slash tolerance.
+            if (configured && issuer !== configured.issuer && issuer !== `${configured.issuer}/`)
+              throw new Error("Configured MCP OAuth metadata does not match the stored issuer")
+            const metadata = configured ?? (await discoverAuthorizationServerMetadata(issuer, { fetchFn }))
             const tokens = await refreshAuthorization(issuer, {
               metadata,
               clientInformation: info,
@@ -44,7 +48,7 @@ export const beforeConnect: NonNullable<McpHost.OAuth["beforeConnect"]> = Effect
               ...value,
               access: tokens.access_token,
               refresh: tokens.refresh_token ?? value.refresh,
-              expires: tokens.expires_in === undefined ? 0 : clock.currentTimeMillisUnsafe() + tokens.expires_in * 1000,
+              expires: tokens.expires_in ? clock.currentTimeMillisUnsafe() + tokens.expires_in * 1000 : 0,
               metadata: {
                 ...value.metadata,
                 issuer,
@@ -55,7 +59,11 @@ export const beforeConnect: NonNullable<McpHost.OAuth["beforeConnect"]> = Effect
           }),
       })
       .pipe(
-        Effect.catch(() => Effect.logDebug("mcp oauth pre-connect refresh unavailable", { credentialID: row.id })),
+        Effect.catchCause((cause) =>
+          Cause.hasInterrupts(cause)
+            ? Effect.interrupt
+            : Effect.logDebug("mcp oauth pre-connect refresh unavailable", { credentialID: row.id }),
+        ),
       )
   },
 )
