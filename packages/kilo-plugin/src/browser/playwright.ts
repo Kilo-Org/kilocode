@@ -23,7 +23,7 @@ import { INSTALL_HINT, locate, type Target } from "./locate"
 import { useKiloBrowsers } from "./install"
 import { BrowserItems } from "./items"
 import { BrowserPermission } from "./permission"
-import * as Png from "./png"
+import { maskScreenshot, withoutScreenshotLink } from "./playwright-screenshot"
 import type { Settings } from "./settings"
 
 type Item = BrowserPermission.Item
@@ -730,12 +730,54 @@ export function tabChoice(input: {
   return input.known && after.includes(input.known) ? input.known : after[after.length - 1]
 }
 
-/** The file link of a screenshot the backend deleted; the masked image replaces it. */
-function withoutScreenshotLink(text: string) {
-  return text
-    .split("\n")
-    .filter((line) => !/^- \[Screenshot[^\]]*\]\(.+\)$/.test(line.trim()))
-    .join("\n")
+const SCREENSHOT_WITHHELD = "The screenshot is unavailable: part of the page is withheld."
+
+type PreparedCall = {
+  args: Record<string, unknown>
+  written: string[]
+  file?: ReturnType<typeof outputFile>
+  shot?: { capture: string; save: string }
+}
+
+function prepareCall(
+  name: string,
+  args: Record<string, unknown>,
+  page: Page | undefined,
+  authorized: readonly string[],
+): PreparedCall | undefined {
+  const withheldBefore = page ? withheldFrames(page, authorized) : []
+  if (name === "browser_take_screenshot") {
+    // Capture PNG in CSS pixels at a backend-owned path, never straight to the requested file.
+    const capture = path.join(outputDirectory(), `.mcp-${randomUUID()}.png`)
+    if (args.target !== undefined && withheldBefore.length) return undefined
+    const callArgs = { ...args, type: "png", scale: "css", filename: capture }
+    const save = screenshotPath(name, args) ?? path.join(autoDirectory(), autoShotName())
+    return { args: callArgs, shot: { capture, save }, written: [capture] }
+  }
+  // The MCP never writes a named result file; the backend writes it from filtered text.
+  const file = outputFile(name, args)
+  return { args: file ? file.args : args, file, written: [] }
+}
+
+async function saveScreenshot(
+  name: string,
+  args: Record<string, unknown>,
+  save: string,
+  data: string,
+  written: string[],
+) {
+  await writeConfined(save, Buffer.from(data, "base64"))
+  written.push(save)
+  // A long-lived connection still respects the cap: one directory read per persisted auto screenshot.
+  if (!screenshotPath(name, args)) await retainScreenshots()
+}
+
+type ToolOutput = {
+  content: ContentBlock[]
+  text: string
+  result: CallToolResult
+  downloads: string[]
+  kept: string[]
 }
 
 class PlaywrightBackend implements BrowserBackend {
@@ -915,36 +957,6 @@ class PlaywrightBackend implements BrowserBackend {
     })
   }
 
-  /** Mask boxes for withheld frames, in CSS pixels of the screenshot. */
-  private async maskBoxes(page: Page, frames: Frame[], fullPage: boolean) {
-    const scroll = fullPage
-      ? await page.mainFrame().evaluate(() => ({ x: window.scrollX, y: window.scrollY }))
-      : { x: 0, y: 0 }
-    const boxes: Png.Box[] = []
-    for (const frame of frames) {
-      const handle = await frame.frameElement().catch(() => null)
-      if (!handle) throw new Error("a withheld frame could not be measured")
-      const box = await handle.boundingBox()
-      handle.dispose()
-      if (!box) continue // a frame with no box paints no pixels
-      boxes.push({ x: box.x + scroll.x, y: box.y + scroll.y, width: box.width, height: box.height })
-    }
-    return boxes
-  }
-
-  /** Mask every withheld frame's box in-place. `false` means the image must not leave the backend. */
-  private async maskFrames(page: Page, images: ContentBlock[], frames: Frame[], fullPage: boolean) {
-    const boxes = await this.maskBoxes(page, frames, fullPage)
-    for (const image of images) {
-      if (image.type !== "image") continue
-      if (image.mimeType !== "image/png") return false
-      const masked = Png.mask(Png.decode(Buffer.from(image.data, "base64")), boxes)
-      image.data = Png.encode(masked).toString("base64")
-      image.mimeType = "image/png"
-    }
-    return images.some((image) => image.type === "image")
-  }
-
   /** Delete the files this call wrote, and nothing else: the output directory is shared by every session. */
   private async removeWritten(files: readonly string[]) {
     for (const file of files) await fs.unlink(file).catch(() => {})
@@ -979,7 +991,7 @@ class PlaywrightBackend implements BrowserBackend {
     const authorized = ctx.authorized ?? []
     const session = ctx.session ?? ""
     const pagesBefore = this.conn.context.pages()
-    let page = this.current(session)
+    const page = this.current(session)
 
     // Every URL a call would open is checked before the browser sees it: a scheme without an http(s) origin has no
     // grant to ask for, so it must not reach a page - or a new tab - at all.
@@ -993,50 +1005,60 @@ class PlaywrightBackend implements BrowserBackend {
     if (page) {
       const reasons = await this.sensitive(session, name, args, page)
       const site = BrowserPermission.site(page.url())
-      if (reasons.length && !site) {
-        throw new Error("A sensitive step was refused: the page has no URL to bind the approval to.")
-      }
-      if (reasons.length && site && !stepApproved(session, ctx.sensitive ?? [], name, args, site)) {
-        throw new NeedsPermissionError(
-          [{ class: "sensitive", origin: site, reason: reasons.join("; ") }],
-          approveStep(session, name, args, site),
-        )
+      if (reasons.length) {
+        if (!site) throw new Error("A sensitive step was refused: the page has no URL to bind the approval to.")
+        if (!stepApproved(session, ctx.sensitive ?? [], name, args, site)) {
+          throw new NeedsPermissionError(
+            [{ class: "sensitive", origin: site, reason: reasons.join("; ") }],
+            approveStep(session, name, args, site),
+          )
+        }
       }
     }
 
-    // A screenshot may not leave the backend with a withheld frame visible in pixels or file. Every screenshot is
-    // taken inline as PNG in CSS pixels: the backend masks it and returns the image, so the MCP never writes pixels
-    // to a file the backend cannot inspect, and a frame that starts loading during the call cannot leave one behind.
-    const withheldBefore = page ? withheldFrames(page, authorized) : []
-    const shot = name === "browser_take_screenshot"
-    // Every file this call writes is tracked by path: another session's file in the shared directory must survive.
-    const written: string[] = []
-    let callArgs = args
-    // The MCP writes into a file this backend names, so the capture path is ours: never derived from tool output. The
-    // bytes are read back and the capture removed once the final PNG is persisted.
-    const capture = shot ? path.join(outputDirectory(), `.mcp-${randomUUID()}.png`) : undefined
-    if (shot) {
-      if (args.target !== undefined && withheldBefore.length) {
+    const prepared = prepareCall(name, args, page, authorized)
+    if (!prepared) {
+      return { content: [{ type: "text", text: SCREENSHOT_WITHHELD }], isError: true }
+    }
+    const planned = plannedOrigin(name, args, page && BrowserPermission.origin(page.url()))
+    const output = await this.#invoke(name, args, ctx, session, page, prepared)
+    this.track(session, name, args, pagesBefore)
+    const landed = this.current(session)
+
+    if (landed) {
+      // A navigation tool may not land on a refused scheme, even if the requested target was allowed.
+      if (name === "browser_navigate" || name === "browser_navigate_back" || name === "browser_tabs") {
+        const refusal = navigationRefusal(landed.url())
+        if (refusal) throw new Error(refusal)
+      }
+      // The action already ran. Withhold the new origin's content (including its title) without retrying it.
+      const need = landingNeed({ tool: name, planned, landed: BrowserPermission.origin(landed.url()), authorized })
+      if (need) {
         return {
-          content: [{ type: "text", text: "The screenshot is unavailable: part of the page is withheld." }],
-          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `- Page URL: ${landed.url()}\n\nThe page moved to ${need.origin}; its content is withheld until read is granted.`,
+            },
+          ],
+          isError: false,
+          meta: { url: landed.url(), needs: [need] },
         }
       }
-      callArgs = { ...args, type: "png", scale: "css", filename: capture }
-      if (capture) written.push(capture)
     }
-    // A file name the model supplies is resolved by the MCP against the workspace root, outside the directory this
-    // backend owns: only a path that stays inside the output directory is accepted. A screenshot is written from the
-    // image the backend holds, so masking is applied to the file as well.
-    // The caller's name when given, otherwise a name in the MCP's own style: an allowed screenshot always leaves a
-    // file that the result can link to.
-    const save = shot ? (screenshotPath(name, args) ?? path.join(autoDirectory(), autoShotName())) : undefined
-    // The MCP never writes a result file: it would hold the withheld frames' content unfiltered. The backend writes
-    // the file from the filtered text instead, so the name is removed from the arguments the MCP sees.
-    const file = shot ? undefined : outputFile(name, args)
-    if (file) callArgs = file.args
-    // What the call meant to act on, so a landing elsewhere is visible after it ran.
-    const planned = plannedOrigin(name, args, page && BrowserPermission.origin(page.url()))
+
+    return this.publishResult(name, args, landed, authorized, prepared, output)
+  }
+
+  /** The only MCP execution path. Observe downloads using the page the action started on. */
+  async #invoke(
+    name: string,
+    args: Record<string, unknown>,
+    ctx: CallContext,
+    session: string,
+    page: Page | undefined,
+    prepared: PreparedCall,
+  ): Promise<ToolOutput> {
     const downloads: string[] = []
     const kept: string[] = []
     const onDownload = (download: Download) => {
@@ -1057,7 +1079,10 @@ class PlaywrightBackend implements BrowserBackend {
     let result: CallToolResult
     this.conn.context.on("download", onDownload)
     try {
-      result = await this.conn.client.callTool({ name, arguments: callArgs }, { timeout: TIMEOUT, signal: ctx.signal })
+      result = await this.conn.client.callTool(
+        { name, arguments: prepared.args },
+        { timeout: TIMEOUT, signal: ctx.signal },
+      )
       // A download starts alongside the action that triggers it; give the event a moment to surface.
       if (page && ["browser_click", "browser_drop", "browser_press_key", "browser_navigate"].includes(name)) {
         await page.waitForTimeout(150).catch(() => undefined)
@@ -1067,6 +1092,7 @@ class PlaywrightBackend implements BrowserBackend {
     }
 
     const content = blocks(result.content)
+    const capture = prepared.shot?.capture
     if (capture) {
       // The MCP saved the pixels to the path this call chose; read them and drop the file again.
       const bytes = await fs.readFile(capture).catch(() => undefined)
@@ -1081,36 +1107,17 @@ class PlaywrightBackend implements BrowserBackend {
       .filter((block) => block.type === "text")
       .map((block) => block.text)
       .join("\n")
-    this.track(session, name, args, pagesBefore)
-    page = this.current(session)
+    return { content, text, result, downloads, kept }
+  }
 
-    // A navigation tool may not land on a scheme without an http(s) origin; the same refusal as its target.
-    if (page && (name === "browser_navigate" || name === "browser_navigate_back" || name === "browser_tabs")) {
-      const refusal = navigationRefusal(page.url())
-      if (refusal) throw new Error(refusal)
-    }
-
-    // Every action, not just the navigation tools, can leave the tab on an origin this session never asked about. The
-    // action already ran, so its content is withheld and read is requested: the call is never retried.
-    const need = page && landingNeed({ tool: name, planned, landed: BrowserPermission.origin(page.url()), authorized })
-    if (need && page) {
-      // Only the URL: a title is content of an origin this session was never granted.
-      return {
-        content: [
-          {
-            type: "text",
-            text: [
-              `- Page URL: ${page.url()}`,
-              "",
-              `The page moved to ${need.origin}; its content is withheld until read is granted.`,
-            ].join("\n"),
-          },
-        ],
-        isError: false,
-        meta: { url: page.url(), needs: [need] },
-      }
-    }
-
+  private async publishResult(
+    name: string,
+    args: Record<string, unknown>,
+    page: Page | undefined,
+    authorized: readonly string[],
+    { file, shot, written }: PreparedCall,
+    { content, text, result, downloads, kept }: ToolOutput,
+  ): Promise<CallResult> {
     const withheld = page ? withheldFrames(page, authorized) : []
     const scoped = page ? await this.filter(page, name, text, authorized) : { text, refused: false }
     let viewed = scoped.text
@@ -1119,18 +1126,16 @@ class PlaywrightBackend implements BrowserBackend {
     const withheldOrigins = withheld
       .map((frame) => frameOrigin(frame))
       .filter((value): value is string => value !== undefined)
+    const originMeta = origin ? { origin } : {}
+    const frameMeta = {
+      ...originMeta,
+      ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
+    }
 
     if (scoped.refused) {
       // A file the refused call wrote must not outlive the call either.
       await this.removeWritten(written)
-      return {
-        content: [{ type: "text", text: viewed }],
-        isError: true,
-        meta: {
-          ...(origin ? { origin } : {}),
-          ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
-        },
-      }
+      return { content: [{ type: "text", text: viewed }], isError: true, meta: frameMeta }
     }
 
     if (kept.length) viewed = `${viewed}\n\nA download was kept: ${kept.join(", ")}.`
@@ -1148,13 +1153,13 @@ class PlaywrightBackend implements BrowserBackend {
         ],
         isError: false,
         meta: {
-          ...(origin ? { origin } : {}),
+          ...originMeta,
           needs: [{ class: "sensitive", origin: site, reason: `download: ${downloads.join(", ")}` }],
         },
       }
     }
 
-    if (file && !scoped.refused) {
+    if (file) {
       await saveOutput(file, viewed)
       written.push(file.path)
       viewed = `${viewed}\n\n${file.link}`
@@ -1164,48 +1169,32 @@ class PlaywrightBackend implements BrowserBackend {
       // Whatever the MCP saved was written before masking: it must not outlive the call, and its path is not an
       // acceptable answer either, because the model would open the unmasked pixels. Only this call's own file goes.
       await this.removeWritten(written)
-      const masked =
-        images.length > 0 && page && args.target === undefined
-          ? await this.maskFrames(page, images, withheld, args.fullPage === true).catch(() => false)
-          : false
-      if (!masked) {
+      if (!(await maskScreenshot(page, images, withheld, args))) {
         return {
-          content: [{ type: "text", text: "The screenshot is unavailable: part of the page is withheld." }],
+          content: [{ type: "text", text: SCREENSHOT_WITHHELD }],
           isError: true,
-          meta: {
-            ...(origin ? { origin } : {}),
-            ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
-          },
+          meta: frameMeta,
         }
       }
       // The masked image is persisted as the answer, and the result links to that file.
-      if (save && images[0]) {
-        await writeConfined(save, Buffer.from(images[0].data, "base64"))
-        written.push(save)
-        if (!screenshotPath(name, args)) await retainScreenshots()
+      if (images[0]) {
+        await saveScreenshot(name, args, shot.save, images[0].data, written)
       }
-      const link = save ? `- [Screenshot](${save})` : undefined
+      const link = `- [Screenshot](${shot.save})`
       return {
         content: [{ type: "text", text: [withoutScreenshotLink(viewed), link].filter(Boolean).join("\n") }, ...images],
         isError: result.isError === true,
-        meta: {
-          ...(origin ? { origin } : {}),
-          ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
-        },
+        meta: frameMeta,
       }
     }
 
     const meta: CallMeta = {
       ...(page ? { url: page.url() } : {}),
-      ...(origin ? { origin } : {}),
-      ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
+      ...frameMeta,
     }
-    if (save && images[0]) {
-      await writeConfined(save, Buffer.from(images[0].data, "base64"))
-      written.push(save)
-      viewed = `${viewed}\n- [Screenshot](${save})`
-      // A long-lived connection still respects the cap: one directory read per persisted screenshot.
-      if (!screenshotPath(name, args)) await retainScreenshots()
+    if (shot && images[0]) {
+      await saveScreenshot(name, args, shot.save, images[0].data, written)
+      viewed = `${viewed}\n- [Screenshot](${shot.save})`
     }
     return {
       content: [{ type: "text", text: viewed }, ...images],
