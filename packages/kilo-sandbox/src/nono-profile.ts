@@ -87,11 +87,12 @@ const secrets = [
 ]
 
 function directories() {
-  const home = os.homedir()
+  const home = process.env.OPENCODE_HOME_DIR || os.homedir()
   const app = process.env.OPENCODE_APP_DIR_NAME || "opencode"
   return {
     data: path.join(process.env.XDG_DATA_HOME || path.join(home, ".local", "share"), app),
-    config: path.join(process.env.XDG_CONFIG_HOME || path.join(home, ".config"), app),
+    config:
+      process.env.OPENCODE_CONFIG_DIR || path.join(process.env.XDG_CONFIG_HOME || path.join(home, ".config"), app),
   }
 }
 
@@ -171,6 +172,8 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
     ...(given.config === undefined ? {} : { config: path.resolve(given.config) }),
   }
   const allowWrite = profile.filesystem.allowWrite.filter((rule) => !covered(rule, profile.filesystem.denyWrite))
+  // denyNames is deliberately not translated: a nono deny also blocks reads, and commands must still read
+  // .git for git status and git log. The gate decision record tracks the upstream primitive that closes it.
   const reads = inputs.reads ?? allowWrite
   const temporary = profile.filesystem.temporaryDirectory
   const stores =

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
+import { unlinkSync, writeFileSync } from "node:fs"
+import os from "node:os"
 import path from "node:path"
-import { parse } from "../src/nono-credentials"
+import { load, parse } from "../src/nono-credentials"
 import { generate } from "../src/nono-profile"
 import type { Profile } from "../src/profile"
 
@@ -207,6 +209,31 @@ describe.skipIf(process.platform === "win32")("nono profile generation", () => {
     expect(result.filesystem.deny).toContain(path.resolve("rel-config"))
   })
 
+  test("denies the config and data roots named by the environment", () => {
+    const previous = {
+      config: process.env.OPENCODE_CONFIG_DIR,
+      data: process.env.XDG_DATA_HOME,
+      app: process.env.OPENCODE_APP_DIR_NAME,
+    }
+    process.env.OPENCODE_CONFIG_DIR = "/custom/config"
+    process.env.XDG_DATA_HOME = "/custom/share"
+    process.env.OPENCODE_APP_DIR_NAME = "kilo2"
+    try {
+      const result = generate(profile())
+      expect(result.filesystem.deny).toContain("/custom/config")
+      expect(result.filesystem.deny).toEqual(
+        expect.arrayContaining(["/custom/share/kilo2/kilo2.db", "/custom/share/kilo2/auth.json"]),
+      )
+    } finally {
+      if (previous.config === undefined) delete process.env.OPENCODE_CONFIG_DIR
+      else process.env.OPENCODE_CONFIG_DIR = previous.config
+      if (previous.data === undefined) delete process.env.XDG_DATA_HOME
+      else process.env.XDG_DATA_HOME = previous.data
+      if (previous.app === undefined) delete process.env.OPENCODE_APP_DIR_NAME
+      else process.env.OPENCODE_APP_DIR_NAME = previous.app
+    }
+  })
+
   test("rejects two credentials that read the same variable", () => {
     expect(() =>
       parse({
@@ -216,5 +243,19 @@ describe.skipIf(process.platform === "win32")("nono profile generation", () => {
         ],
       }),
     ).toThrow()
+  })
+
+  test("treats an absent credential file as no routes", () => {
+    expect(load(path.join(os.tmpdir(), `kilo-missing-${process.pid}-${Date.now()}.json`))).toEqual([])
+  })
+
+  test("rejects a malformed credential file", () => {
+    const file = path.join(os.tmpdir(), `kilo-malformed-${process.pid}-${Date.now()}.json`)
+    writeFileSync(file, "{")
+    try {
+      expect(() => load(file)).toThrow()
+    } finally {
+      unlinkSync(file)
+    }
   })
 })
