@@ -28,6 +28,10 @@
       "rung": 4,
       "seam": "Repository-specific native session sync design and operator commands. The v2 specification directory holds the producer contract; the cloud repository holds service admission, storage, and rollout. This contract now states canonical workspace-root routing, restored/reconnected ownership, bounded pending admission and credential/account fences (+13 non-empty marked lines), and paged model discovery (+3). The exact 16-line documentation growth raises only the markedLines budget from 1660 to 1676; file, unmarked-line and deletion budgets are unchanged. Plugin hooks and host composition cannot supply repository specification text. Runtime and RPC implementations remain in Kilo-owned paths; this shared-file growth is documentation only."
     },
+    "docs/nono-git-gate.md": {
+      "rung": 4,
+      "seam": "Decision record for the read-only .git gate in the nono sandbox work. It belongs in docs/ because it records a blocked security requirement, the measured nono behaviour, the upstream request text and the rollout impact for reviewers and release notes. The first-line `<!-- kilocode_change - new file -->` marker covers the file, so its 122 lines raise only the markedLines budget and the file budget by one; unmarked-line and deletion budgets are unchanged. No plugin or host path can carry repository design text."
+    },
     "packages/cli/src/commands/commands.ts": {
       "rung": 3,
       "seam": "Optional full-TUI --model/-m argument, passed to the existing TUI Args.model selector. The CLI command specification is closed and has no host extension for root parameters; no default changes when omitted. Two generic lines across the root specification and default handler replace a custom argument parser or a second host command mirror."
