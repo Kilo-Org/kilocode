@@ -18,6 +18,10 @@ The preview requires VS Code 1.95 or later.
 
 The preview uses the separate extension id `kilocode.kilo-code-v2` and keeps its server data in a separate `kilo2` directory. You can install it next to Kilo Code v1 and switch between both.
 
+## Webview accessibility checks
+
+From `packages/kilo-vscode`, run `bun run playwright-core install --only-shell chromium` once, then `bun run test:accessibility`. The CI gate runs the Agent Manager sidebar search in Chromium with the production webview component and styles. It fails on axe WCAG violations or broken keyboard selection and dismissal. It does not require VS Code, a server, or an account.
+
 ## Feedback
 
 Report problems at https://github.com/Kilo-Org/kilocode/issues.

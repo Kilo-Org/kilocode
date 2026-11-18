@@ -11,6 +11,8 @@
     "webview-ui/settings/index.tsx",
     "webview-ui/pierre-worker.ts",
     "webview-ui/src/assets.d.ts",
+    "test/browser/accessibility.ts",
+    "test/browser/sidebar-search.tsx",
     "test/fixtures/agent-stack-render.tsx",
     "test/fixtures/browser-network.ts",
     "test/fixtures/browser-panel-render.tsx",
