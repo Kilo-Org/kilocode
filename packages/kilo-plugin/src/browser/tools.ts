@@ -28,7 +28,7 @@ import { BrowserHub } from "./hub"
 import { modeFor, observe, snapshot, split, Tracker } from "./observation"
 import { BrowserPermission } from "./permission"
 import { key, persistStep, playwright, readiness } from "./playwright"
-import { resolve, type Settings } from "./settings"
+import { resolve, type Observation, type Settings } from "./settings"
 import { rememberStep } from "./steps"
 import { KiloGatewayAccounts } from "../gateway/accounts"
 
@@ -288,6 +288,142 @@ type Deps = {
   backend: (choice: Settings) => Promise<BrowserBackend>
 }
 
+/** A granted post-action need hands the model either the answer or the page it can read now. */
+type PostAction = {
+  needs: readonly Item[]
+  result: CallResult
+  active: BrowserBackend
+  entry: Entry
+  input: Record<string, unknown>
+  session: string
+  grants: Set<string>
+  allowSensitive: boolean
+  observation: Observation
+  backend: Settings["backend"]
+  context: Tool.Context
+  permission: Option.Option<Permission.Interface>
+  organization: KiloBrowserPolicy.Policy | undefined
+}
+
+/**
+ * The grants a result asked for after its action ran: ask for them, remember what the next identical step needs, and
+ * answer with the page when the grants were read-only. The action itself is never repeated.
+ */
+function postAction(input: PostAction) {
+  return Effect.gen(function* () {
+    const asked = yield* Effect.result(
+      authorize(
+        input.needs,
+        input.context,
+        input.allowSensitive,
+        (origin) => KiloBrowserPolicy.allows(input.organization, origin),
+        input.permission,
+      ),
+    )
+    if (Result.isFailure(asked)) {
+      const origin = input.needs[0]?.origin ?? ""
+      return {
+        kind: "result" as const,
+        result: {
+          content: [{ type: "text", text: `${textOf(input.result)}\n\n${withheldRefusal(origin)}` }],
+          metadata: {
+            browser: {
+              backend: input.backend,
+              observation: input.observation,
+              ...(origin ? { url: origin } : {}),
+              ...(input.result.meta?.withheldFrames ? { withheldFrames: input.result.meta.withheldFrames } : {}),
+            },
+          },
+        } as Tool.Result,
+      }
+    }
+    // Granted: the step is approved for the next identical call in this session, so the model can repeat it.
+    for (const item of input.needs) {
+      if (item.class === "sensitive" && item.reason?.startsWith("download:")) {
+        persistStep(input.session, input.entry.name, input.input, item.origin)
+      }
+    }
+    // A browser that issues a step token (the extension) spends it on that repeat only.
+    if (input.result.meta?.stepToken !== undefined) {
+      rememberStep(input.session, input.entry.name, input.input, input.result.meta.stepToken)
+    }
+    if (input.needs.some((item) => item.class === "sensitive")) {
+      return {
+        kind: "result" as const,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: `${textOf(input.result)}\n\nApproved. Repeat the same step to receive the file.`,
+            },
+          ],
+          metadata: { browser: { backend: input.backend, observation: input.observation } },
+        } as Tool.Result,
+      }
+    }
+    // Read needs only: read the page again rather than return the withheld placeholder. Reading has no side effect.
+    const reread = yield* Effect.result(
+      Effect.tryPromise({
+        try: (signal) =>
+          input.active.callTool("browser_snapshot", {}, { signal, session: input.session, authorized: [...input.grants] }),
+        catch: (error) => error,
+      }),
+    )
+    if (Result.isSuccess(reread) && !reread.success.isError) {
+      input.result.content = reread.success.content
+      input.result.meta = reread.success.meta
+    }
+    return { kind: "continue" as const, result: input.result }
+  })
+}
+
+/** The model-facing answer for one call: the observation mode, the images, and the metadata the UI reads. */
+function shaped(input: {
+  result: CallResult
+  entry: Entry
+  active: BrowserBackend
+  session: string
+  context: Tool.Context
+  permission: Option.Option<Permission.Interface>
+  observation: Observation
+  backend: Settings["backend"]
+}) {
+  return Effect.gen(function* () {
+    const text = textOf(input.result)
+    const next = snapshot(split(text))
+    const mode = modeFor(input.entry.name, input.observation)
+    const errors = mode === "diff" ? yield* consoleErrors(input.active, input.session, input.context, input.permission) : []
+    const previous = mode === "diff" ? tracker.previous(input.session, input.entry.name, next?.url) : undefined
+    const viewed = observe({ mode, text, previous, consoleErrors: errors })
+    if (viewed.snapshot) tracker.record(input.session, viewed.snapshot)
+
+    const content: Tool.Content[] = [{ type: "text", text: viewed.text }]
+    for (const block of input.result.content) {
+      if (block.type !== "image") continue
+      const ext = block.mimeType.split("/")[1] || "png"
+      content.push({
+        type: "file",
+        uri: `data:${block.mimeType};base64,${block.data}`,
+        mime: block.mimeType,
+        name: `browser-${input.entry.name}.${ext}`,
+      })
+    }
+
+    return {
+      content,
+      metadata: {
+        browser: {
+          backend: input.backend,
+          observation: input.observation,
+          ...(next?.url ? { url: next.url } : {}),
+          ...(next?.title ? { title: next.title } : {}),
+          ...(input.result.meta?.withheldFrames ? { withheldFrames: input.result.meta.withheldFrames } : {}),
+        },
+      },
+    } as Tool.Result
+  })
+}
+
 function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
   return Effect.gen(function* () {
     const browser = yield* settings(deps.config)
@@ -386,102 +522,36 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     if (!result) return yield* failure(new Error("the browser call did not settle"))
     if (result.isError) return yield* failure(new Error(textOf(result) || `${entry.name} failed`))
     // The action already ran; its result asked for a grant. Ask now, and never repeat the action for it.
-    const needs = result.meta?.needs
-    if (needs?.length) {
-      const asked = yield* Effect.result(
-        authorize(
-          needs,
-          context,
-          allowSensitive,
-          (origin) => KiloBrowserPolicy.allows(organization, origin),
-          deps.permission,
-        ),
-      )
-      // Granted: the step is approved for the next identical call in this session, so the model can repeat it. The
-      // action itself is never replayed by the CLI.
-      if (Result.isSuccess(asked)) {
-        for (const item of needs) {
-          if (item.class === "sensitive" && item.reason?.startsWith("download:")) {
-            persistStep(session, entry.name, input, item.origin)
-          }
-        }
-        // A browser that issues a step token (the extension) spends it on that repeat only.
-        if (result.meta?.stepToken !== undefined) rememberStep(session, entry.name, input, result.meta.stepToken)
-      }
-      // Granted: read the page again rather than return the withheld placeholder, but only for read needs - a
-      // sensitive need (a stopped download) keeps the action's own notice. Reading has no side effect.
-      if (Result.isSuccess(asked) && needs.every((item) => item.class === "read")) {
-        const reread = yield* Effect.result(
-          Effect.tryPromise({
-            try: (signal) => active.callTool("browser_snapshot", {}, { signal, session, authorized: [...grants] }),
-            catch: (error) => error,
-          }),
-        )
-        if (Result.isSuccess(reread) && !reread.success.isError) {
-          result.content = reread.success.content
-          result.meta = reread.success.meta
-        }
-      }
-      if (Result.isSuccess(asked) && needs.some((item) => item.class === "sensitive")) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `${textOf(result)}\n\nApproved. Repeat the same step to receive the file.`,
-            },
-          ],
-          metadata: { browser: { backend: choice.backend, observation: browser.observation } },
-        } as Tool.Result
-      }
-      // A refusal must never read as the action being rejected: the action ran, only its content stayed unread.
-      if (Result.isFailure(asked)) {
-        const origin = needs[0]?.origin ?? ""
-        return {
-          content: [{ type: "text", text: `${textOf(result)}\n\n${withheldRefusal(origin)}` }],
-          metadata: {
-            browser: {
-              backend: choice.backend,
-              observation: browser.observation,
-              ...(origin ? { url: origin } : {}),
-              ...(result.meta?.withheldFrames ? { withheldFrames: result.meta.withheldFrames } : {}),
-            },
-          },
-        } as Tool.Result
-      }
-    }
-
-    const text = textOf(result)
-    const next = snapshot(split(text))
-    const mode = modeFor(entry.name, browser.observation)
-    const errors = mode === "diff" ? yield* consoleErrors(active, session, context, deps.permission) : []
-    const previous = mode === "diff" ? tracker.previous(session, entry.name, next?.url) : undefined
-    const viewed = observe({ mode, text, previous, consoleErrors: errors })
-    if (viewed.snapshot) tracker.record(session, viewed.snapshot)
-
-    const content: Tool.Content[] = [{ type: "text", text: viewed.text }]
-    for (const block of result.content) {
-      if (block.type !== "image") continue
-      const ext = block.mimeType.split("/")[1] || "png"
-      content.push({
-        type: "file",
-        uri: `data:${block.mimeType};base64,${block.data}`,
-        mime: block.mimeType,
-        name: `browser-${entry.name}.${ext}`,
+    if (result.meta?.needs?.length) {
+      const settled = yield* postAction({
+        needs: result.meta.needs,
+        result,
+        active,
+        entry,
+        input,
+        session,
+        grants,
+        allowSensitive,
+        observation: browser.observation,
+        backend: choice.backend,
+        context,
+        permission: deps.permission,
+        organization,
       })
+      if (settled.kind === "result") return settled.result
+      result = settled.result
     }
 
-    return {
-      content,
-      metadata: {
-        browser: {
-          backend: choice.backend,
-          observation: browser.observation,
-          ...(next?.url ? { url: next.url } : {}),
-          ...(next?.title ? { title: next.title } : {}),
-          ...(result.meta?.withheldFrames ? { withheldFrames: result.meta.withheldFrames } : {}),
-        },
-      },
-    } as Tool.Result
+    return yield* shaped({
+      result,
+      entry,
+      active,
+      session,
+      context,
+      permission: deps.permission,
+      observation: browser.observation,
+      backend: choice.backend,
+    })
   }).pipe(Effect.mapError((error) => failure(error)))
 }
 

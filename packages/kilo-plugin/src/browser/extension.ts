@@ -128,6 +128,33 @@ function reply(value: BrowserHub.Reply): CallResult {
 }
 
 /**
+ * A failure that asks for more than one grant: the items the browser named, or a refusal when one of them cannot be
+ * described (the caller then refuses rather than asking for half of it).
+ */
+function permissionError(error: BrowserHub.Failure): Error {
+  const items = needs(error.items)
+  if (items === undefined) return new Error(UNDESCRIBABLE)
+  if (error.kind === "moved" && !items.length) {
+    return new Error("The page changed before the step ran. Call the tool again.")
+  }
+  return new NeedsPermissionError(items, error.stepToken)
+}
+
+/** Every failure kind the transport reports, as the tool layer sees it. */
+const MAPPED: Record<string, (error: BrowserHub.Failure) => Error> = {
+  unavailable: (error) => new UnavailableError(HINT, UNAVAILABLE_MESSAGE, { effectsUncertain: error.uncertain }),
+  permission: permissionError,
+  moved: permissionError,
+  busy: () => new Error("The tab is busy with another browser action. Try again in a moment."),
+  taken: () => new Error("Another Kilo surface took over the tab. The action did not run; try again."),
+  stopped: () => new Error(STOPPED),
+  unsupported: () => new UnsupportedError(),
+  blocked: (error) => new Error(error.message || "The browser refused this page."),
+  mismatch: () =>
+    new IncompatibleError("The Kilo browser extension is out of date for this version of Kilo.", UPDATE_HINT),
+}
+
+/**
  * One hub failure as the tool layer sees it. Transport states never reach the model text: the unavailable message is
  * the fixed sentence, and its setup step and its uncertainty marker travel in the error for the UI and the metadata.
  */
@@ -141,35 +168,9 @@ export function map(error: unknown): Error {
     return error
   }
   if (!(error instanceof BrowserHub.Failure)) return error instanceof Error ? error : new Error(String(error))
-  switch (error.kind) {
-    case "unavailable":
-      return new UnavailableError(HINT, UNAVAILABLE_MESSAGE, { effectsUncertain: error.uncertain })
-    case "permission": {
-      const items = needs(error.items)
-      if (items === undefined) return new Error("The browser asked for permission the CLI cannot describe.")
-      return new NeedsPermissionError(items, error.stepToken)
-    }
-    case "moved": {
-      const items = needs(error.items)
-      if (items === undefined) return new Error("The browser asked for permission the CLI cannot describe.")
-      if (items.length) return new NeedsPermissionError(items, error.stepToken)
-      return new Error("The page changed before the step ran. Call the tool again.")
-    }
-    case "busy":
-      return new Error("The tab is busy with another browser action. Try again in a moment.")
-    case "taken":
-      return new Error("Another Kilo surface took over the tab. The action did not run; try again.")
-    case "stopped":
-      return new Error(STOPPED)
-    case "unsupported":
-      return new UnsupportedError()
-    case "blocked":
-      return new Error(error.message || "The browser refused this page.")
-    case "mismatch":
-      return new IncompatibleError("The Kilo browser extension is out of date for this version of Kilo.", UPDATE_HINT)
-    default:
-      return new Error(error.message || "The browser call failed.")
-  }
+  const mapped = MAPPED[error.kind]
+  if (mapped) return mapped(error)
+  return new Error(error.message || "The browser call failed.")
 }
 
 /** The backend over one hub connection. `port` is undefined when the host serves no hub at all. */
@@ -213,49 +214,85 @@ export class ExtensionBackend implements BrowserBackend {
     return BrowserContract.entries.filter((entry) => names.has(entry.name))
   }
 
+  /** The tool-session id, so a stop and a handle are always keyed the same way. */
+  private session(ctx: CallContext) {
+    return ctx.session ?? ""
+  }
+
+  /** A conversation the user stopped is refused before any open, so no session starts behind their back. */
+  private refuse(session: string) {
+    if (this.stopped.has(session)) throw new Error(STOPPED)
+  }
+
+  /** The tool names this extension serves, refusing a name it does not. */
+  private async accepts(name: string) {
+    const names = await this.names()
+    if (names !== undefined && !names.has(name)) throw new UnsupportedError()
+  }
+
+  /**
+   * The step token this call carries: the ones the caller approved, or the remembered one for exactly this repeat of
+   * the step (a granted download).
+   */
+  private sensitive(ctx: CallContext, session: string, name: string, args: Record<string, unknown>) {
+    if (ctx.sensitive !== undefined && ctx.sensitive.length) return [...ctx.sensitive]
+    const step = takeStep(session, name, args)
+    return step === undefined ? undefined : [step]
+  }
+
+  /** The call itself, with the arguments the extension needs and the grants this session approved. */
+  private async send(
+    port: BrowserHub.Port,
+    input: {
+      session: string
+      handle: string
+      name: string
+      args: Record<string, unknown>
+      /** The model's own arguments: a step token is remembered against those, whatever the extension is sent. */
+      key: Record<string, unknown>
+      ctx: CallContext
+    },
+  ) {
+    const sensitive = this.sensitive(input.ctx, input.session, input.name, input.key)
+    return port.call({
+      sessionHandle: input.handle,
+      name: input.name,
+      arguments: input.args,
+      authorized: grants(input.ctx.authorized ?? []),
+      ...(sensitive === undefined ? {} : { sensitive }),
+      ...(input.ctx.signal === undefined ? {} : { signal: input.ctx.signal }),
+    })
+  }
+
+  /** The action already ran and only its content was withheld: ask for the grants and never repeat the step. */
+  private withheld(error: BrowserHub.Failure): CallResult | undefined {
+    if (!(error instanceof BrowserHub.Failure) || error.kind !== "permission" || !error.afterAction) return undefined
+    const items = needs(error.items)
+    if (items === undefined) return undefined
+    const meta = finishMeta({ ...(error.meta ?? {}), ...(items.length ? { needs: items } : {}) }, error.stepToken)
+    return {
+      content: [
+        { type: "text", text: error.message || "The action ran; its content is withheld until the user approves." },
+      ],
+      isError: false,
+      ...(meta ? { meta } : {}),
+    }
+  }
+
   async callTool(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<CallResult> {
     const port = this.input.port
     if (!port) throw new UnavailableError(HINT)
-    // Refused before any open: a conversation the user stopped must not start a new browser session behind them.
-    if (this.stopped.has(ctx.session ?? "")) throw new Error(STOPPED)
+    const session = this.session(ctx)
+    this.refuse(session)
     try {
-      const names = await this.names()
-      if (names !== undefined && !names.has(name)) throw new UnsupportedError()
-      const session = ctx.session ?? ""
+      await this.accepts(name)
       const handle = await this.handle(port, session)
       const input = name === "browser_file_upload" ? await this.upload(port, args) : args
-      // A step token the user granted after an earlier action is spent here, on exactly this repeat of the step.
-      const approved = ctx.sensitive !== undefined && ctx.sensitive.length ? [...ctx.sensitive] : undefined
-      const step = approved === undefined ? takeStep(session, name, args) : undefined
-      const remembered = approved ?? (step === undefined ? undefined : [step])
-      const result = await port.call({
-        sessionHandle: handle,
-        name,
-        arguments: input,
-        authorized: grants(ctx.authorized ?? []),
-        ...(remembered === undefined ? {} : { sensitive: remembered }),
-        ...(ctx.signal === undefined ? {} : { signal: ctx.signal }),
-      })
-      return reply(result)
+      return reply(await this.send(port, { session, handle, name, args: input, key: args, ctx }))
     } catch (error) {
-      // The action already ran and only its content was withheld: ask for the grants and never repeat the step.
-      if (error instanceof BrowserHub.Failure && error.kind === "permission" && error.afterAction) {
-        const items = needs(error.items)
-        if (items === undefined) throw map(error)
-        const meta = finishMeta(
-          {
-            ...(error.meta ?? {}),
-            ...(items.length ? { needs: items } : {}),
-          },
-          error.stepToken,
-        )
-        return {
-          content: [
-            { type: "text", text: error.message || "The action ran; its content is withheld until the user approves." },
-          ],
-          isError: false,
-          ...(meta ? { meta } : {}),
-        }
+      if (error instanceof BrowserHub.Failure) {
+        const withheld = this.withheld(error)
+        if (withheld !== undefined) return withheld
       }
       throw map(error)
     }
