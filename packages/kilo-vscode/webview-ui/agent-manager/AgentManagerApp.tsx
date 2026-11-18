@@ -297,7 +297,8 @@ const AgentManagerContent: Component = () => {
     openTabs: localSessionIDs,
   })
   const rootDirectory = createMemo(() => directories.root(activeProjectId() ?? currentProjectId()))
-  const appSession = createAppSession({ vscode, directories, rootDirectory })
+  const [commandProject, setCommandProject] = createSignal<string>()
+  const appSession = createAppSession({ vscode, directories, rootDirectory, commandProject })
   const panel = appSession.panel
   // The open session is visible, so its directory loads a session list before the worktree card selection settles.
   createEffect(() => {
@@ -1901,6 +1902,7 @@ const AgentManagerContent: Component = () => {
             providers={appSession.providers()}
             agents={appSession.agents()}
             commands={appSession.commands()}
+            onProjectChange={setCommandProject}
           />
         </SpeechToTextStatusProvider>
       </V2Scope>
