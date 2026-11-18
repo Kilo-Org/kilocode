@@ -15,6 +15,8 @@ export type CallMeta = {
   withheldFrames?: readonly string[]
   /** Items the result needs after the action ran; the tool layer asks without repeating the action. */
   needs?: readonly Item[]
+  /** The browser's step token for a post-action need; remembered once the user grants, sent on the identical repeat. */
+  stepToken?: string
 }
 
 export type CallResult = { content: ContentBlock[]; isError: boolean; meta?: CallMeta }

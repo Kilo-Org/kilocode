@@ -25,6 +25,7 @@ import { modeFor, observe, snapshot, split, Tracker } from "./observation"
 import { BrowserPermission } from "./permission"
 import { key, persistStep, playwright } from "./playwright"
 import { resolve, type Settings } from "./settings"
+import { rememberStep } from "./steps"
 import { KiloGatewayAccounts } from "../gateway/accounts"
 
 type Item = BrowserPermission.Item
@@ -370,13 +371,16 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
           deps.permission,
         ),
       )
-      // A granted download is approved for the next identical call in this session; the action is never replayed.
+      // Granted: the step is approved for the next identical call in this session, so the model can repeat it. The
+      // action itself is never replayed by the CLI.
       if (Result.isSuccess(asked)) {
         for (const item of needs) {
           if (item.class === "sensitive" && item.reason?.startsWith("download:")) {
             persistStep(session, entry.name, input, item.origin)
           }
         }
+        // A browser that issues a step token (the extension) spends it on that repeat only.
+        if (result.meta?.stepToken !== undefined) rememberStep(session, entry.name, input, result.meta.stepToken)
       }
       // Granted: read the page again rather than return the withheld placeholder, but only for read needs - a
       // sensitive need (a stopped download) keeps the action's own notice. Reading has no side effect.
@@ -397,7 +401,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
           content: [
             {
               type: "text",
-              text: `${textOf(result)}\n\nApproved. Repeat the same step to receive the download; the action never runs twice by itself.`,
+              text: `${textOf(result)}\n\nApproved. Repeat the same step to receive the file.`,
             },
           ],
           metadata: { browser: { backend: choice.backend, observation: browser.observation } },

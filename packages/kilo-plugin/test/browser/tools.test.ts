@@ -9,6 +9,7 @@ import { UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { EXTENSION_HINT } from "../../src/browser/extension"
 import { BrowserHub } from "../../src/browser/hub"
+import { resetSteps } from "../../src/browser/steps"
 import { authorize, forced, KiloBrowserToolsPlugin, resetGrants } from "../../src/browser/tools"
 
 type Browser = NonNullable<KiloConfigPolicy.BrowserConfig>
@@ -16,8 +17,9 @@ type Browser = NonNullable<KiloConfigPolicy.BrowserConfig>
 const closers: (() => Promise<void>)[] = []
 afterEach(async () => {
   await Promise.all(closers.splice(0).map((close) => close()))
-  // The grant cache is module-level, so one test's grants must never answer the next test's ask.
+  // The grant and step caches are module-level, so one test's grants must never answer the next test's ask.
   resetGrants()
+  resetSteps()
 })
 
 /** A hub the tool layer can drive: it records the calls and answers with the scripted reply. */
@@ -128,13 +130,13 @@ async function boot(
     transforms.forEach((fn) => fn({ add: (tool) => added.push(tool) }))
     return added
   }
-  const call = (name: string, input: unknown = {}) =>
+  const call = (name: string, input: unknown = {}, session = "ses_browser") =>
     Effect.runPromise(
       Effect.result(
         tools()
           .find((tool) => tool.name === name)!
           .execute(input, {
-            sessionID: "ses_browser" as never,
+            sessionID: session as never,
             agent: "code" as never,
             messageID: "msg_browser" as never,
             id: "call_browser" as never,
@@ -504,6 +506,83 @@ describe("browser tools over the extension backend", () => {
     // The console read is a read: it asks for nothing beyond the tool's own key.
     expect(asserts.map((entry) => entry.action)).toEqual(["browser_click"])
     expect(hub.calls.map((call) => call.name)).toEqual(["browser_click", "browser_console_messages"])
+  })
+
+  test("a granted post-action step is spent on the identical repeat only", async () => {
+    const { asserts, service } = recorder()
+    let clicks = 0
+    const downloads: (string | undefined)[] = []
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name !== "browser_click") return Promise.resolve({ content: [{ type: "text", text: "{}" }] })
+        clicks += 1
+        downloads.push(input.sensitive?.[0])
+        if (clicks === 1) {
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "A download started (report.pdf) and was stopped: it needs the user's permission.",
+              items: [{ class: "sensitive", origin: "https://example.com", reason: "download: report.pdf" }],
+              stepToken: "tok-1",
+              afterAction: true,
+            }),
+          )
+        }
+        return Promise.resolve({ content: [{ type: "text", text: "- file report.pdf" }] })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+
+    // 1. The click runs once; the result says the download needs approval.
+    const first = await host.call("browser_click", { target: "e1" })
+    expect(first._tag).toBe("Success")
+    expect(clicks).toBe(1)
+    expect(JSON.stringify(first._tag === "Success" ? first.success.content : "")).toContain(
+      "Approved. Repeat the same step to receive the file.",
+    )
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser_sensitive"])
+
+    // 2. The grant above triggered no call of its own.
+    expect(clicks).toBe(1)
+
+    // 3. The model repeats the step: it carries the extension's token.
+    await host.call("browser_click", { target: "e1" })
+    expect(clicks).toBe(2)
+    expect(downloads[1]).toBe("tok-1")
+
+    // 4. A later repeat without a fresh grant carries no token.
+    await host.call("browser_click", { target: "e1" })
+    expect(clicks).toBe(3)
+    expect(downloads[2]).toBeUndefined()
+  })
+
+  test("another session's repeat never carries the token", async () => {
+    const { service } = recorder()
+    let clicks = 0
+    const seen: (string | undefined)[] = []
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name !== "browser_click") return Promise.resolve({ content: [{ type: "text", text: "{}" }] })
+        clicks += 1
+        seen.push(input.sensitive?.[0])
+        if (clicks === 1) {
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "A download started (report.pdf) and was stopped: it needs the user's permission.",
+              items: [{ class: "sensitive", origin: "https://example.com", reason: "download: report.pdf" }],
+              stepToken: "tok-1",
+              afterAction: true,
+            }),
+          )
+        }
+        return Promise.resolve({ content: [{ type: "text", text: "- file report.pdf" }] })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    await host.call("browser_click", { target: "e1" })
+    await host.call("browser_click", { target: "e1" }, "ses_other")
+    expect(seen[1]).toBeUndefined()
   })
 
   test("an organization that allows Playwright only cannot select the extension", () => {

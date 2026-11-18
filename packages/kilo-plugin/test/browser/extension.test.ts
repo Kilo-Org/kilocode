@@ -12,6 +12,7 @@ import {
 import { BrowserContract } from "../../src/browser/contract"
 import { backend, EXTENSION_HINT, grants, map, needs, UPDATE_HINT } from "../../src/browser/extension"
 import { BrowserHub } from "../../src/browser/hub"
+import { rememberStep, resetSteps, takeStep } from "../../src/browser/steps"
 
 type Call = {
   sessionHandle: string
@@ -264,6 +265,7 @@ describe("extension backend", () => {
             kind: "permission",
             message: "The page moved to https://example.com; its content is withheld until read is granted.",
             items: [{ class: "read", origin: "https://example.com" }],
+            stepToken: "tok-9",
             afterAction: true,
             meta: { url: "https://example.com", withheldFrames: ["https://frame.example.com"] },
           }),
@@ -279,6 +281,8 @@ describe("extension backend", () => {
     expect(result.meta?.needs).toEqual([{ class: "read", origin: "https://example.com" }])
     expect(result.meta?.withheldFrames).toEqual(["https://frame.example.com"])
     expect(result.meta?.url).toBe("https://example.com")
+    // The step token travels with the pending need; the tool layer remembers it once the user grants.
+    expect(result.meta?.stepToken).toBe("tok-9")
   })
 
   test("a need the CLI cannot read is refused instead of half-asked", async () => {
@@ -450,6 +454,23 @@ describe("extension backend", () => {
 })
 
 describe("extension wire helpers", () => {
+  test("a remembered step token is spent once, on its own step, and expires", () => {
+    resetSteps()
+    rememberStep("ses_a", "browser_click", { target: "e1" }, "tok")
+    expect(takeStep("ses_a", "browser_click", { target: "e1" })).toBe("tok")
+    // The next identical call has no token: the browser consumed it.
+    expect(takeStep("ses_a", "browser_click", { target: "e1" })).toBeUndefined()
+
+    rememberStep("ses_a", "browser_click", { target: "e1" }, "tok")
+    expect(takeStep("ses_b", "browser_click", { target: "e1" })).toBeUndefined()
+    expect(takeStep("ses_a", "browser_type", { target: "e1" })).toBeUndefined()
+    expect(takeStep("ses_a", "browser_click", { target: "e2" })).toBeUndefined()
+    expect(takeStep("ses_a", "browser_click", { target: "e1" })).toBe("tok")
+
+    rememberStep("ses_a", "browser_click", { target: "e1" }, "tok", -1)
+    expect(takeStep("ses_a", "browser_click", { target: "e1" })).toBeUndefined()
+  })
+
   test("grants drop what the CLI cannot parse", () => {
     expect(grants(["read:https://example.com", "bogus", "act:not a url"])).toEqual([
       { class: "read", origin: "https://example.com" },

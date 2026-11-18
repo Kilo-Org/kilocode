@@ -16,6 +16,7 @@ import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
 import { BrowserHub } from "./hub"
 import { BrowserPermission } from "./permission"
+import { takeStep } from "./steps"
 
 /** The protocol version this CLI speaks. An extension that does not list it cannot be driven safely. */
 export const PROTOCOL = 1
@@ -93,7 +94,7 @@ export function needs(value: unknown): BrowserPermission.Item[] | undefined {
  * The result meta as the tool layer reads it, or undefined when the extension asked for a grant the CLI cannot
  * describe: the call then fails closed instead of answering with content it could not have granted.
  */
-function finishMeta(meta: BrowserHub.Meta): CallResult["meta"] | undefined {
+function finishMeta(meta: BrowserHub.Meta, stepToken?: string): CallResult["meta"] | undefined {
   const parsed = meta.needs === undefined ? undefined : needs(meta.needs)
   if (meta.needs !== undefined && parsed === undefined) return undefined
   return {
@@ -101,6 +102,7 @@ function finishMeta(meta: BrowserHub.Meta): CallResult["meta"] | undefined {
     ...(meta.origin === undefined ? {} : { origin: meta.origin }),
     ...(meta.withheldFrames === undefined ? {} : { withheldFrames: meta.withheldFrames }),
     ...(parsed === undefined || parsed.length === 0 ? {} : { needs: parsed }),
+    ...(stepToken === undefined ? {} : { stepToken }),
   }
 }
 
@@ -200,14 +202,19 @@ export class ExtensionBackend implements BrowserBackend {
     try {
       const names = await this.names()
       if (names !== undefined && !names.has(name)) throw new UnsupportedError()
-      const handle = await this.handle(port, ctx.session ?? "")
+      const session = ctx.session ?? ""
+      const handle = await this.handle(port, session)
       const input = name === "browser_file_upload" ? await this.upload(port, args) : args
+      // A step token the user granted after an earlier action is spent here, on exactly this repeat of the step.
+      const approved = ctx.sensitive !== undefined && ctx.sensitive.length ? [...ctx.sensitive] : undefined
+      const step = approved === undefined ? takeStep(session, name, args) : undefined
+      const remembered = approved ?? (step === undefined ? undefined : [step])
       const result = await port.call({
         sessionHandle: handle,
         name,
         arguments: input,
         authorized: grants(ctx.authorized ?? []),
-        ...(ctx.sensitive === undefined || !ctx.sensitive.length ? {} : { sensitive: [...ctx.sensitive] }),
+        ...(remembered === undefined ? {} : { sensitive: remembered }),
         ...(ctx.signal === undefined ? {} : { signal: ctx.signal }),
       })
       return reply(result)
@@ -216,10 +223,13 @@ export class ExtensionBackend implements BrowserBackend {
       if (error instanceof BrowserHub.Failure && error.kind === "permission" && error.afterAction) {
         const items = needs(error.items)
         if (items === undefined) throw map(error)
-        const meta = finishMeta({
-          ...(error.meta ?? {}),
-          ...(items.length ? { needs: items } : {}),
-        })
+        const meta = finishMeta(
+          {
+            ...(error.meta ?? {}),
+            ...(items.length ? { needs: items } : {}),
+          },
+          error.stepToken,
+        )
         return {
           content: [
             { type: "text", text: error.message || "The action ran; its content is withheld until the user approves." },
