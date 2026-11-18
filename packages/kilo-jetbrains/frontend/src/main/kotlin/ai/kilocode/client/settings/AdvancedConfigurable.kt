@@ -46,8 +46,8 @@ class AdvancedConfigurable(
         }
         cs.launch {
             app.state.collect { state ->
-                val value = state.config?.telemetry ?: true
-                withContext(edt) { panel.refreshTelemetry(value) }
+                val cfg = state.config ?: return@collect
+                withContext(edt) { panel.refreshTelemetry(cfg.telemetry ?: true) }
             }
         }
         return panel
@@ -71,8 +71,8 @@ class AdvancedConfigurable(
         // this configurable's scope before a coroutine launched here could reach the RPC.
         if (indexWorktreesChanged) app.setIndexWorktreesAsync(value.indexWorktrees)
         if (telemetryChanged) {
-            app.setTelemetryLevelAsync(value.telemetry) { state ->
-                if (state?.config?.telemetry != value.telemetry) {
+            app.setTelemetryLevelAsync(value.telemetry) { saved ->
+                if (!saved) {
                     ApplicationManager.getApplication().invokeLater {
                         KiloNotifications.error(
                             KiloBundle.message("settings.advanced.telemetry.failed.title"),

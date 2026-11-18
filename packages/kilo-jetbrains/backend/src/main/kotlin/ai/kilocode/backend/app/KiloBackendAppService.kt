@@ -316,18 +316,19 @@ class KiloBackendAppService private constructor(
     }
 
     suspend fun setTelemetryLevel(enabled: Boolean): KiloAppState {
+        val connected = connection.state.value as? ConnectionState.Connected ?: throw IllegalStateException("Not connected")
         val http = connection.apiClient ?: throw IllegalStateException("Not connected")
-        val current = _appState.value as? KiloAppState.Ready ?: throw IllegalStateException("Kilo backend is not ready")
-        val connected = connection.state.value as? ConnectionState.Connected
-        KiloBackendTelemetry().setLevel(http, port, enabled)
+        requireReady()
+        KiloBackendTelemetry().setLevel(http, connected.port, enabled)
         log.info("Telemetry level saved: enabled=$enabled")
-        val cfg = fetchConfig().value?.copy(telemetry = enabled)
         val state = _appState.value
-        if (cfg != null && state is KiloAppState.Ready && state.data === current.data && connection.state.value == connected) {
+        // The POST already persisted consent. Keep any other config values refreshed during it.
+        if (state is KiloAppState.Ready && connection.state.value == connected) {
+            val cfg = state.data.config.copy(telemetry = enabled)
             config = cfg
-            setAppReady(current.data.copy(config = cfg))
+            setAppReady(state.data.copy(config = cfg))
         }
-        return (_appState.value as? KiloAppState.Ready) ?: current
+        return _appState.value
     }
 
     internal suspend fun resumeAfterMigration() {

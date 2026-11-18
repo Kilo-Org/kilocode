@@ -278,6 +278,22 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         assertFalse(edt { cfg.isModified })
     }
 
+    fun `test reconnect keeps the opt-out until config is available`() {
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = false))
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.LOADING)
+        ui.drain()
+
+        assertFalse(edt { telemetryToggle(root).isSelected })
+        assertFalse(edt { cfg.isModified })
+
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto())
+        assertTrue(ui.pumpUntil { edt { telemetryToggle(root).isSelected } })
+        assertFalse(edt { cfg.isModified })
+    }
+
     fun `test telemetry refresh does not overwrite an in-flight write`() {
         val gate = CompletableDeferred<Unit>()
         appRpc.telemetryLevelGate = gate

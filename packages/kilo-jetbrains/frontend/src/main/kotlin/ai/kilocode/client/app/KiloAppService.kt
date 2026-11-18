@@ -337,15 +337,15 @@ class KiloAppService internal constructor(
         null
     }
 
-    suspend fun setTelemetryLevel(enabled: Boolean): KiloAppStateDto? = try {
+    private suspend fun setTelemetryLevel(enabled: Boolean): Boolean = try {
         val next = call { setTelemetryLevel(enabled) }
         _state.value = next
-        next
+        true
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         LOG.warn("telemetry level update failed", e)
-        null
+        false
     }
 
     fun updateConfigAsync(
@@ -415,17 +415,18 @@ class KiloAppService internal constructor(
         false
     }
 
-    /**
-     * Persist the worktree-indexing setting and reindex every open project. Runs on the app-lifetime
-     * [scope] so the write and the reindex it triggers survive the settings dialog closing on OK.
-     */
+    /** Persist telemetry consent through the CLI on the app scope, even if settings closes. */
     fun setTelemetryLevelAsync(
         enabled: Boolean,
-        done: (KiloAppStateDto?) -> Unit,
+        done: (Boolean) -> Unit,
     ): Job = cs.launch {
         done(setTelemetryLevel(enabled))
     }
 
+    /**
+     * Persist the worktree-indexing setting and reindex every open project. Runs on the app-lifetime
+     * [scope] so the write and the reindex it triggers survive the settings dialog closing on OK.
+     */
     fun setIndexWorktreesAsync(value: Boolean): Job = cs.launch {
         try {
             call { setIndexWorktrees(value) }

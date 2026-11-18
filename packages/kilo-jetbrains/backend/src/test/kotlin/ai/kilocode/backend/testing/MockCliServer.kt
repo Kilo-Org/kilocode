@@ -62,6 +62,7 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastAuthDeletePath: String? = null
     @Volatile var lastConfigPatchBody: String? = null
     @Volatile var lastTelemetryLevelBody: String? = null
+    @Volatile var telemetryGate: CountDownLatch? = null
     @Volatile var lastWorkspaceConfigPatchPath: String? = null
     @Volatile var lastWorkspaceConfigPatchBody: String? = null
     @Volatile var lastOrganizationSetBody: String? = null
@@ -473,7 +474,10 @@ class MockCliServer : AutoCloseable {
                 }
                 bare == "/telemetry/level" && method == "POST" -> {
                     lastTelemetryLevelBody = body
-                    respond(output, 200, """{"enabled":${body.contains("true")}}""")
+                    telemetryGate?.await()
+                    val enabled = JSON.parseToJsonElement(body).jsonObject.getValue("enabled")
+                    config = mergeConfig(config, """{"experimental":{"openTelemetry":$enabled}}""")
+                    respond(output, 200, body)
                 }
                 bare == "/global/dispose" && method == "POST" -> respond(output, disposeStatus, "true")
                 path.startsWith("/config/warnings") -> respond(output, warningsStatus, warnings)
