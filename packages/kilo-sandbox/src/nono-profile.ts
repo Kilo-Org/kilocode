@@ -1,7 +1,7 @@
 import os from "node:os"
 import path from "node:path"
 import { parseDestination } from "./destination"
-import type { Credential } from "./nono-credentials"
+import { aliases, type Credential } from "./nono-credentials"
 import { matches } from "./path"
 import type { PathRule, Profile } from "./profile"
 
@@ -87,7 +87,8 @@ const secrets = [
 ]
 
 function directories() {
-  const home = process.env.OPENCODE_HOME_DIR || os.homedir()
+  // Mirrors Global.Path: the data root uses the real home and XDG_DATA_HOME; only config honours its override.
+  const home = os.homedir()
   const app = process.env.OPENCODE_APP_DIR_NAME || "opencode"
   return {
     data: path.join(process.env.XDG_DATA_HOME || path.join(home, ".local", "share"), app),
@@ -123,17 +124,15 @@ function access(profile: Profile, reads: ReadonlyArray<PathRule>, cwd: string | 
 
 let portsWarned = false
 
-/** nono's allowlist matches hosts, not ports, and Kilo's policy matches both. Say so once, loudly. */
+/**
+ * nono's allowlist matches hosts, not ports, and Kilo's proxy authorizes the exact host:port, so every entry is
+ * widened to all ports on its host. That includes the usual :443 entry, so warn for any configured host, once.
+ */
 function warnPorts(hosts: ReadonlyArray<string>) {
-  if (portsWarned) return
-  const widened = hosts.filter((host) => {
-    const port = parseDestination(host).port
-    return port !== 443 && port !== 80
-  })
-  if (widened.length === 0) return
+  if (portsWarned || hosts.length === 0) return
   portsWarned = true
   process.stderr.write(
-    `kilo-sandbox: nono ignores allowlist ports, so ${widened.join(", ")} permit every port on those hosts\n`,
+    `kilo-sandbox: nono matches hosts, not ports, so ${hosts.join(", ")} permit every port on those hosts\n`,
   )
 }
 
@@ -194,7 +193,16 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
       : [path.join(paths.data, "kilo2*.db*"), path.join(paths.data, "opencode*.db*"), ...stores]),
     ...(inputs.denies ?? []),
   ]
-  const deniedEnvironment = [...new Set([...profile.environment.deny, ...xdg, ...(inputs.secret ?? [])])]
+  const provided = inputs.credentials ?? []
+  const active = new Set(provided.map((route) => route.envVar))
+  const deniedEnvironment = [
+    ...new Set([
+      ...profile.environment.deny,
+      ...xdg,
+      ...provided.flatMap((route) => aliases(route.envVar).filter((alias) => !active.has(alias))),
+      ...(inputs.secret ?? []),
+    ]),
+  ]
   const set = { ...(inputs.restore ?? {}), ...profile.environment.set }
   return {
     extends: "default",

@@ -245,17 +245,49 @@ describe.skipIf(process.platform === "win32")("nono profile generation", () => {
     ).toThrow()
   })
 
-  test("treats an absent credential file as no routes", () => {
-    expect(load(path.join(os.tmpdir(), `kilo-missing-${process.pid}-${Date.now()}.json`))).toEqual([])
+  test("denies known aliases of a routed credential", () => {
+    const result = generate(profile({ mode: "proxy", allowedHosts: ["api.github.com:443"] }), {
+      paths,
+      credentials: routes,
+    })
+    expect(result.environment?.deny_vars).toEqual(expect.arrayContaining(["GH_TOKEN", "GITHUB_OAUTH_TOKEN"]))
+    expect(result.environment?.deny_vars).not.toContain("GITHUB_TOKEN")
   })
 
-  test("rejects a malformed credential file", () => {
-    const file = path.join(os.tmpdir(), `kilo-malformed-${process.pid}-${Date.now()}.json`)
+  test("denies the canonical name when a route uses an alias", () => {
+    const aliased = parse({
+      credentials: [{ name: "github", source: "env://GH_TOKEN", upstream: "https://example.com" }],
+    })
+    const result = generate(profile({ mode: "proxy", allowedHosts: ["api.github.com:443"] }), {
+      paths,
+      credentials: aliased,
+    })
+    expect(result.environment?.deny_vars).toEqual(expect.arrayContaining(["GITHUB_TOKEN", "GITHUB_OAUTH_TOKEN"]))
+    expect(result.environment?.deny_vars).not.toContain("GH_TOKEN")
+  })
+})
+
+// Reading a credential file is platform independent, so these stay outside the POSIX-only suite above.
+describe("nono credential file", () => {
+  test("treats an absent file as no routes", () => {
+    expect(load(path.join(os.tmpdir(), `kilo-absent-${process.pid}-${Date.now()}.json`))).toEqual([])
+  })
+
+  test("rejects malformed JSON", () => {
+    const file = path.join(os.tmpdir(), `kilo-invalid-${process.pid}-${Date.now()}.json`)
     writeFileSync(file, "{")
     try {
       expect(() => load(file)).toThrow()
     } finally {
       unlinkSync(file)
     }
+  })
+
+  test("rejects a phantom longer than nono accepts", () => {
+    const credential = (shaped: string) => ({
+      credentials: [{ name: "one", source: "env://ONE", upstream: "https://example.com", phantom: shaped }],
+    })
+    expect(() => parse(credential(`${"a".repeat(65)}{}`))).toThrow()
+    expect(parse(credential(`${"a".repeat(64)}{}`))).toHaveLength(1)
   })
 })

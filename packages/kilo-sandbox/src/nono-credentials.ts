@@ -16,17 +16,21 @@ const variable = /^[A-Z_][A-Z0-9_]*$/
 const header = /^[A-Za-z0-9-]+$/
 const phantom = /^[A-Za-z0-9._~-]+\{\}[A-Za-z0-9._~-]*$/
 
-/** Names Kilo knows hold the same secret as the configured variable. */
-const known: Record<string, ReadonlyArray<string>> = {
-  GITHUB_TOKEN: ["GH_TOKEN", "GITHUB_OAUTH_TOKEN"],
-  GITLAB_TOKEN: ["GL_TOKEN"],
-  ANTHROPIC_API_KEY: ["ANTHROPIC_KEY"],
-  OPENAI_API_KEY: ["OPENAI_KEY"],
-  NPM_TOKEN: ["NPM_AUTH_TOKEN"],
-}
+/** Groups of names Kilo knows hold the same secret. Denial must hold whichever of them a route uses. */
+const same: ReadonlyArray<ReadonlyArray<string>> = [
+  ["GITHUB_TOKEN", "GH_TOKEN", "GITHUB_OAUTH_TOKEN"],
+  ["GITLAB_TOKEN", "GL_TOKEN"],
+  ["ANTHROPIC_API_KEY", "ANTHROPIC_KEY"],
+  ["OPENAI_API_KEY", "OPENAI_KEY"],
+  ["NPM_TOKEN", "NPM_AUTH_TOKEN"],
+]
+
+const known = new Map(
+  same.flatMap((group) => group.map((name) => [name, group.filter((other) => other !== name)] as const)),
+)
 
 export function aliases(variable_: string) {
-  return known[variable_] ?? []
+  return known.get(variable_) ?? []
 }
 
 function invalid(message: string) {
@@ -67,8 +71,14 @@ function injection(value: Record<string, unknown>) {
   const format = text(value, "format")
   if (format !== undefined && format.split("{}").length !== 2) throw invalid(`format must contain exactly one {}`)
   const shaped = text(value, "phantom")
-  if (shaped !== undefined && (!phantom.test(shaped) || shaped.includes("nono_"))) {
-    throw invalid(`phantom must be a non-empty prefix, one {}, and must not contain nono_`)
+  if (shaped !== undefined) {
+    if (!phantom.test(shaped) || shaped.includes("nono_")) {
+      throw invalid(`phantom must be a non-empty prefix, one {}, and must not contain nono_`)
+    }
+    // nono rejects a phantom whose prefix and suffix exceed 64 bytes together, after the {} placeholder.
+    if (Buffer.byteLength(shaped.replace("{}", "")) > 64) {
+      throw invalid("phantom prefix and suffix must total at most 64 bytes")
+    }
   }
   const injected = text(value, "header")
   if (injected !== undefined && !header.test(injected))
