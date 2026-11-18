@@ -219,7 +219,7 @@ function consoleErrors(
         try: () =>
           permission.value.allows({
             action: "browser_console_messages",
-            resources: [],
+            resources: ["*"],
             ...Permission.invocation(context),
           } as never),
         catch: () => Effect.succeed(false),
@@ -367,12 +367,11 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
           deps.permission,
         ),
       )
-      // Granted: read the page again rather than return the withheld placeholder, but only for read needs - a
-      // sensitive need (a stopped download) keeps the action's own notice. Reading has no side effect.
+      // A granted download is approved for the next identical call in this session; the action is never replayed.
       if (Result.isSuccess(asked)) {
         for (const item of needs) {
           if (item.class === "sensitive" && item.reason?.startsWith("download:")) {
-            persistStep(entry.name, input, item.origin)
+            persistStep(session, entry.name, input, item.origin)
           }
         }
       }

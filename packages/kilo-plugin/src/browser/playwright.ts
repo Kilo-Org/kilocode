@@ -78,15 +78,15 @@ function blocks(content: unknown): ContentBlock[] {
  * Sensitive step tokens. A token binds the tool, its arguments and the origin, and expires after a minute, so an
  * approval can only replay the exact step it was asked for.
  */
-const STEPS = new Map<string, { hash: string; expires: number; origin: string }>()
+const STEPS = new Map<string, { hash: string; expires: number; origin: string; session: string }>()
 const STEP_TTL = 60_000
 const STEP_LIMIT = 200
 
-function stepHash(tool: string, args: Record<string, unknown>, origin: string) {
-  return createHash("sha256").update(JSON.stringify({ tool, args, origin })).digest("hex")
+function stepHash(session: string, tool: string, args: Record<string, unknown>, origin: string) {
+  return createHash("sha256").update(JSON.stringify({ session, tool, args, origin })).digest("hex")
 }
 
-function approveStep(tool: string, args: Record<string, unknown>, origin: string) {
+function approveStep(session: string, tool: string, args: Record<string, unknown>, origin: string) {
   const now = Date.now()
   for (const [token, step] of STEPS) if (step.expires < now) STEPS.delete(token)
   while (STEPS.size >= STEP_LIMIT) {
@@ -95,12 +95,18 @@ function approveStep(tool: string, args: Record<string, unknown>, origin: string
     STEPS.delete(oldest)
   }
   const token = randomUUID()
-  STEPS.set(token, { hash: stepHash(tool, args, origin), expires: now + STEP_TTL, origin })
+  STEPS.set(token, { hash: stepHash(session, tool, args, origin), expires: now + STEP_TTL, origin, session })
   return token
 }
 
-function stepApproved(tokens: readonly string[], tool: string, args: Record<string, unknown>, origin: string) {
-  const hash = stepHash(tool, args, origin)
+function stepApproved(
+  session: string,
+  tokens: readonly string[],
+  tool: string,
+  args: Record<string, unknown>,
+  origin: string,
+) {
+  const hash = stepHash(session, tool, args, origin)
   return tokens.some((token) => {
     const step = STEPS.get(token)
     if (!step) return false
@@ -116,13 +122,13 @@ function stepApproved(tokens: readonly string[], tool: string, args: Record<stri
  * Approve a step without handing its token to anyone: the next identical call finds the approval by its own tool,
  * arguments and site. Used for a download the user approved after the action had already run.
  */
-export function persistStep(tool: string, args: Record<string, unknown>, origin: string) {
-  approveStep(tool, args, origin)
+export function persistStep(session: string, tool: string, args: Record<string, unknown>, origin: string) {
+  approveStep(session, tool, args, origin)
 }
 
 /** True when a step for exactly this tool, arguments and site was approved recently, whatever token came with it. */
-export function stepPersisted(tool: string, args: Record<string, unknown>, origin: string) {
-  const hash = stepHash(tool, args, origin)
+export function stepPersisted(session: string, tool: string, args: Record<string, unknown>, origin: string) {
+  const hash = stepHash(session, tool, args, origin)
   for (const step of STEPS.values()) {
     if (step.expires < Date.now()) continue
     if (step.hash === hash) return true
@@ -339,9 +345,64 @@ async function connect(settings: Settings): Promise<Connection> {
   }
 }
 
+/** A snapshot ref, the only target form the aria-ref engine resolves. */
+const TARGET_REF = /^(f\d+)?e\d+$/
+
+/** Page probe: any frame holds a field the sensitive gate protects. */
+async function sensitiveFields(page: Page): Promise<boolean> {
+  for (const frame of page.frames()) {
+    const found = await frame
+      .evaluate(() => {
+        const inputs = Array.from(document.querySelectorAll("input,select,textarea"))
+        return inputs.some((el) => {
+          const type = (el.getAttribute("type") ?? "").toLowerCase()
+          const autocomplete = (el.getAttribute("autocomplete") ?? "").toLowerCase()
+          const name = (el.getAttribute("name") ?? "").toLowerCase()
+          return (
+            type === "password" ||
+            autocomplete.includes("one-time-code") ||
+            autocomplete.startsWith("cc-") ||
+            name === "cardnumber"
+          )
+        })
+      })
+      .catch(() => false)
+    if (found === true) return true
+  }
+  return false
+}
+
+/** Page probe: the focused control is a sensitive field or sits in a form that holds card fields. */
+async function sensitiveFocus(page: Page): Promise<boolean> {
+  for (const frame of page.frames()) {
+    const found = await frame
+      .evaluate(() => {
+        const el = document.activeElement
+        if (!el || !(el instanceof Element)) return false
+        const check = (node: Element) => {
+          const type = (node.getAttribute("type") ?? "").toLowerCase()
+          const autocomplete = (node.getAttribute("autocomplete") ?? "").toLowerCase()
+          const name = (node.getAttribute("name") ?? "").toLowerCase()
+          return (
+            type === "password" ||
+            autocomplete.includes("one-time-code") ||
+            autocomplete.startsWith("cc-") ||
+            name === "cardnumber"
+          )
+        }
+        if (check(el)) return true
+        const form = el.closest("form")
+        return !!form && Array.from(form.querySelectorAll("input")).some((input) => check(input))
+      })
+      .catch(() => false)
+    if (found === true) return true
+  }
+  return false
+}
+
 /** The MCP's screenshot file name, `page-<timestamp>.png`. */
 function autoShotName() {
-  return `page-${new Date().toISOString().replace(/[:.]/g, "-")}.png`
+  return `page-${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 6)}.png`
 }
 
 /** Frames whose origin has no `read` grant, outermost first; a withheld frame hides its subtree. */
@@ -675,32 +736,40 @@ class PlaywrightBackend implements BrowserBackend {
   }
 
   /** The frame a `[ref=…]` snapshot ref lives in, resolved through Playwright's aria-ref engine. */
-  private async frameOf(page: Page, ref: string): Promise<Frame | undefined> {
-    const handle = await page
-      .locator(`aria-ref=${ref}`)
-      .elementHandle({ timeout: 2_000 })
-      .catch(() => null)
-    if (!handle) return undefined
-    // An iframe ref points at the frame element in its parent; the grant belongs to the document it contains, so
-    // prefer the child frame when there is one.
+  /**
+   * The element a `target` names, resolved the way the MCP resolves it: a snapshot ref (`e12`, `f2e7`) through the
+   * aria-ref engine, anything else as a page selector, where the MCP takes the first match. The gate needs exactly
+   * one element, so an ambiguous or missing target stays unresolved and is treated as sensitive below.
+   */
+  private async elementOf(page: Page, target: string) {
+    const locator = TARGET_REF.test(target) ? page.locator(`aria-ref=${target}`) : page.locator(target)
+    const count = await locator.count().catch(() => 0)
+    if (count !== 1) return { state: "unresolved" as const }
+    const handle = await locator.elementHandle({ timeout: 2_000 }).catch(() => null)
+    if (!handle) return { state: "unresolved" as const }
+    // An iframe target points at the frame element in its parent; the grant belongs to the document it contains.
     const child = await handle.contentFrame().catch(() => null)
     const frame = child ?? (await handle.ownerFrame())
-    handle.dispose()
-    return frame ?? undefined
+    return { state: "resolved" as const, handle, frame: frame ?? undefined }
+  }
+
+  private async frameOf(page: Page, ref: string): Promise<Frame | undefined> {
+    const element = await this.elementOf(page, ref)
+    if (element.state !== "resolved") return undefined
+    element.handle.dispose()
+    return element.frame
   }
 
   private async inspect(page: Page, ref: string, kind: "fill" | "click"): Promise<string> {
-    const handle = await page
-      .locator(`aria-ref=${ref}`)
-      .elementHandle({ timeout: 2_000 })
-      .catch(() => null)
-    if (!handle) return ""
-    const reason = await handle.evaluate(inspectElement, kind).catch(() => "")
-    handle.dispose()
-    return typeof reason === "string" ? reason : ""
+    const element = await this.elementOf(page, ref)
+    // A target the backend cannot resolve to one element is refused, not skipped: it may be the field the gate wants.
+    if (element.state !== "resolved") return "unresolved target"
+    const reason = await element.handle.evaluate(inspectElement, kind).catch(() => "")
+    element.handle.dispose()
+    return typeof reason === "string" && reason !== "" ? reason : ""
   }
 
-  private async sensitive(name: string, args: Record<string, unknown>, page: Page): Promise<string[]> {
+  private async sensitive(session: string, name: string, args: Record<string, unknown>, page: Page): Promise<string[]> {
     const reasons: string[] = []
     if (oauthConsent(page.url())) reasons.push("OAuth sign-in page")
     if (name === "browser_file_upload" || name === "browser_drop") reasons.push("file upload")
@@ -719,6 +788,13 @@ class PlaywrightBackend implements BrowserBackend {
         const reason = await this.inspect(page, ref, kind)
         if (reason) reasons.push(reason)
       }
+    }
+    // A script and a key press can reach what the element-level check inspects, so they are classified on the page.
+    if (name === "browser_evaluate" || name === "browser_run_code_unsafe") {
+      if (await sensitiveFields(page)) reasons.push("a page script can reach a sensitive field")
+    }
+    if (name === "browser_press_key") {
+      if (await sensitiveFocus(page)) reasons.push("the focused control is a sensitive field")
     }
     return [...new Set(reasons)]
   }
@@ -840,15 +916,15 @@ class PlaywrightBackend implements BrowserBackend {
     // Sensitive steps are classified on the live element, then approved one step at a time. A document without an
     // origin (`about:blank`, a `data:` page) still needs its step approved, keyed by the site it lives in.
     if (page) {
-      const reasons = await this.sensitive(name, args, page)
+      const reasons = await this.sensitive(session, name, args, page)
       const site = BrowserPermission.site(page.url())
       if (reasons.length && !site) {
         throw new Error("A sensitive step was refused: the page has no URL to bind the approval to.")
       }
-      if (reasons.length && site && !stepApproved(ctx.sensitive ?? [], name, args, site)) {
+      if (reasons.length && site && !stepApproved(session, ctx.sensitive ?? [], name, args, site)) {
         throw new NeedsPermissionError(
           [{ class: "sensitive", origin: site, reason: reasons.join("; ") }],
-          approveStep(name, args, site),
+          approveStep(session, name, args, site),
         )
       }
     }
@@ -884,7 +960,6 @@ class PlaywrightBackend implements BrowserBackend {
     // the file from the filtered text instead, so the name is removed from the arguments the MCP sees.
     const file = shot ? undefined : outputFile(name, args)
     if (file) callArgs = file.args
-    if (save) written.push(save)
     // What the call meant to act on, so a landing elsewhere is visible after it ran.
     const planned = plannedOrigin(name, args, page && BrowserPermission.origin(page.url()))
     const downloads: string[] = []
@@ -895,8 +970,8 @@ class PlaywrightBackend implements BrowserBackend {
       const approved =
         site !== undefined &&
         (ctx.allowSensitive === true ||
-          stepApproved(ctx.sensitive ?? [], name, args, site) ||
-          stepPersisted(name, args, site))
+          stepApproved(session, ctx.sensitive ?? [], name, args, site) ||
+          stepPersisted(session, name, args, site))
       if (approved) {
         kept.push(download.suggestedFilename())
         return
@@ -1029,7 +1104,10 @@ class PlaywrightBackend implements BrowserBackend {
         }
       }
       // The masked image is persisted as the answer, and the result links to that file.
-      if (save && images[0]) await writeConfined(save, Buffer.from(images[0].data, "base64"))
+      if (save && images[0]) {
+        await writeConfined(save, Buffer.from(images[0].data, "base64"))
+        written.push(save)
+      }
       const link = save ? `- [Screenshot](${save})` : undefined
       return {
         content: [{ type: "text", text: [withoutScreenshotLink(viewed), link].filter(Boolean).join("\n") }, ...images],
@@ -1048,6 +1126,7 @@ class PlaywrightBackend implements BrowserBackend {
     }
     if (save && images[0]) {
       await writeConfined(save, Buffer.from(images[0].data, "base64"))
+      written.push(save)
       viewed = `${viewed}\n- [Screenshot](${save})`
     }
     return {
