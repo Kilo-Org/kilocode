@@ -121,11 +121,11 @@ describe("scope containment", () => {
   })
 
   test("posix: separators and case are exact", () => {
-    expect(within("/home/igor/.config/kilo", "/home/igor/.config/kilo/kilo2.json")).toBe(true)
-    expect(within("/home/igor/.config/kilo", "/home/igor/.config/kilo2/kilo2.json")).toBe(false)
-    expect(within("/home/igor/.config/kilo", "/home/igor/.config/kilo/../outside/kilo2.json")).toBe(false)
+    expect(within("/home/igor/.config/kilo", "/home/igor/.config/kilo/kilo2.json", path.posix)).toBe(true)
+    expect(within("/home/igor/.config/kilo", "/home/igor/.config/kilo2/kilo2.json", path.posix)).toBe(false)
+    expect(within("/home/igor/.config/kilo", "/home/igor/.config/kilo/../outside/kilo2.json", path.posix)).toBe(false)
     // No folding on posix: these are different directories.
-    expect(within("/Kilo", "/kilo/kilo2.json")).toBe(false)
-    expect(within("/Kilo", "/Kilo/kilo2.json")).toBe(true)
+    expect(within("/Kilo", "/kilo/kilo2.json", path.posix)).toBe(false)
+    expect(within("/Kilo", "/Kilo/kilo2.json", path.posix)).toBe(true)
   })
 })
