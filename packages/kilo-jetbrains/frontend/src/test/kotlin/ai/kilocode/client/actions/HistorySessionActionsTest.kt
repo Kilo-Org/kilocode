@@ -16,7 +16,10 @@ import ai.kilocode.client.session.history.HistorySource
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.PluginDescriptor
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.attribute
+import ai.kilocode.client.testing.elements
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.CloudSessionDto
@@ -37,6 +40,7 @@ import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.content.ContentManager
 import java.lang.reflect.Proxy
 import javax.swing.JPanel
+import org.w3c.dom.Element
 
 @Suppress("UnstableApiUsage")
 class HistorySessionActionsTest : BasePlatformTestCase() {
@@ -390,7 +394,6 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("ref=\"Kilo.Session.Open\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Rename\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Delete\""))
-        assertTrue(xml.contains("ref=\"Kilo.Worktree.Rename\""))
         assertTrue(xml.contains("id=\"Kilo.AgentManager.MoveTo\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.Delete\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenPr\""))
@@ -404,31 +407,29 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Delete\""))
         assertTrue(xml.contains("ref=\"${'$'}Copy\""))
 
-        // Row menu order: rename, move to, (separator), open pr, (separator), open diff, open local diff,
-        // (separator), copy branch name, copy branch path, copy pr ref, (separator),
-        // open/create setup script, run setup script, (separator), delete.
-        val rowMenuStart = xml.indexOf("<group id=\"Kilo.Worktree.RowMenu\">")
-        val rowMenuEnd = xml.indexOf("</group>", rowMenuStart)
-        val rowMenu = xml.substring(rowMenuStart, rowMenuEnd)
-        assertTrue(rowMenu.contains("ref=\"Kilo.OpenSetupScript\""))
-        assertTrue(rowMenu.contains("ref=\"Kilo.Worktree.RunSetupScript\""))
-
-        val rename = rowMenu.indexOf("ref=\"Kilo.Worktree.Rename\"")
-        val relocate = rowMenu.indexOf("ref=\"Kilo.AgentManager.MoveTo\"")
-        val openPr = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenPr\"")
-        val openDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenDiff\"")
-        val openLocalDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenLocalDiff\"")
-        val copyName = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyBranchName\"")
-        val copyPath = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyBranchPath\"")
-        val copyPrRef = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyPrRef\"")
-        val openSetup = rowMenu.indexOf("ref=\"Kilo.OpenSetupScript\"")
-        val runSetup = rowMenu.indexOf("ref=\"Kilo.Worktree.RunSetupScript\"")
-        val delete = rowMenu.indexOf("ref=\"Kilo.Worktree.Delete\"")
-        assertTrue(
-            rename in 0 until relocate && relocate < openPr && openPr < openDiff && openDiff < openLocalDiff &&
-                openLocalDiff < copyName && copyName < copyPath && copyPath < copyPrRef &&
-                copyPrRef < openSetup && openSetup < runSetup && runSetup < delete,
-        )
+        val menu = PluginDescriptor.frontend().elements("group").single { it.attribute("id") == "Kilo.Worktree.RowMenu" }
+        val order = (0 until menu.childNodes.length).mapNotNull { menu.childNodes.item(it) as? Element }.map {
+            if (it.tagName == "separator") "separator" else it.attribute("ref")
+        }
+        assertEquals(listOf(
+            "Kilo.Worktree.OpenPr",
+            "Kilo.HostedWorkspace.Reload",
+            "separator",
+            "Kilo.Worktree.OpenDiff",
+            "Kilo.Worktree.OpenLocalDiff",
+            "Kilo.Worktree.UpdateFromBase",
+            "separator",
+            "Kilo.Worktree.CopyBranchName",
+            "Kilo.Worktree.CopyBranchPath",
+            "Kilo.Worktree.CopyPrRef",
+            "separator",
+            "Kilo.OpenSetupScript",
+            "Kilo.Worktree.RunSetupScript",
+            "separator",
+            "Kilo.AgentManager.MoveTo",
+            "separator",
+            "Kilo.Worktree.Delete",
+        ), order)
 
         // Worktree session row menu order: move to worktree, (separator), rename, delete.
         val sessionRowMenuStart = xml.indexOf("<group id=\"Kilo.WorktreeSession.RowMenu\">")

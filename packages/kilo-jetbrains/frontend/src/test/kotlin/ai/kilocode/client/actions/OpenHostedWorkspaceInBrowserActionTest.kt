@@ -10,7 +10,7 @@ import org.w3c.dom.Element
 
 class OpenHostedWorkspaceInBrowserActionTest : BasePlatformTestCase() {
     companion object {
-        private const val ID = "Kilo.HostedWorkspace.OpenInBrowser"
+        private const val ID = "Kilo.Worktree.OpenPr"
         private const val REMOVE_ID = "Kilo.HostedWorkspace.Remove"
     }
 
@@ -29,7 +29,7 @@ class OpenHostedWorkspaceInBrowserActionTest : BasePlatformTestCase() {
         val descriptor = PluginDescriptor.frontend()
         val declared = descriptor.elements("action").single { it.attribute("id") == ID }
 
-        assertEquals(HostedOpenInBrowserAction::class.java.name, declared.attribute("class"))
+        assertEquals(OpenWorktreePrAction::class.java.name, declared.attribute("class"))
         assertNull(declared.attribute("text"))
         assertNull(declared.attribute("description"))
         assertTrue(descriptor.elements("reference").any {
@@ -37,6 +37,14 @@ class OpenHostedWorkspaceInBrowserActionTest : BasePlatformTestCase() {
         })
         assertEquals("Open in Browser", KiloBundle.optional("action.$ID.text"))
         assertFalse(KiloBundle.optional("action.$ID.description").isNullOrBlank())
+    }
+
+    fun `test duplicate Cloud row browser and management actions are gone`() {
+        val descriptor = PluginDescriptor.frontend()
+        listOf("OpenInBrowser", "Delete", "Dismiss").map { "Kilo.HostedWorkspace.$it" }.forEach { id ->
+            assertTrue(descriptor.elements("action").none { it.attribute("id") == id })
+            assertTrue(descriptor.elements("reference").none { it.attribute("ref") == id })
+        }
     }
 
     fun `test remove from ide action is gone`() {

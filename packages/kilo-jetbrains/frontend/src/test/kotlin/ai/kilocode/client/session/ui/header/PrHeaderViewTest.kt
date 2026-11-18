@@ -6,6 +6,7 @@ import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverArea
+import ai.kilocode.client.ui.PrBadgeActions
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.conflictTooltip
@@ -120,6 +121,68 @@ class PrHeaderViewTest : BasePlatformTestCase() {
                 "https://github.com/kilo/test/pull/123",
                 "https://github.com/kilo/test/pull/123",
                 "https://github.com/kilo/test/pull/123/checks",
+            ),
+            browser.urls,
+        )
+    }
+
+    fun `test injected handlers independently own the state title and each verdict`() {
+        val browser = installBrowser()
+        val calls = mutableListOf<String>()
+        val view = edt {
+            PrHeaderView(handlers = PrBadgeActions(
+                open = { calls += "open" }, review = { calls += "review" },
+                checks = { calls += "checks" }, comments = { calls += "comments" },
+            )) {}
+        }
+        edt {
+            view.update(0, 0, 0, verdicts(), "feature-x")
+            click(badge(view))
+            click(title(view))
+            click(glyph(view, PrIcons.comments))
+            click(glyph(view, PrIcons.reviewApproved))
+            click(glyph(view, PrIcons.checksFailed))
+        }
+        assertEquals(listOf("open", "open", "comments", "review", "checks"), calls)
+        assertTrue(browser.urls.isEmpty())
+    }
+
+    fun `test explicit null handlers keep status visible without browser or keyboard actions`() {
+        val browser = installBrowser()
+        var calls = 0
+        val view = edt { PrHeaderView(handlers = PrBadgeActions(checks = { calls++ }), openDiff = null) }
+        edt {
+            view.update(0, 0, 0, verdicts(), "feature-x")
+            val areas = hovers(view)
+            assertEquals(5, areas.size)
+            val checks = areas.single { SwingUtilities.isDescendingFrom(glyph(view, PrIcons.checksFailed), it) }
+            assertEquals(Cursor.HAND_CURSOR, checks.cursor.type)
+            for (area in areas - checks) {
+                assertEquals(Cursor.DEFAULT_CURSOR, area.cursor.type)
+                assertFalse(area.isFocusable)
+                assertNull(area.action)
+            }
+            areas.forEach { click(it) }
+        }
+        assertEquals(1, calls)
+        assertTrue(browser.urls.isEmpty())
+    }
+
+    fun `test default handlers follow the latest PR when the retained header updates`() {
+        val browser = installBrowser()
+        val view = edt { PrHeaderView {} }
+        edt {
+            view.update(0, 0, 0, verdicts(), "feature-x")
+            click(glyph(view, PrIcons.checksFailed))
+            view.update(0, 0, 0, verdicts().copy(url = "https://example.test/pr/456"), "feature-x")
+            click(title(view))
+            click(glyph(view, PrIcons.reviewApproved))
+            click(glyph(view, PrIcons.checksFailed))
+        }
+        assertEquals(
+            listOf(
+                "https://github.com/kilo/test/pull/123/checks", "https://example.test/pr/456",
+                "https://example.test/pr/456", "https://example.test/pr/456/checks",
             ),
             browser.urls,
         )

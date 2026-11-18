@@ -11,6 +11,7 @@ import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.testing.FakeAppRpcApi
+import ai.kilocode.client.testing.FakeAgentManagerFacade
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
@@ -645,7 +646,10 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             assertEquals(KiloBundle.message("hosted.diff.menu"), changes.toolTipText)
             assertTrue("Saved comparisons remain available while compute sleeps", changes.isEnabled)
             val price = descendants(header).filterIsInstance<JBLabel>().single { it.text == "$1.20/h" }
-            val row = HostedWorkspaceRow(HostedWorkspaceRowData(HostedWorkspaceDto(ref), hosted.state.value.presentation(ref)))
+            val row = HostedWorkspaceRow(
+                HostedWorkspaceRowData(HostedWorkspaceDto(ref), hosted.state.value.presentation(ref)),
+                FakeAgentManagerFacade(),
+            )
             assertEquals(row.badges.single().text, initial.segments.single().text)
             assertSame(row.badges.single().style, initial.segments.single().style)
             header.setSize(900, header.preferredSize.height)

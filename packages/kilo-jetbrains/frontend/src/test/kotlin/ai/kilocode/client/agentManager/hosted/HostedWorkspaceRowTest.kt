@@ -1,5 +1,9 @@
 package ai.kilocode.client.agentManager.hosted
 
+import ai.kilocode.client.agentManager.AgentManagerBadgeState
+import ai.kilocode.client.agentManager.AgentManagerCommand
+import ai.kilocode.client.agentManager.AgentManagerElement
+import ai.kilocode.client.testing.FakeAgentManagerFacade
 import ai.kilocode.client.testing.rowTitle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.session.SessionActivityKind
@@ -12,6 +16,7 @@ import ai.kilocode.client.ui.list.ActiveListRenderer
 import ai.kilocode.client.ui.active.activeLayout
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.style
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
 import ai.kilocode.rpc.dto.GhCommentsDto
@@ -47,7 +52,7 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
             dto.copy(name = " ", branch = " \t") to "wrk_1",
         )
         for ((item, expected) in cases) {
-            val row = HostedWorkspaceRow(HostedWorkspaceRowData(item, null))
+            val row = row(HostedWorkspaceRowData(item, null))
             val params = hostedWorkspaceParams(item)
             service<HostedWorkspaceCache>().put(item)
             assertEquals(expected, row.title)
@@ -63,9 +68,9 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
             branch = "feature/cloud",
             sessions = listOf(HostedWorkspaceSessionDto("hosted:cloud:wrk_1:ses_1", "ses_1")),
         )
-        assertEquals("feature/cloud", HostedWorkspaceRow(HostedWorkspaceRowData(dto, null)).description)
-        assertNull(HostedWorkspaceRow(HostedWorkspaceRowData(dto.copy(branch = null), null)).description)
-        assertNull(HostedWorkspaceRow(HostedWorkspaceRowData(dto.copy(branch = " \t"), null)).description)
+        assertEquals("feature/cloud", row(HostedWorkspaceRowData(dto, null)).description)
+        assertNull(row(HostedWorkspaceRowData(dto.copy(branch = null), null)).description)
+        assertNull(row(HostedWorkspaceRowData(dto.copy(branch = " \t"), null)).description)
     }
 
     fun `test rows tabs and file types use the same cloud icon`() {
@@ -78,7 +83,7 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
 
     fun `test deleting progress replaces the status badge with a spinner`() {
         val item = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "wrk_1"), name = "Cloud workspace")
-        val row = HostedWorkspaceRow(HostedWorkspaceRowData(
+        val row = row(HostedWorkspaceRowData(
             item,
             HostedWorkspaceStatusDto(item.ref, "active", "active", "sandbox_ready", 100.0),
             progress = "Deleting…",
@@ -150,7 +155,7 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
             assertEquals(text, row.badges.single().text)
             assertEquals(HostedWorkspaceStatus.of(row.data.status).badge(), row.badges.single())
         }
-        val row = HostedWorkspaceRow(HostedWorkspaceRowData(row("active").data.dto, null))
+        val row = row(HostedWorkspaceRowData(row("active").data.dto, null))
         assertEquals("Loading Cloud status...", row.badges.single().text)
     }
 
@@ -172,11 +177,11 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
 
     fun `test workspace busy and attention icons reuse local worktree indicators`() {
         val idle = row("active")
-        val busy = HostedWorkspaceRow(idle.data.copy(kind = SessionActivityKind.RUNNING))
+        val busy = row(idle.data.copy(kind = SessionActivityKind.RUNNING))
         assertSame(SpinnerIcon.icon, busy.icon)
         assertFalse(busy.tinted)
         assertSame(HostedWorkspaceIcons.cloud, idle.icon)
-        val waiting = HostedWorkspaceRow(idle.data.copy(kind = SessionActivityKind.QUESTION))
+        val waiting = row(idle.data.copy(kind = SessionActivityKind.QUESTION))
         assertSame(WorktreeIcons.forRow(false, SessionActivityKind.QUESTION), waiting.icon)
         assertFalse(busy == idle)
     }
@@ -207,7 +212,7 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
 
     fun `test linked pull request adds the worktree verdict glyphs and number pill`() {
         val item = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "wrk_pr"), name = "Cloud PR", branch = "feature/pr")
-        val row = HostedWorkspaceRow(HostedWorkspaceRowData(
+        val row = row(HostedWorkspaceRowData(
             item,
             HostedWorkspaceStatusDto(item.ref, "active", "active", "sandbox_ready", 100.0),
             pull = pull(item.ref, GhState.OPEN),
@@ -233,12 +238,41 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
     fun `test pull request badges do not depend on the selected sibling session`() {
         val item = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "wrk_pr"), name = "Cloud PR")
         val data = HostedWorkspaceRowData(item, null, kind = SessionActivityKind.RUNNING, pull = pull(item.ref, GhState.DRAFT))
-        val idle = HostedWorkspaceRow(data.copy(kind = null))
-        val busy = HostedWorkspaceRow(data)
+        val idle = row(data.copy(kind = null))
+        val busy = row(data)
 
         assertEquals(idle.badges.map { it.id }, busy.badges.map { it.id })
         assertEquals(idle.secondaryBadges.map { it.text }, busy.secondaryBadges.map { it.text })
         assertSame(style(GhState.DRAFT), busy.secondaryBadges.single().style)
+    }
+
+    fun `test facade evidence and capabilities determine row badges without changing compute or metrics`() = edtWait {
+        val item = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "wrk_pr"), name = "Cloud PR")
+        val data = HostedWorkspaceRowData(item, HostedWorkspaceStatusDto(item.ref, "active", "sleeping", "", 0.0))
+        val facade = FakeAgentManagerFacade(AgentManagerBadgeState(pr = pull(item.ref, GhState.OPEN)))
+        val row = HostedWorkspaceRow(data, facade)
+        assertEquals(AgentManagerElement.Cloud(item), row.element)
+        assertEquals("Sleeping", row.badges.first().text)
+        assertNull(row.badges.first().action)
+        assertEquals(listOf("cloud-compute", "pr-comments", "pr-review", "pr-checks"), row.badges.map { it.id })
+        assertTrue(row.badges.all { it.action == null })
+        assertNull(row.secondaryBadges.single().action)
+        assertNull(row.metrics)
+        assertTrue(row.search.contains("Fix Cloud PR"))
+
+        facade.state = facade.state.copy(enabled = setOf(AgentManagerCommand.PR))
+        val enabled = HostedWorkspaceRow(data, facade)
+        assertFalse(row == enabled)
+        assertEquals(enabled, HostedWorkspaceRow(data, facade))
+        assertEquals(enabled.hashCode(), HostedWorkspaceRow(data, facade).hashCode())
+        assertNotNull(enabled.secondaryBadges.single().action)
+        assertNull(row.secondaryBadges.single().action)
+
+        facade.state = facade.state.copy(busy = true)
+        val busy = HostedWorkspaceRow(data, facade)
+        assertEmpty(busy.badges)
+        assertEmpty(busy.secondaryBadges)
+        assertFalse(enabled == busy)
     }
 
     private fun pull(ref: HostedWorkspaceRefDto, state: GhState) = WorktreePrDto(
@@ -255,11 +289,20 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
 
     private fun row(state: String, name: String = "Cloud workspace"): HostedWorkspaceRow {
         val ref = HostedWorkspaceRefDto("cloud", name.replace(' ', '_'))
-        return HostedWorkspaceRow(HostedWorkspaceRowData(
+        return row(HostedWorkspaceRowData(
             HostedWorkspaceDto(ref, name = name, branch = "main"),
             HostedWorkspaceStatusDto(ref, "active", state, "detail", 100.0, rateMicrodollarsPerHour = 1_000_000),
         ))
     }
+
+    private fun row(data: HostedWorkspaceRowData): HostedWorkspaceRow = HostedWorkspaceRow(
+        data,
+        FakeAgentManagerFacade(AgentManagerBadgeState(
+            pr = data.pull,
+            busy = data.progress != null,
+            enabled = AgentManagerCommand.entries.toSet(),
+        )),
+    )
 
     private fun descendants(root: Component): List<Component> = listOf(root) +
         if (root is Container) root.components.flatMap(::descendants) else emptyList()

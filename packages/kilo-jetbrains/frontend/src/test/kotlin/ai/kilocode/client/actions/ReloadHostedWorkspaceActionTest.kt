@@ -1,21 +1,26 @@
 package ai.kilocode.client.actions
 
-import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
+import ai.kilocode.client.agentManager.AgentManagerAvailability
+import ai.kilocode.client.agentManager.AgentManagerCommand
+import ai.kilocode.client.agentManager.AgentManagerElement
+import ai.kilocode.client.agentManager.AgentManagerFacade
+import ai.kilocode.client.agentManager.AgentManagerKeys
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
 import ai.kilocode.client.agentManager.hosted.HostedPullRequestService
 import ai.kilocode.client.agentManager.hosted.openHostedWorkspace
 import ai.kilocode.client.agentManager.hosted.hostedWorkspaceParams
+import ai.kilocode.client.agentManager.hosted.reloadHostedWorkspace
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.KiloTelemetryService
 import ai.kilocode.client.testing.FakeAppRpcApi
+import ai.kilocode.client.testing.FakeAgentManagerFacade
 import ai.kilocode.client.testing.PluginDescriptor
 import ai.kilocode.client.testing.TestLog
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.attribute
 import ai.kilocode.client.testing.elements
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
-import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.KiloHostedRpcApi
@@ -30,7 +35,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.ActionUtil
@@ -56,30 +60,24 @@ class ReloadHostedWorkspaceActionTest : BasePlatformTestCase() {
 
     private val ref = HostedWorkspaceRefDto("cloud", "workspace")
     private val dto = HostedWorkspaceDto(ref, sessions = emptyList())
+    private val element = AgentManagerElement.Cloud(dto)
+    private val facade = FakeAgentManagerFacade().apply { enabled = setOf(AgentManagerCommand.RELOAD) }
     private val action = ReloadHostedWorkspaceAction()
     private lateinit var scope: CoroutineScope
-    private lateinit var hosted: KiloHostedService
-    private lateinit var rpc: FakeRpc
     private lateinit var coroutines: TestCoroutines
-    private val revalidated = java.util.concurrent.CopyOnWriteArrayList<HostedWorkspaceRefDto>()
-    private var enabled = true
 
     override fun setUp() {
         super.setUp()
         coroutines = TestCoroutines()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-        rpc = FakeRpc(dto)
-        hosted = KiloHostedService(scope, rpc, gate = { enabled }, log = TestLog())
+        val hosted = KiloHostedService(scope, FakeRpc(dto), gate = { true }, log = TestLog())
         project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
         project.replaceService(
             HostedPullRequestService::class.java,
             HostedPullRequestService(
                 scope,
                 read = { HostedWorkspacePullRequestDto(it, "unavailable", null) },
-                revalidate = {
-                    revalidated += it
-                    HostedWorkspacePullRequestDto(it, "unavailable", null)
-                },
+                revalidate = { HostedWorkspacePullRequestDto(it, "unavailable", null) },
                 pause = {},
                 clock = { 0L },
                 identity = null,
@@ -106,43 +104,54 @@ class ReloadHostedWorkspaceActionTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test reload hides and does nothing without a project or Cloud workspace`() {
-        listOf(event(project = false), event(workspace = null)).forEach {
+    fun `test reload hides and does nothing without a facade or element`() {
+        listOf(event(facade = null), event(element = null)).forEach {
             update(it)
-            action.actionPerformed(it)
+            edtWait { action.actionPerformed(it) }
             assertFalse(it.presentation.isVisible)
             assertFalse(it.presentation.isEnabled)
         }
+        assertTrue(facade.queries.isEmpty())
+        assertTrue(facade.calls.isEmpty())
     }
 
-    fun `test reload is scoped to a persisted active Cloud workspace`() {
+    fun `test reload delegates availability and rechecks stale clicks through the facade`() {
         val event = event()
         update(event)
         assertTrue(event.presentation.isEnabledAndVisible)
         assertEquals(ActionUpdateThread.EDT, action.actionUpdateThread)
+        assertSame(element, facade.queries.single().first)
+        assertEquals(AgentManagerCommand.RELOAD, facade.queries.single().second)
 
-        val deleted = event(workspace = dto.copy(deletionState = "deleted"))
-        update(deleted)
-        assertFalse(deleted.presentation.isVisible)
-        val pending = event(workspace = dto.copy(ref = HostedWorkspaceRefDto("cloud", "pending-create")))
-        update(pending)
-        assertFalse(pending.presentation.isVisible)
-        enabled = false
-        val disabled = event()
-        update(disabled)
-        assertFalse(disabled.presentation.isVisible)
+        facade.overrides[AgentManagerCommand.RELOAD] = AgentManagerAvailability.DISABLED
+        edtWait { action.actionPerformed(event) }
+        assertEquals(2, facade.queries.size)
+        assertTrue(facade.calls.isEmpty())
+        update(event)
+        assertTrue(event.presentation.isVisible)
+        assertFalse(event.presentation.isEnabled)
+
+        facade.overrides[AgentManagerCommand.RELOAD] = AgentManagerAvailability.HIDDEN
+        update(event)
+        assertFalse(event.presentation.isVisible)
+        edtWait { action.actionPerformed(event) }
+        assertTrue(facade.calls.isEmpty())
+
+        facade.overrides[AgentManagerCommand.RELOAD] = AgentManagerAvailability.ENABLED
+        edtWait { action.actionPerformed(event) }
+        assertSame(element, facade.calls.single().element)
+        assertEquals(AgentManagerCommand.RELOAD, facade.calls.single().command)
     }
 
     fun `test reload rebuilds inside the selected editor without changing selection`() {
-        edt { openHostedWorkspace(project, dto) }
+        edtWait { openHostedWorkspace(project, dto) }
         val manager = FileEditorManager.getInstance(project)
         assertEquals(1, manager.openFiles.size)
         val file = manager.selectedFiles.single()
         val container = manager.getSelectedEditor(file)!!.component
         val old = container.components.single()
 
-        val event = event()
-        edt { action.actionPerformed(event) }
+        edtWait { reloadHostedWorkspace(project, dto) }
 
         assertSame(file, manager.selectedFiles.single())
         assertSame(container, manager.getSelectedEditor(file)?.component)
@@ -156,7 +165,6 @@ class ReloadHostedWorkspaceActionTest : BasePlatformTestCase() {
         assertNotNull(KiloVirtualFileSystem.getInstance().cached(
             ai.kilocode.client.vfs.KiloPath(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(dto)),
         ))
-        assertTrue(coroutines.pumpUntil { revalidated.contains(dto.ref) })
     }
 
     fun `test reload replaces refresh in the existing row menu with localized strings`() {
@@ -173,32 +181,29 @@ class ReloadHostedWorkspaceActionTest : BasePlatformTestCase() {
             if (it.tagName == "separator") "separator" else it.attribute("ref")
         }
         assertEquals(listOf(
-            "Kilo.HostedWorkspace.OpenInBrowser",
+            "Kilo.Worktree.OpenPr",
             "Kilo.HostedWorkspace.Reload",
-            "Kilo.HostedWorkspace.CommittedDiff",
-            "Kilo.HostedWorkspace.UncommittedDiff",
-            "Kilo.HostedWorkspace.PullRequestDiff",
             "separator",
-            "Kilo.HostedWorkspace.Delete",
-        ), order.take(7))
+        ), order.take(3))
         assertEquals("Reload", KiloBundle.optional("action.$ID.text"))
         assertFalse(KiloBundle.optional("action.$ID.description").isNullOrBlank())
     }
 
-    private fun event(workspace: HostedWorkspaceDto? = dto, project: Boolean = true): AnActionEvent {
+    private fun event(
+        facade: AgentManagerFacade? = this.facade,
+        element: AgentManagerElement? = this.element,
+    ): AnActionEvent {
         val context = DataContext { id ->
             when {
-                CommonDataKeys.PROJECT.`is`(id) -> this.project.takeIf { project }
-                HostedWorkspaceDataKeys.WORKSPACE.`is`(id) -> workspace
+                AgentManagerKeys.FACADE.`is`(id) -> facade
+                AgentManagerKeys.ELEMENT.`is`(id) -> element
                 else -> null
             }
         }
         return AnActionEvent.createFromDataContext(ActionPlaces.POPUP, Presentation(), context)
     }
 
-    private fun update(event: AnActionEvent) = ActionUtil.updateAction(action, event)
-
-    private fun edt(block: () -> Unit) = ApplicationManager.getApplication().invokeAndWait(block)
+    private fun update(event: AnActionEvent) = edtWait { ActionUtil.updateAction(action, event) }
 
     private class FakeRpc(private val dto: HostedWorkspaceDto) : KiloHostedRpcApi {
         override suspend fun workspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")

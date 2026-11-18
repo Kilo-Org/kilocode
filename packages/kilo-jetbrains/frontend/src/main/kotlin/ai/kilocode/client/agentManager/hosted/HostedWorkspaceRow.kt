@@ -1,16 +1,19 @@
 package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.agentManager.AgentManagerBadges
+import ai.kilocode.client.agentManager.AgentManagerElement
+import ai.kilocode.client.agentManager.AgentManagerFacade
+import ai.kilocode.client.agentManager.AgentManagerRow
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.active.ActiveBadge
-import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveMetrics
 import ai.kilocode.client.ui.list.ActiveSection
-import ai.kilocode.client.ui.prGlyphBadges
-import ai.kilocode.client.ui.prNumberBadge
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import ai.kilocode.rpc.dto.WorktreePrDto
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import javax.swing.Icon
 
 /** A Cloud workspace row in the Agent Manager tree, distinct from local worktrees. */
@@ -22,11 +25,14 @@ internal data class HostedWorkspaceRowData(
     val pull: WorktreePrDto? = null,
 )
 
-internal class HostedWorkspaceRow(
+internal class HostedWorkspaceRow @RequiresEdt constructor(
     val data: HostedWorkspaceRowData,
-) : ActiveSection {
+    facade: AgentManagerFacade,
+) : ActiveSection, AgentManagerRow {
     private val dto get() = data.dto
     private val status get() = data.status
+    override val element = AgentManagerElement.Cloud(dto)
+    private val marks = AgentManagerBadges(facade, element)
 
     override val key: String get() = dto.ref.key
     override val identity: Any get() = "hosted:${dto.ref.key}"
@@ -49,25 +55,27 @@ internal class HostedWorkspaceRow(
             dto.branch,
             dto.ref.providerID,
             dto.ref.workspaceID,
-            data.pull?.title,
-            data.pull?.let { "#${it.number}" },
+            marks.state.pr?.title,
+            marks.state.pr?.let { "#${it.number}" },
         ) + dto.sessions.mapNotNull { it.title }).joinToString(" ")
     override val progress: String? get() = data.progress
     override val badges: List<ActiveBadge>
-        get() = if (data.progress == null) {
-            listOf(HostedWorkspaceStatus.of(status).badge()) + prGlyphBadges(data.pull)
+        get() = if (data.progress == null && !marks.state.busy) {
+            listOf(HostedWorkspaceStatus.of(status).badge()) + marks.primary
         } else {
             emptyList()
         }
 
     /** The `#<number>` pill below the title, matching a worktree row's secondary line. */
     override val secondaryBadges: List<ActiveBadge>
-        get() = if (data.progress == null) listOfNotNull(prNumberBadge(data.pull)) else emptyList()
+        get() = if (data.progress == null) marks.secondary else emptyList()
+
+    override val metrics: ActiveMetrics? get() = marks.metrics
 
     override fun equals(other: Any?): Boolean {
         val row = other as? HostedWorkspaceRow ?: return false
-        return data == row.data
+        return data == row.data && marks.state == row.marks.state
     }
 
-    override fun hashCode(): Int = data.hashCode()
+    override fun hashCode(): Int = 31 * data.hashCode() + marks.state.hashCode()
 }

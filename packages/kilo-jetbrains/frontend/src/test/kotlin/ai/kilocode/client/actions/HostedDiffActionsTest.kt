@@ -114,7 +114,7 @@ class HostedDiffActionsTest : BasePlatformTestCase() {
         edtWait { assertFalse(visible(actions[2])) }
     }
 
-    fun testRowAndHeaderReuseTheSameLocalizedComparisonActions() {
+    fun testHeaderKeepsLocalizedComparisonActionsOutsideTheCommonRowMenu() {
         val descriptor = PluginDescriptor.frontend()
         val ids = listOf("CommittedDiff", "UncommittedDiff", "PullRequestDiff").map { "Kilo.HostedWorkspace.$it" }
         ids.zip(actions).forEach { (id, action) ->
@@ -123,12 +123,18 @@ class HostedDiffActionsTest : BasePlatformTestCase() {
             assertNull(declared.attribute("text"))
             assertFalse(KiloBundle.optional("action.$id.text").isNullOrBlank())
             assertFalse(KiloBundle.optional("action.$id.description").isNullOrBlank())
-            listOf("Kilo.Worktree.RowMenu", "Kilo.HostedWorkspace.Comparisons").forEach { group ->
-                assertTrue(descriptor.elements("reference").any {
-                    it.attribute("ref") == id && (it.parentNode as? Element)?.attribute("id") == group
-                })
-            }
+            assertTrue(descriptor.elements("reference").any {
+                it.attribute("ref") == id && (it.parentNode as? Element)?.attribute("id") == "Kilo.HostedWorkspace.Comparisons"
+            })
+            assertFalse(descriptor.elements("reference").any {
+                it.attribute("ref") == id && (it.parentNode as? Element)?.attribute("id") == "Kilo.Worktree.RowMenu"
+            })
         }
+        val menu = descriptor.elements("group").single { it.attribute("id") == "Kilo.HostedWorkspace.Comparisons" }
+        val order = (0 until menu.childNodes.length).mapNotNull { menu.childNodes.item(it) as? Element }.map {
+            it.attribute("ref")
+        }
+        assertEquals(ids, order)
     }
 
     private fun visible(action: HostedDiffAction, event: AnActionEvent = event()): Boolean {

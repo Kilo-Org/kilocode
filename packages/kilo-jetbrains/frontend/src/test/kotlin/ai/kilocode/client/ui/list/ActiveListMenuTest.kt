@@ -4,6 +4,7 @@ import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRowData
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
+import ai.kilocode.client.testing.FakeAgentManagerFacade
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.WorktreeDto
@@ -23,7 +24,7 @@ class ActiveListMenuTest : BasePlatformTestCase() {
             override val search = dto.name
         }
         val hosted = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "one"))
-        val cloud = HostedWorkspaceRow(HostedWorkspaceRowData(hosted, null))
+        val cloud = HostedWorkspaceRow(HostedWorkspaceRowData(hosted, null), FakeAgentManagerFacade())
         val group = DefaultActionGroup()
         val menu = ActiveMenu(WorktreeDataKeys.WORKTREE, group, element = { row -> dto.takeIf { row === local } },
             alternate = ActiveMenu(HostedWorkspaceDataKeys.WORKSPACE, group, element = { row ->

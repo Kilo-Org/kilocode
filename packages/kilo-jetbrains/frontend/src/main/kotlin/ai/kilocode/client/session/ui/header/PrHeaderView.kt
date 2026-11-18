@@ -6,6 +6,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverArea
+import ai.kilocode.client.ui.PrBadgeActions
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
@@ -13,7 +14,6 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.ui.checksTooltip
-import ai.kilocode.client.ui.checksUrl
 import ai.kilocode.client.ui.commentsCount
 import ai.kilocode.client.ui.commentsTooltip
 import ai.kilocode.client.ui.conflicted
@@ -23,7 +23,6 @@ import ai.kilocode.client.ui.stateLabel
 import ai.kilocode.client.ui.style
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
-import com.intellij.ide.BrowserUtil
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
@@ -47,7 +46,8 @@ internal class PrHeaderView @RequiresEdt constructor(
      */
     stacked: Boolean = false,
     private val fallback: Boolean = false,
-    openDiff: () -> Unit,
+    private val handlers: PrBadgeActions? = null,
+    openDiff: (() -> Unit)?,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
     private val status = JBLabel()
     private val title = SimpleColoredComponent()
@@ -93,8 +93,6 @@ internal class PrHeaderView @RequiresEdt constructor(
     private var number: String? = null
     private var body: String? = null
     private var tip: String? = null
-    private var url: String? = null
-    private var runs: String? = null
 
     init {
         isOpaque = false
@@ -188,12 +186,13 @@ internal class PrHeaderView @RequiresEdt constructor(
 
     @RequiresEdt
     private fun applyPr(pull: WorktreePrDto?, name: String) {
+        val actions = handlers ?: PrBadgeActions.browser(pull)
         if (pull == null) {
             syncPr(fallback && name.isNotBlank())
             syncStatus(null)
             if (fallback && name.isNotBlank()) syncTitle(name, null, name) else clearTitle()
             syncClick(null)
-            syncVerdicts(null)
+            syncVerdicts(null, actions)
             return
         }
         syncPr(true)
@@ -202,24 +201,23 @@ internal class PrHeaderView @RequiresEdt constructor(
         val tip = prTooltip(pull, name.takeIf { it.isNotBlank() && it != trimmed })
         syncStatus(pull.state)
         syncTitle("#${pull.number}", body, tip)
-        syncClick(pull.url)
-        syncVerdicts(pull)
+        syncClick(actions.open)
+        syncVerdicts(pull, actions)
         statusArea.tooltip(tip)
     }
 
     @RequiresEdt
-    private fun syncVerdicts(pull: WorktreePrDto?) {
-        runs = pull?.let(::checksUrl)
+    private fun syncVerdicts(pull: WorktreePrDto?, actions: PrBadgeActions) {
         val talk = glyph(
             commentsArea,
             comments,
             pull?.let { PrIcons.comments(it.comments) },
             pull?.let { commentsTooltip(it.comments) },
-            url,
+            actions.comments,
             pull?.let { commentsCount(it.comments) }.orEmpty(),
         )
-        val verdict = glyph(reviewArea, review, pull?.let { PrIcons.review(it.review) }, pull?.let { reviewTooltip(it.review) }, url)
-        val build = glyph(checksArea, checks, pull?.let { PrIcons.checks(it.checks) }, pull?.let { checksTooltip(it.checks) }, runs)
+        val verdict = glyph(reviewArea, review, pull?.let { PrIcons.review(it.review) }, pull?.let { reviewTooltip(it.review) }, actions.review)
+        val build = glyph(checksArea, checks, pull?.let { PrIcons.checks(it.checks) }, pull?.let { checksTooltip(it.checks) }, actions.checks)
         if (talk || verdict || build) changed()
     }
 
@@ -232,7 +230,7 @@ internal class PrHeaderView @RequiresEdt constructor(
      * toward the return: a count that grew needs the row measured again even though nothing appeared.
      */
     @RequiresEdt
-    private fun glyph(area: HoverArea, label: JBLabel, icon: Icon?, tip: String?, link: String?, text: String = ""): Boolean {
+    private fun glyph(area: HoverArea, label: JBLabel, icon: Icon?, tip: String?, action: (() -> Unit)?, text: String = ""): Boolean {
         val show = icon != null && !tip.isNullOrBlank()
         var moved = area.isVisible != show
         if (moved) {
@@ -246,7 +244,7 @@ internal class PrHeaderView @RequiresEdt constructor(
             moved = true
         }
         area.tooltip(tip)
-        area.action = link?.let { { BrowserUtil.browse(it) } }
+        area.action = action.takeIf { show }
         return moved
     }
 
@@ -312,10 +310,7 @@ internal class PrHeaderView @RequiresEdt constructor(
     }
 
     @RequiresEdt
-    private fun syncClick(next: String?) {
-        if (url == next) return
-        url = next
-        val open = next?.let { { BrowserUtil.browse(it) } }
+    private fun syncClick(open: (() -> Unit)?) {
         statusArea.action = open
         titleArea.action = open
     }
