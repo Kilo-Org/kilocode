@@ -129,14 +129,22 @@ describe("console and network filtering", () => {
 })
 
 describe("opaque withheld frames", () => {
-  test("console lines with no origin are dropped while an opaque frame is withheld", () => {
+  test("only lines attributed to a granted origin survive while a frame is withheld", () => {
+    const allowed = new Set(["https://shop.example.com"])
     const text = [
-      "Total messages: 2 (Errors: 1, Warnings: 0)",
+      "Total messages: 3 (Errors: 2, Warnings: 0)",
       "[LOG] page @ https://shop.example.com/app.js:1",
-      "[ERROR] hidden @ data:text/html,1:3",
+      "[ERROR] opaque data document @ data:text/html,1:3",
+      "[ERROR] blob script @ blob:https://pay.example.net/uuid:4:1",
+      "[ERROR] other origin @ https://other.example/app.js:7",
     ].join("\n")
-    expect(Frames.consoleMessages(text, new Set(), true)).not.toContain("hidden")
-    expect(Frames.consoleMessages(text, new Set(), true)).toContain("page @ https://shop.example.com/app.js:1")
+    const kept = Frames.consoleMessages(text, new Set(["https://pay.example.net"]), allowed)
+    expect(kept).toContain("page @ https://shop.example.com/app.js:1")
+    // A data: document and a blob: script URL name no origin, so neither can be attributed to a granted frame.
+    expect(kept).not.toContain("data document")
+    expect(kept).not.toContain("blob script")
+    // An https line from an origin this session may not read is not attributable to a granted frame either.
+    expect(kept).not.toContain("other origin")
   })
 
   test("the request list drops unattributable lines while an opaque frame is withheld", () => {
@@ -146,11 +154,21 @@ describe("opaque withheld frames", () => {
       text,
       withholding: true,
       withheld: new Set(),
-      opaque: true,
+      allowed: new Set(["https://shop.example.com"]),
       granted: () => true,
     })
     expect(scoped.text).toContain("https://shop.example.com/a")
     expect(scoped.text).not.toContain("blob:bundle")
+    // A request listed for an origin the session may not read is dropped, even when the frame is not its own.
+    const foreign = Frames.scope({
+      tool: "browser_network_requests",
+      text: "1. [GET] https://other.example/x => [200] OK",
+      withholding: true,
+      withheld: new Set(),
+      allowed: new Set(["https://shop.example.com"]),
+      granted: () => true,
+    })
+    expect(foreign.text).not.toContain("other.example")
   })
 })
 

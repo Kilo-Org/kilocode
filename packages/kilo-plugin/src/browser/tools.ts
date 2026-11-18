@@ -6,7 +6,7 @@ import { KiloBrowserPolicy } from "@kilocode/gateway-core/browser-policy"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Tool } from "@opencode/schema/tool"
 import { KiloBrowserRpc } from "@opencode/schema/kilocode/browser"
-import { Effect, Option, Result } from "effect"
+import { Effect, Option, Result, Stream } from "effect"
 import type { JsonSchema } from "effect"
 import {
   NeedsPermissionError,
@@ -187,6 +187,17 @@ export function authorize(
  * unless every item the plan asks for is already granted for this session. It then runs with the same authorized
  * list, so the frame filter sees the same grants a user call does.
  */
+/**
+ * What the model reads when the grant a withheld result asked for was refused. Plain and specific: the action
+ * happened, the page is somewhere else now, and only reading it is blocked - so the model must not repeat the action.
+ */
+export function withheldRefusal(origin: string): string {
+  return [
+    `Note: the action ran. The page is now on ${origin}, and reading it needs the user's permission, which was not granted.`,
+    "Do not repeat the action; ask the user to approve reading that origin, then read the page.",
+  ].join("\n")
+}
+
 function consoleErrors(active: BrowserBackend, session: string, context: Tool.Context) {
   return Effect.gen(function* () {
     if (!active.plan) return []
@@ -318,6 +329,48 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     }
     if (!result) return yield* failure(new Error("the browser call did not settle"))
     if (result.isError) return yield* failure(new Error(textOf(result) || `${entry.name} failed`))
+    // The action already ran; its result asked for a grant. Ask now, and never repeat the action for it.
+    const needs = result.meta?.needs
+    if (needs?.length) {
+      const asked = yield* Effect.result(
+        authorize(
+          needs,
+          context,
+          allowSensitive,
+          (origin) => KiloBrowserPolicy.allows(organization, origin),
+          deps.permission,
+        ),
+      )
+      // Granted: read the page again rather than return the withheld placeholder. Reading has no side effect, so the
+      // action still happened once.
+      if (Result.isSuccess(asked)) {
+        const reread = yield* Effect.result(
+          Effect.tryPromise({
+            try: (signal) => active.callTool("browser_snapshot", {}, { signal, session, authorized: [...grants] }),
+            catch: (error) => error,
+          }),
+        )
+        if (Result.isSuccess(reread) && !reread.success.isError) {
+          result.content = reread.success.content
+          result.meta = reread.success.meta
+        }
+      }
+      // A refusal must never read as the action being rejected: the action ran, only its content stayed unread.
+      if (Result.isFailure(asked)) {
+        const origin = needs[0]?.origin ?? ""
+        return {
+          content: [{ type: "text", text: `${textOf(result)}\n\n${withheldRefusal(origin)}` }],
+          metadata: {
+            browser: {
+              backend: choice.backend,
+              observation: browser.observation,
+              ...(origin ? { url: origin } : {}),
+              ...(result.meta?.withheldFrames ? { withheldFrames: result.meta.withheldFrames } : {}),
+            },
+          },
+        } as Tool.Result
+      }
+    }
 
     const text = textOf(result)
     const next = snapshot(split(text))
@@ -367,6 +420,19 @@ export const KiloBrowserToolsPlugin = define({
         tracker.clear()
         await playwright.dispose()
       }),
+    )
+
+    // A deleted session releases its remembered page at once. The stream never ends, so it is forked: awaiting it
+    // here would keep the plugin effect from ever registering its tools.
+    yield* ctx.event.subscribe({ types: ["session.deleted"] }).pipe(
+      Stream.runForEach((event) =>
+        Effect.sync(() => {
+          if (event.type !== "session.deleted") return
+          tracker.forget(event.data.sessionID)
+          playwright.forgetSession(event.data.sessionID)
+        }),
+      ),
+      Effect.forkScoped({ startImmediately: true }),
     )
 
     const config = yield* Effect.serviceOption(Config.Service)

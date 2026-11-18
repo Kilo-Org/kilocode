@@ -8,6 +8,7 @@
 //
 // `flow` navigates, snapshots, clicks the button by the ref the snapshot reported, and takes a screenshot, then
 // prints one JSON report and exits non-zero when an expectation fails. `missing-browser` expects the install hint.
+import { KiloBinary } from "../../src/binary"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -305,16 +306,10 @@ async function missingBrowser() {
     "--format",
     "json",
   ])
-  const logDirectory = path.join(root, "data", "kilo2", "log")
-  const logs = await fs.readdir(logDirectory).catch(() => [] as string[])
-  const logged = (
-    await Promise.all(logs.map((file) => fs.readFile(path.join(logDirectory, file), "utf8").catch(() => "")))
-  ).join("\n")
-  const reported = `${run.stdout}\n${run.stderr}\n${logged}`
-  expect(
-    reported.includes("kilo browser install-chromium"),
-    `no install hint in the run output or logs:\n${reported.slice(-2500)}`,
-  )
+  // The hint is model-facing: it reaches the tool result, not stdout or the logs.
+  const reported = (record.steps.at(-1)?.results ?? []).join("\n")
+  const hint = `${KiloBinary} browser install-chromium`
+  expect(reported.includes(hint), `no install hint in the tool result:\n${reported.slice(-2500)}`)
 
   const installed = await cli(root, "full", ["browser", "install-chromium"], 600_000)
   expect(installed.code === 0, `install-chromium exited ${installed.code}\n${installed.stderr.slice(-2000)}`)

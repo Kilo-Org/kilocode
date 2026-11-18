@@ -444,22 +444,73 @@ export function screenshotPath(
   return filename === "" ? undefined : insideOutput(filename, directory)
 }
 
+/** The tools whose result the MCP can write to a file, with the link title it uses. */
+const FILE_TITLES: Record<string, string> = {
+  browser_snapshot: "Snapshot",
+  browser_console_messages: "Console",
+  browser_network_requests: "Network",
+  browser_network_request: "Request",
+}
+
+/**
+ * The file a call asks for, and the arguments to run it with. The MCP's copy of that file is written before any
+ * filtering and would keep a withheld frame's content, so the backend writes the file itself from the filtered text:
+ * the name is removed from the arguments the MCP sees.
+ */
+export function outputFile(
+  name: string,
+  args: Record<string, unknown>,
+  directory = outputDirectory(),
+): { tool: string; path: string; link: string; args: Record<string, unknown> } | undefined {
+  const title = FILE_TITLES[name]
+  if (!title) return undefined
+  const filename = typeof args.filename === "string" ? args.filename.trim() : ""
+  if (filename === "") return undefined
+  const target = insideOutput(filename, directory)
+  const { filename: _omitted, ...rest } = args
+  return { tool: name, path: target, link: `- [${title}](${target})`, args: rest }
+}
+
+/** The body the MCP writes for a snapshot: the YAML block, without the section heading or the fences. */
+export function snapshotBody(text: string): string {
+  const block = /```yaml\n([\s\S]*?)\n```/.exec(text)
+  return block ? `${block[1]}\n` : text
+}
+
+/** Write a result file from the filtered text, so a withheld frame never reaches the copy on disk. */
+async function saveOutput(file: { tool: string; path: string }, text: string) {
+  const body = file.tool === "browser_snapshot" ? snapshotBody(text) : text
+  await fs.mkdir(path.dirname(file.path), { recursive: true })
+  await fs.writeFile(file.path, body)
+}
+
 /**
  * Refuse a file name that does not resolve inside the browser output directory. The MCP resolves a relative name
  * against the workspace root, so a result file written there could not be redacted, baselined or deleted here.
  */
 export function insideOutput(filename: string, directory = outputDirectory()): string {
-  const resolved = path.resolve(filename)
+  // A relative name belongs to the output directory: the model never means the process working directory.
+  const resolved = path.resolve(directory, filename)
   if (resolved !== directory && !resolved.startsWith(directory + path.sep)) {
     throw new Error("The file name must stay inside the browser output directory.")
   }
   return resolved
 }
 
-/** Sessions whose current page is remembered. */
-const PAGE_LIMIT = 64
+/**
+ * Drop every session whose page the context no longer has. A session with a live page keeps it, however many sessions
+ * have come and gone; the plugin releases a session's entry when the session is deleted.
+ */
+export function prunePages(pages: Map<string, Page>, live: readonly Page[]) {
+  for (const [session, page] of pages) {
+    if (!live.includes(page)) pages.delete(session)
+  }
+}
 
-/** Remember a session's page, moving it to the back and dropping the oldest session past the bound. */
+/** Hard cap, last resort only: sessions are released when they end, long before this. */
+const PAGE_LIMIT = 1024
+
+/** Remember a session's page, least recently used first out past the cap. */
 export function rememberPage(pages: Map<string, Page>, session: string, page: Page, limit = PAGE_LIMIT) {
   pages.delete(session)
   pages.set(session, page)
@@ -468,6 +519,39 @@ export function rememberPage(pages: Map<string, Page>, session: string, page: Pa
     if (oldest.done) break
     pages.delete(oldest.value)
   }
+}
+
+/**
+ * The origin a call meant to act on: the URL it asked to open, or the page it started on. A navigation's plan is the
+ * target, so a redirect that lands elsewhere is detectable.
+ */
+export function plannedOrigin(tool: string, args: Record<string, unknown>, page?: string): string | undefined {
+  const target = BrowserItems.targets(tool, args)[0]
+  if (target === undefined) return page
+  return BrowserPermission.origin(target) ?? BrowserPermission.site(target)
+}
+
+/**
+ * What an action's result needs after the action ran. Any action can move the tab to another origin (a click, a key,
+ * a script, a redirect); when that origin was never granted, the result belongs to a page this session did not ask
+ * about. The caller withholds the content and asks for read - it never re-runs the action, so side effects happen
+ * once. Read tools and unchanged origins need nothing.
+ */
+export function landingNeed(input: {
+  tool: string
+  planned?: string
+  landed?: string
+  authorized: readonly string[]
+}): Item | undefined {
+  const landed = input.landed
+  if (!landed || landed === input.planned) return undefined
+  if (BrowserPermission.classOf(input.tool) === "read") return undefined
+  if (input.authorized.includes(`read:${landed}`)) return undefined
+  // A navigation the session was allowed to make may report where it landed.
+  if (BrowserPermission.classOf(input.tool) === "navigate" && input.authorized.includes(`navigate:${landed}`)) {
+    return undefined
+  }
+  return { class: "read", origin: landed }
 }
 
 /**
@@ -542,17 +626,22 @@ class PlaywrightBackend implements BrowserBackend {
   /** The page this session acts on, or the newest one when the session has none (a first call, or it was closed). */
   private current(session: string): Page | undefined {
     const pages = this.conn.context.pages()
+    // Only a session whose page is gone loses its entry: a live session keeps its page whatever the session count.
+    prunePages(this.pages, pages)
     const known = this.pages.get(session)
-    // A page that was closed or crashed is dropped, so a session cannot pin a dead page (or its handles).
-    if (known && !pages.includes(known)) this.pages.delete(session)
     if (!pages.length) return undefined
-    if (known && pages.includes(known)) return known
+    if (known) return known
     return pages[pages.length - 1]
   }
 
-  /** Remember a session's page, oldest session first out. */
+  /** Remember a session's page, least recently used first out past the hard cap. */
   private remember(session: string, page: Page) {
     rememberPage(this.pages, session, page)
+  }
+
+  /** Release a session's page when the session ends. */
+  forget(session: string) {
+    this.pages.delete(session)
   }
 
   /** Follow the call's own intent: a tab it created, or the model's own tab choice. */
@@ -641,15 +730,18 @@ class PlaywrightBackend implements BrowserBackend {
     const withheld = withheldFrames(page, authorized)
     if (!withheld.length) return { text, refused: false }
     const origins = new Set(withheld.map((frame) => frameOrigin(frame)).filter((origin): origin is string => !!origin))
-    // An opaque withheld frame has no origin to add to the set: every unattributable line is dropped instead.
-    const opaque = withheld.some((frame) => frameOrigin(frame) === undefined)
+    // Lines are attributed to a granted origin: an opaque frame, a blob: script URL or a request from a frame we
+    // cannot name all fall out, because none of them can be attributed to a page we may read.
+    const allowed = new Set(
+      authorized.filter((entry) => entry.startsWith("read:")).map((entry) => entry.slice("read:".length)),
+    )
     const resolved = text.includes("### Snapshot") ? await this.frameOrigins(page, text) : undefined
     return Frames.scope({
       tool: name,
       text,
       withholding: true,
       withheld: origins,
-      opaque,
+      allowed,
       origins: resolved,
       granted: (origin) => authorized.includes(`read:${origin}`),
     })
@@ -771,7 +863,13 @@ class PlaywrightBackend implements BrowserBackend {
     // backend owns: only a path that stays inside the output directory is accepted. A screenshot is written from the
     // image the backend holds, so masking is applied to the file as well.
     const save = screenshotPath(name, args)
-    if (!shot && typeof args.filename === "string" && args.filename.trim() !== "") insideOutput(args.filename)
+    // The MCP never writes a result file: it would hold the withheld frames' content unfiltered. The backend writes
+    // the file from the filtered text instead, so the name is removed from the arguments the MCP sees.
+    const file = shot ? undefined : outputFile(name, args)
+    if (file) callArgs = file.args
+    if (save) await fs.mkdir(path.dirname(save), { recursive: true })
+    // What the call meant to act on, so a landing elsewhere is visible after it ran.
+    const planned = plannedOrigin(name, args, page && BrowserPermission.origin(page.url()))
     // The withheld set is read again after the call, so the baseline cannot depend on a frame being withheld now.
     const before = outputBaseline(name) ? await this.outputFiles() : undefined
 
@@ -817,20 +915,36 @@ class PlaywrightBackend implements BrowserBackend {
       throw new Error("A download was refused: the page has no URL to bind the approval to.")
     }
 
-    // A navigation can land on another origin through a redirect; the real origin decides. A landing page without an
-    // http(s) origin is refused the same way as such a target.
+    // A navigation tool may not land on a scheme without an http(s) origin; the same refusal as its target.
     if (page && (name === "browser_navigate" || name === "browser_navigate_back" || name === "browser_tabs")) {
       const refusal = navigationRefusal(page.url())
       if (refusal) throw new Error(refusal)
-      const origin = BrowserPermission.origin(page.url())
-      if (origin && !authorized.includes(`read:${origin}`) && !authorized.includes(`navigate:${origin}`)) {
-        throw new NeedsPermissionError([{ class: "navigate", origin }])
+    }
+
+    // Every action, not just the navigation tools, can leave the tab on an origin this session never asked about. The
+    // action already ran, so its content is withheld and read is requested: the call is never retried.
+    const need = page && landingNeed({ tool: name, planned, landed: BrowserPermission.origin(page.url()), authorized })
+    if (need && page) {
+      // Only the URL: a title is content of an origin this session was never granted.
+      return {
+        content: [
+          {
+            type: "text",
+            text: [
+              `- Page URL: ${page.url()}`,
+              "",
+              `The page moved to ${need.origin}; its content is withheld until read is granted.`,
+            ].join("\n"),
+          },
+        ],
+        isError: false,
+        meta: { url: page.url(), needs: [need] },
       }
     }
 
     const withheld = page ? withheldFrames(page, authorized) : []
     const scoped = page ? await this.filter(page, name, text, authorized) : { text, refused: false }
-    const viewed = scoped.text
+    let viewed = scoped.text
     const images = content.filter((block): block is Extract<ContentBlock, { type: "image" }> => block.type === "image")
     const origin = page && BrowserPermission.origin(page.url())
     const withheldOrigins = withheld
@@ -848,6 +962,11 @@ class PlaywrightBackend implements BrowserBackend {
           ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
         },
       }
+    }
+
+    if (file && !scoped.refused) {
+      await saveOutput(file, viewed)
+      viewed = `${viewed}\n\n${file.link}`
     }
 
     if (withheld.length && shot) {
@@ -936,6 +1055,11 @@ export class Backends {
     )
     this.entries.set(key, entry)
     return entry.promise
+  }
+
+  /** Release a deleted session's page on every live backend. A missing backend is not launched for it. */
+  forgetSession(session: string) {
+    for (const entry of this.entries.values()) entry.backend?.forget?.(session)
   }
 
   async dispose() {

@@ -3,8 +3,9 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { Config } from "@opencode/core/config"
+import { Permission } from "@opencode/core/permission"
 import { Tool } from "@opencode/schema/tool"
-import { Effect, Exit, Scope } from "effect"
+import { Effect, Exit, Scope, Stream } from "effect"
 import type { CallContext } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { key, outputDirectory, playwright } from "../../src/browser/playwright"
@@ -31,7 +32,12 @@ const state: World = { pages: [], calls: [], text: () => "", closed: 0 }
 
 /** A page object with the surface the backend reads: its URL, its frame tree, and a ref lookup that finds nothing. */
 class Page {
-  constructor(readonly id: string, public value: string) {}
+  children: Page[] = []
+
+  constructor(
+    readonly id: string,
+    public value: string,
+  ) {}
 
   url() {
     return this.value
@@ -42,7 +48,7 @@ class Page {
   }
 
   childFrames(): Page[] {
-    return []
+    return this.children
   }
 
   parentFrame(): null {
@@ -136,9 +142,7 @@ beforeEach(async () => {
   state.closed = 0
   state.onCall = undefined
   state.text = (name) =>
-    name === "browser_console_messages"
-      ? "### Result\n- [ERROR] boom @ https://gate.example.com/app.js"
-      : pageText
+    name === "browser_console_messages" ? "### Result\n- [ERROR] boom @ https://gate.example.com/app.js" : pageText
 })
 
 afterEach(async () => {
@@ -146,24 +150,27 @@ afterEach(async () => {
 })
 
 /** One plugin location; its scope close runs the finalizers, which is the shutdown path under test. */
-async function boot() {
+async function boot(options: { permission?: unknown } = {}) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const ctx = {
     location: { directory: "/tmp/browser-guards-test" },
     // The status RPC the settings dialog reads; the tests here never call it.
     rpc: { register: () => Effect.succeed({ events: { emit: () => Effect.void }, dispose: Effect.void }) },
     tool: {
-      transform: (fn: (typeof transforms)[number]) => Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
+      transform: (fn: (typeof transforms)[number]) =>
+        Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
     },
+    event: { subscribe: () => Stream.empty },
     permission: { hook: () => Effect.sync(() => ({ dispose: Effect.void })) },
   }
   const config = { entries: () => Effect.succeed([]) } as unknown as Config.Interface
   const scope = await Effect.runPromise(Scope.make())
+  const plugin = KiloBrowserToolsPlugin.effect(ctx as never).pipe(
+    Effect.provideService(Scope.Scope, scope),
+    Effect.provideService(Config.Service, config),
+  )
   await Effect.runPromise(
-    KiloBrowserToolsPlugin.effect(ctx as never).pipe(
-      Effect.provideService(Scope.Scope, scope),
-      Effect.provideService(Config.Service, config),
-    ),
+    options.permission ? plugin.pipe(Effect.provideService(Permission.Service, options.permission as never)) : plugin,
   )
   const tools = () => {
     const added: Tool.Info[] = []
@@ -237,9 +244,10 @@ describe("the backend's call path", () => {
     )
     expect(state.calls).toEqual([])
     expect(error instanceof Error ? error.message : String(error)).toContain("output directory")
-    const inside = path.join(outputDirectory(), "page.png")
-    await backend.callTool("browser_snapshot", { filename: inside }, context)
-    expect(state.calls[0]?.args.filename).toBe(inside)
+    // Inside the directory the backend writes the file itself, from the filtered text; the MCP never sees the name.
+    await backend.callTool("browser_snapshot", { filename: "page.yml" }, context)
+    expect(state.calls[0]?.args.filename).toBeUndefined()
+    expect((await fs.stat(path.join(outputDirectory(), "page.yml")).catch(() => null))?.isFile()).toBe(true)
   })
 
   test("the current page is tracked per session, not taken from tool text", async () => {
@@ -255,6 +263,99 @@ describe("the backend's call path", () => {
     expect(two.meta?.url).toBe("https://other.example.com/")
     expect(one.meta?.url).toBe("https://gate.example.com/")
     expect(back.meta?.url).toBe("https://gate.example.com/")
+  })
+})
+
+describe("a grant a withheld result asked for", () => {
+  const rejection =
+    "This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action."
+
+  test("a refused post-action ask keeps the withheld result and says the action ran", async () => {
+    // The plan's own asks are allowed; only the ask for the origin the action landed on is refused.
+    const host = await boot({
+      permission: {
+        assert: (input: { resources: readonly string[] }) =>
+          Effect.suspend(() =>
+            input.resources.some((resource) => String(resource).includes("other.example.com"))
+              ? Effect.fail(new Error(rejection))
+              : Effect.void,
+          ),
+      },
+    })
+    const page = state.pages[0]
+    state.onCall = (name) => {
+      if (name === "browser_click") page.value = "https://other.example.com/landed"
+    }
+    const result = await host.call("browser_click", {})
+    const text = textOf(result)
+    expect(text).toContain("- Page URL: https://other.example.com/landed")
+    expect(text).toContain("the action ran")
+    expect(text).not.toContain("cannot ask the user")
+    // Only the URL: the title is content of an origin this session was never granted.
+    expect(text).not.toContain("- Page Title:")
+    // The click ran exactly once: the refusal never replayed it.
+    expect(state.calls.filter((call) => call.name === "browser_click").length).toBe(1)
+  })
+
+  test("a refused pre-action ask keeps the existing rejection message", async () => {
+    const host = await boot({
+      permission: { assert: () => Effect.fail(new Error(rejection)) },
+    })
+    const outcome = (await host.call("browser_snapshot", {})) as { failure?: Error }
+    expect(String(outcome.failure?.message ?? "")).toContain("cannot ask the user for permission")
+    // Nothing ran.
+    expect(state.calls).toEqual([])
+  })
+})
+
+describe("a result file the MCP would write", () => {
+  const snapshotText = [
+    "### Page",
+    "- Page URL: https://gate.example.com/",
+    "- Page Title: Gate",
+    "### Snapshot",
+    "```yaml",
+    "- generic [ref=e1]:",
+    "  - iframe [ref=e2]:",
+    '    - heading "IFRAME-MARKER" [level=1]',
+    '  - heading "Gate" [level=1]',
+    "```",
+  ].join("\n")
+
+  test("a saved snapshot holds the filtered snapshot, not the withheld frame", async () => {
+    const parent = state.pages[0]
+    parent.children = [new Page("b", "https://pay.example.net/")]
+    state.text = () => snapshotText
+    const backend = await browser()
+    await backend.callTool("browser_snapshot", { filename: "nested/dir/snap.yml" }, context)
+    const body = await fs.readFile(path.join(outputDirectory(), "nested", "dir", "snap.yml"), "utf8")
+    expect(body).not.toContain("IFRAME-MARKER")
+    expect(body).toContain('heading "Gate"')
+    expect(state.calls[0]?.args.filename).toBeUndefined()
+  })
+
+  test("a saved console file holds the filtered console, not a withheld origin's line", async () => {
+    const parent = state.pages[0]
+    parent.children = [new Page("b", "https://pay.example.net/")]
+    state.text = () =>
+      [
+        "### Result",
+        "Total messages: 2 (Errors: 1, Warnings: 0)",
+        "",
+        "[LOG] page @ https://gate.example.com/app.js:1",
+        "[ERROR] card declined @ https://pay.example.net/checkout.js:8",
+      ].join("\n")
+    const backend = await browser()
+    // The page origin is granted; only the withheld frame's line may not reach the file.
+    await backend.callTool(
+      "browser_console_messages",
+      { level: "error", filename: "console/run.log" },
+      { ...context, authorized: ["read:https://gate.example.com"] },
+    )
+    const body = await fs.readFile(path.join(outputDirectory(), "console", "run.log"), "utf8")
+    expect(body).not.toContain("pay.example.net")
+    expect(body).toContain("https://gate.example.com/app.js:1")
+    expect(state.calls[0]?.args.filename).toBeUndefined()
   })
 })
 

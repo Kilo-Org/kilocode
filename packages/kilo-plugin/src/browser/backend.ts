@@ -13,6 +13,8 @@ export type CallMeta = {
   origin?: string
   /** Origins whose iframes were withheld from this result, outermost first. */
   withheldFrames?: readonly string[]
+  /** Items the result needs after the action ran; the tool layer asks without repeating the action. */
+  needs?: readonly Item[]
 }
 
 export type CallResult = { content: ContentBlock[]; isError: boolean; meta?: CallMeta }
@@ -43,6 +45,8 @@ export type BrowserBackend = {
    */
   plan?(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<Item[]>
   callTool(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<CallResult>
+  /** Release per-session state when the session ends; a backend without any ignores it. */
+  forget?(session: string): void
   dispose(): Promise<void>
 }
 
