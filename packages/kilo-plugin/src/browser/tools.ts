@@ -20,7 +20,7 @@ import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
 import { modeFor, observe, snapshot, split, Tracker } from "./observation"
 import { BrowserPermission } from "./permission"
-import { key, playwright } from "./playwright"
+import { key, persistStep, playwright } from "./playwright"
 import { resolve, type Settings } from "./settings"
 import { KiloGatewayAccounts } from "../gateway/accounts"
 
@@ -226,7 +226,7 @@ function consoleErrors(
       })
       const permitted = yield* queried.pipe(
         Effect.flatten,
-        Effect.catch(() => Effect.succeed(false)),
+        Effect.orElseSucceed(() => false),
       )
       if (!permitted) return []
     }
@@ -303,7 +303,13 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     for (let attempt = 0; attempt < 2; attempt++) {
       if (active.plan) {
         const planned = yield* Effect.tryPromise({
-          try: () => active.plan!(entry.name, input, { session, authorized: [...grants], sensitive: [...sensitive] }),
+          try: () =>
+            active.plan!(entry.name, input, {
+              session,
+              authorized: [...grants],
+              sensitive: [...sensitive],
+              allowSensitive,
+            }),
           catch: (error) => error,
         }).pipe(Effect.catch(() => Effect.succeed<readonly Item[]>([])))
         yield* authorize(
@@ -322,6 +328,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
               session,
               authorized: [...grants],
               sensitive: [...sensitive],
+              allowSensitive,
             }),
           catch: (error) => error,
         }),
@@ -360,9 +367,18 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
           deps.permission,
         ),
       )
-      // Granted: read the page again rather than return the withheld placeholder. Reading has no side effect, so the
-      // action still happened once.
+      // Granted: read the page again rather than return the withheld placeholder, but only for read needs - a
+      // sensitive need (a stopped download) keeps the action's own notice. Reading has no side effect.
       if (Result.isSuccess(asked)) {
+        for (const item of needs) {
+          if (item.class === "sensitive" && item.reason?.startsWith("download:")) {
+            persistStep(entry.name, input, item.origin)
+          }
+        }
+      }
+      // Granted: read the page again rather than return the withheld placeholder, but only for read needs - a
+      // sensitive need (a stopped download) keeps the action's own notice. Reading has no side effect.
+      if (Result.isSuccess(asked) && needs.every((item) => item.class === "read")) {
         const reread = yield* Effect.result(
           Effect.tryPromise({
             try: (signal) => active.callTool("browser_snapshot", {}, { signal, session, authorized: [...grants] }),
@@ -373,6 +389,17 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
           result.content = reread.success.content
           result.meta = reread.success.meta
         }
+      }
+      if (Result.isSuccess(asked) && needs.some((item) => item.class === "sensitive")) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `${textOf(result)}\n\nApproved. Repeat the same step to receive the download; the action never runs twice by itself.`,
+            },
+          ],
+          metadata: { browser: { backend: choice.backend, observation: browser.observation } },
+        } as Tool.Result
       }
       // A refusal must never read as the action being rejected: the action ran, only its content stayed unread.
       if (Result.isFailure(asked)) {

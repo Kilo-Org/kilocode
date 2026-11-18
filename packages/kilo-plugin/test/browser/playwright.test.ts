@@ -19,7 +19,6 @@ import {
   launchFailure,
   navigationRefusal,
   navigationTargets,
-  outputBaseline,
   plannedOrigin,
   prunePages,
   rememberPage,
@@ -172,8 +171,6 @@ describe("output directory", () => {
       expect(file?.path).toBe(path.resolve(directory, "nested/out.txt"))
       // The MCP never receives the name.
       expect(file?.args).toEqual({})
-      // Its file is baselined, so a refused or failed call cannot leave it behind.
-      expect(outputBaseline(name)).toBe(true)
     }
   })
 
@@ -248,9 +245,6 @@ describe("output directory", () => {
     expect(screenshotPath("browser_snapshot", { filename: "x" }, directory)).toBeUndefined()
   })
 
-  test("a snapshot is baselined because it can be saved as a file", () => {
-    expect(outputBaseline("browser_snapshot")).toBe(true)
-  })
 })
 
 describe("current page", () => {
@@ -418,23 +412,6 @@ describe("navigation targets", () => {
   })
 })
 
-describe("output baselines", () => {
-  test("a screenshot is always baselined, even with nothing withheld yet", () => {
-    expect(outputBaseline("browser_take_screenshot")).toBe(true)
-  })
-
-  test("results that can be saved as a file are baselined", () => {
-    expect(outputBaseline("browser_network_request")).toBe(true)
-    expect(outputBaseline("browser_network_requests")).toBe(true)
-    expect(outputBaseline("browser_console_messages")).toBe(true)
-  })
-
-  test("a tool that writes nothing is not read", () => {
-    expect(outputBaseline("browser_click")).toBe(false)
-    expect(outputBaseline("browser_find")).toBe(false)
-    expect(outputBaseline("browser_press_key")).toBe(false)
-  })
-})
 
 describe("playwright launch failures", () => {
   test("names the sandbox fix instead of a raw stack", () => {

@@ -28,6 +28,8 @@ export type CallContext = {
   authorized?: readonly string[]
   /** Step tokens approved for this call, one per sensitive step. */
   sensitive?: readonly string[]
+  /** `browser.allow_sensitive`: a download this call starts is kept, with no prompt. */
+  allowSensitive?: boolean
 }
 
 /**

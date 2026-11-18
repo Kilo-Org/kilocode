@@ -3,7 +3,7 @@
 // scripted OpenAI-compatible model, and the compiled CLI driven through `run`. Not a `bun test` file: it needs a
 // display (run it under xvfb), a built binary and an installed browser.
 //
-//   bun test/browser/permissions-e2e.ts <binary> frames|frames-allowed|ask-public|sensitive-auto|sensitive-rejected|sensitive-allowed|deny-click|navigate-file|tabs-new-file|click-cross-origin|click-cross-origin-granted|back-no-double|nested
+//   bun test/browser/permissions-e2e.ts <binary> frames|frames-allowed|ask-public|sensitive-auto|sensitive-rejected|sensitive-allowed|deny-click|navigate-file|download-approved|tabs-new-file|click-cross-origin|click-cross-origin-granted|back-no-double|nested
 //
 // Each scenario prints one JSON report and exits non-zero when an expectation fails.
 import * as Png from "@kilocode/kilo-plugin/browser/png"
@@ -54,7 +54,17 @@ let page = simple
 const fixture = Bun.serve({
   hostname: "127.0.0.1",
   port: 0,
-  fetch: () => new Response(page, { headers: { "content-type": "text/html; charset=utf-8" } }),
+  fetch(request) {
+    if (new URL(request.url).pathname === "/download") {
+      return new Response("report-body", {
+        headers: {
+          "content-type": "text/plain",
+          "content-disposition": 'attachment; filename="report.txt"',
+        },
+      })
+    }
+    return new Response(page, { headers: { "content-type": "text/html; charset=utf-8" } })
+  },
 })
 
 // A third and fourth origin: the middle frame is withheld, and the inner frame nested in it shares its origin with a
@@ -85,6 +95,13 @@ const middle = Bun.serve({
   port: 0,
   fetch: () => new Response(middlePage, { headers: { "content-type": "text/html; charset=utf-8" } }),
 })
+
+const downloadPage = `<!doctype html>
+<html><head><meta charset="utf-8"><title>Download E2E</title></head>
+<body>
+  <h1>Download E2E</h1>
+  <a id="file" href="/download">Get the report</a>
+</body></html>`
 
 const linkedPage = `<!doctype html>
 <html><head><meta charset="utf-8"><title>Linked E2E</title></head>
@@ -258,6 +275,16 @@ const plans: Record<string, Plan> = {
     }
     return undefined
   },
+  // A download is stopped without approval and kept when sensitive steps are allowed; the click never repeats.
+  "download-approved": (index, results) => {
+    if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
+    if (index === 1) return { name: "browser_snapshot", args: {} }
+    if (index === 2) {
+      const ref = /link "Get the report" \[ref=([^\]]+)\]/.exec(results[1] ?? "")?.[1]
+      return ref ? { name: "browser_click", args: { element: "the report link", target: ref } } : undefined
+    }
+    return undefined
+  },
   // Going back lands on an origin the session was never granted: withheld and asked, and the action runs once.
   "back-no-double": (index) => {
     if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
@@ -386,9 +413,11 @@ async function main() {
       ? framed
       : scenario === "nested"
         ? nestedPage
-        : scenario.startsWith("click-cross-origin")
-          ? linkedPage
-          : simple
+        : scenario === "download-approved"
+          ? downloadPage
+          : scenario.startsWith("click-cross-origin")
+            ? linkedPage
+            : simple
   const output: Record<string, unknown> = { scenario }
 
   if (scenario === "frames") {
@@ -531,6 +560,29 @@ async function main() {
     expect(refused.includes("file:"), `the refusal does not name the scheme:\n${refused.slice(0, 300)}`)
     expect(!refused.includes("root:"), `the local file was read:\n${refused.slice(0, 300)}`)
     expect(back.includes(fixture.url.origin), `the tab did not stay on the fixture:\n${back.slice(0, 300)}`)
+    return output
+  }
+
+  if (scenario === "download-approved") {
+    const stopped = await run({})
+    const kept = await run({ allowSensitive: true })
+    const stoppedText = stopped.last.results[2] ?? ""
+    const keptText = kept.last.results[2] ?? ""
+    const files = await fs
+      .readdir(path.join(kept.root, "data", "kilo2", "browser", "output"))
+      .catch(() => [] as string[])
+    output.stopped = stoppedText.slice(0, 300)
+    output.kept = keptText.slice(0, 300)
+    output.files = files
+    expect(
+      stoppedText.includes("needs the user's permission"),
+      `the download was not stopped:\n${stoppedText.slice(0, 300)}`,
+    )
+    expect(keptText.includes("A download was kept"), `the download was not kept:\n${keptText.slice(0, 300)}`)
+    expect(
+      files.some((file) => file.includes("report")),
+      `the kept download is not on disk: ${files}`,
+    )
     return output
   }
 

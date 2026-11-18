@@ -112,6 +112,24 @@ function stepApproved(tokens: readonly string[], tool: string, args: Record<stri
   })
 }
 
+/**
+ * Approve a step without handing its token to anyone: the next identical call finds the approval by its own tool,
+ * arguments and site. Used for a download the user approved after the action had already run.
+ */
+export function persistStep(tool: string, args: Record<string, unknown>, origin: string) {
+  approveStep(tool, args, origin)
+}
+
+/** True when a step for exactly this tool, arguments and site was approved recently, whatever token came with it. */
+export function stepPersisted(tool: string, args: Record<string, unknown>, origin: string) {
+  const hash = stepHash(tool, args, origin)
+  for (const step of STEPS.values()) {
+    if (step.expires < Date.now()) continue
+    if (step.hash === hash) return true
+  }
+  return false
+}
+
 /** Hosts whose consent screens hand a session to another service. */
 const OAUTH_HOST: Record<string, true> = {
   "accounts.google.com": true,
@@ -387,22 +405,6 @@ export function navigationRefusal(url: string): string | undefined {
 }
 
 /**
- * Whether a call's output directory must be baselined before it runs. The withheld frame set is only final after the
- * call, and every result that can reach the output directory as a file must still be removable afterwards, so the
- * baseline never depends on a frame being withheld before the call.
- */
-export function outputBaseline(name: string): boolean {
-  return (
-    name === "browser_take_screenshot" ||
-    name === "browser_snapshot" ||
-    name === "browser_evaluate" ||
-    name === "browser_network_request" ||
-    name === "browser_network_requests" ||
-    name === "browser_console_messages"
-  )
-}
-
-/**
  * The output path a screenshot asked for, or undefined. A name outside the browser output directory is refused; the
  * file is written from the inline image the backend masked, never by the MCP.
  */
@@ -497,22 +499,6 @@ export function contained(target: string, root: string, flavour: typeof path = p
   // The first path segment decides: `..` is an escape, `..foo` is an ordinary name.
   const [first] = relative.split(flavour.sep)
   return first !== ".."
-}
-
-/**
- * The files the MCP itself wrote for a screenshot. It prints the path relative to its own working directory, so it is
- * resolved the same way a snapshot link is, and only a path inside the output directory is returned.
- */
-export function screenshotWrites(text: string, directory = outputDirectory()): string[] {
-  const boundary = canonical(path.resolve(directory))
-  const found: string[] = []
-  for (const line of text.split("\n")) {
-    const printed = /save it as (.+)$/.exec(line.trim())?.[1]?.trim()
-    if (!printed) continue
-    const resolved = canonical(path.resolve(process.cwd(), printed))
-    if (contained(resolved, boundary)) found.push(resolved)
-  }
-  return [...new Set(found)]
 }
 
 /** Write a file this backend owns, refusing a symbolic link at the target name and creating its parent. */
@@ -870,6 +856,9 @@ class PlaywrightBackend implements BrowserBackend {
     // Every file this call writes is tracked by path: another session's file in the shared directory must survive.
     const written: string[] = []
     let callArgs = args
+    // The MCP writes into a file this backend names, so the path is ours: never derived from tool output, never a
+    // shared `page-<timestamp>.png` another session could own. The bytes are read back here and the file removed.
+    const capture = shot ? path.join(outputDirectory(), `.mcp-${randomUUID()}.png`) : undefined
     if (shot) {
       if (args.target !== undefined && withheldBefore.length) {
         return {
@@ -877,8 +866,8 @@ class PlaywrightBackend implements BrowserBackend {
           isError: true,
         }
       }
-      callArgs = { ...args, type: "png", scale: "css" }
-      delete callArgs.filename
+      callArgs = { ...args, type: "png", scale: "css", filename: capture }
+      if (capture) written.push(capture)
     }
     // A file name the model supplies is resolved by the MCP against the workspace root, outside the directory this
     // backend owns: only a path that stays inside the output directory is accepted. A screenshot is written from the
@@ -892,9 +881,19 @@ class PlaywrightBackend implements BrowserBackend {
     // What the call meant to act on, so a landing elsewhere is visible after it ran.
     const planned = plannedOrigin(name, args, page && BrowserPermission.origin(page.url()))
     const downloads: string[] = []
+    const kept: string[] = []
     const onDownload = (download: Download) => {
       const site = page && BrowserPermission.site(page.url())
-      if (site && stepApproved(ctx.sensitive ?? [], name, args, site)) return
+      // `allow_sensitive` keeps the file on the first call; a persisted approval does it on the next identical one.
+      const approved =
+        site !== undefined &&
+        (ctx.allowSensitive === true ||
+          stepApproved(ctx.sensitive ?? [], name, args, site) ||
+          stepPersisted(name, args, site))
+      if (approved) {
+        kept.push(download.suggestedFilename())
+        return
+      }
       downloads.push(download.suggestedFilename())
       void download.cancel().catch(() => undefined)
     }
@@ -911,6 +910,12 @@ class PlaywrightBackend implements BrowserBackend {
     }
 
     const content = blocks(result.content)
+    if (capture) {
+      // The MCP saved the pixels to the path this call chose; read them and drop the file again.
+      const bytes = await fs.readFile(capture).catch(() => undefined)
+      await fs.unlink(capture).catch(() => undefined)
+      if (bytes) content.push({ type: "image", data: bytes.toString("base64"), mimeType: "image/png" })
+    }
     for (const block of content) if (block.type === "text") block.text = await inline(block.text)
     if (!content.length && result.structuredContent !== undefined) {
       content.push({ type: "text", text: JSON.stringify(result.structuredContent, null, 2) })
@@ -971,6 +976,7 @@ class PlaywrightBackend implements BrowserBackend {
       }
     }
 
+    if (kept.length) viewed = `${viewed}\n\nA download was kept: ${kept.join(", ")}.`
     if (downloads.length && page) {
       // The click already ran. A download cannot be resumed after it was stopped, so the action is never repeated:
       // the result says the download needs approval and the user retries the step after approving.
@@ -980,7 +986,7 @@ class PlaywrightBackend implements BrowserBackend {
         content: [
           {
             type: "text",
-            text: `${viewed}\n\nA download started (${downloads.join(", ")}) and was stopped: it needs the user's permission. The action already ran once and is never repeated; after approving, ask for the step again to receive the file.`,
+            text: `${viewed}\n\nA download started (${downloads.join(", ")}) and was stopped: it needs the user's permission. The action already ran once and is never repeated; once approved, repeat the same step to receive the file.`,
           },
         ],
         isError: false,
@@ -1000,7 +1006,7 @@ class PlaywrightBackend implements BrowserBackend {
     if (withheld.length && shot) {
       // Whatever the MCP saved was written before masking: it must not outlive the call, and its path is not an
       // acceptable answer either, because the model would open the unmasked pixels. Only this call's own file goes.
-      await this.removeWritten([...written, ...screenshotWrites(text)])
+      await this.removeWritten(written)
       const masked =
         images.length > 0 && page && args.target === undefined
           ? await this.maskFrames(page, images, withheld, args.fullPage === true).catch(() => false)

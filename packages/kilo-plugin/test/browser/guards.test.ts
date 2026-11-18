@@ -10,6 +10,7 @@ import type { CallContext } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { key, outputDirectory, playwright } from "../../src/browser/playwright"
 import { resolve } from "../../src/browser/settings"
+import { key as backendKey, persistStep } from "../../src/browser/playwright"
 import { grantsFor, KiloBrowserToolsPlugin, resetGrants } from "../../src/browser/tools"
 
 /**
@@ -387,20 +388,20 @@ describe("a download the action started", () => {
 })
 
 describe("a result file this call did not write", () => {
-  test("survives another session's masked screenshot", async () => {
+  test("is never deleted, even when the tool output names it", async () => {
     const other = path.join(outputDirectory(), "other-session.png")
     const mine = path.join(outputDirectory(), "mine.png")
     await fs.mkdir(outputDirectory(), { recursive: true })
     await fs.writeFile(other, "keep")
-    await fs.writeFile(mine, "drop")
+    await fs.writeFile(mine, "keep")
     const parent = state.pages[0]
     parent.children = [new Page("b", "https://pay.example.net/")]
-    // The MCP reports the file it wrote; only that file may be removed, never the shared directory's neighbours.
-    state.text = () => `### Result\n// Screenshot viewport and save it as ${mine}`
+    // Page-influenced output names both files; only the paths this call wrote may ever be removed.
+    state.text = () => `### Result\n// Screenshot viewport and save it as ${other}\n// and ${mine}`
     const backend = await browser()
     await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
     expect((await fs.stat(other).catch(() => null))?.isFile()).toBe(true)
-    expect(await fs.stat(mine).catch(() => null)).toBeNull()
+    expect((await fs.stat(mine).catch(() => null))?.isFile()).toBe(true)
   })
 })
 

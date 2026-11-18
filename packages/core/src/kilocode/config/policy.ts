@@ -308,8 +308,7 @@ export function parse(
     report?.({
       path: ["sandbox"],
       kind: "invalid",
-      message:
-        "ignored invalid sandbox; expected an object with optional enabled, network, writable_paths and allowed_hosts",
+      message: "ignored invalid sandbox; expected an object with optional enabled, network, writable_paths and allowed_hosts",
     })
   // Managed policy splitting clears optional fields with undefined; the encoded schema requires omitted keys.
   return Option.getOrUndefined(
@@ -372,11 +371,7 @@ function displaySettings(input: unknown, report?: (diagnostic: ConfigNormalize.D
       if (input[key] === undefined) return []
       const value = Option.getOrUndefined(decodeLayout(input[key]))
       if (value === undefined)
-        report?.({
-          path: [key],
-          kind: "invalid",
-          message: `ignored invalid ${key}; expected "expanded" or "collapsed"`,
-        })
+        report?.({ path: [key], kind: "invalid", message: `ignored invalid ${key}; expected "expanded" or "collapsed"` })
       return value === undefined ? [] : [[key, value]]
     }),
   )
@@ -386,15 +381,11 @@ function workflowModels(input: Record<string, unknown>) {
   const legacy = record(input.command) ? input.command : {}
   const native = record(input.commands) ? input.commands : {}
   const names = new Set([...Object.keys(legacy), ...Object.keys(native)])
-  return Object.fromEntries(
-    [...names].flatMap((name) => {
-      const command = native[name]
-      const model =
-        modelOnly(command) ??
-        (record(command) && typeof command.template === "string" ? undefined : modelOnly(legacy[name]))
-      return model ? [[name, model]] : []
-    }),
-  )
+  return Object.fromEntries([...names].flatMap((name) => {
+    const command = native[name]
+    const model = modelOnly(command) ?? (record(command) && typeof command.template === "string" ? undefined : modelOnly(legacy[name]))
+    return model ? [[name, model]] : []
+  }))
 }
 
 /** Apply scoped model-only entries to the winning discovered definitions, without copying their templates. */
@@ -434,9 +425,7 @@ export function fromEntries(entries: readonly Config.Entry[]) {
  * turn off a `true` elsewhere (a global `true` stays on under a project `false`), so disabling clears every `true`.
  */
 export function privacyMode(entries: readonly Config.Entry[]) {
-  return entries.some(
-    (entry) => entry.type === "document" && entry.info instanceof Info && entry.info.privacy_mode === true,
-  )
+  return entries.some((entry) => entry.type === "document" && entry.info instanceof Info && entry.info.privacy_mode === true)
 }
 
 /** The custom commit message prompt of the effective entries: the last document that sets one wins, and empty means none. */
