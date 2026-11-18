@@ -21,7 +21,7 @@ import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
 import { modeFor, observe, snapshot, split, Tracker } from "./observation"
 import { BrowserPermission } from "./permission"
-import { key, playwright, readiness } from "./playwright"
+import { key, persistStep, playwright, readiness } from "./playwright"
 import { resolve, type Settings } from "./settings"
 import { KiloGatewayAccounts } from "../gateway/accounts"
 
@@ -47,6 +47,11 @@ const extension: BrowserBackend = {
   dispose: async () => {},
 }
 
+/** The policy cache key: one gateway answering for another's organization is not the same policy. */
+export function policyKey(server: string, organizationID: string) {
+  return `${server}:${organizationID}`
+}
+
 /** How long an organization policy is reused before the cloud is asked again. */
 const POLICY_TTL = 60_000
 const policies = new Map<string, { value: KiloBrowserPolicy.Policy | undefined; expires: number }>()
@@ -59,7 +64,8 @@ function policy(directory: string, endpoint?: string) {
   const account = KiloGatewayAccounts.get(directory)
   const id = account?.organizationID ?? undefined
   if (!account || !id) return Effect.succeed<KiloBrowserPolicy.Policy | undefined>(undefined)
-  const cached = policies.get(id)
+  const key = policyKey(account.baseURL, id)
+  const cached = policies.get(key)
   if (cached && cached.expires > Date.now()) return Effect.succeed(cached.value)
   return KiloBrowserPolicy.get({
     server: account.baseURL,
@@ -68,7 +74,7 @@ function policy(directory: string, endpoint?: string) {
     ...(endpoint ? { endpoint } : { endpoint: account.baseURL }),
   }).pipe(
     Effect.map((value) => {
-      policies.set(id, { value, expires: Date.now() + POLICY_TTL })
+      policies.set(key, { value, expires: Date.now() + POLICY_TTL })
       return value
     }),
   )
@@ -81,7 +87,7 @@ function policy(directory: string, endpoint?: string) {
 const GRANTS = new Map<string, Set<string>>()
 const GRANT_LIMIT = 200
 
-function grantsFor(session: string) {
+export function grantsFor(session: string) {
   const existing = GRANTS.get(session)
   if (existing) return existing
   while (GRANTS.size >= GRANT_LIMIT) {
@@ -182,15 +188,17 @@ export function authorize(
   })
 }
 
-/**
- * Console data for diff mode. The internal call is a real read: it plans like a user call, and it returns nothing
- * unless every item the plan asks for is already granted for this session. It then runs with the same authorized
- * list, so the frame filter sees the same grants a user call does.
- */
-/**
- * What the model reads when the grant a withheld result asked for was refused. Plain and specific: the action
- * happened, the page is somewhere else now, and only reading it is blocked - so the model must not repeat the action.
- */
+/** Clear every remembered grant. The test seam for this module-level cache. */
+export function resetGrants() {
+  GRANTS.clear()
+}
+
+/** Release a session's grants when it is deleted. */
+export function forgetGrants(session: string) {
+  GRANTS.delete(session)
+}
+
+/** The note that says the action already ran and only reading its page was refused. */
 export function withheldRefusal(origin: string): string {
   return [
     `Note: the action ran. The page is now on ${origin}, and reading it needs the user's permission, which was not granted.`,
@@ -198,9 +206,37 @@ export function withheldRefusal(origin: string): string {
   ].join("\n")
 }
 
-function consoleErrors(active: BrowserBackend, session: string, context: Tool.Context) {
+/**
+ * Console data for diff mode. The internal call is a real read: it plans like a user call, and it returns nothing
+ * unless every item the plan asks for is already granted for this session. It then runs with the same authorized
+ * list, so the frame filter sees the same grants a user call does.
+ */
+function consoleErrors(
+  active: BrowserBackend,
+  session: string,
+  context: Tool.Context,
+  permission: Option.Option<Permission.Interface>,
+) {
   return Effect.gen(function* () {
     if (!active.plan) return []
+    // The per-tool rule is the same one a user call obeys: a deny or an ask skips the console section silently.
+    if (Option.isSome(permission)) {
+      // `Effect.try` covers a permission service that does not implement the query at all.
+      const queried = Effect.try({
+        try: () =>
+          permission.value.allows({
+            action: "browser_console_messages",
+            resources: ["*"],
+            ...Permission.invocation(context),
+          } as never),
+        catch: () => Effect.succeed(false),
+      })
+      const permitted = yield* queried.pipe(
+        Effect.flatten,
+        Effect.orElseSucceed(() => false),
+      )
+      if (!permitted) return []
+    }
     const grants = grantsFor(session)
     const planned = yield* Effect.tryPromise({
       try: () =>
@@ -286,7 +322,13 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     for (let attempt = 0; attempt < 2; attempt++) {
       if (active.plan) {
         const planned = yield* Effect.tryPromise({
-          try: () => active.plan!(entry.name, input, { session, authorized: [...grants], sensitive: [...sensitive] }),
+          try: () =>
+            active.plan!(entry.name, input, {
+              session,
+              authorized: [...grants],
+              sensitive: [...sensitive],
+              allowSensitive,
+            }),
           catch: (error) => error,
         }).pipe(Effect.catch(() => Effect.succeed<readonly Item[]>([])))
         yield* authorize(
@@ -305,6 +347,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
               session,
               authorized: [...grants],
               sensitive: [...sensitive],
+              allowSensitive,
             }),
           catch: (error) => error,
         }),
@@ -343,9 +386,17 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
           deps.permission,
         ),
       )
-      // Granted: read the page again rather than return the withheld placeholder. Reading has no side effect, so the
-      // action still happened once.
+      // A granted download is approved for the next identical call in this session; the action is never replayed.
       if (Result.isSuccess(asked)) {
+        for (const item of needs) {
+          if (item.class === "sensitive" && item.reason?.startsWith("download:")) {
+            persistStep(session, entry.name, input, item.origin)
+          }
+        }
+      }
+      // Granted: read the page again rather than return the withheld placeholder, but only for read needs - a
+      // sensitive need (a stopped download) keeps the action's own notice. Reading has no side effect.
+      if (Result.isSuccess(asked) && needs.every((item) => item.class === "read")) {
         const reread = yield* Effect.result(
           Effect.tryPromise({
             try: (signal) => active.callTool("browser_snapshot", {}, { signal, session, authorized: [...grants] }),
@@ -356,6 +407,17 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
           result.content = reread.success.content
           result.meta = reread.success.meta
         }
+      }
+      if (Result.isSuccess(asked) && needs.some((item) => item.class === "sensitive")) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `${textOf(result)}\n\nApproved. Repeat the same step to receive the download; the action never runs twice by itself.`,
+            },
+          ],
+          metadata: { browser: { backend: choice.backend, observation: browser.observation } },
+        } as Tool.Result
       }
       // A refusal must never read as the action being rejected: the action ran, only its content stayed unread.
       if (Result.isFailure(asked)) {
@@ -377,7 +439,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     const text = textOf(result)
     const next = snapshot(split(text))
     const mode = modeFor(entry.name, browser.observation)
-    const errors = mode === "diff" ? yield* consoleErrors(active, session, context) : []
+    const errors = mode === "diff" ? yield* consoleErrors(active, session, context, deps.permission) : []
     const previous = mode === "diff" ? tracker.previous(session, entry.name, next?.url) : undefined
     const viewed = observe({ mode, text, previous, consoleErrors: errors })
     if (viewed.snapshot) tracker.record(session, viewed.snapshot)
@@ -432,6 +494,7 @@ export const KiloBrowserToolsPlugin = define({
           if (event.type !== "session.deleted") return
           tracker.forget(event.data.sessionID)
           playwright.forgetSession(event.data.sessionID)
+          forgetGrants(event.data.sessionID)
         }),
       ),
       Effect.forkScoped({ startImmediately: true }),

@@ -3,7 +3,7 @@
 // scripted OpenAI-compatible model, and the compiled CLI driven through `run`. Not a `bun test` file: it needs a
 // display (run it under xvfb), a built binary and an installed browser.
 //
-//   bun test/browser/permissions-e2e.ts <binary> frames|frames-allowed|ask-public|sensitive-auto|sensitive-rejected|sensitive-allowed|deny-click|navigate-file|tabs-new-file|click-cross-origin|click-cross-origin-granted|back-no-double|nested
+//   bun test/browser/permissions-e2e.ts <binary> frames|frames-allowed|ask-public|sensitive-auto|sensitive-rejected|sensitive-allowed|deny-click|navigate-file|download-approved|sensitive-selector|sensitive-evaluate|tabs-new-file|click-cross-origin|click-cross-origin-granted|back-no-double|nested
 //
 // Each scenario prints one JSON report and exits non-zero when an expectation fails.
 import * as Png from "@kilocode/kilo-plugin/browser/png"
@@ -40,6 +40,11 @@ const simple = `<!doctype html>
     document.getElementById("go").addEventListener("click", () => {
       document.getElementById("status").textContent = "clicked"
     })
+    // The fixture records what reaches the password field, so a test can prove a rejected fill never landed.
+    const pw = document.getElementById("pw")
+    const send = () => fetch("/__record", { method: "POST", body: pw.value })
+    pw.addEventListener("input", send)
+    pw.addEventListener("change", send)
   </script>
 </body></html>`
 
@@ -50,11 +55,36 @@ const framed = `<!doctype html>
   <h1 style="position:fixed;left:400px;top:0">Browser E2E</h1>
 </body></html>`
 
+/** The files a run wrote: the output directory plus the backend's own `.auto/` screenshots. */
+async function written(root: string) {
+  const output = path.join(root, "data", "kilo2", "browser", "output")
+  const auto = await fs.readdir(path.join(output, ".auto")).catch(() => [] as string[])
+  const files = await fs.readdir(output).catch(() => [] as string[])
+  return [...files, ...auto.map((file) => `.auto/${file}`)]
+}
+
+/** Every value the fixture page reported from its password field. */
+const recorded: string[] = []
+
 let page = simple
 const fixture = Bun.serve({
   hostname: "127.0.0.1",
   port: 0,
-  fetch: () => new Response(page, { headers: { "content-type": "text/html; charset=utf-8" } }),
+  async fetch(request) {
+    if (new URL(request.url).pathname === "/__record") {
+      recorded.push(await request.text().catch(() => ""))
+      return new Response(null, { status: 204 })
+    }
+    if (new URL(request.url).pathname === "/download") {
+      return new Response("report-body", {
+        headers: {
+          "content-type": "text/plain",
+          "content-disposition": 'attachment; filename="report.txt"',
+        },
+      })
+    }
+    return new Response(page, { headers: { "content-type": "text/html; charset=utf-8" } })
+  },
 })
 
 // A third and fourth origin: the middle frame is withheld, and the inner frame nested in it shares its origin with a
@@ -85,6 +115,13 @@ const middle = Bun.serve({
   port: 0,
   fetch: () => new Response(middlePage, { headers: { "content-type": "text/html; charset=utf-8" } }),
 })
+
+const downloadPage = `<!doctype html>
+<html><head><meta charset="utf-8"><title>Download E2E</title></head>
+<body>
+  <h1>Download E2E</h1>
+  <a id="file" href="/download">Get the report</a>
+</body></html>`
 
 const linkedPage = `<!doctype html>
 <html><head><meta charset="utf-8"><title>Linked E2E</title></head>
@@ -226,16 +263,16 @@ const plans: Record<string, Plan> = {
   },
   // A `file:` target has no origin, so it has no grant to ask for: the call is refused before the browser opens it.
   "navigate-file": (index) => {
-    if (index === 0) return { name: "browser_navigate", args: { url: "file:///etc/passwd" } }
-    if (index === 1) return { name: "browser_navigate", args: { url: fixture.url.origin } }
-    if (index === 2) return { name: "browser_evaluate", args: { function: "() => location.href" } }
+    if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
+    if (index === 1) return { name: "browser_navigate", args: { url: "file:///etc/passwd" } }
+    if (index === 2) return { name: "browser_tabs", args: { action: "list" } }
     return undefined
   },
   // A new tab is a navigation too: the same refusal applies before the tab opens.
   "tabs-new-file": (index) => {
     if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
     if (index === 1) return { name: "browser_tabs", args: { action: "new", url: "file:///etc/passwd" } }
-    if (index === 2) return { name: "browser_evaluate", args: { function: "() => location.href" } }
+    if (index === 2) return { name: "browser_tabs", args: { action: "list" } }
     return undefined
   },
   // A click can leave the page for an origin this session was never granted: the result is withheld and read is asked.
@@ -255,6 +292,33 @@ const plans: Record<string, Plan> = {
     if (index === 2) {
       const ref = /link "Other origin" \[ref=([^\]]+)\]/.exec(results[1] ?? "")?.[1]
       return ref ? { name: "browser_click", args: { element: "the Other origin link", target: ref } } : undefined
+    }
+    return undefined
+  },
+  // A CSS-selector target is classified like a ref: a password field still needs a person.
+  "sensitive-selector": (index) => {
+    if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
+    if (index === 1)
+      return {
+        name: "browser_type",
+        args: { element: "the password field", target: "input[type=password]", text: "hunter2" },
+      }
+    return undefined
+  },
+  // A page script can reach the same field, so evaluate on that page needs a person too.
+  "sensitive-evaluate": (index) => {
+    if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
+    if (index === 1)
+      return { name: "browser_evaluate", args: { function: "() => document.querySelector('#pw').value" } }
+    return undefined
+  },
+  // A download is stopped without approval and kept when sensitive steps are allowed; the click never repeats.
+  "download-approved": (index, results) => {
+    if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
+    if (index === 1) return { name: "browser_snapshot", args: {} }
+    if (index === 2) {
+      const ref = /link "Get the report" \[ref=([^\]]+)\]/.exec(results[1] ?? "")?.[1]
+      return ref ? { name: "browser_click", args: { element: "the report link", target: ref } } : undefined
     }
     return undefined
   },
@@ -355,6 +419,7 @@ async function run(settings: { observation?: string; allowSensitive?: boolean; r
   const root = process.env.E2E_HOME ?? (await fs.mkdtemp(path.join(os.tmpdir(), "browser-perm-")))
   await fs.mkdir(path.join(root, "data"), { recursive: true })
   record.steps = []
+  recorded.length = 0
   const output = path.join(root, "data", "kilo2", "browser", "output")
   await fs.rm(output, { recursive: true, force: true }).catch(() => undefined)
   const child = Bun.spawn(
@@ -386,18 +451,18 @@ async function main() {
       ? framed
       : scenario === "nested"
         ? nestedPage
-        : scenario.startsWith("click-cross-origin")
-          ? linkedPage
-          : simple
+        : scenario === "download-approved"
+          ? downloadPage
+          : scenario.startsWith("click-cross-origin")
+            ? linkedPage
+            : simple
   const output: Record<string, unknown> = { scenario }
 
   if (scenario === "frames") {
     const result = await run({})
     const snapshot = result.last.results[1] ?? ""
     const shot = result.last.results[2] ?? ""
-    const files = await fs
-      .readdir(path.join(result.root, "data", "kilo2", "browser", "output"))
-      .catch(() => [] as string[])
+    const files = await written(result.root)
     output.snapshot = snapshot.slice(0, 300)
     output.shot = shot.slice(0, 300)
     output.files = files
@@ -406,13 +471,20 @@ async function main() {
       `the snapshot did not withhold the frame:\n${snapshot.slice(0, 400)}`,
     )
     expect(!snapshot.includes(MARKER), "the withheld frame's marker reached the snapshot")
-    // No path to unmasked pixels leaves the backend for a page with a withheld frame: the file link is dropped and the
-    // file itself is gone (the masked image is the only copy, and a unit test covers the blacking out).
-    expect(!shot.includes("[Screenshot"), `the screenshot link was returned:\n${shot.slice(0, 300)}`)
-    expect(
-      files.filter((file) => file.endsWith(".png")).length === 0,
-      `an unmasked screenshot was left on disk: ${files}`,
-    )
+    // No path to unmasked pixels leaves the backend: the MCP's capture file is gone, and the one persisted PNG is
+    // the masked image the result links to.
+    const pngs = files.filter((file) => file.endsWith(".png"))
+    expect(!files.some((file) => file.startsWith(".mcp-")), `the MCP capture file survived: ${files}`)
+    expect(pngs.length === 1, `expected exactly one persisted screenshot: ${files}`)
+    expect(shot.includes(`[Screenshot]`), `the result does not link to the saved image:\n${shot.slice(0, 300)}`)
+    if (pngs.length === 1) {
+      const image = Png.decode(await fs.readFile(path.join(result.root, "data", "kilo2", "browser", "output", pngs[0])))
+      const at = (8 * image.width + 8) * image.channels
+      const inside = [image.data[at], image.data[at + 1], image.data[at + 2]]
+      output.inside = inside
+      // The frame box is masked black, so the persisted image cannot show its red page.
+      expect(inside[0] < 40 && inside[1] < 40 && inside[2] < 40, `the persisted image is not masked: ${inside}`)
+    }
     return output
   }
 
@@ -421,9 +493,7 @@ async function main() {
     const snapshot = result.last.results[1] ?? ""
     const targeted = result.last.results[2] ?? ""
     const after = result.last.results[3] ?? ""
-    const files = (await fs.readdir(path.join(result.root, "data", "kilo2", "browser", "output"))).filter((file) =>
-      file.endsWith(".png"),
-    )
+    const files = (await written(result.root)).filter((file) => file.endsWith(".png"))
     output.withheld = snapshot.slice(0, 300)
     output.targeted = targeted.slice(0, 300)
     output.after = after.slice(0, 400)
@@ -480,8 +550,16 @@ async function main() {
       typed.includes("cannot ask the user for permission") || typed.includes("Permission denied"),
       `the fill was not rejected:\n${typed.slice(0, 300)}`,
     )
-    // The field is still empty: the rejected step never reached the page.
-    expect(/""/.test(value), `the password field is not empty after the rejection:\n${value.slice(0, 300)}`)
+    // The rejected step never reached the page: the read-back is empty, or is itself refused on that page.
+    // The fixture never saw a value: the rejected fill did not reach the page.
+    const rejectedValue = /""/.test(value) || value.includes("cannot ask the user for permission")
+    expect(rejectedValue, `the read-back is unexpected:\n${value.slice(0, 300)}`)
+    expect(!recorded.includes("hunter2"), `the fixture recorded the rejected fill: ${JSON.stringify(recorded)}`)
+    // The fixture does record a written value when the step is allowed, so the assertion above can fail.
+    const allowed = await run({ auto: true, allowSensitive: true })
+    const written = allowed.last.results[3] ?? ""
+    expect(/"hunter2"/.test(written), `the read-back cannot see a written value:\n${written.slice(0, 300)}`)
+    expect(recorded.includes("hunter2"), `the fixture did not record the allowed fill: ${JSON.stringify(recorded)}`)
     return output
   }
 
@@ -508,7 +586,7 @@ async function main() {
 
   if (scenario === "navigate-file") {
     const result = await run({})
-    const refused = result.last.results[0] ?? ""
+    const refused = result.last.results[1] ?? ""
     const back = result.last.results[2] ?? ""
     output.refused = refused.slice(0, 300)
     output.back = back.slice(0, 200)
@@ -517,7 +595,10 @@ async function main() {
     expect(refused.includes("file:"), `the refusal does not name the scheme:\n${refused.slice(0, 300)}`)
     expect(!refused.includes("root:"), `the local file was read:\n${refused.slice(0, 300)}`)
     // The tab is still on the fixture: the refused call never navigated.
-    expect(back.includes(fixture.url.origin), `the tab did not stay on the fixture:\n${back.slice(0, 300)}`)
+    // The read-only tab list still shows the fixture: the refused call never opened the file.
+    expect(back.includes(fixture.url.origin), `the refused call moved the tab:\n${back.slice(0, 300)}`)
+    expect(!back.includes("passwd"), `the refused call opened the file:\n${back.slice(0, 300)}`)
+    expect(!back.includes("file:"), `a refused file tab is listed:\n${back.slice(0, 300)}`)
     return output
   }
 
@@ -531,6 +612,39 @@ async function main() {
     expect(refused.includes("file:"), `the refusal does not name the scheme:\n${refused.slice(0, 300)}`)
     expect(!refused.includes("root:"), `the local file was read:\n${refused.slice(0, 300)}`)
     expect(back.includes(fixture.url.origin), `the tab did not stay on the fixture:\n${back.slice(0, 300)}`)
+    return output
+  }
+
+  if (scenario === "sensitive-selector" || scenario === "sensitive-evaluate") {
+    const result = await run({})
+    const step = result.last.results.at(-1) ?? ""
+    output.step = step.slice(0, 300)
+    // A non-interactive run rejects the ask instead of running the step.
+    expect(
+      step.includes("cannot ask the user for permission") || step.includes("Permission denied"),
+      `the step was not refused:\n${step.slice(0, 300)}`,
+    )
+    return output
+  }
+
+  if (scenario === "download-approved") {
+    const stopped = await run({})
+    const kept = await run({ allowSensitive: true })
+    const stoppedText = stopped.last.results[2] ?? ""
+    const keptText = kept.last.results[2] ?? ""
+    const files = await written(kept.root)
+    output.stopped = stoppedText.slice(0, 300)
+    output.kept = keptText.slice(0, 300)
+    output.files = files
+    expect(
+      stoppedText.includes("needs the user's permission"),
+      `the download was not stopped:\n${stoppedText.slice(0, 300)}`,
+    )
+    expect(keptText.includes("A download was kept"), `the download was not kept:\n${keptText.slice(0, 300)}`)
+    expect(
+      files.some((file) => file.includes("report")),
+      `the kept download is not on disk: ${files}`,
+    )
     return output
   }
 

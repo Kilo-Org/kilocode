@@ -5,12 +5,15 @@ import path from "node:path"
 import { Config } from "@opencode/core/config"
 import { Permission } from "@opencode/core/permission"
 import { Tool } from "@opencode/schema/tool"
-import { Effect, Exit, Scope, Stream } from "effect"
+import { Effect, Exit, Queue, Scope, Stream } from "effect"
+import { NeedsPermissionError } from "../../src/browser/backend"
 import type { CallContext } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
+import * as Png from "../../src/browser/png"
 import { key, outputDirectory, playwright } from "../../src/browser/playwright"
 import { resolve } from "../../src/browser/settings"
-import { KiloBrowserToolsPlugin } from "../../src/browser/tools"
+import { persistStep, stepPersisted } from "../../src/browser/playwright"
+import { grantsFor, KiloBrowserToolsPlugin, resetGrants } from "../../src/browser/tools"
 
 /**
  * The backend's own call path, over a stand-in browser and MCP client. The helpers above are pure; these drive
@@ -25,6 +28,11 @@ type World = {
   calls: Call[]
   text: Text
   onCall?: (name: string, args: Record<string, unknown>) => void
+  onDownload?: (download: unknown) => void
+  /** What a selector target resolves to: how many elements, and the sensitivity reason its evaluate reports. */
+  selector?: { count: number; reason?: string; frame?: Page }
+  /** What the page-level probes report for a frame. */
+  framesSensitive?: boolean
   closed: number
 }
 
@@ -55,8 +63,29 @@ class Page {
     return null
   }
 
-  locator() {
-    return { elementHandle: async () => null }
+  frames(): Page[] {
+    return [this, ...this.children]
+  }
+
+  /** The jsdom-free stand-in for a frame probe: the test decides what the page holds. */
+  async evaluate() {
+    return state.framesSensitive ?? false
+  }
+
+  locator(selector: string) {
+    if (selector.startsWith("aria-ref=")) return { count: async () => 0, elementHandle: async () => null }
+    return {
+      count: async () => state.selector?.count ?? 0,
+      elementHandle: async () =>
+        state.selector
+          ? {
+              evaluate: async () => state.selector?.reason ?? "",
+              contentFrame: async () => state.selector?.frame ?? null,
+              ownerFrame: async () => this,
+              dispose: () => undefined,
+            }
+          : null,
+    }
   }
 
   async waitForTimeout() {}
@@ -87,7 +116,9 @@ mock.module("playwright-core", () => ({
       async newContext() {
         return {
           pages: () => state.pages,
-          on() {},
+          on(event: string, handler: (download: unknown) => void) {
+            if (event === "download") state.onDownload = handler
+          },
           off() {},
           async close() {
             state.closed += 1
@@ -121,6 +152,13 @@ mock.module("@modelcontextprotocol/client", () => ({
     async callTool(request: { name: string; arguments: Record<string, unknown> }) {
       state.calls.push({ name: request.name, args: request.arguments })
       state.onCall?.(request.name, request.arguments)
+      // A real screenshot call writes the file the backend named; the pixel data comes from a 2x2 image.
+      const file = request.arguments.filename
+      if (request.name === "browser_take_screenshot" && typeof file === "string") {
+        const image = Png.encode({ width: 2, height: 2, channels: 3, data: Buffer.alloc(12, 200) })
+        await fs.mkdir(path.dirname(file), { recursive: true })
+        await fs.writeFile(file, image)
+      }
       return { content: [{ type: "text", text: state.text(request.name, request.arguments) }], isError: false }
     }
     async close() {}
@@ -141,16 +179,20 @@ beforeEach(async () => {
   state.calls = []
   state.closed = 0
   state.onCall = undefined
+  state.selector = undefined
+  state.framesSensitive = false
   state.text = (name) =>
     name === "browser_console_messages" ? "### Result\n- [ERROR] boom @ https://gate.example.com/app.js" : pageText
 })
 
 afterEach(async () => {
   await playwright.dispose()
+  // The grant cache is module-level: one test's grants must never satisfy the next test's plan.
+  resetGrants()
 })
 
 /** One plugin location; its scope close runs the finalizers, which is the shutdown path under test. */
-async function boot(options: { permission?: unknown } = {}) {
+async function boot(options: { permission?: unknown; events?: unknown } = {}) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const ctx = {
     location: { directory: "/tmp/browser-guards-test" },
@@ -160,7 +202,7 @@ async function boot(options: { permission?: unknown } = {}) {
       transform: (fn: (typeof transforms)[number]) =>
         Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
     },
-    event: { subscribe: () => Stream.empty },
+    event: { subscribe: () => options.events ?? Stream.empty },
     permission: { hook: () => Effect.sync(() => ({ dispose: Effect.void })) },
   }
   const config = { entries: () => Effect.succeed([]) } as unknown as Config.Interface
@@ -359,7 +401,237 @@ describe("a result file the MCP would write", () => {
   })
 })
 
+describe("a download the action started", () => {
+  test("asks after the action, and never repeats the click", async () => {
+    const cancelled: string[] = []
+    const backend = await browser()
+    state.onCall = (name) => {
+      if (name !== "browser_click") return
+      state.onDownload?.({
+        suggestedFilename: () => "invoice.pdf",
+        cancel: async () => {
+          cancelled.push("invoice.pdf")
+        },
+      })
+    }
+    const result = await backend.callTool("browser_click", {}, context)
+    // The click ran once, its download was stopped, and the result asks through the post-action path.
+    expect(state.calls.filter((call) => call.name === "browser_click").length).toBe(1)
+    expect(cancelled).toEqual(["invoice.pdf"])
+    expect(result.meta?.needs).toEqual([
+      { class: "sensitive", origin: "https://gate.example.com", reason: "download: invoice.pdf" },
+    ])
+    expect((result.content[0] as { text: string }).text).toContain("needs the user's permission")
+  })
+})
+
+describe("a selector target", () => {
+  test("a password field is sensitive even as a CSS selector", async () => {
+    const backend = await browser()
+    state.selector = { count: 1, reason: "password field" }
+    const error = await settle(
+      backend.callTool("browser_type", { target: "input[type=password]", text: "hunter2" }, context),
+    )
+    expect(error instanceof NeedsPermissionError).toBe(true)
+    expect((error as NeedsPermissionError).items[0]).toMatchObject({
+      class: "sensitive",
+      origin: "https://gate.example.com",
+    })
+  })
+
+  test("a card-form submit is sensitive even as a CSS selector", async () => {
+    const backend = await browser()
+    state.selector = { count: 1, reason: "submit on a payment form" }
+    const error = await settle(backend.callTool("browser_click", { target: "#pay" }, context))
+    expect(error instanceof NeedsPermissionError).toBe(true)
+  })
+
+  test("a selector inside a cross-origin frame plans against the frame origin", async () => {
+    const backend = await browser()
+    const child = new Page("b", "https://pay.example.net/")
+    state.pages[0].children = [child]
+    // A selector that resolves to an iframe element: the child document comes back through `contentFrame()`.
+    state.selector = { count: 1, reason: "", frame: child }
+    const items = await backend.plan!("browser_click", { target: "#pay" }, { session: "ses_selector" })
+    expect(items).toEqual(
+      expect.arrayContaining([
+        { class: "read", origin: "https://pay.example.net", frame: true },
+        { class: "act", origin: "https://pay.example.net", frame: true },
+      ]),
+    )
+  })
+
+  test("an ambiguous selector is refused, not skipped", async () => {
+    const backend = await browser()
+    state.selector = { count: 2, reason: "" }
+    const error = await settle(backend.callTool("browser_type", { target: "input", text: "x" }, context))
+    expect(error instanceof NeedsPermissionError).toBe(true)
+  })
+})
+
+describe("a page-level sensitive step", () => {
+  test("browser_evaluate on a page holding a password field is sensitive", async () => {
+    const backend = await browser()
+    state.framesSensitive = true
+    const error = await settle(backend.callTool("browser_evaluate", { function: "() => 1" }, context))
+    expect(error instanceof NeedsPermissionError).toBe(true)
+  })
+
+  test("browser_press_key while focus is in a sensitive field is sensitive", async () => {
+    const backend = await browser()
+    state.framesSensitive = true
+    const error = await settle(backend.callTool("browser_press_key", { key: "Enter" }, context))
+    expect(error instanceof NeedsPermissionError).toBe(true)
+  })
+})
+
+describe("a persisted step approval", () => {
+  test("keeps for the same session, not for another", () => {
+    persistStep("ses_a", "browser_click", { target: "#download" }, "https://gate.example.com")
+    expect(stepPersisted("ses_a", "browser_click", { target: "#download" }, "https://gate.example.com")).toBe(true)
+    // Another session cannot reuse it, and a different step does not match.
+    expect(stepPersisted("ses_b", "browser_click", { target: "#download" }, "https://gate.example.com")).toBe(false)
+    expect(stepPersisted("ses_a", "browser_click", { target: "#other" }, "https://gate.example.com")).toBe(false)
+    expect(stepPersisted("ses_a", "browser_type", { target: "#download" }, "https://gate.example.com")).toBe(false)
+  })
+})
+
+describe("a screenshot this backend allows", () => {
+  test("without a name leaves exactly one PNG and links to it", async () => {
+    const backend = await browser()
+    const result = await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
+    const files = (await fs.readdir(path.join(outputDirectory(), ".auto"))).filter((file) => file.endsWith(".png"))
+    expect(files.length).toBe(1)
+    expect(files[0]).toMatch(/^shot-.+\.png$/)
+    const text = (result.content[0] as { text: string }).text
+    expect(text).toContain(`- [Screenshot](${path.join(outputDirectory(), ".auto", files[0])})`)
+    // The capture file the MCP wrote is gone.
+    expect((await fs.readdir(outputDirectory())).some((file) => file.startsWith(".mcp-"))).toBe(false)
+  })
+
+  test("with a name lands at that name", async () => {
+    const backend = await browser()
+    await backend.callTool("browser_take_screenshot", { type: "png", scale: "css", filename: "shots/a.png" }, context)
+    expect((await fs.stat(path.join(outputDirectory(), "shots", "a.png")).catch(() => null))?.isFile()).toBe(true)
+  })
+
+  test("refused when a frame is withheld leaves no PNG", async () => {
+    const parent = state.pages[0]
+    parent.children = [new Page("b", "https://pay.example.net/")]
+    // The output directory is shared by the suite: start from no picture so only this call's writes are measured.
+    for (const file of await fs.readdir(outputDirectory()).catch(() => [] as string[]))
+      if (file.endsWith(".png")) await fs.unlink(path.join(outputDirectory(), file)).catch(() => undefined)
+    const backend = await browser()
+    const result = await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
+    // The withheld frame cannot be measured on the stand-in page, so the image never leaves the backend.
+    expect(result.isError).toBe(true)
+    expect((await fs.readdir(outputDirectory())).filter((file) => file.endsWith(".png"))).toEqual([])
+  })
+})
+
+describe("a refused screenshot", () => {
+  test("does not delete an existing file at the requested name", async () => {
+    const keep = path.join(outputDirectory(), "keep.png")
+    await fs.mkdir(outputDirectory(), { recursive: true })
+    await fs.writeFile(keep, "keep")
+    const parent = state.pages[0]
+    parent.children = [new Page("b", "https://pay.example.net/")]
+    const backend = await browser()
+    const result = await backend.callTool(
+      "browser_take_screenshot",
+      { type: "png", scale: "css", filename: "keep.png" },
+      context,
+    )
+    // The withheld frame cannot be measured, so the image is refused; the pre-existing file is not this call's.
+    expect(result.isError).toBe(true)
+    expect(await fs.readFile(keep, "utf8")).toBe("keep")
+  })
+
+  test("gives two unnamed screenshots distinct names", async () => {
+    const backend = await browser()
+    await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
+    await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
+    const names = (await fs.readdir(path.join(outputDirectory(), ".auto"))).filter((file) =>
+      /^shot-.+-[0-9a-f]{6}\.png$/.test(file),
+    )
+    expect(names.length).toBeGreaterThanOrEqual(2)
+    expect(new Set(names).size).toBe(names.length)
+  })
+})
+
+describe("a result file this call did not write", () => {
+  test("is never deleted, even when the tool output names it", async () => {
+    const other = path.join(outputDirectory(), "other-session.png")
+    const mine = path.join(outputDirectory(), "mine.png")
+    await fs.mkdir(outputDirectory(), { recursive: true })
+    await fs.writeFile(other, "keep")
+    await fs.writeFile(mine, "keep")
+    const parent = state.pages[0]
+    parent.children = [new Page("b", "https://pay.example.net/")]
+    // Page-influenced output names both files; only the paths this call wrote may ever be removed.
+    state.text = () => `### Result\n// Screenshot viewport and save it as ${other}\n// and ${mine}`
+    const backend = await browser()
+    await backend.callTool("browser_take_screenshot", { type: "png", scale: "css" }, context)
+    expect((await fs.stat(other).catch(() => null))?.isFile()).toBe(true)
+    expect((await fs.stat(mine).catch(() => null))?.isFile()).toBe(true)
+  })
+})
+
 describe("the diff console read", () => {
+  test("skips the section when the tool rule is deny or ask", async () => {
+    const asked: { action?: string; resources?: readonly string[] }[] = []
+    const host = await boot({
+      permission: {
+        assert: () => Effect.void,
+        allows: (input: { action?: string; resources?: readonly string[] }) => {
+          asked.push(input)
+          return Effect.succeed(false)
+        },
+      },
+    })
+    // A first read grants the page, so nothing but the tool rule can stop the console section.
+    await host.call("browser_snapshot", {})
+    const result = await host.call("browser_click", {})
+    expect(state.calls.map((call) => call.name)).toEqual(["browser_snapshot", "browser_click"])
+    expect(textOf(result)).not.toContain("Console errors")
+    // The query names the tool and a resource a rule matches: an empty resource list would allow every rule.
+    expect(asked.some((input) => input.action === "browser_console_messages" && input.resources?.includes("*"))).toBe(
+      true,
+    )
+  })
+
+  test("returns the re-read page, and the action still ran once", async () => {
+    const host = await boot({ permission: { assert: () => Effect.void } })
+    const page = state.pages[0]
+    state.onCall = (name) => {
+      if (name === "browser_click") page.value = "https://other.example.com/landed"
+    }
+    const result = await host.call("browser_click", {})
+    const text = textOf(result)
+    // The placeholder is replaced by a fresh read of the page (diff mode reports the page, not the button).
+    expect(text).toContain("### Page")
+    expect(text).not.toContain("The page moved to")
+    // Reading has no side effect: the click ran once and the re-read is a snapshot.
+    expect(state.calls.filter((call) => call.name === "browser_click").length).toBe(1)
+    expect(state.calls.filter((call) => call.name === "browser_snapshot").length).toBe(1)
+  })
+})
+
+describe("a deleted session", () => {
+  test("releases its grants", async () => {
+    const queue = await Effect.runPromise(Queue.unbounded<never>())
+    await boot({ events: Stream.fromQueue(queue) })
+    grantsFor("ses_event").add("read:https://shop.example.com")
+    await Effect.runPromise(Queue.offer(queue, { type: "session.deleted", data: { sessionID: "ses_event" } } as never))
+    // The subscription is forked; give it a bounded moment to drain.
+    for (let attempt = 0; attempt < 50 && grantsFor("ses_event").size > 0; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    }
+    expect(grantsFor("ses_event").size).toBe(0)
+  })
+})
+
+describe("the diff console read, rule gated", () => {
   test("does not run unless the plan is already granted for the session", async () => {
     const host = await boot()
     const result = await host.call("browser_click", {})

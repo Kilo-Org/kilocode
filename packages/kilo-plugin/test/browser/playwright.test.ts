@@ -3,10 +3,14 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import type { Frame, Page } from "playwright-core"
+import { BrowserContract } from "../../src/browser/contract"
 import { browsersDirectory, useKiloBrowsers } from "../../src/browser/install"
 import {
   Backends,
+  contained,
+  FILE_TITLES,
   outputFile,
+  retainScreenshots,
   snapshotBody,
   frameOrigin,
   insideOutput,
@@ -16,10 +20,9 @@ import {
   launchFailure,
   navigationRefusal,
   navigationTargets,
-  outputBaseline,
-  readiness,
   plannedOrigin,
   prunePages,
+  readiness,
   rememberPage,
   snapshotFile,
   tabChoice,
@@ -43,6 +46,43 @@ function tree(url: string, parent: Fake | null = null): Fake {
 function page(main: Fake): Page {
   return { mainFrame: () => main.node } as unknown as Page
 }
+
+describe("screenshot retention", () => {
+  test("retains only the backend's own files, and sweeps stale captures", async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "shots-"))
+    const auto = path.join(directory, ".auto")
+    await fs.mkdir(auto, { recursive: true })
+    const now = Date.now()
+    for (let index = 0; index < 210; index += 1) {
+      const file = path.join(auto, `shot-${String(index).padStart(3, "0")}.png`)
+      await fs.writeFile(file, "x")
+      // Index 0 is the newest.
+      await fs.utimes(file, new Date(now - index * 1000), new Date(now - index * 1000))
+    }
+    const ancient = path.join(auto, "shot-ancient.png")
+    await fs.writeFile(ancient, "x")
+    await fs.utimes(ancient, new Date(now - 25 * 60 * 60 * 1000), new Date(now - 25 * 60 * 60 * 1000))
+    // A model-chosen name looks like an auto name but is not this backend's to delete.
+    const user = path.join(directory, "page-login.png")
+    await fs.writeFile(user, "keep")
+    await fs.utimes(user, new Date(now - 25 * 60 * 60 * 1000), new Date(now - 25 * 60 * 60 * 1000))
+    // A capture from a crashed call is swept; one from a running call is left alone.
+    const stale = path.join(directory, ".mcp-stale.png")
+    const live = path.join(directory, ".mcp-live.png")
+    await fs.writeFile(stale, "x")
+    await fs.writeFile(live, "x")
+    await fs.utimes(stale, new Date(now - 10 * 60 * 1000), new Date(now - 10 * 60 * 1000))
+    await retainScreenshots(directory, now)
+    const autoLeft = await fs.readdir(auto)
+    expect(autoLeft.filter((name) => name.startsWith("shot-")).length).toBe(200)
+    expect(autoLeft).toContain("shot-000.png")
+    expect(autoLeft).not.toContain("shot-209.png")
+    expect(autoLeft).not.toContain("shot-ancient.png")
+    expect(await fs.readdir(directory)).toContain("page-login.png")
+    expect(await fs.stat(stale).catch(() => null)).toBeNull()
+    expect((await fs.stat(live).catch(() => null))?.isFile()).toBe(true)
+  })
+})
 
 describe("snapshot links", () => {
   test("a link relative to the MCP's working directory resolves inside the output directory", async () => {
@@ -120,15 +160,15 @@ describe("url-taking tools", () => {
 describe("output directory", () => {
   test("a relative file name resolves under the output directory, not the process cwd", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
-    expect(insideOutput("page.png", directory)).toBe(path.join(directory, "page.png"))
-    expect(insideOutput("nested/page.png", directory)).toBe(path.join(directory, "nested", "page.png"))
+    expect(insideOutput("page.png", directory)).toBe(path.resolve(directory, "page.png"))
+    expect(insideOutput("nested/page.png", directory)).toBe(path.resolve(directory, "nested", "page.png"))
     expect(() => insideOutput("../page.png", directory)).toThrow("output directory")
   })
 
   test("a result file is written by the backend from the filtered text, and the name never reaches the MCP", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
     const file = outputFile("browser_snapshot", { filename: "nested/page.yml", other: 1 }, directory)
-    expect(file?.path).toBe(path.join(directory, "nested", "page.yml"))
+    expect(file?.path).toBe(path.resolve(directory, "nested/page.yml"))
     // The MCP's arguments no longer carry the name, so it cannot write an unfiltered copy.
     expect(file?.args).toEqual({ other: 1 })
     // Only the tools whose result can be a file take a name; a screenshot keeps its own path.
@@ -138,6 +178,76 @@ describe("output directory", () => {
     expect(() => outputFile("browser_console_messages", { filename: "../out.log" }, directory)).toThrow(
       "output directory",
     )
+  })
+
+  test("every contract tool that takes a filename is written inside the output directory", () => {
+    const directory = path.join(path.sep, "tmp", "browser", "output")
+    const names = BrowserContract.entries
+      .filter((entry) => "filename" in ((entry.inputSchema as { properties?: object }).properties ?? {}))
+      .map((entry) => entry.name)
+      .sort()
+    // A contract bump that adds a file-writing tool fails here until it is handled.
+    expect(names).toEqual([
+      "browser_console_messages",
+      "browser_evaluate",
+      "browser_network_request",
+      "browser_network_requests",
+      "browser_run_code_unsafe",
+      "browser_snapshot",
+      "browser_take_screenshot",
+    ])
+    for (const name of names) {
+      // Refused outright before a file could exist.
+      if (name === "browser_run_code_unsafe") continue
+      if (name === "browser_take_screenshot") {
+        expect(screenshotPath(name, { filename: "shots/a.png" }, directory)).toBe(
+          path.resolve(directory, "shots", "a.png"),
+        )
+        continue
+      }
+      expect(FILE_TITLES[name], `${name} has no file title`).toBeDefined()
+      const file = outputFile(name, { filename: "nested/out.txt" }, directory)
+      expect(file?.path).toBe(path.resolve(directory, "nested/out.txt"))
+      // The MCP never receives the name.
+      expect(file?.args).toEqual({})
+    }
+  })
+
+  test("containment is separator- and case-correct on win32 and posix", () => {
+    const win = "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\kilo\\data\\kilo2\\browser\\output"
+    expect(contained(`${win}\\page.png`, win, path.win32)).toBe(true)
+    // A drive-letter or directory case difference is the same directory on Windows.
+    expect(contained(`${win.toLowerCase()}\\nested\\page.png`, win, path.win32)).toBe(true)
+    expect(contained(`${win}\\..\\escape.png`, win, path.win32)).toBe(false)
+    expect(contained("D:\\other\\page.png", win, path.win32)).toBe(false)
+    // A sibling with the same prefix is not inside.
+    expect(contained(`${win}-other\\page.png`, win, path.win32)).toBe(false)
+    expect(contained("/tmp/out/page.png", "/tmp/out", path.posix)).toBe(true)
+    expect(contained("/tmp/out-other/page.png", "/tmp/out", path.posix)).toBe(false)
+    expect(contained("/tmp/out", "/tmp/out", path.posix)).toBe(true)
+    // Only a `..` segment escapes: `..foo` is an ordinary name.
+    expect(contained("/tmp/out/..foo", "/tmp/out", path.posix)).toBe(true)
+    expect(contained("/tmp/out/../x", "/tmp/out", path.posix)).toBe(false)
+    expect(contained("/tmp/out/a/../../x", "/tmp/out", path.posix)).toBe(false)
+    expect(contained("C:\\out\\..foo", "C:\\out", path.win32)).toBe(true)
+    expect(contained("C:\\out\\..\\x", "C:\\out", path.win32)).toBe(false)
+    expect(contained("C:\\out\\a\\..\\..\\x", "C:\\out", path.win32)).toBe(false)
+  })
+
+  test("a symlink target is resolved before containment, and a symlink is never written", async () => {
+    const base = await fs.mkdtemp(path.join(os.tmpdir(), "output-link-"))
+    const root = path.join(base, "output")
+    const outside = path.join(base, "outside")
+    await fs.mkdir(root, { recursive: true })
+    await fs.mkdir(outside, { recursive: true })
+    await fs.writeFile(path.join(outside, "secret.yml"), "secret")
+    await fs.symlink(path.join(outside, "secret.yml"), path.join(root, "escape.yml"))
+    // The name is inside the directory, but the target is not.
+    expect(() => insideOutput("escape.yml", root)).toThrow("output directory")
+    // A link that stays inside resolves to its target.
+    await fs.writeFile(path.join(root, "real.yml"), "- real")
+    await fs.symlink(path.join(root, "real.yml"), path.join(root, "alias.yml"))
+    expect(insideOutput("alias.yml", root)).toBe(await fs.realpath(path.join(root, "real.yml")))
   })
 
   test("a snapshot file body is the YAML block the MCP writes", () => {
@@ -150,13 +260,13 @@ describe("output directory", () => {
   test("a nested screenshot name resolves inside the output directory", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
     expect(screenshotPath("browser_take_screenshot", { filename: "nested/shot.png" }, directory)).toBe(
-      path.join(directory, "nested", "shot.png"),
+      path.resolve(directory, "nested", "shot.png"),
     )
   })
 
   test("a file name outside the backend's directory is refused", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
-    expect(insideOutput(path.join(directory, "page.png"), directory)).toBe(path.join(directory, "page.png"))
+    expect(insideOutput(path.join(directory, "page.png"), directory)).toBe(path.resolve(directory, "page.png"))
     expect(() => insideOutput(path.join(path.sep, "tmp", "elsewhere.png"), directory)).toThrow("output directory")
     expect(() => insideOutput("../../page.png", directory)).toThrow("output directory")
   })
@@ -165,17 +275,13 @@ describe("output directory", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
     // The path the model asked for is resolved up front; the MCP never writes it.
     expect(screenshotPath("browser_take_screenshot", { filename: path.join(directory, "shot.png") }, directory)).toBe(
-      path.join(directory, "shot.png"),
+      path.resolve(directory, "shot.png"),
     )
     expect(() => screenshotPath("browser_take_screenshot", { filename: "../../shot.png" }, directory)).toThrow(
       "output directory",
     )
     expect(screenshotPath("browser_take_screenshot", {}, directory)).toBeUndefined()
     expect(screenshotPath("browser_snapshot", { filename: "x" }, directory)).toBeUndefined()
-  })
-
-  test("a snapshot is baselined because it can be saved as a file", () => {
-    expect(outputBaseline("browser_snapshot")).toBe(true)
   })
 })
 
@@ -341,24 +447,6 @@ describe("navigation targets", () => {
   test("a target that is not a URL is refused", () => {
     expect(navigationRefusal("not a url")).toContain("not a URL")
     expect(navigationRefusal("")).toContain("not a URL")
-  })
-})
-
-describe("output baselines", () => {
-  test("a screenshot is always baselined, even with nothing withheld yet", () => {
-    expect(outputBaseline("browser_take_screenshot")).toBe(true)
-  })
-
-  test("results that can be saved as a file are baselined", () => {
-    expect(outputBaseline("browser_network_request")).toBe(true)
-    expect(outputBaseline("browser_network_requests")).toBe(true)
-    expect(outputBaseline("browser_console_messages")).toBe(true)
-  })
-
-  test("a tool that writes nothing is not read", () => {
-    expect(outputBaseline("browser_click")).toBe(false)
-    expect(outputBaseline("browser_find")).toBe(false)
-    expect(outputBaseline("browser_press_key")).toBe(false)
   })
 })
 

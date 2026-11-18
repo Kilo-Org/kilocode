@@ -133,6 +133,9 @@ describe("browser permission patterns", () => {
     expect(BrowserPermission.parse("read")).toBeUndefined()
     expect(BrowserPermission.parse("write:https://example.com")).toBeUndefined()
     expect(BrowserPermission.parse("read:file:///etc/passwd")).toBeUndefined()
+    // A string `URL` rejects is not a grant: there is no origin to save.
+    expect(BrowserPermission.parse("read:https://exa mple.com")).toBeUndefined()
+    expect(BrowserPermission.parse("act:http://")).toBeUndefined()
   })
 
   test("origins keep the port and drop the path", () => {
