@@ -1539,23 +1539,6 @@ class KiloCliDataParserTest {
         }
 
         @Test
-        fun `parseConfig - telemetry reads experimental openTelemetry`() {
-            assertEquals(true, KiloCliDataParser.parseConfig("""{"experimental":{"openTelemetry":true}}""").telemetry)
-            assertEquals(false, KiloCliDataParser.parseConfig("""{"experimental":{"openTelemetry":false}}""").telemetry)
-            assertNull(KiloCliDataParser.parseConfig("""{"model":"openai/gpt"}""").telemetry)
-        }
-
-        @Test
-        fun `parseConfig - malformed telemetry does not discard config`() {
-            val cfg = KiloCliDataParser.parseConfig(
-                """{"model":"openai/gpt","experimental":{"openTelemetry":{}}}""",
-            )
-
-            assertEquals("openai/gpt", cfg.model)
-            assertNull(cfg.telemetry)
-        }
-
-        @Test
         fun `parseConfig - agent overrides and permissions`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{"agent":{"build":{"model":"x","variant":"high","prompt":"p","description":"d","mode":"subagent","hidden":"true","disable":false,"temperature":0.2,"top_p":0.8,"steps":12,"permission":{"edit":"ask","bash":{"git *":"allow"},"webfetch":null}}}}"""

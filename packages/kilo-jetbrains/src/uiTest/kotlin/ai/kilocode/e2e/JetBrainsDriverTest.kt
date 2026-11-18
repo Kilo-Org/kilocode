@@ -59,7 +59,7 @@ class JetBrainsDriverTest {
         val evidence = DriverEvidence(request, descriptor)
         evidence.log("run=${request.runId} scenario=${request.scenario.id} lane=${request.scenario.lane}")
 
-        seedModel(descriptor, evidence)
+        seedModel(descriptor, evidence, request.scenario.id == "settings.telemetry")
         val preflight = preflight(request, evidence)
         if (!preflight) {
             evidence.write(resultPath)
@@ -90,6 +90,7 @@ class JetBrainsDriverTest {
                 withXmx(4096)
                 addSystemProperty("user.home", isolatedHome.toString())
                 addSystemProperty("idea.is.internal", "true")
+                if (request.scenario.id == "settings.telemetry") addSystemProperty("idea.plugin.in.sandbox.mode", "true")
                 addSystemProperty("idea.trust.all.projects", "true")
                 addSystemProperty("idea.suppress.statistics.report", true)
                 addSystemProperty("feature.usage.event.log.send.on.ide.close", false)
@@ -235,6 +236,9 @@ class JetBrainsDriverTest {
         context: IDETestContext,
         testName: String,
     ) {
+        watchdog.value("core telemetry level is available", timeout = 30.seconds) {
+            ide.frontend().telemetryConfig()
+        }
         val page = TelemetrySettingsPage(ide, watchdog)
         page.open()
         if (page.visible() && page.hasTelemetryRow()) {
@@ -243,29 +247,26 @@ class JetBrainsDriverTest {
             evidence.fail("settings.advanced.visible", "Advanced page or telemetry row is missing")
         }
 
-        val initial = runCatching { page.isEnabled() }.getOrElse { error ->
-            evidence.fail("settings.telemetry.toggle", actionable(error))
-            false
-        }
+        val initial = page.isEnabled()
         evidence.state("settings.telemetry.initial", initial)
-        if (initial) evidence.pass("settings.telemetry.toggle", "enabled by default")
-        else evidence.fail("settings.telemetry.toggle", "toggle was off before the user changed it")
+        if (!initial) evidence.pass("settings.telemetry.toggle", "effective level is off in the sandbox")
+        else evidence.fail("settings.telemetry.toggle", "sandbox did not opt out of telemetry")
 
         captureSettingsShot(context, testName, "settings-telemetry-initial", evidence)
-        page.setEnabled(false)
-        captureSettingsShot(context, testName, "settings-telemetry-off", evidence)
+        page.setEnabled(true)
+        captureSettingsShot(context, testName, "settings-telemetry-draft-on", evidence)
         page.apply()
 
         val files = listOf("kilo.jsonc", "kilo.json")
             .map { Path.of(descriptor.state.config, "kilo", it) }
         val persisted = runCatching {
-            watchdog.value("telemetry opt-out persisted", timeout = 60.seconds) {
+            watchdog.value("telemetry preference persisted", timeout = 60.seconds) {
                 files.firstNotNullOfOrNull { file ->
                     val value = runCatching {
                         jsonc.parseToJsonElement(Files.readString(file)).jsonObject
                     }.getOrNull()
                     value?.get("experimental")?.jsonObject?.get("openTelemetry")?.jsonPrimitive?.booleanOrNull
-                        ?.takeIf { it == false }
+                        ?.takeIf { it }
                         ?.let { file }
                 }
             }
@@ -280,16 +281,15 @@ class JetBrainsDriverTest {
 
         val frontend = runCatching {
             watchdog.value("frontend telemetry config is off", timeout = 30.seconds) {
-                ide.frontend().telemetryConfig().takeIf { !it }
+                ide.frontend().telemetryConfig()?.takeIf { !it }
             }
         }.getOrNull()
         evidence.state("settings.frontend.telemetry", frontend)
-        Thread.sleep(1_000)
         page.open()
         val reloaded = runCatching { page.isEnabled() }.getOrNull()
         evidence.state("settings.reopened.toggle", reloaded)
         if (frontend == false && reloaded == false) {
-            evidence.pass("settings.telemetry.reload", "config state and reopened toggle are off")
+            evidence.pass("settings.telemetry.reload", "saved preference did not override the sandbox opt-out")
         } else {
             evidence.fail("settings.telemetry.reload", "config state='$frontend', reopened toggle='$reloaded'")
         }
@@ -694,7 +694,7 @@ class JetBrainsDriverTest {
         return a != null && normalize(a) == normalize(b)
     }
 
-    private fun seedModel(descriptor: FixtureDescriptor, evidence: DriverEvidence) {
+    private fun seedModel(descriptor: FixtureDescriptor, evidence: DriverEvidence, optOut: Boolean) {
         val model = descriptor.project.model.takeIf { it.isNotBlank() } ?: return
         val file = Path.of(descriptor.state.config, "kilo", "kilo.jsonc")
         runCatching {
@@ -703,6 +703,7 @@ class JetBrainsDriverTest {
             val fields = jsonc.parseToJsonElement(existing).jsonObject.toMutableMap()
             fields["model"] = JsonPrimitive(model)
             fields["small_model"] = JsonPrimitive(model)
+            if (optOut) fields["experimental"] = JsonObject(mapOf("openTelemetry" to JsonPrimitive(false)))
             Files.writeString(file, JsonObject(fields).toString())
         }.onSuccess {
             evidence.state("model.seeded", model)

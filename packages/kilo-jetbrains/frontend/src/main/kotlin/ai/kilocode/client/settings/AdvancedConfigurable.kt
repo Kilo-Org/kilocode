@@ -35,8 +35,7 @@ class AdvancedConfigurable(
 
     override fun createComponent(): JComponent {
         settings.applyLocal()
-        val telemetry = app.state.value.config?.telemetry ?: true
-        val panel = AdvancedSettingsUi(telemetry)
+        val panel = AdvancedSettingsUi(app.telemetryConfig())
         ui = panel
         val cs = newScope()
         scope = cs
@@ -46,8 +45,7 @@ class AdvancedConfigurable(
         }
         cs.launch {
             app.state.collect { state ->
-                val cfg = state.config ?: return@collect
-                withContext(edt) { panel.refreshTelemetry(cfg.telemetry ?: true) }
+                withContext(edt) { panel.refreshTelemetry(state.config?.telemetry) }
             }
         }
         return panel
@@ -65,22 +63,24 @@ class AdvancedConfigurable(
         val indexWorktreesChanged = value.indexWorktrees != panel.savedIndexWorktrees()
         val telemetryChanged = value.telemetry != panel.savedTelemetry()
         val previousTelemetry = panel.savedTelemetry()
-        if (telemetryChanged) panel.markTelemetryPending(value.telemetry)
+        if (telemetryChanged) panel.markTelemetryPending()
         panel.sync()
         // Runs on the app scope, not ours: OK calls apply() then disposeUIResources(), which cancels
         // this configurable's scope before a coroutine launched here could reach the RPC.
         if (indexWorktreesChanged) app.setIndexWorktreesAsync(value.indexWorktrees)
         if (telemetryChanged) {
             app.setTelemetryLevelAsync(value.telemetry) { saved ->
-                if (!saved) {
-                    ApplicationManager.getApplication().invokeLater {
+                ApplicationManager.getApplication().invokeLater({
+                    if (!saved) {
                         KiloNotifications.error(
                             KiloBundle.message("settings.advanced.telemetry.failed.title"),
                             KiloBundle.message("settings.advanced.telemetry.failed.content"),
                         )
-                        panel.restoreTelemetry(previousTelemetry)
                     }
-                }
+                    if (ui === panel) {
+                        panel.finishTelemetry(app.telemetryConfig(), previousTelemetry)
+                    }
+                }, ModalityState.any())
             }
         }
     }

@@ -185,6 +185,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
     var telemetryLevels = mutableListOf<Boolean>()
     var telemetryLevelGate: CompletableDeferred<Unit>? = null
     var telemetryLevelError: Throwable? = null
+    var telemetryAllowed = true
     var telemetryLevelAttempts = 0
         private set
 
@@ -195,7 +196,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
         telemetryLevelError?.let { throw it }
         telemetryLevels.add(enabled)
         val current = state.value
-        val next = current.copy(config = (current.config ?: ConfigDto()).copy(telemetry = enabled))
+        val next = current.copy(config = (current.config ?: ConfigDto()).copy(telemetry = enabled && telemetryAllowed))
         state.value = next
         return next
     }

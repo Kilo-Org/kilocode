@@ -58,7 +58,7 @@ interface Content {
 interface FrontendAppService {
     fun getVersion(): String?
     fun getBundled(): Boolean?
-    fun telemetryConfig(): Boolean
+    fun telemetryConfig(): Boolean?
 }
 
 @Remote(

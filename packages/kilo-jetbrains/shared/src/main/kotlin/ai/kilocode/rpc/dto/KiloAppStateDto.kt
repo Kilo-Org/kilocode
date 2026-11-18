@@ -77,7 +77,7 @@ data class ConfigDto(
     val snapshot: Boolean? = null,
     /** Machine-wide session retention policy. Null means disabled with a 30-day default. */
     val retention: RetentionConfigDto? = null,
-    /** Whether the CLI sends telemetry (`experimental.openTelemetry`). Null means unset, which the CLI treats as enabled. */
+    /** Effective CLI telemetry level. Null means the settings endpoint is unavailable or has not responded yet. */
     val telemetry: Boolean? = null,
 )
 

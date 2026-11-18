@@ -18,7 +18,7 @@ import java.awt.BorderLayout
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JPanel
 
-internal class AdvancedSettingsUi(telemetryEnabled: Boolean = true) : JPanel(BorderLayout()) {
+internal class AdvancedSettingsUi(telemetryEnabled: Boolean?) : JPanel(BorderLayout()) {
     data class Values(
         val level: LogConfig.LogLevel,
         val mode: LogConfig.ContentMode,
@@ -34,14 +34,15 @@ internal class AdvancedSettingsUi(telemetryEnabled: Boolean = true) : JPanel(Bor
     /** Set once the user flips the toggle, so a late backend fetch cannot overwrite their choice. */
     private var touched = false
     private var telemetryTouched = false
-    private var telemetryPending: Boolean? = null
+    private var telemetryPending = false
     private val indexWorktrees = SettingsToggle { touched = true }
-    private val telemetry = SettingsToggle(telemetryEnabled) { telemetryTouched = true }
+    private val telemetry = SettingsToggle(telemetryEnabled == true) { telemetryTouched = true }
 
-    private var saved = current().copy(telemetry = telemetryEnabled)
+    private var saved = current().copy(telemetry = telemetryEnabled == true)
 
     init {
         resetForm()
+        refreshTelemetry(telemetryEnabled)
 
         val rows = SettingsRows().apply {
             border = JBUI.Borders.empty(UiStyle.Gap.pad(), UiStyle.Gap.lg())
@@ -135,30 +136,36 @@ internal class AdvancedSettingsUi(telemetryEnabled: Boolean = true) : JPanel(Bor
         indexWorktrees.isSelected = value
     }
 
-    /** Hold the just-written value until the backend state catches up with it. */
+    /** Keep the submitted value visible and prevent more edits until the CLI responds. */
     @RequiresEdt
-    fun markTelemetryPending(value: Boolean) {
-        telemetryPending = value
+    fun markTelemetryPending() {
+        telemetryPending = true
+        telemetry.isEnabled = false
     }
 
     /** Refresh consent from the backend without discarding a choice or an in-flight write. */
     @RequiresEdt
-    fun refreshTelemetry(value: Boolean) {
+    fun refreshTelemetry(value: Boolean?) {
+        if (telemetryPending) return
+        telemetry.isEnabled = value != null
+        if (value == null) {
+            telemetry.isSelected = saved.telemetry
+            telemetryTouched = false
+            return
+        }
         if (telemetryTouched) return
-        val pending = telemetryPending
-        if (pending != null && value != pending) return
-        if (pending != null) telemetryPending = null
         saved = saved.copy(telemetry = value)
         telemetry.isSelected = value
     }
 
-    /** Revert the toggle after the config write failed, so the panel does not claim a saved value. */
+    /** Reconcile the switch even when the effective level differs from the requested preference. */
     @RequiresEdt
-    fun restoreTelemetry(value: Boolean) {
-        telemetryPending = null
-        saved = saved.copy(telemetry = value)
-        telemetry.isSelected = value
+    fun finishTelemetry(value: Boolean?, previous: Boolean) {
+        telemetryPending = false
+        saved = saved.copy(telemetry = value ?: previous)
         telemetryTouched = false
+        telemetry.isSelected = saved.telemetry
+        refreshTelemetry(value)
     }
 
     private fun current(): Values = Values(
@@ -166,7 +173,7 @@ internal class AdvancedSettingsUi(telemetryEnabled: Boolean = true) : JPanel(Bor
         LogConfig.contentMode(),
         LogConfig.previewMax(),
         indexWorktrees = false,
-        telemetry = true,
+        telemetry = false,
     )
 
     private fun count(): Int? = preview.text.trim().toIntOrNull()

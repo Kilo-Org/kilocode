@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import java.net.ServerSocket
 import java.net.Socket
@@ -63,6 +64,8 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastConfigPatchBody: String? = null
     @Volatile var lastTelemetryLevelBody: String? = null
     @Volatile var telemetryGate: CountDownLatch? = null
+    @Volatile var telemetryStatus = 200
+    @Volatile var telemetryAllowed = true
     @Volatile var lastWorkspaceConfigPatchPath: String? = null
     @Volatile var lastWorkspaceConfigPatchBody: String? = null
     @Volatile var lastOrganizationSetBody: String? = null
@@ -472,12 +475,18 @@ class MockCliServer : AutoCloseable {
                     config = mergeConfig(config, body)
                     respond(output, configStatus, config)
                 }
+                bare == "/telemetry/level" && telemetryStatus != 200 -> respond(output, telemetryStatus, "{}")
+                bare == "/telemetry/level" && method == "GET" -> {
+                    val prefs = JSON.parseToJsonElement(config).jsonObject["experimental"] as? JsonObject
+                    val enabled = telemetryAllowed && prefs?.get("openTelemetry") != JsonPrimitive(false)
+                    respond(output, 200, """{"enabled":$enabled}""")
+                }
                 bare == "/telemetry/level" && method == "POST" -> {
                     lastTelemetryLevelBody = body
                     telemetryGate?.await()
                     val enabled = JSON.parseToJsonElement(body).jsonObject.getValue("enabled")
                     config = mergeConfig(config, """{"experimental":{"openTelemetry":$enabled}}""")
-                    respond(output, 200, body)
+                    respond(output, 200, """{"enabled":${telemetryAllowed && enabled == JsonPrimitive(true)}}""")
                 }
                 bare == "/global/dispose" && method == "POST" -> respond(output, disposeStatus, "true")
                 path.startsWith("/config/warnings") -> respond(output, warningsStatus, warnings)

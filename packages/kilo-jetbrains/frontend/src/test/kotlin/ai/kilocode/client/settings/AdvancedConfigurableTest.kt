@@ -37,6 +37,7 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         ui = TestCoroutines()
         appRpc = FakeAppRpcApi()
         app = KiloAppService(coroutines.scope, appRpc)
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = true))
     }
 
     override fun tearDown() {
@@ -212,13 +213,19 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         assertFalse(edt { cfg.isModified })
     }
 
-    fun `test telemetry toggle defaults on when the config does not set it`() {
+    fun `test telemetry toggle is disabled until a supported CLI reports its level`() {
         app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto())
         val cfg = configurable()
         val root = edt { cfg.createComponent() as Container }
 
-        assertTrue(edt { telemetryToggle(root).isSelected })
+        assertFalse(edt { telemetryToggle(root).isEnabled })
+        edt { telemetryToggle(root).doClick(); cfg.apply() }
+        coroutines.drain()
+        assertTrue(appRpc.telemetryLevels.isEmpty())
         assertFalse(edt { cfg.isModified })
+
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = true))
+        assertTrue(ui.pumpUntil { edt { telemetryToggle(root).isEnabled && telemetryToggle(root).isSelected } })
     }
 
     fun `test isModified tracks the telemetry toggle`() {
@@ -287,10 +294,27 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         ui.drain()
 
         assertFalse(edt { telemetryToggle(root).isSelected })
+        assertFalse(edt { telemetryToggle(root).isEnabled })
         assertFalse(edt { cfg.isModified })
 
-        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto())
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = true))
         assertTrue(ui.pumpUntil { edt { telemetryToggle(root).isSelected } })
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test successful opt-in stays off when the CLI reports an effective opt-out`() {
+        appRpc.telemetryAllowed = false
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = false))
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        edt {
+            telemetryToggle(root).doClick()
+            cfg.apply()
+        }
+
+        assertTrue(coroutines.pumpUntil { edt { telemetryToggle(root).isEnabled && !telemetryToggle(root).isSelected } })
+        assertEquals(listOf(true), appRpc.telemetryLevels)
         assertFalse(edt { cfg.isModified })
     }
 

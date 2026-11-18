@@ -323,8 +323,8 @@ class KiloAppService internal constructor(
         }
     }
 
-    /** Effective `experimental.openTelemetry` from the CLI config, defaulting on when unset. */
-    fun telemetryConfig(): Boolean = _state.value.config?.telemetry ?: true
+    /** Effective telemetry level reported by the connected CLI. */
+    fun telemetryConfig(): Boolean? = _state.value.config?.telemetry
 
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto? = try {
         LOG.info("config update: sending RPC ${summary(patch)}")

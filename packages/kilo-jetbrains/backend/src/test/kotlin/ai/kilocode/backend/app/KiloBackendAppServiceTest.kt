@@ -351,9 +351,45 @@ class KiloBackendAppServiceTest {
         val svc = create()
         svc.connect()
 
-        ready(svc)
+        withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.telemetry == false }
+        }
 
         assertEquals(false, svc.config?.telemetry)
+    }
+
+    @Test
+    fun `older CLI still reaches ready with telemetry settings unavailable`() = runBlocking {
+        mock.telemetryStatus = 404
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertTrue(mock.awaitRequestCount("/telemetry/level", 1))
+        assertEquals(null, svc.config?.telemetry)
+        assertEquals(null, mock.lastTelemetryLevelBody)
+    }
+
+    @Test
+    fun `effective level stays off after saving and refreshing an opt-in under a host opt-out`() = runBlocking {
+        mock.telemetryAllowed = false
+        mock.config = """{"model":"initial","experimental":{"openTelemetry":true}}"""
+        val svc = create()
+        svc.connect()
+        withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.telemetry == false }
+        }
+
+        val state = svc.setTelemetryLevel(true)
+        assertEquals("""{"enabled":true}""", mock.lastTelemetryLevelBody)
+        assertEquals(false, appStateDto(state).config?.telemetry)
+        mock.awaitSseConnection()
+        mock.config = """{"model":"updated","experimental":{"openTelemetry":true}}"""
+        mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
+        val refreshed = withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.model == "updated" }
+        }
+        assertEquals(false, appStateDto(refreshed).config?.telemetry)
     }
 
     @Test
@@ -379,14 +415,17 @@ class KiloBackendAppServiceTest {
         mock.config = """{"model":"initial","experimental":{"openTelemetry":true}}"""
         val svc = create()
         svc.connect()
-        ready(svc)
+        withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.telemetry == true }
+        }
         mock.awaitSseConnection()
         val gate = CountDownLatch(1)
         mock.telemetryGate = gate
+        val requests = mock.requestCount("/telemetry/level")
         val save = async(start = CoroutineStart.UNDISPATCHED) { svc.setTelemetryLevel(false) }
 
         try {
-            assertTrue(mock.awaitRequestCount("/telemetry/level", 1))
+            assertTrue(mock.awaitRequestCount("/telemetry/level", requests + 1))
             mock.config = """{"model":"updated","experimental":{"openTelemetry":true}}"""
             mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
             withTimeout(5_000) {

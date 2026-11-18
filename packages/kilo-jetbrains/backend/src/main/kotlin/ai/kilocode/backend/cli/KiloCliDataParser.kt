@@ -666,7 +666,6 @@ object KiloCliDataParser {
                         ?.toInt(),
                 )
             },
-            telemetry = runCatching { obj["experimental"].obj()?.flagOrNull("openTelemetry") }.getOrNull(),
         )
     }.getOrDefault(ConfigDto())
 
