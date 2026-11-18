@@ -34,6 +34,9 @@ async function measure(dir: string, sources: Map<string, string>): Promise<Findi
     .cwd(dir)
     .quiet()
     .nothrow()
+  // Exit 0 and 1 are the documented outcomes (clean and diagnostics found). Anything else
+  // means Oxlint itself failed, and its stderr says why.
+  if (result.exitCode > 1) throw new Error(result.stderr.toString() || `Oxlint exited ${result.exitCode}`)
   const report = parseReport(result.stdout.toString(), result.stderr.toString(), result.exitCode)
   if (report.number_of_files !== sources.size) throw new Error("Oxlint did not measure the complete snapshot")
   return report.diagnostics.map(({ filename, code, message, labels }) => {
@@ -73,23 +76,40 @@ function lines(text = "") {
   return text.split("\n").length - Number(text.endsWith("\n") || text === "")
 }
 
+// `git diff --name-status -z` pairs a rename destination with its source, so a moved file
+// is measured against the code it came from instead of counting as a new one.
+function renames(status: string) {
+  const entries = new Map<string, string>()
+  const parts = status.split("\0")
+  for (let i = 0; i < parts.length; i++) {
+    const code = parts[i]!
+    if (!code) break
+    if (code.startsWith("R")) {
+      entries.set(parts[i + 2]!, parts[i + 1]!)
+      i += 2
+      continue
+    }
+    entries.set(parts[i + 1]!, code === "A" ? "" : parts[i + 1]!)
+    i += 1
+  }
+  return entries
+}
+
 async function check(base: string) {
   const registry = await readMirrors(process.cwd())
   const mirrors = new Set(Object.values(registry.mirrors).map((x) => x.mirror))
-  const changed = await $`git diff --no-renames --diff-filter=AMT --name-only -z ${base} -- packages`.text()
+  const status = renames(await $`git diff -M --diff-filter=AMRT --name-status -z ${base} -- packages`.text())
   const added = await $`git ls-files --others --exclude-standard -z -- packages`.text()
-  const files = [...new Set((changed + added).split("\0"))].filter(
+  const files = [...new Set([...status.keys(), ...added.split("\0")])].filter(
     (f) => product.test(f) && !excluded.test(f) && !mirrors.has(f),
-  )
-  const originals = new Set(
-    files.length ? (await $`git ls-tree -rz --name-only ${base} -- packages`.text()).split("\0") : [],
   )
   const before = new Map<string, string>()
   const after = new Map<string, string>()
   const errors: string[] = []
   for (const file of files) {
-    if ((await lstat(file)).isSymbolicLink()) throw new Error(`Cannot measure symbolic link: ${file}`)
-    if (originals.has(file)) before.set(file, await $`git show ${base + ":" + file}`.text())
+    if ((await lstat(file)).isSymbolicLink()) continue
+    const source = status.get(file)
+    if (source) before.set(file, await $`git show ${base}:${source}`.text())
     const text = await Bun.file(file).text()
     after.set(file, text)
     const cap = Math.max(1000, lines(before.get(file)))
@@ -104,16 +124,19 @@ async function check(base: string) {
     const current = await measure(join(tmp, "after"), after)
     const patches = new Map<string, string>()
     for (const f of current) {
-      if (before.has(f.file) && !patches.has(f.file)) {
-        patches.set(
-          f.file,
-          await $`git diff --no-ext-diff --no-textconv --no-color --no-renames --ignore-cr-at-eol -U0 --inter-hunk-context=0 ${base} -- ${f.file}`.text(),
-        )
-      }
+      const source = status.get(f.file)
+      if (!source || patches.has(f.file)) continue
+      const paths = source === f.file ? [f.file] : [source, f.file]
+      patches.set(
+        f.file,
+        await $`git diff --no-ext-diff --no-textconv --no-color -M --ignore-cr-at-eol -U0 --inter-hunk-context=0 ${base} -- ${paths}`.text(),
+      )
+    }
+    for (const f of current) {
       const line = originalLine(f.line, patches.get(f.file) ?? "")
-      const cap =
-        old.find((o) => o.file === f.file && o.line === line && o.column === f.column && o.label === f.label)?.score ??
-        20
+      const inherited = old.filter((o) => o.file === f.file)
+      const exact = inherited.find((o) => o.line === line && o.column === f.column && o.label === f.label)
+      const cap = exact?.score ?? ceiling(inherited, current, f)
       if (f.score > cap)
         errors.push(
           `${f.file}:${f.line}:${f.column}: ${f.label} complexity ${f.score} (limit ${cap}). Separate a decision or dispatch path and test it independently.`,
@@ -125,6 +148,15 @@ async function check(base: string) {
   for (const error of errors) console.error(`ERROR ${error}`)
   console.log(`Kilo metrics: ${files.length} changed source files, ${errors.length} regressions.`)
   return Number(errors.length > 0)
+}
+
+// A declaration on an edited line, or reindented, cannot be matched by position. Its ceiling
+// still applies while the file has a single over-limit function with that label, so an edit
+// beside the declaration cannot reset debt it did not create. Ambiguous labels start at 20.
+function ceiling(before: Finding[], after: Finding[], finding: Finding) {
+  const same = before.filter((o) => o.label === finding.label)
+  const peers = after.filter((o) => o.file === finding.file && o.label === finding.label)
+  return same.length === 1 && peers.length === 1 ? same[0]!.score : 20
 }
 
 if (import.meta.main)
