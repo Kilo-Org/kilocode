@@ -11,7 +11,6 @@ export type Grant = "read" | "act" | "navigate"
 export type Rule = BrowserSettingsState["rules"][number]
 
 export const GRANTS: readonly Grant[] = ["read", "act", "navigate"]
-export const EFFECTS: readonly Effect[] = ["allow", "ask", "deny"]
 
 /** One origin of the table, with the effect of every class. */
 export type Site = { origin: string } & Record<Grant, Effect>

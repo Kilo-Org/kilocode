@@ -67,6 +67,7 @@ let shutdownExtension: (() => Promise<void>) | undefined
 /** globalState key of the temporary Kilo v1 import offer: "imported" or "declined" once answered. */
 const V1_IMPORT = "kilo-code.v2.importV1"
 
+/** @knipExternal VS Code calls this through the extension's manifest main. */
 export function activate(context: ExtensionContext) {
   const output = window.createOutputChannel("Kilo Code (v2)")
   const storage = context.globalStorageUri.fsPath
@@ -609,6 +610,7 @@ function browserTheme(): "dark" | "light" {
   return kind === ColorThemeKind.Light || kind === ColorThemeKind.HighContrastLight ? "light" : "dark"
 }
 
+/** @knipExternal VS Code calls this through the extension's manifest main. */
 export function deactivate() {
   cancelChromiumInstall()
   return shutdownExtension?.()

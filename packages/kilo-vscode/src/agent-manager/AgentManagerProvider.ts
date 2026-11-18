@@ -92,7 +92,6 @@ import {
   pushProjects,
   pushState,
   requestState,
-  runStateFor,
   type ProviderStateHost,
 } from "./provider-state"
 import {
@@ -101,12 +100,9 @@ import {
   continueInActiveProject,
   diagnose,
   focusPanel,
-  getSessionDirectories,
-  getWorktreeDirectories,
   isActive,
   openAdvancedWorktree,
   postMessage,
-  revealSession,
   shutdown,
   syncWorktrees,
   waitForReady,
@@ -122,7 +118,6 @@ import type { SetupScriptService } from "./SetupScriptService"
 import { PLATFORM_METADATA } from "./session-create"
 
 export class AgentManagerProvider implements Disposable, ProviderHostsSource, ProviderStateHost, ProviderApiHost {
-  public static readonly viewType = "kilo-code.v2.agentManagerPanel"
   public panel: PanelContext | undefined
   public readonly outputChannel: OutputHandle
   public readonly contexts: ProjectContexts
@@ -160,7 +155,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     if (this.contexts.active()?.id === ctx.id) this.pushState(ctx)
   })
   public closing: Promise<void> | undefined
-  public onVisibilityChange: ((visible: boolean) => void) | undefined
   public readonly panelSessions = new Set<string>()
   public readonly busySessions = new Set<string>()
   public readonly removedSessions = new Set<string>()
@@ -487,10 +481,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     if (!preserveFocus) focusPanelPrompt(panel, this.waitForPanelReady(panel), this.waitForPanelActive(panel))
   }
 
-  public onPanelVisibilityChange(cb: (visible: boolean) => void): void {
-    this.onVisibilityChange = cb
-  }
-
   /** Restore the Agent Manager panel from a serialized state. */
   public deserializePanel(raw: WebviewPanel): void {
     if (this.panel) {
@@ -513,7 +503,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     void this.statsPoller
     for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(panel.visible)
     void this.diffs.setVisible(panel.visible)
-    this.onVisibilityChange?.(panel.visible)
     panel.onDidChangeVisibility((visible) => {
       for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(visible)
       void this.diffs.setVisible(visible)
@@ -544,7 +533,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       this.panel = undefined
       void this.terminalRouter.dispose()
       this.relay.reset()
-      this.onVisibilityChange?.(false)
     })
     this.postCaffeination()
   }
@@ -1112,10 +1100,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return this.contexts.byWorktree(worktreeId)?.id ?? this.context?.id
   }
 
-  public runStateFor(ctx: ProjectContext): ReturnType<RunController["state"]> {
-    return runStateFor(this.stateHost(), ctx)
-  }
-
   public postRunMessage(message: AgentManagerOutMessage): void {
     postRunMessage(this.stateHost(), message)
   }
@@ -1228,26 +1212,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public waitForReady(): Promise<boolean> {
     return waitForReady(this.api())
-  }
-
-  public getSessionDirectories(): ReadonlyMap<string, string> {
-    return getSessionDirectories(this.api())
-  }
-
-  public revealSession(sessionId: string): Promise<boolean> {
-    return revealSession(this.api(), sessionId)
-  }
-
-  public getWorktreeDirectories(): string[] {
-    return getWorktreeDirectories(this.api())
-  }
-
-  public workspaceRoot = () => this.getRoot()
-
-  public projectId = () => this.contexts.active()?.id
-
-  public sessionProject(): string | undefined {
-    return this.projectScope.current()?.id ?? this.contexts.active()?.id
   }
 
   public continueFromSidebar(

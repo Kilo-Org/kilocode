@@ -8,8 +8,6 @@ import { addPendingTab, openSessionTab, replacePendingTab } from "../src/utils/l
 import { LOCAL } from "./navigate"
 import { PENDING_PREFIX } from "./tab-ids"
 
-export const isPendingTab = (id: string) => id.startsWith(PENDING_PREFIX)
-
 export function createLocalTabPlacement(opts: {
   ids: () => string[]
   setIds: (next: string[] | ((prev: string[]) => string[])) => void

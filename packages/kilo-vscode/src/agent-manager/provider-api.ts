@@ -1,4 +1,4 @@
-// Public provider surface (focus, reveal, sidebar entry points, diagnostics, shutdown) split out of
+// Public provider surface (focus, sidebar entry points, diagnostics, shutdown) split out of
 // AgentManagerProvider so the class file stays readable. Every function receives the provider as a host value.
 import type { ProjectContext } from "./project/context"
 import type { ProjectContexts } from "./project/contexts"
@@ -13,10 +13,11 @@ import type { WorktreeDiffController } from "./worktree-diff-controller"
 import type { DiffSourceCatalog } from "../diff/sources/catalog"
 import type { CaffeinationService } from "../services/caffeination"
 import type { BranchNamingController } from "./branch-naming"
+import type { PRStatusPoller } from "./PRStatusPoller"
+import type { RunController } from "./run/controller"
 import type { AgentManagerOutMessage } from "./types"
 import type { CreateWorktreeOnDiskOptions, CreateWorktreeOnDiskResult } from "./worktree-create"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
-import { revealManagedSession } from "./reveal-session"
 import { continueInWorktree, type ContinueContext } from "./continue-in-worktree"
 import { runDoctor } from "./worktree-doctor"
 import { reconcileProject } from "./project/init"
@@ -30,7 +31,7 @@ export interface ProviderApiHost {
   readonly host: Host
   readonly outputChannel: OutputHandle
   readonly gitOps: GitOps
-  readonly prBridge: { poller: { paused(): string[]; stop(): void } }
+  readonly prBridge: { poller: { paused: PRStatusPoller["paused"]; stop(): void } }
   readonly statsPoller: { paused(): string[]; stop(): void }
   readonly diffs: WorktreeDiffController
   readonly diffCatalog: DiffSourceCatalog
@@ -42,7 +43,7 @@ export interface ProviderApiHost {
   readonly scripts: { dispose(): Promise<void> }
   readonly caffeination: CaffeinationService
   readonly orchestration: { dispose(): void }
-  readonly run: { dispose(): void }
+  readonly run: { dispose: RunController["dispose"] }
   readonly activity: { dispose(): void }
   readonly unsubTool: () => void
   readonly unsubEvents: () => void
@@ -90,34 +91,6 @@ export function waitForReady(p: ProviderApiHost): Promise<boolean> {
   const panel = p.panel
   if (!panel) return Promise.resolve(false)
   return p.waitForPanelReady(panel)
-}
-
-export function getSessionDirectories(p: ProviderApiHost): ReadonlyMap<string, string> {
-  const directories = new Map<string, string>()
-  for (const ctx of p.contexts.values()) {
-    const state = ctx.peekState()
-    for (const session of state?.getSessions() ?? []) {
-      const worktree = session.worktreeId ? state?.getWorktree(session.worktreeId) : undefined
-      directories.set(session.id, worktree?.path ?? ctx.root)
-    }
-  }
-  return directories
-}
-
-export function revealSession(p: ProviderApiHost, sessionId: string): Promise<boolean> {
-  return revealManagedSession(sessionId, p.contexts, {
-    directories: () => getSessionDirectories(p),
-    activate: (ctx) => p.activateProject(ctx),
-    projects: () => p.pushProjects(),
-    open: () => p.openPanel(),
-    state: () => p.waitForStateReady("revealSession"),
-    ready: () => waitForReady(p),
-    post: (message) => p.panel?.postMessage(message),
-  })
-}
-
-export function getWorktreeDirectories(p: ProviderApiHost): string[] {
-  return p.getStateManager()?.getWorktrees().map((wt) => wt.path) ?? []
 }
 
 export async function continueFromSidebar(

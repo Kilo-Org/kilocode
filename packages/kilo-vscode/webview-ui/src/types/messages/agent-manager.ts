@@ -241,15 +241,6 @@ export interface ModelAllocation {
   variant?: string
 }
 
-export type ContinueInWorktreeStatus =
-  | "capturing"
-  | "creating"
-  | "setup"
-  | "transferring"
-  | "forking"
-  | "done"
-  | "error"
-
 /** Sidebar target a selection message resolves to. */
 export type AgentManagerSidebarTarget =
   | { projectId: string; kind: "local" }

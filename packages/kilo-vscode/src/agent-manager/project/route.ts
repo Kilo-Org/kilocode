@@ -6,10 +6,6 @@ export interface ProjectRef {
   projectId: string
 }
 
-export interface WorktreeRef extends ProjectRef {
-  worktreeId: string
-}
-
 export interface SessionRef extends ProjectRef {
   sessionId: string
 }
@@ -33,7 +29,6 @@ export class ProjectRouteError extends Error {
 interface ProjectRoute {
   root: string
   generation: number
-  worktrees: Map<string, string>
 }
 
 interface SessionRoute {
@@ -51,7 +46,7 @@ export class ProjectRouteService {
     const current = this.projects.get(projectId)
     if (current && (current.generation !== generation || current.root !== root)) this.unregisterProject(projectId)
     if (current && current.generation === generation && current.root === root) return
-    this.projects.set(projectId, { root, generation, worktrees: new Map() })
+    this.projects.set(projectId, { root, generation })
   }
 
   unregisterProject(projectId: string): void {
@@ -64,11 +59,6 @@ export class ProjectRouteService {
       projects?.delete(projectId)
       if (projects?.size === 0) this.raw.delete(sessionId)
     }
-  }
-
-  registerWorktree(ref: WorktreeRef, directory: string, generation: number): void {
-    const project = this.requireProject(ref.projectId, generation)
-    project.worktrees.set(ref.worktreeId, directory)
   }
 
   registerSession(ref: SessionRef, directory: string, generation: number): void {

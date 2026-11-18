@@ -1,14 +1,9 @@
-import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "../i18n"
 import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
 import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
 import { AutocompleteInlineCompletionProvider } from "./classic-auto-complete/AutocompleteInlineCompletionProvider"
-import {
-  AutocompleteTelemetry,
-  AutocompleteTelemetryEvent,
-  captureAutocompleteTelemetry,
-} from "./classic-auto-complete/AutocompleteTelemetry"
+import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 import type { Connection } from "./connection"
 import { hasValidCredentials } from "./fim"
 import { AUTOCOMPLETE_SECTION, readAutocompleteSettings } from "./settings"
@@ -52,8 +47,6 @@ export class AutocompleteServiceManager {
   private readonly context: vscode.ExtensionContext
   private settings: AutocompleteServiceSettings | null = null
 
-  private taskId: string | null = null
-
   private statusBar: AutocompleteStatusBar | null = null
   private sessionCost: number = 0
   private completionCount: number = 0
@@ -70,9 +63,7 @@ export class AutocompleteServiceManager {
 
   constructor(context: vscode.ExtensionContext, connection: Connection) {
     if (AutocompleteServiceManager._instance) {
-      throw new Error(
-        "AutocompleteServiceManager is a singleton. Use AutocompleteServiceManager.getInstance() instead.",
-      )
+      throw new Error("AutocompleteServiceManager is already initialized.")
     }
 
     this.context = context
@@ -110,10 +101,6 @@ export class AutocompleteServiceManager {
     })
 
     void this.load()
-  }
-
-  public static getInstance(): AutocompleteServiceManager | null {
-    return AutocompleteServiceManager._instance
   }
 
   public async load() {
@@ -168,8 +155,6 @@ export class AutocompleteServiceManager {
       enableSmartInlineTaskKeybinding: false,
     })
 
-    captureAutocompleteTelemetry(AutocompleteTelemetryEvent.GHOST_SERVICE_DISABLED)
-
     await this.load()
   }
 
@@ -178,11 +163,6 @@ export class AutocompleteServiceManager {
     if (!editor) {
       return
     }
-
-    this.taskId = crypto.randomUUID()
-    captureAutocompleteTelemetry(AutocompleteTelemetryEvent.INLINE_ASSIST_AUTO_TASK, {
-      taskId: this.taskId,
-    })
 
     const document = editor.document
 

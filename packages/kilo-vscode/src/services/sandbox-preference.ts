@@ -21,10 +21,6 @@ export class SandboxPreference {
     return this.explicit() ?? fallback
   }
 
-  wait(): Promise<void> {
-    return this.pending
-  }
-
   set(enabled: boolean, validate?: () => Promise<void>): Promise<void> {
     const update = this.pending
       .catch(() => undefined)

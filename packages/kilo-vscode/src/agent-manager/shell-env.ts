@@ -169,12 +169,3 @@ export async function execWithShellEnv(
     return await exec(cmd, args, options)
   }
 }
-
-/** Clear the cached environment (for tests). */
-export function clearShellEnvCache(): void {
-  cached = null
-  cacheTime = 0
-  wasFallback = false
-  fixing = null
-  fixed = false
-}

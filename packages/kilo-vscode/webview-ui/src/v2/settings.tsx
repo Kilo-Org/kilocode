@@ -11,7 +11,6 @@ import { credentials } from "../components/settings/provider-catalog"
 import { SettingsConfigProvider } from "./settings-config"
 import { useV2 } from "./client"
 
-export const KILO = "kilo"
 const POLL = 1000
 
 export function createSettings() {

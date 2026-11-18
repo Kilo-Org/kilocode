@@ -1,4 +1,3 @@
-import * as vscode from "vscode"
 import type { AutocompleteContext, CacheMatchType, FillInAtCursorSuggestion } from "../types"
 import { getSuggestionKey as _getSuggestionKey, insertWithLRUEviction } from "./telemetry-utils"
 
@@ -21,45 +20,11 @@ export const AutocompleteTelemetryEvent = {
   AUTOCOMPLETE_ACCEPT_SUGGESTION: "Autocomplete Accept Suggestion",
   AUTOCOMPLETE_SUGGESTION_FILTERED: "Autocomplete Suggestion Filtered",
   AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN: "Autocomplete Unique Suggestion Shown",
-  INLINE_ASSIST_AUTO_TASK: "Inline Assist Auto Task",
-  GHOST_SERVICE_DISABLED: "Ghost Service Disabled",
 } as const
 
 export type AutocompleteTelemetryEventName = (typeof AutocompleteTelemetryEvent)[keyof typeof AutocompleteTelemetryEvent]
 
 export type AutocompleteTelemetryCapture = (event: string, properties: Record<string, unknown>) => void
-
-let transport: AutocompleteTelemetryCapture | undefined
-
-/**
- * Register the telemetry transport that forwards autocomplete events. No
- * transport exists yet; the default capture drops events after the consent
- * check.
- */
-export function setAutocompleteTelemetrySink(fn: AutocompleteTelemetryCapture | undefined): void {
-  transport = fn
-}
-
-/**
- * Default capture sink. It honours the user's telemetry consent and forwards to
- * the registered transport.
- */
-function defaultCapture(event: string, properties: Record<string, unknown>): void {
-  if (!vscode.env.isTelemetryEnabled) return
-  transport?.(event, properties)
-}
-
-/**
- * Emit an autocomplete telemetry event through the consent-gated sink. Use this
- * for events that are not tied to an AutocompleteTelemetry instance, such as the
- * standalone service and inline-assist events.
- */
-export function captureAutocompleteTelemetry(
-  event: AutocompleteTelemetryEventName,
-  properties?: Record<string, unknown>,
-): void {
-  defaultCapture(event, properties ?? {})
-}
 
 /**
  * Minimum time in milliseconds that a suggestion must be visible before
@@ -121,9 +86,9 @@ export class AutocompleteTelemetry {
   /**
    * Create a new AutocompleteTelemetry instance
    * @param autocompleteType - The type of autocomplete (defaults to "inline")
-   * @param capture - The sink that receives captured events (defaults to the consent-gated transport forwarder)
+   * @param capture - The sink that receives captured events (no-op by default)
    */
-  constructor(autocompleteType: AutocompleteType = "inline", capture: AutocompleteTelemetryCapture = defaultCapture) {
+  constructor(autocompleteType: AutocompleteType = "inline", capture: AutocompleteTelemetryCapture = () => undefined) {
     this.autocompleteType = autocompleteType
     this.capture = capture
   }
