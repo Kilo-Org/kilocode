@@ -29,6 +29,7 @@ import { transcriptChildren } from "../components/chat/background-agents"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { ErrorBanner } from "./error-banner"
+import { createInboxRefresh } from "./inbox-refresh"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
@@ -193,6 +194,7 @@ export function SessionView(props: {
     )
   }
 
+  const inbox = createInboxRefresh(v2.data.session.pending.sync)
   // The session-start loader lasts until the first transcript page lands. createData reports loading only for pages it
   // adds, and an already loaded transcript must stay instant, so the view that starts the first request tracks it. A
   // newer request owns the loader, so the settle of a superseded one cannot clear it.
@@ -209,15 +211,13 @@ export function SessionView(props: {
       setStarting((value) => startingLoader(value, { session: id, loaded }))
       const settle = () => setStarting((value) => settledLoader(value, { session: id, run, attempt }))
       void messages.then(settle, settle)
-      void Promise.all([
-        v2.data.session.sync(id, { children: true }),
-        messages,
-        v2.data.session.pending.sync(id),
-      ]).catch((err: unknown) => {
-        // A session created here is known before the server has it; only a session nobody created is missing.
-        if (props.onMissing && sessionMissing(err) && !v2.data.session.get(id)) return props.onMissing(id)
-        v2.report(err)
-      })
+      void Promise.all([v2.data.session.sync(id, { children: true }), messages, inbox.sync(id)]).catch(
+        (err: unknown) => {
+          // A session created here is known before the server has it; only a session nobody created is missing.
+          if (props.onMissing && sessionMissing(err) && !v2.data.session.get(id)) return props.onMissing(id)
+          v2.report(err)
+        },
+      )
     }),
   )
   // A new session is not on the server until its create request settles, so these reads can fail. Events add
@@ -636,8 +636,13 @@ export function SessionView(props: {
         </div>
         <Show when={!props.readOnly}>
           <div class="chat-input">
-            <Show when={v2.handshake() ?? v2.failure()}>
-              {(failure) => <ErrorBanner failure={failure()} onDismiss={v2.handshake() ? undefined : v2.clearError} />}
+            <Show when={v2.handshake() ?? v2.failure() ?? inbox.failure()}>
+              {(failure) => (
+                <ErrorBanner
+                  failure={failure()}
+                  onDismiss={v2.handshake() ? undefined : v2.failure() ? v2.clearError : inbox.dismiss}
+                />
+              )}
             </Show>
             <Show when={permissions()[0]} keyed>
               {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
