@@ -76,6 +76,38 @@ async function boot(browser?: Browser) {
 }
 
 describe("browser tools", () => {
+  test("activation finishes with an endless session event stream and registers every tool", async () => {
+    // `event.subscribe` returns an endless stream. Awaiting it inside the plugin effect would keep the tools from ever
+    // being registered, so activation must fork it.
+    const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
+    const ctx = {
+      location: { directory: "/tmp/browser-tools-event-test" },
+      tool: {
+        transform: (fn: (typeof transforms)[number]) =>
+          Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
+      },
+      event: { subscribe: () => Stream.never },
+      permission: { hook: () => Effect.sync(() => ({ dispose: Effect.void })) },
+    }
+    const config = { entries: () => Effect.succeed([]) } as unknown as Config.Interface
+    const scope = await Effect.runPromise(Scope.make())
+    closers.push(() => Effect.runPromise(Scope.close(scope, Exit.void)).then(() => undefined))
+    await Effect.runPromise(
+      KiloBrowserToolsPlugin.effect(ctx as never).pipe(
+        // A bounded wait: the inline form never returns, so this fails instead of hanging the suite.
+        Effect.timeout("2 seconds"),
+        Effect.provideService(Scope.Scope, scope),
+        Effect.provideService(Config.Service, config),
+      ),
+    )
+    const added: Tool.Info[] = []
+    transforms.forEach((fn) => fn({ add: (tool) => added.push(tool) }))
+    const names = added.map((tool) => tool.name)
+    expect(transforms.length).toBeGreaterThan(0)
+    expect(names).toContain("browser_navigate")
+    expect(names).toContain("browser_snapshot")
+  })
+
   test("registers the whole pinned contract with the vendored schemas", async () => {
     const host = await boot()
     const tools = host.tools()

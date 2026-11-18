@@ -411,7 +411,8 @@ export const KiloBrowserToolsPlugin = define({
       }),
     )
 
-    // A deleted session releases its remembered page at once; the page map is otherwise only bounded by live pages.
+    // A deleted session releases its remembered page at once. The stream never ends, so it is forked: awaiting it
+    // here would keep the plugin effect from ever registering its tools.
     yield* ctx.event.subscribe({ types: ["session.deleted"] }).pipe(
       Stream.runForEach((event) =>
         Effect.sync(() => {
@@ -420,7 +421,7 @@ export const KiloBrowserToolsPlugin = define({
           playwright.forgetSession(event.data.sessionID)
         }),
       ),
-      Effect.catch(() => Effect.void),
+      Effect.forkScoped({ startImmediately: true }),
     )
 
     const config = yield* Effect.serviceOption(Config.Service)
