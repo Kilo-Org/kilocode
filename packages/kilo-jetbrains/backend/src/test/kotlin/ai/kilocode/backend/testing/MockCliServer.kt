@@ -207,6 +207,8 @@ class MockCliServer : AutoCloseable {
     @Volatile var summarizeResponse = "true"
     @Volatile var sessionsStatus = 200
     @Volatile var recentSessionsStatus = 200
+    @Volatile var moveSessionStatus = 200
+    val moveSessionBodies = CopyOnWriteArrayList<String>()
     @Volatile var sessionCreateStatus = 200
     @Volatile var sessionGetStatus = 200
     @Volatile var sessionDeleteStatus = 200
@@ -648,6 +650,10 @@ class MockCliServer : AutoCloseable {
                     lastExperimentalSessionPath = path
                     recentGate?.await()
                     respond(output, recentSessionsStatus, recentSessions)
+                }
+                bare == "/experimental/control-plane/move-session" && method == "POST" -> {
+                    moveSessionBodies.add(body)
+                    respond(output, moveSessionStatus, "")
                 }
                 bare == "/experimental/capabilities" -> {
                     lastCapabilitiesPath = path

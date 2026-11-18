@@ -23,6 +23,7 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.client.session.history.resolveGitRemoteUrl
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -35,6 +36,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -45,8 +47,11 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.awt.EventQueue
+import kotlin.coroutines.suspendCoroutine
 
 enum class HostedReadiness { Unknown, Preparing, Ready, Failed }
 
@@ -184,6 +189,8 @@ class KiloHostedService internal constructor(
     }
     private val watches = mutableMapOf<String, Watch>()
     private val retired = mutableMapOf<String, Set<String>>()
+    private val revisions = mutableMapOf<String, Long>()
+    private val reloads = mutableSetOf<String>()
     private val prompts = object : java.util.LinkedHashMap<String, PromptDto>(PROMPT_LIMIT, 0.75f, false) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, PromptDto>?) = size > PROMPT_LIMIT
     }
@@ -358,9 +365,10 @@ class KiloHostedService internal constructor(
      * for the next full discovery pass.
      */
     suspend fun workspace(ref: HostedWorkspaceRefDto): HostedWorkspaceDto {
+        val revision = revision(ref)
         val dto = call { workspace(ref, null, null) }
         _state.update { current ->
-            if (current.items.none { it.ref == ref }) current
+            if (revision != revision(ref) || current.items.none { it.ref == ref }) current
             else current.copy(items = current.items.map { if (it.ref == ref) dto else it })
         }
         return dto
@@ -459,13 +467,15 @@ class KiloHostedService internal constructor(
 
     suspend fun status(ref: HostedWorkspaceRefDto): HostedWorkspaceStatusDto {
         val run = generation
+        val revision = revision(ref)
         val fresh = call { workspaceStatus(ref, null) }
         if (fresh.ref != ref || !fresh.observedAt.isFinite() || fresh.observedAt < 0) {
             log.warn("hosted workspace status rejected workspace=${ref.key}")
             return _state.value.statuses[ref.key] ?: HostedWorkspaceStatusDto(ref, "active", "unknown", "", 0.0)
         }
-        if (run != generation || !gate() || _state.value.signedOut) return fresh
+        if (run != generation || revision != revision(ref) || !gate() || _state.value.signedOut) return fresh
         _state.update { current ->
+            if (revision != revision(ref)) return@update current
             val old = current.statuses[ref.key]
             val next = when {
                 old == null || fresh.observedAt > old.observedAt -> fresh
@@ -478,6 +488,64 @@ class KiloHostedService internal constructor(
             current.copy(statuses = current.statuses + (ref.key to next))
         }
         return _state.value.statuses[ref.key] ?: fresh
+    }
+
+    /** Retires one workspace's hosted feeds before [reconnect] constructs replacement subscriptions. */
+    fun reloading(ref: HostedWorkspaceRefDto): Boolean = synchronized(lock) { ref.key in reloads }
+
+    fun reload(ref: HostedWorkspaceRefDto, close: () -> (suspend () -> Unit) = { { } }, reconnect: () -> Unit): Job? {
+        val jobs = synchronized(lock) {
+            if (!reloads.add(ref.key)) return null
+            revisions[ref.key] = (revisions[ref.key] ?: 0L) + 1L
+            val keys = watches.filterValues { it.ref == ref }.keys
+            keys.mapNotNull { key ->
+                retired.remove(key)
+                watches.remove(key)?.job?.also { it.cancel() }
+            }.also {
+                prompts.keys.removeIf { it.startsWith(ref.key + ":") }
+            }
+        }
+        val closed = try {
+            close()
+        } catch (e: Exception) {
+            synchronized(lock) { reloads.remove(ref.key) }
+            throw e
+        }
+        _state.update { current ->
+            current.copy(
+                statuses = current.statuses - ref.key,
+                preparations = current.preparations.filterKeys { !it.startsWith(ref.key + ":") },
+            )
+        }
+        return cs.launch {
+            var ready = false
+            try {
+                closed()
+                jobs.joinAll()
+                ready = true
+            } finally {
+                withContext(NonCancellable) {
+                    onEdt {
+                        synchronized(lock) { reloads.remove(ref.key) }
+                        if (ready && gate() && !_state.value.signedOut) reconnect() else Unit
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun onEdt(action: () -> Unit) {
+        if (ApplicationManager.getApplication() != null) {
+            withContext(Dispatchers.Main) { action() }
+            return
+        }
+        suspendCoroutine<Unit> { continuation ->
+            EventQueue.invokeLater { continuation.resumeWith(runCatching(action)) }
+        }
+    }
+
+    private fun revision(ref: HostedWorkspaceRefDto): Long = synchronized(lock) {
+        revisions[ref.key] ?: 0L
     }
 
     /**
@@ -507,7 +575,9 @@ class KiloHostedService internal constructor(
     fun observe(ref: HostedWorkspaceRefDto, session: String, parent: Disposable): Disposable {
         val key = HostedIDs.session(ref.providerID, ref.workspaceID, session)
         val item = synchronized(lock) {
-            if (gate() && !_state.value.signedOut) watch(ref, session).also { it.owners++ } else null
+            if (gate() && !_state.value.signedOut && ref.key !in reloads) {
+                watch(ref, session).also { it.owners++ }
+            } else null
         }
         val owner = Disposable {
             synchronized(lock) {
@@ -536,12 +606,14 @@ class KiloHostedService internal constructor(
             }
         }
         items.take(WATCH_LIMIT).forEach { ws ->
+            if (ws.ref.key in reloads) return@forEach
             ws.sessions.maxByOrNull { it.updated }?.let { watch(ws.ref, it.nativeSessionID).discovered = true }
         }
         watches.toMap().forEach { (key, item) -> prune(key, item) }
     }
 
     private fun watch(ref: HostedWorkspaceRefDto, session: String): Watch {
+        check(ref.key !in reloads) { "Cloud workspace is reloading: ${ref.key}" }
         val key = HostedIDs.session(ref.providerID, ref.workspaceID, session)
         return watches.getOrPut(key) {
             Watch(ref, session).also { item ->
@@ -583,14 +655,16 @@ class KiloHostedService internal constructor(
         items.map { ws ->
             async {
                 if (run != generation) return@async
+                val revision = revision(ws.ref)
+                if (reloading(ws.ref)) return@async
                 val status = runCatching { statusLimit.withPermit { status(ws.ref) } }.getOrElse {
                     if (it is CancellationException) throw it
                     log.warn("hosted workspace status unavailable workspace=${ws.ref.key}", it)
                     HostedWorkspaceStatusDto(ws.ref, ws.deletionState, "unavailable", "", 0.0)
                 }
-                if (run != generation) return@async
+                if (run != generation || revision != revision(ws.ref) || reloading(ws.ref)) return@async
                 _state.update { current ->
-                    if (run != generation) return@update current
+                    if (run != generation || revision != revision(ws.ref) || reloading(ws.ref)) return@update current
                     if (current.signedOut || current.items.none { it.ref == ws.ref }) return@update current
                     val live = current.statuses[ws.ref.key]
                     val next = if (live != null && live.observedAt >= status.observedAt) live else status
@@ -611,6 +685,8 @@ class KiloHostedService internal constructor(
         watches.values.forEach { it.job?.cancel() }
         watches.clear()
         retired.clear()
+        revisions.clear()
+        reloads.clear()
         prompts.clear()
     }
 
@@ -656,7 +732,7 @@ class KiloHostedService internal constructor(
             "preparing" -> run {
                 val progress = item.progress
                 val distinct = event.attemptID != null && event.attemptID != progress?.attemptID
-                val failed = event.action in setOf("attempt_failed", "step_failed", "failed") || event.failure != null || event.step == "failed"
+                val failed = event.action == "attempt_failed" || event.failure != null || event.step == "failed"
                 val terminal = failed || event.action == "attempt_completed" ||
                     (event.attemptID == null && event.step == "ready")
                 if (event.attemptID?.let { it in item.retired } == true) return
@@ -726,9 +802,12 @@ class KiloHostedService internal constructor(
                         revision = revision ?: previous?.takeIf { !distinct },
                     )
                 }
-                if (event.step != null) item.detail = event.copy(
-                    message = event.message ?: item.detail?.message?.takeIf { item.detail?.step == event.step },
-                )
+                if (event.step != null &&
+                    !(item.detail?.stepKind == "setup_command" && event.stepKind != "setup_command")) {
+                    item.detail = event.copy(
+                        message = event.message ?: item.detail?.message?.takeIf { item.detail?.step == event.step },
+                    )
+                }
                 val latest = item.progress ?: event
                 val display = item.detail ?: latest
                 val closed = terminal || finished || (item.closed && !distinct)

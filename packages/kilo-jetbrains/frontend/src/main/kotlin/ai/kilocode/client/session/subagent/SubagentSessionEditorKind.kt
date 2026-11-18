@@ -18,6 +18,8 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import java.awt.BorderLayout
 import javax.swing.Icon
 import javax.swing.JComponent
@@ -74,16 +76,20 @@ object SubagentSessionEditorKind : KiloEditorKind {
             },
         )
         host.open(id)
-        return SubagentSessionEditorPanel(host)
+        return SubagentSessionEditorPanel(host, cs)
     }
 
     private const val SESSION = "sessionId"
     private const val DIR = "directory"
 }
 
-class SubagentSessionEditorPanel(val host: SubagentSessionEditorHost) : BorderLayoutPanel() {
+class SubagentSessionEditorPanel(val host: SubagentSessionEditorHost, private val cs: CoroutineScope) : BorderLayoutPanel() {
     init {
         add(host.component, BorderLayout.CENTER)
+    }
+
+    suspend fun closed() {
+        cs.coroutineContext[Job]?.join()
     }
 }
 
