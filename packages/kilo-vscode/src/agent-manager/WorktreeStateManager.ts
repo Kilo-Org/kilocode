@@ -422,7 +422,13 @@ export class WorktreeStateManager {
     this.closed.delete(id)
     this.closed.set(id, worktreeId)
     if (this.closed.size > CLOSED_LIMIT) this.closed.delete(this.closed.keys().next().value!)
-    void this.save()
+    const target = this.activeTarget
+    if (target?.kind === "session" && target.sessionId === id) {
+      this.activeTarget = worktreeId
+        ? { projectId: target.projectId, kind: "worktree", worktreeId }
+        : { projectId: target.projectId, kind: "local" }
+    }
+    this.removeSession(id)
   }
 
   removeSession(id: string): void {
