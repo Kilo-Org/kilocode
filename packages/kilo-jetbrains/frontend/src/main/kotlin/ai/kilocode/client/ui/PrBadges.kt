@@ -1,6 +1,7 @@
 package ai.kilocode.client.ui
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
@@ -10,6 +11,7 @@ import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
+import com.intellij.ide.BrowserUtil
 import com.intellij.util.ui.UIUtil
 import com.intellij.xml.util.XmlStringUtil
 
@@ -151,6 +153,63 @@ internal fun commentsOpenTooltip(): String = hint("worktree.pr.comments.tooltip.
 
 private fun hint(key: String): String =
     XmlStringUtil.wrapInHtml(XmlStringUtil.escapeString(KiloBundle.message(key)))
+
+/**
+ * Title-line PR glyphs, in the one order both worktree and hosted rows read: unresolved
+ * conversations, review verdict, CI verdict. Conversations lead because they are the entry that
+ * needs a person; builds and reviews are outcomes to read.
+ */
+internal fun prGlyphBadges(pull: WorktreePrDto?): List<ActiveBadge> {
+    val p = pull ?: return emptyList()
+    return listOfNotNull(commentsBadge(p), reviewBadge(p), checksBadge(p))
+}
+
+/** The `#<number>` secondary-line pill for a PR, or null when there is no linked PR. */
+internal fun prNumberBadge(pull: WorktreePrDto?): ActiveBadge? {
+    val p = pull ?: return null
+    return ActiveBadge(
+        "#${p.number}",
+        style(p.state),
+        id = "pull-request",
+        tooltip = openTooltip(),
+        action = { BrowserUtil.browse(p.url) },
+    )
+}
+
+private fun reviewBadge(p: WorktreePrDto): ActiveBadge? {
+    val glyph = PrIcons.review(p.review) ?: return null
+    return ActiveBadge(
+        "",
+        id = "pr-review",
+        tooltip = reviewTooltip(p.review),
+        action = { BrowserUtil.browse(p.url) },
+        icon = glyph,
+    )
+}
+
+private fun checksBadge(p: WorktreePrDto): ActiveBadge? {
+    val glyph = PrIcons.checks(p.checks) ?: return null
+    return ActiveBadge(
+        "",
+        id = "pr-checks",
+        tooltip = checksTooltip(p.checks),
+        // The checks tab rather than the conversation: someone clicking a red build wants the log.
+        action = { BrowserUtil.browse(checksUrl(p)) },
+        icon = glyph,
+    )
+}
+
+private fun commentsBadge(p: WorktreePrDto): ActiveBadge? {
+    val glyph = PrIcons.comments(p.comments) ?: return null
+    return ActiveBadge(
+        commentsCount(p.comments),
+        id = "pr-comments",
+        tooltip = commentsTooltip(p.comments),
+        // The conversation tab, which is where GitHub lists the threads themselves.
+        action = { BrowserUtil.browse(p.url) },
+        icon = glyph,
+    )
+}
 
 /**
  * Tooltip for a PR title that can be truncated — the header, where the pill and the title are laid out
