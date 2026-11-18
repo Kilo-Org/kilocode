@@ -9,6 +9,7 @@ interface Item {
   outcome?: SessionInfo["outcome"]
   time?: SessionInfo["time"]
   revert?: SessionInfo["revert"]
+  location?: SessionInfo["location"]
 }
 
 export function createSessionActivity(opts: {
@@ -16,7 +17,7 @@ export function createSessionActivity(opts: {
   local: () => string[]
   projects: () => Record<string, Item[]>
   active: () => string | undefined
-  activityFor: (id: string, info?: Outcome) => Activity
+  activityFor: (id: string, info?: Outcome, directory?: string) => Activity
 }) {
   const group = (items: Item[]) => {
     const states = new Map<string | null, Activity[]>()
@@ -24,7 +25,11 @@ export function createSessionActivity(opts: {
       const id = item.worktreeId ?? null
       const values = states.get(id) ?? []
       values.push(
-        opts.activityFor(item.id, item.time ? { outcome: item.outcome, time: item.time, revert: item.revert } : undefined),
+        opts.activityFor(
+          item.id,
+          item.time ? { outcome: item.outcome, time: item.time, revert: item.revert } : undefined,
+          item.location?.directory,
+        ),
       )
       states.set(id, values)
     }

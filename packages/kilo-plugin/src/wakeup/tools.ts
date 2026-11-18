@@ -138,7 +138,7 @@ export function makeTools(wake: WakeupService) {
     description: CRON_CREATE,
     input: CronCreateParams,
     output: Schema.String,
-    options: { codemode: false },
+    options: { codemode: true },
     execute: (params, context: ContextInput) =>
       Effect.gen(function* () {
         const now = Date.now()
@@ -164,7 +164,7 @@ export function makeTools(wake: WakeupService) {
     description: CRON_LIST,
     input: CronListParams,
     output: Schema.String,
-    options: { codemode: false },
+    options: { codemode: true },
     execute: (_params, context: ContextInput) =>
       Effect.gen(function* () {
         const now = Date.now()
@@ -185,7 +185,7 @@ export function makeTools(wake: WakeupService) {
     description: CRON_DELETE,
     input: CronDeleteParams,
     output: Schema.String,
-    options: { codemode: false },
+    options: { codemode: true },
     execute: (params, context: ContextInput) =>
       Effect.gen(function* () {
         const id = params.id.trim()
