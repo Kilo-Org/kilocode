@@ -303,8 +303,8 @@ export class WorktreeManager {
   }
 
   /**
-   * Run independent preflight checks in parallel. Validates the requested ref,
-   * confirms commits exist for an explicit base, and resolves LFS and remote.
+   * Check the ref, commits and LFS in parallel. Only existing branches need their remote here;
+   * new branches resolve it when selecting their start point.
    */
   private async preflight(
     params: { existingBranch?: string; branchName?: string; baseBranch?: string },
@@ -324,7 +324,7 @@ export class WorktreeManager {
       refFormat,
       commit,
       this.repoUsesLfs(),
-      this.resolveRemote(),
+      params.existingBranch ? this.resolveRemote() : undefined,
     ])
     if (usesLfs && !(await this.checkLfsAvailable())) {
       throw new Error(

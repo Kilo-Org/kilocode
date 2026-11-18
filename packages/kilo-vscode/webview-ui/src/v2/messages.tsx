@@ -21,6 +21,7 @@ import { QuestionDock } from "./question"
 import { revertedCount, visibleMessages } from "./revert"
 import type { Selection } from "./selectors"
 import { sessionStarting } from "./session-loading"
+import { TranscriptLoading } from "./transcript-loading"
 import {
   anchorOffset,
   handedRows,
@@ -854,16 +855,12 @@ export function MessageList(props: {
           data-slot="message-list-content"
           // A pending question keeps the transcript lane: the empty layout centers its children in a row, which
           // would put the dock beside the welcome screen and drop its max-width and centering.
-          class={
-            empty() && !starting() && !props.question?.() ? "message-list-content-empty" : "message-list-content"
-          }
+          class={empty() && !starting() && !props.question?.() ? "message-list-content-empty" : "message-list-content"}
         >
-          <Show when={starting()}>
-            <div class="message-list-loading" role="status">
-              <Spinner />
-              <span>{language.t("session.messages.loading")}</span>
-            </div>
-          </Show>
+          <TranscriptLoading
+            session={starting() ? props.session : undefined}
+            label={language.t("session.messages.loading")}
+          />
           <Show when={empty() && !starting()}>
             {props.empty ? (
               props.empty()

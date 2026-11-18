@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 144,
-    "markedLines": 2566,
+    "files": 145,
+    "markedLines": 2583,
     "unmarkedLines": 386,
     "deletedFiles": 0
   },
@@ -558,6 +558,10 @@
     "packages/server/test/fetch.test.ts": {
       "rung": 4,
       "seam": "Test timing only, Kilo CI stability: the OpenAI OAuth tests wait up to 15 s instead of 2 s for the `chatgpt-browser` method to appear in `/api/integration` (the pending-requests test gets the same 15 s for its identical wait on the build agent's permission policy), and the file uses `setDefaultTimeout(30_000)` (the 'both ports busy' test goes from 10 s to 30 s) so bun's deadline stays above that wait plus the fixed 2 s or 3.6 s port retries in `listen`. The wait covers plugin activation of a cold Location: about 0.3 s on macOS and more than 2 s on the Windows `packages` leg, where the Kilo host suite runs beside three package suites on four vCPUs. The 10 ms retry cadence is unchanged, so a passing run returns as soon as the method appears. No assertion and no product code changes; the production `/cancel` probe keeps its 2 s abort. Rung 4: the deadlines are literals inside the upstream test file, and no seam reaches them from Kilo code."
+    },
+    "packages/server/test/vcs.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only: the review-base VCS test uses the existing in-process route fixture to await Location plugin activation before sending real requests through the VCS handlers. This replaces the two-second readiness poll that failed on Windows and preserves the base, committed diff and error assertions. No production changes. Plugin hooks and host composition cannot synchronize the upstream test's private fixture setup."
     },
     "packages/core/src/session.ts": {
       "rung": 3,
