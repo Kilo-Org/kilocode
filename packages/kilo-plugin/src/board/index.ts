@@ -35,6 +35,8 @@ export const Plugin = define({
     const state = { visible: yield* enabled }
     /** Sessions whose latest model request offered board_read. */
     const exposed = new Set<string>()
+    /** Sessions whose last audience probe failed, so a persistent failure logs once per streak. */
+    const probeFailed = new Set<string>()
     /** Sessions retrying a failed model call, from `session.status`. */
     const retrying = new Set<string>()
     const emit = yield* Ref.make<(event: KiloBoardRpc.Changed) => Effect.Effect<void>>(() => Effect.void)
@@ -180,7 +182,26 @@ export const Plugin = define({
       Effect.gen(function* () {
         yield* annotate(event)
         if (state.visible && ("board_read" in event.tools || "board_post" in event.tools)) {
-          const audience = yield* BoardStore.availability(store, { sessionID: event.sessionID, to: "ALL" }).pipe(Effect.option)
+          const audience = yield* BoardStore.availability(store, { sessionID: event.sessionID, to: "ALL" }).pipe(
+            Effect.tap(() => Effect.sync(() => probeFailed.delete(event.sessionID))),
+            Effect.tapError((error) =>
+              Effect.sync(() => {
+                const first = !probeFailed.has(event.sessionID)
+                probeFailed.add(event.sessionID)
+                return first
+              }).pipe(
+                Effect.flatMap((first) =>
+                  first
+                    ? Effect.logWarning("shared agent board audience unavailable", {
+                        "session.id": event.sessionID,
+                        "error.message": error.message,
+                      })
+                    : Effect.void,
+                ),
+              ),
+            ),
+            Effect.option,
+          )
           if (Option.isNone(audience)) {
             // A failed probe keeps the tools: a transient lookup error must not silently disable coordination.
             yield* Effect.logWarning("shared agent board audience unavailable", { "session.id": event.sessionID })

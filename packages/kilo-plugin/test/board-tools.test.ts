@@ -256,6 +256,19 @@ describe("shared board tools", () => {
     expect(content(await host.call("board_read", {})).messages).toHaveLength(3)
   })
 
+  test("keeps the tools when the audience cannot be read", async () => {
+    const host = await boot()
+    host.board.add({ id: "ses_orphan", parentID: "ses_missing" })
+    const event = await host.trigger("session.context", {
+      sessionID: "ses_orphan",
+      tools: { board_read: {}, board_post: {} },
+      system: [],
+      messages: [],
+    })
+    expect(Object.keys(event.tools as object)).toEqual(["board_read", "board_post"])
+    expect(event.system).toEqual([{ type: "text", text: BoardContext.instructions }])
+  })
+
   test("adds the instructions only to requests that offer board_read", async () => {
     const host = await boot()
     const offered = await host.trigger("session.context", {
