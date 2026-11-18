@@ -5,6 +5,8 @@ import { Wildcard } from "@opencode/core/util/wildcard"
 import { KiloBrowserPolicy } from "@kilocode/gateway-core/browser-policy"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Tool } from "@opencode/schema/tool"
+import { AbsolutePath } from "@opencode/schema/schema"
+import { Skill } from "@opencode/schema/skill"
 import { KiloBrowserRpc } from "@opencode/schema/kilocode/browser"
 import { Effect, Option, Result, Scope, Stream } from "effect"
 import type { JsonSchema } from "effect"
@@ -19,6 +21,7 @@ import {
   type CallResult,
 } from "./backend"
 import { BrowserContract } from "./contract"
+import GUIDE from "./browser-skill.txt"
 import type { Entry } from "./contract-shape"
 import type { ExtensionBackend } from "./extension"
 import { BrowserHub } from "./hub"
@@ -608,13 +611,25 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
     // `off` hides the tools: an agent never sees a browser tool it cannot use.
     if (browser.backend === "off" || organization?.control === "off") return
 
+    yield* ctx.skill.transform((editor) =>
+      editor.add(
+        Skill.Info.make({
+          id: Skill.ID.make("browser-automation"),
+          name: Skill.Name.make("browser-automation"),
+          description: "Use to inspect or interact with a web page using Playwright.",
+          path: AbsolutePath.make("/builtin/browser-automation.md"),
+          content: GUIDE,
+        }),
+      ),
+    )
     yield* ctx.tool.transform((editor) => {
       const backend = (choice: Settings): Promise<BrowserBackend> =>
         choice.backend === "extension" ? extension(choice.target) : playwright.get(key(choice))
       for (const entry of BrowserContract.entries) {
         editor.add({
-          name: entry.name,
-          options: { codemode: false },
+          // The registry flattens browser.click to browser_click, preserving permission and policy IDs.
+          name: entry.name.slice("browser_".length),
+          options: { namespace: "browser", codemode: true },
           description: entry.description,
           input: entry.inputSchema as JsonSchema.JsonSchema,
           execute: (args: unknown, context: Tool.Context) =>

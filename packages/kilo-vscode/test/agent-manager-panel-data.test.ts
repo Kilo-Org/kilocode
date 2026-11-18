@@ -2,6 +2,11 @@
 // real server events, and each store must receive only the events of its own directory.
 import { afterAll, describe, expect, mock, test } from "bun:test"
 import { OpenCode, type OpenCodeEvent } from "@opencode/client"
+import { once } from "node:events"
+import path from "node:path"
+import { git, initGit } from "../../core/test/fixture/git"
+import { tmpdir } from "../../core/test/fixture/tmpdir"
+import { command, start, stop } from "../src/server"
 
 // The package resolves the server build of Solid outside a renderer, where effects never run.
 const CLIENT_SOLID = "solid-js/dist/solid.js"
@@ -12,6 +17,7 @@ mock.module("solid-js/store", () => import(CLIENT_STORE))
 const { createRoot } = (await import(CLIENT_SOLID)) as {
   createRoot: <T>(fn: (dispose: () => void) => T) => T
 }
+const { createSignal } = await import("solid-js")
 // The webview page: the event stream reconnects on page lifecycle events.
 Object.assign(globalThis, {
   window: new EventTarget(),
@@ -19,6 +25,7 @@ Object.assign(globalThis, {
 })
 const { createPanelData, key, targets } = await import("../webview-ui/agent-manager/v2/panel-data")
 const { createSessions } = await import("../webview-ui/agent-manager/v2/sessions")
+const { createSessionActivity } = await import("../webview-ui/agent-manager/project/session-busy")
 
 const ROOT = "/repo"
 const WORKTREE = "/repo/.kilo/worktrees/one"
@@ -138,6 +145,76 @@ async function until(check: () => boolean, attempts = 100) {
   }
   throw new Error("condition not reached")
 }
+
+test("keeps a pending form on the owning Local row when switching projects", async () => {
+  await using storage = await tmpdir("kilo-vscode-project-waiting-")
+  const alpha = path.join(storage.path, "Alpha")
+  const bravo = path.join(storage.path, "Bravo")
+  await Promise.all(
+    [alpha, bravo].map(async (directory) => {
+      await initGit(directory)
+      await git(directory, "commit", "--allow-empty", "-m", path.basename(directory))
+    }),
+  )
+  const found = command({ extension: path.resolve(import.meta.dir, ".."), storage: storage.path, env: {} })
+  if (!found) throw new Error("dev entry not found")
+  const server = await start({ command: found, cwd: alpha, env: process.env })
+  try {
+    const api = OpenCode.make({ baseUrl: server.url, headers: { authorization: server.authorization } })
+    const [first, second] = await Promise.all([
+      api.session.create({ location: { directory: alpha } }),
+      api.session.create({ location: { directory: bravo } }),
+    ])
+    expect(first.projectID).not.toBe(second.projectID)
+    await createRoot(async (dispose) => {
+      try {
+        const [active, setActive] = createSignal(first.projectID)
+        const items = { [first.projectID]: [{ ...first }], [second.projectID]: [{ ...second }] }
+        const directory = () => (active() === first.projectID ? alpha : bravo)
+        const panel = createPanelData({ post: () => {}, api })
+        panel.show([alpha])
+        panel.store(bravo)
+        const sessions = createSessions({ panel, directories: () => [directory()], directoryOf: directory })
+        const rows = createSessionActivity({
+          managed: () => [],
+          local: () => (items[active()] ?? []).map((item) => item.id),
+          projects: () => items,
+          active,
+          activityFor: sessions.activityFor,
+        })
+        await until(() => panel.connection.status() === "connected")
+        const form = await api.session.form.create({
+          sessionID: first.id,
+          title: "Which color?",
+          fields: [{ key: "color", type: "string", required: true }],
+        })
+        await until(() => rows.project(first.projectID, null) === "waiting")
+
+        setActive(second.projectID)
+        panel.show([bravo])
+        expect(await api.session.form.list({ sessionID: first.id })).toEqual([form])
+        expect(await api.session.form.list({ sessionID: second.id })).toEqual([])
+        expect(rows.project(second.projectID, null)).toBe("idle")
+        expect(rows.project(first.projectID, null)).toBe("waiting")
+
+        setActive(first.projectID)
+        expect(rows.project(first.projectID, null)).toBe("waiting")
+        await api.session.form.reply({ sessionID: first.id, formID: form.id, answer: { color: "Blue" } })
+        expect(await api.session.form.list({ sessionID: first.id })).toEqual([])
+        await until(() => rows.project(first.projectID, null) === "idle")
+        setActive(second.projectID)
+        expect(rows.project(first.projectID, null)).toBe("idle")
+        expect(rows.project(second.projectID, null)).toBe("idle")
+      } finally {
+        dispose()
+      }
+    })
+  } finally {
+    const exited = once(server.process, "exit")
+    stop(server.process)
+    await exited
+  }
+}, 90_000)
 
 describe("targets", () => {
   const event = (type: string, directory?: string) =>
@@ -345,6 +422,45 @@ describe("createPanelData", () => {
       })
       await until(() => sessions.sessions().length > 0)
       expect(sessions.scope("ses_elsewhere")).toBe(panel.store(WORKTREE))
+      dispose()
+    })
+  })
+
+  // A subagent can move itself (the session_move tool) to a directory the project does not track. Its later events go
+  // only to that directory's store, so the inspector must read it from there instead of the store whose events stopped.
+  test("follows a watched subagent that moves to a directory outside the project", async () => {
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      const layer = createSessions({ panel, directories: () => [ROOT, WORKTREE], directoryOf: () => ROOT })
+      await until(() => panel.connection.status() === "connected" && streams.size > 0)
+      emit(created("ses_sub", ROOT))
+      await until(() => !!panel.store(ROOT).data.session.get("ses_sub"))
+      layer.watch(["ses_sub"])
+      void layer.sync("ses_sub")
+      expect(layer.scope("ses_sub")).toBe(panel.store(ROOT))
+
+      sessions.set("ses_sub", OTHER)
+      emit({
+        id: "evt_ses_sub_moved",
+        created: Date.now(),
+        type: "session.moved",
+        durable: { aggregateID: "ses_sub", seq: 2, version: 1 },
+        location: { directory: OTHER },
+        data: { sessionID: "ses_sub", projectID: "prj_1", subpath: "", location: { directory: OTHER } },
+      })
+
+      await until(() => !!panel.find(OTHER)?.data.session.get("ses_sub"))
+      expect(layer.followed()).toEqual([OTHER])
+      expect(layer.scope("ses_sub")).toBe(panel.find(OTHER))
+      // The followed directory's own sessions stay out of the project's session list.
+      emit(created("ses_foreign", OTHER))
+      await until(() => !!panel.find(OTHER)?.data.session.get("ses_foreign"))
+      expect(layer.sessions().map((item) => item.id)).not.toContain("ses_foreign")
+
+      // A tab the inspector no longer shows (closed, or of another parent session) stops following the directory.
+      layer.watch([])
+      expect(layer.followed()).toEqual([])
       dispose()
     })
   })

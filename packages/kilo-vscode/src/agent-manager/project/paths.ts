@@ -81,6 +81,11 @@ export async function resolveProjectRoot(
   dir: string,
   git: (cwd: string, args: string[]) => Promise<string>,
 ): Promise<string | undefined> {
+  return (await resolveCheckout(dir, git))?.primary
+}
+
+/** Keep the calling checkout as well as the repository it shares with other worktrees. */
+export async function resolveCheckout(dir: string, git: (cwd: string, args: string[]) => Promise<string>) {
   const run = (args: string[]) =>
     Promise.resolve()
       .then(() => git(dir, args))
@@ -92,15 +97,15 @@ export async function resolveProjectRoot(
   if (!top || !path.isAbsolute(top)) return undefined
   const root = canonicalizePath(top)
   const [gitdir, common] = await Promise.all([revparse("--git-dir"), revparse("--git-common-dir")])
-  if (!gitdir || !common || gitdir.startsWith("--") || common.startsWith("--")) return root
+  if (!gitdir || !common || gitdir.startsWith("--") || common.startsWith("--")) return { root, primary: root }
   // Git metadata paths can be relative to the command's cwd, not the extension host's cwd.
   if (samePath(canonicalizePath(path.resolve(dir, gitdir)), canonicalizePath(path.resolve(dir, common)))) {
-    return root
+    return { root, primary: root }
   }
   const listing = await run(["worktree", "list", "--porcelain", "-z"])
   const plain = listing ?? (await run(["worktree", "list", "--porcelain"]))
   const fields = plain?.includes("\0") ? plain.split("\0") : plain?.split(/\r?\n/)
   const first = fields?.find((field) => field.startsWith("worktree "))
   const primary = first?.slice("worktree ".length)
-  return primary && path.isAbsolute(primary) ? canonicalizePath(primary) : root
+  return { root, primary: primary && path.isAbsolute(primary) ? canonicalizePath(primary) : root }
 }

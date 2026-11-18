@@ -468,6 +468,12 @@ export const connectProvider = Effect.fnUntraced(function* (input: {
     },
   })
   lockedRefreshes.set(result, refresh)
+  // kilocode_change start - optional host preparation before the first request
+  if (input.clientMetadata?.beforeConnect)
+    yield* input.clientMetadata.beforeConnect(input.config, found, result.clientInformation, (fetchFn) =>
+      configuredDiscovery({ config: input.config, fetchFn }),
+    )
+  // kilocode_change end
   return result
 })
 

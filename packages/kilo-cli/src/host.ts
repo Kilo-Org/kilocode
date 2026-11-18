@@ -220,7 +220,7 @@ export const overrides: LayerNode.Replacements = [
     KiloMcpRecovery.configured({
       clientInfo: { name: "kilo", version: KiloApp.version },
       host: {
-        oauth: McpClientMetadata.oauth,
+        oauth: { ...McpClientMetadata.oauth, beforeConnect: KiloMcpRefresh.beforeConnect },
         fetch: (base, endpoint) => KiloMcpRefresh.transient(PagesAuth.wrap(KiloSseProbe.probe(base, endpoint))),
         authFailure,
         transient: KiloMcpRefresh.isTransient,

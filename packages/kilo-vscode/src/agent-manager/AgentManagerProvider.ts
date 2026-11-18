@@ -66,8 +66,14 @@ import { routeSession } from "./route-session"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
 import { documentExists, readDocument } from "../documents/document-reader"
-import { resolveWorktreeFile, resolveWorktreeRoot } from "./worktree-file-path"
 import { resolveImageDirectory } from "./save-image-directory"
+import {
+  createSessionRoots,
+  resolveSessionFile,
+  resolveSessionRoot,
+  type SessionFileLookup,
+  type SessionRoots,
+} from "./session-file-root"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
 import { HealthScheduler } from "./worktree-health"
@@ -159,6 +165,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly busySessions = new Set<string>()
   public readonly removedSessions = new Set<string>()
   public visibleSession: string | null = null
+  public readonly sessionRoots: SessionRoots
   public readonly caffeination: CaffeinationService
   readonly settings: ProjectWiring["settings"]
 
@@ -219,6 +226,17 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       ready: (sessionId, result, id) => this.notifyWorktreeReady(sessionId, result, id),
       log: (...args) => this.log(...args),
     })
+    // File links from a session the state file does not file read the directory the server runs it in.
+    this.sessionRoots = createSessionRoots((sessionId) =>
+      this.connection
+        .client()
+        .then((client) => client.session.get({ sessionID: sessionId }))
+        .then((info) => info.location.directory)
+        .catch((err: unknown) => {
+          this.log(`Failed to read session ${sessionId} for its directory:`, err)
+          return undefined
+        }),
+    )
     const semaphore = new Semaphore(3)
     this.gitOps = new GitOps({ log: (...args) => this.log(...args), semaphore, binary })
     const wiring = createProjectWiring({
@@ -348,7 +366,15 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       status: (sessionID, running) => this.onSessionStatus(sessionID, running),
       log: (err) => this.log("Failed to load worktree activity:", err),
     })
-    this.unsubEvents = this.connection.onEvent(
+    // The roots follow every session location event, including a move to a directory that is not a tracked
+    // worktree: an agent can move its own session with the `session_move` tool, and the state file's filing only
+    // follows tracked directories.
+    const stopSessionRoots = this.connection.onEvent(
+      (event) => this.sessionRoots.event(event),
+      (event) =>
+        event.type === "session.created" || event.type === "session.moved" || event.type === "session.deleted",
+    )
+    const stopSessionEvents = this.connection.onEvent(
       (event) => this.onSessionEvent(event),
       located(() =>
         [...this.contexts.values()].flatMap((ctx) => [
@@ -360,6 +386,15 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
         ]),
       ),
     )
+    // Events sent while the stream reconnects are lost, so a move or delete in that gap would leave a stale root.
+    const stopSessionRootsReset = this.connection.onState((status) => {
+      if (status === "connected") this.sessionRoots.clear()
+    })
+    this.unsubEvents = () => {
+      stopSessionRoots()
+      stopSessionRootsReset()
+      stopSessionEvents()
+    }
     this.autoApprove = createHostAutoApprove({
       client: () => this.connection.client(),
       directories: () => {
@@ -746,16 +781,20 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     await this.stateReady.catch((err) => this.log(`${where}: stateReady rejected, continuing:`, err))
   }
 
-  public onToolEvent(event: OpenCodeEvent): void {
+  public async onToolEvent(event: OpenCodeEvent): Promise<void> {
     const directory = event.location?.directory
     const request = parseToolRequest(event.data, directory)
     if (!request) return
-    const owner = directory ? this.contexts.byDirectory(directory) : undefined
-    if (owner) {
-      void this.projectScope.run(owner, () => this.startToolRequest(request))
-      return
+    if (request.mode === "local") {
+      const owner = directory ? this.contexts.byDirectory(directory) : undefined
+      return owner ? this.projectScope.run(owner, () => this.startToolRequest(request)) : this.startToolRequest(request)
     }
-    void this.startToolRequest(request)
+    const owner =
+      request.directory === undefined
+        ? this.contexts.active()
+        : await this.contexts.worktreeCaller(request.directory, this.gitOps)
+    if (owner) return this.projectScope.run(owner, () => this.startToolRequest(request))
+    this.host.showWorktreeCallerError(request.directory)
   }
 
   public async startToolRequest(req: ToolRequest): Promise<void> {
@@ -1111,15 +1150,27 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.host.openFolder(target, true)
   }
 
-  public openWorktreeFile(id: string, filePath: string, line?: number, column?: number): void {
-    const target = resolveWorktreeFile(this.getStateManager(), id, filePath, this.getRoot())
+  /** A file link's id is a worktree id, `local`, or a session id, filed or not. */
+  private fileLookup(id: string): SessionFileLookup {
+    return { state: this.getStateManager(), roots: this.sessionRoots, id, root: this.getRoot() }
+  }
+
+  public async openWorktreeFile(id: string, filePath: string, line?: number, column?: number): Promise<void> {
+    await this.waitForStateReady("openWorktreeFile")
+    const target = await resolveSessionFile({ ...this.fileLookup(id), file: filePath })
     if (target) this.host.openFile(target, line, column)
+  }
+
+  public async copyFilePath(id: string, filePath: string): Promise<void> {
+    await this.waitForStateReady("copyFilePath")
+    const target = await resolveSessionFile({ ...this.fileLookup(id), file: filePath })
+    if (target) await this.host.copyToClipboard(target)
   }
 
   public async validateFiles(id: string, sessionId: string, paths: string[]): Promise<void> {
     // Session roots come from the recovered worktree state, so wait for it as the other session lookups do.
     await this.waitForStateReady("validateFiles")
-    const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
+    const root = await resolveSessionRoot(this.fileLookup(sessionId))
     // An unresolved session is not "every path missing": let the client timeout treat it as unknown.
     if (!root) return
     const existing = paths.filter((file) => documentExists(root, file))
@@ -1128,7 +1179,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public async readDocument(sessionId: string, file: string, contextKey?: string): Promise<void> {
     await this.waitForStateReady("readDocument")
-    const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
+    const root = await resolveSessionRoot(this.fileLookup(sessionId))
     const result = root ? readDocument(root, file) : { error: "The document context is no longer available." }
     this.postToWebview({ type: "agentManager.document", sessionId, file, requestedFile: file, contextKey, ...result })
   }

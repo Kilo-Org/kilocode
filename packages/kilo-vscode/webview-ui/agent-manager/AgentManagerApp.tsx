@@ -98,7 +98,7 @@ import {
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
 import { createProjectLive } from "./project/live"
 import { createProjectSessionsLive } from "./project/sessions-live"
-import { worktreeSessionIds as worktreeMembership, worktreeSessionTabs } from "./project/session-filter"
+import { worktreeSessionTabs } from "./project/session-filter"
 import { applyProjectSelection, createTargetRememberer } from "./project/selection"
 import { createLocalSessions } from "./project/local-tabs"
 import { persistLocalTabs, projectLocalIds, projectLocalSessions } from "./project/local-tabs"
@@ -297,7 +297,8 @@ const AgentManagerContent: Component = () => {
     openTabs: localSessionIDs,
   })
   const rootDirectory = createMemo(() => directories.root(activeProjectId() ?? currentProjectId()))
-  const appSession = createAppSession({ vscode, directories, rootDirectory })
+  const [commandProject, setCommandProject] = createSignal<string>()
+  const appSession = createAppSession({ vscode, directories, rootDirectory, commandProject })
   const panel = appSession.panel
   // The open session is visible, so its directory loads a session list before the worktree card selection settles.
   createEffect(() => {
@@ -452,6 +453,7 @@ const AgentManagerContent: Component = () => {
     hide: () => panels.close(SidePanel.Subagents),
   })
   const subagents = subagentCtl.tabs
+  createEffect(() => sessions.watch(subagents.tabs().map((tab) => tab.id)))
   const editPreview = createEditPreview({
     context: panels.session,
     matches: (id) =>
@@ -902,10 +904,8 @@ const AgentManagerContent: Component = () => {
   const activeWorktreeSessionIds = createMemo<ReadonlySet<string> | undefined>(() => {
     const sel = selection()
     if (!sel || sel === LOCAL) return undefined
-    const closed = closedSessions()
-    const ids = new Set([...worktreeMembership(sel, managedSessions())].filter((id) => !closed.has(id)))
-    for (const session of sessionsForWorktree(sel)) ids.add(session.id)
-    return ids
+    // History includes closed conversations even when there are no open tabs in this worktree.
+    return new Set(historyList().filter((session) => ownerOf(session.id) === sel).map((session) => session.id))
   })
   const activeTabs = createMemo((): SessionInfo[] => {
     const sel = selection()
@@ -1901,6 +1901,7 @@ const AgentManagerContent: Component = () => {
             providers={appSession.providers()}
             agents={appSession.agents()}
             commands={appSession.commands()}
+            onProjectChange={setCommandProject}
           />
         </SpeechToTextStatusProvider>
       </V2Scope>

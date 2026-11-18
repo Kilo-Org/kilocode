@@ -1,8 +1,8 @@
 /**
  * Read-only subagent chats for the Agent Manager inspector.
  *
- * Each subagent is a session of the same directory as its parent, so the panel reads it from the directory store of the
- * sessions layer and renders the shared v2 session view without docks or a prompt.
+ * A subagent starts in its parent's directory and can move itself elsewhere, so the panel reads it from the store the
+ * sessions layer assigns to its current directory and renders the shared v2 session view without docks or a prompt.
  */
 import { AgentAvatar, AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -119,16 +119,22 @@ const SubagentContent: Component<ContentProps> = (props) => {
       <div class="am-subagent-chat">
         <Show when={props.active()} keyed>
           {(id) => (
-            <V2Scope value={scope(id)!}>
-              <SessionView
-                session={id}
-                onSession={() => undefined}
-                actions={props.actions}
-                onShowHistory={props.onShowHistory}
-                readOnly
-                searchCommand={false}
-              />
-            </V2Scope>
+            // A subagent that moved itself to another directory reads from that directory's store, so the view
+            // mounts again on the new store instead of keeping the one whose events stopped.
+            <Show when={scope(id)} keyed>
+              {(store) => (
+                <V2Scope value={store}>
+                  <SessionView
+                    session={id}
+                    onSession={() => undefined}
+                    actions={props.actions}
+                    onShowHistory={props.onShowHistory}
+                    readOnly
+                    searchCommand={false}
+                  />
+                </V2Scope>
+              )}
+            </Show>
           )}
         </Show>
       </div>
