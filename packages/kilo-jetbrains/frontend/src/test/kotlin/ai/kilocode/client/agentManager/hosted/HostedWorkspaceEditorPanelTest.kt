@@ -646,7 +646,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             assertEquals(KiloBundle.message("hosted.diff.menu"), changes.toolTipText)
             assertTrue("Saved comparisons remain available while compute sleeps", changes.isEnabled)
             val price = descendants(header).filterIsInstance<JBLabel>().single { it.text == "$1.20/h" }
-            val row = HostedWorkspaceRow(
+            val row = hostedWorkspaceRow(
                 HostedWorkspaceRowData(HostedWorkspaceDto(ref), hosted.state.value.presentation(ref)),
                 FakeAgentManagerFacade(),
             )

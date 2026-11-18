@@ -161,6 +161,7 @@ class PrHeaderViewTest : BasePlatformTestCase() {
                 assertEquals(Cursor.DEFAULT_CURSOR, area.cursor.type)
                 assertFalse(area.isFocusable)
                 assertNull(area.action)
+                assertFalse(area.toolTipText.orEmpty().contains("Click"))
             }
             areas.forEach { click(it) }
         }

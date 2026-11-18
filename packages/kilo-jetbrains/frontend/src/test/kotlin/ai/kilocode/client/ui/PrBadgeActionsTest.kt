@@ -44,8 +44,11 @@ class PrBadgeActionsTest : BasePlatformTestCase() {
         assertEquals(listOf("pr-comments", "pr-review", "pr-checks"), glyphs.map { it.id })
         assertEquals("2", glyphs.first().text)
         assertTrue(glyphs.all { it.action == null })
-        assertNull(prNumberBadge(pull(), actions)?.action)
-        assertEquals("#7", prNumberBadge(pull(), actions)?.text)
+        val number = requireNotNull(prNumberBadge(pull(), actions))
+        assertNull(number.action)
+        assertNull(number.tooltip)
+        assertEquals("#7", number.text)
+        assertTrue(glyphs.filter { it.id != "pr-review" }.all { !it.tooltip.orEmpty().contains("Click") })
         assertEquals(
             listOf("pr-comments", "pr-checks"),
             prGlyphBadges(pull().copy(review = GhReview.PENDING), actions).map { it.id },

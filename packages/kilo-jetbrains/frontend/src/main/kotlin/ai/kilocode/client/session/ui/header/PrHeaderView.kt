@@ -198,7 +198,7 @@ internal class PrHeaderView @RequiresEdt constructor(
         syncPr(true)
         val trimmed = pull.title.trim()
         val body = trimmed.takeIf { it.isNotBlank() }
-        val tip = prTooltip(pull, name.takeIf { it.isNotBlank() && it != trimmed })
+        val tip = prTooltip(pull, name.takeIf { it.isNotBlank() && it != trimmed }, actions.open != null)
         syncStatus(pull.state)
         syncTitle("#${pull.number}", body, tip)
         syncClick(actions.open)
@@ -212,12 +212,13 @@ internal class PrHeaderView @RequiresEdt constructor(
             commentsArea,
             comments,
             pull?.let { PrIcons.comments(it.comments) },
-            pull?.let { commentsTooltip(it.comments) },
+            pull?.let { commentsTooltip(it.comments, actions.comments != null) },
             actions.comments,
             pull?.let { commentsCount(it.comments) }.orEmpty(),
         )
         val verdict = glyph(reviewArea, review, pull?.let { PrIcons.review(it.review) }, pull?.let { reviewTooltip(it.review) }, actions.review)
-        val build = glyph(checksArea, checks, pull?.let { PrIcons.checks(it.checks) }, pull?.let { checksTooltip(it.checks) }, actions.checks)
+        val build = glyph(checksArea, checks, pull?.let { PrIcons.checks(it.checks) },
+            pull?.let { checksTooltip(it.checks, actions.checks != null) }, actions.checks)
         if (talk || verdict || build) changed()
     }
 

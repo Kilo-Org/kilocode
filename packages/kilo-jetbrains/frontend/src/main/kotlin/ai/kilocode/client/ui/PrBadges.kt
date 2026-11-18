@@ -60,14 +60,15 @@ internal fun reviewTooltip(review: GhReview): String {
  * Tooltip for a CI verdict glyph. Carries the counts the glyph itself cannot, so a red icon can say
  * whether one job of twenty failed or all of them did.
  */
-internal fun checksTooltip(checks: GhChecksDto): String {
+internal fun checksTooltip(checks: GhChecksDto, interactive: Boolean = true): String {
     val head = when (checks.state) {
         GhChecks.PASSED -> KiloBundle.message("worktree.pr.checks.passed", checks.total)
         GhChecks.FAILED -> KiloBundle.message("worktree.pr.checks.failed", checks.failed, checks.total)
         GhChecks.PENDING -> KiloBundle.message("worktree.pr.checks.running", checks.pending, checks.total)
         GhChecks.NONE -> return ""
     }
-    val lines = listOf(head, KiloBundle.message("worktree.pr.checks.tooltip.open")).map(XmlStringUtil::escapeString)
+    val lines = listOfNotNull(head, KiloBundle.message("worktree.pr.checks.tooltip.open").takeIf { interactive })
+        .map(XmlStringUtil::escapeString)
     return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
 }
 
@@ -85,9 +86,10 @@ internal fun commentsCount(value: GhCommentsDto): String =
  * Tooltip for the review-conversation badge. The glyph already shows the unresolved count, so the tooltip's
  * job is to name what is being counted and how many conversations there are in total.
  */
-internal fun commentsTooltip(value: GhCommentsDto): String {
+internal fun commentsTooltip(value: GhCommentsDto, interactive: Boolean = true): String {
     val head = commentsLabel(value).takeIf { it.isNotBlank() } ?: return ""
-    val lines = listOf(head, KiloBundle.message("worktree.pr.comments.tooltip.open")).map(XmlStringUtil::escapeString)
+    val lines = listOfNotNull(head, KiloBundle.message("worktree.pr.comments.tooltip.open").takeIf { interactive })
+        .map(XmlStringUtil::escapeString)
     return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
 }
 
@@ -193,7 +195,7 @@ internal fun prNumberBadge(
         "#${p.number}",
         style(p.state),
         id = "pull-request",
-        tooltip = openTooltip(),
+        tooltip = openTooltip().takeIf { actions.open != null },
         action = actions.open,
     )
 }
@@ -214,7 +216,7 @@ private fun checksBadge(p: WorktreePrDto, action: (() -> Unit)?): ActiveBadge? {
     return ActiveBadge(
         "",
         id = "pr-checks",
-        tooltip = checksTooltip(p.checks),
+        tooltip = checksTooltip(p.checks, action != null),
         // The checks tab rather than the conversation: someone clicking a red build wants the log.
         action = action,
         icon = glyph,
@@ -226,7 +228,7 @@ private fun commentsBadge(p: WorktreePrDto, action: (() -> Unit)?): ActiveBadge?
     return ActiveBadge(
         commentsCount(p.comments),
         id = "pr-comments",
-        tooltip = commentsTooltip(p.comments),
+        tooltip = commentsTooltip(p.comments, action != null),
         // The conversation tab, which is where GitHub lists the threads themselves.
         action = action,
         icon = glyph,
@@ -237,7 +239,7 @@ private fun commentsBadge(p: WorktreePrDto, action: (() -> Unit)?): ActiveBadge?
  * Tooltip for a PR title that can be truncated — the header, where the pill and the title are laid out
  * in a row that a narrow editor tab clips. Carries the state, number, full title, and worktree name.
  */
-internal fun prTooltip(pull: WorktreePrDto, name: String? = null): String {
+internal fun prTooltip(pull: WorktreePrDto, name: String? = null, interactive: Boolean = true): String {
     val title = pull.title.trim()
     val head = buildString {
         append(stateLabel(pull.state))
@@ -251,7 +253,7 @@ internal fun prTooltip(pull: WorktreePrDto, name: String? = null): String {
     val lines = listOfNotNull(
         head,
         name?.takeIf { title.isNotBlank() }?.let { "($it)" },
-        KiloBundle.message("worktree.pr.tooltip.open"),
+        KiloBundle.message("worktree.pr.tooltip.open").takeIf { interactive },
     ).map(XmlStringUtil::escapeString)
     return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
 }

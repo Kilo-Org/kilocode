@@ -18,8 +18,8 @@ import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.hosted.HostedManagementService
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRemoval
-import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRowData
+import ai.kilocode.client.agentManager.hosted.hostedWorkspaceRow
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceIcons
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
@@ -1814,7 +1814,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             assertTrue(panel.availability(element, AgentManagerCommand.COPY_BRANCH).enabled)
             panel.perform(element, AgentManagerCommand.COPY_BRANCH)
             assertEquals(dto.branch, CopyPasteManager.getInstance().contents?.getTransferData(DataFlavor.stringFlavor))
-            assertFalse(panel.availability(element, AgentManagerCommand.UPDATE_BASE).enabled)
+            assertFalse(panel.availability(element, AgentManagerCommand.UPDATE_BASE).visible)
             for (command in listOf(AgentManagerCommand.COPY_PATH, AgentManagerCommand.SHOW_SETUP, AgentManagerCommand.RUN_SETUP)) {
                 assertFalse(panel.availability(element, command).visible)
                 panel.perform(element, command)
@@ -2698,7 +2698,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             assertEquals(listOf(main().id, worktree("aardvark").id, ref.key, other.key), leaves(view).map { it.key })
             assertTrue(leaves(view).all { it.parent === view.hierarchy.root })
             assertTrue(view.select(ref.key))
-            val row = row(panel, 2) as HostedWorkspaceRow
+            val row = row(panel, 2) as AgentManagerWorkspaceRow<*>
+            assertEquals(row(panel, 1)::class, row::class)
+            assertTrue(row(panel, 1) is AgentManagerWorkspaceRow<*>)
             assertEquals("Active", row.badges.single().text)
             assertSame(HostedWorkspaceIcons.cloud, row.icon)
             assertSame(SpinnerIcon.icon, row(panel, 3).icon)
@@ -2876,8 +2878,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         val removal = project.service<HostedWorkspaceRemoval>()
         edt { removal.delete(createdRef, project.basePath!!) }
-        waitUntil { (row(panel, 1) as HostedWorkspaceRow).progress == KiloBundle.message("common.deleting") }
-        assertEmpty((row(panel, 1) as HostedWorkspaceRow).badges)
+        waitUntil { (row(panel, 1) as AgentManagerWorkspaceRow<*>).progress == KiloBundle.message("common.deleting") }
+        assertEmpty((row(panel, 1) as AgentManagerWorkspaceRow<*>).badges)
         assertEquals(2, calls.size)
         edt {
             val event = AnActionEvent.createFromAnAction(group, null, ActionPlaces.POPUP, context(panel))
@@ -2979,7 +2981,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(createdRef.key, edt { selectedValue(view)?.key })
 
         second.complete(Unit)
-        waitUntil { rows(panel) == 2 && (row(panel, 1) as HostedWorkspaceRow).data.dto.ref == createdRef }
+        waitUntil { rows(panel) == 2 && ((row(panel, 1) as? AgentManagerWorkspaceRow<*>)?.element as? AgentManagerElement.Cloud)?.dto?.ref == createdRef }
         assertEquals(createdRef.key, edt { selectedValue(view)?.key })
         edt { assertEquals(section.key, AgentManagerLayout(PropertiesComponent.getInstance(project)).parent(createdRef.key)) }
     }
@@ -3051,7 +3053,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { hosted.refresh(project.basePath!!) }
         waitUntil { hosted.state.value.error == null && hosted.state.value.items.any { it.ref == createdRef } }
         assertEquals(2, rows(panel))
-        assertEquals(createdRef.key, (row(panel, 1) as HostedWorkspaceRow).data.dto.ref.key)
+        assertEquals(createdRef.key, ((row(panel, 1) as AgentManagerWorkspaceRow<*>).element as AgentManagerElement.Cloud).dto.ref.key)
     }
 
     fun `test cloud workspace row uses latest session title`() {
@@ -3074,7 +3076,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             branch = "kilo/branch",
             sessions = listOf(old, latest),
         )
-        val row = HostedWorkspaceRow(HostedWorkspaceRowData(dto, null), FakeAgentManagerFacade())
+        val row = hostedWorkspaceRow(HostedWorkspaceRowData(dto, null), FakeAgentManagerFacade())
         assertEquals("OpenRouter API access", row.title)
         assertEquals("kilo/branch", row.description)
         assertTrue(row.search.contains("OpenRouter API access"))
@@ -3186,11 +3188,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
         waitUntil {
-            leaves(tree(panel)).any { (it.item as? HostedWorkspaceRow)?.data?.dto?.ref == ref }
+            leaves(tree(panel)).any { ((it.item as? AgentManagerWorkspaceRow<*>)?.element as? AgentManagerElement.Cloud)?.dto?.ref == ref }
         }
 
-        val row = leaves(tree(panel)).map { it.item }.filterIsInstance<HostedWorkspaceRow>()
-            .single { it.data.dto.ref == ref }
+        val row = leaves(tree(panel)).map { it.item }.filterIsInstance<AgentManagerWorkspaceRow<*>>()
+            .single { (it.element as? AgentManagerElement.Cloud)?.dto?.ref == ref }
         // Starting is work in progress; the row wears the same spinner local running sessions use.
         assertSame(SpinnerIcon.icon, row.icon)
         assertEquals("Starting", row.badges.single().text)
@@ -3251,7 +3253,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         )
         edt { panel.createHosted(request) }
         waitUntil { rows(panel) == 2 && calls.get() == 2 && !hosted.state.value.loading }
-        assertEquals("OpenRouter API access", (row(panel, 1) as HostedWorkspaceRow).title)
+        assertEquals("OpenRouter API access", (row(panel, 1) as AgentManagerWorkspaceRow<*>).title)
 
         repeat(5) {
             val count = calls.get()
