@@ -44,10 +44,23 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
     models()?.find((model) => model.providerID === props.value?.providerID && model.id === props.value?.modelID),
   )
   const variants = createMemo(() => selected()?.variants.map((variant) => variant.id) ?? [])
+  const showVariantControl = createMemo(
+    () =>
+      props.showVariants !== false &&
+      (variants().length > 0 || (!!props.showUnavailableVariant && !!props.value?.variant)),
+  )
 
-  // The row wraps in a narrow panel, so the variant and clear controls move below the model instead of being cut off.
+  // Allow the variant control to wrap. Without it, truncate the model label before moving the clear button.
   return (
-    <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap", "min-width": 0 }}>
+    <div
+      style={{
+        display: "flex",
+        gap: "8px",
+        "align-items": "center",
+        "flex-wrap": showVariantControl() ? "wrap" : "nowrap",
+        "min-width": 0,
+      }}
+    >
       <div style={{ "min-width": 0, "max-width": "100%" }}>
         <ModelSelectorBase
           models={models()}
@@ -72,12 +85,7 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
           }}
         />
       </div>
-      <Show
-        when={
-          props.showVariants !== false &&
-          (variants().length > 0 || (props.showUnavailableVariant && props.value?.variant))
-        }
-      >
+      <Show when={showVariantControl()}>
         <ThinkingSelectorBase
           variants={variants()}
           value={props.value?.variant}
