@@ -179,12 +179,24 @@ export const Plugin = define({
     yield* ctx.session.hook("context", (event) =>
       Effect.gen(function* () {
         yield* annotate(event)
+        if (state.visible && ("board_read" in event.tools || "board_post" in event.tools)) {
+          const audience = yield* BoardStore.availability(store, { sessionID: event.sessionID, to: "ALL" }).pipe(Effect.option)
+          const session = yield* store.session(event.sessionID)
+          if (Option.isNone(audience) || BoardStore.cannotPost(audience.value, !!session?.parentID)) {
+            delete event.tools.board_post
+            if (Option.isNone(audience) || !audience.value.total) {
+              delete event.tools.board_read
+              // Code Mode's shared catalog still lists the tools. State the session-specific constraint.
+              event.system.push({ type: "text", text: BoardContext.solo })
+            }
+          }
+        }
         if (!state.visible || !("board_read" in event.tools)) {
           exposed.delete(event.sessionID)
           return
         }
         exposed.add(event.sessionID)
-        event.system.push({ type: "text", text: BoardContext.instructions })
+        event.system.push({ type: "text", text: "board_post" in event.tools ? BoardContext.instructions : BoardContext.readOnly })
       }),
     )
     yield* ctx.session.hook("compaction", annotate)

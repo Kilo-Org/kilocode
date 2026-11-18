@@ -38,7 +38,7 @@ async function boot(options: { enabled?: boolean } = {}) {
   const handlers: { value?: Handlers } = {}
   const reloads = { count: 0 }
   const events = await Effect.runPromise(Queue.unbounded<{ type: string; data: Record<string, unknown> }>())
-  const active = new Set<string>()
+  const active = new Set<string>(["ses_child", "ses_sibling"])
   const jobs = new Map<string, Job.Info>()
   const hook = (name: string, callback: Hook) =>
     Effect.sync(() => {
@@ -184,7 +184,7 @@ describe("shared board tools", () => {
     expect(first.receipt).toBe(
       "Stored only. This does not confirm delivery, reading, or action, and does not wake recipients.",
     )
-    expect(first.warning).toStartWith("The direct recipient's execution state was unknown at this post attempt.")
+    expect(first.warning).toBeUndefined()
     const retry = content(await host.call("board_post", { to: "ses_child", type: "ASK", body: "Which schema?" }, "ses_root", identity))
     expect(retry.id).toBe(first.id)
     expect(host.emitted).toEqual([
@@ -200,13 +200,12 @@ describe("shared board tools", () => {
 
   test("reports execution state and post-time availability without changing it", async () => {
     const host = await boot()
-    host.active.add("ses_child")
+    host.active.delete("ses_sibling")
     host.jobs.set("ses_sibling", { id: "ses_sibling", type: "subagent", status: "completed", started_at: 5 })
     const result = await host.call("board_post", { to: "ALL", type: "INFO", body: "Heads up" })
     expect(content(result).availability).toMatchObject({ total: 2, active: 1, inactive: 1, unknown: 0 })
     expect(content(result).warning).toBe("1 recipient(s) had finished invocations at this post attempt.")
-    const direct = content(await host.call("board_post", { to: "ses_sibling", type: "INFO", body: "Done?" }))
-    expect(direct.warning).toStartWith("The direct recipient's state was completed at this post attempt.")
+    await expect(host.call("board_post", { to: "ses_sibling", type: "INFO", body: "Done?" })).rejects.toThrow("finished")
     const read = await host.call("board_read", { since: null, limit: null }, "ses_child")
     expect(read.metadata).toMatchObject({ hasMore: false, truncated: false, participantsTruncated: false })
     expect(content(read).participants).toEqual([
@@ -223,6 +222,35 @@ describe("shared board tools", () => {
     const read = await host.call("board_read", { since: "board_gone" }, "ses_child")
     expect(content(read)).toMatchObject({ recovered: true, messages: [{ body: "one" }] })
     expect(read.metadata).toMatchObject({ recovered: true })
+  })
+
+  test("offers coordination as peers appear and stops accepting new posts when they finish", async () => {
+    const host = await boot()
+    const request = () => host.trigger("session.context", {
+      sessionID: root, tools: { board_read: {}, board_post: {} }, system: [], messages: [],
+    })
+    host.board.sessions.delete("ses_child")
+    host.board.sessions.delete("ses_sibling")
+    host.board.add({ id: "ses_foreign", parentID: root, directory: "/other" })
+    const note = { to: "ALL", type: "INFO", body: "Use the revised contract" }
+    const solo = await request()
+    expect(solo.system).toEqual([{ type: "text", text: BoardContext.solo }])
+    expect(solo.tools).toEqual({})
+    await expect(host.call("board_post", note)).rejects.toThrow("No other participants")
+    expect(host.board.storage.entries.size).toBe(0)
+    host.board.add({ id: "ses_child", parentID: root })
+    expect(Object.keys((await request()).tools as object)).toContain("board_post")
+    const identity = { messageID: "msg_note", id: "call_note" }
+    const sent = content(await host.call("board_post", note, root, identity))
+    host.active.clear()
+    await expect(host.call("board_post", note)).rejects.toThrow("known to be active")
+    // A waiting root can still receive a directed finding from its worker.
+    expect(content(await host.call("board_post", { ...note, to: "main" }, "ses_child")).warning).toContain("unknown")
+    host.jobs.set("ses_child", { id: "ses_child", type: "subagent", status: "completed", started_at: 1 })
+    expect(Object.keys((await request()).tools as object)).toEqual(["board_read"])
+    await expect(host.call("board_post", note)).rejects.toThrow("finished")
+    expect(content(await host.call("board_post", note, root, identity)).id).toBe(sent.id)
+    expect(content(await host.call("board_read", {})).messages).toHaveLength(2)
   })
 
   test("adds the instructions only to requests that offer board_read", async () => {
