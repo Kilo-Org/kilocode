@@ -169,7 +169,16 @@ test("patch card renders a single file with its diff", async () => {
 test("patch card lists every file in a multi-file patch", async () => {
   const card = mountTool("patch", {
     input: { patchText: patchedFiles.map((file) => file.patch).join("") },
-    metadata: { files: [patchedFiles[0], { ...patchedFiles[1], file: "/repo/legacy.ts" }] },
+    metadata: {
+      files: [
+        patchedFiles[0],
+        {
+          ...patchedFiles[1],
+          file: "legacy.ts",
+          patch: "--- a/legacy.ts\n+++ /dev/null\n@@ -1,1 +0,0 @@\n-export const LEGACY = true\n",
+        },
+      ],
+    },
     partID: "patch-multi",
     directory: "/repo",
     forceOpen: true,
