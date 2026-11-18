@@ -299,6 +299,8 @@ async function target(settings: Settings, chromium: string): Promise<Target> {
 async function connect(settings: Settings): Promise<Connection> {
   const out = outputDirectory()
   await fs.mkdir(out, { recursive: true })
+  // Screenshots accumulate; keep the directory bounded whenever a browser starts.
+  await retainScreenshots(out)
   // playwright-core and the MCP server are megabytes of parse work on a session that may never open a browser, and
   // this module is in the CLI's startup graph, so they load on the first browser call. The browser directory is read
   // once, at that import, so it must be set here.
@@ -398,6 +400,31 @@ async function sensitiveFocus(page: Page): Promise<boolean> {
     if (found === true) return true
   }
   return false
+}
+
+/**
+ * Bound the screenshot files in the output directory: the backend's own `page-*` names and the MCP's. Anything older
+ * than a day goes, and the newest 200 are kept. A name the user chose is never touched.
+ */
+export async function retainScreenshots(directory = outputDirectory(), now = Date.now(), limit = 200) {
+  const names = (await fs.readdir(directory).catch(() => [] as string[])).filter((name) => /^page-.*\.png$/.test(name))
+  const files: { path: string; mtime: number }[] = []
+  for (const name of names) {
+    const file = path.join(directory, name)
+    const stat = await fs.stat(file).catch(() => undefined)
+    if (stat?.isFile()) files.push({ path: file, mtime: stat.mtimeMs })
+  }
+  const fresh = files.filter((file) => file.mtime >= now - 24 * 60 * 60 * 1000)
+  const keep = new Set(
+    fresh
+      .sort((left, right) => right.mtime - left.mtime)
+      .slice(0, limit)
+      .map((file) => file.path),
+  )
+  for (const file of files) {
+    if (keep.has(file.path)) continue
+    await fs.unlink(file.path).catch(() => undefined)
+  }
 }
 
 /** The MCP's screenshot file name, `page-<timestamp>.png`. */
@@ -739,7 +766,7 @@ class PlaywrightBackend implements BrowserBackend {
   /**
    * The element a `target` names, resolved the way the MCP resolves it: a snapshot ref (`e12`, `f2e7`) through the
    * aria-ref engine, anything else as a page selector, where the MCP takes the first match. The gate needs exactly
-   * one element, so an ambiguous or missing target stays unresolved and is treated as sensitive below.
+   * one element, so an ambiguous or missing target stays unresolved and is treated as sensitive.
    */
   private async elementOf(page: Page, target: string) {
     const locator = TARGET_REF.test(target) ? page.locator(`aria-ref=${target}`) : page.locator(target)
@@ -753,6 +780,7 @@ class PlaywrightBackend implements BrowserBackend {
     return { state: "resolved" as const, handle, frame: frame ?? undefined }
   }
 
+  /** The frame a `target` lives in: the child document for an iframe target, otherwise the element's own frame. */
   private async frameOf(page: Page, ref: string): Promise<Frame | undefined> {
     const element = await this.elementOf(page, ref)
     if (element.state !== "resolved") return undefined

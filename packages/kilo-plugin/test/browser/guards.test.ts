@@ -80,8 +80,8 @@ class Page {
         state.selector
           ? {
               evaluate: async () => state.selector?.reason ?? "",
-              contentFrame: async () => null,
-              ownerFrame: async () => state.selector?.frame ?? this,
+              contentFrame: async () => state.selector?.frame ?? null,
+              ownerFrame: async () => this,
               dispose: () => undefined,
             }
           : null,
@@ -448,6 +448,7 @@ describe("a selector target", () => {
     const backend = await browser()
     const child = new Page("b", "https://pay.example.net/")
     state.pages[0].children = [child]
+    // A selector that resolves to an iframe element: the child document comes back through `contentFrame()`.
     state.selector = { count: 1, reason: "", frame: child }
     const items = await backend.plan!("browser_click", { target: "#pay" }, { session: "ses_selector" })
     expect(items).toEqual(

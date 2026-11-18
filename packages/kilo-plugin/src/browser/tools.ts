@@ -46,6 +46,11 @@ const extension: BrowserBackend = {
   dispose: async () => {},
 }
 
+/** The policy cache key: one gateway answering for another's organization is not the same policy. */
+export function policyKey(server: string, organizationID: string) {
+  return `${server}:${organizationID}`
+}
+
 /** How long an organization policy is reused before the cloud is asked again. */
 const POLICY_TTL = 60_000
 const policies = new Map<string, { value: KiloBrowserPolicy.Policy | undefined; expires: number }>()
@@ -58,7 +63,8 @@ function policy(directory: string, endpoint?: string) {
   const account = KiloGatewayAccounts.get(directory)
   const id = account?.organizationID ?? undefined
   if (!account || !id) return Effect.succeed<KiloBrowserPolicy.Policy | undefined>(undefined)
-  const cached = policies.get(id)
+  const key = policyKey(account.baseURL, id)
+  const cached = policies.get(key)
   if (cached && cached.expires > Date.now()) return Effect.succeed(cached.value)
   return KiloBrowserPolicy.get({
     server: account.baseURL,
@@ -67,7 +73,7 @@ function policy(directory: string, endpoint?: string) {
     ...(endpoint ? { endpoint } : { endpoint: account.baseURL }),
   }).pipe(
     Effect.map((value) => {
-      policies.set(id, { value, expires: Date.now() + POLICY_TTL })
+      policies.set(key, { value, expires: Date.now() + POLICY_TTL })
       return value
     }),
   )

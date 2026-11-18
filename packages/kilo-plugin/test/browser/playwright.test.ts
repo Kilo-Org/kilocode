@@ -10,6 +10,7 @@ import {
   contained,
   FILE_TITLES,
   outputFile,
+  retainScreenshots,
   snapshotBody,
   frameOrigin,
   insideOutput,
@@ -44,6 +45,33 @@ function tree(url: string, parent: Fake | null = null): Fake {
 function page(main: Fake): Page {
   return { mainFrame: () => main.node } as unknown as Page
 }
+
+describe("screenshot retention", () => {
+  test("keeps a day and two hundred files, and never a user-named one", async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "shots-"))
+    const now = Date.now()
+    for (let index = 0; index < 210; index += 1) {
+      const file = path.join(directory, `page-2026-01-01T00-00-00-000Z-${String(index).padStart(3, "0")}.png`)
+      await fs.writeFile(file, "x")
+      // Newest first by index: index 0 is the newest.
+      await fs.utimes(file, new Date(now - index * 1000), new Date(now - index * 1000))
+    }
+    const old = path.join(directory, "page-ancient.png")
+    await fs.writeFile(old, "x")
+    await fs.utimes(old, new Date(now - 25 * 60 * 60 * 1000), new Date(now - 25 * 60 * 60 * 1000))
+    const user = path.join(directory, "my-screenshot.png")
+    await fs.writeFile(user, "keep")
+    await fs.utimes(user, new Date(now - 25 * 60 * 60 * 1000), new Date(now - 25 * 60 * 60 * 1000))
+    await retainScreenshots(directory, now)
+    const left = await fs.readdir(directory)
+    expect(left.filter((name) => /^page-/.test(name)).length).toBe(200)
+    expect(left).toContain("page-2026-01-01T00-00-00-000Z-000.png")
+    expect(left).not.toContain("page-2026-01-01T00-00-00-000Z-209.png")
+    expect(left).not.toContain("page-ancient.png")
+    // A name the user chose is never the backend's to delete.
+    expect(left).toContain("my-screenshot.png")
+  })
+})
 
 describe("snapshot links", () => {
   test("a link relative to the MCP's working directory resolves inside the output directory", async () => {
@@ -244,7 +272,6 @@ describe("output directory", () => {
     expect(screenshotPath("browser_take_screenshot", {}, directory)).toBeUndefined()
     expect(screenshotPath("browser_snapshot", { filename: "x" }, directory)).toBeUndefined()
   })
-
 })
 
 describe("current page", () => {
@@ -411,7 +438,6 @@ describe("navigation targets", () => {
     expect(navigationRefusal("")).toContain("not a URL")
   })
 })
-
 
 describe("playwright launch failures", () => {
   test("names the sandbox fix instead of a raw stack", () => {

@@ -66,6 +66,39 @@ export function useKiloBrowsers() {
 }
 
 /**
+ * Extract an archive into a sibling staging directory, verify the browser executable is there, and only then replace
+ * the installed directory. A failed or interrupted extraction leaves the working browser untouched.
+ */
+export async function installArchive(input: {
+  directory: string
+  archive: string
+  extract: (zip: string, options: { dir: string }) => Promise<void>
+  executable: string
+}): Promise<string> {
+  const staging = `${input.directory}.staging-${process.pid}`
+  const backup = `${input.directory}.backup-${process.pid}`
+  const relative = path.relative(input.directory, input.executable)
+  await fs.rm(staging, { recursive: true, force: true })
+  await fs.mkdir(staging, { recursive: true })
+  try {
+    await input.extract(input.archive, { dir: staging })
+    const staged = path.join(staging, relative)
+    const found = await fs.stat(staged).catch(() => undefined)
+    if (!found?.isFile()) throw new Error("The Chromium archive did not contain the browser executable.")
+    await fs.chmod(staged, 0o755)
+    // The marker is what playwright-core's own installer checks before it downloads again.
+    await fs.writeFile(path.join(staging, "INSTALLATION_COMPLETE"), "")
+    await fs.rm(backup, { recursive: true, force: true })
+    await fs.rename(input.directory, backup).catch(() => undefined)
+    await fs.rename(staging, input.directory)
+    await fs.rm(backup, { recursive: true, force: true })
+    return path.join(input.directory, relative)
+  } finally {
+    await fs.rm(staging, { recursive: true, force: true })
+  }
+}
+
+/**
  * Download the Chromium build this playwright-core pins into the Kilo data dir, then extract it with the zip reader
  * that ships inside playwright-core. The registry's own installer is unusable here: it forks a Node entry file through
  * `process.execPath`, which in the compiled CLI is the CLI itself.
@@ -114,13 +147,14 @@ export async function installChromium(options: { force?: boolean } = {}) {
       throw new Error(
         `Could not download Chromium from ${urls.join(", ")}: ${failure instanceof Error ? failure.message : String(failure)}`,
       )
-    await fs.rm(executable.directory, { recursive: true, force: true })
-    await utils.extractZip(zip, { dir: executable.directory })
-    const binary = executable.executablePath()
-    if (!binary) throw new Error("The Chromium archive did not contain the browser executable.")
-    await fs.chmod(binary, 0o755)
-    // The marker is what playwright-core's own installer checks before it downloads again.
-    await fs.writeFile(path.join(executable.directory, "INSTALLATION_COMPLETE"), "")
+    const expected = executable.executablePath()
+    if (!expected) throw new Error("The Chromium archive did not contain the browser executable.")
+    const binary = await installArchive({
+      directory: executable.directory,
+      archive: zip,
+      extract: (archive, options) => utils.extractZip(archive, options),
+      executable: expected,
+    })
     return { executable: binary, directory: executable.directory, changed: true }
   } finally {
     await fs.rm(directory, { recursive: true, force: true })

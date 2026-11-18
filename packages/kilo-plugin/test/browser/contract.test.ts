@@ -55,12 +55,14 @@ describe("generated browser contract", () => {
   })
 
   test("normalizes a raw tools/list result back to the same contract and hash", () => {
-    const raw = { tools: BrowserContract.entries.map((entry) => ({
-      name: entry.name,
-      description: entry.description,
-      inputSchema: entry.inputSchema,
-      annotations: { title: entry.title || undefined, readOnlyHint: entry.readOnly },
-    })) }
+    const raw = {
+      tools: BrowserContract.entries.map((entry) => ({
+        name: entry.name,
+        description: entry.description,
+        inputSchema: entry.inputSchema,
+        annotations: { title: entry.title || undefined, readOnlyHint: entry.readOnly },
+      })),
+    }
     expect(entries(raw).map((entry) => entry.name)).toEqual(NAMES)
     expect(entries(raw)).toEqual([...BrowserContract.entries])
   })

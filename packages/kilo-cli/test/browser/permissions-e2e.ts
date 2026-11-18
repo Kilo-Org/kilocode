@@ -243,14 +243,16 @@ const plans: Record<string, Plan> = {
   },
   // A `file:` target has no origin, so it has no grant to ask for: the call is refused before the browser opens it.
   "navigate-file": (index) => {
-    if (index === 0) return { name: "browser_navigate", args: { url: "file:///etc/passwd" } }
-    if (index === 1) return { name: "browser_navigate", args: { url: fixture.url.origin } }
+    if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
+    if (index === 1) return { name: "browser_navigate", args: { url: "file:///etc/passwd" } }
+    if (index === 2) return { name: "browser_tabs", args: { action: "list" } }
     return undefined
   },
   // A new tab is a navigation too: the same refusal applies before the tab opens.
   "tabs-new-file": (index) => {
     if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
     if (index === 1) return { name: "browser_tabs", args: { action: "new", url: "file:///etc/passwd" } }
+    if (index === 2) return { name: "browser_tabs", args: { action: "list" } }
     return undefined
   },
   // A click can leave the page for an origin this session was never granted: the result is withheld and read is asked.
@@ -532,10 +534,11 @@ async function main() {
       `the fill was not rejected:\n${typed.slice(0, 300)}`,
     )
     // The rejected step never reached the page: the read-back is empty, or is itself refused on that page.
-    expect(
-      /""/.test(value) || value.includes("cannot ask the user for permission"),
-      `the password field was written after the rejection:\n${value.slice(0, 300)}`,
-    )
+    expect(/""/.test(value), `the password field was written after the rejection:\n${value.slice(0, 300)}`)
+    // The same read-back observes a written value when the step is allowed, so the assertion above can fail.
+    const allowed = await run({ auto: true, allowSensitive: true })
+    const written = allowed.last.results[3] ?? ""
+    expect(/"hunter2"/.test(written), `the read-back cannot see a written value:\n${written.slice(0, 300)}`)
     return output
   }
 
@@ -562,8 +565,8 @@ async function main() {
 
   if (scenario === "navigate-file") {
     const result = await run({})
-    const refused = result.last.results[0] ?? ""
-    const back = result.last.results[1] ?? ""
+    const refused = result.last.results[1] ?? ""
+    const back = result.last.results[2] ?? ""
     output.refused = refused.slice(0, 300)
     output.back = back.slice(0, 200)
     // The refusal is a tool error the model can read, and it names the scheme it refused.
@@ -571,15 +574,16 @@ async function main() {
     expect(refused.includes("file:"), `the refusal does not name the scheme:\n${refused.slice(0, 300)}`)
     expect(!refused.includes("root:"), `the local file was read:\n${refused.slice(0, 300)}`)
     // The tab is still on the fixture: the refused call never navigated.
-    // The refused call never navigated, so the next navigation opens the fixture normally.
+    // The read-only tab list still shows the fixture: the refused call never opened the file.
     expect(back.includes(fixture.url.origin), `the refused call moved the tab:\n${back.slice(0, 300)}`)
+    expect(!back.includes("passwd"), `the refused call opened the file:\n${back.slice(0, 300)}`)
     return output
   }
 
   if (scenario === "tabs-new-file") {
     const result = await run({})
     const refused = result.last.results[1] ?? ""
-    const back = result.last.results[0] ?? ""
+    const back = result.last.results[2] ?? ""
     output.refused = refused.slice(0, 300)
     output.back = back.slice(0, 200)
     expect(refused.includes("Navigation refused"), `the file: tab was not refused:\n${refused.slice(0, 300)}`)

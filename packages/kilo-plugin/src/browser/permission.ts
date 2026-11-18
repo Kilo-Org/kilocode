@@ -84,7 +84,8 @@ export namespace BrowserPermission {
     const cls = value.slice(0, index)
     const rest = value.slice(index + 1)
     if (cls !== "read" && cls !== "act" && cls !== "navigate" && cls !== "sensitive") return undefined
-    const parsed = origin(rest) ?? (rest.startsWith("http://") || rest.startsWith("https://") ? rest : undefined)
+    // Only a normalized origin is a grant: a string `URL` rejects would never match a real call site.
+    const parsed = origin(rest)
     if (!parsed) return undefined
     return { class: cls, origin: parsed }
   }

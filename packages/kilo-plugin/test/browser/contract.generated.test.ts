@@ -7,18 +7,14 @@ const root = path.resolve(import.meta.dir, "..", "..")
 const script = path.join(root, "script/generate-browser-tool-contract.ts")
 
 describe("browser contract generator", () => {
-  test(
-    "the vendored contract matches @playwright/mcp 0.0.81",
-    async () => {
-      const proc = Bun.spawn([process.execPath, script, "--check"], { cwd: root, stdout: "pipe", stderr: "pipe" })
-      const [stdout, stderr, code] = await Promise.all([
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-        proc.exited,
-      ])
-      expect(`${stdout}${stderr}${code}`).toEndWith("0")
-      expect(stdout).toContain("matches @playwright/mcp@0.0.81 with 26 tools")
-    },
-    120_000,
-  )
+  test("the vendored contract matches @playwright/mcp 0.0.81", async () => {
+    const proc = Bun.spawn([process.execPath, script, "--check"], { cwd: root, stdout: "pipe", stderr: "pipe" })
+    const [stdout, stderr, code] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ])
+    expect(`${stdout}${stderr}${code}`).toEndWith("0")
+    expect(stdout).toContain("matches @playwright/mcp@0.0.81 with 26 tools")
+  }, 120_000)
 })
