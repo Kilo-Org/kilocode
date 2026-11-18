@@ -82,6 +82,26 @@ describe("hub failures as the extension backend reads them", () => {
     }
   })
 
+  test("a client that cannot be created is mapped, not leaked raw", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-port-"))
+    try {
+      const linked = connection({
+        dir,
+        install: () => Promise.resolve(),
+        start: () => {},
+        timeout: 300,
+        create: () => {
+          throw new Error("the transport cannot start")
+        },
+      })
+      const error = await linked.port(null).ready(300).catch((value: unknown) => value)
+      expect(error).toBeInstanceOf(BrowserHub.Failure)
+      expect((error as BrowserHub.Failure).kind).toBe("unknown")
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
+  })
+
   test("a code the protocol does not name is unknown, never a guessed kind", () => {
     const mapped = failure(new HubError({ code: -32099, message: "who knows" }))
     expect(mapped.kind).toBe("unknown")

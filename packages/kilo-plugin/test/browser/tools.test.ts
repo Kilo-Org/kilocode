@@ -86,7 +86,7 @@ function recorder() {
 type Hook = (event: Record<string, unknown>) => Effect.Effect<void, unknown>
 
 async function boot(
-  browser?: Browser,
+  browser?: Browser | (() => Browser),
   options: { hub?: BrowserHub.Interface; permission?: Option.Option<Permission.Interface> } = {},
 ) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
@@ -107,9 +107,17 @@ async function boot(
     },
   }
   const config = {
+    // A function is read per call, the way the plugin reads the config: a test can change a setting mid-session.
     entries: () =>
       Effect.succeed(
-        browser === undefined ? [] : [new Document({ type: "document", info: new KiloConfigPolicy.Info({ browser }) })],
+        browser === undefined
+          ? []
+          : [
+              new Document({
+                type: "document",
+                info: new KiloConfigPolicy.Info({ browser: typeof browser === "function" ? browser() : browser }),
+              }),
+            ],
       ),
   } as unknown as Config.Interface
   const scope = await Effect.runPromise(Scope.make())
@@ -588,17 +596,46 @@ describe("browser tools over the extension backend", () => {
     expect(seen[1]).toBeUndefined()
   })
 
-  test("the per-target backends are bounded and an evicted one is disposed", async () => {
-    const disposed: string[] = []
-    const backends = new Map<string, Promise<{ dispose: () => Promise<void> }>>()
-    for (const target of ["a", "b", "c", "d", "e"]) {
-      backends.set(target, Promise.resolve({ dispose: () => Promise.resolve(void disposed.push(target)) }))
+  test("the per-target backends are bounded through the plugin and an evicted one is disposed", async () => {
+    let target = "a"
+    const released: string[] = []
+    const closed: string[] = []
+    const base = fakeHub()
+    const ports = new Map<string, BrowserHub.Port>()
+    const service: BrowserHub.Interface = {
+      port: (name) => {
+        const label = name ?? ""
+        const existing = ports.get(label)
+        if (existing) return existing
+        let handles = 0
+        const port: BrowserHub.Port = {
+          ...base.service.port(),
+          open: () => {
+            handles += 1
+            return Promise.resolve({ sessionHandle: `${label}-${handles}` })
+          },
+          close: (handle) => {
+            closed.push(handle)
+            return Promise.resolve()
+          },
+          onRevoked: () => () => {
+            released.push(label)
+          },
+        }
+        ports.set(label, port)
+        return port
+      },
     }
-    trim(backends, 4)
-    expect([...backends.keys()]).toEqual(["b", "c", "d", "e"])
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(disposed).toEqual(["a"])
+    const host = await boot(() => ({ backend: "extension", target }), { hub: service })
+    // Five targets through the real plugin wiring: the fifth call evicts the least recently used one.
+    for (const label of ["a", "b", "c", "d", "e"]) {
+      target = label
+      await host.call("browser_snapshot")
+    }
+    expect([...ports.keys()]).toEqual(["a", "b", "c", "d", "e"])
+    expect(released).toEqual(["a"])
+    // The evicted backend closed the browser session it had opened.
+    expect(closed).toEqual(["a-1"])
   })
 
   test("an organization that allows Playwright only cannot select the extension", () => {

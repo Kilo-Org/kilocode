@@ -254,11 +254,13 @@ export class ExtensionBackend implements BrowserBackend {
     void pending?.then((value) => this.input.port?.close(value).catch(() => undefined))
   }
 
-  /** The instance holds only per-session state; the hub connection belongs to the host. */
+  /** The instance closes its browser sessions and releases the hub subscription; the connection belongs to the host. */
   async dispose() {
     this.off()
+    const handles = [...this.sessions.keys()]
     this.handles.clear()
     this.sessions.clear()
+    await Promise.all(handles.map((handle) => this.input.port?.close(handle).catch(() => undefined)))
   }
 
   /** A listing is cached once it succeeds; a failed attempt is dropped so the next call asks again. */
@@ -295,23 +297,27 @@ export class ExtensionBackend implements BrowserBackend {
   private handle(port: BrowserHub.Port, session: string): Promise<string> {
     const existing = this.handles.get(session)
     if (existing) return existing
-    const opening = this.open(port, session)
-    this.handles.set(session, opening)
-    opening.catch(() => {
-      if (this.handles.get(session) === opening) this.handles.delete(session)
+    // Each attempt is its own promise: a later attempt for the same session supersedes an earlier one, and the earlier
+    // one must not adopt its handle when it answers after the session was forgotten and reopened.
+    const attempt = Promise.withResolvers<string>()
+    this.handles.set(session, attempt.promise)
+    void this.open(port, session, attempt.promise).then(attempt.resolve, attempt.reject)
+    attempt.promise.catch(() => {
+      if (this.handles.get(session) === attempt.promise) this.handles.delete(session)
     })
-    return opening
+    return attempt.promise
   }
 
-  private async open(port: BrowserHub.Port, session: string): Promise<string> {
+  private async open(port: BrowserHub.Port, session: string, attempt: Promise<string>): Promise<string> {
     await this.ready(port)
     const opened = await port.open({
       sessionId: session || "unknown",
       title: session || "Kilo agent",
       cwd: this.input.directory,
     })
-    // The session ended while the extension was still opening it: close the handle instead of keeping it alive.
-    if (!this.handles.has(session)) {
+    // The session ended, or another attempt replaced this one, while the extension was still opening it: close the
+    // late handle instead of keeping it (or claiming the new attempt's session) alive.
+    if (this.handles.get(session) !== attempt) {
       await port.close(opened.sessionHandle).catch(() => undefined)
       throw new Error("The session ended before its browser session opened.")
     }

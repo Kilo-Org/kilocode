@@ -427,18 +427,66 @@ describe("extension backend", () => {
     expect(hub.calls[0]?.arguments.paths).toEqual([file])
   })
 
-  test("dispose releases the revocation subscription", async () => {
+  test("a superseded open closes its late handle instead of adopting the new attempt's session", async () => {
+    const first = Promise.withResolvers<void>()
+    const second = Promise.withResolvers<void>()
+    const opened = [Promise.withResolvers<void>(), Promise.withResolvers<void>()]
+    const closed: string[] = []
+    let attempt = 0
+    const hub = fake()
+    const port: BrowserHub.Port = {
+      ...hub.port,
+      open: async () => {
+        const index = attempt
+        attempt += 1
+        opened[index].resolve()
+        await (index === 0 ? first.promise : second.promise)
+        return { sessionHandle: `handle-${index + 1}` }
+      },
+      close: (handle) => {
+        closed.push(handle)
+        return Promise.resolve()
+      },
+    }
+    const active = backend({ port, directory: "/tmp/project" })
+    const stale = active.callTool("browser_snapshot", {}, ctx({ session: "ses_race" }))
+    await opened[0].promise
+    // The session ends and a new call starts a second attempt before the first one answers.
+    active.forget("ses_race")
+    const fresh = active.callTool("browser_snapshot", {}, ctx({ session: "ses_race" }))
+    await opened[1].promise
+    second.resolve()
+    expect((await fresh).content[0]).toEqual({
+      type: "text",
+      text: "- Page URL: http://localhost:3000\n- Page Title: Test page",
+    })
+    first.resolve()
+    const error = await stale.catch((value: unknown) => value)
+    expect((error as Error).message).toContain("ended before its browser session opened")
+    // Only the superseded attempt's handle is closed, and the live session keeps its own.
+    expect(closed).toEqual(["handle-1"])
+  })
+
+  test("dispose releases the revocation subscription and closes its browser sessions", async () => {
     let released = 0
+    const closed: string[] = []
     const hub = fake()
     const port: BrowserHub.Port = {
       ...hub.port,
       onRevoked: () => () => {
         released += 1
       },
+      close: (handle) => {
+        closed.push(handle)
+        return Promise.resolve()
+      },
     }
     const active = backend({ port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
     await active.dispose()
     expect(released).toBe(1)
+    // An evicted backend must not leave a browser session behind.
+    expect(closed).toEqual(["handle-1"])
   })
 
   test("a failed tool listing is retried on the next call instead of cached", async () => {

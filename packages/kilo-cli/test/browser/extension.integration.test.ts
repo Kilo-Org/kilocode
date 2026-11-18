@@ -166,6 +166,18 @@ async function pairExtension(runtime: Runtime, contractSha: string, profile = "D
   return socket
 }
 
+/**
+ * Pairs, or undefined when the hub refused the attach. A refusal is not an error to assert on here: the hub holds one
+ * extension at a time, so a real browser retries until the previous connection is gone.
+ */
+async function tryPair(runtime: Runtime, contractSha: string, profile: string) {
+  try {
+    return await pairExtension(runtime, contractSha, profile)
+  } catch {
+    return undefined
+  }
+}
+
 type Call = { controllerId: string; id: string | number; method: string; params: Record<string, unknown> }
 
 /** The next routed request the extension receives, skipping the hub's controller bookkeeping. */
@@ -273,17 +285,12 @@ describe("extension backend over a real hub", () => {
     try {
       expect((await client.ready(3_000)).profileLabel).toBe("Default")
 
-      // The browser goes away and reconnects as a different profile: the hub accepts only one extension at a time.
+      // One extension at a time: an attach while the first is still attached is refused, which is what a browser
+      // retries. The retry then succeeds once the old connection is gone.
       extension.close()
       sockets.splice(sockets.indexOf(extension), 1)
-      await until(async () => {
-        try {
-          await pairExtension(runtime, "deadbeef", "Work")
-          return true
-        } catch {
-          return undefined
-        }
-      }, 5_000)
+      const second = await until(() => tryPair(runtime, "deadbeef", "Work"), 5_000)
+      expect(second?.status).toBe(101)
 
       // The client refuses it: the link drops, a rediscovery is scheduled, and a call fails closed.
       await until(() => (client.state().kind === "reconnecting" ? true : undefined), 5_000)

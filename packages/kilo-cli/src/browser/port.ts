@@ -16,6 +16,8 @@ export type Options = Input & {
   version?: string
   /** The native-messaging installer; a test replaces it so we never write into the developer's browser profiles. */
   install?: () => Promise<unknown>
+  /** The hub transport factory; a test replaces it to exercise a client that cannot be created at all. */
+  create?: (input: Input) => Client
 }
 
 const Need = z
@@ -148,7 +150,7 @@ function reply(value: { content: readonly unknown[]; isError?: boolean; _meta?: 
 
 /** The hub interface the host provides: one client per profile target, created on the first use of that target. */
 export function hub(options: Options = {}): BrowserHub.Interface {
-  const { install, version, ...input } = options
+  const { install, create: factory, version, ...input } = options
   const clients = new Map<string, Promise<Client>>()
   const client = (target: string | null) => {
     const key = target ?? ""
@@ -163,14 +165,19 @@ export function hub(options: Options = {}): BrowserHub.Interface {
       // native messaging host it does not need.
       const installer = install ?? (async () => (await import("./install")).install())
       await installer().catch(() => undefined)
-      return create({ ...input, ...(key ? { profile: key } : {}) })
+      return (factory ?? create)({ ...input, ...(key ? { profile: key } : {}) })
     })()
     clients.set(key, created)
+    // A transport that could not be created is not a fact: the next call tries again.
+    created.catch(() => {
+      if (clients.get(key) === created) clients.delete(key)
+    })
     return created
   }
   return {
     port(target) {
-      const connection = () => client(target ?? null)
+      // Loading the transport can fail too, and a raw loader error must not escape the backend's error contract.
+      const connection = () => client(target ?? null).catch((error: unknown) => Promise.reject(failure(error)))
       return {
         async ready(timeoutMs) {
           const info = await (await connection())
