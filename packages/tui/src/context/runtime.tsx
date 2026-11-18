@@ -30,6 +30,7 @@ export type TuiTerminalEnvironment = Readonly<{
 export type TuiStartup = Readonly<{
   initialRoute?: unknown
   skipInitialLoading: boolean
+  workspaceReady?: () => boolean // kilocode_change(startup) - local Home can edit during initial server hydration
 }>
 
 export type TuiLifecycle = Readonly<{

@@ -7,14 +7,6 @@ export * as KiloV1Store from "./v1-store"
 
 import { Database as SQLite } from "bun:sqlite"
 import { openReadonly } from "./sqlite-readonly"
-import { Effect, Layer, References } from "effect"
-import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
-import { Database } from "@opencode/core/database/database"
-import { V1Migration } from "@opencode/core/database/v1-migration"
-import { Project } from "@opencode/core/project"
-import { FSUtil } from "@opencode/util/fs-util"
-import { Global } from "@opencode/util/global"
-import { LayerNode } from "@opencode/util/effect/layer-node"
 
 export type Options = {
   /** The kilo2 data directory the converted store belongs to. */
@@ -29,6 +21,7 @@ export type Options = {
  */
 export async function convert(file: string, options: Options) {
   requireV1Store(file)
+  const { migrate } = await import("./v1-migration")
   const total = count(file, "session")
   // Progress between the blocking phases: the caller refreshes its import lock with every report.
   options.progress?.(0, total)
@@ -37,22 +30,7 @@ export async function convert(file: string, options: Options) {
   // The conversion yields after each session, so the timer reports progress while it runs.
   const timer = setInterval(() => options.progress?.(count(file, "session_v2"), total), 2_000)
   try {
-    await Effect.runPromise(
-      Effect.scoped(
-        Effect.gen(function* () {
-          const context = yield* Layer.build(
-            AppNodeBuilder.build(LayerNode.group([Project.node, Database.node, FSUtil.node, Global.node]), [
-              Database.node.replace(Database.configured({ path: file })),
-              Global.node.replace(Global.layerWith({ data: options.data })),
-            ]),
-          )
-          // A missing path: the import never pulls in an `opencode-next.db` that happens to lie in the data directory.
-          yield* V1Migration.run({ nextDatabasePath: `${file}.none` }).pipe(Effect.provide(context))
-        }),
-        // The import runs in the CLI process before a TUI starts: only warnings reach the terminal, not the INFO log of
-        // every schema migration.
-      ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
-    )
+    await migrate(file, options.data)
   } finally {
     clearInterval(timer)
   }

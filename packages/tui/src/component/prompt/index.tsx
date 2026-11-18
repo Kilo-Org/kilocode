@@ -76,6 +76,7 @@ export type PromptProps = {
   sessionID?: string
   visible?: boolean
   disabled?: boolean
+  pendingSubmit?: string // kilocode_change(startup) - edit normally until submission is available
   muted?: boolean
   onSubmit?: () => void
   onEmptySubmit?: () => boolean | Promise<boolean>
@@ -1098,6 +1099,12 @@ export function Prompt(props: PromptProps) {
   let submitting = false
   async function submit(delivery: SessionInbox.Delivery = "steer") {
     if (disabled()) return false
+    // kilocode_change start - startup
+    if (props.pendingSubmit) {
+      toast.show({ message: props.pendingSubmit, variant: "info" })
+      return false
+    }
+    // kilocode_change end
     // Prevent overlapping invocations (e.g. a double-pressed Enter, or the
     // input's native onSubmit racing another dispatch). Without this guard,
     // a second call slips past the empty-input check before the first call

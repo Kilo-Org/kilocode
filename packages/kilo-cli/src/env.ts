@@ -60,3 +60,5 @@ export const directory = "kilo2"
 
 translate(process.env)
 process.env.OPENCODE_APP_DIR_NAME = directory // kilo_port(global:0e189a57d108)
+process.env.OPENCODE_TUI_USE_PINNED_MODE = "1"
+process.env.OPENCODE_TUI_OVERLAP_STARTUP = "1"

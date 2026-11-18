@@ -2,6 +2,7 @@ import { existsSync } from "fs"
 import path from "path"
 import { render, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import "./component/spinner-renderable"
+import { InteractiveStartup } from "./kilocode/interactive-startup" // kilocode_change(startup)
 import { Effect, Latch } from "effect"
 import { Service, type Endpoint } from "@opencode/client/effect/service"
 import { OpenCode, type SessionInfo } from "@opencode/client"
@@ -187,6 +188,7 @@ const appBindingCommands = [
 export type TuiInput = {
   app: TuiApp
   server: {
+    whenReady?: (signal?: AbortSignal) => Promise<void> // kilocode_change(startup)
     endpoint: Endpoint
     local?: boolean
     service?: {
@@ -220,14 +222,14 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
   const options = {
     baseUrl: input.server.endpoint.url,
     headers,
-    fetch: noTimeoutFetch,
+    fetch: InteractiveStartup.transport(noTimeoutFetch, input.server.whenReady), // kilocode_change(startup)
   }
   const api = OpenCode.make(options)
-  const location = yield* Effect.tryPromise(() => api.file.list({ location: { directory: process.cwd() } })).pipe(
+  const locate = Effect.tryPromise /* kilocode_change(startup) */(() => api.file.list({ location: { directory: process.cwd() } })).pipe(
     Effect.map((response) => response.location),
     Effect.catch(() => Effect.tryPromise(() => api.location.get())),
   )
-  const directory = location.directory
+  const startup = yield* InteractiveStartup.workspace(input, locate) // kilocode_change(startup)
   const pluginDirectories = yield* Effect.promise(() => localPluginDirectories(process.cwd(), global.config))
   const handoff = input.terminalHandoff ? yield* Effect.promise(input.terminalHandoff) : undefined
   const managed = input.server.service
@@ -313,7 +315,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
       )
       renderer.once("destroy", () => shutdown.openUnsafe())
       yield* Effect.tryPromise(async () => {
-        const mode = handoff?.mode ?? (await renderer.waitForThemeMode(1000)) ?? "dark"
+        const { mode, detecting } = await startup.colors(renderer, handoff?.mode, config.theme?.mode) // kilocode_change(startup)
         if (renderer.isDestroyed) return
 
         await render(() => {
@@ -380,6 +382,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                     : process.env.OPENCODE_ROUTE
                                       ? JSON.parse(process.env.OPENCODE_ROUTE)
                                       : undefined,
+                                  workspaceReady: startup.confirmed, // kilocode_change(startup)
                                   skipInitialLoading: Boolean(process.env.OPENCODE_FAST_BOOT),
                                 }}
                               >
@@ -409,12 +412,12 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                               service={service}
                                             >
                                               <PermissionProvider>
-                                                <DataProvider directory={directory}>
+                                                <DataProvider directory={startup.directory()} /* kilocode_change(startup) */>
                                                   <LocationProvider>
                                                     <SessionTabsProvider>
                                                       <SessionTerminalsProvider>
                                                         <ThemeProvider
-                                                          mode={mode}
+                                                          mode={mode} detecting={detecting} /* kilocode_change(startup) */
                                                           source={createThemeSource(global.config)}
                                                         >
                                                           <ThemeErrorToast />
@@ -477,7 +480,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
           renderer.requestRender()
         }
       })
-      yield* shutdown.await
+      yield* startup.untilExit(shutdown.await) // kilocode_change(startup)
       return { session: exit.session, updatedVersion: exit.updatedVersion, reason: exit.reason }
     }),
   )
@@ -1434,7 +1437,7 @@ function App() {
           <SessionTabs orientation="vertical" width={tabsResize.size()} />
         </Show>
         <box flexGrow={1} minWidth={0} flexDirection="column">
-          <Show when={plugins.ready()}>
+          <Show when={plugins.ready() || (startup.workspaceReady && route.data.type === "home")} /* kilocode_change(startup) */>
             <box flexGrow={1} minHeight={0} flexDirection="column">
               <Slot path="app.header" /* kilocode_change(remote) seam - optional plugin header */ />
               <Show when={tabsVisible() && !tabsVertical()}>

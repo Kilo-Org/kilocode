@@ -17,7 +17,7 @@
 import "../../../script/kilocode/release-env"
 import { $ } from "bun"
 import { createHash } from "node:crypto"
-import { mkdir, rm } from "fs/promises"
+import { copyFile, mkdir, readdir, rm } from "fs/promises"
 import path from "path"
 import { Script } from "@opencode/script"
 import { embed } from "@opencode/script/highlights"
@@ -219,6 +219,28 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
   const target = targetName(item)
   const name = target.replace(upstreamBinary, "cli")
   const executablePath = await compileExecutable(item)
+  // Kilo: Bun extracts embedded dylibs on first use. Ship the same bytes as a normal install asset too.
+  const renderer =
+    item.os === "darwin"
+      ? path.dirname(
+          Bun.resolveSync(`@opentui/core-darwin-${item.arch}`, path.dirname(Bun.resolveSync("@opentui/core", dir))),
+        )
+      : undefined
+  const rendererPlugin: BunPlugin = {
+    name: "packaged-macos-renderer",
+    setup(build) {
+      if (!renderer) return
+      build.onLoad({ filter: /core-darwin-(arm64|x64)[/\\]index\.bun\.js$/ }, async ({ path: file }) => {
+        if (path.dirname(file) !== renderer) return
+        const bytes = await Bun.file(path.join(renderer, "libopentui.dylib")).arrayBuffer()
+        return {
+          loader: "js",
+          contents: `import { packagedRenderer } from ${JSON.stringify(path.join(dir, "src/packaged-renderer.ts"))}
+export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash("sha256").update(new Uint8Array(bytes)).digest("hex"))}) ?? (await import("./libopentui.dylib", { with: { type: "file" } })).default`,
+        }
+      })
+    },
+  }
   console.log(`building ${name}`)
   // Kilo: Linux targets ship a static Bubblewrap next to the executable, for systems without /usr/bin/bwrap. The
   // build checks its digest at run time. KILO_SKIP_BUNDLED_BWRAP=1 skips it (the system Bubblewrap is still used).
@@ -235,6 +257,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     tsconfig: "./tsconfig.json",
     plugins: [
       hostMirrorsPlugin,
+      rendererPlugin,
       brandingPlugin,
       appAssetsPlugin,
       solidPlugin,
@@ -308,6 +331,16 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
   verifySimulationGraph(simulationInputs)
   // Kilo: copy the sandbox helpers and check that the packaged mutation worker runs.
   const bin = path.join(outdir, name, "bin")
+  if (renderer) {
+    await copyFile(path.join(renderer, "libopentui.dylib"), path.join(bin, "libopentui.dylib"))
+    const notices = path.join(bin, "licenses/opentui")
+    await mkdir(notices, { recursive: true })
+    await Promise.all(
+      (await readdir(renderer))
+        .filter((file) => /^(LICENSE|PATENTS|AUTHORS|FFMPEG-SOURCE)/.test(file))
+        .map((file) => copyFile(path.join(renderer, file), path.join(notices, file))),
+    )
+  }
   await KiloSandboxWorker.copy(kiloSandboxWorker, bin)
   if (item.os === "linux") await KiloSandboxNetwork.copy(kiloSandboxNetwork, bin, item.arch as "arm64" | "x64")
   if (item.os === process.platform && item.arch === process.arch && !item.abi && item.avx2 !== false)
@@ -322,7 +355,9 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       Bun.file(path.resolve(import.meta.dirname, "../../../LICENSE")).text(),
       Bun.file(path.join(bin, "licenses/sandbox-runtime/LICENSE")).text(),
       ...(bwrap
-        ? ["NOTICE", "COPYING", "MUSL-COPYRIGHT"].map((file) => Bun.file(path.join(bin, "licenses/bubblewrap", file)).text())
+        ? ["NOTICE", "COPYING", "MUSL-COPYRIGHT"].map((file) =>
+            Bun.file(path.join(bin, "licenses/bubblewrap", file)).text(),
+          )
         : []),
     ])
     await Bun.write(path.join(outdir, name, "LICENSE"), content.join("\n\n---\n\n"))

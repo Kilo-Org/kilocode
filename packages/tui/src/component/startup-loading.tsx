@@ -2,10 +2,12 @@ import { createEffect, createMemo, createSignal, onCleanup, Show } from "solid-j
 import { useTheme } from "../context/theme"
 import { Spinner } from "./spinner"
 
+export const startupMessage = (ready: boolean) => (ready ? "Finishing startup…" : "Loading plugins…") // kilocode_change(startup)
+
 export function StartupLoading(props: { ready: () => boolean }) {
   const theme = useTheme()
   const [show, setShow] = createSignal(false)
-  const text = createMemo(() => (props.ready() ? "Finishing startup…" : "Loading plugins…"))
+  const text = createMemo(() => startupMessage(props.ready())) // kilocode_change(startup)
   let wait: NodeJS.Timeout | undefined
   let hold: NodeJS.Timeout | undefined
   let stamp = 0
