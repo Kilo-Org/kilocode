@@ -28,7 +28,7 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 - Integration branch: `origin/v2`. Branch from it and target it. Never target `main`.
 - Upstream: `upstream/dev` is upstream's v2 line since 2026-10-10. `upstream/v2` is frozen; never merge it. Never merge upstream in a feature PR. An upstream sync is its own PR (#15020). It targets the next release that `v2` does not have yet (the release commit, which is the parent of the `v2.x.y` tag), and merges with a merge commit, never a squash. After a sync, open PRs merge `v2` into their branch and check and self-test again.
 - Stack on an open v2 PR when you depend on it, and target that PR's branch.
-- Never push directly to `v2`. A human merges.
+- Never push directly to `v2`.
 - Short hyphenated branch names, no slashes. Titles `type(scope): summary`.
 
 ## Branding and upstream drift
