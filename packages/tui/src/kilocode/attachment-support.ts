@@ -47,6 +47,6 @@ export function receivingModel(input: {
   selected: ModelRef
 }): ModelRef | undefined {
   if (input.mode === "shell" && !KiloSteer.steering(input.session)) return undefined
-  const steer = KiloSteer.prompt(input.session)
-  return ("model" in steer ? steer.model : undefined) ?? input.selected
+  const steered = KiloSteer.steering(input.session) ? input.session?.model : undefined
+  return steered ? { providerID: steered.providerID, modelID: steered.id } : input.selected
 }
