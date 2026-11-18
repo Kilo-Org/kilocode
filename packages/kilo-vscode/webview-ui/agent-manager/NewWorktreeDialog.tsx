@@ -164,6 +164,7 @@ export const NewWorktreeDialog: Component<{
   providers: ProviderInfo[]
   agents: AgentInfo[]
   commands: CommandInfo[]
+  onProjectChange: (projectId: string | undefined) => void
 }> = (props) => {
   const language = useLanguage()
   const { t } = language
@@ -180,6 +181,8 @@ export const NewWorktreeDialog: Component<{
 
   const [tab, setTab] = createSignal<DialogTab>("new")
   const [project, setProject] = createSignal(props.projectId ?? props.activeProjectId)
+  createEffect(() => props.onProjectChange(project()))
+  onCleanup(() => props.onProjectChange(undefined))
   const [projectOpen, setProjectOpen] = createSignal(false)
   const projects = () => props.projects?.() ?? []
   const showProject = () => projects().length > 0
