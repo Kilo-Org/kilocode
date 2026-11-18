@@ -146,6 +146,9 @@ describe("kilocode.background-jobs", () => {
       // Promoting a finished job changes nothing.
       expect(yield* env.rpc.promote({ jobID: running[0]!.id })).toBe(false)
     }),
+    // A real session, plugin activation and two tool calls: the setup dominates, and it took 5.4 s on a loaded CI
+    // runner against bun's 5 s default. Every assertion above still decides the result.
+    20_000,
   )
 
   it.live("records a foreground subagent that finishes in its tool call", () =>

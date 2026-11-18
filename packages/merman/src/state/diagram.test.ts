@@ -250,21 +250,27 @@ ${Array.from({ length: 8 }, (_, index) => `  A --> B${index}`).join("\n")}`
     expect(responsive).toBe(horizontal)
   })
 
-  test("falls back before allocating an oversized horizontal canvas", () => {
-    const ids = Array.from({ length: 301 }, (_, index) => `S${index}`)
-    const label = "transition label carrying enough context to make the horizontal canvas too large"
-    const source = `stateDiagram-v2
+  test(
+    "falls back before allocating an oversized horizontal canvas",
+    () => {
+      const ids = Array.from({ length: 301 }, (_, index) => `S${index}`)
+      const label = "transition label carrying enough context to make the horizontal canvas too large"
+      const source = `stateDiagram-v2
   direction LR
 ${ids
   .slice(0, -1)
   .map((id, index) => `  ${id} --> ${ids[index + 1]}: ${label}`)
   .join("\n")}`
-    const output = renderStateDiagram(source, { layoutMaxWidth: 80 })
+      const output = renderStateDiagram(source, { layoutMaxWidth: 80 })
 
-    expect(output).toContain("S0")
-    expect(output).toContain("S300")
-    expect(renderedStateDimensions(output).width).toBeLessThanOrEqual(stringWidth(label) + 8)
-  })
+      expect(output).toContain("S0")
+      expect(output).toContain("S300")
+      expect(renderedStateDimensions(output).width).toBeLessThanOrEqual(stringWidth(label) + 8)
+    },
+    // Layout work for 300 labelled transitions: about 11.8 s idle and 44.9 s on a loaded CI runner, above the 30 s
+    // that the package's `test` script passes to bun. A wrong width still fails the assertions below.
+    90_000,
+  )
 
   test.each(["TB", "TD", "BT"] as const)("preserves explicit %s layouts under a narrow width target", (direction) => {
     const source = `stateDiagram-v2

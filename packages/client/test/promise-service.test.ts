@@ -11,6 +11,10 @@ import { accelerate } from "./fixture/service-timing"
 
 const ensure = accelerate(Service.ensure)
 const stop = accelerate(Service.stop)
+// A health probe is not a speed knob. At the accelerated 100 ms a busy runner can make a healthy replacement look
+// unresponsive; recovery then recruits a second contender, which cannot adopt the single-use handoff and overwrites the
+// replacement fixtures with the handoff it did not receive.
+const ensureReplacement = accelerate(Service.ensure, { requestTimeout: 2_000 })
 
 test("discovers a registered service", async () => {
   await using fixture = await serviceFixture()
@@ -79,7 +83,7 @@ test("passes the prepared handoff to the replacement server", async () => {
   const registration = fixture.registration
   fixture.spawn("handoff")
   await fixture.waitForFile()
-  await ensure({
+  await ensureReplacement({
     file: registration,
     version: "test",
     command: fixture.command("environment"),
