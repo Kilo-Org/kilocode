@@ -241,7 +241,7 @@ const AgentManagerContent: Component = () => {
   const [restricted, setRestricted] = createSignal(false)
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
-  const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
+  const activeProjectId = createMemo(() => projectList().find((p) => p.active)?.id ?? currentProjectId())
   // Agent Manager owns worktree creation and movement, so its chat row reports transfer progress from the host.
   const transfer = createWorktreeTransfer({ project: activeProjectId })
   const repoDefaultBranch = () => repoDetectedBranch() ?? "main"
@@ -2437,7 +2437,7 @@ const AgentManagerContent: Component = () => {
                       actions={toolActions}
                       onShowHistory={() => openHistory()}
                       row={sessionActions}
-                      rowWhenEmpty={!!transfer.branch()}
+                      rowWhenEmpty={!!transfer.branch() || (!!selection() && selection() !== LOCAL)}
                       onNewSession={handleNewTabForCurrentSelection}
                       worktree={!!selection() && selection() !== LOCAL}
                       onUpdateBase={update}

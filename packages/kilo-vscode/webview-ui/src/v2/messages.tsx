@@ -21,6 +21,7 @@ import { QuestionDock } from "./question"
 import { revertedCount, visibleMessages } from "./revert"
 import type { Selection } from "./selectors"
 import { sessionStarting } from "./session-loading"
+import { TranscriptLoading } from "./transcript-loading"
 import {
   anchorOffset,
   handedRows,
@@ -858,11 +859,8 @@ export function MessageList(props: {
             empty() && !starting() && !props.question?.() ? "message-list-content-empty" : "message-list-content"
           }
         >
-          <Show when={starting()}>
-            <div class="message-list-loading" role="status">
-              <Spinner />
-              <span>{language.t("session.messages.loading")}</span>
-            </div>
+          <Show when={starting() && props.session} keyed>
+            {(_id) => <TranscriptLoading label={language.t("session.messages.loading")} />}
           </Show>
           <Show when={empty() && !starting()}>
             {props.empty ? (
