@@ -103,6 +103,7 @@ import {
   isActive,
   openAdvancedWorktree,
   postMessage,
+  revealSession,
   shutdown,
   syncWorktrees,
   waitForReady,
@@ -1212,6 +1213,14 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public waitForReady(): Promise<boolean> {
     return waitForReady(this.api())
+  }
+
+  /**
+   * @knipExternal The attention notification host reveals a managed session through this entry point; that caller
+   * lands with the attention port in #15560, so the only caller is outside this branch's module graph.
+   */
+  public revealSession(sessionId: string): Promise<boolean> {
+    return revealSession(this.api(), sessionId)
   }
 
   public continueFromSidebar(

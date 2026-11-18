@@ -18,6 +18,7 @@ import type { RunController } from "./run/controller"
 import type { AgentManagerOutMessage } from "./types"
 import type { CreateWorktreeOnDiskOptions, CreateWorktreeOnDiskResult } from "./worktree-create"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
+import { revealManagedSession } from "./reveal-session"
 import { continueInWorktree, type ContinueContext } from "./continue-in-worktree"
 import { runDoctor } from "./worktree-doctor"
 import { reconcileProject } from "./project/init"
@@ -91,6 +92,30 @@ export function waitForReady(p: ProviderApiHost): Promise<boolean> {
   const panel = p.panel
   if (!panel) return Promise.resolve(false)
   return p.waitForPanelReady(panel)
+}
+
+export function getSessionDirectories(p: ProviderApiHost): ReadonlyMap<string, string> {
+  const directories = new Map<string, string>()
+  for (const ctx of p.contexts.values()) {
+    const state = ctx.peekState()
+    for (const session of state?.getSessions() ?? []) {
+      const worktree = session.worktreeId ? state?.getWorktree(session.worktreeId) : undefined
+      directories.set(session.id, worktree?.path ?? ctx.root)
+    }
+  }
+  return directories
+}
+
+export function revealSession(p: ProviderApiHost, sessionId: string): Promise<boolean> {
+  return revealManagedSession(sessionId, p.contexts, {
+    directories: () => getSessionDirectories(p),
+    activate: (ctx) => p.activateProject(ctx),
+    projects: () => p.pushProjects(),
+    open: () => p.openPanel(),
+    state: () => p.waitForStateReady("revealSession"),
+    ready: () => waitForReady(p),
+    post: (message) => p.panel?.postMessage(message),
+  })
 }
 
 export async function continueFromSidebar(

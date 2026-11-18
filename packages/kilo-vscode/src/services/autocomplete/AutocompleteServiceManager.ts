@@ -1,9 +1,14 @@
+import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "../i18n"
 import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
 import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
 import { AutocompleteInlineCompletionProvider } from "./classic-auto-complete/AutocompleteInlineCompletionProvider"
-import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
+import {
+  AutocompleteTelemetry,
+  AutocompleteTelemetryEvent,
+  captureAutocompleteTelemetry,
+} from "./classic-auto-complete/AutocompleteTelemetry"
 import type { Connection } from "./connection"
 import { hasValidCredentials } from "./fim"
 import { AUTOCOMPLETE_SECTION, readAutocompleteSettings } from "./settings"
@@ -46,6 +51,8 @@ export class AutocompleteServiceManager {
   private readonly connection: Connection
   private readonly context: vscode.ExtensionContext
   private settings: AutocompleteServiceSettings | null = null
+
+  private taskId: string | null = null
 
   private statusBar: AutocompleteStatusBar | null = null
   private sessionCost: number = 0
@@ -155,6 +162,8 @@ export class AutocompleteServiceManager {
       enableSmartInlineTaskKeybinding: false,
     })
 
+    captureAutocompleteTelemetry(AutocompleteTelemetryEvent.GHOST_SERVICE_DISABLED)
+
     await this.load()
   }
 
@@ -163,6 +172,11 @@ export class AutocompleteServiceManager {
     if (!editor) {
       return
     }
+
+    this.taskId = crypto.randomUUID()
+    captureAutocompleteTelemetry(AutocompleteTelemetryEvent.INLINE_ASSIST_AUTO_TASK, {
+      taskId: this.taskId,
+    })
 
     const document = editor.document
 
