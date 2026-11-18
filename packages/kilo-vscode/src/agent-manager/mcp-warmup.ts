@@ -5,13 +5,14 @@ type Log = (...args: unknown[]) => void
 export async function prepareDirectory(
   client: Pick<OpenCodeClient, "config" | "agent" | "mcp">,
   dir: string,
+  log: Log,
 ): Promise<void> {
   // Listing agents computes the agent and skill state for the directory, so
   // the first prompt does not pay for that discovery after it arrives.
   const results = await Promise.allSettled([
     client.config.get({ location: { directory: dir } }),
     client.agent.list({ location: { directory: dir } }),
-    client.mcp.list({ location: { directory: dir } }),
+    warm(client, dir, log),
   ])
   const failure = results.find((result) => result.status === "rejected")
   if (failure?.status === "rejected") throw failure.reason

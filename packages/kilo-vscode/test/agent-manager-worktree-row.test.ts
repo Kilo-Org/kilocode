@@ -10,7 +10,7 @@ test("the Agent Manager chat wires the shared worktree actions row", () => {
   const app = read("../webview-ui/agent-manager/AgentManagerApp.tsx")
 
   expect(app).toContain("row={sessionActions}")
-  expect(app).toContain("rowWhenEmpty={!!transfer.branch()}")
+  expect(app).toContain("rowWhenEmpty={!!transfer.branch() || (!!selection() && selection() !== LOCAL)}")
   expect(app).toContain("onNewWorktree={handleCreateWorktree}")
   expect(app).toContain("onMoveToWorktree=")
   expect(app).toContain("onConfigureWorktree={() => showNewWorktreeDialog()}")
