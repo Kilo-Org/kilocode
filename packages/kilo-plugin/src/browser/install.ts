@@ -65,10 +65,6 @@ export function useKiloBrowsers() {
   process.env.PLAYWRIGHT_BROWSERS_PATH = browsersDirectory()
 }
 
-/**
- * Extract an archive into a sibling staging directory, verify the browser executable is there, and only then replace
- * the installed directory. A failed or interrupted extraction leaves the working browser untouched.
- */
 /** True when the process exists (EPERM still means it does, owned by another user). */
 function running(pid: number) {
   try {
@@ -101,6 +97,10 @@ export async function cleanStaleInstalls(directory: string, now = Date.now()) {
   }
 }
 
+/**
+ * Extract an archive into a sibling staging directory, verify the browser executable is there, and only then replace
+ * the installed directory. A failed or interrupted extraction leaves the working browser untouched.
+ */
 export async function installArchive(input: {
   directory: string
   archive: string
@@ -139,9 +139,11 @@ export async function installArchive(input: {
         await (input.moveAside ?? fs.rename)(input.directory, backup)
         moved = true
       } catch (error) {
-        const code = (error as NodeJS.ErrnoException).code ?? "unknown"
-        const hint = code === "EBUSY" || code === "EPERM" ? " Close the browser and run install-chromium again." : ""
-        throw new Error(`Could not move the installed Chromium aside (${code}).${hint}`)
+        const code = (error as NodeJS.ErrnoException).code
+        const busy = code === "EBUSY" || code === "EPERM"
+        const detail = code ?? (error instanceof Error ? error.message : String(error))
+        const hint = busy ? " Close the browser and run install-chromium again." : ""
+        throw new Error(`Could not move the installed Chromium aside (${detail}).${hint}`, { cause: error })
       }
     }
     try {

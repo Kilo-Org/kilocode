@@ -14,6 +14,23 @@ async function fixture() {
 }
 
 describe("stale install leftovers", () => {
+  test("a live pid's leftover is removed only once it is an hour old", async () => {
+    const { base, directory } = await fixture()
+    const now = Date.now()
+    const live = path.join(base, `chromium-1244.staging-${process.pid}`)
+    const stale = path.join(base, `chromium-1244.backup-${process.pid}`)
+    for (const dir of [live, stale]) {
+      await fs.mkdir(dir, { recursive: true })
+      await fs.writeFile(path.join(dir, "chrome"), "copy")
+    }
+    // The staging directory is fresh, the backup is two hours old; both belong to this live process.
+    await fs.utimes(live, new Date(now - 60_000), new Date(now - 60_000))
+    await fs.utimes(stale, new Date(now - 2 * 60 * 60 * 1000), new Date(now - 2 * 60 * 60 * 1000))
+    await cleanStaleInstalls(directory, now)
+    expect((await fs.stat(live).catch(() => null))?.isDirectory()).toBe(true)
+    expect(await fs.stat(stale).catch(() => null)).toBeNull()
+  })
+
   test("a dead pid's backup and staging directories are removed, a live pid's are kept", async () => {
     const { base, directory } = await fixture()
     const dead = path.join(base, "chromium-1244.backup-999999")
@@ -113,6 +130,46 @@ describe("installing a browser archive", () => {
     // The old browser is untouched and the staging directory is gone.
     expect(await fs.readFile(binary, "utf8")).toBe("old")
     expect((await fs.readdir(base)).filter((name) => name.includes(".staging-"))).toEqual([])
+  })
+
+  test("an unexpected move error keeps its own message and the original as cause", async () => {
+    const { base, directory, binary } = await fixture()
+    const archive = path.join(base, "chromium.zip")
+    await fs.writeFile(archive, "zip")
+    const original = Object.assign(new Error("permission denied by policy"), { code: "EACCES" })
+    const failure = await installArchive({
+      directory,
+      archive,
+      executable: binary,
+      extract: async (_zip, options) => {
+        const staged = path.join(options.dir, "chrome-linux64", "chrome")
+        await fs.mkdir(path.dirname(staged), { recursive: true })
+        await fs.writeFile(staged, "new")
+      },
+      moveAside: async () => {
+        throw original
+      },
+    }).catch((error: unknown) => error)
+    // The code is the detail when there is one, and the original error is preserved as the cause.
+    expect(failure instanceof Error ? failure.message : String(failure)).toContain("EACCES")
+    expect((failure as Error).cause).toBe(original)
+
+    const noCode = await installArchive({
+      directory,
+      archive,
+      executable: binary,
+      extract: async (_zip, options) => {
+        const staged = path.join(options.dir, "chrome-linux64", "chrome")
+        await fs.mkdir(path.dirname(staged), { recursive: true })
+        await fs.writeFile(staged, "new")
+      },
+      moveAside: async () => {
+        throw new Error("sharing violation")
+      },
+    }).catch((error: unknown) => error)
+    // Without a code the original message is what explains the failure.
+    expect(noCode instanceof Error ? noCode.message : String(noCode)).toContain("sharing violation")
+    expect(await fs.readFile(binary, "utf8")).toBe("old")
   })
 
   test("a complete archive replaces the old directory atomically", async () => {
