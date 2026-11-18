@@ -10,7 +10,7 @@ import type { CallContext } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { key, outputDirectory, playwright } from "../../src/browser/playwright"
 import { resolve } from "../../src/browser/settings"
-import { grantsFor, KiloBrowserToolsPlugin } from "../../src/browser/tools"
+import { grantsFor, KiloBrowserToolsPlugin, resetGrants } from "../../src/browser/tools"
 
 /**
  * The backend's own call path, over a stand-in browser and MCP client. The helpers above are pure; these drive
@@ -150,6 +150,8 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await playwright.dispose()
+  // The grant cache is module-level: one test's grants must never satisfy the next test's plan.
+  resetGrants()
 })
 
 /** One plugin location; its scope close runs the finalizers, which is the shutdown path under test. */

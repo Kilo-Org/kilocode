@@ -181,6 +181,11 @@ export function authorize(
   })
 }
 
+/** Clear every remembered grant. The test seam for this module-level cache. */
+export function resetGrants() {
+  GRANTS.clear()
+}
+
 /** Release a session's grants when it is deleted. */
 export function forgetGrants(session: string) {
   GRANTS.delete(session)
