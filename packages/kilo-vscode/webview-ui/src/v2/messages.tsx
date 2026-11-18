@@ -855,13 +855,12 @@ export function MessageList(props: {
           data-slot="message-list-content"
           // A pending question keeps the transcript lane: the empty layout centers its children in a row, which
           // would put the dock beside the welcome screen and drop its max-width and centering.
-          class={
-            empty() && !starting() && !props.question?.() ? "message-list-content-empty" : "message-list-content"
-          }
+          class={empty() && !starting() && !props.question?.() ? "message-list-content-empty" : "message-list-content"}
         >
-          <Show when={starting() && props.session} keyed>
-            {(_id) => <TranscriptLoading label={language.t("session.messages.loading")} />}
-          </Show>
+          <TranscriptLoading
+            session={starting() ? props.session : undefined}
+            label={language.t("session.messages.loading")}
+          />
           <Show when={empty() && !starting()}>
             {props.empty ? (
               props.empty()

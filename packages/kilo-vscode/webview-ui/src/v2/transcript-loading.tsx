@@ -1,8 +1,16 @@
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createSignal, onCleanup, Show } from "solid-js"
 
-/** Only announce a load that lasts long enough to notice. The transcript itself never waits on this timer. */
-export function TranscriptLoading(props: { label: string }) {
+/** Each starting session gets its own grace period. The transcript itself never waits on this timer. */
+export function TranscriptLoading(props: { session?: string; label: string }) {
+  return (
+    <Show when={props.session} keyed>
+      {(_session) => <DelayedLoading label={props.label} />}
+    </Show>
+  )
+}
+
+function DelayedLoading(props: { label: string }) {
   const [visible, setVisible] = createSignal(false)
   const timer = setTimeout(() => setVisible(true), 150)
   onCleanup(() => clearTimeout(timer))
