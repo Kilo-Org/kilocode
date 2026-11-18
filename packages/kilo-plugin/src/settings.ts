@@ -25,6 +25,21 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /** The failure both halves of the RPC report for a document that resolves outside its scope. */
 const outsideScope = (scope: KiloSettingsRpc.Scope, file: string) => `${file} is outside the ${scope} config scope`
 
+/**
+ * True when `child` is `parent` or below it, on either platform's spelling. A `startsWith(parent + "/")` test is
+ * wrong on win32 (backslashes, drive-letter case, 8.3 names); `path.relative` is the containment test, and win32
+ * compares case-insensitively, so both sides are folded there. Callers pass paths `fs.resolve` canonicalized (realpath
+ * on both sides), which is what makes a symlink or a short name compare as the file it really is.
+ */
+export function within(parent: string, child: string, flavour: typeof path = path): boolean {
+  const fold = (value: string) => (flavour === path.win32 ? value.toLowerCase() : value)
+  const relative = flavour.relative(fold(parent), fold(child))
+  if (relative === "") return true
+  if (flavour.isAbsolute(relative)) return false
+  // The first path segment decides: `..` is an escape, `..foo` is an ordinary name.
+  return relative.split(flavour.sep)[0] !== ".."
+}
+
 /** Whether `parts` resolves to a defined value in a document, for the project-wide unset scan. */
 function hasPath(input: unknown, parts: readonly string[]) {
   let current: unknown = input
@@ -92,9 +107,9 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
     })
 
     const isConfigFile = (file: string) => KiloConfigFiles.names.includes(path.basename(file))
-    const inGlobal = (file: string) => FSUtil.contains(globalDirectory, file)
-    const inSystem = (file: string) => FSUtil.contains(systemDir, file)
-    const inProject = (file: string) => FSUtil.contains(boundary, file) && !inGlobal(file) && !inSystem(file)
+    const inGlobal = (file: string) => within(globalDirectory, file)
+    const inSystem = (file: string) => within(systemDir, file)
+    const inProject = (file: string) => within(boundary, file) && !inGlobal(file) && !inSystem(file)
     const inScope = (scope: KiloSettingsRpc.Scope, file: string) =>
       scope === "global" ? inGlobal(file) : inProject(file)
 

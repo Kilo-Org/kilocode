@@ -3,21 +3,31 @@ import { Config } from "@opencode/core/config"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { Effect, Exit, Scope } from "effect"
-import { KiloSettingsPlugin } from "../src/settings"
+import os from "node:os"
+import path from "node:path"
+import { KiloSettingsPlugin, within } from "../src/settings"
 
 // The read half of `kilocode.settings` applies the same scope guard as the write half. A config file that resolves
 // outside its root — a symlinked `kilo2.json` in the global directory, for example — is refused instead of read.
+//
+// Paths are built with `path.join`, not spelled with slashes: the writer joins its target the same way, and on win32
+// that is a backslash path, so a hand-written `/tmp/...` string would never equal the file the plugin asks about.
 
-const configRoot = "/tmp/kilo-settings-read/global"
-const projectRoot = "/tmp/kilo-settings-read/project"
-const outside = "/tmp/kilo-settings-read/outside/kilo2.json"
+const root = path.join(os.tmpdir(), "kilo-settings-read")
+const configRoot = path.join(root, "global")
+const projectRoot = path.join(root, "project")
+const configFile = path.join(configRoot, "kilo2.json")
+const outside = path.join(root, "outside", "kilo2.json")
+
+/** Same file, whatever spelling the caller used: the mock sees what the writer built, not a fixed string. */
+const same = (a: string, b: string) => path.resolve(a) === path.resolve(b)
 
 /** A filesystem where the global config file is a symlink whose target sits outside the global directory. */
 const filesystem = {
-  resolve: (file: string) => Effect.succeed(file === `${configRoot}/kilo2.json` ? outside : file),
-  isFile: (file: string) => Effect.succeed(file === `${configRoot}/kilo2.json`),
+  resolve: (file: string) => Effect.succeed(same(file, configFile) ? outside : file),
+  isFile: (file: string) => Effect.succeed(same(file, configFile)),
   existsSafe: () => Effect.succeed(false),
-  readFileString: (file: string) => Effect.succeed(file === outside ? `{ "shell": "zsh" }` : "{}"),
+  readFileString: (file: string) => Effect.succeed(same(file, outside) ? `{ "shell": "zsh" }` : "{}"),
 } as unknown as FSUtil.Interface
 
 type Call = (
@@ -90,5 +100,32 @@ describe("kilocode.settings scope guard", () => {
     } finally {
       await plugin.close()
     }
+  })
+})
+
+describe("scope containment", () => {
+  test("win32: a child is inside, a sibling and an escape are not", () => {
+    const global = "C:\\Users\\igor\\AppData\\Roaming\\kilo"
+    expect(within(global, "C:\\Users\\igor\\AppData\\Roaming\\kilo\\kilo2.json", path.win32)).toBe(true)
+    expect(within(global, global, path.win32)).toBe(true)
+    expect(within(global, "C:\\Users\\igor\\AppData\\Roaming\\kilo2\\kilo2.json", path.win32)).toBe(false)
+    expect(within(global, "C:\\Users\\igor\\AppData\\Roaming\\kilo\\..\\outside\\kilo2.json", path.win32)).toBe(false)
+    expect(within(global, "C:\\Users\\igor\\AppData\\Roaming\\kilo\\..foo\\kilo2.json", path.win32)).toBe(true)
+  })
+
+  test("win32: case and drive letter decide the way the filesystem does", () => {
+    // `fs.resolve` realpaths both sides but keeps the caller's casing when it matches, so case must fold here.
+    expect(within("C:\\Kilo", "c:\\kilo\\kilo2.json", path.win32)).toBe(true)
+    expect(within("c:\\kilo", "C:\\KILO\\kilo2.json", path.win32)).toBe(true)
+    expect(within("C:\\kilo", "D:\\kilo\\kilo2.json", path.win32)).toBe(false)
+  })
+
+  test("posix: separators and case are exact", () => {
+    expect(within("/home/igor/.config/kilo", "/home/igor/.config/kilo/kilo2.json")).toBe(true)
+    expect(within("/home/igor/.config/kilo", "/home/igor/.config/kilo2/kilo2.json")).toBe(false)
+    expect(within("/home/igor/.config/kilo", "/home/igor/.config/kilo/../outside/kilo2.json")).toBe(false)
+    // No folding on posix: these are different directories.
+    expect(within("/Kilo", "/kilo/kilo2.json")).toBe(false)
+    expect(within("/Kilo", "/Kilo/kilo2.json")).toBe(true)
   })
 })

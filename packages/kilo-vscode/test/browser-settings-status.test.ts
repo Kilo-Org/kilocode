@@ -106,7 +106,11 @@ describe("extension connection", () => {
   })
 
   test("KILO_BROWSER_RUN_DIR moves the registry, as it moves the CLI's", () => {
-    expect(hubsDirectory(state, { KILO_BROWSER_RUN_DIR: "/tmp/run" })).toBe("/tmp/run/hubs")
+    // `hubsDirectory` joins with the platform separator, as the CLI's `Paths.hubs()` does; asserting a spelled
+    // "/tmp/run/hubs" would only hold on posix.
+    expect(hubsDirectory(state, { KILO_BROWSER_RUN_DIR: path.join(path.sep, "tmp", "run") })).toBe(
+      path.join(path.sep, "tmp", "run", "hubs"),
+    )
   })
 
   test("a registered hub with a live process is a connected extension", () => {
