@@ -393,6 +393,7 @@ export function outputBaseline(name: string): boolean {
   return (
     name === "browser_take_screenshot" ||
     name === "browser_snapshot" ||
+    name === "browser_evaluate" ||
     name === "browser_network_request" ||
     name === "browser_network_requests" ||
     name === "browser_console_messages"
@@ -413,12 +414,17 @@ export function screenshotPath(
   return filename === "" ? undefined : insideOutput(filename, directory)
 }
 
-/** The tools whose result the MCP can write to a file, with the link title it uses. */
-const FILE_TITLES: Record<string, string> = {
+/**
+ * Every tool whose result the MCP can write to a file, with the link title it uses. `browser_run_code_unsafe` takes
+ * one too, but this backend refuses that tool before any file exists; `browser_take_screenshot` is written from the
+ * masked image by `screenshotPath`. A contract bump that adds another file-writing tool must extend this map.
+ */
+export const FILE_TITLES: Record<string, string> = {
   browser_snapshot: "Snapshot",
   browser_console_messages: "Console",
   browser_network_requests: "Network",
   browser_network_request: "Request",
+  browser_evaluate: "Result",
 }
 
 /**

@@ -3,9 +3,11 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import type { Frame, Page } from "playwright-core"
+import { BrowserContract } from "../../src/browser/contract"
 import { browsersDirectory, useKiloBrowsers } from "../../src/browser/install"
 import {
   Backends,
+  FILE_TITLES,
   outputFile,
   snapshotBody,
   frameOrigin,
@@ -137,6 +139,41 @@ describe("output directory", () => {
     expect(() => outputFile("browser_console_messages", { filename: "../out.log" }, directory)).toThrow(
       "output directory",
     )
+  })
+
+  test("every contract tool that takes a filename is written inside the output directory", () => {
+    const directory = path.join(path.sep, "tmp", "browser", "output")
+    const names = BrowserContract.entries
+      .filter((entry) => "filename" in ((entry.inputSchema as { properties?: object }).properties ?? {}))
+      .map((entry) => entry.name)
+      .sort()
+    // A contract bump that adds a file-writing tool fails here until it is handled.
+    expect(names).toEqual([
+      "browser_console_messages",
+      "browser_evaluate",
+      "browser_network_request",
+      "browser_network_requests",
+      "browser_run_code_unsafe",
+      "browser_snapshot",
+      "browser_take_screenshot",
+    ])
+    for (const name of names) {
+      // Refused outright before a file could exist.
+      if (name === "browser_run_code_unsafe") continue
+      if (name === "browser_take_screenshot") {
+        expect(screenshotPath(name, { filename: "shots/a.png" }, directory)).toBe(
+          path.join(directory, "shots", "a.png"),
+        )
+        continue
+      }
+      expect(FILE_TITLES[name], `${name} has no file title`).toBeDefined()
+      const file = outputFile(name, { filename: "nested/out.txt" }, directory)
+      expect(file?.path).toBe(path.join(directory, "nested", "out.txt"))
+      // The MCP never receives the name.
+      expect(file?.args).toEqual({})
+      // Its file is baselined, so a refused or failed call cannot leave it behind.
+      expect(outputBaseline(name)).toBe(true)
+    }
   })
 
   test("a snapshot file body is the YAML block the MCP writes", () => {
