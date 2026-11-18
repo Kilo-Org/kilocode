@@ -23,6 +23,7 @@ import { Spinner } from "../spinner"
 import { useSDK } from "../../context/sdk"
 import { useRoute } from "../../context/route"
 import { useProject } from "../../context/project"
+import { unsupportedAttachments } from "../../kilocode/attachment-support" // kilocode_change
 import { useSync } from "../../context/sync"
 import { useNudge } from "@/kilocode/cli/cmd/tui/context/nudge" // kilocode_change
 import { useEvent } from "../../context/event"
@@ -1105,6 +1106,21 @@ export function Prompt(props: PromptProps) {
       void promptModelWarning()
       return false
     }
+    // kilocode_change start - block attachments the selected model cannot read
+    const capabilities = sync.data.provider.find((item) => item.id === selectedModel.providerID)?.models[
+      selectedModel.modelID
+    ]?.capabilities?.input
+    const unsupported = unsupportedAttachments(store.prompt.parts, capabilities)
+    if (unsupported.length > 0) {
+      const names = unsupported.map((item) => item.filename ?? item.modality).join(", ")
+      toast.show({
+        title: "Attachment not supported",
+        message: `${selectedModel.modelID} does not support ${[...new Set(unsupported.map((item) => item.modality))].join("/")} input (${names}). Switch to a model that supports it or remove the attachment.`,
+        variant: "error",
+      })
+      return false
+    }
+    // kilocode_change end
 
     const workspaceSession = props.sessionID ? sync.session.get(props.sessionID) : undefined
     const workspaceID = workspaceSession?.workspaceID
