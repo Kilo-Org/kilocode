@@ -78,7 +78,7 @@ export function translate(
 ): string {
   const lang = resolveLocale(locale)
   const translations: Record<string, string> = { ...en, ...bundles[lang], ...caller[lang] }
-  let text = translations[key] ?? key
+  let text = translations[key] ?? caller.en[key] ?? key
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
       text = text.replaceAll(`{{${k}}}`, String(v))
