@@ -61,7 +61,7 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
 
     /**
      * Pull-request state per managed worktree. Answers from a short-lived backend cache so a poll
-     * and several panels can share one `gh` fan-out.
+     * and panels with the same [excluded] set can share one `gh` fan-out.
      *
      * [maxAge] caps how old that cached answer may be, in milliseconds; null accepts the backend's
      * full TTL and 0 forces a fresh lookup. An age rather than a `fresh` flag because it composes:
@@ -74,7 +74,9 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
      * so it may have opened a pull request — this is what `maxAge = 0` would otherwise cost: the
      * named paths re-run their lookup while all the others still answer from cache, instead of the
      * whole repository paying a fresh `gh` fan-out to refresh one row.
-     * [excluded] names hidden worktrees that must not be checked or returned.
+     * [excluded] names hidden worktrees that must not be checked or returned. Only the most recent
+     * list is kept per directory to bound the cache as visibility changes; individual worktrees
+     * can still reuse their resolver entries when the exclusion set changes.
      */
     suspend fun prStatus(
         directory: String,

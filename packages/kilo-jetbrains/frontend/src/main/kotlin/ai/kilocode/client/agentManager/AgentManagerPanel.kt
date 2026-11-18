@@ -282,6 +282,7 @@ class AgentManagerPanel(
         // A row that scrolls or gets selected is no longer under the balloon that points at it, and a
         // busy list or a rebuilt model has already dropped the hover the popup was opened from.
         tree.onScroll = { dismissTransient() }
+        tree.onExpand = { project?.service<WorktreeStatusService>()?.visibilityChanged() }
         // Drag gestures move the pointer across rows without the normal hover path, and any transient
         // window that stays up can cache the tree's accessibility view against a window that is about
         // to be disposed. Clear both ends of the drag, then let the next real pointer move restore it.

@@ -148,8 +148,11 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
     fun drop() {
         val collapsed = opened.toSet()
         opened.clear()
-        preview?.let { state ->
-            preview = null
+        val state = preview
+        preview = null
+        // Restore the user's layout before the move callback synchronizes the selected row.
+        if (collapsed.isNotEmpty()) view.preview(collapsed) {}
+        state?.let {
             val parent = parent(state.parent) ?: return@let
             val siblings = siblings(parent)
             val index = siblings.indexOfFirst { it.key == state.key }
@@ -159,8 +162,6 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
                     state.parent, state.previous))
             }
         }
-        // Expansion was only for the drag preview, not a change to the user's layout.
-        if (collapsed.isNotEmpty()) view.preview(collapsed) {}
     }
 
     @RequiresEdt

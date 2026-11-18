@@ -71,12 +71,12 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         stamp.setBounds(0, 0, cell.width, cell.height)
         activeLayout(stamp)
         paintLocal(g, stamp, cell)
+        rail(g, entry, frame)
         if (entry.allowsChildren && state.selected) {
             val box = area(entry, frame)
             g.color = UIUtil.getTreeBackground(true, true)
             g.fillRect(box.x, box.y + box.height - 1, box.width, 1)
         }
-        rail(g, entry, frame)
         val lead = !SystemInfo.isMac && !state.selected && view.leadSelectionPath?.lastPathComponent === entry
         if (lead && RenderingUtil.isFocused(view) && g is Graphics2D) {
             val bounds = area(entry, frame)

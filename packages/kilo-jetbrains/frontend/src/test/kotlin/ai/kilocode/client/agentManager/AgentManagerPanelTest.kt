@@ -1090,9 +1090,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
         assertEquals(listOf(item.path), rpc.prExcluded.last())
 
+        val before = rpc.prCalls.size
         edt { view.expandPath(path) }
-        timers.advanceBy(120_000)
+        timers.advanceBy(30_000)
         flush()
+        assertEquals(before + 1, rpc.prCalls.size)
         assertEmpty(rpc.prExcluded.last())
     }
 

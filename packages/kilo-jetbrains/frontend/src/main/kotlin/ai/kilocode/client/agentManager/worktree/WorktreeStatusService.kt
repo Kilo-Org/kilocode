@@ -67,6 +67,8 @@ class WorktreeStatusService internal constructor(
     /** Worktree activity as of the previous snapshot, so an agent that stopped can be spotted. */
     private var kinds = emptyMap<String, SessionActivityKind>()
     private val exclusions = mutableListOf<() -> Set<String>>()
+    private var hidden = emptySet<String>()
+    private var deferred = emptySet<String>()
     private var refs = 0
     private var lastPr = 0L
     private var github = KiloPluginSettings.getGithub()
@@ -137,6 +139,7 @@ class WorktreeStatusService internal constructor(
      * [fresh] names worktrees whose cached answers the backend must refuse whatever [maxAge] says,
      * for a caller that learned something about those rows in particular. See [stopped].
      */
+    @RequiresEdt(generateAssertion = false)
     fun refreshPr(force: Boolean = false, maxAge: Long? = null, fresh: List<String> = emptyList()) {
         if (project.isDisposed || refs == 0 || !github) return
         // One lookup at a time, whatever the caller asked for. [force] bypasses the throttle, so
@@ -159,6 +162,12 @@ class WorktreeStatusService internal constructor(
         }
         lastPr = now
         loadPr(maxAge, fresh)
+    }
+
+    /** Refresh a newly visible worktree without bypassing the polling throttle. */
+    @RequiresEdt(generateAssertion = false)
+    fun visibilityChanged() {
+        if (hidden.isNotEmpty() && (hidden - excluded()).isNotEmpty()) hold(null)
     }
 
     /**
@@ -364,6 +373,8 @@ class WorktreeStatusService internal constructor(
         prTimer = null
         trail = null
         want = null
+        hidden = emptySet()
+        deferred = emptySet()
         prJob = null
         statsJob = null
         dirtyJob = null
@@ -389,6 +400,8 @@ class WorktreeStatusService internal constructor(
             trail?.stop()
             trail = null
             want = null
+            hidden = emptySet()
+            deferred = emptySet()
             prFlow.value = emptyMap()
             ghFlow.value = GhAvailability.OK
             return
@@ -438,10 +451,17 @@ class WorktreeStatusService internal constructor(
         }
     }
 
-    private fun loadPr(maxAge: Long? = null, fresh: List<String> = emptyList()) {
-        // Take the visibility snapshot on the EDT, before starting the background lookup.
-        val excluded = exclusions.map { it() }.reduceOrNull { left, right -> left intersect right }.orEmpty()
-        val paths = fresh.filterNot(excluded::contains)
+    @RequiresEdt(generateAssertion = false)
+    private fun excluded(): Set<String> = exclusions.map { it() }.reduceOrNull { left, right -> left intersect right }.orEmpty()
+
+    @RequiresEdt(generateAssertion = false)
+    private fun loadPr(maxAge: Long?, fresh: List<String>) {
+        val excluded = excluded()
+        hidden = excluded
+        // Preserve invalidations that the backend cannot spend while their rows are hidden.
+        val pending = deferred + fresh.map(::normalizeWorktreePath)
+        val paths = pending.filterNot(excluded::contains)
+        deferred = pending intersect excluded
         val gen = ++generation
         val job = cs.launch {
             val dir = project.kiloRoot() ?: return@launch
@@ -462,9 +482,11 @@ class WorktreeStatusService internal constructor(
                     // why it stopped moving. Publishing the empty list would instead blank every badge
                     // for up to an hour over something the user cannot act on. A gh that timed out is
                     // in exactly the same position: it answered nothing about these pull requests.
-                    if (dto.availability != GhAvailability.RATE_LIMITED && dto.availability != GhAvailability.TIMEOUT) {
-                        prFlow.value = prFlow.value.filterKeys(excluded::contains) +
+                    when (dto.availability) {
+                        GhAvailability.RATE_LIMITED, GhAvailability.TIMEOUT -> Unit
+                        GhAvailability.OK -> prFlow.value = prFlow.value.filterKeys(excluded::contains) +
                             dto.items.associateBy { normalizeWorktreePath(it.path) }
+                        else -> prFlow.value = emptyMap()
                     }
                     ghFlow.value = dto.availability
                     service<GhStatusCoordinator>().report(project, dto.availability)

@@ -132,6 +132,8 @@ internal class ActiveTree(
     /** Called when the tree scrolls or a row changes position under an anchored popup. */
     var onScroll: (() -> Unit)? = null
 
+    var onExpand: (() -> Unit)? = null
+
     /** Called when a row drag starts, before the native drag loop takes over. */
     var onDragStart: (() -> Unit)? = null
 
@@ -141,6 +143,7 @@ internal class ActiveTree(
     init {
         view.onSelect = actions.select
         view.onGeometry = { onScroll?.invoke() }
+        view.onExpand = { onExpand?.invoke() }
         view.onDragStart = { onDragStart?.invoke() }
         view.onDragEnd = { onDragEnd?.invoke() }
         scroll.verticalScrollBar.addAdjustmentListener { view.geometry() }
@@ -292,6 +295,7 @@ internal class ActiveTreeView(
     private val heights = HashMap<String, Pair<ActiveItem, Int>>()
     internal var onSelect: (() -> Unit)? = null
     internal var onGeometry: (() -> Unit)? = null
+    internal var onExpand: (() -> Unit)? = null
     internal var onDragStart: (() -> Unit)? = null
     internal var onDragEnd: (() -> Unit)? = null
 
@@ -348,7 +352,10 @@ internal class ActiveTreeView(
             onSelect?.invoke()
         }
         addTreeExpansionListener(object : javax.swing.event.TreeExpansionListener {
-            override fun treeExpanded(event: javax.swing.event.TreeExpansionEvent) = changed()
+            override fun treeExpanded(event: javax.swing.event.TreeExpansionEvent) {
+                changed()
+                if (!restoring) onExpand?.invoke()
+            }
             override fun treeCollapsed(event: javax.swing.event.TreeExpansionEvent) {
                 if (!restoring) cancelDrag()
                 changed()
