@@ -11,8 +11,7 @@ async function maskBoxes(page: Page, frames: Frame[], fullPage: boolean) {
   for (const frame of frames) {
     const handle = await frame.frameElement().catch(() => null)
     if (!handle) throw new Error("a withheld frame could not be measured")
-    const box = await handle.boundingBox()
-    handle.dispose()
+    const box = await handle.boundingBox().finally(() => handle.dispose())
     if (!box) continue // a frame with no box paints no pixels
     boxes.push({ x: box.x + scroll.x, y: box.y + scroll.y, width: box.width, height: box.height })
   }

@@ -531,6 +531,30 @@ describe("a screenshot this backend allows", () => {
 })
 
 describe("a refused screenshot", () => {
+  test("disposes the frame element when measuring it fails without publishing the capture", async () => {
+    const dispose = mock(async () => {})
+    state.pages[0].children = [
+      Object.assign(new Page("b", "https://pay.example.net/"), {
+        async frameElement() {
+          return {
+            async boundingBox() {
+              throw new Error("Frame detached during measurement")
+            },
+            dispose,
+          }
+        },
+      }),
+    ]
+    const backend = await browser()
+    const result = await backend.callTool("browser_take_screenshot", { filename: "detached-frame.png" }, context)
+    expect(result.isError).toBe(true)
+    expect(result.content).toEqual([
+      { type: "text", text: "The screenshot is unavailable: part of the page is withheld." },
+    ])
+    expect(await fs.readdir(outputDirectory())).not.toContain("detached-frame.png")
+    expect(dispose).toHaveBeenCalledTimes(1)
+  })
+
   test("does not delete an existing file at the requested name", async () => {
     const keep = path.join(outputDirectory(), "keep.png")
     await fs.mkdir(outputDirectory(), { recursive: true })
