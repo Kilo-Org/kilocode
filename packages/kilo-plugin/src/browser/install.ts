@@ -74,12 +74,16 @@ export async function installArchive(input: {
   archive: string
   extract: (zip: string, options: { dir: string }) => Promise<void>
   executable: string
+  /** The move into place; a test can make it fail to prove the rollback. */
+  swap?: (from: string, to: string) => Promise<void>
 }): Promise<string> {
   const staging = `${input.directory}.staging-${process.pid}`
   const backup = `${input.directory}.backup-${process.pid}`
   const relative = path.relative(input.directory, input.executable)
   await fs.rm(staging, { recursive: true, force: true })
   await fs.mkdir(staging, { recursive: true })
+  // A backup from an install that was killed keeps its browser; the next install starts from a clean name.
+  await fs.rm(backup, { recursive: true, force: true }).catch(() => undefined)
   try {
     await input.extract(input.archive, { dir: staging })
     const staged = path.join(staging, relative)
@@ -88,10 +92,19 @@ export async function installArchive(input: {
     await fs.chmod(staged, 0o755)
     // The marker is what playwright-core's own installer checks before it downloads again.
     await fs.writeFile(path.join(staging, "INSTALLATION_COMPLETE"), "")
-    await fs.rm(backup, { recursive: true, force: true })
-    await fs.rename(input.directory, backup).catch(() => undefined)
-    await fs.rename(staging, input.directory)
-    await fs.rm(backup, { recursive: true, force: true })
+    // Move the old install aside, put the verified one in place, and only then drop the old copy. If the move into
+    // place fails, the old directory is restored and the real error is what the caller sees.
+    const moved = await fs.rename(input.directory, backup).then(
+      () => true,
+      () => false,
+    )
+    try {
+      await (input.swap ?? fs.rename)(staging, input.directory)
+    } catch (error) {
+      if (moved) await fs.rename(backup, input.directory).catch(() => undefined)
+      throw error
+    }
+    if (moved) await fs.rm(backup, { recursive: true, force: true })
     return path.join(input.directory, relative)
   } finally {
     await fs.rm(staging, { recursive: true, force: true })

@@ -47,29 +47,39 @@ function page(main: Fake): Page {
 }
 
 describe("screenshot retention", () => {
-  test("keeps a day and two hundred files, and never a user-named one", async () => {
+  test("retains only the backend's own files, and sweeps stale captures", async () => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), "shots-"))
+    const auto = path.join(directory, ".auto")
+    await fs.mkdir(auto, { recursive: true })
     const now = Date.now()
     for (let index = 0; index < 210; index += 1) {
-      const file = path.join(directory, `page-2026-01-01T00-00-00-000Z-${String(index).padStart(3, "0")}.png`)
+      const file = path.join(auto, `shot-${String(index).padStart(3, "0")}.png`)
       await fs.writeFile(file, "x")
-      // Newest first by index: index 0 is the newest.
+      // Index 0 is the newest.
       await fs.utimes(file, new Date(now - index * 1000), new Date(now - index * 1000))
     }
-    const old = path.join(directory, "page-ancient.png")
-    await fs.writeFile(old, "x")
-    await fs.utimes(old, new Date(now - 25 * 60 * 60 * 1000), new Date(now - 25 * 60 * 60 * 1000))
-    const user = path.join(directory, "my-screenshot.png")
+    const ancient = path.join(auto, "shot-ancient.png")
+    await fs.writeFile(ancient, "x")
+    await fs.utimes(ancient, new Date(now - 25 * 60 * 60 * 1000), new Date(now - 25 * 60 * 60 * 1000))
+    // A model-chosen name looks like an auto name but is not this backend's to delete.
+    const user = path.join(directory, "page-login.png")
     await fs.writeFile(user, "keep")
     await fs.utimes(user, new Date(now - 25 * 60 * 60 * 1000), new Date(now - 25 * 60 * 60 * 1000))
+    // A capture from a crashed call is swept; one from a running call is left alone.
+    const stale = path.join(directory, ".mcp-stale.png")
+    const live = path.join(directory, ".mcp-live.png")
+    await fs.writeFile(stale, "x")
+    await fs.writeFile(live, "x")
+    await fs.utimes(stale, new Date(now - 10 * 60 * 1000), new Date(now - 10 * 60 * 1000))
     await retainScreenshots(directory, now)
-    const left = await fs.readdir(directory)
-    expect(left.filter((name) => /^page-/.test(name)).length).toBe(200)
-    expect(left).toContain("page-2026-01-01T00-00-00-000Z-000.png")
-    expect(left).not.toContain("page-2026-01-01T00-00-00-000Z-209.png")
-    expect(left).not.toContain("page-ancient.png")
-    // A name the user chose is never the backend's to delete.
-    expect(left).toContain("my-screenshot.png")
+    const autoLeft = await fs.readdir(auto)
+    expect(autoLeft.filter((name) => name.startsWith("shot-")).length).toBe(200)
+    expect(autoLeft).toContain("shot-000.png")
+    expect(autoLeft).not.toContain("shot-209.png")
+    expect(autoLeft).not.toContain("shot-ancient.png")
+    expect(await fs.readdir(directory)).toContain("page-login.png")
+    expect(await fs.stat(stale).catch(() => null)).toBeNull()
+    expect((await fs.stat(live).catch(() => null))?.isFile()).toBe(true)
   })
 })
 

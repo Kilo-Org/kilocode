@@ -40,6 +40,11 @@ const simple = `<!doctype html>
     document.getElementById("go").addEventListener("click", () => {
       document.getElementById("status").textContent = "clicked"
     })
+    // The fixture records what reaches the password field, so a test can prove a rejected fill never landed.
+    const pw = document.getElementById("pw")
+    const send = () => fetch("/__record", { method: "POST", body: pw.value })
+    pw.addEventListener("input", send)
+    pw.addEventListener("change", send)
   </script>
 </body></html>`
 
@@ -50,11 +55,18 @@ const framed = `<!doctype html>
   <h1 style="position:fixed;left:400px;top:0">Browser E2E</h1>
 </body></html>`
 
+/** Every value the fixture page reported from its password field. */
+const recorded: string[] = []
+
 let page = simple
 const fixture = Bun.serve({
   hostname: "127.0.0.1",
   port: 0,
-  fetch(request) {
+  async fetch(request) {
+    if (new URL(request.url).pathname === "/__record") {
+      recorded.push(await request.text().catch(() => ""))
+      return new Response(null, { status: 204 })
+    }
     if (new URL(request.url).pathname === "/download") {
       return new Response("report-body", {
         headers: {
@@ -399,6 +411,7 @@ async function run(settings: { observation?: string; allowSensitive?: boolean; r
   const root = process.env.E2E_HOME ?? (await fs.mkdtemp(path.join(os.tmpdir(), "browser-perm-")))
   await fs.mkdir(path.join(root, "data"), { recursive: true })
   record.steps = []
+  recorded.length = 0
   const output = path.join(root, "data", "kilo2", "browser", "output")
   await fs.rm(output, { recursive: true, force: true }).catch(() => undefined)
   const child = Bun.spawn(
@@ -534,15 +547,15 @@ async function main() {
       `the fill was not rejected:\n${typed.slice(0, 300)}`,
     )
     // The rejected step never reached the page: the read-back is empty, or is itself refused on that page.
-    // The read-back is empty, or is itself refused on this page; either way the rejected fill never landed.
-    expect(
-      /""/.test(value) || value.includes("cannot ask the user for permission"),
-      `the password field was written after the rejection:\n${value.slice(0, 300)}`,
-    )
-    // The same read-back observes a written value when the step is allowed, so the assertion above can fail.
+    // The fixture never saw a value: the rejected fill did not reach the page.
+    const rejectedValue = /""/.test(value) || value.includes("cannot ask the user for permission")
+    expect(rejectedValue, `the read-back is unexpected:\n${value.slice(0, 300)}`)
+    expect(!recorded.includes("hunter2"), `the fixture recorded the rejected fill: ${JSON.stringify(recorded)}`)
+    // The fixture does record a written value when the step is allowed, so the assertion above can fail.
     const allowed = await run({ auto: true, allowSensitive: true })
     const written = allowed.last.results[3] ?? ""
     expect(/"hunter2"/.test(written), `the read-back cannot see a written value:\n${written.slice(0, 300)}`)
+    expect(recorded.includes("hunter2"), `the fixture did not record the allowed fill: ${JSON.stringify(recorded)}`)
     return output
   }
 
@@ -581,6 +594,7 @@ async function main() {
     // The read-only tab list still shows the fixture: the refused call never opened the file.
     expect(back.includes(fixture.url.origin), `the refused call moved the tab:\n${back.slice(0, 300)}`)
     expect(!back.includes("passwd"), `the refused call opened the file:\n${back.slice(0, 300)}`)
+    expect(!back.includes("file:"), `a refused file tab is listed:\n${back.slice(0, 300)}`)
     return output
   }
 

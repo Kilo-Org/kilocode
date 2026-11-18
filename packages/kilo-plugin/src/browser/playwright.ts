@@ -402,15 +402,22 @@ async function sensitiveFocus(page: Page): Promise<boolean> {
   return false
 }
 
+/** Where this backend keeps the screenshots it names itself; a user name is never written here. */
+export function autoDirectory(directory = outputDirectory()) {
+  return path.join(directory, ".auto")
+}
+
 /**
- * Bound the screenshot files in the output directory: the backend's own `page-*` names and the MCP's. Anything older
- * than a day goes, and the newest 200 are kept. A name the user chose is never touched.
+ * Bound the files this backend creates and sweep abandoned captures: only `output/.auto/` is retained (newest 200, and
+ * nothing older than a day), and a `.mcp-<uuid>.png` capture left behind by a crash older than five minutes is
+ * removed. A name the user chose, or the MCP's own `page-*` files, are not this backend's to delete.
  */
 export async function retainScreenshots(directory = outputDirectory(), now = Date.now(), limit = 200) {
-  const names = (await fs.readdir(directory).catch(() => [] as string[])).filter((name) => /^page-.*\.png$/.test(name))
+  const auto = autoDirectory(directory)
+  const names = await fs.readdir(auto).catch(() => [] as string[])
   const files: { path: string; mtime: number }[] = []
   for (const name of names) {
-    const file = path.join(directory, name)
+    const file = path.join(auto, name)
     const stat = await fs.stat(file).catch(() => undefined)
     if (stat?.isFile()) files.push({ path: file, mtime: stat.mtimeMs })
   }
@@ -425,11 +432,20 @@ export async function retainScreenshots(directory = outputDirectory(), now = Dat
     if (keep.has(file.path)) continue
     await fs.unlink(file.path).catch(() => undefined)
   }
+  // A capture is only alive during its call; one this old was left by a crash.
+  const captures = (await fs.readdir(directory).catch(() => [] as string[])).filter((name) =>
+    /^\.mcp-.*\.png$/.test(name),
+  )
+  for (const name of captures) {
+    const file = path.join(directory, name)
+    const stat = await fs.stat(file).catch(() => undefined)
+    if (stat?.isFile() && stat.mtimeMs < now - 5 * 60 * 1000) await fs.unlink(file).catch(() => undefined)
+  }
 }
 
-/** The MCP's screenshot file name, `page-<timestamp>.png`. */
+/** The name of a screenshot this backend writes itself, under `output/.auto/`. */
 function autoShotName() {
-  return `page-${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 6)}.png`
+  return `shot-${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 6)}.png`
 }
 
 /** Frames whose origin has no `read` grant, outermost first; a withheld frame hides its subtree. */
@@ -983,7 +999,7 @@ class PlaywrightBackend implements BrowserBackend {
     // image the backend holds, so masking is applied to the file as well.
     // The caller's name when given, otherwise a name in the MCP's own style: an allowed screenshot always leaves a
     // file that the result can link to.
-    const save = shot ? (screenshotPath(name, args) ?? path.join(outputDirectory(), autoShotName())) : undefined
+    const save = shot ? (screenshotPath(name, args) ?? path.join(autoDirectory(), autoShotName())) : undefined
     // The MCP never writes a result file: it would hold the withheld frames' content unfiltered. The backend writes
     // the file from the filtered text instead, so the name is removed from the arguments the MCP sees.
     const file = shot ? undefined : outputFile(name, args)
@@ -1135,6 +1151,7 @@ class PlaywrightBackend implements BrowserBackend {
       if (save && images[0]) {
         await writeConfined(save, Buffer.from(images[0].data, "base64"))
         written.push(save)
+        if (!screenshotPath(name, args)) await retainScreenshots()
       }
       const link = save ? `- [Screenshot](${save})` : undefined
       return {
@@ -1156,6 +1173,8 @@ class PlaywrightBackend implements BrowserBackend {
       await writeConfined(save, Buffer.from(images[0].data, "base64"))
       written.push(save)
       viewed = `${viewed}\n- [Screenshot](${save})`
+      // A long-lived connection still respects the cap: one directory read per persisted screenshot.
+      if (!screenshotPath(name, args)) await retainScreenshots()
     }
     return {
       content: [{ type: "text", text: viewed }, ...images],

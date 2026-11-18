@@ -47,6 +47,31 @@ describe("installing a browser archive", () => {
     expect(await fs.readFile(binary, "utf8")).toBe("old")
   })
 
+  test("a failed move into place restores the old browser and reports the real error", async () => {
+    const { base, directory, binary } = await fixture()
+    const archive = path.join(base, "chromium.zip")
+    await fs.writeFile(archive, "zip")
+    const failure = await installArchive({
+      directory,
+      archive,
+      executable: binary,
+      extract: async (_zip, options) => {
+        const staged = path.join(options.dir, "chrome-linux64", "chrome")
+        await fs.mkdir(path.dirname(staged), { recursive: true })
+        await fs.writeFile(staged, "new")
+      },
+      swap: async () => {
+        throw new Error("rename failed")
+      },
+    }).catch((error: unknown) => error)
+    expect(failure instanceof Error ? failure.message : String(failure)).toContain("rename failed")
+    // The old install is back where it was, and no backup directory is left behind.
+    expect(await fs.readFile(binary, "utf8")).toBe("old")
+    expect((await fs.readdir(base)).filter((name) => name.includes(".backup-") || name.includes(".staging-"))).toEqual(
+      [],
+    )
+  })
+
   test("a complete archive replaces the old directory atomically", async () => {
     const { base, directory, binary } = await fixture()
     const archive = path.join(base, "chromium.zip")
