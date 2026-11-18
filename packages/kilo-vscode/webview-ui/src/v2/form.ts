@@ -2,6 +2,8 @@ import type { FormAnswer, FormField, FormIntegerField, FormNumberField, FormValu
 
 export type Draft = Record<string, FormValue | undefined>
 
+type ValidatedValue = { value: FormValue | undefined } | { error: string }
+
 export function formAnswer(fields: FormField[], values: Draft, custom: Record<string, string> = {}) {
   const answer: FormAnswer = {}
   const visible: FormField[] = []
@@ -12,13 +14,12 @@ export function formAnswer(fields: FormField[], values: Draft, custom: Record<st
     if (visibility === "inactive") return
     if (visibility === "visible") visible.push(field)
 
-    const value = normalizeValue(field, values, custom)
-    const error = validateValue(field, value)
-    if (error !== undefined) {
-      errors.push(error)
+    const result = validateValue(field, normalizeValue(field, values, custom))
+    if ("error" in result) {
+      errors.push(result.error)
       return
     }
-    if (value !== undefined) answer[field.key] = value
+    if (result.value !== undefined) answer[field.key] = result.value
   })
   return { answer, visible, errors }
 }
@@ -49,33 +50,34 @@ function normalizeValue(field: FormField, values: Draft, custom: Record<string, 
         ? extra
         : value
   if ((typeof result === "string" && !result.trim()) || (Array.isArray(result) && !result.length)) return undefined
-  if (result !== undefined && (field.type === "number" || field.type === "integer")) return Number(result)
   return result
 }
 
-function validateValue(field: FormField, value: FormValue | undefined): string | undefined {
+function validateValue(field: FormField, value: FormValue | undefined): ValidatedValue {
   if (field.type === "external") {
     // The server requires exactly `true` to acknowledge an external link.
-    return value === true ? undefined : `${field.title || field.key}: open the link first.`
+    return value === true ? { value } : { error: `${field.title || field.key}: open the link first.` }
   }
-  if (value === undefined) return field.required ? `${field.title || field.key} is required.` : undefined
-  if (typeof value === "number" && (field.type === "number" || field.type === "integer"))
-    return validateNumber(field, value)
+  if (value === undefined) return field.required ? { error: `${field.title || field.key} is required.` } : { value }
+  if (field.type === "number" || field.type === "integer") return validateNumber(field, value)
   if (
     field.type === "multiselect" &&
     Array.isArray(value) &&
     ((field.minItems !== undefined && value.length < field.minItems) ||
       (field.maxItems !== undefined && value.length > field.maxItems))
   )
-    return `${field.title || field.key} has an invalid number of selections.`
+    return { error: `${field.title || field.key} has an invalid number of selections.` }
+  return { value }
 }
 
-function validateNumber(field: FormNumberField | FormIntegerField, value: number) {
-  if (!Number.isFinite(value) || (field.type === "integer" && !Number.isInteger(value)))
-    return `${field.title || field.key} must be ${field.type === "integer" ? "an integer" : "a number"}.`
+function validateNumber(field: FormNumberField | FormIntegerField, value: FormValue): ValidatedValue {
+  const number = Number(value)
+  if (!Number.isFinite(number) || (field.type === "integer" && !Number.isInteger(number)))
+    return { error: `${field.title || field.key} must be ${field.type === "integer" ? "an integer" : "a number"}.` }
   if (
-    (field.minimum !== undefined && value < Number(field.minimum)) ||
-    (field.maximum !== undefined && value > Number(field.maximum))
+    (field.minimum !== undefined && number < Number(field.minimum)) ||
+    (field.maximum !== undefined && number > Number(field.maximum))
   )
-    return `${field.title || field.key} is outside the allowed range.`
+    return { error: `${field.title || field.key} is outside the allowed range.` }
+  return { value: number }
 }
