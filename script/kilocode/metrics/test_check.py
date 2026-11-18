@@ -74,6 +74,13 @@ class MetricGate(unittest.TestCase):
         )
         self.assertIn("complexity 21 (limit 20)", self.gate(1))
 
+    def test_unicode_separators_in_string_do_not_move_declaration(self):
+        self.source.write_text(
+            'const prefix = "a\u2028b\u2029c"\n' + function("legacy", 22),
+            encoding="utf-8",
+        )
+        self.gate(0)
+
     def test_file_growth_and_excluded_sources(self):
         large = "// line\n" * 1001
         for name in ("old.test.ts", "copy.ts", "contract.generated.ts"):

@@ -4,6 +4,7 @@ import difflib
 import json
 from pathlib import Path
 import re
+import os
 import subprocess
 import sys
 import tempfile
@@ -28,6 +29,12 @@ def product(path):
     )
 
 
+def physical_lines(text):
+    # Oxlint numbers LF-delimited lines. Unicode separators inside literals are content.
+    lines = text.replace("\r\n", "\n").split("\n")
+    return lines[:-1] if lines[-1] == "" else lines
+
+
 def measure(folder, sources, binary):
     if not sources:
         return {}
@@ -36,7 +43,9 @@ def measure(folder, sources, binary):
         file = folder / name
         file.parent.mkdir(parents=True, exist_ok=True)
         # Inline disables belong to the project lint run, not the independent metric.
-        file.write_text(re.sub(r"(?:eslint|oxlint)-disable", "metric-disable", text))
+        file.write_bytes(
+            re.sub(r"(?:eslint|oxlint)-disable", "metric-disable", text).encode()
+        )
     config = {
         "categories": {"correctness": "off"},
         "rules": {"complexity": ["error", 20]},
@@ -46,7 +55,7 @@ def measure(folder, sources, binary):
         [binary, "-c", "config.json", "-f", "json", "--no-ignore", "packages"],
         cwd=folder,
         stdout=subprocess.PIPE,
-        text=True,
+        encoding="utf-8",
     )
     report = json.loads(result.stdout)
     if report["number_of_files"] != len(sources) or result.returncode not in (0, 1):
@@ -60,7 +69,7 @@ def measure(folder, sources, binary):
         if not match or finding.get("code") != "eslint(complexity)":
             raise RuntimeError(f"{finding['filename']}: {finding['message']}")
         span = finding["labels"][0]["span"]
-        scores.setdefault(finding["filename"], {})[
+        scores.setdefault(Path(finding["filename"]).as_posix(), {})[
             span["line"], span["column"], match[1]
         ] = int(match[2])
     return scores
@@ -118,7 +127,7 @@ def check(base, binary):
     for name in names:
         if Path(name).is_symlink():
             raise ValueError(f"Cannot measure symbolic link: {name}")
-        after[name] = Path(name).read_text()
+        after[name] = Path(name).read_bytes().decode()
     with tempfile.TemporaryDirectory() as tmp:
         old = measure(Path(tmp, "before"), before, binary)
         new = measure(Path(tmp, "after"), after, binary)
@@ -127,8 +136,8 @@ def check(base, binary):
         for name in names
         for message in compare(
             name,
-            before.get(name, "").splitlines(),
-            after[name].splitlines(),
+            physical_lines(before.get(name, "")),
+            physical_lines(after[name]),
             old.get(name, {}),
             new.get(name, {}),
         )
@@ -147,4 +156,13 @@ if __name__ == "__main__":
         if len(sys.argv) > 1
         else git("merge-base", "origin/v2", "HEAD").strip()
     )
-    sys.exit(check(base, Path("node_modules/.bin/oxlint").absolute()))
+    launchers = ("oxlint.exe", "oxlint.cmd") if os.name == "nt" else ("oxlint",)
+    bindir = Path("node_modules/.bin").absolute()
+    binary = next(
+        (bindir / name for name in launchers if (bindir / name).is_file()), None
+    )
+    if not binary:
+        sys.exit(
+            "Missing local Oxlint launcher. Run bun install from the repository root."
+        )
+    sys.exit(check(base, binary))
