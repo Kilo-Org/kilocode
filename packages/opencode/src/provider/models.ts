@@ -19,6 +19,7 @@ export type CatalogModelStatus = Core.CatalogModelStatus
 
 export interface Interface extends Core.Interface {
   readonly getFailure: ModelCache.Interface["getFailure"]
+  readonly discover: ModelCache.Interface["discover"]
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ModelsDev") {}
@@ -103,7 +104,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
         return providers
       })
 
-      return Service.of({ get, refresh: core.refresh, getFailure: cache.getFailure })
+      return Service.of({ get, refresh: core.refresh, getFailure: cache.getFailure, discover: cache.discover })
     }),
   )
 
