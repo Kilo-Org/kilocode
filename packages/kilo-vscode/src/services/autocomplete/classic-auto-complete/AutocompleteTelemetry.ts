@@ -35,6 +35,9 @@ let transport: AutocompleteTelemetryCapture | undefined
  * Register the telemetry transport that forwards autocomplete events. No
  * transport exists yet; the default capture drops events after the consent
  * check.
+ *
+ * @knipExternal The telemetry service registers this sink once its port lands; that caller is outside this branch's
+ * module graph.
  */
 export function setAutocompleteTelemetrySink(fn: AutocompleteTelemetryCapture | undefined): void {
   transport = fn

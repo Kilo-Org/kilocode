@@ -3,15 +3,6 @@ import { validAutocompleteModel, validAutocompleteProvider } from "../../shared/
 
 export const AUTOCOMPLETE_SECTION = "kilo-code.v2.autocomplete"
 
-/** The keys under `kilo-code.v2.autocomplete`, as the Settings panel writes them. */
-export const AUTOCOMPLETE_SETTING_KEYS = [
-  "enableAutoTrigger",
-  "enableSmartInlineTaskKeybinding",
-  "enableChatAutocomplete",
-  "provider",
-  "model",
-] as const
-
 /**
  * The stored autocomplete settings. Provider and model stay null when unset, so the Settings panel can tell "not set"
  * from an explicit choice of the current default; the runtime resolves null to the default model.

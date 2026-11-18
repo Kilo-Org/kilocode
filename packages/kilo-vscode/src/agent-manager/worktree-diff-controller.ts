@@ -209,25 +209,6 @@ export class WorktreeDiffController {
     await this.controller.requestFile(file)
   }
 
-  /** Resolve the base-branch choices for a context and push them to the webview. */
-  public async postBranches(id: string): Promise<void> {
-    const result = await this.branches(id).catch((err) => {
-      this.ctx.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
-      return undefined
-    })
-    if (!result) return
-    this.ctx.post({
-      type: "agentManager.diffBranches",
-      sessionId: id,
-      branches: result.branches,
-      defaultBranch: result.defaultBranch,
-      autoBase: result.autoBase,
-      currentBase: result.currentBase,
-      isAuto: result.isAuto,
-      currentBranch: result.currentBranch,
-    })
-  }
-
   public start(id: string): void {
     if (this.controller.isPolling && this.controller.currentId === id && this.owner === this.ctx.projectId?.()) return
     this.ctx.log(`Starting diff polling for ${id}`)

@@ -519,6 +519,10 @@ jobs:
         working-directory: packages/kilo-vscode
         run: bun run lint
 
+      - name: Check the VS Code extension for dead code (Knip)
+        working-directory: packages/kilo-vscode
+        run: bun run knip
+
       - name: Test the VS Code extension
         working-directory: packages/kilo-vscode
         run: bun test
