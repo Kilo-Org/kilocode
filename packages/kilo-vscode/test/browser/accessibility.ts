@@ -60,16 +60,24 @@ test("Agent Manager search meets automated WCAG checks and supports keyboard sel
     await dialog.evaluate(async (node) => {
       await Promise.all(node.getAnimations().map((animation) => animation.finished))
     })
-    const violations = await page.evaluate(
+    const findings = await page.evaluate(
       async (options) => {
         const result = await window.axe.run(options.selector, { runOnly: { type: "tag", values: options.rules } })
-        return result.violations.map(
-          (item) => `${item.id}: ${item.help}\n${item.nodes.map((node) => `  ${node.target.join(" ")}`).join("\n")}`,
-        )
+        const format = (item: axe.Result) => {
+          const nodes = item.nodes.map((node) => `  ${node.target.join(" ")}\n${node.failureSummary ?? ""}`)
+          return `${item.id}: ${item.help}\n${nodes.join("\n")}`
+        }
+        return [
+          ...result.violations.map(format),
+          // An unresolved background must not silently bypass the contrast check.
+          ...result.incomplete
+            .filter((item) => item.id === "color-contrast")
+            .map((item) => `Incomplete: ${format(item)}`),
+        ]
       },
       { selector: dialogSelector, rules },
     )
-    expect(violations, violations.join("\n")).toEqual([])
+    expect(findings, findings.join("\n")).toEqual([])
 
     await input.fill("rndr img")
     await dialog.getByText("Render images in diff viewer", { exact: true }).waitFor()

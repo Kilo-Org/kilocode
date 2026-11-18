@@ -14,6 +14,7 @@ for (const [token, value] of Object.entries({
   "editor-foreground": "#ccc",
   foreground: "#ccc",
   descriptionForeground: "#9d9d9d",
+  disabledForeground: "rgba(204, 204, 204, 0.5)",
   "icon-foreground": "#ccc",
   focusBorder: "#0078d4",
   "editorWidget-background": "#202020",
