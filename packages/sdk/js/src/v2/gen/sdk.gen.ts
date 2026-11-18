@@ -506,12 +506,8 @@ import type {
   SyncStealResponses,
   TelemetryCaptureErrors,
   TelemetryCaptureResponses,
-  TelemetryLevelErrors,
-  TelemetryLevelResponses,
   TelemetrySetEnabledErrors,
   TelemetrySetEnabledResponses,
-  TelemetrySetLevelErrors,
-  TelemetrySetLevelResponses,
   TextPartInput,
   ToolIdsErrors,
   ToolIdsResponses,
@@ -10241,7 +10237,7 @@ export class Telemetry extends HeyApiClient {
   /**
    * Set PostHog telemetry enabled state
    *
-   * Update the PostHog client's opt-in/out state at runtime without changing config. Prefer telemetry.level for user-facing settings.
+   * Update the PostHog client's opt-in/out state at runtime. The CLI reads KILO_TELEMETRY_LEVEL once at spawn — this route lets clients (e.g. the VS Code extension) propagate runtime telemetry consent changes.
    */
   public setEnabled<ThrowOnError extends boolean = false>(
     parameters: {
@@ -10275,73 +10271,6 @@ export class Telemetry extends HeyApiClient {
         },
       },
     )
-  }
-
-  /**
-   * Get configured telemetry level
-   *
-   * Read experimental.openTelemetry from the global Kilo config.
-   */
-  public level<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<TelemetryLevelResponses, TelemetryLevelErrors, ThrowOnError>({
-      url: "/telemetry/level",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Set configured telemetry level
-   *
-   * Persist experimental.openTelemetry to the global Kilo config and apply it to the running telemetry client. Clients should call this instead of forcing KILO_TELEMETRY_LEVEL or calling setEnabled directly.
-   */
-  public setLevel<ThrowOnError extends boolean = false>(
-    parameters: {
-      directory?: string
-      workspace?: string
-      enabled: boolean
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "enabled" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<TelemetrySetLevelResponses, TelemetrySetLevelErrors, ThrowOnError>({
-      url: "/telemetry/level",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
   }
 }
 

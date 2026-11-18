@@ -60,7 +60,6 @@ export interface WatcherConfig {
 }
 
 export interface ExperimentalConfig {
-  openTelemetry?: boolean
   batch_tool?: boolean
   image_generation?: boolean
   image_generation_model?: string

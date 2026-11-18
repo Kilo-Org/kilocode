@@ -711,11 +711,6 @@ export interface TelemetryRequest {
   properties?: Record<string, unknown>
 }
 
-export interface SetTelemetryLevelRequest {
-  type: "setTelemetryLevel"
-  enabled: boolean
-}
-
 // Create a new worktree (with auto-created first session)
 export interface CreateWorktreeRequest {
   type: "agentManager.createWorktree"
@@ -1897,7 +1892,6 @@ export type WebviewMessage =
   | ForgetSessionRequest
   | RenameWorktreeRequest
   | TelemetryRequest
-  | SetTelemetryLevelRequest
   | RequestRepoInfoMessage
   | RequestStateMessage
   | RequestProjectsMessage

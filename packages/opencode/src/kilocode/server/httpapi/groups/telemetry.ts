@@ -21,18 +21,9 @@ export const TelemetrySetEnabledPayload = Schema.Struct({
   enabled: Schema.Boolean,
 })
 
-export const TelemetryLevelPayload = Schema.Struct({
-  enabled: Schema.Boolean,
-})
-
-export const TelemetryLevelResult = Schema.Struct({
-  enabled: Schema.Boolean,
-})
-
 export const TelemetryPaths = {
   capture: `${root}/capture`,
   setEnabled: `${root}/setEnabled`,
-  level: `${root}/level`,
 } as const
 
 export const TelemetryApi = HttpApi.make("telemetry")
@@ -61,31 +52,7 @@ export const TelemetryApi = HttpApi.make("telemetry")
             identifier: "telemetry.setEnabled",
             summary: "Set PostHog telemetry enabled state",
             description:
-              "Update the PostHog client's opt-in/out state at runtime without changing config. Prefer telemetry.level for user-facing settings.",
-          }),
-        ),
-        HttpApiEndpoint.get("level", TelemetryPaths.level, {
-          query: WorkspaceRoutingQuery,
-          success: described(TelemetryLevelResult, "Configured telemetry level"),
-          error: HttpApiError.BadRequest,
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "telemetry.level",
-            summary: "Get configured telemetry level",
-            description: "Read experimental.openTelemetry from the global Kilo config.",
-          }),
-        ),
-        HttpApiEndpoint.post("setLevel", TelemetryPaths.level, {
-          query: WorkspaceRoutingQuery,
-          payload: TelemetryLevelPayload,
-          success: described(TelemetryLevelResult, "Telemetry level saved"),
-          error: HttpApiError.BadRequest,
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "telemetry.setLevel",
-            summary: "Set configured telemetry level",
-            description:
-              "Persist experimental.openTelemetry to the global Kilo config and apply it to the running telemetry client. Clients should call this instead of forcing KILO_TELEMETRY_LEVEL or calling setEnabled directly.",
+              "Update the PostHog client's opt-in/out state at runtime. The CLI reads KILO_TELEMETRY_LEVEL once at spawn — this route lets clients (e.g. the VS Code extension) propagate runtime telemetry consent changes.",
           }),
         ),
       )
