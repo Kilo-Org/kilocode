@@ -2,6 +2,7 @@
 // after a window reload. The Settings, Profile and Marketplace panels share this host wiring.
 import { Uri, ViewColumn, window, type Disposable, type ExtensionContext, type WebviewPanel } from "vscode"
 import type { SettingsHandler } from "./agent-manager/project/settings"
+import type { Service } from "./browser-settings"
 import { wire } from "./chat"
 import type { ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
@@ -16,6 +17,8 @@ export function editorPanel(input: {
   handle?: (message: ToHost) => boolean
   onReset?: () => void
   agentManager?: () => SettingsHandler
+  /** The browser tools' settings, for the Settings panel that edits them. */
+  browserSettings?: Service
   /** Extra window globals of the webview bundle. */
   globals?: Record<string, unknown>
 }) {
@@ -64,6 +67,7 @@ export function editorPanel(input: {
       handle: input.handle,
       onReset: input.onReset,
       agentManager: input.agentManager,
+      browserSettings: input.browserSettings,
       globals: input.globals,
     })
     state.post = surface.post

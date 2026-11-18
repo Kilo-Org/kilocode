@@ -200,7 +200,12 @@
         },
         "kilo-code.v2.agentWorkStyle": {
           "type": "string",
-          "enum": ["unset", "human-in-the-loop", "autonomous", "skipped"],
+          "enum": [
+            "unset",
+            "human-in-the-loop",
+            "autonomous",
+            "skipped"
+          ],
           "enumDescriptions": [
             "No work style chosen yet; the onboarding picker is shown for a project with no sessions.",
             "Review first: ask before edits and commands, and expand tool details.",
@@ -384,21 +389,6 @@
           "default": "integrated",
           "scope": "application",
           "description": "Choose where web links open from Kilo chats. Requires the Integrated Browser."
-        },
-        "kilo-code.v2.browserAutomation.enabled": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
-        },
-        "kilo-code.v2.browserAutomation.useSystemChrome": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Use your system's installed Chrome browser instead of downloading a separate Chromium instance."
-        },
-        "kilo-code.v2.browserAutomation.headless": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
         }
       }
     },
