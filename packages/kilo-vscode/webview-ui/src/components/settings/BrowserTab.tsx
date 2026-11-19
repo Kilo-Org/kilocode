@@ -290,7 +290,9 @@ const SavedGrants: Component<{ saved: Saved; onRetry: () => void; onRevoke: (id:
                   {grant.origin}
                 </span>
                 <span data-slot="settings-row-label-subtitle">
-                  {language.t(`settings.browser.origins.${grant.grant}`)}
+                  {grant.tool === "browser"
+                    ? language.t(`settings.browser.origins.${grant.grant}`)
+                    : language.t("ui.permission.toolLabel.browserOpen")}
                 </span>
                 <IconButton
                   variant="ghost"

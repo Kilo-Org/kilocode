@@ -65,8 +65,16 @@ export function extensionRow(
   }
 }
 
-/** One class of one origin a chat saved with "Allow always": a row of the project's `permission` table. */
-export type SavedGrant = { id: string; grant: Grant; origin: string }
+/**
+ * One grant a chat saved with "Allow always": a row of the project's `permission` table. The browser tools save one
+ * class of one origin; the Integrated Browser (`browser_open`) saves `navigate:<origin>`, or `navigate:*` for every site.
+ */
+export type SavedGrant =
+  | { id: string; tool: "browser"; grant: Grant; origin: string }
+  | { id: string; tool: "browser_open"; origin: string }
+
+/** Sort rank inside one origin: the browser tool classes in their table order, then the Integrated Browser. */
+const rank = (grant: SavedGrant) => (grant.tool === "browser" ? GRANTS.indexOf(grant.grant) : GRANTS.length)
 
 /**
  * The browser grants a chat saved for the project, by origin and then in class order. Saved grants are checked after
@@ -74,11 +82,15 @@ export type SavedGrant = { id: string; grant: Grant; origin: string }
  */
 export function savedGrants(rows: readonly PermissionSavedInfo[]): SavedGrant[] {
   return rows
-    .flatMap((row) => {
+    .flatMap((row): SavedGrant[] => {
+      if (row.action === "browser_open") {
+        const parts = parse(row.resource)
+        return parts?.grant === "navigate" ? [{ id: row.id, tool: "browser_open", origin: parts.origin }] : []
+      }
       const parts = row.action === "browser" ? parse(row.resource) : undefined
-      return parts ? [{ id: row.id, ...parts }] : []
+      return parts ? [{ id: row.id, tool: "browser", ...parts }] : []
     })
-    .sort((a, b) => a.origin.localeCompare(b.origin) || GRANTS.indexOf(a.grant) - GRANTS.indexOf(b.grant))
+    .sort((a, b) => a.origin.localeCompare(b.origin) || rank(a) - rank(b))
 }
 
 /**

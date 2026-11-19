@@ -289,7 +289,7 @@ describe("grants saved from a chat", () => {
     time: { created: 0, updated: 0 },
   })
 
-  test("lists the browser grants by origin and class, and nothing else the project saved", () => {
+  test("lists the browser and Integrated Browser grants by origin, and nothing else the project saved", () => {
     expect(
       savedGrants([
         row("psv_1", "browser", "navigate:http://127.0.0.2:48251"),
@@ -298,11 +298,15 @@ describe("grants saved from a chat", () => {
         row("psv_4", "browser_open", "navigate:http://localhost:3000"),
         row("psv_5", "browser", "read:https://example.com"),
         row("psv_6", "browser", "sensitive:https://example.com"),
+        row("psv_7", "browser_open", "navigate:*"),
+        row("psv_8", "browser_open", "read:http://localhost:3000"),
       ]),
     ).toEqual([
-      { id: "psv_3", grant: "read", origin: "http://127.0.0.2:48251" },
-      { id: "psv_1", grant: "navigate", origin: "http://127.0.0.2:48251" },
-      { id: "psv_5", grant: "read", origin: "https://example.com" },
+      { id: "psv_7", tool: "browser_open", origin: "*" },
+      { id: "psv_3", tool: "browser", grant: "read", origin: "http://127.0.0.2:48251" },
+      { id: "psv_1", tool: "browser", grant: "navigate", origin: "http://127.0.0.2:48251" },
+      { id: "psv_4", tool: "browser_open", origin: "http://localhost:3000" },
+      { id: "psv_5", tool: "browser", grant: "read", origin: "https://example.com" },
     ])
   })
 
