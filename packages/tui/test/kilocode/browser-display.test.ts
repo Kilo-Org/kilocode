@@ -1,0 +1,57 @@
+import { describe, expect, test } from "bun:test"
+import { browserDisplayCalls, browserDisplayInput } from "../../src/kilocode/browser-display"
+import { subagentToolLabel } from "../../src/routes/session"
+import { executeCallSummary, primitiveInputSummary } from "../../src/util/tool-display"
+
+const password = "hunter2"
+
+describe("browser tool rows", () => {
+  test("a Code Mode browser.type row masks the typed text", () => {
+    const [call] = browserDisplayCalls([
+      {
+        tool: "browser.type",
+        status: "running" as const,
+        input: { element: "the password field", target: "e2", text: password },
+      },
+    ])
+    expect(executeCallSummary(call!)).toBe("browser.type [element=the password field, target=e2, text=•••]")
+    expect(JSON.stringify(call)).not.toContain(password)
+  })
+
+  test("a direct browser_type call masks the typed text and keeps the rest", () => {
+    const input = browserDisplayInput("browser_type", { target: "e2", text: password, submit: true })
+    expect(primitiveInputSummary(input)).toBe("[target=e2, text=•••, submit=true]")
+  })
+
+  test("browser_fill_form masks typed values and keeps choices", () => {
+    const input = browserDisplayInput("browser.fill_form", {
+      fields: [
+        { name: "Password", type: "textbox", target: "e1", value: password },
+        { name: "Card", type: "combobox", target: "e2", value: "Visa" },
+        { name: "Remember me", type: "checkbox", target: "e3", value: "true" },
+      ],
+    })
+    expect(input.fields).toEqual([
+      { name: "Password", type: "textbox", target: "e1", value: "•••" },
+      { name: "Card", type: "combobox", target: "e2", value: "•••" },
+      { name: "Remember me", type: "checkbox", target: "e3", value: "true" },
+    ])
+  })
+
+  test("every other tool's input is unchanged", () => {
+    const navigate = { url: "https://example.com" }
+    expect(browserDisplayInput("browser.navigate", navigate)).toBe(navigate)
+    const write = { path: "a.txt", text: "kept" }
+    expect(browserDisplayInput("write", write)).toBe(write)
+  })
+
+  test("a subagent's live child line masks the typed text", () => {
+    const part = {
+      type: "tool",
+      id: "call_type",
+      name: "browser_type",
+      state: { status: "running", input: { target: "e2", text: password }, metadata: {} },
+    }
+    expect(subagentToolLabel(part as never)).toBe("Browser_type [target=e2, text=•••]")
+  })
+})

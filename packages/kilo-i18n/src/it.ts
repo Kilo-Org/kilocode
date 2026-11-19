@@ -165,10 +165,25 @@ export const dict = {
   "browser.state.unavailable": "non disponibile",
   "browser.state.readyHint": "Un profilo Chromium gestito da Kilo, avviato alla prima chiamata del browser",
   "browser.state.extensionHint": "Collega l'estensione browser Kilo per usare il tuo browser",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Leggi le pagine su {{origin}}",
+  "browser.permission.act.title": "Fai clic e digita su {{origin}}",
+  "browser.permission.navigate.title": "Apri pagine su {{origin}}",
+  "browser.permission.read.detail":
+    "L'agente può leggere il testo della pagina, le istantanee e le schermate da questa origine.",
+  "browser.permission.act.detail":
+    "L'agente può fare clic, digitare ed eseguire script della pagina su questa origine.",
+  "browser.permission.navigate.detail": "L'agente può aprire pagine su questa origine.",
+  "browser.permission.frame": "Questa origine è un frame all'interno della pagina, non la pagina stessa.",
+  "browser.permission.sensitive.title": "Passaggio sensibile del browser su {{origin}}",
+  "browser.permission.sensitive.reason": "Motivo: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Solo una persona può approvare questo passaggio. L'approvazione copre solo questo passaggio.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Attiva/disattiva approvazione automatica",
   "tui.autoApprove.description": "Approva automaticamente le richieste di autorizzazione per questo processo",
-  "tui.autoApprove.enabled": "Approvazione automatica attivata. Le richieste di autorizzazione vengono approvate automaticamente.",
+  "tui.autoApprove.enabled":
+    "Approvazione automatica attivata. Le richieste di autorizzazione vengono approvate automaticamente.",
   "tui.autoApprove.disabled": "Approvazione automatica disattivata.",
 }

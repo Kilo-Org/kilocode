@@ -168,6 +168,18 @@ export const dict = {
   "browser.state.unavailable": "nicht verfügbar",
   "browser.state.readyHint": "Ein Chromium-Profil von Kilo, gestartet beim ersten Browser-Aufruf",
   "browser.state.extensionHint": "Kilo-Browser-Erweiterung verbinden, um den eigenen Browser zu steuern",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Seiten auf {{origin}} lesen",
+  "browser.permission.act.title": "Auf {{origin}} klicken und tippen",
+  "browser.permission.navigate.title": "Seiten auf {{origin}} öffnen",
+  "browser.permission.read.detail": "Der Agent kann Seitentext, Snapshots und Screenshots von dieser Origin lesen.",
+  "browser.permission.act.detail": "Der Agent kann auf dieser Origin klicken, tippen und Seitenskripte ausführen.",
+  "browser.permission.navigate.detail": "Der Agent kann Seiten auf dieser Origin öffnen.",
+  "browser.permission.frame": "Diese Origin ist ein Frame innerhalb der Seite, nicht die Seite selbst.",
+  "browser.permission.sensitive.title": "Sensibler Browser-Schritt auf {{origin}}",
+  "browser.permission.sensitive.reason": "Grund: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Nur eine Person kann diesen Schritt genehmigen. Die Genehmigung gilt nur für diesen einen Schritt.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Automatische Genehmigung umschalten",

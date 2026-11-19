@@ -166,6 +166,18 @@ export const dict = {
   "browser.state.unavailable": "utilgjengelig",
   "browser.state.readyHint": "En Chromium-profil eid av Kilo, startet ved det første nettleserkallet",
   "browser.state.extensionHint": "Koble til Kilo-nettleserutvidelsen for å bruke din egen nettleser",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Les sider på {{origin}}",
+  "browser.permission.act.title": "Klikk og skriv på {{origin}}",
+  "browser.permission.navigate.title": "Åpne sider på {{origin}}",
+  "browser.permission.read.detail": "Agenten kan lese sidetekst, øyeblikksbilder og skjermbilder fra dette opphavet.",
+  "browser.permission.act.detail": "Agenten kan klikke, skrive og kjøre sideskript på dette opphavet.",
+  "browser.permission.navigate.detail": "Agenten kan åpne sider på dette opphavet.",
+  "browser.permission.frame": "Dette opphavet er en ramme inne i siden, ikke selve siden.",
+  "browser.permission.sensitive.title": "Følsomt nettlesertrinn på {{origin}}",
+  "browser.permission.sensitive.reason": "Årsak: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Bare en person kan godkjenne dette trinnet. Godkjenningen gjelder bare dette ene trinnet.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Veksle automatisk godkjenning",

@@ -167,6 +167,18 @@ export const dict = {
   "browser.state.unavailable": "kullanılamıyor",
   "browser.state.readyHint": "Kilo'ya ait bir Chromium profili; ilk tarayıcı çağrısında başlar",
   "browser.state.extensionHint": "Kendi tarayıcınızı kullanmak için Kilo tarayıcı uzantısını bağlayın",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "{{origin}} üzerindeki sayfaları oku",
+  "browser.permission.act.title": "{{origin}} üzerinde tıkla ve yaz",
+  "browser.permission.navigate.title": "{{origin}} üzerinde sayfa aç",
+  "browser.permission.read.detail":
+    "Ajan bu kaynaktaki sayfa metnini, anlık görüntüleri ve ekran görüntülerini okuyabilir.",
+  "browser.permission.act.detail": "Ajan bu kaynakta tıklayabilir, yazabilir ve sayfa betikleri çalıştırabilir.",
+  "browser.permission.navigate.detail": "Ajan bu kaynakta sayfa açabilir.",
+  "browser.permission.frame": "Bu kaynak sayfanın içindeki bir çerçevedir, sayfanın kendisi değildir.",
+  "browser.permission.sensitive.title": "{{origin}} üzerinde hassas tarayıcı adımı",
+  "browser.permission.sensitive.reason": "Neden: {{reason}}",
+  "browser.permission.sensitive.once": "Bu adımı yalnızca bir kişi onaylayabilir. Onay yalnızca bu tek adımı kapsar.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Otomatik onayı değiştir",

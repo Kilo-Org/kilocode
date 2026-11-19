@@ -167,6 +167,18 @@ export const dict = {
   "browser.state.unavailable": "недоступний",
   "browser.state.readyHint": "Профіль Chromium, що належить Kilo, запускається під час першого виклику браузера",
   "browser.state.extensionHint": "Підключіть розширення браузера Kilo, щоб керувати власним браузером",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Читати сторінки на {{origin}}",
+  "browser.permission.act.title": "Клацати й вводити текст на {{origin}}",
+  "browser.permission.navigate.title": "Відкривати сторінки на {{origin}}",
+  "browser.permission.read.detail": "Агент може читати текст сторінки, знімки та знімки екрана з цього джерела.",
+  "browser.permission.act.detail": "Агент може клацати, вводити текст і запускати скрипти сторінки на цьому джерелі.",
+  "browser.permission.navigate.detail": "Агент може відкривати сторінки на цьому джерелі.",
+  "browser.permission.frame": "Це джерело — фрейм усередині сторінки, а не сама сторінка.",
+  "browser.permission.sensitive.title": "Чутливий крок браузера на {{origin}}",
+  "browser.permission.sensitive.reason": "Причина: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Схвалити цей крок може лише людина. Схвалення стосується лише цього одного кроку.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Перемкнути автосхвалення",

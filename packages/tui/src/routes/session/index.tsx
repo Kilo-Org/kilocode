@@ -137,6 +137,7 @@ import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
 import { RoutedModelBadge, RoutedStep, routedModelLabel } from "../../kilocode/routed-model" // kilocode_change(gateway)
 import { BoardTool, boardTools } from "../../kilocode/board-tool" // kilocode_change(board)
 import { requiresPerson } from "../../kilocode/permission-mode" // kilocode_change(sandbox) - auto-approve leaves human-only requests to the prompt
+import { browserDisplayCalls, browserDisplayInput } from "../../kilocode/browser-display" // kilocode_change(browser) - browser rows never show typed text
 export { InlineToolRow } from "./message-parts"
 export { toolDisplay } from "./message-parts"
 
@@ -2600,7 +2601,10 @@ function ToolPart(props: { part: SessionMessageAssistantTool; images?: boolean }
       return toolDisplayMetadata(props.part.state)
     },
     get input() {
-      return typeof props.part.state.input === "string" ? {} : props.part.state.input
+      // kilocode_change start - browser: mask typed text
+      const input = typeof props.part.state.input === "string" ? {} : props.part.state.input
+      return browserDisplayInput(props.part.name, input)
+      // kilocode_change end
     },
     get output() {
       if (props.part.state.status === "streaming") return undefined
@@ -3432,7 +3436,8 @@ const SUBAGENT_TOOL_OMIT = ["content", "patchText", "newString", "oldString"]
 
 export function subagentToolLabel(part: SessionMessageAssistantTool) {
   if (part.state.status === "streaming") return Locale.titlecase(canonicalToolName(part.name))
-  const args = primitiveInputSummary(part.state.input, SUBAGENT_TOOL_OMIT).replace(/\s+/g, " ")
+  const input = browserDisplayInput(part.name, part.state.input)
+  const args = primitiveInputSummary(input, SUBAGENT_TOOL_OMIT).replace(/\s+/g, " ")
   const label = `${Locale.titlecase(canonicalToolName(part.name))}${args ? ` ${args}` : ""}`
   return Locale.truncate(label, 120)
 }
@@ -3524,7 +3529,7 @@ function Execute(props: ToolProps) {
   const theme = useTheme()
   const dialog = useDialog()
   const isLoading = createMemo(() => props.part.state.status === "streaming" || props.part.state.status === "running")
-  const calls = createMemo(() => executeCalls(props.metadata.toolCalls))
+  const calls = createMemo(() => browserDisplayCalls(executeCalls(props.metadata.toolCalls))) // kilocode_change(browser) - mask typed text
   const output = createMemo(() => stripAnsi(props.output?.trim() ?? ""))
   const hasRuntimeError = createMemo(() => props.metadata.error === true || props.part.state.status === "error")
   const outputPreview = createMemo(() => collapseToolOutput(output(), 4, 4 * Math.max(20, ctx.width - 6)).output)

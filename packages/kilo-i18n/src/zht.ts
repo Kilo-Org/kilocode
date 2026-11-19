@@ -154,6 +154,17 @@ export const dict = {
   "browser.state.unavailable": "無法使用",
   "browser.state.readyHint": "Kilo 擁有的 Chromium 設定檔，於首次瀏覽器呼叫時啟動",
   "browser.state.extensionHint": "連接 Kilo 瀏覽器擴充功能以使用你自己的瀏覽器",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "讀取 {{origin}} 上的頁面",
+  "browser.permission.act.title": "在 {{origin}} 上點擊和輸入",
+  "browser.permission.navigate.title": "開啟 {{origin}} 上的頁面",
+  "browser.permission.read.detail": "代理可以讀取此來源的頁面文字、快照和螢幕擷取畫面。",
+  "browser.permission.act.detail": "代理可以在此來源上點擊、輸入並執行頁面指令碼。",
+  "browser.permission.navigate.detail": "代理可以在此來源上開啟頁面。",
+  "browser.permission.frame": "此來源是頁面內的框架，而不是頁面本身。",
+  "browser.permission.sensitive.title": "{{origin}} 上的敏感瀏覽器步驟",
+  "browser.permission.sensitive.reason": "原因：{{reason}}",
+  "browser.permission.sensitive.once": "只有使用者才能核准此步驟。該核准僅涵蓋這一個步驟。",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "切換自動核准",

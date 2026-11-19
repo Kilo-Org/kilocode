@@ -59,7 +59,8 @@ export const dict = {
   "marketplace.install.failed": "インストールに失敗しました",
   "marketplace.install.done": "完了",
   "marketplace.install.close": "閉じる",
-  "marketplace.install.mcp.signIn.message": "{{name}} はインストールされていますが、ツールを使用する前にサインインが必要です。",
+  "marketplace.install.mcp.signIn.message":
+    "{{name}} はインストールされていますが、ツールを使用する前にサインインが必要です。",
   "marketplace.install.mcp.signIn.button": "サインイン",
   "marketplace.install.mcp.signIn.waiting": "ブラウザでのサインインを待っています…",
   "marketplace.install.mcp.signIn.cancel": "キャンセル",
@@ -162,6 +163,19 @@ export const dict = {
   "browser.state.unavailable": "利用不可",
   "browser.state.readyHint": "Kilo が所有する Chromium プロファイル。最初のブラウザ呼び出しで起動します",
   "browser.state.extensionHint": "Kilo ブラウザ拡張機能を接続して自分のブラウザを操作します",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "{{origin}} のページを読み取る",
+  "browser.permission.act.title": "{{origin}} でクリックと入力を行う",
+  "browser.permission.navigate.title": "{{origin}} のページを開く",
+  "browser.permission.read.detail":
+    "エージェントはこのオリジンのページテキスト、スナップショット、スクリーンショットを読み取れます。",
+  "browser.permission.act.detail": "エージェントはこのオリジンでクリック、入力、ページスクリプトの実行ができます。",
+  "browser.permission.navigate.detail": "エージェントはこのオリジンのページを開けます。",
+  "browser.permission.frame": "このオリジンはページ内のフレームであり、ページそのものではありません。",
+  "browser.permission.sensitive.title": "{{origin}} の機密ブラウザステップ",
+  "browser.permission.sensitive.reason": "理由: {{reason}}",
+  "browser.permission.sensitive.once":
+    "このステップを承認できるのは人のみです。承認はこの 1 ステップだけに適用されます。",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "自動承認を切り替え",

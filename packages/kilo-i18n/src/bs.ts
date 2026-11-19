@@ -171,6 +171,17 @@ export const dict = {
   "browser.state.unavailable": "nedostupno",
   "browser.state.readyHint": "Kilo-ov Chromium profil, pokreće se pri prvom pozivu preglednika",
   "browser.state.extensionHint": "Povežite Kilo proširenje preglednika da koristite svoj preglednik",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Čitaj stranice na {{origin}}",
+  "browser.permission.act.title": "Klikaj i unosi tekst na {{origin}}",
+  "browser.permission.navigate.title": "Otvori stranice na {{origin}}",
+  "browser.permission.read.detail": "Agent može čitati tekst stranice, snimke i snimke ekrana sa ovog izvora.",
+  "browser.permission.act.detail": "Agent može kliknuti, unositi tekst i pokretati skripte stranice na ovom izvoru.",
+  "browser.permission.navigate.detail": "Agent može otvoriti stranice na ovom izvoru.",
+  "browser.permission.frame": "Ovaj izvor je okvir unutar stranice, a ne sama stranica.",
+  "browser.permission.sensitive.title": "Osjetljiv korak preglednika na {{origin}}",
+  "browser.permission.sensitive.reason": "Razlog: {{reason}}",
+  "browser.permission.sensitive.once": "Samo osoba može odobriti ovaj korak. Odobrenje pokriva samo ovaj korak.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Uključi/isključi automatsko odobravanje",

@@ -167,6 +167,18 @@ export const dict = {
   "browser.state.unavailable": "niedostępna",
   "browser.state.readyHint": "Profil Chromium należący do Kilo, uruchamiany przy pierwszym wywołaniu przeglądarki",
   "browser.state.extensionHint": "Podłącz rozszerzenie przeglądarki Kilo, aby używać własnej przeglądarki",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Odczytuj strony w {{origin}}",
+  "browser.permission.act.title": "Klikaj i pisz w {{origin}}",
+  "browser.permission.navigate.title": "Otwieraj strony w {{origin}}",
+  "browser.permission.read.detail": "Agent może odczytywać tekst strony, zrzuty i zrzuty ekranu z tego źródła.",
+  "browser.permission.act.detail": "Agent może klikać, pisać i uruchamiać skrypty strony w tym źródle.",
+  "browser.permission.navigate.detail": "Agent może otwierać strony w tym źródle.",
+  "browser.permission.frame": "To źródło jest ramką wewnątrz strony, a nie samą stroną.",
+  "browser.permission.sensitive.title": "Krok wrażliwy przeglądarki w {{origin}}",
+  "browser.permission.sensitive.reason": "Powód: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Ten krok może zatwierdzić tylko osoba. Zatwierdzenie obejmuje wyłącznie ten jeden krok.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Przełącz automatyczne zatwierdzanie",
