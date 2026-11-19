@@ -11,6 +11,17 @@ const Parameters = Schema.Struct({
   url: Schema.String.annotate({
     description: "Public HTTPS URL or HTTP loopback URL for a local application, for example http://localhost:3000.",
   }),
+  width: Schema.optional(
+    Schema.Int.check(Schema.isBetween({ minimum: 240, maximum: 1920 })).annotate({
+      description:
+        "Viewport width in CSS pixels for the returned screenshot, for example 390 for a phone or 820 for a tablet. Requires height. Omit to use the size of the user's browser panel.",
+    }),
+  ),
+  height: Schema.optional(
+    Schema.Int.check(Schema.isBetween({ minimum: 240, maximum: 1440 })).annotate({
+      description: "Viewport height in CSS pixels for the returned screenshot, for example 844. Requires width.",
+    }),
+  ),
 })
 
 const State = Schema.Struct({
@@ -51,21 +62,8 @@ export const BrowserOpenTool = Tool.define<
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
-          const base = yield* env.get("KILO_BROWSER_BROKER_URL")
-          const token = yield* env.get("KILO_BROWSER_BROKER_TOKEN")
-          const broker = base && URL.canParse(base) ? new URL(base) : undefined
-          if (
-            !broker ||
-            !token ||
-            broker.protocol !== "http:" ||
-            broker.hostname !== "127.0.0.1" ||
-            !broker.port ||
-            broker.username ||
-            broker.password ||
-            broker.pathname !== "/" ||
-            broker.search ||
-            broker.hash
-          ) {
+          const bridge = yield* Network.bridge(env)
+          if (!bridge) {
             return {
               title: "Browser unavailable",
               output: "The Integrated Browser is not available in this session.",
@@ -99,6 +97,17 @@ export const BrowserOpenTool = Tool.define<
               metadata: { status: "error", errors: 0 } satisfies Meta,
             }
           }
+          if ((params.width === undefined) !== (params.height === undefined)) {
+            return {
+              title: "Browser size invalid",
+              output: "Pass both width and height, or neither.",
+              metadata: { status: "error", errors: 0 } satisfies Meta,
+            }
+          }
+          const viewport =
+            params.width !== undefined && params.height !== undefined
+              ? { width: params.width, height: params.height }
+              : undefined
 
           yield* ctx.ask({
             permission: "browser_open",
@@ -114,17 +123,13 @@ export const BrowserOpenTool = Tool.define<
           return yield* Effect.gen(function* () {
             const response = yield* Network.broker(
               http,
-              broker,
-              token,
-              { sessionID: ctx.sessionID, directory: instance.directory, url: url.href },
+              bridge.url,
+              bridge.token,
+              { sessionID: ctx.sessionID, directory: instance.directory, url: url.href, viewport },
               ctx.abort,
             )
-            if (response.status < 200 || response.status >= 300) {
-              const body = yield* response.json.pipe(Effect.orElseSucceed(() => undefined))
-              const error =
-                typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
-                  ? body.error
-                  : `HTTP ${response.status}`
+            const error = yield* Network.refusal(response)
+            if (error) {
               return {
                 title: "Browser open failed",
                 output: `The browser could not open the page: ${error}`,
@@ -139,6 +144,9 @@ export const BrowserOpenTool = Tool.define<
                 `Browser status: ${state.status}.`,
                 state.url ? `URL: ${state.url}.` : undefined,
                 state.title ? `Title: ${state.title}.` : undefined,
+                viewport && state.screenshot
+                  ? `Screenshot viewport: ${viewport.width}x${viewport.height} CSS pixels. The user's live panel keeps its own size.`
+                  : undefined,
                 state.errors > 0 ? `Console errors: ${state.errors}.` : undefined,
                 state.logs?.length
                   ? `Console diagnostics:\n${state.logs.map((line) => `- ${line}`).join("\n")}`

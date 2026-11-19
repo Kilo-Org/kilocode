@@ -7,6 +7,8 @@ const SettingsRow: Component<{
   descriptionId?: string
   tag?: () => string | undefined
   last?: boolean
+  /** Grey out the label of an option that is not available. */
+  dimmed?: boolean
   children: JSX.Element
 }> = (props) => (
   <div
@@ -19,7 +21,7 @@ const SettingsRow: Component<{
       ...(props.description === null || props.description === undefined ? { "align-items": "center" } : {}),
     }}
   >
-    <div data-slot="settings-row-label">
+    <div data-slot="settings-row-label" style={props.dimmed ? { opacity: "0.5" } : undefined}>
       <div
         data-slot="settings-row-label-title"
         style={{

@@ -1,11 +1,26 @@
-import { Component, Show, createSignal, onCleanup, onMount } from "solid-js"
+import { Component, For, Show, createSignal, onCleanup, onMount } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
-import type { BrowserSettings } from "../../types/messages"
+import type {
+  AutomationBrowser as Browser,
+  AutomationBrowserStatus as Status,
+  AutomationBuild as Build,
+  BrowserSettings,
+  BrowserStatusLoadedMessage,
+} from "../../types/messages"
 import SettingsRow from "./SettingsRow"
+
+function build(browser: Browser): browser is Build {
+  return browser === "chromium" || browser === "firefox" || browser === "webkit"
+}
+
+function size(bytes: number): string {
+  const mb = bytes / (1024 * 1024)
+  return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.max(1, Math.round(mb))} MB`
+}
 
 const Header: Component<{ title: string }> = (props) => (
   <h4
@@ -30,12 +45,29 @@ const BrowserTab: Component = () => {
 
   const [settings, setSettings] = createSignal<BrowserSettings>({
     enabled: false,
-    useSystemChrome: true,
-    headless: false,
+    browsers: ["chrome"],
   })
+  // Empty until the extension has checked which browsers are installed.
+  const [status, setStatus] = createSignal<Partial<Record<Browser, Status>>>({})
+  const [installing, setInstalling] = createSignal<Browser[]>([])
+  const [progress, setProgress] = createSignal<NonNullable<BrowserStatusLoadedMessage["progress"]>>({})
+  const [sizes, setSizes] = createSignal<NonNullable<BrowserStatusLoadedMessage["sizes"]>>({})
+  // Builds this view already tried to download, so a failure is retried once per opening of Settings.
+  const tried = new Set<Build>()
+  // The latest download error of each build, kept until the build is allowed again or installed.
+  const [failed, setFailed] = createSignal<Partial<Record<Build, string>>>({})
+
+  const browsers = (): { value: Browser; label: string }[] => [
+    { value: "chrome", label: t("settings.browser.browsers.chrome") },
+    { value: "chromium", label: t("settings.browser.browsers.chromium") },
+    { value: "msedge", label: t("settings.browser.browsers.msedge") },
+    { value: "firefox", label: t("settings.browser.browsers.firefox") },
+    { value: "webkit", label: t("settings.browser.browsers.webkit") },
+  ]
 
   onMount(() => {
     postMessage({ type: "requestBrowserSettings" })
+    postMessage({ type: "requestBrowserStatus" })
   })
 
   // Subscribe outside onMount to catch early pushes (per AGENTS.md pattern)
@@ -43,12 +75,90 @@ const BrowserTab: Component = () => {
     if (msg.type === "browserSettingsLoaded") {
       setSettings(msg.settings)
     }
+    if (msg.type === "browserStatusLoaded") {
+      setStatus((prev) => ({ ...prev, ...msg.status }))
+      setInstalling(msg.installing)
+      setProgress(msg.progress ?? {})
+      if (msg.sizes) setSizes(msg.sizes)
+      const error = msg.failed
+      if (error) setFailed((prev) => ({ ...prev, [error.browser]: error.message }))
+      heal()
+    }
   })
   onCleanup(unsubscribe)
 
-  const update = (key: keyof BrowserSettings, value: boolean) => {
+  const update = <K extends keyof BrowserSettings>(key: K, value: BrowserSettings[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
     postMessage({ type: "updateSetting", key: `browserAutomation.${key}`, value })
+  }
+
+  const allowed = (browser: Browser) => settings().browsers.includes(browser)
+  // The agent needs at least one browser, so the last allowed one stays on.
+  const last = (browser: Browser) => allowed(browser) && settings().browsers.length === 1
+
+  const busy = (browser: Browser) => installing().includes(browser)
+  // Chrome and Edge cannot be downloaded, so a missing one cannot be allowed.
+  const absent = (browser: Browser) => !build(browser) && status()[browser] === "missing"
+
+  const install = (browser: Build) => {
+    tried.add(browser)
+    setFailed((prev) => ({ ...prev, [browser]: undefined }))
+    setInstalling((prev) => [...prev, browser])
+    postMessage({ type: "installBrowser", browser })
+  }
+
+  // An allowed build can be missing after a failed download or settings synced from another machine. Allowing it was
+  // the consent, so download it while browser automation is on. This is also the retry for the last allowed browser,
+  // which cannot be turned off and on.
+  const heal = () => {
+    if (!settings().enabled) return
+    for (const name of ["chromium", "firefox", "webkit"] as const) {
+      if (status()[name] !== "missing" || !allowed(name) || busy(name) || tried.has(name)) continue
+      install(name)
+    }
+  }
+
+  const state = (browser: Browser) => {
+    const value = status()[browser]
+    const amount = build(browser) ? sizes()[browser] : undefined
+    if (busy(browser)) {
+      const step = build(browser) ? progress()[browser] : undefined
+      // Nothing downloads until Playwright has started and named the first file.
+      if (!step?.name) return t("settings.browser.status.preparing")
+      // A build is several files, each downloaded and then unpacked, so the row names the file and its position.
+      const many = step.step !== undefined && step.total !== undefined && step.total > 1
+      const name = many ? `${step.name} (${step.step}/${step.total})` : step.name
+      if (step.percent >= 100) return t("settings.browser.status.unpacking", { name })
+      const text = t("settings.browser.status.downloading", { name, percent: String(step.percent) })
+      return step.bytes ? `${text} · ${size(step.bytes)}` : text
+    }
+    const error = build(browser) ? failed()[browser] : undefined
+    if (value === "installed") {
+      const text = t("settings.browser.status.installed")
+      return amount?.disk ? `${text} · ${t("settings.browser.size.disk", { size: size(amount.disk) })}` : text
+    }
+    if (error) return t("settings.browser.status.failed", { message: error })
+    if (value === "missing") {
+      const text = t("settings.browser.status.missing")
+      return amount?.download
+        ? `${text} · ${t("settings.browser.size.download", { size: size(amount.download) })}`
+        : text
+    }
+    if (value === "unknown") return t("settings.browser.status.unknown")
+    return t("settings.browser.status.checking")
+  }
+
+  const allow = (browser: Browser, checked: boolean) => {
+    if (checked === allowed(browser) || (!checked && last(browser))) return
+    if (checked && absent(browser)) return
+    // Allowing a Playwright build is the consent to download it. The extension skips a build that is already there.
+    if (checked && build(browser) && status()[browser] !== "installed" && !busy(browser)) install(browser)
+    update(
+      "browsers",
+      browsers()
+        .map((item) => item.value)
+        .filter((value) => (value === browser ? checked : allowed(value))),
+    )
   }
 
   const updateWebsearch = (checked: boolean) => {
@@ -124,41 +234,66 @@ const BrowserTab: Component = () => {
           <SettingsRow
             title={t("settings.browser.enable.title")}
             description={t("settings.browser.enable.description")}
-          >
-            <Switch checked={settings().enabled} onChange={(checked: boolean) => update("enabled", checked)} hideLabel>
-              {t("settings.browser.enable.title")}
-            </Switch>
-          </SettingsRow>
-
-          {/* Use System Chrome */}
-          <SettingsRow
-            title={t("settings.browser.systemChrome.title")}
-            description={t("settings.browser.systemChrome.description")}
-          >
-            <Switch
-              checked={settings().useSystemChrome}
-              onChange={(checked: boolean) => update("useSystemChrome", checked)}
-              hideLabel
-            >
-              {t("settings.browser.systemChrome.title")}
-            </Switch>
-          </SettingsRow>
-
-          {/* Headless mode */}
-          <SettingsRow
-            title={t("settings.browser.headless.title")}
-            description={t("settings.browser.headless.description")}
             last
           >
             <Switch
-              checked={settings().headless}
-              onChange={(checked: boolean) => update("headless", checked)}
+              checked={settings().enabled}
+              onChange={(checked: boolean) => {
+                update("enabled", checked)
+                heal()
+              }}
               hideLabel
             >
-              {t("settings.browser.headless.title")}
+              {t("settings.browser.enable.title")}
             </Switch>
           </SettingsRow>
         </Card>
+
+        {/* A subsection of Browser Automation, so its heading is smaller and has no divider. It only applies while the feature is on. */}
+        <Show when={settings().enabled}>
+          <h5
+            style={{
+              margin: "16px 0 6px",
+              color: "var(--text-base, var(--vscode-foreground))",
+              "font-size": "var(--kilo-font-size-14, 14px)",
+              "font-weight": 600,
+              "line-height": "1.4",
+            }}
+          >
+            {t("settings.browser.browsers.title")}
+          </h5>
+          <p
+            style={{
+              margin: "0 0 12px",
+              color: "var(--vscode-descriptionForeground)",
+              "font-size": "var(--kilo-font-size-12)",
+              "line-height": "1.5",
+            }}
+          >
+            {t("settings.browser.browsers.description")}
+          </p>
+          <Card>
+            <For each={browsers()}>
+              {(browser, index) => (
+                <SettingsRow
+                  title={browser.label}
+                  description={state(browser.value)}
+                  dimmed={absent(browser.value)}
+                  last={index() === browsers().length - 1}
+                >
+                  <Switch
+                    checked={allowed(browser.value)}
+                    disabled={last(browser.value) || (absent(browser.value) && !allowed(browser.value))}
+                    onChange={(checked: boolean) => allow(browser.value, checked)}
+                    hideLabel
+                  >
+                    {browser.label}
+                  </Switch>
+                </SettingsRow>
+              )}
+            </For>
+          </Card>
+        </Show>
       </div>
     </div>
   )
