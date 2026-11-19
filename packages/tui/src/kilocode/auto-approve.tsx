@@ -3,8 +3,10 @@
 // permission requests stop prompting.
 import { dict } from "@kilocode/kilo-i18n/en"
 import { Plugin } from "@opencode/plugin/tui"
+import { createEffect, on } from "solid-js"
+import { useConfig } from "../config"
 import { usePermission } from "../context/permission"
-import { togglePermissionMode } from "./permission-mode"
+import { setPermissionMode, togglePermissionMode } from "./permission-mode"
 
 export default Plugin.define({
   id: "kilocode.autoapprove",
@@ -13,6 +15,16 @@ export default Plugin.define({
       append: "app",
       render() {
         const permission = usePermission()
+        const config = useConfig()
+        // A settings write means "use this mode", so it clears the runtime override instead of being ignored until the
+        // next restart.
+        createEffect(
+          on(
+            () => config.data.session.permissions,
+            () => setPermissionMode(undefined),
+            { defer: true },
+          ),
+        )
         const toggle = () => {
           const next = togglePermissionMode(permission.mode)
           context.ui.toast.show({
@@ -24,7 +36,7 @@ export default Plugin.define({
           mode: "global",
           commands: [
             {
-              id: "kilocode.autoapprove.toggle",
+              id: "kilo.autoapprove.toggle",
               title: dict["tui.autoApprove.title"],
               description: dict["tui.autoApprove.description"],
               group: "Session",
