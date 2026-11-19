@@ -77,6 +77,17 @@ function hubFailure(error: unknown) {
   }
 }
 
+/** The protocol errors that carry nothing but their message, by the kind the backend reads. */
+const PLAIN: Record<string, BrowserHub.Kind> = {
+  tab_busy: "busy",
+  tab_taken: "taken",
+  user_stopped: "stopped",
+  session_lost: "lost",
+  unsupported_in_browser: "unsupported",
+  blocked: "blocked",
+  protocol_mismatch: "mismatch",
+}
+
 /** One transport failure as the backend reads it. A kind the CLI does not know stays `unknown` and is refused. */
 export function failure(error: unknown): BrowserHub.Failure {
   const value = hubFailure(error)
@@ -100,21 +111,11 @@ export function failure(error: unknown): BrowserHub.Failure {
     ...(payload.withheldFrames === undefined ? {} : { withheldFrames: payload.withheldFrames }),
     ...(payload.needs === undefined ? {} : { needs: payload.needs }),
   })
+  const plain = Object.hasOwn(PLAIN, value.kind) ? PLAIN[value.kind] : undefined
+  if (plain !== undefined) return new BrowserHub.Failure({ kind: plain, message: value.message })
   switch (value.kind) {
     case "browser_unavailable":
       return new BrowserHub.Failure({ kind: "unavailable", message: value.message, uncertain: value.uncertain })
-    case "tab_busy":
-      return new BrowserHub.Failure({ kind: "busy", message: value.message })
-    case "tab_taken":
-      return new BrowserHub.Failure({ kind: "taken", message: value.message })
-    case "user_stopped":
-      return new BrowserHub.Failure({ kind: "stopped", message: value.message })
-    case "unsupported_in_browser":
-      return new BrowserHub.Failure({ kind: "unsupported", message: value.message })
-    case "blocked":
-      return new BrowserHub.Failure({ kind: "blocked", message: value.message })
-    case "protocol_mismatch":
-      return new BrowserHub.Failure({ kind: "mismatch", message: value.message })
     case "origin_changed": {
       // A redirect landed on a new origin: ask to read it, so the retry is not the same navigation again.
       const to = landed(data?.to)
@@ -181,14 +182,26 @@ function follow(linked: Client): Presence {
 }
 
 /**
+ * How long after the extension that served this connection went away it counts as coming back: Chrome stops an idle
+ * extension service worker and starts it again on the extension's next event, its 30 s watchdog alarm at the latest,
+ * and the worker dials the hub as it starts.
+ */
+const RESTART_WINDOW = 35_000
+
+/**
  * Why no extension answers, from what the client sees now and saw before: a connected extension that did not answer
  * (a timeout, a cancelled turn, its own `browser_unavailable` on a live socket) is not absent; an extension that was
- * connected went away; a hub that waits was either paired once (the extension left) or never; without a hub, a
- * selected profile is the missing piece, otherwise the hub itself.
+ * connected went away a moment ago (it may be restarting) or has stayed away; a hub that waits was either paired once
+ * (the extension left) or never; without a hub, a selected profile is the missing piece, otherwise the hub itself.
  */
-export function absence(state: State, presence: { seen: boolean }, profile: string | undefined): BrowserHub.Absence {
+export function absence(
+  state: State,
+  presence: { seen: boolean; since: number },
+  profile: string | undefined,
+): BrowserHub.Absence {
   if (state.kind === "ready") return { kind: "connected" }
-  if (presence.seen) return { kind: "disconnected" }
+  if (presence.seen)
+    return Date.now() - presence.since < RESTART_WINDOW ? { kind: "dropped" } : { kind: "disconnected" }
   if (state.kind === "waiting") return state.hub.paired ? { kind: "disconnected" } : { kind: "unpaired" }
   if (profile !== undefined) return { kind: "no_profile", profile }
   return { kind: "no_hub" }
@@ -261,8 +274,12 @@ export function hub(options: Options = {}): BrowserHub.Interface {
             if (opened) presence.since = started
           }
           // An extension connects only shortly after the connection changed, so the wait ends `timeoutMs` after that
-          // moment, not after this call: one that has stayed away longer fails the call at once.
-          const wait = Math.max(0, presence.since + timeoutMs - Date.now())
+          // moment, not after this call: one that has stayed away longer fails the call at once. One that dropped a
+          // moment ago is usually a worker the browser is restarting, so every call gives it the whole budget.
+          const wait =
+            absence(linked.state(), presence, profile).kind === "dropped"
+              ? timeoutMs
+              : Math.max(0, presence.since + timeoutMs - Date.now())
           const info = await linked.ready(wait).catch((error: unknown) => {
             throw explained(linked, profile, error)
           })

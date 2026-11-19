@@ -35,6 +35,7 @@ describe("hub failures as the extension backend reads them", () => {
     expect(failure(hub("unsupported_in_browser")).kind).toBe("unsupported")
     expect(failure(hub("blocked")).kind).toBe("blocked")
     expect(failure(hub("protocol_mismatch")).kind).toBe("mismatch")
+    expect(failure(hub("session_lost")).kind).toBe("lost")
     expect(failure(hub("needs_permission")).kind).toBe("permission")
     expect(failure(hub("origin_changed")).kind).toBe("moved")
   })
@@ -285,20 +286,27 @@ describe("why no extension answers", () => {
   })
 
   test("each state the client can be in names its own absence", () => {
-    expect(absence(waiting(false), { seen: false }, undefined)).toEqual({ kind: "unpaired" })
-    expect(absence(waiting(true), { seen: false }, undefined)).toEqual({ kind: "disconnected" })
-    // An extension this connection already saw went away, whatever the registry copy says.
-    expect(absence(waiting(false), { seen: true }, undefined)).toEqual({ kind: "disconnected" })
-    expect(absence({ kind: "connecting", attempt: 1 }, { seen: true }, undefined)).toEqual({ kind: "disconnected" })
-    expect(absence({ kind: "connecting", attempt: 1 }, { seen: false }, undefined)).toEqual({ kind: "no_hub" })
-    expect(absence({ kind: "reconnecting", attempt: 2, reason: "x" }, { seen: false }, "Work")).toEqual({
+    const now = Date.now()
+    expect(absence(waiting(false), { seen: false, since: now }, undefined)).toEqual({ kind: "unpaired" })
+    expect(absence(waiting(true), { seen: false, since: now }, undefined)).toEqual({ kind: "disconnected" })
+    // An extension this connection already saw went away a moment ago: the browser usually restarts its worker.
+    expect(absence(waiting(false), { seen: true, since: now }, undefined)).toEqual({ kind: "dropped" })
+    expect(absence({ kind: "connecting", attempt: 1 }, { seen: true, since: now }, undefined)).toEqual({
+      kind: "dropped",
+    })
+    // One that stayed away longer than a restart takes is disconnected, whatever the registry copy says.
+    expect(absence(waiting(false), { seen: true, since: now - 60_000 }, undefined)).toEqual({ kind: "disconnected" })
+    expect(absence({ kind: "connecting", attempt: 1 }, { seen: false, since: now }, undefined)).toEqual({
+      kind: "no_hub",
+    })
+    expect(absence({ kind: "reconnecting", attempt: 2, reason: "x" }, { seen: false, since: now }, "Work")).toEqual({
       kind: "no_profile",
       profile: "Work",
     })
     // A connected extension that did not answer (a timeout, a cancelled turn) is not reported as gone.
     const hub = Registry.Entry.parse({ ...Registry.empty({ hubId: randomUUID(), mode: "loopback", socket: "s" }) })
     const ready: State = { kind: "ready", hub, extension: extensionHello() }
-    expect(absence(ready, { seen: true }, undefined)).toEqual({ kind: "connected" })
+    expect(absence(ready, { seen: true, since: now }, undefined)).toEqual({ kind: "connected" })
   })
 
   test("no reachable hub is no_hub", async () => {
@@ -392,5 +400,27 @@ describe("why no extension answers", () => {
     later()
     const { error } = await refused(port, LONG)
     expect(error.absence).toEqual({ kind: "disconnected" })
+  })
+
+  test("an extension that dropped a moment ago is named dropped and waited for again by every call", async () => {
+    const dir = await rundir()
+    const hub = await host(dir, true)
+    const { port } = linked(dir)
+    const opened = port.ready(2_000)
+    const drop = hub.connect()
+    await opened
+    drop()
+    await until(async () => ((await port.reported()) === undefined ? true : undefined))
+    const { error } = await refused(port, 50)
+    expect(error.absence).toEqual({ kind: "dropped" })
+    // Longer after the drop than this call's budget, yet well inside the time a worker restart takes: the call still
+    // waits its whole budget, and the extension that comes back answers it.
+    setSystemTime(new Date(Date.now() + 5_000))
+    const pending = port.ready(2_000)
+    // A real delay: the extension comes back over a real socket while the call waits, and a call that did not wait
+    // has already failed by then.
+    await Bun.sleep(300)
+    hub.connect()
+    expect((await pending).profileLabel).toBe("Default")
   })
 })

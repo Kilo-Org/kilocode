@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, jest, test } from "bun:test"
 import * as proto from "../../src/browser/protocol"
 import { create } from "../../src/browser/hub"
 
@@ -303,5 +303,61 @@ describe("hub multiplexing", () => {
     const second = link()
     expect(hub.attach(second.link.send, second.link.close)).toBeUndefined()
     expect(second.closed).toStrictEqual(["hub is shutting down"])
+  })
+})
+
+describe("hub keepalive", () => {
+  const keepalives = (frames: proto.HubToExtension[]) => frames.filter((frame) => frame.type === "hub.keepalive").length
+
+  test("a loopback hub pings its extension while a CLI is attached, and only then", () => {
+    jest.useFakeTimers()
+    try {
+      const hub = create({ mode: "loopback", version: "test", keepalive: 1_000 })
+      const ext = link()
+      hub.attach(ext.link.send, ext.link.close)!.hello(info)
+      jest.advanceTimersByTime(3_000)
+      // No CLI uses the browser: the hub keeps nothing alive.
+      expect(keepalives(ext.frames)).toBe(0)
+      const cli = controller()
+      const joined = hub.join(cli.send, cli.close)
+      jest.advanceTimersByTime(3_000)
+      expect(keepalives(ext.frames)).toBe(3)
+      joined.drop()
+      jest.advanceTimersByTime(3_000)
+      expect(keepalives(ext.frames)).toBe(3)
+      hub.close("done")
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  test("the pings end with the extension, and a native hub never sends them", () => {
+    jest.useFakeTimers()
+    try {
+      const loopback = create({ mode: "loopback", version: "test", keepalive: 1_000 })
+      const dropped = link()
+      const sink = loopback.attach(dropped.link.send, dropped.link.close)!
+      sink.hello(info)
+      loopback.join(controller().send, controller().close)
+      jest.advanceTimersByTime(1_000)
+      sink.drop()
+      jest.advanceTimersByTime(5_000)
+      expect(keepalives(dropped.frames)).toBe(1)
+      // The restarted worker attaches again: one ping per period, never one per attach.
+      const back = link()
+      loopback.attach(back.link.send, back.link.close)!.hello(info)
+      jest.advanceTimersByTime(2_000)
+      expect(keepalives(back.frames)).toBe(2)
+
+      // Chrome keeps a worker with an open native port alive by itself.
+      const native = create({ mode: "native", version: "test", keepalive: 1_000 })
+      const port = link()
+      native.attach(port.link.send, port.link.close)!.hello(info)
+      native.join(controller().send, controller().close)
+      jest.advanceTimersByTime(5_000)
+      expect(keepalives(port.frames)).toBe(0)
+    } finally {
+      jest.useRealTimers()
+    }
   })
 })

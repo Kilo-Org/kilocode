@@ -38,13 +38,15 @@ export namespace BrowserHub {
 
   /**
    * Why a hub call failed. The transport maps the protocol's numeric codes to these kinds; a kind the CLI does not
-   * know is `unknown`, which the backend refuses instead of guessing.
+   * know is `unknown`, which the backend refuses instead of guessing. `lost` is a session the extension no longer holds
+   * and the user did not end: the call did not run.
    */
   export type Kind =
     | "unavailable"
     | "busy"
     | "taken"
     | "stopped"
+    | "lost"
     | "unsupported"
     | "permission"
     | "blocked"
@@ -55,14 +57,17 @@ export namespace BrowserHub {
   /**
    * Why no extension answered an `unavailable` call, as far as the hub connection knows: no hub is reachable
    * (`no_hub`), or none whose extension has the selected browser profile (`no_profile`); a hub runs but no extension
-   * ever connected to it (`unpaired`: not installed, "Allow local agents" off, or the pairing page ignored); an
-   * extension was connected and went away (`disconnected`: the switch turned off, the browser closed); or one is
-   * connected but did not answer the call (`connected`: a timeout, a cancelled turn).
+   * ever connected to it (`unpaired`: not installed, "Allow local agents" off, or the pairing page ignored); the
+   * extension this connection used went away a moment ago and the browser usually brings it back (`dropped`: Chrome
+   * stopped its service worker, or the browser is closing); an extension was connected and has stayed away
+   * (`disconnected`: the switch turned off, the browser closed); or one is connected but did not answer the call
+   * (`connected`: a timeout, a cancelled turn).
    */
   export type Absence =
     | { kind: "no_hub" }
     | { kind: "no_profile"; profile: string }
     | { kind: "unpaired" }
+    | { kind: "dropped" }
     | { kind: "disconnected" }
     | { kind: "connected" }
 

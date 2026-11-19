@@ -622,6 +622,100 @@ describe("extension backend", () => {
     expect(error).toBeInstanceOf(UnavailableError)
     expect((error as UnavailableError).message).not.toContain("socket")
     expect((error as UnavailableError).effectsUncertain).toBe(true)
+    // It may have run: it is never sent again.
+    expect(hub.calls).toHaveLength(1)
+  })
+
+  test("a session the extension lost is opened anew, and the call that did not run is sent once more on it", async () => {
+    let lost = 0
+    const hub = fake({
+      call: (input) =>
+        input.sessionHandle === "handle-1" && hub.calls.length > 1
+          ? Promise.reject(new BrowserHub.Failure({ kind: "lost", message: `Lost ${++lost}.` }))
+          : Promise.resolve({ content: [{ type: "text", text: "ok" }] }),
+    })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
+    // The extension restarted without the session: the same conversation's next call still answers.
+    const result = await active.callTool("browser_click", { target: "e1" }, ctx({ sensitive: ["tok"] }))
+    expect(result).toEqual({ content: [{ type: "text", text: "ok" }], isError: false })
+    expect(hub.opened.map((value) => value.sessionId)).toEqual(["ses_extension", "ses_extension"])
+    expect(hub.calls.map((call) => [call.sessionHandle, call.name, call.sensitive])).toEqual([
+      ["handle-1", "browser_snapshot", undefined],
+      ["handle-1", "browser_click", ["tok"]],
+      ["handle-2", "browser_click", ["tok"]],
+    ])
+    // The new handle is the session's from now on.
+    await active.callTool("browser_snapshot", {}, ctx())
+    expect(hub.calls.at(-1)?.sessionHandle).toBe("handle-2")
+    expect(lost).toBe(1)
+  })
+
+  test("a session lost twice is reported, not reopened again", async () => {
+    const hub = fake({
+      call: () => Promise.reject(new BrowserHub.Failure({ kind: "lost", message: "This agent session is gone." })),
+    })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    const error = await active.callTool("browser_snapshot", {}, ctx()).catch((value: unknown) => value)
+    expect((error as Error).message).toBe("This agent session is gone.")
+    expect(hub.opened).toHaveLength(2)
+    expect(hub.calls).toHaveLength(2)
+  })
+
+  /** A hub whose extension leaves after the first call: `ready` then waits until the test brings it back. */
+  function leaving(failure: () => BrowserHub.Failure) {
+    const back = Promise.withResolvers<void>()
+    const waiting = Promise.withResolvers<void>()
+    let away = false
+    const info: BrowserHub.Info = {
+      protocol: [1],
+      contractSha: BrowserContract.sha256,
+      extensionVersion: "1.0.0",
+      profileLabel: "Fake profile",
+    }
+    const hub = fake({
+      ready: async () => {
+        if (!away) return info
+        waiting.resolve()
+        await back.promise
+        return info
+      },
+      call: () => {
+        if (hub.calls.length !== 2) return Promise.resolve({ content: [{ type: "text", text: "ok" }] })
+        away = true
+        return Promise.reject(failure())
+      },
+    })
+    return { hub, back: back.resolve, waiting: waiting.promise }
+  }
+
+  test("a call refused because the extension just dropped waits for it and is sent again, on the same session", async () => {
+    // The hub answers at once that no extension is attached: nothing reached the browser.
+    const { hub, back, waiting } = leaving(
+      () => new BrowserHub.Failure({ kind: "unavailable", message: "The browser is not available right now." }),
+    )
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
+    const pending = active.callTool("browser_snapshot", {}, ctx())
+    await waiting
+    expect(hub.calls).toHaveLength(2)
+    back()
+    expect((await pending).isError).toBe(false)
+    expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1", "handle-1", "handle-1"])
+    expect(hub.opened).toHaveLength(1)
+  })
+
+  test("a Stop all that arrives while a call waits for the extension ends the call without a new session", async () => {
+    const { hub, back, waiting } = leaving(() => new BrowserHub.Failure({ kind: "lost", message: "lost" }))
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
+    const pending = active.callTool("browser_snapshot", {}, ctx()).catch((value: unknown) => value)
+    await waiting
+    hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+    back()
+    expect(((await pending) as Error).message).toBe(STOPPED)
+    expect(hub.opened).toHaveLength(1)
+    expect(hub.calls).toHaveLength(2)
   })
 
   test("an unavailable answer names the next step for why no extension answered", () => {
@@ -634,6 +728,9 @@ describe("extension backend", () => {
     // An extension that was connected and left is installed: the step turns its switch back on, never installs it.
     expect(hint({ kind: "disconnected" })).toContain('turn on "Allow local agents"')
     expect(hint({ kind: "disconnected" })).not.toContain("Install")
+    // One that dropped a moment ago is usually a worker the browser restarts: wait, and only then check the switch.
+    expect(hint({ kind: "dropped" })).toContain("try again shortly")
+    expect(hint({ kind: "dropped" })).not.toContain("Install")
     expect(hint({ kind: "unpaired" })).toContain("install it")
     expect(hint({ kind: "unpaired" })).toContain("then try again")
     expect(hint({ kind: "no_profile", profile: "Work" })).toContain('"Work"')
