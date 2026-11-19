@@ -280,6 +280,9 @@ async function confined(file: string, directory: string): Promise<string> {
 /** How many written screenshot files a backend remembers; an older one is treated as foreign, never overwritten. */
 const WRITTEN_LIMIT = 200
 
+/** Who opens a session: a turn's tool call, refused once the user stopped it, or the user's own share or adopt. */
+type Opener = { kind: "turn"; turn: number | undefined } | { kind: "user" }
+
 /** The backend over one hub connection. `port` is undefined when the host serves no hub at all. */
 export class ExtensionBackend implements BrowserBackend {
   readonly id = "extension" as const
@@ -479,11 +482,12 @@ export class ExtensionBackend implements BrowserBackend {
     const port = this.input.port
     if (!port) throw new UnavailableError(HINT)
     const session = this.session(ctx)
-    if (this.halts(session, this.input.turns?.get(session))) throw new StoppedError(STOPPED)
+    const turn = this.input.turns?.get(session)
+    if (this.halts(session, turn)) throw new StoppedError(STOPPED)
     this.live()
     try {
       await this.accepts(name)
-      const handle = await this.handle(port, session)
+      const handle = await this.handle(port, session, { kind: "turn", turn })
       const input = name === "browser_file_upload" ? await this.upload(port, args) : args
       return reply(await this.send(port, { session, handle, name, args: input, key: args, ctx }))
     } catch (error) {
@@ -500,7 +504,7 @@ export class ExtensionBackend implements BrowserBackend {
     const port = this.available()
     const stop = this.stopped.get(session)
     try {
-      await port.share(await this.handle(port, session))
+      await port.share(await this.handle(port, session, { kind: "user" }))
     } catch (error) {
       throw map(error)
     }
@@ -512,7 +516,7 @@ export class ExtensionBackend implements BrowserBackend {
     const port = this.available()
     const stop = this.stopped.get(session)
     try {
-      const adopted = await port.adopt(await this.handle(port, session))
+      const adopted = await port.adopt(await this.handle(port, session, { kind: "user" }))
       this.resume(session, stop)
       return adopted
     } catch (error) {
@@ -521,13 +525,16 @@ export class ExtensionBackend implements BrowserBackend {
   }
 
   /**
-   * Lift the stop `stop` that a share or adopt saw when it started. A stop the user made while the command ran is newer
-   * than the command, so it stays and the command reports the session stopped.
+   * Lift the stop `stop` that a share or adopt saw when it started, and the halt of the conversation's current turn. A
+   * stop the user made while the command ran is newer than the command, so it stays and the command reports the
+   * session stopped.
    */
   private resume(session: string, stop: number | undefined) {
     const current = this.stopped.get(session)
     if (current !== undefined && current !== stop) throw new StoppedError(STOPPED)
     this.stopped.delete(session)
+    const turn = this.input.turns?.get(session)
+    if (turn !== undefined) this.halted.delete(turn)
   }
 
   private available(): BrowserHub.Port {
@@ -589,8 +596,11 @@ export class ExtensionBackend implements BrowserBackend {
     return info
   }
 
-  /** One session handle per tool session, opened once and shared by concurrent calls. */
-  private handle(port: BrowserHub.Port, session: string): Promise<string> {
+  /**
+   * One session handle per tool session, opened once and shared by concurrent calls. A turn's open is refused once the
+   * user stopped that turn or conversation; the user's own `/browser share` or `/browser adopt` opens all the same.
+   */
+  private handle(port: BrowserHub.Port, session: string, opener: Opener): Promise<string> {
     const existing = this.handles.get(session)
     if (existing) return existing
     // Each attempt is its own promise: a later attempt for the same session supersedes an earlier one, and the earlier
@@ -598,8 +608,7 @@ export class ExtensionBackend implements BrowserBackend {
     const attempt = Promise.withResolvers<string>()
     this.handles.set(session, attempt.promise)
     // The turn that starts the open owns it: a stop of that turn still applies when the open answers after it ended.
-    const turn = this.input.turns?.get(session)
-    void this.open(port, session, attempt.promise, turn).then(attempt.resolve, attempt.reject)
+    void this.open(port, session, attempt.promise, opener).then(attempt.resolve, attempt.reject)
     attempt.promise.catch(() => {
       if (this.handles.get(session) === attempt.promise) this.handles.delete(session)
     })
@@ -610,7 +619,7 @@ export class ExtensionBackend implements BrowserBackend {
     port: BrowserHub.Port,
     session: string,
     attempt: Promise<string>,
-    turn: number | undefined,
+    opener: Opener,
   ): Promise<string> {
     await this.ready(port)
     // Anything awaited above may have outlived the backend: never open a session from a released instance.
@@ -622,10 +631,15 @@ export class ExtensionBackend implements BrowserBackend {
     })
     // The session ended, another attempt replaced this one, or the user stopped the turn while the extension was still
     // opening it: close the late handle instead of keeping it (or claiming the new attempt's session) alive.
-    const superseded = this.handles.get(session) !== attempt
-    if (superseded || this.halts(session, turn)) {
+    const refused =
+      this.handles.get(session) !== attempt
+        ? new Error("The session ended before its browser session opened.")
+        : opener.kind === "turn" && this.halts(session, opener.turn)
+          ? new StoppedError(STOPPED)
+          : undefined
+    if (refused) {
       await port.close(opened.sessionHandle).catch(() => undefined)
-      throw superseded ? new Error("The session ended before its browser session opened.") : new StoppedError(STOPPED)
+      throw refused
     }
     this.sessions.set(opened.sessionHandle, session)
     return opened.sessionHandle
