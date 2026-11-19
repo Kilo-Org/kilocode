@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 162,
-    "markedLines": 2922,
+    "markedLines": 2930,
     "unmarkedLines": 468,
     "deletedFiles": 0
   },
@@ -407,7 +407,7 @@
     },
     "packages/tui/src/routes/session/index.tsx": {
       "rung": 4,
-      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows."
+      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows. Auto-accept mode (feature `sandbox`) replies `once` to every pending permission request in this route and hides the prompt; a request whose metadata sets `interactive: true` (a Kilo sandbox escalation, a sensitive browser step) must still be answered by a person, as `run --auto` already enforces. The auto-approve effect, the prompted list and the tool-row highlight call the Kilo-owned `requiresPerson` predicate (packages/tui/src/kilocode/permission-mode.ts) so the three cannot drift. The TUI plugin API has no hook into this route's permission replies or prompt selection (rung 1), the host cannot reach the TUI process (rung 2), and an inline generic check would repeat the same condition three times (rung 3)."
     },
     "packages/tui/src/routes/session/group-view.tsx": {
       "rung": 4,
