@@ -236,7 +236,9 @@ export async function launchExtensionBrowser(input: {
   const playwright = (await import(Bun.resolveSync("playwright-core", pluginDirectory))) as unknown as Playwright
   const executablePath = input.chromium ?? playwright.chromium.executablePath()
   await fs.access(path.join(input.extension, "manifest.json"))
-  const directory = input.ungranted ? input.extension : await grantDownloads(input.extension, path.join(input.root, "extension"))
+  const directory = input.ungranted
+    ? input.extension
+    : await grantDownloads(input.extension, path.join(input.root, "extension"))
   if (!existsSync(executablePath)) throw new Error(`no Chromium at ${executablePath}`)
   await fs.mkdir(path.join(input.root, "run"), { recursive: true, mode: 0o700 })
   await fs.mkdir(path.join(input.root, "bin"), { recursive: true })

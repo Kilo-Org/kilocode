@@ -158,7 +158,9 @@ async function openRouterPricing(model: string): Promise<Pricing | undefined> {
       if (!value) return []
       const days = Array.isArray(value["utc_days"]) ? value["utc_days"].map(String) : []
       // utc_start / utc_end are HHMM; an end of 0 is midnight.
-      return [{ days, start: Number(value["utc_start"] ?? 0), end: Number(value["utc_end"] ?? 0), price: price(value, base) }]
+      return [
+        { days, start: Number(value["utc_start"] ?? 0), end: Number(value["utc_end"] ?? 0), price: price(value, base) },
+      ]
     }),
   }
 }
@@ -468,7 +470,9 @@ async function main() {
             answer: result.answer.slice(0, 120),
             error: [
               repaired ? "hub re-paired before this run" : "",
-              result.exit === 0 ? result.metrics.error.slice(0, 300) : `exit ${result.exit}: ${result.stderr.slice(-300)}`,
+              result.exit === 0
+                ? result.metrics.error.slice(0, 300)
+                : `exit ${result.exit}: ${result.stderr.slice(-300)}`,
             ]
               .filter(Boolean)
               .join("; "),

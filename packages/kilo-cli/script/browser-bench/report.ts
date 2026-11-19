@@ -87,7 +87,8 @@ export type Row = {
 }
 
 const tokensOf = (row: Row) => row.input + row.output + row.cacheRead + row.cacheWrite
-const mean = (values: number[]) => (values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length)
+const mean = (values: number[]) =>
+  values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length
 const percent = (value: number) => `${(value * 100).toFixed(1)}%`
 
 function median(values: number[]) {
@@ -208,13 +209,17 @@ export function renderSummary(rows: Row[]): string {
     if (errors.length === 0) lines.push(`| ${backend} | none | 0 | |`)
     for (const [name, count] of countBy(errors, (error) => error.name)) {
       const example = errors.find((error) => error.name === name)
-      lines.push(`| ${backend} | ${name} | ${count} | ${example ? `${example.tool}: ${oneLine(example.text, 160)}` : ""} |`)
+      lines.push(
+        `| ${backend} | ${name} | ${count} | ${example ? `${example.tool}: ${oneLine(example.text, 160)}` : ""} |`,
+      )
     }
   }
   lines.push("")
   lines.push("## Per task")
   lines.push("")
-  lines.push(`| task | ${backends.map((backend) => `${backend} success | ${backend} turns | ${backend} wall`).join(" | ")} |`)
+  lines.push(
+    `| task | ${backends.map((backend) => `${backend} success | ${backend} turns | ${backend} wall`).join(" | ")} |`,
+  )
   lines.push(`|---|${backends.map(() => "---|---|---").join("|")}|`)
   for (const task of [...new Set(rows.map((row) => row.task))]) {
     const cells = backends.map((backend) => {
@@ -232,13 +237,17 @@ export function renderSummary(rows: Row[]): string {
   lines.push("")
   lines.push("Slow: wall time above twice the backend's median.")
   lines.push("")
-  lines.push("| backend | task | run | result | wall | load | turns | browser calls | tool errors | answer / error | log |")
+  lines.push(
+    "| backend | task | run | result | wall | load | turns | browser calls | tool errors | answer / error | log |",
+  )
   lines.push("|---|---|---|---|---|---|---|---|---|---|---|")
   for (const backend of backends) {
     const subset = rows.filter((row) => row.backend === backend)
     const limit = 2 * median(subset.map((row) => row.wallMs))
     for (const row of subset.filter((item) => !item.success || item.wallMs > limit)) {
-      const errors = row.toolErrors.map((error) => `${error.tool}/${error.name}: ${oneLine(error.text, 120)}`).join("; ")
+      const errors = row.toolErrors
+        .map((error) => `${error.tool}/${error.name}: ${oneLine(error.text, 120)}`)
+        .join("; ")
       lines.push(
         `| ${backend} | ${row.task} | ${row.run} | ${row.success ? "slow" : "FAIL"} | ${(row.wallMs / 1000).toFixed(1)}s | ` +
           `${row.load.toFixed(1)} | ${row.turns} | ${row.browserCalls} | ${oneLine(errors, 400) || "–"} | ` +
@@ -270,6 +279,8 @@ if (import.meta.main) {
   // Several matrices side by side: each backend and tool surface is its own column of the tables.
   const surfaces = new Set(rows.map((row) => row.surface))
   console.log(
-    renderSummary(surfaces.size > 1 ? rows.map((row) => ({ ...row, backend: `${row.backend} · ${row.surface}` })) : rows),
+    renderSummary(
+      surfaces.size > 1 ? rows.map((row) => ({ ...row, backend: `${row.backend} · ${row.surface}` })) : rows,
+    ),
   )
 }
