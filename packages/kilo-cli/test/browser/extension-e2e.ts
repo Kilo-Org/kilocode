@@ -1,130 +1,82 @@
 #!/usr/bin/env bun
-// Real end-to-end check of the Kilo browser bridge: the built Chrome MV3 extension loaded into Chromium, paired over
-// loopback with the real CLI (`kilo2 run`, `browser.backend: "extension"`), driven by a scripted OpenAI-compatible
-// model. Not a `bun test` file: it needs a display (run it under xvfb), a built CLI binary and the built extension.
+// Real end-to-end check of the Kilo browser bridge: the built Chrome MV3 extension loaded into a Chromium the harness
+// launches itself (a real profile, no DevTools download override), paired over loopback with the real CLI
+// (`kilo2 run`, `browser.backend: "extension"`), driven by a scripted OpenAI-compatible model. Not a `bun test` file:
+// it needs a display, a built CLI binary and the built extension. The launch, pairing, model and CLI-run steps live in
+// extension-harness.ts.
 //
-//   bun test/browser/extension-e2e.ts <kilo2> <scenario>
+//   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo2> <scenario>
+//   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo2> all [--repeat N] [--only a,b] [--out dir]
 //
 //   E2E_EXTENSION_DIR   the built unpacked extension (default: ../../../cloud/apps/extension/.output/chrome-mv3)
 //   E2E_CHROMIUM        the Chromium executable (default: playwright-core's own build)
-//   E2E_HOME            the run's home (default: a fresh mkdtemp); the harness creates run-<n> under it
-//   E2E_DOWNLOADS       Chrome's default download directory (default: $HOME/Downloads)
+//   E2E_HOME            the run's scratch root (default: a fresh mkdtemp); the harness creates run-<n> under it
+//   E2E_HUB_PORTS       hub ports as `<first>-<last>` (default: a free port per hub)
 //
-// Scenarios: navigate-snapshot, permission, frames, sensitive, group, stop, unpaired, download.
+// Scenarios: download-path, navigate-snapshot, permission, frames, sensitive, group, stop, unpaired, download,
+// download-navigate, download-ungranted, download-late, download-tabs-new, download-tabs-new-notoken,
+// download-approved-one. `all` runs every scenario in its own child process (fresh E2E_HOME each, one after another)
+// and prints one summary table; it exits non-zero when any run failed.
 //
-// Each scenario prints one JSON report and exits non-zero when an expectation fails. Every CLI run gets a fresh
-// E2E_HOME, a fresh hub and a fresh loopback pairing; two CLI runs in one scenario never overlap.
+// Each scenario prints one JSON report and exits non-zero when an expectation fails. Every CLI run gets a fresh home,
+// a fresh hub and a fresh loopback pairing; two CLI runs in one scenario never overlap. Every report carries the CDP
+// log of the harness's own connection (`cdp`): `cdp.downloadBehavior` must be empty, or Chrome's DevTools delegate
+// owned the downloads instead of the extension's guard.
 //
 // The product path this exercises, in order: the extension's "Allow local agents" switch (its settings page, with the
 // optional nativeMessaging prompt granted the way an accepted prompt would), `kilo2 browser hub --loopback`, the
-// hub's `pairing.url` RPC over the per-user CLI socket, the pairing page opened in the Chromium context (the
-// extension redeems the token and dials the hub), then `kilo2 run` with a scripted model.
-import * as Png from "@kilocode/kilo-plugin/browser/png"
+// hub's `pairing.url` RPC over the per-user CLI socket, the pairing page opened in the browser (the extension redeems
+// the token and dials the hub), then `kilo2 run` with a scripted model.
 import fs from "node:fs/promises"
-import { existsSync } from "node:fs"
-import net from "node:net"
 import os from "node:os"
 import path from "node:path"
+import {
+  armDownloadProbe,
+  type Bridge,
+  type Call,
+  cdpReport,
+  chromiumExecutable,
+  decodePng,
+  defaultExtensionDirectory,
+  enableLocalAgents,
+  field,
+  groupById,
+  type GroupInfo,
+  jsonOf,
+  launchChromium,
+  type Launched,
+  openUserTab,
+  type Page,
+  pixel,
+  type Plan,
+  promoteDownloadsCopy,
+  readDownloadProbe,
+  record,
+  refOf,
+  type Rule,
+  type RunOptions,
+  runAgent,
+  type Settings,
+  startModel,
+  tabState,
+  type TabState,
+  toolTimes,
+  until,
+} from "./extension-harness"
 
 const binaryInput = process.argv[2]
 const scenario = process.argv[3] ?? "navigate-snapshot"
-if (!binaryInput) throw new Error("usage: bun test/browser/extension-e2e.ts <kilo2> <scenario>")
+if (!binaryInput) throw new Error("usage: bun test/browser/extension-e2e.ts <kilo2> <scenario|all>")
 // Spawned runs use a fresh HOME as their cwd, so the binary path must not depend on the harness's cwd.
 const binary = path.resolve(binaryInput)
-
-// playwright-core belongs to the plugin workspace, not this package, so the specifier is resolved from there at
-// runtime: a static import would depend on hoisting that the workspace does not promise.
-const pluginDirectory = path.resolve(import.meta.dirname, "../../../kilo-plugin")
-const playwright = (await import(Bun.resolveSync("playwright-core", pluginDirectory))) as unknown as Playwright
-const chromium = playwright.chromium
-
-const extensionDirectory =
-  process.env.E2E_EXTENSION_DIR ?? path.resolve(import.meta.dirname, "../../../../cloud/apps/extension/.output/chrome-mv3")
-const executablePath = process.env.E2E_CHROMIUM ?? chromium.executablePath()
+const extensionDirectory = defaultExtensionDirectory
 
 const MARKER = "IFRAME-MARKER"
 const PUBLIC_MARKER = "PUBLIC-ORIGIN"
 const PASSWORD_VALUE = "hunter2"
 
-/**
- * The extension APIs this harness evaluates inside the service worker. The CLI package has no extension typings, so
- * this is the narrow global the evaluated callbacks use; each result is validated before the harness reads it.
- */
-declare const chrome: {
-  storage: {
-    local: {
-      get(key: string): Promise<unknown>
-      set(items: Record<string, unknown>, callback: () => void): void
-    }
-  }
-  tabGroups: {
-    get(groupId: number): Promise<unknown>
-    query(query: Record<string, unknown>): Promise<unknown>
-  }
-  tabs: { query(query: Record<string, unknown>): Promise<unknown> }
-}
-
 // ---------------------------------------------------------------------------------------------
-// The slice of Playwright this harness drives. Typed here so the test code stays checked without pulling Playwright
-// declarations into the CLI package.
-// ---------------------------------------------------------------------------------------------
-
-type Locator = {
-  click(): Promise<void>
-  getAttribute(name: string): Promise<string | null>
-  waitFor(options?: { timeout?: number }): Promise<void>
-}
-
-type CdpSession = {
-  on(event: string, listener: (payload: unknown) => void): void
-  send(method: string, params?: Record<string, unknown>): Promise<unknown>
-}
-
-type Worker = {
-  evaluate<T>(fn: () => T | Promise<T>): Promise<T>
-  evaluate<T, A>(fn: (arg: A) => T | Promise<T>, arg: A): Promise<T>
-  url(): string
-}
-
-type Page = {
-  evaluate<T>(fn: () => T | Promise<T>): Promise<T>
-  getByRole(role: string, options?: { name?: string }): Locator
-  goto(url: string): Promise<unknown>
-  on(event: string, listener: (payload: unknown) => void): void
-  reload(): Promise<unknown>
-  setDefaultTimeout(timeout: number): void
-  url(): string
-}
-
-type Route = { fulfill(options: { json: unknown; status: number }): Promise<void> }
-
-type Context = {
-  addInitScript(script: { content: string }): Promise<void>
-  browser(): { newBrowserCDPSession(): Promise<CdpSession> } | null
-  close(): Promise<void>
-  newCDPSession(page: Page): Promise<CdpSession>
-  newPage(): Promise<Page>
-  on(event: string, listener: (payload: unknown) => void): void
-  pages(): Page[]
-  route(url: string | ((url: URL) => boolean), handler: (route: Route) => Promise<void> | void): Promise<void>
-  serviceWorkers(): Worker[]
-  setDefaultTimeout(timeout: number): void
-  waitForEvent(event: string): Promise<Worker>
-}
-
-type Playwright = {
-  chromium: {
-    executablePath(): string
-    launchPersistentContext(directory: string, options: Record<string, unknown>): Promise<unknown>
-  }
-}
-
-function record(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined
-}
-
-// ---------------------------------------------------------------------------------------------
-// Fixtures: a localhost page, a cross-origin frame on 127.0.0.2, and a download.
+// Fixtures: a localhost page, a cross-origin frame on 127.0.0.2, and downloads.
 // ---------------------------------------------------------------------------------------------
 
 /** Every value the fixture page reported from its password field. */
@@ -172,30 +124,35 @@ const downloadPage = `<!doctype html>
   <a id="file" href="/download">Get the report</a>
 </body></html>`
 
-const fixture = Bun.serve({
-  hostname: "127.0.0.1",
-  port: 0,
-  async fetch(request) {
-    const url = new URL(request.url)
-    if (url.pathname === "/__record") {
-      recorded.push(await request.text().catch(() => ""))
-      return new Response(null, { status: 204 })
-    }
-    if (url.pathname === "/download") {
-      downloadHits.push({ at: Date.now(), path: url.pathname })
-      return new Response("report-body", {
-        headers: { "content-type": "text/plain", "content-disposition": 'attachment; filename="report.txt"' },
-      })
-    }
-    if (url.pathname === "/download-second") {
-      downloadHits.push({ at: Date.now(), path: url.pathname })
-      return new Response("second-body", {
-        headers: { "content-type": "text/plain", "content-disposition": 'attachment; filename="second.txt"' },
-      })
-    }
-    if (url.pathname === "/download-two") {
-      return new Response(
-        `<!doctype html><html><head><title>Two downloads</title></head><body>
+const html = (body: string) => new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } })
+const attachment = (body: string, filename: string) =>
+  new Response(body, {
+    headers: { "content-disposition": `attachment; filename="${filename}"`, "content-type": "text/plain" },
+  })
+
+let localOrigin = ""
+let publicOrigin = ""
+
+function startFixtures() {
+  const fixture = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      const url = new URL(request.url)
+      if (url.pathname === "/__record") {
+        recorded.push(await request.text().catch(() => ""))
+        return new Response(null, { status: 204 })
+      }
+      if (url.pathname === "/download") {
+        downloadHits.push({ at: Date.now(), path: url.pathname })
+        return attachment("report-body", "report.txt")
+      }
+      if (url.pathname === "/download-second") {
+        downloadHits.push({ at: Date.now(), path: url.pathname })
+        return attachment("second-body", "second.txt")
+      }
+      if (url.pathname === "/download-two") {
+        return html(`<!doctype html><html><head><title>Two downloads</title></head><body>
           <h1>Two downloads</h1><a id="file" href="/download">Get the report</a>
           <script>
             // The approved link starts its own file; the same click also starts a second, different one.
@@ -207,201 +164,46 @@ const fixture = Bun.serve({
               extra.click()
             })
           </script>
-        </body></html>`,
-        { headers: { "content-type": "text/html; charset=utf-8" } },
-      )
-    }
-    if (url.pathname === "/download-late") {
-      // The click itself starts no download; the attachment appears about 1.5 s later (after the click's wait).
-      await Bun.sleep(1500)
-      downloadHits.push({ at: Date.now(), path: url.pathname })
-      return new Response("report-body", {
-        headers: { "content-type": "text/plain", "content-disposition": 'attachment; filename="report.txt"' },
-      })
-    }
-    if (url.pathname === "/download-late-page") {
-      return new Response(
-        `<!doctype html><html><head><title>Late download</title></head><body>
+        </body></html>`)
+      }
+      if (url.pathname === "/download-late") {
+        // The click itself starts no download; the attachment appears about 1.5 s later (after the click's wait).
+        await Bun.sleep(1500)
+        downloadHits.push({ at: Date.now(), path: url.pathname })
+        return attachment("report-body", "report.txt")
+      }
+      if (url.pathname === "/download-late-page") {
+        return html(`<!doctype html><html><head><title>Late download</title></head><body>
           <h1>Late download</h1><a id="file" href="/download-late">Get the report</a>
-        </body></html>`,
-        { headers: { "content-type": "text/html; charset=utf-8" } },
-      )
-    }
-    if (url.pathname === "/user") return new Response(userPage, { headers: { "content-type": "text/html; charset=utf-8" } })
-    if (url.pathname === "/download-page") {
-      return new Response(downloadPage, { headers: { "content-type": "text/html; charset=utf-8" } })
-    }
-    if (url.pathname === "/framed") {
-      return new Response(framed(frame.url.origin), { headers: { "content-type": "text/html; charset=utf-8" } })
-    }
-    return new Response(simple, { headers: { "content-type": "text/html; charset=utf-8" } })
-  },
-})
-
-const frame = Bun.serve({
-  hostname: "127.0.0.2",
-  port: 0,
-  fetch(request) {
-    if (new URL(request.url).pathname === "/public") {
-      return new Response(
-        `<!doctype html><html><head><title>Public</title></head><body><h1 id="marker">${PUBLIC_MARKER}</h1></body></html>`,
-        { headers: { "content-type": "text/html; charset=utf-8" } },
-      )
-    }
-    return new Response(
-      `<!doctype html><html><head><title>Frame</title></head>
-<body style="margin:0;background:#ff0000"><h1 id="marker">${MARKER}</h1></body></html>`,
-      { headers: { "content-type": "text/html; charset=utf-8" } },
-    )
-  },
-})
-
-const publicOrigin = frame.url.origin
-const localOrigin = fixture.url.origin
-
-// ---------------------------------------------------------------------------------------------
-// Scripted model: one Chat Completions endpoint that answers from a per-scenario plan.
-// ---------------------------------------------------------------------------------------------
-
-type Call = { name: string; args: unknown }
-type Step = { calls: Call[]; results: string[]; images: string[] }
-
-function field(value: unknown, key: string): unknown {
-  return record(value)?.[key]
-}
-
-function textOf(content: unknown): string {
-  if (typeof content === "string") return content
-  if (!Array.isArray(content)) return ""
-  return content
-    .flatMap((part) => {
-      const type = field(part, "type")
-      const text = field(part, "text")
-      return type === "text" && typeof text === "string" ? [text] : []
-    })
-    .join("\n")
-}
-
-function callsOf(toolCalls: unknown): Call[] {
-  if (!Array.isArray(toolCalls)) return []
-  return toolCalls.flatMap((call) => {
-    const fn = field(call, "function")
-    const name = field(fn, "name")
-    if (typeof name !== "string") return []
-    const raw = field(fn, "arguments")
-    let args: unknown = raw
-    try {
-      args = typeof raw === "string" ? JSON.parse(raw) : raw
-    } catch {
-      args = raw
-    }
-    return [{ args, name }]
+        </body></html>`)
+      }
+      if (url.pathname === "/user") return html(userPage)
+      if (url.pathname === "/download-page") return html(downloadPage)
+      if (url.pathname === "/framed") return html(framed(publicOrigin))
+      return html(simple)
+    },
   })
-}
-
-/** The first PNG data URL anywhere in a message part (the CLI may send a file part, an image part, or a string). */
-function pngOf(value: unknown, depth = 0): string | undefined {
-  if (depth > 6) return undefined
-  if (typeof value === "string") return value.startsWith("data:image/png;base64,") ? value : undefined
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = pngOf(item, depth + 1)
-      if (found) return found
-    }
-    return undefined
+  const frame = Bun.serve({
+    hostname: "127.0.0.2",
+    port: 0,
+    fetch(request) {
+      if (new URL(request.url).pathname === "/public") {
+        return html(`<!doctype html><html><head><title>Public</title></head><body><h1 id="marker">${PUBLIC_MARKER}</h1></body></html>`)
+      }
+      return html(`<!doctype html><html><head><title>Frame</title></head>
+<body style="margin:0;background:#ff0000"><h1 id="marker">${MARKER}</h1></body></html>`)
+    },
+  })
+  localOrigin = fixture.url.origin
+  publicOrigin = frame.url.origin
+  return () => {
+    fixture.stop(true)
+    frame.stop(true)
   }
-  const object = record(value)
-  if (object === undefined) return undefined
-  for (const key of ["uri", "url", "data", "image_url", "source"]) {
-    const found = pngOf(object[key], depth + 1)
-    if (found) return found
-  }
-  return undefined
 }
-
-function read(messages: unknown): Step {
-  const calls: Call[] = []
-  const results: string[] = []
-  const images: string[] = []
-  if (!Array.isArray(messages)) return { calls, images, results }
-  for (const message of messages) {
-    const role = field(message, "role")
-    if (role === "assistant") calls.push(...callsOf(field(message, "tool_calls")))
-    if (role !== "tool") continue
-    const content = field(message, "content")
-    results.push(textOf(content))
-    const png = pngOf(content)
-    if (png) images.push(png)
-  }
-  return { calls, images, results }
-}
-
-const chunk = (model: string, delta: object, finish: string | null) =>
-  `data: ${JSON.stringify({ choices: [{ delta, finish_reason: finish, index: 0 }], id: "local", model, object: "chat.completion.chunk" })}\n\n`
-
-const toolCall = (model: string, name: string, args: unknown) =>
-  [
-    chunk(
-      model,
-      {
-        role: "assistant",
-        tool_calls: [
-          { function: { arguments: JSON.stringify(args), name }, id: `call_${name}_${Date.now()}`, index: 0, type: "function" },
-        ],
-      },
-      null,
-    ),
-    chunk(model, {}, "tool_calls"),
-    `data: ${JSON.stringify({ choices: [], id: "local", model, object: "chat.completion.chunk", usage: { completion_tokens: 2, prompt_tokens: 10, total_tokens: 12 } })}\n\n`,
-    "data: [DONE]\n\n",
-  ].join("")
-
-const answer = (model: string, text: string) =>
-  [
-    chunk(model, { content: text, role: "assistant" }, null),
-    chunk(model, {}, "stop"),
-    `data: ${JSON.stringify({ choices: [], id: "local", model, object: "chat.completion.chunk", usage: { completion_tokens: 2, prompt_tokens: 10, total_tokens: 12 } })}\n\n`,
-    "data: [DONE]\n\n",
-  ].join("")
-
-type Plan = (step: Step) => Promise<Call | undefined> | Call | undefined
-let activePlan: Plan | undefined
-const history: Step[] = []
-
-const sse = (body: string) => new Response(body, { headers: { "content-type": "text/event-stream" } })
-
-const model = Bun.serve({
-  hostname: "127.0.0.1",
-  port: 0,
-  async fetch(request) {
-    if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
-    const body: unknown = await request.json()
-    const name = typeof field(body, "model") === "string" ? (field(body, "model") as string) : "local"
-    const declared = field(body, "tools")
-    const tools = Array.isArray(declared)
-      ? declared.flatMap((tool) => {
-          const id = field(field(tool, "function"), "name")
-          return typeof id === "string" ? [id] : []
-        })
-      : []
-    if (!tools.some((tool) => tool.startsWith("browser_")) && !tools.includes("execute")) {
-      return sse(answer(name, "Browser E2E"))
-    }
-
-    const step = read(field(body, "messages"))
-    history.push(step)
-    const next = activePlan === undefined ? undefined : await activePlan(step)
-    if (next === undefined) return sse(answer(name, "Browser E2E finished"))
-    // #16317 registers the browser tools as a Code Mode namespace: the model reaches them through `execute`.
-    if (tools.some((tool) => tool.startsWith("browser_"))) return sse(toolCall(name, next.name, next.args))
-    const method = next.name.startsWith("browser_") ? next.name.slice("browser_".length) : next.name
-    const code = `return await tools.browser.${method}(${JSON.stringify(next.args)})`
-    return sse(toolCall(name, "execute", { code }))
-  },
-})
 
 // ---------------------------------------------------------------------------------------------
-// Chromium: the built extension, headed under xvfb, with the settings page driven like a user.
+// Per-process state: one browser, one model, one side panel.
 // ---------------------------------------------------------------------------------------------
 
 const failures: string[] = []
@@ -409,652 +211,27 @@ function expect(condition: boolean, message: string) {
   if (!condition) failures.push(message)
 }
 
-async function until<T>(check: () => Promise<T | undefined> | T | undefined, timeout = 20_000, label = "condition"): Promise<T> {
-  const deadline = Date.now() + timeout
-  let last: unknown
-  while (Date.now() < deadline) {
-    try {
-      const value = await check()
-      if (value !== undefined) return value
-    } catch (error) {
-      last = error
-    }
-    await Bun.sleep(50)
-  }
-  throw new Error(`${label} was not met before ${timeout}ms${last === undefined ? "" : `: ${String(last)}`}`)
-}
-
-async function freePort(): Promise<number> {
-  const { promise, resolve, reject } = Promise.withResolvers<number>()
-  const server = net.createServer()
-  server.once("error", reject)
-  server.listen(0, "127.0.0.1", () => {
-    const address = server.address()
-    resolve(typeof address === "object" && address !== null ? address.port : 0)
-    server.close()
-  })
-  return promise
-}
-
-/** Extension service-worker console and exceptions, through the browser-level CDP session. */
-class ServiceWorkerLog {
-  readonly lines: string[] = []
-  private attached = new Map<string, string>()
-  private nextId = 1
-  private session: CdpSession | undefined
-  private timer: ReturnType<typeof setInterval> | undefined
-
-  constructor(private readonly browser: { newBrowserCDPSession(): Promise<CdpSession> }) {}
-
-  async start() {
-    try {
-      const session = await this.browser.newBrowserCDPSession()
-      this.session = session
-      session.on("Target.receivedMessageFromTarget", (event) => this.receive(event))
-      session.on("Target.detachedFromTarget", (event) => {
-        const sessionId = record(event)?.["sessionId"]
-        if (typeof sessionId === "string") this.attached.delete(sessionId)
-      })
-      await session.send("Target.setDiscoverTargets", { discover: true })
-      session.on("Target.targetCreated", (event) => {
-        const info = record(record(event)?.["targetInfo"])
-        if (info && this.mine(info)) void this.attach(String(info["targetId"]))
-      })
-      await this.attachAll()
-      this.timer = setInterval(() => void this.attachAll(), 2_000)
-      this.push(`[relay] browser CDP session ready; ${this.attached.size} service worker target(s) attached`)
-      return true
-    } catch (error) {
-      this.lines.push(`[relay] cannot attach to the browser's CDP session: ${String(error)}`)
-      return false
-    }
-  }
-
-  stop() {
-    clearInterval(this.timer)
-    this.timer = undefined
-  }
-
-  private mine(info: Record<string, unknown>) {
-    return info["type"] === "service_worker" && typeof info["url"] === "string" && info["url"].includes(extensionId)
-  }
-
-  private async attachAll() {
-    if (!this.session) return
-    try {
-      const targets = record(await this.session.send("Target.getTargets"))
-      const infos = targets?.["targetInfos"]
-      if (!Array.isArray(infos)) return
-      for (const info of infos) {
-        const value = record(info)
-        if (value && this.mine(value)) await this.attach(String(value["targetId"]))
-      }
-    } catch (error) {
-      this.lines.push(`[relay] cannot list targets: ${String(error)}`)
-    }
-  }
-
-  private async attach(targetId: string) {
-    if (!this.session || this.attached.has(targetId)) return
-    try {
-      const attached = record(await this.session.send("Target.attachToTarget", { flatten: false, targetId }))
-      const sessionId = attached?.["sessionId"]
-      if (typeof sessionId !== "string") return
-      this.attached.set(targetId, sessionId)
-      await this.session.send("Target.sendMessageToTarget", {
-        message: JSON.stringify({ id: this.nextId++, method: "Runtime.enable", params: {} }),
-        sessionId,
-      })
-    } catch (error) {
-      this.lines.push(`[relay] cannot attach to ${targetId}: ${String(error)}`)
-    }
-  }
-
-  private receive(event: unknown) {
-    const message = record(event)?.["message"]
-    if (typeof message !== "string") return
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(message)
-    } catch {
-      return
-    }
-    const method = field(parsed, "method")
-    const params = record(field(parsed, "params"))
-    if (method === "Runtime.consoleAPICalled") {
-      const args = Array.isArray(params?.["args"])
-        ? params["args"].map((arg: unknown) => {
-            const entry = record(arg)
-            return entry?.["value"] ?? entry?.["description"] ?? entry?.["type"]
-          })
-        : []
-      this.push(`[${String(params?.["type"] ?? "log")}] ${args.join(" ")}`)
-    }
-    if (method === "Runtime.exceptionThrown") {
-      const details = record(params?.["exceptionDetails"])
-      const exception = record(details?.["exception"])
-      this.push(`[exception] ${String(exception?.["description"] ?? details?.["text"] ?? "unknown exception")}`)
-    }
-  }
-
-  private push(line: string) {
-    this.lines.push(line.slice(0, 2_000))
-    if (this.lines.length > 500) this.lines.splice(0, this.lines.length - 500)
-  }
-}
-
-let extensionId = ""
-let context: Context
+let launched: Launched | undefined
+let bridge: Bridge
 let panel: Page
-let worker: Worker
-let swLog: ServiceWorkerLog | undefined
 
-async function launch(base: string, options: { extension?: string; downloads?: string } = {}) {
-  const directory = options.extension ?? extensionDirectory
-  await fs.access(path.join(directory, "manifest.json"))
-  if (!existsSync(executablePath)) throw new Error(`no Chromium at ${executablePath}; install playwright-core's browser or set E2E_CHROMIUM`)
-  context = (await chromium.launchPersistentContext(path.join(base, "profile"), {
-    args: [
-      `--disable-extensions-except=${directory}`,
-      `--load-extension=${directory}`,
-      "--disable-blink-features=AutomationControlled",
-      ...(process.env.E2E_DSF === undefined ? [] : [`--force-device-scale-factor=${process.env.E2E_DSF}`]),
-    ],
-    executablePath,
-    headless: false,
-    ignoreDefaultArgs: ["--enable-automation"],
-    viewport: process.env.E2E_DSF === undefined ? { height: 900, width: 1280 } : null,
-    ...(options.downloads === undefined ? {} : { downloadsPath: options.downloads }),
-  })) as unknown as Context
-  context.setDefaultTimeout(20_000)
-  const existing = context.serviceWorkers()[0]
-  worker = existing ?? (await context.waitForEvent("serviceworker"))
-  extensionId = new URL(worker.url()).host
-  const browser = context.browser()
-  if (browser) {
-    swLog = new ServiceWorkerLog(browser)
-    await swLog.start()
-  }
-  return { extensionId }
+const browserOf = () => {
+  if (launched === undefined) throw new Error("the browser is not running")
+  return launched
 }
-
-/**
- * A copy of the built extension with the optional `downloads` permission promoted to required: automation cannot
- * answer Chrome's optional-permission prompt, and this is the state it is in after the user accepts it (the cloud
- * e2e does the same).
- */
-async function promoteDownloadsCopy(source: string, target: string) {
-  await fs.rm(target, { recursive: true, force: true })
-  await fs.cp(source, target, { recursive: true })
-  const manifestPath = path.join(target, "manifest.json")
-  const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8")) as {
-    optional_permissions?: string[]
-    permissions?: string[]
-  }
-  const optional = (manifest.optional_permissions ?? []).filter((permission) => permission !== "downloads")
-  const permissions = [...(manifest.permissions ?? [])]
-  if (!permissions.includes("downloads")) permissions.push("downloads")
-  await fs.writeFile(
-    manifestPath,
-    JSON.stringify({ ...manifest, optional_permissions: optional, permissions }, null, 2),
-  )
-  return target
-}
-
-/** Turns on "Allow local agents" through the extension's own settings page, as a signed-in user would. */
-async function enableLocalAgents(_base: string) {
-  // Auth validation and organization fetches: the settings header only exists for a signed-in session.
-  await context.route("https://app.kilo.ai/api/user", (route) =>
-    route.fulfill({ json: { google_user_email: "e2e@kilo.ai" }, status: 200 }),
-  )
-  await context.route("https://app.kilo.ai/api/organizations", (route) =>
-    route.fulfill({ json: { organizations: [] }, status: 200 }),
-  )
-  await context.route(
-    (url) => url.origin === "https://app.kilo.ai" && url.pathname.startsWith("/api/trpc/"),
-    (route) => route.fulfill({ json: {}, status: 200 }),
-  )
-  // A real user answers the optional-permission prompt; automation cannot. The page grants it the way an accepted
-  // prompt would, keeping the flow deterministic (loopback pairing does not need the permission).
-  await context.addInitScript({
-    content: "Object.defineProperty(chrome.permissions, 'request', { value: () => Promise.resolve(true) });",
-  })
-  panel = await context.newPage()
-  panel.setDefaultTimeout(20_000)
-  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`)
-  await seedAuth()
-  await panel.reload()
-  const settings = panel.getByRole("button", { name: "Settings" })
-  await settings.waitFor()
-  await settings.click()
-  const toggle = panel.getByRole("switch", { name: "Allow local agents" })
-  await toggle.waitFor()
-  await until(async () => (await toggle.getAttribute("aria-checked")) === "false", 10_000, "the switch starts off")
-  await toggle.click()
-  await until(async () => (await toggle.getAttribute("aria-checked")) === "true", 10_000, "the switch turns on")
-  const stored = await worker.evaluate(() => chrome.storage.local.get("kiloLocalAgentSettings"))
-  expect(record(stored)?.["kiloLocalAgentSettings"] !== undefined && record(record(stored)?.["kiloLocalAgentSettings"])?.["enabled"] === true, `the switch did not persist: ${JSON.stringify(stored)}`)
-}
-
-async function seedAuth() {
-  await panel.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        // The extension pages expose `chrome`; the ambient DOM types in this package do not.
-        const global = globalThis as { chrome?: ChromeExtensionApi }
-        const api = global.chrome
-        if (!api?.storage?.local) {
-          reject(new Error("chrome.storage.local is unavailable"))
-          return
-        }
-        api.storage.local.set({ kiloAuth: { token: "token-1", userEmail: "e2e@kilo.ai" } }, () => {
-          const message = api.runtime?.lastError?.message
-          if (message) reject(new Error(message))
-          else resolve()
-        })
-      }),
-  )
-}
-
-type ChromeExtensionApi = {
-  runtime?: { lastError?: { message?: string } }
-  storage?: { local?: { set(items: Record<string, unknown>, callback: () => void): void } }
-}
-
-/** A tab the user opened before the run: no opener, so no session may ever claim it. */
-async function openUserTab(url: string): Promise<number> {
-  const cdp = await context.newCDPSession(panel)
-  await cdp.send("Target.createTarget", { newWindow: false, url })
-  return await until(async () => {
-    const tabs = await tabsOf()
-    return tabs.find((tab) => tab.url === url)?.id
-  }, 10_000, "the user tab appears")
-}
-
-type TabInfo = { active?: boolean; groupId?: number; id?: number; title?: string; url?: string }
-type GroupInfo = { collapsed?: boolean; color?: string; id?: number; title?: string }
-
-/** The `chrome.tabs.Tab` fields this harness reads, validated field by field. */
-function tabOf(value: unknown): TabInfo {
-  const tab = record(value) ?? {}
-  return {
-    ...(typeof tab["active"] === "boolean" ? { active: tab["active"] } : {}),
-    ...(typeof tab["groupId"] === "number" ? { groupId: tab["groupId"] } : {}),
-    ...(typeof tab["id"] === "number" ? { id: tab["id"] } : {}),
-    ...(typeof tab["title"] === "string" ? { title: tab["title"] } : {}),
-    ...(typeof tab["url"] === "string" ? { url: tab["url"] } : {}),
-  }
-}
-
-function groupOf(value: unknown): GroupInfo {
-  const group = record(value) ?? {}
-  return {
-    ...(typeof group["collapsed"] === "boolean" ? { collapsed: group["collapsed"] } : {}),
-    ...(typeof group["color"] === "string" ? { color: group["color"] } : {}),
-    ...(typeof group["id"] === "number" ? { id: group["id"] } : {}),
-    ...(typeof group["title"] === "string" ? { title: group["title"] } : {}),
-  }
-}
-
-async function tabsOf(): Promise<TabInfo[]> {
-  const tabs = await worker.evaluate(() => chrome.tabs.query({}))
-  return Array.isArray(tabs) ? tabs.map(tabOf) : []
-}
-
-async function tabState() {
-  const tabs = await tabsOf()
-  const groups = await worker.evaluate(() => chrome.tabGroups.query({}))
-  return { groups: Array.isArray(groups) ? groups.map(groupOf) : [], tabs }
-}
-
-// ---------------------------------------------------------------------------------------------
-// Hub: start `kilo2 browser hub --loopback`, ask it for a pairing URL over its CLI socket, open that page.
-// ---------------------------------------------------------------------------------------------
-
-type HubEntry = { hubId: string; paired?: boolean; port?: number; socket?: string }
-
-type Hub = {
-  child: { exited: Promise<number>; kill(signal?: string): void }
-  entry: () => Promise<HubEntry | undefined>
-  log: { text: string }
-  port: number
-  stop: () => Promise<void>
-}
-
-function environment(root: string, settings: Settings) {
-  const run = path.join(root, "run")
-  return {
-    ...process.env,
-    HOME: root,
-    KILO_API_KEY: "",
-    KILO_AUTH_CONTENT: "",
-    KILO_BROWSER_DATA_DIR: path.join(root, "data", "kilo2", "browser"),
-    KILO_BROWSER_EXTRA_EXTENSION_IDS: extensionId,
-    KILO_BROWSER_RUN_DIR: path.join(run, "browser"),
-    KILO_CONFIG_CONTENT: JSON.stringify(config(settings)),
-    KILO_DISABLE_AUTOUPDATE: "1",
-    KILO_DISABLE_MODELS_FETCH: "1",
-    NO_PROXY: "127.0.0.1,127.0.0.2,localhost",
-    PATH: `${path.join(root, "bin")}:${process.env.PATH ?? ""}`,
-    XDG_CACHE_HOME: path.join(root, "cache"),
-    XDG_CONFIG_HOME: path.join(root, "config"),
-    XDG_DATA_HOME: path.join(root, "data"),
-    XDG_RUNTIME_DIR: run,
-    XDG_STATE_HOME: path.join(root, "state"),
-    no_proxy: "127.0.0.1,127.0.0.2,localhost",
-  }
-}
-
-async function prepareHome(root: string) {
-  await fs.mkdir(root, { recursive: true })
-  await fs.mkdir(path.join(root, "bin"), { recursive: true })
-  await fs.mkdir(path.join(root, "run"), { recursive: true, mode: 0o700 })
-  // The CLI's system opener is xdg-open on Linux; a no-op keeps an unpaired run from waiting on it.
-  await fs.writeFile(path.join(root, "bin", "xdg-open"), "#!/bin/sh\nexit 0\n", { mode: 0o755 })
-}
-
-async function readHubEntry(root: string): Promise<HubEntry | undefined> {
-  const directory = path.join(root, "run", "browser", "hubs")
-  const files = await fs.readdir(directory).catch(() => [] as string[])
-  for (const file of files) {
-    if (!file.endsWith(".json")) continue
-    try {
-      return JSON.parse(await fs.readFile(path.join(directory, file), "utf8")) as HubEntry
-    } catch {
-      // A half-written registry file is rewritten by the hub; wait for the next read.
-    }
-  }
-  return undefined
-}
-
-function tap(stream: ReadableStream<Uint8Array>, into: { text: string }) {
-  void (async () => {
-    const reader = stream.getReader()
-    const decoder = new TextDecoder()
-    try {
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        into.text += decoder.decode(value, { stream: true })
-      }
-    } catch {
-      // The stream closes when the process exits.
-    }
-  })()
-}
-
-async function startHub(root: string, settings: Settings): Promise<Hub> {
-  const port = await freePort()
-  const log = { text: "" }
-  const child = Bun.spawn([binary, "browser", "hub", "--loopback", "--port", String(port)], {
-    cwd: root,
-    env: environment(root, settings),
-    stderr: "pipe",
-    stdout: "pipe",
-  })
-  tap(child.stdout as ReadableStream<Uint8Array>, log)
-  tap(child.stderr as ReadableStream<Uint8Array>, log)
-  await until(async () => readHubEntry(root), 30_000, "the hub registers itself")
-  return {
-    child,
-    entry: () => readHubEntry(root),
-    log,
-    port,
-    stop: async () => {
-      try {
-        child.kill("SIGTERM")
-      } catch {
-        // Already gone.
-      }
-      await Promise.race([child.exited, Bun.sleep(5_000)])
-    },
-  }
-}
-
-/** One JSON-RPC call the hub answers itself, over the same 4-byte-framed socket the CLI uses. */
-async function hubRequest(socketPath: string, method: string, params: unknown): Promise<unknown> {
-  const socket = net.createConnection(socketPath)
-  await new Promise<void>((resolve, reject) => {
-    socket.once("connect", resolve)
-    socket.once("error", reject)
-  })
-  const { promise, resolve, reject } = Promise.withResolvers<unknown>()
-  let buffer = Buffer.alloc(0)
-  const timer = setTimeout(() => {
-    socket.destroy()
-    reject(new Error(`hub ${method} timed out`))
-  }, 15_000)
-  socket.on("data", (chunk: Buffer) => {
-    buffer = Buffer.concat([buffer, chunk])
-    while (buffer.length >= 4) {
-      const length = buffer.readUInt32LE(0)
-      if (buffer.length < 4 + length) return
-      const text = buffer.subarray(4, 4 + length).toString("utf8")
-      buffer = buffer.subarray(4 + length)
-      let frame: unknown
-      try {
-        frame = JSON.parse(text)
-      } catch {
-        continue
-      }
-      if (field(frame, "type") !== "rpc") continue
-      const message = record(field(frame, "message"))
-      if (message?.["id"] !== 1) continue
-      clearTimeout(timer)
-      socket.end()
-      const error = record(message["error"])
-      if (error) reject(new Error(String(error["message"])))
-      else resolve(message["result"])
-      return
-    }
-  })
-  socket.once("error", (error: Error) => {
-    clearTimeout(timer)
-    reject(error)
-  })
-  const body = Buffer.from(JSON.stringify({ message: { id: 1, jsonrpc: "2.0", method, params }, type: "rpc" }))
-  const header = Buffer.alloc(4)
-  header.writeUInt32LE(body.length, 0)
-  socket.write(Buffer.concat([header, body]))
-  return promise
-}
-
-/** The CLI's pairing step: ask the hub for its one-time URL and open the page in this browser. */
-async function pair(hub: Hub) {
-  const entry = await hub.entry()
-  if (entry?.socket === undefined) throw new Error("the hub registry has no socket")
-  const answer = record(await hubRequest(entry.socket, "pairing.url", {}))
-  const url = answer?.["url"]
-  if (typeof url !== "string") throw new Error("the hub returned no pairing URL")
-  const cdp = await context.newCDPSession(panel)
-  // A tab with no opener: the extension observes the navigation and closes it after redeeming the token.
-  await cdp.send("Target.createTarget", { newWindow: true, url })
-  await until(async () => {
-    const current = await hub.entry()
-    return current?.paired === true ? current : undefined
-  }, 30_000, "the extension pairs and connects")
-  return url
-}
-
-// ---------------------------------------------------------------------------------------------
-// CLI runs: a fresh home, a fresh hub, the scripted model, and `kilo2 run`.
-// ---------------------------------------------------------------------------------------------
-
-type Rule = { action: string; effect: "allow" | "ask" | "deny"; resource: string }
-type Settings = { allowSensitive?: boolean; auto?: boolean; rules?: Rule[]; strict?: boolean }
-
-/** A non-interactive run cannot answer a tool-level ask, so the harness config allows the tools it drives. */
-const TOOL_RULES: Rule[] = [
-  "execute",
-  "browser_navigate",
-  "browser_snapshot",
-  "browser_click",
-  "browser_type",
-  "browser_tabs",
-  "browser_take_screenshot",
-].map((action) => ({ action, effect: "allow" as const, resource: "*" }))
-
-/** The built-in defaults the SPEC documents for the localhost family; without them every act reads as an ask. */
-const LOCALHOST_RULES: Rule[] = [
-  { action: "browser", effect: "allow", resource: "*:http://localhost:*" },
-  { action: "browser", effect: "allow", resource: "*:http://127.0.0.1:*" },
-  { action: "browser", effect: "allow", resource: "*:http://*.localhost:*" },
-  { action: "browser", effect: "allow", resource: "*:https://localhost:*" },
-]
-
-function config(settings: Settings) {
-  return {
-    model: "local/echo",
-    providers: {
-      local: {
-        models: { echo: { limit: { context: 200_000, output: 4_000 }, name: "Echo" } },
-        name: "Local",
-        package: "@opencode/ai/providers/openai-compatible",
-        settings: { apiKey: "local-key", baseURL: `${model.url.origin}/v1` },
-      },
-    },
-    browser: {
-      backend: "extension",
-      observation: "full",
-      ...(settings.allowSensitive ? { allow_sensitive: true } : {}),
-    },
-    // A non-interactive run cannot answer an ask, so everything the scenario is not testing is allowed explicitly.
-    permissions: settings.strict
-      ? [...TOOL_RULES, ...LOCALHOST_RULES, ...(settings.rules ?? [])]
-      : [{ action: "*", effect: "allow" as const, resource: "*" }, ...(settings.rules ?? [])],
-  }
-}
-
-let runCounter = 0
-
-type Run = {
-  code: number
-  hub: Hub
-  last: Step
-  pngs: string[]
-  root: string
-  stderr: string
-  steps: Step[]
-  stdout: string
-}
-
-type RunOptions = { pair?: boolean; stop?: () => Promise<void> }
-
-async function run(plan: Plan, settings: Settings, options: RunOptions = {}): Promise<Run> {
-  runCounter += 1
-  const root = path.join(base, `run-${runCounter}`)
-  await prepareHome(root)
-  const hub = await startHub(root, settings)
-  try {
-    if (options.pair !== false) await pair(hub)
-    history.length = 0
-    activePlan = plan
-    const child = Bun.spawn(
-      [
-        binary,
-        "run",
-        "Check the browser bridge.",
-        "--model",
-        "local/echo",
-        "--standalone",
-        "--format",
-        "json",
-        ...(settings.auto ? ["--auto"] : []),
-      ],
-      {
-        cwd: root,
-        env: environment(root, settings),
-        stderr: "pipe",
-        stdout: "pipe",
-        timeout: 240_000,
-      },
-    )
-    const [stdout, stderr, code] = await Promise.all([
-      new Response(child.stdout as ReadableStream).text(),
-      new Response(child.stderr as ReadableStream).text(),
-      child.exited,
-    ])
-    activePlan = undefined
-    const steps = [...history]
-    const last = steps.at(-1) ?? { calls: [], images: [], results: [] }
-    // The screenshot arrives in the run's tool event as a file part with a data URI; the model message may carry only
-    // a text reference, so the event stream is the reliable source.
-    const pngs = [...stdout.matchAll(/data:image\/png;base64,[A-Za-z0-9+/=]+/g)].map((match) => match[0])
-    return { code, hub, last, pngs, root, stderr, steps, stdout }
-  } finally {
-    await hub.stop()
-  }
-}
-
-/** The ref a snapshot reported for one role and name, e.g. `button "Click me"`. */
-function refOf(snapshot: string, pattern: RegExp): string | undefined {
-  return pattern.exec(snapshot)?.[1]
-}
-
-function decodePng(dataUrl: string | undefined): Png.Image | undefined {
-  if (!dataUrl) return undefined
-  const comma = dataUrl.indexOf(",")
-  if (comma < 0) return undefined
-  try {
-    return Png.decode(Buffer.from(dataUrl.slice(comma + 1), "base64"))
-  } catch {
-    return undefined
-  }
-}
-
-function pixel(image: Png.Image | undefined, x: number, y: number) {
-  if (!image) return undefined
-  const at = (y * image.width + x) * image.channels
-  return [image.data[at], image.data[at + 1], image.data[at + 2]]
-}
-
-/** A JSON object the tool rendered, possibly inside observation sections. */
-function jsonOf(text: string): unknown {
-  const array = /"tabs"\s*:\s*(\[[\s\S]*?\])/.exec(text)
-  if (array) {
-    try {
-      return { tabs: JSON.parse(array[1]) }
-    } catch {
-      return undefined
-    }
-  }
-  try {
-    return JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1))
-  } catch {
-    return undefined
-  }
-}
-
-/** The run's tool events in order, with the CLI's own start/end timestamps. */
-function toolTimes(stdout: string): { start: number; end: number }[] {
-  const times: { start: number; end: number }[] = []
-  for (const line of stdout.split("\n")) {
-    if (!line.startsWith("{")) continue
-    let event: unknown
-    try {
-      event = JSON.parse(line)
-    } catch {
-      continue
-    }
-    if (field(event, "type") !== "tool_use") continue
-    const part = record(field(event, "part"))
-    if (part?.["type"] !== "tool") continue
-    const time = record(record(part["state"])?.["time"])
-    if (typeof time?.["start"] === "number" && typeof time?.["end"] === "number") {
-      times.push({ start: time["start"], end: time["end"] })
-    }
-  }
-  return times
-}
+const run = (plan: Plan, settings: Settings, options: RunOptions = {}) => runAgent(bridge, plan, settings, options)
+const tabs = () => tabState(browserOf().worker)
 
 function report(results: Record<string, unknown>) {
   return {
-    chromium: executablePath,
+    cdp: launched === undefined ? undefined : cdpReport(launched.cdp),
+    chromium: chromiumExecutable,
     extension: extensionDirectory,
-    extensionId,
+    extensionId: launched?.extensionId ?? "",
     failures,
     scenario,
-    serviceWorker: swLog?.lines.slice(-120) ?? [],
+    serviceWorker: launched?.swLog.lines.slice(-120) ?? [],
+    ...(failures.length && launched ? { chromiumLog: launched.chromiumLog.text.slice(-3_000) } : {}),
     ...results,
   }
 }
@@ -1062,6 +239,43 @@ function report(results: Record<string, unknown>) {
 // ---------------------------------------------------------------------------------------------
 // Scenarios
 // ---------------------------------------------------------------------------------------------
+
+/**
+ * The launch itself: a plain user download (no agent, switch off) must go through Chrome's own download manager, so
+ * `chrome.downloads.onDeterminingFilename` fires in the extension's service worker and the file lands under its real
+ * name in the profile's `download.default_directory`. Under a DevTools download override neither happens.
+ */
+async function downloadPath() {
+  const { browser, worker } = browserOf()
+  await armDownloadProbe(worker)
+  await clearDownloads()
+  const url = `${localOrigin}/download`
+  const cdp = await browser.newBrowserCDPSession()
+  await cdp.send("Target.createTarget", { newWindow: false, url })
+  const files = await until(
+    async () => ((await downloadFiles()).includes("report.txt") ? await downloadFiles() : undefined),
+    15_000,
+    "report.txt lands in the download directory",
+  ).catch(async () => downloadFiles())
+  const events = await until(
+    async () => {
+      const seen = await readDownloadProbe(worker)
+      return seen.some((event) => event.event === "determining") ? seen : undefined
+    },
+    5_000,
+    "onDeterminingFilename fires",
+  ).catch(async () => readDownloadProbe(worker))
+  const determining = events.filter((event) => event.event === "determining")
+  const bodies = await downloadBodies()
+  expect(determining.length === 1, `onDeterminingFilename fired ${determining.length} times: ${JSON.stringify(events)}`)
+  expect(
+    determining.some((event) => event.filename === "report.txt" && event.url === url),
+    `onDeterminingFilename did not see report.txt from ${url}: ${JSON.stringify(events)}`,
+  )
+  expect(JSON.stringify(files) === JSON.stringify(["report.txt"]), `the download directory holds ${JSON.stringify(files)}`)
+  expect(bodies.includes("report-body"), `the saved file has no body: ${JSON.stringify(bodies)}`)
+  return { downloads: downloadsPath, events, files }
+}
 
 async function navigateSnapshot() {
   const plan: Plan = (step) => {
@@ -1126,6 +340,7 @@ async function permission() {
 }
 
 async function frames() {
+  const { context } = browserOf()
   const dpr = Number(process.env.E2E_DPR ?? process.env.E2E_DSF ?? "1")
   const userPage = await context.newPage()
   await userPage.goto(`${localOrigin}/user`)
@@ -1275,9 +490,9 @@ async function sensitive() {
 
 async function group() {
   const userUrl = `${localOrigin}/user`
-  const userTabId = await openUserTab(userUrl)
-  const userBefore = (await tabState()).tabs.find((tab) => tab.id === userTabId)
-  let during: Awaited<ReturnType<typeof tabState>> | undefined
+  const userTabId = await openUserTab(browserOf(), userUrl)
+  const userBefore = (await tabs()).tabs.find((tab) => tab.id === userTabId)
+  let during: TabState | undefined
   let listed: string | undefined
 
   const result = await run((step) => {
@@ -1290,20 +505,20 @@ async function group() {
     if (step.results.length === 3) {
       listed = step.results[2]
       return (async () => {
-        during = await tabState()
+        during = await tabs()
         const parsed = jsonOf(step.results[2] ?? "")
-        const tabs = field(parsed, "tabs")
-        const user = Array.isArray(tabs) ? tabs.find((tab) => field(tab, "url") === userUrl) : undefined
-        const withheld = Array.isArray(tabs) ? tabs.find((tab) => field(tab, "url") === "[origin withheld]") : undefined
+        const listedTabs = field(parsed, "tabs")
+        const user = Array.isArray(listedTabs) ? listedTabs.find((tab) => field(tab, "url") === userUrl) : undefined
+        const withheld = Array.isArray(listedTabs) ? listedTabs.find((tab) => field(tab, "url") === "[origin withheld]") : undefined
         const index = field(user ?? withheld, "index")
         return typeof index === "number" ? { args: { action: "select", index }, name: "browser_tabs" } : undefined
       })()
     }
     return undefined
   }, {})
-  during ??= await tabState()
+  during ??= await tabs()
 
-  const after = await tabState()
+  const after = await tabs()
   const userAfter = after.tabs.find((tab) => tab.id === userTabId)
   const userDuring = during.tabs.find((tab) => tab.id === userTabId)
   const kiloGroup = during.groups.find(
@@ -1340,13 +555,14 @@ async function group() {
 }
 
 async function stop() {
+  const { worker } = browserOf()
   let stopError: unknown
   let liveGroupId: number | undefined
   let endedGroup: GroupInfo | undefined
   const stopAll = async () => {
     try {
       const live = await until(
-        async () => (await tabState()).groups.find((group) => typeof group.title === "string" && group.title.startsWith("Kilo · ")),
+        async () => (await tabs()).groups.find((candidate) => typeof candidate.title === "string" && candidate.title.startsWith("Kilo · ")),
         20_000,
         "the live Kilo group",
       )
@@ -1356,8 +572,8 @@ async function stop() {
       await button.click()
       endedGroup = await until(async () => {
         if (liveGroupId === undefined) return undefined
-        const group = groupOf(await worker.evaluate(async (id: number) => chrome.tabGroups.get(id), liveGroupId))
-        return group.title === "Kilo · ended" && group.collapsed === true && group.color === "grey" ? group : undefined
+        const ended = await groupById(worker, liveGroupId)
+        return ended.title === "Kilo · ended" && ended.collapsed === true && ended.color === "grey" ? ended : undefined
       }, 20_000, "the group turns ended")
     } catch (error) {
       stopError = error
@@ -1382,7 +598,7 @@ async function stop() {
   )
 
   const next = result.last.results[2] ?? ""
-  const state = await tabState()
+  const state = await tabs()
   expect(stopError === undefined, `Stop all did not run: ${String(stopError)}`)
   expect(endedGroup !== undefined, `no "Kilo · ended" group: ${JSON.stringify(state.groups)}`)
   expect(next.includes("The user stopped this browser session"), `the next call was not user_stopped:\n${next.slice(0, 600)}`)
@@ -1418,9 +634,15 @@ async function unpaired() {
 
 let downloadsPath: string | undefined
 
+/**
+ * Finished files in the download directory. Chrome writes in-flight bytes to `.crdownload` and, during an
+ * onDeterminingFilename hold, to a hidden `.com.google.Chrome.*` temp file; neither is a saved file.
+ */
 async function downloadFiles(): Promise<string[]> {
   if (downloadsPath === undefined) return []
-  return (await fs.readdir(downloadsPath).catch(() => [] as string[])).filter((file) => !file.endsWith(".crdownload"))
+  return (await fs.readdir(downloadsPath).catch(() => [] as string[]))
+    .filter((file) => !file.endsWith(".crdownload") && !file.startsWith(".com.google.Chrome."))
+    .sort()
 }
 
 async function downloadBodies(): Promise<string[]> {
@@ -1438,7 +660,6 @@ async function clearDownloads() {
 }
 
 const APPROVAL = "Approved. Repeat the same step"
-const APPROVAL_LATE = "Approved. Repeat that step"
 
 /**
  * A click on an attachment link: the first call cancels the download and reports a post-action need (auto-approved by
@@ -1491,13 +712,13 @@ async function download() {
 /** Navigating straight to an attachment URL: the same guarded, approved-repeat and re-guarded sequence. */
 async function downloadNavigate() {
   const userUrl = `${localOrigin}/user`
-  const userTabId = await openUserTab(userUrl)
-  const userBefore = (await tabState()).tabs.find((tab) => tab.id === userTabId)
-  let during: Awaited<ReturnType<typeof tabState>> | undefined
+  const userTabId = await openUserTab(browserOf(), userUrl)
+  const userBefore = (await tabs()).tabs.find((tab) => tab.id === userTabId)
+  let during: TabState | undefined
   const folder: string[][] = []
   const plan: Plan = async (step) => {
     folder.push(await downloadFiles())
-    if (step.results.length === 2) during = await tabState()
+    if (step.results.length === 2) during = await tabs()
     if (step.results.length <= 2) return { args: { url: `${localOrigin}/download` }, name: "browser_navigate" }
     return undefined
   }
@@ -1507,7 +728,7 @@ async function downloadNavigate() {
   const result = await run(plan, { allowSensitive: true })
   const text = result.last.results
   const hits = downloadHits.length - hitsBefore
-  const after = await tabState()
+  const after = await tabs()
   const userDuring = during?.tabs.find((tab) => tab.id === userTabId)
   const userAfter = after.tabs.find((tab) => tab.id === userTabId)
   expect(text[0]?.includes(APPROVAL), `the guarded navigation did not report the approval:\n${(text[0] ?? "").slice(0, 600)}`)
@@ -1539,12 +760,12 @@ async function downloadNavigate() {
 async function downloadTabsNew() {
   const url = `${localOrigin}/download`
   const folder: string[][] = []
-  let afterFirst: Awaited<ReturnType<typeof tabState>> | undefined
-  let afterRepeat: Awaited<ReturnType<typeof tabState>> | undefined
+  let afterFirst: TabState | undefined
+  let afterRepeat: TabState | undefined
   const plan: Plan = async (step) => {
     folder.push(await downloadFiles())
-    if (step.results.length === 1) afterFirst = await tabState()
-    if (step.results.length === 2) afterRepeat = await tabState()
+    if (step.results.length === 1) afterFirst = await tabs()
+    if (step.results.length === 2) afterRepeat = await tabs()
     if (step.results.length <= 1) return { args: { action: "new", url }, name: "browser_tabs" }
     return undefined
   }
@@ -1555,7 +776,7 @@ async function downloadTabsNew() {
   const text = result.last.results
   const hits = downloadHits.length - hitsBefore
   // The agent's tab is the one in its Kilo group.
-  const agentTabs = (state: Awaited<ReturnType<typeof tabState>> | undefined) =>
+  const agentTabs = (state: TabState | undefined) =>
     (state?.tabs ?? [])
       .filter((tab) => tab.groupId !== -1)
       .map((tab) => tab.id)
@@ -1674,7 +895,7 @@ async function downloadApprovedOne() {
   }
 }
 
-/** A click whose download starts about 500 ms later: the next call reports it, and the repeat keeps one file. */
+/** A click whose download starts about 1.5 s later: the next call reports it, and the repeat keeps one file. */
 async function downloadLate() {
   const linkRef = (snapshot: string) => refOf(snapshot, /link "Get the report" \[ref=([^\]]+)\]/)
   const folder: string[][] = []
@@ -1766,8 +987,15 @@ async function downloadUngranted() {
 // Main
 // ---------------------------------------------------------------------------------------------
 
-let base = ""
 const scenarios: Record<string, () => Promise<Record<string, unknown>>> = {
+  "download-path": downloadPath,
+  "navigate-snapshot": navigateSnapshot,
+  permission,
+  frames,
+  sensitive,
+  group,
+  stop,
+  unpaired,
   download,
   "download-navigate": downloadNavigate,
   "download-ungranted": downloadUngranted,
@@ -1775,40 +1003,131 @@ const scenarios: Record<string, () => Promise<Record<string, unknown>>> = {
   "download-tabs-new": downloadTabsNew,
   "download-tabs-new-notoken": downloadTabsNewNoToken,
   "download-approved-one": downloadApprovedOne,
-  frames,
-  group,
-  "navigate-snapshot": navigateSnapshot,
-  permission,
-  sensitive,
-  stop,
-  unpaired,
+}
+
+function option(name: string): string | undefined {
+  const at = process.argv.indexOf(name)
+  return at < 0 ? undefined : process.argv[at + 1]
+}
+
+function hubPorts(offset: number): number[] | undefined {
+  const match = /^(\d+)-(\d+)$/.exec(process.env.E2E_HUB_PORTS ?? "")
+  if (!match) return undefined
+  const first = Number(match[1])
+  const all = Array.from({ length: Number(match[2]) - first + 1 }, (_, index) => first + index)
+  const start = offset % all.length
+  return [...all.slice(start), ...all.slice(0, start)]
+}
+
+type Outcome = { failure: string; pass: boolean; repeat: number; scenario: string; seconds: number }
+
+/** `all`: every scenario in its own child process with its own scratch root, one after another. */
+async function runAll(): Promise<number> {
+  const repeat = Math.max(1, Number(option("--repeat") ?? "1"))
+  const only = option("--only")?.split(",").filter(Boolean)
+  const names = only ?? Object.keys(scenarios)
+  const unknown = names.filter((name) => !(name in scenarios))
+  if (unknown.length) throw new Error(`unknown scenario(s) ${unknown.join(", ")}; choose ${Object.keys(scenarios).join(", ")}`)
+  const root = process.env.E2E_HOME ?? (await fs.mkdtemp(path.join(os.tmpdir(), "bridge-e2e-all-")))
+  const out = path.resolve(option("--out") ?? path.join(root, "reports"))
+  await fs.mkdir(out, { recursive: true })
+  const outcomes: Outcome[] = []
+  let child = 0
+  for (let round = 1; round <= repeat; round++) {
+    for (const name of names) {
+      const home = path.join(root, `${name}-${round}`)
+      await fs.rm(home, { force: true, recursive: true })
+      const started = performance.now()
+      const spawned = Bun.spawn([process.execPath, import.meta.path, binary, name], {
+        env: {
+          ...process.env,
+          E2E_HOME: home,
+          ...(process.env.E2E_HUB_PORTS ? { E2E_HUB_PORT_OFFSET: String(child * 4) } : {}),
+        },
+        stderr: "pipe",
+        stdout: "pipe",
+        timeout: 15 * 60_000,
+      })
+      child += 1
+      const [stdout, stderr, code] = await Promise.all([
+        new Response(spawned.stdout as ReadableStream).text(),
+        new Response(spawned.stderr as ReadableStream).text(),
+        spawned.exited,
+      ])
+      const seconds = (performance.now() - started) / 1000
+      await fs.writeFile(path.join(out, `${name}-${round}.json`), stdout)
+      if (stderr) await fs.writeFile(path.join(out, `${name}-${round}.stderr.txt`), stderr)
+      let failure = ""
+      try {
+        const parsed = record(JSON.parse(stdout.slice(stdout.indexOf("{"))))
+        const list = parsed?.["failures"]
+        if (Array.isArray(list) && list.length) failure = String(list[0])
+      } catch {
+        failure = `no JSON report (exit ${code}): ${(stderr.trim().split("\n").at(-1) ?? "").trim()}`
+      }
+      if (!failure && code !== 0) failure = `exit ${code}`
+      const outcome: Outcome = { failure: failure.split("\n")[0]?.slice(0, 160) ?? "", pass: code === 0 && !failure, repeat: round, scenario: name, seconds }
+      outcomes.push(outcome)
+      console.error(`${outcome.pass ? "PASS" : "FAIL"} ${name} #${round} ${seconds.toFixed(1)}s ${outcome.failure}`)
+    }
+  }
+  const width = Math.max(...outcomes.map((outcome) => outcome.scenario.length), "scenario".length)
+  const lines = [
+    `| ${"scenario".padEnd(width)} | run | result | seconds | failure |`,
+    `| ${"-".repeat(width)} | --- | ------ | ------- | ------- |`,
+    ...outcomes.map(
+      (outcome) =>
+        `| ${outcome.scenario.padEnd(width)} | ${String(outcome.repeat).padStart(3)} | ${outcome.pass ? "pass  " : "FAIL  "} | ${outcome.seconds.toFixed(1).padStart(7)} | ${outcome.failure.replaceAll("|", "\\|")} |`,
+    ),
+    "",
+    ...names.map((name) => {
+      const mine = outcomes.filter((outcome) => outcome.scenario === name)
+      return `${name.padEnd(width)}  ${mine.filter((outcome) => outcome.pass).length}/${mine.length} pass`
+    }),
+    `total ${outcomes.filter((outcome) => outcome.pass).length}/${outcomes.length} pass; reports in ${out}`,
+  ]
+  const table = lines.join("\n")
+  await fs.writeFile(path.join(out, "summary.md"), `${table}\n`)
+  console.log(table)
+  return outcomes.every((outcome) => outcome.pass) ? 0 : 1
+}
+
+if (scenario === "all") {
+  process.exit(await runAll())
 }
 
 const selected = scenarios[scenario]
-if (!selected) throw new Error(`unknown scenario ${scenario}; choose ${Object.keys(scenarios).join(", ")}`)
+if (!selected) throw new Error(`unknown scenario ${scenario}; choose all, ${Object.keys(scenarios).join(", ")}`)
 
-base = process.env.E2E_HOME ?? (await fs.mkdtemp(path.join(os.tmpdir(), "bridge-e2e-")))
-if (process.env.E2E_HOME) await fs.mkdir(base, { recursive: true })
+const base = process.env.E2E_HOME ?? (await fs.mkdtemp(path.join(os.tmpdir(), "bridge-e2e-")))
+await fs.mkdir(base, { recursive: true })
+const stopFixtures = startFixtures()
+const model = startModel()
 
-// The downloads scenarios load the promoted copy (the accepted-permission state); the ungranted one loads the
-// shipped build, where `downloads` stays optional and unrequested.
-// Every scenario runs against the accepted-permission state except the explicit "not granted" one.
+// Every scenario runs against the accepted-permission state (a copy with `downloads` promoted to required) except
+// download-ungranted, which loads the shipped build where `downloads` stays optional and unrequested.
 const promoted = scenario !== "download-ungranted"
-const usesDownloads = promoted
 const extension = promoted ? await promoteDownloadsCopy(extensionDirectory, path.join(base, "extension-downloads")) : extensionDirectory
-if (usesDownloads) {
-  downloadsPath = path.join(base, "downloads")
-  await fs.mkdir(downloadsPath, { recursive: true })
-}
+// Chrome's own default download directory, set in the profile before launch; every scenario reads it.
+downloadsPath = path.join(base, "downloads")
 
 try {
-  await launch(base, { extension, ...(downloadsPath === undefined ? {} : { downloads: downloadsPath }) })
-  if (scenario === "unpaired") {
-    panel = await context.newPage()
+  launched = await launchChromium({ downloads: downloadsPath, extension, profile: path.join(base, "profile") })
+  const ports = hubPorts(Number(process.env.E2E_HUB_PORT_OFFSET ?? "0"))
+  bridge = { base, binary, browser: launched, model, ...(ports ? { ports } : {}) }
+  if (scenario === "unpaired" || scenario === "download-path") {
+    panel = await launched.context.newPage()
   } else {
-    await enableLocalAgents(base)
+    const enabled = await enableLocalAgents(launched)
+    panel = enabled.panel
+    const settings = record(record(enabled.stored)?.["kiloLocalAgentSettings"])
+    expect(settings?.["enabled"] === true, `the switch did not persist: ${JSON.stringify(enabled.stored)}`)
   }
   const results = await selected()
+  expect(
+    launched.cdp.downloadBehavior.length === 0,
+    `the harness sent a DevTools download override: ${JSON.stringify(launched.cdp.downloadBehavior)}`,
+  )
   console.log(JSON.stringify(report(results), null, 2))
   if (failures.length) process.exitCode = 1
 } catch (error) {
@@ -1816,9 +1135,7 @@ try {
   console.log(JSON.stringify(report({}), null, 2))
   process.exitCode = 1
 } finally {
-  swLog?.stop()
-  await context?.close().catch(() => undefined)
-  fixture.stop(true)
-  frame.stop(true)
-  model.stop(true)
+  await launched?.close().catch(() => undefined)
+  stopFixtures()
+  model.stop()
 }
