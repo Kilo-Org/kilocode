@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 // Temporary leak check: 400 mixed cycles on one CLI session, forcing GC on the extension service worker every
 // 50 cycles and reading used heap; heap snapshots at cycle 100 and 300 when the usage keeps growing.
-import * as Png from "@kilocode/kilo-plugin/browser/png"
 import fs from "node:fs/promises"
 import net from "node:net"
 import os from "node:os"
@@ -361,7 +360,8 @@ const child = Bun.spawn([binary, "run", "Leak check.", "--model", "local/echo", 
   stdout: "pipe",
   timeout: 3_600_000,
 })
-const [stdout, stderr, code] = await Promise.all([
+// stdout is drained so the pipe never blocks the run; the heap series is the result.
+const [, stderr, code] = await Promise.all([
   new Response(child.stdout as ReadableStream).text(),
   new Response(child.stderr as ReadableStream).text(),
   child.exited,
