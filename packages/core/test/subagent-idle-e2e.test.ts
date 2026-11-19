@@ -414,7 +414,7 @@ describe("subagent idle reports end to end", () => {
         yield* h.llm.serve(
           script({
             reviewer: [
-              TestLLM.toolCall("call-shell", "shell", { description: "Waits for the release file", command, background: true }), // kilocode_change - required summary
+              TestLLM.toolCall("call-shell", "shell", { command, background: true }),
               TestLLM.text("Started tests", "turn-1"),
               TestLLM.text("Tests green", "turn-2"),
             ],
@@ -561,7 +561,7 @@ describe("subagent idle reports end to end", () => {
               TestLLM.text("child saw grandchild finish", "child-turn-3"),
             ],
             fallback: [
-              TestLLM.toolCall("call-grandchild-shell", ShellTool.name, { description: "Waits for the release file", command, background: true }), // kilocode_change - required summary
+              TestLLM.toolCall("call-grandchild-shell", ShellTool.name, { command, background: true }),
               TestLLM.text("grandchild started tests", "grandchild-turn-1"),
               TestLLM.text("grandchild finished", "grandchild-turn-2"),
             ],

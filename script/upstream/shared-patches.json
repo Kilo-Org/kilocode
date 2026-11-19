@@ -1,15 +1,20 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 165,
-    "markedLines": 2933,
-    "unmarkedLines": 480,
+    "files": 162,
+    "markedLines": 2922,
+    "unmarkedLines": 468,
     "deletedFiles": 0
   },
   "files": {
     "packages/cli/src/run/run.ts": {
       "rung": 4,
       "seam": "The shared one-shot run handler owns target preparation, including resumed-session model selection. Neither a plugin nor the Kilo host can wait there before admission. The Kilo-only call checks the resolved location's catalog without changing upstream run behavior."
+    },
+    "packages/cli/test/run/process.test.ts": {
+      "rung": 4,
+      "seam": "The scripted server in the one-shot CLI test now answers `GET /api/model`, optionally holding the catalog until the test releases it, and `POST /api/session/:id/model`, so the test can cover the Kilo catalog wait before a prompt is sent (the product change is the `packages/cli/src/run/run.ts` entry). Upstream has no such wait, so this coverage exists only for Kilo behavior. The added lines are test-only harness code in an upstream test file, so they carry no product seam and no markers.",
+      "unmarked": "Test-only scripted server and spawn options for the Kilo catalog wait; the seam above explains why the harness lines are not marked."
     },
     "packages/cli/src/run/noninteractive.ts": {
       "rung": 3,
@@ -256,15 +261,11 @@
     },
     "packages/core/src/tool/plugin/shell.ts": {
       "rung": 4,
-      "seam": "Two additions for the tool card. (1) Publish the running command's current output and running state while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. (2) Add a required `description` input the model fills with a 5-10 word summary, as the first property so models write it before the command and the card can show it while the command streams, then copy it to `metadata.description` and to the background completion notice. Upstream has no title channel on a tool result, so the card shows the raw first command line, which Kilo sessions fill with a `cd <worktree> &&` prefix that identifies nothing. The input is required because Claude models skipped it as an optional field (0 of 654 Opus shell calls in one day), so their cards kept showing the raw command. Every upstream default and the rest of the result and metadata are unchanged."
+      "seam": "Two additions for the tool card. (1) Publish the running command's current output and running state while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. (2) Ask the model for a 5-10 word summary in `description`, as the first property so it can appear before the command finishes streaming. When present it is copied to `metadata.description` and the background completion notice. The input is optional: the tool card and notices already fall back to the command, so the title must not block execution. The model guidance lives in the same builder used by the shell's contextual description hooks. This corrects the existing patch where the executor and recovery already consume the optional summary, without adding an override or changing any upstream default."
     },
     "packages/core/test/tool-shell.test.ts": {
       "rung": 4,
-      "seam": "Test coverage for the marked live-output progress behavior and for the required model description. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption, plus that the description reaches result metadata and that a call without it is rejected. The `call` helper defaults the description to the command so the upstream notice assertions stay unchanged. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
-    },
-    "packages/sdk/test/embedded.test.ts": {
-      "rung": 4,
-      "seam": "The lazy-provisioning test's scripted model calls the real shell tool, whose `description` input Kilo makes required (see packages/core/src/tool/plugin/shell.ts), so the fixture call passes one. No seam: the fixture is the model output the test asserts on. Requiring the description adds 17 marked lines across the shell tool test and this fixture, which raises the file budget from 137 to 138 and the markedLines budget from 2417 to 2434; the unmarked-line budget is unchanged."
+      "seam": "Test coverage for the marked live-output progress behavior and model description. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption, plus that the description reaches result metadata and that a command-only call executes successfully. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
     },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,
@@ -456,11 +457,6 @@
       "rung": 3,
       "seam": "Codex sign-in reads App.Info.product: the originator in the authorize URL, provider headers and model requests, the OAuth token request user agent (as v1 `kilo/<version>`) and the callback page brand. Defaults stay `opencode`, App.useragent and the OpenCode page. Issue #15409. It also exports the browser and headless method registrations, so the Kilo plugin can give them the v1 labels (the integration editor can only replace a method with a full registration, not rename it). A Kilo model.request hook (rung 1) could rewrite the request header alone, but the authorize URL needs this knob anyway, so all originator uses read the same value. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
     },
-    "packages/cli/test/run/process.test.ts": {
-      "rung": 4,
-      "seam": "Cover the Kilo cold model-catalog wait in one-shot runs: the fixture server delays `/api/model`, the tests pass `--model`, and the exit messages assert the catalog timeout. The behaviour under test is Kilo's `run-catalog` seam; upstream's other run tests are unchanged.",
-      "unmarked": "The fixture and assertions are upstream test bodies edited in place, so markers would obscure the tests; the whole file is Kilo-only coverage."
-    },
     "packages/cli/test/server-connection.test.ts": {
       "rung": 4,
       "seam": "Skips upstream's new `local config commands do not start or require a server` test (v2.2). It expects `mcp add --global` to write `opencode.json`, but the existing Kilo patch in `packages/cli/src/commands/handlers/mcp/add.ts` writes the Kilo names (`kilo2.json`) even without the host. Remove the skip when the CLI write commands read their file names from `ConfigDiscovery.LayoutService` (host knob with upstream defaults) instead of `KiloConfigFiles`."
@@ -615,14 +611,6 @@
     "packages/tui/test/fixture/tui-environment.tsx": {
       "rung": 4,
       "seam": "Kilo TUI tests mount the provider tree piecemeal. Upstream's DataProvider now requires ConfigProvider, so the shared fixture supplies a resolved default. A test fixture has no product seam to expose, and the Kilo tests cannot mount the full app shell."
-    },
-    "packages/core/test/shell-restart.test.ts": {
-      "rung": 4,
-      "seam": "The scripted model calls the real shell tool, whose `description` input Kilo makes required (see packages/core/src/tool/plugin/shell.ts), so each fixture call passes one. These fixtures are new in upstream v2.3.0, after the shell-description change updated the existing ones. No seam: the fixture is the model output the test asserts on."
-    },
-    "packages/core/test/subagent-idle-e2e.test.ts": {
-      "rung": 4,
-      "seam": "The scripted model calls the real shell tool, whose `description` input Kilo makes required (see packages/core/src/tool/plugin/shell.ts), so each fixture call passes one. These fixtures are new in upstream v2.3.0, after the shell-description change updated the existing ones. No seam: the fixture is the model output the test asserts on."
     },
     "packages/client/test/fixture/service-timing.ts": {
       "rung": 3,
