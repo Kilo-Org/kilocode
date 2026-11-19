@@ -29,7 +29,7 @@ import { modeFor, observe, snapshot, split, Tracker } from "./observation"
 import { BrowserPermission } from "./permission"
 import { key, persistStep, playwright, readiness } from "./playwright"
 import { resolve, type Observation, type Settings } from "./settings"
-import { rememberStep } from "./steps"
+import { hashArguments, rememberHash, rememberStep } from "./steps"
 import { KiloGatewayAccounts } from "../gateway/accounts"
 
 type Item = BrowserPermission.Item
@@ -343,9 +343,13 @@ function postAction(input: PostAction) {
         persistStep(input.session, input.entry.name, input.input, item.origin)
       }
     }
-    // A browser that issues a step token (the extension) spends it on that repeat only.
+    // A browser that issues a step token (the extension) spends it on the step the token was issued for. A late
+    // report arrives on whichever call the model made next, so the browser names the causing step when it can; an
+    // older extension names none and the carrying call is used, as before.
+    const causing = caused(input)
     if (input.result.meta?.stepToken !== undefined) {
-      rememberStep(input.session, input.entry.name, input.input, input.result.meta.stepToken)
+      if (causing.late) rememberHash(input.session, causing.tool, causing.hash, input.result.meta.stepToken)
+      else rememberStep(input.session, input.entry.name, input.input, input.result.meta.stepToken)
     }
     if (input.needs.some((item) => item.class === "sensitive")) {
       return {
@@ -354,7 +358,11 @@ function postAction(input: PostAction) {
           content: [
             {
               type: "text",
-              text: `${textOf(input.result)}\n\nApproved. Repeat the same step to receive the file.`,
+              text: `${textOf(input.result)}\n\n${
+                causing.late
+                  ? "Approved. Repeat that step to receive the file."
+                  : "Approved. Repeat the same step to receive the file."
+              }`,
             },
           ],
           metadata: { browser: { backend: input.backend, observation: input.observation } },
@@ -377,6 +385,21 @@ function postAction(input: PostAction) {
     }
     return { kind: "continue" as const, result: input.result }
   })
+}
+
+/**
+ * The step a granted need belongs to. A late report (a download that started after the click returned) names its
+ * causing step, so the token must be remembered under that step, not under the call that carried the news; without
+ * one, the carrying call is the step, exactly as before.
+ */
+function caused(input: PostAction) {
+  const step = input.result.meta?.step
+  const carrying = hashArguments(input.input)
+  return {
+    late: step !== undefined && (step.tool !== input.entry.name || step.argumentsHash !== carrying),
+    tool: step?.tool ?? input.entry.name,
+    hash: step?.argumentsHash ?? carrying,
+  }
 }
 
 /**

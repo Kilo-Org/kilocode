@@ -10,7 +10,7 @@ import { UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { EXTENSION_HINT } from "../../src/browser/extension"
 import { BrowserHub } from "../../src/browser/hub"
-import { resetSteps } from "../../src/browser/steps"
+import { hashArguments, resetSteps } from "../../src/browser/steps"
 import { authorize, effective, granted, KiloBrowserToolsPlugin, resetGrants, trim } from "../../src/browser/tools"
 import { KiloGatewayAccounts } from "../../src/gateway/accounts"
 
@@ -707,6 +707,103 @@ describe("browser tools over the extension backend", () => {
     const text = JSON.stringify(result._tag === "Success" ? result.success.content : "")
     expect(text).toContain("The step ran. The permission is granted; read the page again (browser_snapshot)")
     expect(text).not.toContain("Repeat the same step")
+  })
+
+  test("a late need carried by another call redeems on its causing step exactly once", async () => {
+    const { service } = recorder()
+    const hash = hashArguments({ target: "e1" })
+    const sent: (string | undefined)[] = []
+    const hub = fakeHub({
+      call: (input) => {
+        // The download starts after the click returned: the report arrives on whatever call comes next.
+        if (input.name === "browser_snapshot") {
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "A download started after the click on e1 and was stopped: it needs approval.",
+              items: [{ class: "sensitive", origin: "https://example.com", reason: "download: report.pdf" }],
+              stepToken: "tok-late",
+              step: { tool: "browser_click", argumentsHash: hash },
+              afterAction: true,
+            }),
+          )
+        }
+        sent.push(input.sensitive?.[0])
+        return Promise.resolve({ content: [{ type: "text", text: "- file report.pdf" }] })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const carried = await host.call("browser_snapshot")
+    expect(carried._tag).toBe("Success")
+    // The carrying call says which step to repeat, and never "the same step".
+    const text = JSON.stringify(carried._tag === "Success" ? carried.success.content : "")
+    expect(text).toContain("Approved. Repeat that step to receive the file.")
+    expect(text).not.toContain("the same step")
+
+    // The identical click redeems it once; a second identical click carries nothing.
+    await host.call("browser_click", { target: "e1" })
+    await host.call("browser_click", { target: "e1" })
+    expect(sent).toEqual(["tok-late", undefined])
+  })
+
+  test("a late need is not redeemed by another step or another conversation", async () => {
+    const { service } = recorder()
+    const hash = hashArguments({ target: "e1" })
+    const sent: (string | undefined)[] = []
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name === "browser_snapshot") {
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "A download started after the click on e1 and was stopped: it needs approval.",
+              items: [{ class: "sensitive", origin: "https://example.com", reason: "download: report.pdf" }],
+              stepToken: "tok-late",
+              step: { tool: "browser_click", argumentsHash: hash },
+              afterAction: true,
+            }),
+          )
+        }
+        sent.push(input.sensitive?.[0])
+        return Promise.resolve({ content: [{ type: "text", text: "- file report.pdf" }] })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    await host.call("browser_snapshot")
+    await host.call("browser_click", { target: "e2" })
+    await host.call("browser_click", { target: "e1" }, "ses_other")
+    expect(sent).toEqual([undefined, undefined])
+  })
+
+  test("an old-format need without a step keeps the carrying call's token", async () => {
+    const { service } = recorder()
+    const sent: (string | undefined)[] = []
+    let reports = 1
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name === "browser_snapshot" && reports > 0) {
+          reports -= 1
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "A download started and was stopped: it needs approval.",
+              items: [{ class: "sensitive", origin: "https://example.com", reason: "download: report.pdf" }],
+              stepToken: "tok-carrying",
+              afterAction: true,
+            }),
+          )
+        }
+        sent.push(input.sensitive?.[0])
+        return Promise.resolve({ content: [{ type: "text", text: "ok" }] })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const carried = await host.call("browser_snapshot")
+    const text = JSON.stringify(carried._tag === "Success" ? carried.success.content : "")
+    expect(text).toContain("Approved. Repeat the same step to receive the file.")
+    // Without a named step the token belongs to the call that carried the report, as before.
+    await host.call("browser_snapshot")
+    expect(sent).toEqual(["tok-carrying"])
   })
 
   test("a granted act need that never ran asks for the step again", async () => {

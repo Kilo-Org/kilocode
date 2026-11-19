@@ -34,6 +34,8 @@ const Payload = z
   .object({
     items: z.array(Need).optional(),
     stepToken: z.string().optional(),
+    // The call the token was issued for. Optional: an older extension names no step and the carrying call is used.
+    step: z.object({ tool: z.string(), argumentsHash: z.string() }).optional(),
     // The action already ran; the CLI asks for the grant and never repeats it.
     afterAction: z.boolean().optional(),
     // `origin_changed` names the origins a redirect moved between.
@@ -80,7 +82,12 @@ export function failure(error: unknown): BrowserHub.Failure {
     return new BrowserHub.Failure({ kind: "unknown", message })
   }
   const data = value.data
-  const base = { message: value.message, items: data?.items, stepToken: data?.stepToken }
+  const base = {
+    message: value.message,
+    items: data?.items,
+    stepToken: data?.stepToken,
+    ...(data?.step === undefined ? {} : { step: data.step }),
+  }
   const meta = (payload: Payload): BrowserHub.Meta => ({
     ...(payload.url === undefined ? {} : { url: payload.url }),
     ...(payload.origin === undefined ? {} : { origin: payload.origin }),

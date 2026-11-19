@@ -17,6 +17,8 @@ export type CallMeta = {
   needs?: readonly Item[]
   /** The browser's step token for a post-action need; remembered once the user grants, sent on the identical repeat. */
   stepToken?: string
+  /** The step the token was issued for: a late report names the call that caused it, not the one carrying the news. */
+  step?: { tool: string; argumentsHash: string }
   /** The action already ran and only its content was withheld: the step is never repeated, the page is read again. */
   afterAction?: true
 }
