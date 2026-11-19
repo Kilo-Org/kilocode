@@ -219,7 +219,7 @@ describe("browser client", () => {
     expect(target.state().kind).toBe("waiting")
   })
 
-  test("a call the connected extension does not answer in time is a timeout, not a missing browser", async () => {
+  test("a call the connected extension does not answer in time carries the transport's timeout", async () => {
     const at = await tmp()
     const { hub } = await host({ ...at, paired: true })
     const target = client({ dir: at.dir, start: () => {} })
@@ -239,7 +239,13 @@ describe("browser client", () => {
         (error: unknown) => error,
       )
 
-    expect(mapped(timedOut)).toMatchObject({ kind: "timeout", uncertain: true })
+    expect(timedOut).toBeInstanceOf(HubError)
+    if (!(timedOut instanceof HubError)) throw new Error("expected a HubError")
+    // The transport's own timer ended the call, not the browser: silence is not proof that the step did not run.
+    expect(timedOut.timedOut).toBe(true)
+    expect(timedOut.uncertain).toBe(true)
+    // Only a tool call is read as a step timeout; the generic mapping leaves every other method a silent browser.
+    expect(mapped(timedOut).kind).toBe("unavailable")
     expect(target.state().kind).toBe("ready")
   })
 

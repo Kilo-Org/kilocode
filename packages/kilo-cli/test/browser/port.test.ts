@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { HubError, create as createClient, type State } from "../../src/browser/client"
+import { HubError, create as createClient, type Client, type State } from "../../src/browser/client"
 import { create as createHub } from "../../src/browser/hub"
 import * as pair from "../../src/browser/pair"
 import * as proto from "../../src/browser/protocol"
@@ -144,6 +144,52 @@ describe("hub failures as the extension backend reads them", () => {
       const error = await linked.port(null).ready(300).catch((value: unknown) => value)
       expect(error).toBeInstanceOf(BrowserHub.Failure)
       expect((error as BrowserHub.Failure).kind).toBe("unknown")
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("only a tool call the transport stopped waiting for is a step timeout", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-port-"))
+    // The transport's own timer, for every method alike: the extension is connected and never answered.
+    const stopped = (method: string) =>
+      new HubError({
+        code: proto.ErrorCodes.browser_unavailable,
+        message: `The browser did not answer ${method} within 120000ms.`,
+        data: { effectsUncertain: true, timedOut: true },
+      })
+    const reject = (method: string) => () => Promise.reject(stopped(method))
+    const linked = {
+      state: () => ({ kind: "ready", hub: {}, extension: {} }),
+      subscribe: () => () => {},
+      session: { open: reject("session.open"), close: reject("session.close") },
+      tools: { list: reject("tools.list"), call: reject("tools.call") },
+      upload: { begin: reject("upload.begin"), chunk: reject("upload.chunk"), end: reject("upload.end") },
+    } as unknown as Client
+    try {
+      const port = connection({
+        dir,
+        install: () => Promise.resolve(),
+        start: () => {},
+        create: () => linked,
+      }).port(null)
+      // A call may have reached the extension, so it is a slow step the model has to look at before repeating it.
+      const called = await port
+        .call({ sessionHandle: "s", name: "browser_click", arguments: {}, authorized: [] })
+        .catch((value: unknown) => value)
+      expect(called).toMatchObject({ kind: "timeout", uncertain: true })
+      // No step ran for a listing, a session open or an upload, so they stay a silent browser rather than a slow step.
+      expect(await port.list().catch((value: unknown) => value)).toMatchObject({ kind: "unavailable" })
+      expect(
+        await port
+          .begin({ uploadId: "u", name: "file.txt", size: 1, mimeType: "text/plain" })
+          .catch((value: unknown) => value),
+      ).toMatchObject({ kind: "unavailable" })
+      expect(
+        await port
+          .open({ sessionId: "s", title: "a", cwd: dir })
+          .catch((value: unknown) => value),
+      ).toMatchObject({ kind: "unavailable" })
     } finally {
       await fs.rm(dir, { recursive: true, force: true })
     }
