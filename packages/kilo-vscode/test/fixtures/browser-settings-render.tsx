@@ -207,8 +207,23 @@ post({ type: "browserSettingsLoaded", requestId: first?.requestId, error: "the c
 await wait(10)
 assert.ok(secondText().includes("Browser status unavailable"), "a failed first read shows an error state")
 assert.ok(!secondText().includes("Loading"), "neither status row is left loading")
+assert.ok(button(second, "Retry"), "the error state offers a retry")
+// The live status refresh keeps running; its success must not take the config read's retry away.
+await wait(2_200)
+const refresh = posted.filter((message) => message.type === "browserSettingsStatus").at(-1)
+assert.ok(refresh, "the status refresh runs while the config read has failed")
+post(
+  {
+    type: "browserSettingsLoaded",
+    requestId: refresh?.requestId,
+    status: { playwright: { ready: true, target: "chrome" }, extension: { state: "waiting" } },
+  },
+  window,
+)
+await wait(10)
+assert.ok(secondText().includes("Waiting for the browser extension"), "the refreshed status fills the rows")
 const retry = button(second, "Retry")
-assert.ok(retry, "the error state offers a retry")
+assert.ok(retry, "the failed config read keeps its retry after a status refresh")
 const before = reads().length
 retry.click()
 await wait(10)

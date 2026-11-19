@@ -514,7 +514,8 @@ const BrowserTools: Component = () => {
               )}
             </Show>
           </SettingsRow>
-          <Show when={!browser.status() && browser.error()}>
+          {/* The config read is what failed: a status refresh that succeeds afterwards must not take the retry away. */}
+          <Show when={!browser.state() && browser.error()}>
             <div style={{ display: "flex", gap: "8px", "align-items": "center", padding: "8px 0 4px" }}>
               <Button variant="secondary" size="small" disabled={browser.busy()} onClick={() => browser.load()}>
                 {language.t("common.retry")}
