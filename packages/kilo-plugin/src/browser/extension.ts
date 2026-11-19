@@ -199,10 +199,12 @@ export class ExtensionBackend implements BrowserBackend {
    */
   private readonly stopped = new Set<string>()
   /**
-   * The turns current when the user last stopped this CLI's browser. Such a turn may not have opened a session yet,
-   * so no revoke names it; it is refused all the same, until the conversation's next turn.
+   * Every turn that was current when the user stopped this CLI's browser. Such a turn may not have opened a session
+   * yet, so no revoke names it; it is refused all the same, until the conversation's next turn. Halts accumulate: an
+   * open still in flight for an earlier stopped turn is judged by that turn after later stops. Turn numbers are unique
+   * per process, so an old halt never matches a new turn, and the set grows only with the user's own stops.
    */
-  private halted = new Set<number>()
+  private readonly halted = new Set<number>()
   /** Set by `dispose()`: an evicted backend must not open a session for a call that was already in flight. */
   private disposed = false
 
@@ -216,7 +218,7 @@ export class ExtensionBackend implements BrowserBackend {
   ) {
     this.off =
       input.port?.onRevoked((event) => {
-        this.halted = new Set(input.turns?.values())
+        for (const turn of input.turns?.values() ?? []) this.halted.add(turn)
         const session = this.sessions.get(event.sessionHandle)
         if (session === undefined) return
         this.sessions.delete(event.sessionHandle)
