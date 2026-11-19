@@ -282,6 +282,7 @@ class AgentManagerPanel(
         // A row that scrolls or gets selected is no longer under the balloon that points at it, and a
         // busy list or a rebuilt model has already dropped the hover the popup was opened from.
         tree.onScroll = { dismissTransient() }
+        tree.onExpand = { project?.service<WorktreeStatusService>()?.visibilityChanged() }
         // Drag gestures move the pointer across rows without the normal hover path, and any transient
         // window that stays up can cache the tree's accessibility view against a window that is about
         // to be disposed. Clear both ends of the drag, then let the next real pointer move restore it.
@@ -386,7 +387,7 @@ class AgentManagerPanel(
         controller.onSelect = { key ->
             // Focus the list so the freshly created worktree renders as an active selection rather
             // than the inactive highlight it would get while focus stays on the toolbar.
-            if (tree.select(key)) tree.focus()
+            if (tree.select(key, expand = false)) tree.focus()
             item(key)?.takeIf { controller.progress(it.id) == null }?.let { open(it, focus = false) }
         }
         // A fresh worktree changes what git reports, so bypass both the refresh throttle and the
@@ -461,7 +462,7 @@ class AgentManagerPanel(
     }
 
     fun refresh() {
-        if (tree.selectedKeys().isEmpty()) currentEditorWorktree()?.let { tree.select(it, scroll = false) }
+        if (tree.selectedKeys().isEmpty()) currentEditorWorktree()?.let { tree.select(it, scroll = false, expand = false) }
         controller.reload()
         project?.service<WorktreeStatusService>()?.refreshStats()
         project?.service<WorktreeStatusService>()?.refreshPr()
@@ -533,7 +534,7 @@ class AgentManagerPanel(
         if (!canMove(key) || ordering.section(section) == null) return
         ordering.move(key, section)
         sync()
-        tree.select(key)
+        tree.select(key, expand = false)
     }
 
     @RequiresEdt
@@ -604,7 +605,7 @@ class AgentManagerPanel(
         pendingHosted[pending.ref.key] = pending
         ordering.insert(pending.ref.key, section?.takeIf { ordering.section(it) != null })
         sync()
-        tree.select(pending.ref.key)
+        tree.select(pending.ref.key, expand = false)
         tree.focus()
         openHostedWorkspace(target, pending)
         hostedCs.launch {
@@ -634,7 +635,7 @@ class AgentManagerPanel(
                 ordering.replace(pending.ref.key, workspace.ref.key)
                 sync()
                 target.service<HostedManagementService>().select(workspace.ref, session.id)
-                tree.select(workspace.ref.key)
+                tree.select(workspace.ref.key, expand = false)
                 tree.focus()
                 openHostedWorkspace(target, workspace)
                 closeHostedPending(target, pending)
@@ -887,7 +888,7 @@ class AgentManagerPanel(
             tree.clearSelection()
             return
         }
-        if (tree.select(next.id)) tree.focus()
+        if (tree.select(next.id, expand = false)) tree.focus()
         open(next, focus = false)
     }
 
@@ -1048,7 +1049,7 @@ class AgentManagerPanel(
     private fun track(file: VirtualFile?) {
         val key = project?.service<WorktreeEditorMatchers>()?.match(file)
         if (key != null) {
-            tree.select(key, scroll = false)
+            tree.select(key, scroll = false, expand = false)
             return
         }
         // A null active editor is a transient state (e.g. a tab closing during a delete); keep the
@@ -1244,8 +1245,20 @@ class AgentManagerPanel(
             // Rows carry the uncommitted counts too, as the summary a worktree with no commits yet shows,
             // so a poll has to rebuild them. Row equality keeps a poll that found nothing new from churning.
             onDirty = { value -> dirty = value; sync() },
+            excluded = { excluded(target) },
         )
         WorktreeRunBinding(target, this) { value -> running = value; sync() }
+    }
+
+    @RequiresEdt
+    private fun excluded(target: Project): Set<String> {
+        val hidden = tree.hidden().filterIsInstance<WorktreeRow>().filterNot { controller.isPending(it.key) }
+        if (hidden.isEmpty()) return emptySet()
+        val matchers = target.service<WorktreeEditorMatchers>()
+        val editors = FileEditorManager.getInstance(target).selectedFiles.mapNotNullTo(HashSet()) {
+            matchers.match(it)?.let(::normalizeWorktreePath)
+        }
+        return hidden.mapTo(HashSet()) { normalizeWorktreePath(it.dto.path) } - editors
     }
 
     override fun dispose() {
