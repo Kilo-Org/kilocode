@@ -170,9 +170,10 @@ export const dict = {
   "browser.permission.read.title": "{{origin}}의 페이지 읽기",
   "browser.permission.act.title": "{{origin}}에서 클릭 및 입력",
   "browser.permission.navigate.title": "{{origin}}의 페이지 열기",
-  "browser.permission.read.detail": "에이전트가 이 출처의 페이지 텍스트, 스냅샷, 스크린샷을 읽을 수 있습니다.",
-  "browser.permission.act.detail": "에이전트가 이 출처에서 클릭, 입력, 페이지 스크립트 실행을 할 수 있습니다.",
-  "browser.permission.navigate.detail": "에이전트가 이 출처의 페이지를 열 수 있습니다.",
+  "browser.permission.read.detail": "승인하면 이 세션이 끝날 때까지 {{origin}}의 페이지를 읽을 수 있습니다.",
+  "browser.permission.act.detail":
+    "승인하면 이 세션이 끝날 때까지 {{origin}}에서 클릭, 입력, 페이지 스크립트 실행을 할 수 있습니다.",
+  "browser.permission.navigate.detail": "승인하면 이 세션이 끝날 때까지 {{origin}}의 페이지를 열 수 있습니다.",
   "browser.permission.frame": "이 출처는 페이지 내부의 프레임이며 페이지 자체가 아닙니다.",
   "browser.permission.sensitive.title": "{{origin}}의 민감한 브라우저 단계",
   "browser.permission.sensitive.reason": "이유: {{reason}}",

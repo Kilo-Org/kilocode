@@ -177,10 +177,11 @@ export const dict = {
   "browser.permission.read.title": "Читать страницы на {{origin}}",
   "browser.permission.act.title": "Нажимать и вводить текст на {{origin}}",
   "browser.permission.navigate.title": "Открывать страницы на {{origin}}",
-  "browser.permission.read.detail": "Агент может читать текст страницы, снимки и скриншоты с этого источника.",
+  "browser.permission.read.detail": "Одобрение позволяет этой сессии читать страницы на {{origin}} до её завершения.",
   "browser.permission.act.detail":
-    "Агент может нажимать, вводить текст и запускать скрипты страницы на этом источнике.",
-  "browser.permission.navigate.detail": "Агент может открывать страницы на этом источнике.",
+    "Одобрение позволяет этой сессии нажимать, вводить текст и запускать скрипты страницы на {{origin}} до её завершения.",
+  "browser.permission.navigate.detail":
+    "Одобрение позволяет этой сессии открывать страницы на {{origin}} до её завершения.",
   "browser.permission.frame": "Этот источник — фрейм внутри страницы, а не сама страница.",
   "browser.permission.sensitive.title": "Чувствительный шаг браузера на {{origin}}",
   "browser.permission.sensitive.reason": "Причина: {{reason}}",

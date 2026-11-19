@@ -177,10 +177,12 @@ export const dict = {
   "browser.permission.read.title": "Seiten auf {{origin}} lesen",
   "browser.permission.act.title": "Auf {{origin}} klicken und Text eingeben",
   "browser.permission.navigate.title": "Seiten auf {{origin}} öffnen",
-  "browser.permission.read.detail": "Der Agent kann Seitentext, Snapshots und Screenshots von dieser Origin lesen.",
+  "browser.permission.read.detail":
+    "Die Genehmigung erlaubt dieser Sitzung, bis zu ihrem Ende Seiten auf {{origin}} zu lesen.",
   "browser.permission.act.detail":
-    "Der Agent kann auf dieser Origin klicken, Text eingeben und Seitenskripte ausführen.",
-  "browser.permission.navigate.detail": "Der Agent kann Seiten auf dieser Origin öffnen.",
+    "Die Genehmigung erlaubt dieser Sitzung, bis zu ihrem Ende auf {{origin}} zu klicken, Text einzugeben und Seitenskripte auszuführen.",
+  "browser.permission.navigate.detail":
+    "Die Genehmigung erlaubt dieser Sitzung, bis zu ihrem Ende Seiten auf {{origin}} zu öffnen.",
   "browser.permission.frame": "Diese Origin ist ein Frame innerhalb der Seite, nicht die Seite selbst.",
   "browser.permission.sensitive.title": "Sensibler Browser-Schritt auf {{origin}}",
   "browser.permission.sensitive.reason": "Grund: {{reason}}",

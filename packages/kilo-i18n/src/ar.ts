@@ -170,9 +170,10 @@ export const dict = {
   "browser.permission.read.title": "قراءة الصفحات على {{origin}}",
   "browser.permission.act.title": "النقر والكتابة على {{origin}}",
   "browser.permission.navigate.title": "فتح الصفحات على {{origin}}",
-  "browser.permission.read.detail": "يمكن للوكيل قراءة نص الصفحة واللقطات ولقطات الشاشة من هذا المصدر.",
-  "browser.permission.act.detail": "يمكن للوكيل النقر والكتابة وتشغيل نصوص الصفحة على هذا المصدر.",
-  "browser.permission.navigate.detail": "يمكن للوكيل فتح الصفحات على هذا المصدر.",
+  "browser.permission.read.detail": "تتيح الموافقة لهذه الجلسة قراءة الصفحات على {{origin}} حتى تنتهي.",
+  "browser.permission.act.detail":
+    "تتيح الموافقة لهذه الجلسة النقر والكتابة وتشغيل نصوص الصفحة على {{origin}} حتى تنتهي.",
+  "browser.permission.navigate.detail": "تتيح الموافقة لهذه الجلسة فتح الصفحات على {{origin}} حتى تنتهي.",
   "browser.permission.frame": "هذا المصدر إطار داخل الصفحة، وليس الصفحة نفسها.",
   "browser.permission.sensitive.title": "خطوة متصفح حساسة على {{origin}}",
   "browser.permission.sensitive.reason": "السبب: {{reason}}",

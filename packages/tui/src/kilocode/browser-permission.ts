@@ -65,6 +65,9 @@ export function browserPermissionPresentation(source: Source) {
   return {
     icon: "◎",
     title: browserCopy(TITLE[named.kind], { origin: named.origin }),
-    lines: [browserCopy(DETAIL[named.kind]), ...(named.frame ? [browserCopy("browser.permission.frame")] : [])],
+    lines: [
+      browserCopy(DETAIL[named.kind], { origin: named.origin }),
+      ...(named.frame ? [browserCopy("browser.permission.frame")] : []),
+    ],
   }
 }

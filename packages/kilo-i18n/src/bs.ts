@@ -180,9 +180,11 @@ export const dict = {
   "browser.permission.read.title": "Čitaj stranice na {{origin}}",
   "browser.permission.act.title": "Klikaj i unosi tekst na {{origin}}",
   "browser.permission.navigate.title": "Otvori stranice na {{origin}}",
-  "browser.permission.read.detail": "Agent može čitati tekst stranice, brze snimke i snimke ekrana sa ovog izvora.",
-  "browser.permission.act.detail": "Agent može klikati, unositi tekst i pokretati skripte stranice na ovom izvoru.",
-  "browser.permission.navigate.detail": "Agent može otvoriti stranice na ovom izvoru.",
+  "browser.permission.read.detail": "Odobravanjem ova sesija može čitati stranice na {{origin}} dok se ne završi.",
+  "browser.permission.act.detail":
+    "Odobravanjem ova sesija može klikati, unositi tekst i pokretati skripte stranice na {{origin}} dok se ne završi.",
+  "browser.permission.navigate.detail":
+    "Odobravanjem ova sesija može otvarati stranice na {{origin}} dok se ne završi.",
   "browser.permission.frame": "Ovaj izvor je okvir unutar stranice, a ne sama stranica.",
   "browser.permission.sensitive.title": "Osjetljiv korak preglednika na {{origin}}",
   "browser.permission.sensitive.reason": "Razlog: {{reason}}",
