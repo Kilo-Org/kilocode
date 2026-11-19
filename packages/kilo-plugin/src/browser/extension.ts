@@ -251,6 +251,9 @@ const WITHHELD_URL = "[origin withheld]"
 
 type Identity = { url?: string; title?: string }
 
+/** The snapshot a page read got, the frames it withheld, or the note that says why the page was not read. */
+type SnapshotPart = { snapshot?: string; note?: string; frames?: readonly string[] }
+
 function texts(content: readonly { type: string; text?: string }[]) {
   return content
     .flatMap((block) => (block.type === "text" && block.text !== undefined ? [block.text] : []))
@@ -594,28 +597,47 @@ export class ExtensionBackend implements BrowserBackend {
     const text = texts(result.content)
     const explicit = name === "browser_snapshot"
     const own = explicit ? undefined : answered(text)
-    let snapshot = explicit ? text : undefined
-    let note: string | undefined
-    let frames = result.meta?.withheldFrames
-    if (!explicit && ctx.snapshot) {
-      const read = await this.snapshotAfter(port, session, ctx)
-      if ("value" in read && read.value.isError !== true) {
-        snapshot = texts(read.value.content)
-        frames = [...new Set([...(frames ?? []), ...(read.value.meta?.withheldFrames ?? [])])]
-      } else note = unread("error" in read ? read.error : undefined)
-    }
-    const page =
-      own?.page ??
-      (await this.read(port, session, "browser_tabs", { action: "list" }, ctx).then(
-        (value) => (value.isError === true ? undefined : selected(texts(value.content))),
-        () => undefined,
-      ))
-    const body = sections({ page, note, snapshot, result: explicit || own?.only ? undefined : text })
+    const frames = result.meta?.withheldFrames
+    const read: SnapshotPart = explicit
+      ? { snapshot: text, frames }
+      : await this.snapshotPart(port, session, ctx, frames)
+    const page = own?.page ?? (await this.selectedPage(port, session, ctx))
+    const body = sections({
+      page,
+      note: read.note,
+      snapshot: read.snapshot,
+      result: explicit || own?.only ? undefined : text,
+    })
     return {
       ...result,
       content: [{ type: "text", text: body }, ...result.content.filter((block) => block.type === "image")],
-      ...(frames?.length ? { meta: { ...result.meta, withheldFrames: frames } } : {}),
+      ...(read.frames?.length ? { meta: { ...result.meta, withheldFrames: read.frames } } : {}),
     }
+  }
+
+  /** The snapshot after a step with the frames it withheld; without `snapshot`, only the step's own frames. */
+  private async snapshotPart(
+    port: BrowserHub.Port,
+    session: string,
+    ctx: PageContext,
+    frames: readonly string[] | undefined,
+  ): Promise<SnapshotPart> {
+    if (!ctx.snapshot) return { frames }
+    const read = await this.snapshotAfter(port, session, ctx)
+    if ("error" in read) return { note: unread(read.error), frames }
+    if (read.value.isError === true) return { note: unread(undefined), frames }
+    return {
+      snapshot: texts(read.value.content),
+      frames: [...new Set([...(frames ?? []), ...(read.value.meta?.withheldFrames ?? [])])],
+    }
+  }
+
+  /** The session's own tab as the tab list names it; a list that cannot say names no page. */
+  private selectedPage(port: BrowserHub.Port, session: string, ctx: CallContext) {
+    return this.read(port, session, "browser_tabs", { action: "list" }, ctx).then(
+      (value) => (value.isError === true ? undefined : selected(texts(value.content))),
+      () => undefined,
+    )
   }
 
   /**
