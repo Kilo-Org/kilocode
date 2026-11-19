@@ -5,6 +5,7 @@ import { ChildProcess } from "effect/process"
 import { Entry, Match } from "@opencode/schema/filesystem"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { collectStream, waitForAbort } from "@opencode/util/process"
+import { TextBoundary } from "@opencode/util/text-boundary"
 import { Environment } from "./environment/index.js"
 import { NonNegativeInt, PositiveInt, RelativePath } from "./schema.js"
 import { RipgrepBinary } from "./ripgrep/binary.js"
@@ -20,50 +21,36 @@ const ERROR_BYTES = 8 * 1024
 const MAX_SUBMATCHES = 100
 const MAX_LINE_CHARS = 2_000
 
-// kilocode_change start - ripgrep-bytes: ripgrep emits base64 bytes instead of text for non-UTF-8 data
-const RawText = Schema.Union([Schema.Struct({ text: Schema.String }), Schema.Struct({ bytes: Schema.String })])
-type RawText = Schema.Schema.Type<typeof RawText>
-
-const decodeText = (value: RawText) =>
-  "text" in value ? value.text : Buffer.from(value.bytes, "base64").toString("utf8")
-
-type DecodedMatch = {
-  readonly path: { readonly text: string }
-  readonly lines: { readonly text: string }
-  readonly line_number: number
-  readonly absolute_offset: number
-  readonly submatches: readonly {
-    readonly match: { readonly text: string }
-    readonly start: number
-    readonly end: number
-  }[]
-}
+// rg reports data that is not valid UTF-8 as base64 `bytes` instead of `text`.
+const RawData = Schema.Union([Schema.Struct({ text: Schema.String }), Schema.Struct({ bytes: Schema.String })])
 
 const RawMatch = Schema.Struct({
   type: Schema.Literal("match"),
   data: Schema.Struct({
-    path: RawText,
-    lines: RawText,
+    path: RawData,
+    lines: RawData,
     line_number: PositiveInt,
     absolute_offset: NonNegativeInt,
     submatches: Schema.Array(
       Schema.Struct({
-        match: RawText,
+        match: RawData,
         start: NonNegativeInt,
         end: NonNegativeInt,
       }),
     ),
   }),
 })
-// kilocode_change end
 const decodeJsonRecord = Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown))
 
-type RawMatchData = DecodedMatch // kilocode_change(ripgrep-bytes) - parsed matches carry decoded text
+const rawText = (data: typeof RawData.Type) =>
+  "text" in data ? data.text : Buffer.from(data.bytes, "base64").toString("utf8")
 
 export class Error extends Schema.TaggedError<Error>()("Ripgrep.Error", {
   message: Schema.String,
   cause: Schema.optional(Schema.Defect()),
 }) {}
+
+export class InvalidGlobError extends Error {}
 
 export class InvalidPatternError extends Schema.TaggedError<InvalidPatternError>()("Ripgrep.InvalidPatternError", {
   pattern: Schema.String,
@@ -163,6 +150,11 @@ const layer = Layer.effect(
 
           const code = yield* handle.exitCode
           const stderr = yield* Fiber.join(stderrFiber)
+          if (code === 2) {
+            // rg 13 omits the program name. Ignore-file diagnostics start with a path and line number.
+            const prefix = /^(?:rg: )?error parsing glob /.exec(stderr)
+            if (prefix) return yield* new InvalidGlobError({ message: stderr.slice(prefix[0].length).trimEnd() })
+          }
           if (input.pattern && code === 2 && isInvalidPattern(stderr)) {
             return yield* new InvalidPatternError({ pattern: input.pattern, message: stderr.trim() })
           }
@@ -238,7 +230,7 @@ const layer = Layer.effect(
           onItem: input.onEntry,
         }).pipe(Effect.catchTag("Ripgrep.InvalidPatternError", (cause) => Effect.fail(failure(cause.message, cause)))),
       grep: (input) =>
-        run<RawMatchData>({
+        run({
           ...input,
           args: [
             "--no-config",
@@ -260,25 +252,23 @@ const layer = Layer.effect(
                 if (!json || typeof json !== "object" || !("type" in json) || json.type !== "match")
                   return Effect.undefined
                 return Schema.decodeUnknownEffect(RawMatch)(json).pipe(
-                  // kilocode_change start - ripgrep-bytes: decode text or base64 bytes, then apply limits
                   Effect.map((match) => {
-                    const line = decodeText(match.data.lines)
+                    const lines = rawText(match.data.lines)
                     return {
                       ...match.data,
                       lines: {
                         text:
-                          line.length > MAX_LINE_CHARS
-                            ? Buffer.from(line.slice(0, MAX_LINE_CHARS), "utf8").toString() + "..."
-                            : line,
+                          lines.length > MAX_LINE_CHARS
+                            ? TextBoundary.head(lines, MAX_LINE_CHARS) + "..."
+                            : lines,
                       },
-                      path: { text: normalizePath(decodeText(match.data.path)) },
+                      path: { text: normalizePath(rawText(match.data.path)) },
                       submatches: match.data.submatches.slice(0, MAX_SUBMATCHES).map((submatch) => ({
                         ...submatch,
-                        match: { text: decodeText(submatch.match) },
+                        match: { text: rawText(submatch.match) },
                       })),
                     }
                   }),
-                  // kilocode_change end
                   Effect.mapError((cause) => failure("Invalid ripgrep match output", cause)),
                 )
               }),

@@ -7,10 +7,12 @@ import type { ShellCreateBefore } from "@opencode/plugin/effect/shell"
 import type { Shell as ShellSchema } from "@opencode/schema/shell"
 import type { Tool } from "@opencode/schema/tool"
 import { Clock, Deferred, Duration, Effect, Fiber, Option, Schema, Struct } from "effect" // kilocode_change - Duration
+import { Config } from "../../config.js"
+import { ConfigEntryObserver } from "../../config/plugin/entry-observer.js"
 import { Environment } from "../../environment/index.js"
+import { Flag } from "../../flag.js"
 import { Job } from "../../job.js"
 import { FileAccess } from "../../file-access.js"
-import { Flag } from "../../flag.js"
 import { Permission } from "../../permission.js"
 import { NonNegativeInt } from "../../schema.js"
 import { Session } from "../../session.js"
@@ -24,6 +26,7 @@ import { toolFailure } from "../runtime.js"
 
 export const name = "shell"
 export const DEFAULT_TIMEOUT_MS = 2 * 60 * 1_000
+const CODE_MODE_TIMEOUT_MS = 10 * 60 * 1_000
 // How long a call the user interrupted waits for its stopped command to exit before settling with the output so far.
 const INTERRUPT_WAIT = "500 millis"
 
@@ -37,7 +40,7 @@ const OS =
       : process.platform === "linux"
         ? "Linux"
         : process.platform
-const description = (shell?: string, autoBackground = false) =>
+const description = (shell?: string, codeMode = false) =>
   [
     "Execute a shell command and return its output.",
     ...(shell ? [`Commands run on ${OS} using ${shell}.`] : []),
@@ -45,48 +48,64 @@ const description = (shell?: string, autoBackground = false) =>
     "Prefer dedicated tools over shell commands when possible.",
     "When output is large, the full result is saved to a file and a truncated preview is returned.",
     "Rely on automatic truncation unless filtering the output is more useful.",
-    autoBackground
-      ? "Commands still running after their timeout move to the background."
-      : "Commands accept an optional timeout, background commands have no timeout by default.",
-    "Background commands return immediately, and you will be notified when they complete.",
+    "Commands still running after their timeout move to the background.",
+    // Code Mode has no background parameter.
+    ...(codeMode ? [] : ["Background commands return immediately, and you will be notified when they complete."]),
+    "The current session ID is available in the OPENCODE_SESSION_ID environment variable.",
   ].join(" ")
 
-const input = (autoBackground: boolean) =>
-  Schema.Struct({
-    // kilocode_change start - model-written summary shown instead of the raw command in the tool card.
-    // Required: models such as Claude skip an optional summary, so their cards showed bare `cd <worktree> && ...` rows.
-    // It comes first: models write arguments in schema order, so the card can show it before the command streams.
-    description: Schema.String.annotate({
-      description:
-        "A clear, concise description of what this command does in 5-10 words, shown as the title of the tool card. Examples: 'Shows working tree status', 'Runs the core package tests', 'Installs package dependencies'.",
-    }),
-    // kilocode_change end
-    command: Schema.String.annotate({ description: "Shell command string to execute" }),
-    workdir: Schema.optionalKey(Schema.String).annotate({
-      description:
-        "Working directory to execute the command in. Defaults to the current working directory. When possible, avoid changing directories in the command and set the working directory here instead.",
-    }),
-    timeout: Schema.optionalKey(NonNegativeInt).annotate({
-      description: autoBackground
-        ? `Optional timeout in milliseconds (default ${DEFAULT_TIMEOUT_MS}). When it expires, a foreground command moves to the background and a background command is stopped.`
-        : `Timeout in milliseconds. Set to 0 to disable the timeout. Defaults to ${DEFAULT_TIMEOUT_MS} for foreground commands. Background commands have no timeout by default.`,
-    }),
-    background: Schema.optionalKey(Schema.Boolean).annotate({
-      description:
-        "Run the command in the background and return immediately (useful for dev servers and long-running builds). You do not need to use '&' at the end of the command when using this parameter. You will be notified when it completes. DO NOT poll for completion.",
-    }),
+const timeoutInput = (foreground: number) =>
+  Schema.optionalKey(NonNegativeInt).annotate({
+    description: `Optional timeout in milliseconds (default ${foreground}). When it expires, a foreground command moves to the background and a background command is stopped.`,
   })
 
-export const Input = input(false)
+export const Input = Schema.Struct({
+  // kilocode_change start - model-written summary shown instead of the raw command in the tool card.
+  // Required: models such as Claude skip an optional summary, so their cards showed bare `cd <worktree> && ...` rows.
+  // It comes first: models write arguments in schema order, so the card can show it before the command streams.
+  description: Schema.String.annotate({
+    description:
+      "A clear, concise description of what this command does in 5-10 words, shown as the title of the tool card. Examples: 'Shows working tree status', 'Runs the core package tests', 'Installs package dependencies'.",
+  }),
+  // kilocode_change end
+  command: Schema.String.annotate({ description: "Shell command string to execute" }),
+  workdir: Schema.optionalKey(Schema.String).annotate({
+    description:
+      "Working directory to execute the command in. Defaults to the current working directory. When possible, avoid changing directories in the command and set the working directory here instead.",
+  }),
+  timeout: timeoutInput(DEFAULT_TIMEOUT_MS),
+  background: Schema.optionalKey(Schema.Boolean).annotate({
+    description:
+      "Run the command in the background and return immediately (useful for dev servers and long-running builds). You do not need to use '&' at the end of the command when using this parameter. You will be notified when it completes. DO NOT poll for completion.",
+  }),
+})
+
+const CodeModeInput = Schema.Struct({
+  ...Struct.omit(Input.fields, ["background"]),
+  timeout: timeoutInput(CODE_MODE_TIMEOUT_MS),
+})
 
 const StructuredOutput = Schema.Struct({
-  output: Schema.String,
-  exitCode: Schema.NullOr(Schema.Number),
-  wallTimeSeconds: Schema.Number,
-  outputPath: Schema.optionalKey(Schema.String),
-  signal: Schema.optionalKey(Schema.String),
-  shellID: Schema.optionalKey(Schema.String),
-  pid: Schema.optionalKey(NonNegativeInt),
+  shellID: Schema.optionalKey(Schema.String).annotate({
+    description:
+      "Present only while the command is still running in the background. You will be notified when it exits. A result without shellID is final.",
+  }),
+  exitCode: Schema.NullOr(Schema.Number).annotate({
+    description:
+      "The exit code once the command has exited: 0 means success. null while it is still running, or when a signal ended it.",
+  }),
+  signal: Schema.optionalKey(Schema.String).annotate({ description: "The signal that ended the command, if any" }),
+  output: Schema.String.annotate({
+    description:
+      "Combined stdout and stderr as one string; there are no separate stdout or stderr fields. While shellID is present it is a notice instead, and the output streams to outputPath.",
+  }),
+  outputPath: Schema.optionalKey(Schema.String).annotate({
+    description: "File with the full output, when output was truncated or the command is running in the background",
+  }),
+  pid: Schema.optionalKey(NonNegativeInt).annotate({
+    description: "Process ID while the command is running in the background",
+  }),
+  wallTimeSeconds: Schema.Number.annotate({ description: "Seconds since the command started" }),
 })
 
 type Output = ReturnType<typeof ShellResult.output> & {
@@ -304,7 +323,10 @@ export const Plugin = {
     const shellSelect = yield* ShellSelect.Service
     const compatibleShell = shellSelect.resolve({ priority: "compat" })
     const permission = yield* Permission.Service
-    const autoBackground = yield* Flag.enabled("shell_timeout_background")
+    const config = yield* Config.Service
+    // Internal plugins are not re-run on config changes, so reload the tool transform instead.
+    const loaded = yield* ConfigEntryObserver.observe(config, ctx.event, ctx.tool.reload())
+    const flags = yield* Flag.Service
 
     const prepare = Effect.fn("ShellTool.prepare")(function* (invocation: ShellCreateBefore, context: Tool.Context) {
       const target = yield* access.resolve({ path: invocation.cwd, kind: "directory" })
@@ -369,20 +391,23 @@ export const Plugin = {
     })
 
     yield* ctx.tool
-      .transform((editor) =>
+      .transform((editor) => {
+        const codeMode = flags.resolve(loaded.entries).full_codemode.enabled
+        
         editor.add({
           name,
-          options: { codemode: false },
-          description: description(undefined, autoBackground),
-          input: input(autoBackground),
+          // With full_codemode, shell is called as `tools.shell` inside `execute` instead of as a direct tool, and is
+          // pinned so the Code Mode catalog always lists it, however many other tools there are.
+          options: codeMode ? { codemode: true, pinned: true } : { codemode: false },
+          description: description(undefined, codeMode),
+          input: codeMode ? CodeModeInput : Input,
           output: StructuredOutput,
           execute: (input, context) => {
-            // With timeout backgrounding, a foreground timeout of 0 falls back to the default so a call can't block
-            // until the command exits.
-            const foreground = autoBackground
-              ? input.timeout || DEFAULT_TIMEOUT_MS
-              : (input.timeout ?? DEFAULT_TIMEOUT_MS)
-            const timeout = input.background === true ? (input.timeout ?? 0) : foreground
+            // Code Mode input has no background parameter.
+            const background = "background" in input && input.background === true
+            // A foreground timeout of 0 falls back to the default, so a call can't block until the command exits.
+            const foreground = input.timeout || (codeMode ? CODE_MODE_TIMEOUT_MS : DEFAULT_TIMEOUT_MS)
+            const timeout = background ? (input.timeout ?? 0) : foreground
             let finalTimeout = timeout
             let stopStreaming: Effect.Effect<void> = Effect.void // kilocode_change - the live preview fiber
             // Uninterruptible from spawning to blocking, so an interrupt cannot orphan a started command.
@@ -406,7 +431,7 @@ export const Plugin = {
                       timeout,
                       shell: yield* compatibleShell,
                       metadata: { sessionID: context.sessionID },
-                      waited: input.background !== true,
+                      waited: !background,
                       toolCall: {
                         sessionID: context.sessionID,
                         assistantMessageID: context.messageID,
@@ -433,7 +458,7 @@ export const Plugin = {
                           ),
                         )
                         // A foreground timeout moves the command to the background instead of stopping it.
-                        if (autoBackground && input.background !== true) invocation.timeout = 0
+                        if (!background) invocation.timeout = 0
                       }),
                   )
                   yield* context.progress({ shellID: info.id })
@@ -484,7 +509,7 @@ export const Plugin = {
                   // Stopped while the command was starting: stop it now.
                   if (yield* Deferred.isDone(stopped)) return yield* cancelled(info, job.id)
 
-                  if (input.background === true) {
+                  if (background) {
                     yield* jobs.background(job.id)
                     yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, input.description, settled) // kilocode_change
                     return backgroundResult(info, yield* Clock.currentTimeMillis)
@@ -492,7 +517,7 @@ export const Plugin = {
 
                   const waiting = jobs.block({ id: job.id, sessionID: context.sessionID })
                   const blocked =
-                    autoBackground && finalTimeout > 0
+                    finalTimeout > 0
                       ? waiting.pipe(
                           Effect.timeoutOption(finalTimeout),
                           Effect.flatMap((result) =>
@@ -541,21 +566,21 @@ export const Plugin = {
               // Shell spans, including the job that waits for a backgrounded command, name the call that started them.
               Effect.annotateSpans({
                 "gen_ai.tool.call.id": context.id,
-                ...(input.background === true ? { "opencode.shell.background": true } : {}),
+                ...(background ? { "opencode.shell.background": true } : {}),
               }),
               Effect.map((output) => toolResult(output, finalTimeout, input.description)), // kilocode_change
               Effect.mapError(toolFailure(`Unable to execute command: ${input.command}`)),
             )
           },
-        }),
-      )
+        })
+      })
       .pipe(Effect.orDie)
 
     const hook = (event: SessionHooks["context"]) =>
       Effect.gen(function* () {
         const tool = event.tools[name]
         if (!tool) return
-        tool.description = description(ShellSelect.name(yield* compatibleShell), autoBackground)
+        tool.description = description(ShellSelect.name(yield* compatibleShell))
       })
     yield* ctx.session.hook("context", hook)
     yield* ctx.session.hook("compaction", hook)
