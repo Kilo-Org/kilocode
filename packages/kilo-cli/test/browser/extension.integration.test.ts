@@ -233,7 +233,13 @@ describe("extension backend over a real hub", () => {
 
     const navigating = active.callTool("browser_navigate", { url: "http://localhost:3000" }, { session: "ses_e2e" })
     const opened = await request(extension, "session.open")
-    expect(opened.params).toMatchObject({ sessionId: "ses_e2e", title: "ses_e2e", cwd: "/tmp/kilo-extension-e2e" })
+    // An untitled conversation is named after its project folder and the end of its id, never the bare id.
+    expect(opened.params).toMatchObject({
+      sessionId: "ses_e2e",
+      title: "kilo-extension-e2e (es_e2e)",
+      cwd: "/tmp/kilo-extension-e2e",
+    })
+    expect(opened.params.title).not.toBe("ses_e2e")
     answer(extension, opened, { sessionHandle: randomUUID() })
 
     const navigate = await request(extension, "tools.call")
