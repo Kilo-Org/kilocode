@@ -130,6 +130,7 @@ public final class Smoke implements ProjectActivity {
             var git = new ProcessBuilder("git", "show", ":fixture.txt").directory(repo.toFile()).start();
             if (!new String(git.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).equals("before\n") || git.waitFor() != 0)
                 throw new AssertionError("Commit generation changed the staged fixture");
+            terminalSelection(project);
             return;
         }
         if (phase.equals("create")) {
@@ -162,6 +163,48 @@ public final class Smoke implements ProjectActivity {
         send("Check fixture continuity");
         transcript("KILO_FIXTURE_RECONNECTED");
         edt(() -> { capture("reconnected"); return null; });
+    }
+
+    private void terminalSelection(Project project) throws Exception {
+        var tabs = com.intellij.terminal.frontend.toolwindow.TerminalToolWindowTabsManager.getInstance(project);
+        var terminal = edt(() -> tabs.createTabBuilder().workingDirectory(project.getBasePath())
+            .shellCommand(java.util.List.of("/bin/sh", "-c", "printf 'fixture_terminal_42\\n'; while [ ! -e .terminal-finished ]; do sleep 1; done"))
+            .deferSessionStartUntilUiShown(false).createTab());
+        try {
+            var view = terminal.getView();
+            var token = "fixture_terminal_42";
+            await("terminal-output", () -> {
+                var model = view.getOutputModels().getActive().getValue();
+                var start = model.getStartOffset();
+                var index = model.getText(start, model.getEndOffset()).toString().indexOf(token);
+                if (index < 0) return null;
+                view.getTextSelectionModel().updateSelection(com.intellij.terminal.frontend.view.TerminalTextSelection.Companion.of(
+                    start.plus(index), start.plus(index + token.length())));
+                return true;
+            });
+            var context = com.intellij.openapi.actionSystem.impl.SimpleDataContext.builder()
+                .add(com.intellij.openapi.actionSystem.CommonDataKeys.PROJECT, project)
+                .add(com.intellij.terminal.frontend.view.TerminalView.Companion.getDATA_KEY(), view).build();
+            for (String id : new String[]{"Kilo.AddTerminalSelection", "Kilo.ExplainTerminalSelection"}) {
+                edt(() -> {
+                    var action = ActionManager.getInstance().getAction(id);
+                    var event = com.intellij.openapi.actionSystem.AnActionEvent.createFromDataContext("fixture", action.getTemplatePresentation().clone(), context);
+                    action.update(event);
+                    if (!event.getPresentation().isEnabled()) throw new AssertionError(id + " disabled for terminal selection");
+                    action.actionPerformed(event);
+                    return null;
+                });
+                if (id.equals("Kilo.AddTerminalSelection")) await("terminal-draft", () -> {
+                    var panel = component("PromptPanel");
+                    return panel != null && panel.getClass().getMethod("text").invoke(panel).toString().contains(token) ? true : null;
+                });
+            }
+            transcript("KILO_FIXTURE_TERMINAL_EXPLAINED");
+        } finally {
+            // Closing a live terminal opens the IDE's process-termination confirmation on the EDT.
+            // Release only this fixture process; the isolated IDE owns its tab until shutdown.
+            Files.writeString(dir.resolve("kilo-smoke-project/.terminal-finished"), "done");
+        }
     }
 
     private void act(String id) throws Exception {

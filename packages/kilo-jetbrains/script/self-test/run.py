@@ -38,7 +38,8 @@ def ide_files(path):
 def install_driver(java, home, root, plugins):
     classes = root / "driver-classes"
     classes.mkdir()
-    subprocess.run([java.with_name("javac"), "-proc:none", "-cp", str(home / "lib/*"), "-d", classes, HERE / "Smoke.java"], check=True)
+    cp = os.pathsep.join(str(home / path) for path in ("lib/*", "plugins/terminal/lib/*", "plugins/terminal/lib/modules/*"))
+    subprocess.run([java.with_name("javac"), "-proc:none", "-cp", cp, "-d", classes, HERE / "Smoke.java"], check=True)
     lib = plugins / "kilo-smoke-driver/lib"
     (lib / "modules").mkdir(parents=True)
     with zipfile.ZipFile(lib / "driver.jar", "w") as jar:
@@ -46,7 +47,7 @@ def install_driver(java, home, root, plugins):
 <vendor>Kilo</vendor><version>1</version><depends>com.intellij.modules.platform</depends>
 <content><module name="kilo.selftest.frontend"/></content></idea-plugin>""")
     with zipfile.ZipFile(lib / "modules/kilo.selftest.frontend.jar", "w") as jar:
-        jar.writestr("kilo.selftest.frontend.xml", """<idea-plugin><dependencies><module name="intellij.platform.frontend"/></dependencies>
+        jar.writestr("kilo.selftest.frontend.xml", """<idea-plugin><dependencies><module name="intellij.platform.frontend"/><plugin id="org.jetbrains.plugins.terminal"/><module name="intellij.terminal.frontend"/></dependencies>
 <extensions defaultExtensionNs="com.intellij"><postStartupActivity implementation="ai.kilocode.selftest.Smoke"/></extensions></idea-plugin>""")
         for file in classes.rglob("*.class"):
             jar.write(file, file.relative_to(classes))
@@ -211,8 +212,8 @@ def session(files, root, mode, artifact, probe, keep, stable=None, editor=False,
                 finally:
                     stop(ui)
             if editor:
-                if not {"editor-selection", "commit-message"}.issubset(model.events):
-                    raise AssertionError("Missing editor selection or staged commit generation")
+                if not {"editor-selection", "commit-message", "terminal-selection"}.issubset(model.events):
+                    raise AssertionError("Missing editor, commit or terminal action result")
             elif not probe:
                 if "edit-complete" not in model.events or "reconnected" not in model.events:
                     raise AssertionError("Missing fixture-model edit result or post-reconnect request")

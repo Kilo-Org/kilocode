@@ -31,6 +31,17 @@ class SessionSelectorActionsTest : BasePlatformTestCase() {
         assertEquals("Switch to the next Kilo mode", action.templatePresentation.description)
     }
 
+    fun `test previous mode wraps and skips deprecated modes`() {
+        val ctx = FakeSelectors()
+        ctx.mode.setItems(listOf(ModePicker.Item("ask", "Ask"), ModePicker.Item("code", "Code"),
+            ModePicker.Item("old", "Old", deprecated = true)), "ask")
+        val action = PreviousModeAction()
+        action.actionPerformed(event(action, ctx))
+        assertEquals("code", ctx.mode.selectedForTest()?.id)
+        action.actionPerformed(event(action, ctx))
+        assertEquals("ask", ctx.mode.selectedForTest()?.id)
+    }
+
     fun `test cycle mode action disabled with a single mode`() {
         val ctx = FakeSelectors()
         ctx.mode.setItems(listOf(ModePicker.Item("ask", "Ask")), "ask")

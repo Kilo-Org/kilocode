@@ -64,6 +64,15 @@ class CycleModeAction : SelectorAction(
     override fun perform(ctx: PromptSelectors) = ctx.mode.cycle()
 }
 
+class PreviousModeAction : SelectorAction(
+    KiloBundle.message("action.Kilo.Session.PreviousMode.text"),
+    KiloBundle.message("action.Kilo.Session.PreviousMode.description"),
+) {
+    override fun enabled(ctx: PromptSelectors): Boolean = ctx.mode.canCycle()
+
+    override fun perform(ctx: PromptSelectors) = ctx.mode.cycle(previous = true)
+}
+
 class CycleModelAction : SelectorAction(
     KiloBundle.message("action.Kilo.Session.CycleModel.text"),
     KiloBundle.message("action.Kilo.Session.CycleModel.description"),

@@ -368,6 +368,7 @@
                                replace-all="true"/>
         </action>
 
+        <action id="Kilo.Session.PreviousMode" class="ai.kilocode.client.actions.PreviousModeAction"/>
         <action id="Kilo.Session.CycleModel"
                 class="ai.kilocode.client.actions.CycleModelAction"
                 text="Cycle Model"

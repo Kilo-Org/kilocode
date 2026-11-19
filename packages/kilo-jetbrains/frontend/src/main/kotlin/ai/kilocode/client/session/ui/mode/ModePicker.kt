@@ -53,18 +53,22 @@ class ModePicker : PickerButton() {
     fun canCycle(): Boolean = nextCycleItem() != null
 
     /** Selects the next non-deprecated mode after the current one, wrapping at the end. */
-    fun cycle() {
-        val next = nextCycleItem() ?: return
+    fun cycle(previous: Boolean = false) {
+        val next = nextCycleItem(previous) ?: return
         selected = next
         refresh()
         onSelect(next)
     }
 
-    private fun nextCycleItem(): Item? {
+    private fun nextCycleItem(previous: Boolean = false): Item? {
         val pool = items.filterNot { it.deprecated }
         if (pool.isEmpty()) return null
         val index = pool.indexOfFirst { it.id == selected?.id }
-        val next = pool[(index + 1).mod(pool.size)]
+        val next = when {
+            !previous -> pool[(index + 1).mod(pool.size)]
+            index < 0 -> pool.last()
+            else -> pool[(index - 1).mod(pool.size)]
+        }
         return next.takeIf { it.id != selected?.id }
     }
 
