@@ -203,7 +203,7 @@ export const dict = {
   "browser.notice.unavailableTitle": "Браузер недоступен",
   "browser.notice.outdatedTitle": "Расширение браузера устарело",
   "browser.notice.stopped":
-    "Вы остановили браузер для этой сессии. Выполните /browser adopt, чтобы вернуть ему вкладки.",
+    "Вы остановили браузер для этой сессии. Выполните /browser adopt, чтобы вернуть ей вкладки.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Переключить автоодобрение",

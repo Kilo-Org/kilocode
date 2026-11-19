@@ -203,7 +203,7 @@ export const dict = {
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Preglednik nije dostupan",
   "browser.notice.outdatedTitle": "Proširenje preglednika je zastarjelo",
-  "browser.notice.stopped": "Zaustavili ste preglednik za ovu sesiju. Pokrenite /browser adopt da mu vratite kartice.",
+  "browser.notice.stopped": "Zaustavili ste preglednik za ovu sesiju. Pokrenite /browser adopt da joj vratite kartice.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Uključi/isključi automatsko odobravanje",

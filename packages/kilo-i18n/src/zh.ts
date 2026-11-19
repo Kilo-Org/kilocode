@@ -184,7 +184,7 @@ export const dict = {
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "浏览器不可用",
   "browser.notice.outdatedTitle": "浏览器扩展已过时",
-  "browser.notice.stopped": "你已停止此会话的浏览器。运行 /browser adopt 将标签页还给浏览器。",
+  "browser.notice.stopped": "你已停止此会话的浏览器。运行 /browser adopt 将标签页还给此会话。",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "切换自动批准",

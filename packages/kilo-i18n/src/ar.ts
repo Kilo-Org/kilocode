@@ -163,9 +163,9 @@ export const dict = {
   "browser.state.readyHint": "ملف تعريف Chromium مملوك لـ Kilo يبدأ عند أول استدعاء للمتصفح",
   "browser.state.extensionHint": "اربط إضافة متصفح Kilo لاستخدام متصفحك الخاص",
   "browser.command.usage":
-    "استخدم /browser للإعدادات، أو /browser share لمنح هذه الجلسة علامة التبويب النشطة، أو /browser adopt لإعادة استخدام آخر مجموعة تبويبات منتهية.",
+    "استخدم /browser للإعدادات، أو /browser share لمنح هذه الجلسة علامة التبويب النشطة، أو /browser adopt لإعادة استخدام آخر مجموعة علامات تبويب منتهية.",
   "browser.command.sessionDescription":
-    "شارك علامة التبويب النشطة (/browser share) أو أعد استخدام آخر مجموعة تبويبات منتهية (/browser adopt)",
+    "شارك علامة التبويب النشطة (/browser share) أو أعد استخدام آخر مجموعة علامات تبويب منتهية (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "قراءة الصفحات على {{origin}}",
   "browser.permission.act.title": "النقر والكتابة على {{origin}}",
@@ -179,20 +179,20 @@ export const dict = {
   "browser.permission.sensitive.once": "لا يمكن إلا لشخص الموافقة على هذه الخطوة. تغطي الموافقة هذه الخطوة فقط.",
   // `/browser share` and `/browser adopt`.
   "browser.share.title": "مشاركة علامة التبويب النشطة في المتصفح",
-  "browser.share.description": "انقل علامة التبويب النشطة في متصفحك إلى مجموعة تبويبات هذه الجلسة",
-  "browser.share.done": "علامة التبويب النشطة الآن في مجموعة تبويبات هذه الجلسة.",
-  "browser.adopt.title": "إعادة استخدام مجموعة تبويبات المتصفح المنتهية",
-  "browser.adopt.description": "امنح هذه الجلسة أحدث مجموعة تبويبات Kilo منتهية",
-  "browser.adopt.done": "تستخدم هذه الجلسة الآن آخر مجموعة تبويبات منتهية.",
-  "browser.adopt.none": "لا توجد مجموعة تبويبات منتهية لإعادة استخدامها.",
-  "browser.adopt.kept": "لدى هذه الجلسة تبويباتها الخاصة بالفعل وتحتفظ بها.",
+  "browser.share.description": "انقل علامة التبويب النشطة في متصفحك إلى مجموعة علامات تبويب هذه الجلسة",
+  "browser.share.done": "علامة التبويب النشطة الآن في مجموعة علامات تبويب هذه الجلسة.",
+  "browser.adopt.title": "إعادة استخدام مجموعة علامات تبويب المتصفح المنتهية",
+  "browser.adopt.description": "امنح هذه الجلسة أحدث مجموعة علامات تبويب Kilo منتهية",
+  "browser.adopt.done": "تستخدم هذه الجلسة الآن آخر مجموعة علامات تبويب منتهية.",
+  "browser.adopt.none": "لا توجد مجموعة علامات تبويب منتهية لإعادة استخدامها.",
+  "browser.adopt.kept": "لدى هذه الجلسة علامات تبويبها الخاصة بالفعل وتحتفظ بها.",
   "browser.adopt.unconfirmed":
-    "طُلب من المتصفح إعادة استخدام آخر مجموعة تبويبات منتهية. حدّث إضافة متصفح Kilo لمعرفة ما إذا فعل ذلك.",
-  "browser.control.notExtension": "تتطلب مشاركة التبويبات وإعادة استخدامها إضافة متصفح Kilo. اخترها في /browser.",
+    "طُلب من المتصفح إعادة استخدام آخر مجموعة علامات تبويب منتهية. حدّث إضافة متصفح Kilo لمعرفة ما إذا فعل ذلك.",
+  "browser.control.notExtension": "تتطلب مشاركة علامات التبويب وإعادة استخدامها إضافة متصفح Kilo. اخترها في /browser.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "المتصفح غير متاح",
   "browser.notice.outdatedTitle": "إضافة المتصفح قديمة",
-  "browser.notice.stopped": "أوقفت المتصفح لهذه الجلسة. شغّل /browser adopt لإرجاع تبويباته إليه.",
+  "browser.notice.stopped": "أوقفت المتصفح لهذه الجلسة. شغّل /browser adopt لإرجاع علامات التبويب إلى هذه الجلسة.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "تبديل الموافقة التلقائية",

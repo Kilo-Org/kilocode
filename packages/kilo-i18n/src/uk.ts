@@ -200,7 +200,7 @@ export const dict = {
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Браузер недоступний",
   "browser.notice.outdatedTitle": "Розширення браузера застаріло",
-  "browser.notice.stopped": "Ви зупинили браузер для цієї сесії. Виконайте /browser adopt, щоб повернути йому вкладки.",
+  "browser.notice.stopped": "Ви зупинили браузер для цієї сесії. Виконайте /browser adopt, щоб повернути їй вкладки.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Перемкнути автосхвалення",

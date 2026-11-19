@@ -169,9 +169,9 @@ export const dict = {
   "browser.state.readyHint": "Un perfil de Chromium propio de Kilo, iniciado en la primera llamada al navegador",
   "browser.state.extensionHint": "Conecta la extensión de navegador de Kilo para usar tu propio navegador",
   "browser.command.usage":
-    "Usa /browser para los ajustes, /browser share para dar a esta sesión tu pestaña activa, o /browser adopt para reutilizar el último grupo de pestañas cerrado.",
+    "Usa /browser para los ajustes, /browser share para dar a esta sesión tu pestaña activa, o /browser adopt para reutilizar el último grupo de pestañas finalizado.",
   "browser.command.sessionDescription":
-    "Comparte tu pestaña activa (/browser share) o reutiliza el último grupo de pestañas cerrado (/browser adopt)",
+    "Comparte tu pestaña activa (/browser share) o reutiliza el último grupo de pestañas finalizado (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Leer páginas en {{origin}}",
   "browser.permission.act.title": "Hacer clic y escribir en {{origin}}",
@@ -189,13 +189,13 @@ export const dict = {
   "browser.share.title": "Compartir la pestaña activa del navegador",
   "browser.share.description": "Mover la pestaña activa de tu navegador al grupo de pestañas de esta sesión",
   "browser.share.done": "Tu pestaña activa ya está en el grupo de pestañas de esta sesión.",
-  "browser.adopt.title": "Reutilizar el grupo de pestañas cerrado",
-  "browser.adopt.description": "Dar a esta sesión el grupo de pestañas de Kilo cerrado más reciente",
-  "browser.adopt.done": "Esta sesión ahora usa el último grupo de pestañas cerrado.",
-  "browser.adopt.none": "No hay ningún grupo de pestañas cerrado que reutilizar.",
+  "browser.adopt.title": "Reutilizar el grupo de pestañas finalizado",
+  "browser.adopt.description": "Dar a esta sesión el grupo de pestañas de Kilo finalizado más reciente",
+  "browser.adopt.done": "Esta sesión ahora usa el último grupo de pestañas finalizado.",
+  "browser.adopt.none": "No hay ningún grupo de pestañas finalizado que reutilizar.",
   "browser.adopt.kept": "Esta sesión ya tiene sus propias pestañas y las conserva.",
   "browser.adopt.unconfirmed":
-    "Se pidió al navegador que reutilizara el último grupo de pestañas cerrado. Actualiza la extensión de navegador de Kilo para ver si lo hizo.",
+    "Se pidió al navegador que reutilizara el último grupo de pestañas finalizado. Actualiza la extensión de navegador de Kilo para ver si lo hizo.",
   "browser.control.notExtension":
     "Compartir y reutilizar pestañas requiere la extensión de navegador de Kilo. Elígela en /browser.",
   // Notices for a browser call the user has to act on.

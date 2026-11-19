@@ -143,7 +143,7 @@ export const dict = {
   "ui.tool.chart.failed": "Diagramm konnte nicht gerendert werden",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Browser-Einstellungen",
-  "browser.command.starting": "Kilo startet noch. Versuche es gleich noch einmal.",
+  "browser.command.starting": "Kilo startet noch. Versuchen Sie es gleich noch einmal.",
   "browser.command.description": "Browser-Backend, Ausführbarkeit und Origin-Freigaben anzeigen",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Beobachtung",
@@ -170,7 +170,7 @@ export const dict = {
   "browser.state.readyHint": "Ein Chromium-Profil von Kilo, gestartet beim ersten Browser-Aufruf",
   "browser.state.extensionHint": "Kilo-Browser-Erweiterung verbinden, um den eigenen Browser zu steuern",
   "browser.command.usage":
-    "Nutze /browser für die Einstellungen, /browser share, um dieser Sitzung deinen aktiven Tab zu geben, oder /browser adopt, um die zuletzt beendete Tab-Gruppe wiederzuverwenden.",
+    "Verwenden Sie /browser für die Einstellungen, /browser share, um dieser Sitzung Ihren aktiven Tab zu geben, oder /browser adopt, um die zuletzt beendete Tab-Gruppe wiederzuverwenden.",
   "browser.command.sessionDescription":
     "Aktiven Tab teilen (/browser share) oder die zuletzt beendete Tab-Gruppe wiederverwenden (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
@@ -188,22 +188,22 @@ export const dict = {
     "Nur eine Person kann diesen Schritt genehmigen. Die Genehmigung gilt nur für diesen einen Schritt.",
   // `/browser share` and `/browser adopt`.
   "browser.share.title": "Aktiven Browser-Tab teilen",
-  "browser.share.description": "Den aktiven Tab deines Browsers in die Tab-Gruppe dieser Sitzung verschieben",
-  "browser.share.done": "Dein aktiver Tab ist jetzt in der Tab-Gruppe dieser Sitzung.",
+  "browser.share.description": "Den aktiven Tab Ihres Browsers in die Tab-Gruppe dieser Sitzung verschieben",
+  "browser.share.done": "Ihr aktiver Tab ist jetzt in der Tab-Gruppe dieser Sitzung.",
   "browser.adopt.title": "Beendete Browser-Tab-Gruppe wiederverwenden",
   "browser.adopt.description": "Dieser Sitzung die zuletzt beendete Kilo-Tab-Gruppe geben",
   "browser.adopt.done": "Diese Sitzung verwendet jetzt die zuletzt beendete Tab-Gruppe.",
   "browser.adopt.none": "Es gibt keine beendete Tab-Gruppe zum Wiederverwenden.",
   "browser.adopt.kept": "Diese Sitzung hat bereits eigene Tabs und behält sie.",
   "browser.adopt.unconfirmed":
-    "Der Browser wurde gebeten, die zuletzt beendete Tab-Gruppe wiederzuverwenden. Aktualisiere die Kilo-Browser-Erweiterung, um zu sehen, ob er es getan hat.",
+    "Der Browser wurde gebeten, die zuletzt beendete Tab-Gruppe wiederzuverwenden. Aktualisieren Sie die Kilo-Browser-Erweiterung, um zu sehen, ob er es getan hat.",
   "browser.control.notExtension":
-    "Teilen und Wiederverwenden von Tabs erfordern die Kilo-Browser-Erweiterung. Wähle sie in /browser.",
+    "Teilen und Wiederverwenden von Tabs erfordern die Kilo-Browser-Erweiterung. Wählen Sie sie in /browser.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Browser nicht verfügbar",
   "browser.notice.outdatedTitle": "Browser-Erweiterung veraltet",
   "browser.notice.stopped":
-    "Du hast den Browser für diese Sitzung gestoppt. Führe /browser adopt aus, um ihm seine Tabs zurückzugeben.",
+    "Sie haben den Browser für diese Sitzung gestoppt. Führen Sie /browser adopt aus, um der Sitzung ihre Tabs zurückzugeben.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Automatische Genehmigung umschalten",

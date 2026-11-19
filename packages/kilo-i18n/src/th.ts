@@ -165,9 +165,9 @@ export const dict = {
   "browser.state.readyHint": "โปรไฟล์ Chromium ของ Kilo จะเริ่มเมื่อเรียกใช้เบราว์เซอร์ครั้งแรก",
   "browser.state.extensionHint": "เชื่อมต่อส่วนขยายเบราว์เซอร์ Kilo เพื่อใช้เบราว์เซอร์ของคุณเอง",
   "browser.command.usage":
-    "ใช้ /browser สำหรับการตั้งค่า ใช้ /browser share เพื่อให้เซสชันนี้ใช้แท็บที่ใช้งานอยู่ของคุณ หรือใช้ /browser adopt เพื่อนำกลุ่มแท็บที่ปิดล่าสุดกลับมาใช้",
+    "ใช้ /browser สำหรับการตั้งค่า ใช้ /browser share เพื่อให้เซสชันนี้ใช้แท็บที่ใช้งานอยู่ของคุณ หรือใช้ /browser adopt เพื่อนำกลุ่มแท็บที่สิ้นสุดล่าสุดกลับมาใช้",
   "browser.command.sessionDescription":
-    "แชร์แท็บที่ใช้งานอยู่ (/browser share) หรือนำกลุ่มแท็บที่ปิดล่าสุดกลับมาใช้ (/browser adopt)",
+    "แชร์แท็บที่ใช้งานอยู่ (/browser share) หรือนำกลุ่มแท็บที่สิ้นสุดล่าสุดกลับมาใช้ (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "อ่านหน้าเว็บบน {{origin}}",
   "browser.permission.act.title": "คลิกและพิมพ์บน {{origin}}",
@@ -184,13 +184,13 @@ export const dict = {
   "browser.share.title": "แชร์แท็บเบราว์เซอร์ที่ใช้งานอยู่",
   "browser.share.description": "ย้ายแท็บที่ใช้งานอยู่ของเบราว์เซอร์ไปยังกลุ่มแท็บของเซสชันนี้",
   "browser.share.done": "แท็บที่ใช้งานอยู่ของคุณอยู่ในกลุ่มแท็บของเซสชันนี้แล้ว",
-  "browser.adopt.title": "นำกลุ่มแท็บเบราว์เซอร์ที่ปิดไปแล้วกลับมาใช้",
-  "browser.adopt.description": "มอบกลุ่มแท็บ Kilo ที่ปิดล่าสุดให้เซสชันนี้",
-  "browser.adopt.done": "เซสชันนี้ใช้กลุ่มแท็บที่ปิดล่าสุดแล้ว",
-  "browser.adopt.none": "ไม่มีกลุ่มแท็บที่ปิดแล้วให้กลับมาใช้",
+  "browser.adopt.title": "นำกลุ่มแท็บเบราว์เซอร์ที่สิ้นสุดแล้วกลับมาใช้",
+  "browser.adopt.description": "มอบกลุ่มแท็บ Kilo ที่สิ้นสุดล่าสุดให้เซสชันนี้",
+  "browser.adopt.done": "เซสชันนี้ใช้กลุ่มแท็บที่สิ้นสุดล่าสุดแล้ว",
+  "browser.adopt.none": "ไม่มีกลุ่มแท็บที่สิ้นสุดแล้วให้กลับมาใช้",
   "browser.adopt.kept": "เซสชันนี้มีแท็บของตัวเองอยู่แล้วและจะเก็บไว้",
   "browser.adopt.unconfirmed":
-    "ขอให้เบราว์เซอร์นำกลุ่มแท็บที่ปิดล่าสุดกลับมาใช้แล้ว อัปเดตส่วนขยายเบราว์เซอร์ Kilo เพื่อดูว่าทำสำเร็จหรือไม่",
+    "ขอให้เบราว์เซอร์นำกลุ่มแท็บที่สิ้นสุดล่าสุดกลับมาใช้แล้ว อัปเดตส่วนขยายเบราว์เซอร์ Kilo เพื่อดูว่าทำสำเร็จหรือไม่",
   "browser.control.notExtension": "การแชร์และนำแท็บกลับมาใช้ต้องใช้ส่วนขยายเบราว์เซอร์ Kilo เลือกได้ใน /browser",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "เบราว์เซอร์ไม่พร้อมใช้งาน",
