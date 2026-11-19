@@ -745,28 +745,23 @@
 ## [7.2.1-rc.9] - 2026-11-19
 
 ### Added
-- feat(cli): add the browser hub transport and native host install by @iscekic in https://github.com/Kilo-Org/kilocode/pull/16274
-- feat(agent-manager): show Cloud workspace PR status by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16257
-- feat(cli): add core telemetry level API by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16342
-- feat(jetbrains): add native Cloud workspace diffs by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16284
+
+- Added native Cloud workspace diffs, so Cloud sessions can show their changes in the IDE diff viewer.
+- Agent Manager now shows pull request status for Cloud workspaces.
+- Added a core telemetry level API so the plugin reports telemetry at the level configured in Kilo Core.
+- Bundled Kilo Core CLI provides the new core telemetry level API.
 
 ### Fixed
-- fix(jetbrains): stop reused worktrees inheriting old history by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16250
-- fix(jetbrains): show recording indicator on dictation button by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16241
-- fix(jetbrains): recover and reload Cloud sessions by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16279
-- fix(jetbrains): preserve collapsed Agent Manager sections by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16343
-- fix(provider): keep Gemini anyOf free of sibling keywords from type arrays by @rgbkrk in https://github.com/Kilo-Org/kilocode/pull/16346
-- fix(jetbrains): use core telemetry level API by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16293
+
+- Fixed reused worktrees inheriting old history from previous sessions.
+- Fixed Cloud sessions not recovering and reloading after reconnect.
+- Fixed collapsed Agent Manager sections expanding again after a refresh.
+- Fixed the dictation button not showing its recording indicator.
+- Fixed Gemini type arrays leaving sibling keywords on `anyOf` in generated tool schemas.
 
 ### Changed
-- release(jetbrains): v7.2.1-rc.8 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/16275
-- revert: "feat(cli): add the browser hub transport and native host install" by @iscekic in https://github.com/Kilo-Org/kilocode/pull/16278
-- docs(kilo-docs): explain Claude sign-in and linked billing by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/16283
-- docs(kilo-docs): update Kilo Desktop docs for 1.0.0 by @MihaelaStoica in https://github.com/Kilo-Org/kilocode/pull/16281
-- docs: auto-sync cloud-mobile with merged PRs (through 2026-11-19) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/15936
-- chore(jetbrains): bump CLI pin to v7.8.31 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/16384
-- docs(jetbrains): document exception and freeze report locations by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16381
 
+- Bundled Kilo Core CLI updated to 7.8.31.
 
 ## [7.2.1-rc.8] - 2026-11-17
 
