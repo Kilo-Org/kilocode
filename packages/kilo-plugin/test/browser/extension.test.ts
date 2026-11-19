@@ -314,6 +314,60 @@ describe("extension backend", () => {
     expect((error as Error).message).toContain("cannot describe")
   })
 
+  test("a page with no web origin is refused with the next step, never asked for as an empty origin", async () => {
+    for (const origin of ["://", "opaque:null", "file://"]) {
+      const hub = fake({
+        call: () =>
+          Promise.reject(
+            new BrowserHub.Failure({ kind: "permission", message: "x", items: [{ class: "read", origin }] }),
+          ),
+      })
+      const active = backend({ port: hub.port, directory: "/tmp/project" })
+      const error = await active.callTool("browser_snapshot", {}, ctx()).catch((value: unknown) => value)
+      expect(error).not.toBeInstanceOf(NeedsPermissionError)
+      expect((error as Error).message).toContain("no web page open")
+      expect((error as Error).message).toContain("browser_navigate")
+    }
+  })
+
+  test("an action that lands on a page with no web origin says it ran and asks for nothing", async () => {
+    const after = fake({
+      call: () =>
+        Promise.reject(
+          new BrowserHub.Failure({
+            kind: "permission",
+            message: "withheld",
+            items: [{ class: "read", origin: "://" }],
+            afterAction: true,
+          }),
+        ),
+    })
+    const clicked = await backend({ port: after.port, directory: "/tmp/project" }).callTool(
+      "browser_click",
+      { target: "e1" },
+      ctx(),
+    )
+    expect(clicked.isError).toBe(false)
+    expect(clicked.meta?.needs).toBeUndefined()
+    expect(clicked.content).toHaveLength(1)
+    expect(clicked.content[0]).toMatchObject({ type: "text", text: expect.stringContaining("The action ran.") })
+
+    const carried = fake({
+      call: () =>
+        Promise.resolve({
+          content: [{ type: "text", text: "Clicked." }],
+          meta: { needs: [{ class: "read", origin: "opaque:null" }] },
+        }),
+    })
+    const result = await backend({ port: carried.port, directory: "/tmp/project" }).callTool(
+      "browser_click",
+      { target: "e1" },
+      ctx(),
+    )
+    expect(result.meta?.needs).toBeUndefined()
+    expect(result.content.at(-1)).toMatchObject({ type: "text", text: expect.stringContaining("no web page open") })
+  })
+
   test("the extension's own error kinds map to tool-layer failures", async () => {
     const cases: {
       failure: ConstructorParameters<typeof BrowserHub.Failure>[0]

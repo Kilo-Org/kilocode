@@ -641,6 +641,28 @@ describe("browser tools over the extension backend", () => {
     expect(hub.calls).toHaveLength(2)
   })
 
+  test("a tab with no web origin is answered with the next step and asks the user nothing", async () => {
+    const { asserts, service } = recorder()
+    const hub = fakeHub({
+      call: () =>
+        Promise.reject(
+          new BrowserHub.Failure({
+            kind: "permission",
+            message: "needs permission",
+            items: [{ class: "read", origin: "://" }],
+          }),
+        ),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_snapshot")
+    expect(result._tag).toBe("Failure")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    expect(error?.message).toContain("no web page open")
+    // Only the tool's own key was asked: no grant for an empty origin ever reached the user.
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_snapshot"])
+    expect(hub.calls).toHaveLength(1)
+  })
+
   test("a post-action need asks, reads the page again and never repeats the action", async () => {
     const { asserts, service } = recorder()
     const hub = fakeHub({

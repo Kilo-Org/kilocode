@@ -49,6 +49,19 @@ function extensionHint(absence: BrowserHub.Absence | undefined): string {
 export const UPDATE_HINT = "Update the Kilo browser extension to the current version, then retry."
 
 /**
+ * What a call on a tab with no web origin reports. `about:blank`, a browser page or a local file has no http(s) origin
+ * (the browser spells it `://` or `opaque:null`), so no grant could ever cover it: the model is told to open a web page
+ * instead of the user being asked to approve an empty origin.
+ */
+const NO_ORIGIN =
+  "The tab has no web page open (about:blank, a browser page or a local file), so there is nothing to grant access to. Open an http(s) page with browser_navigate first."
+
+/** A class grant names an http(s) origin; a sensitive step is approved by its token, whatever its origin. */
+function originless(items: readonly BrowserPermission.Item[]) {
+  return items.some((item) => item.class !== "sensitive" && BrowserPermission.origin(item.origin) === undefined)
+}
+
+/**
  * What a call in a stopped conversation reports. The stop is sticky for that conversation: the model is told the user
  * stopped it, so it can ask for the browser to be turned back on or for a new session.
  */
@@ -147,6 +160,16 @@ function reply(value: BrowserHub.Reply): CallResult {
   if (value.meta !== undefined && meta === undefined) {
     return { content: [{ type: "text", text: UNDESCRIBABLE }], isError: true }
   }
+  // A result that asks to read a page with no web origin cannot be granted: the action ran, and the model is told to
+  // open a web page instead.
+  if (meta?.needs !== undefined && originless(meta.needs)) {
+    const { needs: _unaskable, ...kept } = meta
+    return {
+      content: [...content, { type: "text", text: `The action ran. ${NO_ORIGIN}` }],
+      isError: value.isError === true,
+      meta: kept,
+    }
+  }
   // A need carried by a result is after-action by contract: the call succeeded and then asked for a grant, so the
   // action already ran and the model reads the page instead of repeating the step.
   const flagged = meta?.needs === undefined ? meta : { ...meta, afterAction: true as const }
@@ -160,6 +183,7 @@ function reply(value: BrowserHub.Reply): CallResult {
 function permissionError(error: BrowserHub.Failure): Error {
   const items = needs(error.items)
   if (items === undefined) return new Error(UNDESCRIBABLE)
+  if (originless(items)) return new Error(NO_ORIGIN)
   if (error.kind === "moved" && !items.length) {
     return new Error("The page changed before the step ran. Call the tool again.")
   }
@@ -303,6 +327,7 @@ export class ExtensionBackend implements BrowserBackend {
     if (!(error instanceof BrowserHub.Failure) || error.kind !== "permission" || !error.afterAction) return undefined
     const items = needs(error.items)
     if (items === undefined) return undefined
+    if (originless(items)) return { content: [{ type: "text", text: `The action ran. ${NO_ORIGIN}` }], isError: false }
     const meta = finishMeta(
       { ...(error.meta ?? {}), ...(items.length ? { needs: items } : {}) },
       error.stepToken,
