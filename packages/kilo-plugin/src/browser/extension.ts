@@ -199,8 +199,8 @@ export class ExtensionBackend implements BrowserBackend {
    */
   private readonly stopped = new Set<string>()
   /**
-   * The turns that were running when the user last stopped this CLI's browser. Such a turn may not have opened a
-   * session yet, so no revoke names it; it is refused all the same, until the conversation's next turn.
+   * The turns current when the user last stopped this CLI's browser. Such a turn may not have opened a session yet,
+   * so no revoke names it; it is refused all the same, until the conversation's next turn.
    */
   private halted = new Set<number>()
   /** Set by `dispose()`: an evicted backend must not open a session for a call that was already in flight. */
@@ -210,7 +210,7 @@ export class ExtensionBackend implements BrowserBackend {
     private readonly input: {
       port?: BrowserHub.Port
       directory: string
-      /** Each conversation's running turn, numbered once per process; a finished turn is absent. */
+      /** Each conversation's latest turn, numbered once per process: a new user message gets a new number. */
       turns?: ReadonlyMap<string, number>
     },
   ) {
@@ -242,9 +242,12 @@ export class ExtensionBackend implements BrowserBackend {
     return ctx.session ?? ""
   }
 
-  /** A conversation the user stopped is refused before any open, so no session starts behind their back. */
-  private halts(session: string) {
-    const turn = this.input.turns?.get(session)
+  /**
+   * A conversation the user stopped is refused before any open, so no session starts behind their back. `turn` is the
+   * turn the decision belongs to: an open that was in flight is judged by the turn that started it, which may have
+   * ended (and left `turns`) by the time the open answers.
+   */
+  private halts(session: string, turn: number | undefined) {
     return this.stopped.has(session) || (turn !== undefined && this.halted.has(turn))
   }
 
@@ -317,7 +320,7 @@ export class ExtensionBackend implements BrowserBackend {
     const port = this.input.port
     if (!port) throw new UnavailableError(HINT)
     const session = this.session(ctx)
-    if (this.halts(session)) throw new Error(STOPPED)
+    if (this.halts(session, this.input.turns?.get(session))) throw new Error(STOPPED)
     this.live()
     try {
       await this.accepts(name)
@@ -394,14 +397,21 @@ export class ExtensionBackend implements BrowserBackend {
     // one must not adopt its handle when it answers after the session was forgotten and reopened.
     const attempt = Promise.withResolvers<string>()
     this.handles.set(session, attempt.promise)
-    void this.open(port, session, attempt.promise).then(attempt.resolve, attempt.reject)
+    // The turn that starts the open owns it: a stop of that turn still applies when the open answers after it ended.
+    const turn = this.input.turns?.get(session)
+    void this.open(port, session, attempt.promise, turn).then(attempt.resolve, attempt.reject)
     attempt.promise.catch(() => {
       if (this.handles.get(session) === attempt.promise) this.handles.delete(session)
     })
     return attempt.promise
   }
 
-  private async open(port: BrowserHub.Port, session: string, attempt: Promise<string>): Promise<string> {
+  private async open(
+    port: BrowserHub.Port,
+    session: string,
+    attempt: Promise<string>,
+    turn: number | undefined,
+  ): Promise<string> {
     await this.ready(port)
     // Anything awaited above may have outlived the backend: never open a session from a released instance.
     this.live()
@@ -413,7 +423,7 @@ export class ExtensionBackend implements BrowserBackend {
     // The session ended, another attempt replaced this one, or the user stopped the turn while the extension was still
     // opening it: close the late handle instead of keeping it (or claiming the new attempt's session) alive.
     const superseded = this.handles.get(session) !== attempt
-    if (superseded || this.halts(session)) {
+    if (superseded || this.halts(session, turn)) {
       await port.close(opened.sessionHandle).catch(() => undefined)
       throw new Error(superseded ? "The session ended before its browser session opened." : STOPPED)
     }

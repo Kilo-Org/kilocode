@@ -447,37 +447,41 @@ describe("extension backend", () => {
   })
 
   test("a stop that lands while a running turn opens its session closes the new handle", async () => {
-    const gate = Promise.withResolvers<void>()
-    const entering = Promise.withResolvers<void>()
-    const closed: string[] = []
-    const hub = fake()
-    const port: BrowserHub.Port = {
-      ...hub.port,
-      open: async (input) => {
-        if (input.sessionId !== "ses_opening") return hub.port.open(input)
-        entering.resolve()
-        await gate.promise
-        return { sessionHandle: "late" }
-      },
-      close: (handle) => {
-        closed.push(handle)
-        return Promise.resolve()
-      },
+    // Twice: once while the stopped turn still runs when the open answers, once after the next turn already started.
+    for (const nextTurnFirst of [false, true]) {
+      const gate = Promise.withResolvers<void>()
+      const entering = Promise.withResolvers<void>()
+      const closed: string[] = []
+      const hub = fake()
+      const port: BrowserHub.Port = {
+        ...hub.port,
+        open: async (input) => {
+          if (input.sessionId !== "ses_opening") return hub.port.open(input)
+          entering.resolve()
+          await gate.promise
+          return { sessionHandle: "late" }
+        },
+        close: (handle) => {
+          closed.push(handle)
+          return Promise.resolve()
+        },
+      }
+      const turns = new Map([
+        ["ses_open", 1],
+        ["ses_opening", 2],
+      ])
+      const active = backend({ port, directory: "/tmp/project", turns })
+      await active.callTool("browser_snapshot", {}, ctx({ session: "ses_open" }))
+      const call = active.callTool("browser_snapshot", {}, ctx({ session: "ses_opening" }))
+      await entering.promise
+      hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+      if (nextTurnFirst) turns.set("ses_opening", 3)
+      gate.resolve()
+      const error = await call.catch((value: unknown) => value)
+      expect((error as Error).message).toBe(STOPPED)
+      expect(closed).toEqual(["late"])
+      expect(hub.calls.map((value) => value.sessionHandle)).toEqual(["handle-1"])
     }
-    const turns = new Map([
-      ["ses_open", 1],
-      ["ses_opening", 2],
-    ])
-    const active = backend({ port, directory: "/tmp/project", turns })
-    await active.callTool("browser_snapshot", {}, ctx({ session: "ses_open" }))
-    const call = active.callTool("browser_snapshot", {}, ctx({ session: "ses_opening" }))
-    await entering.promise
-    hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
-    gate.resolve()
-    const error = await call.catch((value: unknown) => value)
-    expect((error as Error).message).toBe(STOPPED)
-    expect(closed).toEqual(["late"])
-    expect(hub.calls.map((value) => value.sessionHandle)).toEqual(["handle-1"])
   })
 
   test("another conversation and a new one are unaffected by a stop", async () => {
