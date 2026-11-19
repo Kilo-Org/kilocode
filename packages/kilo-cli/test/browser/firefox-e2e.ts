@@ -1413,8 +1413,26 @@ async function sensitive() {
   return { allowed: (allowed.last.results[3] ?? "").slice(0, 400), recorded: [...recorded], refused: typed.slice(0, 500) }
 }
 
-/** The index `browser_tabs list` printed for the first line whose text contains `needle` (`N: title - url`). */
-function listedIndex(listed: string, needle: string): number | undefined {
+/**
+ * The index `browser_tabs list` reported for the first tab whose url contains `needle`. The checked tab path answers
+ * `{"tabs":[{index,url,…}]}` and withholds tabs outside the session as `[origin withheld]` (`withheld` picks the first
+ * of those when no url matches); the old Firefox path printed `N: title - url` lines.
+ */
+function listedIndex(listed: string, needle: string, withheld = false): number | undefined {
+  const array = /"tabs"\s*:\s*(\[[\s\S]*?\])/.exec(listed)
+  if (array) {
+    let tabs: unknown[] = []
+    try {
+      tabs = JSON.parse(array[1] ?? "[]") as unknown[]
+    } catch {
+      tabs = []
+    }
+    const match =
+      tabs.find((tab) => String(field(tab, "url") ?? "").includes(needle)) ??
+      (withheld ? tabs.find((tab) => field(tab, "url") === "[origin withheld]") : undefined)
+    const index = field(match, "index")
+    return typeof index === "number" ? index : undefined
+  }
   const line = listed.split("\n").find((entry) => /^\d+: /.test(entry) && entry.includes(needle))
   return line === undefined ? undefined : Number(line.slice(0, line.indexOf(":")))
 }
@@ -1437,14 +1455,18 @@ async function group() {
         during = await tabState()
         shot = await evidence("during")
         // The user's own tab (D9: a session may not select it).
-        return { args: { action: "select", index: listedIndex(step.results[2] ?? "", userUrl) ?? -1 }, name: "browser_tabs" }
+        return { args: { action: "select", index: listedIndex(step.results[2] ?? "", userUrl, true) ?? -1 }, name: "browser_tabs" }
       })()
     }
     if (index === 4) {
       return (async () => {
         afterUserSelect = await tabState()
-        // The window's first tab, which Firefox opened before the run and no session was given.
-        return { args: { action: "select", index: listedIndex(step.results[2] ?? "", "about:blank") ?? -1 }, name: "browser_tabs" }
+        // The window's first tab, which Firefox opened before the run and no session was given (listed only where the
+        // tab list shows non-web tabs).
+        const blank = listedIndex(step.results[2] ?? "", "about:blank")
+        return blank === undefined
+          ? { args: { action: "list" }, name: "browser_tabs" }
+          : { args: { action: "select", index: blank }, name: "browser_tabs" }
       })()
     }
     if (index === 5) {
@@ -1454,7 +1476,7 @@ async function group() {
       })()
     }
     // Closing the user's tab: the destructive end of D9. The fixture tab is the harness's own.
-    if (index === 6) return { args: { action: "close", index: listedIndex(step.results[2] ?? "", userUrl) ?? -1 }, name: "browser_tabs" }
+    if (index === 6) return { args: { action: "close", index: listedIndex(step.results[2] ?? "", userUrl, true) ?? -1 }, name: "browser_tabs" }
     return undefined
   }, {})
   during ??= await tabState()
@@ -1472,7 +1494,12 @@ async function group() {
   expect(agentTab !== undefined, `the agent has no tab of its own: ${JSON.stringify(during.tabs)}`)
   expect(agentTab?.active !== true, `the agent's tab took the foreground: ${JSON.stringify(agentTab)}`)
   expect(refused.includes("not in the agent session"), `selecting the user's tab was not refused:\n${refused.slice(0, 500)}`)
-  expect(blankSelected.includes("not in the agent session"), `selecting the window's first (non-session) tab was not refused:\n${blankSelected.slice(0, 500)}`)
+  const blankListed = listedIndex(result.last.results[2] ?? "", "about:blank") !== undefined
+  expect(!blankListed || blankSelected.includes("not in the agent session"), `selecting the window's first (non-session) tab was not refused:\n${blankSelected.slice(0, 500)}`)
+  expect(
+    during.tabs.find((tab) => tab.id === user.tabId)?.active === true && afterUserSelect?.tabs.find((tab) => tab.id === user.tabId)?.active === true,
+    `the agent's select moved the user's foreground: ${JSON.stringify(afterUserSelect?.tabs.filter((tab) => tab.active))}`,
+  )
   expect(
     after.tabs.find((tab) => tab.id === blankTabId)?.url === "about:blank",
     `the navigate after the select changed a non-session tab: ${JSON.stringify(after.tabs)}`,
@@ -1976,7 +2003,7 @@ async function runtime() {
         return { status: tab.status, url: tab.url }
       }, latencyTab)
       return status.status === "complete" && status.url?.includes(`rep=${index}`) ? true : undefined
-    }, 10_000, "the rep's page loads")
+    }, 10_000, `the rep's page loads (navigate answered ${navigate.text.slice(0, 300)})`)
     samples["navigateToLoad"]?.push(navigate.ms + (Date.now() - loadStarted))
     samples["navigate"]?.push(navigate.ms)
     const snap = await runtimeTool(latencyTab, "browser_snapshot", {})
