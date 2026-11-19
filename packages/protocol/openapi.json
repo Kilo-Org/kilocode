@@ -16350,6 +16350,9 @@
           },
           {
             "$ref": "#/components/schemas/Automation.Action.Code"
+          },
+          {
+            "$ref": "#/components/schemas/Automation.Action.Hook"
           }
         ]
       },
@@ -16367,6 +16370,21 @@
         },
         "required": ["type", "code"],
         "additionalProperties": false
+      },
+      "Automation.Action.Hook": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["hook"]
+          },
+          "prompt": {
+            "type": "string"
+          }
+        },
+        "required": ["type", "prompt"],
+        "additionalProperties": false,
+        "description": "An action owned by the experimental automation hook. The prompt is descriptive and is never admitted."
       },
       "Automation.Action.Prompt": {
         "type": "object",
@@ -16392,6 +16410,9 @@
           },
           {
             "$ref": "#/components/schemas/Automation.CodeActionInput"
+          },
+          {
+            "$ref": "#/components/schemas/Automation.HookActionInput"
           }
         ],
         "description": "What it does: { type: \"prompt\", prompt, to? } sends a prompt; { type: \"code\", code, args? } runs Code Mode with no model."
@@ -16444,6 +16465,22 @@
       "Automation.Duration": {
         "type": "string",
         "description": "A duration such as \"90 seconds\", \"5 minutes\" or \"2 hours\"."
+      },
+      "Automation.HookActionInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["hook"]
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Descriptive prompt for a row whose owner delivers it. The native loop never admits it."
+          }
+        },
+        "required": ["type", "prompt"],
+        "additionalProperties": false
       },
       "Automation.ID": {
         "type": "string",
@@ -23273,31 +23310,6 @@
         },
         "required": ["_tag", "type", "message"],
         "additionalProperties": false
-      },
-      "Schedule.Action": {
-        "anyOf": [
-          {
-            "$ref": "#/components/schemas/Schedule.Action.Prompt"
-          },
-          {
-            "$ref": "#/components/schemas/Schedule.Action.Hook"
-          }
-        ]
-      },
-      "Schedule.Action.Hook": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["hook"]
-          },
-          "prompt": {
-            "type": "string"
-          }
-        },
-        "required": ["type", "prompt"],
-        "additionalProperties": false,
-        "description": "An action owned by the experimental schedule hook. The prompt is descriptive and is never admitted."
       },
       "ServerInfo": {
         "type": "object",
