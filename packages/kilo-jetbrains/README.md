@@ -82,6 +82,19 @@ See [RELEASING.md](RELEASING.md) for the full release process, including how to 
 
 ---
 
+## Exception and freeze reports
+
+JetBrains Marketplace collects crash and UI-freeze reports for the published plugin. Both pages require Marketplace login access to the plugin management page:
+
+- **Exception reports**: https://plugins.jetbrains.com/plugin/28350-kilo-code/edit/exception-analyzer
+- **Freeze reports**: https://plugins.jetbrains.com/plugin/28350-kilo-code/edit/freezes
+
+Freeze reports are grouped into piles with an automatically generated thread-dump excerpt, plus downloadable `dump-N.txt` files (a full thread dump every five seconds during the freeze) and, depending on what the IDE captured, `report.txt`, `snapshot.jfr`, and `open-telemetry-metrics.csv`. Start with the event dispatch thread (`AWT-EventQueue-0`) in the excerpt. For background on the Freezes tab, what a report contains, and how to analyze the dumps, see the JetBrains blog post [UI freeze reports are now available in JetBrains Marketplace](https://blog.jetbrains.com/platform/2026/10/ui-freeze-reports-in-marketplace/).
+
+Reporting relies on the `JetBrainsMarketplaceErrorReportSubmitter` error handler, which is registered in the frontend module descriptor (`frontend/src/main/resources/kilo.jetbrains.frontend.xml`). Split-mode plugins must register it in the frontend or shared module — a backend-only registration does not make it available to the frontend. Reports depend on the user's IDE settings and on the IDE attributing the error or freeze to the plugin, so an empty tab does not necessarily mean there were no issues.
+
+---
+
 ## Run the plugin
 
 Use the checked-in `Run IDE (Split Mode)` run configuration (or `./gradlew --no-configuration-cache runIdeSplitMode` from `packages/kilo-jetbrains/`) to launch the backend and frontend halves of a local split-mode sandbox. The backend downloads the pinned CLI release on first connect.
