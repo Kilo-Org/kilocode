@@ -165,4 +165,10 @@ export const dict = {
   "browser.state.unavailable": "utilgængelig",
   "browser.state.readyHint": "En Chromium-profil ejet af Kilo, startet ved det første browserkald",
   "browser.state.extensionHint": "Forbind Kilo-browserudvidelsen for at bruge din egen browser",
+
+  // Auto-approve toggle for the TUI (`/yolo`, Ctrl+Alt+A).
+  "tui.autoApprove.title": "Skift auto-godkendelse",
+  "tui.autoApprove.description": "Godkend anmodninger om tilladelse automatisk for denne proces",
+  "tui.autoApprove.enabled": "Auto-godkendelse aktiveret. Anmodninger om tilladelse godkendes automatisk.",
+  "tui.autoApprove.disabled": "Auto-godkendelse deaktiveret.",
 }

@@ -171,4 +171,10 @@ export const dict = {
   "browser.state.unavailable": "nedostupno",
   "browser.state.readyHint": "Kilo-ov Chromium profil, pokreće se pri prvom pozivu preglednika",
   "browser.state.extensionHint": "Povežite Kilo proširenje preglednika da koristite svoj preglednik",
+
+  // Auto-approve toggle for the TUI (`/yolo`, Ctrl+Alt+A).
+  "tui.autoApprove.title": "Uključi/isključi automatsko odobravanje",
+  "tui.autoApprove.description": "Automatski odobri zahtjeve za dozvolu za ovaj proces",
+  "tui.autoApprove.enabled": "Automatsko odobravanje uključeno. Zahtjevi za dozvolu se odobravaju automatski.",
+  "tui.autoApprove.disabled": "Automatsko odobravanje isključeno.",
 }

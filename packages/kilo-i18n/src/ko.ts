@@ -161,4 +161,10 @@ export const dict = {
   "browser.state.unavailable": "사용할 수 없음",
   "browser.state.readyHint": "Kilo가 소유한 Chromium 프로필이며 첫 브라우저 호출에서 시작됩니다",
   "browser.state.extensionHint": "Kilo 브라우저 확장을 연결해 자신의 브라우저를 사용하세요",
+
+  // Auto-approve toggle for the TUI (`/yolo`, Ctrl+Alt+A).
+  "tui.autoApprove.title": "자동 승인 전환",
+  "tui.autoApprove.description": "이 프로세스의 권한 요청을 자동으로 승인합니다",
+  "tui.autoApprove.enabled": "자동 승인이 활성화되었습니다. 권한 요청이 자동으로 승인됩니다.",
+  "tui.autoApprove.disabled": "자동 승인이 비활성화되었습니다.",
 }

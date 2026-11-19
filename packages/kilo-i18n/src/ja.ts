@@ -162,4 +162,10 @@ export const dict = {
   "browser.state.unavailable": "利用不可",
   "browser.state.readyHint": "Kilo が所有する Chromium プロファイル。最初のブラウザ呼び出しで起動します",
   "browser.state.extensionHint": "Kilo ブラウザ拡張機能を接続して自分のブラウザを操作します",
+
+  // Auto-approve toggle for the TUI (`/yolo`, Ctrl+Alt+A).
+  "tui.autoApprove.title": "自動承認を切り替え",
+  "tui.autoApprove.description": "このプロセスの許可リクエストを自動的に承認します",
+  "tui.autoApprove.enabled": "自動承認を有効にしました。許可リクエストは自動的に承認されます。",
+  "tui.autoApprove.disabled": "自動承認を無効にしました。",
 }
