@@ -198,19 +198,32 @@ export class ExtensionBackend implements BrowserBackend {
    * there is no CLI-side resume inside the same conversation, so the refusal asks for the browser to be turned back on.
    */
   private readonly stopped = new Set<string>()
+  /**
+   * The turns that were running when the user last stopped this CLI's browser. Such a turn may not have opened a
+   * session yet, so no revoke names it; it is refused all the same, until the conversation's next turn.
+   */
+  private halted = new Set<number>()
   /** Set by `dispose()`: an evicted backend must not open a session for a call that was already in flight. */
   private disposed = false
 
-  constructor(private readonly input: { port?: BrowserHub.Port; directory: string }) {
+  constructor(
+    private readonly input: {
+      port?: BrowserHub.Port
+      directory: string
+      /** Each conversation's running turn, numbered once per process; a finished turn is absent. */
+      turns?: ReadonlyMap<string, number>
+    },
+  ) {
     this.off =
       input.port?.onRevoked((event) => {
+        this.halted = new Set(input.turns?.values())
         const session = this.sessions.get(event.sessionHandle)
         if (session === undefined) return
         this.sessions.delete(event.sessionHandle)
         this.handles.delete(session)
-        // Only the user's own decisions stop the conversation. A disconnect is the browser going away (a network drop,
-        // an extension reload): the handle is dropped and the next call reopens when the extension is back.
-        if (event.reason === "user_stop" || event.reason === "switch_off") this.stopped.add(session)
+        // Every revoke is the user's decision: Stop all, the switch, or Disconnect on this CLI. A dropped connection
+        // sends none; its calls fail as unavailable and the next call reopens once the extension is back.
+        this.stopped.add(session)
       }) ?? (() => {})
   }
 
@@ -230,8 +243,9 @@ export class ExtensionBackend implements BrowserBackend {
   }
 
   /** A conversation the user stopped is refused before any open, so no session starts behind their back. */
-  private refuse(session: string) {
-    if (this.stopped.has(session)) throw new Error(STOPPED)
+  private halts(session: string) {
+    const turn = this.input.turns?.get(session)
+    return this.stopped.has(session) || (turn !== undefined && this.halted.has(turn))
   }
 
   /** An evicted backend refuses a call that was still in flight instead of opening a session nothing will close. */
@@ -303,7 +317,7 @@ export class ExtensionBackend implements BrowserBackend {
     const port = this.input.port
     if (!port) throw new UnavailableError(HINT)
     const session = this.session(ctx)
-    this.refuse(session)
+    if (this.halts(session)) throw new Error(STOPPED)
     this.live()
     try {
       await this.accepts(name)
@@ -396,11 +410,12 @@ export class ExtensionBackend implements BrowserBackend {
       title: session || "Kilo agent",
       cwd: this.input.directory,
     })
-    // The session ended, or another attempt replaced this one, while the extension was still opening it: close the
-    // late handle instead of keeping it (or claiming the new attempt's session) alive.
-    if (this.handles.get(session) !== attempt) {
+    // The session ended, another attempt replaced this one, or the user stopped the turn while the extension was still
+    // opening it: close the late handle instead of keeping it (or claiming the new attempt's session) alive.
+    const superseded = this.handles.get(session) !== attempt
+    if (superseded || this.halts(session)) {
       await port.close(opened.sessionHandle).catch(() => undefined)
-      throw new Error("The session ended before its browser session opened.")
+      throw new Error(superseded ? "The session ended before its browser session opened." : STOPPED)
     }
     this.sessions.set(opened.sessionHandle, session)
     return opened.sessionHandle
@@ -451,6 +466,6 @@ export class ExtensionBackend implements BrowserBackend {
   }
 }
 
-export function backend(input: { port?: BrowserHub.Port; directory: string }): ExtensionBackend {
+export function backend(input: ConstructorParameters<typeof ExtensionBackend>[0]): ExtensionBackend {
   return new ExtensionBackend(input)
 }
