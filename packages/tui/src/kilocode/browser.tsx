@@ -1,14 +1,16 @@
 // `/browser`: the browser tools' state — the backend, whether it can run, and the origin grants the CLI enforces —
 // and the switch between the bundled Playwright browser, the Kilo browser extension and off. The choices are the same
-// `browser` keys the VS Code settings panel writes, through the same `kilocode.settings` RPC.
+// `browser` keys the VS Code settings panel writes, through the same `kilocode.settings` RPC. `/browser share` and
+// `/browser adopt` hand the current session the user's active tab or the last ended tab group.
 import { dict } from "@kilocode/kilo-i18n/en"
 import { KiloBrowserRpc } from "@opencode/schema/kilocode/browser"
 import { KiloSettingsRpc } from "@opencode/schema/kilocode/settings"
 import type { Plugin } from "@opencode/plugin/tui"
 import { useTerminalDimensions } from "@opentui/solid"
-import { For } from "solid-js"
+import { For, onCleanup } from "solid-js"
 import { useTheme } from "../context/theme"
 import { errorMessage } from "../util/error"
+import { browserSession } from "./browser-session"
 import { DialogSelect, type DialogSelectOption } from "../ui/dialog-select"
 
 type Backend = "playwright" | "extension" | "off"
@@ -320,6 +322,9 @@ export function browserLayer(context: Plugin.Context) {
     }
   }
 
+  const session = browserSession(context)
+  onCleanup(session.watch())
+
   context.keymap.layer(() => ({
     mode: "global",
     commands: [
@@ -331,6 +336,38 @@ export function browserLayer(context: Plugin.Context) {
         palette: true,
         slash: { name: "browser" },
         run: open,
+      },
+      // The same slash name with arguments: a prompt submitted as `/browser share` or `/browser adopt` runs this one,
+      // while picking `/browser` from the list still opens the settings at once.
+      {
+        id: "kilo.browser.session",
+        title: copy("browser.command.title"),
+        description: copy("browser.command.sessionDescription"),
+        group: "System",
+        slash: { name: "browser", arguments: true },
+        run: (input) => {
+          const action = input?.trim() ?? ""
+          if (action === "share") return session.share()
+          if (action === "adopt") return session.adopt()
+          if (action === "") return open()
+          context.ui.toast.show({ variant: "warning", message: copy("browser.command.usage") })
+        },
+      },
+      {
+        id: "kilo.browser.share",
+        title: copy("browser.share.title"),
+        description: copy("browser.share.description"),
+        group: "System",
+        palette: true,
+        run: () => session.share(),
+      },
+      {
+        id: "kilo.browser.adopt",
+        title: copy("browser.adopt.title"),
+        description: copy("browser.adopt.description"),
+        group: "System",
+        palette: true,
+        run: () => session.adopt(),
       },
     ],
   }))

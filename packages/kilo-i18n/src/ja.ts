@@ -163,6 +163,10 @@ export const dict = {
   "browser.state.unavailable": "利用不可",
   "browser.state.readyHint": "Kilo が所有する Chromium プロファイル。最初のブラウザ呼び出しで起動します",
   "browser.state.extensionHint": "Kilo ブラウザ拡張機能を接続して自分のブラウザを操作します",
+  "browser.command.usage":
+    "設定には /browser、このセッションにアクティブなタブを渡すには /browser share、最後に終了したタブグループを再利用するには /browser adopt を使います。",
+  "browser.command.sessionDescription":
+    "アクティブなタブを共有する（/browser share）か、最後に終了したタブグループを再利用します（/browser adopt）",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "{{origin}} のページを読み取る",
   "browser.permission.act.title": "{{origin}} でクリックと入力を行う",
@@ -176,6 +180,24 @@ export const dict = {
   "browser.permission.sensitive.reason": "理由: {{reason}}",
   "browser.permission.sensitive.once":
     "このステップを承認できるのは人のみです。承認はこの 1 ステップだけに適用されます。",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "アクティブなブラウザタブを共有",
+  "browser.share.description": "ブラウザのアクティブなタブをこのセッションのタブグループに移動します",
+  "browser.share.done": "アクティブなタブがこのセッションのタブグループに移動しました。",
+  "browser.adopt.title": "終了したブラウザタブグループを再利用",
+  "browser.adopt.description": "このセッションに直近に終了した Kilo タブグループを渡します",
+  "browser.adopt.done": "このセッションは最後に終了したタブグループを使用します。",
+  "browser.adopt.none": "再利用できる終了済みのタブグループはありません。",
+  "browser.adopt.kept": "このセッションには既に独自のタブがあり、そのまま保持します。",
+  "browser.adopt.unconfirmed":
+    "最後に終了したタブグループを再利用するようブラウザに要求しました。実行されたかどうかは Kilo ブラウザ拡張機能を更新して確認してください。",
+  "browser.control.notExtension":
+    "タブの共有と再利用には Kilo ブラウザ拡張機能が必要です。/browser で選択してください。",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "ブラウザを利用できません",
+  "browser.notice.outdatedTitle": "ブラウザ拡張機能が古くなっています",
+  "browser.notice.stopped":
+    "このセッションのブラウザを停止しました。タブを戻すには /browser adopt を実行してください。",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "自動承認を切り替え",

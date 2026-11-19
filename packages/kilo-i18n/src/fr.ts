@@ -168,6 +168,10 @@ export const dict = {
   "browser.state.unavailable": "indisponible",
   "browser.state.readyHint": "Un profil Chromium géré par Kilo, lancé au premier appel du navigateur",
   "browser.state.extensionHint": "Connectez l'extension de navigateur Kilo pour piloter votre navigateur",
+  "browser.command.usage":
+    "Utilisez /browser pour les paramètres, /browser share pour donner l'onglet actif à cette session, ou /browser adopt pour réutiliser le dernier groupe d'onglets terminé.",
+  "browser.command.sessionDescription":
+    "Partagez votre onglet actif (/browser share) ou réutilisez le dernier groupe d'onglets terminé (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Lire les pages sur {{origin}}",
   "browser.permission.act.title": "Cliquer et saisir sur {{origin}}",
@@ -182,6 +186,24 @@ export const dict = {
   "browser.permission.sensitive.reason": "Motif : {{reason}}",
   "browser.permission.sensitive.once":
     "Seule une personne peut approuver cette étape. L'approbation ne couvre que cette étape.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Partager l'onglet actif du navigateur",
+  "browser.share.description": "Déplacer l'onglet actif de votre navigateur dans le groupe d'onglets de cette session",
+  "browser.share.done": "Votre onglet actif est maintenant dans le groupe d'onglets de cette session.",
+  "browser.adopt.title": "Réutiliser le groupe d'onglets terminé",
+  "browser.adopt.description": "Donner à cette session le groupe d'onglets Kilo terminé le plus récent",
+  "browser.adopt.done": "Cette session utilise maintenant le dernier groupe d'onglets terminé.",
+  "browser.adopt.none": "Aucun groupe d'onglets terminé à réutiliser.",
+  "browser.adopt.kept": "Cette session a déjà ses propres onglets et les conserve.",
+  "browser.adopt.unconfirmed":
+    "Le navigateur a été invité à réutiliser le dernier groupe d'onglets terminé. Mettez à jour l'extension de navigateur Kilo pour voir s'il l'a fait.",
+  "browser.control.notExtension":
+    "Partager et réutiliser des onglets nécessite l'extension de navigateur Kilo. Choisissez-la dans /browser.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Navigateur indisponible",
+  "browser.notice.outdatedTitle": "Extension de navigateur obsolète",
+  "browser.notice.stopped":
+    "Vous avez arrêté le navigateur pour cette session. Exécutez /browser adopt pour lui rendre ses onglets.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Basculer l'approbation automatique",

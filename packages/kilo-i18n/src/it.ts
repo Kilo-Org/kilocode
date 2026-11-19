@@ -165,6 +165,10 @@ export const dict = {
   "browser.state.unavailable": "non disponibile",
   "browser.state.readyHint": "Un profilo Chromium gestito da Kilo, avviato alla prima chiamata del browser",
   "browser.state.extensionHint": "Collega l'estensione browser Kilo per usare il tuo browser",
+  "browser.command.usage":
+    "Usa /browser per le impostazioni, /browser share per dare a questa sessione la scheda attiva, o /browser adopt per riutilizzare l'ultimo gruppo di schede terminato.",
+  "browser.command.sessionDescription":
+    "Condividi la scheda attiva (/browser share) o riutilizza l'ultimo gruppo di schede terminato (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Leggi le pagine su {{origin}}",
   "browser.permission.act.title": "Fai clic e digita su {{origin}}",
@@ -179,6 +183,24 @@ export const dict = {
   "browser.permission.sensitive.reason": "Motivo: {{reason}}",
   "browser.permission.sensitive.once":
     "Solo una persona può approvare questo passaggio. L'approvazione copre solo questo passaggio.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Condividi la scheda attiva del browser",
+  "browser.share.description": "Sposta la scheda attiva del tuo browser nel gruppo di schede di questa sessione",
+  "browser.share.done": "La tua scheda attiva ora è nel gruppo di schede di questa sessione.",
+  "browser.adopt.title": "Riutilizza il gruppo di schede terminato",
+  "browser.adopt.description": "Assegna a questa sessione il gruppo di schede Kilo terminato più recente",
+  "browser.adopt.done": "Questa sessione ora usa l'ultimo gruppo di schede terminato.",
+  "browser.adopt.none": "Non c'è alcun gruppo di schede terminato da riutilizzare.",
+  "browser.adopt.kept": "Questa sessione ha già le proprie schede e le mantiene.",
+  "browser.adopt.unconfirmed":
+    "È stato chiesto al browser di riutilizzare l'ultimo gruppo di schede terminato. Aggiorna l'estensione browser Kilo per vedere se lo ha fatto.",
+  "browser.control.notExtension":
+    "Condividere e riutilizzare le schede richiede l'estensione browser Kilo. Sceglila in /browser.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Browser non disponibile",
+  "browser.notice.outdatedTitle": "Estensione browser obsoleta",
+  "browser.notice.stopped":
+    "Hai fermato il browser per questa sessione. Esegui /browser adopt per restituirgli le sue schede.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Attiva/disattiva approvazione automatica",

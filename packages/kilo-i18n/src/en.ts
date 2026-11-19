@@ -193,6 +193,10 @@ export const dict = {
   "browser.state.unavailable": "unavailable",
   "browser.state.readyHint": "A Kilo-owned Chromium profile, started by the first browser call",
   "browser.state.extensionHint": "Connect the Kilo browser extension to drive your own browser",
+  "browser.command.usage":
+    "Use /browser for settings, /browser share to give this session your active tab, or /browser adopt to reuse the last ended tab group.",
+  "browser.command.sessionDescription":
+    "Share your active tab (/browser share) or reuse the last ended tab group (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Read pages on {{origin}}",
   "browser.permission.act.title": "Click and type on {{origin}}",
@@ -204,6 +208,22 @@ export const dict = {
   "browser.permission.sensitive.title": "Sensitive browser step on {{origin}}",
   "browser.permission.sensitive.reason": "Reason: {{reason}}",
   "browser.permission.sensitive.once": "Only a person can approve this step. The approval covers this one step.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Share the active browser tab",
+  "browser.share.description": "Move your browser's active tab into this session's tab group",
+  "browser.share.done": "Your active tab is now in this session's tab group.",
+  "browser.adopt.title": "Reuse the ended browser tab group",
+  "browser.adopt.description": "Give this session the most recent ended Kilo tab group",
+  "browser.adopt.done": "This session now uses the last ended tab group.",
+  "browser.adopt.none": "There is no ended tab group to reuse.",
+  "browser.adopt.kept": "This session already has its own tabs and keeps them.",
+  "browser.adopt.unconfirmed":
+    "Asked the browser to reuse the last ended tab group. Update the Kilo browser extension to see whether it did.",
+  "browser.control.notExtension": "Sharing and reusing tabs need the Kilo browser extension. Choose it in /browser.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Browser not available",
+  "browser.notice.outdatedTitle": "Browser extension out of date",
+  "browser.notice.stopped": "You stopped the browser for this session. Run /browser adopt to give it its tabs back.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Toggle auto-approve",

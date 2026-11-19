@@ -8,6 +8,7 @@ import { Tool } from "@opencode/schema/tool"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { Skill } from "@opencode/schema/skill"
 import { KiloBrowserRpc } from "@opencode/schema/kilocode/browser"
+import type { SessionID } from "@opencode/schema/session-id"
 import { Effect, Option, Result, Scope, Stream } from "effect"
 import type { JsonSchema } from "effect"
 import {
@@ -15,6 +16,7 @@ import {
   NeedsPermissionError,
   UNAVAILABLE_MESSAGE,
   UNSUPPORTED_MESSAGE,
+  StoppedError,
   UnavailableError,
   UnsupportedError,
   type BrowserBackend,
@@ -113,6 +115,21 @@ function failure(error: unknown) {
     return new Tool.Error({ message: error.message, metadata: { hint: error.hint } })
   }
   return new Tool.Error({ message: error instanceof Error ? error.message : String(error) })
+}
+
+/** The UI notice one failed call raises, or undefined when the model's own error text is all the user needs. */
+export function notice(sessionID: SessionID, error: unknown): KiloBrowserRpc.Notice | undefined {
+  if (error instanceof UnavailableError) return { kind: "unavailable", sessionID, hint: error.hint }
+  if (error instanceof IncompatibleError) return { kind: "outdated", sessionID, hint: error.hint }
+  if (error instanceof StoppedError) return { kind: "stopped", sessionID }
+  return undefined
+}
+
+/** A failed `/browser share` or `/browser adopt`: the setup step when no browser answers, else the reason in words. */
+export function refusal(error: unknown): { kind: "unavailable"; hint: string } | { kind: "refused"; message: string } {
+  if (error instanceof UnavailableError) return { kind: "unavailable", hint: error.hint }
+  if (error instanceof IncompatibleError) return { kind: "refused", message: `${error.message} ${error.hint}` }
+  return { kind: "refused", message: error instanceof Error ? error.message : String(error) }
 }
 
 /**
@@ -286,6 +303,8 @@ type Deps = {
   directory: string
   /** The backend a call runs on, resolved per call so a config change applies without a restart. */
   backend: (choice: Settings) => Promise<BrowserBackend>
+  /** Raises the UI notice for a failed call; the model reads only the tool error. */
+  notify: (sessionID: SessionID, error: unknown) => Effect.Effect<void>
 }
 
 /** A granted post-action need hands the model either the answer or the page it can read now. */
@@ -375,7 +394,11 @@ function postAction(input: PostAction) {
     const reread = yield* Effect.result(
       Effect.tryPromise({
         try: (signal) =>
-          input.active.callTool("browser_snapshot", {}, { signal, session: input.session, authorized: [...input.grants] }),
+          input.active.callTool(
+            "browser_snapshot",
+            {},
+            { signal, session: input.session, authorized: [...input.grants] },
+          ),
         catch: (error) => error,
       }),
     )
@@ -451,7 +474,8 @@ function shaped(input: {
     const text = textOf(input.result)
     const next = snapshot(split(text))
     const mode = modeFor(input.entry.name, input.observation)
-    const errors = mode === "diff" ? yield* consoleErrors(input.active, input.session, input.context, input.permission) : []
+    const errors =
+      mode === "diff" ? yield* consoleErrors(input.active, input.session, input.context, input.permission) : []
     const previous = mode === "diff" ? tracker.previous(input.session, input.entry.name, next?.url) : undefined
     const viewed = observe({ mode, text, previous, consoleErrors: errors })
     if (viewed.snapshot) tracker.record(input.session, viewed.snapshot)
@@ -487,11 +511,11 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
   return Effect.gen(function* () {
     const browser = yield* settings(deps.config)
     // The tools are not registered while the backend is off; a config edit during the session still refuses.
-    if (browser.backend === "off") return yield* failure(new UnavailableError("Set browser.backend to playwright."))
+    if (browser.backend === "off") return yield* Effect.fail(new UnavailableError("Set browser.backend to playwright."))
 
     const organization = yield* policy(deps.directory)
     if (organization?.control === "off")
-      return yield* failure(new UnavailableError("Your organization turned off browser control in Kilo."))
+      return yield* Effect.fail(new UnavailableError("Your organization turned off browser control in Kilo."))
     // One function decides the backend for a call and for the status RPC: the user's `off` wins, an organization that
     // allows Playwright only forces it, and otherwise the config decides, including the extension.
     const choice: Settings = { ...browser, backend: effective(browser, organization) }
@@ -563,7 +587,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
         break
       }
       const error = outcome.failure
-      if (!(error instanceof NeedsPermissionError)) return yield* failure(error)
+      if (!(error instanceof NeedsPermissionError)) return yield* Effect.fail(error)
       if (attempt === 1 || !error.items.length) {
         return yield* failure(
           new Error("The browser page changed while permission was requested. Call the tool again."),
@@ -611,7 +635,10 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
       observation: browser.observation,
       backend: choice.backend,
     })
-  }).pipe(Effect.mapError((error) => failure(error)))
+  }).pipe(
+    Effect.tapError((error) => deps.notify(context.sessionID, error)),
+    Effect.mapError((error) => failure(error)),
+  )
 }
 
 /**
@@ -722,7 +749,14 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
                 },
           () => ({ ready: false }),
         )
-    yield* ctx.rpc
+    const control = <A>(act: (active: ExtensionBackend) => Promise<A>) =>
+      Effect.gen(function* () {
+        const current = yield* settings(config)
+        if (effective(current, yield* policy(ctx.location.directory)) !== "extension")
+          return { kind: "not_extension" as const }
+        return yield* Effect.promise(() => extension(current.target).then(act).catch(refusal))
+      }).pipe(Effect.orDie)
+    const registration = yield* ctx.rpc
       .register(KiloBrowserRpc.Definition, {
         status: () =>
           Effect.promise(async () => ({
@@ -734,8 +768,15 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
             backend,
             ...organizationStatus,
           })),
+        share: ({ sessionID }) =>
+          control((active) => active.share(sessionID).then(() => ({ kind: "shared" as const }))),
+        adopt: ({ sessionID }) => control((active) => active.adopt(sessionID).then((kind) => ({ kind }))),
       })
       .pipe(Effect.orDie)
+    const notify = (sessionID: SessionID, error: unknown) => {
+      const raised = notice(sessionID, error)
+      return raised === undefined ? Effect.void : registration.events.emit("notice", raised).pipe(Effect.ignore)
+    }
 
     // `off` hides the tools: an agent never sees a browser tool it cannot use.
     if (browser.backend === "off" || organization?.control === "off") return
@@ -762,7 +803,7 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
           description: entry.description,
           input: entry.inputSchema as JsonSchema.JsonSchema,
           execute: (args: unknown, context: Tool.Context) =>
-            run(entry, args, context, { config, permission, directory: ctx.location.directory, backend }),
+            run(entry, args, context, { config, permission, directory: ctx.location.directory, backend, notify }),
         })
       }
     })

@@ -5,7 +5,7 @@ import os from "node:os"
 import path from "node:path"
 import { HubError } from "../../src/browser/client"
 import * as proto from "../../src/browser/protocol"
-import { failure, hub as connection } from "../../src/browser/port"
+import { adoption, failure, hub as connection } from "../../src/browser/port"
 
 const codes = Object.fromEntries(
   (Object.keys(proto.ErrorCodes) as proto.ErrorName[]).map((name) => [name, proto.ErrorCodes[name]]),
@@ -56,7 +56,9 @@ describe("hub failures as the extension backend reads them", () => {
   })
 
   test("a redirect names the origin it landed on, so the retry asks for the right read", () => {
-    expect(failure(hub("origin_changed", { from: "https://a.example.com", to: "https://b.example.com/login" }))).toMatchObject({
+    expect(
+      failure(hub("origin_changed", { from: "https://a.example.com", to: "https://b.example.com/login" })),
+    ).toMatchObject({
       kind: "moved",
       items: [{ class: "read", origin: "https://b.example.com" }],
     })
@@ -106,11 +108,24 @@ describe("hub failures as the extension backend reads them", () => {
     expect(mapped.items).toEqual([])
   })
 
+  test("an adopt answer names what the browser did; an older extension's empty answer is unconfirmed", () => {
+    expect(adoption({ kind: "adopted", groupId: 3 })).toBe("adopted")
+    expect(adoption({ kind: "adopted" })).toBe("adopted")
+    expect(adoption({ kind: "none" })).toBe("none")
+    expect(adoption({ kind: "kept" })).toBe("kept")
+    expect(adoption({})).toBe("unconfirmed")
+    expect(adoption({ kind: "everything" })).toBe("unconfirmed")
+    expect(adoption(undefined)).toBe("unconfirmed")
+  })
+
   test("a transport failure from ready is the backend's own failure, not a raw error", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-port-"))
     try {
       const linked = connection({ dir, install: () => Promise.resolve(), start: () => {}, timeout: 300 })
-      const error = await linked.port(null).ready(300).catch((value: unknown) => value)
+      const error = await linked
+        .port(null)
+        .ready(300)
+        .catch((value: unknown) => value)
       expect(error).toBeInstanceOf(BrowserHub.Failure)
       expect((error as BrowserHub.Failure).kind).toBe("unavailable")
     } finally {
@@ -130,7 +145,10 @@ describe("hub failures as the extension backend reads them", () => {
           throw new Error("the transport cannot start")
         },
       })
-      const error = await linked.port(null).ready(300).catch((value: unknown) => value)
+      const error = await linked
+        .port(null)
+        .ready(300)
+        .catch((value: unknown) => value)
       expect(error).toBeInstanceOf(BrowserHub.Failure)
       expect((error as BrowserHub.Failure).kind).toBe("unknown")
     } finally {

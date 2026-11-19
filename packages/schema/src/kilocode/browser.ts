@@ -3,6 +3,7 @@ export * as KiloBrowserRpc from "./browser.js"
 import { Schema } from "effect"
 import { Rpc } from "../rpc.js"
 import { optional } from "../schema.js"
+import { SessionID } from "../session-id.js"
 
 // The `kilocode.browser` RPC: what the browser backends can do right now. A settings editor reads it so a backend is
 // never shown as ready from the config alone; the Playwright answer is the same `locate` check the backend runs before
@@ -53,6 +54,46 @@ export const Status = Schema.Struct({
 })
 export type Status = typeof Status.Type
 
+const Session = Schema.Struct({ sessionID: SessionID })
+
+/** The extension backend could not be reached; `hint` is the setup step the UI shows. */
+const Unavailable = Schema.Struct({ kind: Schema.Literal("unavailable"), hint: Schema.String })
+/** The browser refused the request; `message` says why, in plain words. */
+const Refused = Schema.Struct({ kind: Schema.Literal("refused"), message: Schema.String })
+/** Sharing and adopting move tabs of the user's own browser, so they need the extension backend. */
+const NotExtension = Schema.Struct({ kind: Schema.Literal("not_extension") })
+
+/** `/browser share`: the browser's active tab joined the session's tab group. */
+export const Share = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("shared") }),
+  Unavailable,
+  Refused,
+  NotExtension,
+])
+export type Share = typeof Share.Type
+
+/**
+ * `/browser adopt`: `adopted` re-keyed the most recent ended group to the session, `none` found no ended group, `kept`
+ * left a session that already owns tabs with them, and `unconfirmed` is an extension too old to say which.
+ */
+export const Adopt = Schema.Union([
+  Schema.Struct({ kind: Schema.Literals(["adopted", "none", "kept", "unconfirmed"]) }),
+  Unavailable,
+  Refused,
+  NotExtension,
+])
+export type Adopt = typeof Adopt.Type
+
+/**
+ * A browser call failed in a way the user, not the model, has to act on: no browser reachable (`hint` is the setup
+ * step), an extension too old for this CLI (`hint` is the update step), or the user stopped the session's browser.
+ */
+export const Notice = Schema.Union([
+  Schema.Struct({ kind: Schema.Literals(["unavailable", "outdated"]), sessionID: SessionID, hint: Schema.String }),
+  Schema.Struct({ kind: Schema.Literal("stopped"), sessionID: SessionID }),
+])
+export type Notice = typeof Notice.Type
+
 export const Definition = Rpc.define({
   id: "kilocode.browser",
   methods: {
@@ -61,6 +102,18 @@ export const Definition = Rpc.define({
       input: portable(Schema.Struct({})),
       output: portable(Status),
     },
+    /** Moves the browser's active tab into the session's tab group. */
+    share: {
+      input: portable(Session),
+      output: portable(Share),
+    },
+    /** Gives the session the most recent ended tab group; lifts the session's stop. */
+    adopt: {
+      input: portable(Session),
+      output: portable(Adopt),
+    },
   },
-  events: {},
+  events: {
+    notice: { schema: portable(Notice) },
+  },
 })

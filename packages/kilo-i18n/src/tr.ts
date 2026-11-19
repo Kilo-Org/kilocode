@@ -167,6 +167,10 @@ export const dict = {
   "browser.state.unavailable": "kullanılamıyor",
   "browser.state.readyHint": "Kilo'ya ait bir Chromium profili; ilk tarayıcı çağrısında başlar",
   "browser.state.extensionHint": "Kendi tarayıcınızı kullanmak için Kilo tarayıcı uzantısını bağlayın",
+  "browser.command.usage":
+    "Ayarlar için /browser, bu oturuma etkin sekmenizi vermek için /browser share veya en son kapanan sekme grubunu yeniden kullanmak için /browser adopt kullanın.",
+  "browser.command.sessionDescription":
+    "Etkin sekmenizi paylaşın (/browser share) veya en son kapanan sekme grubunu yeniden kullanın (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "{{origin}} üzerindeki sayfaları oku",
   "browser.permission.act.title": "{{origin}} üzerinde tıkla ve yaz",
@@ -179,6 +183,24 @@ export const dict = {
   "browser.permission.sensitive.title": "{{origin}} üzerinde hassas tarayıcı adımı",
   "browser.permission.sensitive.reason": "Neden: {{reason}}",
   "browser.permission.sensitive.once": "Bu adımı yalnızca bir kişi onaylayabilir. Onay yalnızca bu tek adımı kapsar.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Etkin tarayıcı sekmesini paylaş",
+  "browser.share.description": "Tarayıcınızın etkin sekmesini bu oturumun sekme grubuna taşı",
+  "browser.share.done": "Etkin sekmeniz artık bu oturumun sekme grubunda.",
+  "browser.adopt.title": "Kapanan tarayıcı sekme grubunu yeniden kullan",
+  "browser.adopt.description": "Bu oturuma en son kapanan Kilo sekme grubunu ver",
+  "browser.adopt.done": "Bu oturum artık en son kapanan sekme grubunu kullanıyor.",
+  "browser.adopt.none": "Yeniden kullanılacak kapanmış sekme grubu yok.",
+  "browser.adopt.kept": "Bu oturumun zaten kendi sekmeleri var ve bunları koruyor.",
+  "browser.adopt.unconfirmed":
+    "Tarayıcıdan en son kapanan sekme grubunu yeniden kullanması istendi. Yapıp yapmadığını görmek için Kilo tarayıcı uzantısını güncelleyin.",
+  "browser.control.notExtension":
+    "Sekme paylaşma ve yeniden kullanma için Kilo tarayıcı uzantısı gerekir. /browser içinde seçin.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Tarayıcı kullanılamıyor",
+  "browser.notice.outdatedTitle": "Tarayıcı uzantısı güncel değil",
+  "browser.notice.stopped":
+    "Bu oturum için tarayıcıyı durdurdunuz. Sekmelerini geri vermek için /browser adopt çalıştırın.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Otomatik onayı değiştir",

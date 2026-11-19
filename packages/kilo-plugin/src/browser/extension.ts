@@ -6,6 +6,7 @@ import {
   NeedsPermissionError,
   UNAVAILABLE_MESSAGE,
   UnavailableError,
+  StoppedError,
   UnsupportedError,
   type BrowserBackend,
   type CallContext,
@@ -100,11 +101,7 @@ export function needs(value: unknown): BrowserPermission.Item[] | undefined {
  * The result meta as the tool layer reads it, or undefined when the extension asked for a grant the CLI cannot
  * describe: the call then fails closed instead of answering with content it could not have granted.
  */
-function finishMeta(
-  meta: BrowserHub.Meta,
-  stepToken?: string,
-  step?: BrowserHub.Step,
-): CallResult["meta"] | undefined {
+function finishMeta(meta: BrowserHub.Meta, stepToken?: string, step?: BrowserHub.Step): CallResult["meta"] | undefined {
   const parsed = meta.needs === undefined ? undefined : needs(meta.needs)
   if (meta.needs !== undefined && parsed === undefined) return undefined
   return {
@@ -155,7 +152,7 @@ const MAPPED: Record<string, (error: BrowserHub.Failure) => Error> = {
   moved: permissionError,
   busy: () => new Error("The tab is busy with another browser action. Try again in a moment."),
   taken: () => new Error("Another Kilo surface took over the tab. The action did not run; try again."),
-  stopped: () => new Error(STOPPED),
+  stopped: () => new StoppedError(STOPPED),
   unsupported: () => new UnsupportedError(),
   blocked: (error) => new Error(error.message || "The browser refused this page."),
   mismatch: () =>
@@ -231,7 +228,7 @@ export class ExtensionBackend implements BrowserBackend {
 
   /** A conversation the user stopped is refused before any open, so no session starts behind their back. */
   private refuse(session: string) {
-    if (this.stopped.has(session)) throw new Error(STOPPED)
+    if (this.stopped.has(session)) throw new StoppedError(STOPPED)
   }
 
   /** An evicted backend refuses a call that was still in flight instead of opening a session nothing will close. */
@@ -317,6 +314,35 @@ export class ExtensionBackend implements BrowserBackend {
       }
       throw map(error)
     }
+  }
+
+  /** `/browser share`: the browser's active tab joins this conversation's group. The user's own command lifts a stop. */
+  async share(session: string): Promise<void> {
+    const port = this.available()
+    try {
+      await port.share(await this.handle(port, session))
+    } catch (error) {
+      throw map(error)
+    }
+    this.stopped.delete(session)
+  }
+
+  /** `/browser adopt`: the most recent ended group becomes this conversation's. The user's own command lifts a stop. */
+  async adopt(session: string): Promise<BrowserHub.Adoption> {
+    const port = this.available()
+    try {
+      const adopted = await port.adopt(await this.handle(port, session))
+      this.stopped.delete(session)
+      return adopted
+    } catch (error) {
+      throw map(error)
+    }
+  }
+
+  private available(): BrowserHub.Port {
+    this.live()
+    if (!this.input.port) throw new UnavailableError(HINT)
+    return this.input.port
   }
 
   /** Release the session's handle; a session the extension already dropped has nothing to close. */
@@ -419,9 +445,7 @@ export class ExtensionBackend implements BrowserBackend {
     const uploads: string[] = []
     for (const file of paths) {
       const data = await fs.readFile(file).catch((error: unknown) => {
-        throw new Error(
-          `Cannot read ${file} for the upload: ${error instanceof Error ? error.message : String(error)}`,
-        )
+        throw new Error(`Cannot read ${file} for the upload: ${error instanceof Error ? error.message : String(error)}`)
       })
       const uploadId = randomUUID()
       try {

@@ -167,6 +167,10 @@ export const dict = {
   "browser.state.unavailable": "indisponível",
   "browser.state.readyHint": "Um perfil Chromium do Kilo, iniciado na primeira chamada do navegador",
   "browser.state.extensionHint": "Conecte a extensão de navegador do Kilo para usar seu próprio navegador",
+  "browser.command.usage":
+    "Use /browser para as configurações, /browser share para dar sua aba ativa a esta sessão, ou /browser adopt para reutilizar o último grupo de abas encerrado.",
+  "browser.command.sessionDescription":
+    "Compartilhe sua aba ativa (/browser share) ou reutilize o último grupo de abas encerrado (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Ler páginas em {{origin}}",
   "browser.permission.act.title": "Clicar e digitar em {{origin}}",
@@ -179,6 +183,24 @@ export const dict = {
   "browser.permission.sensitive.reason": "Motivo: {{reason}}",
   "browser.permission.sensitive.once":
     "Só uma pessoa pode aprovar esta etapa. A aprovação vale apenas para esta etapa.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Compartilhar a aba ativa do navegador",
+  "browser.share.description": "Mover a aba ativa do seu navegador para o grupo de abas desta sessão",
+  "browser.share.done": "Sua aba ativa agora está no grupo de abas desta sessão.",
+  "browser.adopt.title": "Reutilizar o grupo de abas encerrado",
+  "browser.adopt.description": "Dar a esta sessão o grupo de abas Kilo encerrado mais recente",
+  "browser.adopt.done": "Esta sessão agora usa o último grupo de abas encerrado.",
+  "browser.adopt.none": "Não há grupo de abas encerrado para reutilizar.",
+  "browser.adopt.kept": "Esta sessão já tem suas próprias abas e as mantém.",
+  "browser.adopt.unconfirmed":
+    "Pedimos ao navegador que reutilizasse o último grupo de abas encerrado. Atualize a extensão de navegador do Kilo para ver se ele fez isso.",
+  "browser.control.notExtension":
+    "Compartilhar e reutilizar abas exige a extensão de navegador do Kilo. Escolha-a em /browser.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Navegador indisponível",
+  "browser.notice.outdatedTitle": "Extensão de navegador desatualizada",
+  "browser.notice.stopped":
+    "Você parou o navegador para esta sessão. Execute /browser adopt para devolver as abas a ele.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Alternar aprovação automática",

@@ -166,6 +166,10 @@ export const dict = {
   "browser.state.unavailable": "utilgjengelig",
   "browser.state.readyHint": "En Chromium-profil eid av Kilo, startet ved det første nettleserkallet",
   "browser.state.extensionHint": "Koble til Kilo-nettleserutvidelsen for å bruke din egen nettleser",
+  "browser.command.usage":
+    "Bruk /browser for innstillinger, /browser share for å gi denne økten den aktive fanen din, eller /browser adopt for å gjenbruke den sist avsluttede fanegruppen.",
+  "browser.command.sessionDescription":
+    "Del den aktive fanen din (/browser share) eller gjenbruk den sist avsluttede fanegruppen (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Les sider på {{origin}}",
   "browser.permission.act.title": "Klikk og skriv på {{origin}}",
@@ -178,6 +182,22 @@ export const dict = {
   "browser.permission.sensitive.reason": "Årsak: {{reason}}",
   "browser.permission.sensitive.once":
     "Bare en person kan godkjenne dette trinnet. Godkjenningen gjelder bare dette ene trinnet.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Del den aktive nettleserfanen",
+  "browser.share.description": "Flytt nettleserens aktive fane til fanegruppen for denne økten",
+  "browser.share.done": "Den aktive fanen er nå i fanegruppen for denne økten.",
+  "browser.adopt.title": "Gjenbruk den avsluttede nettleserfanegruppen",
+  "browser.adopt.description": "Gi denne økten den sist avsluttede Kilo-fanegruppen",
+  "browser.adopt.done": "Denne økten bruker nå den sist avsluttede fanegruppen.",
+  "browser.adopt.none": "Det er ingen avsluttet fanegruppe å gjenbruke.",
+  "browser.adopt.kept": "Denne økten har allerede egne faner og beholder dem.",
+  "browser.adopt.unconfirmed":
+    "Ba nettleseren gjenbruke den sist avsluttede fanegruppen. Oppdater Kilo-nettleserutvidelsen for å se om den gjorde det.",
+  "browser.control.notExtension": "Deling og gjenbruk av faner krever Kilo-nettleserutvidelsen. Velg den i /browser.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Nettleseren er ikke tilgjengelig",
+  "browser.notice.outdatedTitle": "Nettleserutvidelsen er utdatert",
+  "browser.notice.stopped": "Du stoppet nettleseren for denne økten. Kjør /browser adopt for å gi den fanene tilbake.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Veksle automatisk godkjenning",

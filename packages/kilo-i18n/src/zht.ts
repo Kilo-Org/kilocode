@@ -154,6 +154,9 @@ export const dict = {
   "browser.state.unavailable": "無法使用",
   "browser.state.readyHint": "Kilo 擁有的 Chromium 設定檔，於首次瀏覽器呼叫時啟動",
   "browser.state.extensionHint": "連接 Kilo 瀏覽器擴充功能以使用你自己的瀏覽器",
+  "browser.command.usage":
+    "使用 /browser 開啟設定，使用 /browser share 將你的目前分頁交給此工作階段，或使用 /browser adopt 重複使用上次結束的分頁群組。",
+  "browser.command.sessionDescription": "共用目前分頁（/browser share）或重複使用上次結束的分頁群組（/browser adopt）",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "讀取 {{origin}} 上的頁面",
   "browser.permission.act.title": "在 {{origin}} 上點擊和輸入",
@@ -165,6 +168,21 @@ export const dict = {
   "browser.permission.sensitive.title": "{{origin}} 上的敏感瀏覽器步驟",
   "browser.permission.sensitive.reason": "原因：{{reason}}",
   "browser.permission.sensitive.once": "只有使用者才能核准此步驟。該核准僅涵蓋這一個步驟。",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "共用目前的瀏覽器分頁",
+  "browser.share.description": "將瀏覽器的目前分頁移入此工作階段的分頁群組",
+  "browser.share.done": "你的目前分頁已在此工作階段的分頁群組中。",
+  "browser.adopt.title": "重複使用已結束的瀏覽器分頁群組",
+  "browser.adopt.description": "將最近結束的 Kilo 分頁群組交給此工作階段",
+  "browser.adopt.done": "此工作階段現在使用上次結束的分頁群組。",
+  "browser.adopt.none": "沒有可重複使用的已結束分頁群組。",
+  "browser.adopt.kept": "此工作階段已有自己的分頁，並會保留它們。",
+  "browser.adopt.unconfirmed": "已要求瀏覽器重複使用上次結束的分頁群組。更新 Kilo 瀏覽器擴充功能以查看是否成功。",
+  "browser.control.notExtension": "共用和重複使用分頁需要 Kilo 瀏覽器擴充功能。請在 /browser 中選擇它。",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "瀏覽器無法使用",
+  "browser.notice.outdatedTitle": "瀏覽器擴充功能已過時",
+  "browser.notice.stopped": "你已停止此工作階段的瀏覽器。執行 /browser adopt 將分頁還給瀏覽器。",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "切換自動核准",

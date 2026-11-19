@@ -165,6 +165,10 @@ export const dict = {
   "browser.state.unavailable": "utilgængelig",
   "browser.state.readyHint": "En Chromium-profil ejet af Kilo, startet ved det første browserkald",
   "browser.state.extensionHint": "Forbind Kilo-browserudvidelsen for at bruge din egen browser",
+  "browser.command.usage":
+    "Brug /browser til indstillinger, /browser share til at give denne session din aktive fane, eller /browser adopt til at genbruge den senest afsluttede fanegruppe.",
+  "browser.command.sessionDescription":
+    "Del din aktive fane (/browser share) eller genbrug den senest afsluttede fanegruppe (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Læs sider på {{origin}}",
   "browser.permission.act.title": "Klik og skriv på {{origin}}",
@@ -176,6 +180,23 @@ export const dict = {
   "browser.permission.sensitive.title": "Følsomt browsertrin på {{origin}}",
   "browser.permission.sensitive.reason": "Årsag: {{reason}}",
   "browser.permission.sensitive.once": "Kun en person kan godkende dette trin. Godkendelsen dækker kun dette ene trin.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Del den aktive browserfane",
+  "browser.share.description": "Flyt din browsers aktive fane til denne sessions fanegruppe",
+  "browser.share.done": "Din aktive fane er nu i denne sessions fanegruppe.",
+  "browser.adopt.title": "Genbrug den afsluttede browserfanegruppe",
+  "browser.adopt.description": "Giv denne session den senest afsluttede Kilo-fanegruppe",
+  "browser.adopt.done": "Denne session bruger nu den senest afsluttede fanegruppe.",
+  "browser.adopt.none": "Der er ingen afsluttet fanegruppe at genbruge.",
+  "browser.adopt.kept": "Denne session har allerede sine egne faner og beholder dem.",
+  "browser.adopt.unconfirmed":
+    "Bad browseren om at genbruge den senest afsluttede fanegruppe. Opdater Kilo-browserudvidelsen for at se, om den gjorde det.",
+  "browser.control.notExtension": "Deling og genbrug af faner kræver Kilo-browserudvidelsen. Vælg den i /browser.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Browser ikke tilgængelig",
+  "browser.notice.outdatedTitle": "Browserudvidelsen er forældet",
+  "browser.notice.stopped":
+    "Du stoppede browseren for denne session. Kør /browser adopt for at give den sine faner tilbage.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Skift auto-godkendelse",

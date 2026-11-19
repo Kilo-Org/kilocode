@@ -155,6 +155,9 @@ export const dict = {
   "browser.state.unavailable": "不可用",
   "browser.state.readyHint": "Kilo 拥有的 Chromium 配置，在首次浏览器调用时启动",
   "browser.state.extensionHint": "连接 Kilo 浏览器扩展以使用你自己的浏览器",
+  "browser.command.usage":
+    "使用 /browser 打开设置，使用 /browser share 将你的当前标签页交给此会话，或使用 /browser adopt 复用上次结束的标签页组。",
+  "browser.command.sessionDescription": "共享当前标签页（/browser share）或复用上次结束的标签页组（/browser adopt）",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "读取 {{origin}} 上的页面",
   "browser.permission.act.title": "在 {{origin}} 上点击和输入",
@@ -166,6 +169,21 @@ export const dict = {
   "browser.permission.sensitive.title": "{{origin}} 上的敏感浏览器步骤",
   "browser.permission.sensitive.reason": "原因：{{reason}}",
   "browser.permission.sensitive.once": "只有用户才能批准此步骤。该批准仅涵盖这一个步骤。",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "共享当前浏览器标签页",
+  "browser.share.description": "将浏览器当前标签页移入此会话的标签页组",
+  "browser.share.done": "你的当前标签页现已在此会话的标签页组中。",
+  "browser.adopt.title": "复用已结束的浏览器标签页组",
+  "browser.adopt.description": "将最近结束的 Kilo 标签页组交给此会话",
+  "browser.adopt.done": "此会话现在使用上次结束的标签页组。",
+  "browser.adopt.none": "没有可复用的已结束标签页组。",
+  "browser.adopt.kept": "此会话已有自己的标签页，并会保留它们。",
+  "browser.adopt.unconfirmed": "已请求浏览器复用上次结束的标签页组。更新 Kilo 浏览器扩展以查看是否成功。",
+  "browser.control.notExtension": "共享和复用标签页需要 Kilo 浏览器扩展。请在 /browser 中选择它。",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "浏览器不可用",
+  "browser.notice.outdatedTitle": "浏览器扩展已过时",
+  "browser.notice.stopped": "你已停止此会话的浏览器。运行 /browser adopt 将标签页还给浏览器。",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "切换自动批准",

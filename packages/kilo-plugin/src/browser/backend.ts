@@ -105,6 +105,17 @@ export class IncompatibleError extends Error {
   }
 }
 
+/**
+ * Raised for a call in a conversation whose browser session the user stopped. The message is model-facing; the UI
+ * tells the user how to give the session its tabs back.
+ */
+export class StoppedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "BrowserStoppedError"
+  }
+}
+
 export const UNAVAILABLE_MESSAGE = "The browser is not available right now."
 
 /** A tool the pinned contract lists but this browser cannot run. */

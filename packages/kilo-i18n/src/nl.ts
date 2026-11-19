@@ -169,6 +169,10 @@ export const dict = {
   "browser.state.unavailable": "niet beschikbaar",
   "browser.state.readyHint": "Een Chromium-profiel van Kilo, gestart bij de eerste browseroproep",
   "browser.state.extensionHint": "Verbind de Kilo-browserextensie om je eigen browser te gebruiken",
+  "browser.command.usage":
+    "Gebruik /browser voor instellingen, /browser share om deze sessie je actieve tab te geven, of /browser adopt om de laatst beëindigde tabgroep opnieuw te gebruiken.",
+  "browser.command.sessionDescription":
+    "Deel je actieve tab (/browser share) of hergebruik de laatst beëindigde tabgroep (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Pagina's lezen op {{origin}}",
   "browser.permission.act.title": "Klikken en typen op {{origin}}",
@@ -182,6 +186,23 @@ export const dict = {
   "browser.permission.sensitive.reason": "Reden: {{reason}}",
   "browser.permission.sensitive.once":
     "Alleen een persoon kan deze stap goedkeuren. De goedkeuring geldt alleen voor deze stap.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "De actieve browsertab delen",
+  "browser.share.description": "Verplaats de actieve tab van je browser naar de tabgroep van deze sessie",
+  "browser.share.done": "Je actieve tab staat nu in de tabgroep van deze sessie.",
+  "browser.adopt.title": "De beëindigde browsertabgroep hergebruiken",
+  "browser.adopt.description": "Geef deze sessie de meest recent beëindigde Kilo-tabgroep",
+  "browser.adopt.done": "Deze sessie gebruikt nu de laatst beëindigde tabgroep.",
+  "browser.adopt.none": "Er is geen beëindigde tabgroep om te hergebruiken.",
+  "browser.adopt.kept": "Deze sessie heeft al eigen tabbladen en behoudt die.",
+  "browser.adopt.unconfirmed":
+    "De browser is gevraagd de laatst beëindigde tabgroep opnieuw te gebruiken. Werk de Kilo-browserextensie bij om te zien of dat is gelukt.",
+  "browser.control.notExtension": "Tabs delen en hergebruiken vereist de Kilo-browserextensie. Kies die in /browser.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Browser niet beschikbaar",
+  "browser.notice.outdatedTitle": "Browserextensie is verouderd",
+  "browser.notice.stopped":
+    "Je hebt de browser voor deze sessie gestopt. Voer /browser adopt uit om hem zijn tabs terug te geven.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Automatisch goedkeuren wisselen",

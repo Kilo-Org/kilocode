@@ -171,6 +171,10 @@ export const dict = {
   "browser.state.unavailable": "nedostupno",
   "browser.state.readyHint": "Kilo-ov Chromium profil, pokreće se pri prvom pozivu preglednika",
   "browser.state.extensionHint": "Povežite Kilo proširenje preglednika da koristite svoj preglednik",
+  "browser.command.usage":
+    "Koristite /browser za postavke, /browser share da ovoj sesiji date aktivnu karticu, ili /browser adopt da ponovo koristite posljednju završenu grupu kartica.",
+  "browser.command.sessionDescription":
+    "Podijelite aktivnu karticu (/browser share) ili ponovo koristite posljednju završenu grupu kartica (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Čitaj stranice na {{origin}}",
   "browser.permission.act.title": "Klikaj i unosi tekst na {{origin}}",
@@ -182,6 +186,23 @@ export const dict = {
   "browser.permission.sensitive.title": "Osjetljiv korak preglednika na {{origin}}",
   "browser.permission.sensitive.reason": "Razlog: {{reason}}",
   "browser.permission.sensitive.once": "Samo osoba može odobriti ovaj korak. Odobrenje pokriva samo ovaj korak.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Podijeli aktivnu karticu preglednika",
+  "browser.share.description": "Premjesti aktivnu karticu svog preglednika u grupu kartica ove sesije",
+  "browser.share.done": "Vaša aktivna kartica je sada u grupi kartica ove sesije.",
+  "browser.adopt.title": "Ponovo koristi završenu grupu kartica preglednika",
+  "browser.adopt.description": "Daj ovoj sesiji najnoviju završenu Kilo grupu kartica",
+  "browser.adopt.done": "Ova sesija sada koristi posljednju završenu grupu kartica.",
+  "browser.adopt.none": "Nema završene grupe kartica za ponovnu upotrebu.",
+  "browser.adopt.kept": "Ova sesija već ima svoje kartice i zadržava ih.",
+  "browser.adopt.unconfirmed":
+    "Zatraženo je da preglednik ponovo koristi posljednju završenu grupu kartica. Ažurirajte Kilo proširenje preglednika da vidite je li to učinio.",
+  "browser.control.notExtension":
+    "Dijeljenje i ponovna upotreba kartica zahtijevaju Kilo proširenje preglednika. Odaberite ga u /browser.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Preglednik nije dostupan",
+  "browser.notice.outdatedTitle": "Proširenje preglednika je zastarjelo",
+  "browser.notice.stopped": "Zaustavili ste preglednik za ovu sesiju. Pokrenite /browser adopt da mu vratite kartice.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Uključi/isključi automatsko odobravanje",

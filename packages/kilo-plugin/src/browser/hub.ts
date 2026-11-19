@@ -7,7 +7,9 @@ import { Context } from "effect"
  */
 export namespace BrowserHub {
   /** One content block of a tool result. Audio and resource blocks are not part of the tool contract. */
-  export type Block = { readonly type: "text"; readonly text: string } | { readonly type: "image"; readonly data: string; readonly mimeType: string }
+  export type Block =
+    | { readonly type: "text"; readonly text: string }
+    | { readonly type: "image"; readonly data: string; readonly mimeType: string }
 
   /** The step a token was issued for: a late report names the call that caused it, not the one carrying the news. */
   export type Step = { tool: string; argumentsHash: string }
@@ -79,7 +81,7 @@ export namespace BrowserHub {
       this.kind = input.kind
       this.items = input.items ?? []
       this.stepToken = input.stepToken
-    this.step = input.step
+      this.step = input.step
       this.afterAction = input.afterAction === true
       this.uncertain = input.uncertain === true
       this.meta = input.meta
@@ -99,11 +101,18 @@ export namespace BrowserHub {
 
   export type Upload = { uploadId: string; name: string; size: number; mimeType: string }
 
+  /** What `session.adopt` did: see `Port.adopt`. */
+  export type Adoption = "adopted" | "none" | "kept" | "unconfirmed"
+
   export type Port = {
     /** The connected extension; rejects with `unavailable` while none is reachable. */
     ready(timeoutMs?: number): Promise<Info>
     open(input: { sessionId: string; title: string; cwd: string }): Promise<{ sessionHandle: string; groupId?: string }>
     close(sessionHandle: string): Promise<void>
+    /** Moves the browser's active tab into the session's group; rejects with `blocked` when no tab can be shared. */
+    share(sessionHandle: string): Promise<void>
+    /** Re-keys the most recent ended group to the session; `unconfirmed` is an extension too old to report it. */
+    adopt(sessionHandle: string): Promise<Adoption>
     /** The tool names the extension serves for its own contract. */
     list(): Promise<readonly string[]>
     call(input: CallInput): Promise<Reply>

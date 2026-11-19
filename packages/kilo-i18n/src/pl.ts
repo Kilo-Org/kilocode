@@ -167,6 +167,10 @@ export const dict = {
   "browser.state.unavailable": "niedostępna",
   "browser.state.readyHint": "Profil Chromium należący do Kilo, uruchamiany przy pierwszym wywołaniu przeglądarki",
   "browser.state.extensionHint": "Podłącz rozszerzenie przeglądarki Kilo, aby używać własnej przeglądarki",
+  "browser.command.usage":
+    "Użyj /browser, aby otworzyć ustawienia, /browser share, aby udostępnić tej sesji aktywną kartę, lub /browser adopt, aby ponownie użyć ostatniej zakończonej grupy kart.",
+  "browser.command.sessionDescription":
+    "Udostępnij aktywną kartę (/browser share) lub użyj ponownie ostatniej zakończonej grupy kart (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Odczytuj strony w {{origin}}",
   "browser.permission.act.title": "Klikaj i pisz w {{origin}}",
@@ -179,6 +183,23 @@ export const dict = {
   "browser.permission.sensitive.reason": "Powód: {{reason}}",
   "browser.permission.sensitive.once":
     "Ten krok może zatwierdzić tylko osoba. Zatwierdzenie obejmuje wyłącznie ten jeden krok.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Udostępnij aktywną kartę przeglądarki",
+  "browser.share.description": "Przenieś aktywną kartę przeglądarki do grupy kart tej sesji",
+  "browser.share.done": "Twoja aktywna karta jest teraz w grupie kart tej sesji.",
+  "browser.adopt.title": "Użyj ponownie zakończonej grupy kart",
+  "browser.adopt.description": "Przypisz tej sesji najnowszą zakończoną grupę kart Kilo",
+  "browser.adopt.done": "Ta sesja używa teraz ostatniej zakończonej grupy kart.",
+  "browser.adopt.none": "Brak zakończonej grupy kart do ponownego użycia.",
+  "browser.adopt.kept": "Ta sesja ma już własne karty i zachowuje je.",
+  "browser.adopt.unconfirmed":
+    "Poproszono przeglądarkę o ponowne użycie ostatniej zakończonej grupy kart. Zaktualizuj rozszerzenie przeglądarki Kilo, aby sprawdzić, czy to zrobiła.",
+  "browser.control.notExtension":
+    "Udostępnianie i ponowne używanie kart wymaga rozszerzenia przeglądarki Kilo. Wybierz je w /browser.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Przeglądarka niedostępna",
+  "browser.notice.outdatedTitle": "Rozszerzenie przeglądarki jest nieaktualne",
+  "browser.notice.stopped": "Zatrzymano przeglądarkę dla tej sesji. Uruchom /browser adopt, aby zwrócić jej karty.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Przełącz automatyczne zatwierdzanie",

@@ -64,6 +64,14 @@ function landed(value: string | undefined) {
 
 type Payload = z.infer<typeof Payload>
 
+const Adopted = z.object({ kind: z.enum(["adopted", "none", "kept"]) }).loose()
+
+/** `session.adopt`'s answer. An extension that answers without a `kind` predates it and cannot say what it did. */
+export function adoption(value: unknown): BrowserHub.Adoption {
+  const parsed = Adopted.safeParse(value)
+  return parsed.success ? parsed.data.kind : "unconfirmed"
+}
+
 /** A hub error, read structurally: a malformed frame is not an error object and never becomes one. */
 function hubFailure(error: unknown) {
   if (typeof error !== "object" || error === null) return undefined
@@ -118,7 +126,11 @@ export function failure(error: unknown): BrowserHub.Failure {
     case "origin_changed": {
       // A redirect landed on a new origin: ask to read it, so the retry is not the same navigation again.
       const to = landed(data?.to)
-      return new BrowserHub.Failure({ kind: "moved", ...base, ...(to ? { items: [{ class: "read", origin: to }] } : {}) })
+      return new BrowserHub.Failure({
+        kind: "moved",
+        ...base,
+        ...(to ? { items: [{ class: "read", origin: to }] } : {}),
+      })
     }
     case "needs_permission":
       return new BrowserHub.Failure({
@@ -193,11 +205,9 @@ export function hub(options: Options = {}): BrowserHub.Interface {
       const connection = () => client(target ?? null).catch((error: unknown) => Promise.reject(failure(error)))
       return {
         async ready(timeoutMs) {
-          const info = await (await connection())
-            .ready(timeoutMs)
-            .catch((error: unknown) => {
-              throw failure(error)
-            })
+          const info = await (await connection()).ready(timeoutMs).catch((error: unknown) => {
+            throw failure(error)
+          })
           return {
             protocol: info.protocol,
             contractSha: info.contractSha,
@@ -206,16 +216,27 @@ export function hub(options: Options = {}): BrowserHub.Interface {
           }
         },
         async open(params) {
-          return (await connection()).session.open({ ...params, cliVersion: version ?? OPENCODE_VERSION }).catch(
-            (error: unknown) => {
+          return (await connection()).session
+            .open({ ...params, cliVersion: version ?? OPENCODE_VERSION })
+            .catch((error: unknown) => {
               throw failure(error)
-            },
-          )
+            })
         },
         async close(sessionHandle) {
           await (await connection()).session.close({ sessionHandle }).catch((error: unknown) => {
             throw failure(error)
           })
+        },
+        async share(sessionHandle) {
+          await (await connection()).session.shareActiveTab({ sessionHandle }).catch((error: unknown) => {
+            throw failure(error)
+          })
+        },
+        async adopt(sessionHandle) {
+          const answer = await (await connection()).session.adopt({ sessionHandle }).catch((error: unknown) => {
+            throw failure(error)
+          })
+          return adoption(answer)
         },
         async list() {
           const listed = await (await connection()).tools.list().catch((error: unknown) => {
@@ -240,7 +261,9 @@ export function hub(options: Options = {}): BrowserHub.Interface {
         },
         async call(params) {
           try {
-            const answer = await (await connection()).tools.call(
+            const answer = await (
+              await connection()
+            ).tools.call(
               {
                 sessionHandle: params.sessionHandle,
                 name: params.name,
