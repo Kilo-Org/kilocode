@@ -80,6 +80,8 @@ export function createAgentManagerConnection(input: { server: Manager; reconnect
     },
     /** The client of the running server, or undefined while none runs. */
     current: () => (state.status === "disconnected" ? undefined : state.client?.api),
+    /** Cancels client-side preparation when this server connection is stopped or replaced. */
+    signal: () => state.events?.signal,
     state: () => state.status,
     onState(listener: (status: ConnectionState) => void) {
       states.add(listener)

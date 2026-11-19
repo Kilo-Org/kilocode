@@ -68,7 +68,7 @@ import { expandPastes, isPathMention } from "../components/chat/prompt-input-uti
 import { convertToMentionPath, insertPathMentions } from "../utils/path-mentions"
 import { promptMentionOver, registerPromptMentionDrop, type WorktreeReference } from "../utils/prompt-mention-drop"
 import { message, useV2 } from "./client"
-import { registerComposer, type ComposerHandle } from "./composer"
+import { registerComposer, type ComposerHandle, type SendChoice, type SendTarget } from "./composer"
 import { MentionMenu } from "./mention-menu"
 import { attachmentDrafts, imageAttachment, mergeAttachments, pasteDrafts } from "./prompt-attachments"
 import { type ComposerDraft, visibleMessages } from "./revert"
@@ -151,21 +151,15 @@ const SEND_ICONS = ["send", "arrow-up", "clock", "arrow-right"] as const
 
 const NO_KEYS = { altKey: false, ctrlKey: false, metaKey: false }
 
-/** The agent and model a draft's first send creates its session with. */
-export type SendChoice = { agent: string | undefined; model: ModelRef | undefined }
-
-/**
- * The tab a send was pressed in: its session, or the draft key and the draft's agent and model before a session
- * exists. A tab switch resets the composer's draft choice, so the choice is taken with the tab.
- */
-export type SendTarget = { session: string | undefined; key: string | undefined; choice?: SendChoice }
-
 export function PromptInput(props: {
   session?: string
   /** Draft identity: the session id, or the pending tab id before a session exists. */
   draftKey?: string
   running: boolean
   disabled: boolean
+  /** Catalog preparation blocks submission without making the draft read-only. */
+  sendDisabled?: boolean
+  sendDisabledReason?: string
   /** The model the composer shows; Enhance uses it so the rewrite never depends on another provider. */
   model?: ModelRef
   /** A pending permission blocks sending. Drives the blocked Send tooltip. */
@@ -456,6 +450,7 @@ export function PromptInput(props: {
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
   const ready = () =>
     !props.disabled &&
+    !props.sendDisabled &&
     !props.blocked &&
     !sending() &&
     images.pending() === 0 &&
@@ -472,6 +467,7 @@ export function PromptInput(props: {
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () => {
     if (props.blocked) return language.t("prompt.action.send.blocked")
+    if (props.sendDisabled) return props.sendDisabledReason ?? language.t("common.loading")
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
     if (goalMode()) return language.t("prompt.goal.start")
     return language.t("prompt.action.send")

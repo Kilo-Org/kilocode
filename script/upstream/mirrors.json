@@ -13,6 +13,16 @@
         "`ensurePluginRuntime()` still runs before the first command, imported from the Kilo entry `./index`, which also imports `./env` first."
       ]
     },
+    "packages/cli/src/commands/handlers/run.ts": {
+      "mirror": "packages/kilo-cli/src/commands/run.ts",
+      "sha": "a018101648f3104d5084676b7c5e53d2fdbc8f51",
+      "why": "The Kilo host supplies client-side catalog preparation before non-interactive session creation and prompt admission. Upstream's command handler does not expose run options to the host.",
+      "invariants": [
+        "Preserve upstream's command flag mapping, server resolution, signal cancellation and exit reporting.",
+        "Only the Kilo host supplies the optional run preparation; unhosted runs retain upstream behavior.",
+        "Catalog preparation runs in the resolved target location, remains cancellable and never submits or retries a prompt."
+      ]
+    },
     "packages/cli/src/commands/handlers/serve.ts": {
       "mirror": "packages/kilo-cli/src/serve.ts",
       "sha": "5e1337a16aef4157c0f08e59d5b79609ea6eb40b",

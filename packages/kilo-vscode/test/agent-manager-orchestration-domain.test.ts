@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import type { FormInfo, OpenCodeClient, SessionInfo } from "@opencode/client"
+import { OpenCode, type FormInfo, type ModelInfo, type OpenCodeClient, type SessionInfo } from "@opencode/client"
 import { SessionID } from "@opencode/schema/session-id"
 import { OrchestrationError, answer, move, overview, prompt } from "../src/agent-manager/orchestration-domain"
 import { WorktreeStateManager } from "../src/agent-manager/WorktreeStateManager"
@@ -42,6 +42,12 @@ function form(id: string, sessionID: string, field: Partial<FormInfo["fields"][n
 
 function empty<T>(directory: string): { location: { directory: string }; data: T[] } {
   return { location: { directory }, data: [] }
+}
+
+const model = {
+  list: async () => ({
+    data: [{ providerID: "test", id: "model", enabled: true, capabilities: { input: ["text"], output: ["text"] } }],
+  }),
 }
 
 describe("Agent Manager orchestration domain", () => {
@@ -218,8 +224,11 @@ describe("Agent Manager orchestration domain", () => {
     const get = mock(async () => info("ses_target", fs.realpathSync(worktree), "Target"))
     const delivered = mock(async () => undefined)
     const client = {
+      model,
       session: { get, prompt: delivered },
-      permission: { request: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) } },
+      permission: {
+        request: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) },
+      },
       form: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) },
     } as unknown as OpenCodeClient
 
@@ -229,11 +238,61 @@ describe("Agent Manager orchestration domain", () => {
     expect(delivered).toHaveBeenCalledWith({ sessionID: "ses_target", text: "Continue" })
   })
 
+  it.each([false, true])(
+    "prepares a durable model in its actual directory before prompting (cancel: %s)",
+    async (cancel) => {
+      const wt = state.addWorktree({ branch: "catalog", path: worktree, parentBranch: "main" })
+      state.addSession("ses_delayed", wt.id)
+      const selected = { providerID: "kilo", id: "delayed", variant: "high" }
+      const catalog = Promise.withResolvers<ModelInfo[]>()
+      const started = Promise.withResolvers<string | null>()
+      const controller = new AbortController()
+      const writes: unknown[] = []
+      const client = OpenCode.make({
+        baseUrl: "http://kilo.invalid",
+        fetch: Object.assign(
+          async (...args: Parameters<typeof fetch>) => {
+            const request = new Request(...args)
+            const url = new URL(request.url)
+            if (request.method === "POST") {
+              writes.push(await request.json())
+              return Response.json({ data: {} })
+            }
+            if (url.pathname === "/api/session/ses_delayed")
+              return Response.json({ data: { ...info("ses_delayed", worktree, "Delayed"), model: selected } })
+            if (url.pathname === "/api/model") {
+              started.resolve(url.searchParams.get("location[directory]"))
+              request.signal.addEventListener("abort", () => catalog.reject(request.signal.reason), { once: true })
+              return Response.json({ location: { directory: worktree }, data: await catalog.promise })
+            }
+            return Response.json({ location: { directory: worktree }, data: [] })
+          },
+          { preconnect: fetch.preconnect },
+        ),
+      })
+      const pending = prompt({ client, root, state, sessionID: "ses_delayed", text: "Once", signal: controller.signal })
+      expect(await started.promise).toBe(worktree)
+      expect(writes).toEqual([])
+      if (cancel) {
+        controller.abort()
+        await expect(pending).rejects.toMatchObject({ name: "AbortError" })
+        expect(writes).toEqual([])
+        return
+      }
+    catalog.resolve([{ providerID: selected.providerID, id: selected.id, enabled: true } as ModelInfo])
+      await pending
+      expect(writes).toEqual([{ text: "Once" }])
+    },
+  )
+
   it("lets the backend assign a message ID so peer prompts are never scoped out", async () => {
     const delivered = mock(async (_input: { id?: string }) => undefined)
     const client = {
+      model,
       session: { get: mock(async () => info("ses_caller", fs.realpathSync(root), "Caller")), prompt: delivered },
-      permission: { request: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) } },
+      permission: {
+        request: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) },
+      },
       form: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) },
     } as unknown as OpenCodeClient
 
@@ -247,8 +306,11 @@ describe("Agent Manager orchestration domain", () => {
   it("delivers a reply to a verified original session outside Agent Manager state", async () => {
     const delivered = mock(async () => undefined)
     const client = {
+      model,
       session: { get: mock(async () => info("ses_caller", fs.realpathSync(root), "Caller")), prompt: delivered },
-      permission: { request: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) } },
+      permission: {
+        request: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) },
+      },
       form: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) },
     } as unknown as OpenCodeClient
 
@@ -265,8 +327,11 @@ describe("Agent Manager orchestration domain", () => {
     const delivered = mock(async () => undefined)
     const replied = mock(async () => undefined)
     const client = {
+      model,
       session: { get: mock(async () => session), prompt: delivered, form: { reply: replied } },
-      permission: { request: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) } },
+      permission: {
+        request: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) },
+      },
       form: { list: mock(async ({ location }: { location: { directory: string } }) => ({ location, data: forms })) },
     } as unknown as OpenCodeClient
     const managed = { id: session.id, worktreeId: wt.id, createdAt: "" }
@@ -292,13 +357,16 @@ describe("Agent Manager orchestration domain", () => {
     state.addSession("ses_queue", managed.id)
     const delivered = mock(async () => undefined)
     const client = {
+      model,
       session: {
         get: mock(async () => info("ses_queue", worktree, "Queue")),
         active: mock(async () => ({ ses_queue: { type: "running" } })),
         prompt: delivered,
         interrupt: mock(async () => undefined),
       },
-      permission: { request: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) } },
+      permission: {
+        request: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) },
+      },
       form: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) },
     } as unknown as OpenCodeClient
 
@@ -398,7 +466,9 @@ describe("Agent Manager orchestration domain", () => {
       permission: {
         request: { list: mock(async ({ location }: { location: { directory: string } }) => empty(location.directory)) },
       },
-      form: { list: mock(async ({ location }: { location: { directory: string } }) => ({ location, data: [pending] })) },
+      form: {
+        list: mock(async ({ location }: { location: { directory: string } }) => ({ location, data: [pending] })),
+      },
     } as unknown as OpenCodeClient
 
     await expect(prompt({ client, root, state, sessionID: "ses_blocked", text: "Continue" })).rejects.toMatchObject({

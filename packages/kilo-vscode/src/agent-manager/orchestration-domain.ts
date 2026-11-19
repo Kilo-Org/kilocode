@@ -1,5 +1,6 @@
 import * as fs from "node:fs"
-import type { FormField, JsonValue, OpenCodeClient } from "@opencode/client"
+import type { FormField, JsonValue, ModelRef, OpenCodeClient } from "@opencode/client"
+import { waitForModel } from "@opencode/client/kilocode/model-startup"
 import { SessionID } from "@opencode/schema/session-id"
 import { samePath } from "./project/paths"
 import type { LocalStats, WorktreeStats } from "./GitStatsPoller"
@@ -334,6 +335,7 @@ interface Target {
 interface Located {
   dir: string
   name: string
+  model?: ModelRef
 }
 
 // Verify the target session and return its authoritative directory plus display name, so error
@@ -361,7 +363,7 @@ async function locate(input: Target): Promise<Located> {
   if (!(await sameManagedDirectory(info.location.directory, dir))) {
     throw new OrchestrationError("cross_workspace", "The managed session belongs to a different workspace directory")
   }
-  return { dir, name: info.title?.trim() || input.sessionID }
+  return { dir, name: info.title?.trim() || input.sessionID, model: info.model }
 }
 
 function truncate(value: string, max: number): string {
@@ -440,6 +442,12 @@ export async function prompt(input: {
   const target = await locate(input)
   const blocker = await blocked(input, target.dir, target.name, input.questions)
   if (blocker) throw new OrchestrationError("unavailable_session", blocker)
+  if (input.signal?.aborted) return
+  await waitForModel(input.client, {
+    location: { directory: target.dir },
+    model: input.model ? { providerID: input.model.providerID, id: input.model.modelID } : target.model,
+    signal: input.signal,
+  })
   if (input.signal?.aborted) return
   if (input.agent) await input.client.session.switchAgent({ sessionID: input.sessionID, agent: input.agent })
   if (input.model)

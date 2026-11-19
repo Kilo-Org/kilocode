@@ -1,4 +1,5 @@
 import type { JsonValue, OpenCodeClient, SessionInfo } from "@opencode/client"
+import { waitForModel } from "@opencode/client/kilocode/model-startup"
 import { sanitizeBranchName, versionedName } from "./branch-name"
 import { canonicalizePath, samePath } from "./project/paths"
 import type { CreateWorktreeResult } from "./WorktreeManager"
@@ -43,7 +44,8 @@ interface WorktreeCreated {
 }
 
 export interface ToolDeps {
-  getClient: () => OpenCodeClient
+  getClient: () => OpenCodeClient | undefined
+  signal?: () => AbortSignal | undefined
   getRoot: () => string | undefined
   /** The project that owns the request, when the caller pinned one. */
   getProjectId?: () => string | undefined
@@ -129,10 +131,20 @@ function sessionModel(task: ToolTask): { providerID: string; modelID: string; va
   return task.variant ? { ...task.model, variant: task.variant } : task.model
 }
 
-async function prompt(client: OpenCodeClient, sid: string, task: ToolTask, source?: ToolSource) {
+async function prompt(client: OpenCodeClient, sid: string, task: ToolTask, source?: ToolSource, signal?: AbortSignal) {
   const body = text(task)
   if (!body) return
+  signal?.throwIfAborted()
   await client.session.prompt({ sessionID: sid, text: attribute(body, source?.sessionID) })
+}
+
+async function preparePrompt(deps: ToolDeps, client: OpenCodeClient, task: ToolTask, directory: string) {
+  if (!text(task)) return
+  await waitForModel(client, {
+    location: { directory },
+    model: task.model ? { providerID: task.model.providerID, id: task.model.modelID } : undefined,
+    signal: deps.signal?.(),
+  })
 }
 
 function locate(state: WorktreeStateManager, root: string, dir: string, wid: string) {
@@ -170,6 +182,7 @@ async function local(
   const target = wt?.path ?? root
   const metadata = await deps.sessionMetadata(client, target)
   const selected = sessionModel(task)
+  await preparePrompt(deps, client, task, target)
   const session = await client.session.create(
     sessionCreateBody({
       directory: target,
@@ -188,7 +201,7 @@ async function local(
       sessionId: session.id,
       worktreeId: wt.id,
     })
-  await prompt(client, session.id, task, source)
+  await prompt(client, session.id, task, source, deps.signal?.())
   return true
 }
 
@@ -263,7 +276,8 @@ async function worktree(
   timing.mark("ready")
   await ready
   try {
-    await prompt(client, session.id, task, source)
+    await preparePrompt(deps, client, task, created.result.path)
+    await prompt(client, session.id, task, source, deps.signal?.())
   } finally {
     await prepared.done
   }
@@ -285,6 +299,7 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
   await deps.getPanel()?.waitForReady()
   await deps.waitReady("startFromTool")
   const client = deps.getClient()
+  if (!client) throw new Error("Not connected to CLI backend")
   const total = req.tasks.length
   const versions = req.mode === "worktree" && req.versions === true && total > 1
   const groupId = versions ? `grp-${Date.now()}` : undefined

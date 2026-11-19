@@ -134,6 +134,7 @@ import { useEntryAnchor } from "./anchor-view"
 import { containsAnchor, createTimelineAnchors, groupID } from "./anchors"
 import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
 import { RoutedModelBadge, RoutedStep, routedModelLabel } from "../../kilocode/routed-model" // kilocode_change(gateway)
+import { createModelAdmission } from "../../kilocode/model-startup" // kilocode_change(gateway)
 import { BoardTool, boardTools } from "../../kilocode/board-tool" // kilocode_change(board)
 export { InlineToolRow } from "./message-parts"
 export { toolDisplay } from "./message-parts"
@@ -266,6 +267,7 @@ export function Session(props: {
 
   const scrollAcceleration = createMemo(() => getScrollAcceleration(config))
   const toast = useToast()
+  const modelAdmission = createModelAdmission() // kilocode_change(gateway)
   const restorePrompt = usePromptRestore()
   const client = useClient()
   const autoApproved = new Set<string>()
@@ -1104,7 +1106,7 @@ export function Session(props: {
       },
       run: () => {
         const selection = local.model.current()
-        void data.session
+        void modelAdmission // kilocode_change(gateway) - compact bypasses the composer admission guard.
           .compact({
             sessionID: route.sessionID,
             model: selection

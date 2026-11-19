@@ -27,6 +27,7 @@ import { usePermission } from "./permission"
 import { useLocation } from "./location"
 import { parse } from "../util/model"
 import { createGatewayDefaultModel } from "../kilocode/default-model" // kilocode_change(gateway)
+import { createModelStartup } from "../kilocode/model-startup" // kilocode_change(gateway)
 
 export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
   name: "Local",
@@ -182,6 +183,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           ? { ...parse(configured), variant: undefined }
           : { providerID: configured.providerID, modelID: configured.model, variant: configured.variant }
       })
+      const modelStartup = createModelStartup() // kilocode_change(gateway)
 
       const fallbackModel = createMemo(() => {
         if (args.model) {
@@ -219,6 +221,15 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
       const newSessionModel = createMemo(() => {
         const a = agent.current()
+        // kilocode_change start - gateway: do not replace an explicit model while its provider catalog is empty.
+        const pending = modelStartup.preserve(
+          a && selectionState.newSessionModelByLocationAgent[locationAgentKey(a.id)],
+          a?.model && { providerID: a.model.providerID, modelID: a.model.id },
+          args.model ? parse(args.model) : undefined,
+          configuredModel(),
+        )
+        if (pending) return pending
+        // kilocode_change end
         return getFirstValidModel(
           () => a && selectionState.newSessionModelByLocationAgent[locationAgentKey(a.id)],
           () => a?.model && { providerID: a.model.providerID, modelID: a.model.id },
@@ -238,6 +249,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         if (!selection) return
         return { providerID: selection.providerID, modelID: selection.modelID }
       })
+      modelStartup.observe(currentModel) // kilocode_change(gateway)
 
       function locationAgentKey(agentID: string) {
         const ref = location.ref ?? data.location.default()
@@ -395,8 +407,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return preferences.ready
         },
         get catalogReady() {
-          return models() !== undefined && (!!currentModel() || gatewayDefault.ready()) // kilocode_change(gateway)
+          return models() !== undefined && (!!currentModel() || gatewayDefault.ready()) && !modelStartup.pending() // kilocode_change(gateway)
         },
+        catalogPending: modelStartup.pending, // kilocode_change(gateway)
         recent() {
           return preferences.recent
         },

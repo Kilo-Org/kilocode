@@ -100,6 +100,12 @@ describe("AgentManagerOrchestrationBridge", () => {
       }),
     }
     const client = {
+      model: {
+        list: async ({ location }: { location: { directory: string } }) => ({
+          location,
+          data: [{ providerID: "test", id: "model", enabled: true, capabilities: { input: ["text"], output: ["text"] } }],
+        }),
+      },
       session: {
         get: mock(async ({ sessionID }: { sessionID: string }) =>
           info(sessionID, locations.get(sessionID) ?? dir, "Target"),

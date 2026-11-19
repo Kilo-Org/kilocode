@@ -6,8 +6,10 @@
  * admitted, or the slash command is run. The panel stores nothing itself for this; the events update the store.
  */
 import type { ModelRef } from "@opencode/client"
+import { waitForModel } from "@opencode/client/kilocode/model-startup"
 import type { AgentManagerSendInitialMessage } from "../src/types/messages/agent-manager"
 import type { V2 } from "../src/v2/scope"
+import { parseCommandModel } from "../src/components/settings/agent-behaviour/command-model"
 
 type InitialFile = { uri: string; name?: string; mention?: { start: number; end: number; text: string } }
 
@@ -41,15 +43,36 @@ export function initialMessage(ev: AgentManagerSendInitialMessage) {
  * Dispatch a new worktree's first prompt as a command when it is one, or as a plain message otherwise. An empty
  * request leaves the just-created session idle as the host asked (it only wants the busy state cleared).
  */
-export async function dispatchInitialPrompt(store: V2, ev: AgentManagerSendInitialMessage): Promise<void> {
-  if (ev.agent) await store.api.session.switchAgent({ sessionID: ev.sessionId, agent: ev.agent })
-  const model = initialModel(ev)
-  if (model) await store.api.session.switchModel({ sessionID: ev.sessionId, model })
+export async function dispatchInitialPrompt(
+  store: V2,
+  ev: AgentManagerSendInitialMessage,
+  signal?: AbortSignal,
+): Promise<void> {
   const command = initialCommand(ev)
+  const message = initialMessage(ev)
+  if (!command && !message) return
+  const model = initialModel(ev)
+  const location = { directory: store.directory }
+  const commands = command ? await store.api.command.list({ location }, { signal }) : undefined
+  const own = parseCommandModel(commands?.data.find((item) => item.name === command?.name)?.model)
+  await waitForModel(store.api, {
+    location,
+    model: own
+      ? { providerID: own.providerID, id: own.modelID }
+      : (model ?? store.data.session.get(ev.sessionId)?.model),
+    signal,
+  })
+  signal?.throwIfAborted()
+  if (ev.agent) await store.api.session.switchAgent({ sessionID: ev.sessionId, agent: ev.agent }, { signal })
+  if (model && !own) await store.api.session.switchModel({ sessionID: ev.sessionId, model }, { signal })
+  signal?.throwIfAborted()
   if (command) {
-    await store.api.session.command(command)
+    await store.api.session.command(command, { signal })
     return
   }
-  const message = initialMessage(ev)
-  if (message) await store.data.session.prompt(message)
+  if (message)
+    await store.data.session.prompt({
+      ...message,
+      ...(signal ? { prepare: async () => signal.throwIfAborted() } : {}),
+    })
 }

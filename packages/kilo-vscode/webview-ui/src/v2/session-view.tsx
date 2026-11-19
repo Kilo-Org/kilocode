@@ -1,6 +1,7 @@
 // One session laid out like main's ChatView: task header, transcript, docks and prompt. The sidebar shows one at a
 // time; the Agent Manager shows one per selected tab, each in the store of its directory.
 import { mediaHashFromUri, type FileDiffInfo, type JsonValue, type ModelRef } from "@opencode/client"
+import { waitForModel } from "@opencode/client/kilocode/model-startup"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
@@ -23,7 +24,7 @@ import { kiloSettings } from "./kilo-settings"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
 import type { AppendHandler, ReferenceHandler, ReplyHandler, ReviewAppendHandler } from "./append-ready"
-import type { ComposerHandle } from "./composer"
+import type { ComposerHandle, SendTarget } from "./composer"
 import { promptFiles } from "./prompt-attachments"
 import { transcriptChildren } from "../components/chat/background-agents"
 import { useV2 } from "./client"
@@ -35,10 +36,12 @@ import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
 import { createPermissionPresentation } from "./permission-presentation"
-import { PromptInput, setPromptDraft, type SendTarget } from "./prompt"
+import { PromptInput, setPromptDraft } from "./prompt"
 import { createRevertQueue, EMPTY_DRAFT, redoTarget, restoredDraft, type ComposerDraft } from "./revert"
 import { sendBinding } from "./send-binding"
 import { createSelection, Selectors } from "./selectors"
+import { failureMessage } from "./kilo-catalog"
+import { modelAvailable } from "./model-readiness"
 import type { ManagerContext } from "./shortcut-hint"
 import { settledLoader, startingLoader } from "./session-loading"
 import { createAutoApprove } from "./auto-approve"
@@ -244,6 +247,7 @@ export function SessionView(props: {
 
   const runningOf = (id: string | undefined) => !!id && v2.data.session.status(id) === "running"
   const running = () => runningOf(session())
+  const preparing = () => v2.startup.pending(draftKey())
 
   // Questions do not block the prompt, as in v1: a pending question is dismissed when the user sends instead.
   // Only a permission blocks sending, and the composer stays writable so typing remains possible.
@@ -457,7 +461,16 @@ export function SessionView(props: {
       target?: SendTarget
     },
   ) => {
-    const { id, gate, model, draft } = await begin(mode, input?.target)
+    if (preparing()) return false
+    const target = input?.target ?? { session: session(), key: draftKey(), choice: selection.choice() }
+    const chosen = target.choice
+      ? target.choice.model
+      : target.session
+        ? (selection.draft(target.session) ?? selection.selected(target.session))
+        : undefined
+    // Editor context actions submit without the Send button, so they need the same pre-admission preparation.
+    if (!selection.ready() && !(await prepareModel(chosen, target.key ?? target.session ?? "new"))) return false
+    const { id, gate, model, draft } = await begin(mode, target)
     const files = promptFiles(input?.items ?? [], input?.files ?? [])
     return v2.data.session
       .prompt({
@@ -493,13 +506,31 @@ export function SessionView(props: {
   )
   // The selectors listen for these events, so a slash action opens the same picker as a click.
   const picker = (name: string) => () => window.dispatchEvent(new CustomEvent(name))
+  const prepareModel = async (model: ModelRef | undefined, key: string) => {
+    if (modelAvailable(selection.models(), model)) return true
+    const startup = v2.startup.start(key)
+    try {
+      await waitForModel(v2.api, { location: { directory: v2.directory }, model, signal: startup.signal })
+      return !startup.signal.aborted
+    } catch (error) {
+      if (startup.signal.aborted) return false
+      throw error
+    } finally {
+      startup.done()
+    }
+  }
   // Compaction runs on the composer's selection, as the TUI: an uncommitted draft switches the session first.
   // Compaction commits a staged revert, so it waits for the revert of that session to settle first.
-  const compact = (id: string) =>
-    void reverts
-      .settled(id)
-      .then(() => v2.data.session.compact({ sessionID: id, model: selection.draft(id) }))
+  const compact = (id: string) => {
+    const model = selection.draft(id)
+    void prepareModel(model ?? selection.selected(id), id)
+      .then(async (ready) => {
+        if (!ready) return
+        await reverts.settled(id)
+        await v2.data.session.compact({ sessionID: id, model })
+      })
       .catch(v2.report)
+  }
   const handlers = (): SlashHandlers => {
     const id = session()
     const start = props.onNewSession
@@ -541,10 +572,16 @@ export function SessionView(props: {
     mentions: MentionFile[] = [],
     target?: SendTarget,
   ) => {
-    const { id, gate, model } = await begin(mode, target)
-    const text = args ? `/${entry.name} ${args}` : `/${entry.name}`
     // A command with its own model runs on that model, which the server switches the session to.
     const own = entry.kind === "command" ? parseCommandModel(entry.command.model) : undefined
+    const bound = target ?? { session: session(), key: draftKey(), choice: selection.choice() }
+    if (
+      own &&
+      !(await prepareModel({ providerID: own.providerID, id: own.modelID }, bound.key ?? bound.session ?? "new"))
+    )
+      return false
+    const { id, gate, model } = await begin(mode, bound)
+    const text = args ? `/${entry.name} ${args}` : `/${entry.name}`
     return dispatchSlash(
       {
         entry,
@@ -574,8 +611,9 @@ export function SessionView(props: {
   // The goal plugin pauses an active goal when the user interrupts its run. Between runs, for example while it waits on
   // background work, there is no run to interrupt, so Stop pauses the goal itself.
   const stop = () => {
+    const cancelled = v2.startup.cancel(draftKey())
     const id = session()
-    if (!id) return
+    if (!id || (cancelled && !running() && !working.submitting())) return
     if (!running() && !working.submitting() && goal.active()) return goal.control("pause")
     void v2.api.session.interrupt({ sessionID: id }).catch(v2.report)
   }
@@ -587,7 +625,7 @@ export function SessionView(props: {
     if (props.readOnly) return
     const handler = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return
-      if (!running() && !working.submitting() && !goal.active()) return
+      if (!running() && !working.submitting() && !goal.active() && !preparing()) return
       event.preventDefault()
       stop()
     }
@@ -661,9 +699,9 @@ export function SessionView(props: {
               actions={(todos, agents) => props.row?.(hasMessages(), todos, agents)}
               hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
               status={working.status()}
-              submitting={working.submitting()}
+              submitting={working.submitting() || preparing()}
               timing={working.timing()}
-              text={working.text()}
+              text={preparing() ? language.t("common.loading") : working.text()}
               retry={working.retry()}
               onCancel={stop}
               onScrollToBottom={() => scrollToBottom?.()}
@@ -676,8 +714,10 @@ export function SessionView(props: {
                   draftKey={key}
                   session={session()}
                   // An active goal keeps working between its runs, so the composer offers Stop as main did.
-                  running={running() || goal.active()}
+                  running={running() || goal.active() || preparing()}
                   disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
+                  sendDisabled={!selection.ready() || preparing()}
+                  sendDisabledReason={failureMessage(language.t, v2.kiloFailure())}
                   blocked={blocked()}
                   questioning={questioning()}
                   onSend={send}

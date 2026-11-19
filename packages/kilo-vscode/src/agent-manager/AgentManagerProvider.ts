@@ -788,12 +788,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public async startToolRequest(req: ToolRequest): Promise<void> {
     const client = this.connection.current()
+    const signal = this.connection.signal()
     await startFromTool(
       {
-        getClient: () => {
-          if (!client) throw new Error("Not connected to CLI backend")
-          return client
-        },
+        getClient: () => client,
+        signal: () => signal,
         getRoot: () => this.getRoot(),
         // The request runs inside its owning project's scope when the caller directory matched one.
         getProjectId: () => this.projectScope.current()?.id ?? this.contexts.active()?.id,

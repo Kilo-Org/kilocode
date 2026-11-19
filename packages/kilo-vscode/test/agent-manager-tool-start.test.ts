@@ -16,6 +16,16 @@ window.createTerminal ??= () => ({ show: () => undefined, dispose: () => undefin
 window.createOutputChannel ??= () => ({ appendLine: () => undefined, show: () => undefined, dispose: () => undefined })
 
 const platform = Object.getOwnPropertyDescriptor(process, "platform")
+const model = {
+  list: async () => ({
+    data: ["model", "reasoning/model"].map((id) => ({
+      providerID: "test",
+      id,
+      enabled: true,
+      capabilities: { input: ["text"], output: ["text"] },
+    })),
+  }),
+}
 
 function setPlatform(value: string) {
   Object.defineProperty(process, "platform", { value, configurable: true })
@@ -41,7 +51,9 @@ function result(path: string): CreateWorktreeResult {
   return { path, branch: "kilo/test", parentBranch: "main", startPointSource: "fallback" } as CreateWorktreeResult
 }
 
-function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
+type ReadyDeps = Omit<ToolDeps, "getClient"> & { getClient: () => OpenCodeClient }
+
+function deps(overrides: Partial<ReadyDeps> = {}): ReadyDeps {
   const calls: unknown[] = []
   const panel = {
     waitForReady: mock(async () => calls.push("waitForReady")),
@@ -49,6 +61,7 @@ function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
   return {
     getClient: () =>
       ({
+        model,
         session: {
           create: mock(async () => session("ses-local")),
           prompt: mock(async () => undefined),
@@ -99,6 +112,7 @@ describe("agent manager tool start", () => {
     const entered = Promise.withResolvers<void>()
     const prompted = Promise.withResolvers<void>()
     const client = {
+      model,
       session: {
         prompt: async () => {
           flow.push("prompt")
@@ -232,6 +246,7 @@ describe("agent manager tool start", () => {
 
   it("creates the worktree from the requested base branch", async () => {
     const client = {
+      model,
       session: {
         create: mock(async () => session("ses-local")),
         prompt: mock(async () => undefined),
@@ -262,6 +277,7 @@ describe("agent manager tool start", () => {
       addSession: mock(() => {}),
     }
     const client = {
+      model,
       session: {
         create: mock(async () => session("ses-target")),
         prompt: mock(async () => undefined),
@@ -365,6 +381,7 @@ describe("agent manager tool start", () => {
 
   it("starts local sessions and sends the initial prompt", async () => {
     const client = {
+      model,
       session: {
         create: mock(async () => session("ses-local")),
         prompt: mock(async () => undefined),
@@ -399,6 +416,7 @@ describe("agent manager tool start", () => {
   it("starts local sessions when Windows drive-letter casing differs", async () => {
     setPlatform("win32")
     const client = {
+      model,
       session: {
         create: mock(async () => session("ses-local")),
         prompt: mock(async () => undefined),
@@ -435,6 +453,7 @@ describe("agent manager tool start", () => {
 
   it("starts worktree sessions through existing hooks", async () => {
     const client = {
+      model,
       session: {
         create: mock(async () => session("ses-local")),
         prompt: mock(async () => undefined),
@@ -670,6 +689,7 @@ describe("agent manager tool start", () => {
 
   it("forwards the task agent to session.create for local sessions", async () => {
     const client = {
+      model,
       session: {
         create: mock(async () => session("ses-local")),
         prompt: mock(async () => undefined),
@@ -688,6 +708,7 @@ describe("agent manager tool start", () => {
 
   it("omits agent from session.create for local sessions when not specified", async () => {
     const client = {
+      model,
       session: {
         create: mock(async () => session("ses-local")),
         prompt: mock(async () => undefined),
@@ -722,6 +743,7 @@ describe("agent manager tool start", () => {
 
   it("rejects local sessions for unknown worktree directories", async () => {
     const client = {
+      model,
       session: {
         create: mock(async () => session("ses-local")),
         prompt: mock(async () => undefined),
@@ -748,6 +770,7 @@ describe("agent manager worktree session creation", () => {
   it("applies the resolved model, variant, and agent to session.create", async () => {
     const create = mock(async () => session("ses-wt"))
     const client = {
+      model,
       mcp: { list: mock(async () => []) },
       session: { create },
     } as unknown as OpenCodeClient
@@ -755,7 +778,7 @@ describe("agent manager worktree session creation", () => {
 
     const created = await createSessionInWorktree(
       {
-        connection: { client: async () => client } as never,
+        connection: { client: async () => client, signal: () => undefined } as never,
         postToWebview: (message) => posts.push(message),
         log: () => {},
       },
@@ -796,6 +819,7 @@ describe("agent manager provider tool routing", () => {
   it("passes the tool model, variant, and agent through startToolRequest to session.create", async () => {
     const create = mock(async () => session("ses-wt"))
     const client = {
+      model,
       config: { get: mock(async () => ({})) },
       agent: { list: mock(async () => []) },
       mcp: { list: mock(async () => []) },
@@ -804,6 +828,7 @@ describe("agent manager provider tool routing", () => {
     const connection = {
       client: async () => client,
       current: () => client,
+      signal: () => undefined,
       state: () => "connected",
       onState: () => () => undefined,
       onEvent: () => () => undefined,

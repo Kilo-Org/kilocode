@@ -16,6 +16,7 @@ import { useV2, type V2 } from "./client"
 import { failureMessage } from "./kilo-catalog"
 import { shiftTabCyclesVariant } from "./kilo-settings"
 import { configuredModel, initialModel } from "./model-default"
+import { createModelReadiness } from "./model-readiness"
 import { kiloTeam } from "./kilo-models"
 import { cycleVariant, preserveVariant } from "./variant"
 
@@ -48,23 +49,25 @@ export function createSelection(
       ]).catch(v2.report)
     }),
   )
-  // Sign-in, sign-out and a team switch reload the catalog through createData, and can change the default model and
-  // the models a draft may use. A draft model that left the catalog falls back to the default, as on v1.
+  const info = () => {
+    const id = session()
+    return id ? v2.data.session.get(id) : undefined
+  }
+  // An empty provider catalog can be a cold Location, not a removed selection. Keep the draft until publication.
   createEffect(
     on(
       () => v2.data.location.model.list(),
       (list) => {
         const draft = draftModel()
-        if (list && draft && !list.some((item) => item.providerID === draft.providerID && item.id === draft.id))
+        if (
+          draft &&
+          list?.some((item) => item.providerID === draft.providerID) &&
+          !list.some((item) => item.providerID === draft.providerID && item.id === draft.id)
+        )
           setDraftModel(undefined)
       },
     ),
   )
-
-  const info = () => {
-    const id = session()
-    return id ? v2.data.session.get(id) : undefined
-  }
   // A new draft starts at the default selection instead of inheriting the agent and model of the previous tab or
   // session. An existing session keeps the server value, so resetting the local draft is safe.
   createEffect(
@@ -92,6 +95,7 @@ export function createSelection(
   const initial = () =>
     initialModel({
       pick: prefs ? prefs.pick(agent()?.id) : picks.get(agent()?.id ?? ""),
+      preserveSelection: true,
       agent: agent()?.model ?? undefined,
       configured: configured(),
       team: kiloTeam(v2.kiloModels()),
@@ -114,12 +118,20 @@ export function createSelection(
     const value = own ?? initial()
     // The server reports "no explicit variant" as "default" (core session/info.ts), as the TUI normalizes it.
     if (value?.variant === DEFAULT) return { id: value.id, providerID: value.providerID }
-    if (own || !value) return value
+    if (own || !value || !find(value)) return value
     // A configured or agent effort the model no longer has moves to the nearest one, as v1 and the TUI.
     const variant = value.variant ? preserveVariant(value.variant, variantsOf(value)) : remembered(value)
     return { id: value.id, providerID: value.providerID, ...(variant ? { variant } : {}) }
   }
   const variants = () => variantsOf(model())
+  const ready = createModelReadiness(
+    v2,
+    model,
+    () =>
+      !!v2.data.location.agent.list() &&
+      !!v2.data.location.config.list() &&
+      (session() ? !!info() : (prefs?.loaded() ?? true)),
+  )
 
   const chain = (id: string, run: () => Promise<unknown>) => {
     const request = Promise.all([creates.get(id), commits.get(id)])
@@ -156,6 +168,7 @@ export function createSelection(
     agent,
     model,
     models,
+    ready,
     providers: () => v2.data.location.provider.list(),
     variants,
     selectAgent,

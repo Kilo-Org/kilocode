@@ -8,6 +8,7 @@ import { toFailure, type Failure } from "./error"
 import type { events } from "./events"
 import { createKiloModels } from "./kilo-models"
 import { createModelDrafts } from "./model-draft"
+import { createPromptStartup } from "./prompt-startup"
 import { createWakeups } from "./wakeups"
 
 type Connection = ReturnType<typeof createClientConnection>
@@ -82,8 +83,10 @@ export function createV2Scope(input: {
   // view and an Agent Manager worktree switch, as the TUI keeps them app-wide. The echo of a commit, or any client
   // switching the session to the same model, makes a draft redundant.
   const drafts = createModelDrafts()
+  const startup = createPromptStartup()
   onCleanup(input.event.on("session.model.selected", (event) => drafts.settle(event.data.sessionID, event.data.model)))
   onCleanup(input.event.on("session.deleted", (event) => drafts.drop(event.data.sessionID)))
+  onCleanup(input.event.on("session.deleted", (event) => startup.cancel(event.data.sessionID)))
   const visible = input.visible ?? (() => true)
   // Settings scopes draw no sessions, so only a chat scope that was not given a shared store reads its own directory.
   const wakeups =
@@ -168,6 +171,7 @@ export function createV2Scope(input: {
     kiloModels,
     /** The composer's uncommitted model and effort per session; the next prompt commits it. */
     drafts,
+    startup,
     /** Whether a Session holds a future wakeup, shown as `scheduled` instead of idle. */
     scheduled: input.scheduled ?? wakeups?.scheduled ?? (() => false),
     clearError: () => setFailure(undefined),

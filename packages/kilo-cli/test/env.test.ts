@@ -1,6 +1,15 @@
 import { expect, test } from "bun:test"
 import { names, storage, translate } from "../src/env"
 
+test("the Kilo host enables client-side model startup readiness", () => {
+  const env: Record<string, string | undefined> = {}
+  translate(env)
+  expect(env.KILO_MODEL_STARTUP).toBe("1")
+  env.KILO_MODEL_STARTUP = "0"
+  translate(env)
+  expect(env.KILO_MODEL_STARTUP).toBe("0")
+})
+
 test("KILO_ variables reach their OPENCODE_ name, and the Kilo name wins", () => {
   const env: Record<string, string | undefined> = {
     KILO_CLIENT: "kilo",

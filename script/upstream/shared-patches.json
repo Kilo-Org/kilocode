@@ -1,12 +1,16 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 153,
-    "markedLines": 2831,
-    "unmarkedLines": 386,
+    "files": 157,
+    "markedLines": 2890,
+    "unmarkedLines": 387,
     "deletedFiles": 0
   },
   "files": {
+    "packages/cli/src/run/run.ts": {
+      "rung": 3,
+      "seam": "Expose an optional SessionTargetPreparation on the existing non-interactive run input and call it at the existing prepare boundary. The Kilo host's run handler supplies the catalog wait; no plugin hook or service replacement reaches this private client-side preparation. Omitting the callback preserves upstream behavior and tests."
+    },
     "packages/cli/src/run/noninteractive.ts": {
       "rung": 3,
       "seam": "`run --auto` replies `once` to every permission request. A request whose metadata sets `interactive: true` is rejected instead, so a headless run cannot approve it. The Kilo sandbox asks `sandbox_escalation` with that flag before a Git command runs outside the sandbox. No plugin hook reaches the CLI's permission replies (the permission domain has only `evaluate`), and the host does not own the non-interactive run loop. Upstream never sets the flag, so its behavior does not change."
@@ -333,7 +337,19 @@
     },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
-      "seam": "Full TUI default selection (Gateway): call the Kilo-owned default-model loader, then use SDK model.default after CLI/config and recent models, within the existing user/agent selection precedence. Keep the first catalog model when the server supplies no valid default. Without a higher-priority selection, catalog readiness waits for the default request so --prompt cannot submit the catalog's first model before the recommendation arrives. Rungs 1 and 2 cannot reach LocalProvider's private fallback memo or readiness flag; the TUI plugin API has no model-default resolver, and the host runs in the server process. A generic seam would add a resolver registration API for this single SDK read instead of these small call-outs. Loading, refresh and location isolation stay in tui/src/kilocode/default-model.ts."
+      "seam": "Full TUI default selection (Gateway): call the Kilo-owned default-model loader, then use SDK model.default after CLI/config and recent models, within the existing user/agent selection precedence. Keep the first catalog model when the server supplies no valid default. Without a higher-priority selection, catalog readiness waits for the default request so --prompt cannot submit the catalog's first model before the recommendation arrives. The host-enabled model-startup adapter additionally requires actual selected-model availability and preserves explicit selections while their provider catalog is empty, so a saved --prompt is not consumed prematurely. Rungs 1 and 2 cannot reach LocalProvider's private fallback memo or readiness flag; the TUI plugin API has no model-default resolver, and the host runs in the server process. A generic seam would add a resolver registration API for these private memos instead of small call-outs. Loading, refresh and location isolation stay in tui/src/kilocode/default-model.ts and model-startup.ts."
+    },
+    "packages/tui/src/component/prompt/index.tsx": {
+      "rung": 4,
+      "seam": "Delegate model-dependent admission to the host-enabled Kilo-owned model-startup adapter before session mutations. Source readiness does not cover command model overrides or newly created worktree destinations. The public TUI plugin API has no universal asynchronous submit/destination-preparation hook, keymap interception misses direct submit calls, and server host composition cannot reach the private composer closure. Small call-outs preserve draft recovery, shell execution and unhosted behavior without adding a general submission framework."
+    },
+    "packages/tui/src/mini/runtime.ts": {
+      "rung": 4,
+      "seam": "Call the host-enabled Kilo-owned model-startup adapter before mini compaction and cancel that client-side admission on interrupt. Compaction bypasses the prompt transport, and no plugin hook, service replacement or existing host option reaches this private callback; adding a generic callback API for this single preparation would add more coupling than the import and call-outs. Unhosted behavior is unchanged."
+    },
+    "packages/tui/src/mini/stream-v2.transport.ts": {
+      "rung": 4,
+      "seam": "Call the host-enabled Kilo-owned model-startup adapter before mini prompt, queued prompt and command mutations, and cancel pending preparation on interrupt. The first empty model-list response is not readiness. No public plugin hook or host option reaches these private client admission paths; narrow call-outs preserve upstream transport/queue behavior and never retry an admitted prompt."
     },
     "packages/plugin/src/tui/context.ts": {
       "rung": 3,
@@ -402,7 +418,7 @@
     },
     "packages/tui/src/routes/session/index.tsx": {
       "rung": 4,
-      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows."
+      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows. The private compact action also delegates to the host-enabled model-startup adapter because it bypasses the composer, and no plugin hook or host option reaches its pre-admission boundary."
     },
     "packages/tui/src/routes/session/group-view.tsx": {
       "rung": 4,
@@ -482,7 +498,7 @@
     },
     "packages/client/package.json": {
       "rung": 4,
-      "seam": "Test timing only: the `test` script raises the per-test timeout from 5000 ms to 30000 ms, matching the rest of the workspace. The 5 s ceiling was tight for the suites that regenerate or compile client output and hit the filesystem, and it timed out on slower shared CI runners before the tests themselves failed. Ported from #15879. No seam: the flag is a literal inside upstream's script string and no host or plugin can pass bun test options in its place.",
+      "seam": "Export the Kilo-owned model-startup client helper so CLI, TUI and VS Code share target-location catalog readiness without server waits; package exports cannot be extended by a plugin or host. Also raises the per-test timeout from 5000 ms to 30000 ms for generation and filesystem suites, matching the workspace (ported from #15879). JSON script values have no host override.",
       "unmarked": "JSON has no comments."
     },
     "packages/httpapi-codegen/package.json": {

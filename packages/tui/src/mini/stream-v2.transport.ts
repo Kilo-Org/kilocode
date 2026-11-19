@@ -20,6 +20,7 @@ import { messagePrompt } from "./session.shared"
 import { createSubagentTracker, toolCommit, toolFinalPhase } from "./stream-v2.subagent"
 import { normalizeTool, toolOutputText } from "./tool"
 import { toolDisplayContent } from "../util/tool-display"
+import { createModelWait } from "../kilocode/model-startup" // kilocode_change(gateway)
 import type {
   FooterApi,
   FooterPatch,
@@ -479,6 +480,7 @@ async function resolveSelectedModel(
 
 export async function createSessionTransport(input: StreamInput): Promise<SessionTransport> {
   const controller = new AbortController()
+  const modelStartup = createModelWait(controller.signal) // kilocode_change(gateway)
   let sdk = input.sdk
   let generation = 0
   let activeAttempt: Attempt | undefined
@@ -1813,6 +1815,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       if (next.prompt.mode === "shell") throw new Error("This prompt cannot be queued")
       await waitUntilConnected(next.signal)
       const client = sdk
+      if (!(await modelStartup.turn(client, input, next))) return // kilocode_change(gateway)
       if (!next.prompt.command && next.agent)
         await client.session.switchAgent({ sessionID: input.sessionID, agent: next.agent }, { signal: next.signal })
       if (!next.prompt.command) {
@@ -1840,6 +1843,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       const client = sdk
       const messageID = next.prompt.messageID
       if (!messageID) throw new Error("Prompt message ID is required")
+      if (!(await modelStartup.turn(client, input, next))) return // kilocode_change(gateway)
 
       const command = next.prompt.command
       if (command) {
@@ -1865,6 +1869,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       )
     },
     async interruptActiveTurn() {
+      modelStartup.cancel() // kilocode_change(gateway) - cancel admission before interrupting an active execution.
       // A running shell holds no drain, so session.interrupt cannot reach it;
       // abort the blocking request instead. The server-side command keeps its
       // own lifecycle and simply loses its waiter.

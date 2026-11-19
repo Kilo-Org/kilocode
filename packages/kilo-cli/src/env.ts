@@ -46,6 +46,8 @@ export function translate(env: Record<string, string | undefined>) {
     const value = env[`KILO2_${name}`]
     if (value !== undefined) env[`OPENCODE_${name}`] = value
   }
+  // Client-side catalog readiness is a host opt-in; unhosted OpenCode keeps its submission behavior.
+  env.KILO_MODEL_STARTUP ??= "1"
 }
 
 /**

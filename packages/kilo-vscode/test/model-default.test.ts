@@ -32,6 +32,23 @@ describe("initialModel", () => {
     expect(initialModel({ ...base, configured })).toEqual(configured)
   })
 
+  test("keeps an explicit composer model while its provider catalog is still empty", () => {
+    const requested = { providerID: "kilo", id: "delayed", variant: "high" }
+    for (const preference of ["pick", "agent", "configured"] as const) {
+      expect(
+        initialModel({
+          ...base,
+          preserveSelection: true,
+          [preference]: requested,
+          team: undefined,
+          models: [{ providerID: "x", id: "b" }],
+          serverDefault: { providerID: "x", id: "b" },
+        }),
+      ).toEqual(requested)
+      expect(initialModel({ ...base, preserveSelection: true, [preference]: requested })).toEqual(free)
+    }
+  })
+
   test("skips a pick, agent or configured model that left the catalog", () => {
     const gone = { providerID: "gone", id: "m" }
     expect(initialModel({ ...base, pick: gone })).toEqual(free)
