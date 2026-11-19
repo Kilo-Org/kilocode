@@ -13,7 +13,7 @@ import type { VSCodeContext } from "./v2/bridge"
 import type { AppDirectories } from "./app-directories"
 import { createPanelData } from "./v2/panel-data"
 import { createSessions } from "./v2/sessions"
-import { dispatchInitialPrompt } from "./initial-message"
+import { dispatchInitialPrompt, initialModel } from "./initial-message"
 import { reloadRestoredDirectories } from "./restored-directories"
 
 export function createAppSession(opts: {
@@ -105,7 +105,9 @@ export function createAppSession(opts: {
       })
   }
 
-  const sendInitial = (ev: AgentManagerSendInitialMessage) => {
+  const lifetime = new AbortController()
+  onCleanup(() => lifetime.abort())
+  const sendInitial = (ev: AgentManagerSendInitialMessage, t: (key: string) => string) => {
     const directory = ev.worktreeId
       ? opts.directories.worktreePathIn(ev.projectId, ev.worktreeId)
       : ev.projectId
@@ -113,8 +115,14 @@ export function createAppSession(opts: {
         : undefined
     const store = storeFor(directory ?? opts.directories.directoryOf(ev.sessionId))
     if (!store) return Promise.resolve()
-    return dispatchInitialPrompt(store, ev).catch((error: unknown) => {
-      store.report(error)
+    // A fallback project's catalog cannot establish readiness for a missing worktree mapping.
+    if (ev.worktreeId && !directory && (ev.text || ev.command) && initialModel(ev)) {
+      store.report(t("agentManager.project.missing"))
+      return Promise.resolve()
+    }
+    return dispatchInitialPrompt(store, ev, lifetime.signal).catch((error: unknown) => {
+      if (lifetime.signal.aborted) return
+      store.report(error instanceof DOMException && error.name === "TimeoutError" ? t("error.failure.timeout") : error)
     })
   }
 
