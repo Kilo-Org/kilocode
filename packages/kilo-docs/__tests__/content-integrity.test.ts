@@ -37,6 +37,7 @@ const removed = [
   "kiloclaw/overview",
   "kiloclaw/dashboard",
   "code-with-ai/app-builder",
+  "code-with-ai/gastown",
 ]
 
 function markdown(dir: string): string[] {

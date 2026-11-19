@@ -48,6 +48,7 @@ describe("sitemap.xml", () => {
       "/kiloclaw/overview",
       "/kiloclaw/dashboard",
       "/code-with-ai/app-builder",
+      "/code-with-ai/gastown",
     ]
 
     for (const route of removed) expect(xml).not.toContain(`https://kilo.ai/docs${route}`)

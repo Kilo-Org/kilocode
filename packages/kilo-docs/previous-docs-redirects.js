@@ -1244,8 +1244,8 @@ module.exports = [
     permanent: true,
   },
   {
-    source: "/docs/code-with-ai/gastown/wasteland/troubleshooting",
-    destination: "/docs/code-with-ai/gastown/wasteland",
+    source: "/docs/code-with-ai/gastown",
+    destination: "/docs/getting-started",
     basePath: false,
     permanent: true,
   },

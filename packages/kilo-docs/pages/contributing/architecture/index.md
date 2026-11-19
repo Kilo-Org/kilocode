@@ -34,7 +34,7 @@ Architecture pages cross two repositories:
 | Repository | Contents |
 |---|---|
 | [Kilo&#8209;Org/kilocode](https://github.com/Kilo-Org/kilocode) | Kilo CLI runtime, local daemon, Kilo Console, VS Code extension, JetBrains plugin, JavaScript SDK, codebase indexing, Kilo Gateway client, telemetry, docs, and shared UI packages |
-| [Kilo&#8209;Org/cloud](https://github.com/Kilo-Org/cloud) | Web control plane, Kilo Gateway routes, Cloud Agent session runtime, automation, Gas Town, billing, and supporting Workers |
+| [Kilo&#8209;Org/cloud](https://github.com/Kilo-Org/cloud) | Web control plane, Kilo Gateway routes, Cloud Agent session runtime, automation, billing, and supporting Workers |
 
 ## Three architecture layers
 
@@ -42,7 +42,7 @@ Architecture pages cross two repositories:
 |---|---|---|
 | Local runtime and clients | Runs local coding sessions and connects editor surfaces to one local agent engine | Kilo CLI runtime, `kilo serve` server, local daemon, Kilo Console, VS Code extension, JetBrains plugin |
 | Kilo Cloud shared services | Handles hosted identity, authorization, model routing, billing, orchestration, and shared product services | Web control plane, Kilo Gateway, Workers, queues, Durable Objects, persistence |
-| Hosted product runtimes and automation | Runs scoped cloud work for coding, security analysis, and multi-agent orchestration | Cloud Agent, Automation Services, Security Agent, Gas Town, Wasteland |
+| Hosted product runtimes and automation | Runs scoped cloud work for coding, security analysis, and multi-agent orchestration | Cloud Agent, Automation Services, Security Agent |
 
 Local execution and hosted execution are separate boundaries. Editor clients use a local `kilo serve` server. Hosted automation can launch Cloud Agent execution sessions when cloud coding work is required.
 
@@ -132,21 +132,17 @@ flowchart LR
   agent["Cloud Agent"]
   security["Security Agent"]
   chat["Kilo Chat, events, and notifications"]
-  town["Gas Town"]
-  wasteland["Wasteland"]
 
   web --> workers --> agent
   web --> security
   security -->|"optional deep analysis"| agent
   web --> chat
-  web --> town --> wasteland
 ```
 
 | Boundary | Role | Topology or workflow | Security review |
 |---|---|---|---|
 | Automation Services | Turns commands, source-control events, labels, webhooks, and schedules into scoped work | [Automation Services](/docs/contributing/architecture/automation-services) | [Trust boundaries](/docs/contributing/architecture/cloud-security#trust-boundaries) |
 | Security Agent | Syncs findings and analyzes risk; selected deep analysis can launch Cloud Agent | [Cloud Platform](/docs/contributing/architecture/cloud-platform#security-agent) | [Sync and cleanup](/docs/contributing/architecture/cloud-security#security-agent-sync-and-cleanup) |
-| Gas Town and Wasteland | Coordinate multi-agent repository work and collaborative commons paths | [Cloud Platform](/docs/contributing/architecture/cloud-platform#gas-town-and-wasteland) | [Trust boundaries](/docs/contributing/architecture/cloud-security#trust-boundaries) |
 
 ## Local entry points and clients
 
@@ -172,7 +168,7 @@ Hosted service families live in [`Kilo-Org/cloud`](https://github.com/Kilo-Org/c
 | Kilo Gateway | `apps/ai-gateway/`{% linebreak /%}`packages/web-shared/src/lib/ai-gateway/`{% linebreak /%}Local integration: `Kilo-Org/kilocode/packages/kilo-gateway/` | First-party model-routing boundary and local client integration |
 | Cloud Agent | `services/cloud-agent-next/` | Hosted coding-session capability with policy-selected sandbox allocation |
 | Automation Services | `services/code-review-infra/`{% linebreak /%}`services/auto-triage-infra/`{% linebreak /%}`services/auto-fix-infra/`{% linebreak /%}`services/security-auto-analysis/`{% linebreak /%}`services/security-sync/`{% linebreak /%}`services/webhook-agent-ingest/` | Trigger-driven review, triage, fix, security, and configured webhook flows |
-| Adjacent hosted boundaries | `services/gastown/`{% linebreak /%}`services/wasteland/`{% linebreak /%}Supporting services | Gas Town, Wasteland, chat, notifications, and supporting services |
+| Adjacent hosted boundaries | Supporting services | Chat, notifications, and supporting services |
 
 ## Supporting packages
 

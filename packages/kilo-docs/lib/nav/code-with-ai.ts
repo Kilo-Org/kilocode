@@ -33,30 +33,6 @@ export const CodeWithAiNav: NavSection[] = [
     ],
   },
   {
-    title: "Features",
-    links: [
-      {
-        href: "/code-with-ai/gastown",
-        children: "Gas Town by Kilo",
-        subLinks: [
-          { href: "/code-with-ai/gastown/quick-start", children: "Quick Start" },
-          { href: "/code-with-ai/gastown/concepts", children: "Concepts" },
-          { href: "/code-with-ai/gastown/mayor", children: "The Mayor" },
-          { href: "/code-with-ai/gastown/sling-work", children: "Sling Work" },
-          { href: "/code-with-ai/gastown/code-review", children: "Code Review" },
-          { href: "/code-with-ai/gastown/settings", children: "Settings" },
-          { href: "/code-with-ai/gastown/troubleshooting", children: "Troubleshooting" },
-          { href: "/code-with-ai/gastown/wasteland", children: "Wasteland" },
-          { href: "/code-with-ai/gastown/wasteland/quick-start", children: "Wasteland: Quick Start" },
-          { href: "/code-with-ai/gastown/wasteland/concepts", children: "Wasteland: Concepts" },
-          { href: "/code-with-ai/gastown/wasteland/workflow", children: "Wasteland: Workflow" },
-          { href: "/code-with-ai/gastown/wasteland/admin", children: "Wasteland: Administration" },
-          { href: "/code-with-ai/gastown/wasteland/settings", children: "Wasteland: Settings" },
-        ],
-      },
-    ],
-  },
-  {
     title: "Chat & Context",
     links: [
       {
