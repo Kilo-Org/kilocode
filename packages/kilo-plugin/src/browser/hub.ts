@@ -9,6 +9,9 @@ export namespace BrowserHub {
   /** One content block of a tool result. Audio and resource blocks are not part of the tool contract. */
   export type Block = { readonly type: "text"; readonly text: string } | { readonly type: "image"; readonly data: string; readonly mimeType: string }
 
+  /** The step a token was issued for: a late report names the call that caused it, not the one carrying the news. */
+  export type Step = { tool: string; argumentsHash: string }
+
   /** One grant a call needs, in the extension's own spelling of an origin. */
   export type Need = { class: string; origin: string; frame?: boolean; reason?: string }
 
@@ -53,18 +56,30 @@ export namespace BrowserHub {
     readonly kind: Kind
     readonly items: readonly Need[]
     readonly stepToken: string | undefined
+    /** The call the token was issued for, when the browser names it. */
+    readonly step: Step | undefined
     /** The action already ran; the CLI asks without repeating it. */
     readonly afterAction: boolean
     /** The call may have reached the browser before the connection dropped. */
     readonly uncertain: boolean
     readonly meta: Meta | undefined
 
-    constructor(input: { kind: Kind; message: string; items?: readonly Need[]; stepToken?: string; afterAction?: boolean; uncertain?: boolean; meta?: Meta }) {
+    constructor(input: {
+      kind: Kind
+      message: string
+      items?: readonly Need[]
+      stepToken?: string
+      step?: Step
+      afterAction?: boolean
+      uncertain?: boolean
+      meta?: Meta
+    }) {
       super(input.message)
       this.name = "BrowserHubFailure"
       this.kind = input.kind
       this.items = input.items ?? []
       this.stepToken = input.stepToken
+    this.step = input.step
       this.afterAction = input.afterAction === true
       this.uncertain = input.uncertain === true
       this.meta = input.meta

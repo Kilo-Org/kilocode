@@ -100,7 +100,11 @@ export function needs(value: unknown): BrowserPermission.Item[] | undefined {
  * The result meta as the tool layer reads it, or undefined when the extension asked for a grant the CLI cannot
  * describe: the call then fails closed instead of answering with content it could not have granted.
  */
-function finishMeta(meta: BrowserHub.Meta, stepToken?: string): CallResult["meta"] | undefined {
+function finishMeta(
+  meta: BrowserHub.Meta,
+  stepToken?: string,
+  step?: BrowserHub.Step,
+): CallResult["meta"] | undefined {
   const parsed = meta.needs === undefined ? undefined : needs(meta.needs)
   if (meta.needs !== undefined && parsed === undefined) return undefined
   return {
@@ -109,6 +113,7 @@ function finishMeta(meta: BrowserHub.Meta, stepToken?: string): CallResult["meta
     ...(meta.withheldFrames === undefined ? {} : { withheldFrames: meta.withheldFrames }),
     ...(parsed === undefined || parsed.length === 0 ? {} : { needs: parsed }),
     ...(stepToken === undefined ? {} : { stepToken }),
+    ...(step === undefined ? {} : { step }),
   }
 }
 
@@ -279,7 +284,11 @@ export class ExtensionBackend implements BrowserBackend {
     if (!(error instanceof BrowserHub.Failure) || error.kind !== "permission" || !error.afterAction) return undefined
     const items = needs(error.items)
     if (items === undefined) return undefined
-    const meta = finishMeta({ ...(error.meta ?? {}), ...(items.length ? { needs: items } : {}) }, error.stepToken)
+    const meta = finishMeta(
+      { ...(error.meta ?? {}), ...(items.length ? { needs: items } : {}) },
+      error.stepToken,
+      error.step,
+    )
     const flagged = meta === undefined ? undefined : { ...meta, afterAction: true as const }
     return {
       content: [
