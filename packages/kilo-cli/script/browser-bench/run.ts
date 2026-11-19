@@ -109,6 +109,7 @@ type Metrics = {
   tools: number
   browser: number
   execute: number
+  resultBytesByTool: Record<string, { calls: number; bytes: number }>
   browserTools: Record<string, number>
   toolErrors: ToolError[]
   resultBytes: number
@@ -188,6 +189,7 @@ function parseRun(stdout: string, pricing: Pricing | undefined): Metrics {
     tools: 0,
     browser: 0,
     execute: 0,
+    resultBytesByTool: {},
     browserTools: {},
     toolErrors: [],
     resultBytes: 0,
@@ -257,19 +259,31 @@ function parseRun(stdout: string, pricing: Pricing | undefined): Metrics {
           metrics.toolErrors.push({ tool: name, name: errorName(text), text: text.slice(0, 200) })
         }
       }
+      // An `execute` result belongs to one browser tool only when it made exactly one browser call.
+      const owner = tool.startsWith("browser_")
+        ? tool
+        : innerBrowser.length === 1
+          ? String(innerBrowser[0]?.["tool"]).replace(".", "_")
+          : "execute (several browser calls)"
+      let size = 0
       if (state?.["status"] === "error") {
         const text = String(state["error"] ?? "")
         metrics.toolErrors.push({ tool, name: errorName(text), text: text.slice(0, 200) })
-        if (browser) metrics.resultBytes += bytes(text)
+        size = bytes(text)
       }
-      if (state?.["status"] === "completed" && browser) {
+      if (state?.["status"] === "completed") {
         const content = record(state["metadata"])?.["content"]
         if (Array.isArray(content)) {
           for (const block of content.map(record)) {
-            if (block?.["type"] === "text") metrics.resultBytes += bytes(String(block["text"] ?? ""))
-            else if (block) metrics.resultImages += 1
+            if (block?.["type"] === "text") size += bytes(String(block["text"] ?? ""))
+            else if (block && browser) metrics.resultImages += 1
           }
-        } else metrics.resultBytes += bytes(String(state["output"] ?? ""))
+        } else size = bytes(String(state["output"] ?? ""))
+      }
+      if (browser) {
+        metrics.resultBytes += size
+        const entry = metrics.resultBytesByTool[owner] ?? { calls: 0, bytes: 0 }
+        metrics.resultBytesByTool[owner] = { calls: entry.calls + 1, bytes: entry.bytes + size }
       }
     }
     if (type === "text") {
@@ -445,6 +459,7 @@ async function main() {
             browserTools: result.metrics.browserTools,
             toolErrors: result.metrics.toolErrors,
             resultBytes: result.metrics.resultBytes,
+            resultBytesByTool: result.metrics.resultBytesByTool,
             resultImages: result.metrics.resultImages,
             wallMs: result.wallMs,
             load,

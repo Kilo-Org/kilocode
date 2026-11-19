@@ -1,4 +1,8 @@
-/** Aggregation and output for the browser benchmark: one JSONL row per run, and a Markdown summary per backend. */
+/**
+ * Aggregation and output for the browser benchmark: one JSONL row per run, and a Markdown summary per backend.
+ *
+ *   bun script/browser-bench/report.ts <runs.jsonl>...   re-renders one matrix, or several side by side
+ */
 
 export type ToolError = { tool: string; name: string; text: string }
 
@@ -67,6 +71,8 @@ export type Row = {
   toolErrors: ToolError[]
   /** UTF-8 bytes of the text every browser tool result handed to the model, failures included. */
   resultBytes: number
+  /** Result bytes by browser tool; an `execute` result counts for its tool when it made exactly one browser call. */
+  resultBytesByTool: Record<string, { calls: number; bytes: number }>
   /** Images (screenshots) browser tool results handed to the model. */
   resultImages: number
   wallMs: number
@@ -176,6 +182,23 @@ export function renderSummary(rows: Row[]): string {
     )
   }
   lines.push("")
+  lines.push("## Model-visible result bytes by tool")
+  lines.push("")
+  lines.push("Mean UTF-8 bytes per result (calls in brackets).")
+  lines.push("")
+  const owners = [...new Set(rows.flatMap((row) => Object.keys(row.resultBytesByTool ?? {})))].sort()
+  lines.push(`| backend | ${owners.join(" | ")} |`)
+  lines.push(`|---|${owners.map(() => "---").join("|")}|`)
+  for (const backend of backends) {
+    const subset = rows.filter((row) => row.backend === backend)
+    const cells = owners.map((owner) => {
+      const calls = subset.reduce((sum, row) => sum + (row.resultBytesByTool?.[owner]?.calls ?? 0), 0)
+      const total = subset.reduce((sum, row) => sum + (row.resultBytesByTool?.[owner]?.bytes ?? 0), 0)
+      return calls === 0 ? "–" : `${Math.round(total / calls)} (${calls})`
+    })
+    lines.push(`| ${backend} | ${cells.join(" | ")} |`)
+  }
+  lines.push("")
   lines.push("## Tool errors the model saw")
   lines.push("")
   lines.push("| backend | error | count | example |")
@@ -228,11 +251,11 @@ export function renderSummary(rows: Row[]): string {
 }
 
 if (import.meta.main) {
-  const file = process.argv[2]
-  if (!file) throw new Error("usage: bun script/browser-bench/report.ts <runs.jsonl>")
-  const text = await Bun.file(file).text()
-  const rows = text
-    .split("\n")
+  const files = process.argv.slice(2)
+  if (files.length === 0) throw new Error("usage: bun script/browser-bench/report.ts <runs.jsonl>...")
+  const texts = await Promise.all(files.map((file) => Bun.file(file).text()))
+  const rows = texts
+    .flatMap((text) => text.split("\n"))
     .filter((line) => line.trim().length > 0)
     .map((line) => JSON.parse(line) as Row)
     // Recorded rows keep the error text, so a refined classification applies to an old matrix too. Rows recorded
@@ -241,7 +264,12 @@ if (import.meta.main) {
       ...row,
       surface: row.surface ?? "direct",
       executeCalls: row.executeCalls ?? 0,
+      resultBytesByTool: row.resultBytesByTool ?? {},
       toolErrors: row.toolErrors.map((error) => ({ ...error, name: errorName(error.text) })),
     }))
-  console.log(renderSummary(rows))
+  // Several matrices side by side: each backend and tool surface is its own column of the tables.
+  const surfaces = new Set(rows.map((row) => row.surface))
+  console.log(
+    renderSummary(surfaces.size > 1 ? rows.map((row) => ({ ...row, backend: `${row.backend} · ${row.surface}` })) : rows),
+  )
 }
