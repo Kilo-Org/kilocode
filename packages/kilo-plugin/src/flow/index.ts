@@ -11,6 +11,7 @@ import type { SessionEvent } from "@opencode/schema/session-event"
 import { Tool } from "@opencode/schema/tool"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Cause, DateTime, Effect, Option, Ref, Schema, Semaphore, Stream } from "effect"
+import { automationID, backingSchedule, instant, remaining, scheduleKey, status, time, trigger } from "./native"
 import {
   flowPermissions,
   permissionInstructions,
@@ -23,7 +24,6 @@ export { flowPermissions, permissionInstructions } from "./permissions"
 const prefix = "flow:v1:"
 const runPrefix = "flow-run:v1:"
 const activePrefix = "flow-active:v1:"
-const schedulePrefix = "flow-schedule:v1:"
 const latestPrefix = "flow-latest:v1:"
 const metadataKey = KiloFlowRpc.sessionMetadata
 const permissionAction = "flow"
@@ -477,18 +477,6 @@ export function create(
       ),
     )
   })
-}
-
-/** The native automation row that fires a Flow. Its hook prompt is descriptive only: the scheduler never admits it. */
-function backingSchedule(record: KiloFlowRpc.Record, sessionID: Session.ID): Automation.CreateInput {
-  const expires = expiry(record.ends)
-  return {
-    sessionID,
-    name: `Flow: ${record.name}`,
-    trigger: triggerOf(record.trigger.when, record.trigger.timezone),
-    ...(expires ? { expires } : {}),
-    action: { type: "hook", prompt: record.prompt },
-  }
 }
 
 export function update(
@@ -1268,23 +1256,10 @@ function managed(
   }
 }
 
-/** A Flow's `times` limit, counted against the native row because automation rows only carry a single expiry. */
-function remaining(ends: KiloFlowRpc.Ends | undefined, schedule: Automation.Info) {
-  if (ends?.times === undefined) return undefined
-  return Math.max(0, ends.times - schedule.runCount)
-}
-
 function outcome(run: KiloFlowRpc.Run): KiloFlowRpc.RunOutcome | undefined {
   if (run.status === "succeeded" || run.status === "failed" || run.status === "interrupted" || run.status === "skipped")
     return run.status
   return undefined
-}
-
-function time(input: KiloFlowRpc.CreateInput["when"]): KiloFlowRpc.When {
-  if (input.in !== undefined) return { type: "in", in: input.in, tz: input.tz }
-  if (input.at !== undefined) return { type: "at", at: input.at, tz: input.tz }
-  if (input.every !== undefined) return { type: "every", every: input.every, tz: input.tz }
-  return { type: "cron", cron: input.cron, tz: input.tz }
 }
 
 function unmanaged(schedule: Automation.Info, session: Session.Info | undefined): KiloFlowRpc.Info {
@@ -1317,46 +1292,6 @@ function unmanaged(schedule: Automation.Info, session: Session.Info | undefined)
     health: session ? { status: "healthy" } : { status: "error", message: missing },
     time: { created: instant(schedule.time.created), updated: instant(schedule.time.updated) },
   }
-}
-
-function trigger(schedule: Automation.Info): KiloFlowRpc.Trigger {
-  const timezone = schedule.tz
-  const when = schedule.trigger
-  if (when.type === "at") return { type: "time", when: { type: "at", at: when.at, tz: timezone }, timezone }
-  if (when.type === "every")
-    return { type: "time", when: { type: "every", every: when.every, tz: timezone }, timezone }
-  if (when.type === "cron")
-    return { type: "time", when: { type: "cron", cron: when.cron, tz: timezone }, timezone }
-  // The inventory filters event automations out; a stray row still reads as a labelled time trigger.
-  return { type: "time", when: { type: "at", at: `${when.server}:${when.event}`, tz: timezone }, timezone }
-}
-
-/** The automation trigger for a Flow's `when`, keeping the Flow's zone. */
-function triggerOf(when: KiloFlowRpc.When, timezone: string): Automation.Trigger {
-  const tz = when.tz ?? timezone
-  if (when.type === "in") return { type: "at", at: `in ${when.in}`, tz }
-  if (when.type === "at") return { type: "at", at: when.at, tz }
-  if (when.type === "every") return { type: "every", every: when.every, tz }
-  return { type: "cron", cron: when.cron, tz }
-}
-
-/** Automation rows carry one expiry; a `times` limit is enforced by the Flow claim hook. */
-function expiry(ends: KiloFlowRpc.Ends | undefined) {
-  if (!ends) return undefined
-  if (ends.at) return ends.at
-  if (ends.after) return `in ${ends.after}`
-  return undefined
-}
-
-function status(value: Automation.Status): KiloFlowRpc.Status {
-  if (value === "done") return "completed"
-  return value
-}
-
-function instant(value: DateTime.Utc): number
-function instant(value: DateTime.Utc | undefined): number | undefined
-function instant(value: DateTime.Utc | undefined) {
-  return value && DateTime.toEpochMillis(value)
 }
 
 type Entry = { readonly key: string; readonly value: Schema.Json }
@@ -1571,15 +1506,6 @@ function flowLock(runtime: Pick<Runtime, "locks">, flowID: KiloFlowRpc.ID) {
 
 function activeKey(flowID: KiloFlowRpc.ID) {
   return `${activePrefix}${flowID}`
-}
-
-function scheduleKey(scheduleID: KiloFlowRpc.ScheduleID) {
-  return `${schedulePrefix}${scheduleID}`
-}
-
-/** Stored backing ids may predate automation's `aut_` prefix; the service only needs the brand at its boundary. */
-function automationID(id: KiloFlowRpc.ScheduleID): Automation.ID {
-  return Automation.ID.make(id)
 }
 
 function latestKey(flowID: KiloFlowRpc.ID) {

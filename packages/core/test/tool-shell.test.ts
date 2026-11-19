@@ -944,8 +944,14 @@ describe("ShellTool", () => {
             Stream.runHead,
             Effect.forkScoped({ startImmediately: true }),
           )
-          const quick = JSON.stringify({ command: bodyExitCommand })
-          const long = JSON.stringify({ command: progressOverflowCommand(6, "release"), timeout: 10 })
+          // kilocode_change start - the shell description is required
+          const quick = JSON.stringify({ description: "Prints the body and exits nonzero", command: bodyExitCommand })
+          const long = JSON.stringify({
+            description: "Waits for the release file",
+            command: progressOverflowCommand(6, "release"),
+            timeout: 10,
+          })
+          // kilocode_change end
           const result = yield* executeTool(registry, {
             sessionID,
             ...toolIdentity,
