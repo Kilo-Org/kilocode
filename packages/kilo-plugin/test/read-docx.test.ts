@@ -204,7 +204,6 @@ describe("kilo DOCX reads", () => {
         expect(paged).toMatchObject({
           content: all[all.length - 3],
           offset: all.length - 2,
-          next: expect.any(Number),
           next: all.length - 1,
         })
 
