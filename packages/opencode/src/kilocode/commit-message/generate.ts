@@ -176,7 +176,9 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     options: {},
     permission: [],
     prompt: (request.prompt || SYSTEM_PROMPT) + languageInstruction(request.language),
-    temperature: 0.3,
+    // GPT-5 APIs reject non-default temperature even when the catalog advertises support.
+    temperature:
+      model.capabilities?.temperature && !model.id.toLowerCase().startsWith("gpt-5") ? 0.3 : undefined,
   }
 
   let userMessage = buildUserMessage(ctx)
@@ -206,7 +208,9 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
         } as any,
         tools: {},
         model,
-        small: true,
+        // The configured small model is already selected above. Do not apply the generic
+        // small-task defaults, which otherwise force its first reasoning variant (often "low").
+        small: false,
         messages: [
           {
             role: "user" as const,

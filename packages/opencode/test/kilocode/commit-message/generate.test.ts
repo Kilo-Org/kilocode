@@ -33,6 +33,18 @@ function lastPrompt(): string | undefined {
   return (args[0] as { agent?: { prompt?: string } }).agent?.prompt
 }
 
+function lastTemperature(): number | undefined {
+  const args = stream.mock.calls[stream.mock.calls.length - 1]
+  if (!args) return undefined
+  return (args[0] as { agent?: { temperature?: number } }).agent?.temperature
+}
+
+function lastSmallFlag(): boolean | undefined {
+  const args = stream.mock.calls[stream.mock.calls.length - 1]
+  if (!args) return undefined
+  return (args[0] as { small?: boolean }).small
+}
+
 mock.module("@/agent/agent", () => ({
   ...realAgent,
   Agent: {},
@@ -91,6 +103,40 @@ describe("commit-message.generate", () => {
       }
       const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBe("feat(api): add api module")
+    })
+
+    test("omits temperature for models that do not support it", async () => {
+      model.mockImplementation(
+        async () => ({
+          providerID: "openai",
+          id: "gpt-5.6-terra",
+          capabilities: { temperature: false },
+        }) as Provider.Model,
+      )
+
+      await generateCommitMessage({ path: "/repo" })
+
+      expect(lastTemperature()).toBeUndefined()
+    })
+
+    test("omits temperature for GPT-5 models", async () => {
+      model.mockImplementation(
+        async () => ({
+          providerID: "openai",
+          id: "gpt-5.6-terra",
+          capabilities: { temperature: true },
+        }) as Provider.Model,
+      )
+
+      await generateCommitMessage({ path: "/repo" })
+
+      expect(lastTemperature()).toBeUndefined()
+    })
+
+    test("does not force a small-model reasoning variant", async () => {
+      await generateCommitMessage({ path: "/repo" })
+
+      expect(lastSmallFlag()).toBe(false)
     })
   })
 
