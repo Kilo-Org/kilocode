@@ -9,9 +9,11 @@ const timing = {
   stopPollInterval: 5,
 }
 
-export function accelerate<A extends object, B>(ensure: (options?: A) => B) {
-  return (options: A) => ensure(withEnsureTiming(options, timing))
+// kilocode_change start
+export function accelerate<A extends object, B>(ensure: (options?: A) => B, overrides: Partial<typeof timing> = {}) {
+  return (options: A) => ensure(withEnsureTiming(options, { ...timing, ...overrides }))
 }
+// kilocode_change end
 
 export async function waitForExit(pid: number) {
   for (let attempt = 0; attempt < 600; attempt++) {

@@ -246,7 +246,9 @@ describe("vm", () => {
         9100 in sorted,
       ]),
     })
-  })
+  // kilocode_change start
+  }, 20_000) // 300,000 words sorted one trip at a time: 5.19 s on a loaded CI runner, above bun's 5 s default.
+  // kilocode_change end
 
   test("concurrent tool calls stop the VM once, with every call in one batch", () => {
     const vm = vmFor(`return await Promise.all([1, 2, 3].map((value) => tools.echo({ value })))`)
