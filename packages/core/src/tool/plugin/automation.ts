@@ -193,12 +193,10 @@ function summary(view: View) {
   const action =
     view.action.type === "prompt"
       ? `prompt ${view.action.to.session ?? `subagent ${view.action.to.subagent}`}: ${JSON.stringify(clip(view.action.prompt))}`
-      : // kilocode_change start - render the hook action Kilo's plugins own
-        view.action.type === "hook"
-        ? `hook: ${JSON.stringify(clip(view.action.prompt))}`
-        : // kilocode_change end
-          `code: ${JSON.stringify( // kilocode_change - indentation follows the hook branch
-            clip(
+      : view.action.type === "hook" // kilocode_change - render the hook action Kilo's plugins own
+        ? `hook: ${JSON.stringify(clip(view.action.prompt))}` // kilocode_change
+        : `code: ${JSON.stringify(
+          clip(
             view.action.code
               .split("\n")
               .find((line) => line.trim() !== "")
