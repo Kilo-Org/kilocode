@@ -52,6 +52,20 @@ export namespace BrowserHub {
     | "mismatch"
     | "unknown"
 
+  /**
+   * Why no extension answered an `unavailable` call, as far as the hub connection knows: no hub is reachable
+   * (`no_hub`), or none whose extension has the selected browser profile (`no_profile`); a hub runs but no extension
+   * ever connected to it (`unpaired`: not installed, "Allow local agents" off, or the pairing page ignored); an
+   * extension was connected and went away (`disconnected`: the switch turned off, the browser closed); or one is
+   * connected but did not answer the call (`connected`: a timeout, a cancelled turn).
+   */
+  export type Absence =
+    | { kind: "no_hub" }
+    | { kind: "no_profile"; profile: string }
+    | { kind: "unpaired" }
+    | { kind: "disconnected" }
+    | { kind: "connected" }
+
   export class Failure extends Error {
     readonly kind: Kind
     readonly items: readonly Need[]
@@ -63,6 +77,8 @@ export namespace BrowserHub {
     /** The call may have reached the browser before the connection dropped. */
     readonly uncertain: boolean
     readonly meta: Meta | undefined
+    /** Why no extension answered, for an `unavailable` failure the hub connection can explain. */
+    readonly absence: Absence | undefined
 
     constructor(input: {
       kind: Kind
@@ -73,6 +89,7 @@ export namespace BrowserHub {
       afterAction?: boolean
       uncertain?: boolean
       meta?: Meta
+      absence?: Absence
     }) {
       super(input.message)
       this.name = "BrowserHubFailure"
@@ -83,6 +100,7 @@ export namespace BrowserHub {
       this.afterAction = input.afterAction === true
       this.uncertain = input.uncertain === true
       this.meta = input.meta
+      this.absence = input.absence
     }
   }
 
