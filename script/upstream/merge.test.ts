@@ -17,6 +17,7 @@ async function fixture() {
   await r.git("switch", "-q", "-c", "v2")
   await r.remove(".github/workflows/deploy.yml")
   await r.write(".github/workflows/kilo-v2.yml", "name: kilo-v2\n")
+  await r.write(".github/workflows/kilo-v2-jetbrains.yml", "name: kilo-v2-jetbrains\n")
   await r.write(".github/workflows/kilo-v2-publish.yml", "name: kilo-v2-publish\n")
   await r.write("script/check-workflows.ts", await Bun.file(guard).text())
   await r.commit("chore(ci): kilo workflows")
