@@ -14,9 +14,7 @@ const ratioLimit = 8
  * CPU time, not wall time: a loaded runner has this process off the CPU for most of a sample, which would make a
  * longer sample look worse than it is.
  *
- * Both sizes must add input length, not block structure: a block container nested 4x deeper is superlinear by nature
- * (every level walks the markers that remain) and emphasis nested 4x deeper overflows the stack. The bracket and link
- * stacks are the exception: they stay linear at any depth.
+ * Compare tables of the same shape so the input size grows without changing the nesting depth.
  */
 function growth(work: (scale: number) => void, from = 1, to = 4, samples = 5) {
   const clock = () => {
@@ -84,40 +82,41 @@ describe("slow-input linear-time bounds", () => {
   )
 
   test(
-    "long * and _ delimiter runs and distinct unclosed backtick runs stay linear",
+    "delimiter scans and backtick matches stay bounded as the input grows",
     () => {
       // Each shape keeps the run lengths of the original case and one paragraph per unit of size. A 4x longer run would
       // nest emphasis 4x deeper and overflow the stack instead of measuring time.
       const emph = "*a".repeat(5_000) + " " + "_b".repeat(5_000) + " " + "**c*d".repeat(2_000)
       const mismatchedHeal = "*a ".repeat(5_000) + "b_ ".repeat(5_000)
       const ticks = Array.from({ length: 500 }, (_, i) => "`".repeat(i + 1) + "a").join(" ")
-      expect(
-        growth(
-          (scale) => {
-            const f1 = createMarkdownStream({ renderHtml: true }).update(
-              Array.from({ length: scale }, () => emph).join("\n\n"),
-              { streaming: false },
-            )
-            expect(f1.blocks).toHaveLength(scale)
-
-            const fHeal = createMarkdownStream({ renderHtml: false }).update(
-              Array.from({ length: scale }, () => mismatchedHeal).join("\n\n"),
-              { streaming: true },
-            )
-            expect(fHeal.blocks).toHaveLength(scale)
-
-            const f2 = createMarkdownStream({ renderHtml: true }).update(
-              Array.from({ length: scale }, () => ticks).join(" "),
-              { streaming: false },
-            )
-            expect(f2.blocks).toHaveLength(1)
-          },
-          // 1 and 4 are too short for the fixed cost of a sample to disappear from the ratio; 8 and 32 are not. The
-          // 60 s budget below only catches a catastrophic regression.
-          8,
-          32,
-        ),
-      ).toBeLessThan(ratioLimit)
+      for (const scale of [8, 32]) {
+        for (const unit of [emph, mismatchedHeal]) {
+          const source = Array(scale).fill(unit).join("\n\n")
+          const streaming = unit === mismatchedHeal
+          const reads = charsRead(() => {
+            const frame = createMarkdownStream({ renderHtml: !streaming }).update(source, { streaming })
+            expect(frame.blocks).toHaveLength(scale)
+          })
+          expect(reads / source.length).toBeLessThan(6)
+        }
+        // The inline parser indexes backticks using regexp matches rather than charCodeAt.
+        // Repeatedly searching the suffix for each unmatched opener would revisit many runs.
+        const source = Array(scale).fill(ticks).join(" ")
+        let matches = 0
+        const exec = RegExp.prototype.exec
+        RegExp.prototype.exec = function (text) {
+          const match = exec.call(this, text)
+          if (match?.[0][0] === "`") matches++
+          return match
+        }
+        try {
+          const frame = createMarkdownStream({ renderHtml: true }).update(source, { streaming: false })
+          expect(frame.blocks).toHaveLength(1)
+        } finally {
+          RegExp.prototype.exec = exec
+        }
+        expect(matches).toBeLessThan(500 * scale * 4)
+      }
     },
     60_000,
   )
