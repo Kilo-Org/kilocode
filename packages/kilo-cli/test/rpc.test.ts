@@ -347,7 +347,14 @@ test(
       expect(await gateway.rpc.authStatus({}, gateway.options)).toMatchObject({ authenticated: true, organizationID: null })
       profileReady.resolve()
       await until(() => gateway.syncOrganizations.includes("selected"), "automatic organization enrollment reaches the peer")
-      expect(await gateway.rpc.authStatus({}, gateway.options)).toMatchObject({ authenticated: true, organizationID: "selected" })
+      // Catalog resolution settles after the enrollment reaches the peer, so authStatus reads null for a while.
+      expect(
+        await eventually(
+          () => gateway.rpc.authStatus({}, gateway.options),
+          (status) => status.organizationID === "selected",
+          "authStatus reports the resolved organization",
+        ),
+      ).toMatchObject({ authenticated: true, organizationID: "selected" })
       const directory = gateway.options.location.directory
       const status = await gateway.sync.status({ directory }, gateway.options)
       expect(status).toMatchObject({ enabled: true, tenant: { type: "organization", id: "selected" } })

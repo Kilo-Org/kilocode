@@ -126,6 +126,9 @@ describe("kilocode.background-jobs", () => {
       yield* env.until((list) => list[0]?.status === "cancelled")
       yield* gate.release
     }),
+    // A real session, plugin activation and two tool calls: the setup dominates, and it took 5.4 s on a loaded CI
+    // runner against bun's 5 s default. Every assertion above still decides the result.
+    20_000,
   )
 
   it.live("lists the background job of a subagent call without a background field", () =>

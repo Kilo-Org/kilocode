@@ -1,15 +1,14 @@
 import { CrossSpawnSpawner } from "@opencode/util/cross-spawn-spawner"
 import { LayerNode } from "@opencode/util/effect/layer-node"
-import { Deferred, Effect, Schema, Stream } from "effect"
+import { Effect } from "effect" // kilocode_change(startup)
+import { privateLease } from "../kilocode/private-lease" // kilocode_change(startup)
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { randomBytes } from "node:crypto"
 import { selfCommand } from "../util/process"
 
-const Ready = Schema.Struct({ url: Schema.String })
-const decodeReady = Schema.decodeUnknownPromise(Schema.fromJsonString(Ready))
-
 type Options = {
   readonly command?: ReadonlyArray<string>
+  readonly earlyLease?: boolean // kilocode_change(startup) - only a TUI that gates API reads opts in
 }
 
 const startupDirectory = process.cwd()
@@ -21,7 +20,7 @@ function command(password: string, options: Options) {
     cwd: startupDirectory,
     // Explicit entry wins over anything inherited, so a user-exported
     // OPENCODE_PASSWORD cannot shadow the child's lease credential.
-    env: { OPENCODE_PASSWORD: password },
+    env: { OPENCODE_PASSWORD: password, OPENCODE_PRIVATE_TUI_LEASE: options.earlyLease ? "1" : "0" }, // kilocode_change(startup)
     extendEnv: true,
     // The server treats EOF on this pipe as the end of its ownership lease.
     // The OS closes it even when the TUI is killed before Effect finalizers run.
@@ -37,19 +36,9 @@ const makeEndpoint = Effect.fn("cli.standalone.endpoint")(
     const password = randomBytes(32).toString("base64url")
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const proc = yield* spawner.spawn(command(password, options))
-    const readyLine = yield* Deferred.make<string, Error>()
-    // Keep draining stdout after readiness so later server writes cannot hit EPIPE.
-    yield* proc.stdout.pipe(
-      Stream.decodeText(),
-      Stream.splitLines,
-      Stream.runForEach((line) => Deferred.succeed(readyLine, line)),
-      Effect.ensuring(Deferred.fail(readyLine, new Error("Standalone server exited before reporting readiness"))),
-      Effect.forkScoped,
-    )
-    const output = yield* Deferred.await(readyLine)
-    const ready = yield* Effect.tryPromise(() => decodeReady(output))
+    const lease = yield* privateLease(proc.stdout, options.earlyLease) // kilocode_change(startup) - drain stdout and separate bound from ready
     return {
-      url: ready.url,
+      ...lease, // kilocode_change(startup)
       auth: { type: "basic" as const, username: "opencode", password },
       pid: proc.pid,
       exited: proc.exitCode,

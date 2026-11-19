@@ -20,7 +20,11 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       api: () => withMediaRefs(client.api),
       event: client.event,
       connection: client.connection,
-      directory: props.directory,
+      // kilocode_change start - startup
+      get directory() {
+        return props.directory
+      // kilocode_change end
+      }, // kilocode_change(startup) - server-confirmed initial directory
       // Live tool events carry screenshots as inline base64, which open tabs would otherwise hold for the whole run.
       // Read per event, so toggling previews applies to new results without a restart.
       omitToolFileData: () => !config.data.session?.image_preview,

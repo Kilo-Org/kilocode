@@ -21,6 +21,7 @@ export default Runtime.handler(Commands, (input) =>
     const requestedDirectory = Option.getOrUndefined(input.directory)
     const requestedServer = Option.getOrUndefined(input.server)
     if (requestedDirectory !== undefined) process.chdir(requestedDirectory)
+    let handoff = false // kilocode_change(startup) - an active update owns the terminal
     const preflight = UpdatePreflight.make()
     yield* Effect.addFinalizer(() => Effect.promise(() => preflight.close()))
     const serviceStarts = yield* Queue.unbounded<{
@@ -35,10 +36,11 @@ export default Runtime.handler(Commands, (input) =>
     const server = yield* ServerConnection.resolve({
       server: requestedServer,
       standalone: input.standalone,
+      earlyLease: process.env.OPENCODE_TUI_OVERLAP_STARTUP === "1" && input.standalone && !input.continue && Option.isNone(input.session), // kilocode_change(startup)
       mismatch: "replace",
       onStart: (reason, previousVersion) => {
         Queue.offerUnsafe(serviceStarts, { reason, previousVersion })
-        if (reason === "version-mismatch" && preflight.begin(previousVersion)) return
+        if (reason === "version-mismatch" && (handoff = preflight.begin(previousVersion)) /* kilocode_change(startup) */) return
         process.stderr.write(
           reason === "version-mismatch"
             ? "Restarting background server (version mismatch)...\n"
@@ -102,6 +104,7 @@ export default Runtime.handler(Commands, (input) =>
       },
       server: {
         endpoint: server.endpoint,
+        whenReady: "whenReady" in server ? server.whenReady : undefined, // kilocode_change(startup)
         // Managed and standalone servers run here; an explicit --server may be on another machine.
         local: requestedServer === undefined,
         service: service
@@ -144,7 +147,7 @@ export default Runtime.handler(Commands, (input) =>
         prepare: (spec, install = true) => runPromise(install ? npm.add(spec) : npm.resolve(spec)),
       },
       environment: requestedServer === undefined ? Env.session() : undefined,
-      terminalHandoff: () => preflight.finish(),
+      terminalHandoff: handoff ? () => preflight.finish() : undefined, // kilocode_change(startup)
       log: (level, message, tags) => {
         const effect =
           level === "debug"

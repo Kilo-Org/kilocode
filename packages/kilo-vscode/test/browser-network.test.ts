@@ -1,10 +1,8 @@
 import { expect, test } from "bun:test"
-import { chromiumProbe, executable } from "./fixtures/chromium"
+import { executable } from "./fixtures/chromium"
 import { node } from "./fixtures/node"
 
-const probe = executable ? await chromiumProbe() : ({ state: "missing" } as const)
-
-test.skipIf(probe.state !== "ready")(
+test.skipIf(!executable)(
   "browser network Chromium checks run in the extension host's Node runtime",
   async () => {
     const result = await node("browser-network", {
@@ -20,7 +18,3 @@ test.skipIf(probe.state !== "ready")(
   },
   190_000,
 )
-
-test.skipIf(probe.state !== "failed")("browser network Chromium launches", () => {
-  if (probe.state === "failed") expect.unreachable(probe.reason)
-})

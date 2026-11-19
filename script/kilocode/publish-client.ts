@@ -25,7 +25,8 @@
 // release-env copies KILO_VERSION to OPENCODE_VERSION, which `@opencode/script` reads, so it is imported first.
 import "./release-env"
 import { $ } from "bun"
-import { mkdtemp, rm } from "node:fs/promises"
+import { constants } from "node:fs"
+import { copyFile, mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { Script } from "@opencode/script"
@@ -53,12 +54,17 @@ async function publish(name: string) {
   const pkg: ClientManifest.Manifest = JSON.parse(original)
   const target = ClientManifest.kilo(pkg.name)
   await $`bun run build`.cwd(dir)
+  const license = path.join(dir, "LICENSE")
+  await copyFile(path.join(root, "LICENSE"), license, constants.COPYFILE_EXCL)
   try {
     await Bun.write(file, JSON.stringify(ClientManifest.manifest(pkg, name, Script.version), null, 2) + "\n")
     const destination = path.join(out, name)
     await $`bun pm pack --quiet --destination ${destination}`.cwd(dir)
     const tarball = Array.from(new Bun.Glob("*.tgz").scanSync({ cwd: destination, absolute: true }))[0]
     if (!tarball) throw new Error(`bun pm pack did not write a tarball for ${target}`)
+    const notice = (await $`tar -xOf ${tarball} package/LICENSE`.quiet()).text()
+    if (notice !== (await Bun.file(license).text()))
+      throw new Error(`${target} does not include the repository MIT license`)
     if (dryRun) {
       await $`npm publish ${tarball} --dry-run --access public --tag ${tag}`
       return
@@ -70,6 +76,6 @@ async function publish(name: string) {
     }
     await $`npm publish ${tarball} --access public --tag ${tag}`
   } finally {
-    await Bun.write(file, original)
+    await Promise.all([Bun.write(file, original), rm(license)])
   }
 }

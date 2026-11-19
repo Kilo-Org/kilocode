@@ -46,6 +46,8 @@ export function translate(env: Record<string, string | undefined>) {
     const value = env[`KILO2_${name}`]
     if (value !== undefined) env[`OPENCODE_${name}`] = value
   }
+  env.OPENCODE_TUI_USE_PINNED_MODE ??= "1"
+  env.OPENCODE_TUI_OVERLAP_STARTUP ??= "1"
 }
 
 /**

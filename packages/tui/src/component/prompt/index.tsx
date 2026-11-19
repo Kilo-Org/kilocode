@@ -76,6 +76,7 @@ export type PromptProps = {
   sessionID?: string
   visible?: boolean
   disabled?: boolean
+  pendingSubmit?: string // kilocode_change(startup) - edit normally until submission is available
   muted?: boolean
   onSubmit?: () => void
   onEmptySubmit?: () => boolean | Promise<boolean>
@@ -1147,6 +1148,12 @@ export function Prompt(props: PromptProps) {
       await slash.command.run(slash.input)
       return true
     }
+    // kilocode_change start - startup: local exit and registered commands remain usable during hydration.
+    if (props.pendingSubmit) {
+      toast.show({ message: props.pendingSubmit, variant: "info" })
+      return false
+    }
+    // kilocode_change end
     const slashHead = parseSlashHead(inputText, /\s/)
     const isCommand =
       slashHead !== undefined &&
@@ -1533,6 +1540,7 @@ export function Prompt(props: PromptProps) {
 
   // Keep the last resolved prompt display visible while destination catalogs load;
   // availability and submission still use the live location-scoped catalog.
+  const progressive = !props.sessionID && process.env.OPENCODE_TUI_OVERLAP_STARTUP === "1" // kilocode_change(startup)
   const promptDisplay = createMemo<{
     agentLabel: string | undefined
     agentColor: RGBA | undefined
@@ -1548,6 +1556,12 @@ export function Prompt(props: PromptProps) {
       const loading = data.location.agent.list(location) === undefined || !local.model.catalogReady
       const error = currentLocation.error
       const failed = error && locationKey(error.location) === locationKey(location)
+      // kilocode_change start - startup: show the first confirmed Home mode without waiting for its model.
+      if (progressive && loading && !failed && !previous.modelLabel) {
+        const agent = local.agent.current()
+        if (agent) return { ...previous, agentLabel: Locale.titlecase(agent.id), agentColor: local.agent.color(agent.id) }
+      }
+      // kilocode_change end
       if (loading && !failed) return previous
 
       const agent = local.agent.current()
@@ -1563,7 +1577,7 @@ export function Prompt(props: PromptProps) {
     {
       agentLabel: undefined,
       agentColor: undefined,
-      modelLabel: local.model.parsed().model,
+      modelLabel: progressive ? "" : local.model.parsed().model, // kilocode_change(startup)
       providerLabel: local.model.parsed().provider,
       variant: undefined,
     },

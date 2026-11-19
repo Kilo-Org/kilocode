@@ -4,6 +4,7 @@ import { Logo } from "../component/logo"
 import { useArgs } from "../context/args"
 import { useRouteData } from "../context/route"
 import { usePromptRef } from "../context/prompt"
+import { usePendingSubmission } from "../kilocode/pending-submission" // kilocode_change(startup)
 import { useLocal } from "../context/local"
 import { useEditorContext } from "../context/editor"
 import { useData } from "../context/data"
@@ -36,6 +37,7 @@ export function Home() {
   // Global MCP elicitations can arrive without a session route, so keep them reachable from Home.
   const currentLocation = () => route.location ?? data.location.default()
   const forms = createMemo(() => data.session.form.list("global", currentLocation()) ?? [])
+  const pending = usePendingSubmission(currentLocation) // kilocode_change(startup)
   let sent = false
 
   // Track only the route location and (when absent) the default location; location.set
@@ -69,6 +71,7 @@ export function Home() {
   createEffect(() => {
     const r = ref()
     if (sent) return
+    if (pending() || forms().length) return // kilocode_change(startup)
     if (!r) return
     if (!local.model.ready || !local.model.catalogReady) return
     if (!local.agent.current() || !local.model.current()) return
@@ -99,7 +102,7 @@ export function Home() {
         <box height={1} flexShrink={0} />
         <UpdateNotification width={logoWidth()} />
         <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1} flexShrink={0} position="relative">
-          <Prompt ref={bind} placeholders={placeholder} disabled={forms().length > 0} />
+          <Prompt ref={bind} placeholders={placeholder} disabled={forms().length > 0} pendingSubmit={pending()} /* kilocode_change(startup) */ />
         </box>
         <Slot path="home.bottom" /* kilocode_change(gateway) seam - plugin slot below the home prompt */ />
         <box flexGrow={1} minHeight={0} />

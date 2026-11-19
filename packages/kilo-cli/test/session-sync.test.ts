@@ -43,6 +43,7 @@ import { Store } from "../src/session-sync/store"
 import { Assets } from "../src/session-sync/assets"
 import { SessionSyncOutput } from "../src/session-sync/tool-output"
 import {
+  type Change,
   type Receipt,
   type Tenant,
   Kind,
@@ -3298,6 +3299,209 @@ for (const partType of ["text", "reasoning", "tool"] as const)
       }),
     60_000,
   )
+
+const packetFixture = Effect.gen(function* () {
+  const f = yield* fixture
+  const s = yield* boot(f)
+  yield* signIn(s.credentials)
+  yield* seed(s.db, f.directory)
+  yield* allow(s.db, f.directory, f.backend)
+  expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
+  const initial = readPacket(f.backend.bodies.pop()!)
+  return { ...f, ...s, after: initial.through, sourceID: initial.sourceID }
+})
+
+const packetPut = (id: string, value: Schema.Json) => ({ op: "put", kind: "message", id, value }) as const
+const packetRemove = (id: string) => ({ op: "remove", kind: "message", id, cause: "revert" }) as const
+
+// Stage captured rows directly so exact boundary sizing is independent of native trigger encoding.
+const stagePacketRows = (
+  f: Effect.Success<typeof packetFixture>,
+  rows: readonly (ReturnType<typeof packetPut> | ReturnType<typeof packetRemove>)[],
+) => Effect.gen(function* () {
+  for (const [index, row] of [...rows.entries()].reverse())
+    yield* f.db.run(sql`INSERT INTO _kilo_sync_dirty(session_id,kind,id,position,op,value,cause)
+      VALUES(${id},${row.kind},${row.id},${f.after + index + 1},${row.op},
+        ${row.op === "put" ? JSON.stringify(row.value) : null},${row.op === "remove" ? row.cause : null})`)
+  yield* f.db.run(sql`UPDATE _kilo_sync_session SET position=${f.after + rows.length} WHERE id=${id}`)
+})
+
+function expectPacketBody(
+  f: Effect.Success<typeof packetFixture>,
+  index: number,
+  from: number,
+  count: number,
+  changes: readonly Change[],
+) {
+  const body = f.backend.bodies[index]!
+  expect(body).toBe(JSON.stringify({
+    version: 1,
+    sourceID: f.sourceID,
+    batchID: readPacket(body).batchID,
+    after: f.after + from,
+    through: f.after + from + count,
+    changes,
+  }))
+}
+
+for (const [boundary, offset] of [["below", -1], ["at", 0], ["above", 1]] as const) {
+  it.live(`packet limits: UTF-8 bytes ${boundary} the 520192-byte changes budget`, () =>
+    Effect.gen(function* () {
+      const f = yield* packetFixture
+      const prefix = Array.from({ length: 8 }, (_, i) => packetPut(`msg_bytes_${i}`, "é".repeat(32_000)))
+      const entityID = "msg_bytes_asset"
+      const pointer = "/message/files/0"
+      const blob = { hash: digest("x"), bytes: 1 }
+      const asset = {
+        op: "put", kind: "asset", id: digest(`message:${entityID}:${pointer}`),
+        value: { entity: { kind: "message", id: entityID }, pointer, reference: "inline", blob, mime: "text/plain" },
+      } as const
+      const last = (text: string) => packetPut(entityID, {
+        message: { type: "user", text, files: [{ mime: "text/plain", source: { type: "inline" }, data: "eA==" }] },
+      })
+      const padding = 520_192 + offset - Buffer.byteLength(JSON.stringify([...prefix, asset, last("")]))
+      const tail = last("x".repeat(padding))
+      const rows = [...prefix, tail]
+      const changes = [...prefix, asset, tail]
+      yield* stagePacketRows(f, rows)
+      expect(Buffer.byteLength(JSON.stringify(changes))).toBe(520_192 + offset)
+
+      if (offset > 0) {
+        // Stop after freezing the prefix to inspect the packet and the deferred blob reservation.
+        f.backend.control.mode = "offline"
+        expect(yield* f.sync.flush({ directory: f.directory })).toMatchObject({ pending: rows.length, error: { code: "internal_error" } })
+        expectPacketBody(f, 0, 0, prefix.length, prefix)
+        expect(yield* Store.packet(f.db, id)).toMatchObject({ body: f.backend.bodies[0], blobs: "[]" })
+        expect((yield* Store.dirty(f.db, id)).at(-1)).toMatchObject({ id: entityID, position: f.after + rows.length })
+        expect(Buffer.from(yield* Assets.read(f.global, id, blob)).toString()).toBe("x")
+        expect(f.backend.blobRequests).toEqual([])
+        f.backend.control.mode = "online"
+      }
+      expect((yield* f.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.blobRequests).toEqual([blob.hash])
+      if (offset > 0) {
+        expect(f.backend.bodies).toHaveLength(3)
+        expect(f.backend.bodies[1]).toBe(f.backend.bodies[0]!)
+        expectPacketBody(f, 2, prefix.length, 1, [asset, tail])
+      } else {
+        expect(f.backend.bodies).toHaveLength(1)
+        expectPacketBody(f, 0, 0, rows.length, changes)
+      }
+      expect(yield* Store.dirty(f.db, id)).toEqual([])
+    }),
+  )
+
+  it.live(`packet limits: aggregate JSON nodes ${boundary} the 32768-node budget with the envelope reserve`, () =>
+    Effect.gen(function* () {
+      const f = yield* packetFixture
+      const array = (length: number) => Array.from({ length }, () => 0)
+      const prefix = Array.from({ length: 4 }, (_, i) => packetPut(`msg_nodes_${i}`, array(8_000)))
+      const nodes = (changes: readonly Change[]) => jsonNodes(changes, 66, 40_000)!
+      const empty = packetPut("msg_nodes_tail", [])
+      // The changes-array root is replaced by a 128-node reserve in the producer's accounting.
+      const tail = packetPut(empty.id, array(32_641 + offset - nodes([...prefix, empty])))
+      const changes = [...prefix, tail]
+      yield* stagePacketRows(f, changes)
+      expect(nodes(changes)).toBe(32_641 + offset)
+      expect((yield* f.sync.flush({ directory: f.directory })).pending).toBe(0)
+      expect(f.backend.blobRequests).toEqual([])
+      expect(f.backend.bodies).toHaveLength(offset > 0 ? 2 : 1)
+      if (offset > 0) {
+        expectPacketBody(f, 0, 0, prefix.length, prefix)
+        expectPacketBody(f, 1, prefix.length, 1, [tail])
+      } else {
+        expectPacketBody(f, 0, 0, changes.length, changes)
+      }
+    }),
+  )
+}
+
+const stageAssetInventory = (db: Store.DB, entityID: string, count: number) => Effect.gen(function* () {
+  const ids = Array.from({ length: count }, (_, i) => `asset_${String(i).padStart(2, "0")}`)
+  for (const assetID of ids.toReversed())
+    yield* db.run(sql`INSERT INTO _kilo_sync_asset_mapping(session_id,id,kind,entity_id)
+      VALUES(${id},${assetID},'message',${entityID})`)
+  return ids
+})
+
+for (const [count, prefix] of [[63, false], [64, false], [65, false], [64, true], [65, true]] as const) {
+  it.live(`packet limits: ${count} removals as one group ${prefix ? "after a put" : "in an empty packet"}`, () =>
+    Effect.gen(function* () {
+      const f = yield* packetFixture
+      const remove = packetRemove("msg_remove")
+      const put = packetPut("msg_prefix", "before removal")
+      const assets = yield* stageAssetInventory(f.db, remove.id, count - 1)
+      const removals: Change[] = [
+        ...assets.map((id) => ({ op: "remove", kind: "asset", id, cause: "revert" }) as const),
+        remove,
+      ]
+      yield* stagePacketRows(f, prefix ? [put, remove] : [remove])
+      const dirty = yield* Store.dirty(f.db, id)
+      const status = yield* f.sync.flush({ directory: f.directory })
+      if (count > 64) {
+        expect(status).toMatchObject({
+          pending: 1,
+          error: { code: "packet_too_large", message: "One portable removal exceeds the service packet limit" },
+        })
+        expect(f.backend.bodies).toHaveLength(Number(prefix))
+        if (prefix) expectPacketBody(f, 0, 0, 1, [put])
+        expect(yield* Store.packet(f.db, id)).toBeUndefined()
+        expect(yield* Store.dirty(f.db, id)).toEqual(dirty.slice(Number(prefix)))
+        expect(yield* f.db.all(sql`SELECT id FROM _kilo_sync_asset_mapping WHERE session_id=${id} ORDER BY id`)).toEqual(
+          assets.map((id) => ({ id })),
+        )
+        return
+      }
+      expect(status.pending).toBe(0)
+      expect(f.backend.bodies).toHaveLength(prefix ? 2 : 1)
+      if (prefix) expectPacketBody(f, 0, 0, 1, [put])
+      expectPacketBody(f, Number(prefix), Number(prefix), 1, removals)
+      expect(yield* f.db.all(sql`SELECT id FROM _kilo_sync_asset_mapping WHERE session_id=${id}`)).toEqual([])
+    }),
+  )
+}
+
+it.live("packet limits: a put with more than 64 changes fails even after a valid prefix", () =>
+  Effect.gen(function* () {
+    const f = yield* packetFixture
+    const put = packetPut("msg_replace_assets", "no remaining assets")
+    yield* stageAssetInventory(f.db, put.id, 64)
+    yield* stagePacketRows(f, [packetPut("msg_prefix", "not frozen"), put])
+    const dirty = yield* Store.dirty(f.db, id)
+    expect(yield* f.sync.flush({ directory: f.directory })).toMatchObject({
+      pending: 2,
+      error: { code: "asset_limit", message: "One native entity requires more assets than the service packet limit" },
+    })
+    expect(f.backend.bodies).toEqual([])
+    expect(yield* Store.packet(f.db, id)).toBeUndefined()
+    expect(yield* Store.dirty(f.db, id)).toEqual(dirty)
+    expect(yield* f.db.all(sql`SELECT id FROM _kilo_sync_asset_mapping WHERE session_id=${id}`)).toHaveLength(64)
+  }),
+)
+
+it.live("packet limits: an oversized first put retains its dirty value and spooled assets without freezing", () =>
+  Effect.gen(function* () {
+    const f = yield* packetFixture
+    const put = packetPut("msg_oversized_mapping", {
+      message: { type: "user", files: [{ mime: "text/plain", source: { type: "inline" }, data: "eA==", name: "é".repeat(260_096) }] },
+    })
+    yield* stagePacketRows(f, [put])
+    const dirty = yield* Store.dirty(f.db, id)
+    expect(yield* f.sync.flush({ directory: f.directory })).toMatchObject({
+      pending: 1,
+      error: { code: "packet_too_large", message: "One portable entity and its asset mappings exceed the service packet limit" },
+    })
+    expect(f.backend.bodies).toEqual([])
+    expect(f.backend.blobRequests).toEqual([])
+    expect(yield* Store.packet(f.db, id)).toBeUndefined()
+    expect(yield* Store.dirty(f.db, id)).toEqual(dirty)
+    expect(yield* f.db.all(sql`SELECT id FROM _kilo_sync_asset_mapping WHERE session_id=${id}`)).toEqual([])
+    const value = JSON.stringify(put.value)
+    const body = { hash: digest(value), bytes: Buffer.byteLength(value) }
+    expect(Buffer.from(yield* Assets.read(f.global, id, body)).toString()).toBe(value)
+    expect(Buffer.from(yield* Assets.read(f.global, id, { hash: digest("x"), bytes: 1 })).toString()).toBe("x")
+  }),
+)
 
 it.live("producer externalizes node-heavy and deep values and splits aggregate JSON nodes below the byte limit", () =>
   Effect.gen(function* () {

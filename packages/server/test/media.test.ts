@@ -278,6 +278,11 @@ it.live("serves stored media as refs only to clients that opt in while experimen
       })
     })
   }).pipe(Effect.scoped),
+  // kilocode_change start
+  // A real database import plus three round trips through the SDK: about 1.3 s idle and 5.6 s on a loaded CI runner,
+  // above bun's 5 s default. A wrong payload still fails the assertions.
+  20_000,
+  // kilocode_change end
 )
 
 it.live("follows experimental.media_blob from the session's project config and serves only referenced blobs", () =>

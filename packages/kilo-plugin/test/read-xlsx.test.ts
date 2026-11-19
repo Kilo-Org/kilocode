@@ -125,6 +125,9 @@ describe("kilo XLSX reads", () => {
         expect(result.output).toContain("After blank row")
       }),
     ),
+    // SheetJS writes the workbook in-process and the read parses it back. That is CPU work: about 0.35 s idle and up
+    // to 5.9 s on a loaded CI runner, above bun's 5 s default. The extracted cells still decide the result.
+    20_000,
   )
 
   it.live("reads date cells as ISO dates with their time of day", () =>
@@ -208,6 +211,9 @@ describe("kilo XLSX reads", () => {
         expect(result.output).toContain("[... truncated at row 50000 ...]")
       }),
     ),
+    // Writing and reading 50,001 rows is the heaviest spreadsheet path: about 0.66 s idle and up to 5.9 s on a loaded
+    // CI runner, above bun's 5 s default. The extracted rows still decide the result.
+    20_000,
   )
 
   it.live("applies ordinary read line limits to spreadsheet text", () =>
@@ -439,6 +445,9 @@ describe("kilo ODS reads", () => {
         expect(result.output).toContain("[... truncated at row 50000 ...]")
       }),
     ),
+    // The ODS writer is slower than the XLSX one: about 0.84 s idle and up to 5.9 s on a loaded CI runner, above bun's
+    // 5 s default. The extracted rows still decide the result.
+    20_000,
   )
 
   it.live("applies ordinary read line limits to spreadsheet text in ODS files", () =>

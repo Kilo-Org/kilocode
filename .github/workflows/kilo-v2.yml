@@ -523,9 +523,18 @@ jobs:
         working-directory: packages/kilo-vscode
         run: bun run knip
 
+      # BrowserStream inspects isolated-world listeners through CDP; use full Chromium, not the headless shell.
+      - name: Install Chromium for the VS Code browser tests
+        working-directory: packages/kilo-vscode
+        run: bun run playwright-core install --with-deps --no-shell chromium
+
       - name: Test the VS Code extension
         working-directory: packages/kilo-vscode
-        run: bun test
+        run: CHROME_PATH=$(node -p 'require("playwright-core").chromium.executablePath()') bun test
+
+      - name: Test VS Code webview accessibility
+        working-directory: packages/kilo-vscode
+        run: bun run test:accessibility
 
       # Fails when Kilo plugin activation grows past packages/kilo-cli/startup-budget.json (#15244).
       - name: Startup ratchet

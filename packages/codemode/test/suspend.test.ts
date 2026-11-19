@@ -222,6 +222,11 @@ describe("synchronous host calls", () => {
       const resumed = await Effect.runPromise(background(runtime.resume(CodeMode.toBytes(suspended.state))).result)
       expect(resumed).toMatchObject({ ok: true, value: 200000 })
     },
+    // kilocode_change start
+    // 200,000 host round trips: 5.31 s on a loaded CI runner, above bun's 5 s default. The suspension assertions still
+    // decide the result.
+    20_000,
+    // kilocode_change end
   )
 
   test("a loop of sync extension calls is interrupted by the timeout", async () => {

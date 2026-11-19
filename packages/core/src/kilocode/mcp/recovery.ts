@@ -4,6 +4,7 @@ import { McpEvent } from "@opencode/schema/mcp-event"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { httpFetch } from "@opencode/util/effect/app-node-platform"
 import { Clock, Effect, FiberMap, Layer, Stream } from "effect"
+import { realpath } from "node:fs/promises"
 import { Bus } from "../../bus.js"
 import { Credential } from "../../credential.js"
 import { Environment } from "../../environment/index.js"
@@ -13,6 +14,31 @@ import { Integration } from "../../integration.js"
 import { Location } from "../../location.js"
 import { Mcp } from "../../mcp/index.js"
 import { McpPool } from "../../mcp/pool.js"
+
+// Session and Location paths are durable identities. Only the opt-in local MCP pool needs
+// the physical cwd: two spellings of the same checkout start the same child process there.
+const localPool = Layer.effect(
+  McpPool.Service,
+  Effect.gen(function* () {
+    const pool = yield* McpPool.Service
+    return McpPool.Service.of({
+      connection(input) {
+        const config = input.config
+        if (config.type !== "local") return pool.connection(input)
+        return pool.connection({
+          ...input,
+          select: Effect.gen(function* () {
+            const selected = yield* input.select
+            const { McpStdio } = yield* Effect.promise(() => import("../../mcp/stdio.js"))
+            const cwd = McpStdio.resolveCwd(input.directory, config.cwd)
+            const physical = yield* Effect.promise(() => realpath(cwd).catch(() => cwd))
+            return physical === cwd ? selected : { ...selected, key: McpPool.key({ ...input, cwd: physical }) }
+          }),
+        })
+      },
+    })
+  }),
+)
 
 // Upstream leaves a server that failed, or whose live connection closed, failed until someone reconnects it
 // by hand (anomalyco/opencode#52237), so a DNS or VPN outage at startup or after sleep strands it for the life of
@@ -27,7 +53,7 @@ export const STABLE_MS = 30_000
 export const configured = (options?: Mcp.Options) =>
   makeLocationNode({
     service: Mcp.Service,
-    layer: layer(Mcp.layer(options)),
+    layer: layer(Mcp.layer(options).pipe(Layer.provide(localPool))),
     deps: [
       Location.node,
       Environment.node,

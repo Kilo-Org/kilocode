@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 145,
-    "markedLines": 2590,
-    "unmarkedLines": 386,
+    "files": 162,
+    "markedLines": 2932,
+    "unmarkedLines": 387,
     "deletedFiles": 0
   },
   "files": {
@@ -59,6 +59,11 @@
     "CONTRIBUTING.md": {
       "rung": 4,
       "seam": "Development setup names the exact Bun version from `packageManager` (3 lines). Documentation for contributors of this repository; `bun run build` and `install:alpha` fail on another Bun version. No seam: the contributor guide is a single upstream-owned file and has no Kilo-owned equivalent that GitHub shows. Goes away when the Kilo docs replace CONTRIBUTING.md."
+    },
+    "LICENSE": {
+      "rung": 4,
+      "seam": "The repository license must include the Kilo copyright notice alongside OpenCode's. Neither a runtime hook nor a host or build override can put that notice in copies of the source tree.",
+      "unmarked": "The MIT license is plain text; retain the exact copyright notice without adding a tooling annotation."
     },
     "README.md": {
       "rung": 4,
@@ -540,7 +545,7 @@
     },
     "packages/patchmark/test/slow-inputs.test.ts": {
       "rung": 4,
-      "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4)."
+      "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4). The slow-input linear-time bounds are also Kilo's: they compare one shape at two sizes instead of timing a fixed input, and the blockquote shape counts characters read through `charCodeAt` because a wall-clock ratio there measures the collector. The 58 marked lines this file adds raise only the markedLines budget from 2773 to 2831 (53 for the bounds, 5 for the streamed-table split and the wording fixes that followed review); file, unmarked-line and deletion budgets are unchanged."
     },
     "packages/server/test/artifact.test.ts": {
       "rung": 4,
@@ -549,6 +554,10 @@
     "packages/server/test/fetch.test.ts": {
       "rung": 4,
       "seam": "Test timing only, Kilo CI stability: the OpenAI OAuth tests wait up to 15 s instead of 2 s for the `chatgpt-browser` method to appear in `/api/integration` (the pending-requests test gets the same 15 s for its identical wait on the build agent's permission policy), and the file uses `setDefaultTimeout(30_000)` (the 'both ports busy' test goes from 10 s to 30 s) so bun's deadline stays above that wait plus the fixed 2 s or 3.6 s port retries in `listen`. The wait covers plugin activation of a cold Location: about 0.3 s on macOS and more than 2 s on the Windows `packages` leg, where the Kilo host suite runs beside three package suites on four vCPUs. The 10 ms retry cadence is unchanged, so a passing run returns as soon as the method appears. No assertion and no product code changes; the production `/cancel` probe keeps its 2 s abort. Rung 4: the deadlines are literals inside the upstream test file, and no seam reaches them from Kilo code."
+    },
+    "packages/server/test/vcs.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only: the review-base VCS test uses the existing in-process route fixture to await Location plugin activation before sending real requests through the VCS handlers. This replaces the two-second readiness poll that failed on Windows and preserves the base, committed diff and error assertions. No production changes. Plugin hooks and host composition cannot synchronize the upstream test's private fixture setup."
     },
     "packages/core/src/session.ts": {
       "rung": 3,
@@ -601,6 +610,66 @@
     "packages/core/test/subagent-idle-e2e.test.ts": {
       "rung": 4,
       "seam": "The scripted model calls the real shell tool, whose `description` input Kilo makes required (see packages/core/src/tool/plugin/shell.ts), so each fixture call passes one. These fixtures are new in upstream v2.3.0, after the shell-description change updated the existing ones. No seam: the fixture is the model output the test asserts on."
+    },
+    "packages/client/test/fixture/service-timing.ts": {
+      "rung": 3,
+      "seam": "The shared service-timing fixture's `accelerate` takes an optional overrides object, so one probe can use a budget other than the accelerated 100 ms. A health probe is not a speed knob: at 100 ms a busy runner made a healthy replacement look unresponsive. Calls that pass no overrides behave exactly as before. No seam: the helper that wraps `Service.ensure`/`Service.stop` is a literal in the shared fixture, and only the caller that needs a longer probe can ask for it."
+    },
+    "packages/client/test/promise-service.test.ts": {
+      "rung": 4,
+      "seam": "Kilo CI stability: the handoff-recovery test probes the replacement with a 2 s health probe (`ensureReplacement`) instead of the accelerated 100 ms one. At 100 ms a loaded runner made a healthy replacement look unresponsive, recovery recruited a second contender that cannot adopt the single-use handoff, and the fixture was overwritten with a handoff it never received. The assertion is unchanged; only the probe budget is. No seam: the timing fixture is shared, and the test's own call site is the only place that can bound its probe (inline patch, option 4)."
+    },
+    "packages/codemode/test/suspend.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the suspend/resume test over 200,000 host round trips gets a 20 s budget (5.31 s on a loaded CI runner). The suspension assertions still decide the result. No seam: bun's per-test deadline is the test's third argument inside an upstream test file (inline patch, option 4)."
+    },
+    "packages/merman/src/state/diagram.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the oversized-horizontal-canvas test gets a 90 s budget. Layout work for 300 labelled transitions takes about 11.8 s idle and 44.9 s on a loaded CI runner, above the 30 s that the package's shared `test` script passes to bun. A wrong width still fails the existing assertions. No seam: the deadline is the test's third argument, and the package's `test` script sets one default for every file it runs (inline patch, option 4)."
+    },
+    "packages/patchmark/test/fuzz-differential.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the GFM differential test gets a 30 s budget. Both reference parsers run for every one of 2,000 cases, so the test is CPU bound: about 2.4 s idle and 7.4 s on a loaded CI runner against bun's 5 s default. The budget spans only the parser work, and a diff still fails the assertions. No seam: the deadline is the test's third argument inside an upstream test file (inline patch, option 4)."
+    },
+    "packages/sdk/test/instances-lifecycle.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the cancelled-borrower lifecycle test gets a 20 s budget. Building the embedded host and its instance layer is measurable setup work that took 5.77 s on a loaded CI runner, above bun's 5 s default. The lifecycle assertions still decide the result. No seam: the deadline is the test's third argument inside an upstream test file (inline patch, option 4)."
+    },
+    "packages/server/test/media.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the experimental-media refs test gets a 20 s budget. A real database import plus three round trips through the SDK cost about 1.3 s idle and 5.6 s on a loaded CI runner, above bun's 5 s default. A wrong payload still fails the assertions. No seam: the deadline is the test's third argument inside an upstream test file (inline patch, option 4)."
+    },
+    "packages/server/test/worktree.test.ts": {
+      "rung": 4,
+      "seam": "The multi-clone refresh and ownership tests run real Git and boot multiple server locations. On Windows CI they hit Bun's five-second default. Use the adjacent integration tests' 30-second budget at those two call sites; all inventory and ownership assertions remain in place."
+    },
+    "packages/tui/src/component/prompt/index.tsx": {
+      "rung": 3,
+      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. On first Home render, reveal the confirmed agent label while the model catalog is pending."
+    },
+    "packages/tui/src/component/startup-loading.tsx": {
+      "rung": 3,
+      "seam": "Share the existing startup status copy with the Home submit-readiness feedback."
+    },
+    "packages/tui/src/context/data.tsx": {
+      "rung": 3,
+      "seam": "Forward the directory as an accessor so the existing store accepts the server-confirmed initial location without remounting the composer."
+    },
+    "packages/tui/src/context/location.tsx": {
+      "rung": 3,
+      "seam": "Expose the current location sync's terminal failure after retries to the early Home editor. Only a typed missing directory is a location-unavailable error for existing consumers."
+    },
+    "packages/tui/src/context/runtime.tsx": {
+      "rung": 3,
+      "seam": "Optional workspace readiness for an already mounted local Home. Server plugins cannot attach before the frontend is mounted."
+    },
+    "packages/cli/src/services/server-connection.ts": {
+      "rung": 3,
+      "seam": "Forward the optional private TUI lease and its readiness wait. Managed and remote connections retain their discovery and reconnect paths."
+    },
+    "packages/cli/src/services/standalone.ts": {
+      "rung": 4,
+      "seam": "An opted-in private TUI lease receives the real bound URL before route readiness, with a separate scoped readiness wait. Other stdio owners retain their original single ready line; a server plugin cannot change process negotiation."
     }
   }
 }
