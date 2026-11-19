@@ -42,7 +42,7 @@ Architecture pages cross two repositories:
 |---|---|---|
 | Local runtime and clients | Runs local coding sessions and connects editor surfaces to one local agent engine | Kilo CLI runtime, `kilo serve` server, local daemon, Kilo Console, VS Code extension, JetBrains plugin |
 | Kilo Cloud shared services | Handles hosted identity, authorization, model routing, billing, orchestration, and shared product services | Web control plane, Kilo Gateway, Workers, queues, Durable Objects, persistence |
-| Hosted product runtimes and automation | Runs scoped cloud work for coding, security analysis, and multi-agent orchestration | Cloud Agent, Automation Services, Security Agent |
+| Hosted product runtimes and automation | Runs scoped cloud work for coding and security analysis | Cloud Agent, Automation Services, Security Agent |
 
 Local execution and hosted execution are separate boundaries. Editor clients use a local `kilo serve` server. Hosted automation can launch Cloud Agent execution sessions when cloud coding work is required.
 
