@@ -302,19 +302,34 @@ export class ExtensionBackend implements BrowserBackend {
   private readonly stopped = new Set<string>()
   /** Screenshot files this backend wrote: a screenshot replaces one of these, never a file it did not write. */
   private readonly written = new Set<string>()
+  /**
+   * Every turn that was current when the user stopped this CLI's browser. Such a turn may not have opened a session
+   * yet, so no revoke names it; it is refused all the same, until the conversation's next turn. Halts accumulate: an
+   * open still in flight for an earlier stopped turn is judged by that turn after later stops. Turn numbers are unique
+   * per process, so an old halt never matches a new turn, and the set grows only with the user's own stops.
+   */
+  private readonly halted = new Set<number>()
   /** Set by `dispose()`: an evicted backend must not open a session for a call that was already in flight. */
   private disposed = false
 
-  constructor(private readonly input: { port?: BrowserHub.Port; directory: string }) {
+  constructor(
+    private readonly input: {
+      port?: BrowserHub.Port
+      directory: string
+      /** Each conversation's latest turn, numbered once per process: a new user message gets a new number. */
+      turns?: ReadonlyMap<string, number>
+    },
+  ) {
     this.off =
       input.port?.onRevoked((event) => {
+        for (const turn of input.turns?.values() ?? []) this.halted.add(turn)
         const session = this.sessions.get(event.sessionHandle)
         if (session === undefined) return
         this.sessions.delete(event.sessionHandle)
         this.handles.delete(session)
-        // Only the user's own decisions stop the conversation. A disconnect is the browser going away (a network drop,
-        // an extension reload): the handle is dropped and the next call reopens when the extension is back.
-        if (event.reason === "user_stop" || event.reason === "switch_off") this.stopped.add(session)
+        // Every revoke is the user's decision: Stop all, the switch, or Disconnect on this CLI. A dropped connection
+        // sends none; its calls fail as unavailable and the next call reopens once the extension is back.
+        this.stopped.add(session)
       }) ?? (() => {})
   }
 
@@ -333,9 +348,13 @@ export class ExtensionBackend implements BrowserBackend {
     return ctx.session ?? ""
   }
 
-  /** A conversation the user stopped is refused before any open, so no session starts behind their back. */
-  private refuse(session: string) {
-    if (this.stopped.has(session)) throw new Error(STOPPED)
+  /**
+   * A conversation the user stopped is refused before any open, so no session starts behind their back. `turn` is the
+   * turn the decision belongs to: an open that was in flight is judged by the turn that started it, which may have
+   * ended (and left `turns`) by the time the open answers.
+   */
+  private halts(session: string, turn: number | undefined) {
+    return this.stopped.has(session) || (turn !== undefined && this.halted.has(turn))
   }
 
   /** An evicted backend refuses a call that was still in flight instead of opening a session nothing will close. */
@@ -461,7 +480,7 @@ export class ExtensionBackend implements BrowserBackend {
     const port = this.input.port
     if (!port) throw new UnavailableError(HINT)
     const session = this.session(ctx)
-    this.refuse(session)
+    if (this.halts(session, this.input.turns?.get(session))) throw new Error(STOPPED)
     this.live()
     try {
       await this.accepts(name)
@@ -538,14 +557,21 @@ export class ExtensionBackend implements BrowserBackend {
     // one must not adopt its handle when it answers after the session was forgotten and reopened.
     const attempt = Promise.withResolvers<string>()
     this.handles.set(session, attempt.promise)
-    void this.open(port, session, attempt.promise).then(attempt.resolve, attempt.reject)
+    // The turn that starts the open owns it: a stop of that turn still applies when the open answers after it ended.
+    const turn = this.input.turns?.get(session)
+    void this.open(port, session, attempt.promise, turn).then(attempt.resolve, attempt.reject)
     attempt.promise.catch(() => {
       if (this.handles.get(session) === attempt.promise) this.handles.delete(session)
     })
     return attempt.promise
   }
 
-  private async open(port: BrowserHub.Port, session: string, attempt: Promise<string>): Promise<string> {
+  private async open(
+    port: BrowserHub.Port,
+    session: string,
+    attempt: Promise<string>,
+    turn: number | undefined,
+  ): Promise<string> {
     await this.ready(port)
     // Anything awaited above may have outlived the backend: never open a session from a released instance.
     this.live()
@@ -554,11 +580,12 @@ export class ExtensionBackend implements BrowserBackend {
       title: session || "Kilo agent",
       cwd: this.input.directory,
     })
-    // The session ended, or another attempt replaced this one, while the extension was still opening it: close the
-    // late handle instead of keeping it (or claiming the new attempt's session) alive.
-    if (this.handles.get(session) !== attempt) {
+    // The session ended, another attempt replaced this one, or the user stopped the turn while the extension was still
+    // opening it: close the late handle instead of keeping it (or claiming the new attempt's session) alive.
+    const superseded = this.handles.get(session) !== attempt
+    if (superseded || this.halts(session, turn)) {
       await port.close(opened.sessionHandle).catch(() => undefined)
-      throw new Error("The session ended before its browser session opened.")
+      throw new Error(superseded ? "The session ended before its browser session opened." : STOPPED)
     }
     this.sessions.set(opened.sessionHandle, session)
     return opened.sessionHandle
@@ -609,6 +636,6 @@ export class ExtensionBackend implements BrowserBackend {
   }
 }
 
-export function backend(input: { port?: BrowserHub.Port; directory: string }): ExtensionBackend {
+export function backend(input: ConstructorParameters<typeof ExtensionBackend>[0]): ExtensionBackend {
   return new ExtensionBackend(input)
 }
