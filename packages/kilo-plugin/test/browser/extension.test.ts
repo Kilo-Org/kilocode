@@ -286,6 +286,17 @@ describe("extension backend", () => {
     expect(await fs.readdir(outside)).toEqual([])
   })
 
+  test("a folder that cannot be resolved is a plain could-not-be-saved note, never an errno", async () => {
+    const directory = await workspace()
+    await fs.symlink(path.join(directory, "gone"), path.join(directory, "shots"))
+    const active = backend({ port: shot(Buffer.from("png")).port, directory })
+    const result = await active.callTool("browser_take_screenshot", { filename: "shots/a.png" }, ctx())
+    const note = result.content.at(-1)
+    expect(note).toMatchObject({ type: "text", text: expect.stringContaining("could not be saved") })
+    expect(JSON.stringify(note)).not.toMatch(/ENOENT|ELOOP|realpath/)
+    expect(result.content.some((block) => block.type === "image")).toBe(true)
+  })
+
   test("the written-file memory is bounded: the oldest name falls out and is then treated as foreign", async () => {
     const directory = await workspace()
     const active = backend({ port: shot(Buffer.from("png")).port, directory })
@@ -509,7 +520,11 @@ describe("extension backend", () => {
             message: "withheld",
             items: [{ class: "read", origin: "://" }],
             afterAction: true,
-            meta: { url: "about:blank", withheldFrames: ["https://ads.example.com"] },
+            meta: {
+              url: "about:blank",
+              withheldFrames: ["https://ads.example.com"],
+              needs: [{ class: "read", origin: "://" }],
+            },
           }),
         ),
     })

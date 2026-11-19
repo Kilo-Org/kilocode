@@ -355,6 +355,24 @@ describe("why no extension answers", () => {
     expect(attempts).toBe(2)
   })
 
+  test("a pairing page that never opens cannot hold the call past its own timeout", async () => {
+    const dir = await rundir()
+    await host(dir, false)
+    let attempts = 0
+    const { port } = linked(dir, {
+      pairAgain: 0,
+      // The first page opens; the second opener never exits, as a hung `xdg-open` would.
+      opener: () => (++attempts === 1 ? Promise.resolve() : Promise.withResolvers<void>().promise),
+    })
+    await refused(port, 200)
+    await until(() => (attempts === 1 ? true : undefined))
+    later()
+    // Within bun's 5 s test timeout: the call settles at its own 300 ms budget instead of waiting on the opener.
+    const { error } = await refused(port, 300)
+    expect(error.absence).toEqual({ kind: "unpaired" })
+    expect(attempts).toBe(2)
+  })
+
   test("an extension that went away is disconnected; a reconnect inside the window still answers", async () => {
     const dir = await rundir()
     const hub = await host(dir, true)

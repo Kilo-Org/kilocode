@@ -259,6 +259,9 @@ function screenshotFile(name: string, args: Record<string, unknown>, directory: 
   }
 }
 
+/** A screenshot name that leads outside the working directory. */
+class OutsideError extends Error {}
+
 /**
  * The file a screenshot is written to, checked again where it lands: the nearest existing ancestor is resolved, so a
  * symbolic link anywhere in the path that leads outside the working directory is refused, even for directories the
@@ -273,7 +276,7 @@ async function confined(file: string, directory: string): Promise<string> {
     existing = path.dirname(existing)
   }
   const target = path.join(await fs.realpath(existing), ...missing, path.basename(file))
-  if (!contained(target, root)) throw new Error(`The screenshot file name must stay inside ${directory}.`)
+  if (!contained(target, root)) throw new OutsideError(`The screenshot file name must stay inside ${directory}.`)
   return target
 }
 
@@ -391,12 +394,22 @@ export class ExtensionBackend implements BrowserBackend {
       (block): block is Extract<BrowserHub.Block, { type: "image" }> => block.type === "image",
     )
     if (answer.isError || image === undefined) return answer
-    const target = await confined(file, this.input.directory).catch((error: unknown) =>
-      error instanceof Error ? error : new Error(String(error)),
+    // A folder that cannot be resolved (a broken link, a missing working directory) is a file that could not be saved,
+    // said in words; the system's error code tells the model nothing it can act on.
+    const checked = await confined(file, this.input.directory).then(
+      (target) => ({ kind: "inside" as const, target }),
+      (error: unknown) => ({
+        kind: "refused" as const,
+        text:
+          error instanceof OutsideError
+            ? error.message
+            : `The screenshot could not be saved to ${file}: a folder in that path cannot be opened. Pass another filename to save it.`,
+      }),
     )
-    if (target instanceof Error) {
-      return { ...answer, content: [...answer.content, { type: "text", text: target.message }] }
+    if (checked.kind === "refused") {
+      return { ...answer, content: [...answer.content, { type: "text", text: checked.text }] }
     }
+    const target = checked.target
     const foreign = !this.written.has(target) && (await fs.lstat(target).catch(() => undefined)) !== undefined
     const note = foreign
       ? `${target} already exists, so the screenshot was not saved over it. Pass another filename to save it.`
@@ -425,11 +438,13 @@ export class ExtensionBackend implements BrowserBackend {
       error.step,
     )
     if (refusal !== undefined) {
-      // Nothing to ask: the action ran, and the page and frame data still reach the tool metadata.
+      // Nothing to ask: the action ran, and the page and frame data still reach the tool metadata. A needs list the
+      // browser also sent in the meta names the same unaskable grants, so it is dropped too.
+      const { needs: _unaskable, ...kept } = meta ?? {}
       return {
         content: [{ type: "text", text: `The action ran. ${refusal}` }],
         isError: false,
-        ...(meta === undefined ? {} : { meta }),
+        ...(meta === undefined ? {} : { meta: kept }),
       }
     }
     const flagged = meta === undefined ? undefined : { ...meta, afterAction: true as const }

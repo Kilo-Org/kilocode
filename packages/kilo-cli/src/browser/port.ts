@@ -251,9 +251,14 @@ export function hub(options: Options = {}): BrowserHub.Interface {
           const linked = await connection()
           const presence = presenceOf(linked)
           // A hub whose pairing page went stale shows a fresh one, and this call waits for the extension to redeem it;
-          // only a page that really opened resets the wait.
-          if (absence(linked.state(), presence, profile).kind === "unpaired" && (await linked.pair())) {
-            presence.since = Date.now()
+          // only a page that really opened resets the wait. Opening it shares the call's own budget: a hub that does
+          // not answer or an opener that never exits cannot hold the call past `timeoutMs`.
+          const started = Date.now()
+          if (absence(linked.state(), presence, profile).kind === "unpaired") {
+            const expired = Promise.withResolvers<boolean>()
+            const timer = setTimeout(() => expired.resolve(false), timeoutMs)
+            const opened = await Promise.race([linked.pair(), expired.promise]).finally(() => clearTimeout(timer))
+            if (opened) presence.since = started
           }
           // An extension connects only shortly after the connection changed, so the wait ends `timeoutMs` after that
           // moment, not after this call: one that has stayed away longer fails the call at once.
