@@ -82,6 +82,24 @@ describe("hub failures as the extension backend reads them", () => {
     expect(failure(hub("needs_permission", { items: [] })).step).toBeUndefined()
   })
 
+  test("a malformed step is dropped on its own, keeping the need's items and token", () => {
+    const mapped = failure(
+      hub("needs_permission", {
+        items: [{ class: "sensitive", origin: "https://example.com", reason: "download: report.pdf" }],
+        stepToken: "tok",
+        afterAction: true,
+        step: "browser_click",
+      }),
+    )
+    expect(mapped).toMatchObject({
+      kind: "permission",
+      stepToken: "tok",
+      items: [{ class: "sensitive", origin: "https://example.com", reason: "download: report.pdf" }],
+    })
+    // The step is gone, so the carrying call keys the token, exactly as an older extension would.
+    expect(mapped.step).toBeUndefined()
+  })
+
   test("a malformed payload leaves the items empty instead of guessing", () => {
     const mapped = failure(hub("needs_permission", { items: "everything" }))
     expect(mapped.kind).toBe("permission")

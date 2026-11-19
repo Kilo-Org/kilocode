@@ -29,13 +29,16 @@ const Need = z
   })
   .loose()
 
+/** The call a late token was issued for: absent or unreadable leaves the carrying call as the step. */
+const Step = z.object({ tool: z.string(), argumentsHash: z.string() }).loose()
+
 /** The fields an extension error or a result's `_meta` carries beyond its message. */
 const Payload = z
   .object({
     items: z.array(Need).optional(),
     stepToken: z.string().optional(),
-    // The call the token was issued for. Optional: an older extension names no step and the carrying call is used.
-    step: z.object({ tool: z.string(), argumentsHash: z.string() }).optional(),
+    // The call the token was issued for, read leniently below: a malformed step must not cost the need its items.
+    step: z.unknown().optional(),
     // The action already ran; the CLI asks for the grant and never repeats it.
     afterAction: z.boolean().optional(),
     // `origin_changed` names the origins a redirect moved between.
@@ -82,11 +85,14 @@ export function failure(error: unknown): BrowserHub.Failure {
     return new BrowserHub.Failure({ kind: "unknown", message })
   }
   const data = value.data
+  // A step is optional and read on its own: an extension that sends a shape the CLI cannot read loses only the step,
+  // so the need keeps its items and token and falls back to the carrying call's key.
+  const step = Step.safeParse(data?.step).data
   const base = {
     message: value.message,
     items: data?.items,
     stepToken: data?.stepToken,
-    ...(data?.step === undefined ? {} : { step: data.step }),
+    ...(step === undefined ? {} : { step }),
   }
   const meta = (payload: Payload): BrowserHub.Meta => ({
     ...(payload.url === undefined ? {} : { url: payload.url }),

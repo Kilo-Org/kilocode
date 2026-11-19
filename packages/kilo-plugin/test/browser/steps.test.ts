@@ -2,8 +2,9 @@ import { describe, expect, test } from "bun:test"
 import { hashArguments, rememberHash, rememberStep, resetSteps, takeHash, takeStep } from "../../src/browser/steps"
 
 describe("tool argument hashing", () => {
-  // The extension's FINAL cross-implementation vectors, pinned verbatim from /tmp/browser-bridge/hash-vectors.json:
-  // both spellings of the same call hash alike, so a drift on either side fails here instead of losing a download.
+  // Cross-implementation vectors computed with Kilo-Org/cloud `apps/extension/src/shared/browser-agent-checks.ts`
+  // `hashBrowserToolArguments` (branch `extension-agent-sessions`): both spellings of the same call hash alike, so a
+  // drift on either side fails here instead of losing a download.
   test("matches the extension's published vectors", () => {
     expect(hashArguments({ scale: "css", url: "https://example.com/report.txt" })).toBe("19ea8d50:54")
     expect(
@@ -22,8 +23,19 @@ describe("tool argument hashing", () => {
     ).toBe("a243193a:114")
   })
 
-  // CLI-only coverage: values computed with the extension's implementation for shapes the published set does not
-  // exercise (arrays of primitives, a nested object, the empty call).
+  // Non-ASCII vectors from the same function. The canonical form is a JS string, so the loop visits UTF-16 units and
+  // `codePointAt` yields a whole astral code point on the high surrogate and its low surrogate next — the extension's
+  // own quirk, kept identical here. A mismatch on any of these means approvals for such arguments never redeem.
+  test("matches the extension on non-ASCII arguments", () => {
+    expect(hashArguments({ text: "café" })).toBe("4acfafd3:15")
+    expect(hashArguments({ text: "a😀b" })).toBe("c3f119:15")
+    expect(hashArguments({ text: "日本語テキスト" })).toBe("edae66dd:18")
+    expect(hashArguments({ ключ: "значение" })).toBe("2d42327b:19")
+    expect(hashArguments({ target: "e1", text: "naïve 😀 漢字" })).toBe("d54a8501:36")
+  })
+
+  // CLI-only coverage: values computed with the same function for shapes the published set does not exercise
+  // (arrays of primitives, a nested object, the empty call).
   test("also matches the extension's implementation on further shapes (CLI-only)", () => {
     expect(hashArguments({ target: "e1" })).toBe("b1391036:15")
     expect(hashArguments({ target: "e1", text: "a" })).toBe("9343961e:26")
