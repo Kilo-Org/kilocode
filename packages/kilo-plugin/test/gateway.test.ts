@@ -2168,6 +2168,74 @@ describe("KiloGatewayPlugin", () => {
     )
   }
 
+  it.live("keeps config kilocodeToken and kilocodeOrganizationId out of request bodies and in headers", () =>
+    Effect.gen(function* () {
+      const backend = yield* Effect.acquireRelease(
+        Effect.sync(() => fixture()),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      )
+      const sent: Array<{ path: string; authorization: string | null; organization: string | null; body: Record<string, unknown> }> = []
+      backend.state.teamModels = { data: [{ id: "kilo-auto/free", name: "Free", context_length: 128000, isFree: true }] }
+      const inference = yield* Effect.acquireRelease(
+        Effect.sync(() => Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
+          const path = new URL(request.url).pathname
+          if (request.method === "GET") return fetch(new URL(path, backend.url), request)
+          sent.push({
+            path,
+            authorization: request.headers.get("authorization"),
+            organization: request.headers.get("x-kilocode-organizationid"),
+            body: await request.json(),
+          })
+          return new Response(`data: ${JSON.stringify({
+            id: "completion-config-token",
+            object: "chat.completion.chunk",
+            created: 0,
+            model: "kilo-auto/free",
+            choices: [{ index: 0, delta: { role: "assistant", content: "OK" }, finish_reason: "stop" }],
+            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+          })}\n\ndata: [DONE]\n\n`, { headers: { "content-type": "text/event-stream" } })
+        } })),
+        (server) => Effect.sync(() => server.stop(true)),
+      )
+      yield* withEnv({ ...env, KILO_API_URL: backend.url, KILO_AI_GATEWAY_URL: `${inference.url.origin}/api/v1` }, () => Effect.gen(function* () {
+        const config = yield* Config.Test
+        yield* config.setEntries([new Document({ type: "document", info: Schema.decodeUnknownSync(Info)({
+          providers: { kilo: { settings: { kilocodeToken: "config-token", kilocodeOrganizationId: "first" } } },
+        }) })])
+        const host = yield* addPlugin()
+        yield* ConfigProviderPlugin.Plugin.effect(host)
+        // The host registers the options plugin in the post phase, after config overlays the provider settings.
+        yield* GatewayOptions.Plugin.effect(host)
+        const modelService = yield* Model.Service
+        yield* eventually(modelService.get(kilo, Model.ID.make("kilo-auto/free")), Boolean)
+        const providers = yield* Provider.Service
+        const settings = (yield* providers.get(kilo))?.settings
+        expect(settings).not.toHaveProperty("kilocodeToken")
+        expect(settings).not.toHaveProperty("kilocodeOrganizationId")
+        const resolver = yield* ModelResolver.Service.pipe(Effect.provide(KiloGatewayModel.resolverLayer(ModelResolver.layer)))
+        const session = yield* host.session.create({ title: "config token" })
+        const requests = yield* SessionModelRequest.Service.pipe(Effect.provide(SessionModelRequest.layer.pipe(
+          Layer.provide(SessionModelTransport.layer.pipe(Layer.provide(WebSocketConstructor.layer))),
+        )))
+        const llm = yield* LLMClient.Service.pipe(Effect.provide(LLMClient.layer.pipe(Layer.provide(RequestExecutor.layer))))
+        const resolved = yield* resolver.resolve(Model.Ref.make({ providerID: kilo, id: Model.ID.make("kilo-auto/free") }))
+        if (!resolved) throw new Error("Missing config-token model")
+        const prepared = yield* requests.primary({ session, agent: Agent.ID.make("code"), model: resolved, system: [], messages: [] })
+        yield* llm.generate(prepared.request, prepared.options)
+        yield* llm.generate(ai.request({ model: resolved.model, prompt: "Stateless config token" }))
+        expect(sent.map((request) => ({ path: request.path, authorization: request.authorization }))).toEqual([
+          { path: "/api/v1/chat/completions", authorization: "Bearer config-token" },
+          { path: "/api/v1/chat/completions", authorization: "Bearer config-token" },
+        ])
+        expect(sent[0]?.organization).toBe("first")
+        for (const request of sent) {
+          expect(request.body).not.toHaveProperty("kilocodeToken")
+          expect(request.body).not.toHaveProperty("kilocodeOrganizationId")
+        }
+      }))
+    }),
+  )
+
   it.live("sends anonymous fallback requests without erasing the retained credential identity", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),
