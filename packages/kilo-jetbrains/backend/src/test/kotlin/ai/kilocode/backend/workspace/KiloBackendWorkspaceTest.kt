@@ -52,10 +52,22 @@ class KiloBackendWorkspaceTest {
             apps.clear()
             scope.cancel()
             mock.close()
-            withTimeout(10_000) { scope.coroutineContext[Job]?.join() }
+            val done = withTimeoutOrNull(10_000) {
+                scope.coroutineContext[Job]?.join()
+                true
+            }
+            check(done == true) { "Backend scope did not complete within 10s after cancel\n${threads()}" }
             delete(root)
         }
     }
+
+    /** Stacks of the threads that can hold the backend scope open, for teardown timeouts. */
+    private fun threads(): String =
+        Thread.getAllStackTraces().entries
+            .filter { it.key.name.startsWith("DefaultDispatcher") || it.key.name.startsWith("OkHttp") }
+            .joinToString("\n\n") { entry ->
+                "${entry.key.name} (${entry.key.state})\n" + entry.value.take(30).joinToString("\n") { "    at $it" }
+            }
 
     private fun setup(): KiloBackendAppService =
         KiloBackendAppService.create(scope, FakeCliServer(mock), log).also { apps.add(it) }
