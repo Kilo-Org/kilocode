@@ -1816,17 +1816,16 @@ type RuntimeCall = { ms: number; reply: unknown; text: string }
 
 /**
  * One browser tool through the extension's own runtime message (`kilo.tabs.browserTool`), the dispatch the side panel
- * uses and the CLI bridge wraps. Without `agent` the call is the side panel's (no agent grant check); with `agent` it
- * runs the same origin gate a CLI session's call runs. The time is the round trip from the extension page.
+ * uses and the CLI bridge wraps, as a panel caller: the same tool code a CLI call reaches, without the agent origin
+ * gate (which runs only for `agent` callers, browser-runtime.ts). The time is the round trip from the extension page.
  */
-async function runtimeTool(tabId: number, tool: string, args: Record<string, unknown>, agent?: Record<string, unknown>): Promise<RuntimeCall> {
+async function runtimeTool(tabId: number, tool: string, args: Record<string, unknown>): Promise<RuntimeCall> {
   const message = {
     arguments: args,
     caller: { conversationId: "e2e-conversation", kind: "panel", panelId: "e2e-panel" },
     tabId,
     tool,
     type: "kilo.tabs.browserTool",
-    ...(agent === undefined ? {} : { agent }),
   }
   const answer = await ext<{ ms: number; reply: unknown }>(async (body: Record<string, unknown>) => {
     const runtime = browser.runtime as unknown as { sendMessage(message: unknown): Promise<unknown> }
@@ -1877,9 +1876,9 @@ async function readFocus(userContext: string) {
 
 /**
  * Tool parity, D9 and latency inside the extension: every contract tool through the runtime message on an inactive
- * tab while the user's tab is active; the same snapshot with the CLI's grants (`agent`); five viewport screenshots
- * by each screenshot path while the user's tab records every visibility change; then navigate/snapshot/click/
- * screenshot × reps. This answers what the Firefox runtime can do once a CLI call reaches it.
+ * tab while the user's tab is active; five viewport screenshots by each screenshot path while the user's tab records
+ * every visibility change; then navigate/snapshot/click/screenshot × reps. This answers what the Firefox runtime can
+ * do once a CLI call gets past the agent gate.
  */
 async function runtime() {
   const uploadFile = path.join(base, "upload.txt")
@@ -1887,10 +1886,6 @@ async function runtime() {
   const user = await openUserTab(`${localOrigin}/user`)
   await recordFocus(user.context)
   const tabId = await inactiveTab(`${localOrigin}/all`)
-  const grants = {
-    authorized: ["read", "act", "navigate"].map((grantClass) => ({ class: grantClass, origin: localOrigin })),
-  }
-  const gated = await runtimeTool(tabId, "browser_snapshot", {}, grants)
   const snapshot = await runtimeTool(tabId, "browser_snapshot", {})
   const s = snapshot.text
   const ref = (pattern: RegExp, fallback: string) => pattern.exec(s)?.[1] ?? fallback
@@ -1995,7 +1990,6 @@ async function runtime() {
     Object.entries(samples).map(([key, values]) => [key, { count: values.length, medianMs: Math.round(percentile(values, 50)), p95Ms: Math.round(percentile(values, 95)) }]),
   )
   return {
-    gatedSnapshot: { ms: Math.round(gated.ms), text: gated.text.slice(0, 900) },
     latency,
     latencyFocus: { activations: latencyFocus.activations.length, visibilityChanges: latencyFocus.visibility.length },
     rows,
