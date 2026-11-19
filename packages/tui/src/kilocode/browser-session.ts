@@ -3,6 +3,7 @@
 // location's browser plugin holds the session's tab group, so another location's answer would be another group.
 import type { Plugin } from "@opencode/plugin/tui"
 import { KiloBrowserRpc } from "@opencode/schema/kilocode/browser"
+import { isRecord } from "../util/record"
 import { errorMessage } from "../util/error"
 import { browserCopy } from "./browser-copy"
 
@@ -55,6 +56,43 @@ export function noticeToast(notice: KiloBrowserRpc.Notice): Toast {
   return { ...base, variant: "warning", title: browserCopy(title), message: notice.hint }
 }
 
+// How long a command typed while Kilo starts waits for the location's plugins, and how often it asks.
+const STARTUP_WAIT = 10_000
+const STARTUP_POLL = 100
+
+/**
+ * One `/browser share` or `/browser adopt` call. A location answers `rpc.unavailable` until its plugins are
+ * registered, and lists no plugin until then, so a command typed while Kilo starts waits until the location lists its
+ * plugins and calls once more. Only a second `rpc.unavailable` answer says Kilo is still starting; every other failure
+ * rejects unchanged. The call never ran on the server when it answered `rpc.unavailable`, so calling again is safe.
+ */
+export async function whenStarted(
+  call: () => Promise<Toast>,
+  plugins: () => Promise<{ data: readonly unknown[] }>,
+): Promise<Toast> {
+  try {
+    return await call()
+  } catch (error) {
+    if (!isRecord(error) || error.type !== "rpc.unavailable") throw error
+  }
+  const deadline = Date.now() + STARTUP_WAIT
+  while (Date.now() < deadline) {
+    // A server without the plugin inventory fails the read, which ends the wait at once.
+    const listed = await plugins().then(
+      (result) => result.data.length > 0,
+      () => true,
+    )
+    if (listed) break
+    await Bun.sleep(STARTUP_POLL)
+  }
+  try {
+    return await call()
+  } catch (error) {
+    if (!isRecord(error) || error.type !== "rpc.unavailable") throw error
+    return { variant: "warning", message: browserCopy("browser.command.starting") }
+  }
+}
+
 export function browserSession(context: Plugin.Context) {
   const rpc = context.client.rpc(KiloBrowserRpc.Definition)
   // One notice per session and kind: a model that retries must not stack the same toast. A share or adopt that
@@ -95,8 +133,20 @@ export function browserSession(context: Plugin.Context) {
   }
 
   return {
-    share: () => act((sessionID, options) => rpc.share({ sessionID }, options).then(shareToast)),
-    adopt: () => act((sessionID, options) => rpc.adopt({ sessionID }, options).then(adoptToast)),
+    share: () =>
+      act((sessionID, options) =>
+        whenStarted(
+          () => rpc.share({ sessionID }, options).then(shareToast),
+          () => context.client.plugin.list(options),
+        ),
+      ),
+    adopt: () =>
+      act((sessionID, options) =>
+        whenStarted(
+          () => rpc.adopt({ sessionID }, options).then(adoptToast),
+          () => context.client.plugin.list(options),
+        ),
+      ),
     /** Shows each failed call's notice once per session and kind; returns the unsubscribe. */
     watch: () =>
       rpc.events.on("notice", (event) => {

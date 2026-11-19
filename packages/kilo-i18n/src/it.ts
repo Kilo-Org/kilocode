@@ -140,6 +140,7 @@ export const dict = {
   "ui.tool.chart.failed": "Impossibile eseguire il rendering del grafico",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Impostazioni del browser",
+  "browser.command.starting": "Kilo si sta ancora avviando. Riprova tra un momento.",
   "browser.command.description": "Mostra il backend del browser, se può essere eseguito e le autorizzazioni di origine",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Osservazione",

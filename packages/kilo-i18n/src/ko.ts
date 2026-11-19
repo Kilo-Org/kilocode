@@ -137,6 +137,7 @@ export const dict = {
   "ui.tool.chart.failed": "차트를 렌더링하지 못했습니다",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "브라우저 설정",
+  "browser.command.starting": "Kilo가 아직 시작 중입니다. 잠시 후 다시 시도하세요.",
   "browser.command.description": "브라우저 백엔드, 실행 가능 여부, 출처 권한을 표시",
   "browser.command.backend": "백엔드",
   "browser.command.observation": "관찰",

@@ -139,6 +139,7 @@ export const dict = {
   "ui.tool.chart.failed": "แสดงแผนภูมิไม่สำเร็จ",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "การตั้งค่าเบราว์เซอร์",
+  "browser.command.starting": "Kilo ยังเริ่มทำงานไม่เสร็จ โปรดลองอีกครั้งในอีกสักครู่",
   "browser.command.description": "แสดงแบ็กเอนด์ของเบราว์เซอร์ สถานะการใช้งาน และสิทธิ์ของต้นทาง",
   "browser.command.backend": "แบ็กเอนด์",
   "browser.command.observation": "การสังเกต",

@@ -142,6 +142,7 @@ export const dict = {
   "ui.tool.chart.failed": "Grafik oluşturulamadı",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Tarayıcı ayarları",
+  "browser.command.starting": "Kilo hâlâ başlatılıyor. Birazdan tekrar deneyin.",
   "browser.command.description": "Tarayıcı arka ucunu, çalışıp çalışamayacağını ve kaynak izinlerini göster",
   "browser.command.backend": "Arka uç",
   "browser.command.observation": "Gözlem",

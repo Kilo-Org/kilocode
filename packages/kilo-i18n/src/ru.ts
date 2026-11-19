@@ -143,6 +143,7 @@ export const dict = {
   "ui.tool.chart.failed": "Не удалось отобразить диаграмму",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Настройки браузера",
+  "browser.command.starting": "Kilo ещё запускается. Повторите попытку через мгновение.",
   "browser.command.description": "Показать бэкенд браузера, его доступность и разрешения для источников",
   "browser.command.backend": "Бэкенд",
   "browser.command.observation": "Наблюдение",

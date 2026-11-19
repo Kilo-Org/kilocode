@@ -141,6 +141,7 @@ export const dict = {
   "ui.tool.chart.failed": "Diagrammet kunne ikke vises",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Nettleserinnstillinger",
+  "browser.command.starting": "Kilo starter fortsatt. Prøv igjen om et øyeblikk.",
   "browser.command.description": "Vis nettleserens backend, om den kan kjøre, og opphavstillatelsene",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Observasjon",

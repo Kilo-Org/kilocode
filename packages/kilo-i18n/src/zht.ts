@@ -130,6 +130,7 @@ export const dict = {
   "ui.tool.chart.failed": "圖表轉譯失敗",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "瀏覽器設定",
+  "browser.command.starting": "Kilo 仍在啟動中。請稍後再試一次。",
   "browser.command.description": "顯示瀏覽器後端、是否可用以及來源權限",
   "browser.command.backend": "後端",
   "browser.command.observation": "觀察",

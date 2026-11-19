@@ -139,6 +139,7 @@ export const dict = {
   "ui.tool.chart.failed": "グラフを描画できませんでした",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "ブラウザ設定",
+  "browser.command.starting": "Kilo はまだ起動中です。しばらくしてからもう一度お試しください。",
   "browser.command.description": "ブラウザのバックエンド、実行可否、オリジンの許可を表示",
   "browser.command.backend": "バックエンド",
   "browser.command.observation": "観測",

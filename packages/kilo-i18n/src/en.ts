@@ -169,6 +169,7 @@ export const dict = {
   "ui.tool.chart.failed": "Failed to render chart",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Browser settings",
+  "browser.command.starting": "Kilo is still starting. Try again in a moment.",
   "browser.command.description": "Show the browser backend, whether it can run, and the origin grants",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Observation",

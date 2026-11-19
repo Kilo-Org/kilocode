@@ -137,6 +137,7 @@ export const dict = {
   "ui.tool.chart.failed": "فشل عرض المخطط",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "إعدادات المتصفح",
+  "browser.command.starting": "لا يزال Kilo قيد البدء. حاول مرة أخرى بعد لحظات.",
   "browser.command.description": "اعرض خلفية المتصفح وما إذا كان يمكن تشغيلها وأذونات المصادر",
   "browser.command.backend": "الخلفية",
   "browser.command.observation": "المراقبة",

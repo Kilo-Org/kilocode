@@ -143,6 +143,7 @@ export const dict = {
   "ui.tool.chart.failed": "Échec du rendu du graphique",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Paramètres du navigateur",
+  "browser.command.starting": "Kilo est encore en cours de démarrage. Réessayez dans un instant.",
   "browser.command.description": "Afficher le backend du navigateur, sa disponibilité et les autorisations d'origine",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Observation",

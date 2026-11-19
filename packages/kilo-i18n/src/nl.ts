@@ -144,6 +144,7 @@ export const dict = {
   "ui.tool.chart.failed": "Grafiek kon niet worden weergegeven",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Browserinstellingen",
+  "browser.command.starting": "Kilo wordt nog gestart. Probeer het zo meteen opnieuw.",
   "browser.command.description": "Toon de browserbackend, of die kan draaien, en de oorsprongsmachtigingen",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Observatie",

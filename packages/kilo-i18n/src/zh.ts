@@ -131,6 +131,7 @@ export const dict = {
   "ui.tool.chart.failed": "图表渲染失败",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "浏览器设置",
+  "browser.command.starting": "Kilo 仍在启动。请稍后重试。",
   "browser.command.description": "显示浏览器后端、是否可用以及来源权限",
   "browser.command.backend": "后端",
   "browser.command.observation": "观察",

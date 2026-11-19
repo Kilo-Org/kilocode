@@ -146,6 +146,7 @@ export const dict = {
   "ui.tool.chart.failed": "Prikaz grafikona nije uspio",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Postavke preglednika",
+  "browser.command.starting": "Kilo se još pokreće. Pokušajte ponovo za trenutak.",
   "browser.command.description": "Prikaži pozadinu preglednika, može li se pokrenuti i dozvole za izvore",
   "browser.command.backend": "Pozadina",
   "browser.command.observation": "Posmatranje",

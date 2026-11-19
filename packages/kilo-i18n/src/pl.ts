@@ -142,6 +142,7 @@ export const dict = {
   "ui.tool.chart.failed": "Nie udało się wyrenderować wykresu",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Ustawienia przeglądarki",
+  "browser.command.starting": "Kilo nadal się uruchamia. Spróbuj ponownie za chwilę.",
   "browser.command.description": "Pokaż backend przeglądarki, jego dostępność i uprawnienia dla źródeł",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Obserwacja",
