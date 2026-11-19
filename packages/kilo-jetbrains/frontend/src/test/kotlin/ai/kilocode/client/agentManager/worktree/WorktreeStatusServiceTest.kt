@@ -62,7 +62,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test attach loads pr immediately and stats after debounce`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 3, GhState.OPEN, "https://pr/3")))
         val key = normalizeWorktreePath(path)
@@ -78,7 +78,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test attach loads dirty on the same debounce as stats`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
         rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
         val key = normalizeWorktreePath(path)
@@ -94,7 +94,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test an unavailable poll keeps the previous counts instead of publishing zeros`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4, files = 2)))
         rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
@@ -118,7 +118,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a worktree the backend stops reporting is dropped`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
         val handle = service.attach()
@@ -140,7 +140,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         // KiloWorktreeService.stats/dirty wrap the RPC in try/catch; a thrown exception must still
         // report unavailable=true, not fall through to the DTO's default false, or a failed RPC would
         // clear every badge exactly like a failed poll answering an empty list.
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
         rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
@@ -161,7 +161,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a failed listing keeps every badge instead of clearing them`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
         rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
@@ -184,7 +184,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a stats poll in flight is cancelled when the last handle closes`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 1)))
         val gate = CompletableDeferred<Unit>()
@@ -211,7 +211,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a stats poll does not stack while one is in flight`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 1)))
         val gate = CompletableDeferred<Unit>()
         rpc.beforeStats = { gate.await() }
@@ -240,7 +240,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test refresh is ignored after the last handle closes`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 1)))
         val handle = service.attach()
@@ -258,7 +258,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test polling keeps loading while a handle remains`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 1)))
         val first = service.attach()
@@ -279,7 +279,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test pr refresh throttles non-forced calls but honors force`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
         val handle = service.attach()
@@ -448,7 +448,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a pr lookup cancelled by a disable cannot publish after a re-enable`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         val gate = CompletableDeferred<Unit>()
         // The lookup that gets abandoned. It answers empty and OK, which is what the RPC layer
@@ -478,7 +478,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test returning after a long absence observes a pr merged elsewhere`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
         val handle = service.attach()
@@ -517,7 +517,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a spent github budget leaves the badges it cannot refresh alone`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
         val handle = service.attach()
@@ -711,7 +711,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test the poll still recovers after a rate limit suppressed focus refreshes`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.prResult = WorktreePrListDto(GhAvailability.RATE_LIMITED)
         val handle = service.attach()
@@ -735,7 +735,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test an agent that stops pays a lookup naming only its own worktree`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
         val handle = service.attach()
@@ -762,7 +762,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test an agent that stops to ask something still pays a lookup`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
         val handle = service.attach()
         drain()
@@ -781,8 +781,8 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a worktree that keeps working owes no lookup`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
-        val other = "${project.basePath}/.kilo/worktrees/feature-y"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
+        val other = "${project.basePath}/.kilo2/worktrees/feature-y"
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
         val handle = service.attach()
         drain()
@@ -804,8 +804,8 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test turn endings inside the floor window collapse onto one lookup naming both`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
-        val other = "${project.basePath}/.kilo/worktrees/feature-y"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
+        val other = "${project.basePath}/.kilo2/worktrees/feature-y"
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
         val handle = service.attach()
         drain()
@@ -836,7 +836,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a turn ending held with a return keeps both the ceiling and the path`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
         val handle = service.attach()
         drain()
@@ -864,7 +864,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a spent github budget suppresses a turn ending`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         rpc.prResult = WorktreePrListDto(GhAvailability.RATE_LIMITED)
         val handle = service.attach()
         drain()
@@ -886,7 +886,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a turn ending while nothing is attached does not start a lookup`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
         val handle = service.attach()
         drain()
@@ -920,7 +920,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test attach skips pr polling while the github integration is off`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 3, GhState.OPEN, "https://pr/3")))
@@ -945,7 +945,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test disabling clears pr state and stops the poll`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.prResult = WorktreePrListDto(GhAvailability.UNAUTH, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
         val handle = service.attach()
@@ -966,7 +966,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test re-enabling reloads pr state and resumes the poll`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath}/.kilo2/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
         val handle = service.attach()

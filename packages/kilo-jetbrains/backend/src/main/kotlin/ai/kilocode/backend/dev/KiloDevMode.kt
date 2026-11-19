@@ -9,7 +9,8 @@ internal object KiloDevMode {
     /** The backend JVM receives the checkout path from runIde; never discover a script from a user's project. */
     fun command(root: String?, storage: Path, env: Map<String, String>): CliCommand? {
         if (root == null) return null
-        val script = Path.of(root).resolve("script/dev-isolated.ts").toAbsolutePath()
+        require(Path.of(root).isAbsolute) { "Kilo development checkout must be an absolute path" }
+        val script = Path.of(root).resolve("script/dev-isolated.ts")
         check(Files.isRegularFile(script)) { "Missing isolated Kilo development entry: $script" }
         val bun = if (System.getProperty("os.name").startsWith("Windows")) "bun.exe" else "bun"
         val home = env["BUN_INSTALL"]?.let(Path::of) ?: Path.of(System.getProperty("user.home"), ".bun")

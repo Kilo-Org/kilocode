@@ -23,6 +23,7 @@ internal interface SessionActions {
 
     /** Public share URL, when this session is shared. */
     val share: String?
+    val publicLinks: Boolean
 
     /** Whether git is usable in the session directory. */
     val git: Boolean

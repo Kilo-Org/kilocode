@@ -93,12 +93,12 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
         source.workingDirectory = "/repo/packages/kilo-jetbrains"
         source.envs = mutableMapOf("FOO" to "bar")
 
-        val task = requireNotNull(WorktreeRunDelegate.task(source, "/repo/.kilo/worktrees/wt", "/repo"))
+        val task = requireNotNull(WorktreeRunDelegate.task(source, "/repo/.kilo2/worktrees/wt", "/repo"))
         val clone = task.runProfile as ParamsConfig
         assertNotSame(source, clone)
-        assertEquals(Path.of("/repo/.kilo/worktrees/wt/packages/kilo-jetbrains").toString(), clone.workingDirectory)
+        assertEquals(Path.of("/repo/.kilo2/worktrees/wt/packages/kilo-jetbrains").toString(), clone.workingDirectory)
         assertEquals("bar", clone.envs["FOO"])
-        assertEquals("/repo/.kilo/worktrees/wt", clone.envs[WorktreeRunAdapter.WORKTREE_ENV])
+        assertEquals("/repo/.kilo2/worktrees/wt", clone.envs[WorktreeRunAdapter.WORKTREE_ENV])
         assertEquals("/repo", clone.envs[WorktreeRunAdapter.REPO_ENV])
         assertEquals("false", clone.envs[WorktreeRunAdapter.DEBUGGER_ENV])
         assertEquals("dev", task.presentableName)
@@ -115,11 +115,11 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
         config.isAllowRunningInParallel = true
 
         val result = WorktreeRunDelegate.DeriveResult(settings, config)
-        WorktreeRunDelegate.adapt(result, "/repo/.kilo/worktrees/wt", "/repo", "wt", "dev")
+        WorktreeRunDelegate.adapt(result, "/repo/.kilo2/worktrees/wt", "/repo", "wt", "dev")
 
-        val expected = Path.of("/repo/.kilo/worktrees/wt/packages/kilo-jetbrains").toString()
+        val expected = Path.of("/repo/.kilo2/worktrees/wt/packages/kilo-jetbrains").toString()
         assertEquals(expected, config.settings.externalProjectPath)
-        assertEquals("/repo/.kilo/worktrees/wt", config.settings.env[WorktreeRunAdapter.WORKTREE_ENV])
+        assertEquals("/repo/.kilo2/worktrees/wt", config.settings.env[WorktreeRunAdapter.WORKTREE_ENV])
         assertEquals("/repo", config.settings.env[WorktreeRunAdapter.REPO_ENV])
         assertTrue(config.beforeRunTasks.isEmpty())
         assertFalse(config.isAllowRunningInParallel)
@@ -140,7 +140,7 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
         source.envs = mutableMapOf("FOO" to "bar")
         source.profiles = "dev"
 
-        val plain = requireNotNull(WorktreeRunDelegate.plain(project, source, "/repo/.kilo/worktrees/wt", "/repo"))
+        val plain = requireNotNull(WorktreeRunDelegate.plain(project, source, "/repo/.kilo2/worktrees/wt", "/repo"))
 
         // Built from the registered "Application" type, which is what makes the build system's generic
         // application provider claim it.
@@ -150,8 +150,8 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
         assertEquals("--server.port=9090", copy.programParameters)
         assertEquals("bar", copy.envs["FOO"])
         // Rebased onto the worktree, like the direct delegation path.
-        assertEquals(Path.of("/repo/.kilo/worktrees/wt/api-gateway").toString(), copy.workingDirectory)
-        assertEquals("/repo/.kilo/worktrees/wt", copy.envs[WorktreeRunAdapter.WORKTREE_ENV])
+        assertEquals(Path.of("/repo/.kilo2/worktrees/wt/api-gateway").toString(), copy.workingDirectory)
+        assertEquals("/repo/.kilo2/worktrees/wt", copy.envs[WorktreeRunAdapter.WORKTREE_ENV])
         // Only the framework-only option is reported: the before-run element is dropped by every
         // worktree run anyway, and everything the target could read is not a loss.
         assertEquals(listOf(FrameworkConfig.PROFILES_OPTION), plain.dropped)
@@ -163,7 +163,7 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
         applicationType()
         val settings = add(register(frameworkType("kilo.test.delegate.plain.nomain")), "tests")
         (settings.configuration as FrameworkConfig).setModule(module)
-        assertNull(WorktreeRunDelegate.plain(project, settings.configuration, "/repo/.kilo/worktrees/wt", "/repo"))
+        assertNull(WorktreeRunDelegate.plain(project, settings.configuration, "/repo/.kilo2/worktrees/wt", "/repo"))
     }
 
     fun testPlainIsUnavailableWithoutTheApplicationConfigurationType() {
@@ -173,7 +173,7 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
         val source = settings.configuration as FrameworkConfig
         source.setModule(module)
         source.main = "com.example.App"
-        assertNull(WorktreeRunDelegate.plain(project, source, "/repo/.kilo/worktrees/wt", "/repo"))
+        assertNull(WorktreeRunDelegate.plain(project, source, "/repo/.kilo2/worktrees/wt", "/repo"))
     }
 
     fun testDeriveResultViaIsTheExternalSystemReadableName() {

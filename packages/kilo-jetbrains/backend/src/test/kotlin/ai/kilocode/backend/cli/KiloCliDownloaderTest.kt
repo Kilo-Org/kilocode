@@ -41,7 +41,7 @@ class KiloCliDownloaderTest {
     private fun archive(banner: String, other: String = "package/bin/assets/grammar.wasm"): ByteArray {
         val out = ByteArrayOutputStream()
         TarArchiveOutputStream(GZIPOutputStream(out)).use { tar ->
-            mapOf("package/bin/kilo2" to "#!/bin/sh\ntest \"\$1\" = --version || exit 2\necho '$banner'\n", other to "asset").forEach { (name, text) ->
+            mapOf("package/LICENSE" to "license", "package/bin/kilo2" to "#!/bin/sh\ntest \"\$1\" = --version || exit 2\necho '$banner'\n", other to "asset").forEach { (name, text) ->
                 val bytes = text.toByteArray()
                 val entry = TarArchiveEntry(name)
                 entry.setModTime(0L)
@@ -63,6 +63,7 @@ class KiloCliDownloaderTest {
         assertEquals(listOf(pin.tarball), calls)
         assertEquals(listOf(0, 100), listOf(progress.first(), progress.last()))
         assertEquals("asset", Files.readString(exe.parent.resolve("assets/grammar.wasm")))
+        assertEquals("license", Files.readString(exe.parent.parent.resolve("LICENSE")))
         assertEquals(exe, downloader.resolve(pin, emptyMap(), false) {})
         assertEquals(1, calls.size)
         download = archive("kilo v7.0.0")

@@ -32,7 +32,7 @@ class ReadToolViewTest : BasePlatformTestCase() {
 
     fun `test read file output renders filename hyperlink`() {
         val opened = mutableListOf<String>()
-        val path = "/Users/kirillk/work/kilocode/.kilo/worktrees/agreeable-marlin/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/SessionUiLayoutTest.kt"
+        val path = "/Users/kirillk/work/kilocode/.kilo2/worktrees/agreeable-marlin/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/SessionUiLayoutTest.kt"
         val t = tool().also {
             it.output = """
                 <path>$path</path>

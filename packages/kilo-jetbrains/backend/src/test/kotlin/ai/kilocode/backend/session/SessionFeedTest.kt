@@ -54,7 +54,7 @@ class SessionFeedTest {
             val body = when (x.requestURI.path) {
                 path -> """{"data":{"id":"ses_s","projectID":"p","location":{"directory":"/fixture"},"time":{"created":0,"updated":1}}}"""
                 "$path/message" -> when {
-                    second -> """{"data":[${user("b")}],"cursor":{}}"""
+                    second -> """{"data":[${user("b")},{"id":"msg_idle","type":"idle","time":{"created":2},"outcome":"failed","error":{"type":"provider","message":"unavailable"}}],"cursor":{}}"""
                     x.requestURI.query.contains("cursor=") -> """{"data":[${user("b")}],"cursor":{}}"""
                     else -> """{"data":[${user("a")}],"cursor":{"next":"page2"}}"""
                 }
@@ -82,6 +82,7 @@ class SessionFeedTest {
             assertTrue(ChatEventDto.PermissionReplied("ses_s", "per_b") in recovered)
             assertTrue(ChatEventDto.QuestionRejected("ses_s", "frm_a") in recovered)
             assertEquals("idle", recovered.filterIsInstance<ChatEventDto.SessionStatusChanged>().single().status.type)
+            assertEquals("unavailable", recovered.filterIsInstance<ChatEventDto.Error>().single().error?.message)
         } finally { server.stop(0) }
     }
 

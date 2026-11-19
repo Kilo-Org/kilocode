@@ -73,6 +73,9 @@ val worktreeRoot = providers.gradleProperty("kilo.dev.worktree.root").orElse(
 val splitPort = providers.gradleProperty("kilo.splitModeServerPort").map { it.toInt().also { n -> require(n in 0..65535) } }.orElse(0)
 
 tasks {
+    buildPlugin {
+        from(layout.projectDirectory.file("../../LICENSE")) { into(rootProject.name) }
+    }
     if (providers.gradleProperty("kilo.cli.bundled").map(String::toBooleanStrict).orElse(false).get()) {
         buildPlugin { archiveClassifier.set("bundled") }
     }

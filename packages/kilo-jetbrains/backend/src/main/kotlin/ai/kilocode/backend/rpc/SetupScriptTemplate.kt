@@ -1,7 +1,7 @@
 package ai.kilocode.backend.rpc
 
 /**
- * Default templates for the worktree setup script (`.kilo/setup-script`), ported verbatim from the
+ * Default templates for the worktree setup script (`.kilo2/setup-script`), ported verbatim from the
  * VS Code extension (`packages/kilo-vscode/src/agent-manager/setup-script-template.ts`) so a repo
  * behaves the same regardless of which IDE created the file.
  */

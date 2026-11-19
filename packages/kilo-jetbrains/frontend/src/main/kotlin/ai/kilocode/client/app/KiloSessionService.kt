@@ -281,6 +281,8 @@ class KiloSessionService internal constructor(
         return session
     }
 
+    suspend fun cloudHistoryCapabilities(dir: String) = call { cloudCapabilities(dir) }
+
     suspend fun cloudSessions(dir: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto =
         call { cloudSessions(dir, cursor, limit, gitUrl) }
 

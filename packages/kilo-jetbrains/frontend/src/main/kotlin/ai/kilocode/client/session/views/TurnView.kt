@@ -77,7 +77,7 @@ class TurnView(
     }
 
     override fun isValidateRoot(): Boolean {
-        return Registry.`is`("kilo.session.validateRoots", true) && settled
+        return Registry.`is`("kilo2.session.validateRoots", true) && settled
     }
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */

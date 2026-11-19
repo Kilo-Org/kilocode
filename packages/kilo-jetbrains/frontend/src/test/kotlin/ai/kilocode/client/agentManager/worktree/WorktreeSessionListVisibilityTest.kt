@@ -93,6 +93,6 @@ class WorktreeSessionListVisibilityTest : BasePlatformTestCase() {
     private fun pump() = pumpEdt()
 
     private companion object {
-        const val DIR = "/repo/.kilo/worktrees/feature-x"
+        const val DIR = "/repo/.kilo2/worktrees/feature-x"
     }
 }

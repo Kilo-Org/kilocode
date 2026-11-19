@@ -173,7 +173,7 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
     }
 
     fun `test core group separates reload from recovery actions`() {
-        val xml = requireNotNull(javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml"))
+        val xml = requireNotNull(javaClass.classLoader.getResourceAsStream("kilo.jetbrains.v2.frontend.xml"))
             .bufferedReader()
             .use { it.readText() }
 
@@ -197,7 +197,7 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
     }
 
     fun `test settings menu offers page shortcuts between open settings and the config groups`() {
-        val xml = requireNotNull(javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml"))
+        val xml = requireNotNull(javaClass.classLoader.getResourceAsStream("kilo.jetbrains.v2.frontend.xml"))
             .bufferedReader()
             .use { it.readText() }
         val start = xml.indexOf("<group id=\"Kilo.SettingsGroup\">")
@@ -452,7 +452,7 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
 
     fun `test setup script action says open when target exists`() {
         rpc.setupScriptExists = true
-        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "~/.kilo/setup-script", true)
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo2/setup-script", "~/.kilo2/setup-script", true)
         val action = OpenSetupScriptAction()
         val event = event(action, workspace = workspace("/test"))
 
@@ -465,7 +465,7 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
 
     fun `test setup script action says create when target is missing`() {
         rpc.setupScriptExists = false
-        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "~/.kilo/setup-script", false)
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo2/setup-script", "~/.kilo2/setup-script", false)
         val action = OpenSetupScriptAction()
         val event = event(action, workspace = workspace("/test"))
 
@@ -529,12 +529,12 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
 
     fun `test setup script action visible on a non-main worktree row`() {
         rpc.setupScriptExists = true
-        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "/test/.kilo/setup-script", true)
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo2/setup-script", "/test/.kilo2/setup-script", true)
         val action = OpenSetupScriptAction()
         val event = event(
             action,
             workspace = workspace("/test"),
-            worktree = WorktreeDto("/test/.kilo/worktrees/feature-x", "feature-x", "feature-x", "/test/.kilo/worktrees/feature-x"),
+            worktree = WorktreeDto("/test/.kilo2/worktrees/feature-x", "feature-x", "feature-x", "/test/.kilo2/worktrees/feature-x"),
         )
 
         update(action, event)

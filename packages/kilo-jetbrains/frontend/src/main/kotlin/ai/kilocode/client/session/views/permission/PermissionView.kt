@@ -141,8 +141,8 @@ class PermissionView(
         // displayed command can't repaint the line). Its external_directory sibling still shows
         // directories via resolveTarget; only the header carries the skill attribution.
         val target = when {
-            skillShell && tool == "bash" -> permission.meta.skillCommands.joinToString("\n") { escapeControl(it) }
-            tool == "bash" -> permission.meta.command
+            skillShell && isShell(tool) -> permission.meta.skillCommands.joinToString("\n") { escapeControl(it) }
+            isShell(tool) -> permission.meta.command
             else -> resolveTarget(permission)
         }
         syncCode(tool, target)
@@ -272,7 +272,7 @@ class PermissionView(
         }
 
         val view = ensureMd()
-        val lang = if (tool == "bash") "bash" else ""
+        val lang = if (isShell(tool)) "bash" else ""
         val text = fenced(target, lang)
         if (view.markdown() != text) view.set(text)
         applyCodeStyle(view)
@@ -335,7 +335,9 @@ class PermissionView(
             code in 0x202a..0x202e ||
             code in 0x2066..0x2069
 
-    private fun description(permission: Permission): String = if (permission.name == "bash") {
+    private fun isShell(name: String) = name == "shell" || name == "bash"
+
+    private fun description(permission: Permission): String = if (isShell(permission.name)) {
         permission.meta.raw["description"] ?: toolLabel(permission.name)
     } else {
         toolLabel(permission.name)
@@ -364,14 +366,14 @@ class PermissionView(
         "glob" -> KiloBundle.message("session.permission.tool.glob")
         "grep" -> KiloBundle.message("session.permission.tool.grep")
         "list" -> KiloBundle.message("session.permission.tool.list")
-        "bash" -> KiloBundle.message("session.permission.tool.bash")
+        "shell", "bash" -> KiloBundle.message("session.permission.tool.bash")
         "external_directory" -> KiloBundle.message("session.permission.tool.external_directory")
         "webfetch" -> KiloBundle.message("session.permission.tool.webfetch")
         "websearch" -> KiloBundle.message("session.permission.tool.websearch")
         "codesearch" -> KiloBundle.message("session.permission.tool.codesearch")
         "todoread" -> KiloBundle.message("session.permission.tool.todoread")
         "todowrite" -> KiloBundle.message("session.permission.tool.todowrite")
-        "task" -> KiloBundle.message("session.permission.tool.task")
+        "subagent", "task" -> KiloBundle.message("session.permission.tool.task")
         "skill" -> KiloBundle.message("session.permission.tool.skill")
         "lsp" -> KiloBundle.message("session.permission.tool.lsp")
         else -> tool

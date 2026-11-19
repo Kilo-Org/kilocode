@@ -270,7 +270,7 @@ internal fun normalizeWorkspacePath(path: String): String? {
     }
 }
 
-// Candidate names in the .kilo/ directory, in resolution order. Disjoint by design: a POSIX script is
+// Candidate names in the .kilo2/ directory, in resolution order. Disjoint by design: a POSIX script is
 // never resolved on Windows and vice versa, matching the VS Code extension.
 private val SETUP_POSIX_CANDIDATES = listOf(
     "setup-script" to SetupScriptKind.POSIX,
@@ -285,13 +285,13 @@ private val SETUP_DEFAULT_POSIX = "setup-script" to SetupScriptKind.POSIX
 private val SETUP_DEFAULT_WINDOWS = "setup-script.ps1" to SetupScriptKind.POWERSHELL
 
 /**
- * Resolves the worktree setup script in `<root>/.kilo/` for the given platform. POSIX and Windows
+ * Resolves the worktree setup script in `<root>/.kilo2/` for the given platform. POSIX and Windows
  * candidate lists are disjoint (a POSIX script is never resolved on Windows and vice versa); the
  * first existing candidate wins, otherwise the platform default path is returned with `exists = false`.
  * Pure and unit-testable without touching [SystemInfo].
  */
 internal fun resolveSetupScript(root: Path, windows: Boolean): SetupScriptTargetDto {
-    val dir = root.resolve(".kilo")
+    val dir = root.resolve(".kilo2")
     val candidates = if (windows) SETUP_WINDOWS_CANDIDATES else SETUP_POSIX_CANDIDATES
     val found = candidates.firstOrNull { (name, _) -> Files.exists(dir.resolve(name)) }
     val (name, kind) = found ?: (if (windows) SETUP_DEFAULT_WINDOWS else SETUP_DEFAULT_POSIX)

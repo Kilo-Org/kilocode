@@ -2096,7 +2096,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     /** The plugin's `<registryKey>` extensions are not loaded in tests, so contribute the key here. */
     private fun disableValidateRoots() {
-        val key = "kilo.session.validateRoots"
+        val key = "kilo2.session.validateRoots"
         Registry.mutateContributedKeys {
             it + (key to RegistryKeyDescriptor(key, "test", "true", false, false, null, null))
         }

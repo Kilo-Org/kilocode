@@ -307,7 +307,7 @@ internal object WorktreeRunAdapter {
      * - blank, the repo root, or the bare project macro resolve to the worktree root
      * - relative paths resolve against the worktree
      * - absolute paths already inside [worktree] are kept, so managed worktrees living under
-     *   `<repo>/.kilo/worktrees/<name>` are never nested a second time
+     *   `<repo>/.kilo2/worktrees/<name>` are never nested a second time
      * - absolute paths under [repo] are rebased onto [worktree]
      * - absolute paths outside [repo] are kept as configured, since they are not part of the
      *   transplanted tree (an external tool or data directory)

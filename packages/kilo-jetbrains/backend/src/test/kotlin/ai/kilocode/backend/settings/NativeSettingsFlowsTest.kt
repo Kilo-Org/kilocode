@@ -1,5 +1,6 @@
 package ai.kilocode.backend.settings
 
+import ai.kilocode.backend.app.KiloAccountSettings
 import ai.kilocode.backend.marketplace.KiloBackendMarketplaceManager
 import ai.kilocode.backend.provider.KiloBackendProviderSettingsManager
 import ai.kilocode.backend.rpc.KiloAgentBehaviorRpcApiImpl
@@ -52,6 +53,36 @@ class NativeSettingsFlowsTest {
     private fun output(raw: String) = buildJsonObject {
         put("output", Json.parseToJsonElement(raw))
     }
+
+    @Test
+    fun `gateway sign in displays the user code rather than the poll code and loads the active team`() =
+        serve({ exchange, body ->
+            when (exchange.requestURI.path) {
+                "/api/integration/kilo" ->
+                    data("""{"methods":[{"id":"gateway-device","type":"oauth"}]}""")
+                "/api/integration/kilo/connect/oauth" -> {
+                    assertEquals("gateway-device", body.text("methodID"))
+                    data(
+                        """{"attemptID":"attempt","mode":"auto","url":"https://example.org/device?code=USER-CODE","instructions":"Enter code: polling-code","time":{"expires":${System.currentTimeMillis()+60000}}}"""
+                    )
+                }
+                "/api/integration/kilo/connect/oauth/attempt" -> data("""{"status":"complete"}""")
+                "/api/rpc/kilocode.gateway/authStatus" -> output("""{"authenticated":true}""")
+                "/api/rpc/kilocode.gateway/profile" ->
+                    output(
+                        """{"email":"fixture@example.org","name":"Fixture","hasPersonalAccount":true,"organizationID":"team","organizations":[{"id":"team","name":"Team","role":"member"}]}"""
+                    )
+                "/api/rpc/kilocode.gateway/balance" -> output("""{"balance":10.5}""")
+                "/api/rpc/kilocode.gateway/kiloPass" -> output("null")
+                else -> error(exchange.requestURI.path)
+            }
+        }) { api ->
+            val account = KiloAccountSettings { api }
+            assertEquals("USER-CODE", account.startLogin("/repo").code)
+            val profile = assertNotNull(account.completeLogin("/repo"))
+            assertEquals("team", profile.currentOrgId)
+            assertEquals(10.5, profile.balance?.balance)
+        }
 
     @Test
     fun `custom model fetch sends the stored key only to its saved provider URL`() =

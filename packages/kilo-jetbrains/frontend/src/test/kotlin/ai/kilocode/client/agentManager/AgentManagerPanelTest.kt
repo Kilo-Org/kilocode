@@ -128,7 +128,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test creating a worktree selects it while pending and after the rpc resolves`() {
-        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
         edt { controller.reload() }
@@ -315,7 +315,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test clicking a worktree opens the worktree session editor`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo2/worktrees/feature-x")
         rpc.listed += item
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
@@ -349,7 +349,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     fun `test current branch row appears first and opens session editor`() {
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         rpc.listed += main
         rpc.listed += item
         val controller = WorktreeController(service, "/repo", coroutines.scope)
@@ -388,8 +388,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test refresh preserves selected worktree across model replace`() {
-        val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
-        val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
+        val first = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
+        val second = WorktreeDto("/repo/.kilo2/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo2/worktrees/feature-y")
         rpc.listed += first
         rpc.listed += second
         val controller = WorktreeController(service, "/test", coroutines.scope)
@@ -406,8 +406,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test panel refresh keeps selected worktree across tab switch reload`() {
-        val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
-        val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
+        val first = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
+        val second = WorktreeDto("/repo/.kilo2/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo2/worktrees/feature-y")
         rpc.listed += first
         rpc.listed += second
         val controller = WorktreeController(service, "/test", coroutines.scope)
@@ -424,8 +424,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test refresh keeps existing selection`() {
-        val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
-        val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
+        val first = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
+        val second = WorktreeDto("/repo/.kilo2/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo2/worktrees/feature-y")
         rpc.listed += first
         rpc.listed += second
         val controller = WorktreeController(service, "/test", coroutines.scope)
@@ -445,8 +445,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test refresh uses active worktree editor when no selection exists`() {
-        val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
-        val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
+        val first = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
+        val second = WorktreeDto("/repo/.kilo2/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo2/worktrees/feature-y")
         rpc.listed += first
         rpc.listed += second
         val controller = WorktreeController(service, "/test", coroutines.scope)
@@ -465,8 +465,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test selecting worktree editor tab selects its worktree row`() {
-        val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
-        val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
+        val first = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
+        val second = WorktreeDto("/repo/.kilo2/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo2/worktrees/feature-y")
         rpc.listed += first
         rpc.listed += second
         val controller = WorktreeController(service, "/test", coroutines.scope)
@@ -485,7 +485,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test selecting non worktree editor tab clears worktree row selection`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         rpc.listed += item
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
@@ -508,7 +508,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test panel starts with no selection when active editor tab is not worktree`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         rpc.listed += item
         val file = myFixture.addFileToProject("src/Current.kt", "fun current() = Unit").virtualFile
         edt { FileEditorManager.getInstance(project).openFile(file, true) }
@@ -523,7 +523,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test custom worktree editor matcher can select a row for another editor kind`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         rpc.listed += item
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
@@ -544,7 +544,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test deleting a worktree closes and releases its worktree session editor`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         rpc.listed += item
         val controller = WorktreeController(service, "/test", coroutines.scope)
         edt { AgentManagerPanel(testRootDisposable, controller, project) }
@@ -568,9 +568,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test deleting the shown worktree selects and opens the next row`() {
-        val a = WorktreeDto("/repo/.kilo/worktrees/a", "a", "a", "/repo/.kilo/worktrees/a")
-        val b = WorktreeDto("/repo/.kilo/worktrees/b", "b", "b", "/repo/.kilo/worktrees/b")
-        val c = WorktreeDto("/repo/.kilo/worktrees/c", "c", "c", "/repo/.kilo/worktrees/c")
+        val a = WorktreeDto("/repo/.kilo2/worktrees/a", "a", "a", "/repo/.kilo2/worktrees/a")
+        val b = WorktreeDto("/repo/.kilo2/worktrees/b", "b", "b", "/repo/.kilo2/worktrees/b")
+        val c = WorktreeDto("/repo/.kilo2/worktrees/c", "c", "c", "/repo/.kilo2/worktrees/c")
         rpc.listed += a
         rpc.listed += b
         rpc.listed += c
@@ -596,8 +596,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test deleting the last worktree selects and opens the previous row`() {
-        val a = WorktreeDto("/repo/.kilo/worktrees/a", "a", "a", "/repo/.kilo/worktrees/a")
-        val b = WorktreeDto("/repo/.kilo/worktrees/b", "b", "b", "/repo/.kilo/worktrees/b")
+        val a = WorktreeDto("/repo/.kilo2/worktrees/a", "a", "a", "/repo/.kilo2/worktrees/a")
+        val b = WorktreeDto("/repo/.kilo2/worktrees/b", "b", "b", "/repo/.kilo2/worktrees/b")
         rpc.listed += a
         rpc.listed += b
         val controller = WorktreeController(service, "/test", coroutines.scope)
@@ -622,8 +622,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test deleting a background worktree keeps the shown selection`() {
-        val a = WorktreeDto("/repo/.kilo/worktrees/a", "a", "a", "/repo/.kilo/worktrees/a")
-        val b = WorktreeDto("/repo/.kilo/worktrees/b", "b", "b", "/repo/.kilo/worktrees/b")
+        val a = WorktreeDto("/repo/.kilo2/worktrees/a", "a", "a", "/repo/.kilo2/worktrees/a")
+        val b = WorktreeDto("/repo/.kilo2/worktrees/b", "b", "b", "/repo/.kilo2/worktrees/b")
         rpc.listed += a
         rpc.listed += b
         val controller = WorktreeController(service, "/test", coroutines.scope)
@@ -648,7 +648,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test worktree row shows activity icon for matching directory`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         val activity = MutableStateFlow(mapOf(
             "ses_1" to SessionActivityDto(item.path, SessionActivityKindDto.QUESTION),
         ))
@@ -664,7 +664,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test worktree row uses the error icon for error activity`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         val activity = MutableStateFlow(mapOf(
             "ses_1" to SessionActivityDto(item.path, SessionActivityKindDto.ERROR),
         ))
@@ -690,7 +690,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test locked worktree row shows the lock icon`() {
-        val path = "${project.basePath!!}/.kilo/worktrees/held"
+        val path = "${project.basePath!!}/.kilo2/worktrees/held"
         rpc.listed += WorktreeDto(path, "held", "held", path, locked = true, lockReason = "held by test")
         val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
@@ -739,7 +739,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         // ...and cleared once the only live process belongs to a different worktree. Asserting the
         // transition rather than a bare non-match keeps this from passing when the states never arrive.
-        run.states.value = listOf(RunStateDto("id1", "dev [other]", "${project.basePath!!}/.kilo/worktrees/other"))
+        run.states.value = listOf(RunStateDto("id1", "dev [other]", "${project.basePath!!}/.kilo2/worktrees/other"))
         waitUntil { row(panel, 0).icon === WorktreeIcons.branch }
     }
 
@@ -817,7 +817,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
      * padding that never shrinks back.
      */
     fun `test worktree row height round trips through repeated IDE zoom changes`() {
-        val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("${project.basePath!!}/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo2/worktrees/feature-x")
         rpc.listed += main()
         rpc.listed += item
         rpc.statsResult = WorktreeStatsListDto(
@@ -872,7 +872,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test worktree row shows metrics from status service`() {
-        val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("${project.basePath!!}/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo2/worktrees/feature-x")
         rpc.listed += item
         rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(item.path, additions = 5, deletions = 2, ahead = 1, behind = 3, files = 2, base = "origin/main")))
         val timers = TestUiTimers()
@@ -1072,7 +1072,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test open diff opens the branch diff editor`() {
-        val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("${project.basePath!!}/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo2/worktrees/feature-x")
         rpc.listed += item
         val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
@@ -1091,7 +1091,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test open local diff opens the uncommitted changes editor`() {
-        val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("${project.basePath!!}/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo2/worktrees/feature-x")
         rpc.listed += item
         val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
@@ -1146,11 +1146,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(listOf(controller.directory), workspaceRpc.setupScriptTargetCalls.toList())
 
         service<KiloWorkspaceService>().setupScript[controller.directory] =
-            SetupScriptTargetDto("${controller.directory}/.kilo/setup-script", "", exists = false)
+            SetupScriptTargetDto("${controller.directory}/.kilo2/setup-script", "", exists = false)
         assertFalse(edt { panel.canRunSetup(item) })
 
         service<KiloWorkspaceService>().setupScript[controller.directory] =
-            SetupScriptTargetDto("${controller.directory}/.kilo/setup-script", "", exists = true)
+            SetupScriptTargetDto("${controller.directory}/.kilo2/setup-script", "", exists = true)
         assertTrue(edt { panel.canRunSetup(item) })
     }
 
@@ -1208,7 +1208,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test open pr availability reflects pr status`() {
-        val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("${project.basePath!!}/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo2/worktrees/feature-x")
         rpc.listed += item
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(item.path, 7, GhState.OPEN, "https://example.test/pr/7")))
         val gate = CompletableDeferred<Unit>()
@@ -1480,7 +1480,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test pr title replaces row name and the pill tooltip is only the click hint`() {
-        val path = "${project.basePath!!}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath!!}/.kilo2/worktrees/feature-x"
         val item = WorktreeDto(path, "Feature Label", "feature/x", path)
         rpc.listed += item
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 7, GhState.DRAFT, "https://example.test/pr/7", "Fix <login> bug")))
@@ -1513,7 +1513,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test blank pr title keeps the row name`() {
-        val path = "${project.basePath!!}/.kilo/worktrees/feature-x"
+        val path = "${project.basePath!!}/.kilo2/worktrees/feature-x"
         val item = WorktreeDto(path, "Feature Label", "feature/x", path)
         rpc.listed += item
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 8, GhState.OPEN, "https://example.test/pr/8", "   ")))
@@ -1795,7 +1795,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     private fun worktree(name: String): WorktreeDto {
-        val path = "${project.basePath!!}/.kilo/worktrees/$name"
+        val path = "${project.basePath!!}/.kilo2/worktrees/$name"
         return WorktreeDto(path, name, name, path)
     }
 

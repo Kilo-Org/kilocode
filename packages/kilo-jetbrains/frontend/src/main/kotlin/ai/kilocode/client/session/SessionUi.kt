@@ -183,7 +183,7 @@ class SessionUi(
     // turn's message as confirmation of its own.
     private var pendingSend: Int? = null
     private val flushMs =
-        Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
+        Registry.intValue("kilo2.session.flushMs", EVENT_FLUSH_MS.toInt())
             .takeIf { it > 0 }
             ?.toLong()
             ?: EVENT_FLUSH_MS
@@ -197,7 +197,7 @@ class SessionUi(
         cs = cs,
         comp = this,
         flushMs = flushMs,
-        condense = Registry.`is`("kilo.session.condense", true),
+        condense = Registry.`is`("kilo2.session.condense", true),
         displayMs = displayMs,
         open = { item -> manager?.openSession(item) },
         beforeUpdate = { if (opening) false else scroll.following() },
@@ -314,6 +314,7 @@ class SessionUi(
     override val pr: WorktreePrDto? get() = branch?.pr
 
     override val share: String? get() = controller.model.session?.share?.url
+    override val publicLinks: Boolean get() = controller.model.session?.publicLinks == true
 
     override val git: Boolean get() = branch.let { it != null && it.availability != GhAvailability.GIT_MISSING }
 

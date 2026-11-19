@@ -27,7 +27,7 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
     private lateinit var sessions: KiloSessionService
     private lateinit var controller: WorktreeSessionListController
 
-    private val dir = "/repo/.kilo/worktrees/feature-x"
+    private val dir = "/repo/.kilo2/worktrees/feature-x"
 
     override fun setUp() {
         super.setUp()

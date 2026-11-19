@@ -38,8 +38,8 @@ class OrphanDialogTest : BasePlatformTestCase() {
 
     fun `test leftover rows are pre-selected and broken rows are not`() {
         open(
-            OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER),
-            OrphanDto("/repo/.kilo/worktrees/broken", OrphanKind.BROKEN),
+            OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER),
+            OrphanDto("/repo/.kilo2/worktrees/broken", OrphanKind.BROKEN),
         )
 
         val table = table()
@@ -49,8 +49,8 @@ class OrphanDialogTest : BasePlatformTestCase() {
 
     fun `test delete button label reflects the current selection`() {
         open(
-            OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER),
-            OrphanDto("/repo/.kilo/worktrees/broken", OrphanKind.BROKEN),
+            OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER),
+            OrphanDto("/repo/.kilo2/worktrees/broken", OrphanKind.BROKEN),
         )
         val table = table()
 
@@ -64,7 +64,7 @@ class OrphanDialogTest : BasePlatformTestCase() {
     }
 
     fun `test the ok action is disabled once every row is deselected`() {
-        open(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
+        open(OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER))
         val table = table()
         assertTrue(edt { requireNotNull(dialog).isOKActionEnabled })
 
@@ -74,20 +74,20 @@ class OrphanDialogTest : BasePlatformTestCase() {
     }
 
     fun `test result is null until confirmed`() {
-        open(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
+        open(OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER))
 
         assertNull(edt { requireNotNull(dialog).result() })
     }
 
     fun `test result carries the selected paths once confirmed`() {
         open(
-            OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER),
-            OrphanDto("/repo/.kilo/worktrees/broken", OrphanKind.BROKEN),
+            OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER),
+            OrphanDto("/repo/.kilo2/worktrees/broken", OrphanKind.BROKEN),
         )
 
         edt { requireNotNull(dialog).doOKAction() }
 
-        assertEquals(listOf("/repo/.kilo/worktrees/leftover"), edt { requireNotNull(dialog).result() })
+        assertEquals(listOf("/repo/.kilo2/worktrees/leftover"), edt { requireNotNull(dialog).result() })
     }
 
     /**
@@ -97,8 +97,8 @@ class OrphanDialogTest : BasePlatformTestCase() {
      */
     fun `test the fixed columns keep their width and stay unresizable after a toggle`() {
         open(
-            OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER),
-            OrphanDto("/repo/.kilo/worktrees/broken", OrphanKind.BROKEN),
+            OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER),
+            OrphanDto("/repo/.kilo2/worktrees/broken", OrphanKind.BROKEN),
         )
         val table = table()
         val widths = edt { listOf(column(table, 0).width, column(table, COLUMN_REVEAL_INDEX).width) }
@@ -112,7 +112,7 @@ class OrphanDialogTest : BasePlatformTestCase() {
     }
 
     fun `test the reveal column renders an icon and is not editable`() {
-        open(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
+        open(OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER))
         val table = table()
 
         assertTrue(edt { table.model.getValueAt(0, COLUMN_REVEAL_INDEX) } is Icon)
@@ -121,7 +121,7 @@ class OrphanDialogTest : BasePlatformTestCase() {
     }
 
     fun `test the header explains where the folders come from`() {
-        open(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
+        open(OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER))
 
         val north = edt { requireNotNull(dialog).northComponent() }
         val text = components(north).filterIsInstance<JEditorPane>().joinToString(" ") { edt { it.text ?: "" } }
@@ -132,7 +132,7 @@ class OrphanDialogTest : BasePlatformTestCase() {
             EditorNotificationPanel.Status.Info,
             edt { (north as InlineBanner).status },
         )
-        assertTrue("expected the worktree directory to be named -> $text", text.contains(".kilo/worktrees"))
+        assertTrue("expected the worktree directory to be named -> $text", text.contains(".kilo2/worktrees"))
         assertTrue("expected git detection to be explained -> $text", text.contains("git"))
         assertFalse("every help string must resolve -> $text", text.contains("!worktree.orphans"))
     }
@@ -142,11 +142,11 @@ class OrphanDialogTest : BasePlatformTestCase() {
      * behind a Show more / Show less link; only the intro sentence is visible up front.
      */
     fun `test the header explanation is collapsed to its intro until Show more is clicked`() {
-        open(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
+        open(OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER))
         val north = edt { requireNotNull(dialog).northComponent() }
 
         val collapsedText = edt { messageText(north) }
-        assertTrue("expected the intro up front -> $collapsedText", collapsedText.contains(".kilo/worktrees"))
+        assertTrue("expected the intro up front -> $collapsedText", collapsedText.contains(".kilo2/worktrees"))
         assertFalse("bullets must stay hidden until expanded -> $collapsedText", collapsedText.contains("uncommitted"))
 
         val toggle = edt { linkLabel(north) }
@@ -171,7 +171,7 @@ class OrphanDialogTest : BasePlatformTestCase() {
      * inset only, so the strip has to be right-only or the header stops lining up with the rows.
      */
     fun `test the viewport reserves a right-only strip for the scrollbar`() {
-        open(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
+        open(OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER))
         val scroll = components(edt { requireNotNull(dialog).centerComponent() }).filterIsInstance<JBScrollPane>().single()
 
         val insets = edt { requireNotNull(scroll.viewportBorder).getBorderInsets(scroll) }
@@ -183,7 +183,7 @@ class OrphanDialogTest : BasePlatformTestCase() {
     }
 
     fun `test footer mentions checkouts only when a broken row is selected`() {
-        open(OrphanDto("/repo/.kilo/worktrees/broken", OrphanKind.BROKEN))
+        open(OrphanDto("/repo/.kilo2/worktrees/broken", OrphanKind.BROKEN))
         val table = table()
         val footer = footer()
 

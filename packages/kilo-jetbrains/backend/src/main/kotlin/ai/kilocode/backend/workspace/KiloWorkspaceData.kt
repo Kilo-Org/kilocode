@@ -168,6 +168,7 @@ internal class KiloWorkspaceData(private val client: V2Client, directory: String
     }
 
     suspend fun updateConfig(patch: ConfigPatchDto, scope: String = if (directory == null) "global" else "project"): ConfigDto {
+        require(patch.retention == null || scope == "global") { "Retention is a machine-wide setting." }
         val read = readSettings(scope)
         val target = read.getValue("target").jsonObject
         val current = document()

@@ -634,7 +634,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             content.update(
                 ProviderSettingsDto(
                     providers = listOf(provider("local-openai", "Local OpenAI", source = "custom")),
-                    config = mapOf("local-openai" to CustomProviderConfigDto("local-openai", npm = "@ai-sdk/openai-compatible")),
+                    config = mapOf("local-openai" to CustomProviderConfigDto("local-openai", npm = "@opencode/ai/providers/openai-compatible")),
                     auth = mapOf("local-openai" to listOf(ProviderAuthMethodDto("api", "API key"))),
                 ),
             )
@@ -678,7 +678,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
                     provider("local-openai", "Local OpenAI", source = "custom"),
                     provider("env-provider", "Env Provider", source = "env"),
                 ),
-                config = mapOf("local-openai" to CustomProviderConfigDto("local-openai", npm = "@ai-sdk/openai-compatible")),
+                config = mapOf("local-openai" to CustomProviderConfigDto("local-openai", npm = "@opencode/ai/providers/openai-compatible")),
             ),
             "",
         )
@@ -747,7 +747,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
                     provider("available-custom", "Available Custom", source = "custom"),
                     provider("local-openai", "Local OpenAI", source = "custom"),
                 ),
-                config = mapOf("local-openai" to CustomProviderConfigDto("local-openai", npm = "@ai-sdk/openai-compatible")),
+                config = mapOf("local-openai" to CustomProviderConfigDto("local-openai", npm = "@opencode/ai/providers/openai-compatible")),
             ),
             "",
         )

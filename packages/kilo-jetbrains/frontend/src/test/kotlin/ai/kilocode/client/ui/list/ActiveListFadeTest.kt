@@ -194,7 +194,7 @@ class ActiveListFadeTest : BasePlatformTestCase() {
     private companion object {
         // No spaces, so a cut is guaranteed to land mid-glyph and every column of the fade band carries ink.
         val LONG = "M".repeat(120)
-        const val FLAG = "kilo.list.fade"
+        const val FLAG = "kilo2.list.fade"
         const val NARROW = 120
         const val WIDE = 4000
         const val HEIGHT = 24

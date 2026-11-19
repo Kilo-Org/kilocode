@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 class WorktreeRunAdapterTest {
     private val repo = "/repo"
-    private val worktree = "/repo/.kilo/worktrees/wt"
+    private val worktree = "/repo/.kilo2/worktrees/wt"
 
     @Test
     fun `blank and repo root resolve to the worktree root`() {
@@ -49,7 +49,7 @@ class WorktreeRunAdapterTest {
 
     @Test
     fun `paths already inside the worktree are not nested again`() {
-        // Managed worktrees live under <repo>/.kilo/worktrees/<name>, so they also match the repo prefix.
+        // Managed worktrees live under <repo>/.kilo2/worktrees/<name>, so they also match the repo prefix.
         assertEquals(path(worktree), rebase(worktree))
         assertEquals(path("$worktree/packages/kilo-jetbrains"), rebase("$worktree/packages/kilo-jetbrains"))
     }
@@ -57,8 +57,8 @@ class WorktreeRunAdapterTest {
     @Test
     fun `sibling worktree path is rebased onto the target worktree`() {
         assertEquals(
-            path("$worktree/.kilo/worktrees/other/packages/x"),
-            rebase("/repo/.kilo/worktrees/other/packages/x"),
+            path("$worktree/.kilo2/worktrees/other/packages/x"),
+            rebase("/repo/.kilo2/worktrees/other/packages/x"),
         )
     }
 

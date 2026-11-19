@@ -99,6 +99,7 @@ class HistoryPanel(
         addTab(cloudInfo).setPreferredFocusableComponent(cloudSearch.textEditor)
         addListener(object : TabsListener {
             override fun selectionChanged(oldSelection: TabInfo?, newSelection: TabInfo?) {
+                if (newSelection === cloudInfo && !controller.cloud.loading) controller.reloadCloud()
                 sync()
             }
         }, this@HistoryPanel)
@@ -140,6 +141,7 @@ class HistoryPanel(
         stale = false
         updateTheme()
         controller.reload()
+        if (tabs.selectedInfo === cloudInfo) controller.reloadCloud()
     }
 
     private fun bindTheme() {
@@ -160,7 +162,7 @@ class HistoryPanel(
     }
 
     private fun search(model: HistoryModel<out HistoryItem>) = SearchTextField(false).apply {
-        textEditor.emptyText.text = KiloBundle.message("history.search.placeholder")
+        textEditor.emptyText.text = KiloBundle.message(if (model === controller.cloud) "history.cloud.search.id" else "history.search.placeholder")
         textEditor.document.addDocumentListener(object : DocumentAdapter() {
             override fun textChanged(e: DocumentEvent) {
                 model.setFilter(text)
@@ -177,7 +179,11 @@ class HistoryPanel(
             JComponent.WHEN_FOCUSED,
         )
         textEditor.registerKeyboardAction(
-            { activeList().selected()?.let(::activate) },
+            {
+                val row = activeList().selected()
+                if (row != null) activate(row)
+                else if (model === controller.cloud) controller.openCloudID(text)
+            },
             KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
             JComponent.WHEN_FOCUSED,
         )

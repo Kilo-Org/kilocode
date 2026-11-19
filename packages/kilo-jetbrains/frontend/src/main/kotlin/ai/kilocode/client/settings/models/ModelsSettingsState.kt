@@ -10,16 +10,12 @@ import ai.kilocode.rpc.dto.ProvidersDto
 internal data class ModelsDraft(
     val model: String? = null,
     val small: String? = null,
-    val subagent: String? = null,
-    val variant: String? = null,
     val agents: Map<String, String?> = emptyMap(),
 )
 
 internal fun modelsDraft(config: ConfigDto?, agents: List<AgentDto>): ModelsDraft = ModelsDraft(
     model = config?.model,
     small = config?.smallModel,
-    subagent = config?.subagentModel,
-    variant = config?.subagentVariant,
     agents = agents.associate { item -> item.name to config?.agent?.get(item.name)?.model },
 )
 
@@ -27,12 +23,6 @@ internal fun patch(from: ModelsDraft, to: ModelsDraft): ConfigPatchDto {
     val values = linkedMapOf<String, String?>()
     if (from.model != to.model) values["model"] = to.model
     if (from.small != to.small) values["small_model"] = to.small
-    if (from.subagent != to.subagent) {
-        values["subagent_model"] = to.subagent
-        if (to.subagent == null || from.variant != to.variant) values["subagent_variant"] = to.variant
-    } else if (from.variant != to.variant) {
-        values["subagent_variant"] = to.variant
-    }
 
     val agents = linkedMapOf<String, AgentConfigPatchDto>()
     for (name in (from.agents.keys + to.agents.keys).sorted()) {
@@ -84,8 +74,6 @@ internal fun modelsLoginBannerVisible(ready: Boolean, authenticated: Boolean): B
 internal fun savedMatches(base: ModelsDraft, draft: ModelsDraft): Boolean {
     if (base.model != draft.model) return false
     if (base.small != draft.small) return false
-    if (base.subagent != draft.subagent) return false
-    if (base.variant != draft.variant) return false
     for ((name, value) in draft.agents) {
         if (base.agents[name] != value) return false
     }

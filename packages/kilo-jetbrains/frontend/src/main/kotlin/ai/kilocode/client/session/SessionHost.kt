@@ -217,7 +217,7 @@ abstract class SessionHost(
     @RequiresEdt
     private fun schedule(ui: SessionUi) {
         cancel(ui)
-        val delay = Registry.intValue("kilo.session.inactive.disposeTimeoutMs").coerceAtLeast(0)
+        val delay = Registry.intValue("kilo2.session.inactive.disposeTimeoutMs").coerceAtLeast(0)
         val timer = timers.timer(delay, repeats = false) {
             activeTimers.remove(ui)
             if (ui === current || ui !in all) return@timer

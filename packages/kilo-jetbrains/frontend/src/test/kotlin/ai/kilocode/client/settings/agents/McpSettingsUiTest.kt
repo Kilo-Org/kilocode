@@ -315,7 +315,7 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         flushUntil { rows(panel).size == 3 }
         val server = agentRpc.mcpConfigs.getValue("github")
         agentRpc.mcpConfigs = agentRpc.mcpConfigs + ("github" to server.copy(scope = "workspace"))
-        marketRpc.bundles = listOf(MarketplaceBundleDto("github", "project", listOf("$DIR/.kilo/skills/github/SKILL.md")))
+        marketRpc.bundles = listOf(MarketplaceBundleDto("github", "project", listOf("$DIR/.kilo2/skills/github/SKILL.md")))
         edt { panel.reload(); true }
         flushUntil { marketRpc.bundleCalls.size >= 2 && searchField(panel).isEnabled }
         var message = ""

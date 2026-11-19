@@ -16,7 +16,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 internal const val KILO_PROVIDER_ID = "kilo"
-internal const val CUSTOM_PROVIDER_PACKAGE = "@ai-sdk/openai-compatible"
+internal const val CUSTOM_PROVIDER_PACKAGE = "@opencode/ai/providers/openai-compatible"
 
 private val popularIds = listOf(
     KILO_PROVIDER_ID,

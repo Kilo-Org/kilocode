@@ -16,8 +16,8 @@ class WorktreeDiagnosticsTest {
 
     @Test
     fun `reports tool availability, per-worktree status, and leftovers`() {
-        val healthy = "/repo/.kilo/worktrees/alive"
-        val broken = "/repo/.kilo/worktrees/broken"
+        val healthy = "/repo/.kilo2/worktrees/alive"
+        val broken = "/repo/.kilo2/worktrees/broken"
 
         val text = WorktreeDiagnostics.render(
             WorktreeDiagnostics.Input(
@@ -27,7 +27,7 @@ class WorktreeDiagnosticsTest {
                     WorktreeDto(healthy, "alive", "feature/alive", healthy),
                     WorktreeDto(broken, "broken", "feature/broken", broken),
                 ),
-                orphans = listOf("/repo/.kilo/worktrees/leftover"),
+                orphans = listOf("/repo/.kilo2/worktrees/leftover"),
                 stats = mapOf(normalizeWorktreePath(healthy) to WorktreeStatsDto(healthy, additions = 3)),
                 dirty = mapOf(
                     normalizeWorktreePath(broken) to
@@ -44,7 +44,7 @@ class WorktreeDiagnosticsTest {
         assertContains(text, "orphan directories: 1")
         assertContains(text, "[ok] alive — $healthy (branch=feature/alive)")
         assertContains(text, "[unavailable] broken — $broken (branch=feature/broken reason=Git command timed out)")
-        assertContains(text, "  /repo/.kilo/worktrees/leftover")
+        assertContains(text, "  /repo/.kilo2/worktrees/leftover")
     }
 
     @Test

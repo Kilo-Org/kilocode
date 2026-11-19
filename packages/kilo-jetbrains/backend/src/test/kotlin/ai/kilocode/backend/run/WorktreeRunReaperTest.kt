@@ -12,7 +12,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class WorktreeRunReaperTest {
-    private val worktree = "/repo/.kilo/worktrees/wt"
+    private val worktree = "/repo/.kilo2/worktrees/wt"
     private val now = Instant.now()
 
     @Test

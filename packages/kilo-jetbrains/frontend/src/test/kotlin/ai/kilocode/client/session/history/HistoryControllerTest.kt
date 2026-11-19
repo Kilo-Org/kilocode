@@ -125,6 +125,33 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertEquals("true", event.second["hasNextCursor"])
     }
 
+    fun `test local history never starts cloud transfer and unsupported CLI keeps local history available`() {
+        rpc.cloudFeatures = rpc.cloudFeatures.copy(available = false)
+        rpc.listed += session("ses_local", "Local")
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
+        assertFalse(controller.cloud.loaded)
+        panel.clickCloud()
+        flush()
+        assertEquals(KiloBundle.message("history.cloud.unsupported"), controller.cloud.error)
+        assertTrue(rpc.cloudCalls.isEmpty())
+        assertFalse(controller.canImport)
+        assertEquals("ses_local", controller.local.items.single().id)
+    }
+
+    fun `test exact cloud ID can open without paging to its row`() {
+        rpc.cloudFeatures = rpc.cloudFeatures.copy(repositoryFilter = false)
+        val opened = mutableListOf<String>()
+        val panel = HistoryPanel(parent, controller(opened))
+        flush()
+        panel.clickCloud()
+        flush()
+        panel.setSearch("ses_unlisted")
+        key(panel.defaultFocusedComponent, KeyEvent.VK_ENTER)
+        assertEquals(listOf("cloud:ses_unlisted"), opened)
+    }
+
     fun `test local delete calls rpc and removes item`() {
         rpc.listed += session("ses_1", "Local One")
         val controller = controller()

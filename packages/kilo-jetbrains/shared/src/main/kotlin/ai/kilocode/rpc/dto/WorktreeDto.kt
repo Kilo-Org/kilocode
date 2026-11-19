@@ -19,7 +19,7 @@ data class WorktreeDto(
 data class WorktreeListDto(
     val worktrees: List<WorktreeDto> = emptyList(),
     /**
-     * Directories under `.kilo/worktrees/` that git does not track — leftovers from interrupted
+     * Directories under `.kilo2/worktrees/` that git does not track — leftovers from interrupted
      * deletes or hand-removed metadata. Reported so they can be surfaced and cleaned deliberately;
      * nothing removes them automatically.
      */

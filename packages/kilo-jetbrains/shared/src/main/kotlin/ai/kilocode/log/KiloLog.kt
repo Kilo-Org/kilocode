@@ -27,10 +27,10 @@ import java.util.logging.LogRecord
  * Logging interface for the Kilo JetBrains plugin.
  *
  * In normal (non-sandbox) mode, output goes through IntelliJ's own [com.intellij.openapi.diagnostic.Logger],
- * which writes to the standard IDE log file, and to rotated `kilo.log*` files inside the IDE log directory.
+ * which writes to the standard IDE log file, and to rotated `kilo2.log*` files inside the IDE log directory.
  *
  * In sandbox mode (i.e. when running via `./gradlew runIde`, detected via the `idea.plugin.in.sandbox.mode`
- * system property), output is written only to `kilo.log*`, and each process starts a new `kilo.log`
+ * system property), output is written only to `kilo2.log*`, and each process starts a new `kilo2.log`
  * so a Run tool window `log_file` tab shows exactly one run. Installed builds keep appending.
  *
  * Usage:
@@ -42,7 +42,7 @@ import java.util.logging.LogRecord
  * log.warn("unexpected state", exception)
  * ```
  *
- * The log level for the sandbox file can be controlled via the `kilo.dev.log.level` system property
+ * The log level for the sandbox file can be controlled via the `kilo2.dev.log.level` system property
  * (DEBUG, INFO, WARN, ERROR, OFF). Defaults to INFO.
  */
 interface KiloLog {
@@ -72,6 +72,8 @@ interface KiloLog {
 
         /** Current diagnostic log file for this process (frontend or backend in split mode). */
         fun logFile(): Path = FileLog.logFile()
+
+        fun closeFile() = FileLog.close()
 
         fun payload(log: KiloLog? = null): Map<String, String> = buildMap {
             put("platform", "jetbrains")
@@ -119,7 +121,7 @@ internal class FileLog(cls: Class<*>) : KiloLog {
         private var initialized = false
 
         private val root: java.util.logging.Logger by lazy {
-            val logger = java.util.logging.Logger.getLogger("ai.kilocode")
+            val logger = java.util.logging.Logger.getAnonymousLogger()
             val payload = KiloLog.payload().entries.joinToString(" ") { "${it.key}=${it.value}" }
             logger.addHandler(handler)
             logger.useParentHandlers = false
@@ -130,45 +132,18 @@ internal class FileLog(cls: Class<*>) : KiloLog {
         }
 
         private val handler: Handler by lazy {
-            val dir = resolveLogDir()
-            val path = dir.resolve("kilo.log")
-            IntellijLog(FileLog::class.java).info("Kilo diagnostic log directory: $dir")
-            deleteLegacyLogs(dir)
-            // Sandbox runs start a new file so a Run tool window `log_file` tab shows just this run;
-            // the previous run stays readable as kilo.log.0. Installed builds keep appending, so a
-            // user's bug report is not truncated by an IDE restart.
-            val h = RotatingLogHandler(path, LIMIT, ROTATIONS, fresh = KiloLog.sandbox())
-            h.formatter = KiloFormatter()
-            h
+            createHandler(PathManager.getLogDir(), KiloLog.sandbox())
         }
 
-        internal fun deleteLegacyLogs(dir: Path) {
-            runCatching {
-                Files.newDirectoryStream(dir, "kilo-dev.log*").use { files ->
-                    files.forEach { Files.deleteIfExists(it) }
-                }
-            }.onFailure {
-                IntellijLog(FileLog::class.java).warn("Could not delete legacy Kilo diagnostic logs in $dir", it)
+        internal fun createHandler(dir: Path, fresh: Boolean): Handler =
+            RotatingLogHandler(dir.resolve(FILENAME), LIMIT, ROTATIONS, fresh).apply {
+                formatter = KiloFormatter()
             }
-        }
 
-        private fun resolveLogDir(): Path {
-            val dir = PathManager.getLogDir()
-            var current = dir
-            var side: String? = null
-            while (current.parent != null) {
-                val name = current.fileName.toString()
-                if (name.startsWith("log_run")) {
-                    side = if (name.lowercase().contains("frontend")) "kilo-frontend" else "kilo-backend"
-                }
-                if (name == "kilo.jetbrains" && side != null) {
-                    val target = current.resolve(side)
-                    Files.createDirectories(target)
-                    return target
-                }
-                current = current.parent
-            }
-            return dir
+        fun close() {
+            if (!initialized) return
+            root.removeHandler(handler)
+            handler.close()
         }
 
         internal fun refreshLevel() {
@@ -176,7 +151,8 @@ internal class FileLog(cls: Class<*>) : KiloLog {
             root.level = LogConfig.julLevel()
         }
 
-        internal fun logFile(): Path = resolveLogDir().resolve("kilo.log")
+        private const val FILENAME = "kilo2.log"
+        internal fun logFile(): Path = PathManager.getLogDir().resolve(FILENAME)
     }
 
     override val isDebugEnabled: Boolean

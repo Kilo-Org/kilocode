@@ -98,7 +98,7 @@ class ConnectionPanelTest : SessionControllerTestBase() {
         edt {
             panel.onEvent(SessionControllerEvent.ConnectionChanged.ShowError("CLI startup failed", null))
         }
-        val xml = requireNotNull(javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml"))
+        val xml = requireNotNull(javaClass.classLoader.getResourceAsStream("kilo.jetbrains.v2.frontend.xml"))
             .bufferedReader()
             .use { it.readText() }
 

@@ -61,7 +61,7 @@ class KiloVirtualFileSystem : VirtualFileSystem(), NonPhysicalFileSystem {
     private fun unsupported(): Nothing = throw UnsupportedOperationException("Kilo virtual files are read-only")
 
     companion object {
-        const val PROTOCOL = "kilo"
+        const val PROTOCOL = "kilo2"
 
         private val json = Json
         private val log = logger<KiloVirtualFileSystem>()

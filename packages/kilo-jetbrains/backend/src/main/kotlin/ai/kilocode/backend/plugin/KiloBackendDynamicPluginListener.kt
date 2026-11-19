@@ -14,7 +14,14 @@ class KiloBackendDynamicPluginListener : DynamicPluginListener {
     override fun beforePluginUnload(pluginDescriptor: IdeaPluginDescriptor, isUpdate: Boolean) {
         if (pluginDescriptor.pluginId != KiloPlugin.id) return
         log.info("Shutting down Kilo backend for plugin unload (isUpdate=$isUpdate)")
-        serviceIfCreated<KiloBackendAppService>()?.shutdown()
-        serviceIfCreated<KiloBackendCliManager>()?.shutdown(fast = false)
+        try {
+            serviceIfCreated<KiloBackendAppService>()?.shutdown()
+        } finally {
+            try {
+                serviceIfCreated<KiloBackendCliManager>()?.shutdown(fast = false)
+            } finally {
+                KiloLog.closeFile()
+            }
+        }
     }
 }

@@ -121,7 +121,7 @@ internal class OnboardingDialog(
         return JBSplitter(false, SPLIT_PROPORTION).apply {
             firstComponent = rail
             secondComponent = right
-            splitterProportionKey = "Kilo.OnboardingDialog.splitter"
+            splitterProportionKey = "Kilo2.OnboardingDialog.splitter"
             preferredSize = JBDimension(DIALOG_WIDTH, DIALOG_HEIGHT)
         }
     }
@@ -159,7 +159,7 @@ internal class OnboardingDialog(
 
     override fun getPreferredFocusedComponent(): JComponent = rail.preferredFocus()
 
-    override fun getDimensionServiceKey(): String = "Kilo.OnboardingDialog"
+    override fun getDimensionServiceKey(): String = "Kilo2.OnboardingDialog"
 
     override fun doCancelAction() {
         if (isSelectedRunning()) return

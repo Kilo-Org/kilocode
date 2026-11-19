@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class OrphanKind { BROKEN, LEFTOVER }
 
-/** One directory under `.kilo/worktrees/` that git does not track. See `WorktreeListDto.orphans`. */
+/** One directory under `.kilo2/worktrees/` that git does not track. See `WorktreeListDto.orphans`. */
 @Serializable
 data class OrphanDto(
     val path: String,

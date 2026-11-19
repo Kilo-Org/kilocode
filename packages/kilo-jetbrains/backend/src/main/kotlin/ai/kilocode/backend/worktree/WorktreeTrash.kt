@@ -28,14 +28,13 @@ import java.util.concurrent.CopyOnWriteArrayList
  * (`packages/kilo-vscode/src/agent-manager/WorktreeManager.ts`): the caller atomically renames the
  * worktree to a `$PREFIX<uuid>` sibling — which is what makes it vanish from `git worktree list` and
  * from disk-existence checks in a single filesystem operation — then this service deletes that
- * sibling's contents on its own scope. Both clients share the same prefix, so either one sweeps
- * orphans the other left behind (e.g. after a force-quit mid-delete).
+ * sibling's contents on its own scope. A later sweep finishes interrupted deletes in the same storage.
  */
 @Service(Service.Level.APP)
 class WorktreeTrash(private val cs: CoroutineScope) {
     companion object {
-        /** Must match the VS Code extension's `TEMP_PREFIX` exactly so orphan sweeps are shared. */
-        const val PREFIX = ".kilo-delete-"
+        /** Only this client's staged directories are eligible for a sweep. */
+        const val PREFIX = ".kilo2-delete-"
         private val LOG = KiloLog.create(WorktreeTrash::class.java)
     }
 
@@ -216,8 +215,7 @@ class WorktreeTrash(private val cs: CoroutineScope) {
 
                 /**
                  * The base implementation rethrows, which would abandon the rest of the tree over one
-                 * entry. A file that vanished on its own (an external process, or a `.kilo-delete-*`
-                 * tree the VS Code extension is reaping concurrently) is already the outcome this
+                 * entry. A file that vanished on its own is already the outcome this
                  * walk wants, so carry on; anything else is genuinely unexpected and propagates.
                  */
                 override fun visitFileFailed(file: Path, exc: IOException): FileVisitResult {

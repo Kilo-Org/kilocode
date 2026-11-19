@@ -24,7 +24,7 @@ import javax.swing.JComponent
  * Root settings entry under Settings -> Tools -> Kilo Code.
  *
  * Displays a brief description and links to the registered child pages.
- * Child configurables are registered in XML (`kilo.jetbrains.frontend.xml`) as
+ * Child configurables are registered in XML (`kilo.jetbrains.v2.frontend.xml`) as
  * `applicationConfigurable` entries with the appropriate `parentId` — that is the
  * single source of truth for the settings hierarchy. This class does NOT implement
  * [com.intellij.openapi.options.SearchableConfigurable.Parent] to avoid creating a

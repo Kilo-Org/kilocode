@@ -238,7 +238,7 @@ class ModelPicker : PickerButton() {
     internal fun expandedForTest(): Boolean = props.getBoolean(MODEL_PICKER_EXPANDED_KEY, false)
 }
 
-internal const val MODEL_PICKER_EXPANDED_KEY = "kilo.model.picker.expanded"
+internal const val MODEL_PICKER_EXPANDED_KEY = "kilo2.model.picker.expanded"
 
 internal data class ModelPickerRow(
     val item: ModelPicker.Item?,

@@ -18,7 +18,7 @@ private val LOG = KiloLog.create(OrphanTree::class.java)
 private class OrphanTree
 
 /**
- * Apparent on-disk size of each leftover worktree directory under `.kilo/worktrees/`.
+ * Apparent on-disk size of each leftover worktree directory under `.kilo2/worktrees/`.
  *
  * No dependency on [ai.kilocode.backend.rpc.KiloWorktreeRpcApiImpl] or any other worktree machinery —
  * this is a pure filesystem walk, callable from the RPC layer or a test. Mirrors VS Code's

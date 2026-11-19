@@ -38,8 +38,8 @@ class KiloTelemetryService internal constructor(
     private val warned = AtomicBoolean()
 
     fun send(event: String, properties: Map<String, String> = emptyMap()) {
-        // Only development diagnostics are available until the server exposes consent-aware telemetry.
-        if (capture == null && !KiloLog.sandbox()) return
+        // The pinned server exposes no consent-aware telemetry sink.
+        if (capture == null || KiloLog.sandbox()) return
         if (pending.incrementAndGet() > MAX_PENDING) {
             pending.decrementAndGet()
             if (warned.compareAndSet(false, true)) {
@@ -49,14 +49,9 @@ class KiloTelemetryService internal constructor(
         }
         cs.launch {
             try {
-                if (KiloLog.sandbox()) {
-                    val payload = KiloLog.payload(LOG) + properties
-                    LOG.info("event=$event ${payload.entries.joinToString(" ") { "${it.key}=${it.value}" }}")
-                    return@launch
-                }
                 val dto = TelemetryCaptureDto(event, properties)
                 val sent = withTimeoutOrNull(TIMEOUT_MS) {
-                    capture?.invoke(dto)
+                    capture.invoke(dto)
                     true
                 }
                 if (sent != true) LOG.warn("telemetry capture timed out: $event")

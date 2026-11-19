@@ -419,7 +419,7 @@ class TaskToolView(
     companion object {
         private const val POPUP_MIN_CHARS = 60
         private val CONTINUE_IN_BACKGROUND_ICON = IconLoader.getIcon("/icons/arrow-down-to-line.svg", TaskToolView::class.java)
-        fun canRender(content: Tool): Boolean = content.name == "task"
+        fun canRender(content: Tool): Boolean = content.name == "subagent" || content.name == "task"
     }
 }
 
@@ -479,7 +479,7 @@ private fun rowTitleColor(tool: Tool) = if (tool.state == ToolExecState.ERROR) {
 }
 
 private fun agentTitle(tool: Tool): String {
-    val type = tool.input["subagent_type"]?.takeIf { it.isNotBlank() } ?: tool.name
+    val type = (tool.input["agent"] ?: tool.input["subagent_type"])?.takeIf { it.isNotBlank() } ?: tool.name
     return KiloBundle.message("session.part.tool.agent", type.replaceFirstChar { it.titlecase() })
 }
 

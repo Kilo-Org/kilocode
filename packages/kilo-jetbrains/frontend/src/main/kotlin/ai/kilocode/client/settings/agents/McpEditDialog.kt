@@ -205,7 +205,7 @@ internal class McpEditDialog(
 
     override fun getPreferredFocusedComponent(): JComponent = if (type == REMOTE) url else command
 
-    override fun getDimensionServiceKey(): String = "Kilo.McpEditDialog"
+    override fun getDimensionServiceKey(): String = "Kilo2.McpEditDialog"
 
     override fun doValidate(): ValidationInfo? {
         if (type != REMOTE || oauthMode.selectedItem != OAUTH_CUSTOM) return null

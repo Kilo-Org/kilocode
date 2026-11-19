@@ -53,7 +53,9 @@ class KiloBackendChatManager(private val cs: CoroutineScope) {
     val events: SharedFlow<ChatEventDto> = merge(flow<ChatEventDto> {
         raw.collect { e ->
             val data = e.obj("data") ?: return@collect
-            val events = activityEvents(e.required("type"), data)
+            val events = try { activityEvents(e.required("type"), data) }
+                catch (error: CancellationException) { throw error }
+                catch (error: RuntimeException) { log.warn("Invalid activity event ${e.str("type")}", error); return@collect }
             for (event in events) emit(event)
         }
     }, interrupts).shareIn(cs, SharingStarted.WhileSubscribed(), replay = 0)

@@ -3,7 +3,6 @@ package ai.kilocode.client.settings.models
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.model.modelItems
 import ai.kilocode.client.settings.base.BaseContentPanel
@@ -11,9 +10,6 @@ import ai.kilocode.client.settings.base.BaseSettingsUi
 import ai.kilocode.client.settings.base.SettingsBannerKind
 import ai.kilocode.client.settings.base.SettingsRow
 import ai.kilocode.client.settings.base.SettingsRows
-import ai.kilocode.client.ui.layout.HAlign
-import ai.kilocode.client.ui.layout.VAlign
-import ai.kilocode.client.ui.layout.align
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
@@ -46,9 +42,6 @@ internal class ModelsSettingsUi(
 
     private val defaults get() = form.defaults
     private val small get() = form.small
-    private val subagent get() = form.subagent
-    private val variant get() = form.variant
-    private val variantRow get() = form.variantRow
     private val pickers get() = form.pickers
 
     private var providers: ProvidersDto? = null
@@ -57,7 +50,7 @@ internal class ModelsSettingsUi(
     private var allItems: List<ModelPicker.Item> = emptyList()
 
     init {
-        startSettings(ModelsSettingsContent(app, { updateDraft(it) }, ::selectSubagent))
+        startSettings(ModelsSettingsContent(app) { updateDraft(it) })
     }
 
     override fun change(from: ModelsDraft, to: ModelsDraft): ConfigPatchDto? = patch(from, to).takeIf {
@@ -138,14 +131,10 @@ internal class ModelsSettingsUi(
         } else {
             clearProgress()
         }
-        var layout = false
         defaults.setItems(allItems, draft.model)
         small.setItems(smallItems, draft.small)
-        subagent.setItems(allItems, draft.subagent)
-        listOf(defaults, small, subagent).forEach { it.isEnabled = editable }
-        layout = syncVariant(editable) || layout
-        layout = syncModes(editable) || layout
-        if (layout) {
+        listOf(defaults, small).forEach { it.isEnabled = editable }
+        if (syncModes(editable)) {
             revalidate()
             repaint()
         }
@@ -169,21 +158,6 @@ internal class ModelsSettingsUi(
     }
 
     private fun items(includeSmall: Boolean): List<ModelPicker.Item> = modelItems(providers, includeSmall)
-
-    @RequiresEdt
-    private fun syncVariant(ready: Boolean): Boolean {
-        val item = allItems.firstOrNull { it.key == draft.subagent || it.id == draft.subagent }
-        val valid = item?.variants.orEmpty()
-        if (draft.variant != null && draft.variant !in valid) draft = draft.copy(variant = valid.firstOrNull())
-        if (draft.subagent != null && valid.isEmpty() && draft.variant != null) draft = draft.copy(variant = null)
-        variant.setItems(valid.map { ReasoningPicker.Item(it, variantTitle(it)) }, draft.variant)
-        variant.isEnabled = ready && valid.isNotEmpty()
-        val visible = valid.isNotEmpty()
-        val changed = variantRow.isVisible != visible
-        variantRow.isVisible = visible
-        variant.isVisible = visible
-        return changed
-    }
 
     @RequiresEdt
     private fun syncModes(ready: Boolean): Boolean {
@@ -218,10 +192,6 @@ internal class ModelsSettingsUi(
         return layout
     }
 
-    private fun selectSubagent(item: ModelPicker.Item) {
-        val variant = if (draft.subagent == item.key && draft.variant in item.variants) draft.variant else item.variants.firstOrNull()
-        updateDraft { copy(subagent = item.key, variant = variant) }
-    }
 }
 
 private fun summary(patch: ConfigPatchDto): String {
@@ -232,17 +202,9 @@ private fun summary(patch: ConfigPatchDto): String {
 internal class ModelsSettingsContent(
     app: KiloAppService,
     update: (ModelsDraft.() -> ModelsDraft) -> Unit,
-    select: (ModelPicker.Item) -> Unit,
 ) : BaseContentPanel() {
     val defaults = ModelSettingPicker()
     val small = ModelSettingPicker()
-    val subagent = ModelSettingPicker()
-    val variant = ReasoningPicker()
-    val variantRow = SettingsRow(
-        KiloBundle.message("settings.models.subagentVariant.title"),
-        KiloBundle.message("settings.models.subagentVariant.description"),
-        variant.align(HAlign.RIGHT, VAlign.CENTER),
-    )
     val modes: SettingsRows
     val pickers = linkedMapOf<String, ModelSettingPicker>()
 
@@ -252,10 +214,7 @@ internal class ModelsSettingsContent(
         small.picker.onSelect = { update { copy(small = it.key) } }
         small.picker.onClear = { update { copy(small = null) } }
         small.picker.includeSmall = true
-        subagent.picker.onSelect = { item -> select(item) }
-        subagent.picker.onClear = { update { copy(subagent = null, variant = null) } }
-        variant.onSelect = { item -> update { copy(variant = item.id) } }
-        listOf(defaults, small, subagent).forEach { picker ->
+        listOf(defaults, small).forEach { picker ->
             picker.picker.favorites = { app.favorites.value }
             picker.picker.onFavoriteToggle = { app.toggleModelFavorite(it.provider, it.id) }
         }
@@ -272,19 +231,11 @@ internal class ModelsSettingsContent(
             KiloBundle.message("settings.models.smallModel.description"),
             small,
         ))
-        rows.row(SettingsRow(
-            KiloBundle.message("settings.models.subagentModel.title"),
-            KiloBundle.message("settings.models.subagentModel.description"),
-            subagent,
-        ))
-        rows.row(variantRow)
         modes = section(
             KiloBundle.message("settings.models.modeModels.title"),
             KiloBundle.message("settings.models.modeModels.description"),
         )
     }
 }
-
-private fun variantTitle(value: String): String = value.replaceFirstChar { it.titlecase() }
 
 private fun title(value: String): String = value.replace('-', ' ').replace('_', ' ').replaceFirstChar { it.titlecase() }

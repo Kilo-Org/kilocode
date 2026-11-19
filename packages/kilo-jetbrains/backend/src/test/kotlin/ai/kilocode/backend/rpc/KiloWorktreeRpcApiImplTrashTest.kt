@@ -59,7 +59,7 @@ class KiloWorktreeRpcApiImplTrashTest {
         )
 
         trash.drain()
-        val storage = repo.resolve(".kilo").resolve("worktrees")
+        val storage = repo.resolve(".kilo2").resolve("worktrees")
         val orphans = Files.newDirectoryStream(storage).use { stream ->
             stream.filter { it.fileName.toString().startsWith(WorktreeTrash.PREFIX) }.toList()
         }

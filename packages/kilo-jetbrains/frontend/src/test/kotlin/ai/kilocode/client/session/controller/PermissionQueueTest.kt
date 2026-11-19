@@ -160,9 +160,27 @@ class PermissionQueueTest : SessionControllerTestBase() {
         assertTrue(m.model.state is SessionState.Idle)
     }
 
-    fun `test auto approve drain queues multiple skill shell permissions`() {
+    fun `test interactive live requests stay visible while ordinary tools auto approve`() {
+        edt { KiloPluginSettings.setAutoApprove(true) }
+        val (m, _, _) = prompted()
+        val requests = listOf(
+            permission("browser", "browser_sensitive"), permission("sandbox", "sandbox_escalation"),
+            permission("browser-meta").copy(metadata = mapOf("browserSensitive" to "true")),
+            permission("interactive").copy(metadata = mapOf("interactive" to "true")),
+        )
+        requests.forEach { emit(ChatEventDto.PermissionAsked("ses_test", it)) }
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("ordinary")))
+        flush()
+        assertEquals(listOf("ordinary"), rpc.permissionReplies.map { it.first })
+        requests.forEach {
+            assertPermission(m, it.id, it.permission)
+            emit(ChatEventDto.PermissionReplied("ses_test", it.id))
+        }
+    }
+
+    fun `test auto approve drain queues interactive shell and browser permissions`() {
         rpc.pendingPermissionList.add(skillPermission("perm1"))
-        rpc.pendingPermissionList.add(skillPermission("perm2"))
+        rpc.pendingPermissionList.add(permission("perm2", "browser_sensitive"))
         val (m, _, _) = prompted()
 
         edt { m.setAutoApprove(true) }
@@ -171,7 +189,8 @@ class PermissionQueueTest : SessionControllerTestBase() {
         assertPermission(m, "perm1")
 
         emit(ChatEventDto.PermissionReplied("ses_test", "perm1"))
-        assertPermission(m, "perm2")
+        assertPermission(m, "perm2", "browser_sensitive")
+        assertTrue(rpc.permissionReplies.isEmpty())
     }
 
     fun `test toggling auto approve on keeps a visible skill shell card queued for purge`() {

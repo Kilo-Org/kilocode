@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.DataProvider;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.ProjectActivity;
+import com.intellij.openapi.util.ActionCallback;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.openapi.wm.WindowManager;
@@ -25,6 +26,7 @@ import java.nio.file.*;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 /** Disposable frontend-only companion installed beside, never in, the plugin under test. */
@@ -33,6 +35,8 @@ public final class Smoke implements ProjectActivity {
     private final String phase = System.getProperty("kilo.smoke.phase");
     private String step = "start";
     private JComponent chat;
+    private ToolWindow window;
+    private Content tab;
     private String lastStatus = "";
 
     @Override public Object execute(Project project, Continuation<? super Unit> continuation) {
@@ -59,11 +63,11 @@ public final class Smoke implements ProjectActivity {
         });
         mark("frame", "pid=" + ProcessHandle.current().pid() + " project=" + project.getName());
         if (phase.equals("probe")) return;
-        ToolWindow window = await("tool-window", () -> ToolWindowManager.getInstance(project).getToolWindow("Kilo Code"));
-        edt(() -> { window.show(); return null; });
-        Content content = await("chat-tab", () -> Arrays.stream(window.getContentManager().getContents())
+        window = await("tool-window", () -> ToolWindowManager.getInstance(project).getToolWindow("Kilo Code"));
+        edt(() -> { window.activate(null); return null; });
+        tab = await("chat-tab", () -> Arrays.stream(window.getContentManager().getContents())
             .filter(c -> c.getDisplayName().equals("Chat")).findFirst().orElse(null));
-        edt(() -> { window.getContentManager().setSelectedContent(content, true); chat = content.getComponent(); return null; });
+        edt(() -> { window.getContentManager().setSelectedContent(tab, true); chat = tab.getComponent(); return null; });
         if (phase.equals("create")) {
             act("Kilo.NewSession");
             send("Update the smoke fixture");
@@ -97,16 +101,18 @@ public final class Smoke implements ProjectActivity {
     }
 
     private void act(String id) throws Exception {
-        step = id;
-        var callback = edt(() -> {
+        var inFlight = new AtomicReference<ActionCallback>();
+        await(id, () -> {
+            var last = inFlight.get();
+            if (last != null && last.isDone()) return true;
+            if (last != null && !last.isRejected()) return null;
+            var context = component("PromptPanel");
+            if (context == null) return null;
             var actions = ActionManager.getInstance();
             var action = actions.getAction(id);
             if (action == null) throw new AssertionError("Action not registered: " + id);
-            return actions.tryToExecute(action, null, chat, null, true);
-        });
-        await(id, () -> {
-            if (callback.isRejected()) throw new AssertionError("Action was disabled: " + id);
-            return callback.isDone() ? true : null;
+            inFlight.set(actions.tryToExecute(action, null, context, null, true));
+            return null;
         });
     }
 
@@ -164,9 +170,23 @@ public final class Smoke implements ProjectActivity {
         step = name;
         mark("step", name);
         long deadline = System.nanoTime() + 120_000_000_000L;
+        boolean captured = false;
         do {
-            T value = edt(operation);
+            T value = edt(() -> {
+                // IDEA can activate its Project pane after the first project scan. Reopen
+                // the chat rather than driving detached Swing widgets behind another pane.
+                if (chat != null && !chat.isShowing()) {
+                    if (!window.isVisible()) window.show();
+                    if (window.getContentManager().getSelectedContent() != tab) window.getContentManager().setSelectedContent(tab, true);
+                    return null;
+                }
+                return operation.call();
+            });
             if (value != null) return value;
+            if (!captured && chat != null && System.nanoTime() > deadline - 115_000_000_000L) {
+                edt(() -> { capture(name); return null; });
+                captured = true;
+            }
             Thread.sleep(250);
         } while (System.nanoTime() < deadline);
         throw new AssertionError("Timed out waiting for " + name);

@@ -140,7 +140,7 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
     suspend fun orphanSizes(directory: String, paths: List<String>): Map<String, Long>
 
     /**
-     * Removes every one of [paths] — directories under `.kilo/worktrees/` that git does not track
+     * Removes every one of [paths] — directories under `.kilo2/worktrees/` that git does not track
      * (see [ai.kilocode.rpc.dto.orphans.OrphanDto]) — from [directory]'s repository. Each path is
      * re-validated against a fresh scan immediately before it is touched and reported independently,
      * so a stale selection or a path that is no longer an orphan is skipped rather than deleted.

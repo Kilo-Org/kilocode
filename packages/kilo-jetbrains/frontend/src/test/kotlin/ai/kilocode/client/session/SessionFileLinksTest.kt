@@ -71,8 +71,8 @@ class SessionFileLinksTest : BasePlatformTestCase() {
     fun `test managed worktree storage filter only rejects worktree subtree`() {
         assertFalse(isManagedWorktreeStorage("backend/src/Main.java"))
         assertFalse(isManagedWorktreeStorage(".kilo/plans/x.md"))
-        assertTrue(isManagedWorktreeStorage(".kilo/worktrees"))
-        assertTrue(isManagedWorktreeStorage(".kilo/worktrees/foo/backend/src/Main.java"))
+        assertTrue(isManagedWorktreeStorage(".kilo2/worktrees"))
+        assertTrue(isManagedWorktreeStorage(".kilo2/worktrees/foo/backend/src/Main.java"))
     }
 
     fun `test open falls back to decoded search query and opens match`() = runBlocking {

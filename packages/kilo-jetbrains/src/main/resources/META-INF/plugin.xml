@@ -19,9 +19,10 @@
         <p><a href="https://kilo.ai">kilo.ai</a></p>
     ]]></description>
 
+    <incompatible-with>ai.kilocode.jetbrains</incompatible-with>
     <content>
-        <module name="kilo.jetbrains.shared" loading="required"/>
-        <module name="kilo.jetbrains.frontend"/>
-        <module name="kilo.jetbrains.backend"/>
+        <module name="kilo.jetbrains.v2.shared" loading="required"/>
+        <module name="kilo.jetbrains.v2.frontend"/>
+        <module name="kilo.jetbrains.v2.backend"/>
     </content>
 </idea-plugin>

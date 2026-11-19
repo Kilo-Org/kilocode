@@ -63,7 +63,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
     fun `test reload lists only non-main worktrees`() {
         rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
-        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         val controller = controller()
 
         controller.reload()
@@ -76,11 +76,11 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
     fun `test service open routes the directory to the backend rpc`() {
         var result: Boolean? = null
-        coroutines.scope.launch { result = service.open("/repo/.kilo/worktrees/feature-x") }
+        coroutines.scope.launch { result = service.open("/repo/.kilo2/worktrees/feature-x") }
         flush()
 
         assertEquals(true, result)
-        assertEquals(listOf("/repo/.kilo/worktrees/feature-x"), rpc.opens.toList())
+        assertEquals(listOf("/repo/.kilo2/worktrees/feature-x"), rpc.opens.toList())
     }
 
     fun `test service open returns false when the backend call fails`() {
@@ -112,7 +112,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test create prepends placeholder and created worktree`() {
-        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         val gate = CompletableDeferred<Unit>()
         rpc.beforeCreate = { gate.await() }
         val controller = controller()
@@ -172,7 +172,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test reload preserves pending worktrees`() {
-        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         val gate = CompletableDeferred<Unit>()
         rpc.beforeCreate = { gate.await() }
         val controller = controller()
@@ -189,7 +189,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test remove invokes rpc and removes from the model`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         rpc.listed += item
         val controller = controller()
         controller.reload()
@@ -209,7 +209,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test remove waits for process release and ignores duplicate removal`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         val gate = CompletableDeferred<Unit>()
         run.beforeRelease = { gate.await() }
         rpc.listed += item
@@ -240,7 +240,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test remove marks the row deleting until it resolves`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         val gate = CompletableDeferred<Unit>()
         rpc.listed += item
         rpc.beforeRemove = { gate.await() }
@@ -261,7 +261,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test failed remove keeps the row and invokes the failure callback`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         rpc.listed += item
         rpc.removeResult = { _, _, _ -> RemoveWorktreeResultDto(error = "cannot remove a locked working tree", locked = true) }
         val controller = controller()
@@ -281,8 +281,8 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test refused nested remove keeps the row and surfaces the error`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
-        val nestedPath = "/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested"
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
+        val nestedPath = "/repo/.kilo2/worktrees/feature-x/.kilo2/worktrees/nested"
         rpc.listed += item
         rpc.removeResult = { _, _, _ ->
             RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n$nestedPath", nestedPaths = listOf(nestedPath))
@@ -309,10 +309,10 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         val controller = controller()
 
         var failed = false
-        controller.reveal("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested") { failed = true }
+        controller.reveal("/repo/.kilo2/worktrees/feature-x/.kilo2/worktrees/nested") { failed = true }
         flush()
 
-        assertEquals(listOf("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested"), rpc.revealPaths.toList())
+        assertEquals(listOf("/repo/.kilo2/worktrees/feature-x/.kilo2/worktrees/nested"), rpc.revealPaths.toList())
         assertFalse(failed)
     }
 
@@ -321,14 +321,14 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         rpc.revealPathResult = { false }
 
         var failed = false
-        controller.reveal("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested") { failed = true }
+        controller.reveal("/repo/.kilo2/worktrees/feature-x/.kilo2/worktrees/nested") { failed = true }
         flush()
 
         assertTrue(failed)
     }
 
     fun `test force remove passes the force flag and drops the row on success`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x", locked = true)
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x", locked = true)
         rpc.listed += item
         val controller = controller()
         controller.reload()
@@ -342,7 +342,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test rename optimistically updates and keeps successful result`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         val gate = CompletableDeferred<Unit>()
         rpc.listed += item
         rpc.beforeRename = { gate.await() }
@@ -365,7 +365,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test rename failure reverts row and invokes callback`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         rpc.listed += item
         rpc.renameResult = { _, _ -> RenameWorktreeResultDto(error = "cannot rename") }
         val failures = mutableListOf<String?>()
@@ -385,7 +385,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
     fun `test reload derives default branch from the main worktree`() {
         rpc.listed += WorktreeDto("/repo", "repo", "trunk", "/repo", main = true)
-        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         val controller = controller()
 
         controller.reload()
@@ -433,7 +433,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
     fun `test base branches exclude branches checked out in worktrees`() {
         rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
-        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         rpc.branchesList += listOf("main", "feature/x", "develop")
         val controller = controller()
 
@@ -701,7 +701,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
     fun `test worktree delete eligibility excludes missing main and pending rows`() {
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
-        val child = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val child = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
 
         assertFalse(worktreeDeletable(null, busy = false))
         assertFalse(worktreeDeletable(main, busy = false))
@@ -710,7 +710,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test applyName updates the matching row so an adopted name shows live`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         rpc.listed += item
         val controller = controller()
         controller.reload()
@@ -722,7 +722,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test applyName ignores unknown paths, identical names, and blanks`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         rpc.listed += item
         val controller = controller()
         controller.reload()
@@ -730,7 +730,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         val before = controller.model.getElementAt(0)
 
         ApplicationManager.getApplication().invokeAndWait {
-            controller.applyName("/repo/.kilo/worktrees/other", "Ignored")
+            controller.applyName("/repo/.kilo2/worktrees/other", "Ignored")
             controller.applyName(item.path, "feature-x")
             controller.applyName(item.path, null)
         }

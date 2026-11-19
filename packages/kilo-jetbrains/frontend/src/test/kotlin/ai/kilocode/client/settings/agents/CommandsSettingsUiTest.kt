@@ -479,8 +479,8 @@ class CommandsSettingsUiTest : BasePlatformTestCase() {
 
     private companion object {
         const val DIR = "/test"
-        const val CUSTOM = "/home/test/.kilo/workflows/plan.md"
-        const val REMOTE = "/home/test/.cache/kilo/commands/remote.md"
+        const val CUSTOM = "/home/test/.kilo2/commands/plan.md"
+        const val REMOTE = "/home/test/.cache/kilo2/commands/remote.md"
     }
 }
 

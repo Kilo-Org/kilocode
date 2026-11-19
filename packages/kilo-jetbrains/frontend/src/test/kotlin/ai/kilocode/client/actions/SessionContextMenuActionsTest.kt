@@ -444,6 +444,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         override val readonly: Boolean = false,
         override val pr: WorktreePrDto? = null,
         override val share: String? = null,
+        override val publicLinks: Boolean = true,
         override val git: Boolean = true,
         override val forkable: Boolean = false,
         override val board: Boolean = false,

@@ -762,7 +762,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     private fun useLongInactiveDisposeTimeout() = setInactiveDisposeTimeout(60_000)
 
     private fun setInactiveDisposeTimeout(ms: Int) {
-        val key = "kilo.session.inactive.disposeTimeoutMs"
+        val key = "kilo2.session.inactive.disposeTimeoutMs"
         Registry.mutateContributedKeys {
             it + (key to RegistryKeyDescriptor(
                 key,

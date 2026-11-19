@@ -106,7 +106,7 @@ class WorktreeController(
     private var known: Set<String> = emptySet()
 
     /**
-     * Directories under `.kilo/worktrees/` that git does not track, from the most recent [reload].
+     * Directories under `.kilo2/worktrees/` that git does not track, from the most recent [reload].
      * [ai.kilocode.client.agentManager.orphans.OrphanBanner] reads this on the EDT after [onReload]
      * fires — never polled independently, so the banner and the worktree list always agree on which
      * paths are orphans.

@@ -6,9 +6,9 @@ object LogConfig {
     const val MIN_PREVIEW = 1
     const val MAX_PREVIEW = 2000
     const val DEFAULT_PREVIEW = 160
-    const val LEVEL_PROPERTY = "kilo.dev.log.level"
-    const val CONTENT_PROPERTY = "kilo.dev.log.chat.content"
-    const val PREVIEW_PROPERTY = "kilo.dev.log.chat.preview.max"
+    const val LEVEL_PROPERTY = "kilo2.dev.log.level"
+    const val CONTENT_PROPERTY = "kilo2.dev.log.chat.content"
+    const val PREVIEW_PROPERTY = "kilo2.dev.log.chat.preview.max"
 
     class LogLevel(val value: String, val jul: Level) {
         override fun toString(): String = value

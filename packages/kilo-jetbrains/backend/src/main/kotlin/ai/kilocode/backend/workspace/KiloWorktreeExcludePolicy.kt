@@ -7,7 +7,7 @@ import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.util.ArrayUtil
 
 /**
- * Excludes `<project>/.kilo/worktrees` from this project's index when the worktree is stored inside
+ * Excludes `<project>/.kilo2/worktrees` from this project's index when the worktree is stored inside
  * the project directory. Worktrees there are indexed like any other project file by default because
  * IntelliJ scanning follows the workspace model, not git — a `.git/info/exclude` entry is never
  * consulted by the indexer.

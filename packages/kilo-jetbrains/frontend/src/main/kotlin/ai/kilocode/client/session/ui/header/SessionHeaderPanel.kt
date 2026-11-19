@@ -58,7 +58,7 @@ class SessionHeaderPanel(
         private const val TOUCH_BEGIN = 2
         private const val TOUCH_UPDATE = 3
         private const val TOUCH_END = 4
-        internal const val EXPANDED_KEY = "kilo.session.header.expanded"
+        internal const val EXPANDED_KEY = "kilo2.session.header.expanded"
     }
 
     private val title = JBLabel().apply {

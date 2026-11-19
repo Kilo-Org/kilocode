@@ -379,7 +379,7 @@ class BranchLocalDiffTest {
         trees.dirty(repo.toString()).items.single { it.path == dir.toString() }.unpushed
 
     private fun worktree(): Path {
-        val dir = repo.resolve(".kilo/worktrees/feature")
+        val dir = repo.resolve(".kilo2/worktrees/feature")
         git(repo, "worktree", "add", "-b", "feature", dir.toString())
         return dir.toRealPath()
     }

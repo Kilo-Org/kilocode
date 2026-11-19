@@ -9,6 +9,7 @@ import ai.kilocode.client.util.edt
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.SessionDto
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -59,9 +60,17 @@ class HistoryController(
     private val deleting = mutableSetOf<String>()
     private val opener = open
 
+    @Volatile
+    var canImport = false
+        private set
+
+    fun openCloudID(text: String) {
+        val id = text.trim()
+        if (canImport && Regex("ses[A-Za-z0-9_-]{1,253}").matches(id)) opener(SessionRef.Cloud(id))
+    }
+
     fun reload() {
         reloadLocal()
-        reloadCloud()
     }
 
     internal fun activity() = sessions.activitySnapshot()
@@ -173,9 +182,15 @@ class HistoryController(
         val cursor = cloud.cursor.takeUnless { reset }
         edt { cloud.start(reset) }
         cs.launch {
-            val url = resolveUrlIfNeeded()
-            val filter = if (repoOnly) url else null
             try {
+                val features = sessions.cloudHistoryCapabilities(workspace.directory)
+                canImport = features.available
+                if (!features.available) {
+                    edt { cloud.fail(KiloBundle.message("history.cloud.unsupported")) }
+                    return@launch
+                }
+                val url = if (features.repositoryFilter) resolveUrlIfNeeded() else null
+                val filter = if (repoOnly) url else null
                 val result = sessions.cloudSessions(workspace.directory, cursor, CLOUD_LIMIT, filter)
                 val items = result.sessions.map(::cloudItem)
                 capture("History Cloud Page Loaded", mapOf(
@@ -188,6 +203,8 @@ class HistoryController(
                     if (reset) cloud.replace(items, result.nextCursor)
                     else cloud.append(items, result.nextCursor)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 capture("History Load Failed", mapOf("source" to "cloud", "errorClass" to e::class.java.name))
                 edt { cloud.fail(e.message ?: KiloBundle.message("history.error.cloud")) }

@@ -112,7 +112,7 @@ class KiloAgentBehaviorServiceTest : BasePlatformTestCase() {
     }
 
     fun `test refreshCommandFiles returns previous rows on rpc failure`() = runBlocking {
-        val fallback = listOf(CommandFileDto("plan", location = "/test/.kilo/workflows/plan.md"))
+        val fallback = listOf(CommandFileDto("plan", location = "/test/.kilo2/commands/plan.md"))
         rpc.commandFilesError = RuntimeException("boom")
 
         val items = withContext(Dispatchers.Default) { service.refreshCommandFiles("/test", fallback) }
@@ -121,14 +121,14 @@ class KiloAgentBehaviorServiceTest : BasePlatformTestCase() {
     }
 
     fun `test saveCommands forwards all edits`() = runBlocking {
-        rpc.commandFiles = listOf(CommandFileDto("plan", location = "/test/.kilo/workflows/plan.md"))
+        rpc.commandFiles = listOf(CommandFileDto("plan", location = "/test/.kilo2/commands/plan.md"))
 
         val ok = withContext(Dispatchers.Default) {
-            service.saveCommands("/test", mapOf("/test/.kilo/workflows/plan.md" to "# Saved"))
+            service.saveCommands("/test", mapOf("/test/.kilo2/commands/plan.md" to "# Saved"))
         }
 
         assertTrue(ok)
-        assertEquals(listOf(Triple("/test", "/test/.kilo/workflows/plan.md", "# Saved")), rpc.commandSaves)
+        assertEquals(listOf(Triple("/test", "/test/.kilo2/commands/plan.md", "# Saved")), rpc.commandSaves)
         assertEquals("# Saved", rpc.commandFiles.single().content)
     }
 

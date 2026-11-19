@@ -56,7 +56,8 @@ internal class KiloCliDownloader(
         val dir = parent.resolve(pin.platform)
         val exe = dir.resolve("bin").resolve(pin.executable)
         val complete = dir.resolve(".complete")
-        if (!force && Files.isRegularFile(complete, NOFOLLOW_LINKS) && Files.readString(complete) == pin.integrity &&
+        if (!force && Files.isRegularFile(dir.resolve("LICENSE"), NOFOLLOW_LINKS) &&
+            Files.isRegularFile(complete, NOFOLLOW_LINKS) && Files.readString(complete) == pin.integrity &&
             Files.isRegularFile(exe, NOFOLLOW_LINKS) && validVersion(exe, pin.version, env)) return exe
 
         val stage = Files.createTempDirectory(parent, ".install-")
@@ -64,6 +65,7 @@ internal class KiloCliDownloader(
             val archive = stage.resolve("package.tgz")
             download(pin, archive, progress)
             extract(archive, stage)
+            check(Files.isRegularFile(stage.resolve("LICENSE"), NOFOLLOW_LINKS)) { "CLI archive is missing its LICENSE" }
             Files.delete(archive)
             val staged = stage.resolve("bin").resolve(pin.executable)
             check(Files.isRegularFile(staged, NOFOLLOW_LINKS) && validVersion(staged, pin.version, env)) {
@@ -129,7 +131,7 @@ internal class KiloCliDownloader(
                 check(!name.startsWith('/') && '\\' !in name && ':' !in name && ".." !in name.split('/')) {
                     "Invalid CLI archive path"
                 }
-                if (!name.startsWith("package/bin/")) continue
+                if (name != "package/LICENSE" && !name.startsWith("package/bin/")) continue
                 val target = stage.resolve(name.removePrefix("package/"))
                 when {
                     entry.isDirectory -> Files.createDirectories(target)

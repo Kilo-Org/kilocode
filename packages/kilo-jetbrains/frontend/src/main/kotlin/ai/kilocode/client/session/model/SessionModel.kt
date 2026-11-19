@@ -789,8 +789,8 @@ private fun parseToolState(raw: String?): ToolExecState = when (raw) {
 private data class ChildRef(val messageId: String, val partId: String)
 
 private fun childID(tool: Tool): String? {
-    if (tool.name != "task") return null
-    return tool.metadata["sessionId"]
+    if (tool.name != "subagent" && tool.name != "task") return null
+    return tool.metadata["sessionID"] ?: tool.metadata["sessionId"]
 }
 
 data class AgentItem(

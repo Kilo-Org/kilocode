@@ -57,7 +57,7 @@ class SendPromptActionTest : BasePlatformTestCase() {
     }
 
     fun `test frontend descriptor registers send prompt shortcuts`() {
-        val xml = javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml")
+        val xml = javaClass.classLoader.getResourceAsStream("kilo.jetbrains.v2.frontend.xml")
             ?.bufferedReader()
             ?.use { it.readText() }
             ?: error("missing frontend descriptor")

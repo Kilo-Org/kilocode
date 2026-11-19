@@ -165,11 +165,11 @@ class KiloWorktreeRpcApiImpl(
         val store = worktreeNameStore(alive)
         val state = store?.let { syncWorktreeState(it, worktreePaths(alive), livePaths(alive)) } ?: WorktreeState()
         val named = overlayWorktreeNames(alive, state.names)
-        // Cheap and non-blocking: sweeps orphaned `.kilo-delete-*` directories left by an interrupted
-        // delete (this plugin's or the VS Code extension's) every time the list is polled, so they do
+        // Cheap and non-blocking: sweeps orphaned `.kilo2-delete-*` directories left by an interrupted
+        // delete every time the list is polled, so they do
         // not require a fresh remove() to be cleaned up.
         alive.firstOrNull { it.main }?.let {
-            trash?.sweep(Path.of(it.path).normalize().resolve(".kilo").resolve("worktrees").normalize())
+            trash?.sweep(Path.of(it.path).normalize().resolve(".kilo2").resolve("worktrees").normalize())
         }
         WorktreeListDto(orderWorktrees(named, state.worktreeOrder), orphans = reconciled.orphans)
     }
@@ -314,7 +314,7 @@ class KiloWorktreeRpcApiImpl(
             // writing the checkout — so a poll that pruned mid-add would delete the metadata of a
             // worktree being created. The most frequent caller in the backend must not be the one
             // path that skips that mutex.
-            val pruned = exclusive(main(raw), "prune") { prune(root) }
+            val pruned = exclusive(main(raw), "prune") { forgetMissing(root, stale) }
             // Not pruning is harmless: the entry is still stale on the next poll, and this pass
             // simply reports what git reported. Waiting for the mutation instead would park every
             // status poll behind a `git worktree add` on a large repository.
@@ -332,17 +332,23 @@ class KiloWorktreeRpcApiImpl(
     private fun main(all: List<WorktreeDto>): Path? =
         all.firstOrNull { it.main }?.let { Path.of(it.path).normalize() }
 
-    /**
-     * `git worktree prune`, on a budget short enough to bound how long a mutation waits for a poll.
-     *
-     * See [GIT_PRUNE_TIMEOUT_MS]: this runs holding the repository's mutation lock, so the write
-     * budget would let one wedged prune park a user-initiated create for three minutes.
-     */
-    private fun prune(root: Path): Boolean {
-        val res = runGit(root, listOf("worktree", "prune", "-v"), GIT_PRUNE_TIMEOUT_MS)
-        if (!res.ok) LOG.warn("worktree prune during sync failed: exit=${res.exit} stderr=${snippet(res.stderr)}")
-        if (res.ok && res.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(res.stdout)}")
-        return res.ok
+    // `git worktree prune` unregisters *every* missing checkout, including checkouts owned by other clients.
+    private fun forgetMissing(root: Path, stale: List<WorktreeDto>): Boolean {
+        var ok = true
+        for (item in stale) {
+            if (item.locked || Files.exists(Path.of(item.path), LinkOption.NOFOLLOW_LINKS)) continue
+            val res = runGit(root, listOf("worktree", "remove", "--", item.path), GIT_PRUNE_TIMEOUT_MS)
+            if (!res.ok) {
+                LOG.warn("Could not unregister ${item.path}: ${snippet(res.stderr)}")
+                ok = false
+            }
+        }
+        return ok
+    }
+
+    private fun forgetMissing(root: Path): Boolean {
+        val list = runGit(root, "worktree", "list", "--porcelain")
+        return list.ok && forgetMissing(root, staleWorktrees(parseWorktreeList(list.stdout)))
     }
 
     /**
@@ -357,7 +363,7 @@ class KiloWorktreeRpcApiImpl(
     }
 
     /**
-     * Directories under `.kilo/worktrees/` that git does not track.
+     * Directories under `.kilo2/worktrees/` that git does not track.
      *
      * Reported, never removed automatically: a leftover directory can still hold files that exist
      * nowhere else, so deleting one is the user's decision (see [removeOrphans]). They are worth
@@ -370,14 +376,14 @@ class KiloWorktreeRpcApiImpl(
      * clients agree on which rows are risky to delete.
      */
     private fun orphanDirs(all: List<WorktreeDto>, base: Path?): List<OrphanDto> {
-        val dir = base?.resolve(".kilo")?.resolve("worktrees")?.normalize() ?: return emptyList()
+        val dir = base?.resolve(".kilo2")?.resolve("worktrees")?.normalize() ?: return emptyList()
         if (!Files.isDirectory(dir)) return emptyList()
         val tracked = all.map { Path.of(it.path).normalize().toString() }.toSet()
         val orphans = runCatching {
             Files.list(dir).use { stream ->
                 stream.filter { Files.isDirectory(it) }
                     .map { it.normalize() }
-                    .filter { it.fileName.toString().startsWith(".kilo-delete-").not() }
+                    .filter { it.fileName.toString().startsWith(".kilo2-delete-").not() }
                     .filter { it.toString() !in tracked }
                     .map { OrphanDto(it.toString(), if (Files.exists(it.resolve(".git"))) OrphanKind.BROKEN else OrphanKind.LEFTOVER) }
                     .toList()
@@ -700,10 +706,10 @@ class KiloWorktreeRpcApiImpl(
             }
         }
 
-    /** Runs `git worktree add` under `<base>/.kilo/worktrees/<slug>` and records list bookkeeping. */
+    /** Runs `git worktree add` under `<base>/.kilo2/worktrees/<slug>` and records list bookkeeping. */
     private fun addWorktree(base: Path, branch: String, existing: Boolean, baseRef: String?, copyEnv: Boolean = true): CreateWorktreeResultDto {
         val root = mainWorktree(base)
-        val storage = root.resolve(".kilo").resolve("worktrees").normalize()
+        val storage = root.resolve(".kilo2").resolve("worktrees").normalize()
         val parts = branch.split('/')
         if (parts.any { it.isBlank() || it == "." || it == ".." }) return CreateWorktreeResultDto(error = "Invalid branch name")
         val dir = storage.resolve(branch.replace('/', '-')).normalize()
@@ -735,7 +741,7 @@ class KiloWorktreeRpcApiImpl(
             val file = root.resolve(exclude.stdout.trim())
             Files.createDirectories(file.parent)
             val lines = if (Files.exists(file)) Files.readAllLines(file) else emptyList()
-            val missing = listOf("/.kilo/worktrees/", "/.kilo2/jetbrains.json").filterNot { it in lines }
+            val missing = listOf("/.kilo2/worktrees/", "/.kilo2/jetbrains.json").filterNot { it in lines }
             if (missing.isNotEmpty()) Files.writeString(file, missing.joinToString("\n", "\n", "\n"), StandardOpenOption.CREATE, StandardOpenOption.APPEND)
         }.onFailure { LOG.warn("Could not exclude worktree storage from git status", it) }
         invalidate()
@@ -779,7 +785,7 @@ class KiloWorktreeRpcApiImpl(
                 val all = parseWorktreeList(list.stdout)
                 val items = managedWorktrees(all)
                 val main = all.firstOrNull { it.main }
-                val storage = main?.let { Path.of(it.path).normalize().resolve(".kilo").resolve("worktrees").normalize() }
+                val storage = main?.let { Path.of(it.path).normalize().resolve(".kilo2").resolve("worktrees").normalize() }
                 val target = all.firstOrNull {
                     val item = Path.of(it.path).normalize()
                     !it.main && samePath(it.path, path) && item.parent == storage
@@ -818,7 +824,7 @@ class KiloWorktreeRpcApiImpl(
 
     /**
      * Performs the actual removal of [target], once it has been validated as a managed, non-nested
-     * worktree and marked in [WorktreeTrash]. Prefers an atomic rename to a `.kilo-delete-*` sibling
+     * worktree and marked in [WorktreeTrash]. Prefers an atomic rename to a `.kilo2-delete-*` sibling
      * so the RPC never blocks on the recursive filesystem delete; falls back to a synchronous
      * `git worktree remove --force` when [trash] is unavailable, the rename fails (e.g. cross-device),
      * or the worktree is locked without [force] — a lock check has to go through git itself so
@@ -883,17 +889,8 @@ class KiloWorktreeRpcApiImpl(
             )
             return RemoveWorktreeResultDto(error = reason(res, "git worktree remove failed"), locked = locked)
         }
-        // Every successful arm arrives here with no checkout at the registered path — renamed away,
-        // deleted by git, or already gone before this call started — so unregistering is always both
-        // safe and needed. It has to happen before `branch -D`: git refuses to delete a branch that a
-        // registered worktree still has checked out, so pruning afterwards would leave the branch
-        // behind (the `git` arm has already unregistered it, making this a no-op there). `--expire now`
-        // because the default grace period is three months, which for a checkout that is already gone
-        // would mean not pruning it at all. This also clears unrelated dangling entries.
-        val prune = runGit(base, "worktree", "prune", "--expire", "now")
-        if (!prune.ok) {
-            LOG.warn("worktree prune failed: path=${target.path} exit=${prune.exit} stderr=${snippet(prune.stderr)}")
-        }
+        // Unregister before deleting the owned branch: git will not delete a branch it still considers checked out.
+        forgetMissing(base)
         // Best-effort, mirroring location eviction above: the snapshot repository for this worktree
         // is no longer reachable from any live checkout once the prune above lands.
         val root = storage?.parent?.parent?.toString() ?: base.toString()
@@ -967,7 +964,7 @@ class KiloWorktreeRpcApiImpl(
                 val freshOrphans = reconciled.orphans.mapTo(HashSet()) { Path.of(it.path).normalize().toString() }
                 val managed = reconciled.items.mapTo(HashSet()) { Path.of(it.path).normalize().toString() }
                 val main = reconciled.items.firstOrNull { it.main }
-                val storage = main?.let { Path.of(it.path).normalize().resolve(".kilo").resolve("worktrees").normalize() }
+                val storage = main?.let { Path.of(it.path).normalize().resolve(".kilo2").resolve("worktrees").normalize() }
                 val targets = paths.map { raw ->
                     val norm = Path.of(raw).normalize()
                     val error = when {
@@ -1119,6 +1116,7 @@ class KiloWorktreeRpcApiImpl(
                 val res = runGit(base, "worktree", "list", "--porcelain")
                 if (!res.ok) return@lock false
                 val items = managedWorktrees(parseWorktreeList(res.stdout))
+                if (items.none { !it.main }) return@lock false
                 val store = worktreeNameStore(items) ?: return@lock false
                 try {
                     val state = readWorktreeState(store)
@@ -1195,8 +1193,7 @@ class KiloWorktreeRpcApiImpl(
     private fun add(base: Path, args: List<String>): CmdOut {
         val first = runGit(base, args, GIT_WRITE_TIMEOUT_MS)
         if (first.ok || !stale(first.stderr)) return first
-        val prune = runGit(base, listOf("worktree", "prune"), GIT_WRITE_TIMEOUT_MS)
-        if (!prune.ok) LOG.warn("worktree prune before retry failed: exit=${prune.exit} stderr=${prune.stderr.trim()}")
+        forgetMissing(base)
         return runGit(base, args, GIT_WRITE_TIMEOUT_MS)
     }
 
@@ -1775,7 +1772,7 @@ internal fun parseWorktreeList(raw: String): List<WorktreeDto> {
 internal fun managedWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
     val main = items.firstOrNull { it.main } ?: return emptyList()
     val root = Path.of(main.path).normalize()
-    val storage = root.resolve(".kilo").resolve("worktrees").normalize()
+    val storage = root.resolve(".kilo2").resolve("worktrees").normalize()
     return items.filter { item ->
         if (item.main) return@filter true
         if (item.prunable) return@filter false
@@ -1789,7 +1786,7 @@ internal fun managedWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
 }
 
 /**
- * Kilo-managed worktrees under `.kilo/worktrees/` whose checkout is gone. This is the only reason
+ * Kilo-managed worktrees under `.kilo2/worktrees/` whose checkout is gone. This is the only reason
  * [KiloWorktreeRpcApiImpl.sync] runs a prune, so a stale worktree the user keeps somewhere else is
  * never a reason for the plugin to touch git's administrative files on a polling loop.
  *
@@ -1799,7 +1796,7 @@ internal fun managedWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
  */
 internal fun staleWorktrees(items: List<WorktreeDto>, trash: WorktreeTrash? = null): List<WorktreeDto> {
     val main = items.firstOrNull { it.main } ?: return emptyList()
-    val storage = Path.of(main.path).normalize().resolve(".kilo").resolve("worktrees").normalize()
+    val storage = Path.of(main.path).normalize().resolve(".kilo2").resolve("worktrees").normalize()
     return items.filter { item ->
         if (item.main) return@filter false
         if (Path.of(item.path).normalize().parent != storage) return@filter false

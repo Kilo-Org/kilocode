@@ -5,6 +5,7 @@ import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
+import ai.kilocode.rpc.dto.CloudHistoryCapabilitiesDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -239,6 +240,9 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     private fun current(id: String): SessionDto =
         listed.firstOrNull { it.id == id } ?: session.copy(id = id)
+
+    var cloudFeatures = CloudHistoryCapabilitiesDto(available = true, repositoryFilter = true)
+    override suspend fun cloudCapabilities(directory: String) = cloudFeatures
 
     override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto {
         assertNotEdt("cloudSessions")

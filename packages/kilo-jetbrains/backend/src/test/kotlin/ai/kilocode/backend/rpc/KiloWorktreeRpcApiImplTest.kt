@@ -158,7 +158,7 @@ class KiloWorktreeRpcApiImplTest {
     fun `list reports leftover directories under the worktrees folder without removing them`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
-        val leftover = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        val leftover = repo.resolve(".kilo2").resolve("worktrees").resolve("leftover")
         Files.createDirectories(leftover.resolve(".kilo-dev"))
 
         val listed = api.list(repo.toString())
@@ -175,7 +175,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `list classifies an orphan that still holds a git checkout as broken`() = runBlocking {
         initRepo()
-        val broken = repo.resolve(".kilo").resolve("worktrees").resolve("broken")
+        val broken = repo.resolve(".kilo2").resolve("worktrees").resolve("broken")
         Files.createDirectories(broken)
         // A plain file named `.git` is what a linked worktree checkout actually has (it points back
         // at the shared `.git` dir) — a directory named `.git` is the primary repo's own shape. Either
@@ -191,7 +191,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `orphanSizes sums regular file sizes and never follows symlinks`() = runBlocking {
         initRepo()
-        val orphan = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        val orphan = repo.resolve(".kilo2").resolve("worktrees").resolve("leftover")
         Files.createDirectories(orphan)
         Files.write(orphan.resolve("a.bin"), ByteArray(10))
         Files.write(orphan.resolve("b.bin"), ByteArray(20))
@@ -209,10 +209,10 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `orphanSizes omits a path that fails to walk instead of failing the batch`() = runBlocking {
         initRepo()
-        val ok = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        val ok = repo.resolve(".kilo2").resolve("worktrees").resolve("leftover")
         Files.createDirectories(ok)
         Files.write(ok.resolve("a.bin"), ByteArray(5))
-        val missing = repo.resolve(".kilo").resolve("worktrees").resolve("does-not-exist")
+        val missing = repo.resolve(".kilo2").resolve("worktrees").resolve("does-not-exist")
 
         val sizes = api.orphanSizes(repo.toString(), listOf(ok.toString(), missing.toString()))
 
@@ -236,7 +236,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `orphanSizes stops mid-walk once cancelled, instead of running to completion`() = runBlocking {
         initRepo()
-        val big = repo.resolve(".kilo").resolve("worktrees").resolve("big")
+        val big = repo.resolve(".kilo2").resolve("worktrees").resolve("big")
         Files.createDirectories(big)
         repeat(20_000) { i -> Files.write(big.resolve("f$i.bin"), ByteArray(1)) }
         val target = listOf(big.toString())
@@ -268,7 +268,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `removeOrphans deletes a validated leftover directory`() = runBlocking {
         initRepo()
-        val orphan = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        val orphan = repo.resolve(".kilo2").resolve("worktrees").resolve("leftover")
         Files.createDirectories(orphan.resolve("nested"))
         Files.writeString(orphan.resolve("nested").resolve("file.txt"), "hi")
         val real = orphan.toRealPath().toString()
@@ -310,7 +310,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `removeOrphans rejects a stale selection that is no longer an orphan`() = runBlocking {
         initRepo()
-        val orphan = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        val orphan = repo.resolve(".kilo2").resolve("worktrees").resolve("leftover")
         Files.createDirectories(orphan)
         val real = orphan.toRealPath().toString()
         // Someone else already cleaned it up between the dialog's scan and this call.
@@ -326,7 +326,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `removeOrphans reports independent results per path`() = runBlocking {
         initRepo()
-        val ok = repo.resolve(".kilo").resolve("worktrees").resolve("leftover")
+        val ok = repo.resolve(".kilo2").resolve("worktrees").resolve("leftover")
         Files.createDirectories(ok)
         val okReal = ok.toRealPath().toString()
         val outside = repo.resolve("outside")
@@ -379,20 +379,20 @@ class KiloWorktreeRpcApiImplTest {
 
     @Test
     fun `a named worktree resolves its pull request against nothing cached`() {
-        val fresh = prPaths(listOf("/repo/.kilo/worktrees/feature-x/"))
+        val fresh = prPaths(listOf("/repo/.kilo2/worktrees/feature-x/"))
 
         // The caller named this one because an agent just stopped in it, so no cached answer about it
         // can have accounted for whatever that agent did.
-        assertEquals(0, prAge("/repo/.kilo/worktrees/feature-x", fresh, maxAge = null))
+        assertEquals(0, prAge("/repo/.kilo2/worktrees/feature-x", fresh, maxAge = null))
         // A trailing separator, a `.` segment, or a `..` on the way in still names the same checkout.
-        assertEquals(0, prAge("/repo/.kilo/worktrees/./feature-x", fresh, maxAge = null))
-        assertEquals(0, prAge("/repo/.kilo/worktrees/other/../feature-x", fresh, maxAge = null))
+        assertEquals(0, prAge("/repo/.kilo2/worktrees/./feature-x", fresh, maxAge = null))
+        assertEquals(0, prAge("/repo/.kilo2/worktrees/other/../feature-x", fresh, maxAge = null))
 
         // Every other row keeps the caller's own ceiling. Spending the fan-out on all of them is what
         // naming paths exists to avoid: one row's news is not news about the rest of the repository.
-        assertEquals(90_000, prAge("/repo/.kilo/worktrees/other", fresh, maxAge = 90_000))
-        assertNull(prAge("/repo/.kilo/worktrees/other", fresh, maxAge = null))
-        assertNull(prAge("/repo/.kilo/worktrees/feature-x", emptySet(), maxAge = null))
+        assertEquals(90_000, prAge("/repo/.kilo2/worktrees/other", fresh, maxAge = 90_000))
+        assertNull(prAge("/repo/.kilo2/worktrees/other", fresh, maxAge = null))
+        assertNull(prAge("/repo/.kilo2/worktrees/feature-x", emptySet(), maxAge = null))
     }
 
     @Test
@@ -488,7 +488,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `branch status serves its cache until a caller demands a fresher answer`() = runBlocking {
         initRepo()
-        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("cached")
+        val dir = repo.resolve(".kilo2").resolve("worktrees").resolve("cached")
         git(repo, "worktree", "add", "-b", "feature/cached", dir.toString())
         assertEquals("feature/cached", api.branchStatus(dir.toString()).branch)
 
@@ -503,7 +503,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `branch status keeps serving the cache for a ceiling wider than the entry age`() = runBlocking {
         initRepo()
-        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("wide")
+        val dir = repo.resolve(".kilo2").resolve("worktrees").resolve("wide")
         git(repo, "worktree", "add", "-b", "feature/wide", dir.toString())
         assertEquals("feature/wide", api.branchStatus(dir.toString()).branch)
 
@@ -517,7 +517,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `branch status skips a missing directory without caching the empty result`() = runBlocking {
         initRepo()
-        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("late")
+        val dir = repo.resolve(".kilo2").resolve("worktrees").resolve("late")
         assertEquals("", api.branchStatus(dir.toString()).branch)
 
         git(repo, "worktree", "add", "-b", "feature/x", dir.toString())
@@ -534,7 +534,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `branch status resolves git state without a pull request when the github integration is off`() = runBlocking {
         initRepo()
-        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("off")
+        val dir = repo.resolve(".kilo2").resolve("worktrees").resolve("off")
         git(repo, "worktree", "add", "-b", "feature/off", dir.toString())
 
         val status = api.branchStatus(dir.toString(), github = false)
@@ -574,13 +574,31 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `reconcile and delete never claim old storage or prune another clients missing checkout`() = runBlocking {
+        initRepo()
+        val old = repo.resolve(".kilo/worktrees/elsewhere")
+        Files.createDirectories(old.parent)
+        git(repo, "worktree", "add", "-b", "existing", old.toString())
+        val kept = old.toRealPath().toString()
+        val sentinel = old.resolve(".env")
+        Files.writeString(sentinel, "fixture")
+        val live = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("managed")).worktree)
+        assertTrue(api.list(repo.toString()).worktrees.none { it.path == kept })
+        assertFalse(api.remove(repo.toString(), kept, "existing", true).ok)
+        assertEquals("fixture", Files.readString(sentinel))
+        delete(old)
+        assertTrue(api.remove(repo.toString(), live.path, live.branch).ok)
+        assertTrue(output(repo, "worktree", "list", "--porcelain").contains(kept))
+    }
+
+    @Test
     fun `staleWorktrees only reports gone worktrees inside the kilo storage`() {
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
         val managed = WorktreeDto(
-            "/repo/.kilo/worktrees/gone",
+            "/repo/.kilo2/worktrees/gone",
             "gone",
             "feature/gone",
-            "/repo/.kilo/worktrees/gone",
+            "/repo/.kilo2/worktrees/gone",
             prunable = true,
         )
         val outside = WorktreeDto("/elsewhere/gone", "gone", "feature/other", "/elsewhere/gone", prunable = true)
@@ -685,7 +703,7 @@ class KiloWorktreeRpcApiImplTest {
     fun `staleWorktrees excludes a worktree already marked doomed in WorktreeTrash`() {
         val trash = WorktreeTrash(CoroutineScope(Dispatchers.Default + SupervisorJob()))
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
-        val gone = WorktreeDto("/repo/.kilo/worktrees/gone", "gone", "feature/gone", "/repo/.kilo/worktrees/gone", prunable = true)
+        val gone = WorktreeDto("/repo/.kilo2/worktrees/gone", "gone", "feature/gone", "/repo/.kilo2/worktrees/gone", prunable = true)
 
         assertEquals(listOf(gone.path), staleWorktrees(listOf(main, gone), trash).map { it.path })
 
@@ -700,12 +718,12 @@ class KiloWorktreeRpcApiImplTest {
     fun `managedWorktrees excludes a directory staged for delete even while git still lists it`() {
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
         val staged = WorktreeDto(
-            "/repo/.kilo/worktrees/${WorktreeTrash.PREFIX}abc",
+            "/repo/.kilo2/worktrees/${WorktreeTrash.PREFIX}abc",
             "${WorktreeTrash.PREFIX}abc",
             "feature/x",
-            "/repo/.kilo/worktrees/${WorktreeTrash.PREFIX}abc",
+            "/repo/.kilo2/worktrees/${WorktreeTrash.PREFIX}abc",
         )
-        val real = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val real = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
 
         assertEquals(listOf(real.path), managedWorktrees(listOf(main, staged, real)).filter { !it.main }.map { it.path })
     }
@@ -717,7 +735,7 @@ class KiloWorktreeRpcApiImplTest {
             HEAD 1111111111111111111111111111111111111111
             branch refs/heads/main
 
-            worktree /repo/.kilo/worktrees/feature-x
+            worktree /repo/.kilo2/worktrees/feature-x
             HEAD 2222222222222222222222222222222222222222
             branch refs/heads/feature/x
 
@@ -729,7 +747,7 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("/repo", list[0].path)
         assertEquals("main", list[0].branch)
         assertTrue(list[0].main)
-        assertEquals("/repo/.kilo/worktrees/feature-x", list[1].path)
+        assertEquals("/repo/.kilo2/worktrees/feature-x", list[1].path)
         assertEquals("feature-x", list[1].name)
         assertEquals("feature/x", list[1].branch)
         assertFalse(list[1].main)
@@ -742,7 +760,7 @@ class KiloWorktreeRpcApiImplTest {
             HEAD 1111111111111111111111111111111111111111
             branch refs/heads/main
 
-            worktree /repo/.kilo/worktrees/hyper-video
+            worktree /repo/.kilo2/worktrees/hyper-video
             HEAD 2222222222222222222222222222222222222222
             branch refs/heads/hyper-video
             locked Air Agent worktree
@@ -763,7 +781,7 @@ class KiloWorktreeRpcApiImplTest {
             HEAD 1111111111111111111111111111111111111111
             branch refs/heads/main
 
-            worktree /repo/.kilo/worktrees/hyper-video
+            worktree /repo/.kilo2/worktrees/hyper-video
             HEAD 2222222222222222222222222222222222222222
             branch refs/heads/hyper-video
             prunable gitdir file points to non-existent location
@@ -783,7 +801,7 @@ class KiloWorktreeRpcApiImplTest {
             HEAD 1111111111111111111111111111111111111111
             branch refs/heads/main
 
-            worktree /repo/.kilo/worktrees/feature-x
+            worktree /repo/.kilo2/worktrees/feature-x
             HEAD 2222222222222222222222222222222222222222
             branch refs/heads/feature/x
 
@@ -799,7 +817,7 @@ class KiloWorktreeRpcApiImplTest {
 
         val list = managedWorktrees(parseWorktreeList(raw))
 
-        assertEquals(listOf("/repo", "/repo/.kilo/worktrees/feature-x"), list.map { it.path })
+        assertEquals(listOf("/repo", "/repo/.kilo2/worktrees/feature-x"), list.map { it.path })
     }
 
     @Test
@@ -809,7 +827,7 @@ class KiloWorktreeRpcApiImplTest {
             HEAD 1111111111111111111111111111111111111111
             branch refs/heads/main
 
-            worktree /repo/.kilo/worktrees
+            worktree /repo/.kilo2/worktrees
             HEAD 2222222222222222222222222222222222222222
             branch refs/heads/bad
 
@@ -827,15 +845,15 @@ class KiloWorktreeRpcApiImplTest {
             HEAD 1111111111111111111111111111111111111111
             branch refs/heads/main
 
-            worktree /repo/.kilo/worktrees/feature-x
+            worktree /repo/.kilo2/worktrees/feature-x
             HEAD 2222222222222222222222222222222222222222
             branch refs/heads/feature/x
 
-            worktree /repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested
+            worktree /repo/.kilo2/worktrees/feature-x/.kilo2/worktrees/nested
             HEAD 3333333333333333333333333333333333333333
             branch refs/heads/nested
 
-            worktree /repo/.kilo/worktrees/dead
+            worktree /repo/.kilo2/worktrees/dead
             HEAD 4444444444444444444444444444444444444444
             branch refs/heads/dead
             prunable gitdir file points to non-existent location
@@ -844,7 +862,7 @@ class KiloWorktreeRpcApiImplTest {
 
         val list = managedWorktrees(parseWorktreeList(raw))
 
-        assertEquals(listOf("/repo", "/repo/.kilo/worktrees/feature-x"), list.map { it.path })
+        assertEquals(listOf("/repo", "/repo/.kilo2/worktrees/feature-x"), list.map { it.path })
     }
 
     @Test
@@ -870,7 +888,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `overlayWorktreeNames applies labels only to non-main worktrees`() {
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
-        val child = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val child = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
 
         val out = overlayWorktreeNames(listOf(main, child), mapOf(main.path to "Main Label", child.path to "Feature Label"))
 
@@ -883,9 +901,9 @@ class KiloWorktreeRpcApiImplTest {
         val file = repo.resolve(".kilo2").resolve("jetbrains.json")
 
         assertTrue(readWorktreeNames(file).isEmpty())
-        writeWorktreeNames(file, mapOf("/repo/.kilo/worktrees/feature-x" to "Feature Label", "/blank" to ""))
+        writeWorktreeNames(file, mapOf("/repo/.kilo2/worktrees/feature-x" to "Feature Label", "/blank" to ""))
 
-        assertEquals(mapOf("/repo/.kilo/worktrees/feature-x" to "Feature Label"), readWorktreeNames(file))
+        assertEquals(mapOf("/repo/.kilo2/worktrees/feature-x" to "Feature Label"), readWorktreeNames(file))
         assertEquals(emptyList(), readWorktreeState(file).worktreeOrder)
 
         Files.writeString(file, "not json")
@@ -895,8 +913,8 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `worktree state round trips and migrates legacy names`() {
         val file = repo.resolve(".kilo2").resolve("jetbrains.json")
-        val first = "/repo/.kilo/worktrees/zebra"
-        val second = "/repo/.kilo/worktrees/alpha"
+        val first = "/repo/.kilo2/worktrees/zebra"
+        val second = "/repo/.kilo2/worktrees/alpha"
 
         writeWorktreeState(file, WorktreeState(mapOf(first to "Zebra", second to "Alpha"), listOf(first, second)))
 
@@ -909,9 +927,9 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `orderWorktrees keeps main first and sorts worktrees by persisted order`() {
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
-        val first = WorktreeDto("/repo/.kilo/worktrees/zebra", "zebra", "zebra", "/repo/.kilo/worktrees/zebra")
-        val second = WorktreeDto("/repo/.kilo/worktrees/alpha", "alpha", "alpha", "/repo/.kilo/worktrees/alpha")
-        val third = WorktreeDto("/repo/.kilo/worktrees/beta", "beta", "beta", "/repo/.kilo/worktrees/beta")
+        val first = WorktreeDto("/repo/.kilo2/worktrees/zebra", "zebra", "zebra", "/repo/.kilo2/worktrees/zebra")
+        val second = WorktreeDto("/repo/.kilo2/worktrees/alpha", "alpha", "alpha", "/repo/.kilo2/worktrees/alpha")
+        val third = WorktreeDto("/repo/.kilo2/worktrees/beta", "beta", "beta", "/repo/.kilo2/worktrees/beta")
 
         val out = orderWorktrees(listOf(main, second, third, first), listOf(first.path, second.path))
 
@@ -975,9 +993,9 @@ class KiloWorktreeRpcApiImplTest {
         val result = api.create(first.path, CreateWorktreeRequestDto("feature/y"))
         val created = assertNotNull(result.worktree, "create failed: ${result.error}")
 
-        assertEquals(repo.resolve(".kilo").resolve("worktrees").resolve("feature-y").toRealPath().toString(), created.path)
+        assertEquals(repo.resolve(".kilo2").resolve("worktrees").resolve("feature-y").toRealPath().toString(), created.path)
         assertFalse(
-            Files.exists(Path.of(first.path).resolve(".kilo").resolve("worktrees").resolve("feature-y")),
+            Files.exists(Path.of(first.path).resolve(".kilo2").resolve("worktrees").resolve("feature-y")),
             "creating from a linked worktree must not nest storage inside it",
         )
     }
@@ -997,7 +1015,7 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("local fixture", Files.readString(checkout.resolve(".env.local")))
         assertFalse(Files.exists(checkout.resolve(".envrc")))
         val untracked = output(repo, "ls-files", "--others", "--exclude-standard")
-        assertFalse(".kilo/worktrees" in untracked || ".kilo2/jetbrains.json" in untracked)
+        assertFalse(".kilo2/worktrees" in untracked || ".kilo2/jetbrains.json" in untracked)
     }
 
     @Test
@@ -1008,7 +1026,7 @@ class KiloWorktreeRpcApiImplTest {
 
         assertNull(result.worktree)
         assertEquals("Invalid branch name", result.error)
-        assertFalse(Files.exists(repo.resolve(".kilo").resolve("escape")))
+        assertFalse(Files.exists(repo.resolve(".kilo2").resolve("escape")))
     }
 
     @Test
@@ -1068,7 +1086,8 @@ class KiloWorktreeRpcApiImplTest {
 
     @Test
     fun `reorder returns false when the repo has no worktrees`() = runBlocking {
-        assertFalse(api.reorder(repo.toString(), listOf("/repo/.kilo/worktrees/x")))
+        initRepo()
+        assertFalse(api.reorder(repo.toString(), listOf("/repo/.kilo2/worktrees/x")))
     }
 
     @Test
@@ -1090,7 +1109,7 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `session list visibility round trips beside names and order`() {
         val file = repo.resolve(".kilo2").resolve("jetbrains.json")
-        val path = "/repo/.kilo/worktrees/feature-x"
+        val path = "/repo/.kilo2/worktrees/feature-x"
 
         writeWorktreeState(file, WorktreeState(mapOf(path to "Feature"), listOf(path), mapOf(path to true, "/repo" to false)))
 
@@ -1108,8 +1127,8 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `reconcile drops visibility for vanished worktrees but keeps the main tree`() {
         val main = "/repo"
-        val live = "/repo/.kilo/worktrees/live"
-        val dead = "/repo/.kilo/worktrees/dead"
+        val live = "/repo/.kilo2/worktrees/live"
+        val dead = "/repo/.kilo2/worktrees/dead"
         val state = WorktreeState(sessionList = mapOf(main to true, live to false, dead to true))
 
         val next = state.reconcile(listOf(live), listOf(main, live))
@@ -1165,6 +1184,7 @@ class KiloWorktreeRpcApiImplTest {
 
     @Test
     fun `session list visibility reports nothing outside a repo`() = runBlocking {
+        preventGitDiscovery()
         assertNull(api.sessionList(repo.toString()))
         assertFalse(api.setSessionList(repo.toString(), true))
     }
@@ -1253,7 +1273,7 @@ class KiloWorktreeRpcApiImplTest {
         initRepo()
         val parent = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
         val nested = assertNotNull(api.create(parent.path, CreateWorktreeRequestDto("feature/y")).worktree)
-        val old = Path.of(parent.path).resolve(".kilo").resolve("worktrees").resolve("nested")
+        val old = Path.of(parent.path).resolve(".kilo2").resolve("worktrees").resolve("nested")
         Files.createDirectories(old.parent)
         git(parent.path, "worktree", "move", nested.path, old.toString())
 
@@ -1271,7 +1291,7 @@ class KiloWorktreeRpcApiImplTest {
         initRepo()
         val parent = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
         val nested = assertNotNull(api.create(parent.path, CreateWorktreeRequestDto("feature/y")).worktree)
-        val old = Path.of(parent.path).resolve(".kilo").resolve("worktrees").resolve("nested")
+        val old = Path.of(parent.path).resolve(".kilo2").resolve("worktrees").resolve("nested")
         Files.createDirectories(old.parent)
         git(parent.path, "worktree", "move", nested.path, old.toString())
         delete(old)
@@ -1634,18 +1654,18 @@ class KiloWorktreeRpcApiImplTest {
     fun `prTargets keeps the main tree and drops detached and prunable entries`() {
         val items = listOf(
             WorktreeDto("/repo", "repo", "main", "/repo", main = true),
-            WorktreeDto("/repo/.kilo/worktrees/a", "a", "feature/a", "/repo/.kilo/worktrees/a"),
-            WorktreeDto("/repo/.kilo/worktrees/detached", "detached", "(detached)", "/repo/.kilo/worktrees/detached"),
-            WorktreeDto("/repo/.kilo/worktrees/gone", "gone", "feature/gone", "/repo/.kilo/worktrees/gone", prunable = true),
+            WorktreeDto("/repo/.kilo2/worktrees/a", "a", "feature/a", "/repo/.kilo2/worktrees/a"),
+            WorktreeDto("/repo/.kilo2/worktrees/detached", "detached", "(detached)", "/repo/.kilo2/worktrees/detached"),
+            WorktreeDto("/repo/.kilo2/worktrees/gone", "gone", "feature/gone", "/repo/.kilo2/worktrees/gone", prunable = true),
         )
 
-        assertEquals(listOf("/repo", "/repo/.kilo/worktrees/a"), prTargets(items).map { it.path })
+        assertEquals(listOf("/repo", "/repo/.kilo2/worktrees/a"), prTargets(items).map { it.path })
     }
 
     @Test
     fun `baseBranch reads the main tree branch and ignores a detached one`() {
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
-        val linked = WorktreeDto("/repo/.kilo/worktrees/a", "a", "feature/a", "/repo/.kilo/worktrees/a")
+        val linked = WorktreeDto("/repo/.kilo2/worktrees/a", "a", "feature/a", "/repo/.kilo2/worktrees/a")
 
         assertEquals("main", baseBranch(listOf(main, linked)))
         assertNull(baseBranch(listOf(main.copy(branch = "(detached)"), linked)))
@@ -1761,11 +1781,11 @@ class KiloWorktreeRpcApiImplTest {
 
     @Test
     fun `parsePr reads title from gh output`() {
-        val pull = assertNotNull(parsePr("/repo/.kilo/worktrees/feature-x", """
+        val pull = assertNotNull(parsePr("/repo/.kilo2/worktrees/feature-x", """
             {"number":12,"state":"OPEN","isDraft":false,"url":"https://example.test/pr/12","title":"  Fix login bug  "}
         """.trimIndent()))
 
-        assertEquals("/repo/.kilo/worktrees/feature-x", pull.path)
+        assertEquals("/repo/.kilo2/worktrees/feature-x", pull.path)
         assertEquals(12, pull.number)
         assertEquals(GhState.OPEN, pull.state)
         assertEquals("https://example.test/pr/12", pull.url)
@@ -2009,6 +2029,7 @@ class KiloWorktreeRpcApiImplTest {
 
     @Test
     fun `capture fails instead of reporting a clean tree when git cannot run`() {
+        preventGitDiscovery()
         // No git repository: a failed capture must throw rather than look like "nothing to move".
         val err = failure(repo)
 
@@ -2025,11 +2046,12 @@ class KiloWorktreeRpcApiImplTest {
 
     @Test
     fun `moveToWorktree emits ERROR when capture fails`() = runBlocking {
+        preventGitDiscovery()
         val events = api.moveToWorktree(repo.toString(), "ses_1", "feature/x").toList()
 
         assertEquals(listOf(MoveStage.CAPTURING, MoveStage.ERROR), events.map { it.stage })
         assertTrue(assertNotNull(events.last().error).isNotBlank(), "the error event should explain the failure")
-        assertFalse(Files.exists(repo.resolve(".kilo/worktrees/feature-x")))
+        assertFalse(Files.exists(repo.resolve(".kilo2/worktrees/feature-x")))
     }
 
     @Test
@@ -2226,14 +2248,14 @@ class KiloWorktreeRpcApiImplTest {
                     events.last().error,
                 )
                 val target = Path.of(assertNotNull(events.last().worktree).path)
-                assertEquals(repo.resolve(".kilo/worktrees/feature-x").toRealPath(), target.toRealPath())
+                assertEquals(repo.resolve(".kilo2/worktrees/feature-x").toRealPath(), target.toRealPath())
                 assertEquals(rev, head(target, "HEAD"))
                 assertEquals("linked staged\n", output(target, "show", ":README.md"))
                 assertEquals("linked unstaged\n", Files.readString(target.resolve("README.md")))
                 assertEquals("MM README.md\u0000", output(target, "status", "--porcelain=v1", "-z", "--", "README.md"))
                 assertEquals("linked notes\n", Files.readString(target.resolve("notes.txt")))
                 assertFalse(Files.exists(target.resolve("main-only.txt")))
-                assertFalse(Files.exists(source.resolve(".kilo/worktrees/feature-x")))
+                assertFalse(Files.exists(source.resolve(".kilo2/worktrees/feature-x")))
             }
         }
     }
@@ -2493,7 +2515,7 @@ class KiloWorktreeRpcApiImplTest {
         preserved {
             val events = api.moveToWorktree(repo.toString(), null, "feature/x").onEach { event ->
                 if (event.stage == MoveStage.TRANSFERRING) {
-                    val target = repo.resolve(".kilo/worktrees/feature-x")
+                    val target = repo.resolve(".kilo2/worktrees/feature-x")
                     assertTrue(Files.isDirectory(target))
                     assertEquals(head(repo, "HEAD"), head(repo, "refs/heads/feature/x"))
                     Files.writeString(target.resolve("sub"), "blocking file\n")
@@ -2655,7 +2677,7 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     private fun absent() {
-        assertFalse(Files.exists(repo.resolve(".kilo/worktrees/feature-x")), "a failed move must not leave a worktree directory")
+        assertFalse(Files.exists(repo.resolve(".kilo2/worktrees/feature-x")), "a failed move must not leave a worktree directory")
         val listed = parseWorktreeList(output(repo, "worktree", "list", "--porcelain"))
         assertEquals(1, listed.size, "a failed move must not leave a worktree registration: $listed")
         assertTrue(listed.single().main)
@@ -2670,8 +2692,8 @@ class KiloWorktreeRpcApiImplTest {
         val rev = head(dir, "HEAD")
         val ref = output(dir, "symbolic-ref", "HEAD")
         val index = output(dir, "ls-files", "--stage", "-z")
-        val status = output(dir, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ".", ":(exclude).kilo")
-        val files = output(dir, "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", ".", ":(exclude).kilo")
+        val status = output(dir, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ".", ":(exclude).kilo2")
+        val files = output(dir, "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", ".", ":(exclude).kilo2")
             .split('\u0000').filter { it.isNotEmpty() }.distinct().associateWith { bytes(dir.resolve(it)) }
 
         block()
@@ -2681,7 +2703,7 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(index, output(dir, "ls-files", "--stage", "-z"), "index stages must be unchanged in $dir")
         assertEquals(
             status,
-            output(dir, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ".", ":(exclude).kilo"),
+            output(dir, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ".", ":(exclude).kilo2"),
             "status must be unchanged in $dir",
         )
         files.forEach { (name, content) ->
@@ -2722,6 +2744,9 @@ class KiloWorktreeRpcApiImplTest {
         git(repo, "add", "README.md")
         git(repo, "commit", "-m", "init")
     }
+
+    // Some IDE test runners put java.io.tmpdir inside a real checkout. Never walk into that checkout.
+    private fun preventGitDiscovery() { Files.writeString(repo.resolve(".git"), "gitdir: nonexistent\n") }
 
     /**
      * Builds an "origin" repository holding [head] plus a `refs/pull/<pull>/head` ref pointing at it,

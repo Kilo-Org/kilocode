@@ -37,7 +37,7 @@ import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 
 class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
-    private val path = "/repo/.kilo/worktrees/feature-x"
+    private val path = "/repo/.kilo2/worktrees/feature-x"
 
     fun `test the popup states both verdicts with their counts`() {
         val body = body()

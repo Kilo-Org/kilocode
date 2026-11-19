@@ -20,7 +20,7 @@ data class LocalHistoryItem(val session: SessionDto) : HistoryItem {
 
 data class CloudHistoryItem(val session: CloudSessionDto) : HistoryItem {
     override val id: String get() = session.id
-    override val title: String get() = session.title.orEmpty()
+    override val title: String get() = session.title ?: session.id
     override val createdAt: String get() = session.createdAt
     override val updatedAt: String get() = session.updatedAt
 }

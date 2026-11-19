@@ -174,7 +174,7 @@ internal class NewWorktreeDialog(
     override fun getPreferredFocusedComponent(): JComponent = focus()
 
     // Versioned: DialogWrapper persists the size per key, so a stale entry would keep the old width.
-    override fun getDimensionServiceKey(): String = "ai.kilocode.NewWorktreeDialog.v3"
+    override fun getDimensionServiceKey(): String = "Kilo2.NewWorktreeDialog"
 
     override fun doOKAction() = submit()
 

@@ -62,6 +62,6 @@ class KiloRunServiceTest : BasePlatformTestCase() {
 
     private companion object {
         private const val ROOT = "/real/repo"
-        private const val WT = "$ROOT/.kilo/worktrees/feature"
+        private const val WT = "$ROOT/.kilo2/worktrees/feature"
     }
 }

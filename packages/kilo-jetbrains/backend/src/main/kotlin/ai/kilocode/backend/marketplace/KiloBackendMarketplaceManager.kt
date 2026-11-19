@@ -71,19 +71,20 @@ class KiloBackendMarketplaceManager(private val client: suspend () -> V2Client =
     ): MarketplaceResultDto {
         val raw = Json.parseToJsonElement(item.content).jsonObject
         return mutation(item.id) {
-            val result = rpc(
-                    "install",
-                    directory,
-                    buildJsonObject {
-                        put("registry", raw.required("registry"))
-                        put("kind", item.type)
-                        put("id", item.id)
-                        put("scope", target)
-                        parameters["__method"]?.let { put("option", it) }
-                        put("params", (parameters - "__method").asJson())
-                    },
-                )
-                .jsonObject
+            val result =
+                rpc(
+                        "install",
+                        directory,
+                        buildJsonObject {
+                            put("registry", raw.required("registry"))
+                            put("kind", item.type)
+                            put("id", item.id)
+                            put("scope", target)
+                            parameters["__method"]?.let { put("option", it) }
+                            put("params", (parameters - "__method").asJson())
+                        },
+                    )
+                    .jsonObject
             MarketplaceResultDto(true, result.required("id"))
         }
     }
@@ -105,23 +106,30 @@ class KiloBackendMarketplaceManager(private val client: suspend () -> V2Client =
                 )
         return mutation(id) {
             rpc(
-            "uninstall",
-            directory,
-            mapOf(
-                    "registry" to row.required("registry"),
-                    "id" to id,
-                    "kind" to type,
-                    "scope" to scope,
-                )
-                .asJson(),
-        )
+                "uninstall",
+                directory,
+                mapOf(
+                        "registry" to row.required("registry"),
+                        "id" to id,
+                        "kind" to type,
+                        "scope" to scope,
+                    )
+                    .asJson(),
+            )
             MarketplaceResultDto(true, id)
         }
     }
 
-    private suspend fun mutation(id: String, block: suspend () -> MarketplaceResultDto): MarketplaceResultDto =
-        try { block() } catch (e: V2HttpException) {
-            val detail = runCatching { Json.parseToJsonElement(e.body).jsonObject.text("message") }.getOrNull()
+    private suspend fun mutation(
+        id: String,
+        block: suspend () -> MarketplaceResultDto,
+    ): MarketplaceResultDto =
+        try {
+            block()
+        } catch (e: V2HttpException) {
+            val detail =
+                runCatching { Json.parseToJsonElement(e.body).jsonObject.text("message") }
+                    .getOrNull()
             MarketplaceResultDto(false, id, detail ?: e.message)
         }
 

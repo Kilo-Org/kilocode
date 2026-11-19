@@ -9,12 +9,12 @@ object KiloPluginSettings {
 
     fun setAutoBranchName(value: Boolean) = PropertiesComponent.getInstance().setValue(AUTO_BRANCH_NAME_KEY, value, true)
 
-    private const val AUTO_APPROVE_KEY = "kilo.session.autoApprove"
-    private const val AUTO_EDITOR_CONTEXT_KEY = "kilo.session.autoEditorContext"
-    private const val SHOW_APPROVAL_REASON_KEY = "kilo.session.showApprovalReason"
-    private const val PERMISSION_RULES_EXPANDED_KEY = "kilo.session.permissionRulesExpanded"
-    private const val GITHUB_KEY = "kilo.integrations.github"
-    private const val AGENT_KEY = "kilo.session.agent"
+    private const val AUTO_APPROVE_KEY = "kilo2.session.autoApprove"
+    private const val AUTO_EDITOR_CONTEXT_KEY = "kilo2.session.autoEditorContext"
+    private const val SHOW_APPROVAL_REASON_KEY = "kilo2.session.showApprovalReason"
+    private const val PERMISSION_RULES_EXPANDED_KEY = "kilo2.session.permissionRulesExpanded"
+    private const val GITHUB_KEY = "kilo2.integrations.github"
+    private const val AGENT_KEY = "kilo2.session.agent"
 
     /**
      * Mode the prompt picker last selected, or null when the CLI's own default should win.

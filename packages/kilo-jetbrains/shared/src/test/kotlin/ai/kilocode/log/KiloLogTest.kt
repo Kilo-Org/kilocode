@@ -12,7 +12,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertSame
-import kotlin.test.assertTrue
 
 class KiloLogTest {
 
@@ -121,7 +120,7 @@ class KiloLogTest {
     }
 
     @Test
-    fun `file log startup deletes legacy dev logs`() {
+    fun `preview startup and rotation leave other diagnostic logs untouched`() {
         val dir = createTempDirectory("kilo-log")
         val current = dir.resolve("kilo.log")
         val rotated = dir.resolve("kilo.log.0")
@@ -133,12 +132,17 @@ class KiloLogTest {
         legacy.writeText("legacy")
         old.writeText("old")
 
-        FileLog.deleteLegacyLogs(dir)
+        dir.resolve("kilo2.log").writeText("previous preview")
+        FileLog.createHandler(dir, fresh = true).apply {
+            publish(LogRecord(Level.INFO, "preview"))
+            close()
+        }
 
-        assertTrue(current.exists())
-        assertTrue(rotated.exists())
-        assertFalse(legacy.exists())
-        assertFalse(old.exists())
+        assertEquals("previous preview", dir.resolve("kilo2.log.0").readText())
+        assertEquals("current", current.readText())
+        assertEquals("rotated", rotated.readText())
+        assertEquals("legacy", legacy.readText())
+        assertEquals("old", old.readText())
     }
 
     private class LineFormatter : Formatter() {

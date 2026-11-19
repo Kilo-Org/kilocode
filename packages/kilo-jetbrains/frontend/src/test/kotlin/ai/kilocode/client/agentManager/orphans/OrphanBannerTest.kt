@@ -56,10 +56,10 @@ class OrphanBannerTest : BasePlatformTestCase() {
     }
 
     fun `test banner shows the count immediately then fills in size once the size pass lands`() {
-        rpc.orphans = listOf(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
+        rpc.orphans = listOf(OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER))
         val gate = CompletableDeferred<Unit>()
         rpc.beforeOrphanSizes = { gate.await() }
-        rpc.orphanSizesResult = { mapOf("/repo/.kilo/worktrees/leftover" to 2048L) }
+        rpc.orphanSizesResult = { mapOf("/repo/.kilo2/worktrees/leftover" to 2048L) }
         val controller = controller()
         edt { controller.reload() }
         flush()
@@ -81,7 +81,7 @@ class OrphanBannerTest : BasePlatformTestCase() {
     }
 
     fun `test banner hides once orphans clear after a reload`() {
-        rpc.orphans = listOf(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
+        rpc.orphans = listOf(OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER))
         val controller = controller()
         edt { controller.reload() }
         flush()
@@ -103,7 +103,7 @@ class OrphanBannerTest : BasePlatformTestCase() {
      * not keep re-running the failing walk on every refresh.
      */
     fun `test banner drops the size claim when the size pass fails instead of reporting zero bytes`() {
-        rpc.orphans = listOf(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
+        rpc.orphans = listOf(OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER))
         rpc.orphanSizesResult = { emptyMap() }
         val controller = controller()
         edt { controller.reload() }
@@ -128,10 +128,10 @@ class OrphanBannerTest : BasePlatformTestCase() {
      */
     fun `test banner drops the size claim when the size pass covers only some folders`() {
         rpc.orphans = listOf(
-            OrphanDto("/repo/.kilo/worktrees/first", OrphanKind.LEFTOVER),
-            OrphanDto("/repo/.kilo/worktrees/second", OrphanKind.LEFTOVER),
+            OrphanDto("/repo/.kilo2/worktrees/first", OrphanKind.LEFTOVER),
+            OrphanDto("/repo/.kilo2/worktrees/second", OrphanKind.LEFTOVER),
         )
-        rpc.orphanSizesResult = { mapOf("/repo/.kilo/worktrees/first" to 4096L) }
+        rpc.orphanSizesResult = { mapOf("/repo/.kilo2/worktrees/first" to 4096L) }
         val controller = controller()
         edt { controller.reload() }
         flush()
@@ -147,7 +147,7 @@ class OrphanBannerTest : BasePlatformTestCase() {
      * has to be cancelled rather than left running to be discarded when it lands.
      */
     fun `test a size pass is cancelled when the orphan set changes under it`() {
-        rpc.orphans = listOf(OrphanDto("/repo/.kilo/worktrees/first", OrphanKind.LEFTOVER))
+        rpc.orphans = listOf(OrphanDto("/repo/.kilo2/worktrees/first", OrphanKind.LEFTOVER))
         val gate = CompletableDeferred<Unit>()
         val walked = AtomicInteger()
         rpc.beforeOrphanSizes = { gate.await() }
@@ -163,7 +163,7 @@ class OrphanBannerTest : BasePlatformTestCase() {
         assertEquals(1, rpc.orphanSizeCalls.size)
 
         // The orphan set changes while the first walk is still parked on the gate.
-        rpc.orphans = listOf(OrphanDto("/repo/.kilo/worktrees/second", OrphanKind.LEFTOVER))
+        rpc.orphans = listOf(OrphanDto("/repo/.kilo2/worktrees/second", OrphanKind.LEFTOVER))
         edt { controller.reload() }
         flush()
         edt { banner.refresh() }
@@ -185,8 +185,8 @@ class OrphanBannerTest : BasePlatformTestCase() {
      * renamed away — so it is cancelled, and the reload afterwards measures only what is left.
      */
     fun `test removing folders cancels the size pass and re-measures the leftovers`() {
-        val doomed = "/repo/.kilo/worktrees/doomed"
-        val survivor = "/repo/.kilo/worktrees/survivor"
+        val doomed = "/repo/.kilo2/worktrees/doomed"
+        val survivor = "/repo/.kilo2/worktrees/survivor"
         rpc.orphans = listOf(OrphanDto(doomed, OrphanKind.LEFTOVER), OrphanDto(survivor, OrphanKind.LEFTOVER))
         val gate = CompletableDeferred<Unit>()
         val walked = AtomicInteger()
@@ -222,8 +222,8 @@ class OrphanBannerTest : BasePlatformTestCase() {
     }
 
     fun `test banner does not re-fetch sizes when the orphan set is unchanged`() {
-        rpc.orphans = listOf(OrphanDto("/repo/.kilo/worktrees/leftover", OrphanKind.LEFTOVER))
-        rpc.orphanSizesResult = { mapOf("/repo/.kilo/worktrees/leftover" to 10L) }
+        rpc.orphans = listOf(OrphanDto("/repo/.kilo2/worktrees/leftover", OrphanKind.LEFTOVER))
+        rpc.orphanSizesResult = { mapOf("/repo/.kilo2/worktrees/leftover" to 10L) }
         val controller = controller()
         edt { controller.reload() }
         flush()

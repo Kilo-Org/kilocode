@@ -146,6 +146,13 @@ internal class SessionFeed(private val sid: String, private val api: suspend () 
             }
             (previous - known).forEach { add(ChatEventDto.MessageRemoved(sid, it)) }
             add(ChatEventDto.SessionQueueChanged(sid, queued.toList()))
+            if (!active) when (transcript.idle?.str("outcome")) {
+                "failed" -> {
+                    transcript.idle?.obj("error")?.let { add(ChatEventDto.Error(sid, chatError(it))) }
+                    add(ChatEventDto.TurnClose(sid, "error"))
+                }
+                "interrupted" -> add(ChatEventDto.TurnClose(sid, "interrupted"))
+            }
             val oldPermissions = permissions; val oldForms = forms
             permissions = permissionList.mapTo(mutableSetOf()) { it.id }; forms = formList.mapTo(mutableSetOf()) { it.id }
             (oldPermissions - permissions).forEach { add(ChatEventDto.PermissionReplied(sid, it)) }

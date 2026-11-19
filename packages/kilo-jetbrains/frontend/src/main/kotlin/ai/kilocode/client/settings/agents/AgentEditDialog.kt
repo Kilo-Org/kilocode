@@ -202,7 +202,7 @@ internal class AgentEditDialog(
 
     override fun getPreferredFocusedComponent(): JComponent = description
 
-    override fun getDimensionServiceKey(): String = "Kilo.AgentEditDialog"
+    override fun getDimensionServiceKey(): String = "Kilo2.AgentEditDialog"
 
     override fun doValidateAll(): List<ValidationInfo> = listOfNotNull(
         validateMode(),

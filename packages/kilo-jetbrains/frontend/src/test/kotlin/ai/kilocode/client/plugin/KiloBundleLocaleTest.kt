@@ -188,14 +188,13 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             val props = load(locale)
             assertEquals(
                 "$locale: project skill destination",
-                ".kilo/skills/review/",
+                ".kilo2/skills/review/",
                 format(props.getProperty("settings.marketplace.install.destination.skill.project"), "review"),
             )
-            assertEquals(
-                "$locale: global skill destination",
-                "~/.kilo/skills/review/",
-                format(props.getProperty("settings.marketplace.install.destination.skill.global"), "review"),
-            )
+            val global = format(props.getProperty("settings.marketplace.install.destination.skill.global"), "review")
+            assertTrue("$locale: global skill destination", "skills/review/" in global && ".kilo" !in global && '~' !in global)
+            assertEquals(".kilo2/agents/review.md", format(props.getProperty("settings.marketplace.install.destination.agent.project"), "review"))
+            assertTrue("$locale: project command directory", ".kilo2/commands" in props.getProperty("settings.agentBehavior.commands.info.more"))
         }
     }
 

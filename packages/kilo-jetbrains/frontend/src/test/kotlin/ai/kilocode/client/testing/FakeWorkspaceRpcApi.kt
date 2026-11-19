@@ -68,7 +68,7 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var beforeLocalConfigTarget: (suspend () -> Unit)? = null
     var beforeGlobalConfigTarget: (suspend () -> Unit)? = null
     var refreshConfigThrows: Exception? = null
-    var setupScriptPath = "/test/.kilo/setup-script"
+    var setupScriptPath = "/test/.kilo2/setup-script"
     var setupScriptDisplayPath = setupScriptPath
     var setupScriptExists = false
     var setupScriptKind = SetupScriptKind.POSIX

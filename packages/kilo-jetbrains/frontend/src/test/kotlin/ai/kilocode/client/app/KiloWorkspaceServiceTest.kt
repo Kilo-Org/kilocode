@@ -188,13 +188,13 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
 
     fun `test ifSetupScriptExists invokes callback when a script is configured`() = runBlocking {
         rpc.setupScriptExists = true
-        rpc.setupScriptPath = "/test/.kilo/setup-script"
+        rpc.setupScriptPath = "/test/.kilo2/setup-script"
         var seen: String? = null
 
         service.ifSetupScriptExists("/test") { seen = it.path }.join()
         pumpEdt()
 
-        assertEquals("/test/.kilo/setup-script", seen)
+        assertEquals("/test/.kilo2/setup-script", seen)
         assertEquals(listOf("/test"), rpc.setupScriptTargetCalls.toList())
     }
 

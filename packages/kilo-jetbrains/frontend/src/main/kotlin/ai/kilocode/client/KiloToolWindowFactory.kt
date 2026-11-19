@@ -46,7 +46,7 @@ import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
 import javax.swing.JPanel
 
-/** Registered id of the Kilo Code tool window (`kilo.jetbrains.frontend.xml`'s `<toolWindow id=...>`). */
+/** Registered id of the Kilo Code tool window (`kilo.jetbrains.v2.frontend.xml`'s `<toolWindow id=...>`). */
 const val KILO_TOOL_WINDOW_ID = "Kilo Code"
 
 /**

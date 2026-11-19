@@ -20,23 +20,23 @@ class ContextSettingsStateTest : BasePlatformTestCase() {
 
         assertEquals(true, draft.auto)
         assertEquals("75", draft.threshold)
-        assertEquals(true, draft.prune)
         assertEquals(listOf("**/dist/**"), draft.ignore)
     }
 
     fun `test unchanged draft emits no patch`() {
-        val draft = ContextDraft(auto = true, threshold = "75", prune = false, ignore = listOf("tmp/**"))
+        val draft = ContextDraft(auto = true, threshold = "75", ignore = listOf("tmp/**"))
 
         assertEquals(false, patch(draft, draft)?.let(::changed))
     }
 
-    fun `test boolean false values are emitted`() {
-        val from = ContextDraft(auto = true, prune = true)
-        val to = ContextDraft(auto = false, prune = false)
+    fun `test auto compaction defaults on and can be disabled without setting pruning`() {
+        val from = contextDraft(ConfigDto())
+        assertTrue(from.auto)
+        val to = from.copy(auto = false)
         val patch = patch(from, to)
 
         assertEquals(false, patch?.compaction?.auto)
-        assertEquals(false, patch?.compaction?.prune)
+        assertNull(patch?.compaction?.prune)
     }
 
     fun `test threshold set and clear use explicit semantics`() {
@@ -58,10 +58,14 @@ class ContextSettingsStateTest : BasePlatformTestCase() {
 
     fun `test invalid threshold prevents patch without looking like no changes`() {
         val from = ContextDraft(threshold = "50")
-        val to = ContextDraft(auto = true, threshold = "101", prune = true, ignore = listOf("tmp/**"))
-
-        assertEquals(ThresholdStatus.INVALID, thresholdStatus(to.threshold))
-        assertNull(patch(from, to))
+        for (value in listOf("0", "0.5", "101")) {
+            val to = ContextDraft(auto = true, threshold = value, ignore = listOf("tmp/**"))
+            assertEquals(ThresholdStatus.INVALID, thresholdStatus(to.threshold))
+            assertNull(patch(from, to))
+        }
+        for (value in listOf("1", "12.5", "100")) {
+            assertEquals(value.toDouble(), patch(from, from.copy(threshold = value))?.compaction?.threshold_percent)
+        }
     }
 
     fun `test saved match normalizes threshold formatting`() {

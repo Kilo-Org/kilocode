@@ -17,7 +17,7 @@ import kotlinx.coroutines.Job
  *
  * Looks up [Kilo.SettingsGroup] from [ActionManager] and shows it
  * as a popup. The group composition is declared in
- * `kilo.jetbrains.frontend.xml`.
+ * `kilo.jetbrains.v2.frontend.xml`.
  */
 class KiloSettingsAction : AnAction(), DumbAware {
 

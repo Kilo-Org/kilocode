@@ -272,7 +272,7 @@ class ToolBody private constructor(
         fun editor(tool: Tool): ToolBody {
             val disposable = Disposer.newDisposable("Tool body")
             val body = runCatching {
-                val field = ToolField(preview(tool), SessionEditorStyle.current(), tool.name == "bash").also { ed ->
+                val field = ToolField(preview(tool), SessionEditorStyle.current(), ShellToolView.canRender(tool)).also { ed ->
                     Disposer.register(disposable) {
                         ed.getEditor(false)?.let(EditorFactory.getInstance()::releaseEditor)
                     }
@@ -453,8 +453,8 @@ internal fun icon(tool: Tool) = when (tool.name) {
     "glob", "grep" -> SessionViewIcons.search
     "webfetch", "websearch" -> SessionViewIcons.windowCursor
     "codesearch" -> SessionViewIcons.code
-    "task", "board_post", "board_read" -> SessionViewIcons.task
-    "bash" -> SessionViewIcons.console
+    "subagent", "task", "board_post", "board_read" -> SessionViewIcons.task
+    "shell", "bash" -> SessionViewIcons.console
     "edit", "write", "apply_patch" -> SessionViewIcons.edit
     "todowrite", "todoread" -> SessionViewIcons.checklist
     "question" -> SessionViewIcons.bubble
@@ -464,14 +464,14 @@ internal fun icon(tool: Tool) = when (tool.name) {
 
 internal fun title(tool: Tool) = when {
     tool.name == "read" -> KiloBundle.message("session.part.tool.read")
-    tool.name == "bash" -> KiloBundle.message("session.part.tool.shell")
+    ShellToolView.canRender(tool) -> KiloBundle.message("session.part.tool.shell")
     tool.kind == ToolKind.WRITE -> KiloBundle.message("session.part.tool.edit")
     else -> toolTitle(tool)
 }
 
 internal fun subtitle(tool: Tool) = when (tool.name) {
     "read" -> readPath(tool)
-    "bash" -> shellTitle(tool)
+    "shell", "bash" -> shellTitle(tool)
     else -> toolSubtitle(tool)
 }
 
@@ -628,9 +628,9 @@ internal fun output(tool: Tool): String =
         ?: tool.metadata["output"]?.takeIf { it.isNotBlank() }
         ?: ""
 
-internal fun preview(tool: Tool): String = if (tool.name == "bash") shellPreview(tool) else plainPreview(tool)
+internal fun preview(tool: Tool): String = if (ShellToolView.canRender(tool)) shellPreview(tool) else plainPreview(tool)
 
-internal fun body(tool: Tool): String = if (tool.name == "bash") shellBody(tool) else plainBody(tool)
+internal fun body(tool: Tool): String = if (ShellToolView.canRender(tool)) shellBody(tool) else plainBody(tool)
 
 /** Fenced markdown of a tool's body text for the collapsed hover popup; empty when nothing to show. */
 internal fun toolBodyMarkdown(tool: Tool): String {
@@ -698,7 +698,7 @@ internal fun plainBody(tool: Tool): String {
 }
 
 internal fun canExpand(tool: Tool): Boolean {
-    if (tool.name == "bash") return command(tool).isNotBlank() || output(tool).isNotBlank() || !tool.error.isNullOrBlank()
+    if (ShellToolView.canRender(tool)) return command(tool).isNotBlank() || output(tool).isNotBlank() || !tool.error.isNullOrBlank()
     return output(tool).isNotBlank() || !tool.error.isNullOrBlank()
 }
 

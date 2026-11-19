@@ -8,25 +8,25 @@ internal data class CliCommand(
     val expectedVersion: String? = null,
 )
 
-private val inherited = setOf(
-    "KILO_SERVER_PASSWORD", "OPENCODE_SERVER_PASSWORD", "OPENCODE_PASSWORD", "KILO_PARENT_PID",
-    "KILO_USE_RELEASE_CONFIG", "KILO_CONFIG_DIR", "KILO_CONFIG", "KILO_DB", "KILO_CONFIG_CONTENT",
-    "OPENCODE_CONFIG_DIR", "OPENCODE_CONFIG", "OPENCODE_DB", "OPENCODE_HOME_DIR", "OPENCODE_APP_DIR_NAME",
-    "OPENCODE_SESSION_ID", "OPENCODE_PTY_HANDOFF", "OPENCODE_PRIVATE_TUI_LEASE", "OPENCODE_SSH_ASKPASS_PORT",
-    "KILO_AGENT_MANAGER_HOST", "KILO_BROWSER_BROKER_URL", "KILO_BROWSER_BROKER_TOKEN",
-    "KILO_NOTEBOOK_BROKER_URL", "KILO_NOTEBOOK_BROKER_TOKEN", "KILO_V2_TEST_BINARY",
-    "KILO_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_CLAUDE_CODE", "KILO_ENABLE_QUESTION_TOOL", "KILO_TELEMETRY_LEVEL",
-    "KILO_TREE_SITTER_WASM_DIR", "KILO_BWRAP_PATH", "KILO_APP_NAME", "KILO_APP_VERSION", "KILO_EDITOR_NAME",
+private val controlPrefixes = listOf("KILO_", "KILO2_", "KILOCODE_", "OPENCODE_")
+private val devFixtureInputs = setOf(
+    "KILO_V2_PROFILE", "OPENCODE_CONFIG_CONTENT", "KILO_DISABLE_MODELS_FETCH", "KILO_DISABLE_AUTOUPDATE",
+    "KILO_API_URL", "KILO_AI_GATEWAY_URL", "KILO_API_KEY",
 )
 
-internal fun cliEnvironment(base: Map<String, String>, cwd: Path, editor: String, claudeCompat: Boolean) = buildMap {
-    putAll(base.filterKeys { it.uppercase() !in inherited })
+internal fun cliEnvironment(base: Map<String, String>, cwd: Path, editor: String, claudeCompat: Boolean, dev: Boolean = false) = buildMap {
+    // An IDE started in another CLI's shell must not adopt its database, explicit config or approval policy.
+    putAll(base.filterKeys { key ->
+        val name = key.uppercase()
+        name != "NODE_OPTIONS" && name != "BUN_OPTIONS" && controlPrefixes.none(name::startsWith)
+    })
+    if (dev) devFixtureInputs.forEach { key -> base[key]?.let { put(key, it) } }
     put("KILO_CLIENT", "jetbrains")
     put("KILO_PLATFORM", "jetbrains")
+    put("KILO_TELEMETRY_LEVEL", "off")
     put("KILOCODE_EDITOR_NAME", editor)
     put("KILOCODE_FEATURE", "jetbrains-plugin")
     put("INIT_CWD", cwd.toString())
     putIfAbsent("NODE_USE_SYSTEM_CA", "1")
-    putIfAbsent("OPENCODE_CONFIG_CONTENT", """{"permissions":[{"action":"edit","resource":"*","effect":"ask"}]}""")
     if (!claudeCompat) put("KILO_DISABLE_CLAUDE_CODE", "true")
 }

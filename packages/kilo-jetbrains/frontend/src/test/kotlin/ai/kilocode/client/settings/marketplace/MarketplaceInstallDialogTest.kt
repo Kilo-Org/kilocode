@@ -124,7 +124,7 @@ class MarketplaceInstallDialogTest : BasePlatformTestCase() {
             val project = labels(dialog.centerComponent())
             assertTrue(project.contains("Included skills"))
             for (skill in item.skills) {
-                assertTrue(project.any { it.contains("${skill.id}: .kilo/skills/${skill.id}/") })
+                assertTrue(project.any { it.contains("${skill.id}: .kilo2/skills/${skill.id}/") })
                 assertTrue("archive URLs are not presentation fields", project.none { it.contains(skill.content) })
             }
             assertFalse(dialog.result().remove)
@@ -133,7 +133,7 @@ class MarketplaceInstallDialogTest : BasePlatformTestCase() {
 
             val global = labels(dialog.centerComponent())
             for (skill in item.skills) {
-                assertTrue(global.any { it.contains("${skill.id}: ~/.kilo/skills/${skill.id}/") })
+                assertTrue(global.any { it.contains("${skill.id}: Global skills/${skill.id}/") })
             }
             assertEquals("global", dialog.result().target)
             assertFalse(dialog.result().remove)
@@ -258,7 +258,7 @@ class MarketplaceInstallDialogTest : BasePlatformTestCase() {
             assertEquals("switching back to an install asks for its parameters again", 1, fields(dialog.centerComponent()).size)
             assertTrue(labels(dialog.centerComponent()).any { it.contains("Docker") })
             assertTrue(labels(dialog.centerComponent()).contains("Included skills"))
-            assertTrue(labels(dialog.centerComponent()).any { it.contains("gitlab-review: ~/.kilo/skills/gitlab-review/") })
+            assertTrue(labels(dialog.centerComponent()).any { it.contains("gitlab-review: Global skills/gitlab-review/") })
             assertTrue(labels(dialog.centerComponent()).none { it.contains("companion skills owned") })
         }
     }

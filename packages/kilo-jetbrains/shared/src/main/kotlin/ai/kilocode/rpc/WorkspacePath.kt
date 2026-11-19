@@ -1,6 +1,6 @@
 package ai.kilocode.rpc
 
-const val WORKTREE_STORAGE = ".kilo/worktrees"
+const val WORKTREE_STORAGE = ".kilo2/worktrees"
 
 fun isManagedWorktreeStorage(path: String): Boolean {
     val rel = path.replace('\\', '/').trimStart('/')

@@ -36,7 +36,7 @@ class SetupScriptResolutionTest {
 
         assertTrue(target.exists)
         assertEquals(SetupScriptKind.POSIX, target.kind)
-        assertEquals(root.resolve(".kilo").resolve("setup-script").toString(), target.path)
+        assertEquals(root.resolve(".kilo2").resolve("setup-script").toString(), target.path)
     }
 
     @Test
@@ -48,7 +48,7 @@ class SetupScriptResolutionTest {
 
         assertTrue(target.exists)
         assertEquals(SetupScriptKind.POSIX, target.kind)
-        assertEquals(root.resolve(".kilo").resolve("setup-script.sh").toString(), target.path)
+        assertEquals(root.resolve(".kilo2").resolve("setup-script.sh").toString(), target.path)
     }
 
     @Test
@@ -59,7 +59,7 @@ class SetupScriptResolutionTest {
 
         assertFalse(target.exists)
         assertEquals(SetupScriptKind.POSIX, target.kind)
-        assertEquals(root.resolve(".kilo").resolve("setup-script").toString(), target.path)
+        assertEquals(root.resolve(".kilo2").resolve("setup-script").toString(), target.path)
     }
 
     @Test
@@ -73,7 +73,7 @@ class SetupScriptResolutionTest {
 
         assertTrue(target.exists)
         assertEquals(SetupScriptKind.POWERSHELL, target.kind)
-        assertEquals(root.resolve(".kilo").resolve("setup-script.ps1").toString(), target.path)
+        assertEquals(root.resolve(".kilo2").resolve("setup-script.ps1").toString(), target.path)
     }
 
     @Test
@@ -86,7 +86,7 @@ class SetupScriptResolutionTest {
 
         assertTrue(target.exists)
         assertEquals(SetupScriptKind.CMD, target.kind)
-        assertEquals(root.resolve(".kilo").resolve("setup-script.cmd").toString(), target.path)
+        assertEquals(root.resolve(".kilo2").resolve("setup-script.cmd").toString(), target.path)
     }
 
     @Test
@@ -97,7 +97,7 @@ class SetupScriptResolutionTest {
 
         assertFalse(target.exists)
         assertEquals(SetupScriptKind.POWERSHELL, target.kind)
-        assertEquals(root.resolve(".kilo").resolve("setup-script.ps1").toString(), target.path)
+        assertEquals(root.resolve(".kilo2").resolve("setup-script.ps1").toString(), target.path)
     }
 
     @Test
@@ -133,7 +133,7 @@ class SetupScriptResolutionTest {
         val target = KiloWorkspaceRpcApiImpl().setupScriptTarget(root.toString())
 
         assertTrue(target.exists)
-        assertEquals(root.resolve(".kilo").resolve("setup-script").toString(), target.path)
+        assertEquals(root.resolve(".kilo2").resolve("setup-script").toString(), target.path)
     }
 
     private fun repo(): Path {
@@ -143,7 +143,7 @@ class SetupScriptResolutionTest {
     }
 
     private fun write(root: Path, name: String) {
-        val dir = root.resolve(".kilo")
+        val dir = root.resolve(".kilo2")
         Files.createDirectories(dir)
         dir.resolve(name).writeText("# test\n")
     }

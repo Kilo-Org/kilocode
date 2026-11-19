@@ -11,8 +11,8 @@ import com.intellij.openapi.components.service
 
 @Service(Service.Level.APP)
 @State(
-    name = "KiloLogSettings",
-    storages = [Storage("kiloLogSettings.xml")],
+    name = "Kilo2LogSettings",
+    storages = [Storage("kilo2LogSettings.xml")],
 )
 class KiloLogSettingsService : PersistentStateComponent<KiloLogSettingsService.State> {
 

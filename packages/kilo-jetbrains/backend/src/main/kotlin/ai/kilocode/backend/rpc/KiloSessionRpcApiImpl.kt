@@ -6,6 +6,8 @@ import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.app.KiloBackendChatManager
 import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.editor.KiloEditorGeneration
+import ai.kilocode.backend.cli.KiloBackendCliManager
+import ai.kilocode.backend.session.KiloCloudSessions
 import ai.kilocode.backend.session.fullFileSides
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.CloudSessionListDto
@@ -32,8 +34,13 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
     override suspend fun rename(id: String, directory: String, title: String) = sessions.rename(id, directory, title)
     override suspend fun share(id: String, directory: String): SessionDto = throw UnsupportedOperationException("Public session links are unavailable on this server")
     override suspend fun unshare(id: String, directory: String): SessionDto = throw UnsupportedOperationException("Public session links are unavailable on this server")
-    override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto = throw UnsupportedOperationException("Cloud history is unavailable on this server")
-    override suspend fun importCloudSession(id: String, directory: String): SessionDto = throw UnsupportedOperationException("Cloud history is unavailable on this server")
+    private suspend fun cloud(directory: String) = KiloCloudSessions(service<KiloBackendCliManager>().client(), directory)
+    override suspend fun cloudCapabilities(directory: String) = cloud(directory).capabilities()
+    override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto {
+        require(gitUrl == null) { "Native cloud history cannot filter by Git remote." }
+        return cloud(directory).list(cursor, limit)
+    }
+    override suspend fun importCloudSession(id: String, directory: String): SessionDto = cloud(directory).importSession(id)
     override suspend fun statuses() = sessions.statuses
     override suspend fun activity() = activity.activity
     override suspend fun changes() = sessions.changes
@@ -45,7 +52,10 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
     override suspend fun command(id: String, directory: String, command: String, arguments: String, prompt: PromptDto) = chat.command(id, command, arguments, prompt)
     override suspend fun abort(id: String, directory: String) = chat.abort(id)
     override suspend fun compact(id: String, directory: String, model: ModelSelectionDto) = chat.compact(id, model)
-    override suspend fun revert(id: String, directory: String, messageID: String, partID: String?) = chat.revert(id, messageID)
+    override suspend fun revert(id: String, directory: String, messageID: String, partID: String?) {
+        require(partID == null) { "This server supports message-level rollback only" }
+        chat.revert(id, messageID)
+    }
     override suspend fun deleteMessage(id: String, directory: String, messageID: String) = chat.deleteMessage(id, messageID)
     override suspend fun unrevert(id: String, directory: String) = chat.unrevert(id)
     override suspend fun messages(id: String, directory: String) = chat.messages(id)

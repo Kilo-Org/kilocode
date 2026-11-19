@@ -26,7 +26,8 @@ class KiloBackendRetentionScheduler(private val cs: CoroutineScope) {
                 attempt = {
                     val app = service<KiloBackendAppService>()
                     app.appState.first { it.status == KiloAppStatusDto.READY }
-                    if (app.retention.status().supported) app.retention.run(false)
+                    val status = app.retention.status()
+                    if (status.supported && status.policy.enabled) app.retention.run(false)
                 },
                 wait = { delay(it) },
                 failed = { LOG.warn("Automatic session cleanup failed", it) },

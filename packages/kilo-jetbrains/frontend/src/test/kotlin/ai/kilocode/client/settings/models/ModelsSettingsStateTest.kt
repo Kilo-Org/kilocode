@@ -22,12 +22,9 @@ class ModelsSettingsStateTest {
     }
 
     @Test
-    fun `subagent clear clears variant`() {
-        val from = ModelsDraft(subagent = "kilo/gpt-5", variant = "high")
-        val to = ModelsDraft(subagent = null, variant = null)
-        val patch = patch(from, to)
-        assertNull(patch.values["subagent_model"])
-        assertNull(patch.values["subagent_variant"])
+    fun `editing the default model leaves unsupported global subagent overrides untouched`() {
+        val from = modelsDraft(ConfigDto(subagentModel = "kilo/gpt-5", subagentVariant = "high"), emptyList())
+        assertEquals(mapOf("model" to "openai/gpt"), patch(from, from.copy(model = "openai/gpt")).values)
     }
 
     @Test
@@ -52,8 +49,6 @@ class ModelsSettingsStateTest {
         val draft = modelsDraft(config, agents)
         assertEquals("kilo/gpt-5", draft.model)
         assertEquals("kilo/auto-small", draft.small)
-        assertEquals("openai/gpt", draft.subagent)
-        assertEquals("high", draft.variant)
         assertEquals("kilo/gpt-5", draft.agents["ask"])
     }
 

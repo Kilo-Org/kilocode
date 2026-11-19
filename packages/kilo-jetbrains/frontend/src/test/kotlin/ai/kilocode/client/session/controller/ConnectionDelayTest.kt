@@ -203,14 +203,14 @@ class ConnectionDelayTest : SessionControllerTestBase() {
 
         projectRpc.state.value = KiloWorkspaceStateDto(
             status = KiloWorkspaceStatusDto.MISSING,
-            error = "/repo/.kilo/worktrees/deleted",
+            error = "/repo/.kilo2/worktrees/deleted",
         )
         pause(80)
 
         val event = events.filterIsInstance<SessionControllerEvent.ConnectionChanged.ShowError>().single()
         assertEquals("Workspace folder missing", event.summary)
         assertEquals(
-            "Kilo can't load this session because the workspace folder no longer exists: /repo/.kilo/worktrees/deleted",
+            "Kilo can't load this session because the workspace folder no longer exists: /repo/.kilo2/worktrees/deleted",
             event.detail,
         )
         assertEquals("workspace", event.source)

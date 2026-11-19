@@ -2,7 +2,7 @@
     <dependencies>
         <module name="intellij.platform.backend"/>
         <module name="intellij.platform.kernel.backend"/>
-        <module name="kilo.jetbrains.shared"/>
+        <module name="kilo.jetbrains.v2.shared"/>
     </dependencies>
 
     <extensions defaultExtensionNs="com.intellij">

@@ -202,7 +202,7 @@ class ShellToolView(
     override fun dumpLabel() = "ShellToolView#$contentId(${labelText()})"
 
     companion object {
-        fun canRender(tool: Tool) = tool.name == "bash"
+        fun canRender(tool: Tool) = tool.name == "shell" || tool.name == "bash"
     }
 }
 

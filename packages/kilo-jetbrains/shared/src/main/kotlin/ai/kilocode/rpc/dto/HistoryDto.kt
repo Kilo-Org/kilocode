@@ -3,6 +3,9 @@ package ai.kilocode.rpc.dto
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class CloudHistoryCapabilitiesDto(val available: Boolean, val repositoryFilter: Boolean = false)
+
+@Serializable
 data class CloudSessionDto(
     val id: String,
     val title: String? = null,

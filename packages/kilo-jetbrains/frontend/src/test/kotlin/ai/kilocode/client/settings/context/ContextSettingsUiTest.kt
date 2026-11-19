@@ -83,14 +83,13 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
         edt {
             val toggles = components(panel).filterIsInstance<SettingsToggle>()
             toggles[0].doClick()
-            toggles[1].doClick()
             panel.applyDraft()
         }
 
         flushUntil { rpc.configPatches.isNotEmpty() }
         val patch = rpc.configPatches.single()
         assertEquals(false, patch.compaction?.auto)
-        assertEquals(false, patch.compaction?.prune)
+        assertNull(patch.compaction?.prune)
     }
 
     fun `test editing threshold sends number`() {
@@ -112,11 +111,15 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
             val field = threshold(panel)
             assertTrue(text(panel).contains("%"))
             assertTrue(text(panel).contains("Auto Compaction Limit"))
-            assertTrue(text(panel).contains("Prune Old Outputs"))
+            assertFalse(text(panel).contains("Prune Old Outputs"))
             assertEquals("Default", field.emptyText.text)
             field.text = ""
             field.text = "101"
             assertEquals("", field.text)
+            field.text = "0"
+            assertEquals("", field.text)
+            field.text = "1"
+            assertEquals("1", field.text)
             field.text = "100"
             assertEquals("100", field.text)
             (field.document as AbstractDocument).replace(0, field.document.length, "-1", null)

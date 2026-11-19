@@ -1098,7 +1098,7 @@ internal open class MdViewHybrid(
 
         private fun kick() {
             val item = desc as Desc.Code
-            if (!Registry.`is`("kilo.diagram.inline.enabled", true)) {
+            if (!Registry.`is`("kilo2.diagram.inline.enabled", true)) {
                 status("")
                 showSource()
                 return

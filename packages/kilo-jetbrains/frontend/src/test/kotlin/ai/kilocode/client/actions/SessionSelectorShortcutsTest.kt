@@ -64,7 +64,7 @@ class SessionSelectorShortcutsTest : BasePlatformTestCase() {
     }
 
     private fun actions(): List<Element> {
-        val stream = javaClass.getResourceAsStream("/kilo.jetbrains.frontend.xml") ?: error("missing plugin descriptor")
+        val stream = javaClass.getResourceAsStream("/kilo.jetbrains.v2.frontend.xml") ?: error("missing plugin descriptor")
         val root = stream.use { JDOMUtil.load(it) }
         return root.getChild("actions")?.getChildren("action") ?: error("missing actions element")
     }

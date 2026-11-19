@@ -255,8 +255,8 @@ class KiloBackendAppService(private val scope: CoroutineScope) : Disposable {
 
     suspend fun updateConfig(patch: ConfigPatchDto) = data.withLock {
         requireReady()
-        require(patch.retention == null || retention.status().supported) { "Session retention is unavailable" }
         val client = client()
+        require(patch.retention == null || retention.endpoint(client).status().supported) { "Session retention is unavailable" }
         val config = KiloWorkspaceData(client).updateConfig(patch, "global")
         update(client) { copy(config = config) }
         appState.value

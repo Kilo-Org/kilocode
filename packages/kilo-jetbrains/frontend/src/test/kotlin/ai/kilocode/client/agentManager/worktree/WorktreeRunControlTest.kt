@@ -76,7 +76,7 @@ class WorktreeRunControlTest : BasePlatformTestCase() {
         assertTrue(coroutines.pumpUntil { run.stateDirs.isNotEmpty() })
         val idle = edtWait { control.button.icon }
 
-        run.states.value = listOf(RunStateDto("id1", "dev [other]", "$ROOT/.kilo/worktrees/other"))
+        run.states.value = listOf(RunStateDto("id1", "dev [other]", "$ROOT/.kilo2/worktrees/other"))
 
         coroutines.drain(::pumpEdt)
         assertSame(idle, edtWait { control.button.icon })
@@ -98,6 +98,6 @@ class WorktreeRunControlTest : BasePlatformTestCase() {
 
     private companion object {
         private const val ROOT = "/real/repo"
-        private const val WORKTREE = "$ROOT/.kilo/worktrees/feature-x"
+        private const val WORKTREE = "$ROOT/.kilo2/worktrees/feature-x"
     }
 }

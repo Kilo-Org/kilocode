@@ -108,7 +108,19 @@ class SessionShareTest : SessionUiTestBase() {
         assertTrue(rpc.shares.isEmpty())
     }
 
+    fun `test native history cannot publish a public link`() {
+        open()
+        controller().model.setSession(rpc.session.copy(publicLinks = false))
+        val action = ShareSessionAction()
+        val event = event(action)
+        ActionUtil.updateAction(action, event)
+        assertFalse(event.presentation.isEnabled)
+        action.actionPerformed(event)
+        assertTrue(rpc.shares.isEmpty())
+    }
+
     private fun open() {
+        rpc.session = rpc.session.copy(publicLinks = true)
         rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()

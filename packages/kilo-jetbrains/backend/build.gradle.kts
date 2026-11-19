@@ -72,4 +72,7 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
     jvmArgs("-Didea.force.use.core.classloader=true")
+    // A non-repository fixture must not discover an unrelated checkout above the system temp directory.
+    systemProperty("java.io.tmpdir", temporaryDir.canonicalPath)
+    environment("GIT_CEILING_DIRECTORIES", temporaryDir.canonicalPath)
 }

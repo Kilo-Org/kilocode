@@ -61,7 +61,7 @@ private fun activeListIconGap() = JBUI.getInt("ActionsList.icon.gap", UiStyle.Ga
  * the middle of it — the escape hatch for a surface where the fade is wrong, such as a theme that paints a
  * row background the renderer cannot name.
  */
-private fun activeListFade() = Registry.`is`("kilo.list.fade", true)
+private fun activeListFade() = Registry.`is`("kilo2.list.fade", true)
 
 internal class ActiveListRenderer(
     private val model: CollectionListModel<ActiveListItem>,

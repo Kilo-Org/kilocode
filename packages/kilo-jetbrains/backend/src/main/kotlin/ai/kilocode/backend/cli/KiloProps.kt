@@ -4,7 +4,7 @@ import java.util.Base64
 import java.util.Properties
 import java.net.URL
 
-internal data class CliPin(val version: String, val platform: String, val integrity: String) {
+internal data class CliPin(val version: String, val platform: String, val integrity: String, val retentionVersion: String? = null) {
     init {
         require(version.matches(Regex("0\\.0\\.0-v2-[0-9]+"))) { "Expected an exact Kilo v2 CLI release pin" }
         require(platform.matches(Regex("(darwin|linux|windows)-(x64|arm64)"))) { "Unsupported CLI platform: $platform" }
@@ -26,6 +26,8 @@ internal object KiloProps {
                 "Missing Kilo v2 CLI release pin"
             }.use(::load)
         }
-        CliPin(props.getProperty("cli.version"), platform, props.getProperty("cli.integrity.$platform"))
+        val version = props.getProperty("cli.version")
+        CliPin(version, platform, props.getProperty("cli.integrity.$platform"),
+            props.getProperty("cli.retention.verified-version")?.takeIf { it == version })
     }
 }

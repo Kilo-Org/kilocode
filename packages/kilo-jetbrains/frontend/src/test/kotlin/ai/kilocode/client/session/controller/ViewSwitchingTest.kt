@@ -129,7 +129,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         flush()
         assertEquals(1, rpc.recentCalls.size)
 
-        change("ses_other", "/repo/.kilo/worktrees/other", SessionChangeKindDto.CREATED)
+        change("ses_other", "/repo/.kilo2/worktrees/other", SessionChangeKindDto.CREATED)
 
         assertFalse(waitFor(QUIET_MS) { rpc.recentCalls.size > 1 })
         assertEquals(1, m.recents().size)

@@ -10,7 +10,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * descriptor off the test classpath instead of asking for a live `ActionGroup`.
  */
 internal object PluginDescriptor {
-    private const val FRONTEND = "kilo.jetbrains.frontend.xml"
+    private const val FRONTEND = "kilo.jetbrains.v2.frontend.xml"
 
     fun frontend(): Document {
         val stream = PluginDescriptor::class.java.classLoader.getResourceAsStream(FRONTEND)

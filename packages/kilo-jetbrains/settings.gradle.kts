@@ -6,5 +6,5 @@ pluginManagement {
     }
 }
 
-rootProject.name = "kilo.jetbrains"
+rootProject.name = "kilo.jetbrains.v2"
 include("shared", "frontend", "backend")

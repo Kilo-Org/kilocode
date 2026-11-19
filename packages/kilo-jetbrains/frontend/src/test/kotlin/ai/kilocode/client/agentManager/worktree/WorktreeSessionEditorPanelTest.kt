@@ -1294,6 +1294,6 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
     }
 
     private companion object {
-        const val DIR = "/repo/.kilo/worktrees/feature-x"
+        const val DIR = "/repo/.kilo2/worktrees/feature-x"
     }
 }

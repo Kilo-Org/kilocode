@@ -3,6 +3,7 @@ package ai.kilocode.rpc
 import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
+import ai.kilocode.rpc.dto.CloudHistoryCapabilitiesDto
 import ai.kilocode.rpc.dto.SessionBoardDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
@@ -77,6 +78,8 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     suspend fun unshare(id: String, directory: String): SessionDto
 
     /** List cloud-backed sessions. */
+    suspend fun cloudCapabilities(directory: String): CloudHistoryCapabilitiesDto
+
     suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto
 
     /** Import a cloud-backed session into local storage. */

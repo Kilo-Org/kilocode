@@ -61,7 +61,7 @@ def env_for(root, config, origin):
         raise ValueError("Bun is required to run the checkout's isolated CLI")
     env.update(PATH=os.pathsep.join([str(Path(bun).parent), "/usr/bin", "/bin", "/usr/sbin", "/sbin"]),
                HOME=str(root / "home"), USER="fixture", LOGNAME="fixture", SHELL="/bin/sh", LANG="en_US.UTF-8",
-               TMPDIR=str(root / "tmp"), GIT_CONFIG_NOSYSTEM="1", GIT_TERMINAL_PROMPT="0",
+               TMPDIR=str(root / "tmp"), GIT_CONFIG_NOSYSTEM="1", GIT_TERMINAL_PROMPT="0", GIT_CEILING_DIRECTORIES=str(root),
                KILO_V2_PROFILE=str(root / "profile"), KILO_TEST_HOME=str(root / "profile/home"),
                OPENCODE_CONFIG_CONTENT=json.dumps(config), KILO_DISABLE_MODELS_FETCH="1", KILO_DISABLE_AUTOUPDATE="1",
                KILO_API_URL=origin, KILO_AI_GATEWAY_URL=origin + "/v1", NO_PROXY="localhost,127.0.0.1",
@@ -70,6 +70,9 @@ def env_for(root, config, origin):
         env["XDG_" + kind + "_HOME"] = str(root / "xdg" / kind.lower())
     for path in (root / "home", root / "tmp", root / "profile/home"):
         path.mkdir(parents=True)
+    cfg = root / "profile/config/kilo2/kilo2.json"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_text(json.dumps(config))
     return env
 
 

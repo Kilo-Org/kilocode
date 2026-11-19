@@ -943,36 +943,36 @@ class SessionController(
     }
 
     private fun approve(request: PermissionRequestDto) {
-        approve(request.id) { toPermission(request) }
+        approve(toPermission(request))
     }
 
     private fun approve(permission: Permission) {
-        approve(permission.id) { permission }
-    }
-
-    private fun approve(id: String, restore: () -> Permission) {
         assertEdt()
+        val id = permission.id
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id" }
         // Sensitive permissions must be answered by a human: the server refuses non-interactive
         // approvals, so show the card (its manual reply sets interactive=true) rather than send a
         // machine reply. Decide and enqueue synchronously on the EDT so back-to-back asks keep
         // arrival (FIFO) order, matching asked()'s non-auto path; only the RPC needs a coroutine.
-        if (!autoApprove || manual(restore().meta.raw)) {
-            show(restore())
+        if (!autoApprove || manual(permission.name, permission.meta.raw)) {
+            show(permission)
             return
         }
-        updateModel { model.setState(SessionState.Busy(KiloBundle.message("session.status.considering"))) }
+        val current = model.state
+        if ((current !is SessionState.AwaitingPermission || current.permission.id == id) && current !is SessionState.AwaitingQuestion) {
+            updateModel { model.setState(SessionState.Busy(KiloBundle.message("session.status.considering"))) }
+        }
         cs.launch {
             try {
                 sessions.replyPermission(id, directory, PermissionReplyDto("once"))
-                capture("Permission Auto Approved", sessionProps() + mapOf("tool" to restore().name, "source" to "single"))
+                capture("Permission Auto Approved", sessionProps() + mapOf("tool" to permission.name, "source" to "single"))
                 LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id ok=true" }
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
                     // Queue the error card too, so pending stays the single source of truth and a
                     // later Stop / TurnClose / idle purge can clear it instead of stranding it.
-                    show(restore().copy(
+                    show(permission.copy(
                         state = PermissionRequestState.ERROR,
                         message = e.message ?: KiloBundle.message("session.permission.error"),
                     ))
@@ -993,7 +993,7 @@ class SessionController(
                 val count = replyAll(permissions)
                 // Sensitive requests are skipped by replyAll; queue all of them so they aren't
                 // stranded (never machine-approved, never shown) or overwritten by later cards.
-                val cards = permissions.filter { manual(it.metadata) }.map(::toPermission)
+                val cards = permissions.filter(::manual).map(::toPermission)
                 if (count == 0 && cards.isEmpty()) return@launch
                 runEdt {
                     if (disposed) return@runEdt
@@ -1029,7 +1029,7 @@ class SessionController(
         for (request in permissions) {
             if (!autoApprove) return count
             // Sensitive permissions need a human; skip them here (callers surface the card).
-            if (manual(request.metadata)) continue
+            if (manual(request)) continue
             sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
             capture("Permission Auto Approved", sessionProps(request.sessionID) + mapOf("tool" to request.permission, "source" to "drain"))
             count++
@@ -1040,10 +1040,13 @@ class SessionController(
     // Sensitive requests are never machine-approved; after draining, callers must surface one as a
     // card so a human can answer.
     private fun card(permissions: List<PermissionRequestDto>): PermissionRequestDto? =
-        permissions.lastOrNull { manual(it.metadata) }
+        permissions.lastOrNull(::manual)
 
-    private fun manual(metadata: Map<String, String>): Boolean =
-        metadata["skillShell"] == "true" || metadata["sandboxEscalation"] == "true"
+    private fun manual(request: PermissionRequestDto): Boolean = manual(request.permission, request.metadata)
+
+    private fun manual(action: String, metadata: Map<String, String>): Boolean =
+        action == "browser_sensitive" || action == "sandbox_escalation" || metadata["interactive"] == "true" ||
+            metadata["browserSensitive"] == "true" || metadata["sandboxEscalation"] == "true" || metadata["skillShell"] == "true"
 
     private fun updatePermission(id: String, state: PermissionRequestState, message: String? = null) {
         assertEdt()
@@ -1581,7 +1584,7 @@ class SessionController(
             // queue only the latter. Otherwise queue every pending permission.
             val queue = if (autoApprove) {
                 replyAll(permissions)
-                permissions.filter { manual(it.metadata) }
+                permissions.filter(::manual)
             } else {
                 permissions
             }
@@ -1661,7 +1664,7 @@ class SessionController(
             }
             // After auto-approve only sensitive permissions still need a human card; queue those.
             // Otherwise queue the whole pending set so each request is resolved in turn.
-            val queue = if (autoApprove) permissions.filter { manual(it.metadata) } else permissions
+            val queue = if (autoApprove) permissions.filter(::manual) else permissions
             // An "idle" status is still a status. It means no live work, not "nothing to recover", so it
             // must not shadow the transcript: a session reopened after a failed turn is idle on the
             // server and would otherwise recover as if it had never failed.
@@ -2517,13 +2520,13 @@ class SessionController(
         "reasoning" -> KiloBundle.message("session.status.thinking")
         "text" -> KiloBundle.message("session.status.writing")
         "tool" -> when (tool) {
-            "task" -> KiloBundle.message("session.status.delegating")
+            "subagent", "task" -> KiloBundle.message("session.status.delegating")
             "todowrite", "todoread" -> KiloBundle.message("session.status.planning")
             "read" -> KiloBundle.message("session.status.gathering")
             "glob", "grep", "list" -> KiloBundle.message("session.status.searching.codebase")
             "webfetch", "websearch", "codesearch" -> KiloBundle.message("session.status.searching.web")
             "edit", "write" -> KiloBundle.message("session.status.editing")
-            "bash" -> KiloBundle.message("session.status.commands")
+            "shell", "bash" -> KiloBundle.message("session.status.commands")
             else -> KiloBundle.message("session.status.considering")
         }
         else -> KiloBundle.message("session.status.considering")
@@ -2996,8 +2999,8 @@ class SessionController(
 
 /** Extracts the child session ID from a task tool part's metadata, or null if not a task part. */
 private fun childID(part: PartDto): String? {
-    if (part.type != "tool" || part.tool != "task") return null
-    return part.metadata["sessionId"]
+    if (part.type != "tool" || (part.tool != "subagent" && part.tool != "task")) return null
+    return part.metadata["sessionID"] ?: part.metadata["sessionId"]
 }
 
 private data class PartKey(val messageId: String, val partId: String)

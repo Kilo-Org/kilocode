@@ -152,7 +152,6 @@ internal class ContextSettingsContent(
     // autoApprove). It participates in this page's draft/apply/reset state so the Configurable
     // Apply button reflects unsaved local changes, but it is never sent as CLI config.
     private val editor = SettingsToggle { value -> update { copy(editor = value) } }
-    private val prune = SettingsToggle { value -> update { copy(prune = value) } }
     private val threshold = ThresholdField(
         KiloBundle.message("settings.context.compaction.threshold.placeholder"),
     ) { value -> update { copy(threshold = value) } }
@@ -175,11 +174,6 @@ internal class ContextSettingsContent(
                     .next(JBLabel(KiloBundle.message("settings.context.compaction.threshold.suffix")))
                     .align(HAlign.RIGHT, VAlign.CENTER),
             ))
-            row(SettingsRow(
-                KiloBundle.message("settings.context.compaction.prune.title"),
-                KiloBundle.message("settings.context.compaction.prune.description"),
-                prune,
-            ))
         }
         section(
             KiloBundle.message("settings.context.editor.title"),
@@ -201,10 +195,9 @@ internal class ContextSettingsContent(
         // gating that applies to the remote config rows below.
         editor.isSelected = draft.editor
         editor.isEnabled = true
-        prune.isSelected = draft.prune
         threshold.sync(draft.threshold)
         patterns.sync(draft.ignore)
-        listOf(auto, prune, threshold, patterns).forEach { it.isEnabled = enabled }
+        listOf(auto, threshold, patterns).forEach { it.isEnabled = enabled }
     }
 }
 
@@ -249,8 +242,7 @@ private class NumberFilter : DocumentFilter() {
     private fun valid(value: String): Boolean {
         if (value.count { it == '.' } > 1) return false
         if (!value.all { it.isDigit() || it == '.' }) return false
-        val num = value.toDoubleOrNull() ?: return false
-        return num >= 0.0 && num <= 100.0
+        return thresholdStatus(value) == ThresholdStatus.VALID
     }
 }
 

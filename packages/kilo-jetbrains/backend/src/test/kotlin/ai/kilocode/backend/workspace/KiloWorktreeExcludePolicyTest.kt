@@ -19,7 +19,7 @@ class KiloWorktreeExcludePolicyTest : BasePlatformTestCase() {
 
         assertOrderedEquals(
             policy.getExcludeUrlsForProject().toList(),
-            listOf(VfsUtilCore.pathToUrl("$base/.kilo/worktrees")),
+            listOf(VfsUtilCore.pathToUrl("$base/.kilo2/worktrees")),
         )
     }
 

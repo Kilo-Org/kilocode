@@ -28,14 +28,14 @@ class WorktreeSessionEditorKindTest : BasePlatformTestCase() {
     }
 
     fun `test worktree session params use only the worktree path`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         val params = worktreeSessionParams(item)
 
         assertEquals(mapOf("path" to item.path), params)
     }
 
     fun `test a moved session is queued out of band so the tab identity stays the path`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo2/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo2/worktrees/feature-x")
         service<PendingWorktreeSession>().put(item.path, "ses_fork")
 
         // The queued session must not leak into the editor identity, or Agent Manager's path-only
@@ -49,13 +49,13 @@ class WorktreeSessionEditorKindTest : BasePlatformTestCase() {
     fun `test worktree session kind creates a custom virtual file type`() {
         ensureWorktreeSessionEditorKind()
         val fs = KiloVirtualFileSystem.getInstance()
-        val path = KiloPath(WorktreeSessionEditorKind.ID, mapOf("path" to "/repo/.kilo/worktrees/feature-x"))
+        val path = KiloPath(WorktreeSessionEditorKind.ID, mapOf("path" to "/repo/.kilo2/worktrees/feature-x"))
         val file = fs.findOrCreateFile(path)
 
         assertNotNull(file)
         assertSame(WorktreeSessionFileType, file!!.fileType)
         assertEquals("feature-x", file.name)
-        assertEquals("/repo/.kilo/worktrees/feature-x", (file as VirtualFilePathWrapper).presentablePath)
+        assertEquals("/repo/.kilo2/worktrees/feature-x", (file as VirtualFilePathWrapper).presentablePath)
         assertNotNull(service<KiloEditorKindRegistry>().get(WorktreeSessionEditorKind.ID))
         assertNotNull(service<KiloVirtualFileKindRegistry>().get(WorktreeSessionEditorKind.ID))
 
@@ -68,14 +68,14 @@ class WorktreeSessionEditorKindTest : BasePlatformTestCase() {
     }
 
     fun `test worktree session title uses cached label`() {
-        val path = "/repo/.kilo/worktrees/feature-x"
+        val path = "/repo/.kilo2/worktrees/feature-x"
         service<WorktreeNameCache>().put(path, "Feature Label")
 
         assertEquals("Feature Label", WorktreeSessionEditorKind.title(mapOf("path" to path)))
     }
 
     fun `test worktree session title uses same winning label as worktree list`() {
-        val path = "/repo/.kilo/worktrees/feature-x"
+        val path = "/repo/.kilo2/worktrees/feature-x"
         service<WorktreeNameCache>().put(path, "Feature Label")
         service<WorktreeNameCache>().putPr(path, WorktreePrDto(path, 3, GhState.OPEN, "https://example.test/pr/3", "PR Label"))
 

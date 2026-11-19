@@ -12,7 +12,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class PrResolverTest {
-    private val path = "/repo/.kilo/worktrees/feature-x"
+    private val path = "/repo/.kilo2/worktrees/feature-x"
     private val calls = mutableListOf<List<String>>()
     /** Timeout budget each `gh` call was given, so the short probe budget stays verifiable. */
     private val budgets = mutableListOf<Int>()

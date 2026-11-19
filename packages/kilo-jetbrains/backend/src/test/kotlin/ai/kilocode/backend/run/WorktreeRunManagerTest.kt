@@ -147,7 +147,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         val source = settings.configuration as ParamsConfig
         val repo = requireNotNull(project.basePath)
         source.workingDirectory = "$repo/packages/kilo-jetbrains"
-        val wt = "$repo/.kilo/worktrees/nested-wt"
+        val wt = "$repo/.kilo2/worktrees/nested-wt"
 
         assertTrue(manager().run(settings.uniqueID, wt).ok)
         val cfg = launched.single().configuration as ParamsConfig
@@ -163,7 +163,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         val repo = requireNotNull(project.basePath)
         source.settings.externalProjectPath = "$repo/packages/kilo-jetbrains"
         source.settings.taskNames = listOf(":runIdeSplitMode")
-        val wt = "$repo/.kilo/worktrees/gradle-wt"
+        val wt = "$repo/.kilo2/worktrees/gradle-wt"
 
         assertTrue(manager().run(settings.uniqueID, wt).ok)
         val cfg = launched.single().configuration as ExternalSystemRunConfiguration
@@ -189,7 +189,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         val sandbox = "packages/kilo-jetbrains/.intellijPlatform/sandbox/kilo.jetbrains"
         source.addLogFile("$repo/$sandbox/kilo-backend/kilo.log", "Backend Kilo", true, false, false)
         source.addLogFile("/var/log/shared/audit.log", "Audit", true, true, false)
-        val wt = "$repo/.kilo/worktrees/logs-wt"
+        val wt = "$repo/.kilo2/worktrees/logs-wt"
 
         assertTrue(manager().run(settings.uniqueID, wt).ok)
         val cfg = launched.single().configuration as ExternalSystemRunConfiguration
@@ -215,7 +215,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         val source = settings.configuration as ParamsConfig
         val repo = requireNotNull(project.basePath)
         source.addLogFile("$repo/build/app.log", "App", true, false, false)
-        val wt = "$repo/.kilo/worktrees/params-logs-wt"
+        val wt = "$repo/.kilo2/worktrees/params-logs-wt"
 
         assertTrue(manager().run(settings.uniqueID, wt).ok)
         val cfg = launched.single().configuration as ParamsConfig
@@ -231,7 +231,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         val repo = requireNotNull(project.basePath)
         source.pkg = "$repo/package.json"
         source.envs = mapOf("KILO" to "keep")
-        val wt = "$repo/.kilo/worktrees/npm-wt"
+        val wt = "$repo/.kilo2/worktrees/npm-wt"
 
         assertTrue(manager().run(settings.uniqueID, wt).ok)
         val cfg = launched.single().configuration as PkgConfig
@@ -252,7 +252,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         val source = settings.configuration as PkgConfig
         val repo = requireNotNull(project.basePath)
         source.pkg = "$repo/packages/kilo-vscode/package.json"
-        val wt = "$repo/.kilo/worktrees/npm-nested-wt"
+        val wt = "$repo/.kilo2/worktrees/npm-nested-wt"
 
         // Listed as a direct transplant, so no "via" build system.
         val listed = manager().configs()
@@ -272,7 +272,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         (settings.configuration as PkgConfig).pkg = null
         val repo = requireNotNull(project.basePath)
 
-        val result = manager().run(settings.uniqueID, "$repo/.kilo/worktrees/npm-nopath-wt")
+        val result = manager().run(settings.uniqueID, "$repo/.kilo2/worktrees/npm-nopath-wt")
         assertFalse(result.ok)
         assertTrue(launched.isEmpty())
     }
@@ -318,7 +318,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         val runner = delegatingRunner()
         val mgr = manager()
         val repo = requireNotNull(project.basePath)
-        val wt = "$repo/.kilo/worktrees/spring-wt"
+        val wt = "$repo/.kilo2/worktrees/spring-wt"
 
         val listed = mgr.configs().configs.single { it.name == "HvApiGatewayApp" }
         assertEquals(ProjectSystemId("GRADLE").readableName, listed.via)
@@ -367,7 +367,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         // `javaClass ==` match rejecting a framework subclass.
         val runner = delegatingRunner(accept = { it is PlainApplicationConfig })
         val mgr = manager()
-        val wt = "${requireNotNull(project.basePath)}/.kilo/worktrees/fallback-wt"
+        val wt = "${requireNotNull(project.basePath)}/.kilo2/worktrees/fallback-wt"
 
         val result = mgr.run(settings.uniqueID, wt)
         assertNull(result.error)
@@ -758,7 +758,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         val type = register(paramsType("kilo.test.params.label"))
         val settings = add(type, "dev")
         val repo = requireNotNull(project.basePath)
-        val wt = "$repo/.kilo/worktrees/feature"
+        val wt = "$repo/.kilo2/worktrees/feature"
         val store = Path.of(repo).resolve(".kilo2").resolve("jetbrains.json")
         Files.createDirectories(store.parent)
         Files.writeString(store, """{"names":{"$wt":"My Feature"}}""")

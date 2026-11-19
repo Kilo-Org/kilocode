@@ -722,7 +722,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private companion object {
-        const val DIR = "/repo/.kilo/worktrees/feature-x"
-        const val TIMEOUT = "kilo.session.inactive.disposeTimeoutMs"
+        const val DIR = "/repo/.kilo2/worktrees/feature-x"
+        const val TIMEOUT = "kilo2.session.inactive.disposeTimeoutMs"
     }
 }

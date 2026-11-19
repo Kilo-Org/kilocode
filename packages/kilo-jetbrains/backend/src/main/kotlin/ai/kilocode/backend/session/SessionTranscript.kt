@@ -24,6 +24,8 @@ import java.util.Base64
 internal class SessionTranscript(private val sid: String, var parent: String? = null) {
     private var agent: String? = null
     private var model: JsonObject? = null
+    var idle: JsonObject? = null
+        private set
 
     fun message(m: JsonObject): MessageWithPartsDto? {
         val id = m.required("id")
@@ -32,6 +34,7 @@ internal class SessionTranscript(private val sid: String, var parent: String? = 
         val role = when (type) {
             "agent-switched" -> { agent = m.str("agent"); return null }
             "model-switched" -> { model = m.obj("model"); return null }
+            "idle" -> { idle = m; return null }
             "user" -> { parent = id; "user" }
             "assistant", "compaction", "shell" -> "assistant"
             else -> return null // Synthetic and control records are not conversation bubbles.
@@ -48,8 +51,9 @@ internal class SessionTranscript(private val sid: String, var parent: String? = 
                     .forEachIndexed { index, f -> add(filePart(sid, id, index, f.jsonObject)) }
             }
             "compaction" -> listOf(PartDto(partID(id, "compaction", 0), sid, id, "compaction", text = m.str("summary")))
-            "shell" -> listOf(PartDto(partID(id, "shell", 0), sid, id, "tool", tool = "bash", state = m.str("status"),
-                input = mapOf("command" to m.required("command")), output = m.obj("output")?.str("output")))
+            "shell" -> listOf(PartDto(partID(id, "shell", 0), sid, id, "tool", tool = "bash", state = when (m.str("status")) {
+                "running" -> "running"; "exited" -> if (m.str("exit") == "0") "completed" else "error"; else -> "error"
+            }, input = mapOf("command" to m.required("command")), output = m.obj("output")?.str("output")))
             else -> {
                 val counts = mutableMapOf<String, Int>()
                 m.items("content").mapNotNull { content ->

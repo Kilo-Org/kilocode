@@ -33,5 +33,5 @@ data class RetentionStatusDto(
     val policy: RetentionPolicyDto = RetentionPolicyDto(),
     val last: RetentionResultDto? = null,
     val progress: RetentionProgressDto? = null,
-    val supported: Boolean = true,
+    val supported: Boolean = false,
 )

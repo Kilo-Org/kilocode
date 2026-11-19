@@ -34,14 +34,15 @@ sealed interface CliState {
 @Service
 class KiloBackendCliManager(scope: CoroutineScope) : Disposable {
     private val storage = Path.of(PathManager.getSystemPath(), "kilo2")
+    private val devRoot = System.getProperty("kilo.dev.worktree.root")
     private val cwd = storage.resolve("cwd")
     private val downloader by lazy { KiloCliDownloader(storage.resolve("cli")) }
     private val runtime = CliRuntime(scope, cwd, environment = {
         val info = ApplicationInfo.getInstance()
         cliEnvironment(EnvironmentUtil.getEnvironmentMap(), cwd, "${info.fullApplicationName} ${info.build.asString()}",
-            KiloClaudeCompatSettings.get())
+            KiloClaudeCompatSettings.get(), dev = devRoot != null)
     }, resolve = { env, force, progress ->
-        KiloDevMode.command(System.getProperty("kilo.dev.worktree.root"), storage, env) ?: run {
+        KiloDevMode.command(devRoot, storage, env) ?: run {
             val pin = KiloProps.pin
             CliCommand(listOf(downloader.resolve(pin, env, force, progress).toString()), expectedVersion = pin.version)
         }
@@ -50,7 +51,7 @@ class KiloBackendCliManager(scope: CoroutineScope) : Disposable {
     val state: StateFlow<CliState> get() = runtime.state
     val version: String get() = KiloProps.pin.version
     val platform: String get() = KiloProps.pin.platform
-    val bundled: Boolean get() = System.getProperty("kilo.dev.worktree.root") == null && KiloProps.pin.bundled != null
+    val bundled: Boolean get() = devRoot == null && KiloProps.pin.bundled != null
 
     suspend fun client(): V2Client = runtime.get()
     suspend fun restart(force: Boolean = false): V2Client = runtime.get(restart = true, force = force)

@@ -12,7 +12,6 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.RetentionConfigDto
 import ai.kilocode.rpc.dto.RetentionPolicyDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
-import ai.kilocode.rpc.dto.RetentionPatchDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.fields.IntegerField
 import com.intellij.util.ui.UIUtil
@@ -146,7 +145,7 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
         edt {
             assertFalse(cleanup().isSelected)
             assertEquals(30, days().value)
-            assertTrue(runButton().isEnabled)
+            assertFalse(runButton().isEnabled)
         }
     }
 
@@ -214,7 +213,7 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
         val accepted = AtomicBoolean()
         var confirmations = 0
         val values = mutableListOf<Boolean>()
-        val status = RetentionStatusDto(policy = RetentionPolicyDto(true, 30))
+        val status = RetentionStatusDto(policy = RetentionPolicyDto(true, 30), supported = true)
         start(
             ConfigDto(retention = RetentionConfigDto(enabled = true, maxAgeDays = 30)),
             confirm = {
@@ -250,17 +249,15 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf(true), rpc.retentionForces)
     }
 
-    fun `test manual cleanup temporarily enables and restores a disabled policy`() {
+    fun `test an unsaved enable never lends automatic cleanup consent to a manual pass`() {
         start(ConfigDto(retention = RetentionConfigDto(enabled = false, maxAgeDays = 30)))
-        val done = CompletableDeferred<Unit>()
-
-        app.runManualRetentionAsync(RetentionPatchDto(enabled = false, maxAgeDays = 30)) {
-            done.complete(Unit)
+        edt {
+            cleanup().doClick()
+            assertFalse(runButton().isEnabled)
+            runButton().doClick(0)
         }
-        runBlocking(Dispatchers.Default) { done.await() }
-
-        assertEquals(listOf(true, false), rpc.configPatches.map { it.retention?.enabled })
-        assertEquals(listOf(true), rpc.retentionForces)
+        assertTrue(rpc.configPatches.isEmpty())
+        assertTrue(rpc.retentionForces.isEmpty())
     }
 
     private fun toggles(): List<SettingsToggle> = components(requireNotNull(ui)).filterIsInstance<SettingsToggle>()

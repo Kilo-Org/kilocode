@@ -54,7 +54,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
     val selections = mutableListOf<ModelSelectionUpdateDto>()
     val variants = mutableListOf<ModelVariantUpdateDto>()
     val configPatches = mutableListOf<ConfigPatchDto>()
-    var retention = RetentionStatusDto()
+    var retention = RetentionStatusDto(supported = true)
     val retentionStatusCalls = AtomicInteger()
     val retentionForces = CopyOnWriteArrayList<Boolean>()
     var retentionError: Exception? = null

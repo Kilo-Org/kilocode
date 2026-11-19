@@ -106,12 +106,13 @@ class ShareSessionAction : AnAction(), DumbAware {
         val prefix = if (actions.share != null) "action.Kilo.Session.Share.stop" else "action.Kilo.Session.Share"
         e.presentation.isEnabledAndVisible = true
         e.presentation.text = KiloBundle.message("$prefix.text")
-        e.presentation.description = KiloBundle.message("$prefix.description")
+        e.presentation.isEnabled = actions.publicLinks
+        e.presentation.description = KiloBundle.message(if (actions.publicLinks) "$prefix.description" else "history.cloud.links.unavailable")
     }
 
     override fun actionPerformed(e: AnActionEvent) {
         val actions = e.getData(SessionActionsKeys.ACTIONS) ?: return
-        if (actions.id == null || actions.readonly) return
+        if (actions.id == null || actions.readonly || !actions.publicLinks) return
         val shared = actions.share != null
         Telemetry.send("Session Action", mapOf("action" to if (shared) "unshare" else "share"))
         if (shared) actions.stopShare() else actions.startShare()

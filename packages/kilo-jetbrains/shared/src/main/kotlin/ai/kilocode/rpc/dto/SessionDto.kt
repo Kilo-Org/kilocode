@@ -14,6 +14,7 @@ data class SessionDto(
     val summary: SessionSummaryDto? = null,
     val revert: SessionRevertDto? = null,
     val share: SessionShareDto? = null,
+    val publicLinks: Boolean = false,
 )
 
 /** Public share link for a session. Present only while the session is shared. */

@@ -26,7 +26,7 @@ class KiloBackendWorkspaceTest {
         assertEquals("/api/fs/find", exchange.requestURI.path)
         val query = URLDecoder.decode(exchange.requestURI.rawQuery, Charsets.UTF_8)
         assertTrue("location[directory]=/a project" in query && "query=src" in query && "limit=3" in query)
-        """{"location":{"directory":"/a project"},"data":[{"path":"src/","type":"directory"},{"path":"src/F.kt","type":"file"},{"path":".kilo/worktrees/tmp/src","type":"directory"}]}"""
+        """{"location":{"directory":"/a project"},"data":[{"path":"src/","type":"directory"},{"path":"src/F.kt","type":"file"},{"path":".kilo2/worktrees/tmp/src","type":"directory"}]}"""
     }) { data ->
         assertEquals(listOf(WorkspaceFileDto("src", "src", true), WorkspaceFileDto("src/F.kt", "F.kt")), data.files("src", 3))
     }
