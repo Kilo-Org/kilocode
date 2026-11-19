@@ -221,12 +221,22 @@ export function modeFor(tool: string, selected: Observation): Observation {
   return tool === "browser_snapshot" || tool === "browser_find" || tool === "browser_tabs" ? "full" : selected
 }
 
+/**
+ * Where a session's tab is, as its last results showed it: on a known page, moved by the browser to another origin,
+ * closed, or switched to a page no result named.
+ */
+export type Tab =
+  | { kind: "page"; url: string }
+  | { kind: "moved"; origin: string }
+  | { kind: "closed" }
+  | { kind: "unknown" }
+
 type SessionState = {
   active?: Snapshot
   tabs: Map<string, Snapshot>
   console: Set<string>
-  /** The page URL the session's last result showed. */
-  page?: string
+  /** Where the tab is; undefined before the session's first page. */
+  tab?: Tab
 }
 
 const CONSOLE_SEEN_LIMIT = 500
@@ -291,14 +301,19 @@ export class Tracker {
     }
   }
 
-  /** Remember the page URL a result showed, so a later refusal can say where the tab is. */
-  visit(session: string, url: string) {
-    this.state(session).page = url
+  /** Remember where a result left the tab, so a later refusal can say where it is. */
+  place(session: string, tab: Tab | undefined) {
+    if (tab) this.state(session).tab = tab
   }
 
-  /** The page URL the session's last result showed, or undefined before its first page. */
-  page(session: string): string | undefined {
-    return this.sessions.get(session)?.page
+  /** The browser moved the tab to another origin (a redirect); undefined means it did not move. */
+  moved(session: string, origin: string | undefined) {
+    if (origin !== undefined) this.state(session).tab = { kind: "moved", origin }
+  }
+
+  /** Where the session's tab is, or undefined before its first page. */
+  tab(session: string): Tab | undefined {
+    return this.sessions.get(session)?.tab
   }
 
   /** Console messages not returned to the model before in this session. */

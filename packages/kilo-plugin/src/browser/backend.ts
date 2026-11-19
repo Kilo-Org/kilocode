@@ -67,12 +67,15 @@ export type BrowserBackend = {
 export class NeedsPermissionError extends Error {
   readonly items: readonly Item[]
   readonly stepToken?: string
+  /** The origin the browser moved the tab to (a redirect) before it asked; undefined when the tab did not move. */
+  readonly moved?: string
 
-  constructor(items: readonly Item[], stepToken?: string) {
+  constructor(items: readonly Item[], stepToken?: string, moved?: string) {
     super("The browser step needs permission.")
     this.name = "BrowserNeedsPermissionError"
     this.items = items
     this.stepToken = stepToken
+    this.moved = moved
   }
 }
 

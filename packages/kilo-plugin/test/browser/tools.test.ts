@@ -753,6 +753,79 @@ describe("browser tools over the extension backend", () => {
     )
   })
 
+  describe("a refusal says where a tab change left the tab", () => {
+    const feedback = "Continue without this action."
+    const refusing = Option.some({
+      assert: (input: { action: string }) =>
+        input.action === "browser" ? Effect.fail(new Permission.CorrectedError({ feedback })) : Effect.void,
+    } as unknown as Permission.Interface)
+    const login = page("http://localhost:3000/login", "Login")
+    const refusal = (origin: string) =>
+      Promise.reject(
+        new BrowserHub.Failure({
+          kind: "permission",
+          message: "needs permission",
+          items: [{ class: "navigate", origin }],
+        }),
+      )
+    const answers: Record<string, string> = {
+      browser_close: "Closed the browser.",
+      browser_tabs: "Selected tab 1 (Other - https://z.example/).",
+    }
+    const hub = () =>
+      fakeHub({
+        call: (input) =>
+          input.name === "browser_navigate" && input.arguments.url === "https://x.example/"
+            ? refusal("https://x.example")
+            : Promise.resolve({ content: [{ type: "text", text: answers[input.name] ?? login }] }),
+      })
+    const refusedAfter = async (tool: string, args: Record<string, unknown>) => {
+      const host = await boot({ backend: "extension" }, { hub: hub().service, permission: refusing })
+      expect((await host.call("browser_navigate", { url: "http://localhost:3000/login" }))._tag).toBe("Success")
+      expect((await host.call(tool, args))._tag).toBe("Success")
+      const refused = await host.call("browser_navigate", { url: "https://x.example/" })
+      return refused._tag === "Failure" ? (refused.failure as Tool.Error).message : ""
+    }
+
+    test("after browser_close the tab is closed", async () => {
+      expect(await refusedAfter("browser_close", {})).toBe(
+        "Permission for navigate on https://x.example was not granted. The session's browser tab is closed. Continue without this action.",
+      )
+    })
+
+    test("after a tab switch that names no page, the model is told to look first", async () => {
+      expect(await refusedAfter("browser_tabs", { action: "select", index: 1 })).toBe(
+        "Permission for navigate on https://x.example was not granted. Take a snapshot to see which page the tab is on. Continue without this action.",
+      )
+    })
+
+    test("listing tabs leaves the tab where it was", async () => {
+      expect(await refusedAfter("browser_tabs", { action: "list" })).toBe(
+        "Permission for navigate on https://x.example was not granted. The tab is still on http://localhost:3000/login. Continue without this action.",
+      )
+    })
+
+    test("after a redirect the tab is on the origin it reached", async () => {
+      const moving = fakeHub({
+        call: (input) =>
+          input.name === "browser_navigate" && input.arguments.url === "http://localhost:3000/go"
+            ? Promise.reject(
+                new BrowserHub.Failure({
+                  kind: "moved",
+                  message: "the page moved",
+                  items: [{ class: "read", origin: "https://y.example" }],
+                }),
+              )
+            : Promise.resolve({ content: [{ type: "text", text: login }] }),
+      })
+      const host = await boot({ backend: "extension" }, { hub: moving.service, permission: refusing })
+      expect((await host.call("browser_navigate", { url: "http://localhost:3000/login" }))._tag).toBe("Success")
+      const refused = await host.call("browser_navigate", { url: "http://localhost:3000/go" })
+      expect(refused._tag === "Failure" ? (refused.failure as Tool.Error).message : "").toBe(
+        "Permission for read on https://y.example was not granted. The tab is now on a page at https://y.example. Continue without this action.",
+      )
+    })
+  })
 
   test("a refused post-action read still records the page the action reached", async () => {
     const feedback = "Continue without this action."

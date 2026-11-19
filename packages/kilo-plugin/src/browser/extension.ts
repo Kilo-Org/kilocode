@@ -163,7 +163,8 @@ function permissionError(error: BrowserHub.Failure): Error {
   if (error.kind === "moved" && !items.length) {
     return new Error("The page changed before the step ran. Call the tool again.")
   }
-  return new NeedsPermissionError(items, error.stepToken)
+  // A redirect names only the origin it reached, which is the read it asks for.
+  return new NeedsPermissionError(items, error.stepToken, error.kind === "moved" ? items[0]?.origin : undefined)
 }
 
 /** Every failure kind the transport reports, as the tool layer sees it. */

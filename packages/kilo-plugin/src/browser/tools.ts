@@ -26,7 +26,7 @@ import GUIDE from "./browser-skill.txt"
 import type { Entry } from "./contract-shape"
 import type { ExtensionBackend } from "./extension"
 import { BrowserHub } from "./hub"
-import { modeFor, observe, snapshot, split, Tracker } from "./observation"
+import { modeFor, observe, snapshot, split, Tracker, type Tab } from "./observation"
 import { BrowserPermission } from "./permission"
 import { key, persistStep, playwright, readiness } from "./playwright"
 import { resolve, type Observation, type Settings } from "./settings"
@@ -107,6 +107,18 @@ function pageUrl(result: CallResult) {
     snapshot(split(text))?.url ??
     Option.getOrUndefined(Option.map(decodeOpened(text), (opened) => opened.url))
   )
+}
+
+/**
+ * Where a successful call left the session's tab: the page its result names; closed after `browser_close`; unknown
+ * after a tab switch, open or close whose result names no page; unchanged (undefined) for any other call.
+ */
+function placed(tool: string, args: Record<string, unknown>, result: CallResult): Tab | undefined {
+  const url = pageUrl(result)
+  if (url) return { kind: "page", url }
+  if (tool === "browser_close") return { kind: "closed" }
+  if (tool === "browser_tabs" && args.action !== "list") return { kind: "unknown" }
+  return undefined
 }
 
 /**
@@ -227,8 +239,18 @@ function ask(permission: Permission.Interface, request: Permission.AssertInput, 
   // The page the session's last result showed: the model's next step starts from where the tab really is, not from
   // the page it asked for.
   const where = () => {
-    const url = tracker.page(String(request.sessionID))
-    return url ? `The tab is still on ${url}.` : "This session has no browser tab yet."
+    const tab = tracker.tab(String(request.sessionID))
+    if (tab === undefined) return "This session has no browser tab yet."
+    switch (tab.kind) {
+      case "page":
+        return `The tab is still on ${tab.url}.`
+      case "moved":
+        return `The tab is now on a page at ${tab.origin}.`
+      case "closed":
+        return "The session's browser tab is closed."
+      case "unknown":
+        return "Take a snapshot to see which page the tab is on."
+    }
   }
   return permission.assert(request).pipe(
     Effect.catchTags({
@@ -395,8 +417,7 @@ type PostAction = {
 function postAction(input: PostAction) {
   return Effect.gen(function* () {
     // The action ran, so the tab is on the page it reported, whatever the answer to the ask.
-    const url = pageUrl(input.result)
-    if (url) tracker.visit(input.session, url)
+    tracker.place(input.session, placed(input.entry.name, input.input, input.result))
     const asked = yield* Effect.result(
       authorize(
         input.needs,
@@ -526,6 +547,7 @@ export function granted(input: PostAction) {
 function shaped(input: {
   result: CallResult
   entry: Entry
+  args: Record<string, unknown>
   active: BrowserBackend
   session: string
   context: Tool.Context
@@ -541,8 +563,7 @@ function shaped(input: {
     const previous = mode === "diff" ? tracker.previous(input.session, input.entry.name, next?.url) : undefined
     const viewed = observe({ mode, text, previous, consoleErrors: errors })
     if (viewed.snapshot) tracker.record(input.session, viewed.snapshot)
-    const url = pageUrl(input.result)
-    if (url) tracker.visit(input.session, url)
+    tracker.place(input.session, placed(input.entry.name, input.args, input.result))
 
     const content: Tool.Content[] = [{ type: "text", text: viewed.text }]
     for (const block of input.result.content) {
@@ -658,6 +679,8 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
       }
       const error = outcome.failure
       if (!(error instanceof NeedsPermissionError)) return yield* failure(error)
+      // A redirect already moved the tab: a refusal must not say it is still on the page it left.
+      tracker.moved(session, error.moved)
       if (attempt === 1 || !error.items.length) {
         return yield* failure(
           new Error("The browser page changed while permission was requested. Call the tool again."),
@@ -696,6 +719,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     }
 
     return yield* shaped({
+      args: input,
       result,
       entry,
       active,
