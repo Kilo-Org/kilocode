@@ -2,10 +2,47 @@
 
 export type ToolError = { tool: string; name: string; text: string }
 
+/**
+ * Model-facing failure texts mapped to a name: the bridge error they stand for (SPEC error names), else the recurring
+ * tool-level failure. The first match wins, so the specific texts come before the generic permission words.
+ */
+const ERROR_NAMES: [RegExp, string][] = [
+  [
+    /\b(browser_unavailable|tab_busy|tab_taken|user_stopped|unsupported_in_browser|needs_permission|origin_changed|protocol_mismatch)\b/,
+    "$1",
+  ],
+  [/browser is not available right now/i, "browser_unavailable"],
+  [/tab is busy/i, "tab_busy"],
+  [/took over the tab/i, "tab_taken"],
+  [/user stopped this browser session/i, "user_stopped"],
+  [/unsupported in this browser/i, "unsupported_in_browser"],
+  [/page changed (before the step ran|while permission was requested)/i, "origin_changed"],
+  [/step needs permission|asked for permission the CLI cannot describe/i, "needs_permission"],
+  [/out of date for this version of Kilo/i, "protocol_mismatch"],
+  [/browser refused this page|\(blocked\)/i, "blocked"],
+  [/stale or unknown|Unknown element reference|Ref \S+ not found/i, "stale_ref"],
+  [/could not compile the snippet|Content Security Policy/i, "eval_refused_by_csp"],
+  [/Local agent request failed/i, "extension_internal_error"],
+  [/No tool named/i, "unknown_tool"],
+  [/No dialog is currently open/i, "no_dialog"],
+  [/\b(TypeError|ReferenceError|SyntaxError)\b/, "page_script_error"],
+  [/declined this tool call|Permission denied|rejected/i, "permission_rejected"],
+]
+
+export function errorName(text: string) {
+  for (const [pattern, name] of ERROR_NAMES) {
+    const match = pattern.exec(text)
+    if (match) return name === "$1" ? (match[1] ?? "other") : name
+  }
+  return "other"
+}
+
 export type Row = {
   backend: string
   model: string
   observation: string
+  /** The tool surface the model saw: browser_* tools directly, or Code Mode's `execute`. */
+  surface: string
   task: string
   group: string
   run: number
@@ -22,6 +59,8 @@ export type Row = {
   turns: number
   toolCalls: number
   browserCalls: number
+  /** Code Mode `execute` calls; browser calls made inside them are counted in browserCalls when the events show them. */
+  executeCalls: number
   /** Browser tool calls by tool name. */
   browserTools: Record<string, number>
   /** Every failed tool call the model saw, classified by the bridge error it maps to. */
@@ -70,6 +109,7 @@ export function renderSummary(rows: Row[]): string {
   lines.push(
     `${rows.length} runs · ${backends.join(", ")} · ${[...new Set(rows.map((row) => row.model))].join(", ")} · ` +
       `observation ${[...new Set(rows.map((row) => row.observation))].join(", ")} · ` +
+      `tool surface ${[...new Set(rows.map((row) => row.surface))].join(", ")} · ` +
       `${new Set(rows.map((row) => row.task)).size} tasks · up to ${Math.max(...rows.map((row) => row.run))} repetitions`,
   )
   lines.push("")
@@ -83,9 +123,9 @@ export function renderSummary(rows: Row[]): string {
   lines.push("## Per backend")
   lines.push("")
   lines.push(
-    "| backend | runs | success | mean tokens | mean non-cached | mean reasoning | mean turns | mean wall | median wall | mean CLI cost | mean list cost | total list cost | mean browser calls | mean tool errors | mean result KB | mean load |",
+    "| backend | runs | success | mean tokens | mean non-cached | mean reasoning | mean turns | mean wall | median wall | mean CLI cost | mean list cost | total list cost | mean execute calls | mean browser calls | mean tool errors | mean result KB | mean load |",
   )
-  lines.push("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+  lines.push("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
   for (const backend of backends) {
     const subset = rows.filter((row) => row.backend === backend)
     const successes = subset.filter((row) => row.success).length
@@ -96,8 +136,17 @@ export function renderSummary(rows: Row[]): string {
         `${mean(subset.map((row) => row.turns)).toFixed(1)} | ${(mean(subset.map((row) => row.wallMs)) / 1000).toFixed(1)}s | ` +
         `${(median(subset.map((row) => row.wallMs)) / 1000).toFixed(1)}s | $${mean(subset.map((row) => row.cost)).toFixed(4)} | ` +
         `$${mean(subset.map((row) => row.listCost)).toFixed(4)} | $${subset.reduce((sum, row) => sum + row.listCost, 0).toFixed(4)} | ` +
+        `${mean(subset.map((row) => row.executeCalls)).toFixed(1)} | ` +
         `${mean(subset.map((row) => row.browserCalls)).toFixed(1)} | ${mean(subset.map((row) => row.toolErrors.length)).toFixed(2)} | ` +
         `${(mean(subset.map((row) => row.resultBytes)) / 1024).toFixed(1)} | ${mean(subset.map((row) => row.load)).toFixed(1)} |`,
+    )
+  }
+  const tabs = rows.filter((row) => row.tabsAfter >= 0).map((row) => row.tabsAfter)
+  if (tabs.length > 0) {
+    lines.push("")
+    lines.push(
+      `Extension browser tabs after each extension run: first ${tabs[0]}, last ${tabs.at(-1)}, over ${tabs.length} runs ` +
+        `(one session per run; a count that grows by one per run means sessions leave their tab open).`,
     )
   }
   lines.push("")
@@ -186,5 +235,13 @@ if (import.meta.main) {
     .split("\n")
     .filter((line) => line.trim().length > 0)
     .map((line) => JSON.parse(line) as Row)
+    // Recorded rows keep the error text, so a refined classification applies to an old matrix too. Rows recorded
+    // before the surface fields existed came from the direct-tool surface.
+    .map((row) => ({
+      ...row,
+      surface: row.surface ?? "direct",
+      executeCalls: row.executeCalls ?? 0,
+      toolErrors: row.toolErrors.map((error) => ({ ...error, name: errorName(error.text) })),
+    }))
   console.log(renderSummary(rows))
 }

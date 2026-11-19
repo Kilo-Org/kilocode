@@ -12,6 +12,7 @@ import path from "node:path"
 
 declare const chrome: {
   storage: { local: { get(key: string): Promise<unknown> } }
+  tabGroups: { query(query: Record<string, unknown>): Promise<unknown> }
   tabs: { query(query: Record<string, unknown>): Promise<unknown> }
 }
 
@@ -34,6 +35,7 @@ type Page = {
   getByRole(role: string, options?: { name?: string }): Locator
   goto(url: string): Promise<unknown>
   reload(): Promise<unknown>
+  on(event: "dialog", listener: (dialog: unknown) => void): void
   screenshot(options: { path: string }): Promise<unknown>
   setDefaultTimeout(timeout: number): void
 }
@@ -45,6 +47,8 @@ type Context = {
   close(): Promise<void>
   newCDPSession(page: Page): Promise<CdpSession>
   newPage(): Promise<Page>
+  on(event: "page", listener: (page: Page) => void): void
+  pages(): Page[]
   route(url: string | ((url: URL) => boolean), handler: (route: Route) => Promise<void> | void): Promise<void>
   serviceWorkers(): Worker[]
   setDefaultTimeout(timeout: number): void
@@ -182,6 +186,8 @@ export type ExtensionBrowser = {
   environment: () => Record<string, string>
   /** Tabs open in the browser right now, so a run that leaves tabs behind shows in the results. */
   tabCount: () => Promise<number>
+  /** Tab group titles right now: each session's group, and how ended sessions leave theirs. */
+  groupTitles: () => Promise<string[]>
   /** Restarts and re-pairs the hub when it exited or lost the extension between runs. */
   ensurePaired: () => Promise<{ repaired: boolean }>
   hubLog: () => string
@@ -268,6 +274,11 @@ export async function launchExtensionBrowser(input: {
   await context.addInitScript({
     content: "Object.defineProperty(chrome.permissions, 'request', { value: () => Promise.resolve(true) });",
   })
+  // Playwright dismisses every JavaScript dialog on a page it drives unless the page has a dialog listener, so the
+  // extension would never see one open. A listener that does nothing leaves the dialog to the extension, as in a
+  // browser no automation drives.
+  for (const page of context.pages()) page.on("dialog", () => {})
+  context.on("page", (page) => page.on("dialog", () => {}))
   const panel = await context.newPage()
   panel.setDefaultTimeout(20_000)
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`)
@@ -373,6 +384,10 @@ export async function launchExtensionBrowser(input: {
     tabCount: async () => {
       const tabs = await worker.evaluate(() => chrome.tabs.query({}))
       return Array.isArray(tabs) ? tabs.length : -1
+    },
+    groupTitles: async () => {
+      const groups = await worker.evaluate(() => chrome.tabGroups.query({}))
+      return Array.isArray(groups) ? groups.map((group) => String(record(group)?.["title"] ?? "")) : []
     },
     ensurePaired: async () => {
       const entry = await readHubEntry(input.root)

@@ -8,7 +8,8 @@
  * Options: --tasks <ids or groups>, --model <provider/model>, --observation full|diff|none (default: unset, so the
  * CLI's own default applies), --timeout <s>, --budget <USD>, --extension <built chrome-mv3 dir>, --chromium <path>,
  * --ports <from-to> (hub port range), --port <fixture port>, --downloads-ungranted (load the shipped manifest instead
- * of the accepted-Downloads-permission state).
+ * of the accepted-Downloads-permission state), --code-mode (allow Code Mode's `execute`, the v2 default tool surface;
+ * without it the model calls the browser_* tools directly).
  *
  * Backends are interleaved per task and repetition (task1/extension, task1/playwright, task2/extension, ...), so host
  * load hits both alike. Every run is its own CLI session with fresh XDG directories. The extension backend uses one
@@ -24,7 +25,7 @@ import { appendFile, mkdir, readFile, symlink, writeFile } from "node:fs/promise
 import { join, resolve } from "node:path"
 import { answerOf, task as findTask, TASKS, type Task } from "./fixtures"
 import { launchExtensionBrowser, type ExtensionBrowser } from "./extension"
-import { renderSummary, type Row, type ToolError } from "./report"
+import { errorName, renderSummary, type Row, type ToolError } from "./report"
 import { serve } from "./server"
 
 type Backend = "playwright" | "extension"
@@ -67,18 +68,25 @@ function parseArgs(argv: string[]) {
     ports: ports?.length === 2 ? (ports as [number, number]) : undefined,
     port: Number(read("port") ?? 0),
     ungranted: argv.includes("--downloads-ungranted"),
+    codeMode: argv.includes("--code-mode"),
   }
 }
 
 type Args = ReturnType<typeof parseArgs>
 
-/** v2 config: the backend under test, the observation default unless asked, and browser tools as the only tools. */
+/**
+ * v2 config: the backend under test, the observation default unless asked, and browser tools as the only tools.
+ * Denying every tool also turns Code Mode off (core/src/tool.ts: Code Mode is on unless `execute` is wholly denied),
+ * so the model calls the browser_* tools directly; `--code-mode` allows `execute`, the v2 default surface, where the
+ * browser tools are reached through it.
+ */
 function config(args: Args, backend: Backend) {
   return {
     model: args.model,
     browser: { backend, ...(args.observation ? { observation: args.observation } : {}) },
     permissions: [
       { action: "*", effect: "deny", resource: "*" },
+      ...(args.codeMode ? [{ action: "execute", effect: "allow", resource: "*" }] : []),
       { action: "browser_*", effect: "allow", resource: "*" },
       // Other origins (about:blank, a new tab) stay an ask, which `--auto` approves, as a user's default would.
       { action: "browser", effect: "ask", resource: "*" },
@@ -100,35 +108,13 @@ type Metrics = {
   turns: number
   tools: number
   browser: number
+  execute: number
   browserTools: Record<string, number>
   toolErrors: ToolError[]
   resultBytes: number
   resultImages: number
   text: string
   error: string
-}
-
-/** Model-facing failure texts of the browser tools, mapped back to the bridge error they stand for. */
-const ERROR_NAMES: [RegExp, string][] = [
-  [/\b(browser_unavailable|tab_busy|tab_taken|user_stopped|unsupported_in_browser|needs_permission|blocked|origin_changed|protocol_mismatch)\b/, "$1"],
-  [/browser is not available right now/i, "browser_unavailable"],
-  [/tab is busy/i, "tab_busy"],
-  [/took over the tab/i, "tab_taken"],
-  [/user stopped this browser session/i, "user_stopped"],
-  [/unsupported in this browser/i, "unsupported_in_browser"],
-  [/page changed before the step ran/i, "origin_changed"],
-  [/step needs permission|asked for permission the CLI cannot describe/i, "needs_permission"],
-  [/out of date for this version of Kilo/i, "protocol_mismatch"],
-  [/browser refused this page/i, "blocked"],
-  [/permission|rejected|denied/i, "permission_rejected"],
-]
-
-function errorName(text: string) {
-  for (const [pattern, name] of ERROR_NAMES) {
-    const match = pattern.exec(text)
-    if (match) return name === "$1" ? (match[1] ?? "other") : name
-  }
-  return "other"
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -201,6 +187,7 @@ function parseRun(stdout: string, pricing: Pricing | undefined): Metrics {
     turns: 0,
     tools: 0,
     browser: 0,
+    execute: 0,
     browserTools: {},
     toolErrors: [],
     resultBytes: 0,
@@ -249,11 +236,26 @@ function parseRun(stdout: string, pricing: Pricing | undefined): Metrics {
     if (type === "tool_use") {
       const tool = String(part?.["tool"] ?? "")
       const state = record(part?.["state"])
-      const browser = tool.startsWith("browser_")
+      // Code Mode reports the calls one `execute` made as `tools.browser.<name>` in its metadata.
+      const inner = record(record(state?.["metadata"])?.["metadata"])?.["toolCalls"]
+      const calls = tool === "execute" && Array.isArray(inner) ? inner.map(record) : []
+      const innerBrowser = calls.filter((call) => String(call?.["tool"] ?? "").startsWith("browser."))
+      const browser = tool.startsWith("browser_") || innerBrowser.length > 0
       metrics.tools += 1
-      if (browser) {
+      if (tool === "execute") metrics.execute += 1
+      if (tool.startsWith("browser_")) {
         metrics.browser += 1
         metrics.browserTools[tool] = (metrics.browserTools[tool] ?? 0) + 1
+      }
+      for (const call of innerBrowser) {
+        const name = String(call?.["tool"]).replace(".", "_")
+        metrics.browser += 1
+        metrics.browserTools[name] = (metrics.browserTools[name] ?? 0) + 1
+        // A failed inner call usually fails the whole `execute`, which is recorded once below.
+        if (call?.["status"] === "error" && state?.["status"] !== "error") {
+          const text = String(call["error"] ?? "inner call failed")
+          metrics.toolErrors.push({ tool: name, name: errorName(text), text: text.slice(0, 200) })
+        }
       }
       if (state?.["status"] === "error") {
         const text = String(state["error"] ?? "")
@@ -398,6 +400,7 @@ async function main() {
   const rows: Row[] = []
   const total = args.runs * args.tasks.length * args.backends.length
   let stopped = ""
+  let groups = ""
   try {
     for (let run = 1; run <= args.runs && !stopped; run++) {
       for (const id of args.tasks) {
@@ -423,6 +426,7 @@ async function main() {
             backend,
             model: args.model,
             observation: args.observation ?? "default",
+            surface: args.codeMode ? "code-mode" : "direct",
             task: task.id,
             group: task.group,
             run,
@@ -437,6 +441,7 @@ async function main() {
             turns: result.metrics.turns,
             toolCalls: result.metrics.tools,
             browserCalls: result.metrics.browser,
+            executeCalls: result.metrics.execute,
             browserTools: result.metrics.browserTools,
             toolErrors: result.metrics.toolErrors,
             resultBytes: result.metrics.resultBytes,
@@ -480,6 +485,10 @@ async function main() {
   } finally {
     fixtures.stop()
     if (extension) {
+      const titles = await extension.groupTitles().catch(() => [] as string[])
+      const counts = new Map<string, number>()
+      for (const title of titles) counts.set(title, (counts.get(title) ?? 0) + 1)
+      groups = [...counts].map(([title, count]) => `${count} × "${title}"`).join(", ") || "none"
       await writeFile(join(args.out, "logs", "hub.log"), extension.hubLog())
       await extension.close()
     }
@@ -489,7 +498,10 @@ async function main() {
     (pricing
       ? `OpenRouter list price of the recorded tokens (time-of-day overrides applied): $${rows.reduce((sum, row) => sum + row.listCost, 0).toFixed(4)}.`
       : "No list pricing for this model.")
-  const summary = `${renderSummary(rows)}\n## Spend\n\n${spend}\n${stopped ? `\n${stopped}\n` : ""}`
+  const summary =
+    `${renderSummary(rows)}\n` +
+    (groups ? `## Extension tab groups at the end\n\n${groups}\n\n` : "") +
+    `## Spend\n\n${spend}\n${stopped ? `\n${stopped}\n` : ""}`
   await writeFile(join(args.out, "summary.md"), summary)
   console.log(`\n${summary}`)
   console.log(`\nwrote ${rowsPath}`)
