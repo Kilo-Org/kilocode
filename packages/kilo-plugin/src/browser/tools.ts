@@ -556,7 +556,8 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
 
     // Ask, then call. A backend that discovers the real origin at action time (redirects, frames, sensitive elements,
     // downloads) reports it as needs_permission; the call is retried once per distinct need it reports, with the new
-    // grants and the step token, so an act grant, then a sensitive step, then a redirect target each get one ask.
+    // grants and every step token approved so far, so an act grant, then a sensitive step, then a redirect target each
+    // get one ask and a later need never drops an approval the call already has.
     const asked = new Set<string>()
     let asks = 0
     let sensitive: string[] = []
@@ -611,7 +612,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
       )
       for (const item of error.items) asked.add(need(item))
       asks += 1
-      sensitive = error.stepToken ? [error.stepToken] : []
+      if (error.stepToken) sensitive = [...sensitive, error.stepToken]
     }
     if (result.isError) return yield* failure(new Error(textOf(result) || `${entry.name} failed`))
     // The action already ran; its result asked for a grant. Ask now, and never repeat the action for it.

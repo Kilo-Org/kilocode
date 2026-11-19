@@ -651,6 +651,38 @@ describe("browser tools over the extension backend", () => {
     expect(asserts.filter((entry) => entry.action === "browser")).toHaveLength(3)
   })
 
+  test("a later need keeps the sensitive approval the call already has", async () => {
+    const { asserts, service } = recorder()
+    const hub = scripted([
+      needs([{ class: "act", origin: "https://example.com" }]),
+      needs([{ class: "sensitive", origin: "https://example.com", reason: "password field" }], "step-1"),
+      needs([{ class: "read", origin: "https://frame.example.com", frame: true }]),
+    ])
+    const host = await boot({ backend: "extension", allow_sensitive: true }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_type", { target: "e1", text: "hunter2" })
+    expect(result._tag).toBe("Success")
+    expect(asserts.filter((entry) => entry.action === "browser_sensitive")).toHaveLength(1)
+    // The browser checks the frame grant before the sensitive step, so the approved token is still unspent.
+    expect(stepped(hub.calls, "browser_type").map((call) => call.sensitive)).toEqual([
+      undefined,
+      undefined,
+      ["step-1"],
+      ["step-1"],
+    ])
+  })
+
+  test("a refusal that names no permission stops the call and says so", async () => {
+    const { asserts, service } = recorder()
+    const hub = scripted([needs([])])
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag === "Failure" ? (result.failure as Tool.Error).message : "").toBe(
+      "The browser refused this step without naming the permission it needs. Continue without this action.",
+    )
+    expect(stepped(hub.calls, "browser_click")).toHaveLength(1)
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_click"])
+  })
+
   test("a post-action need asks, reads the page again and never repeats the action", async () => {
     const { asserts, service } = recorder()
     const hub = fakeHub({
