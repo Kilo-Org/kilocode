@@ -1,5 +1,15 @@
 # @kilocode/cli
 
+## 7.8.31
+
+### Minor Changes
+
+- [#16342](https://github.com/Kilo-Org/kilocode/pull/16342) [`182a5f9`](https://github.com/Kilo-Org/kilocode/commit/182a5f9f501d4d2bff2b5a4372d6f06065cf9904) - Change the Kilo telemetry preference from VS Code's About tab or the core telemetry API. Telemetry stays off if Kilo config, VS Code, or the environment disables it.
+
+### Patch Changes
+
+- [#16346](https://github.com/Kilo-Org/kilocode/pull/16346) [`f35ba50`](https://github.com/Kilo-Org/kilocode/commit/f35ba505e8b232012b02ab52952d8a195c89d7a6) Thanks [@rgbkrk](https://github.com/rgbkrk)! - Fix Gemini requests failing when an MCP tool declares a nullable enum or a multi-type parameter.
+
 ## 7.8.30
 
 ### Minor Changes
