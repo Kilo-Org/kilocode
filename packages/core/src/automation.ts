@@ -38,6 +38,7 @@ import {
   Target,
   Trigger,
 } from "@opencode/schema/automation"
+import type { HookAction, ServiceCreateInput } from "@opencode/schema/automation"
 import type { ProjectID } from "@opencode/schema/project-id"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { Agent } from "./agent.js"
@@ -65,6 +66,8 @@ import { SessionInboxTable } from "./session/sql.js"
 import { SubagentDepth } from "./session/subagent-depth.js"
 
 export { Action, ActionInput, CreateInput, ID, Info, Outcome, Request, Status, Target, Trigger }
+// kilocode_change - flows seam: the service-only create input is part of the automation namespace
+export type { ServiceCreateInput } from "@opencode/schema/automation"
 
 export class NotFoundError extends Schema.TaggedError<NotFoundError>()("Automation.NotFoundError", {
   automationID: ID,
@@ -95,7 +98,7 @@ export interface ListInput {
 
 export interface Interface {
   readonly create: (
-    input: CreateInput,
+    input: ServiceCreateInput,
     invocation?: Invocation,
   ) => Effect.Effect<Info, InvalidError | DisabledError | Session.NotFoundError | Permission.Error>
   readonly list: (input?: ListInput) => Effect.Effect<Info[]>
@@ -566,25 +569,23 @@ const layer = Layer.effect(
     // kilocode_change start - flows seam: a due automation is offered to the plugins that own it before delivery
     /** Offers one due row to the location plugins; a claimed run is advanced by the caller without being delivered. */
     const claimDue = Effect.fnUntraced(function* (row: Row) {
-      if (row.session_id === null || row.trigger.type === "event") return false
+      // Only a hook-owned row has a plugin owner; native prompt and code rows keep upstream behavior untouched.
+      if (row.session_id === null || row.trigger.type === "event" || row.action.type !== "hook") return false
       const owner = yield* existing(row.session_id)
       if (!owner) return false
-      const attempt = Effect.gen(function* () {
+      const event = yield* Effect.gen(function* () {
         const hooks = yield* PluginHooks.Service
-        // Without a Kilo owner the row keeps upstream behavior, including activation and directory failures.
-        if (!(yield* hooks.has("session", "experimental.automation"))) return false
+        // Hooks register during activation, which the supervisor starts in a forked fiber, so a cold or reloaded
+        // Location must finish activating before the check. A defect keeps the due time and uses the failed-retry
+        // backoff instead of recording the occurrence as fired.
         yield* Plugin.awaitActivation
-        const result = yield* hooks.trigger("session", "experimental.automation", {
+        if (!(yield* hooks.has("session", "experimental.automation"))) return undefined
+        return yield* hooks.trigger("session", "experimental.automation", {
           sessionID: owner.id,
           automation: toInfo(row),
         })
-        return result.claimed === true
-      })
-      // The seam is advisory: a hook that cannot run leaves the row unclaimed instead of changing the run.
-      return yield* attempt.pipe(
-        instances.provide(owner),
-        Effect.catchCause((cause) => (Cause.hasInterruptsOnly(cause) ? Effect.interrupt : Effect.succeed(false))),
-      )
+      }).pipe(instances.provide(owner))
+      return event?.claimed === true
     })
     // kilocode_change end
 
@@ -968,7 +969,7 @@ const layer = Layer.effect(
     /** The trigger as stored, with a relative `at` fixed to an instant, and its first due time. */
     const firstDue = Effect.fnUntraced(function* (
       trigger: Trigger,
-      action: ActionInput,
+      action: ActionInput | HookAction,
       zone: DateTime.TimeZone,
       now: number,
     ) {
@@ -1008,7 +1009,7 @@ const layer = Layer.effect(
 
     /** Resolves a prompt's target and checks a code action, both in the automation's directory. */
     const resolveAction = Effect.fnUntraced(function* (
-      input: CreateInput,
+      input: ServiceCreateInput,
       owner: SessionSchema.Info | undefined,
       trigger: Trigger,
       directory: string,

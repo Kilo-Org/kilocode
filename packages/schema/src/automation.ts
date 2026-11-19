@@ -184,16 +184,8 @@ export const CodeActionInput = Schema.Struct({
 }).annotate({ identifier: "Automation.CodeActionInput" })
 export interface CodeActionInput extends Schema.Schema.Type<typeof CodeActionInput> {}
 
-// kilocode_change start - flows seam: the Kilo plugins create hook-owned rows through the service
-export const HookActionInput = Schema.Struct({
-  type: Schema.tag("hook"),
-  prompt: Schema.String.check(Schema.isMinLength(1)).annotate({
-    description: "Descriptive prompt for a row whose owner delivers it. The native loop never admits it.",
-  }),
-}).annotate({ identifier: "Automation.HookActionInput" })
-export interface HookActionInput extends Schema.Schema.Type<typeof HookActionInput> {}
-
-export const ActionInput = Schema.Union([PromptActionInput, CodeActionInput, HookActionInput]).pipe(
+// kilocode_change start - flows seam: hook-owned rows are written by the service only
+export const ActionInput = Schema.Union([PromptActionInput, CodeActionInput]).pipe(
   Schema.toTaggedUnion("type"),
   Schema.annotate({ identifier: "Automation.ActionInput" }),
 )
@@ -226,3 +218,8 @@ export const CreateInput = Schema.Struct({
   ...Request.fields,
 }).annotate({ identifier: "Automation.CreateInput" })
 export interface CreateInput extends Schema.Schema.Type<typeof CreateInput> {}
+
+// kilocode_change start - flows seam: the service accepts the hook action, the public create schemas do not
+/** The internal create input. A hook action can only be written by a plugin, never by a tool or HTTP caller. */
+export type ServiceCreateInput = Omit<CreateInput, "action"> & { readonly action: ActionInput | HookAction }
+// kilocode_change end

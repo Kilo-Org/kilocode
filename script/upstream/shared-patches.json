@@ -24,6 +24,10 @@
       "rung": 3,
       "seam": "Export the existing layer and cleanup node so the Kilo host can decorate native file allocations while preserving native truncation and cleanup. A plugin cannot observe allocation provenance, and replacing the service without these exports would duplicate the upstream implementation. No algorithm or upstream default changes."
     },
+    "packages/core/src/database/migration/20261116043204_automation.ts": {
+      "rung": 4,
+      "seam": "Carry a hook-owned row across the schedule→automation migration as a hook action instead of rewriting it to a native prompt, and keep its `times` limit with the plugin owner. Kilo's Flow and wakeup records resolve the migrated row through the deterministic `sch_`→`aut_` id, so the rename is safe; dropping the row or converting it to a prompt would lose the feature or admit raw prompts into the source session. The migration is a one-shot upstream artifact that no plugin hook or host composition can reach."
+    },
     "specs/v2/session-sync.md": {
       "rung": 4,
       "seam": "Repository-specific native session sync design and operator commands. The v2 specification directory holds the producer contract; the cloud repository holds service admission, storage, and rollout. This contract now states canonical workspace-root routing, restored/reconnected ownership, bounded pending admission and credential/account fences (+13 non-empty marked lines), and paged model discovery (+3). The exact 16-line documentation growth raises only the markedLines budget from 1660 to 1676; file, unmarked-line and deletion budgets are unchanged. Plugin hooks and host composition cannot supply repository specification text. Runtime and RPC implementations remain in Kilo-owned paths; this shared-file growth is documentation only."
@@ -119,7 +123,7 @@
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, the optional `workspace` restoration outcome on `Session.Revert`, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, the optional `workspace` restoration outcome on `Session.Revert`, and the `hook` action variant of `Automation.Action` that lets a Kilo-owned plugin own an automation row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. Its unmarked growth in the 2.3.1 sync is this regeneration: the net +12 lines are the `Automation.Action.Hook` component with the removed `Schedule.Action` components. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
@@ -133,11 +137,11 @@
     },
     "packages/core/src/automation.ts": {
       "rung": 3,
-      "seam": "Generic due-automation claim seam for location plugins. An experimental session hook receives a due automation before native prompt admission; claiming it suppresses that prompt and advances the row through the existing settle path, preserving the scheduler's leader election, advancement, retry and outcome bookkeeping. A hook-owned action remains suppressed when its owner is unavailable. The hook runs after the native experimental.automations flag check, which the Kilo host turns on through Flag.Overrides; a hook failure leaves the row unclaimed and uses the existing failed-retry backoff. Kilo managed Flows and the wakeup plugin use the hook, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior."
+      "seam": "Generic due-automation claim seam for location plugins. Only a hook-owned row is offered to the experimental session hook, after plugin activation has finished (hooks register during activation), so native prompt and code rows keep upstream behavior exactly. Claiming a row suppresses its prompt and advances it through the existing settle path, preserving leader election, advancement and outcome bookkeeping. A hook-owned action stays suppressed when its owner is unavailable. The hook runs after the native experimental.automations flag check, which the Kilo host turns on through Flag.Overrides; a hook defect propagates instead of counting as fired, so the row keeps its due time and uses the existing failed-retry backoff. Kilo managed Flows and the wakeup plugin use the hook, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior."
     },
     "packages/schema/src/automation.ts": {
       "rung": 3,
-      "seam": "Add a generic hook-owned automation action alongside the native prompt and code actions. The scheduler advances it without native prompt admission even when its plugin owner is unavailable. A plugin hook cannot make the stored action safe before plugin activation, and host composition cannot persist ownership in the shared automation model."
+      "seam": "Add a generic hook-owned automation action alongside the native prompt and code actions, and widen only the service create input (`ServiceCreateInput`) so a plugin can write it; the public tool, RPC and OpenAPI create schemas stay prompt-only. The scheduler advances a hook row without native prompt admission even when its plugin owner is unavailable. A plugin hook cannot make the stored action safe before plugin activation, and host composition cannot persist ownership in the shared automation model."
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,
@@ -435,7 +439,7 @@
     },
     "packages/plugin/src/effect/session.ts": {
       "rung": 3,
-      "seam": "Session hooks for host-owned behavior. The `route` hook lets a plugin select another catalog model before a request is built; no existing hook reaches the request model early enough. The experimental `schedule` hook carries a due time schedule and a mutable claimed flag so a location plugin can take ownership before native prompt admission; no existing hook runs between scheduler leader election and admission. Both are generic type-only hooks with no Kilo values."
+      "seam": "Session hooks for host-owned behavior. The `route` hook lets a plugin select another catalog model before a request is built; no existing hook reaches the request model early enough. The experimental `automation` hook carries a due automation and a mutable claimed flag so a location plugin can take ownership before native prompt admission; no existing hook runs between scheduler leader election and admission. Both are generic type-only hooks with no Kilo values."
     },
     "packages/core/src/session/model-request.ts": {
       "rung": 3,

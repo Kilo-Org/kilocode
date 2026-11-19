@@ -7,6 +7,7 @@ import type { KiloWakeupRpc } from "@opencode/schema/kilocode/wakeup"
 import { Identifier } from "@opencode/schema/identifier"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { SessionID } from "@opencode/schema/session-id"
+import { automationID } from "../schedule-id"
 import { DateTime, Effect, Option, Semaphore } from "effect"
 import {
   clampNotice,
@@ -97,7 +98,7 @@ export function makeService(ctx: Ctx, schedules: Automation.Interface, emit: () 
   const write = (record: WakeupRecord) => ctx.storage.set(KEY + record.id, record).pipe(Effect.orDie)
 
   const removeSchedule = (id: string) =>
-    schedules.remove(Automation.ID.make(id)).pipe(Effect.catchTag("Automation.NotFoundError", () => Effect.void))
+    schedules.remove(automationID(id)).pipe(Effect.catchTag("Automation.NotFoundError", () => Effect.void))
 
   const drop = (record: WakeupRecord) =>
     ctx.storage.remove(KEY + record.id).pipe(Effect.ignore, Effect.andThen(removeSchedule(record.scheduleID)))
@@ -113,7 +114,7 @@ export function makeService(ctx: Ctx, schedules: Automation.Interface, emit: () 
       }
       const live: { record: WakeupRecord; info: Automation.Info }[] = []
       for (const record of records) {
-        const info = infos.get(record.scheduleID)
+        const info = infos.get(automationID(record.scheduleID))
         // Only an active row can fire. A paused row keeps its due time, so counting it would leave the session
         // `scheduled` and hold Keep Awake until the horizon although nothing can fire. The row is removed with the
         // record: the native schedule tools are not registered in the host, so nothing else could reach it again.
@@ -328,7 +329,7 @@ export function makeService(ctx: Ctx, schedules: Automation.Interface, emit: () 
   const fire = (info: Automation.Info) =>
     serial(
       Effect.gen(function* () {
-      const record = (yield* scan).find((item) => item.scheduleID === info.id)
+      const record = (yield* scan).find((item) => automationID(item.scheduleID) === info.id)
       if (record === undefined) return false
       const now = Date.now()
       const dueAt = millis(info.nextDueAt) ?? record.dueAt

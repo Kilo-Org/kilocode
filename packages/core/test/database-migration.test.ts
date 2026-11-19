@@ -465,13 +465,18 @@ describe("DatabaseMigration", () => {
         const insert = (
           id: string,
           when: string,
-          extra: { status?: string; check?: string; remaining?: number; name?: string } = {},
+          extra: { status?: string; check?: string; remaining?: number; name?: string; action?: string } = {},
         ) =>
           db.run(sql`
             INSERT INTO schedule (id, session_id, name, action, "when", tz, status, next_due_at, remaining_runs, "check", run_count, last_message_id, time_created, time_updated)
-            VALUES (${id}, 'ses_1', ${extra.name ?? null}, '{"type":"prompt","prompt":"check the build"}', ${when}, 'UTC', ${extra.status ?? "active"}, 60000, ${extra.remaining ?? null}, ${extra.check ?? null}, 2, ${`msg_${id}_2`}, 1, 2)
+            VALUES (${id}, 'ses_1', ${extra.name ?? null}, ${extra.action ?? '{"type":"prompt","prompt":"check the build"}'}, ${when}, 'UTC', ${extra.status ?? "active"}, 60000, ${extra.remaining ?? null}, ${extra.check ?? null}, 2, ${`msg_${id}_2`}, 1, 2)
           `)
         yield* insert("sch_cron", '{"type":"cron","cron":"0 9 * * *"}', { name: "morning" })
+        // kilocode_change - a hook-owned row carries over as a hook action even with a `times` limit
+        yield* insert("sch_hook", '{"type":"every","every":"1 minute"}', {
+          action: '{"type":"hook","prompt":"run the flow"}',
+          remaining: 3,
+        })
         yield* insert("sch_in", '{"type":"in","in":"1 minute"}', { status: "paused" })
         yield* insert("sch_gated", '{"type":"every","every":"1 minute"}', {
           check: '{"mode":"if","condition":{"type":"shell","run":"true"}}',
@@ -498,6 +503,20 @@ describe("DatabaseMigration", () => {
             next_due_at: 60000,
             run_count: 2,
             last_message_id: "msg_sch_cron_2",
+            event_position: null,
+          },
+          {
+            id: "aut_hook",
+            project_id: "prj_1",
+            session_id: "ses_1",
+            directory: "/repo",
+            name: "run the flow",
+            trigger: '{"type":"every","every":"1 minute"}',
+            action: '{"type":"hook","prompt":"run the flow"}',
+            status: "active",
+            next_due_at: 60000,
+            run_count: 2,
+            last_message_id: "msg_sch_hook_2",
             event_position: null,
           },
           {

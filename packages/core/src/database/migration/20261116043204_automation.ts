@@ -37,6 +37,7 @@ const migration: DatabaseMigration.Migration = {
       yield* tx.run(
         `CREATE INDEX \`automation_due_idx\` ON \`automation\` (\`next_due_at\`) WHERE "automation"."status" = 'active' and "automation"."next_due_at" is not null;`,
       )
+      // kilocode_change start - carry hook-owned rows as hook actions instead of native prompts
       // Carry over live schedules that map onto automations unchanged: a prompt into their Session with no `if` or
       // `until` check and no `ends.times` limit. Gated or counted schedules, and finished ones, are dropped, since
       // without their condition or limit they would run differently.
@@ -57,7 +58,10 @@ const migration: DatabaseMigration.Migration = {
             ELSE s.\`when\`
           END,
           s.\`tz\`,
-          json_object('type', 'prompt', 'prompt', json_extract(s.\`action\`, '$.prompt'), 'to', json_object('session', s.\`session_id\`)),
+          CASE json_extract(s.\`action\`, '$.type')
+            WHEN 'hook' THEN json_object('type', 'hook', 'prompt', json_extract(s.\`action\`, '$.prompt'))
+            ELSE json_object('type', 'prompt', 'prompt', json_extract(s.\`action\`, '$.prompt'), 'to', json_object('session', s.\`session_id\`))
+          END,
           s.\`status\`,
           s.\`next_due_at\`,
           s.\`ends_at\`,
@@ -72,9 +76,11 @@ const migration: DatabaseMigration.Migration = {
         JOIN \`session_v2\` v ON v.\`id\` = s.\`session_id\`
         WHERE s.\`status\` IN ('active', 'paused')
           AND s.\`check\` IS NULL
-          AND s.\`remaining_runs\` IS NULL
+          -- A hook-owned row (Kilo Flow or wakeup) becomes a hook action and keeps its times limit in the owner.
+          AND (json_extract(s.\`action\`, '$.type') = 'hook' OR s.\`remaining_runs\` IS NULL)
           AND s.\`next_due_at\` IS NOT NULL;
       `)
+      // kilocode_change end
       yield* tx.run(`DROP TABLE \`schedule\`;`)
     })
   },

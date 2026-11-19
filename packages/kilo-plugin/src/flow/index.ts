@@ -11,7 +11,17 @@ import type { SessionEvent } from "@opencode/schema/session-event"
 import { Tool } from "@opencode/schema/tool"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Cause, DateTime, Effect, Option, Ref, Schema, Semaphore, Stream } from "effect"
-import { automationID, backingSchedule, instant, remaining, scheduleKey, status, time, trigger } from "./native"
+import {
+  automationID,
+  backingSchedule,
+  instant,
+  legacyScheduleKey,
+  remaining,
+  scheduleKey,
+  status,
+  time,
+  trigger,
+} from "./native"
 import {
   flowPermissions,
   permissionInstructions,
@@ -73,7 +83,9 @@ export const KiloFlowPlugin = define({
     )
     yield* ctx.session.hook("experimental.automation", (event) =>
       Effect.gen(function* () {
-        const flowID = Option.getOrUndefined(decodeFlowID(yield* ctx.storage.get(scheduleKey(event.automation.id))))
+        const current = yield* ctx.storage.get(scheduleKey(event.automation.id))
+        const migrated = current === undefined ? yield* ctx.storage.get(legacyScheduleKey(event.automation.id)) : current
+        const flowID = Option.getOrUndefined(decodeFlowID(migrated))
         if (flowID === undefined) return
         // Claim only once the occurrence has started or was deliberately skipped. A start failure dies here so the
         // scheduler keeps the due time and retries with its failed-retry backoff instead of advancing the row.
@@ -690,7 +702,7 @@ export function run(
 
 function control(
   ctx: Plugin.Context,
-  schedules: Pick<Automation.Interface, "pause" | "resume">,
+  schedules: Pick<Automation.Interface, "get" | "pause" | "resume">,
   input: KiloFlowRpc.ControlInput,
   authorizedProjectID: Session.Info["projectID"],
   operation: "pause" | "resume",
@@ -699,10 +711,16 @@ function control(
   return Effect.gen(function* () {
     const record = yield* requireRecord(ctx, input.flowID, authorizedProjectID)
     if (!record.scheduleID) return yield* Effect.fail(new Error(`Flow ${record.id} has no backing schedule`))
-    const schedule = yield* (operation === "pause"
-      ? schedules.pause(automationID(record.scheduleID))
-      : schedules.resume(automationID(record.scheduleID))
-    ).pipe(Effect.mapError((error) => new Error(error.message)))
+    const id = automationID(record.scheduleID)
+    // A `times`-exhausted Flow stays finished: resuming it would fire a phantom run the limit already used up.
+    if (operation === "resume") {
+      const current = yield* schedules.get(id).pipe(Effect.mapError((error) => new Error(error.message)))
+      if (remaining(record.ends, current) === 0)
+        return yield* Effect.fail(new Error(`Flow ${record.id} has finished all ${record.ends?.times} runs`))
+    }
+    const schedule = yield* (operation === "pause" ? schedules.pause(id) : schedules.resume(id)).pipe(
+      Effect.mapError((error) => new Error(error.message)),
+    )
     yield* notify(runtime, record, "updated")
     return managed(record, schedule, (yield* latest(ctx, record.id)).run)
   })
@@ -871,10 +889,15 @@ export function scheduled(
 ): Effect.Effect<"fired" | "skipped" | "paused" | "orphaned", Error> {
   return Effect.gen(function* () {
     const record = Option.getOrUndefined(decodeRecord(yield* ctx.storage.get(`${prefix}${flowID}`)))
-    if (!record || record.id !== flowID || (record.scheduleID !== undefined && record.scheduleID !== schedule.id)) {
+    if (
+      !record ||
+      record.id !== flowID ||
+      (record.scheduleID !== undefined && automationID(record.scheduleID) !== schedule.id)
+    ) {
       // A stale index must not retry forever; the hook action is never admitted, so the row simply advances.
       yield* Effect.logWarning("removing stale Flow schedule index", { scheduleID: schedule.id, flowID })
       yield* ctx.storage.remove(scheduleKey(schedule.id))
+      yield* ctx.storage.remove(legacyScheduleKey(schedule.id))
       return "orphaned" as const
     }
     // A Flow's `times` limit is Kilo-side: an automation row only carries a single expiry.
@@ -1243,17 +1266,24 @@ function managed(
       status: "error",
       health: { status: "error", message: `Backing schedule ${record.scheduleID} no longer exists` },
     }
+  const left = remaining(record.ends, schedule)
   return {
     ...shared,
-    status: status(schedule.status),
+    // A `times`-exhausted row is paused by the claim hook; the Flow itself is finished, not paused.
+    status: settledStatus(status(schedule.status), left),
     nextRunAt: instant(schedule.nextDueAt),
     lastRunAt: run?.time.started ?? run?.time.created ?? instant(schedule.lastRunAt),
     lastOutcome: (run && outcome(run)) ?? schedule.lastOutcome,
     ...(schedule.expires ? { endsAt: instant(schedule.expires) } : {}),
-    ...(remaining(record.ends, schedule) === undefined ? {} : { remainingRuns: remaining(record.ends, schedule) }),
+    ...(left === undefined ? {} : { remainingRuns: left }),
     ...(run ? { latestRun: run } : {}),
     health,
   }
+}
+
+/** A Flow whose `times` limit is used up is finished even though the row is paused. */
+function settledStatus(value: KiloFlowRpc.Status, left: number | undefined) {
+  return left === 0 ? "completed" : value
 }
 
 function outcome(run: KiloFlowRpc.Run): KiloFlowRpc.RunOutcome | undefined {

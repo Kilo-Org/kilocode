@@ -1,12 +1,16 @@
 import { Automation } from "@opencode/core/automation"
 import type { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import type { Session } from "@opencode/schema/session"
-import { DateTime } from "effect"
+import { durationMillis } from "@opencode/schema/automation"
+import { DateTime, Option } from "effect"
+import { automationID } from "../schedule-id"
+
+export { automationID }
 
 const schedulePrefix = "flow-schedule:v1:"
 
 /** The native automation row that fires a Flow. Its hook prompt is descriptive only: the scheduler never admits it. */
-export function backingSchedule(record: KiloFlowRpc.Record, sessionID: Session.ID): Automation.CreateInput {
+export function backingSchedule(record: KiloFlowRpc.Record, sessionID: Session.ID): Automation.ServiceCreateInput {
   const expires = expiry(record.ends)
   return {
     sessionID,
@@ -21,9 +25,9 @@ export function scheduleKey(scheduleID: KiloFlowRpc.ScheduleID) {
   return `${schedulePrefix}${scheduleID}`
 }
 
-/** Stored backing ids may predate automation's `aut_` prefix; the service only needs the brand at its boundary. */
-export function automationID(id: KiloFlowRpc.ScheduleID): Automation.ID {
-  return Automation.ID.make(id)
+/** The pre-2.3.1 storage key for a row the migration renamed from `sch_` to `aut_`. */
+export function legacyScheduleKey(scheduleID: KiloFlowRpc.ScheduleID) {
+  return `${schedulePrefix}${scheduleID.startsWith("aut_") ? `sch_${scheduleID.slice(4)}` : scheduleID}`
 }
 
 /** A Flow's `times` limit, counted against the native row because automation rows only carry a single expiry. */
@@ -74,7 +78,11 @@ function triggerOf(when: KiloFlowRpc.When, timezone: string): Automation.Trigger
 /** Automation rows carry one expiry; a `times` limit is enforced by the Flow claim hook. */
 function expiry(ends: KiloFlowRpc.Ends | undefined) {
   if (!ends) return undefined
-  if (ends.at) return ends.at
-  if (ends.after) return `in ${ends.after}`
-  return undefined
+  const at = ends.at === undefined ? undefined : Date.parse(ends.at)
+  const after =
+    ends.after === undefined ? undefined : Date.now() + Option.getOrElse(durationMillis(ends.after), () => 0)
+  // The Flow stops at whichever limit comes first, as the RPC documents, so keep the earlier instant.
+  const first = at !== undefined && after !== undefined ? Math.min(at, after) : (at ?? after)
+  if (first === undefined || Number.isNaN(first)) return undefined
+  return new Date(first).toISOString()
 }

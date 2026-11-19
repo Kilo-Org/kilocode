@@ -4719,7 +4719,6 @@ export type ExperimentalAutomationCreateInput = {
           | { readonly subagent: string; readonly session?: never }
       }
     | { readonly type: "code"; readonly code: string; readonly args?: JsonValue }
-    | { readonly type: "hook"; readonly prompt: string }
   readonly expires?: string | undefined
 }
 

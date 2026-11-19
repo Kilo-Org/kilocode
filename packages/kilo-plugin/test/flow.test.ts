@@ -14,6 +14,7 @@ import path from "node:path"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { assemble, create, flowPermissions, list, permissionInstructions, scheduled, storedRecord } from "../src/flow"
 import { KiloFlowPlugin } from "../src/flow"
+import { backingSchedule, automationID, legacyScheduleKey } from "../src/flow/native"
 import { validatePermissions } from "../src/flow/permissions"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Session } from "@opencode/schema/session"
@@ -59,6 +60,13 @@ const scheduleMock = Layer.mock(Automation.Service, {
     const paused: Automation.Info = { ...found, status: "paused" }
     backingSchedules.set(scheduleID, paused)
     return Effect.succeed(paused)
+  },
+  resume: (scheduleID) => {
+    const found = backingSchedules.get(scheduleID)
+    if (!found) return Effect.fail(new Automation.NotFoundError({ automationID: scheduleID }))
+    const active: Automation.Info = { ...found, status: "active" }
+    backingSchedules.set(scheduleID, active)
+    return Effect.succeed(active)
   },
   remove: (scheduleID) => Effect.sync(() => backingSchedules.delete(scheduleID)).pipe(Effect.asVoid),
 })
@@ -146,6 +154,22 @@ const record = (id: string, scheduleID?: Automation.ID) =>
     ...(scheduleID ? { scheduleID } : {}),
     time: { created: 1, updated: 2 },
   })
+
+test("resolves a carried sch_ backing id on its renamed aut_ row", () => {
+  expect(String(automationID("sch_abc"))).toBe("aut_abc")
+  expect(String(automationID("aut_abc"))).toBe("aut_abc")
+  expect(legacyScheduleKey(Automation.ID.make("aut_abc"))).toBe("flow-schedule:v1:sch_abc")
+})
+
+test("keeps the earlier ends limit when both are present", () => {
+  const far = new Date(Date.now() + 86_400_000).toISOString()
+  const input = backingSchedule(
+    { ...record("flw_ends"), ends: { at: far, after: "1 millisecond" } } as KiloFlowRpc.Record,
+    session.id,
+  )
+  expect(input.expires).toBeDefined()
+  expect(Date.parse(input.expires!)).toBeLessThan(Date.parse(far))
+})
 
 test("aggregates timed native automations with Session metadata and status mapping", () => {
   const time = schedule({ id: "aut_time", sessionID: session.id, next: 200 })
