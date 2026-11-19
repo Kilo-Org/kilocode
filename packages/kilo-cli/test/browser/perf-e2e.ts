@@ -20,7 +20,8 @@ import os from "node:os"
 import path from "node:path"
 
 const binaryInput = process.argv[2]
-if (!binaryInput || binaryInput.startsWith("--")) throw new Error("usage: bun perf-e2e.ts <kilo2> [--reps 20] [--areas a,b] [--out dir]")
+if (!binaryInput || binaryInput.startsWith("--"))
+  throw new Error("usage: bun perf-e2e.ts <kilo2> [--reps 20] [--areas a,b] [--out dir]")
 const binary = path.resolve(binaryInput)
 const flag = (name: string, fallback: string) => {
   const at = process.argv.indexOf(`--${name}`)
@@ -47,7 +48,11 @@ const playwright: any = await import(Bun.resolveSync("playwright-core", pluginDi
 const html = (title: string, body: string) =>
   `<!doctype html>\n<html><head><meta charset="utf-8"><title>${title}</title></head><body>${body}</body></html>`
 const marker = (url: URL) =>
-  url.searchParams.has("run") ? `Run ${url.searchParams.get("run")}` : url.searchParams.has("tab") ? `Tab ${url.searchParams.get("tab")}` : "Perf"
+  url.searchParams.has("run")
+    ? `Run ${url.searchParams.get("run")}`
+    : url.searchParams.has("tab")
+      ? `Tab ${url.searchParams.get("tab")}`
+      : "Perf"
 const CLICK = `<script>document.getElementById("go").addEventListener("click", () => {
   document.getElementById("status").textContent = "clicked"; document.body.style.background = "#00ff00" })</script>`
 const BIG = (() => {
@@ -61,7 +66,10 @@ const BIG = (() => {
 })()
 const LONG = html(
   "Long",
-  Array.from({ length: 100 }, (_, i) => `<div style="height:200px;background:hsl(${(i * 37) % 360},70%,60%)">Band ${i}</div>`).join(""),
+  Array.from(
+    { length: 100 },
+    (_, i) => `<div style="height:200px;background:hsl(${(i * 37) % 360},70%,60%)">Band ${i}</div>`,
+  ).join(""),
 )
 
 const servers: { stop(force?: boolean): void }[] = []
@@ -81,23 +89,35 @@ function page(url: URL): string {
       `<iframe src="${origins.b}/frame?n=0" style="position:fixed;left:0;top:0;width:320px;height:200px;border:0"></iframe>
 <h1 style="position:fixed;left:400px;top:0">Perf</h1>`,
     )
-  if (p === "/frame") return html(`Frame ${url.searchParams.get("n")}`, `<h2>Frame ${url.searchParams.get("n")}</h2><button>Frame button ${url.searchParams.get("n")}</button>`)
+  if (p === "/frame")
+    return html(
+      `Frame ${url.searchParams.get("n")}`,
+      `<h2>Frame ${url.searchParams.get("n")}</h2><button>Frame button ${url.searchParams.get("n")}</button>`,
+    )
   if (p === "/iframes")
     return html(
       "Iframes",
       `<h1>Iframes</h1>` +
-        Array.from({ length: 20 }, (_, i) => `<iframe src="${i % 2 === 0 ? origins.a : origins.b}/frame?n=${i}" style="width:300px;height:150px"></iframe>`).join(""),
+        Array.from(
+          { length: 20 },
+          (_, i) =>
+            `<iframe src="${i % 2 === 0 ? origins.a : origins.b}/frame?n=${i}" style="width:300px;height:150px"></iframe>`,
+        ).join(""),
     )
   if (p === "/big") return BIG
   if (p === "/long") return LONG
   const name = marker(url)
   return html(`Perf ${name}`, `<h1>${name}</h1><button id="go">Click me</button><p id="status">idle</p>${CLICK}`)
 }
-for (const [key, hostname] of [["a", "127.0.0.1"], ["b", "127.0.0.2"]] as const) {
+for (const [key, hostname] of [
+  ["a", "127.0.0.1"],
+  ["b", "127.0.0.2"],
+] as const) {
   const server = Bun.serve({
     hostname,
     port: 0,
-    fetch: (request) => new Response(page(new URL(request.url)), { headers: { "content-type": "text/html; charset=utf-8" } }),
+    fetch: (request) =>
+      new Response(page(new URL(request.url)), { headers: { "content-type": "text/html; charset=utf-8" } }),
   })
   servers.push(server)
   origins[key] = server.url.origin
@@ -108,7 +128,14 @@ const A = origins.a
 // The scripted model: one plan per CLI run, addressed by the run id in the base URL path.
 
 type Call = { tool: string; args: unknown }
-type Step = { label: string; call: Call; expect?: RegExp; reject?: RegExp; keepImage?: boolean; before?: () => Promise<void> }
+type Step = {
+  label: string
+  call: Call
+  expect?: RegExp
+  reject?: RegExp
+  keepImage?: boolean
+  before?: () => Promise<void>
+}
 type Result = { text: string; bytes: number; imageBytes: number; image?: string }
 type Plan = (i: number, results: Result[], steps: Step[]) => Step | undefined
 type RunState = { plan: Plan; steps: Step[]; results: Result[]; firstRequestAt?: number; pid?: number }
@@ -119,16 +146,36 @@ const chunk = (model: string, delta: object, finish: string | null) =>
 let callSeq = 0
 const toolCall = (model: string, name: string, args: unknown) =>
   [
-    chunk(model, { role: "assistant", tool_calls: [{ function: { arguments: JSON.stringify(args), name }, id: `call_${(callSeq += 1)}`, index: 0, type: "function" }] }, null),
+    chunk(
+      model,
+      {
+        role: "assistant",
+        tool_calls: [
+          {
+            function: { arguments: JSON.stringify(args), name },
+            id: `call_${(callSeq += 1)}`,
+            index: 0,
+            type: "function",
+          },
+        ],
+      },
+      null,
+    ),
     chunk(model, {}, "tool_calls"),
     "data: [DONE]\n\n",
   ].join("")
-const answer = (model: string, text: string) => [chunk(model, { content: text, role: "assistant" }, null), chunk(model, {}, "stop"), "data: [DONE]\n\n"].join("")
-const field = (value: unknown, key: string): unknown => (typeof value === "object" && value !== null ? (value as Record<string, unknown>)[key] : undefined)
+const answer = (model: string, text: string) =>
+  [chunk(model, { content: text, role: "assistant" }, null), chunk(model, {}, "stop"), "data: [DONE]\n\n"].join("")
+const field = (value: unknown, key: string): unknown =>
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>)[key] : undefined
 const textOf = (content: unknown): string => {
   if (typeof content === "string") return content
   if (!Array.isArray(content)) return ""
-  return content.flatMap((part) => (field(part, "type") === "text" && typeof field(part, "text") === "string" ? [String(field(part, "text"))] : [])).join("\n")
+  return content
+    .flatMap((part) =>
+      field(part, "type") === "text" && typeof field(part, "text") === "string" ? [String(field(part, "text"))] : [],
+    )
+    .join("\n")
 }
 const IMAGE = /data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+/g
 
@@ -171,11 +218,15 @@ const model = Bun.serve({
       await step.before?.()
     }
     const declared = field(body, "tools")
-    const direct = Array.isArray(declared) && declared.some((tool) => String(field(field(tool, "function"), "name")).startsWith("browser_"))
+    const direct =
+      Array.isArray(declared) &&
+      declared.some((tool) => String(field(field(tool, "function"), "name")).startsWith("browser_"))
     return sse(
       direct
         ? toolCall(name, step.call.tool, step.call.args)
-        : toolCall(name, "execute", { code: `return await tools.browser.${step.call.tool.slice("browser_".length)}(${JSON.stringify(step.call.args)})` }),
+        : toolCall(name, "execute", {
+            code: `return await tools.browser.${step.call.tool.slice("browser_".length)}(${JSON.stringify(step.call.args)})`,
+          }),
     )
   },
 })
@@ -204,7 +255,11 @@ function processTable() {
   }
   return table
 }
-function subtree(table: Map<number, { ppid: number; cmd: string }>, root: number, skip?: (pid: number) => boolean): number[] {
+function subtree(
+  table: Map<number, { ppid: number; cmd: string }>,
+  root: number,
+  skip?: (pid: number) => boolean,
+): number[] {
   const out: number[] = []
   const queue = [root]
   while (queue.length) {
@@ -226,14 +281,47 @@ function memoryOf(pids: number[]) {
     } catch {}
   return { rssMb: Math.round(rss / 1024), pssMb: Math.round(pss / 1024), processes: pids.length }
 }
-const isChrome = (table: Map<number, { ppid: number; cmd: string }>) => (pid: number) => /chrom(e|ium)/i.test(table.get(pid)?.cmd.split(" ")[0] ?? "")
+const isChrome = (table: Map<number, { ppid: number; cmd: string }>) => (pid: number) =>
+  /chrom(e|ium)/i.test(table.get(pid)?.cmd.split(" ")[0] ?? "")
 
-type Sample = { label: string; ms: number; start: number; end: number; status: string; ok: boolean; bytes: number; imageBytes: number; text: string }
-type RunOutcome = { id: string; backend: Backend; code: number | null; spawnedAt: number; firstRequestAt?: number; exitedAt: number; samples: Sample[]; stderr: string; results: Result[]; steps: Step[] }
-type Stat = { n: number; failures: number; median: number; p95: number; min: number; max: number; bytesMedian: number; imageBytesMedian: number; failureSamples: string[] }
+type Sample = {
+  label: string
+  ms: number
+  start: number
+  end: number
+  status: string
+  ok: boolean
+  bytes: number
+  imageBytes: number
+  text: string
+}
+type RunOutcome = {
+  id: string
+  backend: Backend
+  code: number | null
+  spawnedAt: number
+  firstRequestAt?: number
+  exitedAt: number
+  samples: Sample[]
+  stderr: string
+  results: Result[]
+  steps: Step[]
+}
+type Stat = {
+  n: number
+  failures: number
+  median: number
+  p95: number
+  min: number
+  max: number
+  bytesMedian: number
+  imageBytesMedian: number
+  failureSamples: string[]
+}
 
 // Model-visible failure: a named browser error, a thrown error, or a tool that reports its own failure in text.
-const FAILURE = /\b(browser_unavailable|tab_busy|tab_taken|user_stopped|unsupported_in_browser|needs_permission|blocked|origin_changed|protocol_mismatch)\b|Error:|is not available|not connected|unavailable|field\(s\) failed|stale or unknown|is not open/i
+const FAILURE =
+  /\b(browser_unavailable|tab_busy|tab_taken|user_stopped|unsupported_in_browser|needs_permission|blocked|origin_changed|protocol_mismatch)\b|Error:|is not available|not connected|unavailable|field\(s\) failed|stale or unknown|is not open/i
 
 function stat(samples: Sample[]): Stat {
   const values = samples.map((sample) => sample.ms)
@@ -247,7 +335,9 @@ function stat(samples: Sample[]): Stat {
     max: Math.max(...values),
     bytesMedian: median(samples.map((sample) => sample.bytes)),
     imageBytesMedian: median(samples.map((sample) => sample.imageBytes)),
-    failureSamples: [...new Set(failures.map((sample) => `${sample.status}: ${sample.text.replace(/\s+/g, " ").slice(0, 240)}`))].slice(0, 3),
+    failureSamples: [
+      ...new Set(failures.map((sample) => `${sample.status}: ${sample.text.replace(/\s+/g, " ").slice(0, 240)}`)),
+    ].slice(0, 3),
   }
 }
 function byLabel(samples: Sample[]): Record<string, Stat> {
@@ -285,21 +375,31 @@ function baseEnv(backend: Backend, extensionId = "") {
 }
 await fs.mkdir(path.join(base, "bin"), { recursive: true })
 await fs.writeFile(path.join(base, "bin", "xdg-open"), "#!/bin/sh\nexit 0\n", { mode: 0o755 })
-for (const backend of ["extension", "playwright"] as const) await fs.mkdir(path.join(base, backend, "run"), { recursive: true, mode: 0o700 })
+for (const backend of ["extension", "playwright"] as const)
+  await fs.mkdir(path.join(base, backend, "run"), { recursive: true, mode: 0o700 })
 
 async function spawnText(argv: string[], env: Record<string, string>, cwd: string) {
   const child = Bun.spawn(argv, { cwd, env, stderr: "pipe", stdout: "pipe", timeout: 600_000 })
-  const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
+  const [out, err, code] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ])
   return { out, err, code }
 }
 
 // The Playwright backend's Chromium, installed once into `<XDG_DATA_HOME>/kilo2/browser/browsers`; every run links
 // that directory into its own data home. The extension runs in the same build unless E2E_CHROMIUM says otherwise.
 const browsersDir = path.join(base, "xdg-data", "kilo2", "browser", "browsers")
-const install = await spawnText([binary, "browser", "install-chromium"], { ...baseEnv("playwright").env, XDG_DATA_HOME: path.join(base, "xdg-data") }, base)
+const install = await spawnText(
+  [binary, "browser", "install-chromium"],
+  { ...baseEnv("playwright").env, XDG_DATA_HOME: path.join(base, "xdg-data") },
+  base,
+)
 console.error(`install-chromium exit ${install.code}: ${(install.out + install.err).trim().slice(-200)}`)
 const installedChrome = (() => {
-  for (const file of new Bun.Glob("*/chrome-linux*/chrome").scanSync({ cwd: browsersDir, onlyFiles: true })) return path.join(browsersDir, file)
+  for (const file of new Bun.Glob("*/chrome-linux*/chrome").scanSync({ cwd: browsersDir, onlyFiles: true }))
+    return path.join(browsersDir, file)
   return undefined
 })()
 const chromium = process.env.E2E_CHROMIUM ?? installedChrome ?? playwright.chromium.executablePath()
@@ -324,12 +424,22 @@ async function launchExtension() {
   const loaded = path.join(base, "extension")
   await fs.cp(extensionDirectory, loaded, { recursive: true })
   const manifestPath = path.join(loaded, "manifest.json")
-  const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8")) as { optional_permissions?: string[]; permissions?: string[] }
+  const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8")) as {
+    optional_permissions?: string[]
+    permissions?: string[]
+  }
   const permissions = [...new Set([...(manifest.permissions ?? []), "downloads"])]
   const optional = (manifest.optional_permissions ?? []).filter((permission) => permission !== "downloads")
-  await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, optional_permissions: optional, permissions }, null, 2))
+  await fs.writeFile(
+    manifestPath,
+    JSON.stringify({ ...manifest, optional_permissions: optional, permissions }, null, 2),
+  )
   ext.context = await playwright.chromium.launchPersistentContext(ext.profile, {
-    args: [`--disable-extensions-except=${loaded}`, `--load-extension=${loaded}`, "--disable-blink-features=AutomationControlled"],
+    args: [
+      `--disable-extensions-except=${loaded}`,
+      `--load-extension=${loaded}`,
+      "--disable-blink-features=AutomationControlled",
+    ],
     executablePath: chromium,
     headless: false,
     ignoreDefaultArgs: ["--enable-automation"],
@@ -343,7 +453,9 @@ async function launchExtension() {
   // The signed-in session's endpoints, on the store origin and on the campaign build's VITE_KILO_API_BASE_URL
   // (http://localhost:3000, where another stack may answer 401): the side panel only shows Settings when signed in.
   await ctx.route(
-    (url: URL) => (url.origin === "https://app.kilo.ai" || url.origin === "http://localhost:3000") && url.pathname.startsWith("/api/"),
+    (url: URL) =>
+      (url.origin === "https://app.kilo.ai" || url.origin === "http://localhost:3000") &&
+      url.pathname.startsWith("/api/"),
     (route: any) => {
       const pathname = new URL(route.request().url()).pathname
       if (pathname === "/api/user") return route.fulfill({ json: { google_user_email: "perf@kilo.ai" }, status: 200 })
@@ -351,7 +463,9 @@ async function launchExtension() {
       return route.fulfill({ json: {}, status: 200 })
     },
   )
-  await ctx.addInitScript({ content: "Object.defineProperty(chrome.permissions, 'request', { value: () => Promise.resolve(true) });" })
+  await ctx.addInitScript({
+    content: "Object.defineProperty(chrome.permissions, 'request', { value: () => Promise.resolve(true) });",
+  })
   const panel = await ctx.newPage()
   await panel.goto(`chrome-extension://${ext.id}/sidepanel.html`)
   await panel.evaluate(
@@ -371,7 +485,15 @@ async function launchExtension() {
     .click({ timeout: 20_000 })
     .catch(async (error: unknown) => {
       await panel.screenshot({ path: path.join(evidenceDir, "panel-no-settings.png") }).catch(() => undefined)
-      throw new Error(`no Settings button; panel text: ${(await panel.locator("body").innerText().catch(() => "")).slice(0, 600)}`, { cause: error })
+      throw new Error(
+        `no Settings button; panel text: ${(
+          await panel
+            .locator("body")
+            .innerText()
+            .catch(() => "")
+        ).slice(0, 600)}`,
+        { cause: error },
+      )
     })
   const toggle = panel.getByRole("switch", { name: "Allow local agents" })
   await toggle.waitFor()
@@ -382,7 +504,12 @@ async function launchExtension() {
   const { root, env } = baseEnv("extension", ext.id)
   const port = await freePort()
   const started = Date.now()
-  ext.hub = Bun.spawn([binary, "browser", "hub", "--loopback", "--port", String(port)], { cwd: root, env, stderr: "pipe", stdout: "pipe" })
+  ext.hub = Bun.spawn([binary, "browser", "hub", "--loopback", "--port", String(port)], {
+    cwd: root,
+    env,
+    stderr: "pipe",
+    stdout: "pipe",
+  })
   for (const stream of [ext.hub.stdout, ext.hub.stderr] as ReadableStream<Uint8Array>[])
     void (async () => {
       const decoder = new TextDecoder()
@@ -392,7 +519,11 @@ async function launchExtension() {
   const pairing = await hubRequest(entry.socket, "pairing.url")
   const cdp = await ext.context.newCDPSession(panel)
   await cdp.send("Target.createTarget", { newWindow: true, url: pairing.url })
-  await poll(async () => ((await readEntry(root))?.paired === true ? true : undefined), 30_000, "extension did not pair")
+  await poll(
+    async () => ((await readEntry(root))?.paired === true ? true : undefined),
+    30_000,
+    "extension did not pair",
+  )
   ext.pairingMs = Date.now() - started
 }
 
@@ -508,7 +639,11 @@ function topSelf(profile: any, limit = 15) {
   return {
     totalMs: Math.round(total),
     busyMs: Math.round(total - idle),
-    top: [...self].filter(([key]) => !key.startsWith("(idle)")).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([key, ms]) => ({ fn: key, selfMs: Math.round(ms) })),
+    top: [...self]
+      .filter(([key]) => !key.startsWith("(idle)"))
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([key, ms]) => ({ fn: key, selfMs: Math.round(ms) })),
   }
 }
 /** Stops the extension worker; the method that worked and how long until its target was gone. */
@@ -527,18 +662,28 @@ async function stopWorker(helper: any): Promise<{ method: string; ms: number; go
   session.on("ServiceWorker.workerVersionUpdated", (event: any) => versions.push(...event.versions))
   await session.send("ServiceWorker.enable")
   await Bun.sleep(300)
-  const mine = versions.filter((version) => String(version.scriptURL).includes(ext.id) && version.runningStatus === "running")
-  for (const version of mine) await session.send("ServiceWorker.stopWorker", { versionId: version.versionId }).catch(() => undefined)
+  const mine = versions.filter(
+    (version) => String(version.scriptURL).includes(ext.id) && version.runningStatus === "running",
+  )
+  for (const version of mine)
+    await session.send("ServiceWorker.stopWorker", { versionId: version.versionId }).catch(() => undefined)
   await session.detach().catch(() => undefined)
-  if (mine.length && (await gone(5_000))) return { method: "ServiceWorker.stopWorker", ms: Date.now() - started, gone: true }
+  if (mine.length && (await gone(5_000)))
+    return { method: "ServiceWorker.stopWorker", ms: Date.now() - started, gone: true }
   const target = await swTarget()
   if (target) await ext.cdp.send("Target.closeTarget", { targetId: target.targetId }).catch(() => undefined)
   const closed = await gone(5_000)
-  return { method: mine.length ? "ServiceWorker.stopWorker+Target.closeTarget" : "Target.closeTarget", ms: Date.now() - started, gone: closed }
+  return {
+    method: mine.length ? "ServiceWorker.stopWorker+Target.closeTarget" : "Target.closeTarget",
+    ms: Date.now() - started,
+    gone: closed,
+  }
 }
 function extensionMemory() {
   const table = processTable()
-  const main = [...table].find(([, info]) => info.cmd.includes(`--user-data-dir=${ext.profile}`) && !info.cmd.includes("--type="))?.[0]
+  const main = [...table].find(
+    ([, info]) => info.cmd.includes(`--user-data-dir=${ext.profile}`) && !info.cmd.includes("--type="),
+  )?.[0]
   return {
     browser: main ? memoryOf(subtree(table, main)) : undefined,
     hub: ext.hub ? memoryOf(subtree(table, ext.hub.pid)) : undefined,
@@ -549,7 +694,11 @@ function extensionMemory() {
 // One `kilo2 run` with a plan.
 
 let runSeq = 0
-async function runCli(backend: Backend, plan: Plan, options: { timeoutMs?: number; tag?: string; onSpawn?: (state: RunState) => void } = {}): Promise<RunOutcome> {
+async function runCli(
+  backend: Backend,
+  plan: Plan,
+  options: { timeoutMs?: number; tag?: string; onSpawn?: (state: RunState) => void } = {},
+): Promise<RunOutcome> {
   const id = `${backend.slice(0, 3)}-${(runSeq += 1)}${options.tag ? `-${options.tag}` : ""}`
   const state: RunState = { plan, steps: [], results: [] }
   runs.set(id, state)
@@ -579,16 +728,23 @@ async function runCli(backend: Backend, plan: Plan, options: { timeoutMs?: numbe
     XDG_STATE_HOME: path.join(dir, "state"),
   }
   const spawnedAt = Date.now()
-  const child = Bun.spawn([binary, "run", "Measure the browser.", "--model", "local/echo", "--standalone", "--format", "json"], {
-    cwd: dir,
-    env: runEnv,
-    stderr: "pipe",
-    stdout: "pipe",
-    timeout: options.timeoutMs ?? 900_000,
-  })
+  const child = Bun.spawn(
+    [binary, "run", "Measure the browser.", "--model", "local/echo", "--standalone", "--format", "json"],
+    {
+      cwd: dir,
+      env: runEnv,
+      stderr: "pipe",
+      stdout: "pipe",
+      timeout: options.timeoutMs ?? 900_000,
+    },
+  )
   state.pid = child.pid
   options.onSpawn?.(state)
-  const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ])
   const exitedAt = Date.now()
   const samples: Sample[] = []
   for (const line of stdout.split("\n")) {
@@ -608,7 +764,10 @@ async function runCli(backend: Backend, plan: Plan, options: { timeoutMs?: numbe
     const result = state.results[index]
     const text = result?.text ?? String(part.state?.output ?? part.state?.error ?? "")
     const status = String(part.state?.status ?? "")
-    const ok = status === "completed" && (step?.expect ? step.expect.test(text) : !FAILURE.test(text)) && !(step?.reject?.test(text) ?? false)
+    const ok =
+      status === "completed" &&
+      (step?.expect ? step.expect.test(text) : !FAILURE.test(text)) &&
+      !(step?.reject?.test(text) ?? false)
     samples.push({
       label: step?.label ?? part.tool,
       ms: time.end - time.start,
@@ -623,8 +782,21 @@ async function runCli(backend: Backend, plan: Plan, options: { timeoutMs?: numbe
   }
   runs.delete(id)
   if (code !== 0 || samples.length !== state.steps.length)
-    console.error(`[${id}] exit ${code}, ${samples.length} tool events for ${state.steps.length} steps; stderr: ${stderr.slice(-400)}`)
-  return { id, backend, code, spawnedAt, firstRequestAt: state.firstRequestAt, exitedAt, samples, stderr: stderr.slice(-1500), results: state.results, steps: state.steps }
+    console.error(
+      `[${id}] exit ${code}, ${samples.length} tool events for ${state.steps.length} steps; stderr: ${stderr.slice(-400)}`,
+    )
+  return {
+    id,
+    backend,
+    code,
+    spawnedAt,
+    firstRequestAt: state.firstRequestAt,
+    exitedAt,
+    samples,
+    stderr: stderr.slice(-1500),
+    results: state.results,
+    steps: state.steps,
+  }
 }
 
 /** A plan from a fixed sequence of step builders; each builder sees the results so far. */
@@ -641,8 +813,13 @@ function ref(results: Result[], role: string, name: string, fallback: string): s
   }
   return fallback
 }
-const step = (label: string, tool: string, args: unknown, extra: Partial<Step> = {}): Step => ({ label, call: { tool: `browser_${tool}`, args }, ...extra })
-const repeat = <T>(count: number, make: (index: number) => T[]): T[] => Array.from({ length: count }, (_, index) => make(index)).flat()
+const step = (label: string, tool: string, args: unknown, extra: Partial<Step> = {}): Step => ({
+  label,
+  call: { tool: `browser_${tool}`, args },
+  ...extra,
+})
+const repeat = <T>(count: number, make: (index: number) => T[]): T[] =>
+  Array.from({ length: count }, (_, index) => make(index)).flat()
 
 const TOOL_CYCLE: ((results: Result[]) => Step)[] = [
   () => step("navigate", "navigate", { url: `${A}/form` }),
@@ -663,7 +840,10 @@ const TOOL_CYCLE: ((results: Result[]) => Step)[] = [
     step(
       "evaluate",
       "evaluate",
-      { function: "() => JSON.stringify([document.title, document.getElementById('name').value, document.getElementById('email').value, document.getElementById('agree').checked])" },
+      {
+        function:
+          "() => JSON.stringify([document.title, document.getElementById('name').value, document.getElementById('email').value, document.getElementById('agree').checked])",
+      },
       { expect: /Form\\?",\\?"helloa\\?",\\?"a@b\.c\\?",true/ },
     ),
   () => step("tabs_list", "tabs", { action: "list" }),
@@ -692,7 +872,8 @@ const report: any = {
   },
   areas: {} as Record<string, any>,
 }
-const orderFor = (index: number): Backend[] => (index % 2 === 0 ? ["extension", "playwright"] : ["playwright", "extension"])
+const orderFor = (index: number): Backend[] =>
+  index % 2 === 0 ? ["extension", "playwright"] : ["playwright", "extension"]
 async function saveImage(name: string, dataUri: string | undefined) {
   if (!dataUri) return undefined
   const file = path.join(evidenceDir, `${name}.${imageSize(dataUri)?.format ?? "bin"}`)
@@ -703,12 +884,14 @@ async function saveImage(name: string, dataUri: string | undefined) {
 function imageSize(dataUri: string | undefined): { format: string; width: number; height: number } | undefined {
   if (!dataUri) return undefined
   const bytes = Buffer.from(dataUri.slice(dataUri.indexOf(",") + 1), "base64")
-  if (bytes.subarray(1, 4).toString("latin1") === "PNG") return { format: "png", width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) }
+  if (bytes.subarray(1, 4).toString("latin1") === "PNG")
+    return { format: "png", width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) }
   if (bytes[0] !== 0xff || bytes[1] !== 0xd8) return undefined
   for (let at = 2; at + 9 < bytes.length; ) {
     if (bytes[at] !== 0xff) return undefined
     const marker = bytes[at + 1]!
-    if (marker >= 0xc0 && marker <= 0xc3) return { format: "jpg", width: bytes.readUInt16BE(at + 7), height: bytes.readUInt16BE(at + 5) }
+    if (marker >= 0xc0 && marker <= 0xc3)
+      return { format: "jpg", width: bytes.readUInt16BE(at + 7), height: bytes.readUInt16BE(at + 5) }
     at += 2 + bytes.readUInt16BE(at + 2)
   }
   return undefined
@@ -733,19 +916,38 @@ async function areaTools(backend: Backend) {
   const builders = [
     ...repeat(reps, () => TOOL_CYCLE),
     () => step("navigate_framed", "navigate", { url: `${A}/framed` }),
-    ...repeat(reps, () => [() => step("screenshot_masked", "take_screenshot", { scale: "css", type: "png" }, { keepImage: true })]),
+    ...repeat(reps, () => [
+      () => step("screenshot_masked", "take_screenshot", { scale: "css", type: "png" }, { keepImage: true }),
+    ]),
   ]
   const outcome = await runCli(backend, sequence(builders))
-  const files = [await saveImage(`${backend}-tools-screenshot`, firstImage(outcome, "screenshot")), await saveImage(`${backend}-tools-screenshot-masked`, firstImage(outcome, "screenshot_masked"))]
+  const files = [
+    await saveImage(`${backend}-tools-screenshot`, firstImage(outcome, "screenshot")),
+    await saveImage(`${backend}-tools-screenshot-masked`, firstImage(outcome, "screenshot_masked")),
+  ]
   // What the model reads back from each tool, once: the payload comparison in words, not only in bytes.
   const examples = Object.fromEntries(
-    outcome.samples.map((sample, index) => [sample.label, { args: JSON.stringify(outcome.steps[index]?.call.args).slice(0, 300), text: sample.text.replace(/\s+/g, " ").slice(0, 400) }]).reverse(),
+    outcome.samples
+      .map((sample, index) => [
+        sample.label,
+        {
+          args: JSON.stringify(outcome.steps[index]?.call.args).slice(0, 300),
+          text: sample.text.replace(/\s+/g, " ").slice(0, 400),
+        },
+      ])
+      .reverse(),
   )
   return { run: runSummary(outcome), stats: byLabel(outcome.samples), examples, evidence: files.filter(Boolean) }
 }
 
 async function areaCold(backend: Backend, index: number) {
-  const outcome = await runCli(backend, sequence([() => step("navigate", "navigate", { url: `${A}/?run=cold${index}` }), () => step("snapshot", "snapshot", {})]))
+  const outcome = await runCli(
+    backend,
+    sequence([
+      () => step("navigate", "navigate", { url: `${A}/?run=cold${index}` }),
+      () => step("snapshot", "snapshot", {}),
+    ]),
+  )
   return runSummary(outcome)
 }
 
@@ -756,18 +958,34 @@ async function areaLarge(backend: Backend) {
     ...repeat(reps, () => [() => step("find_10k", "find", { text: "Needle 777" }, { expect: /Needle 777/ })]),
     () => step("navigate_iframes", "navigate", { url: `${A}/iframes` }),
     ...repeat(reps, () => [() => step("snapshot_iframes", "snapshot", {})]),
-    ...repeat(reps, () => [() => step("screenshot_iframes", "take_screenshot", { scale: "css", type: "png" }, { keepImage: true })]),
+    ...repeat(reps, () => [
+      () => step("screenshot_iframes", "take_screenshot", { scale: "css", type: "png" }, { keepImage: true }),
+    ]),
     () => step("navigate_long", "navigate", { url: `${A}/long` }),
-    ...repeat(reps, () => [() => step("screenshot_fullpage", "take_screenshot", { scale: "css", type: "png", fullPage: true }, { keepImage: true })]),
+    ...repeat(reps, () => [
+      () =>
+        step(
+          "screenshot_fullpage",
+          "take_screenshot",
+          { scale: "css", type: "png", fullPage: true },
+          { keepImage: true },
+        ),
+    ]),
   ]
   const outcome = await runCli(backend, sequence(builders))
-  const iframes = outcome.results[outcome.samples.findIndex((sample) => sample.label === "snapshot_iframes")]?.text ?? ""
+  const iframes =
+    outcome.results[outcome.samples.findIndex((sample) => sample.label === "snapshot_iframes")]?.text ?? ""
   const big = outcome.results[outcome.samples.findIndex((sample) => sample.label === "snapshot_10k")]?.text ?? ""
   return {
     run: runSummary(outcome),
     stats: byLabel(outcome.samples),
     framesInSnapshot: (iframes.match(/Frame button \d+/g) ?? []).length,
-    bigSnapshot: { chars: big.length, rowsVisible: (big.match(/Row \d+/g) ?? []).length, needleVisible: big.includes("Needle 777"), tail: big.slice(-300) },
+    bigSnapshot: {
+      chars: big.length,
+      rowsVisible: (big.match(/Row \d+/g) ?? []).length,
+      needleVisible: big.includes("Needle 777"),
+      tail: big.slice(-300),
+    },
     fullPageSize: imageSize(firstImage(outcome, "screenshot_fullpage")),
     iframeScreenshotSize: imageSize(firstImage(outcome, "screenshot_iframes")),
     evidence: [
@@ -790,7 +1008,10 @@ function tabIndex(results: Result[], k: number): number | undefined {
 async function areaTabs(backend: Backend) {
   const builders: ((results: Result[], steps: Step[]) => Step)[] = [
     () => step("navigate", "navigate", { url: `${A}/?tab=0` }),
-    ...Array.from({ length: 19 }, (_, k) => () => step("tabs_new", "tabs", { action: "new", url: `${A}/?tab=${k + 1}` })),
+    ...Array.from(
+      { length: 19 },
+      (_, k) => () => step("tabs_new", "tabs", { action: "new", url: `${A}/?tab=${k + 1}` }),
+    ),
     ...repeat(reps, (r) => {
       const k = (r * 7 + 3) % 20
       return [
@@ -826,8 +1047,19 @@ const fillByRef = (r: Result[]) =>
   })
 const REF_VARIANTS: { name: string; pre: ((results: Result[]) => Step)[]; act?: ((results: Result[]) => Step)[] }[] = [
   { name: "fresh", pre: [] },
-  { name: "after_click", pre: [(r) => step("pre_click", "click", { element: "Click me button", target: ref(r, "button", "Click me", "#go") })] },
-  { name: "after_type", pre: [(r) => step("pre_type", "type", { element: "Name field", target: ref(r, "textbox", "Name", "#name"), text: "hello" })] },
+  {
+    name: "after_click",
+    pre: [
+      (r) => step("pre_click", "click", { element: "Click me button", target: ref(r, "button", "Click me", "#go") }),
+    ],
+  },
+  {
+    name: "after_type",
+    pre: [
+      (r) =>
+        step("pre_type", "type", { element: "Name field", target: ref(r, "textbox", "Name", "#name"), text: "hello" }),
+    ],
+  },
   { name: "after_press_key", pre: [() => step("pre_press_key", "press_key", { key: "a" })] },
   { name: "after_evaluate", pre: [() => step("pre_evaluate", "evaluate", { function: "() => 1" })] },
   { name: "after_screenshot", pre: [() => step("pre_screenshot", "take_screenshot", { scale: "css", type: "png" })] },
@@ -835,7 +1067,12 @@ const REF_VARIANTS: { name: string; pre: ((results: Result[]) => Step)[]; act?: 
     name: "control_type_click_same_refs",
     pre: [],
     act: [
-      (r) => step("fill_form", "type", { element: "Email field", target: ref(r, "textbox", "Email", "#email"), text: "a@b.c" }),
+      (r) =>
+        step("fill_form", "type", {
+          element: "Email field",
+          target: ref(r, "textbox", "Email", "#email"),
+          text: "a@b.c",
+        }),
       (r) => step("click_agree", "click", { element: "Agree checkbox", target: ref(r, "checkbox", "Agree", "#agree") }),
     ],
   },
@@ -864,7 +1101,15 @@ async function areaRefs(backend: Backend) {
     ...variant.pre.map((make) => named(variant.name, make)),
     ...(variant.act ?? [fillByRef]).map((make) => named(variant.name, make)),
     () =>
-      step(`${variant.name}:state`, "evaluate", { function: "() => JSON.stringify([document.getElementById('email').value, document.getElementById('agree').checked])" }, { expect: /a@b\.c\\?",true/ }),
+      step(
+        `${variant.name}:state`,
+        "evaluate",
+        {
+          function:
+            "() => JSON.stringify([document.getElementById('email').value, document.getElementById('agree').checked])",
+        },
+        { expect: /a@b\.c\\?",true/ },
+      ),
   ])
   const outcome = await runCli(backend, sequence(builders))
   return Object.fromEntries(
@@ -872,7 +1117,15 @@ async function areaRefs(backend: Backend) {
       const mine = outcome.samples.filter((sample) => sample.label.startsWith(`${variant.name}:`))
       const fill = mine.find((sample) => sample.label.endsWith(":fill_form"))
       const state = mine.find((sample) => sample.label.endsWith(":state"))
-      return [variant.name, { fillOk: fill?.ok, stateOk: state?.ok, fill: fill?.text.replace(/\s+/g, " ").slice(0, 200), state: state?.text.slice(0, 80) }]
+      return [
+        variant.name,
+        {
+          fillOk: fill?.ok,
+          stateOk: state?.ok,
+          fill: fill?.text.replace(/\s+/g, " ").slice(0, 200),
+          state: state?.text.slice(0, 80),
+        },
+      ]
     }),
   )
 }
@@ -884,7 +1137,8 @@ function concurrentPlan(k: number): Plan {
     () => step("navigate", "navigate", { url: `${A}/?run=${k}` }),
     ...repeat(reps, () => [
       () => step("snapshot", "snapshot", {}, { expect: own, reject: other }),
-      (r: Result[]) => step("click", "click", { element: "Click me button", target: ref(r, "button", "Click me", "#go") }),
+      (r: Result[]) =>
+        step("click", "click", { element: "Click me button", target: ref(r, "button", "Click me", "#go") }),
       () => step("evaluate", "evaluate", { function: "() => document.title" }, { expect: own, reject: other }),
       () => step("screenshot", "take_screenshot", { scale: "css", type: "png" }),
     ]),
@@ -896,13 +1150,20 @@ async function areaConcurrent(backend: Backend) {
   const together = await Promise.all([0, 1, 2].map((k) => runCli(backend, concurrentPlan(k), { tag: `c${k}` })))
   const wallMs = Date.now() - started
   const all = together.flatMap((outcome) => outcome.samples)
-  const crossTalk = all.filter((sample) => /Run \d/.test(sample.text) && !sample.ok && sample.status === "completed" && !FAILURE.test(sample.text))
+  const crossTalk = all.filter(
+    (sample) => /Run \d/.test(sample.text) && !sample.ok && sample.status === "completed" && !FAILURE.test(sample.text),
+  )
   const baseStats = byLabel(baseline.samples)
   const concStats = byLabel(all)
   return {
     baseline: { run: runSummary(baseline), stats: baseStats },
     concurrent: { wallMs, runs: together.map(runSummary), stats: concStats },
-    inflation: Object.fromEntries(Object.keys(concStats).map((label) => [label, Math.round(((concStats[label]!.median || 0) / (baseStats[label]?.median || 1)) * 100) / 100])),
+    inflation: Object.fromEntries(
+      Object.keys(concStats).map((label) => [
+        label,
+        Math.round(((concStats[label]!.median || 0) / (baseStats[label]?.median || 1)) * 100) / 100,
+      ]),
+    ),
     tabBusy: all.filter((sample) => /tab_busy/.test(sample.text)).length,
     crossTalk: crossTalk.length,
     crossTalkSamples: crossTalk.slice(0, 3).map((sample) => sample.text.slice(0, 300)),
@@ -953,7 +1214,15 @@ async function areaMemory(backend: Backend) {
   await sample(outcome.samples.length)
   const windows = Array.from({ length: Math.ceil(outcome.samples.length / 100) }, (_, w) => {
     const slice = outcome.samples.slice(w * 100, w * 100 + 100)
-    return { from: w * 100, median: median(slice.map((s) => s.ms)), p95: percentile(slice.map((s) => s.ms), 95), failures: slice.filter((s) => !s.ok).length }
+    return {
+      from: w * 100,
+      median: median(slice.map((s) => s.ms)),
+      p95: percentile(
+        slice.map((s) => s.ms),
+        95,
+      ),
+      failures: slice.filter((s) => !s.ok).length,
+    }
   })
   return { run: runSummary(outcome), series, windows, stats: byLabel(outcome.samples) }
 }
@@ -984,14 +1253,19 @@ async function areaReconnect() {
       if (i === 0) return step("navigate", "navigate", { url: `${A}/form` })
       if (i === 1) return step("snapshot_before", "snapshot", {}, { expect: /Click me/ })
       if (i === 2)
-        return step("snapshot_stopped", "snapshot", {}, {
-          expect: /Click me/,
-          before: async () => {
-            info.stop = await stopWorker(helper)
-            stoppedAt = Date.now()
-            if (scenario === "idle35s") await Bun.sleep(35_000)
+        return step(
+          "snapshot_stopped",
+          "snapshot",
+          {},
+          {
+            expect: /Click me/,
+            before: async () => {
+              info.stop = await stopWorker(helper)
+              stoppedAt = Date.now()
+              if (scenario === "idle35s") await Bun.sleep(35_000)
+            },
           },
-        })
+        )
       const last = results[i - 1]?.text ?? ""
       if (!recovered && /Click me/.test(last) && steps[i - 1]?.label !== "snapshot_before") recovered = true
       if (!recovered) {
@@ -1002,7 +1276,10 @@ async function areaReconnect() {
       if (after >= 10) return undefined
       return after % 2 === 0
         ? step("after_snapshot", "snapshot", {}, { expect: /Click me/ })
-        : step("after_click", "click", { element: "Click me button", target: ref(results, "button", "Click me", "#go") })
+        : step("after_click", "click", {
+            element: "Click me button",
+            target: ref(results, "button", "Click me", "#go"),
+          })
     }
     const outcome = await runCli("extension", plan)
     watching = false
@@ -1010,17 +1287,37 @@ async function areaReconnect() {
     const stopped = outcome.samples.find((sample) => sample.label === "snapshot_stopped")
     const firstOk = outcome.samples.find((sample, index) => index >= 2 && sample.ok)
     info.run = runSummary(outcome)
-    info.whileStopped = stopped && { ms: stopped.ms, ok: stopped.ok, status: stopped.status, text: stopped.text.slice(0, 600) }
+    info.whileStopped = stopped && {
+      ms: stopped.ms,
+      ok: stopped.ok,
+      status: stopped.status,
+      text: stopped.text.slice(0, 600),
+    }
     info.failedAttempts = outcome.samples.filter((sample, index) => index >= 2 && !sample.ok).length
-    info.failureTexts = [...new Set(outcome.samples.filter((s, index) => index >= 2 && !s.ok).map((s) => s.text.replace(/\s+/g, " ").slice(0, 300)))].slice(0, 4)
+    info.failureTexts = [
+      ...new Set(
+        outcome.samples.filter((s, index) => index >= 2 && !s.ok).map((s) => s.text.replace(/\s+/g, " ").slice(0, 300)),
+      ),
+    ].slice(0, 4)
     info.stopToFirstSuccessMs = firstOk ? firstOk.end - stoppedAt : undefined
     info.firstSuccessCallMs = firstOk?.ms
     info.swBackAfterMs = swBackAt === undefined ? undefined : swBackAt - stoppedAt
     info.after = byLabel(outcome.samples.filter((sample) => sample.label.startsWith("after_")))
     info.hubLog = ext.hubLog.slice(logFrom).split("\n").filter(Boolean).slice(-15)
     // A new conversation after the restart: does the extension serve a fresh session?
-    const fresh = await runCli("extension", sequence([() => step("navigate", "navigate", { url: `${A}/form` }), () => step("snapshot", "snapshot", {}, { expect: /Click me/ })]))
-    info.freshRun = { ...runSummary(fresh), texts: fresh.samples.map((sample) => `${sample.ok ? "ok" : "FAIL"} ${sample.ms} ms: ${sample.text.replace(/\s+/g, " ").slice(0, 160)}`) }
+    const fresh = await runCli(
+      "extension",
+      sequence([
+        () => step("navigate", "navigate", { url: `${A}/form` }),
+        () => step("snapshot", "snapshot", {}, { expect: /Click me/ }),
+      ]),
+    )
+    info.freshRun = {
+      ...runSummary(fresh),
+      texts: fresh.samples.map(
+        (sample) => `${sample.ok ? "ok" : "FAIL"} ${sample.ms} ms: ${sample.text.replace(/\s+/g, " ").slice(0, 160)}`,
+      ),
+    }
     scenarios.push(info)
   }
   return { panelOpen: false, scenarios }
@@ -1031,7 +1328,12 @@ async function areaReconnect() {
  * page while one run snapshots and searches the big page. The profiles go to the evidence directory.
  */
 async function areaProfile() {
-  let sw: { send(method: string, params?: Record<string, unknown>, timeoutMs?: number): Promise<any>; detach(): Promise<void> } | undefined
+  let sw:
+    | {
+        send(method: string, params?: Record<string, unknown>, timeoutMs?: number): Promise<any>
+        detach(): Promise<void>
+      }
+    | undefined
   let page: any
   const start = async () => {
     sw = await swAttach()
@@ -1066,7 +1368,10 @@ async function areaProfile() {
     axTree.push({ ms: Math.round(performance.now() - started), nodes: tree.nodes.length })
   }
   const files: string[] = []
-  for (const [name, profile] of [["sw", swProfile], ["page", pageProfile]] as const) {
+  for (const [name, profile] of [
+    ["sw", swProfile],
+    ["page", pageProfile],
+  ] as const) {
     if (!profile) continue
     const file = path.join(evidenceDir, `extension-profile-${name}-10k.cpuprofile`)
     await fs.writeFile(file, JSON.stringify(profile))
@@ -1099,14 +1404,21 @@ for (const [index, area] of areas.entries()) {
     if (area === "tools") for (const backend of order) entry[backend] = await areaTools(backend)
     if (area === "cold") {
       for (const backend of order) entry[backend] = { runs: [] as any[] }
-      for (let i = 0; i < coldRuns; i += 1) for (const backend of i % 2 === 0 ? order : [...order].reverse()) entry[backend].runs.push(await areaCold(backend, i))
+      for (let i = 0; i < coldRuns; i += 1)
+        for (const backend of i % 2 === 0 ? order : [...order].reverse())
+          entry[backend].runs.push(await areaCold(backend, i))
       for (const backend of order) {
-        const list = entry[backend].runs as { firstCallMs?: number; spawnToFirstRequestMs?: number; spawnToFirstToolStartMs?: number }[]
+        const list = entry[backend].runs as {
+          firstCallMs?: number
+          spawnToFirstRequestMs?: number
+          spawnToFirstToolStartMs?: number
+        }[]
         entry[backend].firstCallMedianMs = median(list.map((run) => run.firstCallMs ?? 0))
         entry[backend].spawnToFirstRequestMedianMs = median(list.map((run) => run.spawnToFirstRequestMs ?? 0))
         entry[backend].spawnToFirstToolStartMedianMs = median(list.map((run) => run.spawnToFirstToolStartMs ?? 0))
       }
-      entry.cliStartupDeltaMs = entry.extension.spawnToFirstRequestMedianMs - entry.playwright.spawnToFirstRequestMedianMs
+      entry.cliStartupDeltaMs =
+        entry.extension.spawnToFirstRequestMedianMs - entry.playwright.spawnToFirstRequestMedianMs
       entry.pairingMs = ext.pairingMs
     }
     if (area === "large") for (const backend of order) entry[backend] = await areaLarge(backend)
@@ -1131,7 +1443,8 @@ report.meta.hubLogTail = ext.hubLog.split("\n").filter(Boolean).slice(-20)
 // ---------------------------------------------------------------------------------------------------------------
 // Markdown.
 
-const fmt = (value: number | undefined) => (value === undefined || !Number.isFinite(value) ? "–" : String(Math.round(value)))
+const fmt = (value: number | undefined) =>
+  value === undefined || !Number.isFinite(value) ? "–" : String(Math.round(value))
 const ratio = (a?: number, b?: number) => (a === undefined || b === undefined || !b ? "–" : `${(a / b).toFixed(2)}×`)
 function compare(title: string, ext?: Record<string, Stat>, pw?: Record<string, Stat>): string[] {
   const labels = [...new Set([...Object.keys(ext ?? {}), ...Object.keys(pw ?? {})])]
@@ -1147,11 +1460,16 @@ function compare(title: string, ext?: Record<string, Stat>, pw?: Record<string, 
     )
   }
   const failures = labels.flatMap((label) =>
-    (["extension", "playwright"] as const).flatMap((backend) => ((backend === "extension" ? ext : pw)?.[label]?.failureSamples ?? []).map((text) => `- ${backend} ${label}: \`${text.replaceAll("`", "'")}\``)),
+    (["extension", "playwright"] as const).flatMap((backend) =>
+      ((backend === "extension" ? ext : pw)?.[label]?.failureSamples ?? []).map(
+        (text) => `- ${backend} ${label}: \`${text.replaceAll("`", "'")}\``,
+      ),
+    ),
   )
   return failures.length ? [...lines, "", "Failure texts:", ...failures] : lines
 }
-const loadLine = (entry: any) => `Load (1/5/15 min, running/total, last pid) start \`${entry.loadStart}\`, end \`${entry.loadEnd}\`; nproc ${nproc}. Order: ${entry.order?.join(" → ")}.${entry.error ? ` **Area error:** \`${String(entry.error).split("\n")[0]}\`` : ""}`
+const loadLine = (entry: any) =>
+  `Load (1/5/15 min, running/total, last pid) start \`${entry.loadStart}\`, end \`${entry.loadEnd}\`; nproc ${nproc}. Order: ${entry.order?.join(" → ")}.${entry.error ? ` **Area error:** \`${String(entry.error).split("\n")[0]}\`` : ""}`
 
 const md: string[] = [
   `# Browser bridge performance: extension vs bundled Playwright`,
@@ -1167,45 +1485,87 @@ const md: string[] = [
 const areaEntry = (name: string) => report.areas[name]
 if (areaEntry("tools")) {
   const entry = areaEntry("tools")
-  md.push("## 1. Per-tool latency", "", loadLine(entry), "", ...compare("tool", entry.extension?.stats, entry.playwright?.stats), "")
+  md.push(
+    "## 1. Per-tool latency",
+    "",
+    loadLine(entry),
+    "",
+    ...compare("tool", entry.extension?.stats, entry.playwright?.stats),
+    "",
+  )
   md.push(`Runs: ext ${JSON.stringify(entry.extension?.run)}; pw ${JSON.stringify(entry.playwright?.run)}`, "")
-  const cell = (text: unknown) => `\`${String(text ?? "–").slice(0, 160).replaceAll("`", "'").replaceAll("|", "/")}\``
+  const cell = (text: unknown) =>
+    `\`${String(text ?? "–")
+      .slice(0, 160)
+      .replaceAll("`", "'")
+      .replaceAll("|", "/")}\``
   md.push("| tool | extension result text (first 160 chars) | playwright result text |", "|---|---|---|")
   for (const label of Object.keys(entry.extension?.examples ?? {}))
-    md.push(`| ${label} | ${cell(entry.extension.examples[label]?.text)} | ${cell(entry.playwright?.examples?.[label]?.text)} |`)
+    md.push(
+      `| ${label} | ${cell(entry.extension.examples[label]?.text)} | ${cell(entry.playwright?.examples?.[label]?.text)} |`,
+    )
   md.push("")
 }
 if (areaEntry("cold")) {
   const entry = areaEntry("cold")
   md.push("## 2. Cold start, pairing, CLI startup", "", loadLine(entry), "")
   md.push("| metric | extension | playwright |", "|---|---|---|")
-  md.push(`| first browser call of a run, median ms (${coldRuns} fresh runs) | ${fmt(entry.extension?.firstCallMedianMs)} | ${fmt(entry.playwright?.firstCallMedianMs)} |`)
-  md.push(`| spawn → first model request, median ms | ${fmt(entry.extension?.spawnToFirstRequestMedianMs)} | ${fmt(entry.playwright?.spawnToFirstRequestMedianMs)} |`)
-  md.push(`| spawn → first tool start, median ms | ${fmt(entry.extension?.spawnToFirstToolStartMedianMs)} | ${fmt(entry.playwright?.spawnToFirstToolStartMedianMs)} |`)
+  md.push(
+    `| first browser call of a run, median ms (${coldRuns} fresh runs) | ${fmt(entry.extension?.firstCallMedianMs)} | ${fmt(entry.playwright?.firstCallMedianMs)} |`,
+  )
+  md.push(
+    `| spawn → first model request, median ms | ${fmt(entry.extension?.spawnToFirstRequestMedianMs)} | ${fmt(entry.playwright?.spawnToFirstRequestMedianMs)} |`,
+  )
+  md.push(
+    `| spawn → first tool start, median ms | ${fmt(entry.extension?.spawnToFirstToolStartMedianMs)} | ${fmt(entry.playwright?.spawnToFirstToolStartMedianMs)} |`,
+  )
   md.push(`| pairing (hub spawn → paired), ms | ${fmt(entry.pairingMs)} | n/a |`)
   md.push(`| CLI startup delta (ext − pw, spawn → first model request) | ${fmt(entry.cliStartupDeltaMs)} | |`, "")
-  md.push(`First-call ms per run: ext ${JSON.stringify(entry.extension?.runs?.map((r: any) => r.firstCallMs))}, pw ${JSON.stringify(entry.playwright?.runs?.map((r: any) => r.firstCallMs))}`, "")
+  md.push(
+    `First-call ms per run: ext ${JSON.stringify(entry.extension?.runs?.map((r: any) => r.firstCallMs))}, pw ${JSON.stringify(entry.playwright?.runs?.map((r: any) => r.firstCallMs))}`,
+    "",
+  )
 }
 if (areaEntry("reconnect")) {
   const entry = areaEntry("reconnect")
-  md.push("## 3. Reconnect after a service-worker stop (extension only)", "", loadLine(entry), "", "Side panel closed (production default).", "")
-  md.push("| scenario | stop method | call while stopped | failed attempts | stop → first success ms | SW back after ms | after-reconnect snapshot median ms |", "|---|---|---|---|---|---|---|")
+  md.push(
+    "## 3. Reconnect after a service-worker stop (extension only)",
+    "",
+    loadLine(entry),
+    "",
+    "Side panel closed (production default).",
+    "",
+  )
+  md.push(
+    "| scenario | stop method | call while stopped | failed attempts | stop → first success ms | SW back after ms | after-reconnect snapshot median ms |",
+    "|---|---|---|---|---|---|---|",
+  )
   for (const s of entry.extension?.scenarios ?? [])
     md.push(
       `| ${s.scenario} | ${s.stop?.method} (${s.stop?.gone ? "gone" : "STILL RUNNING"} in ${s.stop?.ms} ms) | ${s.whileStopped ? `${s.whileStopped.ok ? "ok" : "failed"} after ${s.whileStopped.ms} ms` : "–"} | ${s.failedAttempts} | ${fmt(s.stopToFirstSuccessMs)} | ${fmt(s.swBackAfterMs)} | ${fmt(s.after?.after_snapshot?.median)} |`,
     )
   md.push("")
   for (const s of entry.extension?.scenarios ?? []) {
-    md.push(`Model-visible text, ${s.scenario}, call while stopped: \`${String(s.whileStopped?.text ?? "").replace(/\s+/g, " ").slice(0, 400).replaceAll("`", "'")}\``)
+    md.push(
+      `Model-visible text, ${s.scenario}, call while stopped: \`${String(s.whileStopped?.text ?? "")
+        .replace(/\s+/g, " ")
+        .slice(0, 400)
+        .replaceAll("`", "'")}\``,
+    )
     for (const text of s.failureTexts ?? []) md.push(`- failure text: \`${text.replaceAll("`", "'")}\``)
-    md.push(`- a new \`kilo2 run\` afterwards: ${(s.freshRun?.texts ?? []).map((text: string) => `\`${text.replaceAll("`", "'")}\``).join("; ")}`)
+    md.push(
+      `- a new \`kilo2 run\` afterwards: ${(s.freshRun?.texts ?? []).map((text: string) => `\`${text.replaceAll("`", "'")}\``).join("; ")}`,
+    )
   }
   md.push("")
 }
 if (areaEntry("memory")) {
   const entry = areaEntry("memory")
   md.push(`## 4. Memory over ${memoryCalls} mixed calls`, "", loadLine(entry), "")
-  md.push("| calls | ext SW heap MB (after GC) | ext CLI RSS MB | ext hub RSS MB | ext browser RSS/PSS MB | ext pages | pw CLI RSS MB | pw browser RSS/PSS MB |", "|---|---|---|---|---|---|---|---|")
+  md.push(
+    "| calls | ext SW heap MB (after GC) | ext CLI RSS MB | ext hub RSS MB | ext browser RSS/PSS MB | ext pages | pw CLI RSS MB | pw browser RSS/PSS MB |",
+    "|---|---|---|---|---|---|---|---|",
+  )
   const es = entry.extension?.series ?? []
   const ps = entry.playwright?.series ?? []
   for (let i = 0; i < Math.max(es.length, ps.length); i += 1) {
@@ -1220,42 +1580,104 @@ if (areaEntry("memory")) {
   const ew = entry.extension?.windows ?? []
   const pwWindows = entry.playwright?.windows ?? []
   for (let i = 0; i < Math.max(ew.length, pwWindows.length); i += 1)
-    md.push(`| ${ew[i]?.from ?? pwWindows[i]?.from} | ${ew[i] ? `${ew[i].median}/${ew[i].p95} (${ew[i].failures})` : "–"} | ${pwWindows[i] ? `${pwWindows[i].median}/${pwWindows[i].p95} (${pwWindows[i].failures})` : "–"} |`)
+    md.push(
+      `| ${ew[i]?.from ?? pwWindows[i]?.from} | ${ew[i] ? `${ew[i].median}/${ew[i].p95} (${ew[i].failures})` : "–"} | ${pwWindows[i] ? `${pwWindows[i].median}/${pwWindows[i].p95} (${pwWindows[i].failures})` : "–"} |`,
+    )
   md.push("", `Runs: ext ${JSON.stringify(entry.extension?.run)}; pw ${JSON.stringify(entry.playwright?.run)}`, "")
 }
 if (areaEntry("large")) {
   const entry = areaEntry("large")
-  md.push("## 5. Large pages", "", loadLine(entry), "", ...compare("step", entry.extension?.stats, entry.playwright?.stats), "")
-  md.push(`Frame buttons visible in the 20-iframe snapshot: ext ${entry.extension?.framesInSnapshot}, pw ${entry.playwright?.framesInSnapshot}. Full-page image: ext ${JSON.stringify(entry.extension?.fullPageSize)}, pw ${JSON.stringify(entry.playwright?.fullPageSize)}.`, "")
-  md.push(`10k snapshot text: ext ${JSON.stringify({ ...entry.extension?.bigSnapshot, tail: undefined })}, pw ${JSON.stringify({ ...entry.playwright?.bigSnapshot, tail: undefined })}.`, "")
-  md.push(`10k snapshot tail: ext \`${String(entry.extension?.bigSnapshot?.tail ?? "").replace(/\s+/g, " ").slice(-200).replaceAll("`", "'")}\`; pw \`${String(entry.playwright?.bigSnapshot?.tail ?? "").replace(/\s+/g, " ").slice(-200).replaceAll("`", "'")}\``, "")
+  md.push(
+    "## 5. Large pages",
+    "",
+    loadLine(entry),
+    "",
+    ...compare("step", entry.extension?.stats, entry.playwright?.stats),
+    "",
+  )
+  md.push(
+    `Frame buttons visible in the 20-iframe snapshot: ext ${entry.extension?.framesInSnapshot}, pw ${entry.playwright?.framesInSnapshot}. Full-page image: ext ${JSON.stringify(entry.extension?.fullPageSize)}, pw ${JSON.stringify(entry.playwright?.fullPageSize)}.`,
+    "",
+  )
+  md.push(
+    `10k snapshot text: ext ${JSON.stringify({ ...entry.extension?.bigSnapshot, tail: undefined })}, pw ${JSON.stringify({ ...entry.playwright?.bigSnapshot, tail: undefined })}.`,
+    "",
+  )
+  md.push(
+    `10k snapshot tail: ext \`${String(entry.extension?.bigSnapshot?.tail ?? "")
+      .replace(/\s+/g, " ")
+      .slice(-200)
+      .replaceAll("`", "'")}\`; pw \`${String(entry.playwright?.bigSnapshot?.tail ?? "")
+      .replace(/\s+/g, " ")
+      .slice(-200)
+      .replaceAll("`", "'")}\``,
+    "",
+  )
 }
 if (areaEntry("profile")) {
   const entry = areaEntry("profile")
   const p = entry.extension
   md.push("## 5b. Extension CPU profile: 5 snapshots + 5 finds on the 10k page", "", loadLine(entry), "")
-  md.push(`Calls: ${JSON.stringify(Object.fromEntries(Object.entries(p?.stats ?? {}).map(([label, s]: [string, any]) => [label, `${s.median}/${s.p95} ms`])))}; sum of call times after navigate ${p?.callsWallMs} ms. SW profile busy ${p?.sw?.busyMs}/${p?.sw?.totalMs} ms; page profile busy ${p?.page?.busyMs}/${p?.page?.totalMs} ms.`, "")
-  md.push(`Raw \`Accessibility.getFullAXTree\` on the same page from the harness's own CDP session: ${JSON.stringify(p?.axTree)}.`, "")
-  for (const [name, summary] of [["service worker", p?.sw], ["page", p?.page]] as const) {
+  md.push(
+    `Calls: ${JSON.stringify(Object.fromEntries(Object.entries(p?.stats ?? {}).map(([label, s]: [string, any]) => [label, `${s.median}/${s.p95} ms`])))}; sum of call times after navigate ${p?.callsWallMs} ms. SW profile busy ${p?.sw?.busyMs}/${p?.sw?.totalMs} ms; page profile busy ${p?.page?.busyMs}/${p?.page?.totalMs} ms.`,
+    "",
+  )
+  md.push(
+    `Raw \`Accessibility.getFullAXTree\` on the same page from the harness's own CDP session: ${JSON.stringify(p?.axTree)}.`,
+    "",
+  )
+  for (const [name, summary] of [
+    ["service worker", p?.sw],
+    ["page", p?.page],
+  ] as const) {
     if (!summary) continue
-    md.push(`| ${name} top self time | ms |`, "|---|---|", ...summary.top.map((row: any) => `| \`${row.fn}\` | ${row.selfMs} |`), "")
+    md.push(
+      `| ${name} top self time | ms |`,
+      "|---|---|",
+      ...summary.top.map((row: any) => `| \`${row.fn}\` | ${row.selfMs} |`),
+      "",
+    )
   }
 }
 if (areaEntry("refs")) {
   const entry = areaEntry("refs")
-  md.push("## 1b. Ref stability: fill_form with refs from one snapshot, after one other action", "", loadLine(entry), "")
-  md.push("| variant | ext fill_form | ext page state | pw fill_form | pw page state | ext text |", "|---|---|---|---|---|---|")
+  md.push(
+    "## 1b. Ref stability: fill_form with refs from one snapshot, after one other action",
+    "",
+    loadLine(entry),
+    "",
+  )
+  md.push(
+    "| variant | ext fill_form | ext page state | pw fill_form | pw page state | ext text |",
+    "|---|---|---|---|---|---|",
+  )
   for (const variant of REF_VARIANTS.map((v) => v.name)) {
     const e = entry.extension?.[variant]
     const p = entry.playwright?.[variant]
-    md.push(`| ${variant} | ${e?.fillOk ? "ok" : "FAIL"} | ${e?.stateOk ? "ok" : "FAIL"} | ${p?.fillOk ? "ok" : "FAIL"} | ${p?.stateOk ? "ok" : "FAIL"} | \`${String(e?.fill ?? "").slice(0, 120).replaceAll("`", "'")}\` |`)
+    md.push(
+      `| ${variant} | ${e?.fillOk ? "ok" : "FAIL"} | ${e?.stateOk ? "ok" : "FAIL"} | ${p?.fillOk ? "ok" : "FAIL"} | ${p?.stateOk ? "ok" : "FAIL"} | \`${String(
+        e?.fill ?? "",
+      )
+        .slice(0, 120)
+        .replaceAll("`", "'")}\` |`,
+    )
   }
   md.push("")
 }
 if (areaEntry("tabs")) {
   const entry = areaEntry("tabs")
-  md.push("## 6. Many tabs (20 in the session)", "", loadLine(entry), "", ...compare("step", entry.extension?.stats, entry.playwright?.stats), "")
-  md.push(`Tabs named in the list: ext ${entry.extension?.tabsInList} (+${entry.extension?.withheldInList} withheld-origin entries, ${entry.extension?.listChars} chars), pw ${entry.playwright?.tabsInList} (${entry.playwright?.listChars} chars). \`snapshot_after_switch\` failures = the snapshot did not show the selected tab.`, "")
+  md.push(
+    "## 6. Many tabs (20 in the session)",
+    "",
+    loadLine(entry),
+    "",
+    ...compare("step", entry.extension?.stats, entry.playwright?.stats),
+    "",
+  )
+  md.push(
+    `Tabs named in the list: ext ${entry.extension?.tabsInList} (+${entry.extension?.withheldInList} withheld-origin entries, ${entry.extension?.listChars} chars), pw ${entry.playwright?.tabsInList} (${entry.playwright?.listChars} chars). \`snapshot_after_switch\` failures = the snapshot did not show the selected tab.`,
+    "",
+  )
 }
 if (areaEntry("concurrent")) {
   const entry = areaEntry("concurrent")
@@ -1263,11 +1685,22 @@ if (areaEntry("concurrent")) {
   for (const backend of ["extension", "playwright"] as const) {
     const b = entry[backend]
     if (!b) continue
-    md.push(`### ${backend}`, "", `Wall: 3 runs together ${b.concurrent?.wallMs} ms vs one alone ${b.baseline?.run?.wallMs} ms. tab_busy results: ${b.tabBusy}. Cross-talk (another run's page): ${b.crossTalk}.`, "")
-    md.push("| tool | alone median/p95 | 3 concurrent median/p95 | inflation | concurrent failures |", "|---|---|---|---|---|")
+    md.push(
+      `### ${backend}`,
+      "",
+      `Wall: 3 runs together ${b.concurrent?.wallMs} ms vs one alone ${b.baseline?.run?.wallMs} ms. tab_busy results: ${b.tabBusy}. Cross-talk (another run's page): ${b.crossTalk}.`,
+      "",
+    )
+    md.push(
+      "| tool | alone median/p95 | 3 concurrent median/p95 | inflation | concurrent failures |",
+      "|---|---|---|---|---|",
+    )
     for (const label of Object.keys(b.concurrent?.stats ?? {}))
-      md.push(`| ${label} | ${fmt(b.baseline?.stats?.[label]?.median)}/${fmt(b.baseline?.stats?.[label]?.p95)} | ${fmt(b.concurrent.stats[label].median)}/${fmt(b.concurrent.stats[label].p95)} | ${b.inflation?.[label]}× | ${b.concurrent.stats[label].failures} |`)
-    for (const text of Object.values(b.concurrent?.stats ?? {}).flatMap((s: any) => s.failureSamples)) md.push(`- failure text: \`${String(text).replaceAll("`", "'")}\``)
+      md.push(
+        `| ${label} | ${fmt(b.baseline?.stats?.[label]?.median)}/${fmt(b.baseline?.stats?.[label]?.p95)} | ${fmt(b.concurrent.stats[label].median)}/${fmt(b.concurrent.stats[label].p95)} | ${b.inflation?.[label]}× | ${b.concurrent.stats[label].failures} |`,
+      )
+    for (const text of Object.values(b.concurrent?.stats ?? {}).flatMap((s: any) => s.failureSamples))
+      md.push(`- failure text: \`${String(text).replaceAll("`", "'")}\``)
     md.push("")
   }
 }
