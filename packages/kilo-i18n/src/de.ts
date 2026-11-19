@@ -168,6 +168,7 @@ export const dict = {
   "browser.state.unavailable": "nicht verfügbar",
   "browser.state.readyHint": "Ein Chromium-Profil von Kilo, gestartet beim ersten Browser-Aufruf",
   "browser.state.extensionHint": "Kilo-Browser-Erweiterung verbinden, um den eigenen Browser zu steuern",
+  "ui.permission.reason": "Grund: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Automatische Genehmigung umschalten",

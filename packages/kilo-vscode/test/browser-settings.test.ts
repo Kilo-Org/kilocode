@@ -91,12 +91,12 @@ describe("browser settings document", () => {
 
   test("allow-all is one catch-all rule beside the listed origins, ahead of them", () => {
     const state = BrowserSettings.read(document)
-    const set = BrowserSettings.apply(state, document, { allowAll: true })
-    expect(set.permissions).toContainEqual({ action: "browser", resource: "*", effect: "allow" })
-    expect(set.permissions).toContainEqual({ action: "browser", resource: "read:https://example.com", effect: "allow" })
+    const set = BrowserSettings.apply(state, document, { allowAll: true }).permissions ?? []
+    expect(set).toContainEqual({ action: "browser", resource: "*", effect: "allow" })
+    expect(set).toContainEqual({ action: "browser", resource: "read:https://example.com", effect: "allow" })
     // Last-match-wins: the catch-all is a baseline, so the specific origin rules after it still decide.
-    expect(set.permissions.findIndex((rule) => rule.action === "browser" && rule.resource === "*")).toBeLessThan(
-      set.permissions.findIndex((rule) => rule.action === "browser" && rule.resource === "read:https://example.com"),
+    expect(set.findIndex((rule) => rule.action === "browser" && rule.resource === "*")).toBeLessThan(
+      set.findIndex((rule) => rule.action === "browser" && rule.resource === "read:https://example.com"),
     )
     expect(BrowserSettings.apply(state, document, { allowAll: false }).permissions).not.toContainEqual({
       action: "browser",
@@ -147,15 +147,29 @@ describe("browser settings document", () => {
     ])
   })
 
-  test("a patch leaves every untouched key in place", () => {
+  test("a patch writes only the keys it names", () => {
     const state = BrowserSettings.read(document)
-    const set = BrowserSettings.apply(state, document, { browser: { observation: "none" } })
-    expect(set.browser).toEqual({ backend: "extension", observation: "none", allow_sensitive: true, headless: true })
-    expect(BrowserSettings.apply(state, document, {}).browser).toEqual({
+    // The RPC writes each leaf of `set`, so a key left out here is never written: picking a backend must not also
+    // write the observation and sensitive-step defaults the user never chose.
+    expect(BrowserSettings.apply(state, document, { browser: { backend: "playwright" } })).toEqual({
+      browser: { backend: "playwright" },
+    })
+    expect(BrowserSettings.apply(state, document, { browser: { observation: "none" } })).toEqual({
+      browser: { observation: "none" },
+    })
+    expect(BrowserSettings.apply(state, document, {})).toEqual({})
+    expect(Object.keys(BrowserSettings.apply(state, document, { allowAll: true }))).toEqual(["permissions"])
+  })
+
+  test("the state after a write is the file's keys with the patch on top", () => {
+    const set = BrowserSettings.apply(BrowserSettings.read({}), {}, { browser: { backend: "extension" } })
+    expect(BrowserSettings.read(BrowserSettings.applied({ browser: { headless: true } }, set))).toEqual({
       backend: "extension",
       observation: "diff",
-      allow_sensitive: true,
+      allow_sensitive: false,
       headless: true,
+      rules: [],
+      allowAll: false,
     })
   })
 
@@ -324,13 +338,20 @@ describe("config document writes", () => {
       read: async () => ({ path: "/kilo2.json", revision: revision(), document: JSON.parse(text) as unknown }),
       write: async (set: unknown, expected?: { path: string; revision: string }) => {
         if (expected && expected.revision !== revision()) throw new Error("revision-conflict")
-        const current = JSON.parse(text) as Record<string, unknown>
-        text = JSON.stringify({ ...current, ...(set as Record<string, unknown>) })
+        text = JSON.stringify(leaves(JSON.parse(text), set))
       },
       document: () => JSON.parse(text) as Record<string, unknown>,
       writes: 0,
     }
   }
+
+  const record = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value)
+  /** The RPC's `set` (`kilo-plugin/src/settings.ts` `expandSet`): objects are written leaf by leaf, other values replace. */
+  const leaves = (current: unknown, set: unknown): unknown =>
+    record(current) && record(set)
+      ? { ...current, ...Object.fromEntries(Object.entries(set).map(([key, value]) => [key, leaves(current[key], value)])) }
+      : set
 
   test("two concurrent writes both land instead of one failing on the other's revision", async () => {
     const file = guarded({ browser: { backend: "off", observation: "diff" }, permissions: [] })
@@ -346,11 +367,8 @@ describe("config document writes", () => {
       store.write({ browser: { observation: "full" } }),
     ])
     expect(file.writes).toBe(2)
-    expect(file.document().browser).toEqual({
-      backend: "playwright",
-      observation: "full",
-      allow_sensitive: false,
-    })
+    // Each write names one key, so the file gains exactly those two and no default the user never chose.
+    expect(file.document().browser).toEqual({ backend: "playwright", observation: "full" })
     expect(first.backend).toBe("playwright")
     expect(second.observation).toBe("full")
   })
@@ -386,6 +404,6 @@ describe("config document writes", () => {
     ])
     expect(failed).toBe(true)
     expect(written.observation).toBe("none")
-    expect(file.document().browser).toEqual({ backend: "off", observation: "none", allow_sensitive: false })
+    expect(file.document().browser).toEqual({ backend: "off", observation: "none" })
   })
 })

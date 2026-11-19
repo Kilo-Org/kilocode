@@ -7,7 +7,7 @@ import { PermissionCommand } from "../components/chat/PermissionCommand"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 import { PermissionDiff } from "./permission-diff"
-import { allowBroader, displayResource, widerRule } from "./permission-rules"
+import { allowBroader, displayResource, reasonOf, savable, widerRule } from "./permission-rules"
 
 /** v2 permission actions whose existing label key has another name. */
 const LABELS: Record<string, string> = {
@@ -110,6 +110,13 @@ export function PermissionDock(props: {
                 </div>
               )}
             </Show>
+            <Show when={reasonOf(props.request)}>
+              {(reason) => (
+                <div data-slot="permission-hint" data-wrap data-reason>
+                  {language.t("ui.permission.reason", { reason: reason() })}
+                </div>
+              )}
+            </Show>
             <Show when={command()}>{(text) => <PermissionCommand command={text()} />}</Show>
             <Show when={props.onPreview && files().length > 0}>
               <Button
@@ -138,9 +145,11 @@ export function PermissionDock(props: {
           <Button variant="primary" size="small" onClick={() => submit("once")} disabled={sending()}>
             {language.t("ui.permission.allowOnce")}
           </Button>
-          <Button variant="secondary" size="small" onClick={() => submit("always")} disabled={sending()}>
-            {language.t("ui.permission.allowAlways")}
-          </Button>
+          <Show when={savable(props.request)}>
+            <Button variant="secondary" size="small" onClick={() => submit("always")} disabled={sending()}>
+              {language.t("ui.permission.allowAlways")}
+            </Button>
+          </Show>
           <Show when={wider()}>
             {(rule) => (
               <Button variant="secondary" size="small" onClick={() => submit("always", rule())} disabled={sending()}>
