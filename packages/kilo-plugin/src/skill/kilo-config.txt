@@ -47,7 +47,7 @@ Each project directory on the walk is a config directory. It loads its root file
 | Plugins | `{plugin,plugins}/*.{ts,js}` or a plugin package directory |
 | Instructions | `AGENTS.md` in the global directory and in each directory from the workspace up to the project root, plus `instructions` |
 
-`AGENTS.md` is read as an instruction file in the global directory and in each directory from the workspace up to the project root. `CLAUDE.md` is read too: `./CLAUDE.md` in each directory up to the project root and `~/.claude/CLAUDE.md`; `KILO_DISABLE_CLAUDE_CODE=1` or `KILO_DISABLE_CLAUDE_CODE_PROMPT=1` stops those files. `.claude` and `.agents` skills stop with `KILO_DISABLE_CLAUDE_CODE=1` or `KILO_DISABLE_CLAUDE_CODE_SKILLS=1`. Add any other file to `instructions`.
+`AGENTS.md` is read as an instruction file in the global directory and in each directory from the workspace up to the project root. `CLAUDE.md` is read too: `./CLAUDE.md` in each directory up to the project root and `~/.claude/CLAUDE.md`; `KILO_DISABLE_CLAUDE_CODE=1` or `KILO_DISABLE_CLAUDE_CODE_PROMPT=1` stops those files. `.claude` skills stop with `KILO_DISABLE_CLAUDE_CODE=1` or `KILO_DISABLE_CLAUDE_CODE_SKILLS=1`; `.agents` skills are always loaded. Add any other file to `instructions`.
 
 To find where `/name` or an agent comes from, list the loaded set first (`kilo2 api get /api/command`, `kilo2 api get /api/agent`), then search the patterns above in `~/.config/kilo2/`, `$KILO2_CONFIG_DIR`, each `.kilo2/` from the workspace up to the worktree root, and the `commands` or `agents` keys of the config files. Never search `.kilo/`, `.kilocode/` or `~/.kilo*`: v2 does not read them. MCP prompts also appear as `/<server>:<prompt>` commands.
 
