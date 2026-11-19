@@ -180,7 +180,7 @@ export const dict = {
   "browser.permission.navigate.title": "Pagina's openen op {{origin}}",
   "browser.permission.read.detail":
     "De agent kan paginatekst, snapshots en schermafbeeldingen van deze oorsprong lezen.",
-  "browser.permission.act.detail": "De agent kan op deze oorsprong klikken, typen en pagina-scripts uitvoeren.",
+  "browser.permission.act.detail": "De agent kan op deze oorsprong klikken, typen en paginascripts uitvoeren.",
   "browser.permission.navigate.detail": "De agent kan pagina's op deze oorsprong openen.",
   "browser.permission.frame": "Deze oorsprong is een frame binnen de pagina, niet de pagina zelf.",
   "browser.permission.sensitive.title": "Gevoelige browserstap op {{origin}}",

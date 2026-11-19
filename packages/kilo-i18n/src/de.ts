@@ -175,10 +175,11 @@ export const dict = {
     "Aktiven Tab teilen (/browser share) oder die zuletzt beendete Tab-Gruppe wiederverwenden (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Seiten auf {{origin}} lesen",
-  "browser.permission.act.title": "Auf {{origin}} klicken und tippen",
+  "browser.permission.act.title": "Auf {{origin}} klicken und Text eingeben",
   "browser.permission.navigate.title": "Seiten auf {{origin}} öffnen",
   "browser.permission.read.detail": "Der Agent kann Seitentext, Snapshots und Screenshots von dieser Origin lesen.",
-  "browser.permission.act.detail": "Der Agent kann auf dieser Origin klicken, tippen und Seitenskripte ausführen.",
+  "browser.permission.act.detail":
+    "Der Agent kann auf dieser Origin klicken, Text eingeben und Seitenskripte ausführen.",
   "browser.permission.navigate.detail": "Der Agent kann Seiten auf dieser Origin öffnen.",
   "browser.permission.frame": "Diese Origin ist ein Frame innerhalb der Seite, nicht die Seite selbst.",
   "browser.permission.sensitive.title": "Sensibler Browser-Schritt auf {{origin}}",

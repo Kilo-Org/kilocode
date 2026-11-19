@@ -174,10 +174,10 @@ export const dict = {
     "Udostępnij aktywną kartę (/browser share) lub użyj ponownie ostatniej zakończonej grupy kart (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Odczytuj strony w {{origin}}",
-  "browser.permission.act.title": "Klikaj i pisz w {{origin}}",
+  "browser.permission.act.title": "Klikaj i wpisuj tekst w {{origin}}",
   "browser.permission.navigate.title": "Otwieraj strony w {{origin}}",
-  "browser.permission.read.detail": "Agent może odczytywać tekst strony, zrzuty i zrzuty ekranu z tego źródła.",
-  "browser.permission.act.detail": "Agent może klikać, pisać i uruchamiać skrypty strony w tym źródle.",
+  "browser.permission.read.detail": "Agent może odczytywać tekst strony, migawki i zrzuty ekranu z tego źródła.",
+  "browser.permission.act.detail": "Agent może klikać, wpisywać tekst i uruchamiać skrypty strony w tym źródle.",
   "browser.permission.navigate.detail": "Agent może otwierać strony w tym źródle.",
   "browser.permission.frame": "To źródło jest ramką wewnątrz strony, a nie samą stroną.",
   "browser.permission.sensitive.title": "Krok wrażliwy przeglądarki w {{origin}}",
