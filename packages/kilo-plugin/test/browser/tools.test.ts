@@ -346,7 +346,7 @@ describe("browser tools", () => {
   test("a config change hides the tools and the skill for the next turn and shows them again, without a restart", async () => {
     let backend: Browser["backend"] = "extension"
     const host = await boot(() => ({ backend }))
-    expect(host.tools().length).toBe(26)
+    expect(host.tools().length).toBe(BrowserContract.entries.length)
 
     backend = "off"
     await host.publish("config.updated")
@@ -358,7 +358,7 @@ describe("browser tools", () => {
     backend = "playwright"
     await host.publish("config.updated")
     await host.reloaded(2)
-    expect(host.tools().length).toBe(26)
+    expect(host.tools().length).toBe(BrowserContract.entries.length)
     expect(host.skills.map((skill) => skill.id)).toEqual([Skill.ID.make("browser-automation")])
     expect(((await host.status()) as { backend: string }).backend).toBe("playwright")
   })
@@ -370,7 +370,7 @@ describe("browser tools", () => {
     backend = "extension"
     await host.publish("config.updated")
     await host.reloaded(1)
-    expect(host.tools().length).toBe(26)
+    expect(host.tools().length).toBe(BrowserContract.entries.length)
   })
 
   test("a call made after the user turned the tools off says so and never asks the model to turn them on", async () => {
