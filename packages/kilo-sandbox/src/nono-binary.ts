@@ -15,8 +15,14 @@ import path from "node:path"
 import type { Support } from "./backend"
 import { resolvePath } from "./path"
 
+// Injected by the CLI build for a packaged binary; absent when running from source.
+declare const KILO_NONO_VERSION: string | undefined
+declare const KILO_NONO_SHA256: string | undefined
+
+const fallback = "0.82.0"
+
 /** The release the POC expects when no local binary is supplied. */
-export const version = "0.82.0"
+export const version = typeof KILO_NONO_VERSION === "string" ? KILO_NONO_VERSION : fallback
 
 function manifestFile() {
   return process.env.KILO_NONO_MANIFEST || path.join(import.meta.dir, "..", "script", "nono-manifest.json")
@@ -153,11 +159,18 @@ function executable(file: string) {
   }
 }
 
+/** A packaged build ships nono next to the executable and embeds its digest at build time. */
+function packaged() {
+  if (typeof KILO_NONO_SHA256 !== "string") return undefined
+  return path.join(path.dirname(process.execPath), "nono")
+}
+
 function staged() {
-  return path.join(root(), "bin", "nono", version, "nono")
+  return packaged() ?? path.join(root(), "bin", "nono", version, "nono")
 }
 
 function pin() {
+  if (typeof KILO_NONO_SHA256 === "string") return KILO_NONO_SHA256
   const name = target()
   if (!name) return undefined
   try {

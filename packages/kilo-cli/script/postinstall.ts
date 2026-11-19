@@ -13,11 +13,12 @@ export async function launcherPostinstall() {
     "bwrap",
     "licenses",
     "kilo-sandbox-mutation-worker.js",
+    "nono",
     KiloSandboxNetwork.relay,
     KiloSandboxNetwork.seccomp,
     "libopentui.dylib",
   ]
-  const executables = ["bwrap", KiloSandboxNetwork.seccomp]
+  const executables = ["bwrap", "nono", KiloSandboxNetwork.seccomp]
   return script.replace(
     copied,
     copied +
