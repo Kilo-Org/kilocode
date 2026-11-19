@@ -231,6 +231,8 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "Automatisch goedkeuren is uitgeschakeld. Klik om toestemmingsverzoeken automatisch goed te keuren.",
   "prompt.action.autoApprove.sandboxExcluded": "Escalatieaanvragen van de sandbox worden altijd uitgesloten.",
+  "prompt.action.autoApprove.enabledNotification": "Automatisch goedkeuren ingeschakeld. Verzoeken om sandbox-escalatie zijn uitgesloten.",
+  "prompt.action.autoApprove.disabledNotification": "Automatisch goedkeuren uitgeschakeld.",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
   "prompt.action.sandbox.enable": "Sandbox inschakelen",

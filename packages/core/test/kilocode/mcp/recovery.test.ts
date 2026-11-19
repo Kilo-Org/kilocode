@@ -3,6 +3,7 @@ import { ConfigMCP } from "@opencode/schema/config/mcp"
 import { ID, type Payload } from "@opencode/schema/event"
 import { Bus } from "@opencode/core/bus"
 import { Credential } from "@opencode/core/credential"
+import { Flag } from "@opencode/core/flag"
 import { Form } from "@opencode/core/form"
 import { Integration } from "@opencode/core/integration"
 import { KiloMcpRecovery } from "@opencode/core/kilocode/mcp/recovery"
@@ -47,6 +48,10 @@ const mcpLayer = KiloMcpRecovery.layer(Mcp.layer()).pipe(
       McpPool.layer.pipe(Layer.provide(LayerNode.compile(CrossSpawnSpawner.node))),
       Layer.succeed(Location.Service, Location.Service.of(location({ directory: AbsolutePath.make(import.meta.dir) }))),
       Layer.mock(Form.Service, {}),
+      Layer.mock(Flag.Service, {
+        resolve: () => ({}) as Record<Flag.Key, Flag.State>,
+        enabled: () => Effect.succeed(false),
+      }),
       // `oauth: false` servers never register an integration or read a credential.
       Layer.mock(Integration.Service, {
         revision: () => 0,

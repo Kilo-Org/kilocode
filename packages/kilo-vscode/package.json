@@ -465,6 +465,11 @@
         "category": "Kilo Code (v2)"
       },
       {
+        "command": "kilo-code.v2.toggleAutoApprove",
+        "title": "Toggle Auto-Approve",
+        "category": "Kilo Code (v2)"
+      },
+      {
         "command": "kilo-code.v2.generateCommitMessage",
         "title": "Generate Commit Message",
         "category": "Kilo Code (v2)",
@@ -724,6 +729,11 @@
         "key": "ctrl+shift+.",
         "mac": "cmd+shift+.",
         "when": "kilo-code.v2.sidebarFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.v2.toggleAutoApprove",
+        "key": "ctrl+alt+a",
+        "mac": "cmd+alt+a"
       },
       {
         "command": "kilo-code.v2.settingsSearch",

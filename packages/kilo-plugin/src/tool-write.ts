@@ -9,9 +9,6 @@ import path from "path"
 
 type Input = { readonly path: string }
 
-// The `write` output schema in @opencode/core.
-type Output = { readonly target: string; readonly resource: string; readonly existed: boolean }
-
 // A large write would otherwise store its whole content twice: once in the tool input and again in this patch,
 // which is durable on the session and sent to every client. The counts and status stay, the renderer falls back
 // to its text preview, and the diff viewer is not offered for that card.
@@ -37,11 +34,10 @@ export const KiloWriteToolPlugin = define<FSUtil.Service | Scope.Scope>({
             const target = resolvePath(ctx.location.directory, input.path)
             const before = internal(ctx.location, target) ? yield* existing(fs, target) : undefined
             const result = yield* execute(input, context)
-            const output = result.output as Output | undefined
-            if (before === undefined || output === undefined) return result
-            const after = yield* read(fs, output.target)
+            if (before === undefined) return result
+            const after = yield* read(fs, target)
             if (after === undefined) return result
-            const file = fileDiff(output.resource, before, after, output.existed ? "modified" : "added")
+            const file = fileDiff(resource(ctx.location, target), before.text, after, before.existed ? "modified" : "added")
             return { ...result, metadata: { ...result.metadata, files: [bounded(file)] } } // kilo_port(unattributed:tool:0bc16fea6c47)
           })
       }),
@@ -65,9 +61,22 @@ const internal = (location: { directory: string; project: { directory: string } 
 const bounded = (file: typeof FileDiff.Info.Type): typeof FileDiff.Info.Type =>
   file.patch.length > PATCH_LIMIT ? { ...file, patch: "" } : file
 
-/** The current text, or an empty string when the write creates the file. */
-const existing = (fs: FSUtil.Interface, target: string) =>
-  fs.existsSafe(target).pipe(Effect.andThen((exists) => (exists ? read(fs, target) : Effect.succeed(""))))
+/** The current text and whether the file existed before the write. */
+const existing = (
+  fs: FSUtil.Interface,
+  target: string,
+): Effect.Effect<{ readonly text: string; readonly existed: boolean } | undefined> =>
+  fs.existsSafe(target).pipe(
+    Effect.flatMap((existed): Effect.Effect<{ readonly text: string; readonly existed: boolean } | undefined> =>
+      existed
+        ? Effect.map(read(fs, target), (text) => (text === undefined ? undefined : { text, existed: true }))
+        : Effect.succeed({ text: "", existed: false }),
+    ),
+  )
+
+/** The resource name the write tool reports: relative to the session directory for an internal target. */
+const resource = (location: { directory: string }, target: string) =>
+  (path.relative(location.directory, target) || ".").replaceAll("\\", "/")
 
 /** A preview read, so an unreadable file leaves the result without a diff instead of failing the write. */
 const read = (fs: FSUtil.Interface, target: string) =>

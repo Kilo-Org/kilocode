@@ -113,6 +113,12 @@ describe("resolvePromptKeybindings", () => {
     })
   })
 
+  it("labels the auto-approve toggle from the manifest binding", () => {
+    const toggle = [{ command: "kilo-code.v2.toggleAutoApprove", key: "ctrl+alt+a", mac: "cmd+alt+a" }]
+    expect(resolvePromptKeybindings(toggle, undefined, true).toggleAutoApprove).toBe("⌘⌥A")
+    expect(resolvePromptKeybindings(toggle, undefined, false).toggleAutoApprove).toBe("Ctrl+Alt+A")
+  })
+
   it("applies the user's override and ignores unrelated commands", () => {
     const user = [
       { key: "cmd+j", command: "kilo-code.v2.cycleAgentMode" },

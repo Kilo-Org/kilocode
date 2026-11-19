@@ -193,7 +193,7 @@ describe("Kilo delegation", () => {
           expect(request.system[1]?.text).not.toContain("Do not spawn subagents unless")
           expect(request.system[2]?.text).toBe("PROJECT INSTRUCTIONS")
           expect(request.system[3]?.text).toContain("without waiting for an explicit request")
-          expect(request.system[3]?.text).toContain("Prefer background subagents")
+          expect(request.system[3]?.text).toContain("Every subagent runs in the background")
           expect(request.system[3]?.text).not.toContain("shared board")
           expect(request.system).toHaveLength(4)
         }
@@ -222,7 +222,7 @@ describe("Kilo delegation", () => {
           tools: { subagent: tool, board_read: tool, board_post: tool },
         })
         expect(request.system[1]?.text).toBe(custom)
-        expect(request.system[2]?.text).toContain("Prefer background subagents")
+        expect(request.system[2]?.text).toContain("Every subagent runs in the background")
         expect(request.system[2]?.text).not.toContain("shared board")
 
         const withoutSubagent = yield* hooks.trigger("session", "context", {
@@ -254,7 +254,7 @@ describe("Kilo delegation", () => {
           const request = yield* hooks.trigger("session", name, { ...input, system: [SystemPart.make("BASE")] })
           expect(request.system[1]?.text).toContain("# Destructive actions")
           expect(request.system[1]?.text).not.toContain("Do not spawn subagents unless")
-          expect(request.system.at(-1)?.text).toContain("Prefer background subagents")
+          expect(request.system.at(-1)?.text).toContain("Every subagent runs in the background")
         }
         const withoutTools = yield* hooks.trigger("session", "generate", {
           ...input,
@@ -286,7 +286,7 @@ describe("Kilo delegation", () => {
         }
         const request = yield* hooks.trigger("session", "context", input)
         expect(request.options[ClaudeSystemPrompt.INSTRUCTIONS_OPTION]).toStartWith("PROJECT INSTRUCTIONS\n\n")
-        expect(request.options[ClaudeSystemPrompt.INSTRUCTIONS_OPTION]).toContain("Prefer background subagents")
+        expect(request.options[ClaudeSystemPrompt.INSTRUCTIONS_OPTION]).toContain("Every subagent runs in the background")
       }),
     ),
   )

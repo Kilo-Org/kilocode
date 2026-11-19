@@ -1,6 +1,6 @@
 export * as McpConnection from "./connection.js"
 
-import type { OAuthClientProvider } from "@modelcontextprotocol/client"
+import type { AuthProvider } from "@modelcontextprotocol/client"
 import type { Mcp } from "@opencode/schema/mcp"
 import { Cause, Effect, Exit, Scope } from "effect"
 import { FetchHttpClient } from "effect/http"
@@ -52,9 +52,11 @@ export interface Input {
    */
   readonly shared?: boolean
   readonly clientInfo?: { readonly name: string; readonly version: string }
+  /** Declares MCP Events; see `McpClient.ConnectOptions.events`. */
+  readonly mcpEvents?: boolean
   readonly host?: McpHost.Host // kilocode_change - embedding transport and OAuth hooks
   /** Read on every attempt, so a credential change applies to the next one. */
-  readonly authProvider: Effect.Effect<OAuthClientProvider | undefined>
+  readonly authProvider: Effect.Effect<AuthProvider | undefined>
   readonly elicitation: McpClient.ElicitationHandler
   /** A stdio server is spawned on this execution plane. */
   readonly environment: Environment.Interface
@@ -185,8 +187,9 @@ export function make(input: Input): Connection {
         authProvider,
         elicitation: input.elicitation,
         clientInfo: input.clientInfo,
-        host: input.host, // kilocode_change - embedding transport hooks
         roots: !input.shared,
+        events: input.mcpEvents,
+        host: input.host, // kilocode_change - embedding transport hooks
       }).pipe(
         Effect.flatMap(
           (client): Effect.Effect<{ client: McpClient.Connection; tools?: ReadonlyArray<McpClient.Tool> }, Error> =>
