@@ -30,15 +30,20 @@ internal fun HostedWorkspaceChangesDto.headerChanges(): HostedWorkspaceHeaderCha
     val local = groups.flatMap { it.files }.filter { it.scope == "uncommitted" }
     val bases = groups.filter { group -> group.files.any { it.scope == "against-base-branch" } }
         .map { it.comparison.baseRef }.distinct()
-    val incomplete = missing == null && (truncated || groups.any { it.truncated } ||
-        (committed + local).any { !it.countsComplete })
+    val partial = truncated || groups.any { it.truncated } || (committed + local).any { !it.countsComplete }
+    val committedAdditions = committed.additions()
+    val committedDeletions = committed.deletions()
+    val localAdditions = local.additions()
+    val localDeletions = local.deletions()
     return HostedWorkspaceHeaderChanges(
-        stats = WorktreeStatsDto(ref.key, committed.additions(), committed.deletions(), files = committed.size,
+        stats = WorktreeStatsDto(ref.key, committedAdditions, committedDeletions, files = committed.size,
             base = bases.singleOrNull().orEmpty(), unavailable = missing != null, reason = missing.orEmpty(),
-            incomplete = incomplete),
-        dirty = WorktreeDirtyDto(ref.key, local.additions(), local.deletions(), files = local.size,
+            incomplete = missing == null && (partial || committedAdditions == Int.MAX_VALUE ||
+                committedDeletions == Int.MAX_VALUE)),
+        dirty = WorktreeDirtyDto(ref.key, localAdditions, localDeletions, files = local.size,
             untracked = local.count { !it.tracked }, unavailable = missing != null, reason = missing.orEmpty(),
-            incomplete = incomplete),
+            incomplete = missing == null && (partial || localAdditions == Int.MAX_VALUE ||
+                localDeletions == Int.MAX_VALUE)),
     )
 }
 

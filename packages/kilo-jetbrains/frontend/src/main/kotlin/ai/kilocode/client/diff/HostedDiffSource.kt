@@ -102,7 +102,13 @@ internal fun openHostedDiff(
     val source = HostedDiffSource(ref, comparison, HostedDiffSource.account(account), state.profile?.currentOrgId)
     if (!source.current(project)) return
     ensureDiffEditorKind()
-    project.service<KiloVfsManager>().open(KiloDiffEditorKind.ID, source.params())
+    val manager = project.service<KiloVfsManager>()
+    val params = source.params()
+    manager.open(KiloDiffEditorKind.ID, params)
+    // `open` selects an existing tab without re-reading its name, so a rename that happened while the
+    // diff was already open needs this explicit presentation refresh. The entry already exists here,
+    // so this cannot reintroduce the retention guarded against in refreshHostedDiffTitles.
+    manager.updatePresentation(KiloDiffEditorKind.ID, params)
 }
 
 /**

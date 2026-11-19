@@ -27,11 +27,12 @@ class HostedWorkspaceHeaderChangesTest : BasePlatformTestCase() {
         assertEquals(2, changes.stats.files)
         assertEquals("origin/main", changes.stats.base)
         assertFalse(changes.stats.unavailable)
-        assertFalse(changes.stats.incomplete)
+        assertTrue("Saturated totals are a lower bound", changes.stats.incomplete)
         assertEquals(7, changes.dirty.additions)
         assertEquals(3, changes.dirty.deletions)
         assertEquals(1, changes.dirty.files)
         assertEquals(1, changes.dirty.untracked)
+        assertFalse(changes.dirty.incomplete)
     }
 
     fun `test multiple bases avoid a misleading label and uncaptured snapshots read as unknown`() {

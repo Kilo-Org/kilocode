@@ -8,6 +8,7 @@ import ai.kilocode.client.testing.TestLog
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.ui.DiffStatBadge
+import ai.kilocode.client.vfs.KiloEditorKindRegistry
 import ai.kilocode.client.vfs.KiloPath
 import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
@@ -133,13 +134,28 @@ class HostedDiffRequestsTest : BasePlatformTestCase() {
         assertTrue(source.current(project))
     }
 
-    fun `test title refresh does not create virtual files for unopened comparisons`() {
+    fun `test title refresh only updates comparisons that are already open`() {
+        val registry = service<KiloEditorKindRegistry>()
         val fs = KiloVirtualFileSystem.getInstance()
-        service<HostedWorkspaceCache>().putTitle(ref, "Task overview")
-        refreshHostedDiffTitles(project, ref)
-        HostedDiffComparison.entries.forEach { comparison ->
-            val path = KiloPath(KiloDiffEditorKind.ID, source.copy(comparison = comparison).params())
-            assertNull(fs.cached(path))
+        fun path(comparison: HostedDiffComparison) =
+            KiloPath(KiloDiffEditorKind.ID, source.copy(comparison = comparison).params())
+        try {
+            registry.register(KiloDiffEditorKind)
+            val cache = service<HostedWorkspaceCache>()
+            cache.putTitle(ref, "Task overview")
+            refreshHostedDiffTitles(project, ref)
+            HostedDiffComparison.entries.forEach { assertNull(fs.cached(path(it))) }
+
+            assertNotNull(fs.findOrCreateFile(path(HostedDiffComparison.COMMITTED)))
+            cache.putTitle(ref, "Renamed task")
+            refreshHostedDiffTitles(project, ref)
+            assertNotNull(fs.cached(path(HostedDiffComparison.COMMITTED)))
+            HostedDiffComparison.entries.filter { it != HostedDiffComparison.COMMITTED }.forEach {
+                assertNull(fs.cached(path(it)))
+            }
+        } finally {
+            registry.unregister(KiloDiffEditorKind.ID)
+            fs.clear()
         }
     }
 
