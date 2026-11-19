@@ -35,6 +35,8 @@ Parent organization Owners and Admins can create direct sub-organizations.
 
 The new sub-organization starts empty. It does not automatically copy parent members, model policy, or organization settings. Parent Owners, Admins, and Billing Managers receive inherited management access without becoming members of the new sub-organization.
 
+A new sub-organization starts on the parent organization's current plan — an Enterprise parent creates an Enterprise child, and a Teams parent creates a Teams child. This is a one-time default at creation: changing either organization's plan later does not change the other.
+
 {% callout type="note" %}
 Billing Managers can view sub-organizations and manage financial operations, but they cannot create a sub-organization.
 {% /callout %}

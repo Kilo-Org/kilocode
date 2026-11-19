@@ -430,4 +430,48 @@ describe("DirectoryScanner", () => {
     expect(retry?.maxRetries).toBe(2)
     expect(retry?.error).toContain("[REDACTED_PATH]")
   })
+
+  test("keeps capitalized source folders that match ignored dirs case-insensitively", async () => {
+    // The anchored ignore globs (e.g. **/build/**) must match case-sensitively
+    // like FileIgnore.match() does: on glob platforms with a nocase default
+    // (macOS, Windows), they would prune valid sources such as src/Build/Main.ts.
+    // Only the capitalized dirs exist, so this works on case-insensitive volumes
+    // too and catches a regression on the platform where it actually occurs.
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    try {
+      const kept = join(root, "src", "Build", "Main.ts")
+      const keptTarget = join(root, "src", "Target", "Main.ts")
+      const keptDesktop = join(root, "Desktop", "App.ts")
+      const pruned = join(root, "build", "gen.ts")
+      const prunedNested = join(root, "pkg", "build", "gen.ts")
+
+      await mkdir(join(root, "src", "Build"), { recursive: true })
+      await mkdir(join(root, "src", "Target"), { recursive: true })
+      await mkdir(join(root, "Desktop"), { recursive: true })
+      await mkdir(join(root, "build"), { recursive: true })
+      await mkdir(join(root, "pkg", "build"), { recursive: true })
+      await Bun.write(kept, "export const kept = 1\n")
+      await Bun.write(keptTarget, "export const keptTarget = 1\n")
+      await Bun.write(keptDesktop, "export const keptDesktop = 1\n")
+      await Bun.write(pruned, "export const pruned = 1\n")
+      await Bun.write(prunedNested, "export const prunedNested = 1\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+
+      const scan = new DirectoryScanner(new Emb(), new Store(), new Parser(), cache, ignore(), 1, 1)
+      const result = await scan.scanDirectory(root)
+
+      expect(result.stats.processed).toBe(3)
+      expect(cache.getHash(kept)).toBeDefined()
+      expect(cache.getHash(keptTarget)).toBeDefined()
+      expect(cache.getHash(keptDesktop)).toBeDefined()
+      expect(cache.getHash(pruned)).toBeUndefined()
+      expect(cache.getHash(prunedNested)).toBeUndefined()
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
 })

@@ -29,6 +29,8 @@ import { KiloToolInput } from "@/kilocode/session/tool-input" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model"
 import { KiloResponseMetadata } from "@/kilocode/session/response-metadata"
+import { KiloGeneratedFile } from "@/kilocode/session/generated-file"
+import { KiloReasoningReplay } from "@/kilocode/session/reasoning-replay"
 import { Suggestion } from "@/kilocode/suggestion"
 // kilocode_change end
 import { errorMessage } from "@/util/error"
@@ -631,6 +633,39 @@ const layer = Layer.effect(
             })
             // kilocode_change end
             yield* Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)
+            // kilocode_change start - persist model-generated images as assistant file parts
+            yield* Effect.forEach(
+              yield* KiloGeneratedFile.store({
+                metadata: value.providerMetadata,
+                sessionID: ctx.assistantMessage.sessionID,
+                messageID: ctx.assistantMessage.id,
+                id: () => PartID.ascending(),
+                image,
+                config: yield* config.get(),
+              }),
+              (part) => session.updatePart(part),
+            )
+            // kilocode_change end
+            // kilocode_change start - persist late-arriving OpenRouter reasoning details for replay
+            const details = KiloReasoningReplay.details(value.providerMetadata)
+            if (details) {
+              const parts = yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
+                Effect.provideService(Database.Service, database),
+              )
+              yield* Effect.forEach(
+                KiloReasoningReplay.reconcile({
+                  parts,
+                  details,
+                  messageID: ctx.assistantMessage.id,
+                  sessionID: ctx.assistantMessage.sessionID,
+                }),
+                (part) =>
+                  session
+                    .getPart({ partID: part.id, messageID: part.messageID, sessionID: part.sessionID })
+                    .pipe(Effect.flatMap((stored) => session.updatePart(KiloReasoningReplay.restore(part, stored)))),
+              )
+            }
+            // kilocode_change end
             // Anthropic reports thinking blocks it removed before the model saw the
             // prompt. Prefix mismatches mean opencode changed history behind a signed
             // block; log them so the churn can be tracked down.

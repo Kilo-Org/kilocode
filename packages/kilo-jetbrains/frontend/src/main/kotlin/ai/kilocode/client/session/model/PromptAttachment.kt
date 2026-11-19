@@ -5,6 +5,7 @@ import java.awt.Image
 import java.awt.image.BufferedImage
 import java.awt.image.MultiResolutionImage
 import java.io.ByteArrayOutputStream
+import java.net.URI
 import java.util.Base64
 import java.util.UUID
 import javax.imageio.ImageIO
@@ -126,3 +127,39 @@ object PromptAttachmentExtractor {
 }
 
 private fun data(path: Path, mime: String) = "data:$mime;base64,${Base64.getEncoder().encodeToString(path.readBytes())}"
+
+// Rebuilds a prompt attachment from what a sent user message persisted, so reverting the message
+// puts the same chips back in the prompt box that were there when it was sent.
+
+/** A file or image the message carried. Prefers the on-disk path so the rebuilt chip is editable. */
+internal fun FileAttachment.toPromptAttachment(): PromptAttachment {
+    val path = filePath(url)
+    val name = filename?.takeIf { it.isNotBlank() } ?: path?.fileName?.toString() ?: "file"
+    return PromptAttachment(
+        id = path?.toAbsolutePath()?.normalize()?.toString() ?: "attachment:$id",
+        name = name,
+        mime = mime,
+        url = path?.toUri()?.toString() ?: url,
+        path = path,
+        reference = path == null || !PromptAttachmentExtractor.image(mime),
+    )
+}
+
+/** An attachment the CLI could not read: only its source path was persisted, in the notice. */
+internal fun Notice.toPromptAttachment(): PromptAttachment? {
+    val raw = path ?: return null
+    val path = runCatching { Path.of(raw) }.getOrNull()
+    return PromptAttachment(
+        id = raw,
+        name = name ?: path?.fileName?.toString() ?: raw,
+        mime = "text/plain",
+        url = path?.toUri()?.toString() ?: raw,
+        path = path,
+        reference = true,
+    )
+}
+
+private fun filePath(url: String): Path? {
+    if (!url.startsWith("file:")) return null
+    return runCatching { Path.of(URI(url)) }.getOrNull()
+}

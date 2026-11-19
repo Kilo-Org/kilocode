@@ -25,12 +25,12 @@ describe("autocomplete settings", () => {
   })
 
   it("includes the configured direct provider model in loaded settings", async () => {
-    state.set("provider", "inception")
-    state.set("model", "mercury-edit-2")
+    state.set("provider", "mistral")
+    state.set("model", "codestral-2508")
     const { buildAutocompleteSettingsMessage } = await import("../settings")
 
-    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("inception")
-    expect(buildAutocompleteSettingsMessage().settings.model).toBe("mercury-edit-2")
+    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("mistral")
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("codestral-2508")
   })
 
   it("passes a bare model setting through unchanged so the webview can render it as-is", async () => {
@@ -38,11 +38,11 @@ describe("autocomplete settings", () => {
     // picked something." We don't try to interpret a bare `model` here —
     // resolving it to a default happens at the runtime layer, not in the
     // settings message.
-    state.set("model", "mercury-edit-2")
+    state.set("model", "codestral-2508")
     const { buildAutocompleteSettingsMessage } = await import("../settings")
 
     expect(buildAutocompleteSettingsMessage().settings.provider).toBeNull()
-    expect(buildAutocompleteSettingsMessage().settings.model).toBe("mercury-edit-2")
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("codestral-2508")
   })
 
   it("returns null for both keys when nothing is set (let the webview render 'Not set')", async () => {
@@ -63,8 +63,8 @@ describe("autocomplete settings", () => {
   it("validates supported model updates", async () => {
     const { validAutocompleteSetting } = await import("../settings")
 
-    expect(validAutocompleteSetting("model", "mercury-edit-2")).toBe(true)
-    expect(validAutocompleteSetting("provider", "inception")).toBe(true)
+    expect(validAutocompleteSetting("model", "codestral-2508")).toBe(true)
+    expect(validAutocompleteSetting("provider", "mistral")).toBe(true)
   })
 
   it("accepts null/undefined for provider and model so users can clear the setting", async () => {

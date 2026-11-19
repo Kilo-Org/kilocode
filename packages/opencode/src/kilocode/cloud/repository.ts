@@ -165,6 +165,12 @@ export namespace CloudRepository {
     })
   }
 
+  /** Parse a Git remote URL, where owner/repository is a local path. */
+  export function remote(input: ParseInput): Output {
+    if (shorthand.test(input.repo)) return invalid("Local repository remotes are not supported")
+    return parse(input)
+  }
+
   export function parse(input: ParseInput): Output {
     const ref = input.repo
     const name = validate(input.branch)
@@ -252,14 +258,12 @@ export namespace CloudRepository {
     if (fetched.exitCode !== 0 || !ref) {
       return yield* Effect.fail(new DiscoveryError({ message: "Unable to read the selected Git remote fetch URL" }))
     }
-    if (shorthand.test(ref)) {
-      return yield* Effect.fail(new InvalidRepositoryError({ message: "Local repository remotes are not supported" }))
-    }
-
-    return yield* parsed({
-      repo: ref,
-      ...(input.type === undefined ? {} : { type: input.type }),
-      ...(input.branch === undefined ? {} : { branch: input.branch }),
+    return yield* Effect.try({
+      try: () => CloudRepository.remote({ repo: ref, type: input.type, branch: input.branch }),
+      catch: (error) => {
+        if (error instanceof InvalidRepositoryError || error instanceof InvalidBranchError) return error
+        return new InvalidRepositoryError({ message: "Repository is invalid" })
+      },
     })
   })
 }

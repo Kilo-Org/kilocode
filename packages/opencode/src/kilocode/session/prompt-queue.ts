@@ -34,6 +34,9 @@ export namespace KiloSessionPromptQueue {
   // own message is never in this list. Published via session.queue.changed so
   // remote clients can reconcile "Queued" badges.
   const waiting = new Map<SessionID, MessageID[]>()
+  // Only newer foreground prompts may dismiss questions; background results
+  // still hand off at the next step boundary.
+  const interactive = new Map<MessageID, number>()
   // Message IDs whose turn handed off to a queued follow-up. The goal runner
   // reads this to keep an active goal running after a user prompt preempts its
   // continuation turn instead of settling the goal to paused.
@@ -166,11 +169,13 @@ export namespace KiloSessionPromptQueue {
    * began. runLoop calls this between LLM steps to break out so the next
    * queued prompt can take over without starting another LLM round-trip for
    * the now-superseded turn.
+   * The question guard passes foreground=true so notifications cannot dismiss
+   * questions, including when older foreground prompts are still queued.
    */
-  export function hasFollowup(sessionID: SessionID): boolean {
+  export function hasFollowup(sessionID: SessionID, foreground = false): boolean {
     const l = latest.get(sessionID) ?? 0
     const a = activeSince.get(sessionID) ?? 0
-    return l > a && (waiting.get(sessionID)?.length ?? 0) > 0
+    return l > a && (waiting.get(sessionID)?.some((id) => !foreground || (interactive.get(id) ?? 0) > a) ?? false)
   }
 
   export function scope(sessionID: SessionID, messages: MessageV2.WithParts[]) {
@@ -216,11 +221,13 @@ export namespace KiloSessionPromptQueue {
     work: Effect.Effect<A, E>,
     cancelled: Effect.Effect<A, E>,
     reserved: Effect.Effect<void> = Effect.void,
+    foreground = true,
   ): Effect.Effect<A, E> {
     return Effect.acquireUseRelease(
       Effect.sync(() => {
         const mine = ++seq
         latest.set(sessionID, mine)
+        if (foreground) interactive.set(target, mine)
         // Record whether this slot starts immediately
         // (no existing tail) so we can publish the queue change exactly once
         // on the transition that actually mutates the waiting list.
@@ -271,6 +278,7 @@ export namespace KiloSessionPromptQueue {
         ),
       (slot) =>
         Effect.sync(() => {
+          interactive.delete(target)
           slot.done.resolve()
           if (tails.get(sessionID) !== slot.tail) return
           tails.delete(sessionID)

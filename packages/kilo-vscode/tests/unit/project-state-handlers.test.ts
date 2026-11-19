@@ -134,6 +134,8 @@ describe("createProjectStateHandlers", () => {
         [
           process.execPath,
           "--conditions=browser",
+          "--preload",
+          path.resolve(import.meta.dir, "../setup/worker-url.ts"),
           "-e",
           `
           import assert from "node:assert/strict"

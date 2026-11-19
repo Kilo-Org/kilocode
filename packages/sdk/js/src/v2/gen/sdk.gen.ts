@@ -11,6 +11,10 @@ import type {
   AgentManagerRequestId,
   AgentManagerResult,
   AgentPartInput,
+  AgentUsageRunsErrors,
+  AgentUsageRunsResponses,
+  AgentUsageSummaryErrors,
+  AgentUsageSummaryResponses,
   AnacondaDesktopOpenErrors,
   AnacondaDesktopOpenResponses,
   AnacondaDesktopStatusErrors,
@@ -42,6 +46,9 @@ import type {
   BackgroundProcessStopSessionResponses,
   BranchNameGenerateErrors,
   BranchNameGenerateResponses,
+  CloudAgentSystemEventsErrors,
+  CloudAgentSystemEventsResponse,
+  CloudAgentSystemEventsResponses,
   CommandListErrors,
   CommandListResponses,
   CommitMessageGenerateErrors,
@@ -235,8 +242,6 @@ import type {
   KilocodeTeardownWorktreeResponses,
   KilocodeWakeupsErrors,
   KilocodeWakeupsResponses,
-  KiloEditErrors,
-  KiloEditResponses,
   KiloFimErrors,
   KiloFimResponse,
   KiloFimResponses,
@@ -408,6 +413,65 @@ import type {
   SessionForkResponses,
   SessionGetErrors,
   SessionGetResponses,
+  SessionHostAttachErrors,
+  SessionHostAttachResponses,
+  SessionHostClearWorkspacePersonalDefaultProfileErrors,
+  SessionHostClearWorkspacePersonalDefaultProfileResponses,
+  SessionHostContinueWorkspaceErrors,
+  SessionHostContinueWorkspaceInput,
+  SessionHostContinueWorkspaceResponses,
+  SessionHostCreateWorkspaceErrors,
+  SessionHostCreateWorkspaceInput,
+  SessionHostCreateWorkspaceResponses,
+  SessionHostDeleteWorkspaceErrors,
+  SessionHostDeleteWorkspaceResponses,
+  SessionHostDetachErrors,
+  SessionHostDetachResponses,
+  SessionHostGetErrors,
+  SessionHostGetResponses,
+  SessionHostGetWorkspaceChangeFileErrors,
+  SessionHostGetWorkspaceChangeFileResponses,
+  SessionHostGetWorkspaceChangesErrors,
+  SessionHostGetWorkspaceChangesResponses,
+  SessionHostGetWorkspaceErrors,
+  SessionHostGetWorkspacePullRequestDiffErrors,
+  SessionHostGetWorkspacePullRequestDiffFileErrors,
+  SessionHostGetWorkspacePullRequestDiffFileResponses,
+  SessionHostGetWorkspacePullRequestDiffResponses,
+  SessionHostGetWorkspacePullRequestErrors,
+  SessionHostGetWorkspacePullRequestResponses,
+  SessionHostGetWorkspaceResponses,
+  SessionHostGetWorkspaceStatusErrors,
+  SessionHostGetWorkspaceStatusResponses,
+  SessionHostListErrors,
+  SessionHostListResponses,
+  SessionHostListWorkspaceProfilesErrors,
+  SessionHostListWorkspaceProfilesResponses,
+  SessionHostListWorkspacesErrors,
+  SessionHostListWorkspaceSessionsErrors,
+  SessionHostListWorkspaceSessionsResponses,
+  SessionHostListWorkspacesResponses,
+  SessionHostOrganizationId,
+  SessionHostProviderId,
+  SessionHostProvidersErrors,
+  SessionHostProvidersResponses,
+  SessionHostRefreshWorkspaceChangesErrors,
+  SessionHostRefreshWorkspaceChangesResponses,
+  SessionHostRefreshWorkspacePullRequestErrors,
+  SessionHostRefreshWorkspacePullRequestResponses,
+  SessionHostSetWorkspacePersonalDefaultProfileErrors,
+  SessionHostSetWorkspacePersonalDefaultProfileResponses,
+  SessionHostStartErrors,
+  SessionHostStartInput,
+  SessionHostStartResponses,
+  SessionHostStartWorkspaceSessionErrors,
+  SessionHostStartWorkspaceSessionResponses,
+  SessionHostTranscriptErrors,
+  SessionHostTranscriptResponses,
+  SessionHostWorkspaceChangeScope,
+  SessionHostWorkspaceId,
+  SessionHostWorkspaceProfileDefaultInput,
+  SessionHostWorkspaceSessionStartBody,
   SessionInitErrors,
   SessionInitResponses,
   SessionListErrors,
@@ -6296,6 +6360,84 @@ export class AgentBuilder extends HeyApiClient {
   }
 }
 
+export class AgentUsage extends HeyApiClient {
+  /**
+   * Get agent usage summary
+   *
+   * Get a per-agent rollup of runs, sessions, direct cost, active time, tokens, errors, and the last run time for the routed project.
+   */
+  public summary<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      agent?: string
+      from?: string
+      to?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "agent" },
+            { in: "query", key: "from" },
+            { in: "query", key: "to" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentUsageSummaryResponses, AgentUsageSummaryErrors, ThrowOnError>({
+      url: "/kilocode/agent-usage/summary",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List agent runs
+   *
+   * List agent runs newest first by start time, with optional agent and time window filters. Pages by the opaque `next` cursor returned by the previous page.
+   */
+  public runs<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      agent?: string
+      from?: string
+      to?: string
+      limit?: string
+      cursor?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "agent" },
+            { in: "query", key: "from" },
+            { in: "query", key: "to" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "cursor" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentUsageRunsResponses, AgentUsageRunsErrors, ThrowOnError>({
+      url: "/kilocode/agent-usage/runs",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class BackgroundProcess extends HeyApiClient {
   /**
    * List background processes
@@ -6602,6 +6744,42 @@ export class CommitMessage extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+}
+
+export class CloudAgent extends HeyApiClient {
+  /**
+   * Subscribe to Cloud Agent system events
+   *
+   * Read preparation and sandbox status events through an opaque hosted attachment.
+   */
+  public systemEvents<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError, CloudAgentSystemEventsResponse>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).sse.get<
+      CloudAgentSystemEventsResponses,
+      CloudAgentSystemEventsErrors,
+      ThrowOnError
+    >({
+      url: "/cloud-agent/event",
+      ...options,
+      ...params,
     })
   }
 }
@@ -7149,66 +7327,6 @@ export class Kilo extends HeyApiClient {
     )
     return (options?.client ?? this.client).sse.post<KiloFimResponses, KiloFimErrors, ThrowOnError>({
       url: "/kilo/fim",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Next Edit completion
-   *
-   * Proxy a Mercury-style Next Edit request. The client supplies structured editor context; the gateway assembles the sentinel-tagged prompt and forwards to the upstream edit endpoint.
-   */
-  public edit<ThrowOnError extends boolean = false>(
-    parameters: {
-      directory?: string
-      workspace?: string
-      provider?: string
-      model?: string
-      maxTokens?: number
-      currentFilePath: string
-      currentFileContent: string
-      cursorLine: number
-      cursorCharacter: number
-      editableRegionStartLine: number
-      editableRegionEndLine: number
-      recentlyViewedSnippets: Array<{
-        filepath: string
-        content: string
-      }>
-      editDiffHistory: Array<string>
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "provider" },
-            { in: "body", key: "model" },
-            { in: "body", key: "maxTokens" },
-            { in: "body", key: "currentFilePath" },
-            { in: "body", key: "currentFileContent" },
-            { in: "body", key: "cursorLine" },
-            { in: "body", key: "cursorCharacter" },
-            { in: "body", key: "editableRegionStartLine" },
-            { in: "body", key: "editableRegionEndLine" },
-            { in: "body", key: "recentlyViewedSnippets" },
-            { in: "body", key: "editDiffHistory" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<KiloEditResponses, KiloEditErrors, ThrowOnError>({
-      url: "/kilo/edit",
       ...options,
       ...params,
       headers: {
@@ -9433,6 +9551,828 @@ export class Sandbox extends HeyApiClient {
       url: "/session/{sessionID}/sandbox/toggle",
       ...options,
       ...params,
+    })
+  }
+}
+
+export class SessionHost extends HeyApiClient {
+  /**
+   * List session host providers
+   *
+   * Report every registered session host provider with its availability and transport state.
+   */
+  public providers<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<
+      SessionHostProvidersResponses,
+      SessionHostProvidersErrors,
+      ThrowOnError
+    >({ url: "/kilocode/session-host/provider", ...options })
+  }
+
+  /**
+   * List hosted sessions
+   *
+   * List sessions from the authenticated default session host provider.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      limit?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "limit" }] }])
+    return (options?.client ?? this.client).get<SessionHostListResponses, SessionHostListErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Start a hosted session
+   *
+   * Start a hosted session and deliver the initial message. Reuse the same operation key and message ID to retry safely.
+   */
+  public start<ThrowOnError extends boolean = false>(
+    parameters?: {
+      sessionHostStartInput?: SessionHostStartInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "sessionHostStartInput", map: "body" }] }])
+    return (options?.client ?? this.client).post<SessionHostStartResponses, SessionHostStartErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Get a hosted session
+   *
+   * Read a hosted session's normalized native detail without waking compute.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<SessionHostGetResponses, SessionHostGetErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session/{providerID}/{sessionID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read a hosted transcript
+   *
+   * Read a bounded page of a hosted session transcript without waking compute.
+   */
+  public transcript<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      sessionID: string
+      limit?: string
+      before?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "before" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostTranscriptResponses,
+      SessionHostTranscriptErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/session/{providerID}/{sessionID}/message",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Attach to a hosted session
+   *
+   * Mint an opaque local attachment that routes the proven native API for one hosted session. No provider origin, credential, or selector is exposed.
+   */
+  public attach<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      sessionID: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionHostAttachResponses, SessionHostAttachErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session/{providerID}/{sessionID}/attach",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Detach a hosted session
+   *
+   * Dispose a local attachment. This never changes Cloud lifecycle.
+   */
+  public detach<ThrowOnError extends boolean = false>(
+    parameters: {
+      attachmentID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "attachmentID" }] }])
+    return (options?.client ?? this.client).delete<SessionHostDetachResponses, SessionHostDetachErrors, ThrowOnError>({
+      url: "/kilocode/session-host/attachment/{attachmentID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List hosted workspaces
+   *
+   * List workspaces from the authenticated default session host provider. A workspace is the shared compute and repository identity that groups root sessions.
+   */
+  public listWorkspaces<ThrowOnError extends boolean = false>(
+    parameters?: {
+      limit?: string
+      sessionLimit?: string
+      cursor?: string
+      repositoryUrl?: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "limit" },
+            { in: "query", key: "sessionLimit" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "repositoryUrl" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostListWorkspacesResponses,
+      SessionHostListWorkspacesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Create a hosted workspace
+   *
+   * Create a hosted workspace and, optionally, its root initial turn and explicit profile. Omit prompt and messageID to create an empty workspace; Cloud applies the effective default profile when profile is omitted. Reuse the same operation key and message ID to retry safely.
+   */
+  public createWorkspace<ThrowOnError extends boolean = false>(
+    parameters?: {
+      sessionHostCreateWorkspaceInput?: SessionHostCreateWorkspaceInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [{ args: [{ key: "sessionHostCreateWorkspaceInput", map: "body" }] }],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostCreateWorkspaceResponses,
+      SessionHostCreateWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Continue a local worktree in Cloud
+   *
+   * Copy the open root sessions of one local worktree into a new hosted workspace. The CLI validates Git, sessions, and sync and stores one durable request body; reuse the same operation key to retry safely.
+   */
+  public continueWorkspace<ThrowOnError extends boolean = false>(
+    parameters?: {
+      sessionHostContinueWorkspaceInput?: SessionHostContinueWorkspaceInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [{ args: [{ key: "sessionHostContinueWorkspaceInput", map: "body" }] }],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostContinueWorkspaceResponses,
+      SessionHostContinueWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/continue",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * List workspace creation profiles
+   *
+   * List personal and organization profile summaries for workspace creation with their default flags. Secret and environment values are never returned.
+   */
+  public listWorkspaceProfiles<ThrowOnError extends boolean = false>(
+    parameters?: {
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "organizationID" }] }])
+    return (options?.client ?? this.client).get<
+      SessionHostListWorkspaceProfilesResponses,
+      SessionHostListWorkspaceProfilesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/profiles",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Set the personal default workspace profile
+   *
+   * Set the authenticated user's personal default profile for workspace creation. The profile must be owned by the caller.
+   */
+  public setWorkspacePersonalDefaultProfile<ThrowOnError extends boolean = false>(
+    parameters?: {
+      sessionHostWorkspaceProfileDefaultInput?: SessionHostWorkspaceProfileDefaultInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [{ args: [{ key: "sessionHostWorkspaceProfileDefaultInput", map: "body" }] }],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostSetWorkspacePersonalDefaultProfileResponses,
+      SessionHostSetWorkspacePersonalDefaultProfileErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/profiles/personal-default",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Clear the personal default workspace profile
+   *
+   * Clear the authenticated user's personal default profile for workspace creation. The profile must be owned by the caller.
+   */
+  public clearWorkspacePersonalDefaultProfile<ThrowOnError extends boolean = false>(
+    parameters: {
+      profileID: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "profileID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      SessionHostClearWorkspacePersonalDefaultProfileResponses,
+      SessionHostClearWorkspacePersonalDefaultProfileErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/profiles/personal-default/{profileID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Delete a hosted workspace
+   *
+   * Delete a hosted workspace and invalidate its local attachments. Attachments for other workspaces are preserved.
+   */
+  public deleteWorkspace<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      SessionHostDeleteWorkspaceResponses,
+      SessionHostDeleteWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get a hosted workspace
+   *
+   * Read one hosted workspace with a bounded page of its root sessions.
+   */
+  public getWorkspace<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      sessionLimit?: string
+      sessionCursor?: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "sessionLimit" },
+            { in: "query", key: "sessionCursor" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspaceResponses,
+      SessionHostGetWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read hosted workspace status
+   *
+   * Read passive compute, activity, wake, billing, and deletion progress without waking compute.
+   */
+  public getWorkspaceStatus<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspaceStatusResponses,
+      SessionHostGetWorkspaceStatusErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read hosted workspace PR status
+   *
+   * Read the cached linked PR without contacting GitHub or waking compute. Only no_pr means no eligible linked PR is known; unavailable or partial observations must not clear previous evidence.
+   */
+  public getWorkspacePullRequest<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspacePullRequestResponses,
+      SessionHostGetWorkspacePullRequestErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Refresh hosted workspace PR status
+   *
+   * Explicitly refresh the linked PR observation. Preserve cached evidence, partial fields, cooldown status, and retry time; refresh failure is not no_pr and does not mutate the PR or wake compute.
+   */
+  public refreshWorkspacePullRequest<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostRefreshWorkspacePullRequestResponses,
+      SessionHostRefreshWorkspacePullRequestErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request/refresh",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read hosted workspace changes
+   *
+   * Read the saved committed and uncommitted workspace comparison without waking compute. Every file reports explicit diff and content availability, and an omitted payload never looks like an empty diff.
+   */
+  public getWorkspaceChanges<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspaceChangesResponses,
+      SessionHostGetWorkspaceChangesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Refresh hosted workspace changes
+   *
+   * Explicitly refresh the saved workspace comparison. An offline or failed refresh preserves the previous durable snapshot.
+   */
+  public refreshWorkspaceChanges<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostRefreshWorkspaceChangesResponses,
+      SessionHostRefreshWorkspaceChangesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/refresh",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read a hosted workspace file
+   *
+   * Read one captured file fenced by the expected snapshot revision. A stale or delisted result never returns another revision's patch.
+   */
+  public getWorkspaceChangeFile<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      path: string
+      scope?: SessionHostWorkspaceChangeScope
+      expectedRevision: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "path" },
+            { in: "query", key: "scope" },
+            { in: "query", key: "expectedRevision" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspaceChangeFileResponses,
+      SessionHostGetWorkspaceChangeFileErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/file",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read the hosted workspace pull request diff
+   *
+   * Read the verified linked PR and its published file comparison. This comparison is distinct from the committed and uncommitted workspace changes; not_linked is a successful result with no PR data.
+   */
+  public getWorkspacePullRequestDiff<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspacePullRequestDiffResponses,
+      SessionHostGetWorkspacePullRequestDiffErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read a hosted workspace pull request file
+   *
+   * Read one PR patch fenced by the verified head SHA. A stale, delisted, or omitted file never returns a synthesized patch.
+   */
+  public getWorkspacePullRequestDiffFile<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      path: string
+      expectedHeadSha: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "path" },
+            { in: "query", key: "expectedHeadSha" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspacePullRequestDiffFileResponses,
+      SessionHostGetWorkspacePullRequestDiffFileErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff/file",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List hosted workspace sessions
+   *
+   * List a bounded page of a hosted workspace's root sessions.
+   */
+  public listWorkspaceSessions<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      limit?: string
+      cursor?: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostListWorkspaceSessionsResponses,
+      SessionHostListWorkspaceSessionsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Start a session in a hosted workspace
+   *
+   * Add a root session to an existing hosted workspace. The workspace supplies repository, environment, and compute; reuse the same operation key and message ID to retry safely.
+   */
+  public startWorkspaceSession<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      sessionHostWorkspaceSessionStartBody?: SessionHostWorkspaceSessionStartBody
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { key: "sessionHostWorkspaceSessionStartBody", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostStartWorkspaceSessionResponses,
+      SessionHostStartWorkspaceSessionErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 }
@@ -12191,6 +13131,11 @@ export class KiloClient extends HeyApiClient {
     return (this._agentBuilder ??= new AgentBuilder({ client: this.client }))
   }
 
+  private _agentUsage?: AgentUsage
+  get agentUsage(): AgentUsage {
+    return (this._agentUsage ??= new AgentUsage({ client: this.client }))
+  }
+
   private _backgroundProcess?: BackgroundProcess
   get backgroundProcess(): BackgroundProcess {
     return (this._backgroundProcess ??= new BackgroundProcess({ client: this.client }))
@@ -12204,6 +13149,11 @@ export class KiloClient extends HeyApiClient {
   private _commitMessage?: CommitMessage
   get commitMessage(): CommitMessage {
     return (this._commitMessage ??= new CommitMessage({ client: this.client }))
+  }
+
+  private _cloudAgent?: CloudAgent
+  get cloudAgent(): CloudAgent {
+    return (this._cloudAgent ??= new CloudAgent({ client: this.client }))
   }
 
   private _enhancePrompt?: EnhancePrompt
@@ -12244,6 +13194,11 @@ export class KiloClient extends HeyApiClient {
   private _sandbox?: Sandbox
   get sandbox(): Sandbox {
     return (this._sandbox ??= new Sandbox({ client: this.client }))
+  }
+
+  private _sessionHost?: SessionHost
+  get sessionHost(): SessionHost {
+    return (this._sessionHost ??= new SessionHost({ client: this.client }))
   }
 
   private _suggestion?: Suggestion

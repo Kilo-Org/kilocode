@@ -252,7 +252,7 @@ describe("RemoteWS", () => {
     await settled()
     const raw = await msg
     const parsed = JSON.parse(raw)
-    expect(parsed.capabilities).toEqual({ attachments: true, sessionClone: true })
+    expect(parsed.capabilities).toEqual({ attachments: true, sessionClone: true, sessionCloneAtMessage: true })
   })
 
   test("serializes concurrent heartbeat snapshots", async () => {
@@ -1314,7 +1314,7 @@ describe("RemoteWS", () => {
       expect(payload1.type).toBe("heartbeat")
       expect(payload1.sessions).toEqual(knownGoodSessions)
       expect(payload1.instance).toEqual(instance)
-      expect(payload1.capabilities).toEqual({ attachments: true, sessionClone: true })
+      expect(payload1.capabilities).toEqual({ attachments: true, sessionClone: true, sessionCloneAtMessage: true })
 
       // Cycle 2: wedged gather times out → degraded send carries the same list.
       mode = "wedge"
@@ -1326,7 +1326,7 @@ describe("RemoteWS", () => {
       expect(payload2.type).toBe("heartbeat")
       expect(payload2.sessions).toEqual(knownGoodSessions)
       expect(payload2).not.toHaveProperty("instance")
-      expect(payload2.capabilities).toEqual({ attachments: true, sessionClone: true })
+      expect(payload2.capabilities).toEqual({ attachments: true, sessionClone: true, sessionCloneAtMessage: true })
       expect(payload2.protocolVersion).toBe(payload1.protocolVersion)
 
       // Recovery must advertise fresh metadata, not the cached instance.
@@ -1336,7 +1336,7 @@ describe("RemoteWS", () => {
       const recovered = JSON.parse(socket.sent.at(-1)!)
       expect(recovered.instance).toEqual({ ...payload1.instance, gitBranch: "feature/recovered" })
       expect(recovered.sessions).toEqual(knownGoodSessions)
-      expect(recovered.capabilities).toEqual({ attachments: true, sessionClone: true })
+      expect(recovered.capabilities).toEqual({ attachments: true, sessionClone: true, sessionCloneAtMessage: true })
       expect(conn.connected).toBe(true)
     })
   })
@@ -2034,7 +2034,7 @@ describe("RemoteWS", () => {
       await conn.heartbeat()
       const first = JSON.parse(socket.sent.at(-1)!)
       expect(first.instance).toEqual(instance)
-      expect(first.capabilities).toEqual({ attachments: true, sessionClone: true })
+      expect(first.capabilities).toEqual({ attachments: true, sessionClone: true, sessionCloneAtMessage: true })
 
       socket.disconnect(1000, "transient")
       instance.gitBranch = "feature/reconnected"
@@ -2045,7 +2045,7 @@ describe("RemoteWS", () => {
       await conn.heartbeat()
       const second = JSON.parse(next.sent.at(-1)!)
       expect(second.instance).toEqual({ ...first.instance, gitBranch: "feature/reconnected" })
-      expect(second.capabilities).toEqual({ attachments: true, sessionClone: true })
+      expect(second.capabilities).toEqual({ attachments: true, sessionClone: true, sessionCloneAtMessage: true })
       expect(second.protocolVersion).toBe(first.protocolVersion)
     })
   })
@@ -2074,7 +2074,7 @@ describe("RemoteWS", () => {
       const parsed = JSON.parse(socket.sent[0])
       expect(parsed).not.toHaveProperty("instance")
       expect(parsed.protocolVersion).toBeDefined()
-      expect(parsed.capabilities).toEqual({ attachments: true, sessionClone: true })
+      expect(parsed.capabilities).toEqual({ attachments: true, sessionClone: true, sessionCloneAtMessage: true })
     })
   })
 

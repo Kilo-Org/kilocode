@@ -11,6 +11,7 @@
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://api.kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
+  <!-- packages/opencode/src/kilocode/cloud/origin.ts -->
 - <https://api.x.ai/v1>
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://app.kilo.ai>
@@ -51,8 +52,6 @@
   <!-- packages/opencode/src/kilocode/provider/error.ts -->
 - <https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
-- <https://docs.inceptionlabs.ai/capabilities/next-edit>
-  <!-- packages/opencode/src/kilocode/server/httpapi/groups/kilo-gateway.ts -->
 - <https://docs.mistral.ai/studio-api/conversations/reasoning>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://docs.venice.ai/overview/guides/reasoning-models#reasoning-effort>
@@ -63,6 +62,7 @@
   <!-- packages/kilo-vscode/src/agent-manager/git-errors.ts -->
 - <https://github.com>
   <!-- packages/opencode/src/kilocode/security/github.ts -->
+  <!-- packages/opencode/src/kilocode/session-hosting/kilo-cloud.ts -->
 - <https://github.com/anthropics/claude-code/issues/31375>
   <!-- packages/kilo-vscode/src/utils.ts -->
 - <https://github.com/apps/kiloconnect>

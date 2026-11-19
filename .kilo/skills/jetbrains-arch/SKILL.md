@@ -163,5 +163,5 @@ In `frontend/` and `backend/`, do not call `Json.decodeFromString<SharedDto>(...
 - The plugin spawns `kilo serve --port 0` (OS assigns random port) and reads stdout for `listening on http://...:(\d+)` to discover the port.
 - A random 32-byte hex password is passed via `KILO_SERVER_PASSWORD` env var for Basic Auth.
 - Fixed env vars set on every spawn: `KILO_CLIENT=jetbrains`, `KILO_PLATFORM=jetbrains`, `KILO_APP_NAME=kilo-code`, `KILO_ENABLE_QUESTION_TOOL=true`, `KILO_DISABLE_CLAUDE_CODE=true`, `KILOCODE_FEATURE=jetbrains-plugin`.
-- Unless already provided by the base environment, the backend sets `KILO_CONFIG_CONTENT` to make `edit` and `bash` permissions ask by default for JetBrains-launched CLI processes.
+- The backend does **not** inject `KILO_CONFIG_CONTENT`. The JetBrains `edit: ask` default comes from the CLI's client-keyed defaults layer (`packages/opencode/src/kilocode/agent/index.ts`, under `Flag.KILO_CLIENT === "jetbrains"`), which sits below user config so global `kilo.json`, project `kilo.jsonc`, per-agent permission, and the plugin's Auto-Approve page all override it. An externally-provided `KILO_CONFIG_CONTENT` is still passed through unchanged.
 - This is the same protocol used by the VS Code extension (`packages/kilo-vscode/src/services/cli-backend/server-manager.ts`).

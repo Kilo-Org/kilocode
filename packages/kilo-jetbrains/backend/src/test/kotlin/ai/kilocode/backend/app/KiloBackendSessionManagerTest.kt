@@ -15,6 +15,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
@@ -31,6 +32,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class KiloBackendSessionManagerTest {
+
+    companion object {
+        private const val WAIT_MS = 10_000L
+    }
 
     private val mock = MockCliServer()
     private val log = TestLog()
@@ -91,6 +96,31 @@ class KiloBackendSessionManagerTest {
         val result = app.sessions.list("/d")
         assertEquals(1, result.sessions.size)
         assertEquals("ses_1", result.sessions[0].id)
+    }
+
+    @Test
+    fun `worktree sessions move to the project root`() = runBlocking {
+        mock.recentSessions = """[
+            {"id":"ses_a","slug":"a","projectID":"p","directory":"/worktree","title":"A","version":"1","time":{"created":1,"updated":1}},
+            {"id":"ses_b","slug":"b","projectID":"p","directory":"/worktree","title":"B","version":"1","time":{"created":1,"updated":1}}
+        ]"""
+        val app = setup()
+        ready(app)
+        app.sessions.setDirectory("ses_a", "/stale-override")
+
+        val moved = app.sessions.rehome("/worktree", "/root")
+
+        assertEquals(2, moved)
+        assertTrue(mock.moveSessionBodies.any { it.contains("\"sessionID\":\"ses_a\"") })
+        assertTrue(mock.moveSessionBodies.any { it.contains("\"sessionID\":\"ses_b\"") })
+        assertTrue(mock.moveSessionBodies.all { it.contains("\"directory\":\"/root\"") })
+        assertTrue(mock.moveSessionBodies.all { it.contains("\"moveChanges\":false") })
+        val path = mock.lastExperimentalSessionPath ?: error("missing experimental session request")
+        assertTrue(path.contains("roots=false"), path)
+        assertTrue(path.contains("archived=true"), path)
+        assertTrue(URLDecoder.decode(path, "UTF-8").contains("directory=/worktree"), path)
+        // A session turned active before the next listing must not be attributed to the old path.
+        assertEquals("/root", app.sessions.sessionDirectory("ses_a"))
     }
 
     @Test
@@ -582,6 +612,36 @@ class KiloBackendSessionManagerTest {
     // ------ SSE status tracking ------
 
     @Test
+    fun `start subscribes before returning and preserves immediate session events`() = runBlocking {
+        val app = setup()
+        ready(app)
+        val events = MutableSharedFlow<SseEvent>(extraBufferCapacity = 2)
+        // This scope queues dispatched coroutines until the test suspends.
+        val manager = KiloBackendSessionManager(this, log)
+        try {
+            manager.start(app.api!!, app.http!!, app.port, events)
+            assertEquals(1, events.subscriptionCount.value, "start must subscribe before returning")
+
+            assertTrue(events.tryEmit(
+                SseEvent("session.created", lifecycle("session.created", "ses_immediate", "/repo/wt")),
+            ))
+            assertTrue(events.tryEmit(
+                SseEvent(
+                    "session.status",
+                    """{"type":"session.status","properties":{"sessionID":"ses_immediate","status":{"type":"busy"}}}""",
+                ),
+            ))
+
+            withTimeout(WAIT_MS) {
+                manager.statuses.first { it["ses_immediate"]?.type == "busy" }
+            }
+            assertEquals("/repo/wt", manager.sessionDirectory("ses_immediate"))
+        } finally {
+            manager.stop()
+        }
+    }
+
+    @Test
     fun `SSE session status events update status map`() = runBlocking {
         val app = setup()
         ready(app)
@@ -669,7 +729,7 @@ class KiloBackendSessionManagerTest {
     fun `activity badges a session this frame only learned about from events`() = runBlocking {
         val app = setup()
         ready(app)
-        mock.awaitSseConnection()
+        assertTrue(mock.awaitSseConnection(), "SSE client did not connect")
 
         mock.pushEvent("session.created", lifecycle("session.created", "ses_other_frame", "/repo/wt"))
         mock.pushEvent(
@@ -677,7 +737,7 @@ class KiloBackendSessionManagerTest {
             """{"type":"session.status","properties":{"sessionID":"ses_other_frame","status":{"type":"busy"}}}""",
         )
 
-        val snap = withTimeout(10_000) {
+        val snap = withTimeout(WAIT_MS) {
             app.activity.activity.first { it.containsKey("ses_other_frame") }
         }
         assertEquals("/repo/wt", snap["ses_other_frame"]?.directory)

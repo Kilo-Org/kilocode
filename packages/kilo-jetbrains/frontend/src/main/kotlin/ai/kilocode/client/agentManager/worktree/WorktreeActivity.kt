@@ -8,7 +8,10 @@ internal fun aggregateWorktreeActivity(
     activity: Map<String, SessionActivityDto>,
 ): Map<String, SessionActivityKind> = activity.values
     .groupBy { normalize(it.directory) }
-    .mapValues { (_, items) -> items.map { it.kind.toKind() }.minBy(::rank) }
+    .mapValues { (_, items) -> checkNotNull(aggregateSessionActivity(items.map { it.kind.toKind() })) }
+
+internal fun aggregateSessionActivity(activity: Iterable<SessionActivityKind>): SessionActivityKind? =
+    activity.minByOrNull(::rank)
 
 internal fun normalizeWorktreePath(path: String): String = normalize(path)
 

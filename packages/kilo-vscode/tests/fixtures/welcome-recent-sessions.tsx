@@ -34,6 +34,7 @@ const { render } = await import("solid-js/web")
 const { DialogProvider } = await import("@kilocode/kilo-ui/context/dialog")
 const { LanguageContext } = await import("../../webview-ui/src/context/language")
 const { SessionContext } = await import("../../webview-ui/src/context/session")
+const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
 const { WelcomeEmptyState } = await import("../../webview-ui/src/components/chat/WelcomeEmptyState")
 
 const info = (id: string, title: string, updatedAt: string): SessionInfo => ({
@@ -56,13 +57,15 @@ const titles = () => [...root.querySelectorAll(".recent-session-title")].map((no
 const show = (props: { sessions?: () => SessionInfo[] }) =>
   render(
     () => (
-      <DialogProvider>
-        <LanguageContext.Provider value={language as never}>
-          <SessionContext.Provider value={store as never}>
-            <WelcomeEmptyState sessions={props.sessions} onSelectSession={() => {}} />
-          </SessionContext.Provider>
-        </LanguageContext.Provider>
-      </DialogProvider>
+      <VSCodeProvider>
+        <DialogProvider>
+          <LanguageContext.Provider value={language as never}>
+            <SessionContext.Provider value={store as never}>
+              <WelcomeEmptyState sessions={props.sessions} onSelectSession={() => {}} />
+            </SessionContext.Provider>
+          </LanguageContext.Provider>
+        </DialogProvider>
+      </VSCodeProvider>
     ),
     root,
   )

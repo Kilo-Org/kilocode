@@ -23,11 +23,7 @@ const MCP_DOCS = "https://kilo.ai/docs/automate/mcp/what-is-mcp"
 interface Props {
   item: MarketplaceItem
   onClose: () => void
-  onInstallResult: (
-    success: boolean,
-    scope: "project" | "global",
-    extra?: { hasParameters?: boolean; installationMethodName?: string },
-  ) => void
+  onInstallResult: (success: boolean, scope: "project" | "global") => void
 }
 
 export const InstallModal = (props: Props) => {
@@ -53,11 +49,7 @@ export const InstallModal = (props: Props) => {
     needsAuth?: boolean
   } | null>(null)
   const [params, setParams] = createSignal<Record<string, string>>({})
-  const [pending, setPending] = createSignal<{
-    scope: "project" | "global"
-    hasParameters: boolean
-    method?: string
-  } | null>(null)
+  const [pending, setPending] = createSignal<{ scope: "project" | "global" } | null>(null)
 
   const destination = (target = scope().value) => {
     const base = target === "project" ? ".kilo" : "~/.config/kilo"
@@ -115,10 +107,7 @@ export const InstallModal = (props: Props) => {
           error: msg.error,
           needsAuth: msg.needsAuth,
         })
-        props.onInstallResult(msg.success, request.scope, {
-          hasParameters: request.hasParameters,
-          installationMethodName: request.method,
-        })
+        props.onInstallResult(msg.success, request.scope)
         setPending(null)
       }
     })
@@ -133,11 +122,7 @@ export const InstallModal = (props: Props) => {
       paramValues.__method = current.name
     }
     const target = scope().value
-    setPending({
-      scope: target,
-      hasParameters: Object.keys(params()).length > 0,
-      method: current?.name,
-    })
+    setPending({ scope: target })
     vscode.postMessage({
       type: "installMarketplaceItem",
       mpItem: props.item,

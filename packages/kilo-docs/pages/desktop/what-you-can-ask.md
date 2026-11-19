@@ -14,8 +14,9 @@ Kilo Desktop's agent works across the tools in your workspace. Describe what you
 | Review and manage changes | "Show me my uncommitted changes and create a branch for this work." | [Git integration](/docs/desktop/features/git) |
 | Manage Python dependencies | "Create a conda environment with Python 3.12 and install pandas." | [Conda environments](/docs/desktop/features/environments) |
 | Work with workspace files | "Read `src/api.py` and add input validation." | [Files](/docs/desktop/features/files) |
+| See results visually | "Chart test coverage by module as an interactive page." or "Draw a sequence diagram of the login flow." | [Pages and diagrams in replies](/docs/desktop/quickstart#pages-and-diagrams-in-replies) |
 
 ## Tips
 
 - Reference workspace files directly with `@` in the chat to point the agent at a specific file.
-- Keep each chat scoped to one workspace so the agent's tools operate on the right folders. Use the **Select workspace** control in the chat to choose the workspace you want the agent to work in — its file, terminal, and git tools all run inside the folders in that workspace.
+- Keep each chat scoped to one workspace so the agent's tools operate on the right folders. Choose the **Workspace** on the [New Session page](/docs/desktop/quickstart#start-a-session) when you start a session — the agent's file, terminal, and git tools all run inside that workspace's folders.

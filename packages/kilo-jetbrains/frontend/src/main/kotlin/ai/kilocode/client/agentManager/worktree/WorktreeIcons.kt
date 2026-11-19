@@ -2,10 +2,10 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SpinnerIcon
+import ai.kilocode.client.ui.AnimationIcon
 import ai.kilocode.client.ui.LiveBadgeIcon
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.util.IconLoader
-import com.intellij.ui.AnimatedIcon
 import com.intellij.util.ui.JBUI
 import java.util.concurrent.ConcurrentHashMap
 import javax.swing.Icon
@@ -17,10 +17,10 @@ internal object WorktreeIcons {
     // The current checkout is the machine you work on rather than a branch checkout, so it gets the
     // monitor glyph the VS Code agent manager uses for the same row.
     val local: Icon = IconLoader.getIcon("/icons/worktree-local.svg", WorktreeIcons::class.java)
-    val spinner: Icon = AnimatedIcon.Default.INSTANCE
+    val spinner: Icon = AnimationIcon.Progress()
 
     // Single swap point for the running-session icon. Change this to retarget the animation
-    // (e.g. AnimatedIcon.Default.INSTANCE or SessionActivityKind.RUNNING.icon()).
+    // (e.g. AnimationIcon.Progress() or SessionActivityKind.RUNNING.icon()).
     val running: Icon = SpinnerIcon.icon
 
     // Cached per base so a row keeps a stable icon identity across list rebuilds, and so the badge

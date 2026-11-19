@@ -41,6 +41,7 @@ const active = new Set([
   "community-triage-test.yml",
   "containers.yml",
   "dependabot-auto-merge.yml",
+  "dependency-submission.yml",
   "docs-build.yml",
   "docs-check-links.yml",
   "docs-sync.yml",
@@ -63,6 +64,8 @@ const active = new Set([
   "test.yml",
   "typecheck.yml",
   "validate-cli-smoke.yml",
+  "v2-port-tracker.yml",
+  "v2-upstream-release-notify.yml",
   "visual-regression.yml",
   "watch-opencode-releases.yml",
 ])

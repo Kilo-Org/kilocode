@@ -268,7 +268,7 @@ export namespace RemoteWS {
               send({
                 type: "heartbeat",
                 protocolVersion: InstallationVersion,
-                capabilities: { attachments: true, sessionClone: true },
+                capabilities: { attachments: true, sessionClone: true, sessionCloneAtMessage: true },
                 sessions: fresh.sessions,
                 ...(fresh.instance ? { instance: fresh.instance } : {}),
               })
@@ -313,7 +313,7 @@ export namespace RemoteWS {
               send({
                 type: "heartbeat",
                 protocolVersion: InstallationVersion,
-                capabilities: { attachments: true, sessionClone: true },
+                capabilities: { attachments: true, sessionClone: true, sessionCloneAtMessage: true },
                 sessions: lastGood ?? [],
               })
               waiters = cycleWaiters.concat(waiters)

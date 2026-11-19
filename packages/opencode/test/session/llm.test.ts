@@ -331,7 +331,7 @@ describe("session.llm.ai-sdk adapter", () => {
       await adapt([
         uncheckedAdapterEvent({ type: "abort" }),
         uncheckedAdapterEvent({ type: "source" }),
-        uncheckedAdapterEvent({ type: "file" }),
+        // kilocode_change - generated files are kept (test/kilocode/session/generated-file.test.ts)
         uncheckedAdapterEvent({ type: "raw" }),
         uncheckedAdapterEvent({ type: "tool-output-denied" }),
         uncheckedAdapterEvent({ type: "tool-approval-request" }),

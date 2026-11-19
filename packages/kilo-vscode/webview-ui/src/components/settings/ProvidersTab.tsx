@@ -17,7 +17,15 @@ import type { Provider } from "../../types/messages"
 import CustomProviderDialog from "./CustomProviderDialog"
 import ProviderConnectDialog from "./ProviderConnectDialog"
 import ProviderSelectDialog from "./ProviderSelectDialog"
-import { isPopularProvider, providerIcon, providerNoteKey, sortProviders } from "./provider-catalog"
+import {
+  isPopularProvider,
+  providerFailure,
+  providerFailureMessageKey,
+  providerFailureNeedsSignIn,
+  providerIcon,
+  providerNoteKey,
+  sortProviders,
+} from "./provider-catalog"
 import {
   canChangeProviderKey,
   disabledProviderOptions,
@@ -43,6 +51,7 @@ const ProvidersTab: Component = () => {
   onCleanup(action.dispose)
 
   const kiloLoggedIn = createMemo(() => !!provider.authStates()[KILO_PROVIDER_ID])
+  const kiloFailure = createMemo(() => providerFailure(KILO_PROVIDER_ID, provider.failures()))
 
   const connectedProviders = createMemo(() => {
     const ids = visibleConnectedIds(provider.connected(), provider.authStates())
@@ -173,31 +182,56 @@ const ProvidersTab: Component = () => {
           <div
             style={{
               display: "flex",
-              "align-items": "center",
-              gap: "12px",
+              "flex-direction": "column",
+              gap: "4px",
               "min-height": "56px",
               padding: "12px 0",
             }}
           >
-            <ProviderIcon id={providerIcon(KILO_PROVIDER_ID)} width={20} height={20} />
-            <span
-              style={{
-                "font-size": "var(--kilo-font-size-14)",
-                "font-weight": "500",
-                color: "var(--vscode-foreground)",
+            <div style={{ display: "flex", "align-items": "center", gap: "12px" }}>
+              <ProviderIcon id={providerIcon(KILO_PROVIDER_ID)} width={20} height={20} />
+              <span
+                style={{
+                  "font-size": "var(--kilo-font-size-14)",
+                  "font-weight": "500",
+                  color: "var(--vscode-foreground)",
+                }}
+              >
+                Kilo Gateway
+              </span>
+              <Show
+                when={kiloLoggedIn() && !(kiloFailure() && providerFailureNeedsSignIn(kiloFailure()!))}
+                fallback={
+                  <Button size="small" variant="secondary" onClick={() => server.goToLogin()}>
+                    {language.t("common.signIn")}
+                  </Button>
+                }
+              >
+                <Tag>{language.t("settings.providers.tag.gateway")}</Tag>
+              </Show>
+            </div>
+            <Show when={kiloFailure()}>
+              {(failure) => {
+                // Read the failure inside a tracked call so a changed reason
+                // (e.g. network -> unauthorized) re-renders instead of keeping
+                // the previous text. A non-keyed Show does not re-run its
+                // render function when one truthy value replaces another.
+                const message = createMemo(() => {
+                  const { key, vars } = providerFailureMessageKey(failure())
+                  return language.t(key, vars)
+                })
+                return (
+                  <span
+                    style={{
+                      "font-size": "var(--kilo-font-size-12)",
+                      color: "var(--vscode-errorForeground)",
+                      "padding-left": "32px",
+                    }}
+                  >
+                    {message()}
+                  </span>
+                )
               }}
-            >
-              Kilo Gateway
-            </span>
-            <Show
-              when={kiloLoggedIn()}
-              fallback={
-                <Button size="small" variant="secondary" onClick={() => server.goToLogin()}>
-                  {language.t("common.signIn")}
-                </Button>
-              }
-            >
-              <Tag>{language.t("settings.providers.tag.gateway")}</Tag>
             </Show>
           </div>
         </Card>

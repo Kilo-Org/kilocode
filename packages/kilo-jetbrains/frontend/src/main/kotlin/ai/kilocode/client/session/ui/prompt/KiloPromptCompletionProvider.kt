@@ -37,6 +37,7 @@ class KiloPromptCompletionProvider(
     private val actions: List<SlashAction>,
     private val mentions: List<MentionAction>,
     private val scope: CoroutineScope,
+    private val files: Boolean = true,
 ) : TextCompletionProvider, DumbAware {
     private val paths = Collections.synchronizedSet(mutableSetOf<String>())
     private val exists = Collections.synchronizedMap(mutableMapOf<String, Boolean>())
@@ -68,6 +69,7 @@ class KiloPromptCompletionProvider(
 
     /** Open a resolved file mention using the workspace's go-to-file plumbing. */
     fun navigate(value: String) {
+        if (!files) return
         scope.launch { service.openPath(workspace.directory, value) }
     }
 
@@ -79,6 +81,7 @@ class KiloPromptCompletionProvider(
     }
 
     fun prewarm() {
+        if (!files) return
         scope.launch {
             if (cache.containsKey("")) return@launch
             val result = service.searchFiles(workspace.directory, "", 50)
@@ -321,13 +324,13 @@ class KiloPromptCompletionProvider(
         val head = text.substring(start, pos)
         val raw = text.substring(start, end)
         if (raw.startsWith("/") && text.take(start).isBlank() && raw.indexOf(' ') < 0) return Token(Kind.SLASH, head.drop(1))
-        if (raw.startsWith("@") && raw.indexOf(' ') < 0) return Token(Kind.MENTION, head.drop(1))
+        if (files && raw.startsWith("@") && raw.indexOf(' ') < 0) return Token(Kind.MENTION, head.drop(1))
         return null
     }
 
     private data class Token(val kind: Kind, val prefix: String)
 
-    private fun mentionSpans(text: String): List<Mention> = promptMentions(text)
+    private fun mentionSpans(text: String): List<Mention> = if (files) promptMentions(text) else emptyList()
 
     private enum class Kind { SLASH, MENTION }
 }

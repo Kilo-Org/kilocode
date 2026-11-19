@@ -1,0 +1,170 @@
+# kilocode_change - new file
+name: v2-port tracker
+
+# Files a `[v2-port]` tracking issue for every merged PR that carries a
+# Kilo-specific change to packages/opencode/, so the behavior can be
+# re-implemented or verified in the opencode v2 rewrite. Post-merge only: a red
+# run blocks nothing and is recovered with `workflow_dispatch`.
+#
+# Security posture, in three parts:
+#   1. `pull_request_target` on a merged PR never checks out or executes PR code.
+#      The checkout is the base branch tip (history that already passed review).
+#   2. The agent step is steered by untrusted PR text, so it gets NO GitHub token
+#      and NO bash. The workflow pre-fetches pr.json + pr.diff, and the agent's
+#      only writes are scoped to v2-port-out/ via KILO_CONFIG_CONTENT. Every
+#      GitHub mutation is performed by deterministic scripts afterwards.
+#   3. PR runs (paths-limited to this workflow and .github/v2-port/**) execute
+#      branch code only in a read-only, secretless `selftest` job that never
+#      calls an LLM.
+# See .github/v2-port/README.md.
+
+on:
+  pull_request_target:
+    types: [closed]
+    paths:
+      - "packages/opencode/**"
+  pull_request:
+    paths:
+      - ".github/v2-port/**"
+      - ".github/workflows/v2-port-tracker.yml"
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Merged PR number to process"
+        required: true
+        type: string
+      dry_run:
+        description: "Analyze and print the issue, but create nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: v2-port-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: false
+
+env:
+  V2_PORT_MODEL: ${{ vars.V2_PORT_MODEL || 'kilo/anthropic/claude-sonnet-4.6' }}
+  V2_PORT_VARIANT: ${{ vars.V2_PORT_VARIANT || 'high' }}
+
+jobs:
+  selftest:
+    if: github.repository == 'Kilo-Org/kilocode' && github.event_name == 'pull_request'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Run v2-port tests
+        run: for f in .github/v2-port/*.test.mjs; do echo "--- $f"; node "$f"; done
+
+  track:
+    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
+    steps:
+      # Base branch tip, never the PR head ref: pull_request_target runs in the
+      # base repo's context and must not execute contributor code.
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # Do not leave the write-capable workflow token in .git/config where
+          # the PR-steered agent could read it from the workspace.
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Decide whether the PR qualifies
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+        run: node .github/v2-port/gate.mjs
+
+      - name: Install Kilo CLI
+        if: steps.gate.outputs.qualifies == 'true'
+        run: |
+          npm install -g @kilocode/cli
+          kilo --version
+
+      # No GH_TOKEN here on purpose: the agent analyzes untrusted PR text, so it
+      # must not hold a credential that can write to the repository.
+      #
+      # Permissions are explicit denies rather than --auto. An inherited "ask"
+      # default is auto-rejected headlessly, which aborts the whole run
+      # (run.ts:1032-1039); an explicit "deny" returns a tool error the agent can
+      # recover from. Only the tools this task needs are reachable, and writes are
+      # confined to v2-port-out/.
+      - name: Draft the tracking issue
+        if: steps.gate.outputs.qualifies == 'true'
+        env:
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+          KILO_CONFIG_CONTENT: |
+            {
+              "permission": {
+                "bash": "deny",
+                "webfetch": "deny",
+                "websearch": "deny",
+                "task": "deny",
+                "external_directory": "deny",
+                "recall": "deny",
+                "kilo_memory_recall": "deny",
+                "kilo_memory_save": "deny",
+                "skill": "allow",
+                "edit": { "*": "deny", "v2-port-out/**": "allow" }
+              }
+            }
+        run: |
+          set -o pipefail
+          prompt="$(cat .github/v2-port/prompt.md)"
+          attempt=1
+          while :; do
+            if kilo run "$prompt" \
+              -m "$V2_PORT_MODEL" --variant "$V2_PORT_VARIANT" \
+              --dir "$GITHUB_WORKSPACE" \
+              -f v2-port-out/pr.json -f v2-port-out/pr.diff \
+              2>&1 | node .github/docs-sync/redact-stream.mjs | tee "v2-port-out/draft-log-$attempt.txt"; then
+              break
+            fi
+            if [ "$attempt" -ge 2 ]; then
+              echo "::error::kilo run failed on both attempts"
+              exit 1
+            fi
+            echo "::warning::kilo run attempt $attempt failed; retrying in 60s"
+            sleep 60
+            attempt=$((attempt + 1))
+          done
+
+      - name: Create the tracking issue
+        if: steps.gate.outputs.qualifies == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node .github/v2-port/issue.mjs
+
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-port-out
+          path: v2-port-out/
+          retention-days: 14
+          if-no-files-found: ignore

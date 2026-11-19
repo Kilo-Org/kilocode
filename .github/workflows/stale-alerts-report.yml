@@ -31,9 +31,9 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: ./.github/actions/setup-bun
         with:
-          bun-version-file: package.json
+          install: false
 
       - id: report
         env:

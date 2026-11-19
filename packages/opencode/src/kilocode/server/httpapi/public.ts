@@ -51,6 +51,82 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
   )
   if (limit) limit.schema = { type: "integer", minimum: 1, maximum: 50 }
 
+  const profileSummary = spec.components?.schemas?.SessionHostWorkspaceProfileSummary?.properties
+  if (profileSummary?.description) profileSummary.description = nullable(profileSummary.description)
+
+  const profilePage = spec.components?.schemas?.SessionHostWorkspaceProfilePage?.properties
+  for (const field of [
+    "personalDefaultProfileID",
+    "organizationDefaultProfileID",
+    "effectiveDefaultProfileID",
+  ] as const) {
+    const value = profilePage?.[field]
+    if (profilePage && value) profilePage[field] = nullable(value)
+  }
+
+  const workspaceStatus = spec.components?.schemas?.SessionHostWorkspaceStatus?.properties
+  const compute = workspaceStatus?.compute?.properties
+  if (compute?.estimatedSleepAt) compute.estimatedSleepAt = nullable(compute.estimatedSleepAt)
+  const wake = workspaceStatus?.wakeOnInput?.properties
+  if (wake?.blockedReason) wake.blockedReason = nullable(wake.blockedReason)
+  const billing = workspaceStatus?.billing?.properties
+  for (const field of ["payer", "sku", "blocked", "intervalStartedAt", "rate"] as const) {
+    const value = billing?.[field]
+    if (billing && value) billing[field] = nullable(value)
+  }
+  const deletion = workspaceStatus?.deletion?.properties
+  if (deletion?.startedAt) deletion.startedAt = nullable(deletion.startedAt)
+
+  const pr = spec.components?.schemas?.SessionHostWorkspacePullRequestSummary?.properties
+  for (const field of ["title", "headSha"] as const) {
+    if (pr?.[field]) pr[field] = nullable(pr[field])
+  }
+  const review = pr?.review?.properties
+  if (review?.decision) review.decision = nullable(review.decision)
+  const conversations = pr?.conversations?.properties
+  if (conversations?.unresolved) conversations.unresolved = nullable(conversations.unresolved)
+  const mergeability = pr?.mergeability?.properties
+  for (const field of ["mergeable", "state"] as const) {
+    if (mergeability?.[field]) mergeability[field] = nullable(mergeability[field])
+  }
+  const refresh = spec.components?.schemas?.SessionHostWorkspacePullRequestRefresh?.properties
+  if (refresh?.retryAt) refresh.retryAt = nullable(refresh.retryAt)
+  const result = spec.components?.schemas?.SessionHostWorkspacePullRequestResult?.properties
+  if (result?.pullRequest) result.pullRequest = nullable(result.pullRequest)
+
+  const workspaceChanges = spec.components?.schemas?.SessionHostWorkspaceChanges?.properties
+  for (const field of ["revision", "capturedAt", "comparisons"] as const) {
+    const value = workspaceChanges?.[field]
+    if (workspaceChanges && value) workspaceChanges[field] = nullable(value)
+  }
+
+  const changeFileResult = spec.components?.schemas?.SessionHostWorkspaceChangeFileResult?.properties
+  for (const field of ["file", "capturedAt", "comparison", "currentRevision"] as const) {
+    const value = changeFileResult?.[field]
+    if (changeFileResult && value) changeFileResult[field] = nullable(value)
+  }
+
+  const changeFile = spec.components?.schemas?.SessionHostWorkspaceChangeFile?.properties
+  if (changeFile?.repository) changeFile.repository = nullable(changeFile.repository)
+
+  const changeComparison = spec.components?.schemas?.SessionHostWorkspaceChangeComparison?.properties
+  if (changeComparison?.repository) changeComparison.repository = nullable(changeComparison.repository)
+
+  const pullRequestDiff = spec.components?.schemas?.SessionHostWorkspacePullRequestDiff?.properties
+  for (const field of ["reason", "pullRequest"] as const) {
+    const value = pullRequestDiff?.[field]
+    if (pullRequestDiff && value) pullRequestDiff[field] = nullable(value)
+  }
+
+  const pullRequestFile = spec.components?.schemas?.SessionHostWorkspacePullRequestDiffFile?.properties
+  if (pullRequestFile?.previousPath) pullRequestFile.previousPath = nullable(pullRequestFile.previousPath)
+
+  const pullRequestFileResult = spec.components?.schemas?.SessionHostWorkspacePullRequestDiffFileResult?.properties
+  for (const field of ["reason", "omissionReason", "headSha", "patch"] as const) {
+    const value = pullRequestFileResult?.[field]
+    if (pullRequestFileResult && value) pullRequestFileResult[field] = nullable(value)
+  }
+
   const body = spec.paths?.["/kilo/organization"]?.post?.requestBody?.content?.["application/json"]?.schema
   const ref = body?.$ref?.replace("#/components/schemas/", "")
   const props = ref ? spec.components?.schemas?.[ref]?.properties : body?.properties

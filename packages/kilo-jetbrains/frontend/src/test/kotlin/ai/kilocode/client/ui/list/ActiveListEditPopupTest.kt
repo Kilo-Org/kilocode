@@ -1,5 +1,7 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveEditOptions
+import ai.kilocode.client.ui.active.activeEditContent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
@@ -10,8 +12,8 @@ import javax.swing.JButton
 @Suppress("UnstableApiUsage")
 class ActiveListEditPopupTest : BasePlatformTestCase() {
     fun `test edit content keeps the commit button enabled for every value`() {
-        val content = activeListEditContent(
-            ActiveListEditOptions(value = "Current"),
+        val content = activeEditContent(
+            ActiveEditOptions(value = "Current"),
             hide = {},
             commit = {},
         )
@@ -30,8 +32,8 @@ class ActiveListEditPopupTest : BasePlatformTestCase() {
     fun `test edit content hides without committing an unchanged value`() {
         val hides = mutableListOf<Unit>()
         val commits = mutableListOf<String>()
-        val content = activeListEditContent(
-            ActiveListEditOptions(value = "Current"),
+        val content = activeEditContent(
+            ActiveEditOptions(value = "Current"),
             hide = { hides += Unit },
             commit = { commits += it },
         )
@@ -49,8 +51,8 @@ class ActiveListEditPopupTest : BasePlatformTestCase() {
     fun `test edit content hides without committing a blank value`() {
         val hides = mutableListOf<Unit>()
         val commits = mutableListOf<String>()
-        val content = activeListEditContent(
-            ActiveListEditOptions(value = "Current"),
+        val content = activeEditContent(
+            ActiveEditOptions(value = "Current"),
             hide = { hides += Unit },
             commit = { commits += it },
         )
@@ -65,8 +67,8 @@ class ActiveListEditPopupTest : BasePlatformTestCase() {
     }
 
     fun `test edit content shows rename help label by default`() {
-        val content = activeListEditContent(
-            ActiveListEditOptions(value = "Current"),
+        val content = activeEditContent(
+            ActiveEditOptions(value = "Current"),
             hide = {},
             commit = {},
         )
@@ -79,8 +81,8 @@ class ActiveListEditPopupTest : BasePlatformTestCase() {
     fun `test edit content commits trimmed value and hides`() {
         val hides = mutableListOf<Unit>()
         val commits = mutableListOf<String>()
-        val content = activeListEditContent(
-            ActiveListEditOptions(value = "Current"),
+        val content = activeEditContent(
+            ActiveEditOptions(value = "Current"),
             hide = { hides += Unit },
             commit = { commits += it },
         )

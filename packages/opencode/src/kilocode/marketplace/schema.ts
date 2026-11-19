@@ -14,11 +14,23 @@ export const McpParameter = Schema.Struct({
 }).annotate({ identifier: "McpParameter" })
 export type McpParameter = typeof McpParameter.Type
 
+// Reviewed auth metadata published by the marketplace catalog. Values stay plain strings so a
+// catalog value this build does not know yet never rejects the whole listing.
+// oauthRequirement: required | optional | conditional | not_required | unknown
+// authHandler: kilo | server_process | external_setup | unknown
+const AuthMetadata = {
+  oauthRequirement: Schema.optional(Schema.String),
+  authHandler: Schema.optional(Schema.String),
+}
+
 export const McpInstallationMethod = Schema.Struct({
+  /** Stable method identifier; `name` is a display label and may change. */
+  id: Schema.optional(Schema.String),
   name: Schema.String,
   content: Schema.String,
   parameters: Schema.optional(Schema.Array(McpParameter)),
   prerequisites: Schema.optional(Schema.Array(Schema.String)),
+  ...AuthMetadata,
 }).annotate({ identifier: "McpInstallationMethod" })
 export type McpInstallationMethod = typeof McpInstallationMethod.Type
 
@@ -60,6 +72,8 @@ export const McpMarketplaceItem = Schema.Struct({
   content: Schema.Union([Schema.String, Schema.Array(McpInstallationMethod)]),
   parameters: Schema.optional(Schema.Array(McpParameter)),
   skills: Schema.optional(Schema.Array(McpSkill)),
+  // Auth metadata for a single-string `content`, which is the implicit `default` method.
+  ...AuthMetadata,
 }).annotate({ identifier: "McpMarketplaceItem" })
 export type McpMarketplaceItem = typeof McpMarketplaceItem.Type
 

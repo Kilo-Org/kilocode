@@ -878,6 +878,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
         onScroll={handleScroll}
         class="message-list"
         data-slot="message-list"
+        // VS Code 1.143+ refocuses the last focused webview element before a
+        // native Copy when focus is on the body. Without a focusable transcript,
+        // that element is the prompt, so the selection collapses and Copy is empty.
+        tabIndex={-1}
         role={props.announce === false ? undefined : "log"}
         aria-live={props.announce === false ? undefined : "polite"}
         aria-busy={props.announce === false && session.status() !== "idle" ? "true" : undefined}

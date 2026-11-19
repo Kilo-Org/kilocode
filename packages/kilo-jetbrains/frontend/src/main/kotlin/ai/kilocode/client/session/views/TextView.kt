@@ -100,6 +100,9 @@ open class TextView(
     /** Current markdown source — used by tests to assert rendered content. */
     fun markdown(): String = md.markdown()
 
+    /** Bounded markdown prefix — keeps accessibility summaries cheap on long streamed text. */
+    fun markdown(limit: Int): String = md.markdown(limit)
+
     internal fun simulateLink(href: String) = md.simulateLink(href)
 
     internal fun contentOpaque() = md.opaque

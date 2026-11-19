@@ -18,7 +18,7 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
 
 ## Prerequisites
 
-- **Bun 1.4.2+** — required for all packages.
+- **Bun `1.4.4`** - The exact official npm package is required for all packages. Install it as shown below.
 - **Java 21** — required by the JetBrains plugin. The root `bun turbo typecheck` and `bun turbo test:ci` commands include `@kilocode/kilo-jetbrains` and will fail without Java 21.
 
   The preferred way to install Java is via [SDKMAN](https://sdkman.io/install):
@@ -41,9 +41,21 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
   bun turbo typecheck --filter=!@kilocode/kilo-jetbrains
   ```
 
+Use Node.js 24.22.1 or newer with npm from a trusted source to install the pinned Bun release:
+
+```bash
+npm install --global bun@1.4.4
+bun --version
+bun --print "Bun.revision"
+```
+
+The expected `Bun.revision` is `38afee6c84fcf48c0edb2466aa4b27d287a59c30`. The CLI build rejects other revisions. The root `package.json` pins the npm package version, and `script/kilocode/bun.json` records the exact revision and target artifact checksums.
+
+The first CLI build needs access to the npm registry. The build caches verified Bun archives in a private, user-scoped temporary directory. Each build extracts a fresh executable before compilation.
+
 ## Developing Kilo CLI
 
-- **Requirements:** Bun 1.4.2+, Java 21 (see [Prerequisites](#prerequisites) above)
+- **Requirements:** Bun `1.4.4` at the exact revision above, Java 21 (see [Prerequisites](#prerequisites) above)
 - Install dependencies and start the CLI from the repo root:
 
   ```bash
@@ -91,6 +103,8 @@ bun run test
 bun run compile
 bun run package
 ```
+
+Linux visual CI prefers Ubuntu's official HTTPS archive for Playwright system packages and retains the Azure mirror as a fallback.
 
 ### Documentation checks
 
@@ -235,13 +249,20 @@ To point the CLI at a local backend (e.g., a locally running Kilo API server on 
 KILO_API_URL=http://localhost:3000 bun dev
 ```
 
-This redirects all gateway traffic (auth, model listing, provider routing, profile, etc.) to your local server. The default is `https://api.kilo.ai`.
+This redirects Kilo API traffic (auth, profile, etc.) to your local server. The default is `https://api.kilo.ai`. When only `KILO_API_URL` is set, AI gateway traffic (chat, model listing, embeddings, autocomplete, transcription) also goes to this server under `/api/gateway/v1`, which the web app rewrites to the AI gateway.
+
+To point AI gateway traffic at a separate server, such as a locally running `ai-gateway` app, set `KILO_AI_GATEWAY_URL` to its `/api/v1` base. It takes precedence over `KILO_API_URL` for gateway traffic only:
+
+```bash
+KILO_API_URL=http://localhost:3000 KILO_AI_GATEWAY_URL=http://localhost:3010/api/v1 bun dev
+```
 
 There are also optional overrides for other services:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `KILO_API_URL` | `https://api.kilo.ai` | Kilo API (gateway, auth, models, profile) |
+| `KILO_API_URL` | `https://api.kilo.ai` | Kilo API (auth, profile, defaults); when set without `KILO_AI_GATEWAY_URL`, also gateway traffic via `${KILO_API_URL}/api/gateway/v1` |
+| `KILO_AI_GATEWAY_URL` | `https://ai-gateway.kilo.ai/api/v1` | AI gateway (chat, models, embeddings, autocomplete, transcription) |
 | `KILO_SESSION_INGEST_URL` | `https://ingest.kilosessions.ai` | Session export / cloud sync |
 | `KILO_MODELS_URL` | `https://models.dev` | Model metadata |
 

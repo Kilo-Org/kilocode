@@ -1,0 +1,26 @@
+diff --git a/dist/index.js b/dist/index.js
+index c37123b8565addd0da72d4ecdedd2249fec38682..175b5c9858a281e41983c67af87c96f4a881c7e9 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -61,7 +61,7 @@ module.exports = __toCommonJS(index_exports);
+ var import_sdk = __toESM(require("@anthropic-ai/sdk"));
+ 
+ // src/gitlab-direct-access.ts
+-var import_zod = require("zod");
++var import_zod = require("zod/v3");
+ 
+ // src/gitlab-error.ts
+ var GitLabError = class _GitLabError extends Error {
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 30eaff7cad57a5e479ca8d623a89531437ea725c..9816ed7678677239c4ab3710f25efc2f1ec6ed06 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -2,7 +2,7 @@
+ import Anthropic from "@anthropic-ai/sdk";
+ 
+ // src/gitlab-direct-access.ts
+-import { z } from "zod";
++import { z } from "zod/v3";
+ 
+ // src/gitlab-error.ts
+ var GitLabError = class _GitLabError extends Error {

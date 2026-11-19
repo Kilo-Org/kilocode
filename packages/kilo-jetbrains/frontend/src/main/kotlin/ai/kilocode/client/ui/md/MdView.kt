@@ -10,7 +10,7 @@ import java.awt.Point
 import javax.swing.JComponent
 
 /** Markdown rendering component. All public methods must be called on the EDT. */
-interface MdView : Disposable {
+interface MdView : Disposable, MdSearchView {
     val component: JComponent
 
     fun set(text: String)
@@ -46,6 +46,10 @@ interface MdView : Disposable {
     }
 
     fun markdown(): String
+
+    /** At most [limit] leading characters of the source, without copying the whole document. */
+    fun markdown(limit: Int): String = markdown().take(limit)
+
     fun html(): String
     fun overrideSheet(): String
     fun simulateLink(href: String)

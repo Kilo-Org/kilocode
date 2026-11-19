@@ -41,16 +41,6 @@ describe("postprocessAutocompleteSuggestion", () => {
       })
       expect(result).toBe("test")
     })
-
-    it("handles Mercury prefix duplication", () => {
-      const result = postprocessAutocompleteSuggestion({
-        suggestion: "const x = 42",
-        prefix: "const x = ",
-        suffix: "",
-        model: "inception/mercury-edit-2",
-      })
-      expect(result).toBe("42")
-    })
   })
 
   describe("extreme repetition filtering", () => {

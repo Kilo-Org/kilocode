@@ -158,10 +158,12 @@ class KiloAgentBehaviorServiceTest : BasePlatformTestCase() {
         rpc.mcpStatusError = RuntimeException("boom")
         rpc.mcpConnectError = RuntimeException("boom")
 
-        val status = withContext(Dispatchers.Default) { service.mcpStatus("/test") }
+        val status = runCatching { withContext(Dispatchers.Default) { service.mcpStatus("/test") } }
         val ok = withContext(Dispatchers.Default) { service.mcpConnect("/test", "filesystem") }
 
-        assertTrue(status.isEmpty())
+        // status is a strict read: a failed RPC surfaces so callers keep their last-known badge
+        // instead of treating the failure as "no servers need authentication".
+        assertTrue(status.isFailure)
         assertFalse(ok)
         assertTrue(rpc.mcpConnects.isEmpty())
     }

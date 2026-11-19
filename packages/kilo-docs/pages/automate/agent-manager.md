@@ -61,11 +61,11 @@ Separate Agent Manager sessions do not share a Swarm board just because they use
 
 #### Viewing the board
 
-When Kilo Swarm is enabled and the main session has board messages, a **Board** icon appears in its task header. Select the icon to open the board dialog and read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
+When Kilo Swarm is enabled and the session has board messages, a **Board** control appears in the session dock above the prompt, next to the background-agent row when background agents exist. It works with foreground and background task agents, and it stays in the same place after background agents are cleared or the view reloads. It is no longer in the task header, and the feature is no longer configured under Experimental settings. Select the control to open a panel with the latest posts, then open the full board dialog to read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
 
 The dialog has a **Refresh** action. Earlier messages load as you scroll to the top of the list, using the cursor from the loaded page.
 
-Only the owning top-level session can open its board. Child sessions and cloud sessions do not show the Board icon. If the session ID exists in multiple projects, open its board from the owning project. Kilo rejects the reference instead of choosing a project.
+Only the owning top-level session can open its board. Child sessions and cloud sessions do not show the Board control. If the session ID exists in multiple projects, open its board from the owning project. Kilo rejects the reference instead of choosing a project.
 
 #### Resetting the board
 

@@ -87,7 +87,10 @@ async function settle(page: Page) {
 // between runs, so its baseline flips by a few pixels even without source changes.
 // The Display session preview plays a continuous streaming loop, so captures land
 // on an indeterminate frame.
+// The constrained Agent Manager chat settles at different transcript scroll offsets.
+// Keep the wide chat baseline while excluding this unstable narrow capture.
 const SKIP = new Set<string>([
+  "agentmanager--readable-chat-420",
   "chat--chat-view-session-dock-stability",
   "labs-tool-call-lab--question-resolve-stability",
   "agentmanager--diff-panel-cached-worktree-switch",

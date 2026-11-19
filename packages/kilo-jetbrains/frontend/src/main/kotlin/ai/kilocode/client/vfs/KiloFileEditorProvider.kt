@@ -59,4 +59,5 @@ private fun ensureKiloKinds() {
     ensureSubagentSessionEditorKind()
     ensureWorktreeSessionEditorKind()
     ensureDiagramEditorKind()
+    ai.kilocode.client.agentManager.hosted.ensureHostedWorkspaceEditorKind()
 }

@@ -13,7 +13,7 @@ import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeMarketplaceRpcApi
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.testing.rowLines
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.client.ui.list.activeListHits
 import ai.kilocode.rpc.dto.ConfigDto
@@ -239,6 +239,22 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf(DIR, DIR), agentRpc.mcpCalls)
     }
 
+    /**
+     * A failed runtime status read still lists the configured servers, and it is not runtime truth,
+     * so it must keep the composer's needs-auth badge instead of clearing it.
+     */
+    fun `test failed runtime status keeps configured rows and the needs auth badge`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        assertTrue(service<KiloMcpAuthService>().needsAuth.value[DIR].orEmpty().contains("github"))
+
+        agentRpc.mcpStatusError = RuntimeException("backend offline")
+        edt { panel.reload(); true }
+
+        flushUntil { rows(panel).map { it.key } == listOf("filesystem", "github") }
+        assertTrue(service<KiloMcpAuthService>().needsAuth.value[DIR].orEmpty().contains("github"))
+    }
+
     fun `test panel reloads automatically when it becomes visible again`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
@@ -308,6 +324,39 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         assertEquals("filesystem", save.first)
         assertEquals("global", save.second)
         assertNull(save.third)
+    }
+
+    /** The reported bug: a server's needs-auth indicator must not outlive the server itself. */
+    fun `test remove action clears the needs auth indicator`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        assertTrue(service<KiloMcpAuthService>().needsAuth.value[DIR].orEmpty().contains("github"))
+        agentRpc.mcps = agentRpc.mcps.filterNot { it.name == "github" }
+        TestDialogManager.setTestDialog(TestDialog.YES)
+
+        click(panel, "github", "remove")
+
+        flushUntil { rows(panel).none { it.key == "github" } }
+        assertFalse(service<KiloMcpAuthService>().needsAuth.value[DIR].orEmpty().contains("github"))
+    }
+
+    /** Removing a server with a sign-in in flight must cancel it instead of leaving it busy. */
+    fun `test remove action cancels a pending sign in for that server`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        val gate = CompletableDeferred<Unit>()
+        agentRpc.beforeAuthenticate = { gate.await() }
+        val auth = service<KiloMcpAuthService>()
+        scope!!.launch { auth.signIn(DIR, "github") }
+        flushUntil { agentRpc.mcpAuthenticateStarted }
+        agentRpc.mcps = agentRpc.mcps.filterNot { it.name == "github" }
+        TestDialogManager.setTestDialog(TestDialog.YES)
+
+        click(panel, "github", "remove")
+
+        flushUntil { agentRpc.mcpAuthCancels.contains("github") }
+        flushUntil { auth.busy.value.isEmpty() }
+        assertTrue("removal must not delete credentials via auth-remove", agentRpc.mcpAuthRemovals.isEmpty())
     }
 
     fun `test removing a marketplace MCP confirms and removes its companion bundle`() {
@@ -712,12 +761,12 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: McpSettingsUi): List<ActiveListItem> {
+    private fun rows(panel: McpSettingsUi): List<ActiveItem> {
         val model = list(panel).model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun list(panel: McpSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
+    private fun list(panel: McpSettingsUi) = components(panel).filterIsInstance<JBList<ActiveItem>>().single()
 
     private fun bannerIntro(info: SettingsInfo): String {
         val pane = UIUtil.findComponentOfType(info, javax.swing.JEditorPane::class.java) ?: error("no banner text")
@@ -763,12 +812,12 @@ class McpSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<ActiveListItem>, point: Point) {
+    private fun click(list: JBList<ActiveItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
 
-    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(list: JBList<ActiveItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),

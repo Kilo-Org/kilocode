@@ -1,0 +1,13 @@
+diff --git a/dist/sandbox/sandbox-config.js b/dist/sandbox/sandbox-config.js
+index 15035f58b43fe13674b85fa62cc37fd25551d898..b8be6eacfd1b2d74b0674ec4b438c25611d30ce2 100644
+--- a/dist/sandbox/sandbox-config.js
++++ b/dist/sandbox/sandbox-config.js
+@@ -3,7 +3,7 @@
+  * This is the main configuration interface that consumers pass to SandboxManager.initialize()
+  */
+ import { isAbsolute } from 'node:path';
+-import { z } from 'zod';
++import { z } from 'zod/v3';
+ import { isInjectHostCoveredByAllowedDomains } from './domain-pattern.js';
+ /**
+  * Schema for domain patterns (e.g., "example.com", "*.npmjs.org")

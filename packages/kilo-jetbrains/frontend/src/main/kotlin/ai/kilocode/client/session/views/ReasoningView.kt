@@ -3,10 +3,14 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.openSessionLink
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Reasoning
+import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -31,20 +35,36 @@ import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
 import javax.swing.SwingUtilities
 
-/** Renders reasoning as a secondary collapsible block. */
+/**
+ * Renders reasoning as a secondary collapsible block. Behavior is driven by the configured
+ * [ReasoningDisplay] mode (Transcript settings):
+ * - [ReasoningDisplay.EXPANDED]: opens whenever content is non-blank, full height, never
+ *   auto-collapses.
+ * - [ReasoningDisplay.PREVIEW]: opens while streaming in a height-capped auto-scrolling body,
+ *   auto-collapses and releases its body when the block finishes.
+ * - [ReasoningDisplay.HEADLINE]: never auto-opens; header only until the user expands it.
+ *
+ * Auto-opening is gated by [live]: a block only opens itself while its turn is the actively
+ * streaming (non-settled) turn in a visible transcript. History load, transcript rebuilds, and
+ * background catch-up leave every block collapsed; only a live block in the active turn opens.
+ * A manual user toggle marks the base view as touched and always overrides later automatic changes.
+ */
 class ReasoningView(
     reasoning: Reasoning,
     private val openFile: SessionFileOpener = { _, _ -> },
     private val openUrl: (String) -> Unit = {},
     private val selection: SessionSelection? = null,
     private val parts: ReasoningParts = reasoningParts(selection),
+    private var mode: ReasoningDisplay = KiloPluginSettings.getReasoningDisplay(),
+    /** Whether this block may auto-open from the display setting: a live block in a visible turn. */
+    private val live: () -> Boolean = { true },
 ) :
     AbstractSessionPartView(
         parts.header,
         { parts.scroll(openFile, openUrl) },
-        expanded = reasoning.content.isNotBlank() && !reasoning.done,
+        expanded = initialExpanded(mode, reasoning) && live(),
         compact = true,
-    ) {
+    ), TranscriptDisplayTarget {
 
     override val contentId: String = reasoning.id
 
@@ -67,8 +87,6 @@ class ReasoningView(
     private var done = reasoning.done
     private var registered = false
     private var following = false
-    private var pinned = false
-
     init {
         applyStyle(style)
         if (bodyVisible()) syncBody()
@@ -103,7 +121,7 @@ class ReasoningView(
             }
             changed = true
         }
-        if (finishing && !pinned) {
+        if (finishing && !touched && mode == ReasoningDisplay.PREVIEW) {
             changed = collapse() || changed
             changed = releaseBody() || changed
         }
@@ -123,11 +141,6 @@ class ReasoningView(
     }
 
     @RequiresEdt
-    override fun userToggled() {
-        pinned = true
-    }
-
-    @RequiresEdt
     override fun appendDelta(delta: String) {
         if (delta.isEmpty()) return
         val follow = tailVisible()
@@ -144,6 +157,8 @@ class ReasoningView(
     fun markdown(): String = source
     @RequiresEdt
     fun hasToggle(): Boolean = arrow.isVisible
+    @RequiresEdt
+    internal fun arrowIcon() = arrow.icon
     @RequiresEdt
     fun headerText(): String = parts.title.text
     @RequiresEdt
@@ -180,7 +195,7 @@ class ReasoningView(
     @RequiresEdt
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
-        if (!bodyVisible()) return size
+        if (!bodyVisible() || mode != ReasoningDisplay.PREVIEW) return size
         val height = row.preferredSize.height + expandedGap() + bodyMaxHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
@@ -195,11 +210,32 @@ class ReasoningView(
             changed = true
         }
         changed = syncExpandable(canExpand()) || changed
-        if (visible && !done && !parts.bodyCreated()) {
+        if (!touched && live() && opens(mode, visible, done) && !isExpanded()) {
             changed = expand() || changed
             changed = syncExpandable(canExpand()) || changed
         }
         return changed
+    }
+
+    @RequiresEdt
+    override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
+        if (!force && touched) return false
+        val next = display.reasoning
+        if (mode == next) return false
+        mode = next
+        val visible = source.isNotBlank()
+        if (opens(mode, visible, done)) {
+            expand()
+        } else {
+            collapse()
+            releaseBody()
+        }
+        syncExpandable(canExpand())
+        // Expanded and Preview are both open and differ only in measured height (full text vs capped
+        // rows), so nothing here changes containment to invalidate the card. Without this the parent
+        // SessionLayout keeps serving the height it cached while the card still reported isValid.
+        refresh()
+        return true
     }
 
     private fun apply(md: MdView): Boolean {
@@ -348,6 +384,21 @@ class ReasoningBody(
     val panel: TrackPanel,
     val scroll: JBScrollPane,
 )
+
+/** Whether a freshly constructed [ReasoningView] should start expanded, given [mode] and [reasoning]. */
+private fun initialExpanded(mode: ReasoningDisplay, reasoning: Reasoning): Boolean {
+    val visible = reasoning.content.isNotBlank()
+    return opens(mode, visible, reasoning.done)
+}
+
+/** The single mode rule used for both initial state and later automatic expansion. */
+private fun opens(mode: ReasoningDisplay, visible: Boolean, done: Boolean): Boolean {
+    return when (mode) {
+        ReasoningDisplay.EXPANDED -> visible
+        ReasoningDisplay.PREVIEW -> visible && !done
+        ReasoningDisplay.HEADLINE -> false
+    }
+}
 
 private fun reasoningParts(selection: SessionSelection? = null): ReasoningParts {
     val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }

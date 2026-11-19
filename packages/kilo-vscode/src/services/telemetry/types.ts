@@ -35,8 +35,6 @@ export enum TelemetryEventName {
 
   // Marketplace
   MARKETPLACE_INSTALL_BUTTON_CLICKED = "Marketplace Install Button Clicked",
-  MARKETPLACE_ITEM_INSTALLED = "Marketplace Item Installed",
-  MARKETPLACE_ITEM_REMOVED = "Marketplace Item Removed",
   MARKETPLACE_TAB_VIEWED = "Marketplace Tab Viewed",
 
   // Account & Auth
