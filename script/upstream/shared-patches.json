@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 145,
-    "markedLines": 2583,
+    "files": 153,
+    "markedLines": 2773,
     "unmarkedLines": 386,
     "deletedFiles": 0
   },
@@ -602,6 +602,38 @@
     "packages/tui/test/session-panel.test.tsx": {
       "rung": 4,
       "seam": "Kilo registers an additional builtin TUI plugin, so the Plugins dialog can scroll past `opencode.diffs`. The test waits for the reveal instead of requiring that row in the first frame after ctrl+a; the same row, filter and toggle assertions stay. The test must stay next to the upstream session-panel harness because it drives the real dialog and keymap."
+    },
+    "packages/client/test/fixture/service-timing.ts": {
+      "rung": 3,
+      "seam": "The shared service-timing fixture's `accelerate` takes an optional overrides object, so one probe can use a budget other than the accelerated 100 ms. A health probe is not a speed knob: at 100 ms a busy runner made a healthy replacement look unresponsive. Calls that pass no overrides behave exactly as before. No seam: the helper that wraps `Service.ensure`/`Service.stop` is a literal in the shared fixture, and only the caller that needs a longer probe can ask for it."
+    },
+    "packages/client/test/promise-service.test.ts": {
+      "rung": 4,
+      "seam": "Kilo CI stability: the handoff-recovery test probes the replacement with a 2 s health probe (`ensureReplacement`) instead of the accelerated 100 ms one. At 100 ms a loaded runner made a healthy replacement look unresponsive, recovery recruited a second contender that cannot adopt the single-use handoff, and the fixture was overwritten with a handoff it never received. The assertion is unchanged; only the probe budget is. No seam: the timing fixture is shared, and the test's own call site is the only place that can bound its probe (inline patch, option 4)."
+    },
+    "packages/codemode/test/vm/state.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the large default sort test gets a 20 s budget. 300,000 words sorted one trip at a time took 5.19 s on a loaded CI runner, above bun's 5 s default. The slice-count and sort-comparison assertions still decide the result. No seam: bun's per-test deadline is the test's third argument inside an upstream test file (inline patch, option 4)."
+    },
+    "packages/codemode/test/vm/suspend.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the suspend/resume test over 200,000 host round trips gets a 20 s budget (5.31 s on a loaded CI runner). The suspension assertions still decide the result. No seam: bun's per-test deadline is the test's third argument inside an upstream test file (inline patch, option 4)."
+    },
+    "packages/merman/src/state/diagram.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the oversized-horizontal-canvas test gets a 90 s budget. Layout work for 300 labelled transitions takes about 11.8 s idle and 44.9 s on a loaded CI runner, above the 30 s that the package's shared `test` script passes to bun. A wrong width still fails the existing assertions. No seam: the deadline is the test's third argument, and the package's `test` script sets one default for every file it runs (inline patch, option 4)."
+    },
+    "packages/patchmark/test/fuzz-differential.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the GFM differential test gets a 30 s budget. Both reference parsers run for every one of 2,000 cases, so the test is CPU bound: about 2.4 s idle and 7.4 s on a loaded CI runner against bun's 5 s default. The budget spans only the parser work, and a diff still fails the assertions. No seam: the deadline is the test's third argument inside an upstream test file (inline patch, option 4)."
+    },
+    "packages/sdk/test/instances-lifecycle.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the cancelled-borrower lifecycle test gets a 20 s budget. Building the embedded host and its instance layer is measurable setup work that took 5.77 s on a loaded CI runner, above bun's 5 s default. The lifecycle assertions still decide the result. No seam: the deadline is the test's third argument inside an upstream test file (inline patch, option 4)."
+    },
+    "packages/server/test/media.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the experimental-media refs test gets a 20 s budget. A real database import plus three round trips through the SDK cost about 1.3 s idle and 5.6 s on a loaded CI runner, above bun's 5 s default. A wrong payload still fails the assertions. No seam: the deadline is the test's third argument inside an upstream test file (inline patch, option 4)."
     }
   }
 }

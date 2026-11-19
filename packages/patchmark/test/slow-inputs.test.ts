@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { createMarkdownStream, renderBlocksToHtml } from "../src/index"
 
+// kilocode_change start
 // These bounds compare one shape at two sizes instead of timing a fixed input: quadratic parsing needs about 16x the
 // work for a 4x input, linear parsing about 4x, and how loaded the host is does not change how much CPU the parser
 // burns. Each side is the fastest of several samples taken from a fresh heap: a busy host inflates the middle of the
@@ -149,6 +150,7 @@ describe("slow-input linear-time bounds", () => {
     expect(scannedPerRow(1_000)).toBeLessThan(150)
     expect(scannedPerRow(4_000)).toBeLessThan(150)
   })
+  // kilocode_change end
 
   test(
     // kilocode_change start - 256 KB instead of 1 MB: the work bound below is unchanged, but the smaller input

@@ -17,6 +17,7 @@ describe("differential fuzzing against commonmark 0.31.2 and micromark-gfm", () 
     }
   })
 
+  // kilocode_change start
   test(
     "zero unexplained GFM diffs across 2,000 seeded generated + spec-mutated cases",
     () => {
@@ -36,4 +37,5 @@ describe("differential fuzzing against commonmark 0.31.2 and micromark-gfm", () 
     // CI runner versus bun's 5 s default. The budget only spans the parser work; a diff still fails the assertions.
     30_000,
   )
+  // kilocode_change end
 })

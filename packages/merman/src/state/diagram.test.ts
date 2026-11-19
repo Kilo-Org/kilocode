@@ -250,6 +250,7 @@ ${Array.from({ length: 8 }, (_, index) => `  A --> B${index}`).join("\n")}`
     expect(responsive).toBe(horizontal)
   })
 
+  // kilocode_change start
   test(
     "falls back before allocating an oversized horizontal canvas",
     () => {
@@ -271,6 +272,7 @@ ${ids
     // that the package's `test` script passes to bun. A wrong width still fails the assertions below.
     90_000,
   )
+  // kilocode_change end
 
   test.each(["TB", "TD", "BT"] as const)("preserves explicit %s layouts under a narrow width target", (direction) => {
     const source = `stateDiagram-v2

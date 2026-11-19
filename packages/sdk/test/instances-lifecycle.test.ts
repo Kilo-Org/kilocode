@@ -63,7 +63,9 @@ it.live("a cancelled borrower cannot strand a later failed instance construction
     yield* Effect.promise(host.close)
     expect(released).toEqual([1, 2])
   }),
+  // kilocode_change start
   // Building the embedded host and its instance layer is measurable setup work: it took 5.77 s on a loaded CI runner,
   // above bun's 5 s default. The lifecycle assertions still decide the result.
   20_000,
+  // kilocode_change end
 )
