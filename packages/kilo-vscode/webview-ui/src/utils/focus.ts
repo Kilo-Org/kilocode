@@ -1,5 +1,6 @@
 const nonText = new Set(["button", "checkbox", "file", "hidden", "image", "radio", "range", "reset", "submit"])
-const QUESTION_OPTION = '[data-component="question-dock"] button[data-slot="question-option"]'
+const QUESTION_OPTION =
+  '[data-component="question-dock"] :is(button[data-slot="question-option"], input[data-slot="custom-input"])'
 
 export const hasPopup = (root: ParentNode = document): boolean =>
   root.querySelector(".popup-selector[data-expanded]") !== null
@@ -35,7 +36,10 @@ export function focusQuestionOption(root: ParentNode = document): boolean {
   const options = [...root.querySelectorAll<HTMLButtonElement>(QUESTION_OPTION)].filter(
     (option) => !option.disabled && !option.closest("[inert]"),
   )
-  const option = options.find((item) => item.dataset.picked === "true") ?? options.at(0)
+  const option =
+    options.find((item) => item.matches('input[data-slot="custom-input"]')) ??
+    options.find((item) => item.dataset.picked === "true") ??
+    options.at(0)
   if (!option) return false
   option.focus({ preventScroll: true })
   return true

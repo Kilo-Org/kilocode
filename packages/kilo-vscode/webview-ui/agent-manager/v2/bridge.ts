@@ -2,8 +2,12 @@
 // against them.
 import type { AgentManagerExtensionMessage, AgentManagerWebviewMessage } from "../../src/types/messages/agent-manager"
 import type { ToHost, ToWebview } from "../../../src/protocol"
+import type { AgentManagerFocusTarget } from "../focus"
 
-export type OutMessage = AgentManagerWebviewMessage | ToHost
+export type OutMessage =
+  | AgentManagerWebviewMessage
+  | ToHost
+  | { type: "agentManagerFocusChanged"; target: AgentManagerFocusTarget }
 export type InMessage = AgentManagerExtensionMessage | ToWebview
 
 export type VSCodeContext = {

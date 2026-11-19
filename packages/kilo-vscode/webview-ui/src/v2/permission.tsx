@@ -24,6 +24,7 @@ const LABELS: Record<string, string> = {
 
 export function PermissionDock(props: {
   request: PermissionRequest
+  onAnswer?: (decision: "once" | "always" | "reject") => Promise<unknown>
   /** Opens the proposed file changes of an edit request; the Agent Manager shows them in its edit preview. */
   onPreview?: (files: FileDiffInfo[], sessionID: string) => void
 }) {
@@ -53,9 +54,10 @@ export function PermissionDock(props: {
     return value === key ? props.request.action : value
   }
 
-  const wider = () => widerRule(props.request)
+  const wider = () => (props.onAnswer ? undefined : widerRule(props.request))
 
   const answer = (decision: "once" | "always" | "reject", broader?: string) => {
+    if (props.onAnswer) return props.onAnswer(decision)
     const request = props.request
     if (!broader)
       return v2.data.session.permission.reply({ sessionID: request.sessionID, requestID: request.id, decision })

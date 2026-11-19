@@ -15,6 +15,7 @@ import type { WorktreeReference } from "../utils/prompt-mention-drop"
 import { parseCommandModel } from "../components/settings/agent-behaviour/command-model"
 import { useLanguage } from "../context/language"
 import { focusPrompt } from "../utils/tab-navigation"
+import { useInterruptKey } from "./interrupt-key"
 import { useModelPreferences } from "../context/model-preferences"
 import { useWorkStyleOptional } from "../context/work-style"
 import { getVSCodeAPI } from "../context/vscode"
@@ -583,17 +584,7 @@ export function SessionView(props: {
   // Escape interrupts the running turn, as v1's ChatView did. A question dock, popover or selector that handles
   // Escape first consumes the event, so this only fires for a press nothing else used. A read-only view has no
   // composer, so it also has nothing to interrupt.
-  onMount(() => {
-    if (props.readOnly) return
-    const handler = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return
-      if (!running() && !working.submitting() && !goal.active()) return
-      event.preventDefault()
-      stop()
-    }
-    document.addEventListener("keydown", handler)
-    onCleanup(() => document.removeEventListener("keydown", handler))
-  })
+  useInterruptKey(() => !props.readOnly && (running() || working.submitting() || goal.active()), stop)
 
   return (
     <TranscriptSearchProvider>

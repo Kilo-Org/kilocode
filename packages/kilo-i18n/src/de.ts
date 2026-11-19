@@ -168,4 +168,47 @@ export const dict = {
   "browser.state.unavailable": "nicht verfügbar",
   "browser.state.readyHint": "Ein Chromium-Profil von Kilo, gestartet beim ersten Browser-Aufruf",
   "browser.state.extensionHint": "Kilo-Browser-Erweiterung verbinden, um den eigenen Browser zu steuern",
+
+  // Agent Manager: Cloud workspaces and chat
+  "agentManager.cloud.newWorkspace": "Cloud-Arbeitsbereich erstellen",
+  "agentManager.cloud.newSession": "Cloud-Sitzung starten",
+  "agentManager.cloud.launchSibling":
+    "Sende eine Aufgabe, um einen unabhängigen Agenten in diesem Arbeitsbereich zu starten. Die Agenten teilen sich die Dateien, führen aber getrennte Unterhaltungen.",
+  "agentManager.cloud.launchWorkspace":
+    "Sende eine Aufgabe, um einen Cloud-Agenten in einer neuen Arbeitskopie dieses Repositorys zu starten.",
+  "agentManager.cloud.disconnected":
+    "Die Verbindung für Live-Updates ist unterbrochen. Dein Agent arbeitet möglicherweise weiter. Beim Wiederverbinden wird deine Nachricht nicht erneut gesendet.",
+  "agentManager.cloud.sleeping":
+    "Dieser Arbeitsbereich ist im Ruhezustand. Sende eine Nachricht, damit der Agent seine Arbeit fortsetzt.",
+  "agentManager.cloud.shellEnded":
+    "Diese Shell wurde beendet oder die Verbindung wurde getrennt. Öffne ein neues Terminal, um eine neue Shell zu starten. Deine Unterhaltung mit dem Agenten ist weiterhin verfügbar.",
+  "agentManager.cloud.stopping": "Die Cloud schließt diesen Lauf gerade ab. Deine Unterhaltung bleibt verfügbar.",
+  "agentManager.cloud.empty": "Für dieses Repository gibt es keine Cloud-Arbeitsbereiche.",
+  "agentManager.cloud.signedOut": "Melde dich an, um Cloud-Arbeitsbereiche zu sehen.",
+  "agentManager.cloud.noRepository":
+    "Dieses Projekt benötigt ein unterstütztes Git-Remote, um Cloud-Arbeitsbereiche zu nutzen.",
+  "agentManager.cloud.unsupported": "Für dieses Konto sind keine Cloud-Arbeitsbereiche verfügbar.",
+  "agentManager.cloud.loadFailed": "Cloud-Arbeitsbereiche konnten nicht geladen werden.",
+  "agentManager.cloud.createFailed": "Der Cloud-Arbeitsbereich oder die Cloud-Sitzung konnte nicht erstellt werden.",
+  "agentManager.cloud.optionalPrompt": "Erste Eingabe (optional)",
+  "agentManager.cloud.prompt": "Erste Eingabe",
+  "agentManager.cloud.model": "Cloud-Modell",
+  "agentManager.cloud.noModels": "Keine Kilo-Modelle verfügbar.",
+  "agentManager.cloud.chat.empty": "Noch keine Nachrichten. Sende eine Nachricht, um diese Cloud-Sitzung zu starten.",
+  "agentManager.cloud.chat.user": "Du",
+  "agentManager.cloud.chat.assistant": "Cloud-Agent",
+  "agentManager.cloud.chat.reconnecting": "Verbindung zur Cloud wird wiederhergestellt…",
+  "agentManager.cloud.review.autoCommit": "Änderungen festschreiben, wenn der Lauf endet",
+  "agentManager.cloud.share.title": "Sitzung teilen",
+  "agentManager.cloud.share.visibility": "Jeder mit dem Link kann diese Sitzung lesen.",
+  "agentManager.cloud.share.snapshot": "Der Link umfasst nur Nachrichten, die vor seiner Erstellung eingegangen sind.",
+  "agentManager.cloud.share.expires": "Läuft in {{duration}} ab",
+  "agentManager.cloud.share.sevenDays": "7 Tg.",
+  "agentManager.cloud.share.replaces": "Wenn du einen neuen Link mit diesen Einstellungen erstellst, ersetzt er den alten, und der alte Link funktioniert nicht mehr.",
+  "agentManager.cloud.share.create": "Link erstellen",
+  "agentManager.cloud.chat.unavailable": "Diese Cloud-Sitzung konnte nicht geöffnet werden.",
+  "agentManager.cloud.chat.permission": "Angeforderte Berechtigung: {{permission}}",
+  "agentManager.cloud.profile": "Umgebungsprofil",
+  "agentManager.cloud.show": "Cloud-Arbeitsbereiche anzeigen",
+  "agentManager.cloud.showDescription": "Cloud-Arbeitsbereiche dieses Repositorys im Agent Manager anzeigen.",
 }

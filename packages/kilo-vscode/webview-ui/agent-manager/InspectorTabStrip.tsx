@@ -30,6 +30,7 @@ interface Props {
   renderTab: (id: string, api: InspectorTabStripApi) => JSX.Element
   overlay: (id: string) => string
   onSelect: (id: string) => void
+  onActivate?: (id: string) => void
   onReorder: (from: string, to: string) => void
   /** Prompt mention payload for a tab id, so the tab can be dragged to the prompt. */
   drag?: (id: string) => PromptMentionDrop | undefined
@@ -39,7 +40,7 @@ interface Props {
 export const InspectorTabStrip: Component<Props> = (props) => {
   let host!: HTMLDivElement
   const scroll = useTabScroll(props.ids, props.active)
-  const focus = createTabFocus({ ids: props.ids, select: props.onSelect, root: () => host })
+  const focus = createTabFocus({ ids: props.ids, select: props.onSelect, activate: props.onActivate, root: () => host })
   const [dragging, setDragging] = createSignal<{ id: string; width: number }>()
   const freeze = () => setTabWidths(true, host, TABLIST)
   const release = () => setTabWidths(false, host, TABLIST)

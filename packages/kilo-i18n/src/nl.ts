@@ -169,4 +169,47 @@ export const dict = {
   "browser.state.unavailable": "niet beschikbaar",
   "browser.state.readyHint": "Een Chromium-profiel van Kilo, gestart bij de eerste browseroproep",
   "browser.state.extensionHint": "Verbind de Kilo-browserextensie om je eigen browser te gebruiken",
+
+  // Agent Manager: Cloud workspaces and chat
+  "agentManager.cloud.newWorkspace": "Cloudwerkruimte maken",
+  "agentManager.cloud.newSession": "Cloudsessie starten",
+  "agentManager.cloud.launchSibling":
+    "Stuur een taak om een onafhankelijke agent in deze werkruimte te starten. De agents delen bestanden, maar hebben elk hun eigen gesprek.",
+  "agentManager.cloud.launchWorkspace":
+    "Stuur een taak om een cloudagent te starten in een nieuwe werkkopie van deze repository.",
+  "agentManager.cloud.disconnected":
+    "De verbinding voor live-updates is verbroken. Je agent is mogelijk nog aan het werk. Je bericht wordt niet opnieuw verzonden als de verbinding wordt hersteld.",
+  "agentManager.cloud.sleeping":
+    "Deze werkruimte staat in de slaapstand. Stuur een bericht om de agent verder te laten werken.",
+  "agentManager.cloud.shellEnded":
+    "Deze shell is afgesloten of de verbinding is verbroken. Open een nieuwe terminal om een nieuwe shell te starten. Je gesprek met de agent is nog beschikbaar.",
+  "agentManager.cloud.stopping": "Deze uitvoering wordt in de cloud afgerond. Je gesprek blijft beschikbaar.",
+  "agentManager.cloud.empty": "Er zijn geen cloudwerkruimten voor deze repository.",
+  "agentManager.cloud.signedOut": "Log in om cloudwerkruimten te bekijken.",
+  "agentManager.cloud.noRepository":
+    "Dit project heeft een ondersteunde Git-remote nodig om cloudwerkruimten te gebruiken.",
+  "agentManager.cloud.unsupported": "Cloudwerkruimten zijn niet beschikbaar voor dit account.",
+  "agentManager.cloud.loadFailed": "De cloudwerkruimten konden niet worden geladen.",
+  "agentManager.cloud.createFailed": "De cloudwerkruimte of cloudsessie kon niet worden gemaakt.",
+  "agentManager.cloud.optionalPrompt": "Eerste prompt (optioneel)",
+  "agentManager.cloud.prompt": "Eerste prompt",
+  "agentManager.cloud.model": "Cloudmodel",
+  "agentManager.cloud.noModels": "Er zijn geen Kilo-modellen beschikbaar.",
+  "agentManager.cloud.chat.empty": "Er zijn nog geen berichten. Stuur een bericht om deze cloudsessie te starten.",
+  "agentManager.cloud.chat.user": "Jij",
+  "agentManager.cloud.chat.assistant": "Cloudagent",
+  "agentManager.cloud.chat.reconnecting": "Opnieuw verbinden met de cloud…",
+  "agentManager.cloud.review.autoCommit": "Wijzigingen committen wanneer de uitvoering eindigt",
+  "agentManager.cloud.share.title": "Sessie delen",
+  "agentManager.cloud.share.visibility": "Iedereen met de link kan deze sessie lezen.",
+  "agentManager.cloud.share.snapshot": "De link bevat alleen berichten die zijn ontvangen voordat je hem aanmaakt.",
+  "agentManager.cloud.share.expires": "Verloopt over {{duration}}",
+  "agentManager.cloud.share.sevenDays": "7d",
+  "agentManager.cloud.share.replaces": "Als je een nieuwe link met deze instellingen maakt, wordt die vervangen en werkt de oude link niet meer.",
+  "agentManager.cloud.share.create": "Link maken",
+  "agentManager.cloud.chat.unavailable": "Deze cloudsessie kon niet worden geopend.",
+  "agentManager.cloud.chat.permission": "Gevraagde toestemming: {{permission}}",
+  "agentManager.cloud.profile": "Omgevingsprofiel",
+  "agentManager.cloud.show": "Cloudwerkruimten tonen",
+  "agentManager.cloud.showDescription": "Toon de cloudwerkruimten van deze repository in Agent Manager.",
 }

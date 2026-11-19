@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, type Component } from "solid-js"
+import { createEffect, createMemo, createSignal, type Component, type JSX } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type {
@@ -17,8 +17,9 @@ import { useBridge } from "./v2/vscode"
 import { ProjectsSection } from "./ProjectsSection"
 import { ProjectSidebarBody } from "./ProjectSidebarBody"
 import { SidebarSearchMenu, type SidebarSearchMenuRef } from "./SidebarSearchMenu"
-import type { SidebarSearchItem } from "./sidebar-search"
+import { projectActivity, type SidebarSearchItem } from "./sidebar-search"
 import { label, type Activity } from "./v2/activity"
+import type { CloudStatus } from "./cloud/status"
 import { LOCAL } from "./navigate"
 import { NewProjectDialog } from "./NewProjectDialog"
 import { CloneProjectDialog } from "./CloneProjectDialog"
@@ -37,6 +38,9 @@ const operationBusy = (store: ProjectStore | undefined, id: string) =>
 
 interface Props {
   projects: AgentProjectSnapshot[]
+  onCloud?: (id: string) => void
+  cloud?: (project: AgentProjectSnapshot) => JSX.Element
+  cloudStatus?: CloudStatus
   states: Record<string, AgentManagerStateMessage>
   store?: (projectId: string) => ProjectStore
   stats: Record<string, Record<string, WorktreeGitStats>>
@@ -143,7 +147,7 @@ export const ProjectList: Component<Props> = (props) => {
     }
     return result
   })
-  const search = createMemo(() => {
+  const localSearch = createMemo(() => {
     const items: SidebarSearchItem[] = []
     for (const project of props.projects) {
       const state = props.states[project.id]
@@ -206,7 +210,35 @@ export const ProjectList: Component<Props> = (props) => {
     }
     return items
   })
+  // A streamed token changes the snapshot, but must not rebuild the local catalog or reset the open search list.
+  const observed = createMemo(() => props.cloudStatus?.rows() ?? [], undefined, {
+    equals: (previous, next) => previous?.length === next.length && next.every((row, i) => {
+      const old = previous[i]!
+      return old.key === row.key && old.state === row.state && old.selected === row.selected && old.title === row.title
+    }),
+  })
+  const cloudSearch = createMemo((): SidebarSearchItem[] =>
+    observed().flatMap((row) => {
+      const project = props.projects.find((p) => p.id === row.projectId)
+      if (!project || project.missing || !props.states[project.id] || props.states[project.id]?.restricted) return []
+      const meta = [project.label, props.t("session.tab.cloud")]
+      return [
+        {
+          ...row,
+          kind: "cloud",
+          group: "sessions",
+          meta,
+          search: [row.title, ...meta].join(" "),
+          visible: project.expanded,
+        },
+      ]
+    }),
+  )
+  const search = createMemo(() => [...localSearch(), ...cloudSearch()])
+  const summary = createMemo(() => projectActivity(search()))
   const current = createMemo(() => {
+    const cloud = cloudSearch().find((item) => item.kind === "cloud" && item.selected)
+    if (cloud) return cloud
     const projectId = props.selectedProject
     if (!projectId) return
     const worktree = search().find(
@@ -226,6 +258,7 @@ export const ProjectList: Component<Props> = (props) => {
     return undefined
   })
   const selectSearch = (item: SidebarSearchItem) => {
+    if (item.kind === "cloud") return props.cloudStatus?.select(item.key)
     if (!item.projectId) return
     if (item.kind === "local") return select({ projectId: item.projectId, kind: "local" })
     if (item.kind === "worktree")
@@ -266,6 +299,7 @@ export const ProjectList: Component<Props> = (props) => {
   }
   return (
     <ProjectsSection
+      activity={(id) => summary().get(id) ?? "idle"}
       projects={props.projects}
       t={props.t}
       tools={
@@ -312,6 +346,7 @@ export const ProjectList: Component<Props> = (props) => {
       onRemove={(projectId) => vscode.postMessage({ type: "agentManager.removeProject", projectId })}
       onHistory={props.onHistory}
       onNew={newWorktree}
+      onCloud={props.onCloud}
       onCreate={(projectId) => props.onCreate?.(projectId)}
       onSection={(projectId) => newSection(projectId)}
       onSettings={(projectId) => vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId })}
@@ -330,6 +365,7 @@ export const ProjectList: Component<Props> = (props) => {
       body={(project) => (
         <ProjectSidebarBody
           project={project}
+          cloud={props.cloud?.(project)}
           state={props.states[project.id]}
           store={store(project.id)!}
           deletion={deletion}

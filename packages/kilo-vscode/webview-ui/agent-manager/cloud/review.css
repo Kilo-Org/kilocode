@@ -1,0 +1,55 @@
+.am-cloud-review.am-diff-panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.am-cloud-review-tree {
+  height: clamp(76px, 25%, 250px);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+.am-cloud-review-file {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: auto;
+}
+.am-cloud-review-file > .am-document-content {
+  flex: 1;
+  overflow: auto;
+}
+.am-cloud-review-note {
+  padding: 6px 10px;
+  color: var(--text-weak);
+}
+.am-cloud-review-draft,
+.am-cloud-review-editor,
+.am-cloud-review-lines {
+  padding: 8px;
+}
+.am-cloud-review-draft {
+  border-top: 1px solid var(--vscode-panel-border);
+  overflow: auto;
+  flex-shrink: 0;
+  max-height: 45%;
+}
+.am-cloud-review-draft label,
+.am-cloud-review-editor label {
+  display: grid;
+  gap: 4px;
+  margin-block: 6px;
+}
+.am-cloud-review-draft textarea,
+.am-cloud-review-editor textarea,
+.am-cloud-review-draft select {
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border);
+  width: 100%;
+}
+.am-cloud-review-lines {
+  overflow: auto;
+  min-height: 0;
+}

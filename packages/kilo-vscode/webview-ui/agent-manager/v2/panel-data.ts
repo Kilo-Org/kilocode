@@ -55,9 +55,12 @@ export function createPanelData(input: {
   const [selection, setSelection] = createSignal(false)
   const commands = new Set<(name: string) => void>()
   const catalogHandlers = new Set<() => void>()
+  const hostedHandlers = new Set<(directory?: string) => void>()
   let metadata: ConnectionMetadata | undefined
   let connected: OpenCodeEvent | undefined
   const route = (event: OpenCodeEvent) => {
+    if (event.type === "rpc.kilocode.hosted.changed")
+      hostedHandlers.forEach((handler) => handler(event.location?.directory))
     if (event.type === catalogEvent) catalogHandlers.forEach((handler) => handler())
     if (event.type === "server.connected") {
       // A store loads its directory's location, VCS and project when the server connects, and each of those loads
@@ -175,6 +178,10 @@ export function createPanelData(input: {
   return {
     api,
     connection,
+    onHostedChange(handler: (directory?: string) => void) {
+      hostedHandlers.add(handler)
+      return () => hostedHandlers.delete(handler)
+    },
     store,
     find: (directory: string) => stores.get(key(directory))?.scope,
     show,

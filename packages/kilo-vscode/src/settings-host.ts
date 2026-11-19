@@ -51,6 +51,7 @@ export const KILO_SETTING_KEYS = [
   "autocomplete.provider",
   "autocomplete.model",
   "agentManager.autoBranchNaming",
+  "agentManager.cloudWorkspaces",
   "agentManager.branchPrefix",
   "agentManager.worktreePool",
   "agentManager.pushFixes",

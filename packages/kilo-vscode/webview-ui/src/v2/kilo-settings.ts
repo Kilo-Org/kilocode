@@ -31,6 +31,10 @@ export function fallbackFontSize(): number {
 const [kiloSettings, setKiloSettings] = createSignal<Record<string, unknown>>(initial())
 export { kiloSettings }
 
+export function cloudWorkspacesVisible(): boolean {
+  return kiloSettings()["agentManager.cloudWorkspaces"] !== false
+}
+
 /** Scale the `--kilo-font-size-*` variables. The base font tokens in `globals.css` follow them. */
 export function applyFontSize(size: number) {
   const root = document.documentElement

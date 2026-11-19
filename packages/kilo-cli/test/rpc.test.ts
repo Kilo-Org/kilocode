@@ -2,11 +2,12 @@ import { expect, test } from "bun:test"
 import { fixture } from "@kilocode/gateway-core/testing"
 import { OpenCode } from "@opencode/client"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
+import { KiloHostedRpc } from "@opencode/schema/kilocode/hosted"
 import { KiloSessionSyncRpc } from "@opencode/schema/kilocode/session-sync"
 import { createRoutes } from "@opencode/server/routes"
 import { Context, Effect, Layer, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
-import { mkdtemp, rm } from "node:fs/promises"
+import { appendFile, mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
@@ -19,6 +20,7 @@ import { Global } from "@opencode/util/global"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { SessionSync } from "../src/session-sync"
 import { loadPlugins } from "./lib/plugins"
+import { initGit } from "../../core/test/fixture/git"
 
 // The reference Kilo RPC end to end: the contract in @opencode/schema, the handlers in the Gateway plugin of
 // packages/kilo-plugin, the plugin registered by the host overrides, and the call through the generated client's
@@ -32,100 +34,106 @@ const boot =
     options: { syncBackground?: boolean; awaitActivation?: boolean; data?: string } = {},
   ) =>
   async () => {
-  using backend = fixture()
-  const syncOrganizations: (string | null)[] = []
-  const syncScopes: (string | null | undefined)[] = []
-  const syncPeer = Bun.serve({
-    hostname: "127.0.0.1",
-    port: 0,
-    async fetch(request) {
-      if (new URL(request.url).pathname !== "/v1/auth/exchange") return new Response(null, { status: 404 })
-      const input = await request.json() as { organizationID?: string }
-      const organizationID = input.organizationID ?? null
-      syncOrganizations.push(organizationID)
-      return Response.json({
-        version: 1,
-        token: "sync-fixture-grant",
-        expiresAt: new Date(Date.now() + 300_000).toISOString(),
-        userID: "fixture",
-        tenant: organizationID ? { type: "organization", id: organizationID } : { type: "user", id: "fixture" },
-      })
-    },
-  })
-  const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-rpc-"))
-  // Keep a developer's Kilo login out of the test.
-  const variables = { ...signedOut, KILO_API_URL: backend.url, ...env }
-  const previous = Object.fromEntries(Object.keys(variables).map((key) => [key, process.env[key]]))
-  apply(variables)
-  try {
-    await Effect.runPromise(
-      Effect.scoped(
-        Effect.gen(function* () {
-          const context = yield* Layer.build(
-            createRoutes(
-              {
-                password: "secret",
-                database: { path: ":memory:" },
-                models: { fetch: false },
-                fs: { filewatcher: false },
-                config: { directory, project: false },
-              },
-              () => [],
-              [
-                ...KiloHost.overrides,
-                SessionSync.node.replace(makeGlobalNode({
-                  service: KiloSessionSync.Service,
-                  layer: Layer.effect(KiloSessionSync.Service, Effect.gen(function* () {
-                    const sync = yield* SessionSync.make({
-                      background: options.syncBackground ?? false,
-                      destination: syncPeer.url.origin,
-                    })
-                    return KiloSessionSync.Service.of({
-                      ...sync,
-                      organization: (input) => Effect.gen(function* () {
-                        syncScopes.push(input.organizationID)
-                        yield* sync.organization(input)
-                      }),
-                    })
-                  })),
-                  deps: [Database.node, Bus.node, SessionProjector.node, Credential.node, Global.node],
-                })),
-                ...(options.data
-                  ? [Global.node.replace(Global.layerWith({ config: directory, data: options.data }))]
-                  : []),
-              ],
-            ).pipe(Layer.provide(HttpServer.layerServices)),
-          )
-          const handler = Context.get(context, HttpRouter.HttpRouter)
-            .asHttpEffect()
-            .pipe(HttpEffect.toWebHandlerWith(context))
-          const client = OpenCode.make({
-            baseUrl: "http://kilo.local",
-            headers: { authorization: `Basic ${btoa("opencode:secret")}` },
-            // The client sends its requests to the server in this process instead of the network.
-            fetch: Object.assign(
-              async (input: string | URL | Request, init?: RequestInit) =>
-                handler(input instanceof Request ? input : new Request(input, init)),
-              { preconnect: fetch.preconnect },
-            ),
-          })
-          // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
-          const ready = loadPlugins(context, directory)
-          // A test that asserts intermediate activation state opts out and awaits `gateway.ready()` itself once its
-          // fixture is in place.
-          if (options.awaitActivation !== false) yield* ready
-          yield* Effect.promise(() =>
-            body(gateway(client, directory, backend.url, syncOrganizations, syncScopes, ready), backend),
-          )
-        }),
-      ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
-    )
-  } finally {
-    syncPeer.stop(true)
-    apply(previous)
-    await rm(directory, { recursive: true, force: true })
+    using backend = fixture()
+    const syncOrganizations: (string | null)[] = []
+    const syncScopes: (string | null | undefined)[] = []
+    const syncPeer = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      async fetch(request) {
+        if (new URL(request.url).pathname !== "/v1/auth/exchange") return new Response(null, { status: 404 })
+        const input = (await request.json()) as { organizationID?: string }
+        const organizationID = input.organizationID ?? null
+        syncOrganizations.push(organizationID)
+        return Response.json({
+          version: 1,
+          token: "sync-fixture-grant",
+          expiresAt: new Date(Date.now() + 300_000).toISOString(),
+          userID: "fixture",
+          tenant: organizationID ? { type: "organization", id: organizationID } : { type: "user", id: "fixture" },
+        })
+      },
+    })
+    const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-rpc-"))
+    // Keep a developer's Kilo login out of the test.
+    const variables = { ...signedOut, KILO_API_URL: backend.url, ...env }
+    const previous = Object.fromEntries(Object.keys(variables).map((key) => [key, process.env[key]]))
+    apply(variables)
+    try {
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const context = yield* Layer.build(
+              createRoutes(
+                {
+                  password: "secret",
+                  database: { path: ":memory:" },
+                  models: { fetch: false },
+                  fs: { filewatcher: false },
+                  config: { directory, project: false },
+                },
+                () => [],
+                [
+                  ...KiloHost.overrides,
+                  SessionSync.node.replace(
+                    makeGlobalNode({
+                      service: KiloSessionSync.Service,
+                      layer: Layer.effect(
+                        KiloSessionSync.Service,
+                        Effect.gen(function* () {
+                          const sync = yield* SessionSync.make({
+                            background: options.syncBackground ?? false,
+                            destination: syncPeer.url.origin,
+                          })
+                          return KiloSessionSync.Service.of({
+                            ...sync,
+                            organization: (input) =>
+                              Effect.gen(function* () {
+                                syncScopes.push(input.organizationID)
+                                yield* sync.organization(input)
+                              }),
+                          })
+                        }),
+                      ),
+                      deps: [Database.node, Bus.node, SessionProjector.node, Credential.node, Global.node],
+                    }),
+                  ),
+                  ...(options.data
+                    ? [Global.node.replace(Global.layerWith({ config: directory, data: options.data }))]
+                    : []),
+                ],
+              ).pipe(Layer.provide(HttpServer.layerServices)),
+            )
+            const handler = Context.get(context, HttpRouter.HttpRouter)
+              .asHttpEffect()
+              .pipe(HttpEffect.toWebHandlerWith(context))
+            const client = OpenCode.make({
+              baseUrl: "http://kilo.local",
+              headers: { authorization: `Basic ${btoa("opencode:secret")}` },
+              // The client sends its requests to the server in this process instead of the network.
+              fetch: Object.assign(
+                async (input: string | URL | Request, init?: RequestInit) =>
+                  handler(input instanceof Request ? input : new Request(input, init)),
+                { preconnect: fetch.preconnect },
+              ),
+            })
+            // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
+            const ready = loadPlugins(context, directory)
+            // A test that asserts intermediate activation state opts out and awaits `gateway.ready()` itself once its
+            // fixture is in place.
+            if (options.awaitActivation !== false) yield* ready
+            yield* Effect.promise(() =>
+              body(gateway(client, directory, backend.url, syncOrganizations, syncScopes, ready), backend),
+            )
+          }),
+        ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
+      )
+    } finally {
+      syncPeer.stop(true)
+      apply(previous)
+      await rm(directory, { recursive: true, force: true })
+    }
   }
-}
 
 const signedOut = {
   KILO_API_KEY: undefined,
@@ -162,6 +170,70 @@ function gateway(
     ready: () => Effect.runPromise(ready),
   }
 }
+
+test(
+  "a signed-out Agent Manager can discover hosted support but cannot use a restored workspace scope",
+  boot({}, async (gateway) => {
+    const hosted = gateway.client.rpc(KiloHostedRpc.Definition)
+    expect(await hosted.status({}, gateway.options)).toMatchObject({ state: "signed_out" })
+    await expect(hosted.list({ scope: "stale" }, gateway.options)).rejects.toMatchObject({ type: "HostedError" })
+  }),
+  30_000,
+)
+
+test("hosted discovery through the generated client uses the checkout remote, an exchanged token and the current account", async () => {
+  const repo = "https://github.com/example/cloud-fixture"
+  const calls: { path: string; auth: string | null; input: string | null }[] = []
+  using issuer = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request) {
+      const path = new URL(request.url).pathname
+      calls.push({ path, auth: request.headers.get("authorization"), input: null })
+      if (path !== "/api/cloud-agent-next/token") return new Response(null, { status: 404 })
+      return Response.json({ token: "control-grant", expiresAt: new Date(Date.now() + 90_000).toISOString() })
+    },
+  })
+  using cloud = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request) {
+      const url = new URL(request.url)
+      calls.push({
+        path: url.pathname,
+        auth: request.headers.get("authorization"),
+        input: url.searchParams.get("input"),
+      })
+      if (url.pathname === "/trpc/listHostedWorkspaces")
+        return Response.json({ result: { data: { items: [], nextCursor: null } } })
+      return new Response(null, { status: 404 })
+    },
+  })
+  await boot(
+    { KILO_API_KEY: "fixture-token", CLOUD_AGENT_NEXT_BASE_URL: cloud.url.origin, KILO_WEB_APP_URL: issuer.url.origin },
+    async (gateway) => {
+      const directory = gateway.options.location.directory
+      await initGit(directory)
+      await appendFile(
+        path.join(directory, ".git/config"),
+        '\n[remote "origin"]\n\turl = git@github.com:example/cloud-fixture.git\n',
+      )
+      const hosted = gateway.client.rpc(KiloHostedRpc.Definition)
+      const status = await hosted.status({}, gateway.options)
+      expect(status).toMatchObject({ state: "ready", repository: repo })
+      if (!status.scope) throw new Error("Expected a scoped Cloud catalog")
+      expect(await hosted.list({ scope: status.scope }, gateway.options)).toEqual({ items: [] })
+      expect(calls.map(({ path, auth }) => [path, auth])).toEqual([
+        ["/api/cloud-agent-next/token", "Bearer fixture-token"],
+        ["/trpc/listHostedWorkspaces", "Bearer control-grant"],
+      ])
+      expect(JSON.parse(calls[1]!.input!)).toMatchObject({ repositoryUrl: repo })
+      await gateway.rpc["organization.set"]({ organizationID: "first" }, gateway.options)
+      await expect(hosted.list({ scope: status.scope }, gateway.options)).rejects.toMatchObject({ type: "HostedError" })
+      expect(calls).toHaveLength(2)
+    },
+  )()
+}, 30_000)
 
 test(
   "a signed-out client reads the Gateway state and catalog through the generated client",
@@ -324,47 +396,60 @@ test(
 
 test(
   "a team-only login never enrolls provisionally as Personal while its default organization resolves",
-  boot({ KILO_API_KEY: "fixture-token" }, async (gateway, backend) => {
-    const profileReady = Promise.withResolvers<void>()
-    backend.state.profilePending = profileReady.promise
-    backend.state.profile = {
-      user: { email: "team-only@example.test", name: "Team fixture" },
-      organizations: [{ id: "selected", name: "Selected", role: "owner" }],
-      selectedOrganizationId: "selected",
-      hasPersonalAccount: false,
-    }
-    // The server no longer waits for plugins in rpc.call, so this one-shot caller awaits activation before it calls.
-    // Activation registers the RPC and starts the login's catalog resolution, which blocks on the pending profile, so
-    // no organization resolves yet.
-    await gateway.ready()
-    try {
-      await until(() => backend.requests.some((request) => request.path === "/api/profile"), "the unresolved profile request reaches the peer")
-      expect(gateway.syncScopes.length).toBeGreaterThan(0)
-      expect(gateway.syncScopes.every((scope) => scope === undefined)).toBe(true)
-      expect(gateway.syncOrganizations).toEqual([])
-      // rpc.call no longer waits for the login's catalog resolution, so authStatus reports no organization yet.
-      // Before upstream v2.2.7 this call waited and returned the organization.
-      expect(await gateway.rpc.authStatus({}, gateway.options)).toMatchObject({ authenticated: true, organizationID: null })
-      profileReady.resolve()
-      await until(() => gateway.syncOrganizations.includes("selected"), "automatic organization enrollment reaches the peer")
-      // Catalog resolution settles after the enrollment reaches the peer, so authStatus reads null for a while.
-      expect(
-        await eventually(
-          () => gateway.rpc.authStatus({}, gateway.options),
-          (status) => status.organizationID === "selected",
-          "authStatus reports the resolved organization",
-        ),
-      ).toMatchObject({ authenticated: true, organizationID: "selected" })
-      const directory = gateway.options.location.directory
-      const status = await gateway.sync.status({ directory }, gateway.options)
-      expect(status).toMatchObject({ enabled: true, tenant: { type: "organization", id: "selected" } })
-      expect(status.error).toBeUndefined()
-      expect(gateway.syncOrganizations.every((scope) => scope === "selected")).toBe(true)
-      expect(gateway.syncScopes.filter((scope) => scope !== undefined)).toEqual(["selected"])
-    } finally {
-      profileReady.resolve()
-    }
-  }, { syncBackground: true, awaitActivation: false }),
+  boot(
+    { KILO_API_KEY: "fixture-token" },
+    async (gateway, backend) => {
+      const profileReady = Promise.withResolvers<void>()
+      backend.state.profilePending = profileReady.promise
+      backend.state.profile = {
+        user: { email: "team-only@example.test", name: "Team fixture" },
+        organizations: [{ id: "selected", name: "Selected", role: "owner" }],
+        selectedOrganizationId: "selected",
+        hasPersonalAccount: false,
+      }
+      // The server no longer waits for plugins in rpc.call, so this one-shot caller awaits activation before it calls.
+      // Activation registers the RPC and starts the login's catalog resolution, which blocks on the pending profile, so
+      // no organization resolves yet.
+      await gateway.ready()
+      try {
+        await until(
+          () => backend.requests.some((request) => request.path === "/api/profile"),
+          "the unresolved profile request reaches the peer",
+        )
+        expect(gateway.syncScopes.length).toBeGreaterThan(0)
+        expect(gateway.syncScopes.every((scope) => scope === undefined)).toBe(true)
+        expect(gateway.syncOrganizations).toEqual([])
+        // rpc.call no longer waits for the login's catalog resolution, so authStatus reports no organization yet.
+        // Before upstream v2.2.7 this call waited and returned the organization.
+        expect(await gateway.rpc.authStatus({}, gateway.options)).toMatchObject({
+          authenticated: true,
+          organizationID: null,
+        })
+        profileReady.resolve()
+        await until(
+          () => gateway.syncOrganizations.includes("selected"),
+          "automatic organization enrollment reaches the peer",
+        )
+        // Catalog resolution settles after the enrollment reaches the peer, so authStatus reads null for a while.
+        expect(
+          await eventually(
+            () => gateway.rpc.authStatus({}, gateway.options),
+            (status) => status.organizationID === "selected",
+            "authStatus reports the resolved organization",
+          ),
+        ).toMatchObject({ authenticated: true, organizationID: "selected" })
+        const directory = gateway.options.location.directory
+        const status = await gateway.sync.status({ directory }, gateway.options)
+        expect(status).toMatchObject({ enabled: true, tenant: { type: "organization", id: "selected" } })
+        expect(status.error).toBeUndefined()
+        expect(gateway.syncOrganizations.every((scope) => scope === "selected")).toBe(true)
+        expect(gateway.syncScopes.filter((scope) => scope !== undefined)).toEqual(["selected"])
+      } finally {
+        profileReady.resolve()
+      }
+    },
+    { syncBackground: true, awaitActivation: false },
+  ),
   30_000,
 )
 
@@ -425,10 +510,18 @@ test(
     })
     backend.state.fimHang = true
     const abort = new AbortController()
-    const pending = gateway.rpc["autocomplete.fim"]({ prefix: "", suffix: "" }, { ...gateway.options, signal: abort.signal })
+    const pending = gateway.rpc["autocomplete.fim"](
+      { prefix: "", suffix: "" },
+      { ...gateway.options, signal: abort.signal },
+    )
     await until(() => backend.state.autocompleteRequests.length >= 2, "the hung FIM request reached the fixture")
     abort.abort()
-    expect(await pending.then(() => false, () => true)).toBe(true)
+    expect(
+      await pending.then(
+        () => false,
+        () => true,
+      ),
+    ).toBe(true)
     await until(() => backend.state.fimAborted === 1, "the fixture saw the aborted FIM request")
   }),
   30_000,

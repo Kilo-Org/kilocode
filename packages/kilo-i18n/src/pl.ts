@@ -167,4 +167,46 @@ export const dict = {
   "browser.state.unavailable": "niedostępna",
   "browser.state.readyHint": "Profil Chromium należący do Kilo, uruchamiany przy pierwszym wywołaniu przeglądarki",
   "browser.state.extensionHint": "Podłącz rozszerzenie przeglądarki Kilo, aby używać własnej przeglądarki",
+
+  // Agent Manager: Cloud workspaces and chat
+  "agentManager.cloud.newWorkspace": "Utwórz obszar roboczy w chmurze",
+  "agentManager.cloud.newSession": "Rozpocznij sesję w chmurze",
+  "agentManager.cloud.launchSibling":
+    "Wyślij zadanie, aby uruchomić niezależnego agenta w tym obszarze roboczym. Agenci współdzielą pliki, ale każdy prowadzi osobną rozmowę.",
+  "agentManager.cloud.launchWorkspace":
+    "Wyślij zadanie, aby uruchomić agenta w chmurze w nowej kopii roboczej tego repozytorium.",
+  "agentManager.cloud.disconnected":
+    "Utracono połączenie z aktualizacjami na żywo. Agent może nadal pracować. Po przywróceniu połączenia wiadomość nie zostanie wysłana ponownie.",
+  "agentManager.cloud.sleeping": "Ten obszar roboczy jest uśpiony. Wyślij wiadomość, aby agent wznowił pracę.",
+  "agentManager.cloud.shellEnded":
+    "Ta powłoka zakończyła pracę lub utracono z nią połączenie. Otwórz nowy terminal, aby uruchomić nową powłokę. Rozmowa z agentem jest nadal dostępna.",
+  "agentManager.cloud.stopping": "Trwa kończenie tego uruchomienia w chmurze. Rozmowa pozostanie dostępna.",
+  "agentManager.cloud.empty": "Brak obszarów roboczych w chmurze dla tego repozytorium.",
+  "agentManager.cloud.signedOut": "Zaloguj się, aby zobaczyć obszary robocze w chmurze.",
+  "agentManager.cloud.noRepository":
+    "Aby korzystać z obszarów roboczych w chmurze, projekt musi mieć skonfigurowane obsługiwane zdalne repozytorium Git.",
+  "agentManager.cloud.unsupported": "Obszary robocze w chmurze są niedostępne dla tego konta.",
+  "agentManager.cloud.loadFailed": "Nie udało się wczytać obszarów roboczych w chmurze.",
+  "agentManager.cloud.createFailed": "Nie udało się utworzyć obszaru roboczego lub sesji w chmurze.",
+  "agentManager.cloud.optionalPrompt": "Pierwsze zapytanie (opcjonalne)",
+  "agentManager.cloud.prompt": "Pierwsze zapytanie",
+  "agentManager.cloud.model": "Model w chmurze",
+  "agentManager.cloud.noModels": "Brak dostępnych modeli Kilo.",
+  "agentManager.cloud.chat.empty": "Nie ma jeszcze wiadomości. Wyślij wiadomość, aby rozpocząć tę sesję w chmurze.",
+  "agentManager.cloud.chat.user": "Ty",
+  "agentManager.cloud.chat.assistant": "Agent w chmurze",
+  "agentManager.cloud.chat.reconnecting": "Ponowne łączenie z chmurą…",
+  "agentManager.cloud.review.autoCommit": "Zatwierdź zmiany po zakończeniu uruchomienia",
+  "agentManager.cloud.share.title": "Udostępnij sesję",
+  "agentManager.cloud.share.visibility": "Każdy, kto ma link, może odczytać tę sesję.",
+  "agentManager.cloud.share.snapshot": "Link obejmuje tylko wiadomości otrzymane przed jego utworzeniem.",
+  "agentManager.cloud.share.expires": "Wygasa za {{duration}}",
+  "agentManager.cloud.share.sevenDays": "7 dni",
+  "agentManager.cloud.share.replaces": "Utworzenie nowego linku z tymi ustawieniami zastąpi go, a stary link przestanie działać.",
+  "agentManager.cloud.share.create": "Utwórz link",
+  "agentManager.cloud.chat.unavailable": "Nie udało się otworzyć tej sesji w chmurze.",
+  "agentManager.cloud.chat.permission": "Prośba o uprawnienie: {{permission}}",
+  "agentManager.cloud.profile": "Profil środowiska",
+  "agentManager.cloud.show": "Pokaż obszary robocze w chmurze",
+  "agentManager.cloud.showDescription": "Pokaż obszary robocze tego repozytorium w chmurze w Agent Manager.",
 }

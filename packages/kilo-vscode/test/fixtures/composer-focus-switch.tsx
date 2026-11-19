@@ -50,6 +50,11 @@ const { V2Scope } = await import("../../webview-ui/src/v2/client")
 const { createAutoApprove } = await import("../../webview-ui/src/v2/auto-approve")
 const { createSandbox } = await import("../../webview-ui/src/v2/sandbox")
 const { PromptInput } = await import("../../webview-ui/src/v2/prompt")
+const { bindCloudFocus, cloudDraftMayFocus, focusCloudChat } = await import(
+  "../../webview-ui/agent-manager/cloud/focus"
+)
+const { createTabFocus, createTabMenuAction } = await import("../../webview-ui/src/utils/tab-navigation")
+const { createCloudShells, cloudShellAction } = await import("../../webview-ui/agent-manager/cloud/shell-tabs")
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const sandboxStatus = { directory: "/workspace", enabled: false, available: true, network: false, version: 1 }
@@ -206,5 +211,116 @@ await wait(80)
 document.hasFocus = hasFocus
 assert.notEqual(document.activeElement, prompt(unfocused.root), "an unfocused window keeps no prompt focus")
 unfocused.dispose()
+
+const cloud = isolate(() => <Composer session="cloud" focusOnDraftChange={cloudDraftMayFocus} />)
+cloud.root.classList.add("am-cloud-detail")
+const strip = document.createElement("div")
+strip.innerHTML =
+  '<div data-tab-id="a"><button role="tab">A</button></div><div data-tab-id="b"><button role="tab">B</button></div>'
+cloud.root.append(strip)
+const terminalHost = document.createElement("div")
+terminalHost.className = "am-cloud-terminal am-side-terminal-layer"
+terminalHost.innerHTML = '<div class="am-terminal-host"><textarea></textarea></div>'
+cloud.root.append(terminalHost)
+const shell = terminalHost.querySelector("textarea")!
+const reportsCloud: string[] = []
+const cleanup = bindCloudFocus(cloud.root, (target) => reportsCloud.push(target))
+const fieldCloud = prompt(cloud.root)
+const [a, b] = strip.querySelectorAll("button")
+let selected = "a"
+const rove = createTabFocus({
+  ids: () => ["a", "b"],
+  select: (id) => (selected = id),
+  activate: () => focusCloudChat(),
+  root: () => strip,
+})
+for (const [button, id] of [
+  [a!, "a"],
+  [b!, "b"],
+] as const) {
+  button.addEventListener("keydown", (event) => rove.key(id, event))
+  button.addEventListener("click", () => focusCloudChat())
+}
+const press = (button: HTMLElement, key: string) =>
+  button.dispatchEvent(
+    new window.KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }) as unknown as KeyboardEvent,
+  )
+const paint = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+for (const [from, key, expected, id] of [
+  [a!, "ArrowRight", b!, "b"],
+  [b!, "Home", a!, "a"],
+  [a!, "End", b!, "b"],
+] as const) {
+  from.focus()
+  press(from, key)
+  await paint()
+  assert.equal(selected, id)
+  assert.equal(document.activeElement, expected, `roving ${key} leaves focus on selected tab`)
+}
+press(b!, "Enter")
+assert.equal(document.activeElement, fieldCloud, "Enter opens the already-selected composer")
+b!.focus()
+b!.click()
+assert.equal(document.activeElement, fieldCloud, "click opens the already-selected composer")
+shell.focus()
+assert.equal(reportsCloud.at(-1), "sideTerminal", "VS Code routes terminal shortcuts to the side shell")
+focusCloudChat()
+assert.equal(document.activeElement, shell, "normal recovery respects a terminal")
+shell.blur()
+window.dispatchEvent(new window.Event("focus"))
+assert.equal(document.activeElement, shell, "a window which lost DOM focus restores the shell")
+const dock = document.createElement("div")
+dock.dataset.component = "question-dock"
+dock.innerHTML = '<input data-slot="custom-input">'
+cloud.root.append(dock)
+focusCloudChat(true)
+assert.equal(
+  document.activeElement,
+  dock.firstElementChild,
+  "the explicit terminal shortcut prefers a free-text question",
+)
+const branch = document.createElement("input")
+cloud.root.append(branch)
+branch.focus()
+focusCloudChat(true)
+window.dispatchEvent(new window.Event("focus"))
+assert.equal(document.activeElement, branch, "focus recovery never takes a branch editor away from the user")
+branch.remove()
+dock.remove()
+b!.focus()
+const menu = createTabMenuAction()
+const dismissal = new window.Event("close", { cancelable: true }) as unknown as Event
+menu.close(dismissal)
+assert.ok(!dismissal.defaultPrevented, "dismissing a menu can restore its trigger")
+menu.select(() => focusCloudChat())
+menu.close(dismissal)
+assert.ok(dismissal.defaultPrevented, "opening a session suppresses trigger restoration")
+assert.equal(document.activeElement, fieldCloud, "menu selection enters the restored session")
+const shells = createCloudShells({
+  kind: "session",
+  title: "Fixture",
+  projectID: "test",
+  directory: "/workspace",
+  repository: "fixture",
+  scope: "fixture",
+  target: { scope: "fixture", providerID: "kilo-cloud", workspaceID: "fixture", sessionID: "test" },
+})
+const firstShell = shells.active()
+shells.add()
+let closed = 0
+const closeShell = () => {
+  closed++
+  terminalHost.remove()
+  focusCloudChat()
+}
+assert.equal(cloudShellAction("closeTab", shells, closeShell), false, "a composer close does not close the terminal")
+shell.focus()
+assert.equal(cloudShellAction("closeTab", shells, closeShell), true, "a terminal close is consumed")
+assert.equal(shells.request().id, firstShell, "the surviving terminal receives keyboard focus")
+cloudShellAction("closeTab", shells, closeShell)
+assert.equal(closed, 1)
+assert.equal(document.activeElement, fieldCloud, "closing the last terminal returns to the composer")
+cleanup()
+cloud.dispose()
 
 await window.happyDOM.close()

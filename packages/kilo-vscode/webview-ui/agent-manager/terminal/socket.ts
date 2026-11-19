@@ -21,6 +21,11 @@ export interface TerminalSocketCloseEvent {
   reason: string
 }
 
+export type TerminalTransport = Pick<
+  TerminalSocket,
+  "readyState" | "send" | "close" | "onopen" | "onclose" | "onmessage" | "onerror"
+>
+
 export class TerminalSocket {
   static readonly CONNECTING = 0
   static readonly OPEN = 1

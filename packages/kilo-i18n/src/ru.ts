@@ -168,4 +168,46 @@ export const dict = {
   "browser.state.unavailable": "недоступен",
   "browser.state.readyHint": "Профиль Chromium, принадлежащий Kilo, запускается при первом вызове браузера",
   "browser.state.extensionHint": "Подключите расширение браузера Kilo, чтобы управлять своим браузером",
+
+  // Agent Manager: Cloud workspaces and chat
+  "agentManager.cloud.newWorkspace": "Создать облачное рабочее пространство",
+  "agentManager.cloud.newSession": "Начать облачную сессию",
+  "agentManager.cloud.launchSibling":
+    "Отправьте задачу, чтобы запустить независимого агента в этом рабочем пространстве. Агенты работают с общими файлами, но у каждого своя беседа.",
+  "agentManager.cloud.launchWorkspace":
+    "Отправьте задачу, чтобы запустить облачного агента в новой рабочей копии этого репозитория.",
+  "agentManager.cloud.disconnected":
+    "Связь с потоком обновлений прервана. Возможно, агент всё ещё работает. При восстановлении соединения ваше сообщение не будет отправлено повторно.",
+  "agentManager.cloud.sleeping":
+    "Это рабочее пространство находится в спящем режиме. Отправьте сообщение, чтобы агент продолжил работу.",
+  "agentManager.cloud.shellEnded":
+    "Оболочка завершила работу или связь с ней прервалась. Откройте новый терминал, чтобы запустить новую оболочку. Ваша беседа с агентом по-прежнему доступна.",
+  "agentManager.cloud.stopping": "Этот запуск в облаке завершается. Ваша беседа останется доступной.",
+  "agentManager.cloud.empty": "У этого репозитория нет облачных рабочих пространств.",
+  "agentManager.cloud.signedOut": "Войдите, чтобы увидеть облачные рабочие пространства.",
+  "agentManager.cloud.noRepository": "Для работы в облаке проекту нужен поддерживаемый удалённый репозиторий Git.",
+  "agentManager.cloud.unsupported": "Облачные рабочие пространства недоступны для этой учётной записи.",
+  "agentManager.cloud.loadFailed": "Не удалось загрузить облачные рабочие пространства.",
+  "agentManager.cloud.createFailed": "Не удалось создать облачное рабочее пространство или сессию.",
+  "agentManager.cloud.optionalPrompt": "Первый запрос (необязательно)",
+  "agentManager.cloud.prompt": "Первый запрос",
+  "agentManager.cloud.model": "Облачная модель",
+  "agentManager.cloud.noModels": "Нет доступных моделей Kilo.",
+  "agentManager.cloud.chat.empty": "Сообщений пока нет. Отправьте сообщение, чтобы начать эту облачную сессию.",
+  "agentManager.cloud.chat.user": "Вы",
+  "agentManager.cloud.chat.assistant": "Облачный агент",
+  "agentManager.cloud.chat.reconnecting": "Повторное подключение к облаку…",
+  "agentManager.cloud.review.autoCommit": "Фиксировать изменения по завершении запуска",
+  "agentManager.cloud.share.title": "Поделиться сессией",
+  "agentManager.cloud.share.visibility": "Любой, у кого есть ссылка, может читать эту сессию.",
+  "agentManager.cloud.share.snapshot": "Ссылка включает только сообщения, полученные до её создания.",
+  "agentManager.cloud.share.expires": "Истекает через {{duration}}",
+  "agentManager.cloud.share.sevenDays": "7 дн.",
+  "agentManager.cloud.share.replaces": "Новая ссылка с этими настройками заменит её, и старая перестанет работать.",
+  "agentManager.cloud.share.create": "Создать ссылку",
+  "agentManager.cloud.chat.unavailable": "Не удалось открыть эту облачную сессию.",
+  "agentManager.cloud.chat.permission": "Запрашиваемое разрешение: {{permission}}",
+  "agentManager.cloud.profile": "Профиль окружения",
+  "agentManager.cloud.show": "Показывать облачные рабочие пространства",
+  "agentManager.cloud.showDescription": "Показывать облачные рабочие пространства этого репозитория в Agent Manager.",
 }

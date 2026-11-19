@@ -18,6 +18,7 @@
  */
 import { type Component, type ComponentProps, type JSX, createEffect, createSignal, onCleanup, Show } from "solid-js"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
+import { SessionDockFrame } from "./SessionDockFrame"
 import { showsWorking } from "../shared/working-indicator-utils"
 import { useTodoSource } from "../../v2/todo"
 import type { BackgroundJobs } from "../../v2/background-jobs"
@@ -270,7 +271,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
   })
 
   return (
-    <div class="session-dock" ref={setDock} data-component="session-dock" data-active={active() ? "" : undefined}>
+    <SessionDockFrame ref={setDock} active={active()}>
       <div class="session-dock-state" ref={goal.row} data-active={working() ? "" : undefined} aria-hidden={!working()}>
         <div
           class="session-working"
@@ -323,7 +324,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
           {chip(false)}
         </div>
       </div>
-    </div>
+    </SessionDockFrame>
   )
 }
 

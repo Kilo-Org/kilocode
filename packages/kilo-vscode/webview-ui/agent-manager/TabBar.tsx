@@ -1,3 +1,5 @@
+import { WorkspaceTabBar, WorkspaceTerminalButton } from "./WorkspaceTabBar"
+import { SessionTabList } from "./SessionTabList"
 import { For, Show, type Component, type JSX } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -87,267 +89,244 @@ export const TabBar: Component<TabBarProps> = (props) => (
     >
       <DragDropSensors />
       <ConstrainDragYAxis />
-      <div class="am-tab-bar" onPointerLeave={props.onRelease}>
-        <div class="am-tab-leading">
-          <SidebarToggleButton collapsed={props.collapsed} onClick={props.onToggleSidebar} />
-        </div>
-        <div class="am-tab-scroll-area">
-          <div class={`am-tab-fade am-tab-fade-left ${props.scroll.showLeft() ? "am-tab-fade-visible" : ""}`} />
-          <div class="am-tab-list-wrap">
-            <div
-              class="am-tab-list"
-              ref={props.scroll.setRef}
-              role="tablist"
-              aria-label={props.t("agentManager.shortcuts.category.tabs")}
-              style={{ "--tab-count": `${props.ids().length}` } as JSX.CSSProperties}
-            >
-              <SortableProvider ids={props.ids()}>
-                <For each={props.ids()}>{(id) => props.renderTab(id)}</For>
-              </SortableProvider>
-            </div>
-          </div>
-          <div class={`am-tab-fade am-tab-fade-right ${props.scroll.showRight() ? "am-tab-fade-visible" : ""}`} />
-        </div>
-        <Show when={props.selection() !== null}>
-          <div class="am-tab-add-wrap">
-            <div class="am-tab-add-separator" />
-            {props.newTab()}
-          </div>
-        </Show>
-        <div class="am-tab-actions">
-          {(() => {
-            const sel = () => props.selection()
-            const isWorktree = () => typeof sel() === "string" && sel() !== LOCAL
-            const stats = () => {
-              if (sel() === LOCAL) return props.localStats()
-              return typeof sel() === "string" ? props.worktreeStats()[sel() as string] : undefined
-            }
-            const hasChanges = () => {
-              const s = stats()
-              return s && (s.files > 0 || s.additions > 0 || s.deletions > 0)
-            }
-            const applyBusy = () => {
-              const state = props.applyState()
-              if (!state) return false
-              return state.status === "checking" || state.status === "applying"
-            }
-            const panels = () => props.documentsAvailable() || props.subagentsAvailable()
-            return (
-              <>
-                {/* Session panels: re-open handles for panels this session produced.
+      <WorkspaceTabBar
+        collapsed={props.collapsed}
+        toggle={props.onToggleSidebar}
+        release={props.onRelease}
+        add={props.newTab()}
+        actions={
+          <>
+            {(() => {
+              const sel = () => props.selection()
+              const isWorktree = () => typeof sel() === "string" && sel() !== LOCAL
+              const stats = () => {
+                if (sel() === LOCAL) return props.localStats()
+                return typeof sel() === "string" ? props.worktreeStats()[sel() as string] : undefined
+              }
+              const hasChanges = () => {
+                const s = stats()
+                return s && (s.files > 0 || s.additions > 0 || s.deletions > 0)
+              }
+              const applyBusy = () => {
+                const state = props.applyState()
+                if (!state) return false
+                return state.status === "checking" || state.status === "applying"
+              }
+              const panels = () => props.documentsAvailable() || props.subagentsAvailable()
+              return (
+                <>
+                  {/* Session panels: re-open handles for panels this session produced.
                      They grow outward to the left so the workbench never shifts. */}
-                <Show when={panels()}>
-                  <span class="am-tab-session-panels">
-                    <Show when={props.documentsAvailable()}>
-                      <Tooltip value={props.t("agentManager.documents.toggle")} placement="bottom" openDelay={0}>
-                        <IconButton
-                          icon="book-open-check"
-                          size="small"
-                          variant="ghost"
-                          aria-label={props.t("agentManager.documents.toggle")}
-                          aria-pressed={props.documentsOpen()}
-                          data-active={props.documentsOpen() ? "" : undefined}
-                          onClick={props.onToggleDocuments}
-                        />
-                      </Tooltip>
-                    </Show>
-                    <Show when={props.subagentsAvailable()}>
-                      <Tooltip value="Subagents" placement="bottom" openDelay={0}>
-                        <IconButton
-                          icon="task"
-                          size="small"
-                          variant="ghost"
-                          aria-label="Subagents"
-                          aria-pressed={props.subagentsOpen()}
-                          data-active={props.subagentsOpen() ? "" : undefined}
-                          onClick={props.onToggleSubagents}
-                        />
-                      </Tooltip>
-                    </Show>
-                    <span class="am-tab-actions-separator" />
-                  </span>
-                </Show>
-                {/* Workbench: fixed slots anchored to the right edge.
+                  <Show when={panels()}>
+                    <span class="am-tab-session-panels">
+                      <Show when={props.documentsAvailable()}>
+                        <Tooltip value={props.t("agentManager.documents.toggle")} placement="bottom" openDelay={0}>
+                          <IconButton
+                            icon="book-open-check"
+                            size="small"
+                            variant="ghost"
+                            aria-label={props.t("agentManager.documents.toggle")}
+                            aria-pressed={props.documentsOpen()}
+                            data-active={props.documentsOpen() ? "" : undefined}
+                            onClick={props.onToggleDocuments}
+                          />
+                        </Tooltip>
+                      </Show>
+                      <Show when={props.subagentsAvailable()}>
+                        <Tooltip value="Subagents" placement="bottom" openDelay={0}>
+                          <IconButton
+                            icon="task"
+                            size="small"
+                            variant="ghost"
+                            aria-label="Subagents"
+                            aria-pressed={props.subagentsOpen()}
+                            data-active={props.subagentsOpen() ? "" : undefined}
+                            onClick={props.onToggleSubagents}
+                          />
+                        </Tooltip>
+                      </Show>
+                      <span class="am-tab-actions-separator" />
+                    </span>
+                  </Show>
+                  {/* Workbench: fixed slots anchored to the right edge.
                      Changes first so its stats can grow without moving a pillar. */}
-                <TooltipKeybind
-                  title={props.t("agentManager.diff.toggle")}
-                  keybind={props.bindings().toggleDiff ?? ""}
-                  placement="bottom"
-                  openDelay={0}
-                >
-                  <IconButton
-                    icon="layers"
-                    size="small"
-                    variant="ghost"
-                    class="am-diff-toggle-btn"
-                    onClick={props.onToggleDiff}
-                    aria-label={props.t("agentManager.diff.toggle")}
-                    aria-pressed={props.diffOpen() && !props.reviewActive()}
-                    data-active={props.diffOpen() && !props.reviewActive() ? "" : undefined}
+                  <TooltipKeybind
+                    title={props.t("agentManager.diff.toggle")}
+                    keybind={props.bindings().toggleDiff ?? ""}
+                    placement="bottom"
+                    openDelay={0}
                   >
-                    <Show when={hasChanges()}>
-                      <span class="am-diff-toggle-stats">
-                        <Show when={stats()!.files > 0}>
-                          <span class="am-stat-files">
-                            <CountUp value={stats()!.files} />f
+                    <IconButton
+                      icon="layers"
+                      size="small"
+                      variant="ghost"
+                      class="am-diff-toggle-btn"
+                      onClick={props.onToggleDiff}
+                      aria-label={props.t("agentManager.diff.toggle")}
+                      aria-pressed={props.diffOpen() && !props.reviewActive()}
+                      data-active={props.diffOpen() && !props.reviewActive() ? "" : undefined}
+                    >
+                      <Show when={hasChanges()}>
+                        <span class="am-diff-toggle-stats">
+                          <Show when={stats()!.files > 0}>
+                            <span class="am-stat-files">
+                              <CountUp value={stats()!.files} />f
+                            </span>
+                          </Show>
+                          <span class="am-stat-additions">
+                            +<CountUp value={stats()!.additions} />
                           </span>
-                        </Show>
-                        <span class="am-stat-additions">
-                          +<CountUp value={stats()!.additions} />
+                          <span class="am-stat-deletions">
+                            −<CountUp value={stats()!.deletions} />
+                          </span>
                         </span>
-                        <span class="am-stat-deletions">
-                          −<CountUp value={stats()!.deletions} />
-                        </span>
+                      </Show>
+                    </IconButton>
+                  </TooltipKeybind>
+                  <Show when={props.prStatus()}>
+                    {(pr) => (
+                      <TooltipKeybind
+                        title={`PR #${pr().number}`}
+                        keybind={props.bindings().openPR ?? ""}
+                        placement="bottom"
+                        openDelay={0}
+                      >
+                        <IconButton
+                          icon="pull-request"
+                          size="small"
+                          variant="ghost"
+                          aria-label={`PR #${pr().number}`}
+                          aria-pressed={props.prOpen()}
+                          data-active={props.prOpen() ? "" : undefined}
+                          onClick={props.onTogglePR}
+                        />
+                      </TooltipKeybind>
+                    )}
+                  </Show>
+                  <Show when={isWorktree()}>
+                    <Tooltip
+                      value={
+                        props.reviewScope() === "branch"
+                          ? props.t("agentManager.apply.tooltip")
+                          : props.t("agentManager.diff.applyBranchOnly")
+                      }
+                      placement="bottom"
+                      openDelay={0}
+                    >
+                      <span class="am-tab-apply">
+                        <IconButton
+                          size="small"
+                          variant="ghost"
+                          icon="check"
+                          aria-label={props.t("agentManager.apply.globalButton")}
+                          aria-busy={applyBusy()}
+                          loading={applyBusy()}
+                          onClick={props.onApply}
+                          disabled={!hasChanges() || applyBusy() || props.reviewScope() !== "branch"}
+                        />
                       </span>
-                    </Show>
-                  </IconButton>
-                </TooltipKeybind>
-                <Show when={props.prStatus()}>
-                  {(pr) => (
+                    </Tooltip>
                     <TooltipKeybind
-                      title={`PR #${pr().number}`}
-                      keybind={props.bindings().openPR ?? ""}
+                      title={props.t("agentManager.open.tooltip")}
+                      keybind={props.bindings().openWorktree ?? ""}
                       placement="bottom"
                       openDelay={0}
                     >
                       <IconButton
-                        icon="pull-request"
                         size="small"
                         variant="ghost"
-                        aria-label={`PR #${pr().number}`}
-                        aria-pressed={props.prOpen()}
-                        data-active={props.prOpen() ? "" : undefined}
-                        onClick={props.onTogglePR}
+                        icon="folder"
+                        aria-label={props.t("agentManager.open.button")}
+                        onClick={props.onOpen}
                       />
                     </TooltipKeybind>
-                  )}
-                </Show>
-                <Show when={isWorktree()}>
-                  <Tooltip
-                    value={
-                      props.reviewScope() === "branch"
-                        ? props.t("agentManager.apply.tooltip")
-                        : props.t("agentManager.diff.applyBranchOnly")
-                    }
-                    placement="bottom"
-                    openDelay={0}
-                  >
-                    <span class="am-tab-apply">
+                  </Show>
+                  <Show when={props.browserAutomation()}>
+                    <Tooltip value={props.t("agentManager.browser.title")} placement="bottom" openDelay={0}>
                       <IconButton
+                        icon="globe"
                         size="small"
                         variant="ghost"
-                        icon="check"
-                        aria-label={props.t("agentManager.apply.globalButton")}
-                        aria-busy={applyBusy()}
-                        loading={applyBusy()}
-                        onClick={props.onApply}
-                        disabled={!hasChanges() || applyBusy() || props.reviewScope() !== "branch"}
+                        aria-label={props.t("agentManager.browser.title")}
+                        aria-pressed={props.browserOpen()}
+                        data-active={props.browserOpen() ? "" : undefined}
+                        onClick={props.onToggleBrowser}
                       />
-                    </span>
-                  </Tooltip>
-                  <TooltipKeybind
-                    title={props.t("agentManager.open.tooltip")}
-                    keybind={props.bindings().openWorktree ?? ""}
-                    placement="bottom"
-                    openDelay={0}
-                  >
-                    <IconButton
-                      size="small"
-                      variant="ghost"
-                      icon="folder"
-                      aria-label={props.t("agentManager.open.button")}
-                      onClick={props.onOpen}
-                    />
-                  </TooltipKeybind>
-                </Show>
-                <Show when={props.browserAutomation()}>
-                  <Tooltip value={props.t("agentManager.browser.title")} placement="bottom" openDelay={0}>
-                    <IconButton
-                      icon="globe"
-                      size="small"
-                      variant="ghost"
-                      aria-label={props.t("agentManager.browser.title")}
-                      aria-pressed={props.browserOpen()}
-                      data-active={props.browserOpen() ? "" : undefined}
-                      onClick={props.onToggleBrowser}
-                    />
-                  </Tooltip>
-                </Show>
-                {/* Run and Terminal form the fixed tail: a run sends its output
+                    </Tooltip>
+                  </Show>
+                  {/* Run and Terminal form the fixed tail: a run sends its output
                      to the panel terminal, so cause and effect stay adjacent. */}
-                <Show when={sel()}>
-                  {(() => {
-                    const rid = () => (sel() === LOCAL ? LOCAL : (sel() as string))
-                    const rs = () => props.runStatuses()[rid()]
-                    const active = () => rs()?.state === "running" || rs()?.state === "stopping"
-                    const configured = props.runConfigured
-                    const title = () => (configured() ? (active() ? "Stop" : "Run") : "Configure run script")
-                    return (
-                      <span class="am-split-button">
-                        <TooltipKeybind
-                          title={title()}
-                          keybind={props.bindings().runScript ?? ""}
-                          placement="bottom"
-                          openDelay={0}
-                        >
-                          <IconButton
-                            size="small"
-                            variant="ghost"
-                            icon={active() ? "stop" : "play"}
-                            aria-label={title()}
-                            disabled={rs()?.state === "stopping"}
-                            onClick={() => props.onRun(rid())}
-                          />
-                        </TooltipKeybind>
-                        <DropdownMenu gutter={4} placement="bottom-end">
-                          <Tooltip value={props.t("agentManager.run.options")} placement="bottom" openDelay={0}>
-                            <DropdownMenu.Trigger
-                              as={IconButton}
-                              icon="chevron-down"
+                  <Show when={sel()}>
+                    {(() => {
+                      const rid = () => (sel() === LOCAL ? LOCAL : (sel() as string))
+                      const rs = () => props.runStatuses()[rid()]
+                      const active = () => rs()?.state === "running" || rs()?.state === "stopping"
+                      const configured = props.runConfigured
+                      const title = () => (configured() ? (active() ? "Stop" : "Run") : "Configure run script")
+                      return (
+                        <span class="am-split-button">
+                          <TooltipKeybind
+                            title={title()}
+                            keybind={props.bindings().runScript ?? ""}
+                            placement="bottom"
+                            openDelay={0}
+                          >
+                            <IconButton
                               size="small"
                               variant="ghost"
-                              class="am-split-arrow"
-                              aria-label={props.t("agentManager.run.options")}
+                              icon={active() ? "stop" : "play"}
+                              aria-label={title()}
+                              disabled={rs()?.state === "stopping"}
+                              onClick={() => props.onRun(rid())}
                             />
-                          </Tooltip>
-                          <DropdownMenu.Portal>
-                            <DropdownMenu.Content class="am-split-menu">
-                              <DropdownMenu.Item
-                                onSelect={props.onConfigureRun}
-                              >
-                                <Icon name="settings-gear" size="small" />
-                                <DropdownMenu.ItemLabel>{props.t("agentManager.run.configure")}</DropdownMenu.ItemLabel>
-                              </DropdownMenu.Item>
-                            </DropdownMenu.Content>
-                          </DropdownMenu.Portal>
-                        </DropdownMenu>
-                      </span>
-                    )
-                  })()}
-                </Show>
-              </>
-            )
-          })()}
-          {/* The terminal button toggles the embedded side panel terminal.
-               Cmd+Shift+T creates a central terminal from center focus. Cmd+T creates a session in the center or a terminal in the right sidebar. */}
-          <TooltipKeybind
-            title={props.t("agentManager.tab.terminal")}
-            keybind={props.terminalKeybind()}
-            placement="bottom"
-            openDelay={0}
-          >
-            <IconButton
-              icon="console"
-              size="small"
-              variant="ghost"
-              aria-label={props.t("agentManager.tab.terminal")}
-              aria-pressed={props.terminalOpen()}
-              data-active={props.terminalOpen() ? "" : undefined}
-              onClick={props.onTerminalOpen}
+                          </TooltipKeybind>
+                          <DropdownMenu gutter={4} placement="bottom-end">
+                            <Tooltip value={props.t("agentManager.run.options")} placement="bottom" openDelay={0}>
+                              <DropdownMenu.Trigger
+                                as={IconButton}
+                                icon="chevron-down"
+                                size="small"
+                                variant="ghost"
+                                class="am-split-arrow"
+                                aria-label={props.t("agentManager.run.options")}
+                              />
+                            </Tooltip>
+                            <DropdownMenu.Portal>
+                              <DropdownMenu.Content class="am-split-menu">
+                                <DropdownMenu.Item onSelect={props.onConfigureRun}>
+                                  <Icon name="settings-gear" size="small" />
+                                  <DropdownMenu.ItemLabel>
+                                    {props.t("agentManager.run.configure")}
+                                  </DropdownMenu.ItemLabel>
+                                </DropdownMenu.Item>
+                              </DropdownMenu.Content>
+                            </DropdownMenu.Portal>
+                          </DropdownMenu>
+                        </span>
+                      )
+                    })()}
+                  </Show>
+                </>
+              )
+            })()}
+            <WorkspaceTerminalButton
+              active={props.terminalOpen()}
+              keybind={props.terminalKeybind()}
+              open={props.onTerminalOpen}
             />
-          </TooltipKeybind>
-        </div>
-      </div>
+          </>
+        }
+      >
+        <SessionTabList
+          count={props.ids().length}
+          label={props.t("agentManager.shortcuts.category.tabs")}
+          scroll={props.scroll}
+        >
+          <SortableProvider ids={props.ids()}>
+            <For each={props.ids()}>{(id) => props.renderTab(id)}</For>
+          </SortableProvider>
+        </SessionTabList>
+      </WorkspaceTabBar>
       <DragOverlay>
         <Show when={props.overlay()}>
           {(tab) => (

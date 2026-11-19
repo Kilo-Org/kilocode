@@ -2,6 +2,10 @@ import { Icon as Upstream, type IconProps as Props } from "@opencode-ai/ui/icon"
 import { Show, splitProps } from "solid-js"
 
 const icons: Record<string, { path: string; viewBox: string }> = {
+  cloud: {
+    viewBox: "0 0 20 20",
+    path: `<path d="M5.2 15.4a4.1 4.1 0 0 1-.4-8.18 5.5 5.5 0 0 1 10.66 1.25 3.5 3.5 0 0 1-.16 6.93H5.2Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>`,
+  },
   "circle-x-outline": {
     viewBox: "0 0 20 20",
     path: `<path d="M7.5 7.5L12.5 12.5M12.5 7.5L7.5 12.5M18.3333 10C18.3333 14.6024 14.6024 18.3333 10 18.3333C5.39763 18.3333 1.66667 14.6024 1.66667 10C1.66667 5.39763 5.39763 1.66667 10 1.66667C14.6024 1.66667 18.3333 5.39763 18.3333 10Z" stroke="currentColor" stroke-linecap="square"/>`,

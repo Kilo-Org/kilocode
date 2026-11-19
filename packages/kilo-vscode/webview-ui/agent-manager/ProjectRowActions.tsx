@@ -26,6 +26,7 @@ export const ProjectRowActions: Component<Props> = (props) => (
       loaded
       t={props.t}
       onCreate={props.onCreate}
+      onCloud={props.onCloud}
       onNew={props.onNew}
       onSection={props.onSection}
     />

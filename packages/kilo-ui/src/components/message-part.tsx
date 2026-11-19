@@ -55,6 +55,7 @@ import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { inputChanges, streamedTool, streamInterval, type ChangeCount } from "./tool-stream"
 import { busy, createSmoothText, createThrottledValue } from "./tool-utils"
 import { Tooltip } from "./tooltip"
+import { ToolDiffAction, patchPreview } from "./tool-diff-action"
 
 export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
 export { useGrowIn } from "./tool-utils"
@@ -1354,26 +1355,6 @@ function ToolFileOpenAction(props: { when: boolean; onClick: (event: MouseEvent)
   )
 }
 
-function ToolDiffAction(props: { when: boolean; onClick: (event: MouseEvent) => void }) {
-  const i18n = useI18n()
-  return (
-    <Show when={props.when}>
-      <span data-slot="tool-trigger-actions">
-        <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
-          <IconButton
-            icon="square-arrow-top-right"
-            size="small"
-            variant="ghost"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={props.onClick}
-            aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
-          />
-        </Tooltip>
-      </span>
-    </Show>
-  )
-}
-
 ToolRegistry.register({
   name: "edit",
   render(props) {
@@ -1606,14 +1587,16 @@ ToolRegistry.register({
       props.actions?.openFile?.(file.file)
     }
     const openDiff = (file: FileDiffInfo) => {
-      const diff = view(file)
-      if (!diff || !props.actions?.openDiff) return
-      props.actions.openDiff({
-        file: file.file,
-        patch: diff.patch,
-        additions: file.additions,
-        deletions: file.deletions,
-      })
+      const diff = patchPreview(file)
+      if (diff) props.actions?.openDiff?.(diff)
+    }
+    const canOpenGroup = () =>
+      !!props.actions?.openDiffs && list().length > 1 && list().every((file) => HUNK_MARKER.test(file.patch))
+    const openGroup = (event: MouseEvent) => {
+      event.stopPropagation()
+      if (!canOpenGroup()) return
+      const diffs = list().map(patchPreview).filter((diff) => diff !== undefined)
+      if (diffs.length === list().length) props.actions?.openDiffs?.(diffs)
     }
     // The action sits in the file body, not in the row header: the header is a
     // button, and an interactive control inside it is invalid for assistive tech.
@@ -1686,6 +1669,7 @@ ToolRegistry.register({
                     <div data-slot="message-part-tool-changes">
                       <DiffChanges changes={list()} />
                     </div>
+                    <ToolDiffAction when={canOpenGroup()} onClick={openGroup} />
                   </Show>
                   <Show when={live()}>
                     {(changes) => (

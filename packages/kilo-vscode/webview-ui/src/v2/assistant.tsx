@@ -26,6 +26,8 @@ import { toolDefaultOpen } from "./tool-default-open"
 import { turnDiffs, type TurnFile } from "./turn-diffs"
 
 export function AssistantMessage(props: {
+  hosted?: boolean
+  openLink?: (uri: string) => void
   message: SessionMessageAssistant
   session: string
   actions?: ToolActions
@@ -67,7 +69,7 @@ export function AssistantMessage(props: {
     on(
       () => [props.metadata, props.userTurn, lastChunk()] as const,
       ([metadata, turn]) => {
-        if (!metadata || !turn || !lastChunk()) return
+        if (props.hosted || !metadata || !turn || !lastChunk()) return
         const cached = turnDiffs.read(props.session, turn)
         if (cached) return setTurnFiles(cached)
         void turnDiffs
@@ -189,8 +191,8 @@ export function AssistantMessage(props: {
                         message={props.message}
                         index={at()}
                         session={props.session}
-                        directory={v2.directory}
-                        open={v2.open}
+                        directory={props.hosted ? "" : v2.directory}
+                        open={props.hosted ? props.openLink : v2.open}
                         copy={at() === copy()}
                         throughput={at() === copy() ? throughputEl() : undefined}
                         turnMeta={at() === copy() ? turnMetaEl() : undefined}
@@ -199,7 +201,7 @@ export function AssistantMessage(props: {
                         reasoningDisplay={displaySettings().reasoningDisplay}
                         actions={props.actions}
                         loadedFiles={item.type === "tool" ? props.instructionFiles?.(item.id) : undefined}
-                        errorAction={errorAction}
+                        errorAction={props.hosted ? undefined : errorAction}
                       />
                     )}
                   </Show>

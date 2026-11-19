@@ -167,4 +167,47 @@ export const dict = {
   "browser.state.unavailable": "indisponível",
   "browser.state.readyHint": "Um perfil Chromium do Kilo, iniciado na primeira chamada do navegador",
   "browser.state.extensionHint": "Conecte a extensão de navegador do Kilo para usar seu próprio navegador",
+
+  // Agent Manager: Cloud workspaces and chat
+  "agentManager.cloud.newWorkspace": "Criar espaço de trabalho na nuvem",
+  "agentManager.cloud.newSession": "Iniciar sessão na nuvem",
+  "agentManager.cloud.launchSibling":
+    "Envie uma tarefa para iniciar um agente independente neste espaço de trabalho. Os agentes compartilham os arquivos, mas cada um tem sua própria conversa.",
+  "agentManager.cloud.launchWorkspace":
+    "Envie uma tarefa para iniciar um agente na nuvem em uma nova cópia de trabalho deste repositório.",
+  "agentManager.cloud.disconnected":
+    "A conexão com as atualizações em tempo real foi interrompida. Seu agente pode continuar em execução. A reconexão não reenviará sua mensagem.",
+  "agentManager.cloud.sleeping":
+    "Este espaço de trabalho está em suspensão. Envie uma mensagem para o agente retomar o trabalho.",
+  "agentManager.cloud.shellEnded":
+    "Este shell foi encerrado ou perdeu a conexão. Abra um novo terminal para iniciar outro shell. Sua conversa com o agente continua disponível.",
+  "agentManager.cloud.stopping": "A nuvem está finalizando esta execução. Sua conversa continuará disponível.",
+  "agentManager.cloud.empty": "Nenhum espaço de trabalho na nuvem para este repositório.",
+  "agentManager.cloud.signedOut": "Entre para ver os espaços de trabalho na nuvem.",
+  "agentManager.cloud.noRepository":
+    "Para usar espaços de trabalho na nuvem, este projeto precisa de um repositório Git remoto compatível.",
+  "agentManager.cloud.unsupported": "Os espaços de trabalho na nuvem não estão disponíveis para esta conta.",
+  "agentManager.cloud.loadFailed": "Não foi possível carregar os espaços de trabalho na nuvem.",
+  "agentManager.cloud.createFailed": "Não foi possível criar o espaço de trabalho ou a sessão na nuvem.",
+  "agentManager.cloud.optionalPrompt": "Prompt inicial (opcional)",
+  "agentManager.cloud.prompt": "Prompt inicial",
+  "agentManager.cloud.model": "Modelo na nuvem",
+  "agentManager.cloud.noModels": "Nenhum modelo do Kilo disponível.",
+  "agentManager.cloud.chat.empty": "Ainda não há mensagens. Envie uma mensagem para iniciar esta sessão na nuvem.",
+  "agentManager.cloud.chat.user": "Você",
+  "agentManager.cloud.chat.assistant": "Agente na nuvem",
+  "agentManager.cloud.chat.reconnecting": "Reconectando à nuvem…",
+  "agentManager.cloud.review.autoCommit": "Confirmar alterações ao final da execução",
+  "agentManager.cloud.share.title": "Compartilhar sessão",
+  "agentManager.cloud.share.visibility": "Qualquer pessoa com o link pode ler esta sessão.",
+  "agentManager.cloud.share.snapshot": "O link inclui apenas as mensagens recebidas antes de você criá-lo.",
+  "agentManager.cloud.share.expires": "Expira em {{duration}}",
+  "agentManager.cloud.share.sevenDays": "7d",
+  "agentManager.cloud.share.replaces": "Criar um novo link com essas configurações substitui o atual, e o link antigo deixa de funcionar.",
+  "agentManager.cloud.share.create": "Criar link",
+  "agentManager.cloud.chat.unavailable": "Não foi possível abrir esta sessão na nuvem.",
+  "agentManager.cloud.chat.permission": "Permissão solicitada: {{permission}}",
+  "agentManager.cloud.profile": "Perfil do ambiente",
+  "agentManager.cloud.show": "Mostrar espaços de trabalho na nuvem",
+  "agentManager.cloud.showDescription": "Mostre os espaços de trabalho na nuvem deste repositório no Agent Manager.",
 }

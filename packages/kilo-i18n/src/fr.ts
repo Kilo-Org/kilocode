@@ -168,4 +168,48 @@ export const dict = {
   "browser.state.unavailable": "indisponible",
   "browser.state.readyHint": "Un profil Chromium géré par Kilo, lancé au premier appel du navigateur",
   "browser.state.extensionHint": "Connectez l'extension de navigateur Kilo pour piloter votre navigateur",
+
+  // Agent Manager: Cloud workspaces and chat
+  "agentManager.cloud.newWorkspace": "Créer un espace de travail dans le cloud",
+  "agentManager.cloud.newSession": "Démarrer une session dans le cloud",
+  "agentManager.cloud.launchSibling":
+    "Envoyez une tâche pour démarrer un agent indépendant dans cet espace de travail. Les agents partagent les fichiers, mais chacun a sa propre conversation.",
+  "agentManager.cloud.launchWorkspace":
+    "Envoyez une tâche pour démarrer un agent dans le cloud avec une nouvelle copie de travail de ce dépôt.",
+  "agentManager.cloud.disconnected":
+    "La connexion aux mises à jour en direct a été interrompue. Votre agent est peut-être toujours en cours d’exécution. Votre message ne sera pas renvoyé lors de la reconnexion.",
+  "agentManager.cloud.sleeping":
+    "Cet espace de travail est en veille. Envoyez un message pour que l’agent reprenne son travail.",
+  "agentManager.cloud.shellEnded":
+    "Ce shell s’est arrêté ou a été déconnecté. Ouvrez un nouveau terminal pour démarrer un autre shell. Votre conversation avec l’agent reste accessible.",
+  "agentManager.cloud.stopping": "L’exécution se termine dans le cloud. Votre conversation restera accessible.",
+  "agentManager.cloud.empty": "Aucun espace de travail dans le cloud pour ce dépôt.",
+  "agentManager.cloud.signedOut": "Connectez-vous pour voir les espaces de travail dans le cloud.",
+  "agentManager.cloud.noRepository":
+    "Ce projet doit avoir un dépôt Git distant pris en charge pour utiliser les espaces de travail dans le cloud.",
+  "agentManager.cloud.unsupported": "Les espaces de travail dans le cloud ne sont pas disponibles pour ce compte.",
+  "agentManager.cloud.loadFailed": "Impossible de charger les espaces de travail dans le cloud.",
+  "agentManager.cloud.createFailed": "Impossible de créer l’espace de travail ou la session dans le cloud.",
+  "agentManager.cloud.optionalPrompt": "Message initial (facultatif)",
+  "agentManager.cloud.prompt": "Message initial",
+  "agentManager.cloud.model": "Modèle dans le cloud",
+  "agentManager.cloud.noModels": "Aucun modèle Kilo disponible.",
+  "agentManager.cloud.chat.empty":
+    "Aucun message pour le moment. Envoyez un message pour démarrer cette session dans le cloud.",
+  "agentManager.cloud.chat.user": "Vous",
+  "agentManager.cloud.chat.assistant": "Agent dans le cloud",
+  "agentManager.cloud.chat.reconnecting": "Reconnexion au cloud…",
+  "agentManager.cloud.review.autoCommit": "Valider les modifications à la fin de l’exécution",
+  "agentManager.cloud.share.title": "Partager la session",
+  "agentManager.cloud.share.visibility": "Toute personne disposant du lien peut lire cette session.",
+  "agentManager.cloud.share.snapshot": "Le lien n’inclut que les messages reçus avant sa création.",
+  "agentManager.cloud.share.expires": "Expire dans {{duration}}",
+  "agentManager.cloud.share.sevenDays": "7 j",
+  "agentManager.cloud.share.replaces": "En créer un nouveau avec ces paramètres le remplace et désactive l’ancien lien.",
+  "agentManager.cloud.share.create": "Créer le lien",
+  "agentManager.cloud.chat.unavailable": "Impossible d’ouvrir cette session dans le cloud.",
+  "agentManager.cloud.chat.permission": "Autorisation demandée : {{permission}}",
+  "agentManager.cloud.profile": "Profil d’environnement",
+  "agentManager.cloud.show": "Afficher les espaces de travail dans le cloud",
+  "agentManager.cloud.showDescription": "Affiche les espaces de travail dans le cloud de ce dépôt dans Agent Manager.",
 }

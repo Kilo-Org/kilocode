@@ -1,3 +1,4 @@
+import { ComposerSend } from "./composer-controls"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -145,10 +146,6 @@ export function setPromptDraft(key: string | undefined, next: ComposerDraft) {
   else references.delete(key)
 }
 
-// Send keeps every icon it can show mounted and crossfades between them, so a modifier pressed and released quickly
-// reverses the transition instead of restarting it.
-const SEND_ICONS = ["send", "arrow-up", "clock", "arrow-right"] as const
-
 const NO_KEYS = { altKey: false, ctrlKey: false, metaKey: false }
 
 /** The agent and model a draft's first send creates its session with. */
@@ -161,6 +158,12 @@ export type SendChoice = { agent: string | undefined; model: ModelRef | undefine
 export type SendTarget = { session: string | undefined; key: string | undefined; choice?: SendChoice }
 
 export function PromptInput(props: {
+  /** Disable local workspace tools and mentions on remote composers. */
+  textOnly?: boolean
+  /** The remote service accepts explicit images, independently of local file/path context. */
+  allowImages?: boolean
+  /** Hosted admissions during a run queue; the Cloud service has no steer delivery. */
+  queueOnly?: boolean
   session?: string
   /** Draft identity: the session id, or the pending tab id before a session exists. */
   draftKey?: string
@@ -217,6 +220,7 @@ export function PromptInput(props: {
   onComposerReady?: (composer: ComposerHandle | undefined) => void
   /** The slash command menu: its entries, and the runner of a sent server command or skill. */
   slash?: {
+    discover?: () => void
     entries: () => SlashEntry[]
     run: (
       entry: SlashEntry,
@@ -289,7 +293,7 @@ export function PromptInput(props: {
   const paste = usePasteCollapse({ enabled: () => !props.disabled, text })
   paste.load(untrack(text), pasteDrafts.get(props.draftKey))
   // Shared across conversations unless the user opts in to a separate history per conversation.
-  const scoped = () => kiloSettings()["experimental.conversationPromptHistory"] === true
+  const scoped = () => props.textOnly || kiloSettings()["experimental.conversationPromptHistory"] === true
   const history = usePromptHistory(
     () => props.draftKey,
     () => !scoped(),
@@ -325,7 +329,7 @@ export function PromptInput(props: {
   // textarea input event, so it invalidates a pending Enhance itself, as every other programmatic insert does.
   images.setFilePathDropHandler((paths) => {
     const ref = refs.input
-    if (props.disabled || !ref) return
+    if (props.textOnly || props.disabled || !ref) return
     enhanceToken++
     preEnhance = null
     history.reset()
@@ -417,6 +421,7 @@ export function PromptInput(props: {
    * before the first await, while the composer still holds them.
    */
   const mentionFiles = async (value: string): Promise<MentionFile[] | undefined> => {
+    if (props.textOnly) return []
     const known = mention.parseFileAttachments(value)
     // Both requests start before the first wait, so a tab switch that unmounts this composer finds them open and keeps
     // listening for their replies.
@@ -531,7 +536,7 @@ export function PromptInput(props: {
         away: away(),
         draft: false,
         // A pending question is not running work, so it does not offer queueing.
-        busy: activity.busy() && !props.questioning,
+        busy: activity.busy() && !props.questioning && !props.queueOnly,
         selection: v2.selection(),
         tabs: props.tabs,
         manager: () => {
@@ -565,7 +570,11 @@ export function PromptInput(props: {
       ? language.t("prompt.placeholder.plain")
       : language.t("prompt.placeholder.connecting")
   const busySend = () => props.running && !props.blocked && speech.state() !== "recording"
-  const sendAction = (): SendMode => (busySend() ? sendMode(held(), true, runningDelivery()) : "steer")
+  const delivery = (keys: Parameters<typeof sendMode>[0]): SendMode => {
+    const mode = sendMode(keys, props.running, runningDelivery())
+    return props.queueOnly && props.running && mode !== "now" ? "queue" : mode
+  }
+  const sendAction = (): SendMode => (busySend() ? delivery(held()) : "steer")
   // While the agent runs, Send draws the icon the pending prompt rows use for its action: the steer arrow ("join this
   // turn") or the clock ("after this turn"). The other delivery is ⌥↵, previewed here, or the pending row's controls.
   const sendIcon = () =>
@@ -578,7 +587,9 @@ export function PromptInput(props: {
     return (
       <div data-slot="tooltip-keybind">
         <span>{language.t(action === "now" ? "prompt.action.stopAndSend" : `prompt.action.${action}`)}</span>
-        <span data-slot="tooltip-keybind-key">{sendShortcuts(runningDelivery())[action]}</span>
+        <Show when={!props.queueOnly}>
+          <span data-slot="tooltip-keybind-key">{sendShortcuts(runningDelivery())[action]}</span>
+        </Show>
       </div>
     )
   }
@@ -771,6 +782,7 @@ export function PromptInput(props: {
   })
   // Session tabs, worktree cards, terminal tabs, diff headers and document tabs drop as a mention at the caret.
   onMount(() => {
+    if (props.textOnly) return
     registerPromptMentionDrop(refs.container, (drop) => {
       const ref = refs.input
       if (!ref || !ref.isConnected || props.disabled) return false
@@ -1248,6 +1260,7 @@ export function PromptInput(props: {
     }
   }
   const foldable = createMemo<OverflowItem[]>(() => {
+    if (props.textOnly) return []
     const list: OverflowItem[] = indexing.buttonVisible() ? [indexingAction()] : []
     const sandbox = props.sandbox
     if (sandbox?.visible())
@@ -1306,9 +1319,9 @@ export function PromptInput(props: {
         "prompt-input-container--dragging": images.dragging(),
         "prompt-input-container--mention-drop": promptMentionOver(),
       }}
-      onDragOver={images.handleDragOver}
-      onDragLeave={images.handleDragLeave}
-      onDrop={images.handleDrop}
+      onDragOver={props.textOnly && !props.allowImages ? undefined : images.handleDragOver}
+      onDragLeave={props.textOnly && !props.allowImages ? undefined : images.handleDragLeave}
+      onDrop={props.textOnly && !props.allowImages ? (event) => event.preventDefault() : images.handleDrop}
     >
       <Show when={slash.show()}>
         <SlashMenu menu={slash} onSelect={(entry) => slash.select(entry, text(), replaceDraft)} />
@@ -1480,11 +1493,12 @@ export function PromptInput(props: {
               const cursor = e.currentTarget.selectionStart ?? e.currentTarget.value.length
               // A goal objective is plain text, so it opens no command menu.
               if (!goalMode()) slash.input(e.currentTarget.value, cursor)
-              mention.onInput(e.currentTarget.value, cursor)
+              if (!props.textOnly) mention.onInput(e.currentTarget.value, cursor)
+              if (e.currentTarget.value.startsWith("/")) props.slash?.discover?.()
             }}
             onPaste={(e) => {
               if (props.disabled || !refs.input) return
-              images.handlePaste(e)
+              if (!props.textOnly || props.allowImages) images.handlePaste(e)
               paste.paste(e, refs.input, setText, () => {
                 enhanceToken++
                 preEnhance = null
@@ -1515,7 +1529,7 @@ export function PromptInput(props: {
               if (historyKey(e)) return
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
-              send(sendMode(e, props.running, runningDelivery()))
+              send(delivery(e))
             }}
             onKeyUp={(e) => {
               speechUp(e)
@@ -1545,7 +1559,7 @@ export function PromptInput(props: {
           <div class="prompt-action" data-folded={hidden().length === 0 ? "" : undefined}>
             <PromptOverflow items={hidden()} />
           </div>
-          <Show when={indexing.buttonVisible()}>
+          <Show when={!props.textOnly && indexing.buttonVisible()}>
             <div class="prompt-action" data-folded={folded("indexing") ? "" : undefined}>
               <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
                 <IconButton
@@ -1574,19 +1588,21 @@ export function PromptInput(props: {
               </div>
             )}
           </Show>
-          <div class="prompt-action" data-folded={folded("enhance") ? "" : undefined}>
-            <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
-              <IconButton
-                icon="wand-sparkles"
-                variant="ghost"
-                size="small"
-                onClick={enhance}
-                disabled={!canEnhance()}
-                loading={enhancing()}
-                aria-label={language.t("prompt.action.enhance")}
-              />
-            </Tooltip>
-          </div>
+          <Show when={!props.textOnly}>
+            <div class="prompt-action" data-folded={folded("enhance") ? "" : undefined}>
+              <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
+                <IconButton
+                  icon="wand-sparkles"
+                  variant="ghost"
+                  size="small"
+                  onClick={enhance}
+                  disabled={!canEnhance()}
+                  loading={enhancing()}
+                  aria-label={language.t("prompt.action.enhance")}
+                />
+              </Tooltip>
+            </div>
+          </Show>
           <Show when={props.autoApprove}>
             {(autoApprove) => (
               <div class="prompt-action" data-folded={folded("approve") ? "" : undefined}>
@@ -1632,31 +1648,13 @@ export function PromptInput(props: {
                     </Tooltip>
                   }
                 >
-                  <Tooltip value={sendHint()} placement="top" openDelay={0}>
-                    <button
-                      type="button"
-                      data-component="icon-button"
-                      data-size="small"
-                      data-variant="ghost"
-                      data-icon={sendIcon()}
-                      class="prompt-send-button"
-                      onClick={(event) => send(sendMode(event, props.running, runningDelivery()))}
-                      disabled={!canSend()}
-                      aria-label={sendLabel()}
-                    >
-                      <For each={SEND_ICONS}>
-                        {(name) => (
-                          <span
-                            class="prompt-send-icon"
-                            data-name={name}
-                            data-active={sendIcon() === name ? "" : undefined}
-                          >
-                            <Icon name={name} size="small" />
-                          </span>
-                        )}
-                      </For>
-                    </button>
-                  </Tooltip>
+                  <ComposerSend
+                    hint={sendHint()}
+                    label={sendLabel()}
+                    icon={sendIcon()}
+                    disabled={!canSend()}
+                    onClick={(event) => send(delivery(event))}
+                  />
                 </Show>
               }
             >

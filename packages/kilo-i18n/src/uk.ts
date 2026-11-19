@@ -167,4 +167,47 @@ export const dict = {
   "browser.state.unavailable": "недоступний",
   "browser.state.readyHint": "Профіль Chromium, що належить Kilo, запускається під час першого виклику браузера",
   "browser.state.extensionHint": "Підключіть розширення браузера Kilo, щоб керувати власним браузером",
+
+  // Agent Manager: Cloud workspaces and chat
+  "agentManager.cloud.newWorkspace": "Створити хмарний робочий простір",
+  "agentManager.cloud.newSession": "Почати хмарну сесію",
+  "agentManager.cloud.launchSibling":
+    "Надішліть завдання, щоб запустити незалежного агента в цьому робочому просторі. Агенти працюють зі спільними файлами, але кожен має окрему розмову.",
+  "agentManager.cloud.launchWorkspace":
+    "Надішліть завдання, щоб запустити хмарного агента в новій робочій копії цього репозиторію.",
+  "agentManager.cloud.disconnected":
+    "Зв’язок із потоком оновлень перервано. Можливо, агент і далі працює. Після відновлення з’єднання ваше повідомлення не буде надіслано повторно.",
+  "agentManager.cloud.sleeping":
+    "Цей робочий простір у режимі сну. Надішліть повідомлення, щоб агент продовжив роботу.",
+  "agentManager.cloud.shellEnded":
+    "Оболонка завершила роботу або втратила зв’язок. Відкрийте новий термінал, щоб запустити нову оболонку. Ваша розмова з агентом і далі доступна.",
+  "agentManager.cloud.stopping": "Виконання в хмарі добігає кінця. Ваша розмова залишиться доступною.",
+  "agentManager.cloud.empty": "Цей репозиторій не має хмарних робочих просторів.",
+  "agentManager.cloud.signedOut": "Увійдіть, щоб побачити хмарні робочі простори.",
+  "agentManager.cloud.noRepository":
+    "Щоб використовувати хмарні робочі простори, проєкту потрібен підтримуваний віддалений репозиторій Git.",
+  "agentManager.cloud.unsupported": "Для цього облікового запису хмарні робочі простори недоступні.",
+  "agentManager.cloud.loadFailed": "Не вдалося завантажити хмарні робочі простори.",
+  "agentManager.cloud.createFailed": "Не вдалося створити хмарний робочий простір або сесію.",
+  "agentManager.cloud.optionalPrompt": "Перший запит (необов’язково)",
+  "agentManager.cloud.prompt": "Перший запит",
+  "agentManager.cloud.model": "Хмарна модель",
+  "agentManager.cloud.noModels": "Немає доступних моделей Kilo.",
+  "agentManager.cloud.chat.empty": "Повідомлень ще немає. Надішліть повідомлення, щоб почати цю хмарну сесію.",
+  "agentManager.cloud.chat.user": "Ви",
+  "agentManager.cloud.chat.assistant": "Хмарний агент",
+  "agentManager.cloud.chat.reconnecting": "Повторне підключення до хмари…",
+  "agentManager.cloud.review.autoCommit": "Фіксувати зміни після завершення запуску",
+  "agentManager.cloud.share.title": "Поділитися сесією",
+  "agentManager.cloud.share.visibility": "Будь-хто з посиланням може читати цю сесію.",
+  "agentManager.cloud.share.snapshot": "Посилання містить лише повідомлення, отримані до його створення.",
+  "agentManager.cloud.share.expires": "Спливає через {{duration}}",
+  "agentManager.cloud.share.sevenDays": "7 дн.",
+  "agentManager.cloud.share.replaces": "Створення нового посилання з цими налаштуваннями замінить його, і старе перестане працювати.",
+  "agentManager.cloud.share.create": "Створити посилання",
+  "agentManager.cloud.chat.unavailable": "Не вдалося відкрити цю хмарну сесію.",
+  "agentManager.cloud.chat.permission": "Запит на дозвіл: {{permission}}",
+  "agentManager.cloud.profile": "Профіль середовища",
+  "agentManager.cloud.show": "Показувати хмарні робочі простори",
+  "agentManager.cloud.showDescription": "Показувати хмарні робочі простори цього репозиторію в Agent Manager.",
 }

@@ -123,6 +123,8 @@ import { defaultBase as projectDefaultBase } from "./project/default-base"
 import { createModeRouter } from "./mode-router"
 import * as modifier from "./modifier"
 import { ProjectList } from "./ProjectList"
+import { createCloudSurface } from "./cloud/surface"
+import { SetupOverlay } from "./SetupOverlay"
 import { reportFailure } from "./failure-toast"
 import { TabBar } from "./TabBar"
 import { createBrowserPanel } from "./BrowserPanel"
@@ -199,6 +201,7 @@ import { attachSubagentEvent, createSubagentController } from "./subagent-tabs"
 import { EditPreviewPanel } from "./EditPreviewPanel"
 import {
   createEditPreview,
+  groupEditFiles,
   previewMatchesContext,
   sessionTreeContains,
   sessionWorktree,
@@ -277,6 +280,7 @@ const AgentManagerContent: Component = () => {
     setHistorySwitches([])
   }
   const openHistory = (pid?: string) => {
+    cloud.leave()
     comments.cancel()
     const scoped = pid !== undefined
     if (scoped && (currentProjectId() !== pid || historySwitches().length > 0))
@@ -300,6 +304,14 @@ const AgentManagerContent: Component = () => {
   const [commandProject, setCommandProject] = createSignal<string>()
   const appSession = createAppSession({ vscode, directories, rootDirectory, commandProject })
   const panel = appSession.panel
+  const cloud = createCloudSurface({
+    panel,
+    diffPreferences: { style: diffStyle, updateStyle: style => setSharedDiffStyle(style), markdown: () => markdown.render(), updateMarkdown: render => markdown.update(render) },
+    projects: projectList,
+    collapsed: sidebarCollapsed,
+    toggle: toggleSidebar,
+    allowed: (id) => !!projectStates()[id] && !projectStates()[id]?.restricted,
+  })
   // The open session is visible, so its directory loads a session list before the worktree card selection settles.
   createEffect(() => {
     const id = appSession.sessions.currentSessionID()
@@ -332,6 +344,7 @@ const AgentManagerContent: Component = () => {
   const onHostMessage = (callback: (message: ExtensionMessage) => void) =>
     vscode.onMessage((message) => callback(message as unknown as ExtensionMessage))
   const activateSelection = (target: AgentManagerSidebarTarget, restore?: boolean) => {
+    cloud.leave()
     saveTabMemory()
     comments.cancel()
     to({ type: "agentManager.activateSelection", target, restore })
@@ -542,6 +555,7 @@ const AgentManagerContent: Component = () => {
   const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
   const focusOnDraftChange = createDraftFocus({ key: focusKey, memory: focusMemory, terms, terminalVisible })
   const restoreFocus = (owner = focusMemory.get(focusKey())) => {
+    if (cloud.current()) return
     if (prompt.active()) return
     const key = focusKey()
     if (owner && owner !== "prompt") {
@@ -977,6 +991,7 @@ const AgentManagerContent: Component = () => {
     return sessions.currentSessionID() ?? activePendingId()
   })
   const visibleSession = createMemo(() => {
+    if (cloud.current()) return null
     // The subagent inspector shows another session over the transcript. Reporting it while it is visible and the
     // parent again when it closes keeps the host's viewed session from going stale.
     if (sidePanel() === SidePanel.Subagents) return subagents.active() ?? null
@@ -1299,18 +1314,8 @@ const AgentManagerContent: Component = () => {
 
   // Tool cards and edit permissions open their file changes in the edit preview, next to the session.
   const previewEdit = (files: EditPreviewDiff[], sessionID = sessions.currentSessionID()) => {
-    const first = files[0]
-    if (!first) return
-    const diff =
-      files.length === 1
-        ? first
-        : {
-            file: first.file,
-            additions: files.reduce((sum, item) => sum + item.additions, 0),
-            deletions: files.reduce((sum, item) => sum + item.deletions, 0),
-            files,
-          }
-    editPreview.open(diff, sessionID, diffStyle())
+    const diff = groupEditFiles(files)
+    if (diff) editPreview.open(diff, sessionID, diffStyle())
   }
   // Inline file candidates are validated by the host, which owns filesystem access and the worktree boundary.
   const fileChecks = new Map<string, { resolve: (existing: string[]) => void; reject: (error: Error) => void }>()
@@ -1965,6 +1970,8 @@ const AgentManagerContent: Component = () => {
   onMount(() => {
     const drafts = createNewTaskDrafts()
     const keys = bindAppKeys({
+      hosted: () => !!cloud.current(),
+      hostedAction: cloud.action,
       handlers: {
         sessionPrevious: () => projectNav.step("up"),
         sessionNext: () => projectNav.step("down"),
@@ -2151,6 +2158,7 @@ const AgentManagerContent: Component = () => {
       }
       if (message.type === "agentManager.revealSession") {
         applyRevealSession(message, {
+          beforeFocus: cloud.leave,
           currentProjectId,
           focusManaged: focusManagedSession,
           focusLocal: focusLocalSession,
@@ -2230,6 +2238,7 @@ const AgentManagerContent: Component = () => {
     window.addEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
     // These host messages are shared with the sidebar protocol, not the Agent Manager message union.
     const context = vscode.onMessage((raw) => {
+      if (cloud.current()) return
       const message = raw as unknown as ToWebview
       // Context for the composer needs a session tab: a terminal main tab hands over to the remembered session.
       if ((message.type === "appendContext" || message.type === "startPrompt") && main.terminal()) {
@@ -2327,9 +2336,12 @@ const AgentManagerContent: Component = () => {
         local={projectLive.local()}
         prs={projectLive.prs()}
         sessions={projectSessionsLive()}
-        selectedProject={activeProjectId()}
-        selection={selection() ?? undefined}
-        currentSessionID={() => sessions.currentSessionID()}
+        cloud={cloud.sidebar}
+        cloudStatus={cloud.activity}
+        onCloud={cloud.enabled() ? cloud.create : undefined}
+        selectedProject={cloud.current() ? undefined : activeProjectId()}
+        selection={cloud.current() ? undefined : (selection() ?? undefined)}
+        currentSessionID={() => (cloud.current() ? undefined : sessions.currentSessionID())}
         mode={mode}
         defaultBase={defaultBase}
         onCreate={(projectId) => createWorktreeNow(undefined, projectId)}
@@ -2742,27 +2754,7 @@ const AgentManagerContent: Component = () => {
           <div class="am-empty-state-text">{t("agentManager.project.restricted")}</div>
         </div>
       </Show>
-      <Show when={overlay()}>
-        {(state) => (
-          <div class="am-setup-overlay">
-            <div class="am-setup-card">
-              <Icon name="branch" size="large" />
-              <div class="am-setup-title">
-                {state().error ? t("agentManager.setup.failed") : t("agentManager.setup.settingUp")}
-              </div>
-              <Show when={state().branch}>
-                <div class="am-setup-branch">{state().branch}</div>
-              </Show>
-              <div class="am-setup-status">
-                <Show when={!state().error} fallback={<Icon name="circle-x" size="small" />}>
-                  <Spinner class="am-setup-spinner" />
-                </Show>
-                <span>{state().errorCode ? t(`agentManager.setup.error.${state().errorCode}`) : state().message}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </Show>
+      <Show when={overlay()}>{(state) => <SetupOverlay state={state()} />}</Show>
       {renderHistory()}
       <Show when={!restricted() && showDetailStack()}>
         <div class={`am-detail-stack ${history() ? "am-detail-stack-hidden" : ""}`} inert={history()}>
@@ -2785,7 +2777,7 @@ const AgentManagerContent: Component = () => {
       onContextMenu={(event) => event.preventDefault()}
     >
       {renderSidebar()}
-      {renderDetail()}
+      {cloud.detail(renderDetail)}
     </div>
   )
 }

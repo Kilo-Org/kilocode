@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 
-import type { Component } from "solid-js"
+import { Show, type Component } from "solid-js"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -15,6 +15,7 @@ export interface WorktreeCreateProps {
   t: LanguageContextValue["t"]
   onCreate: () => void
   onNew: () => void
+  onCloud?: () => void
   onSection: () => void
 }
 
@@ -60,6 +61,12 @@ export const WorktreeCreate: Component<WorktreeCreateProps> = (props) => (
               ))}
             </span>
           </DropdownMenu.Item>
+          <Show when={props.onCloud}>
+            <DropdownMenu.Item onSelect={props.onCloud}>
+              <Icon name="cloud" size="small" />
+              <DropdownMenu.ItemLabel>{props.t("agentManager.cloud.newWorkspace")}</DropdownMenu.ItemLabel>
+            </DropdownMenu.Item>
+          </Show>
           <DropdownMenu.Separator />
           <DropdownMenu.Item onSelect={props.onSection}>
             <Icon name="plus" size="small" />

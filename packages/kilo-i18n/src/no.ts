@@ -166,4 +166,47 @@ export const dict = {
   "browser.state.unavailable": "utilgjengelig",
   "browser.state.readyHint": "En Chromium-profil eid av Kilo, startet ved det første nettleserkallet",
   "browser.state.extensionHint": "Koble til Kilo-nettleserutvidelsen for å bruke din egen nettleser",
+
+  // Agent Manager: Cloud workspaces and chat
+  "agentManager.cloud.newWorkspace": "Opprett arbeidsområde i skyen",
+  "agentManager.cloud.newSession": "Start økt i skyen",
+  "agentManager.cloud.launchSibling":
+    "Send en oppgave for å starte en uavhengig agent i dette arbeidsområdet. Agentene deler filer, men hver agent har sin egen samtale.",
+  "agentManager.cloud.launchWorkspace":
+    "Send en oppgave for å starte en agent i skyen i en ny arbeidskopi av dette repositoriet.",
+  "agentManager.cloud.disconnected":
+    "Forbindelsen for sanntidsoppdateringer er brutt. Agenten kan fortsatt være i gang. Meldingen din blir ikke sendt på nytt når forbindelsen gjenopprettes.",
+  "agentManager.cloud.sleeping":
+    "Dette arbeidsområdet er i hvilemodus. Send en melding for å få agenten til å fortsette.",
+  "agentManager.cloud.shellEnded":
+    "Skallet er avsluttet, eller forbindelsen til det er brutt. Åpne en ny terminal for å starte et nytt skall. Samtalen med agenten er fortsatt tilgjengelig.",
+  "agentManager.cloud.stopping": "Kjøringen avsluttes nå i skyen. Samtalen din vil fortsatt være tilgjengelig.",
+  "agentManager.cloud.empty": "Det finnes ingen arbeidsområder i skyen for dette kodelageret.",
+  "agentManager.cloud.signedOut": "Logg inn for å se arbeidsområder i skyen.",
+  "agentManager.cloud.noRepository":
+    "Prosjektet må ha et støttet eksternt Git-kodelager for å bruke arbeidsområder i skyen.",
+  "agentManager.cloud.unsupported": "Arbeidsområder i skyen er ikke tilgjengelige for denne kontoen.",
+  "agentManager.cloud.loadFailed": "Kunne ikke laste inn arbeidsområder i skyen.",
+  "agentManager.cloud.createFailed": "Kunne ikke opprette arbeidsområdet eller økten i skyen.",
+  "agentManager.cloud.optionalPrompt": "Første forespørsel (valgfritt)",
+  "agentManager.cloud.prompt": "Første forespørsel",
+  "agentManager.cloud.model": "Modell i skyen",
+  "agentManager.cloud.noModels": "Ingen Kilo-modeller er tilgjengelige.",
+  "agentManager.cloud.chat.empty": "Ingen meldinger ennå. Send en melding for å starte denne økten i skyen.",
+  "agentManager.cloud.chat.user": "Du",
+  "agentManager.cloud.chat.assistant": "Agent i skyen",
+  "agentManager.cloud.chat.reconnecting": "Kobler til skyen på nytt…",
+  "agentManager.cloud.review.autoCommit": "Sjekk inn endringer når kjøringen er ferdig",
+  "agentManager.cloud.share.title": "Del økt",
+  "agentManager.cloud.share.visibility": "Alle som har lenken, kan lese denne økten.",
+  "agentManager.cloud.share.snapshot": "Lenken inneholder bare meldinger mottatt før du oppretter den.",
+  "agentManager.cloud.share.expires": "Utløper om {{duration}}",
+  "agentManager.cloud.share.sevenDays": "7 d",
+  "agentManager.cloud.share.replaces": "Hvis du oppretter en ny lenke med disse innstillingene, erstattes den, og den gamle lenken slutter å virke.",
+  "agentManager.cloud.share.create": "Opprett lenke",
+  "agentManager.cloud.chat.unavailable": "Kunne ikke åpne denne økten i skyen.",
+  "agentManager.cloud.chat.permission": "Forespurt tillatelse: {{permission}}",
+  "agentManager.cloud.profile": "Miljøprofil",
+  "agentManager.cloud.show": "Vis arbeidsområder i skyen",
+  "agentManager.cloud.showDescription": "Vis kodelagerets arbeidsområder i skyen i Agent Manager.",
 }

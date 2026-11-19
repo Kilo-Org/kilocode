@@ -24,6 +24,23 @@ function openDiff() {
   return { calls, action: (diff: ToolActionDiff) => calls.push(diff) }
 }
 
+test("a collapsed multi-file patch can open the whole change from its header", async () => {
+  const groups: ToolActionDiff[][] = []
+  const card = mountTool("patch", {
+    input: {},
+    metadata: { files: patchedFiles },
+    partID: "cloud-group",
+    actions: { openDiffs: (files) => groups.push(files) },
+  })
+  mounted.push(card)
+  const action = await waitFor(() =>
+    card.host.querySelector<HTMLElement>('[aria-label="ui.messagePart.openInDiffViewer"]'),
+  )
+  action.click()
+  expect(groups).toHaveLength(1)
+  expect(groups[0]?.map((f) => [f.file, f.patch])).toEqual(patchedFiles.map((f) => [f.file, f.patch]))
+})
+
 test("edit card renders the file header, change counts and the real diff body", async () => {
   const diff = openDiff()
   const card = mountTool("edit", {

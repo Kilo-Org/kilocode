@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal, onCleanup, type Component } from "solid-js"
+import { For, Show, createMemo, createSignal, onCleanup, type Component, type JSX } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { CountUp, createCountStart } from "@kilocode/kilo-ui/count-up"
 import {
@@ -53,6 +53,7 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 
 interface Props {
   project: AgentProjectSnapshot
+  cloud?: JSX.Element
   state?: AgentManagerStateMessage
   store: ProjectStore
   deletion: WorktreeDelete
@@ -431,9 +432,9 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           </div>
         </div>
       </button>
-
       <div class="am-section">
         <div class="am-worktree-list">
+          {props.cloud}
           <OrphanNotice orphans={store.orphanDirectories()} onResolve={openOrphanDialog} />
           <Show when={state()} fallback={<WorktreeSkeleton />}>
             <DragDropProvider

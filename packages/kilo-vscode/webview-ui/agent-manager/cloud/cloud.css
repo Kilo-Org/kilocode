@@ -1,0 +1,66 @@
+.am-cloud-launch {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+}
+.am-cloud-launch .message-list-empty {
+  max-width: 42ch;
+  margin: auto;
+  text-align: center;
+}
+.am-cloud-launch h2 {
+  margin: 10px 0 4px;
+  font-size: var(--font-size-large);
+  font-weight: 600;
+}
+.am-cloud-repo {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--text-weak);
+  font-family: var(--vscode-editor-font-family);
+  font-size: var(--font-size-small);
+}
+.am-cloud-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+}
+.am-cloud-options {
+  padding: 6px 10px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+}
+.am-cloud-options label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 3px;
+  gap: 8px;
+}
+.am-cloud-preparation {
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+  padding: 8px;
+}
+.am-cloud-preparation summary {
+  cursor: pointer;
+}
+.am-cloud-preparation li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-block: 3px;
+}
+.am-cloud-preparation li[data-status="completed"] {
+  color: var(--text-success-base);
+}
+
+.am-cloud-workspace > .am-worktree-item {
+  width: 100%;
+  text-align: start;
+}

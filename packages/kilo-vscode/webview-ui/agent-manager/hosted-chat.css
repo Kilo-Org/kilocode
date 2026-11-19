@@ -1,0 +1,22 @@
+.am-hosted-status {
+  padding: 4px 8px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+}
+.am-hosted-child {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.am-hosted-child ~ * {
+  display: none !important;
+}
+.am-hosted-child .message-list-scroll {
+  overflow: auto;
+  min-height: 0;
+}
+.am-hosted-queued {
+  display: flex;
+  justify-content: flex-end;
+}

@@ -171,4 +171,47 @@ export const dict = {
   "browser.state.unavailable": "nedostupno",
   "browser.state.readyHint": "Kilo-ov Chromium profil, pokreće se pri prvom pozivu preglednika",
   "browser.state.extensionHint": "Povežite Kilo proširenje preglednika da koristite svoj preglednik",
+
+  // Agent Manager: Cloud workspaces and chat
+  "agentManager.cloud.newWorkspace": "Kreiraj radni prostor u oblaku",
+  "agentManager.cloud.newSession": "Pokreni sesiju u oblaku",
+  "agentManager.cloud.launchSibling":
+    "Pošalji zadatak da pokreneš nezavisnog agenta u ovom radnom prostoru. Agenti dijele datoteke, ali svaki ima svoj razgovor.",
+  "agentManager.cloud.launchWorkspace":
+    "Pošalji zadatak da pokreneš agenta u oblaku u novoj radnoj kopiji ovog repozitorija.",
+  "agentManager.cloud.disconnected":
+    "Veza za ažuriranja uživo je prekinuta. Agent možda i dalje radi. Ponovno povezivanje neće ponovo poslati tvoju poruku.",
+  "agentManager.cloud.sleeping": "Ovaj radni prostor je u stanju mirovanja. Pošalji poruku da agent nastavi s radom.",
+  "agentManager.cloud.shellEnded":
+    "Ova ljuska je završila s radom ili je veza s njom prekinuta. Otvori novi terminal da pokreneš novu ljusku. Razgovor s agentom je i dalje dostupan.",
+  "agentManager.cloud.stopping": "Izvršavanje se privodi kraju u oblaku. Razgovor će ostati dostupan.",
+  "agentManager.cloud.empty": "Nema radnih prostora u oblaku za ovaj repozitorij.",
+  "agentManager.cloud.signedOut": "Prijavite se da biste vidjeli radne prostore u oblaku.",
+  "agentManager.cloud.noRepository":
+    "Za korištenje radnih prostora u oblaku ovom projektu je potreban podržani udaljeni Git repozitorij.",
+  "agentManager.cloud.unsupported": "Radni prostori u oblaku nisu dostupni za ovaj račun.",
+  "agentManager.cloud.loadFailed": "Nije moguće učitati radne prostore u oblaku.",
+  "agentManager.cloud.createFailed": "Nije moguće kreirati radni prostor ili sesiju u oblaku.",
+  "agentManager.cloud.optionalPrompt": "Početni upit (neobavezno)",
+  "agentManager.cloud.prompt": "Početni upit",
+  "agentManager.cloud.model": "Model u oblaku",
+  "agentManager.cloud.noModels": "Nema dostupnih Kilo modela.",
+  "agentManager.cloud.chat.empty": "Još nema poruka. Pošaljite poruku da biste pokrenuli ovu sesiju u oblaku.",
+  "agentManager.cloud.chat.user": "Vi",
+  "agentManager.cloud.chat.assistant": "Agent u oblaku",
+  "agentManager.cloud.chat.reconnecting": "Ponovno povezivanje s oblakom…",
+  "agentManager.cloud.review.autoCommit": "Commitaj promjene kada se pokretanje završi",
+  "agentManager.cloud.share.title": "Podijeli sesiju",
+  "agentManager.cloud.share.visibility": "Svako ko ima link može čitati ovu sesiju.",
+  "agentManager.cloud.share.snapshot": "Link uključuje samo poruke primljene prije nego što ga kreirate.",
+  "agentManager.cloud.share.expires": "Ističe za {{duration}}",
+  "agentManager.cloud.share.sevenDays": "7d",
+  "agentManager.cloud.share.replaces": "Kreiranje novog linka sa ovim postavkama zamjenjuje postojeći i stari link prestaje raditi.",
+  "agentManager.cloud.share.create": "Kreiraj link",
+  "agentManager.cloud.chat.unavailable": "Nije moguće otvoriti ovu sesiju u oblaku.",
+  "agentManager.cloud.chat.permission": "Tražena dozvola: {{permission}}",
+  "agentManager.cloud.profile": "Profil okruženja",
+  "agentManager.cloud.show": "Prikaži radne prostore u oblaku",
+  "agentManager.cloud.showDescription":
+    "Prikažite radne prostore ovog repozitorija u oblaku u aplikaciji Agent Manager.",
 }

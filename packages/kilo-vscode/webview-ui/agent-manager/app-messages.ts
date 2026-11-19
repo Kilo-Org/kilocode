@@ -74,7 +74,8 @@ export function applySetupMessage(
     if (worktree && deps.selection() !== worktree) deps.saveTabMemory()
   }
   if (msg.status === "ready" && msg.sessionId) {
-    const worktree = msg.worktreeId ?? deps.managedSessions().find((session) => session.id === msg.sessionId)?.worktreeId
+    const worktree =
+      msg.worktreeId ?? deps.managedSessions().find((session) => session.id === msg.sessionId)?.worktreeId
     leave(worktree)
     deps.selectSession(msg.sessionId)
     if (worktree) deps.setSelection(worktree)
@@ -119,21 +120,24 @@ function quickCreateBlocked(
   return false
 }
 
-export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
-  currentProjectId: Accessor<string | undefined>
-  resume: (sessionId: string) => void
-  saveTabMemory: () => void
-  appendOrder: (worktreeId: string, sessionId: string) => void
-  setSelection: (id: string) => void
-  evictLocal: (id: string) => void
-  focusLocal: (id: string) => void
-  applyDraft: (worktreeId: string, sessionId: string) => void
-  selectSession: (id: string) => void
-  requestChatFocus: (force?: boolean) => void
-  /** Whether the panel filed this session without taking the view; consumes the mark. */
-  quiet: (id: string) => boolean
-  placeLocal: (id: string) => void
-}) {
+export function applySessionAdded(
+  msg: AgentManagerSessionAddedMessage,
+  deps: {
+    currentProjectId: Accessor<string | undefined>
+    resume: (sessionId: string) => void
+    saveTabMemory: () => void
+    appendOrder: (worktreeId: string, sessionId: string) => void
+    setSelection: (id: string) => void
+    evictLocal: (id: string) => void
+    focusLocal: (id: string) => void
+    applyDraft: (worktreeId: string, sessionId: string) => void
+    selectSession: (id: string) => void
+    requestChatFocus: (force?: boolean) => void
+    /** Whether the panel filed this session without taking the view; consumes the mark. */
+    quiet: (id: string) => boolean
+    placeLocal: (id: string) => void
+  },
+) {
   if (!isCurrent(msg, deps.currentProjectId())) return
   // The host filing the session opens it again, even when the user closed its tab before this message arrived.
   deps.resume(msg.sessionId)
@@ -158,18 +162,21 @@ export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   deps.requestChatFocus(true)
 }
 
-export function applySessionForked(msg: AgentManagerSessionForkedMessage, deps: {
-  currentProjectId: Accessor<string | undefined>
-  insertAfter: (worktreeId: string | undefined, anchor: string, id: string) => void
-  setLocal: (update: (prev: string[]) => string[]) => void
-  persist: (sessionId: string) => void
-  saveTabMemory: () => void
-  setSelection: (id: string) => void
-  evictLocal: (id: string) => void
-  selectSession: (id: string) => void
-  remember: (session: SessionInfo) => void
-  requestChatFocus: (force?: boolean) => void
-}) {
+export function applySessionForked(
+  msg: AgentManagerSessionForkedMessage,
+  deps: {
+    currentProjectId: Accessor<string | undefined>
+    insertAfter: (worktreeId: string | undefined, anchor: string, id: string) => void
+    setLocal: (update: (prev: string[]) => string[]) => void
+    persist: (sessionId: string) => void
+    saveTabMemory: () => void
+    setSelection: (id: string) => void
+    evictLocal: (id: string) => void
+    selectSession: (id: string) => void
+    remember: (session: SessionInfo) => void
+    requestChatFocus: (force?: boolean) => void
+  },
+) {
   if (!isCurrent(msg, deps.currentProjectId())) return
   deps.remember(msg.session)
   deps.insertAfter(msg.worktreeId, msg.forkedFromId, msg.sessionId)
@@ -189,12 +196,17 @@ export function applySessionForked(msg: AgentManagerSessionForkedMessage, deps: 
   deps.requestChatFocus(true)
 }
 
-export function applyRevealSession(msg: AgentManagerRevealSessionMessage, deps: {
-  currentProjectId: Accessor<string | undefined>
-  focusManaged: (worktreeId: string, sessionId: string, scroll: boolean) => void
-  focusLocal: (sessionId: string, scroll: boolean) => void
-}) {
+export function applyRevealSession(
+  msg: AgentManagerRevealSessionMessage,
+  deps: {
+    currentProjectId: Accessor<string | undefined>
+    beforeFocus?: () => void
+    focusManaged: (worktreeId: string, sessionId: string, scroll: boolean) => void
+    focusLocal: (sessionId: string, scroll: boolean) => void
+  },
+) {
   if (deps.currentProjectId() !== msg.projectId) return
+  deps.beforeFocus?.()
   if (msg.worktreeId) deps.focusManaged(msg.worktreeId, msg.sessionId, true)
   else deps.focusLocal(msg.sessionId, true)
 }
@@ -205,7 +217,11 @@ export function applyKeybindings(msg: AgentManagerKeybindingsMessage, set: (valu
 
 export function applyMultiVersion(
   msg: AgentManagerMultiVersionProgressMessage,
-  deps: { creation: { abandon: (projectId?: string) => void }; ensure: (projectId: string) => ProjectStore; active: () => ProjectStore },
+  deps: {
+    creation: { abandon: (projectId?: string) => void }
+    ensure: (projectId: string) => ProjectStore
+    active: () => ProjectStore
+  },
 ) {
   if (msg.status === "done") deps.creation.abandon(msg.projectId)
   if (msg.status === "done" && msg.groupId) {

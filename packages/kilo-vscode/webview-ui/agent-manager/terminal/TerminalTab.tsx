@@ -20,7 +20,7 @@ import { useBridge } from "../v2/vscode"
 import { useLanguage } from "../../src/context/language"
 import type { ScriptTerminalStatus, TerminalFont } from "./state"
 import { createInputBuffer, createReplayGate, createWriteBatcher } from "./replay"
-import { TerminalSocket } from "./socket"
+import { TerminalSocket, type TerminalTransport } from "./socket"
 import { registerTerminalOutput, unregisterTerminalOutput } from "./output"
 import { registerActivity } from "./activity"
 import type { Activity } from "../v2/activity"
@@ -34,6 +34,7 @@ import {
 
 interface Props {
   terminalId: string
+  remote?: { connect: () => TerminalTransport; resize: (cols: number, rows: number) => void }
   /** Terminal font settings forwarded from the extension host. Used on
    *  initial mount; live changes arrive via `agentManager.terminal.fontChanged`. */
   font: TerminalFont
@@ -211,7 +212,7 @@ export const TerminalTab: Component<Props> = (props) => {
     // strips these itself, so this only fires for real title codes.
     const disposeTitle = term.onTitleChange((title) => props.onTitleChange?.(title))
 
-    let ws: TerminalSocket | undefined
+    let ws: TerminalTransport | undefined
     let closed = false
     const input = createInputBuffer()
     let user = false
@@ -326,8 +327,9 @@ export const TerminalTab: Component<Props> = (props) => {
     const open = () => {
       if (closed) return
       if (ws && ws.readyState !== TerminalSocket.CLOSING && ws.readyState !== TerminalSocket.CLOSED) return
-      replay.attach(disconnected)
-      const next = new TerminalSocket(vscode, props.terminalId)
+      // Cloud streams live shell output without the local relay's replay boundary.
+      replay.attach(disconnected || !!props.remote)
+      const next = props.remote ? props.remote.connect() : new TerminalSocket(vscode, props.terminalId)
       ws = next
       opened = false
       next.onopen = () => {
@@ -385,7 +387,7 @@ export const TerminalTab: Component<Props> = (props) => {
         // A socket that never opened was refused before any output. Re-open
         // once: the relay mints a fresh ticket for every open, so a stale or
         // already consumed ticket is recoverable without ending the terminal.
-        if (!opened && !attached) {
+        if (!props.remote && !opened && !attached) {
           attached = true
           open()
           return
@@ -439,6 +441,7 @@ export const TerminalTab: Component<Props> = (props) => {
       lastCols = term.cols
       lastRows = term.rows
       synced = true
+      if (props.remote) return props.remote.resize(term.cols, term.rows)
       vscode.postMessage({
         type: "agentManager.terminal.resize",
         terminalId: props.terminalId,

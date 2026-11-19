@@ -32,17 +32,36 @@ export function focusSelectedTab(root: ParentNode | null, fallback?: () => void)
 
 export const focusPrompt = () => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
 
+/** Let a selected destination take focus after the menu releases its focus trap. Escape still restores the trigger. */
+export function createTabMenuAction() {
+  let action: (() => void) | undefined
+  return {
+    select: (next: () => void) => {
+      action = next
+    },
+    close: (event: Event) => {
+      if (!action) return
+      event.preventDefault()
+      const next = action
+      action = undefined
+      next()
+    },
+  }
+}
+
 export function handleTabKey(input: {
   ids: readonly string[]
   id: string
   event: KeyboardEvent
   select: (id: string) => void
+  activate?: (id: string) => void
   root: ParentNode | null
 }) {
   if (input.event.target !== input.event.currentTarget) return
   if (input.event.key === "Enter" || input.event.key === " ") {
     input.event.preventDefault()
-    input.select(input.id)
+    const activate = input.activate ?? input.select
+    activate(input.id)
     return
   }
   if (input.event.metaKey || input.event.ctrlKey || input.event.shiftKey || input.event.altKey) return
@@ -56,6 +75,8 @@ export function handleTabKey(input: {
 export function createTabFocus(input: {
   ids: () => readonly string[]
   select: (id: string) => void
+  /** Enter/Space enters the panel; arrows only select and keep focus on the strip. */
+  activate?: (id: string) => void
   root?: () => ParentNode | null
   fallback?: () => void
 }) {
@@ -65,7 +86,7 @@ export function createTabFocus(input: {
   return {
     restore,
     key: (id: string, event: KeyboardEvent) =>
-      handleTabKey({ ids: input.ids(), id, event, select: input.select, root: root() }),
+      handleTabKey({ ids: input.ids(), id, event, select: input.select, activate: input.activate, root: root() }),
     run: (action: () => void) => {
       action()
       restore()

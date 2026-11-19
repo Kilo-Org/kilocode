@@ -7,6 +7,8 @@ import type { TranscriptRow } from "./transcript"
 import { UserMessage } from "./user"
 
 export function TranscriptRowView(props: {
+  hosted?: boolean
+  openLink?: (uri: string) => void
   row: TranscriptRow
   session: string
   actions?: ToolActions
@@ -61,6 +63,8 @@ export function TranscriptRowView(props: {
         <Match when={props.row.type === "assistant" && props.row}>
           {(row) => (
             <AssistantMessage
+              hosted={props.hosted}
+              openLink={props.openLink}
               message={row().message}
               session={props.session}
               actions={props.actions}

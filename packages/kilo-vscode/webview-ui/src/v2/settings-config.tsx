@@ -39,6 +39,7 @@ export type KiloSettingKey =
   | "showTokenThroughput"
   | "showAutoApprovalReason"
   | "agentManager.autoBranchNaming"
+  | "agentManager.cloudWorkspaces"
   | "agentManager.branchPrefix"
   | "agentManager.worktreePool"
   | "agentManager.pushFixes"
@@ -173,8 +174,7 @@ export function createSettingsConfig() {
   /** The target file the host resolved for a scope, so the header can open it. */
   const path = (scope: SettingsScope) => files()?.[scope]?.path
 
-  const source = (path: string[]): SettingsScope | undefined =>
-    scopeOf(path, rawConfig().project, rawConfig().global)
+  const source = (path: string[]): SettingsScope | undefined => scopeOf(path, rawConfig().project, rawConfig().global)
 
   const optimisticValue = (path: string[]) => {
     const key = pathKey(path)
@@ -221,7 +221,10 @@ export function createSettingsConfig() {
     const target = await writeScope(scope, filesReady.wait, () => source(path))
     const key = pathKey(path)
     const writeValue = clone(value)
-    setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope: target, path, value: writeValue }])
+    setOptimistic((list) => [
+      ...list.filter((item) => pathKey(item.path) !== key),
+      { scope: target, path, value: writeValue },
+    ])
     // A token per write keeps `pending` true until every write for the path settles, including both scopes.
     const token = nextToken++
     setInflight((list) => [...list, { path: key, token }])

@@ -288,7 +288,12 @@ export function createDefaultModel(v2: V2) {
   return model
 }
 
-export function Selectors(props: { selection: Selection; blocked: boolean }) {
+export type SelectorSource = Pick<
+  Selection,
+  "model" | "models" | "providers" | "agents" | "variants" | "selectModel" | "selectAgent" | "selectVariant"
+> & { agent: () => ReturnType<Selection["agent"]> | undefined }
+
+export function Selectors(props: { selection: SelectorSource; blocked: boolean }) {
   const v2 = useV2()
   const language = useLanguage()
   const model = () => {

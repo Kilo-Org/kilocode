@@ -20,6 +20,7 @@ import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSessionSync } from "./session-sync"
 import { KiloRemote } from "./remote"
+import { KiloHostedPlugin } from "./hosted"
 
 export { KiloSessionSync }
 export { KiloRemote }
@@ -84,6 +85,7 @@ export const KiloPlugins = [
   KiloFlowPlugin,
   KiloSessionSync.plugin,
   KiloRemote.plugin,
+  KiloHostedPlugin,
   KiloSkillPlugin,
   // Replaces the upstream OpenCode and report built-in skills with Kilo's config guide.
   KiloSkillConfigPlugin.Plugin,

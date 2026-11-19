@@ -21,6 +21,8 @@ import { ProjectsFooter } from "./ProjectsFooter"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { ProjectRowActions } from "./ProjectRowActions"
 import { ProjectAvatar } from "./ProjectAvatar"
+import { ActivityIcon } from "../src/components/shared/ActivityIcon"
+import { description, type Activity } from "./v2/activity"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { applyProjectOrder, moveProject, projectDrop, type ProjectDrop } from "./project-order"
 
@@ -36,11 +38,13 @@ interface ProjectsSectionProps {
   onExpand: (id: string, expanded: boolean) => void
   onReorder: (order: string[]) => void
   onHistory: (id: string) => void
+  onCloud?: (id: string) => void
   onNew: (id: string) => void
   onCreate: (id: string) => void
   onSection: (id: string) => void
   onSettings: (id: string) => void
   count: (id: string) => number | undefined
+  activity?: (id: string) => Activity
   baseBranch: (id: string) => string
   tools?: JSX.Element
   body: (project: AgentProjectSnapshot) => JSX.Element
@@ -132,6 +136,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => {
           <For each={projects().map((project) => project.id)}>
             {(id) => {
               const project = () => projects().find((item) => item.id === id)!
+              const activity = () => props.activity?.(id) ?? "idle"
               // The pinned workspace project is not part of the stored catalog order.
               const draggable = untrack(project).pinned ? undefined : createDraggable(id)
               onCleanup(() => nodes.delete(id))
@@ -164,6 +169,17 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => {
                     label={
                       <>
                         <span class="am-project-label">{project().label}</span>
+                        <Show when={activity() !== "idle" && !project().missing}>
+                          <span
+                            class="am-sidebar-search-icon"
+                            role="img"
+                            data-activity={activity()}
+                            title={props.t(description(activity()))}
+                            aria-label={props.t(description(activity()))}
+                          >
+                            <ActivityIcon state={activity()} />
+                          </span>
+                        </Show>
                         <Show when={props.count(project().id) !== undefined}>
                           <span class="am-project-count">({props.count(project().id)})</span>
                         </Show>
@@ -179,6 +195,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => {
                         t={props.t}
                         pinned={project().pinned}
                         onCreate={() => props.onCreate(project().id)}
+                        onCloud={props.onCloud ? () => props.onCloud?.(project().id) : undefined}
                         onNew={() => props.onNew(project().id)}
                         onSection={() => props.onSection(project().id)}
                         onHistory={() => props.onHistory(project().id)}

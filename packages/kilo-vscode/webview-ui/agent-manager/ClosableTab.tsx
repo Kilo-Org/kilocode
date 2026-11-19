@@ -55,6 +55,7 @@ export const ClosableTabChrome: Component<ClosableTabProps> = (props) => {
   return (
     <div
       class={`am-tab am-tab-closable ${props.active ? "am-tab-active" : ""} ${props.focused ? "am-tab-focused" : ""} ${props.class ?? ""}`}
+      data-tab-id={props.id}
       data-activity={props.state}
     >
       <div

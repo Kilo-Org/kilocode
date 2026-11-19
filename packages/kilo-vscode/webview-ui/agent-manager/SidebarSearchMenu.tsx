@@ -131,7 +131,16 @@ export const SidebarSearchMenu: Component<SidebarSearchMenuProps> = (props) => {
                           spinner="search-menu-spinner"
                           idle={
                             <Show when={item.kind !== "local"} fallback={<Icon name="local" size="small" />}>
-                              <Icon name={item.kind === "worktree" ? "branch" : "speech-bubble"} size="small" />
+                              <Icon
+                                name={
+                                  item.kind === "cloud"
+                                    ? "cloud"
+                                    : item.kind === "worktree"
+                                      ? "branch"
+                                      : "speech-bubble"
+                                }
+                                size="small"
+                              />
                             </Show>
                           }
                         />
@@ -159,13 +168,13 @@ export const SidebarSearchMenu: Component<SidebarSearchMenuProps> = (props) => {
                       {stateLabel()}
                     </span>
                   </Show>
-                  <Show when={item.kind !== "session" && item.state === "idle" && !item.busy}>
+                  <Show when={item.group === "contexts" && item.state === "idle" && !item.busy}>
                     <span class="search-menu-status am-sidebar-search-count">
-                      {item.kind !== "session" ? item.count : ""}
+                      {item.group === "contexts" ? item.count : ""}
                     </span>
                   </Show>
-                  <Show when={item.kind === "session" && item.state === "idle"}>
-                    <span class="search-menu-status">{formatRelativeDate(item.updatedAt)}</span>
+                  <Show when={item.kind === "session" && item.state === "idle" && item.updatedAt}>
+                    {(updated) => <span class="search-menu-status">{formatRelativeDate(updated())}</span>}
                   </Show>
                 </span>
               )

@@ -11,7 +11,12 @@ import { createEffect, createSignal, on, onCleanup, onMount, Show, type Componen
 import { ProjectBranchDialog } from "../../../agent-manager/ProjectBranchDialog"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import type { AgentManagerSettingsBranchPayload, AgentManagerSettingsProject, ToHost, ToWebview } from "../../../../src/protocol"
+import type {
+  AgentManagerSettingsBranchPayload,
+  AgentManagerSettingsProject,
+  ToHost,
+  ToWebview,
+} from "../../../../src/protocol"
 import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
 import Switch from "./Switch"
@@ -146,6 +151,18 @@ const AgentManagerTab: Component<SettingsTabProps> = (props) => {
       <div class="settings-agent-manager">
         <Card>
           <SettingsRow
+            title={language.t("agentManager.cloud.show")}
+            description={language.t("agentManager.cloud.showDescription")}
+          >
+            <Switch
+              checked={config.setting("agentManager.cloudWorkspaces") !== false}
+              onChange={(checked) => config.setSetting("agentManager.cloudWorkspaces", checked)}
+              hideLabel
+            >
+              {language.t("agentManager.cloud.show")}
+            </Switch>
+          </SettingsRow>
+          <SettingsRow
             title={language.t("agentManager.settings.autoBranchNaming.title")}
             description={language.t("agentManager.settings.autoBranchNaming.description")}
           >
@@ -207,10 +224,7 @@ const AgentManagerTab: Component<SettingsTabProps> = (props) => {
               triggerProps={{ title: project()?.root }}
             />
           </SettingsRow>
-          <Show
-            when={project()}
-            fallback={<p>{language.t("agentManager.settings.project.empty")}</p>}
-          >
+          <Show when={project()} fallback={<p>{language.t("agentManager.settings.project.empty")}</p>}>
             <SettingsRow
               title={language.t("agentManager.worktree.defaultBaseBranch")}
               description={language.t("agentManager.settings.defaultBaseBranch.description")}

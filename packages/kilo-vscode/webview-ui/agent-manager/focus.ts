@@ -2,7 +2,6 @@ import { createEffect, on } from "solid-js"
 import {
   focusQuestionOption,
   hasPopup,
-  hasQuestionOption,
   hasTextSelection,
   isTextControl,
   ownsFocusRegion,
@@ -229,6 +228,18 @@ export function createFocusBridge(deps: {
 export const preservesTextFocus = (active: Element | null): boolean =>
   active !== null && isTextControl(active) && !active.classList.contains("prompt-input")
 
+/** A single focus pass, shared by native and Cloud tabs. A roving tab or a field being edited owns the keyboard. */
+export function focusChatTarget(force: boolean, restore = true, root: ParentNode = document) {
+  const active = document.activeElement
+  if (!force && (ownsFocusRegion(active) || active?.matches('[role="tab"]'))) return
+  if (hasPopup() || active?.closest('[role="dialog"], [role="alertdialog"], [role="menu"]') || hasTextSelection())
+    return
+  if (preservesTextFocus(active) || (!force && isTextControl(active))) return
+  if (active?.closest('[data-component="question-dock"]')) return
+  if (focusQuestionOption(root)) return
+  window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore, deferFocusToQuestion: true, force } }))
+}
+
 export function createChatFocus(deps: {
   term: () => string | undefined
   history: () => boolean
@@ -236,19 +247,7 @@ export function createChatFocus(deps: {
 }) {
   const focus = (force: boolean) => {
     if ((!force && (!document.hasFocus() || deps.term())) || deps.history() || deps.review()) return
-    // A focused diff viewport keeps focus; delayed prompt recovery must not steal it.
-    if (!force && ownsFocusRegion()) return
-    if (hasPopup()) return
-    if (preservesTextFocus(document.activeElement) || (!force && isTextControl(document.activeElement))) return
-    if (!force && document.activeElement?.matches('[role="tab"]')) return
-    if (!force && document.activeElement?.closest('[data-component="question-dock"]')) return
-    if (focusQuestionOption()) return
-    const defer = hasQuestionOption()
-    window.dispatchEvent(
-      new CustomEvent("focusPrompt", {
-        detail: { restore: !defer, deferFocusToQuestion: defer, force },
-      }),
-    )
+    focusChatTarget(force)
   }
   return (force = false) => {
     queueMicrotask(() => focus(force))

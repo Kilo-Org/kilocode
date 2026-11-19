@@ -22,6 +22,7 @@ import { closableRightOf, closeToRight } from "./close-to-right"
 import type { SessionInfo } from "../src/types/messages/agent-manager"
 import type { Activity } from "./v2/activity"
 import { parseBindingTokens } from "../src/utils/keybind-tokens"
+import { createTabMenuAction } from "../src/utils/tab-navigation"
 
 interface FocusTabDeps {
   id: string
@@ -219,6 +220,7 @@ function keybind(deps: NewTabButtonDeps, name: string): string {
  * visible anyway).
  */
 export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
+  const menu = createTabMenuAction()
   return (
     <Show when={deps.contextSelected()}>
       <div class="am-split-button am-tab-add-split">
@@ -247,8 +249,8 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
             aria-label={deps.moreOptionsLabel}
           />
           <DropdownMenu.Portal>
-            <DropdownMenu.Content class="am-split-menu">
-              <DropdownMenu.Item onSelect={deps.onNewSession}>
+            <DropdownMenu.Content class="am-split-menu" onCloseAutoFocus={menu.close}>
+              <DropdownMenu.Item onSelect={() => menu.select(deps.onNewSession)}>
                 <Icon name="plus" size="small" />
                 <DropdownMenu.ItemLabel>{deps.newSessionMenuLabel}</DropdownMenu.ItemLabel>
                 <span class="am-menu-shortcut">
@@ -257,7 +259,7 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
                   ))}
                 </span>
               </DropdownMenu.Item>
-              <DropdownMenu.Item onSelect={deps.onNewTerminal}>
+              <DropdownMenu.Item onSelect={() => menu.select(deps.onNewTerminal)}>
                 <Icon name="console" size="small" />
                 <DropdownMenu.ItemLabel>{deps.newTerminalLabel}</DropdownMenu.ItemLabel>
                 <span class="am-menu-shortcut">

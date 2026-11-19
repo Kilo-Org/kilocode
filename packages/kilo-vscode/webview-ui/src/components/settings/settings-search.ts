@@ -179,6 +179,7 @@ const EXTRA_ENTRIES: SettingsEntry[] = [
     descriptionKey: "settings.webTools.webSearch.description",
   },
   { tab: "notifications", titleKey: "settings.notifications.sounds" },
+  { tab: "agentManager", titleKey: "agentManager.cloud.show", descriptionKey: "agentManager.cloud.showDescription" },
   {
     tab: "commitMessage",
     titleKey: "settings.commitMessage.language.description",

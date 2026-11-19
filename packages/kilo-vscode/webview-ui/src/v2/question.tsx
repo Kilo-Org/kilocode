@@ -1,14 +1,17 @@
-import type { FormField, FormInfo, FormValue } from "@opencode/client"
+import type { FormAnswer, FormField, FormInfo, FormValue } from "@opencode/client"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { createEffect, createMemo, createSignal, For, on, Show } from "solid-js"
 import { useLanguage } from "../context/language"
-import { isTextControl } from "../utils/focus"
+import { focusQuestionOption, hasPopup, hasTextSelection, isTextControl, ownsFocusRegion } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { useV2 } from "./client"
 import { type Draft, formAnswer } from "./form"
 
-export function QuestionDock(props: { form: FormInfo }) {
+export function QuestionDock(props: {
+  form: FormInfo
+  actions?: { reply: (value: FormAnswer) => Promise<unknown>; cancel: () => Promise<unknown> }
+}) {
   const v2 = useV2()
   const language = useLanguage()
   const [values, setValues] = createSignal<Draft>({})
@@ -140,8 +143,15 @@ export function QuestionDock(props: { form: FormInfo }) {
       return
     }
     setSending(true)
-    void v2.data.session.form
-      .reply({ sessionID: props.form.sessionID, formID: props.form.id, answer: result().answer })
+    void (
+      props.actions
+        ? props.actions.reply(result().answer)
+        : v2.data.session.form.reply({
+            sessionID: props.form.sessionID,
+            formID: props.form.id,
+            answer: result().answer,
+          })
+    )
       .then(focus)
       .catch(v2.report)
       .finally(() => setSending(false))
@@ -149,8 +159,11 @@ export function QuestionDock(props: { form: FormInfo }) {
   const reject = () => {
     if (sending()) return
     setSending(true)
-    void v2.data.session.form
-      .cancel({ sessionID: props.form.sessionID, formID: props.form.id })
+    void (
+      props.actions
+        ? props.actions.cancel()
+        : v2.data.session.form.cancel({ sessionID: props.form.sessionID, formID: props.form.id })
+    )
       .then(focus)
       .catch(v2.report)
       .finally(() => setSending(false))
@@ -182,12 +195,10 @@ export function QuestionDock(props: { form: FormInfo }) {
     tab()
     if (collapsed() || editing() || confirm()) return
     requestAnimationFrame(() => {
-      if (!document.hasFocus() || isTextControl(document.activeElement) || !refs.root?.isConnected) return
-      const selector = "button[data-slot='question-option']:not(:disabled)"
-      const button =
-        refs.root.querySelector<HTMLButtonElement>(`${selector}[data-picked='true']`) ??
-        refs.root.querySelector<HTMLButtonElement>(selector)
-      button?.focus({ preventScroll: true })
+      const active = document.activeElement
+      if (!document.hasFocus() || !refs.root?.isConnected || isTextControl(active) || ownsFocusRegion(active)) return
+      if (active?.closest('[role="tab"], [role="menu"], [role="dialog"]') || hasPopup() || hasTextSelection()) return
+      focusQuestionOption(refs.root)
     })
   })
 

@@ -167,4 +167,47 @@ export const dict = {
   "browser.state.unavailable": "kullanılamıyor",
   "browser.state.readyHint": "Kilo'ya ait bir Chromium profili; ilk tarayıcı çağrısında başlar",
   "browser.state.extensionHint": "Kendi tarayıcınızı kullanmak için Kilo tarayıcı uzantısını bağlayın",
+
+  // Agent Manager: Cloud workspaces and chat
+  "agentManager.cloud.newWorkspace": "Bulutta çalışma alanı oluştur",
+  "agentManager.cloud.newSession": "Bulutta oturum başlat",
+  "agentManager.cloud.launchSibling":
+    "Bu çalışma alanında bağımsız bir ajan başlatmak için bir görev gönderin. Ajanlar dosyaları paylaşır ancak her birinin ayrı bir sohbeti vardır.",
+  "agentManager.cloud.launchWorkspace":
+    "Bu deponun yeni bir çalışma kopyasında bulut ajanı başlatmak için bir görev gönderin.",
+  "agentManager.cloud.disconnected":
+    "Canlı güncellemelerin bağlantısı kesildi. Ajanınız hâlâ çalışıyor olabilir. Yeniden bağlandığınızda mesajınız tekrar gönderilmez.",
+  "agentManager.cloud.sleeping":
+    "Bu çalışma alanı uyku modunda. Ajanın çalışmaya devam etmesi için bir mesaj gönderin.",
+  "agentManager.cloud.shellEnded":
+    "Bu kabuk kapandı veya bağlantısı kesildi. Yeni bir kabuk başlatmak için yeni bir terminal açın. Ajanla yaptığınız sohbete hâlâ erişebilirsiniz.",
+  "agentManager.cloud.stopping": "Bulutta bu çalıştırma tamamlanmak üzere. Sohbetinize erişmeye devam edebileceksiniz.",
+  "agentManager.cloud.empty": "Bu depoya ait bulut çalışma alanı yok.",
+  "agentManager.cloud.signedOut": "Bulut çalışma alanlarını görmek için giriş yapın.",
+  "agentManager.cloud.noRepository":
+    "Bulut çalışma alanlarını kullanmak için projede desteklenen bir uzak Git deposu tanımlanmalıdır.",
+  "agentManager.cloud.unsupported": "Bulut çalışma alanları bu hesapta kullanılamaz.",
+  "agentManager.cloud.loadFailed": "Bulut çalışma alanları yüklenemedi.",
+  "agentManager.cloud.createFailed": "Bulutta çalışma alanı veya oturum oluşturulamadı.",
+  "agentManager.cloud.optionalPrompt": "İlk istem (isteğe bağlı)",
+  "agentManager.cloud.prompt": "İlk istem",
+  "agentManager.cloud.model": "Bulut modeli",
+  "agentManager.cloud.noModels": "Kullanılabilir Kilo modeli yok.",
+  "agentManager.cloud.chat.empty": "Henüz mesaj yok. Bu bulut oturumunu başlatmak için bir mesaj gönderin.",
+  "agentManager.cloud.chat.user": "Siz",
+  "agentManager.cloud.chat.assistant": "Bulut ajanı",
+  "agentManager.cloud.chat.reconnecting": "Buluta yeniden bağlanılıyor…",
+  "agentManager.cloud.review.autoCommit": "Çalıştırma bittiğinde değişiklikleri işle",
+  "agentManager.cloud.share.title": "Oturumu paylaş",
+  "agentManager.cloud.share.visibility": "Bağlantıya sahip olan herkes bu oturumu okuyabilir.",
+  "agentManager.cloud.share.snapshot": "Bağlantı yalnızca siz oluşturmadan önce alınan mesajları içerir.",
+  "agentManager.cloud.share.expires": "{{duration}} içinde sona erer",
+  "agentManager.cloud.share.sevenDays": "7 gün",
+  "agentManager.cloud.share.replaces": "Bu ayarlarla yeni bir bağlantı oluşturursanız mevcut bağlantının yerini alır ve eski bağlantı çalışmaz hâle gelir.",
+  "agentManager.cloud.share.create": "Bağlantı oluştur",
+  "agentManager.cloud.chat.unavailable": "Bu bulut oturumu açılamadı.",
+  "agentManager.cloud.chat.permission": "İstenen izin: {{permission}}",
+  "agentManager.cloud.profile": "Ortam profili",
+  "agentManager.cloud.show": "Bulut çalışma alanlarını göster",
+  "agentManager.cloud.showDescription": "Bu deponun bulut çalışma alanlarını Agent Manager’da gösterir.",
 }

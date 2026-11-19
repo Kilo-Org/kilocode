@@ -42,6 +42,9 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 
 export function bindAppKeys(opts: {
   handlers: AppActionHandlers
+  /** A hosted surface has no local tab, terminal, or worktree for a command to act on. */
+  hosted?: () => boolean
+  hostedAction?: (name: string) => void
   openHistory: () => void
   press: (event: KeyboardEvent) => void
   isDiffFocusTarget: (target: EventTarget | null) => boolean
@@ -63,6 +66,10 @@ export function bindAppKeys(opts: {
     }
     if (msg.type !== "action") return
     const action = msg.action ?? ""
+    if (opts.hosted?.() && !isProjectNavigation(action)) {
+      opts.hostedAction?.(action)
+      return
+    }
     // Agent cycling acts on the composer the user types in: not from another surface, and not from a terminal.
     if (action === "cycleAgentMode" || action === "cyclePreviousAgentMode") {
       if (document.hasFocus() && !opts.terminalFocused()) opts.handlers[action]()
@@ -80,12 +87,14 @@ export function bindAppKeys(opts: {
   const messageHandler = (event: MessageEvent) => actionHandler(event.data ?? {})
 
   const preventDefaults = (event: KeyboardEvent) => {
+    if (opts.hosted?.()) return
     const target = event.target as HTMLElement | null
     if (target?.closest("[data-agent-manager-native-text-shortcuts]")) return
     if (blocksBrowserDefault(event, isMac)) event.preventDefault()
   }
 
   const deleteKeyHandler = (event: KeyboardEvent) => {
+    if (opts.hosted?.()) return
     if (event.key !== "Delete" && event.key !== "Backspace") return
     if (opts.isDiffFocusTarget(event.target)) return
     const target = event.target as HTMLElement | null
@@ -98,6 +107,7 @@ export function bindAppKeys(opts: {
   }
 
   const newTaskHandler = (event: Event) => {
+    if (opts.hosted?.()) return
     const selection = opts.selection()
     if (!selection || selection === LOCAL) return
     event.stopImmediatePropagation()
@@ -111,10 +121,12 @@ export function bindAppKeys(opts: {
     document.body.style.pointerEvents = ""
     document.body.style.overflow = ""
     opts.focusReport()
-    opts.restoreFocus()
+    if (!opts.hosted?.()) opts.restoreFocus()
   }
 
-  const shortcut = (event: KeyboardEvent) => opts.press(event)
+  const shortcut = (event: KeyboardEvent) => {
+    if (!opts.hosted?.()) opts.press(event)
+  }
 
   window.addEventListener("message", messageHandler)
   window.addEventListener("keydown", preventDefaults, true)
@@ -135,3 +147,7 @@ export function bindAppKeys(opts: {
 }
 
 export { isMac }
+
+function isProjectNavigation(action: string) {
+  return ["search", "showShortcuts", "sessionPrevious", "sessionNext"].includes(action) || /^jumpTo[1-9]$/.test(action)
+}

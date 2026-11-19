@@ -13,6 +13,17 @@ export interface EditPreviewDiff {
 
 export type DiffStyle = "unified" | "split"
 
+export function groupEditFiles(files: EditPreviewDiff[]): EditPreviewDiff | undefined {
+  const first = files[0]
+  if (!first || files.length === 1) return first
+  return {
+    file: first.file,
+    files,
+    additions: files.reduce((n, f) => n + f.additions, 0),
+    deletions: files.reduce((n, f) => n + f.deletions, 0),
+  }
+}
+
 export interface EditPreview {
   diff: EditPreviewDiff
   sessionID?: string

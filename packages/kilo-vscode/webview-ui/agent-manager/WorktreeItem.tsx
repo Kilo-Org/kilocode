@@ -12,7 +12,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { CountUp, createCountStart } from "@kilocode/kilo-ui/count-up"
 import type { WorktreeState, WorktreeGitStats, SectionState, RunStatus } from "../src/types/messages/agent-manager"
 import type { PRStatus } from "../src/types/messages/agent-manager"
-import { ActivityIcon } from "../src/components/shared/ActivityIcon"
+import { WorkspaceRowBody } from "./WorkspaceRowBody"
 import { description, label, running, strongest, type Activity } from "./v2/activity"
 import { colorCss } from "./section-colors"
 import { useLanguage } from "../src/context/language"
@@ -451,253 +451,250 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 }}
                 onClick={select}
               >
-                <div class="am-wt-icon" data-activity={state()} aria-label={t(label(state()))}>
-                  <ActivityIcon state={state()} idle={<Icon name="branch" size="small" />} />
-                </div>
-                <div class="am-wt-content">
-                  {/* Row 1: label + stale badge + stats/hover-actions overlay */}
-                  <div class="am-wt-row1">
-                    <Show when={problem()}>
-                      <Tooltip
-                        value={
-                          props.health
-                            ? healthNote(t, props.health, props.worktree.branch)
-                            : t("agentManager.worktree.staleTooltip")
-                        }
-                        placement="top"
-                        contentClass="am-tooltip-wrap"
-                      >
-                        <span class="am-worktree-stale-badge" data-health={props.health}>
-                          <Icon name={badge()} size="small" />
-                        </span>
-                      </Tooltip>
-                    </Show>
-                    <Show
-                      when={props.renaming}
-                      fallback={
-                        <span
-                          class="am-worktree-branch"
-                          onDblClick={(e) => {
-                            e.stopPropagation()
-                            props.onStartRename(props.label)
-                          }}
-                          title={t("agentManager.worktree.doubleClickRename")}
-                        >
-                          {/* Inner span keeps the finish strikethrough tight to the text. */}
-                          <span class="am-wt-name">{props.label}</span>
-                        </span>
-                      }
-                    >
-                      <input
-                        class="am-worktree-rename-input"
-                        value={props.renameValue}
-                        onInput={(e) => props.onRenameInput(e.currentTarget.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault()
-                            props.onCommitRename()
+                <WorkspaceRowBody
+                  state={state()}
+                  primary={
+                    <>
+                      <Show when={problem()}>
+                        <Tooltip
+                          value={
+                            props.health
+                              ? healthNote(t, props.health, props.worktree.branch)
+                              : t("agentManager.worktree.staleTooltip")
                           }
-                          if (e.key === "Escape") {
-                            e.preventDefault()
-                            props.onCancelRename()
-                          }
-                        }}
-                        onBlur={() => props.onCommitRename()}
-                        onClick={(e) => e.stopPropagation()}
-                        ref={(el) =>
-                          requestAnimationFrame(() =>
-                            requestAnimationFrame(() => {
-                              el.focus()
-                              el.select()
-                            }),
-                          )
-                        }
-                      />
-                    </Show>
-                    {/* Grid cell: stats visible by default, hover actions on top */}
-                    <div class="am-wt-actions-cell">
-                      <Show when={props.stats === undefined}>
-                        <div class="am-worktree-stats-skeleton">
-                          <div class="am-worktree-stats-skeleton-row" />
-                        </div>
-                      </Show>
-                      <Show when={hasStats(props.stats)}>
-                        <div class="am-worktree-stats">
-                          <Show when={props.stats!.behind > 0}>
-                            <span class="am-worktree-behind">
-                              ↓<CountUp value={props.stats!.behind} from={start()} />
-                            </span>
-                          </Show>
-                          <Show when={props.stats!.ahead > 0}>
-                            <span class="am-worktree-commits">
-                              ↑<CountUp value={props.stats!.ahead} from={start()} />
-                            </span>
-                          </Show>
-                          <Show
-                            when={props.stats!.additions > 0 || props.stats!.deletions > 0}
-                            fallback={
-                              <Show when={props.stats!.files > 0}>
-                                <span class="am-stat-files">
-                                  <CountUp value={props.stats!.files} from={start()} />f
-                                </span>
-                              </Show>
-                            }
-                          >
-                            <Show when={props.stats!.additions > 0}>
-                              <span class="am-stat-additions">
-                                +<CountUp value={props.stats!.additions} from={start()} />
-                              </span>
-                            </Show>
-                            <Show when={props.stats!.deletions > 0}>
-                              <span class="am-stat-deletions">
-                                −<CountUp value={props.stats!.deletions} from={start()} />
-                              </span>
-                            </Show>
-                          </Show>
-                        </div>
-                      </Show>
-                      <Show when={props.pendingDelete && !blocked()}>
-                        <Button
-                          class="am-worktree-delete-hint"
-                          size="small"
-                          variant="ghost"
-                          onClick={(e: MouseEvent) => {
-                            e.stopPropagation()
-                            if (!blocked()) props.onDelete(e)
-                          }}
+                          placement="top"
+                          contentClass="am-tooltip-wrap"
                         >
-                          {t("agentManager.worktree.confirmDelete")}
-                        </Button>
-                      </Show>
-                      <div class="am-wt-hover-actions">
-                        <Show
-                          when={props.shortcut !== undefined && props.shortcut >= 2 && props.shortcut <= MAX_SHORTCUT}
-                        >
-                          <span class="am-shortcut-badge">
-                            {isMac ? "⌘" : "Ctrl+"}
-                            {props.shortcut}
+                          <span class="am-worktree-stale-badge" data-health={props.health}>
+                            <Icon name={badge()} size="small" />
                           </span>
-                        </Show>
-                        <UnpinButton t={t} show={unpinnable()} onToggle={props.onTogglePin} onOver={setOverAction} />
-                        {/* A pinned worktree has no hover delete button, so a click meant for
-                            the unpin button cannot delete it. Delete stays on the context menu. */}
-                        <Show when={deletable()}>
-                          <div
-                            class="am-worktree-close"
-                            onMouseEnter={() => setOverAction(true)}
-                            onMouseLeave={() => setOverAction(false)}
+                        </Tooltip>
+                      </Show>
+                      <Show
+                        when={props.renaming}
+                        fallback={
+                          <span
+                            class="am-worktree-branch"
+                            onDblClick={(e) => {
+                              e.stopPropagation()
+                              props.onStartRename(props.label)
+                            }}
+                            title={t("agentManager.worktree.doubleClickRename")}
                           >
-                            <TooltipKeybind
-                              title={t("agentManager.worktree.delete")}
-                              keybind={props.closeKeybind}
-                              placement="top"
-                            >
-                              <IconButton
-                                ref={trash}
-                                icon="trash"
-                                size="small"
-                                variant="ghost"
-                                aria-label={t("agentManager.worktree.delete")}
-                                onClick={(e: MouseEvent) => {
-                                  e.stopPropagation()
-                                  if (blocked()) return
-                                  props.onCancelDelete?.()
-                                  props.onDelete(e)
-                                }}
-                              />
-                            </TooltipKeybind>
+                            {/* Inner span keeps the finish strikethrough tight to the text. */}
+                            <span class="am-wt-name">{props.label}</span>
+                          </span>
+                        }
+                      >
+                        <input
+                          class="am-worktree-rename-input"
+                          value={props.renameValue}
+                          onInput={(e) => props.onRenameInput(e.currentTarget.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault()
+                              props.onCommitRename()
+                            }
+                            if (e.key === "Escape") {
+                              e.preventDefault()
+                              props.onCancelRename()
+                            }
+                          }}
+                          onBlur={() => props.onCommitRename()}
+                          onClick={(e) => e.stopPropagation()}
+                          ref={(el) =>
+                            requestAnimationFrame(() =>
+                              requestAnimationFrame(() => {
+                                el.focus()
+                                el.select()
+                              }),
+                            )
+                          }
+                        />
+                      </Show>
+                      {/* Grid cell: stats visible by default, hover actions on top */}
+                      <div class="am-wt-actions-cell">
+                        <Show when={props.stats === undefined}>
+                          <div class="am-worktree-stats-skeleton">
+                            <div class="am-worktree-stats-skeleton-row" />
                           </div>
                         </Show>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Row 2: branch subtitle + PR badge */}
-                  <div class="am-wt-row2">
-                    <Show when={props.subtitle}>
-                      <span class="am-worktree-subtitle">{props.subtitle}</span>
-                    </Show>
-                    <RunBadge status={props.runStatus} />
-                    <Show
-                      when={props.pr}
-                      fallback={
-                        <Show when={props.stats === undefined}>
-                          <div class="am-pr-badge-skeleton" />
+                        <Show when={hasStats(props.stats)}>
+                          <div class="am-worktree-stats">
+                            <Show when={props.stats!.behind > 0}>
+                              <span class="am-worktree-behind">
+                                ↓<CountUp value={props.stats!.behind} from={start()} />
+                              </span>
+                            </Show>
+                            <Show when={props.stats!.ahead > 0}>
+                              <span class="am-worktree-commits">
+                                ↑<CountUp value={props.stats!.ahead} from={start()} />
+                              </span>
+                            </Show>
+                            <Show
+                              when={props.stats!.additions > 0 || props.stats!.deletions > 0}
+                              fallback={
+                                <Show when={props.stats!.files > 0}>
+                                  <span class="am-stat-files">
+                                    <CountUp value={props.stats!.files} from={start()} />f
+                                  </span>
+                                </Show>
+                              }
+                            >
+                              <Show when={props.stats!.additions > 0}>
+                                <span class="am-stat-additions">
+                                  +<CountUp value={props.stats!.additions} from={start()} />
+                                </span>
+                              </Show>
+                              <Show when={props.stats!.deletions > 0}>
+                                <span class="am-stat-deletions">
+                                  −<CountUp value={props.stats!.deletions} from={start()} />
+                                </span>
+                              </Show>
+                            </Show>
+                          </div>
                         </Show>
-                      }
-                    >
-                      {(pr) => {
-                        const indicator = () => prBadgeIndicator(pr())
-                        const count = () => pr().unresolvedThreads ?? pr().comments?.unresolved ?? 0
-                        const tooltip = () =>
-                          t(
-                            count() === 1
-                              ? "agentManager.pr.comment.unresolvedThread"
-                              : "agentManager.pr.comment.unresolvedThreads",
-                            { count: count() },
-                          )
-                        return (
-                          <span
-                            class="am-pr-badge"
-                            classList={{
-                              "am-pr-accent-draft": pr().state === "draft",
-                              "am-pr-accent-merged": pr().state === "merged",
-                              "am-pr-accent-closed": pr().state === "closed",
-                              "am-pr-accent-pending": pr().state === "open" && pr().checks.status === "pending",
-                              "am-pr-accent-open": pr().state === "open" && pr().checks.status !== "pending",
-                              "am-pr-badge-pending": prChecksRunning(pr()),
+                        <Show when={props.pendingDelete && !blocked()}>
+                          <Button
+                            class="am-worktree-delete-hint"
+                            size="small"
+                            variant="ghost"
+                            onClick={(e: MouseEvent) => {
+                              e.stopPropagation()
+                              if (!blocked()) props.onDelete(e)
                             }}
-                            onClick={handleOpenPR}
                           >
-                            <Icon name="pull-request" size="small" />
-                            <span class="am-pr-badge-number">#{pr().number}</span>
-                            <Switch>
-                              <Match when={indicator() === "failure"}>
-                                <Icon
-                                  name="circle-x-outline"
+                            {t("agentManager.worktree.confirmDelete")}
+                          </Button>
+                        </Show>
+                        <div class="am-wt-hover-actions">
+                          <Show
+                            when={props.shortcut !== undefined && props.shortcut >= 2 && props.shortcut <= MAX_SHORTCUT}
+                          >
+                            <span class="am-shortcut-badge">
+                              {isMac ? "⌘" : "Ctrl+"}
+                              {props.shortcut}
+                            </span>
+                          </Show>
+                          <UnpinButton t={t} show={unpinnable()} onToggle={props.onTogglePin} onOver={setOverAction} />
+                          {/* A pinned worktree has no hover delete button, so a click meant for
+                            the unpin button cannot delete it. Delete stays on the context menu. */}
+                          <Show when={deletable()}>
+                            <div
+                              class="am-worktree-close"
+                              onMouseEnter={() => setOverAction(true)}
+                              onMouseLeave={() => setOverAction(false)}
+                            >
+                              <TooltipKeybind
+                                title={t("agentManager.worktree.delete")}
+                                keybind={props.closeKeybind}
+                                placement="top"
+                              >
+                                <IconButton
+                                  ref={trash}
+                                  icon="trash"
                                   size="small"
-                                  class="am-pr-badge-status"
-                                  data-status="failure"
-                                />
-                              </Match>
-                              <Match when={indicator() === "changes"}>
-                                <Icon name="warning" size="small" class="am-pr-badge-status" data-status="changes" />
-                              </Match>
-                              <Match when={indicator() === "approved"}>
-                                <Icon
-                                  name="circle-check"
-                                  size="small"
-                                  class="am-pr-badge-status"
-                                  data-status="approved"
-                                />
-                              </Match>
-                            </Switch>
-                            <Show when={count() > 0}>
-                              <Tooltip value={tooltip()} placement="top">
-                                <Button
-                                  class="am-pr-badge-comments"
                                   variant="ghost"
-                                  size="small"
-                                  aria-label={tooltip()}
-                                  onMouseEnter={() => setOverAction(true)}
-                                  onMouseLeave={() => setOverAction(false)}
+                                  aria-label={t("agentManager.worktree.delete")}
                                   onClick={(e: MouseEvent) => {
                                     e.stopPropagation()
-                                    e.preventDefault()
-                                    setHovered(false)
-                                    props.onOpenComments?.()
+                                    if (blocked()) return
+                                    props.onCancelDelete?.()
+                                    props.onDelete(e)
                                   }}
-                                >
-                                  <Icon name="speech-bubble" size="small" />
-                                  <span>{count()}</span>
-                                </Button>
-                              </Tooltip>
-                            </Show>
-                          </span>
+                                />
+                              </TooltipKeybind>
+                            </div>
+                          </Show>
+                        </div>
+                      </div>
+                    </>
+                  }
+                >
+                  <Show when={props.subtitle}>
+                    <span class="am-worktree-subtitle">{props.subtitle}</span>
+                  </Show>
+                  <RunBadge status={props.runStatus} />
+                  <Show
+                    when={props.pr}
+                    fallback={
+                      <Show when={props.stats === undefined}>
+                        <div class="am-pr-badge-skeleton" />
+                      </Show>
+                    }
+                  >
+                    {(pr) => {
+                      const indicator = () => prBadgeIndicator(pr())
+                      const count = () => pr().unresolvedThreads ?? pr().comments?.unresolved ?? 0
+                      const tooltip = () =>
+                        t(
+                          count() === 1
+                            ? "agentManager.pr.comment.unresolvedThread"
+                            : "agentManager.pr.comment.unresolvedThreads",
+                          { count: count() },
                         )
-                      }}
-                    </Show>
-                  </div>
-                </div>
+                      return (
+                        <span
+                          class="am-pr-badge"
+                          classList={{
+                            "am-pr-accent-draft": pr().state === "draft",
+                            "am-pr-accent-merged": pr().state === "merged",
+                            "am-pr-accent-closed": pr().state === "closed",
+                            "am-pr-accent-pending": pr().state === "open" && pr().checks.status === "pending",
+                            "am-pr-accent-open": pr().state === "open" && pr().checks.status !== "pending",
+                            "am-pr-badge-pending": prChecksRunning(pr()),
+                          }}
+                          onClick={handleOpenPR}
+                        >
+                          <Icon name="pull-request" size="small" />
+                          <span class="am-pr-badge-number">#{pr().number}</span>
+                          <Switch>
+                            <Match when={indicator() === "failure"}>
+                              <Icon
+                                name="circle-x-outline"
+                                size="small"
+                                class="am-pr-badge-status"
+                                data-status="failure"
+                              />
+                            </Match>
+                            <Match when={indicator() === "changes"}>
+                              <Icon name="warning" size="small" class="am-pr-badge-status" data-status="changes" />
+                            </Match>
+                            <Match when={indicator() === "approved"}>
+                              <Icon
+                                name="circle-check"
+                                size="small"
+                                class="am-pr-badge-status"
+                                data-status="approved"
+                              />
+                            </Match>
+                          </Switch>
+                          <Show when={count() > 0}>
+                            <Tooltip value={tooltip()} placement="top">
+                              <Button
+                                class="am-pr-badge-comments"
+                                variant="ghost"
+                                size="small"
+                                aria-label={tooltip()}
+                                onMouseEnter={() => setOverAction(true)}
+                                onMouseLeave={() => setOverAction(false)}
+                                onClick={(e: MouseEvent) => {
+                                  e.stopPropagation()
+                                  e.preventDefault()
+                                  setHovered(false)
+                                  props.onOpenComments?.()
+                                }}
+                              >
+                                <Icon name="speech-bubble" size="small" />
+                                <span>{count()}</span>
+                              </Button>
+                            </Tooltip>
+                          </Show>
+                        </span>
+                      )
+                    }}
+                  </Show>
+                </WorkspaceRowBody>
               </div>
             </ContextMenu.Trigger>
           }
