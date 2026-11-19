@@ -68,19 +68,15 @@ const STARTUP_POLL = 100
 
 /**
  * One `/browser share` or `/browser adopt` call. A location answers `rpc.unavailable` until its plugins are
- * registered, and lists no plugin until then, so a command typed while Kilo starts waits until the location lists its
- * plugins and calls once more. Only a second `rpc.unavailable` answer says Kilo is still starting; every other failure
- * rejects unchanged. The call never ran on the server when it answered `rpc.unavailable`, so calling again is safe.
+ * registered, and lists no plugin until then, so the command first waits until the location lists its plugins and then
+ * calls once. It never calls again: `rpc.unavailable` also answers a call whose location shut down while the browser
+ * was acting, and a second share or adopt would move another tab or group. That answer, like a location that still
+ * lists no plugin when the wait ends, says Kilo is starting; every other failure rejects unchanged.
  */
 export async function whenStarted(
   call: () => Promise<Toast>,
   plugins: () => Promise<{ data: readonly unknown[] }>,
 ): Promise<Toast> {
-  try {
-    return await call()
-  } catch (error) {
-    if (!isRecord(error) || error.type !== "rpc.unavailable") throw error
-  }
   const deadline = Date.now() + STARTUP_WAIT
   while (Date.now() < deadline) {
     // A server without the plugin inventory fails the read, which ends the wait at once.
