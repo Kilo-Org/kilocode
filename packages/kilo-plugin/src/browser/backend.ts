@@ -60,7 +60,8 @@ export type BrowserBackend = {
 
 /**
  * Raised when the real origin of a step is not covered by `authorized`. The tool layer asks for the items, then
- * retries the call once with the new pairs and any step token, so the backend never prompts and never retries itself.
+ * retries the call once per distinct need with the new pairs and any step token, so the backend never prompts and
+ * never retries itself.
  */
 export class NeedsPermissionError extends Error {
   readonly items: readonly Item[]

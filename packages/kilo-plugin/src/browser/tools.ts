@@ -217,6 +217,39 @@ export function withheldRefusal(origin: string): string {
   ].join("\n")
 }
 
+/** How many times one call asks before it stops: an act grant, a sensitive step and a redirect target. */
+const ASK_LIMIT = 3
+
+/** One need as the retry loop counts it: a sensitive step is told apart by its reason as well as its origin. */
+function need(item: Item) {
+  const key = BrowserPermission.pattern(item)
+  return item.class === "sensitive" ? `${key}:${item.reason ?? ""}` : key
+}
+
+function described(item: Item) {
+  if (item.class === "sensitive") return `approval for a sensitive step on ${item.origin}`
+  if (item.class === "read") return `permission to read ${item.origin}`
+  if (item.class === "navigate") return `permission to open ${item.origin}`
+  return `permission to act on ${item.origin}`
+}
+
+/**
+ * Why a call that reported more needs stops asking, or undefined while it may ask again. Each distinct need gets one
+ * ask; a need that comes back after it was approved, a refusal that names nothing, and a call past the ask limit stop,
+ * and the text says which of these happened.
+ */
+function exhausted(items: readonly Item[], asked: ReadonlySet<string>, asks: number): string | undefined {
+  if (!items.length)
+    return "The browser refused this step without naming the permission it needs. Continue without this action."
+  const repeated = items.find((item) => asked.has(need(item)))
+  if (repeated) {
+    return `The browser asked again for ${described(repeated)} after it was approved. Do not repeat this step; continue without it or ask the user for help.`
+  }
+  if (asks >= ASK_LIMIT)
+    return "This step needs more approvals than one call asks for. Call the tool again to ask for the rest."
+  return undefined
+}
+
 /**
  * Console data for diff mode. The internal call is a real read and must never prompt: a backend that can plan is
  * checked first and the read runs only when every item the plan asks for is already granted for this session. A
@@ -522,10 +555,13 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     const allowSensitive = browser.allowSensitive
 
     // Ask, then call. A backend that discovers the real origin at action time (redirects, frames, sensitive elements,
-    // downloads) reports it as needs_permission; the call is retried once with the new grants and the step token.
+    // downloads) reports it as needs_permission; the call is retried once per distinct need it reports, with the new
+    // grants and the step token, so an act grant, then a sensitive step, then a redirect target each get one ask.
+    const asked = new Set<string>()
+    let asks = 0
     let sensitive: string[] = []
-    let result: CallResult | undefined
-    for (let attempt = 0; attempt < 2; attempt++) {
+    let result: CallResult
+    for (;;) {
       if (active.plan) {
         const planned = yield* Effect.tryPromise({
           try: () =>
@@ -564,11 +600,8 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
       }
       const error = outcome.failure
       if (!(error instanceof NeedsPermissionError)) return yield* failure(error)
-      if (attempt === 1 || !error.items.length) {
-        return yield* failure(
-          new Error("The browser page changed while permission was requested. Call the tool again."),
-        )
-      }
+      const stop = exhausted(error.items, asked, asks)
+      if (stop) return yield* failure(new Error(stop))
       yield* authorize(
         error.items,
         context,
@@ -576,9 +609,10 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
         (origin) => KiloBrowserPolicy.allows(organization, origin),
         deps.permission,
       )
+      for (const item of error.items) asked.add(need(item))
+      asks += 1
       sensitive = error.stepToken ? [error.stepToken] : []
     }
-    if (!result) return yield* failure(new Error("the browser call did not settle"))
     if (result.isError) return yield* failure(new Error(textOf(result) || `${entry.name} failed`))
     // The action already ran; its result asked for a grant. Ask now, and never repeat the action for it.
     if (result.meta?.needs?.length) {
