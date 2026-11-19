@@ -167,6 +167,16 @@ export const dict = {
   "browser.state.unavailable": "niedostępna",
   "browser.state.readyHint": "Profil Chromium należący do Kilo, uruchamiany przy pierwszym wywołaniu przeglądarki",
   "browser.state.extensionHint": "Podłącz rozszerzenie przeglądarki Kilo, aby używać własnej przeglądarki",
+  "browser.notice.extension":
+    "Rozszerzenie przeglądarki Kilo jest połączone w przeglądarce {{browser}}. Używać własnej przeglądarki w narzędziach przeglądarki zamiast dołączonej?",
+  "browser.notice.switch": "Użyj mojej przeglądarki",
+  "settings.browser.status.extension.waiting": "Oczekiwanie na rozszerzenie przeglądarki",
+  "settings.browser.origins.saved.title": "Dozwolone w czatach",
+  "settings.browser.origins.saved.description":
+    "Witryny dozwolone z czatu przyciskiem Zezwalaj zawsze, dla tego obszaru roboczego. Obowiązują dodatkowo do reguł powyżej.",
+  "settings.browser.origins.saved.empty": "Żadna witryna nie została jeszcze dozwolona z czatu.",
+  "settings.browser.origins.saved.failed": "Zapisane uprawnienia są niedostępne",
+  "settings.browser.origins.saved.revoke": "Odwołaj",
   "ui.permission.reason": "Powód: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

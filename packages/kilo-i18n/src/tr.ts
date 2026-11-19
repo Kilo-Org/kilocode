@@ -167,6 +167,16 @@ export const dict = {
   "browser.state.unavailable": "kullanılamıyor",
   "browser.state.readyHint": "Kilo'ya ait bir Chromium profili; ilk tarayıcı çağrısında başlar",
   "browser.state.extensionHint": "Kendi tarayıcınızı kullanmak için Kilo tarayıcı uzantısını bağlayın",
+  "browser.notice.extension":
+    "Kilo tarayıcı uzantısı {{browser}} içinde bağlı. Tarayıcı araçları için paketli tarayıcı yerine kendi tarayıcınız kullanılsın mı?",
+  "browser.notice.switch": "Tarayıcımı kullan",
+  "settings.browser.status.extension.waiting": "Tarayıcı uzantısı bekleniyor",
+  "settings.browser.origins.saved.title": "Sohbetlerde izin verilenler",
+  "settings.browser.origins.saved.description":
+    "Bu çalışma alanı için bir sohbetten Her zaman izin ver ile izin verdiğiniz siteler. Yukarıdaki kurallara ek olarak uygulanır.",
+  "settings.browser.origins.saved.empty": "Henüz bir sohbetten izin verilen site yok.",
+  "settings.browser.origins.saved.failed": "Kayıtlı izinler kullanılamıyor",
+  "settings.browser.origins.saved.revoke": "İptal et",
   "ui.permission.reason": "Neden: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

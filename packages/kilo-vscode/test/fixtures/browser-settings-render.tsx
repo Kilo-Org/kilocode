@@ -50,13 +50,37 @@ const { SettingsConfigProvider } = await import("../../webview-ui/src/v2/setting
 const { post } = await import("../../webview-ui/src/utils/webview-message")
 const { default: BrowserTab } = await import("../../webview-ui/src/components/settings/BrowserTab")
 
-// The tab's other rows read the live config and the VS Code settings; the browser section only posts its own requests.
+// The tab's other rows read the live config and the VS Code settings; the browser section posts its own requests and
+// reads the project's saved grants through the client, which this fake answers like the server.
+const saved = [
+  { id: "psv_1", projectID: "prj_preview", action: "browser", resource: "read:http://127.0.0.2:48251" },
+  { id: "psv_2", projectID: "prj_preview", action: "shell", resource: "git *" },
+  { id: "psv_3", projectID: "prj_preview", action: "browser", resource: "act:http://127.0.0.2:48251" },
+].map((row) => ({ ...row, time: { created: 0, updated: 0 } }))
+const removed: string[] = []
+const listed: (string | undefined)[] = []
 const scope = {
   connection: { status: () => "connected" },
   report: () => undefined,
   directory: "/preview",
   open: () => undefined,
-  api: {},
+  api: {
+    location: {
+      get: async (input: { location: { directory: string } }) => ({
+        directory: input.location.directory,
+        project: { id: "prj_preview", directory: "/preview", canonical: "/preview" },
+      }),
+    },
+    permission: {
+      saved: {
+        list: async (input: { projectID?: string }) => {
+          listed.push(input.projectID)
+          return saved.filter((row) => !removed.includes(row.id))
+        },
+        remove: async (input: { id: string }) => void removed.push(input.id),
+      },
+    },
+  },
   data: { location: { config: { list: () => [], sync: async () => undefined } } },
 } as never
 
@@ -94,13 +118,32 @@ post(
     type: "browserSettingsLoaded",
     requestId: request("browserSettingsRead")?.requestId,
     state: { backend: "off", observation: "diff", allowSensitive: false, rules: [], allowAll: false },
-    status: { playwright: { ready: false }, extension: { connected: false } },
+    status: { playwright: { ready: false }, extension: { state: "none" } },
   },
   window,
 )
 await wait(10)
 assert.ok(text().includes("Chromium is missing"), "a false status shows the missing-browser line")
 assert.equal(radios()[2]?.checked, true, "the stored backend is the checked radio")
+const extension = (where: HTMLElement) => where.querySelector('[data-slot="browser-extension-status"]')
+assert.equal(extension(root)?.textContent, "Off", "the off backend is the extension row's state")
+assert.equal(
+  [...root.querySelectorAll("*")].filter((node) => node.childElementCount === 0 && node.textContent?.trim() === "Backend")
+    .length,
+  1,
+  "Backend is named once, as the section header",
+)
+// The chat's grants for this workspace's project are listed under Site permissions, browser grants only.
+assert.deepEqual(listed, ["prj_preview"], "the saved grants are read for the panel's project")
+const grants = () =>
+  [...root.querySelectorAll('[data-slot="browser-saved-grant"]')].map(
+    (node) => `${node.textContent} ${node.nextElementSibling?.textContent}`,
+  )
+assert.deepEqual(grants(), ["http://127.0.0.2:48251 Read", "http://127.0.0.2:48251 Act"], "each saved grant is a row")
+root.querySelector<HTMLButtonElement>('button[aria-label="Revoke"]')?.click()
+await wait(10)
+assert.deepEqual(removed, ["psv_1"], "revoke removes that saved grant")
+assert.deepEqual(grants(), ["http://127.0.0.2:48251 Act"], "the list is read again after a revoke")
 
 // A write shows the chosen backend at once, then a failed reply rolls it back and reports the error.
 radios()[0]?.click()
@@ -175,12 +218,50 @@ post(
     type: "browserSettingsLoaded",
     requestId: reads().at(-1)?.requestId,
     state: { backend: "playwright", observation: "diff", allowSensitive: false, rules: [], allowAll: false },
-    status: { playwright: { ready: true, target: "chrome" }, extension: { connected: true } },
+    status: {
+      playwright: { ready: true, target: "chrome" },
+      extension: { state: "connected", browser: "Chrome", profile: "Work" },
+    },
   },
   window,
 )
 await wait(10)
-assert.ok(secondText().includes("Connected"), "the retried read fills the rows")
+assert.equal(extension(second)?.textContent, "Connected · Chrome (Work)", "the retried read fills the rows")
+
+// The status rows follow the machine while the tab is open: a refresh asks for the status alone.
+const statuses = () => posted.filter((message) => message.type === "browserSettingsStatus")
+const polled = statuses().length
+await wait(2_200)
+assert.ok(statuses().length > polled, "the open tab asks for the status again on its own")
+post(
+  {
+    type: "browserSettingsLoaded",
+    requestId: statuses().at(-1)?.requestId,
+    status: { playwright: { ready: true, target: "chrome" }, extension: { state: "waiting" } },
+  },
+  window,
+)
+await wait(10)
+assert.equal(
+  extension(second)?.textContent,
+  "Waiting for the browser extension",
+  "a hub with no extension is waiting, not connected",
+)
+// Coming back to the tab reads at once.
+const before2 = statuses().length
+document.dispatchEvent(new Event("visibilitychange"))
+await wait(10)
+assert.equal(statuses().length, before2 + 1, "a visible tab reads the status at once")
+post(
+  {
+    type: "browserSettingsLoaded",
+    requestId: statuses().at(-1)?.requestId,
+    status: { playwright: { ready: true, target: "chrome" }, extension: { state: "none" } },
+  },
+  window,
+)
+await wait(10)
+assert.equal(extension(second)?.textContent, "Not connected", "no hub is not connected")
 assert.ok(!secondText().includes("Browser status unavailable"), "the error state clears with the reply")
 
 disposeSecond()

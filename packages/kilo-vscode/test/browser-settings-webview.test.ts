@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test"
 import { BrowserPermission } from "../../kilo-plugin/src/browser/permission"
 import { Wildcard } from "../../core/src/util/wildcard"
-import { origin, parse, sites } from "../webview-ui/src/components/settings/browser-settings"
+import {
+  extensionRow,
+  origin,
+  parse,
+  savedGrants,
+  sites,
+} from "../webview-ui/src/components/settings/browser-settings"
 import { defaultAllow } from "../src/shared/browser-permissions"
 import { requestTracker } from "../webview-ui/src/v2/browser-settings-requests"
 
@@ -247,5 +253,60 @@ describe("browser settings requests", () => {
     expect(tracker.accepts("install:0")).toBe(false)
     expect(tracker.accepts("removed:1")).toBe(false)
     expect(tracker.accepts("")).toBe(false)
+  })
+
+  test("a status refresh is its own operation: it never takes over a read's reply", () => {
+    const tracker = requestTracker()
+    const read = tracker.start("read")
+    const status = tracker.start("status")
+    expect(tracker.kindOf(status)).toBe("status")
+    expect(tracker.accepts(read)).toBe(true)
+    expect(tracker.accepts(status)).toBe(true)
+    expect(tracker.accepts(tracker.start("status"))).toBe(true)
+    expect(tracker.accepts(status)).toBe(false)
+  })
+})
+
+describe("extension status row", () => {
+  test("each registry state is its own row, and the off backend wins over all of them", () => {
+    expect(extensionRow("extension", { state: "none" })).toEqual({ kind: "none" })
+    expect(extensionRow("extension", { state: "waiting" })).toEqual({ kind: "waiting" })
+    expect(extensionRow("playwright", { state: "connected", browser: "Chrome", profile: "Work" })).toEqual({
+      kind: "connected",
+      label: "Chrome (Work)",
+    })
+    expect(extensionRow(undefined, { state: "connected", browser: "Edge" })).toEqual({ kind: "connected", label: "Edge" })
+    expect(extensionRow("off", { state: "connected", browser: "Chrome" })).toEqual({ kind: "off" })
+  })
+})
+
+describe("grants saved from a chat", () => {
+  const row = (id: string, action: string, resource: string) => ({
+    id,
+    projectID: "prj_1",
+    action,
+    resource,
+    time: { created: 0, updated: 0 },
+  })
+
+  test("lists the browser grants by origin and class, and nothing else the project saved", () => {
+    expect(
+      savedGrants([
+        row("psv_1", "browser", "navigate:http://127.0.0.2:48251"),
+        row("psv_2", "shell", "git *"),
+        row("psv_3", "browser", "read:http://127.0.0.2:48251"),
+        row("psv_4", "browser_open", "navigate:http://localhost:3000"),
+        row("psv_5", "browser", "read:https://example.com"),
+        row("psv_6", "browser", "sensitive:https://example.com"),
+      ]),
+    ).toEqual([
+      { id: "psv_3", grant: "read", origin: "http://127.0.0.2:48251" },
+      { id: "psv_1", grant: "navigate", origin: "http://127.0.0.2:48251" },
+      { id: "psv_5", grant: "read", origin: "https://example.com" },
+    ])
+  })
+
+  test("a project with no saved grant lists none", () => {
+    expect(savedGrants([])).toEqual([])
   })
 })

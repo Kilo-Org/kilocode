@@ -2,7 +2,8 @@
 // from the rules the host stores is testable. A rule names one class of one origin (`<class>:<origin>`); a class is
 // resolved as the CLI resolves it — the last matching rule wins, catch-alls included — and one no rule matches shows
 // the CLI's default: allow on the localhost family, ask elsewhere.
-import type { BrowserSettingsState } from "../../../../src/protocol"
+import type { PermissionSavedInfo } from "@opencode/client"
+import type { BrowserSettingsState, BrowserSettingsStatus } from "../../../../src/protocol"
 import { defaultAllow } from "../../../../src/shared/browser-permissions"
 import { matchAction } from "./permission-utils"
 
@@ -44,6 +45,40 @@ export function sites(rules: Rule[]): Site[] {
     })
   }
   return [...rows.values()]
+}
+
+/**
+ * The extension status row: the tools turned off, no hub running, a hub waiting for the extension (unpaired, or with
+ * "Allow local agents" off), or the browser and profile of the connected extension.
+ */
+export type ExtensionRow = { kind: "off" } | { kind: "none" } | { kind: "waiting" } | { kind: "connected"; label: string }
+
+export function extensionRow(
+  backend: BrowserSettingsState["backend"] | undefined,
+  extension: BrowserSettingsStatus["extension"],
+): ExtensionRow {
+  if (backend === "off") return { kind: "off" }
+  if (extension.state !== "connected") return { kind: extension.state }
+  return {
+    kind: "connected",
+    label: extension.profile ? `${extension.browser} (${extension.profile})` : extension.browser,
+  }
+}
+
+/** One class of one origin a chat saved with "Allow always": a row of the project's `permission` table. */
+export type SavedGrant = { id: string; grant: Grant; origin: string }
+
+/**
+ * The browser grants a chat saved for the project, by origin and then in class order. Saved grants are checked after
+ * the config rules (`core/src/permission.ts`), so each one allows its class whatever the table above says.
+ */
+export function savedGrants(rows: readonly PermissionSavedInfo[]): SavedGrant[] {
+  return rows
+    .flatMap((row) => {
+      const parts = row.action === "browser" ? parse(row.resource) : undefined
+      return parts ? [{ id: row.id, ...parts }] : []
+    })
+    .sort((a, b) => a.origin.localeCompare(b.origin) || GRANTS.indexOf(a.grant) - GRANTS.indexOf(b.grant))
 }
 
 /**
