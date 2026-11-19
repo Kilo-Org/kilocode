@@ -132,6 +132,8 @@ internal class ActiveTree(
     /** Called when the tree scrolls or a row changes position under an anchored popup. */
     var onScroll: (() -> Unit)? = null
 
+    var onExpand: (() -> Unit)? = null
+
     /** Called when a row drag starts, before the native drag loop takes over. */
     var onDragStart: (() -> Unit)? = null
 
@@ -141,6 +143,7 @@ internal class ActiveTree(
     init {
         view.onSelect = actions.select
         view.onGeometry = { onScroll?.invoke() }
+        view.onExpand = { onExpand?.invoke() }
         view.onDragStart = { onDragStart?.invoke() }
         view.onDragEnd = { onDragEnd?.invoke() }
         scroll.verticalScrollBar.addAdjustmentListener { view.geometry() }
@@ -165,7 +168,10 @@ internal class ActiveTree(
     }
 
     @RequiresEdt
-    fun select(key: String, scroll: Boolean = true): Boolean = view.select(key, scroll)
+    fun select(key: String, scroll: Boolean = true, expand: Boolean = true): Boolean = view.select(key, scroll, expand)
+
+    @RequiresEdt
+    fun hidden(): List<ActiveItem> = view.hidden()
 
     @RequiresEdt
     fun reveal(key: String): Boolean = view.reveal(key)
@@ -274,6 +280,7 @@ internal class ActiveTreeView(
     private var pending: String? = null
     private var pendingRefresh = false
     private var pendingScroll = true
+    private var pendingExpand = true
     private var revision = 0
     private var popups = 0
     private var popupProperty: Any? = null
@@ -288,6 +295,7 @@ internal class ActiveTreeView(
     private val heights = HashMap<String, Pair<ActiveItem, Int>>()
     internal var onSelect: (() -> Unit)? = null
     internal var onGeometry: (() -> Unit)? = null
+    internal var onExpand: (() -> Unit)? = null
     internal var onDragStart: (() -> Unit)? = null
     internal var onDragEnd: (() -> Unit)? = null
 
@@ -344,7 +352,10 @@ internal class ActiveTreeView(
             onSelect?.invoke()
         }
         addTreeExpansionListener(object : javax.swing.event.TreeExpansionListener {
-            override fun treeExpanded(event: javax.swing.event.TreeExpansionEvent) = changed()
+            override fun treeExpanded(event: javax.swing.event.TreeExpansionEvent) {
+                changed()
+                if (!restoring) onExpand?.invoke()
+            }
             override fun treeCollapsed(event: javax.swing.event.TreeExpansionEvent) {
                 if (!restoring) cancelDrag()
                 changed()
@@ -527,7 +538,7 @@ internal class ActiveTreeView(
         pending?.let { key ->
             val entry = entries[key] ?: return@let
             pending = null
-            reveal(entry, scroll = pendingScroll)
+            reveal(entry, scroll = pendingScroll, expand = pendingExpand)
             return
         }
         val target = when (selection) {
@@ -536,9 +547,9 @@ internal class ActiveTreeView(
             ActiveSelection.Slide -> (previous + neighbors).firstNotNullOfOrNull { entries[it] }
         }
         if (target != null) {
-            val path = TreePath(target.path)
+            val path = visible(TreePath(target.path))
             if (selectionPath != path) selectionModel.selectionPath = path
-            anchorKey = target.key
+            anchorKey = entry(path)?.key
         } else if (previous.isEmpty()) {
             selectionModel.clearSelection()
             anchorKey = null
@@ -549,6 +560,7 @@ internal class ActiveTreeView(
                 parent?.let { entries[it]?.childCount == 0 } == true
             pending = if (empty) previous.firstOrNull() else null
             pendingRefresh = empty
+            pendingExpand = false
             selectionModel.clearSelection()
             anchorKey = null
         }
@@ -585,18 +597,18 @@ internal class ActiveTreeView(
     }
 
     @RequiresEdt
-    fun select(key: String, scroll: Boolean = true): Boolean {
+    fun select(key: String, scroll: Boolean = true, expand: Boolean = true): Boolean {
         checkEdt()
         revision++
         pendingRefresh = false
         val entry = entries[key] ?: run {
             pending = key
             pendingScroll = scroll
+            pendingExpand = expand
             return false
         }
         pending = null
-        anchorKey = key
-        reveal(entry, scroll)
+        reveal(entry, scroll, expand = expand)
         return true
     }
 
@@ -608,8 +620,15 @@ internal class ActiveTreeView(
         return true
     }
 
-    private fun reveal(entry: ActiveEntry, scroll: Boolean, selected: Boolean = true) {
+    private fun visible(path: TreePath): TreePath =
+        generateSequence(path) { it.parentPath }.first(::isVisible)
+
+    @RequiresEdt
+    fun hidden(): List<ActiveItem> = entries.values.filterNot { isVisible(TreePath(it.path)) }.map { it.item }
+
+    private fun reveal(target: ActiveEntry, scroll: Boolean, selected: Boolean = true, expand: Boolean = true) {
         revision++
+        val path = TreePath(target.path).let { if (expand) it else visible(it) }
         val port = parent as? JViewport
         val viewport = port?.viewPosition
         val expands = expandsSelectedPaths
@@ -617,22 +636,18 @@ internal class ActiveTreeView(
         expandsSelectedPaths = false
         scrollsOnExpand = false
         try {
-            var path: TreePath? = TreePath(entry.path)
-            while (path != null && path.pathCount > 1) {
-                path = path.parentPath
-                if (path != null) expandPath(path)
-            }
-            if (selected) selectionModel.selectionPath = TreePath(entry.path)
+            if (expand) makeVisible(path)
+            if (selected) selectionModel.selectionPath = path
         } finally {
             expandsSelectedPaths = expands
             scrollsOnExpand = scrolls
         }
-        if (scroll) scrollPathToVisible(TreePath(entry.path))
+        if (scroll) scrollPathToVisible(path)
         if (!scroll && viewport != null) {
             val stamp = revision
             SwingUtilities.invokeLater { if (stamp == revision) port.viewPosition = viewport }
         }
-        if (selected) anchorKey = entry.key
+        if (selected) anchorKey = entry(path)?.key
     }
 
     @RequiresEdt
@@ -780,11 +795,12 @@ internal class ActiveTreeView(
         val enabled = isEnabled && !entry.item.disabled
         val hovered = hoveredKey == entry.key
         val cell = if (hovered) button.cell?.takeIf { button.row == getRowForPath(TreePath(entry.path)) } else null
-        val fg = UIUtil.getTreeForeground(active, active || focused)
+        val fg = UIUtil.getTreeForeground(active && !entry.allowsChildren, active || focused)
         val background = background
         val selection = UIUtil.getTreeBackground(true, !entry.allowsChildren && active)
-        val hover = if (hovered) JBUI.CurrentTheme.Tree.Hover.background(active || focused) else null
-        val backdrop = if (selected) selection else hover ?: background
+        val fixed = entry.item.alwaysSelected
+        val hover = if (hovered && !fixed) JBUI.CurrentTheme.Tree.Hover.background(active || focused) else null
+        val backdrop = if (fixed || selected) selection else hover ?: background
         val actions = actionsVisible(enabled, selected, hovered, active)
         return ActiveRenderState(
             item = entry.item,
@@ -794,7 +810,7 @@ internal class ActiveTreeView(
             hovered = hovered,
             enabled = enabled,
             background = background,
-            selectionColor = if (selected) selection else hover,
+            selectionColor = if (fixed || selected) selection else hover,
             paintSelection = false,
             backdrop = backdrop,
             foreground = fg,

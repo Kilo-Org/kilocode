@@ -356,18 +356,21 @@ class SessionController(
         else if (!model.isOptimistic(id)) initial = null
     }
 
+    // Keep the durable handoff's correlation optional for ordinary prompt callers.
+    @Suppress("LongParameterList")
     fun prompt(
         text: String,
         files: List<PromptPartDto> = emptyList(),
         editorContext: EditorContextDto? = null,
         select: PromptSelection? = null,
         injectedTitle: String? = null,
+        messageID: String? = null,
     ) {
         assertEdt()
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
         val hosted = isHosted
-        val messageID = if (hosted) hostedMessageID() else null
+        val messageID = messageID ?: if (hosted) hostedMessageID() else null
         val dto = promptDto(text, files, editorContext, select, injectedTitle).let {
             if (messageID != null) it.copy(messageID = messageID) else it
         }
@@ -378,7 +381,13 @@ class SessionController(
         }
     }
 
-    fun command(command: String, args: String, files: List<PromptPartDto> = emptyList()) {
+    fun command(
+        command: String,
+        args: String,
+        files: List<PromptPartDto> = emptyList(),
+        select: PromptSelection? = null,
+        messageID: String? = null,
+    ) {
         assertEdt()
         if (hosted && ref == null) {
             notifyInfo(
@@ -389,7 +398,7 @@ class SessionController(
         }
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
-        val dto = promptDto("", files)
+        val dto = promptDto("", files, select = select).copy(messageID = messageID)
         val props = promptProps(files)
         LOG.debug { "${ChatLogSummary.sid(start)} kind=command command=$command args=${args.length} ${ChatLogSummary.dir(directory)}" }
         dispatch(Dispatch("command", "command", args, props, start, exists)) { id ->
@@ -743,6 +752,22 @@ class SessionController(
         return preparationPrompt() != null
     }
 
+    /** Whether the current failed Cloud prompt can be sent again with a fresh message identity. */
+    @RequiresEdt
+    fun canRetryTerminal(): Boolean {
+        if (ref !is SessionRef.Hosted || sid == null || revertOp != null) return false
+        val tail = model.messages().lastOrNull() ?: return false
+        return tail.info.role == "user" && tail.terminal?.status == "failed" && canRetryPreparation()
+    }
+
+    @RequiresEdt
+    fun retryTerminal() {
+        assertEdt()
+        if (!canRetryTerminal()) return
+        val prompt = preparationPrompt() ?: return
+        resend(prompt, KiloBundle.message("session.status.considering"), "message")
+    }
+
     /**
      * Retry Cloud workspace preparation. Cloud retries preparation when a prompt is submitted, so
      * replay the last user text with a fresh canonical message ID. The optimistic prompt is dropped
@@ -750,24 +775,28 @@ class SessionController(
      */
     fun retryPreparation(failure: HostedSystemEventDto? = null) {
         assertEdt()
-        val id = sid ?: return
         if (!canRetryPreparation(failure)) return
         val prompt = preparationPrompt() ?: return
+        resend(prompt, KiloBundle.message("hosted.workspace.preparation.retrying"), "preparation")
+    }
+
+    private fun resend(prompt: PromptDto, status: String, kind: String) {
+        val id = sid ?: return
         promptRevision++
         initial = null
         val tail = model.messages().lastOrNull { it.info.role == "user" }
         val tailOptimistic = tail?.let { model.isOptimistic(it.info.id) } == true
         tail?.let { model.removeOptimistic(it.info.id) }
         addOptimistic(prompt)
-        LOG.info("${ChatLogSummary.sid(id)} kind=retry preparation=true")
-        model.setState(SessionState.Busy(KiloBundle.message("hosted.workspace.preparation.retrying")))
+        LOG.info("${ChatLogSummary.sid(id)} kind=retry hosted=$kind")
+        model.setState(SessionState.Busy(status))
         cs.launch {
             try {
                 sessions.prompt(id, directory, prompt)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                LOG.warn("${ChatLogSummary.sid(id)} kind=retry preparation=true failed message=${e.message}", e)
+                LOG.warn("${ChatLogSummary.sid(id)} kind=retry hosted=$kind failed message=${e.message}", e)
                 edt {
                     if (disposed) return@edt
                     // Keep the replacement prompt when the removed tail was optimistic. Otherwise

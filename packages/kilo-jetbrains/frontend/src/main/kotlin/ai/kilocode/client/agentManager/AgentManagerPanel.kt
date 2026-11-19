@@ -31,6 +31,8 @@ import ai.kilocode.client.agentManager.worktree.WorktreeRowPopupBody
 import ai.kilocode.client.agentManager.worktree.WorktreeTitle
 import ai.kilocode.client.agentManager.worktree.openWorktreeSession
 import ai.kilocode.client.agentManager.hosted.HostedManagementService
+import ai.kilocode.client.agentManager.hosted.HostedPullRequestService
+import ai.kilocode.client.agentManager.hosted.titled
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceCache
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDialog
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
@@ -54,11 +56,6 @@ import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
-import ai.kilocode.client.ui.PrIcons
-import ai.kilocode.client.ui.checksTooltip
-import ai.kilocode.client.ui.checksUrl
-import ai.kilocode.client.ui.commentsCount
-import ai.kilocode.client.ui.commentsTooltip
 import ai.kilocode.client.ui.conflicted
 import ai.kilocode.client.ui.popup.SidePopupContent
 import ai.kilocode.client.ui.popup.SidePopupController
@@ -66,12 +63,11 @@ import ai.kilocode.client.ui.popup.SidePopupFit
 import ai.kilocode.client.ui.popup.SidePopupGeometry
 import ai.kilocode.client.ui.popup.SidePopupRequest
 import ai.kilocode.client.ui.popup.SidePopupSpot
-import ai.kilocode.client.ui.openTooltip
-import ai.kilocode.client.ui.reviewTooltip
-import ai.kilocode.client.ui.style
 import ai.kilocode.client.diff.KiloDiffComparison
 import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.prGlyphBadges
+import ai.kilocode.client.ui.prNumberBadge
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
@@ -160,23 +156,14 @@ class AgentManagerPanel(
     parent: Disposable,
     private val controller: WorktreeController,
     private val project: Project? = null,
-    private val dialog: (Component, Project) -> NewWorktreeHandle = { anchor, target ->
-        NewWorktreeDialog(
-            anchor,
-            target,
-            controller.directory,
-            controller.suggestName(),
-            controller.defaultBranch,
-            controller.branches,
-            controller.origin,
-        )
-    },
+    private val dialog: ((Component, Project) -> NewWorktreeHandle)? = null,
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val provider = RowDeleteProvider()
     private val edit = RenameAction()
     private val ordering = AgentManagerLayout(project?.let(PropertiesComponent::getInstance))
     private val missed = mutableMapOf<String, Int>()
-    private val rows = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
+    private val rows = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? DefaultActionGroup ?: DefaultActionGroup()
+    private val manager get() = ActionManager.getInstance()
     private val sections: Array<AnAction> = arrayOf(
         object : DumbAwareAction(KiloBundle.message("agentManager.section.rename")) {
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
@@ -202,7 +189,8 @@ class AgentManagerPanel(
         },
     )
     private val group = object : ActionGroup(), DumbAware {
-        override fun getChildren(e: AnActionEvent?) = if (e?.getData(SECTION) != null) sections else rows.getChildren(e)
+        override fun getChildren(e: AnActionEvent?) =
+            if (e?.getData(SECTION) != null) sections else rows.getChildren(manager)
     }
     private val pendingHosted = linkedMapOf<String, HostedWorkspaceDto>()
     private val createdHosted = linkedMapOf<String, HostedWorkspaceDto>()
@@ -224,10 +212,14 @@ class AgentManagerPanel(
             open = { row, focus ->
                 when (row) {
                     is WorktreeRow -> open(row.dto, focus)
-                    is HostedWorkspaceRow -> project?.let { openHostedWorkspace(it, row.data.dto, focus) }
+                    is HostedWorkspaceRow -> project?.let {
+                        it.service<HostedPullRequestService>().refresh(row.data.dto.ref)
+                        openHostedWorkspace(it, row.data.dto, focus)
+                    }
                     else -> Unit
                 }
             },
+            select = ::selectionChanged,
             hover = { row -> hover(row) },
         ),
         menu = ActiveMenu(
@@ -258,6 +250,7 @@ class AgentManagerPanel(
     private val popup = SidePopupController(dwell = SidePopupController.LIST_MS)
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
+    private var hostedPulls: Map<String, WorktreePrDto> = emptyMap()
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
     private var running: Set<String> = emptySet()
     private var hostedState = KiloHostedService.HostedState()
@@ -289,6 +282,7 @@ class AgentManagerPanel(
         // A row that scrolls or gets selected is no longer under the balloon that points at it, and a
         // busy list or a rebuilt model has already dropped the hover the popup was opened from.
         tree.onScroll = { dismissTransient() }
+        tree.onExpand = { project?.service<WorktreeStatusService>()?.visibilityChanged() }
         // Drag gestures move the pointer across rows without the normal hover path, and any transient
         // window that stays up can cache the tree's accessibility view against a window that is about
         // to be disposed. Clear both ends of the drag, then let the next real pointer move restore it.
@@ -304,6 +298,9 @@ class AgentManagerPanel(
         tree.installPopup(group)
         project?.let { target ->
             target.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
+            val management = target.service<HostedManagementService>()
+            val removal = target.service<HostedWorkspaceRemoval>()
+            val pulls = target.service<HostedPullRequestService>()
             target.service<KiloHostedService>().let { hosted ->
                 hosted.observe(this) { state ->
                     edt({ !target.isDisposed && !Disposer.isDisposed(this) }) {
@@ -331,6 +328,9 @@ class AgentManagerPanel(
                                     missedHosted.remove(key)
                                     if (workspace != null) closeHostedPending(target, workspace)
                                 }
+                                // Discovery and reconnect are the initial load for rows. A passive
+                                // read is enough; Cloud and the core cache keep the rest.
+                                pulls.refreshAll(management.visible(state.items).map { it.ref })
                             }
                         }
                         hostedState = state
@@ -338,8 +338,14 @@ class AgentManagerPanel(
                     }
                 }
                 hosted.refresh(controller.directory)
-                val management = target.service<HostedManagementService>()
-                val removal = target.service<HostedWorkspaceRemoval>()
+                hostedCs.launch {
+                    pulls.pulls.collect { value ->
+                        edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                            hostedPulls = value
+                            sync()
+                        }
+                    }
+                }
                 hostedCs.launch {
                     service<KiloAppService>().state.collect { app ->
                         val key = "${app.profile?.email}\u0000${app.profile?.currentOrgId}"
@@ -381,7 +387,7 @@ class AgentManagerPanel(
         controller.onSelect = { key ->
             // Focus the list so the freshly created worktree renders as an active selection rather
             // than the inactive highlight it would get while focus stays on the toolbar.
-            if (tree.select(key)) tree.focus()
+            if (tree.select(key, expand = false)) tree.focus()
             item(key)?.takeIf { controller.progress(it.id) == null }?.let { open(it, focus = false) }
         }
         // A fresh worktree changes what git reports, so bypass both the refresh throttle and the
@@ -456,7 +462,7 @@ class AgentManagerPanel(
     }
 
     fun refresh() {
-        if (tree.selectedKeys().isEmpty()) currentEditorWorktree()?.let { tree.select(it, scroll = false) }
+        if (tree.selectedKeys().isEmpty()) currentEditorWorktree()?.let { tree.select(it, scroll = false, expand = false) }
         controller.reload()
         project?.service<WorktreeStatusService>()?.refreshStats()
         project?.service<WorktreeStatusService>()?.refreshPr()
@@ -468,27 +474,68 @@ class AgentManagerPanel(
      * dialog closes, so [onCreate] — e.g. the chat dock switching the tool window to this panel —
      * never competes with the modal dialog for focus.
      */
+    @RequiresEdt
     fun configure(anchor: Component = this, onCreate: () -> Unit = {}) {
         val target = project ?: return
-        val handle = dialog(anchor, target)
+        val handle = dialog?.invoke(anchor, target) ?: NewWorktreeDialog(
+            anchor,
+            target,
+            controller.directory,
+            controller.suggestName(),
+            controller.defaultBranch,
+            controller.branches,
+            controller.origin,
+            sections = sections(),
+            section = section(),
+        )
         if (!handle.showAndGet()) return
         val plan = handle.result() ?: return
         onCreate()
+        val place = fun(key: String, previous: String?) {
+            if (previous != null) return ordering.replace(previous, key)
+            ordering.insert(key, plan.section?.takeIf { ordering.section(it) != null })
+        }
         when (plan) {
-            is NewWorktreePlan.Create -> controller.create(plan.branch, plan.base, prompt = plan.prompt, fetchBase = plan.fetchBase)
+            is NewWorktreePlan.Create -> controller.create(
+                plan.branch, plan.base, prompt = plan.prompt, fetchBase = plan.fetchBase, place = place,
+            )
             is NewWorktreePlan.Branch -> {
                 Telemetry.send("Worktree Import Submitted", mapOf("kind" to "branch"))
-                controller.importBranch(plan.branch)
+                controller.importBranch(plan.branch, place = place)
             }
             is NewWorktreePlan.Pr -> {
                 Telemetry.send("Worktree Import Submitted", mapOf("kind" to "pr"))
-                controller.importPr(plan.url)
+                controller.importPr(plan.url, place = place)
             }
         }
     }
 
     internal fun move(sessionId: String?, directory: String, surface: String = "sidebar") =
         controller.move(sessionId, directory, surface)
+
+    @RequiresEdt
+    internal fun sections(): List<AgentManagerLayout.Section> = ordering.sections()
+
+    @RequiresEdt
+    internal fun section(key: String? = tree.selected()?.key): String? = key?.let {
+        ordering.section(it)?.key ?: ordering.parent(it)
+    }
+
+    @RequiresEdt
+    internal fun canMove(key: String?): Boolean {
+        if (key == null) return false
+        val local = item(key)?.let { !it.main && controller.progress(key) == null }
+        return local ?: (key !in pendingHosted && key !in deletingHosted &&
+            (key in createdHosted || hostedState.items.any { it.ref.key == key }))
+    }
+
+    @RequiresEdt
+    internal fun relocate(key: String, section: String) {
+        if (!canMove(key) || ordering.section(section) == null) return
+        ordering.move(key, section)
+        sync()
+        tree.select(key, expand = false)
+    }
 
     @RequiresEdt
     internal fun createSection() {
@@ -524,6 +571,8 @@ class AgentManagerPanel(
             target,
             controller.directory,
             repo,
+            sections = sections(),
+            section = section(),
         )
         if (!dialog.showAndGet()) return
         val plan = dialog.plan() ?: return
@@ -535,11 +584,11 @@ class AgentManagerPanel(
             operationKey = java.util.UUID.randomUUID().toString(),
             messageID = hostedMessageID(),
         )
-        createHosted(request)
+        createHosted(request, plan.section)
     }
 
     @RequiresEdt
-    internal fun createHosted(request: HostedCreateWorkspaceDto) {
+    internal fun createHosted(request: HostedCreateWorkspaceDto, section: String? = null) {
         val target = project ?: return
         if (hostedState.signedOut) {
             KiloNotifications.info(target, KiloBundle.message("hosted.workspace.signInRequired"))
@@ -554,8 +603,9 @@ class AgentManagerPanel(
             profileID = request.profileID,
         )
         pendingHosted[pending.ref.key] = pending
+        ordering.insert(pending.ref.key, section?.takeIf { ordering.section(it) != null })
         sync()
-        tree.select(pending.ref.key)
+        tree.select(pending.ref.key, expand = false)
         tree.focus()
         openHostedWorkspace(target, pending)
         hostedCs.launch {
@@ -577,14 +627,15 @@ class AgentManagerPanel(
                         KiloBundle.message("hosted.workspace.create.failed"),
                         failure?.message,
                         KiloBundle.message("common.retry"),
-                    ) { createHosted(request) }
+                    ) { createHosted(request, section) }
                     return@edt
                 }
                 createdHosted[workspace.ref.key] = workspace
                 missedHosted.remove(workspace.ref.key)
+                ordering.replace(pending.ref.key, workspace.ref.key)
                 sync()
                 target.service<HostedManagementService>().select(workspace.ref, session.id)
-                tree.select(workspace.ref.key)
+                tree.select(workspace.ref.key, expand = false)
                 tree.focus()
                 openHostedWorkspace(target, workspace)
                 closeHostedPending(target, pending)
@@ -681,7 +732,9 @@ class AgentManagerPanel(
         val title = "Update from $parent"
         val text = worktreeBaseUpdatePrompt(item.path, parent, item.remote, item.parentBranchRecorded)
         if (!target.service<WorktreeBaseUpdatePrompts>().submit(item.path, text, title)) {
-            target.service<PendingWorktreePrompt>().put(item.path, PendingPrompt(text, injectedTitle = title))
+            service<PendingWorktreePrompt>().put(
+                controller.directory, item.path, PendingPrompt(text, injectedTitle = title),
+            )
         }
         open(item, focus = true)
     }
@@ -835,7 +888,7 @@ class AgentManagerPanel(
             tree.clearSelection()
             return
         }
-        if (tree.select(next.id)) tree.focus()
+        if (tree.select(next.id, expand = false)) tree.focus()
         open(next, focus = false)
     }
 
@@ -981,7 +1034,7 @@ class AgentManagerPanel(
                     HostedWorkspaceStatus.of(status).busy() || (!known && status?.hasActiveTurn == true)
                 }
                 val progress = if (dto.ref.key in deletingHosted) KiloBundle.message("common.deleting") else null
-                HostedWorkspaceRowData(dto, status, kind, progress)
+                HostedWorkspaceRowData(dto, status, kind, progress, hostedPulls[dto.ref.key])
             }).distinctBy { it.dto.ref.key }.map(::HostedWorkspaceRow)
         } else {
             emptyList()
@@ -996,7 +1049,7 @@ class AgentManagerPanel(
     private fun track(file: VirtualFile?) {
         val key = project?.service<WorktreeEditorMatchers>()?.match(file)
         if (key != null) {
-            tree.select(key, scroll = false)
+            tree.select(key, scroll = false, expand = false)
             return
         }
         // A null active editor is a transient state (e.g. a tab closing during a delete); keep the
@@ -1033,15 +1086,42 @@ class AgentManagerPanel(
      */
     @RequiresEdt
     private fun hover(row: ActiveItem?) {
-        val item = row as? WorktreeRow
-        if (item == null || row is HostedWorkspaceRow) {
-            popup.notifyExit(hovered ?: return)
-            hovered = null
-            return
+        when (row) {
+            is WorktreeRow -> {
+                val key = row.dto.path
+                hovered = key
+                popup.show(key, this) { request(row) }
+            }
+            is HostedWorkspaceRow -> {
+                val key = "hosted:${row.key}"
+                hovered = key
+                popup.show(key, this) { request(row) }
+            }
+            else -> {
+                popup.notifyExit(hovered ?: return)
+                hovered = null
+            }
         }
-        val key = item.dto.path
-        hovered = key
-        popup.show(key, this) { request(item) }
+    }
+
+    /**
+     * The same hover detail a worktree row uses, with the workspace PR and no changes (I2F owns diffs).
+     * The shared body already names the merge verdict, conversation and inspection counts, and every
+     * line opens the page it describes.
+     */
+    @RequiresEdt
+    private fun request(row: HostedWorkspaceRow): SidePopupRequest? {
+        if (project == null || row.data.progress != null) return null
+        val pull = row.data.pull ?: return null
+        return SidePopupRequest(
+            build = {
+                val disposable = Disposer.newDisposable("Hosted workspace row popup")
+                val body = WorktreeRowPopupBody(openDiff = {})
+                body.update(null, pull.titled(row.title), row.title, null)
+                HeaderPopupBody(body, disposable, UiStyle.Balloon.bg(), maxWidth = POPUP_WIDTH, horizontal = true)
+            },
+            place = { built -> place(built) },
+        )
     }
 
     /**
@@ -1123,14 +1203,21 @@ class AgentManagerPanel(
                 sessions.activitySnapshot() to statuses.keys
             }.collect { (kinds, known) ->
                 edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
-                    val idle = activity.any { (id, kind) ->
-                        kind == SessionActivityKind.RUNNING && !kinds.containsKey(id) &&
-                            HostedIDs.parseSession(id) != null
-                    }
+                    val finished = activity.filter { (id, kind) ->
+                        kind == SessionActivityKind.RUNNING && !kinds.containsKey(id)
+                    }.keys.mapNotNull { id ->
+                        HostedIDs.parseSession(id)?.let { (provider, workspace, _) ->
+                            HostedWorkspaceRefDto(provider, workspace)
+                        }
+                    }.distinct()
                     activity = kinds
                     observed = known
                     sync()
-                    if (idle) scheduleHostedRefresh()
+                    if (finished.isNotEmpty()) {
+                        // A turn that ran in any session of the workspace can open or update its PR.
+                        target.service<HostedPullRequestService>().refreshAll(finished, revalidate = true)
+                        scheduleHostedRefresh()
+                    }
                 }
             }
         }
@@ -1158,8 +1245,20 @@ class AgentManagerPanel(
             // Rows carry the uncommitted counts too, as the summary a worktree with no commits yet shows,
             // so a poll has to rebuild them. Row equality keeps a poll that found nothing new from churning.
             onDirty = { value -> dirty = value; sync() },
+            excluded = { excluded(target) },
         )
         WorktreeRunBinding(target, this) { value -> running = value; sync() }
+    }
+
+    @RequiresEdt
+    private fun excluded(target: Project): Set<String> {
+        val hidden = tree.hidden().filterIsInstance<WorktreeRow>().filterNot { controller.isPending(it.key) }
+        if (hidden.isEmpty()) return emptySet()
+        val matchers = target.service<WorktreeEditorMatchers>()
+        val editors = FileEditorManager.getInstance(target).selectedFiles.mapNotNullTo(HashSet()) {
+            matchers.match(it)?.let(::normalizeWorktreePath)
+        }
+        return hidden.mapTo(HashSet()) { normalizeWorktreePath(it.dto.path) } - editors
     }
 
     override fun dispose() {
@@ -1188,6 +1287,13 @@ class AgentManagerPanel(
     private fun selectedRow(): WorktreeRow? = tree.selected() as? WorktreeRow
 
     private fun selectedHosted(): HostedWorkspaceRow? = tree.selected() as? HostedWorkspaceRow
+
+    /** Selecting a Cloud row is an activation: read its PR evidence again, throttled by the service. */
+    @RequiresEdt
+    private fun selectionChanged() {
+        val ref = selectedHosted()?.data?.dto?.ref ?: return
+        project?.service<HostedPullRequestService>()?.refresh(ref)
+    }
 
     /** Local and hosted rows share the platform Delete shortcut and confirmation popup. */
     private inner class RowDeleteProvider : DeleteProvider {
@@ -1288,58 +1394,13 @@ class AgentManagerPanel(
         override val badges: List<ActiveBadge>
             get() {
                 if (progress != null) return emptyList()
-                val p = pr ?: return emptyList()
-                return listOfNotNull(commentsBadge(p), reviewBadge(p), checksBadge(p))
+                return prGlyphBadges(pr)
             }
-
-        private fun reviewBadge(p: WorktreePrDto): ActiveBadge? {
-            val glyph = PrIcons.review(p.review) ?: return null
-            return ActiveBadge(
-                "",
-                id = "pr-review",
-                tooltip = reviewTooltip(p.review),
-                action = { BrowserUtil.browse(p.url) },
-                icon = glyph,
-            )
-        }
-
-        private fun checksBadge(p: WorktreePrDto): ActiveBadge? {
-            val glyph = PrIcons.checks(p.checks) ?: return null
-            return ActiveBadge(
-                "",
-                id = "pr-checks",
-                tooltip = checksTooltip(p.checks),
-                // The checks tab rather than the conversation: someone clicking a red build wants the log.
-                action = { BrowserUtil.browse(checksUrl(p)) },
-                icon = glyph,
-            )
-        }
-
-        private fun commentsBadge(p: WorktreePrDto): ActiveBadge? {
-            val glyph = PrIcons.comments(p.comments) ?: return null
-            return ActiveBadge(
-                commentsCount(p.comments),
-                id = "pr-comments",
-                tooltip = commentsTooltip(p.comments),
-                // The conversation tab, which is where GitHub lists the threads themselves.
-                action = { BrowserUtil.browse(p.url) },
-                icon = glyph,
-            )
-        }
 
         override val secondaryBadges: List<ActiveBadge>
             get() {
                 if (progress != null) return emptyList()
-                val p = pr ?: return emptyList()
-                return listOf(
-                    ActiveBadge(
-                        "#${p.number}",
-                        style(p.state),
-                        id = "pull-request",
-                        tooltip = openTooltip(),
-                        action = { BrowserUtil.browse(p.url) },
-                    ),
-                )
+                return listOfNotNull(prNumberBadge(pr))
             }
         /**
          * Committed counts against the base branch, with the uncommitted ones behind them so a worktree

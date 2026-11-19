@@ -310,6 +310,18 @@
                                first-keystroke="control ENTER"/>
         </action>
 
+        <action id="Kilo.SpeechInput"
+                class="ai.kilocode.client.actions.SpeechInputAction">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="control K"/>
+            <keyboard-shortcut keymap="Mac OS X"
+                               first-keystroke="control K"
+                               replace-all="true"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="control K"
+                               replace-all="true"/>
+        </action>
+
         <action id="Kilo.SubmitDialog"
                 class="ai.kilocode.client.actions.SubmitDialogAction"
                 text="Submit Dialog"
@@ -404,6 +416,10 @@
         <action id="Kilo.Worktree.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeAction"/>
 
+        <group id="Kilo.AgentManager.MoveTo"
+               class="ai.kilocode.client.actions.MoveAgentManagerItemGroup"
+               popup="true"/>
+
         <action id="Kilo.Worktree.Delete"
                 class="ai.kilocode.client.actions.DeleteWorktreeAction"/>
 
@@ -431,8 +447,8 @@
         <action id="Kilo.Worktree.RunSetupScript"
                 class="ai.kilocode.client.actions.RunWorktreeSetupScriptAction"/>
 
-        <action id="Kilo.HostedWorkspace.Refresh"
-                class="ai.kilocode.client.actions.RefreshHostedWorkspaceAction"/>
+        <action id="Kilo.HostedWorkspace.Reload"
+                class="ai.kilocode.client.actions.ReloadHostedWorkspaceAction"/>
 
         <action id="Kilo.HostedWorkspace.OpenInBrowser"
                 class="ai.kilocode.client.actions.HostedOpenInBrowserAction"/>
@@ -456,12 +472,14 @@
                 class="ai.kilocode.client.actions.ForkWorktreeSessionAction"/>
 
         <group id="Kilo.Worktree.RowMenu">
-            <reference ref="Kilo.HostedWorkspace.Refresh"/>
             <reference ref="Kilo.HostedWorkspace.OpenInBrowser"/>
+            <reference ref="Kilo.HostedWorkspace.Reload"/>
             <separator/>
+            <reference ref="Kilo.HostedWorkspace.Delete"/>
             <reference ref="Kilo.HostedWorkspace.Dismiss"/>
             <separator/>
             <reference ref="Kilo.Worktree.Rename"/>
+            <reference ref="Kilo.AgentManager.MoveTo"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
             <separator/>
@@ -476,7 +494,6 @@
             <reference ref="Kilo.OpenSetupScript"/>
             <reference ref="Kilo.Worktree.RunSetupScript"/>
             <separator/>
-            <reference ref="Kilo.HostedWorkspace.Delete"/>
             <reference ref="Kilo.Worktree.Delete"/>
         </group>
 

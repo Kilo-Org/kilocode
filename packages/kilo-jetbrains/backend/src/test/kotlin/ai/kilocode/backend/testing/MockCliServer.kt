@@ -43,6 +43,15 @@ class MockCliServer : AutoCloseable {
     @Volatile var profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":null}"""
     @Volatile var path = """{"home":"/tmp","state":"${createTempDirectory("kilo-model-state").toAbsolutePath()}","config":"/tmp","worktree":"/tmp","directory":"/tmp"}"""
     @Volatile var profileStatus = 200
+    @Volatile var transcriptionModels = """[{"id":"openai/whisper-1","name":"Whisper"}]"""
+    @Volatile var transcriptionModelsStatus = 200
+    @Volatile var transcription = """{"text":"transcribed prompt"}"""
+    @Volatile var transcriptionStatus = 200
+    @Volatile var lastTranscriptionModelsPath: String? = null
+    @Volatile var lastTranscriptionPath: String? = null
+    @Volatile var lastTranscriptionBody: String? = null
+    @Volatile var transcriptionEntered: CountDownLatch? = null
+    @Volatile var transcriptionRelease: CountDownLatch? = null
     @Volatile var configStatus = 200
     @Volatile var workspaceConfigStatus = 200
     @Volatile var warningsStatus = 200
@@ -148,6 +157,11 @@ class MockCliServer : AutoCloseable {
     @Volatile var hostedStart = """{"workspace":{"providerID":"cloud","workspaceID":"wrk_1"},"session":{"providerID":"cloud","sessionID":"ses_cloud_2"},"messageID":"msg_start","replayed":false}"""
     @Volatile var hostedDelete = """{"workspace":{"providerID":"cloud","workspaceID":"wrk_1"},"success":true}"""
     @Volatile var hostedManagementStatus = 200
+    @Volatile var hostedPullRequest = """{"id":{"providerID":"cloud","workspaceID":"wrk_1"},"state":"no_pr","pullRequest":null}"""
+    @Volatile var hostedPullRequestStatus = 200
+    @Volatile var hostedPullRequestHandler: ((Socket, BufferedWriter) -> Unit)? = null
+    data class PullRequestCall(val method: String, val path: String, val body: String, val authorization: String?)
+    val hostedPullRequestCalls = CopyOnWriteArrayList<PullRequestCall>()
     @Volatile var lastHostedCreateBody: String? = null
     @Volatile var lastHostedStartBody: String? = null
     @Volatile var lastHostedDeletePath: String? = null
@@ -193,6 +207,8 @@ class MockCliServer : AutoCloseable {
     @Volatile var summarizeResponse = "true"
     @Volatile var sessionsStatus = 200
     @Volatile var recentSessionsStatus = 200
+    @Volatile var moveSessionStatus = 200
+    val moveSessionBodies = CopyOnWriteArrayList<String>()
     @Volatile var sessionCreateStatus = 200
     @Volatile var sessionGetStatus = 200
     @Volatile var sessionDeleteStatus = 200
@@ -436,12 +452,16 @@ class MockCliServer : AutoCloseable {
             val path = parts[1]
 
             var len = 0
+            var authorization: String? = null
             while (true) {
                 val header = input.readLine()
                 if (header.isNullOrBlank()) break
                 val parts = header.split(":", limit = 2)
                 if (parts.size == 2 && parts[0].equals("Content-Length", ignoreCase = true)) {
                     len = parts[1].trim().toIntOrNull() ?: 0
+                }
+                if (parts.size == 2 && parts[0].equals("Authorization", ignoreCase = true)) {
+                    authorization = parts[1].trim()
                 }
             }
             val body = if (len > 0) CharArray(len).also { input.read(it, 0, len) }.concatToString() else ""
@@ -495,6 +515,17 @@ class MockCliServer : AutoCloseable {
                     } else {
                         respond(output, profileStatus, profile)
                     }
+                }
+                bare == "/kilo/models/transcriptions" && method == "GET" -> {
+                    lastTranscriptionModelsPath = path
+                    respond(output, transcriptionModelsStatus, transcriptionModels)
+                }
+                bare == "/kilo/audio/transcriptions" && method == "POST" -> {
+                    lastTranscriptionPath = path
+                    lastTranscriptionBody = body
+                    transcriptionEntered?.countDown()
+                    transcriptionRelease?.await(10, TimeUnit.SECONDS)
+                    respond(output, transcriptionStatus, transcription)
                 }
                 path.matches(Regex("/provider/[^/]+/oauth/authorize.*")) && method == "POST" -> {
                     lastAuthorizeBody = body
@@ -620,6 +651,10 @@ class MockCliServer : AutoCloseable {
                     recentGate?.await()
                     respond(output, recentSessionsStatus, recentSessions)
                 }
+                bare == "/experimental/control-plane/move-session" && method == "POST" -> {
+                    moveSessionBodies.add(body)
+                    respond(output, moveSessionStatus, "")
+                }
                 bare == "/experimental/capabilities" -> {
                     lastCapabilitiesPath = path
                     respond(output, capabilitiesStatus, capabilities)
@@ -634,6 +669,11 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/kilocode/session-host/provider" -> respond(output, 200, hostedProviders)
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+/pull-request(/refresh)?")) -> {
+                    hostedPullRequestCalls.add(PullRequestCall(method, path, body, authorization))
+                    val handler = hostedPullRequestHandler
+                    if (handler != null) handler(socket, output) else respond(output, hostedPullRequestStatus, hostedPullRequest)
+                }
                 bare == "/kilocode/session-host/workspace/profiles" && method == "GET" -> {
                     lastHostedProfilesPath = path
                     respond(output, hostedManagementStatus, hostedProfiles)
