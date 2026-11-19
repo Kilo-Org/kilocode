@@ -12,11 +12,7 @@ const model = { providerID: "test", id: "test" }
 const password = "hunter2"
 const pin = "4096-2048"
 
-function toolPart(
-  id: string,
-  name: string,
-  state: SessionMessageAssistantTool["state"],
-): SessionMessageAssistantTool {
+function toolPart(id: string, name: string, state: SessionMessageAssistantTool["state"]): SessionMessageAssistantTool {
   return { type: "tool", id, name, state, time: { created: 1, completed: 2 } }
 }
 
