@@ -197,8 +197,8 @@ function summary(view: View) {
         view.action.type === "hook"
         ? `hook: ${JSON.stringify(clip(view.action.prompt))}`
         : // kilocode_change end
-          `code: ${JSON.stringify(
-          clip(
+          `code: ${JSON.stringify( // kilocode_change - indentation follows the hook branch
+            clip(
             view.action.code
               .split("\n")
               .find((line) => line.trim() !== "")
