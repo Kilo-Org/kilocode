@@ -193,9 +193,11 @@ function summary(view: View) {
   const action =
     view.action.type === "prompt"
       ? `prompt ${view.action.to.session ?? `subagent ${view.action.to.subagent}`}: ${JSON.stringify(clip(view.action.prompt))}`
-      : view.action.type === "hook"
+      : // kilocode_change start - render the hook action Kilo's plugins own
+        view.action.type === "hook"
         ? `hook: ${JSON.stringify(clip(view.action.prompt))}`
-        : `code: ${JSON.stringify(
+        : // kilocode_change end
+          `code: ${JSON.stringify(
           clip(
             view.action.code
               .split("\n")

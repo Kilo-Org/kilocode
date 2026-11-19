@@ -55,7 +55,7 @@ import { Location } from "./location.js"
 import { LocationServiceMap } from "./location-service-map.js"
 import { Permission } from "./permission.js"
 import { Plugin } from "./plugin.js"
-import { PluginHooks } from "./plugin/hooks.js"
+import { PluginHooks } from "./plugin/hooks.js" // kilocode_change - automation claim seam
 import { Project } from "./project.js"
 import { Session } from "./session.js"
 import { SessionExecution } from "./session/execution.js"
