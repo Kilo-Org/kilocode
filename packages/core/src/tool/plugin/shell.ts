@@ -40,6 +40,7 @@ const OS =
 const description = (shell?: string, autoBackground = false) =>
   [
     "Execute a shell command and return its output.",
+    "Include a short description for every command, even when the command is self-explanatory.", // kilocode_change(shell-tool-card) - ask for a title without requiring it at runtime
     ...(shell ? [`Commands run on ${OS} using ${shell}.`] : []),
     "Quote file paths containing spaces or special characters.",
     "Prefer dedicated tools over shell commands when possible.",
@@ -54,9 +55,8 @@ const description = (shell?: string, autoBackground = false) =>
 const input = (autoBackground: boolean) =>
   Schema.Struct({
     // kilocode_change start - model-written summary shown instead of the raw command in the tool card.
-    // Required: models such as Claude skip an optional summary, so their cards showed bare `cd <worktree> && ...` rows.
-    // It comes first: models write arguments in schema order, so the card can show it before the command streams.
-    description: Schema.String.annotate({
+    // Put the summary first so it can appear while the command streams. Do not require display metadata to run a command.
+    description: Schema.optionalKey(Schema.String).annotate({
       description:
         "A clear, concise description of what this command does in 5-10 words, shown as the title of the tool card. Examples: 'Shows working tree status', 'Runs the core package tests', 'Installs package dependencies'.",
     }),
