@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { adoptToast, noticeToast, shareToast, whenStarted } from "../../src/kilocode/browser-session"
+import type { KiloBrowserRpc } from "@opencode/schema/kilocode/browser"
+import { adoptToast, browserSession, noticeToast, shareToast, whenStarted } from "../../src/kilocode/browser-session"
 
 const hint =
   'Install the Kilo browser extension and turn on "Allow local agents" in its settings, or set browser.backend to "playwright".'
@@ -140,5 +141,91 @@ describe("browser notices", () => {
     expect(noticeToast({ kind: "outdated", sessionID: "ses_a" as never, hint: "Update it." }).title).toBe(
       "Browser extension out of date",
     )
+  })
+})
+
+describe("browser notices in the TUI", () => {
+  /**
+   * `browserSession` over a stand-in plugin context: the `kilocode.browser` RPC answers `share` and `adopt` with the
+   * given results, `notice` raises one event, and every toast lands in `toasts`.
+   */
+  function harness(answers: { share?: KiloBrowserRpc.Share; adopt?: KiloBrowserRpc.Adopt } = {}) {
+    const toasts: { message: string; sessionID?: string }[] = []
+    const listeners: ((event: { data: KiloBrowserRpc.Notice }) => void)[] = []
+    const rpc = {
+      share: async () => answers.share ?? { kind: "shared" },
+      adopt: async () => answers.adopt ?? { kind: "adopted" },
+      events: {
+        on: (_: "notice", listener: (event: { data: KiloBrowserRpc.Notice }) => void) => {
+          listeners.push(listener)
+          return () => void listeners.splice(listeners.indexOf(listener), 1)
+        },
+      },
+    }
+    const context = {
+      client: { rpc: () => rpc, plugin: { list: async () => ({ data: ["kilocode.browser"] }) } },
+      ui: {
+        toast: { show: (toast: { message: string; sessionID?: string }) => void toasts.push(toast) },
+        // `/browser share` and `/browser adopt` act on the routed session.
+        router: { current: () => ({ type: "session", sessionID: "ses_a" }) },
+      },
+      data: { session: { get: () => undefined } },
+    }
+    const session = browserSession(context as never)
+    const off = session.watch()
+    return {
+      toasts,
+      session,
+      off,
+      /** One failed call's notice: `stopped`, or `unavailable` with the setup step. */
+      notice: (input: { kind: "stopped" | "unavailable"; sessionID: string }) => {
+        const sessionID = input.sessionID as never
+        const data: KiloBrowserRpc.Notice =
+          input.kind === "stopped" ? { kind: "stopped", sessionID } : { kind: "unavailable", sessionID, hint }
+        for (const listener of [...listeners]) listener({ data })
+      },
+    }
+  }
+
+  test("the same notice for the same session shows once; another kind or session shows", () => {
+    const host = harness()
+    host.notice({ kind: "stopped", sessionID: "ses_a" })
+    host.notice({ kind: "stopped", sessionID: "ses_a" })
+    expect(host.toasts.map((toast) => toast.sessionID)).toEqual(["ses_a"])
+    host.notice({ kind: "unavailable", sessionID: "ses_a" })
+    host.notice({ kind: "stopped", sessionID: "ses_b" })
+    host.notice({ kind: "unavailable", sessionID: "ses_a" })
+    expect(host.toasts.map((toast) => [toast.sessionID, toast.message])).toEqual([
+      ["ses_a", "You stopped the browser for this session. Run /browser adopt to give it its tabs back."],
+      ["ses_a", hint],
+      ["ses_b", "You stopped the browser for this session. Run /browser adopt to give it its tabs back."],
+    ])
+  })
+
+  test("a successful share or adopt shows that session's next notice again, and only that session's", async () => {
+    for (const act of ["share", "adopt"] as const) {
+      const host = harness()
+      host.notice({ kind: "stopped", sessionID: "ses_a" })
+      host.notice({ kind: "stopped", sessionID: "ses_b" })
+      await host.session[act]()
+      host.notice({ kind: "stopped", sessionID: "ses_a" })
+      host.notice({ kind: "stopped", sessionID: "ses_b" })
+      expect(host.toasts.map((toast) => toast.sessionID ?? act)).toEqual(["ses_a", "ses_b", act, "ses_a"])
+    }
+  })
+
+  test("a share that did not succeed keeps the notice shown once", async () => {
+    const host = harness({ share: { kind: "not_extension" } })
+    host.notice({ kind: "stopped", sessionID: "ses_a" })
+    await host.session.share()
+    host.notice({ kind: "stopped", sessionID: "ses_a" })
+    expect(host.toasts.map((toast) => toast.sessionID ?? "share")).toEqual(["ses_a", "share"])
+  })
+
+  test("unsubscribing stops the notices", () => {
+    const host = harness()
+    host.off()
+    host.notice({ kind: "stopped", sessionID: "ses_a" })
+    expect(host.toasts).toEqual([])
   })
 })
