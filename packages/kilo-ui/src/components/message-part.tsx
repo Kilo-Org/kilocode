@@ -54,6 +54,7 @@ import { useToolChildSession } from "./tool-child-session"
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { inputChanges, streamedTool, streamInterval, type ChangeCount } from "./tool-stream"
 import { busy, createSmoothText, createThrottledValue } from "./tool-utils"
+import { ToolImages } from "./tool-images"
 import { Tooltip } from "./tooltip"
 
 export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
@@ -657,12 +658,10 @@ ToolRegistry.register({
   name: "read",
   render(props) {
     const i18n = useI18n()
-    const dialog = useDialog()
     const path = () => string(props.input.path)
     const args = () =>
       ["offset", "limit"].flatMap((key) => (typeof props.input[key] === "number" ? [`${key}=${props.input[key]}`] : []))
     const line = () => (typeof props.input.offset === "number" ? props.input.offset : undefined)
-    const images = () => props.attachments.filter((file) => file.mime.startsWith("image/"))
     return (
       <>
         <BasicTool
@@ -710,26 +709,7 @@ ToolRegistry.register({
             )}
           </For>
         </Show>
-        <Show when={images().length}>
-          <div data-slot="tool-read-images">
-            <For each={images()}>
-              {(file) => (
-                <div
-                  data-slot="tool-read-image"
-                  onClick={() => dialog.show(() => <ImagePreview src={file.uri} alt={file.name ?? undefined} />)}
-                >
-                  <img
-                    data-slot="tool-read-image-img"
-                    src={file.uri}
-                    alt={file.name ?? i18n.t("ui.message.attachment.alt")}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-              )}
-            </For>
-          </div>
-        </Show>
+        <ToolImages files={props.attachments} />
       </>
     )
   },

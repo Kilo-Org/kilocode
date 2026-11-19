@@ -163,6 +163,7 @@ export const dict = {
   "browser.state.unavailable": "ไม่พร้อมใช้งาน",
   "browser.state.readyHint": "โปรไฟล์ Chromium ของ Kilo จะเริ่มเมื่อเรียกใช้เบราว์เซอร์ครั้งแรก",
   "browser.state.extensionHint": "เชื่อมต่อส่วนขยายเบราว์เซอร์ Kilo เพื่อใช้เบราว์เซอร์ของคุณเอง",
+  "ui.permission.reason": "เหตุผล: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "สลับการอนุมัติอัตโนมัติ",

@@ -155,6 +155,7 @@ export const dict = {
   "browser.state.unavailable": "不可用",
   "browser.state.readyHint": "Kilo 拥有的 Chromium 配置，在首次浏览器调用时启动",
   "browser.state.extensionHint": "连接 Kilo 浏览器扩展以使用你自己的浏览器",
+  "ui.permission.reason": "原因：{{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "切换自动批准",
