@@ -77,6 +77,13 @@ describe("browser observation", () => {
     expect(observed.text).not.toContain('button "Sign in" [ref=e5]')
   })
 
+  test("none mode keeps the modal state, so a dialog is never hidden from the model", () => {
+    const observed = observe({ mode: "none", text: second })
+    expect(observed.text).toContain('### Modal state\n- ["alert" dialog with message "Signed in"]')
+    expect(observed.text).not.toContain("### Snapshot")
+    expect(observed.text).not.toContain("### Events")
+  })
+
   test("diff mode returns the full snapshot on the first visit", () => {
     const observed = observe({ mode: "diff", text: first })
     expect(observed.text).toContain("### Snapshot\n```yaml")
