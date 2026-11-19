@@ -198,7 +198,8 @@ const SHARE_ADOPT_FIX = "kilocode #16392 (/browser share, /browser adopt and bro
  * What fails today for a reason owned elsewhere: whole scenarios, with the failure messages they are expected to
  * produce, and single checks (`<scenario>:<check>`) inside scenarios that otherwise must pass. A failure that matches
  * none of a scenario's messages (a harness error, a TUI or serve that never starts, another regression) stays `FAIL`
- * (see `finish`); a known scenario or check that passes is reported as an unexpected pass, so its entry can go.
+ * (see `finish`). A check entry with `failures` is held to them too: a miss with any other message is a plain failure.
+ * A known scenario or check that passes is reported as an unexpected pass, so its entry can go.
  */
 const KNOWN_FAILURES: Record<string, { reason: string; failures?: RegExp[] }> = {
   "stop-race": { reason: SETTINGS_FIX, failures: [/^a turn running at Stop all opened a new session/] },
@@ -225,17 +226,41 @@ const KNOWN_FAILURES: Record<string, { reason: string; failures?: RegExp[] }> = 
   "controls:disconnect": { reason: SETTINGS_FIX },
   "settings-faults:stop-all-text": { reason: SETTINGS_FIX },
   "settings-faults:disconnect-text": { reason: SETTINGS_FIX },
-  "tui:prompt-text": { reason: PROMPTS_FIX },
-  "tui:masked-text": { reason: PROMPTS_FIX },
-  "tui:notices": { reason: SHARE_ADOPT_FIX },
+  "tui:prompt-text": {
+    reason: PROMPTS_FIX,
+    failures: [
+      /^(once|always|reject): the navigate prompt does not read "Open pages on \S+" with "Approving lets this conversation open pages on \S+ until it ends\."$/,
+      /^(once|always|reject): a browser prompt still reads "Call tool browser"$/,
+      /^(once|always): no prompt reads "Read pages on \S+" with "Approving lets this conversation read pages on \S+ until it ends\." for the snapshot$/,
+      /^(ask|allow-all): the sensitive prompt does not read "Sensitive browser step on \S+" with a "Reason: …" line$/,
+    ],
+  },
+  "tui:masked-text": {
+    reason: PROMPTS_FIX,
+    failures: [
+      /^(ask|allow-all): the pane shows the typed password: › browser\.type \[element=the password field, target=\w+, text=hunter2\]/,
+    ],
+  },
+  "tui:notices": {
+    reason: SHARE_ADOPT_FIX,
+    failures: [
+      /^(ask|allow-all): no "You stopped the browser for this session…" toast after Stop all; toasts: \[(?!.*stopped).*\]$/,
+      /^the TUI shows no "Browser not available" toast with the unpaired install hint; toasts: \[(?!.*Browser not available).*\]$/,
+    ],
+  },
 }
 /** The known checks this run evaluated: their outcome and, when they failed, the message. */
 const knownChecks: { check: string; message?: string; passed: boolean; reason: string }[] = []
 
-/** A hard check that is a known failure today: a miss is recorded against its reason instead of failing the run. */
+/**
+ * A hard check that is a known failure today: a miss is recorded against its reason instead of failing the run, as
+ * long as its message is one the entry expects (when the entry lists any).
+ */
 function expectKnown(check: string, condition: boolean, message: string) {
   const known = KNOWN_FAILURES[check]
   if (known === undefined) return expect(condition, message)
+  if (!condition && known.failures && !known.failures.some((pattern) => pattern.test(message)))
+    return expect(false, `${check} (known for ${known.reason}) failed with an unexpected message: ${message}`)
   knownChecks.push({ check, passed: condition, reason: known.reason, ...(condition ? {} : { message }) })
   return condition
 }
@@ -1232,13 +1257,21 @@ async function tuiSensitiveAndStop(mode: "ask" | "allow-all") {
     out["maskedLines"] = watchedState.masked
     out["leakedLines"] = watchedState.leaks
     const panes = [sensitivePrompt, again, String(out["afterStop"])].filter((text): text is string => text !== undefined)
-    // The running browser.type row sits above the sensitive prompt, so the saved prompt pane holds it for certain.
+    // The running browser.type row sits above the sensitive prompt, so the saved prompt pane holds it for certain; the
+    // watcher may sample too few frames to see it.
+    const leaked = [
+      ...new Set([
+        ...watchedState.leaks,
+        ...panes.flatMap((text) => text.split("\n").filter((line) => line.includes(PASSWORD_VALUE)).map((line) => line.trim())),
+      ]),
+    ]
     expectKnown(
       "tui:masked-text",
-      watchedState.leaks.length === 0 &&
-        !panes.some((text) => text.includes(PASSWORD_VALUE)) &&
+      leaked.length === 0 &&
         (watchedState.masked.some((line) => line.includes("text=•••")) || panes.some((text) => text.includes("text=•••"))),
-      `${mode}: the pane shows the typed password or no tool row shows "text=•••": ${watchedState.leaks.join(" / ")}`,
+      leaked.length > 0
+        ? `${mode}: the pane shows the typed password: ${leaked.join(" / ")}`
+        : `${mode}: no tool row shows "text=•••"`,
     )
     expectKnown(
       "tui:notices",
