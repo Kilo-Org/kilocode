@@ -153,13 +153,16 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
     fun nodes(items: List<ActiveItem>, pin: String? = null): List<ActiveTreeNode> {
         pinned = pin ?: pinned
         assign()
-        val sections = state.sections.associateBy { it.key }
-        val grouped = items.groupBy { state.membership[it.key]?.takeIf(sections::containsKey) ?: ROOT }
+        // The tree is keyed, so a repeated item or a corrupted section list must not emit two nodes
+        // with one key. Keep the first occurrence, which is the caller's preferred ordering.
+        val sections = state.sections.distinctBy { it.key }.associateBy { it.key }
+        val grouped = items.distinctBy { it.key }.groupBy { state.membership[it.key]?.takeIf(sections::containsKey) ?: ROOT }
         fun sorted(parent: String, rows: List<ActiveItem>): List<ActiveItem> {
             val rank = state.order[parent].orEmpty().withIndex().associate { it.value to it.index }
             return rows.sortedBy { rank[it.key] ?: Int.MAX_VALUE }
         }
-        val nodes = sorted(ROOT, grouped[ROOT].orEmpty() + state.sections).map { item ->
+        val roots = (grouped[ROOT].orEmpty() + sections.values).distinctBy { it.key }
+        val nodes = sorted(ROOT, roots).map { item ->
             ActiveTreeNode(item, sections[item.key]?.let { section ->
                 sorted(section.key, grouped[section.key].orEmpty()).map { ActiveTreeNode(it) }
             }, color = ActiveTreeColors.color(sections[item.key]?.color))

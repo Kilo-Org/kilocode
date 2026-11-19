@@ -85,6 +85,22 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("/repo", controller.current?.path)
     }
 
+    fun `test completion resolving to the primary checkout keeps it out of the model`() {
+        val primary = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.createResult = { CreateWorktreeResultDto(primary) }
+        val controller = controller()
+        val tree = tree(controller)
+        val completed = mutableListOf<WorktreeDto>()
+        controller.onCreated = { completed += it }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("main", null) }
+        flush()
+
+        assertEquals(emptyList<WorktreeDto>(), controller.model.items)
+        assertEquals(listOf(primary), completed)
+        assertEquals(0, (tree.preferredFocus() as ActiveTreeView).rowCount)
+    }
+
     fun `test branch tracker reloads a checkout switched outside the list`() {
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
         val feature = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")

@@ -339,7 +339,9 @@ class WorktreeController(
                 branches = branches.filterNot { it == created.branch }
                 known = known + created.branch
                 publish { cache().put(created) }
-                publish { model.replaceAll(listOf(created) + rows) }
+                // The model holds linked worktrees only; the primary checkout renders from [current],
+                // so adding it here would give the list two rows for one key.
+                publish { model.replaceAll(if (created.main) rows else listOf(created) + rows) }
                 publish { onSelect?.invoke(created.id) }
                 publish { onCreated?.invoke(created) }
                 telemetry("Worktree Created", mapOf("branch" to branch))
@@ -451,7 +453,13 @@ class WorktreeController(
                                 tasks.remove(temp.id)
                                 val worktree = event.worktree ?: return@edt
                                 val idx = model.getElementIndex(temp)
-                                if (idx >= 0) model.setElementAt(worktree, idx) else model.add(0, worktree)
+                                // The model holds linked worktrees only; the primary checkout
+                                // renders from [current], so never publish it as a second row.
+                                when {
+                                    worktree.main -> model.remove(temp)
+                                    idx >= 0 -> model.setElementAt(worktree, idx)
+                                    else -> model.add(0, worktree)
+                                }
                                 cache().put(worktree)
                                 // Queue the forked session for the editor the selection is about to
                                 // open; the tab's identity stays the worktree path alone.
