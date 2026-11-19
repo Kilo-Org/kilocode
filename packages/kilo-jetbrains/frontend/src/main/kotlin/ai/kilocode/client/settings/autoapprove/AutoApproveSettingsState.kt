@@ -20,7 +20,7 @@ internal val LEVELS = listOf("allow", "ask", "deny")
 // Keep aligned with the CLI's DEFAULT_RULES (permission-utils.ts:8-13).
 private val DEFAULT_LEVEL = mapOf(
     "external_directory" to "ask",
-    "bash" to "ask",
+    "shell" to "ask",
     "doom_loop" to "ask",
 )
 

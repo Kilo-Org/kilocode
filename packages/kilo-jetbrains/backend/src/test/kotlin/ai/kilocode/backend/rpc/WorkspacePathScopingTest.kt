@@ -61,7 +61,7 @@ class WorkspacePathScopingTest {
     @Test
     fun `workspace scope keeps normal project and kilo plan files`() {
         assertEquals("backend/src/Main.java", relativeWithinWorkspace(base, at("backend", "src", "Main.java")))
-        assertEquals(".kilo/plans/x.md", relativeWithinWorkspace(base, at(".kilo2", "plans", "x.md")))
+        assertEquals(".kilo2/plans/x.md", relativeWithinWorkspace(base, at(".kilo2", "plans", "x.md")))
     }
 
     @Test

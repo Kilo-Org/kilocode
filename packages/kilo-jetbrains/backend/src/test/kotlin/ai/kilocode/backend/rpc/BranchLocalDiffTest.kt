@@ -366,7 +366,7 @@ class BranchLocalDiffTest {
         git(repo, "config", "user.email", "test@kilo.ai")
         git(repo, "config", "user.name", "Kilo Test")
         git(repo, "config", "core.autocrlf", "false")
-        Files.writeString(repo.resolve(".gitignore"), ".kilo/\nignored.txt\n")
+        Files.writeString(repo.resolve(".gitignore"), ".kilo2/\nignored.txt\n")
         Files.writeString(repo.resolve("tracked.txt"), "one\ntwo\nthree\n")
         Files.writeString(repo.resolve("deleted.txt"), "remove\n")
         Files.writeString(repo.resolve("rename.txt"), "rename contents\n")

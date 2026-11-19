@@ -74,7 +74,7 @@ val splitPort = providers.gradleProperty("kilo.splitModeServerPort").map { it.to
 
 tasks {
     buildPlugin {
-        from(layout.projectDirectory.file("../../LICENSE")) { into(rootProject.name) }
+        from(layout.projectDirectory.file("../../LICENSE"))
     }
     if (providers.gradleProperty("kilo.cli.bundled").map(String::toBooleanStrict).orElse(false).get()) {
         buildPlugin { archiveClassifier.set("bundled") }

@@ -13,12 +13,12 @@ private enum class ExceptionKind { PATH, COMMAND }
 
 private val GRANULAR_TOOLS = listOf(
     "external_directory" to ExceptionKind.PATH,
-    "bash" to ExceptionKind.COMMAND,
+    "shell" to ExceptionKind.COMMAND,
     "read" to ExceptionKind.PATH,
     "edit" to ExceptionKind.PATH,
 )
 
-private val SIMPLE_TOOLS = listOf("glob", "grep", "list", "task", "skill", "lsp")
+private val SIMPLE_TOOLS = listOf("glob", "grep", "list", "subagent", "skill", "lsp")
 private val GROUPED_IDS = listOf("todoread", "todowrite")
 private val TRAILING_TOOLS = listOf("websearch", "webfetch", "doom_loop")
 

@@ -15,6 +15,7 @@ import ai.kilocode.backend.session.required
 import ai.kilocode.backend.session.sessionPath
 import ai.kilocode.backend.session.str
 import ai.kilocode.backend.v2.V2Client
+import ai.kilocode.backend.workspace.KiloWorkspaceData
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -74,7 +75,12 @@ class KiloBackendChatManager(private val cs: CoroutineScope) {
     private suspend fun select(api: V2Client, id: String, prompt: PromptDto) {
         val path = sessionPath(id)
         val info = api.call("session.get", path).data().jsonObject
-        if (prompt.agent != null && prompt.agent != info.str("agent")) api.call("session.switchAgent", path, body = fields("agent" to prompt.agent))
+        // A session created while location plugins are still loading can have no agent yet.
+        val previous = info.str("agent")
+        val agent = prompt.agent?.takeIf { it.isNotBlank() } ?: previous?.takeIf { it.isNotBlank() }
+            ?: KiloWorkspaceData(api, info.obj("location")?.required("directory")).agents().default
+        require(agent.isNotBlank()) { "The workspace has no primary agent available yet." }
+        if (agent != previous) api.call("session.switchAgent", path, body = fields("agent" to agent))
         if (prompt.providerID != null && prompt.modelID != null) {
             val model = fields("id" to prompt.modelID, "providerID" to prompt.providerID, "variant" to prompt.variant)
             if (model != info.obj("model")) api.call("session.switchModel", path, body = buildJsonObject { put("model", model) })

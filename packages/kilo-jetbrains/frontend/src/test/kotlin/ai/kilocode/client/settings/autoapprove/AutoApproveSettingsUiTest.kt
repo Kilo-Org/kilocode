@@ -31,7 +31,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 
 // Matches AutoApproveContent's fixed granular section order.
-private val LEVEL_SELECT_ORDER = listOf("external_directory", "bash", "read", "edit")
+private val LEVEL_SELECT_ORDER = listOf("external_directory", "shell", "read", "edit")
 
 class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     private lateinit var appScope: CoroutineScope
@@ -113,49 +113,49 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
 
     fun `test choosing Default reverts a tool to inherited`() {
         val panel = requireUi()
-        rpc.state.value = rpc.state.value.copy(config = ConfigDto(permission = mapOf("bash" to PermissionRuleDto.Level("deny"))))
+        rpc.state.value = rpc.state.value.copy(config = ConfigDto(permission = mapOf("shell" to PermissionRuleDto.Level("deny"))))
         app._state.value = rpc.state.value
         flushUntil { !edt { panel.modified() } }
 
         edt {
-            selectInherit(levelSelectFor(panel, "bash"))
+            selectInherit(levelSelectFor(panel, "shell"))
             panel.applyDraft()
         }
 
         flushUntil { rpc.configPatches.isNotEmpty() }
-        assertEquals(mapOf("bash" to PermissionRuleDto.Level(null)), rpc.configPatches.single().permission)
+        assertEquals(mapOf("shell" to PermissionRuleDto.Level(null)), rpc.configPatches.single().permission)
     }
 
     fun `test adding an exception to a granular tool sends full patterns patch`() {
         val panel = requireUi()
 
         edt {
-            val list = inlineListFor(panel, "bash")
+            val list = inlineListFor(panel, "shell")
             list.input = { "git *" }
             click(button(list, 0))
             panel.applyDraft()
         }
 
         flushUntil { rpc.configPatches.isNotEmpty() }
-        val rule = rpc.configPatches.single().permission?.get("bash")
+        val rule = rpc.configPatches.single().permission?.get("shell")
         assertEquals(PermissionRuleDto.Patterns(mapOf("git *" to "allow")), rule)
     }
 
     fun `test scalar wildcard is preserved after applying a new exception`() {
         val panel = requireUi()
-        rpc.state.value = rpc.state.value.copy(config = ConfigDto(permission = mapOf("bash" to PermissionRuleDto.Level("ask"))))
+        rpc.state.value = rpc.state.value.copy(config = ConfigDto(permission = mapOf("shell" to PermissionRuleDto.Level("ask"))))
         app._state.value = rpc.state.value
         flushUntil { !edt { panel.modified() } }
 
         edt {
-            val list = inlineListFor(panel, "bash")
+            val list = inlineListFor(panel, "shell")
             list.input = { "git *" }
             click(button(list, 0))
             panel.applyDraft()
         }
 
         flushUntil { rpc.configPatches.isNotEmpty() }
-        val rule = rpc.state.value.config?.permission?.get("bash")
+        val rule = rpc.state.value.config?.permission?.get("shell")
         assertEquals(PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "allow")), rule)
     }
 
@@ -223,12 +223,12 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         val panel = requireUi()
         rpc.state.value = rpc.state.value.copy(
             config = ConfigDto(permission = mapOf(
-                "bash" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git log *" to "allow", "got" to "allow")),
+                "shell" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git log *" to "allow", "got" to "allow")),
             )),
         )
         app._state.value = rpc.state.value
         flushUntil { !edt { panel.modified() } }
-        val list = edt { inlineListFor(panel, "bash") }
+        val list = edt { inlineListFor(panel, "shell") }
         val height = edt {
             val jList = jbList(list)
             val idx = indexOf(jList, "git log *")
@@ -275,12 +275,12 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         val panel = requireUi()
         rpc.state.value = rpc.state.value.copy(
             config = ConfigDto(permission = mapOf(
-                "bash" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "allow")),
+                "shell" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "allow")),
             )),
         )
         app._state.value = rpc.state.value
         flushUntil { !edt { panel.modified() } }
-        val list = edt { inlineListFor(panel, "bash") }
+        val list = edt { inlineListFor(panel, "shell") }
 
         edt {
             list.editInput = { "git status" }
@@ -292,7 +292,7 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         }
 
         flushUntil { rpc.configPatches.isNotEmpty() }
-        val rule = rpc.configPatches.last().permission?.get("bash")
+        val rule = rpc.configPatches.last().permission?.get("shell")
         assertEquals(PermissionRuleDto.Patterns(mapOf("*" to "ask", "git status" to "allow", "git *" to null)), rule)
         edt {
             assertEquals("git status", (jbList(list).selectedValue as ActiveListItem).key)
@@ -468,6 +468,6 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     }
 
     private companion object {
-        val GRANULAR_ORDER = listOf("external_directory", "bash", "read", "edit")
+        val GRANULAR_ORDER = listOf("external_directory", "shell", "read", "edit")
     }
 }

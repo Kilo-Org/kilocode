@@ -32,6 +32,7 @@ class V2HttpException(val status: Int, val body: String) : IOException("Kilo API
 class V2Client(baseUrl: String, private val authorization: String) : AutoCloseable {
     private val base = baseUrl.toHttpUrl()
     private val http = OkHttpClient.Builder().proxy(Proxy.NO_PROXY).followRedirects(false).followSslRedirects(false)
+        .retryOnConnectionFailure(false)
         // Model generation requests can outlive OkHttp's default ten-second inactivity timeout.
         .readTimeout(0, TimeUnit.MILLISECONDS).build()
     private val eventSources = EventSources.createFactory(http)

@@ -11,15 +11,15 @@ import kotlin.test.assertTrue
 class AutoApproveSettingsStateTest {
     @Test
     fun `draft reads permission config`() {
-        val draft = permissionDraft(ConfigDto(permission = mapOf("bash" to PermissionRuleDto.Level("allow"))))
+        val draft = permissionDraft(ConfigDto(permission = mapOf("shell" to PermissionRuleDto.Level("allow"))))
 
-        assertEquals("allow", wildcardLevel(draft.rules["bash"]))
+        assertEquals("allow", wildcardLevel(draft.rules["shell"]))
     }
 
     @Test
     fun `default level rules match CLI defaults`() {
         assertEquals("ask", defaultLevel("external_directory"))
-        assertEquals("ask", defaultLevel("bash"))
+        assertEquals("ask", defaultLevel("shell"))
         assertEquals("ask", defaultLevel("doom_loop"))
         assertEquals("allow", defaultLevel("read"))
         assertEquals("allow", defaultLevel("edit"))
@@ -29,7 +29,7 @@ class AutoApproveSettingsStateTest {
     fun `effective level falls back to default when unset`() {
         val draft = PermissionDraft()
 
-        assertEquals("ask", effectiveLevel(draft, "bash"))
+        assertEquals("ask", effectiveLevel(draft, "shell"))
         assertEquals("allow", effectiveLevel(draft, "read"))
     }
 
@@ -52,9 +52,9 @@ class AutoApproveSettingsStateTest {
     @Test
     fun `setWildcard on unset tool emits scalar patch`() {
         val from = PermissionDraft()
-        val to = setWildcard(from, "bash", "deny")
+        val to = setWildcard(from, "shell", "deny")
 
-        assertEquals(mapOf("bash" to PermissionRuleDto.Level("deny")), permissionPatch(from, to))
+        assertEquals(mapOf("shell" to PermissionRuleDto.Level("deny")), permissionPatch(from, to))
     }
 
     @Test
@@ -72,11 +72,11 @@ class AutoApproveSettingsStateTest {
 
     @Test
     fun `inheritWildcard removes tool entirely when no exceptions`() {
-        val from = PermissionDraft(rules = mapOf("bash" to PermissionRuleDto.Level("deny")))
-        val to = inheritWildcard(from, "bash")
+        val from = PermissionDraft(rules = mapOf("shell" to PermissionRuleDto.Level("deny")))
+        val to = inheritWildcard(from, "shell")
 
         assertTrue(to.rules.isEmpty())
-        assertEquals(mapOf("bash" to PermissionRuleDto.Level(null)), permissionPatch(from, to))
+        assertEquals(mapOf("shell" to PermissionRuleDto.Level(null)), permissionPatch(from, to))
     }
 
     @Test
@@ -96,13 +96,13 @@ class AutoApproveSettingsStateTest {
 
     @Test
     fun `addException on scalar wildcard preserves the wildcard as star pattern`() {
-        val from = PermissionDraft(rules = mapOf("bash" to PermissionRuleDto.Level("ask")))
-        val to = addException(from, "bash", "git *")
+        val from = PermissionDraft(rules = mapOf("shell" to PermissionRuleDto.Level("ask")))
+        val to = addException(from, "shell", "git *")
 
-        assertEquals(listOf("git *" to "allow"), exceptions(to.rules["bash"]))
-        assertEquals("ask", wildcardLevel(to.rules["bash"]))
+        assertEquals(listOf("git *" to "allow"), exceptions(to.rules["shell"]))
+        assertEquals("ask", wildcardLevel(to.rules["shell"]))
         assertEquals(
-            mapOf("bash" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "allow"))),
+            mapOf("shell" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "allow"))),
             permissionPatch(from, to),
         )
     }
@@ -110,21 +110,21 @@ class AutoApproveSettingsStateTest {
     @Test
     fun `addException ignores an existing pattern`() {
         val draft = PermissionDraft(
-            rules = mapOf("bash" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "deny"))),
+            rules = mapOf("shell" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "deny"))),
         )
 
-        assertEquals(draft, addException(draft, "bash", "git *"))
+        assertEquals(draft, addException(draft, "shell", "git *"))
     }
 
     @Test
     fun `editException ignores an existing target pattern`() {
         val draft = PermissionDraft(
             rules = mapOf(
-                "bash" to PermissionRuleDto.Patterns(mapOf("git *" to "deny", "git status" to "ask")),
+                "shell" to PermissionRuleDto.Patterns(mapOf("git *" to "deny", "git status" to "ask")),
             ),
         )
 
-        assertEquals(draft, editException(draft, "bash", "git *", "git status"))
+        assertEquals(draft, editException(draft, "shell", "git *", "git status"))
     }
 
     @Test
@@ -208,7 +208,7 @@ class AutoApproveSettingsStateTest {
     fun `no-op diff returns null`() {
         val draft = PermissionDraft(
             rules = mapOf(
-                "bash" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "allow")),
+                "shell" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "allow")),
                 "read" to PermissionRuleDto.Level("allow"),
             ),
         )
@@ -220,9 +220,9 @@ class AutoApproveSettingsStateTest {
     @Test
     fun `patch wraps the permission patch in a ConfigPatchDto`() {
         val from = PermissionDraft()
-        val to = setWildcard(from, "bash", "deny")
+        val to = setWildcard(from, "shell", "deny")
 
-        assertEquals(mapOf("bash" to PermissionRuleDto.Level("deny")), patch(from, to)?.permission)
+        assertEquals(mapOf("shell" to PermissionRuleDto.Level("deny")), patch(from, to)?.permission)
     }
 
     @Test
