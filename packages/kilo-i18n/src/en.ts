@@ -205,6 +205,7 @@ export const dict = {
   "browser.permission.sensitive.title": "Sensitive browser step on {{origin}}",
   "browser.permission.sensitive.reason": "Reason: {{reason}}",
   "browser.permission.sensitive.once": "Only a person can approve this step. The approval covers this one step.",
+  "ui.permission.reason": "Reason: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Toggle auto-approve",

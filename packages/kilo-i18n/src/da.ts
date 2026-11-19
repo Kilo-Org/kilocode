@@ -177,6 +177,7 @@ export const dict = {
   "browser.permission.sensitive.title": "Følsomt browsertrin på {{origin}}",
   "browser.permission.sensitive.reason": "Årsag: {{reason}}",
   "browser.permission.sensitive.once": "Kun en person kan godkende dette trin. Godkendelsen dækker kun dette ene trin.",
+  "ui.permission.reason": "Årsag: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Skift auto-godkendelse",

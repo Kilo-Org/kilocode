@@ -173,6 +173,7 @@ export const dict = {
   "browser.permission.sensitive.title": "{{origin}}의 민감한 브라우저 단계",
   "browser.permission.sensitive.reason": "이유: {{reason}}",
   "browser.permission.sensitive.once": "이 단계는 사람만 승인할 수 있습니다. 승인은 이 단계 하나에만 적용됩니다.",
+  "ui.permission.reason": "이유: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "자동 승인 전환",

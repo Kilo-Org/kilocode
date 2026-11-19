@@ -182,6 +182,7 @@ export const dict = {
   "browser.permission.sensitive.reason": "Reden: {{reason}}",
   "browser.permission.sensitive.once":
     "Alleen een persoon kan deze stap goedkeuren. De goedkeuring geldt alleen voor deze stap.",
+  "ui.permission.reason": "Reden: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Automatisch goedkeuren wisselen",

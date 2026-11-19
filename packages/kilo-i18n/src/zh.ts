@@ -166,6 +166,7 @@ export const dict = {
   "browser.permission.sensitive.title": "{{origin}} 上的敏感浏览器步骤",
   "browser.permission.sensitive.reason": "原因：{{reason}}",
   "browser.permission.sensitive.once": "只有用户才能批准此步骤。该批准仅涵盖这一个步骤。",
+  "ui.permission.reason": "原因：{{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "切换自动批准",

@@ -184,6 +184,7 @@ export const dict = {
   "browser.permission.sensitive.title": "Osjetljiv korak preglednika na {{origin}}",
   "browser.permission.sensitive.reason": "Razlog: {{reason}}",
   "browser.permission.sensitive.once": "Samo osoba može odobriti ovaj korak. Odobrenje pokriva samo ovaj korak.",
+  "ui.permission.reason": "Razlog: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Uključi/isključi automatsko odobravanje",

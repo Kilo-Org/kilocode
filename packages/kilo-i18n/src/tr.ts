@@ -180,6 +180,7 @@ export const dict = {
   "browser.permission.sensitive.title": "{{origin}} üzerinde hassas tarayıcı adımı",
   "browser.permission.sensitive.reason": "Neden: {{reason}}",
   "browser.permission.sensitive.once": "Bu adımı yalnızca bir kişi onaylayabilir. Onay yalnızca bu tek adımı kapsar.",
+  "ui.permission.reason": "Neden: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Otomatik onayı değiştir",

@@ -182,6 +182,7 @@ export const dict = {
   "browser.permission.sensitive.reason": "Powód: {{reason}}",
   "browser.permission.sensitive.once":
     "Ten krok może zatwierdzić tylko osoba. Zatwierdzenie obejmuje wyłącznie ten jeden krok.",
+  "ui.permission.reason": "Powód: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Przełącz automatyczne zatwierdzanie",

@@ -183,6 +183,7 @@ export const dict = {
   "browser.permission.sensitive.reason": "Motif : {{reason}}",
   "browser.permission.sensitive.once":
     "Seule une personne peut approuver cette étape. L'approbation ne couvre que cette étape.",
+  "ui.permission.reason": "Raison : {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Basculer l'approbation automatique",

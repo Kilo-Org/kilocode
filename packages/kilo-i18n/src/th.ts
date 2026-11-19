@@ -176,6 +176,7 @@ export const dict = {
   "browser.permission.sensitive.reason": "เหตุผล: {{reason}}",
   "browser.permission.sensitive.once":
     "มีเพียงบุคคลเท่านั้นที่อนุมัติขั้นตอนนี้ได้ การอนุมัติครอบคลุมเพียงขั้นตอนนี้เท่านั้น",
+  "ui.permission.reason": "เหตุผล: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "สลับการอนุมัติอัตโนมัติ",

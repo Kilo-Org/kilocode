@@ -181,6 +181,7 @@ export const dict = {
   "browser.permission.sensitive.reason": "Причина: {{reason}}",
   "browser.permission.sensitive.once":
     "Схвалити цей крок може лише людина. Схвалення стосується лише цього одного кроку.",
+  "ui.permission.reason": "Причина: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Перемкнути автосхвалення",

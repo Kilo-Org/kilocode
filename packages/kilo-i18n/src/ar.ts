@@ -173,6 +173,7 @@ export const dict = {
   "browser.permission.sensitive.title": "خطوة متصفح حساسة على {{origin}}",
   "browser.permission.sensitive.reason": "السبب: {{reason}}",
   "browser.permission.sensitive.once": "لا يمكن إلا لشخص الموافقة على هذه الخطوة. تغطي الموافقة هذه الخطوة فقط.",
+  "ui.permission.reason": "السبب: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "تبديل الموافقة التلقائية",

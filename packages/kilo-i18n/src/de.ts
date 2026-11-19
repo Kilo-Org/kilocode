@@ -183,6 +183,7 @@ export const dict = {
   "browser.permission.sensitive.reason": "Grund: {{reason}}",
   "browser.permission.sensitive.once":
     "Nur eine Person kann diesen Schritt genehmigen. Die Genehmigung gilt nur für diesen einen Schritt.",
+  "ui.permission.reason": "Grund: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Automatische Genehmigung umschalten",

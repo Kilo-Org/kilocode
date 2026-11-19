@@ -179,6 +179,7 @@ export const dict = {
   "browser.permission.sensitive.reason": "Årsak: {{reason}}",
   "browser.permission.sensitive.once":
     "Bare en person kan godkjenne dette trinnet. Godkjenningen gjelder bare dette ene trinnet.",
+  "ui.permission.reason": "Årsak: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Veksle automatisk godkjenning",
