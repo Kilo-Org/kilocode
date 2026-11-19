@@ -943,11 +943,15 @@ class KiloBackendAppService private constructor(
     suspend fun refreshProfile(): KiloProfile200Response? {
         val result = fetchProfile()
         val fresh = result.value
-        val current = _appState.value
-        if (current is KiloAppState.Ready) {
-            setAppReady(current.data.copy(profile = fresh))
+        // Background telemetry and config refreshes also republish Ready. Serialize the
+        // read-modify-write so a late publish cannot restore the snapshot taken before this update.
+        synchronized(loadLock) {
+            val current = _appState.value
+            if (current is KiloAppState.Ready) {
+                setAppReady(current.data.copy(profile = fresh))
+            }
+            profile = fresh
         }
-        profile = fresh
         return fresh
     }
 
@@ -985,10 +989,12 @@ class KiloBackendAppService private constructor(
     suspend fun logout(): Boolean {
         val client = connection.api ?: throw IllegalStateException("Not connected")
         val result = client.authRemove(providerID = "kilo")
-        val current = _appState.value
-        if (current is KiloAppState.Ready) {
-            profile = null
-            setAppReady(current.data.copy(profile = null))
+        synchronized(loadLock) {
+            val current = _appState.value
+            if (current is KiloAppState.Ready) {
+                profile = null
+                setAppReady(current.data.copy(profile = null))
+            }
         }
         return result
     }
