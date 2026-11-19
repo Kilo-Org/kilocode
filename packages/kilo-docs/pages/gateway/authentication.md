@@ -26,7 +26,7 @@ API keys are JWT tokens tied to your Kilo account. See [how to get your API key]
 import { createOpenAI } from "@ai-sdk/openai"
 
 const kilo = createOpenAI({
-  baseURL: "https://api.kilo.ai/api/gateway",
+  baseURL: "https://ai-gateway.kilo.ai/api/v1",
   apiKey: process.env.KILO_API_KEY,
 })
 ```
@@ -39,7 +39,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key=os.getenv("KILO_API_KEY"),
-    base_url="https://api.kilo.ai/api/gateway",
+    base_url="https://ai-gateway.kilo.ai/api/v1",
 )
 ```
 
@@ -47,7 +47,7 @@ client = OpenAI(
 {% tab label="cURL" %}
 
 ```bash
-curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
+curl -X POST "https://ai-gateway.kilo.ai/api/v1/chat/completions" \
   -H "Authorization: Bearer $KILO_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "anthropic/claude-sonnet-4.5", "messages": [{"role": "user", "content": "Hello"}]}'
@@ -111,7 +111,7 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 2. Keys are encrypted at rest using AES-256 encryption
 3. When you make a request for a model from that provider, the gateway automatically uses your key
 4. Usage is tracked but not billed to your Kilo balance (cost is set to $0)
-5. If your BYOK key fails, the request will not automatically fall back to Kilo's keys
+5. If a BYOK key's provider answers with an error, the gateway retries with your next BYOK key that serves the model, in route order. It never falls back to Kilo's keys: when every BYOK key fails, the request returns the last key's failure
 
 BYOK keys can be configured at the personal level or at the organization level. Organization-level keys apply to all members of the organization and require owner or billing manager access to manage.
 

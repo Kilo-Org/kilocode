@@ -1,8 +1,8 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
 import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
-import { resolveKiloGatewayBaseUrl } from "./url.js"
-import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
+import { resolveKiloGatewayBaseUrl, resolveKiloGatewayUrl } from "./url.js"
+import { KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
 export type KiloModelsResult = {
   models: Record<string, any>
@@ -57,6 +57,7 @@ const openRouterModelSchema = z.object({
       family: z.string().optional(),
       prompt: z.enum(PROMPTS).optional().catch(undefined),
       variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
+      reasoning_options: z.array(z.unknown()).optional().catch(undefined),
       ai_sdk_provider: z.enum(AI_SDK_PROVIDERS).optional().catch(undefined),
     })
     .optional(),
@@ -213,7 +214,9 @@ async function fetchRawKiloModels(options?: {
   const organizationId = options?.kilocodeOrganizationId
 
   // Construct base URL
-  const defaultBaseURL = organizationId ? `${KILO_API_BASE}/api/organizations/${organizationId}` : KILO_OPENROUTER_BASE
+  const defaultBaseURL = organizationId
+    ? resolveKiloGatewayUrl(`organizations/${organizationId}`)
+    : KILO_OPENROUTER_BASE
 
   const baseURL = options?.baseURL ?? defaultBaseURL
 
@@ -237,7 +240,7 @@ async function fetchRawKiloModels(options?: {
   }
 
   if (!response.ok) {
-    if (response.status === 401 && token && !organizationId && !finalBaseURL.includes("/api/organizations/")) {
+    if (response.status === 401 && token && !organizationId && !finalBaseURL.includes("/organizations/")) {
       return fetchRawKiloModels({})
     }
     const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
@@ -308,7 +311,11 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
     reasoning: supportsReasoning,
     temperature: supportsTemperature,
     recommendedIndex: model.preferredIndex,
-    variants: model.opencode?.variants,
+    // The gateway's `variants` are legacy; they only apply when `reasoning_options` is absent
+    // (e.g. admin-authored custom LLM variants).
+    variants: model.opencode?.reasoning_options
+      ? legacyVariants(model.opencode.reasoning_options, model.opencode.ai_sdk_provider)
+      : model.opencode?.variants,
     prompt: model.opencode?.prompt,
     ai_sdk_provider: model.opencode?.ai_sdk_provider,
     tool_call: tools,
@@ -340,6 +347,63 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
       ...(model.description && { description: model.description }),
     },
   }
+}
+
+// Mirrors `ReasoningEffortSchema` and `VerbositySchema` in Kilo-Org/cloud `packages/db/src/schema-types.ts`.
+const REASONING_EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+const VERBOSITIES = ["low", "medium", "high", "xhigh", "max"]
+
+const reasoningOptionSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("toggle") }),
+  z.object({ type: z.literal("effort"), values: z.array(z.unknown()) }),
+])
+
+/**
+ * Builds the OpenRouter-shaped variants from the gateway's `reasoning_options`, mirroring
+ * `toLegacyVariants` in Kilo-Org/cloud `packages/web-shared/src/lib/ai-gateway/providers/legacy-variants.ts`.
+ * `[]` (reasoning that is always on) keeps a single `thinking` variant, a lone toggle becomes
+ * `instant`/`thinking`, and effort variants of Anthropic models also get the matching `verbosity`,
+ * which the gateway maps to Anthropic's `effort`. Unknown entries (e.g. `budget_tokens`) are dropped
+ * one by one.
+ */
+function legacyVariants(
+  raw: readonly unknown[],
+  aiSdkProvider: NonNullable<OpenRouterModel["opencode"]>["ai_sdk_provider"],
+) {
+  const options = raw.flatMap((entry) => reasoningOptionSchema.safeParse(entry).data ?? [])
+  const toggle = options.some((option) => option.type === "toggle")
+  const efforts = [
+    ...new Set(
+      options.flatMap((option) =>
+        option.type === "effort"
+          ? option.values.filter(
+              (value): value is string => typeof value === "string" && REASONING_EFFORTS.includes(value),
+            )
+          : [],
+      ),
+    ),
+  ]
+  const entries =
+    raw.length === 0
+      ? [["thinking", "high"]]
+      : efforts.length === 0
+        ? toggle
+          ? [
+              ["instant", "none"],
+              ["thinking", "high"],
+            ]
+          : []
+        : [...(toggle && !efforts.includes("none") ? ["none"] : []), ...efforts].map((effort) => [effort, effort])
+  if (entries.length === 0) return undefined
+  return Object.fromEntries(
+    entries.map(([name, effort]) => [
+      name,
+      {
+        reasoning: { enabled: effort !== "none", effort },
+        ...(aiSdkProvider === "anthropic" && name === effort && VERBOSITIES.includes(effort) && { verbosity: effort }),
+      },
+    ]),
+  )
 }
 
 /**

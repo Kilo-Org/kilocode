@@ -1,8 +1,12 @@
 package ai.kilocode.client.session.views.tool
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -23,7 +27,10 @@ class ToolView(
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, mode = ToolBodyMode.EDITOR),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
-) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget {
+    private var display: BlockDisplay = KiloPluginSettings.getMcpToolDisplay(),
+    private val live: () -> Boolean = { true },
+) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget,
+    TranscriptDisplayTarget {
 
     override val contentId: String = tool.id
 
@@ -145,10 +152,23 @@ class ToolView(
         return changed
     }
 
-    private fun sync(): Boolean {
+    /**
+     * [force] reapplies even when the stored display matches a divergence from the card's
+     * containment. [auto] marks an automatic expansion from construction/streaming, which [live]
+     * may suppress for history or non-streaming blocks; an explicit display change passes
+     * `auto = false` and always applies.
+     */
+    private fun sync(force: Boolean = false, auto: Boolean = true): Boolean {
         val expand = canExpand(item)
         var changed = false
         changed = syncExpandable(expand) || changed
+        if (force || (!touched && (!auto || live()))) {
+            changed = if (display == BlockDisplay.EXPANDED && expand) {
+                expand() || changed
+            } else {
+                collapse() || changed
+            }
+        }
         changed = setVisible(parts.state, !expand) || changed
         changed = syncLabels() || changed
         val body = parts.content
@@ -158,6 +178,20 @@ class ToolView(
         }
         changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
+    }
+
+    @RequiresEdt
+    override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
+        if (!force && touched) return false
+        val next = display.mcpTool
+        // A forced call must reapply even when the stored value already matches: the card's containment
+        // can have diverged from it while the user held a manual state.
+        if (!force && this.display == next) return false
+        this.display = next
+        sync(force, auto = false)
+        // Same contract as update(): a state change the card applies itself must revalidate it.
+        refresh()
+        return true
     }
 
     private fun syncLabels(): Boolean {

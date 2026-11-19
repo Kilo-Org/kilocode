@@ -1,6 +1,6 @@
 import { TextAttributes } from "@opentui/core"
 import { createMemo, createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js"
-import open from "open"
+import { openUrl } from "@opencode-ai/core/open"
 import { useTheme } from "@tui/context/theme"
 import { useSDK } from "@tui/context/sdk"
 import { useBindings } from "@tui/keymap"
@@ -69,7 +69,7 @@ export function AnacondaDesktopSetup(props: { model: ModelComponent }) {
     if (action === "connect") return void controller.connect()
     const url = view().downloadURL
     if (!url) return
-    void open(url).catch(toast.error)
+    void openUrl(url).catch(toast.error)
   }
 
   useBindings(() => ({

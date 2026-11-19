@@ -1,11 +1,33 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.activeVisibleCells
+import ai.kilocode.client.ui.active.ActiveSelection
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import java.awt.Dimension
 
 class ActiveListSelectionTest : BasePlatformTestCase() {
+
+    fun `test renderer clears selection color for unselected row`() {
+        val item = row("a", "Alpha")
+        val model = com.intellij.ui.CollectionListModel(listOf(item))
+        val renderer = ActiveListRenderer(model)
+        val list = com.intellij.ui.components.JBList(model)
+        val stamp = renderer.getListCellRendererComponent(list, item, 0, true, true)
+        fun picker(component: java.awt.Container): ai.kilocode.client.session.ui.PickerRow? {
+            if (component is ai.kilocode.client.session.ui.PickerRow) return component
+            return component.components.filterIsInstance<java.awt.Container>().firstNotNullOfOrNull { picker(it) }
+        }
+        val wrap = picker(stamp)!!
+        assertEquals(UIUtil.getListBackground(true, true), wrap.selectionColor)
+        renderer.getListCellRendererComponent(list, item, 0, false, false)
+        assertNull(wrap.selectionColor)
+        assertEquals(list.background, wrap.background)
+    }
 
     fun `test two phase rebuild keeps selection and mutes onSelect`() {
         var calls = 0
@@ -28,9 +50,9 @@ class ActiveListSelectionTest : BasePlatformTestCase() {
         view.update(rows("a", "b"))
         assertTrue(view.select("b"))
 
-        view.update(rows("a"), ActiveListSelection.Preserve)
+        view.update(rows("a"), ActiveSelection.Preserve)
         assertNull(view.selected())
-        view.update(rows("a", "b"), ActiveListSelection.Preserve)
+        view.update(rows("a", "b"), ActiveSelection.Preserve)
 
         assertEquals("b", view.selected()?.key)
     }
@@ -51,10 +73,10 @@ class ActiveListSelectionTest : BasePlatformTestCase() {
         view.update(rows("a", "b", "c"))
         assertTrue(view.select("b"))
 
-        view.update(rows("a", "c"), ActiveListSelection.Slide)
+        view.update(rows("a", "c"), ActiveSelection.Slide)
         assertEquals("c", view.selected()?.key)
 
-        view.update(emptyList(), ActiveListSelection.Slide)
+        view.update(emptyList(), ActiveSelection.Slide)
         assertNull(view.selected())
     }
 
@@ -63,7 +85,7 @@ class ActiveListSelectionTest : BasePlatformTestCase() {
         view.update(rows("a", "b"))
         view.clearSelection()
 
-        view.update(rows("a"), ActiveListSelection.Slide)
+        view.update(rows("a"), ActiveSelection.Slide)
 
         assertNull(view.selected())
     }
@@ -81,7 +103,7 @@ class ActiveListSelectionTest : BasePlatformTestCase() {
     }
 
     fun `test multi select restores all surviving rows`() {
-        val view = ActiveListView("", ActiveListConfig(selection = javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION)) { _, _ -> }
+        val view = ActiveListView("", options = ActiveListOptions(selection = javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION)) { _, _ -> }
         view.update(rows("a", "b", "c", "d"))
         view.setSelectionIndices(intArrayOf(1, 3))
 
@@ -96,9 +118,9 @@ class ActiveListSelectionTest : BasePlatformTestCase() {
         val view = view()
         view.update(rows("a", "b"))
 
-        view.update(rows("a"), ActiveListSelection.Key("b"))
+        view.update(rows("a"), ActiveSelection.Key("b"))
         assertNull(view.selected())
-        view.update(rows("a", "b"), ActiveListSelection.Preserve)
+        view.update(rows("a", "b"), ActiveSelection.Preserve)
 
         assertEquals("b", view.selected()?.key)
     }
@@ -119,7 +141,7 @@ class ActiveListSelectionTest : BasePlatformTestCase() {
         view.update(rows("a", "b", "c"))
         assertTrue(view.select("c"))
 
-        view.update(rows("a", "b"), ActiveListSelection.Slide)
+        view.update(rows("a", "b"), ActiveSelection.Slide)
 
         assertEquals("b", view.selected()?.key)
     }
@@ -193,7 +215,7 @@ class ActiveListSelectionTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
         assertEquals(before, scroll.viewport.viewPosition.y)
 
-        view.update(rows, ActiveListSelection.Key("k0"))
+        view.update(rows, ActiveSelection.Key("k0"))
         UIUtil.dispatchAllInvocationEvents()
 
         assertEquals("k0", view.selected()?.key)
@@ -213,24 +235,24 @@ class ActiveListSelectionTest : BasePlatformTestCase() {
     }
 
     fun `test progress row keeps cells in model but hides visible actions`() {
-        val item = object : ActiveListItem {
+        val item = object : ActiveItem {
             override val key = "busy"
             override val title = "Busy"
             override val progress = "Working..."
-            override val cells = listOf(ActiveListCell("open", "Open", primary = true))
+            override val cells = listOf(ActiveCell("open", "Open", primary = true))
         }
 
         assertEquals(listOf("open"), item.cells.map { it.id })
-        assertEquals(emptyList<ActiveListCell>(), activeListVisibleCells(item, active = true))
+        assertEquals(emptyList<ActiveCell>(), activeVisibleCells(item, active = true))
     }
 
     private fun view(onSelect: () -> Unit = {}): ActiveListView {
         return ActiveListView("") { _, _ -> }.apply { this.onSelect = onSelect }
     }
 
-    private fun rows(vararg keys: String): List<ActiveListItem> = keys.map { row(it, title(it)) }
+    private fun rows(vararg keys: String): List<ActiveItem> = keys.map { row(it, title(it)) }
 
-    private fun row(key: String, title: String, identity: Any = key): ActiveListItem = object : ActiveListItem {
+    private fun row(key: String, title: String, identity: Any = key): ActiveItem = object : ActiveItem {
         override val key = key
         override val identity = identity
         override val title = title

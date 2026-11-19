@@ -103,6 +103,7 @@ val stageRepoCli = tasks.register<StageRepoCliTask>("stageRepoCli") {
     this.bin.set(bin)
     archive.set(generatedCli.map { it.file("kilo-cli.zip") })
     outputs.upToDateWhen { false }
+    mustRunAfter(buildRepoCli)
 }
 
 val stageBundledCli = tasks.register<StageBundledCliTask>("stageBundledCli") {

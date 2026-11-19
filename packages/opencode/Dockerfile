@@ -19,6 +19,14 @@ COPY dist/@kilocode/cli-linux-arm64-musl/bin/licenses /usr/local/share/licenses/
 # kilocode_change end
 
 ARG TARGETARCH
+# kilocode_change start
+FROM build-${TARGETARCH} AS openshell
+RUN kilo --version
+ENTRYPOINT ["kilo"]
+COPY script/kilocode/openshell/kilo.json /etc/kilo/kilo.json
+ENV KILO_DISABLE_MODELS_FETCH=1 KILO_DISABLE_SESSION_INGEST=1 KILO_DISABLE_PRESENCE=1
+# kilocode_change end
+
 FROM build-${TARGETARCH}
 RUN kilo --version
 ENTRYPOINT ["kilo"]

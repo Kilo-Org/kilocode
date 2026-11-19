@@ -8,6 +8,8 @@ export interface BearerRequest {
   readonly path: `/${string}`
   readonly headers?: Readonly<Record<string, string>>
   readonly body?: BodyInit
+  /** Overrides the client default. Use `0` for a long-lived stream. */
+  readonly timeoutMs?: number
 }
 
 export interface BearerHttpClient {
@@ -32,13 +34,14 @@ export function createBearerHttpClient(options: BearerHttpClientOptions): Bearer
         throw new CloudError("Authorization headers are managed by Kilo")
       }
       headers.set("authorization", `Bearer ${options.apiKey}`)
+      const timeout = request.timeoutMs ?? options.timeoutMs ?? DEFAULT_HTTP_TIMEOUT_MS
 
       const response = await fetcher(url, {
         method: request.method,
         headers,
         ...(request.body === undefined ? {} : { body: request.body }),
         redirect: "manual",
-        signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_HTTP_TIMEOUT_MS),
+        ...(timeout > 0 ? { signal: AbortSignal.timeout(timeout) } : {}),
       }).catch(() => {
         throw new ServiceTransportError()
       })

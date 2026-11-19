@@ -5,6 +5,7 @@ import path from "node:path"
 import * as Sbom from "../../script/kilocode/sbom"
 import { LanceDBRuntime } from "../../src/kilocode/lancedb"
 import { validate } from "../../../../script/kilocode/sbom/index"
+import { pin } from "../../../../script/kilocode/bun"
 
 const release = { version: "9.9.9", channel: "latest", commit: "d".repeat(40) }
 
@@ -18,7 +19,7 @@ function delivery(bom: any, name: string) {
 }
 
 describe("target", () => {
-  test("parses every published archive name", () => {
+  test("maps every published archive name to its pinned Bun artifact", async () => {
     expect(Sbom.target("linux-x64")).toEqual({
       name: "@kilocode/cli-linux-x64",
       os: "linux",
@@ -34,7 +35,13 @@ describe("target", () => {
     })
     expect(Sbom.target("windows-arm64")).toMatchObject({ os: "win32", arch: "arm64", baseline: false })
     expect(Sbom.target("darwin-x64-baseline")).toMatchObject({ os: "darwin", arch: "x64", baseline: true })
-  })
+
+    for (const [slug, artifact] of Object.entries(pin.artifacts)) {
+      const graph = await Sbom.graph({ target: Sbom.target(slug), subject: "kilocode:test" })
+      const bun = graph.components.find((item) => item.name === "bun")
+      expect(bun?.properties).toMatchObject({ "bun:artifact": artifact.name, "bun:integrity": artifact.integrity })
+    }
+  }, 30_000)
 
   test("accepts the npm package name form", () => {
     expect(Sbom.target("@kilocode/cli-linux-arm64-musl")).toMatchObject({
@@ -60,6 +67,20 @@ describe("archive", () => {
       expect(result.entry).toMatchObject({ artifact: "kilo-linux-x64.tar.gz", target: "linux-x64" })
       expect(bom.metadata.component.hashes[0].content).toBe(result.entry.sha256)
       expect(bom.metadata.properties).toContainEqual({ name: "kilocode:build:commit", value: release.commit })
+      const runtime = bom.components.find((item: { name: string }) => item.name === "bun")
+      expect(runtime.version).toBe(pin.runtime)
+      expect(runtime.purl).toBe(`pkg:generic/bun@${pin.runtime}`)
+      expect(runtime.properties).toContainEqual({ name: "kilocode:bun:revision", value: pin.revision })
+      expect(runtime.properties).toContainEqual({ name: "kilocode:bun:runtime-version", value: pin.runtime })
+      expect(runtime.properties).toContainEqual({ name: "kilocode:bun:package-version", value: pin.version })
+      expect(runtime.properties).toContainEqual({
+        name: "kilocode:bun:artifact",
+        value: pin.artifacts["linux-x64"].name,
+      })
+      expect(runtime.properties).toContainEqual({
+        name: "kilocode:bun:integrity",
+        value: pin.artifacts["linux-x64"].integrity,
+      })
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
     }

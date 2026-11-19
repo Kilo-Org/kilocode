@@ -4,9 +4,9 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -26,6 +26,7 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.SearchTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -52,7 +53,7 @@ private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
 internal abstract class SettingsListPanel(
     private val cs: CoroutineScope,
-    cfg: ActiveListConfig = ActiveListConfig.Equal,
+    cfg: ActiveConfig = ActiveConfig.Equal,
 ) : SettingsPanel(), Disposable {
     private val search = SearchTextField(false)
     protected val view = ActiveListView(KiloBundle.message("settings.agentBehavior.empty"), cfg) { key, id ->
@@ -89,7 +90,7 @@ internal abstract class SettingsListPanel(
     open fun reload() {
         checkEdt()
         pending = false
-        if (!reload(ActiveListSelection.Preserve)) return
+        if (!reload(ActiveSelection.Preserve)) return
         showProgress(loadingText())
     }
 
@@ -114,9 +115,16 @@ internal abstract class SettingsListPanel(
         search.textEditor.requestFocusInWindow()
     }
 
+    /** Keeps the row's action cells painted while [popup] holds focus outside the list. */
+    @RequiresEdt
+    protected fun trackPopup(popup: JBPopup) {
+        checkEdt()
+        view.trackPopup(popup)
+    }
+
     @RequiresEdt
     protected fun mutateAndReload(
-        selection: ActiveListSelection = ActiveListSelection.Preserve,
+        selection: ActiveSelection = ActiveSelection.Preserve,
         text: String = loadingText(),
         overlay: Boolean = true,
         block: suspend () -> Boolean,
@@ -128,7 +136,7 @@ internal abstract class SettingsListPanel(
      */
     @RequiresEdt
     protected fun mutateAndReload(
-        selection: suspend () -> ActiveListSelection,
+        selection: suspend () -> ActiveSelection,
         text: String = loadingText(),
         overlay: Boolean = true,
         block: suspend () -> Boolean,
@@ -147,7 +155,7 @@ internal abstract class SettingsListPanel(
         if (overlay) showProgress(text)
     }
 
-    protected abstract suspend fun fetch(): List<ActiveListItem>
+    protected abstract suspend fun fetch(): List<ActiveItem>
 
     protected abstract fun onCell(key: String, cellId: String)
 
@@ -293,7 +301,7 @@ internal abstract class SettingsListPanel(
     }
 
     @RequiresEdt
-    private fun reload(selection: ActiveListSelection): Boolean {
+    private fun reload(selection: ActiveSelection): Boolean {
         checkEdt()
         return launch("reload") { id ->
             val items = fetch()
@@ -301,7 +309,7 @@ internal abstract class SettingsListPanel(
         }
     }
 
-    private suspend fun apply(id: Int, items: List<ActiveListItem>, selection: ActiveListSelection) {
+    private suspend fun apply(id: Int, items: List<ActiveItem>, selection: ActiveSelection) {
         withContext(edt) {
             if (!active(id)) return@withContext
             setBusy(false)

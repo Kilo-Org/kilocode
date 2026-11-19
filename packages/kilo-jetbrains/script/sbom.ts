@@ -151,7 +151,9 @@ async function clis(input: {
   const delivery = input.variant === "bundled" ? ("contained" as const) : ("runtime" as const)
   const components: Component[] = []
   const dependencies: Record<string, string[]> = {}
-  const gaps: Gap[] = []
+  const gaps: Gap[] = [
+    { component: "bun", reason: `Bun runtime for CLI ${input.version} requires release-specific evidence` },
+  ]
 
   for (const platform of PLATFORMS) {
     const digest = input.digests.get(platform)
@@ -179,11 +181,11 @@ async function clis(input: {
     })
 
     const graph = await Cli.graph({ target: Cli.target(platform), subject: ref, lock: input.lock })
+    // This separately released CLI does not necessarily contain this checkout's Bun pin.
+    const contents = graph.components.filter((item) => item.name !== "bun")
     // A lean plugin does not contain these components; it causes them to be
     // installed, so the whole embedded subtree inherits runtime delivery.
-    components.push(
-      ...(delivery === "contained" ? graph.components : graph.components.map((item) => ({ ...item, delivery }))),
-    )
+    components.push(...(delivery === "contained" ? contents : contents.map((item) => ({ ...item, delivery }))))
     for (const [from, to] of Object.entries(graph.dependencies)) {
       dependencies[from] = [...new Set([...(dependencies[from] ?? []), ...to])]
     }

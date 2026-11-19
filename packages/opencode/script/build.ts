@@ -26,6 +26,10 @@ import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
 import * as KiloSbom from "./kilocode/sbom"
 import * as KiloRelease from "../../../script/kilocode/release"
+import * as KiloBun from "../../../script/kilocode/bun"
+if (Bun.revision !== KiloBun.pin.revision) {
+  throw new Error(`Build the CLI with Bun ${KiloBun.pin.version} (${KiloBun.pin.revision}), not ${Bun.revision}`)
+}
 // kilocode_change end
 
 const singleFlag = process.argv.includes("--single")
@@ -289,6 +293,15 @@ for (const item of targets) {
   console.log(`building ${name}`)
   await $`mkdir -p dist/${name}/bin`
   // kilocode_change start
+  // Nix already verifies its runtime with fetchurl and builds without network access.
+  const runtime =
+    process.env.NIX_BUILD_TOP &&
+    item.os === process.platform &&
+    item.arch === process.arch &&
+    !item.abi &&
+    item.avx2 !== false
+      ? process.execPath
+      : await KiloBun.stage(item)
   const bwrap =
     item.os === "linux" && process.env.KILO_SKIP_BUNDLED_BWRAP !== "1"
       ? await stageBubblewrap(item.arch, path.resolve(dir, `dist/${name}/bin`))
@@ -330,6 +343,7 @@ for (const item of targets) {
       autoloadPackageJson: true,
       target: name.replace(pkg.name, "bun") as any,
       // kilocode_change start
+      executablePath: runtime,
       outfile: `dist/${name}/bin/kilo`,
       execArgv: [`--user-agent=kilo/${Script.version}`, "--use-system-ca", "--"],
       // kilocode_change end
@@ -370,7 +384,8 @@ for (const item of targets) {
     await KiloSandboxNetwork.copy(kiloSandboxNetwork, path.resolve(dir, `dist/${name}/bin`), item.arch)
   }
 
-  if (item.os === "linux") {
+  // Preserve the loader from Nix's already-patched native runtime.
+  if (item.os === "linux" && runtime !== process.execPath) {
     const interpreters: Record<string, string> = {
       x64: "/lib64/ld-linux-x86-64.so.2",
       arm64: "/lib/ld-linux-aarch64.so.1",

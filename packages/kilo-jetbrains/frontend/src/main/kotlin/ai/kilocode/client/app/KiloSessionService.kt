@@ -214,6 +214,9 @@ class KiloSessionService internal constructor(
     suspend fun get(id: String, dir: String): SessionDto =
         call { get(id, dir) }
 
+    suspend fun find(id: String, dir: String): SessionDto? =
+        call { find(id, dir) }
+
     /** Create a new session. Caller awaits the result. */
     suspend fun create(dir: String): SessionDto {
         log.info("kind=session create=true dir=${ChatLogSummary.dir(dir)}")

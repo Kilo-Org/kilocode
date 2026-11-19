@@ -1,7 +1,7 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.ui.AnimationIcon
 import ai.kilocode.client.ui.UiStyle
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.ColorUtil
 import com.intellij.util.ui.JBUI
 import java.awt.Component
@@ -18,8 +18,7 @@ import kotlin.math.cos
  * outer ring. Painted in the neutral icon grey ([UiStyle.Colors.running]) so it carries the same
  * weight as the static row icons it stands in for.
  *
- * Built as a frame-based [com.intellij.ui.AnimatedIcon] so it animates automatically inside list
- * cell renderers that set `AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED` (see `ActiveListView`).
+ * Native labels animate normally; shared list/tree renderers sample frames on their container's clock.
  */
 internal object SpinnerIcon {
     private const val GRID = 4
@@ -54,7 +53,7 @@ internal object SpinnerIcon {
         0.00f, 0.48f, 0.78f, 0.00f,
     )
 
-    val icon: Icon = AnimatedIcon(DELAY, *Array(FRAMES) { Frame(it) })
+    val icon: Icon = AnimationIcon.Cycle(DELAY, *Array(FRAMES) { Frame(it) })
 
     /** Ease-in-out 0..1..0 wave, matching CSS `ease-in-out` opacity pulses. */
     private fun ease(t: Float): Float = ((1f - cos(2.0 * Math.PI * t)) / 2.0).toFloat()

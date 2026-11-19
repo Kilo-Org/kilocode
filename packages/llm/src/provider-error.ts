@@ -32,6 +32,8 @@ const patterns = [
   // kilocode_change start - providers/gateways report over-long requests as
   // "<N> tokens long and exceeds this model's context length"
   /exceeds (?:this|the) model'?s (?:(?:maximum|max) )?context length/i,
+  // BytePlus Ark: "Input exceeds the context limit (1048568 tokens)"
+  /exceeds the context limit/i,
   // kilocode_change end
 ]
 

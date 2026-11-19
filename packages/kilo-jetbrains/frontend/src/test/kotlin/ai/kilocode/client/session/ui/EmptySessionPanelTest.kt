@@ -134,6 +134,36 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertEquals(5, panel.recentCount())
     }
 
+    fun `test setRecents attaches the list when sessions arrive after construction`() {
+        val panel = panel()
+
+        assertFalse(panel.recentVisible())
+
+        panel.setRecents(listOf(session("ses_1"), session("ses_2")))
+
+        assertTrue(panel.recentVisible())
+        assertEquals(2, panel.recentCount())
+    }
+
+    fun `test setRecents detaches the list when it becomes empty`() {
+        val panel = panel(listOf(session("ses_1")))
+
+        assertTrue(panel.recentVisible())
+
+        panel.setRecents(emptyList())
+
+        assertFalse(panel.recentVisible())
+        assertEquals(0, panel.recentCount())
+    }
+
+    fun `test setRecents stays hidden on a minimal surface`() {
+        val panel = panel(minimal = true)
+
+        panel.setRecents(listOf(session("ses_1")))
+
+        assertFalse(panel.recentVisible())
+    }
+
     fun `test minimal mode shows only logo and feedback`() {
         val panel = panel(recents = listOf(session("ses_1")), minimal = true)
 

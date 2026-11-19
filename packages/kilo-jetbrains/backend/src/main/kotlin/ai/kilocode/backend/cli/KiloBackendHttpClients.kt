@@ -5,6 +5,7 @@ import com.intellij.util.net.JdkProxyProvider
 import com.intellij.util.net.ssl.CertificateManager
 import okhttp3.ConnectionPool
 import okhttp3.Credentials
+import okhttp3.Dispatcher
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
@@ -29,11 +30,17 @@ object KiloBackendHttpClients {
 
     private const val CONNECT_TIMEOUT_MS = 10_000L
     private const val HEALTH_TIMEOUT_MS = 3_000L
+    private const val CONCURRENCY = 256
 
     /** API client — no call/read timeout (SSE and long-running ops). */
     fun api(password: String): OkHttpClient =
         OkHttpClient.Builder()
             .addInterceptor(auth(password))
+            // Discovery holds one SSE request per Cloud workspace, exceeding OkHttp's five per host.
+            .dispatcher(Dispatcher().apply {
+                maxRequests = CONCURRENCY
+                maxRequestsPerHost = CONCURRENCY
+            })
             .connectTimeout(CONNECT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
             .callTimeout(0, TimeUnit.MILLISECONDS)
             .readTimeout(0, TimeUnit.MILLISECONDS)

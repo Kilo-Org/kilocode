@@ -33,6 +33,12 @@ export enum TelemetryEvent {
   // MCP Events
   MCP_SERVER_CONNECTED = "MCP Server Connected",
   MCP_SERVER_ERROR = "MCP Server Error",
+  MCP_AUTH_STARTED = "MCP Auth Started",
+  MCP_AUTH_COMPLETED = "MCP Auth Completed",
+
+  // Marketplace Events (names predate CLI ownership; the editors sent them first)
+  MARKETPLACE_ITEM_INSTALLED = "Marketplace Item Installed",
+  MARKETPLACE_ITEM_REMOVED = "Marketplace Item Removed",
 
   // Remote Events
   REMOTE_CONNECTION_OPENED = "Remote Connection Opened",

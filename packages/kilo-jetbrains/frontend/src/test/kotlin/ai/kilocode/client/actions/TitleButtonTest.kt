@@ -73,7 +73,7 @@ class TitleButtonTest : BasePlatformTestCase() {
         assertCentered(button(NewSessionAction(), "Session", context))
     }
 
-    fun `test New Worktree button centers the plus and label`() {
+    fun `test Add button centers the plus and label`() {
         val service = KiloWorktreeService(coroutines.scope, FakeWorktreeRpcApi())
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edtWait { AgentManagerPanel(testRootDisposable, controller) }
@@ -81,7 +81,7 @@ class TitleButtonTest : BasePlatformTestCase() {
             .add(SidePanelKeys.MODE, SidePanelMode.AGENT_MANAGER)
             .add(SidePanelKeys.WORKTREE_PANEL, panel)
             .build()
-        assertCentered(button(NewWorktreeAction(), "Worktree", context))
+        assertCentered(button(AgentManagerAddAction(), "Add", context))
     }
 
     fun `test add icon is 25 percent smaller than the platform action icon`() {

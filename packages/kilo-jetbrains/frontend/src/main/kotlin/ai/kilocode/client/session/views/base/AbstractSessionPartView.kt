@@ -111,12 +111,17 @@ abstract class AbstractSessionPartView(
      */
     protected fun expandedGap(): Int = if (isExpanded()) SessionUiStyle.View.contentGap() else 0
 
+    /** Once true, transcript appearance changes must not override this card's user-chosen state. */
+    protected var touched = false
+        private set
+
     fun isExpanded(): Boolean = body?.parent === this
 
     fun toggle() {
         if (!expandable || !arrow.isVisible) return
         val changed = toggleLocal()
         if (!changed) return
+        touched = true
         userToggled()
         syncArrow()
         refresh()
@@ -136,6 +141,18 @@ abstract class AbstractSessionPartView(
         if (item.parent !== this) return false
         remove(item)
         footer?.takeIf { it.parent === this }?.let(::remove)
+        return true
+    }
+
+    /**
+     * Expands a collapsed card for a programmatic reveal, which does not go through [toggle]. The header
+     * has to be refreshed too: [expand] only attaches the body, so the chevron would still show the
+     * collapsed arrow.
+     */
+    fun open(): Boolean {
+        if (!expand()) return false
+        syncExpandable(true)
+        refresh()
         return true
     }
 

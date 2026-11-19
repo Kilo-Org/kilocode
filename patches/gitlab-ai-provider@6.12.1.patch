@@ -1,0 +1,44 @@
+diff --git a/dist/index.js b/dist/index.js
+index 96d71f6c61a5e005f5d1b790090a3667079d7a0f..7c06f9018d81605a4157db204f606ae547cb866c 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -81,7 +81,7 @@ module.exports = __toCommonJS(index_exports);
+ var import_sdk = __toESM(require("@anthropic-ai/sdk"));
+ 
+ // src/gitlab-direct-access.ts
+-var import_zod = require("zod");
++var import_zod = require("zod/v3");
+ 
+ // src/gitlab-error.ts
+ var GitLabError = class _GitLabError extends Error {
+@@ -4847,7 +4847,7 @@ var GitLabWorkflowLanguageModel = class _GitLabWorkflowLanguageModel {
+ };
+ 
+ // src/gitlab-api-types.ts
+-var import_zod2 = require("zod");
++var import_zod2 = require("zod/v3");
+ var gitlabOAuthTokenResponseSchema = import_zod2.z.object({
+   access_token: import_zod2.z.string(),
+   refresh_token: import_zod2.z.string().optional(),
+diff --git a/dist/index.mjs b/dist/index.mjs
+index cfb38501652a261594730a7b379ee45d8aacdb48..b74db24c91b51c239da95ee60a10b12f99036232 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -2,7 +2,7 @@
+ import Anthropic from "@anthropic-ai/sdk";
+ 
+ // src/gitlab-direct-access.ts
+-import { z } from "zod";
++import { z } from "zod/v3";
+ 
+ // src/gitlab-error.ts
+ var GitLabError = class _GitLabError extends Error {
+@@ -4768,7 +4768,7 @@ var GitLabWorkflowLanguageModel = class _GitLabWorkflowLanguageModel {
+ };
+ 
+ // src/gitlab-api-types.ts
+-import { z as z2 } from "zod";
++import { z as z2 } from "zod/v3";
+ var gitlabOAuthTokenResponseSchema = z2.object({
+   access_token: z2.string(),
+   refresh_token: z2.string().optional(),

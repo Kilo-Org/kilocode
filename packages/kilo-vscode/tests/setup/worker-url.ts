@@ -1,4 +1,5 @@
 import { plugin } from "bun"
+import "../../../ui/test/solid-jsx"
 
 plugin({
   name: "worker-url",

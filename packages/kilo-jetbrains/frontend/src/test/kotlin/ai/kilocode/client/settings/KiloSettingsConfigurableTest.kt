@@ -10,6 +10,7 @@ import ai.kilocode.client.settings.autoapprove.AutoApproveConfigurable
 import ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable
 import ai.kilocode.client.settings.providers.ProvidersConfigurable
 import ai.kilocode.client.settings.rules.RulesConfigurable
+import ai.kilocode.client.settings.transcript.TranscriptConfigurable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.SearchableConfigurable
@@ -45,6 +46,10 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
 
     fun `test child integrations id matches xml registration`() {
         assertEquals("ai.kilocode.jetbrains.settings.integrations", IntegrationsConfigurable.ID)
+    }
+
+    fun `test child transcript id matches xml registration`() {
+        assertEquals("ai.kilocode.jetbrains.settings.transcript", TranscriptConfigurable.ID)
     }
 
     fun `test child advanced id matches xml registration`() {
@@ -126,7 +131,7 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
             val panel = cfg.createComponent()
             val labels = links(panel as Container).map { it.text }
             assertEquals(
-                listOf("User Profile", "Models", "Providers", "Marketplace", "Agent Behavior", "Auto-Approve", "Context", "Checkpoints", "Integrations", "Advanced"),
+                listOf("User Profile", "Models", "Providers", "Marketplace", "Agent Behavior", "Auto-Approve", "Transcript", "Context", "Checkpoints", "Integrations", "Advanced"),
                 labels,
             )
         }

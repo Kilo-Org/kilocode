@@ -405,9 +405,30 @@ describe("Kilo preflight compaction", () => {
     ).toBe(true)
   })
 
-  test("counts system content and tool schemas in the baseline projection", () => {
-    // The provider report covers the previous request only; a new system prompt
-    // or grown tool schemas must be added on top regardless of the message tail.
+  test("does not add system content and tool schemas on top of a report that includes them", () => {
+    // Regression for #15471: the report already counts the system prompt and tool
+    // schemas. Adding a ~27k overhead again compacted a 200k model at ~66% with an
+    // 80% threshold.
+    const conf = cfg({ threshold_percent: 80 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+    const input = {
+      cfg: conf,
+      model: mdl,
+      usable: usable({ cfg: conf, model: mdl }),
+      tokens: 180_000,
+      tail: 1_000,
+      overhead: 27_000,
+      continuation: false,
+    }
+
+    expect(KiloSessionOverflow.shouldCompact({ ...input, reported: 131_000 })).toBe(false)
+    expect(KiloSessionOverflow.shouldCompact({ ...input, reported: 158_999 })).toBe(false)
+    expect(KiloSessionOverflow.shouldCompact({ ...input, reported: 159_000 })).toBe(true)
+  })
+
+  test("uses system content and tool schemas when they exceed the reported baseline", () => {
+    // A report smaller than the current system prompt and tool schemas cannot
+    // include them, so they replace the report as the baseline.
     const conf = cfg({ threshold_percent: 80 })
     const mdl = model({ context: 200_000, output: 32_000 })
 

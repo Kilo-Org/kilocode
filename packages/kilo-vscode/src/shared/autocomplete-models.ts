@@ -5,6 +5,4 @@ export {
   getAutocompleteModelById,
   validAutocompleteModel,
   validAutocompleteProvider,
-  type AutocompleteModelDef,
-  type AutocompleteProviderID,
 } from "@kilocode/kilo-gateway/autocomplete"

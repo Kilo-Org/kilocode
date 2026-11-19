@@ -7,6 +7,7 @@ import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -98,6 +99,16 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
 
         assertEquals(err.message, seen?.message)
         assertEquals(listOf("dep"), rpc.searchQueries)
+    }
+
+    fun `test closing a dialog cancels model loading without returning a load error`() = runBlocking {
+        val err = CancellationException("dialog closed")
+        rpc.modelsGate = CompletableDeferred<Unit>().apply { completeExceptionally(err) }
+
+        val failure = withContext(Dispatchers.Default) { runCatching { service.models("/test") }.exceptionOrNull() }
+
+        assertTrue(failure is CancellationException)
+        assertEquals(err.message, failure?.message)
     }
 
     fun `test refreshConfigFiles logs backend failure and completes`() = runBlocking {

@@ -54,6 +54,26 @@ class KiloPromptCompletionProviderTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test text-only completion skips file mentions and local file lookup`() {
+        val workspaces = KiloWorkspaceService(scope, rpc)
+        provider = KiloPromptCompletionProvider(
+            workspaces.workspace("/test"), workspaces,
+            listOf(SlashAction("new", "New") {}), emptyList(), scope, files = false,
+        )
+        provider.prewarm()
+        provider.validate("@src/Foo.kt @git-changes", 3) {}
+        provider.navigate("src/Foo.kt")
+        assertTrue(rpc.searchQueries.isEmpty())
+        assertTrue(rpc.fileCalls.isEmpty())
+        assertTrue(rpc.opened.isEmpty())
+        assertNull(provider.mentionAt("@src/Foo.kt", 3))
+        assertFalse(provider.inside("@src/Foo.kt", 3))
+        assertFalse(provider.completing("@src/Foo.kt", 3))
+        complete("@src<caret>")
+        assertTrue(myFixture.lookupElementStrings.orEmpty().isEmpty())
+        assertTrue(provider.completingSlash("/new", 4))
+    }
+
     fun `test mention completion shows backend fuzzy results without local filtering`() {
         rpc.searchResult = FileSearchResultDto(files = listOf(file("src/foo/Bar.kt")))
 

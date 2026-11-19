@@ -248,11 +248,13 @@ export const GenerateImageTool = Tool.define(
               filepath: absPath,
               provider: resolved.provider,
             } as Meta,
+            // Inline data so clients can render the image: the processor drops non-data image
+            // attachments, and webviews cannot load workspace file:// URLs.
             attachments: [
               {
                 type: "file" as const,
                 mime: `image/${parsed.format}`,
-                url: `file://${absPath}`,
+                url: `data:image/${parsed.format};base64,${parsed.base64}`,
                 filename: path.basename(absPath),
               },
             ],

@@ -93,6 +93,8 @@ data class PartDto(
     val filename: String? = null,
     val synthetic: Boolean? = null,
     val source: PartSourceDto? = null,
+    /** Set for user text that Kilo composed, e.g. "Update from main". Stored in metadata.kilo.injected. */
+    val injectedTitle: String? = null,
 )
 
 @Serializable
@@ -164,6 +166,8 @@ data class PromptPartDto(
     val source: PartSourceDto? = null,
     /** Hides the part from the transcript; used for handoff notes the agent reads but the user never sees. */
     val synthetic: Boolean? = null,
+    /** Marks a text part Kilo composed instead of the user typing it. */
+    val injectedTitle: String? = null,
 )
 
 // --- Streaming Events ---
@@ -176,6 +180,17 @@ sealed class ChatEventDto {
     data class MessageUpdated(
         val sessionID: String,
         val info: MessageDto,
+    ) : ChatEventDto()
+
+    /** Public Cloud terminal metadata; deliberately excludes provider error/reason text. */
+    @Serializable
+    @SerialName("cloud.message.terminal")
+    data class MessageTerminal(
+        val sessionID: String,
+        val messageID: String,
+        val status: String,
+        val delivery: String,
+        val accepted: Boolean,
     ) : ChatEventDto()
 
     @Serializable
@@ -317,6 +332,18 @@ sealed class ChatEventDto {
     data class TodoUpdated(
         val sessionID: String,
         val todos: List<TodoDto> = emptyList(),
+    ) : ChatEventDto()
+
+    /**
+     * The hosted event stream reconnected after a gap. Backend-synthesized, never parsed from a CLI
+     * event. The controller reloads hosted history and pending prompts so events missed during the
+     * gap cannot leave the transcript or question cards stale.
+     */
+    @Serializable
+    @SerialName("hosted.resnapshot")
+    data class Resnapshot(
+        val sessionID: String,
+        val phase: String = "complete",
     ) : ChatEventDto()
 
     /**

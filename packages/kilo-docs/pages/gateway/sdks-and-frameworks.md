@@ -24,7 +24,7 @@ import { streamText } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 
 const kilo = createOpenAI({
-  baseURL: "https://api.kilo.ai/api/gateway",
+  baseURL: "https://ai-gateway.kilo.ai/api/v1",
   apiKey: process.env.KILO_API_KEY,
 })
 
@@ -46,7 +46,7 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { z } from "zod"
 
 const kilo = createOpenAI({
-  baseURL: "https://api.kilo.ai/api/gateway",
+  baseURL: "https://ai-gateway.kilo.ai/api/v1",
   apiKey: process.env.KILO_API_KEY,
 })
 
@@ -78,7 +78,7 @@ import { streamText } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 
 const kilo = createOpenAI({
-  baseURL: "https://api.kilo.ai/api/gateway",
+  baseURL: "https://ai-gateway.kilo.ai/api/v1",
   apiKey: process.env.KILO_API_KEY,
 })
 
@@ -109,7 +109,7 @@ import OpenAI from "openai"
 
 const client = new OpenAI({
   apiKey: process.env.KILO_API_KEY,
-  baseURL: "https://api.kilo.ai/api/gateway",
+  baseURL: "https://ai-gateway.kilo.ai/api/v1",
 })
 
 // Non-streaming
@@ -148,7 +148,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key=os.getenv("KILO_API_KEY"),
-    base_url="https://api.kilo.ai/api/gateway",
+    base_url="https://ai-gateway.kilo.ai/api/v1",
 )
 
 # Non-streaming
@@ -182,7 +182,7 @@ for chunk in stream:
 ### Non-streaming request
 
 ```bash
-curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
+curl -X POST "https://ai-gateway.kilo.ai/api/v1/chat/completions" \
   -H "Authorization: Bearer $KILO_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -196,7 +196,7 @@ curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
 ### Streaming request
 
 ```bash
-curl -N -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
+curl -N -X POST "https://ai-gateway.kilo.ai/api/v1/chat/completions" \
   -H "Authorization: Bearer $KILO_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -239,7 +239,7 @@ func main() {
     jsonBody, _ := json.Marshal(body)
 
     req, _ := http.NewRequest("POST",
-        "https://api.kilo.ai/api/gateway/chat/completions",
+        "https://ai-gateway.kilo.ai/api/v1/chat/completions",
         bytes.NewBuffer(jsonBody))
 
     req.Header.Set("Authorization", "Bearer "+os.Getenv("KILO_API_KEY"))
@@ -262,7 +262,7 @@ func main() {
 require 'net/http'
 require 'json'
 
-uri = URI('https://api.kilo.ai/api/gateway/chat/completions')
+uri = URI('https://ai-gateway.kilo.ai/api/v1/chat/completions')
 http = Net::HTTP.new(uri.host, uri.port)
 http.use_ssl = true
 
@@ -312,7 +312,7 @@ from langchain_openai import ChatOpenAI
 llm = ChatOpenAI(
     model="anthropic/claude-sonnet-4.5",
     api_key=os.getenv("KILO_API_KEY"),
-    base_url="https://api.kilo.ai/api/gateway",
+    base_url="https://ai-gateway.kilo.ai/api/v1",
 )
 
 response = llm.invoke("Explain photosynthesis in simple terms.")
@@ -328,7 +328,7 @@ const model = new ChatOpenAI({
   modelName: "anthropic/claude-sonnet-4.5",
   openAIApiKey: process.env.KILO_API_KEY,
   configuration: {
-    baseURL: "https://api.kilo.ai/api/gateway",
+    baseURL: "https://ai-gateway.kilo.ai/api/v1",
   },
 })
 

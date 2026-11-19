@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/kilo-gateway",
-  "version": "7.8.8",
+  "version": "7.8.30",
   "type": "module",
   "license": "MIT",
   "description": "Unified Kilo Gateway package for OpenCode - authentication, provider, and API integration",
@@ -19,8 +19,6 @@
     ".": "./src/index.ts",
     "./autocomplete": "./src/autocomplete.ts",
     "./fim": "./src/fim.ts",
-    "./edit": "./src/edit.ts",
-    "./edit-prompt": "./src/edit-prompt.ts",
     "./provider-usage": "./src/provider-usage.ts",
     "./event-service": "./src/event-service/client.ts",
     "./tui": "./src/tui.ts"
@@ -37,11 +35,11 @@
     "@kilocode/plugin": "workspace:*",
     "@ai-sdk/anthropic": "3.0.82",
     "@ai-sdk/openai": "3.0.88",
-    "@ai-sdk/openai-compatible": "2.0.48",
+    "@ai-sdk/openai-compatible": "2.0.54",
     "@openrouter/ai-sdk-provider": "2.9.0",
     "@clack/prompts": "1.0.0-alpha.1",
     "ai": "catalog:",
-    "open": "10.1.2",
+    "open": "11.0.4",
     "zod": "catalog:"
   },
   "devDependencies": {

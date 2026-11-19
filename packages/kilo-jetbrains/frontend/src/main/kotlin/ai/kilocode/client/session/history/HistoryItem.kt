@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.history
 
 import ai.kilocode.rpc.dto.CloudSessionDto
+import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.SessionDto
 
 sealed interface HistoryItem {
@@ -23,6 +24,13 @@ data class CloudHistoryItem(val session: CloudSessionDto) : HistoryItem {
     override val title: String get() = session.title.orEmpty()
     override val createdAt: String get() = session.createdAt
     override val updatedAt: String get() = session.updatedAt
+}
+
+data class HostedHistoryItem(val session: HostedWorkspaceSessionDto) : HistoryItem {
+    override val id: String get() = session.id
+    override val title: String get() = session.title.orEmpty()
+    override val createdAt: String get() = session.created.toString()
+    override val updatedAt: String get() = session.updated.toString()
 }
 
 enum class HistorySource { LOCAL, CLOUD }

@@ -17,11 +17,15 @@ internal data class PermissionDraft(val rules: Map<String, PermissionRuleDto> = 
 /** The three permission levels, in restrictiveness order. Shared by [LevelSelect] and [SettingsInlineList]. */
 internal val LEVELS = listOf("allow", "ask", "deny")
 
-// Keep aligned with the CLI's DEFAULT_RULES (permission-utils.ts:8-13).
+// Mirrors the CLI's effective default rules for JetBrains. `edit` is JetBrains-only: the plugin's
+// client-keyed defaults layer in packages/opencode/src/kilocode/agent/index.ts sets `edit: ask`,
+// so the settings row must show "Ask" as the inherited level. The VS Code DEFAULT_RULES
+// (webview-ui/.../settings/permission-utils.ts) intentionally does not include `edit`.
 private val DEFAULT_LEVEL = mapOf(
     "external_directory" to "ask",
     "bash" to "ask",
     "doom_loop" to "ask",
+    "edit" to "ask",
 )
 
 private val RESTRICTION_ORDER = mapOf("allow" to 0, "ask" to 1, "deny" to 2)

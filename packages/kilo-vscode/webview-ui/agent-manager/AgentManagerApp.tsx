@@ -1297,6 +1297,7 @@ const AgentManagerContent: Component = () => {
           )?.id
       if (owner && owner !== (currentProjectId() ?? "single")) {
         if (!projectList().some((project) => project.id === owner)) return
+        intro.started()
         if (backgroundCreated(registry.ensure(owner), created))
           vscode.postMessage({
             type: "agentManager.persistSession",
@@ -1308,6 +1309,7 @@ const AgentManagerContent: Component = () => {
       }
       const pending = created.draftID && localSessionIDs().includes(created.draftID) ? created.draftID : undefined
       if (!pending && localSessionIDs().includes(created.session.id)) return
+      intro.started()
       if (worktreeSessionIds().has(created.session.id)) return
       const active = activePendingId()
       const focus = !pending || (selection() === LOCAL && pending === active)
@@ -1816,6 +1818,7 @@ const AgentManagerContent: Component = () => {
       setReviewActive(false)
     },
     focus: requestChatFocus,
+    compose: prompt.focus,
   })
   const handleForkSession = (sessionId: string, messageId?: string) => {
     const sel = selection()

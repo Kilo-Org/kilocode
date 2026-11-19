@@ -22,11 +22,11 @@ import ai.kilocode.client.settings.marketplace.marketplaceAction
 import ai.kilocode.client.ui.CodeViewField
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListCell
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ConfigPatchDto
@@ -89,7 +89,7 @@ internal class SkillsSettingsUi(
         SettingsPathDialog(sourceDialogTitle(adding, path), value, if (path) choose else null)
     },
     private val edit: (SkillDto, Boolean) -> SkillEditDialogHandle = ::SkillEditDialog,
-) : SettingsListPanel(scope, ActiveListConfig.Equal.copy(tooltip = false, keepActions = true)), SettingsDraftPage {
+) : SettingsListPanel(scope, ActiveConfig.Equal.copy(tooltip = false, keepActions = true)), SettingsDraftPage {
     private val cs = scope
     private var dir = dir
     private var skills = emptyMap<String, SkillDto>()
@@ -118,7 +118,7 @@ internal class SkillsSettingsUi(
     /** A Marketplace install or removal can add or drop skills while this page sits open. */
     override fun refreshOnFocus(): Boolean = true
 
-    override suspend fun fetch(): List<ActiveListItem> {
+    override suspend fun fetch(): List<ActiveItem> {
         val items = withTimeoutOrNull(SKILL_LOAD_TIMEOUT_MS) {
             service<KiloAgentBehaviorService>().loadSkills(dir)
         } ?: throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.skills.load.timeout"))
@@ -248,7 +248,7 @@ internal class SkillsSettingsUi(
         verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
     }
 
-    private fun rows(items: List<SkillDto> = skills.values.toList()): List<ActiveListItem> = items.mapNotNull { skill ->
+    private fun rows(items: List<SkillDto> = skills.values.toList()): List<ActiveItem> = items.mapNotNull { skill ->
         if (skill.location in draft.deleted || draft.uninstalls.any { skill.location in it.skills }) return@mapNotNull null
         item(skill)
     }
@@ -258,27 +258,27 @@ internal class SkillsSettingsUi(
         target.edited[skill.location]?.let { skill.copy(content = it) } ?: skill
     }
 
-    private fun item(skill: SkillDto) = object : ActiveListItem {
+    private fun item(skill: SkillDto) = object : ActiveItem {
         override val key = key(skill)
         override val title = skill.name
         override val note = skill.location.takeUnless { builtin(it) }
         override val description = skill.description
         override val doubleClick = EDIT_CELL
         override val badges = listOf(
-            ActiveListBadge(KiloBundle.message("settings.agentBehavior.badge.builtin"), UiStyle.Badge.Secondary),
+            ActiveBadge(KiloBundle.message("settings.agentBehavior.badge.builtin"), UiStyle.Badge.Secondary),
         ).takeIf { builtin(skill.location) } ?: emptyList()
         override val cells = listOfNotNull(
-            ActiveListCell(
+            ActiveCell(
                 OPEN_CELL,
                 KiloBundle.message("settings.agentBehavior.skills.openInEditor"),
                 primary = true,
             ).takeIf { skill.editable },
-            ActiveListCell(
+            ActiveCell(
                 EDIT_CELL,
                 KiloBundle.message(if (skill.editable) "settings.agentBehavior.edit" else "common.open"),
                 primary = !skill.editable,
             ),
-            ActiveListCell(
+            ActiveCell(
                 DELETE_CELL,
                 KiloBundle.message("common.delete"),
                 icon = AllIcons.Actions.GC,
@@ -296,7 +296,7 @@ internal class SkillsSettingsUi(
         }
         if (!dialog.showAndGet()) return
         state.update { copy(edited = edited + (skill.location to dialog.content())) }
-        view.update(rows(), ActiveListSelection.Key(key(skill)))
+        view.update(rows(), ActiveSelection.Key(key(skill)))
     }
 
     private fun open(skill: SkillDto) {
@@ -331,11 +331,11 @@ internal class SkillsSettingsUi(
                     uninstalls = uninstalls + bundle,
                 )
             }
-            view.update(rows(), ActiveListSelection.Slide)
+            view.update(rows(), ActiveSelection.Slide)
             return
         }
         state.update { copy(deleted = deleted + skill.location, edited = edited - skill.location) }
-        view.update(rows(), ActiveListSelection.Slide)
+        view.update(rows(), ActiveSelection.Slide)
     }
 
     private fun content(skill: SkillDto) = draft.edited[skill.location] ?: skill.content
@@ -405,7 +405,8 @@ internal class SkillSourcesView(
 ) : Stack(ai.kilocode.client.ui.layout.StackAxis.VERTICAL, UiStyle.Gap.sm()) {
     private val view = ActiveListView(
         KiloBundle.message("settings.agentBehavior.skills.sources.empty"),
-        ActiveListConfig(description = false, selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
+        ActiveConfig(description = false),
+        options = ai.kilocode.client.ui.list.ActiveListOptions(selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
     ) { key, id ->
         if (id == EDIT_CELL) edit(key)
     }
@@ -457,13 +458,13 @@ internal class SkillSourcesView(
         parent.updateSources(cfg.paths, cfg.urls + url)
     }
 
-    private fun rows(config: SkillsConfigDto): List<ActiveListItem> {
+    private fun rows(config: SkillsConfigDto): List<ActiveItem> {
         val paths = config.paths.map { source(PATH_PREFIX, it) }
         val urls = config.urls.map { source(URL_PREFIX, it) }
         return paths + urls
     }
 
-    private fun source(prefix: String, value: String) = object : ActiveListItem {
+    private fun source(prefix: String, value: String) = object : ActiveItem {
         override val key = prefix + value
         override val title = value
         override val doubleClick = EDIT_CELL

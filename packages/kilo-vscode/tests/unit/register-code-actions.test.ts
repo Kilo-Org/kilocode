@@ -23,7 +23,7 @@ const original = {
   diagnostics: api.languages.getDiagnostics,
 }
 
-function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "tab") {
+function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "tab", tabbed = false) {
   const commands = new Map<string, Command>()
   const executed: unknown[][] = []
   const events: string[] = []
@@ -88,7 +88,7 @@ function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "
   }
 
   const views = { sidebar: provider, agent, tab }
-  registerCodeActions(context, provider as never, agent as never, undefined, () =>
+  registerCodeActions(context, provider as never, agent as never, tabbed ? () => tab as never : undefined, () =>
     focused.current ? (views[focused.current] as never) : undefined,
   )
 
@@ -207,6 +207,47 @@ describe("registerCodeActions", () => {
 
     expect(state.events).toEqual(["wait", "post"])
     expect(state.posts).toEqual([{ type: "action", action: "focusSearch" }])
+  })
+
+  it("shows open tabs in the sidebar even when Agent Manager is active", async () => {
+    const state = setup(true)
+
+    await state.commands.get("kilo-code.new.showOpenTabs")?.()
+
+    expect(state.recipients).toEqual(["sidebar"])
+    expect(state.executed).toEqual([["kilo-code.SidebarProvider.focus"]])
+    expect(state.posts).toEqual([{ type: "action", action: "showOpenTabs" }])
+  })
+
+  it("shows open tabs in the active Kilo editor tab without revealing the sidebar", async () => {
+    const state = setup(false, true, undefined, true)
+
+    await state.commands.get("kilo-code.new.showOpenTabs")?.()
+
+    expect(state.recipients).toEqual(["tab"])
+    expect(state.waits).toEqual(["tab"])
+    expect(state.executed).toEqual([])
+    expect(state.posts).toEqual([{ type: "action", action: "showOpenTabs" }])
+  })
+
+  it("prefers the last focused sidebar over an active Kilo editor tab", async () => {
+    const state = setup(false, true, "sidebar", true)
+
+    await state.commands.get("kilo-code.new.showOpenTabs")?.()
+
+    expect(state.recipients).toEqual(["sidebar"])
+    expect(state.executed).toEqual([["kilo-code.SidebarProvider.focus"]])
+    expect(state.posts).toEqual([{ type: "action", action: "showOpenTabs" }])
+  })
+
+  it("redirects open tabs to the sidebar when Agent Manager was last focused", async () => {
+    const state = setup(false, true, "agent", true)
+
+    await state.commands.get("kilo-code.new.showOpenTabs")?.()
+
+    expect(state.recipients).toEqual(["sidebar"])
+    expect(state.waits).toEqual(["provider"])
+    expect(state.posts).toEqual([{ type: "action", action: "showOpenTabs" }])
   })
 
   it("does not toggle chat search when Agent Manager readiness is cancelled", async () => {

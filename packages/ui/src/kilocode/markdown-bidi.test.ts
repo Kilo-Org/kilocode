@@ -10,8 +10,25 @@ const root = path.resolve(import.meta.dir, "../..")
 describe("Markdown bidirectional rendering contract", () => {
   test("renders the markdown root with automatic direction", () => {
     const code = String.raw`
+      import { plugin } from "bun"
       import { mock } from "bun:test"
       import { createComponent, renderToString } from "solid-js/web"
+
+      // Bun 1.4.4 compiles child JSX for the automatic runtime; keep the classic React shim below.
+      const transpiler = new Bun.Transpiler({
+        loader: "tsx",
+        trimUnusedImports: true,
+        tsconfig: { compilerOptions: { jsx: "react", jsxFactory: "React.createElement" } },
+      })
+      plugin({
+        name: "classic-jsx",
+        setup(build) {
+          build.onLoad({ filter: /\.[jt]sx$/ }, async (args) => ({
+            contents: transpiler.transformSync(await Bun.file(args.path).text()),
+            loader: "js",
+          }))
+        },
+      })
 
       function attr(props) {
         return Object.entries(props || {})

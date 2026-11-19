@@ -49,6 +49,25 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertSame(view, content.parent)
     }
 
+    fun `test manual toggle marks the card as touched`() {
+        val view = TestView(content = JLabel("body"))
+
+        assertFalse(view.wasTouched())
+
+        view.toggle()
+
+        assertTrue(view.wasTouched())
+    }
+
+    fun `test programmatic expand and collapse do not mark the card as touched`() {
+        val view = TestView(content = JLabel("body"))
+
+        view.expand()
+        view.collapse()
+
+        assertFalse(view.wasTouched())
+    }
+
     fun `test toggle uses right and down chevron icons`() {
         val view = TestView(content = JLabel("body"))
 
@@ -304,6 +323,7 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         fun arrowAttached() = arrow.parent === row
         fun arrowParent(): Component? = arrow.parent
         fun arrowCursor() = arrow.cursor.type
+        fun wasTouched() = touched
     }
 
     private class NestedView(header: JComponent) : AbstractSessionPartView(header, JLabel("body")) {

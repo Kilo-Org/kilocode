@@ -45,6 +45,9 @@ interface ToolDef {
   id: string
   descriptionKey: string
   granular?: GranularConfig
+  // Keep non-wildcard rules when the level changes. The permission prompt saves
+  // per-origin browser_open rules, and a scalar level would drop them.
+  preserveExceptions?: boolean
 }
 
 interface GranularToolDef extends ToolDef {
@@ -116,6 +119,7 @@ const GROUPED_TOOLS: GroupedToolDef[] = [
 const TRAILING_TOOLS: ToolDef[] = [
   { id: "websearch", descriptionKey: "settings.autoApprove.tool.websearch" },
   { id: "webfetch", descriptionKey: "settings.autoApprove.tool.webfetch" },
+  { id: "browser_open", descriptionKey: "settings.autoApprove.tool.browser_open", preserveExceptions: true },
   { id: "doom_loop", descriptionKey: "settings.autoApprove.tool.doom_loop" },
 ]
 
@@ -250,8 +254,8 @@ const PermissionEditor: Component<{
             level={levelFor(tool.id)}
             inherited={props.inherited && inheritedWildcard(ruleFor(tool.id))}
             showDefaultLevel={props.showDefaultLevel}
-            onChange={(level) => setSimple(tool.id, level)}
-            onInherit={() => clearSimple(tool.id)}
+            onChange={(level) => (tool.preserveExceptions ? setWildcard(tool.id, level) : setSimple(tool.id, level))}
+            onInherit={() => (tool.preserveExceptions ? clearWildcard(tool.id) : clearSimple(tool.id))}
           />
         )}
       </For>

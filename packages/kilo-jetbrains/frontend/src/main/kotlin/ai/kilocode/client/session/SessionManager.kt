@@ -3,6 +3,7 @@ package ai.kilocode.client.session
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataKey
@@ -40,6 +41,19 @@ interface SessionManager {
 
     fun openSession(ref: SessionRef)
 
+    /**
+     * Hosted backends create their session from the first prompt and return the live ref. Only
+     * called when [hosted] is true; there is no local fallback, so a null return (this default) is
+     * reported as a failed Cloud session start.
+     */
+    suspend fun createSession(prompt: PromptDto): SessionRef? = null
+
+    /**
+     * A blank session created its backend session. Register [ui] as the surface for [ref] so the
+     * panel the user already typed into keeps showing, and let the host refresh its session list.
+     */
+    fun sessionCreated(ui: SessionUi, ref: SessionRef) {}
+
     fun activity(): Map<String, SessionActivityKind> = emptyMap()
 
     fun titles(): Map<String, String> = emptyMap()
@@ -51,6 +65,24 @@ interface SessionManager {
     val showsBranchDock: Boolean get() = true
 
     val hostedInEditorTab: Boolean get() = false
+
+    /**
+     * True for a live Cloud session reached through Session Host. Remote prompt/command/stream/Stop,
+     * questions, permissions, and diff stay available; local Git/PR/files/terminal/run/worktree/fork/
+     * compact/revert actions do not exist for it.
+     */
+    val hosted: Boolean get() = false
+
+    val supportsShare: Boolean get() = !hosted
+
+    val supportsCompact: Boolean get() = !hosted
+
+    val supportsRevert: Boolean get() = !hosted
+
+    val supportsBoard: Boolean get() = !hosted
+
+    /** Whether session attachments and file links may open local files. */
+    val localFiles: Boolean get() = !hosted
 
     val readonly: Boolean get() = false
 

@@ -2,9 +2,9 @@ package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.ui.list.ActiveListView
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
@@ -34,7 +34,7 @@ import javax.swing.event.DocumentEvent
  */
 internal abstract class SettingsInlineListPanel(
     emptyText: String,
-    cfg: ActiveListConfig = ActiveListConfig.Equal,
+    cfg: ActiveConfig = ActiveConfig.Equal,
     private val selectionMode: Int = ListSelectionModel.SINGLE_SELECTION,
     private val showSearch: Boolean = true,
 ) : BaseContentPanel() {
@@ -77,10 +77,10 @@ internal abstract class SettingsInlineListPanel(
     }
 
     @RequiresEdt
-    fun setItems(items: List<ActiveListItem>, enabled: Boolean) {
+    fun setItems(items: List<ActiveItem>, enabled: Boolean) {
         checkEdt()
         setEnabled(enabled)
-        view.update(items, ActiveListSelection.Preserve)
+        view.update(items, ActiveSelection.Preserve)
         toolbar?.updateActionsImmediately()
     }
 

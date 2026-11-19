@@ -158,7 +158,9 @@ export function policy(opts: {
       if (!retry) return Cause.done(meta.attempt)
       return Effect.gen(function* () {
         // kilocode_change start — handle network disconnect via offline handler
-        if (opts.offline && SessionNetwork.disconnected(meta.input)) {
+        // A retryable connection reset is a transient server-side failure: retry
+        // it through the normal backoff path instead of the offline wait.
+        if (opts.offline && SessionNetwork.disconnected(meta.input) && !SessionNetwork.serverReset(error)) {
           const result = yield* opts.offline({
             error: meta.input,
             message: SessionNetwork.message(meta.input),

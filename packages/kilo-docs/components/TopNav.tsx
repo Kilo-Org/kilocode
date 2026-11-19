@@ -32,7 +32,7 @@ const mainNavItems: NavItem[] = [
   { label: "Automate", href: "/automate" },
   { label: "Deploy & Secure", href: "/deploy-secure" },
   { label: "Kilo Gateway", href: "/gateway" },
-  { label: "Kilo Desktop", href: "/desktop", badge: "Beta" },
+  { label: "Kilo Desktop", href: "/desktop" },
   { label: "Contributing", href: "/contributing" },
 ]
 
@@ -200,7 +200,7 @@ function NavTab({ item, isActive }: { item: NavItem; isActive: boolean }) {
     <Link
       href={item.href}
       className={`relative px-1 py-3 text-sm font-medium transition-colors ${
-        isActive ? "text-indigo-600 dark:text-[#F8F675]" : "hover:text-[var(--text-color)]"
+        isActive ? "text-indigo-600 dark:text-[var(--kilo-yellow)]" : "hover:text-[var(--text-color)]"
       }`}
       style={{ color: isActive ? "var(--text-brand)" : "var(--text-secondary)" }}
     >
@@ -223,7 +223,7 @@ function NavTab({ item, isActive }: { item: NavItem; isActive: boolean }) {
           {item.badge}
         </span>
       ) : null}
-      {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-[#F8F675]" />}
+      {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-[var(--kilo-yellow)]" />}
     </Link>
   )
 }

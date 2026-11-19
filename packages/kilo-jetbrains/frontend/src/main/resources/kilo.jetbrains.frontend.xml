@@ -1,6 +1,7 @@
 <idea-plugin>
     <dependencies>
         <module name="intellij.platform.frontend"/>
+        <module name="intellij.platform.lang.impl"/>
         <plugin id="org.jetbrains.plugins.terminal"/>
         <module name="intellij.terminal.frontend"/>
         <module name="kilo.jetbrains.shared"/>
@@ -9,6 +10,7 @@
     <resource-bundle>messages.KiloBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
+        <errorHandler implementation="com.intellij.diagnostic.JetBrainsMarketplaceErrorReportSubmitter"/>
         <applicationService serviceImplementation="ai.kilocode.client.onboarding.providers.v5migration.KiloMigrationService"/>
         <applicationService serviceImplementation="ai.kilocode.client.onboarding.KiloOnboardingService"/>
         <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
@@ -84,7 +86,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.context"
-                groupWeight="-1"
+                groupWeight="-2"
                 instance="ai.kilocode.client.settings.context.ContextConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.context.displayName"/>
@@ -99,8 +101,16 @@
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.transcript"
+                groupWeight="-1"
+                instance="ai.kilocode.client.settings.transcript.TranscriptConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.transcript.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.checkpoints"
-                groupWeight="-2"
+                groupWeight="-3"
                 instance="ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.checkpoints.displayName"/>
@@ -108,7 +118,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.integrations"
-                groupWeight="-3"
+                groupWeight="-4"
                 instance="ai.kilocode.client.settings.integrations.IntegrationsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.integrations.displayName"/>
@@ -116,7 +126,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.advanced"
-                groupWeight="-4"
+                groupWeight="-5"
                 instance="ai.kilocode.client.settings.AdvancedConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.advanced.displayName"/>
@@ -156,6 +166,11 @@
                 bundle="messages.KiloBundle"
                 key="settings.agentBehavior.rules.displayName"/>
 
+        <registryKey key="kilo.cloudWorkspaces.enabled"
+                     description="Show repository-scoped Cloud workspaces and hosted sessions in Agent Manager."
+                     defaultValue="true"
+                     restartRequired="false"
+                     overrides="false"/>
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
                      defaultValue="true"
@@ -200,6 +215,9 @@
         <action id="Kilo.ReloadCoreSettings"
                 class="ai.kilocode.client.actions.ReloadCoreSettingsAction"/>
 
+        <action id="Kilo.RefreshCloud"
+                class="ai.kilocode.client.actions.RefreshCloudAction"/>
+
         <action id="Kilo.Reinstall"
                 class="ai.kilocode.client.actions.ReinstallKiloAction"/>
 
@@ -230,6 +248,7 @@
 
         <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.ReloadCoreSettings"/>
+            <reference ref="Kilo.RefreshCloud"/>
             <separator/>
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
@@ -262,8 +281,9 @@
         <action id="Kilo.NewSession"
                 class="ai.kilocode.client.actions.NewSessionAction"/>
 
-        <action id="Kilo.NewWorktree"
-                class="ai.kilocode.client.actions.NewWorktreeAction"/>
+        <group id="Kilo.AgentManager.Add"
+               class="ai.kilocode.client.actions.AgentManagerAddAction"
+               popup="true"/>
 
         <action id="Kilo.Chat.NewWorktree"
                 class="ai.kilocode.client.actions.ChatNewWorktreeAction"
@@ -278,14 +298,6 @@
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>
 
-        <!-- Declarative toolbar group for the Kilo tool window title bar -->
-        <group id="Kilo.ToolWindowToolbar">
-            <reference ref="Kilo.NewSession"/>
-            <reference ref="Kilo.NewWorktree"/>
-            <reference ref="Kilo.History"/>
-            <reference ref="Kilo.Settings"/>
-        </group>
-
         <action id="Kilo.SendPrompt"
                 class="ai.kilocode.client.actions.SendPromptAction"
                 text="Send Prompt"
@@ -296,6 +308,18 @@
                                first-keystroke="meta ENTER"/>
             <keyboard-shortcut keymap="$default"
                                first-keystroke="control ENTER"/>
+        </action>
+
+        <action id="Kilo.SpeechInput"
+                class="ai.kilocode.client.actions.SpeechInputAction">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="control K"/>
+            <keyboard-shortcut keymap="Mac OS X"
+                               first-keystroke="control K"
+                               replace-all="true"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="control K"
+                               replace-all="true"/>
         </action>
 
         <action id="Kilo.SubmitDialog"
@@ -392,6 +416,10 @@
         <action id="Kilo.Worktree.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeAction"/>
 
+        <group id="Kilo.AgentManager.MoveTo"
+               class="ai.kilocode.client.actions.MoveAgentManagerItemGroup"
+               popup="true"/>
+
         <action id="Kilo.Worktree.Delete"
                 class="ai.kilocode.client.actions.DeleteWorktreeAction"/>
 
@@ -407,6 +435,9 @@
         <action id="Kilo.Worktree.OpenLocalDiff"
                 class="ai.kilocode.client.actions.OpenWorktreeLocalDiffAction"/>
 
+        <action id="Kilo.Worktree.UpdateFromBase"
+                class="ai.kilocode.client.actions.UpdateWorktreeFromBaseAction"/>
+
         <action id="Kilo.Worktree.CopyBranchName"
                 class="ai.kilocode.client.actions.CopyBranchNameAction"/>
 
@@ -415,6 +446,18 @@
 
         <action id="Kilo.Worktree.RunSetupScript"
                 class="ai.kilocode.client.actions.RunWorktreeSetupScriptAction"/>
+
+        <action id="Kilo.HostedWorkspace.Reload"
+                class="ai.kilocode.client.actions.ReloadHostedWorkspaceAction"/>
+
+        <action id="Kilo.HostedWorkspace.OpenInBrowser"
+                class="ai.kilocode.client.actions.HostedOpenInBrowserAction"/>
+
+        <action id="Kilo.HostedWorkspace.Delete"
+                class="ai.kilocode.client.actions.HostedDeleteWorkspaceAction"/>
+
+        <action id="Kilo.HostedWorkspace.Dismiss"
+                class="ai.kilocode.client.actions.HostedDismissWorkspaceAction"/>
 
         <action id="Kilo.WorktreeSession.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
@@ -429,12 +472,20 @@
                 class="ai.kilocode.client.actions.ForkWorktreeSessionAction"/>
 
         <group id="Kilo.Worktree.RowMenu">
+            <reference ref="Kilo.HostedWorkspace.OpenInBrowser"/>
+            <reference ref="Kilo.HostedWorkspace.Reload"/>
+            <separator/>
+            <reference ref="Kilo.HostedWorkspace.Delete"/>
+            <reference ref="Kilo.HostedWorkspace.Dismiss"/>
+            <separator/>
             <reference ref="Kilo.Worktree.Rename"/>
+            <reference ref="Kilo.AgentManager.MoveTo"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenDiff"/>
             <reference ref="Kilo.Worktree.OpenLocalDiff"/>
+            <reference ref="Kilo.Worktree.UpdateFromBase"/>
             <separator/>
             <reference ref="Kilo.Worktree.CopyBranchName"/>
             <reference ref="Kilo.Worktree.CopyBranchPath"/>
@@ -470,6 +521,23 @@
 
         <action id="Kilo.Session.Board"
                 class="ai.kilocode.client.actions.ShowSessionBoardAction"/>
+
+        <!--
+          Transcript Find inherits the user's current IDE shortcuts. The actions are promoted over the
+          editor Find actions only when the data context resolves the active chat, so ordinary file
+          editors keep their native behavior.
+        -->
+        <action id="Kilo.Transcript.Find"
+                class="ai.kilocode.client.actions.TranscriptFindAction"
+                use-shortcut-of="Find"/>
+
+        <action id="Kilo.Transcript.FindNext"
+                class="ai.kilocode.client.actions.TranscriptFindNextAction"
+                use-shortcut-of="FindNext"/>
+
+        <action id="Kilo.Transcript.FindPrevious"
+                class="ai.kilocode.client.actions.TranscriptFindPreviousAction"
+                use-shortcut-of="FindPrevious"/>
 
         <action id="Kilo.Session.CompareToBase"
                 class="ai.kilocode.client.actions.CompareToBaseAction"/>
@@ -520,7 +588,9 @@
 
         <!--
           Popup shown from the "more" icon in the prompt bar. Same SessionActionsKeys.ACTIONS context
-          as the context menu, with Copy and Stop reserved for the right-click menu.
+          as the context menu, with Copy and Stop reserved for the right-click menu. Core lifecycle
+          reuses the tool window gear's Kilo.CliGroup submenu, so the version/architecture footer and
+          Restart/Reinstall stay in one place.
         -->
         <group id="Kilo.Session.PromptMenu">
             <reference ref="Kilo.Session.AutoApprove"/>
@@ -533,7 +603,7 @@
             <reference ref="Kilo.Session.CopyPrRef"/>
             <separator/>
             <reference ref="Kilo.OpenSettings"/>
-            <reference ref="Kilo.ReloadCoreSettings"/>
+            <reference ref="Kilo.CliGroup"/>
             <separator/>
             <reference ref="Kilo.Session.CopyId"/>
             <reference ref="Kilo.Session.CopyShareLink"/>

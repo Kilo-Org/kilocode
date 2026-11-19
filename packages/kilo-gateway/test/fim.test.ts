@@ -6,12 +6,7 @@ describe("FIM target resolution", () => {
     expect(resolveFimTarget("kilo", "mistralai/codestral-2508")).toEqual({
       provider: "kilo",
       model: "mistralai/codestral-2508",
-      url: "https://api.kilo.ai/api/fim/completions",
-    })
-    expect(resolveFimTarget("kilo", "inception/mercury-edit-2")).toEqual({
-      provider: "kilo",
-      model: "inception/mercury-edit-2",
-      url: "https://api.kilo.ai/api/fim/completions",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
   })
 
@@ -20,33 +15,31 @@ describe("FIM target resolution", () => {
       provider: "mistral",
       model: "codestral-2508",
     })
+  })
+
+  test("falls back to the default Gateway model for retired direct providers", () => {
     expect(resolveFimTarget("inception", "mercury-edit-2")).toEqual({
-      provider: "inception",
-      model: "mercury-edit-2",
-      url: "https://api.inceptionlabs.ai/v1/fim/completions",
+      provider: "kilo",
+      model: "mistralai/codestral-2508",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
   })
 
   test("preserves gateway model pass-through behavior", () => {
     expect(resolveFimTarget()).toEqual({
       provider: "kilo",
-      model: "mistralai/codestral-2501",
-      url: "https://api.kilo.ai/api/fim/completions",
+      model: "mistralai/codestral-2508",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
     expect(resolveFimTarget(undefined, "mistralai/codestral-2508")).toEqual({
       provider: "kilo",
       model: "mistralai/codestral-2508",
-      url: "https://api.kilo.ai/api/fim/completions",
-    })
-    expect(resolveFimTarget(undefined, "inception/mercury-edit")).toEqual({
-      provider: "kilo",
-      model: "inception/mercury-edit",
-      url: "https://api.kilo.ai/api/fim/completions",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
     expect(resolveFimTarget("kilo", "custom/fim-model")).toEqual({
       provider: "kilo",
       model: "custom/fim-model",
-      url: "https://api.kilo.ai/api/fim/completions",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
   })
 })

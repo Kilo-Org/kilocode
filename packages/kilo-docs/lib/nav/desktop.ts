@@ -18,6 +18,7 @@ export const DesktopNav: NavSection[] = [
       { href: "/desktop/features/browser", children: "In-app browser" },
       { href: "/desktop/features/terminal", children: "Terminal" },
       { href: "/desktop/features/git", children: "Git integration" },
+      { href: "/desktop/features/workspace-board", children: "Workspace board" },
       { href: "/desktop/features/local-inference", children: "Local inference" },
       { href: "/desktop/features/environments", children: "Conda environments" },
       { href: "/desktop/features/files", children: "Files" },
@@ -32,6 +33,9 @@ export const DesktopNav: NavSection[] = [
   },
   {
     title: "Help",
-    links: [{ href: "/desktop/troubleshooting", children: "Troubleshooting" }],
+    links: [
+      { href: "/desktop/troubleshooting", children: "Troubleshooting" },
+      { href: "/desktop/release-notes", children: "Release notes" },
+    ],
   },
 ]

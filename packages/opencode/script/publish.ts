@@ -166,6 +166,11 @@ if (!Script.preview) {
   const metadata = path.resolve("dist", "oci-metadata.json")
   await $`docker buildx build --platform ${platforms} ${tagFlags} --provenance=mode=max --sbom=true --metadata-file ${metadata} --push .`
   evidence.push(...(await describeImages(metadata)))
+  // The OpenShell variant is the Dockerfile's openshell stage, built, pushed and described like the main image.
+  const variantMetadata = path.resolve("dist", "oci-metadata-openshell.json")
+  const variantTagFlags = tags.flatMap((t) => ["-t", `${t}-openshell`])
+  await $`docker buildx build --platform ${platforms} ${variantTagFlags} --target openshell --provenance=mode=max --sbom=true --metadata-file ${variantMetadata} --push .`
+  evidence.push(...(await describeImages(variantMetadata)))
   // kilocode_change end
   // Calculate SHA values
   const arm64Sha = await $`sha256sum ./dist/kilo-linux-arm64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
@@ -310,7 +315,7 @@ if (Script.release) {
   // Expected coverage is derived from what this release had to produce, not from
   // what happened to be recorded, so a missing package or image is a shortfall.
   const packages = Object.keys(binaries).length + 1
-  const images = Script.preview ? 0 : platforms.split(",").length + 1
+  const images = Script.preview ? 0 : 2 * (platforms.split(",").length + 1) // main image and OpenShell variant
   const described = await KiloSbom.distribution({
     dir: path.resolve("dist"),
     release: { version, channel: Script.channel },

@@ -10,6 +10,7 @@ import { SidebarSectionHeader } from "./SidebarSectionHeader"
 interface Props {
   section: SectionState
   count: number
+  marker?: JSX.Element
   children?: JSX.Element
   /** When true, auto-enter rename mode (e.g. after creation). */
   autoRename?: boolean
@@ -108,6 +109,7 @@ const SectionHeader: Component<Props> = (props) => {
               </Show>
             }
             count={props.count}
+            marker={props.marker}
             onToggle={() => {
               if (!renaming()) props.onToggle()
             }}

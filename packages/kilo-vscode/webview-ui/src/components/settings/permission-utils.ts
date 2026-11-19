@@ -9,6 +9,7 @@ export const DEFAULT_RULES: PermissionRuleItem[] = [
   { permission: "*", pattern: "*", action: "allow" },
   { permission: "external_directory", pattern: "*", action: "ask" },
   { permission: "bash", pattern: "*", action: "ask" },
+  { permission: "browser_open", pattern: "*", action: "ask" },
   { permission: "doom_loop", pattern: "*", action: "ask" },
 ]
 

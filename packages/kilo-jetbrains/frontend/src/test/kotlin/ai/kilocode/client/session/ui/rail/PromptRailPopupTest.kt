@@ -2,22 +2,26 @@ package ai.kilocode.client.session.ui.rail
 
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListRowHeight
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveRowHeight
 import com.intellij.openapi.options.advanced.AdvancedSettings
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
+import java.awt.Point
 import java.awt.Rectangle
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import java.awt.event.MouseWheelEvent
 import javax.swing.JList
 import javax.swing.JScrollPane
 import javax.swing.KeyStroke
+import javax.swing.Scrollable
 import javax.swing.JViewport
 
 class PromptRailPopupTest : BasePlatformTestCase() {
@@ -81,6 +85,179 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         Disposer.dispose(fix.popup.disposable)
     }
 
+    fun `test the last row is revealed flush with the end of the list`() {
+        val fix = shown(40)
+
+        fix.popup.select(39)
+        val view = fix.port.view ?: error("expected a view")
+        assertEquals(
+            "hovering the last row must leave the list scrolled to its end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        fix.popup.select(20)
+        fix.popup.select(39)
+        assertEquals(
+            "returning to the last row must scroll back to the end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * Isolates the extent listener: changing the viewport size without laying the body out again must
+     * re-reveal the row. The balloon's own relayout path is covered separately below.
+     */
+    fun `test a revealed last row stays revealed when the viewport shrinks`() {
+        val fix = shown(40)
+        fix.popup.select(39)
+        val view = fix.port.view ?: error("expected a view")
+        assertEquals(
+            "precondition: the last row starts flush with the end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        fix.port.extentSize = Dimension(CAP_W, CAP_H - 80)
+
+        assertEquals(
+            "the last row must stay at the end after the viewport shrinks",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * The balloon can be laid out more than once, and the platform may settle on a shorter body after
+     * the first pass. A reveal applied against the taller viewport then leaves the list short of the
+     * end, which is what hovering the last stripe exposed.
+     */
+    fun `test a revealed last row stays revealed after a balloon relayout`() {
+        val fix = shown(40)
+        fix.popup.select(39)
+        val view = fix.port.view ?: error("expected a view")
+        assertEquals(
+            "precondition: the last row starts flush with the end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        fix.popup.fitWithin(CAP_W, CAP_H - 80)
+        fix.popup.component.size = fix.popup.component.preferredSize
+        layoutAll(fix.popup.component)
+
+        assertEquals(
+            "the last row must stay at the end after the body shrinks",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * Arrow-key navigation moves the list's selection without going through [PromptRailPopup.select].
+     * A later layout must not drag the list back to the row the pointer hovered earlier.
+     */
+    fun `test list selection stops revealing the last hovered row`() {
+        val fix = shown(40)
+        fix.popup.select(20)
+        val list = findList(fix.popup.component) ?: error("expected a JList of rows")
+
+        list.selectedIndex = 39
+        fix.port.viewPosition = Point(0, 0)
+        layoutAll(fix.popup.component)
+
+        assertEquals("the user's row must stay selected", 39, list.selectedIndex)
+        assertEquals("layout must not restore the stale hovered row", 0, fix.port.viewPosition.y)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * A wheel or scrollbar drag is the user taking over the list. A later balloon resize must not drag
+     * the list back to the row the pointer hovered earlier.
+     */
+    fun `test manual scrolling stops revealing the hovered row on resize`() {
+        val fix = shown(40)
+        fix.popup.select(39)
+        assertTrue("precondition: the hovered row scrolls down", fix.port.viewPosition.y > 0)
+
+        val list = findList(fix.popup.component) ?: error("expected a JList of rows")
+        list.dispatchEvent(
+            MouseWheelEvent(
+                list,
+                MouseEvent.MOUSE_WHEEL,
+                0L,
+                0,
+                0,
+                0,
+                0,
+                false,
+                MouseWheelEvent.WHEEL_UNIT_SCROLL,
+                1,
+                3,
+            ),
+        )
+        fix.port.viewPosition = Point(0, 0)
+        fix.port.extentSize = Dimension(CAP_W, CAP_H - 80)
+
+        assertEquals("manual scrolling must stop the resize follow", Point(0, 0), fix.port.viewPosition)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    fun `test keyboard scrolling stops revealing the hovered row on resize`() {
+        val fix = shown(40)
+        fix.popup.select(39)
+        assertTrue("precondition: the hovered row scrolls down", fix.port.viewPosition.y > 0)
+
+        val list = findList(fix.popup.component) ?: error("expected a JList of rows")
+        // Key events need a focused component in a showing window, so invoke the installed listener
+        // directly; this still covers the wiring under test.
+        val key = KeyEvent(list, KeyEvent.KEY_PRESSED, 0L, 0, KeyEvent.VK_PAGE_UP, KeyEvent.CHAR_UNDEFINED)
+        list.keyListeners.forEach { it.keyPressed(key) }
+        val after = fix.port.viewPosition
+        fix.port.extentSize = Dimension(CAP_W, CAP_H - 80)
+
+        assertEquals("keyboard scrolling must stop the resize follow", after, fix.port.viewPosition)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * The balloon lays the list out after sizing it, and that pass updates the scrollbar model too.
+     * That is not the user scrolling, so it must not drop the follow: the hovered row still has to be
+     * revealed when the viewport settles to its final, shorter extent.
+     */
+    fun `test a layout-time scrollbar update keeps the hovered row revealed`() {
+        val fix = shown(40, hovered = 39)
+        val view = fix.port.view ?: error("expected a view")
+        assertEquals(
+            "precondition: the hovered last row starts at the end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        val scroll = findScroll(fix.popup.component) ?: error("expected the row list to own a scroll pane")
+        scroll.verticalScrollBar.maximum += 40
+
+        fix.port.extentSize = Dimension(CAP_W, CAP_H - 80)
+
+        assertEquals(
+            "a layout-time model update must not stop the hovered row following the resize",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
     /** A row requested before the body had bounds still has to be revealed once it does. */
     fun `test a row requested before layout is revealed once laid out`() {
         val popup = popup(items(40), hovered = 30)
@@ -119,6 +296,49 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         }
 
         Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * With room to spare the body must be exactly as tall as the rows need, so the list does not clip
+     * a row in half. Capping at a fixed height instead left the last row cut off mid-line.
+     */
+    fun `test the body grows to the rows it has when the frame allows it`() {
+        val long = List(3) {
+            PromptRailItem(
+                id = "long_$it",
+                queued = false,
+                prompt = "Prompt $it",
+                answer = "A long answer whose wrapped height is only known after the popup assigns " +
+                    "the list its final width. ".repeat(5),
+            )
+        }
+        val popup = popup(long, hovered = 0)
+        popup.fitWithin(CAP_W, JBUI.scale(2000))
+        val root = popup.component
+        val rows = popup.list
+        val head = root.components.single { it !== rows }
+        assertEquals(
+            "preferred height must be the header plus every width-aware cell",
+            head.preferredSize.height + rows.preferredHeight(CAP_W),
+            root.preferredSize.height,
+        )
+        root.size = root.preferredSize
+        layoutAll(root)
+
+        val scroll = findScroll(root) ?: error("expected the row list to own a scroll pane")
+        val view = scroll.viewport.view
+        assertEquals(
+            "view ${view.height} must fit the extent ${scroll.viewport.extentSize.height}",
+            view.height,
+            scroll.viewport.extentSize.height,
+        )
+        assertEquals(
+            "the full cell sum must be exposed before the view enters a viewport",
+            view.preferredSize.height,
+            (view as Scrollable).preferredScrollableViewportSize.height,
+        )
+
+        Disposer.dispose(popup.disposable)
     }
 
     fun `test the body honors the width and height caps`() {
@@ -199,7 +419,7 @@ class PromptRailPopupTest : BasePlatformTestCase() {
     fun `test a row tooltip is served when the config leaves it on`() {
         val rows = ActiveList(
             emptyText = "",
-            cfg = ActiveListConfig(height = ActiveListRowHeight.PREFERRED, wrapDescription = true),
+            cfg = ActiveConfig(height = ActiveRowHeight.PREFERRED, wrapDescription = true),
             showSearch = false,
             onCell = { _, _ -> },
         )
@@ -313,7 +533,7 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         override val key: String,
         override val title: String,
         override val description: String?,
-    ) : ActiveListItem
+    ) : ActiveItem
 
     /**
      * The header buttons have to drive the same navigation the ticks do. Scrolling the transcript alone

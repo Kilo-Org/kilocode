@@ -130,34 +130,6 @@ export const FimBody = Schema.Struct({
   temperature: Schema.optional(Schema.Finite),
 })
 
-// Next Edit (NES) — non-streaming. Clients send structured editor context; the
-// gateway assembles the Mercury sentinel-tagged prompt (contract documented at
-// https://docs.inceptionlabs.ai/capabilities/next-edit) so the prompt format
-// lives in one place and is shared across editors.
-export const EditBody = Schema.Struct({
-  provider: Schema.optional(Schema.String),
-  model: Schema.optional(Schema.String),
-  maxTokens: Schema.optional(Schema.Finite),
-  currentFilePath: Schema.String,
-  currentFileContent: Schema.String,
-  cursorLine: Schema.Finite,
-  cursorCharacter: Schema.Finite,
-  editableRegionStartLine: Schema.Finite,
-  editableRegionEndLine: Schema.Finite,
-  recentlyViewedSnippets: Schema.Array(Schema.Struct({ filepath: Schema.String, content: Schema.String })),
-  editDiffHistory: Schema.Array(Schema.String),
-})
-
-export const EditResponse = Schema.Struct({
-  content: Schema.String,
-  usage: Schema.optional(
-    Schema.Struct({
-      prompt_tokens: Schema.optional(Schema.Finite),
-      completion_tokens: Schema.optional(Schema.Finite),
-    }),
-  ),
-})
-
 export const AudioTranscriptionsBody = Schema.Struct({
   model: Schema.String,
   input_audio: Schema.Struct({
@@ -236,7 +208,6 @@ export const KiloGatewayPaths = {
   profile: `${root}/profile`,
   authStatus: `${root}/auth-status`,
   fim: `${root}/fim`,
-  edit: `${root}/edit`,
   audioTranscriptions: `${root}/audio/transcriptions`,
   imageModels: `${root}/models/images`,
   transcriptionModels: `${root}/models/transcriptions`,
@@ -293,20 +264,6 @@ export const KiloGatewayApi = HttpApi.make("kilo")
             identifier: "kilo.fim",
             summary: "FIM completion",
             description: "Proxy a Fill-in-the-Middle completion request to the Kilo Gateway",
-          }),
-        ),
-        HttpApiEndpoint.post("edit", KiloGatewayPaths.edit, {
-          query: WorkspaceRoutingQuery,
-          payload: EditBody,
-          success: described(EditResponse, "Next Edit completion"),
-          error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "kilo.edit",
-            summary: "Next Edit completion",
-            description:
-              "Proxy a Mercury-style Next Edit request. The client supplies structured editor " +
-              "context; the gateway assembles the sentinel-tagged prompt and forwards to the upstream edit endpoint.",
           }),
         ),
         HttpApiEndpoint.post("audioTranscriptions", KiloGatewayPaths.audioTranscriptions, {

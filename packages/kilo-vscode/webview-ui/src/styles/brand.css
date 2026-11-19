@@ -1,0 +1,6 @@
+/* Same tokens as the docs site. Yellow is a brand fill, not a warning color. */
+
+html[data-theme="kilo-vscode"] {
+  --kilo-yellow: #ffdd00;
+  --kilo-yellow-hover: #edcd00;
+}

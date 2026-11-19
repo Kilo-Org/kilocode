@@ -5,11 +5,173 @@ import type { AgentManagerOutMessage } from "../../src/agent-manager/types"
 
 const font = { fontFamily: "Menlo", fontSize: 12 }
 
+function ownership(failing = true) {
+  const live = new Set<string>()
+  const attempts = new Map<string, number>()
+  const ready = Promise.withResolvers<void>()
+  const release = Promise.withResolvers<void>()
+  const created = Promise.withResolvers<void>()
+  let count = 0
+  const client = {
+    pty: {
+      create: async ({ title }: { title: string }) => {
+        const id = `pty-${++count}`
+        if (id === "pty-2") {
+          ready.resolve()
+          await release.promise
+        }
+        live.add(id)
+        return { data: { id, title } }
+      },
+      remove: async ({ ptyID }: { ptyID: string }) => {
+        const count = (attempts.get(ptyID) ?? 0) + 1
+        attempts.set(ptyID, count)
+        if (failing && ptyID === "pty-2" && count === 1) return { error: new Error("offline") }
+        live.delete(ptyID)
+        return { data: true }
+      },
+      update: async () => ({ data: true }),
+    },
+  } as unknown as KiloClient
+  const messages: AgentManagerOutMessage[] = []
+  const router = new TerminalRouter({
+    getClient: () => client,
+    getClientAsync: async () => client,
+    getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
+    getRoot: () => "/workspace",
+    getWorktreePath: () => "/workspace/worktree",
+    getProjectId: () => "prj-1",
+    log: () => undefined,
+    post: (message) => {
+      messages.push(message)
+      if (message.type === "agentManager.terminal.created") created.resolve()
+    },
+    getTerminalFont: () => font,
+  })
+  return { router, live, attempts, ready, release, created, messages }
+}
+
 function wait() {
   return new Promise((resolve) => setTimeout(resolve, 0))
 }
 
 describe("Agent Manager terminal routing", () => {
+  it("releases a retired manager when its late replacement cleanup succeeds", async () => {
+    const test = ownership(false)
+    test.router.handle({
+      type: "agentManager.terminal.create",
+      createId: "one",
+      placement: "tab",
+      worktreeId: "wt-1",
+    })
+    await test.created.promise
+    const manager = test.router["manager"]
+    test.router.handle({ type: "agentManager.terminal.restart", terminalId: "one" })
+    await test.ready.promise
+    await test.router.dispose()
+    expect(test.router["retired"].has(manager)).toBe(true)
+    test.release.resolve()
+    await wait()
+    expect([...test.live]).toEqual([])
+    expect(test.router["retired"].has(manager)).toBe(false)
+  })
+
+  for (const action of ["dispose", "directory"] as const) {
+    it(`retries a retired manager's failed late replacement during ${action} cleanup`, async () => {
+      const test = ownership()
+      test.router.handle({
+        type: "agentManager.terminal.create",
+        createId: "one",
+        placement: "tab",
+        worktreeId: "wt-1",
+      })
+      await test.created.promise
+      const manager = test.router["manager"]
+      test.router.handle({ type: "agentManager.terminal.restart", terminalId: "one" })
+      await test.ready.promise
+      // Disposal must finish even though the replacement has not arrived.
+      await test.router.dispose()
+      expect([...test.live]).toEqual([])
+      test.release.resolve()
+      await wait()
+      expect([...test.live]).toEqual(["pty-2"])
+      expect(test.messages.filter((message) => message.type === "agentManager.terminal.restarted")).toEqual([])
+
+      if (action === "dispose") await test.router.dispose()
+      else await test.router.closeDirectory("/workspace/worktree")
+      expect([...test.live]).toEqual([])
+      expect(test.attempts.get("pty-2")).toBe(2)
+      expect(test.router["retired"].has(manager)).toBe(false)
+    })
+  }
+
+  it("retries detached ownership during directory cleanup without disposing the router", async () => {
+    const test = ownership()
+    test.router.handle({
+      type: "agentManager.terminal.create",
+      createId: "one",
+      placement: "tab",
+      worktreeId: "wt-1",
+    })
+    await test.created.promise
+    test.router.handle({ type: "agentManager.terminal.restart", terminalId: "one" })
+    await test.ready.promise
+    test.router.handle({ type: "agentManager.terminal.close", terminalId: "one" })
+    await wait()
+    test.release.resolve()
+    await wait()
+    expect([...test.live]).toEqual(["pty-2"])
+    await test.router.closeDirectory("/workspace/other")
+    expect(test.attempts.get("pty-2")).toBe(1)
+    await test.router.closeDirectory("/workspace/worktree")
+    expect([...test.live]).toEqual([])
+    expect(test.attempts.get("pty-2")).toBe(2)
+    await test.router.dispose()
+  })
+
+  it("retains an initial create awaiting connection until its failed late cleanup can be retried", async () => {
+    const connection = Promise.withResolvers<KiloClient>()
+    const created = Promise.withResolvers<void>()
+    const live = new Set<string>()
+    let attempts = 0
+    const client = {
+      pty: {
+        create: async () => {
+          live.add("pty-1")
+          created.resolve()
+          return { data: { id: "pty-1", title: "Terminal 1" } }
+        },
+        remove: async () => {
+          if (++attempts === 1) return { error: new Error("offline") }
+          live.delete("pty-1")
+          return { data: true }
+        },
+      },
+    } as unknown as KiloClient
+    const router = new TerminalRouter({
+      getClient: () => client,
+      getClientAsync: () => connection.promise,
+      getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
+      getRoot: () => "/workspace",
+      getWorktreePath: () => undefined,
+      getProjectId: () => "prj-1",
+      log: () => undefined,
+      post: () => undefined,
+      getTerminalFont: () => font,
+    })
+    const manager = router["manager"]
+    router.handle({ type: "agentManager.terminal.create", createId: "one", placement: "tab", worktreeId: null })
+    await router.dispose()
+    connection.resolve(client)
+    await created.promise
+    await wait()
+    expect([...live]).toEqual(["pty-1"])
+    await router.dispose()
+    expect([...live]).toEqual([])
+    expect(attempts).toBe(2)
+    expect(router["retired"].has(manager)).toBe(false)
+  })
+
   it("round-trips side placement and rejects missing worktrees", async () => {
     const messages: AgentManagerOutMessage[] = []
     const envs: Array<Record<string, string> | undefined> = []

@@ -1,0 +1,217 @@
+package ai.kilocode.client.agentManager.hosted
+
+import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
+import ai.kilocode.client.app.KiloHostedService
+import ai.kilocode.client.vfs.KiloEditorKind
+import ai.kilocode.client.vfs.KiloEditorKindRegistry
+import ai.kilocode.client.vfs.KiloVirtualFile
+import ai.kilocode.client.vfs.KiloVirtualFileSystem
+import ai.kilocode.client.vfs.KiloVfsManager
+import ai.kilocode.client.vfs.KiloPath
+import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatcher
+import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
+import ai.kilocode.client.session.subagent.SubagentSessionEditorKind
+import ai.kilocode.client.session.subagent.SubagentSessionEditorPanel
+import ai.kilocode.rpc.dto.HostedIDs
+import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.components.service
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileTypes.FileType
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.components.BorderLayoutPanel
+import javax.swing.Icon
+import javax.swing.JComponent
+
+/**
+ * Editor identity for one Cloud workspace: its provider and workspace ids, never a local path.
+ * Sessions inside it are selected through hosted [SessionRef] keys.
+ */
+object HostedWorkspaceEditorKind : KiloEditorKind {
+    const val ID = "hosted-workspace"
+    const val PROVIDER = "provider"
+    const val WORKSPACE = "workspace"
+    const val PENDING_PREFIX = "pending-"
+
+    override val id: String = ID
+
+    override fun title(params: Map<String, String>): String {
+        val ref = HostedWorkspaceRefDto(params[PROVIDER].orEmpty(), params[WORKSPACE].orEmpty())
+        val cache = service<HostedWorkspaceCache>()
+        val dto = cache.get(ref)
+        return cache.title(ref)
+            ?: HostedWorkspaceTitle.text(dto?.name, dto?.branch, params[WORKSPACE].orEmpty())
+    }
+
+    override fun icon(params: Map<String, String>): Icon = HostedWorkspaceIcons.cloud
+    override fun fileType(params: Map<String, String>): FileType = HostedWorkspaceFileType
+    override fun presentablePath(params: Map<String, String>): String = title(params)
+    override fun isValid(params: Map<String, String>): Boolean =
+        !params[PROVIDER].isNullOrBlank() && !params[WORKSPACE].isNullOrBlank()
+
+    @RequiresEdt
+    override fun preferredFocus(component: JComponent): JComponent? =
+        (component as? HostedWorkspaceEditorContainer)?.preferredFocus()
+
+    @RequiresEdt
+    override fun createContent(project: Project, file: KiloVirtualFile, parent: Disposable): JComponent {
+        val provider = file.path.params[PROVIDER]?.takeIf { it.isNotBlank() } ?: return BorderLayoutPanel()
+        val workspace = file.path.params[WORKSPACE]?.takeIf { it.isNotBlank() } ?: return BorderLayoutPanel()
+        val ref = HostedWorkspaceRefDto(provider, workspace)
+        val hosted = project.service<KiloHostedService>()
+        if (!hosted.enabled() || project.service<HostedManagementService>().excluded(ref)) {
+            return BorderLayoutPanel()
+        }
+        if (workspace.startsWith(PENDING_PREFIX)) {
+            return BorderLayoutPanel().apply {
+                addToCenter(JBLabel(KiloBundle.message("hosted.workspace.progress.creating")).align(HAlign.CENTER, VAlign.CENTER))
+            }
+        }
+        val dto = service<HostedWorkspaceCache>().get(ref)
+        return HostedWorkspaceEditorContainer(
+            parent = parent,
+            project = project,
+            ref = ref,
+            name = dto?.name,
+            branch = dto?.branch,
+        )
+    }
+}
+
+internal class HostedWorkspaceEditorContainer @RequiresEdt constructor(
+    parent: Disposable,
+    private val project: Project,
+    private val ref: HostedWorkspaceRefDto,
+    name: String?,
+    branch: String?,
+) : BorderLayoutPanel(), Disposable {
+    private var panel: HostedWorkspaceEditorPanel? = null
+
+    init {
+        Disposer.register(parent, this)
+        mount(name, branch)
+    }
+
+    @RequiresEdt
+    fun preferredFocus(): JComponent? = panel?.preferredFocus()
+
+    @RequiresEdt
+    fun detach(): suspend () -> Unit {
+        val old = panel ?: return {}
+        panel = null
+        remove(old)
+        Disposer.dispose(old)
+        revalidate()
+        repaint()
+        return { old.closed() }
+    }
+
+    @RequiresEdt
+    fun rebuild(dto: HostedWorkspaceDto) {
+        check(panel == null)
+        mount(dto.name, dto.branch)
+        revalidate()
+        repaint()
+    }
+
+    @RequiresEdt
+    private fun mount(name: String?, branch: String?) {
+        val next = HostedWorkspaceEditorPanel(this, project, ref, name, branch)
+        panel = next
+        addToCenter(next)
+    }
+
+    override fun dispose() {
+        panel = null
+        removeAll()
+    }
+}
+
+object HostedWorkspaceFileType : FileType {
+    override fun getName(): String = "KILO_HOSTED_WORKSPACE"
+    override fun getDisplayName(): String = "Kilo Cloud workspace"
+    override fun getDescription(): String = "A Cloud workspace served through the local Session Host"
+    override fun getDefaultExtension(): String = "kilo-cloud-workspace"
+    override fun getIcon(): Icon = HostedWorkspaceIcons.cloud
+    override fun isBinary(): Boolean = true
+    override fun isReadOnly(): Boolean = true
+    override fun getCharset(file: VirtualFile, content: ByteArray): String? = null
+}
+
+object HostedWorkspaceEditorMatcher : WorktreeEditorMatcher {
+    override fun match(file: VirtualFile): String? {
+        val kilo = file as? KiloVirtualFile ?: return null
+        if (kilo.path.kind != HostedWorkspaceEditorKind.ID) return null
+        val provider = kilo.path.params[HostedWorkspaceEditorKind.PROVIDER] ?: return null
+        val workspace = kilo.path.params[HostedWorkspaceEditorKind.WORKSPACE] ?: return null
+        return HostedIDs.workspace(provider, workspace)
+    }
+}
+
+fun ensureHostedWorkspaceEditorKind() {
+    service<KiloEditorKindRegistry>().register(HostedWorkspaceEditorKind)
+}
+
+internal fun hostedWorkspaceParams(dto: HostedWorkspaceDto): Map<String, String> =
+    buildMap {
+        put(HostedWorkspaceEditorKind.PROVIDER, dto.ref.providerID)
+        put(HostedWorkspaceEditorKind.WORKSPACE, dto.ref.workspaceID)
+    }
+
+internal fun openHostedWorkspace(project: Project, dto: HostedWorkspaceDto, focus: Boolean = true) {
+    ensureHostedWorkspaceEditorKind()
+    service<HostedWorkspaceCache>().put(dto, HostedWorkspaceTitle.text(dto))
+    project.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
+    project.service<KiloVfsManager>().open(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(dto), focus)
+}
+
+/** Disposes every workspace-owned UI/controller before reconnecting its hosted streams. */
+@RequiresEdt
+internal fun reloadHostedWorkspace(project: Project, dto: HostedWorkspaceDto) {
+    var children = emptyList<Map<String, String>>()
+    var containers = emptyList<HostedWorkspaceEditorContainer>()
+    project.service<KiloHostedService>().reload(dto.ref, close = {
+        val vfs = project.service<KiloVfsManager>()
+        val params = hostedWorkspaceParams(dto)
+        val files = FileEditorManager.getInstance(project)
+        val file = KiloVirtualFileSystem.getInstance().cached(KiloPath(HostedWorkspaceEditorKind.ID, params))
+        containers = file?.let { files.getEditors(it) }
+            ?.mapNotNull { it.component as? HostedWorkspaceEditorContainer }
+            .orEmpty()
+        val subagents = files.openFiles.mapNotNull { child ->
+            val kilo = child as? KiloVirtualFile ?: return@mapNotNull null
+            if (kilo.path.kind != SubagentSessionEditorKind.ID) return@mapNotNull null
+            val directory = kilo.path.params["directory"]
+            if (directory != dto.ref.key) return@mapNotNull null
+            val childPanels = files.getEditors(child).mapNotNull { it.component as? SubagentSessionEditorPanel }
+            kilo.path.params to childPanels
+        }
+        children = subagents.map { it.first }
+        val closed = containers.map { it.detach() }
+        if (containers.isEmpty()) vfs.close(HostedWorkspaceEditorKind.ID, params)
+        subagents.forEach { (child, _) -> vfs.close(SubagentSessionEditorKind.ID, child) }
+        suspend {
+            closed.forEach { it() }
+            subagents.flatMap { it.second }.forEach { it.closed() }
+        }
+    }) {
+        if (project.isDisposed) return@reload
+        if (containers.isEmpty()) openHostedWorkspace(project, dto)
+        else containers.forEach { it.rebuild(dto) }
+        val vfs = project.service<KiloVfsManager>()
+        // Child tabs are restored only after their old controller scopes have fully terminated.
+        children.forEach { vfs.open(SubagentSessionEditorKind.ID, it, focus = false) }
+    }
+}
+
+internal fun hostedWorkspaceRoot(project: Project): ai.kilocode.client.app.Workspace =
+    project.service<KiloWorkspaceService>().workspace(project.basePath.orEmpty())

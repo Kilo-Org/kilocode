@@ -8,8 +8,8 @@ const FLAG = "kilo.autocomplete.defaultClearMigrationV1"
  * they exactly match the current `DEFAULT_AUTOCOMPLETE_MODEL`. Many users have
  * the default explicitly stored only because it was the only thing visible in
  * the dropdown — leaving it pinned would block them from picking up future
- * default changes (e.g. a switch to Mercury Next Edit) silently. After the
- * migration runs they show up as "Not set" and follow the resolved default.
+ * default changes silently. After the migration runs they show up as "Not set"
+ * and follow the resolved default.
  *
  * Users who picked a different model are untouched. The migration runs once
  * per machine and is gated on a globalState flag.

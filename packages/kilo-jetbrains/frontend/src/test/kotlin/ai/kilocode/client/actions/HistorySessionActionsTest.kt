@@ -130,6 +130,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
             when (ref) {
                 is SessionRef.Local -> opened.add(ref.id)
                 is SessionRef.Cloud -> opened.add("cloud:${ref.id}")
+                is SessionRef.Hosted -> opened.add(ref.id)
             }
         })
         val local = localItem("ses_1")
@@ -148,6 +149,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
             when (ref) {
                 is SessionRef.Local -> opened.add(ref.id)
                 is SessionRef.Cloud -> opened.add("cloud:${ref.id}")
+                is SessionRef.Hosted -> opened.add(ref.id)
             }
         })
         val item = cloudItem("cloud_1")
@@ -389,6 +391,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("ref=\"Kilo.Session.Rename\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Delete\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.Rename\""))
+        assertTrue(xml.contains("id=\"Kilo.AgentManager.MoveTo\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.Delete\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenPr\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.CopyPrRef\""))
@@ -401,7 +404,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Delete\""))
         assertTrue(xml.contains("ref=\"${'$'}Copy\""))
 
-        // Row menu order: rename, (separator), open pr, (separator), open diff, open local diff,
+        // Row menu order: rename, move to, (separator), open pr, (separator), open diff, open local diff,
         // (separator), copy branch name, copy branch path, copy pr ref, (separator),
         // open/create setup script, run setup script, (separator), delete.
         val rowMenuStart = xml.indexOf("<group id=\"Kilo.Worktree.RowMenu\">")
@@ -411,6 +414,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(rowMenu.contains("ref=\"Kilo.Worktree.RunSetupScript\""))
 
         val rename = rowMenu.indexOf("ref=\"Kilo.Worktree.Rename\"")
+        val relocate = rowMenu.indexOf("ref=\"Kilo.AgentManager.MoveTo\"")
         val openPr = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenPr\"")
         val openDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenDiff\"")
         val openLocalDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenLocalDiff\"")
@@ -421,7 +425,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val runSetup = rowMenu.indexOf("ref=\"Kilo.Worktree.RunSetupScript\"")
         val delete = rowMenu.indexOf("ref=\"Kilo.Worktree.Delete\"")
         assertTrue(
-            rename in 0 until openPr && openPr < openDiff && openDiff < openLocalDiff &&
+            rename in 0 until relocate && relocate < openPr && openPr < openDiff && openDiff < openLocalDiff &&
                 openLocalDiff < copyName && copyName < copyPath && copyPath < copyPrRef &&
                 copyPrRef < openSetup && openSetup < runSetup && runSetup < delete,
         )
