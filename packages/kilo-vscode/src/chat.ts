@@ -4,6 +4,7 @@ import {
   commands,
   env,
   Uri,
+  window,
   workspace,
   type ExtensionContext,
   type Webview,
@@ -11,6 +12,7 @@ import {
   type WebviewViewProvider,
 } from "vscode"
 import { getErrorMessage } from "./agent-manager/errors"
+import { t } from "./services/i18n"
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import type { Service } from "./browser-settings"
@@ -174,6 +176,7 @@ export function chat(input: {
     provider,
     post: send,
     syncState,
+    toggleAutoApprove: () => persistAutoApprove(input.context, !input.context.globalState.get(AUTO_APPROVE, false)),
     focused: () => state.focused,
   }
 }
@@ -400,10 +403,7 @@ export function wire(input: {
         post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
         return true
       case "persistAutoApproveState":
-        void input.context.globalState.update(AUTO_APPROVE, message.value)
-        others({ type: "autoApproveStateLoaded", value: message.value })
-        // The host sweep is the only owner of the decision, so tell it to approve the requests already pending.
-        notifyHostAutoApprove()
+        void persistAutoApprove(input.context, message.value)
         return true
       case "requestSandboxDefault":
         void sandboxDefaultMessage().then((reply) => post(reply))
@@ -578,6 +578,18 @@ export function wire(input: {
 }
 
 const surfaces = new Set<(message: ToWebview) => void>()
+
+async function persistAutoApprove(context: ExtensionContext, value: boolean) {
+  await context.globalState.update(AUTO_APPROVE, value)
+  if (context.globalState.get(AUTO_APPROVE, false) !== value) return
+  surfaces.forEach((post) => post({ type: "autoApproveStateLoaded", value }))
+  notifyHostAutoApprove()
+  void window.showInformationMessage(
+    value
+      ? `${t("prompt.action.autoApprove.enabled")} ${t("prompt.action.autoApprove.sandboxExcluded")}`
+      : t("prompt.action.autoApprove.disabled"),
+  )
+}
 
 /**
  * The composer state every webview shares through globalState: auto-approve, the model picker preferences and the

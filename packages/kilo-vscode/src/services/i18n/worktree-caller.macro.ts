@@ -11,12 +11,15 @@ const entries = await Promise.all(
       {
         "agentManager.setup.failed": manager.dict["agentManager.setup.failed"],
         "session.workspaceScope.alternatives": app.dict["session.workspaceScope.alternatives"],
+        "prompt.action.autoApprove.enabled": app.dict["prompt.action.autoApprove.enabled"],
+        "prompt.action.autoApprove.disabled": app.dict["prompt.action.autoApprove.disabled"],
+        "prompt.action.autoApprove.sandboxExcluded": app.dict["prompt.action.autoApprove.sandboxExcluded"],
       },
     ]
   }),
 )
 
-// The native notification needs two webview strings. Inline just those translations in the host bundle.
+// Inline only the translations used by native notifications in the host bundle.
 export function callerMessages(): Record<string, Record<string, string>> {
   return Object.fromEntries(entries)
 }
