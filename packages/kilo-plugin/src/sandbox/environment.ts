@@ -108,6 +108,10 @@ function decorate(base: Environment.Interface): Environment.Interface {
     remove: (path) =>
       confined(path, base.files.remove(path), (fs) => fs.remove(path, { recursive: true, force: true })),
     mkdir: (path) => confined(path, base.files.mkdir(path), (fs) => ensureDirectory(fs, path)),
+    append: (path, bytes) =>
+      confined(path, base.files.append(path, bytes), (fs) =>
+        ensureDirectory(fs, dirname(path)).pipe(Effect.andThen(fs.writeFile(path, bytes, { flag: "a" }))),
+      ),
     move: (from, to) =>
       Effect.flatMap(enabled, (active) => {
         if (!active) return base.files.move(from, to)
