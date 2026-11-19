@@ -30,7 +30,7 @@ test(
     await app.ready
     await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
 
-    await app.mockInput.typeText("/yolo")
+    await app.mockInput.typeText("/auto-approve")
     app.mockInput.pressEnter()
     await app.waitForFrame((frame) => frame.includes("Auto-approve enabled."))
 

@@ -168,7 +168,7 @@ export const dict = {
   "browser.state.readyHint": "Profil Chromium należący do Kilo, uruchamiany przy pierwszym wywołaniu przeglądarki",
   "browser.state.extensionHint": "Podłącz rozszerzenie przeglądarki Kilo, aby używać własnej przeglądarki",
 
-  // Auto-approve toggle for the TUI (`/yolo`, Ctrl+Alt+A).
+  // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Przełącz automatyczne zatwierdzanie",
   "tui.autoApprove.description": "Automatycznie zatwierdzaj prośby o uprawnienia dla tego procesu",
   "tui.autoApprove.enabled": "Automatyczne zatwierdzanie włączone. Prośby o uprawnienia są zatwierdzane automatycznie.",

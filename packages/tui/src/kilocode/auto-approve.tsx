@@ -1,5 +1,6 @@
-// `/yolo` and Ctrl+Alt+A toggle auto-approve for this process, the TUI counterpart of the VS Code shield. The prompt
-// metadata row shows "auto" while it is on and permission requests stop prompting.
+// `/auto-approve` (aliases `/autoapprove`, `/approve-all`, `/approveall`, `/yolo`) and Ctrl+Alt+A toggle auto-approve
+// for this process, the TUI counterpart of the VS Code shield. The prompt metadata row shows "auto" while it is on and
+// permission requests stop prompting.
 import { dict } from "@kilocode/kilo-i18n/en"
 import { Plugin } from "@opencode/plugin/tui"
 import { usePermission } from "../context/permission"
@@ -28,7 +29,7 @@ export default Plugin.define({
               description: dict["tui.autoApprove.description"],
               group: "Session",
               palette: true,
-              slash: { name: "yolo" },
+              slash: { name: "auto-approve", aliases: ["autoapprove", "approve-all", "approveall", "yolo"] },
               bind: "ctrl+alt+a",
               run: toggle,
             },

@@ -168,7 +168,7 @@ export const dict = {
   "browser.state.readyHint": "Kilo'ya ait bir Chromium profili; ilk tarayıcı çağrısında başlar",
   "browser.state.extensionHint": "Kendi tarayıcınızı kullanmak için Kilo tarayıcı uzantısını bağlayın",
 
-  // Auto-approve toggle for the TUI (`/yolo`, Ctrl+Alt+A).
+  // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Otomatik onayı değiştir",
   "tui.autoApprove.description": "Bu süreç için izin isteklerini otomatik olarak onayla",
   "tui.autoApprove.enabled": "Otomatik onay etkinleştirildi. İzin istekleri otomatik olarak onaylanır.",

@@ -345,7 +345,7 @@
     },
     "packages/tui/src/context/permission.tsx": {
       "rung": 4,
-      "seam": "A runtime override for the permission mode (feature `autoapprove`): the `Permission` context reads Kilo-owned `permissionModeOverride()` before the launch flag and the configured `session.permissions`, so `/yolo` and Ctrl+Alt+A can switch auto-approve while the TUI runs. Upstream derives the mode from the arguments and config only, and the TUI plugin API exposes no permission-mode setter, so rung 1 cannot change it, rung 2 cannot reach the TUI process-local context, and a generic seam would still need a public plugin API addition for the setter. One import line and the existing return line; the state and the toggle live in tui/src/kilocode/permission-mode.ts."
+      "seam": "A runtime override for the permission mode (feature `autoapprove`): the `Permission` context reads Kilo-owned `permissionModeOverride()` before the launch flag and the configured `session.permissions`, so `/auto-approve` and Ctrl+Alt+A can switch auto-approve while the TUI runs. Upstream derives the mode from the arguments and config only, and the TUI plugin API exposes no permission-mode setter, so rung 1 cannot change it, rung 2 cannot reach the TUI process-local context, and a generic seam would still need a public plugin API addition for the setter. One import line and the existing return line; the state and the toggle live in tui/src/kilocode/permission-mode.ts."
     },
     "packages/tui/src/routes/home.tsx": {
       "rung": 3,
@@ -353,7 +353,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
-      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY), `KiloPeriodic` (`/periodic`, local scheduled Flows), `KiloAutoApprove` (`/yolo` and Ctrl+Alt+A for the runtime auto-approve toggle) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
+      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY), `KiloPeriodic` (`/periodic`, local scheduled Flows), `KiloAutoApprove` (`/auto-approve` and Ctrl+Alt+A for the runtime auto-approve toggle) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
