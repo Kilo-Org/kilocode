@@ -295,6 +295,8 @@ type Call = {
   ctx: CallContext
   /** The step tokens this call carries, taken once: a call sent again carries the same ones. */
   sensitive: string[] | undefined
+  /** The turn that made the call: a stop of that turn ends it, even when the turn ended while the call waited. */
+  turn: number | undefined
 }
 
 /**
@@ -430,8 +432,8 @@ export class ExtensionBackend implements BrowserBackend {
     } catch (error) {
       if (!unsent(error, call.ctx.signal)) throw error
       await this.ready(port)
-      // A Stop all that arrived meanwhile ends the call: a stopped conversation never gets a new session.
-      this.refuse(call.session)
+      // A stop that arrived meanwhile ends the call: a stopped conversation never gets a new session.
+      if (this.halts(call.session, call.turn)) throw new Error(STOPPED)
       this.live()
       if (error.kind === "lost") this.drop(call.session, handle)
     }
@@ -521,14 +523,15 @@ export class ExtensionBackend implements BrowserBackend {
     const port = this.input.port
     if (!port) throw new UnavailableError(HINT)
     const session = this.session(ctx)
-    if (this.halts(session, this.input.turns?.get(session))) throw new Error(STOPPED)
+    const turn = this.input.turns?.get(session)
+    if (this.halts(session, turn)) throw new Error(STOPPED)
     this.live()
     try {
       await this.accepts(name)
       const input = name === "browser_file_upload" ? await this.upload(port, args) : args
       // Taken before the first send: a remembered token is consumed once, and a call sent again carries it too.
       const sensitive = this.sensitive(ctx, session, name, args)
-      return reply(await this.run(port, { session, name, args: input, ctx, sensitive }))
+      return reply(await this.run(port, { session, name, args: input, ctx, sensitive, turn }))
     } catch (error) {
       if (error instanceof BrowserHub.Failure) {
         const withheld = this.withheld(error)
