@@ -62,6 +62,8 @@ const Unavailable = Schema.Struct({ kind: Schema.Literal("unavailable"), hint: S
 const Refused = Schema.Struct({ kind: Schema.Literal("refused"), message: Schema.String })
 /** Sharing and adopting move tabs of the user's own browser, so they need the extension backend. */
 const NotExtension = Schema.Struct({ kind: Schema.Literal("not_extension") })
+/** The organization turned browser control off, so no choice in `/browser` can share or adopt. */
+const OrganizationOff = Schema.Struct({ kind: Schema.Literal("organization_off") })
 
 /** `/browser share`: the browser's active tab joined the session's tab group. */
 export const Share = Schema.Union([
@@ -69,6 +71,7 @@ export const Share = Schema.Union([
   Unavailable,
   Refused,
   NotExtension,
+  OrganizationOff,
 ])
 export type Share = typeof Share.Type
 
@@ -81,6 +84,7 @@ export const Adopt = Schema.Union([
   Unavailable,
   Refused,
   NotExtension,
+  OrganizationOff,
 ])
 export type Adopt = typeof Adopt.Type
 

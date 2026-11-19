@@ -180,6 +180,7 @@ export const dict = {
   "browser.adopt.kept": "此会话已有自己的标签页，并会保留它们。",
   "browser.adopt.unconfirmed": "已请求浏览器复用上次结束的标签页组。更新 Kilo 浏览器扩展以查看是否成功。",
   "browser.control.notExtension": "共享和复用标签页需要 Kilo 浏览器扩展。请在 /browser 中选择它。",
+  "browser.control.organizationOff": "你的组织已在 Kilo 中关闭浏览器控制。",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "浏览器不可用",
   "browser.notice.outdatedTitle": "浏览器扩展已过时",

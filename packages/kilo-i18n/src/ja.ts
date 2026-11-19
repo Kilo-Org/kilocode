@@ -192,6 +192,7 @@ export const dict = {
     "最後に終了したタブグループを再利用するようブラウザに要求しました。実行されたかどうかは Kilo ブラウザ拡張機能を更新して確認してください。",
   "browser.control.notExtension":
     "タブの共有と再利用には Kilo ブラウザ拡張機能が必要です。/browser で選択してください。",
+  "browser.control.organizationOff": "組織が Kilo でのブラウザ操作をオフにしました。",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "ブラウザを利用できません",
   "browser.notice.outdatedTitle": "ブラウザ拡張機能が古くなっています",

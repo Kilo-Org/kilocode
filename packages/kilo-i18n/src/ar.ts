@@ -188,6 +188,7 @@ export const dict = {
   "browser.adopt.unconfirmed":
     "طُلب من المتصفح إعادة استخدام آخر مجموعة علامات تبويب منتهية. حدّث إضافة متصفح Kilo لمعرفة ما إذا فعل ذلك.",
   "browser.control.notExtension": "تتطلب مشاركة علامات التبويب وإعادة استخدامها إضافة متصفح Kilo. اخترها في /browser.",
+  "browser.control.organizationOff": "عطّلت مؤسستك التحكم في المتصفح في Kilo.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "المتصفح غير متاح",
   "browser.notice.outdatedTitle": "إضافة المتصفح قديمة",

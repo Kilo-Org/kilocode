@@ -198,6 +198,7 @@ export const dict = {
     "Браузеру предложено повторно использовать последнюю завершённую группу вкладок. Обновите расширение браузера Kilo, чтобы узнать, сделал ли он это.",
   "browser.control.notExtension":
     "Для обмена вкладками и их повторного использования нужно расширение браузера Kilo. Выберите его в /browser.",
+  "browser.control.organizationOff": "Ваша организация отключила управление браузером в Kilo.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Браузер недоступен",
   "browser.notice.outdatedTitle": "Расширение браузера устарело",

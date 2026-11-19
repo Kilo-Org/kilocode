@@ -188,6 +188,7 @@ export const dict = {
   "browser.adopt.unconfirmed":
     "마지막으로 종료된 탭 그룹을 다시 사용하도록 브라우저에 요청했습니다. 실행되었는지 확인하려면 Kilo 브라우저 확장을 업데이트하세요.",
   "browser.control.notExtension": "탭 공유와 다시 사용에는 Kilo 브라우저 확장이 필요합니다. /browser에서 선택하세요.",
+  "browser.control.organizationOff": "조직에서 Kilo의 브라우저 제어를 껐습니다.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "브라우저를 사용할 수 없음",
   "browser.notice.outdatedTitle": "브라우저 확장이 오래됨",

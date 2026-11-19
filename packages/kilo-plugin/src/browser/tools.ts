@@ -749,11 +749,14 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
                 },
           () => ({ ready: false }),
         )
+    // An organization that turned browser control off is its own answer: no backend the user picks in `/browser` could
+    // share or adopt. The user's own `off` and a Playwright backend, chosen or pinned, need the extension chosen.
     const control = <A>(act: (active: ExtensionBackend) => Promise<A>) =>
       Effect.gen(function* () {
         const current = yield* settings(config)
-        if (effective(current, yield* policy(ctx.location.directory)) !== "extension")
-          return { kind: "not_extension" as const }
+        const organization = yield* policy(ctx.location.directory)
+        if (organization?.control === "off") return { kind: "organization_off" as const }
+        if (effective(current, organization) !== "extension") return { kind: "not_extension" as const }
         return yield* Effect.promise(() => extension(current.target).then(act).catch(refusal))
       }).pipe(Effect.orDie)
     const registration = yield* ctx.rpc

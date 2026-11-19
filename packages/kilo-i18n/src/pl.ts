@@ -198,6 +198,7 @@ export const dict = {
     "Poproszono przeglądarkę o ponowne użycie ostatniej zakończonej grupy kart. Zaktualizuj rozszerzenie przeglądarki Kilo, aby sprawdzić, czy to zrobiła.",
   "browser.control.notExtension":
     "Udostępnianie i ponowne używanie kart wymaga rozszerzenia przeglądarki Kilo. Wybierz je w /browser.",
+  "browser.control.organizationOff": "Twoja organizacja wyłączyła sterowanie przeglądarką w Kilo.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Przeglądarka niedostępna",
   "browser.notice.outdatedTitle": "Rozszerzenie przeglądarki jest nieaktualne",

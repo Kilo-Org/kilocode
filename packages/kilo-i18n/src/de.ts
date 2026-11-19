@@ -199,6 +199,7 @@ export const dict = {
     "Der Browser wurde gebeten, die zuletzt beendete Tab-Gruppe wiederzuverwenden. Aktualisieren Sie die Kilo-Browser-Erweiterung, um zu sehen, ob er es getan hat.",
   "browser.control.notExtension":
     "Teilen und Wiederverwenden von Tabs erfordern die Kilo-Browser-Erweiterung. Wählen Sie sie in /browser.",
+  "browser.control.organizationOff": "Ihre Organisation hat die Browsersteuerung in Kilo deaktiviert.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Browser nicht verfügbar",
   "browser.notice.outdatedTitle": "Browser-Erweiterung veraltet",

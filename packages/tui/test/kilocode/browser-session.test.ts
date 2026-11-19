@@ -36,6 +36,15 @@ describe("/browser share and adopt answers", () => {
     expect(adoptToast({ kind: "unconfirmed" }).message).toContain("Update the Kilo browser extension")
     expect(adoptToast({ kind: "unavailable", hint }).message).toBe(hint)
   })
+
+  test("an organization that turned browser control off says so instead of asking to choose the extension", () => {
+    for (const toast of [shareToast({ kind: "organization_off" }), adoptToast({ kind: "organization_off" })])
+      expect(toast).toEqual({
+        variant: "warning",
+        message: "Your organization turned off browser control in Kilo.",
+        duration: 10000,
+      })
+  })
 })
 
 describe("/browser share and adopt typed while Kilo starts", () => {

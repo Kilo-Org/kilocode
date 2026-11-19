@@ -199,6 +199,7 @@ export const dict = {
     "Le navigateur a été invité à réutiliser le dernier groupe d'onglets terminé. Mettez à jour l'extension de navigateur Kilo pour voir s'il l'a fait.",
   "browser.control.notExtension":
     "Partager et réutiliser des onglets nécessite l'extension de navigateur Kilo. Choisissez-la dans /browser.",
+  "browser.control.organizationOff": "Votre organisation a désactivé le contrôle du navigateur dans Kilo.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Navigateur indisponible",
   "browser.notice.outdatedTitle": "Extension de navigateur obsolète",

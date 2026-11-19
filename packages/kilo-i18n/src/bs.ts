@@ -200,6 +200,7 @@ export const dict = {
     "Zatraženo je da preglednik ponovo koristi posljednju završenu grupu kartica. Ažurirajte Kilo proširenje preglednika da vidite je li to učinio.",
   "browser.control.notExtension":
     "Dijeljenje i ponovna upotreba kartica zahtijevaju Kilo proširenje preglednika. Odaberite ga u /browser.",
+  "browser.control.organizationOff": "Vaša organizacija je isključila upravljanje preglednikom u Kilo.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Preglednik nije dostupan",
   "browser.notice.outdatedTitle": "Proširenje preglednika je zastarjelo",

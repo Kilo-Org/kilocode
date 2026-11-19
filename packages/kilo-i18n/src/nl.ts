@@ -198,6 +198,7 @@ export const dict = {
     "De browser is gevraagd de laatst beëindigde tabbladgroep opnieuw te gebruiken. Werk de Kilo-browserextensie bij om te zien of dat is gelukt.",
   "browser.control.notExtension":
     "Tabbladen delen en hergebruiken vereist de Kilo-browserextensie. Kies die in /browser.",
+  "browser.control.organizationOff": "Je organisatie heeft browserbesturing in Kilo uitgeschakeld.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Browser niet beschikbaar",
   "browser.notice.outdatedTitle": "Browserextensie is verouderd",

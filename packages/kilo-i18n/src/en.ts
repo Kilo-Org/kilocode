@@ -220,6 +220,7 @@ export const dict = {
   "browser.adopt.unconfirmed":
     "Asked the browser to reuse the last ended tab group. Update the Kilo browser extension to see whether it did.",
   "browser.control.notExtension": "Sharing and reusing tabs need the Kilo browser extension. Choose it in /browser.",
+  "browser.control.organizationOff": "Your organization turned off browser control in Kilo.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Browser not available",
   "browser.notice.outdatedTitle": "Browser extension out of date",

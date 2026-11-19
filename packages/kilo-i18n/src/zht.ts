@@ -179,6 +179,7 @@ export const dict = {
   "browser.adopt.kept": "此工作階段已有自己的分頁，並會保留它們。",
   "browser.adopt.unconfirmed": "已要求瀏覽器重複使用上次結束的分頁群組。更新 Kilo 瀏覽器擴充功能以查看是否成功。",
   "browser.control.notExtension": "共用和重複使用分頁需要 Kilo 瀏覽器擴充功能。請在 /browser 中選擇它。",
+  "browser.control.organizationOff": "你的組織已在 Kilo 中關閉瀏覽器控制。",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "瀏覽器無法使用",
   "browser.notice.outdatedTitle": "瀏覽器擴充功能已過時",

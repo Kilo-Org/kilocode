@@ -191,6 +191,7 @@ export const dict = {
   "browser.adopt.unconfirmed":
     "ขอให้เบราว์เซอร์นำกลุ่มแท็บที่สิ้นสุดล่าสุดกลับมาใช้แล้ว อัปเดตส่วนขยายเบราว์เซอร์ Kilo เพื่อดูว่าทำสำเร็จหรือไม่",
   "browser.control.notExtension": "การแชร์และนำแท็บกลับมาใช้ต้องใช้ส่วนขยายเบราว์เซอร์ Kilo เลือกได้ใน /browser",
+  "browser.control.organizationOff": "องค์กรของคุณปิดการควบคุมเบราว์เซอร์ใน Kilo แล้ว",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "เบราว์เซอร์ไม่พร้อมใช้งาน",
   "browser.notice.outdatedTitle": "ส่วนขยายเบราว์เซอร์ล้าสมัย",

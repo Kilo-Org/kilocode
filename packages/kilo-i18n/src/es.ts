@@ -196,6 +196,7 @@ export const dict = {
     "Se pidió al navegador que reutilizara el último grupo de pestañas finalizado. Actualiza la extensión de navegador de Kilo para ver si lo hizo.",
   "browser.control.notExtension":
     "Compartir y reutilizar pestañas requiere la extensión de navegador de Kilo. Elígela en /browser.",
+  "browser.control.organizationOff": "Tu organización desactivó el control del navegador en Kilo.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Navegador no disponible",
   "browser.notice.outdatedTitle": "Extensión de navegador desactualizada",

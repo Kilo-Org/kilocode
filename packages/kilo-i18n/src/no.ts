@@ -194,6 +194,7 @@ export const dict = {
   "browser.adopt.unconfirmed":
     "Ba nettleseren gjenbruke den sist avsluttede fanegruppen. Oppdater Kilo-nettleserutvidelsen for å se om den gjorde det.",
   "browser.control.notExtension": "Deling og gjenbruk av faner krever Kilo-nettleserutvidelsen. Velg den i /browser.",
+  "browser.control.organizationOff": "Organisasjonen din har slått av nettleserstyring i Kilo.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Nettleseren er ikke tilgjengelig",
   "browser.notice.outdatedTitle": "Nettleserutvidelsen er utdatert",

@@ -385,6 +385,35 @@ describe("browser status RPC", () => {
     expect(status.backend).toBe("extension")
     expect(status.organization).toBeUndefined()
   })
+
+  test("share and adopt under an organization that turned browser control off name the organization", async () => {
+    policies(() => ({ browserControl: "off" }))
+    const restore = account("org_control_off")
+    try {
+      // Choosing the extension in /browser cannot help here, so the answer is not `not_extension`.
+      const host = await boot({ backend: "extension" }, { hub: fakeHub().service })
+      expect(await host.control("share")).toEqual({ kind: "organization_off" })
+      expect(await host.control("adopt")).toEqual({ kind: "organization_off" })
+    } finally {
+      restore()
+    }
+  })
+
+  test("a Playwright pin and the user's own off still ask for the extension", async () => {
+    policies((org) => ({ browserControl: org === "org_control_pin" ? "playwright_only" : "allow" }))
+    const pinned = account("org_control_pin")
+    try {
+      expect(await (await boot({ backend: "extension" })).control("share")).toEqual({ kind: "not_extension" })
+    } finally {
+      pinned()
+    }
+    const allowed = account("org_control_allow")
+    try {
+      expect(await (await boot({ backend: "off" })).control("adopt")).toEqual({ kind: "not_extension" })
+    } finally {
+      allowed()
+    }
+  })
 })
 
 describe("browser permission flow", () => {

@@ -197,6 +197,7 @@ export const dict = {
     "Tarayıcıdan en son sona eren sekme grubunu yeniden kullanması istendi. Yapıp yapmadığını görmek için Kilo tarayıcı uzantısını güncelleyin.",
   "browser.control.notExtension":
     "Sekme paylaşma ve yeniden kullanma için Kilo tarayıcı uzantısı gerekir. /browser içinde seçin.",
+  "browser.control.organizationOff": "Kuruluşunuz Kilo'da tarayıcı denetimini kapattı.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Tarayıcı kullanılamıyor",
   "browser.notice.outdatedTitle": "Tarayıcı uzantısı güncel değil",

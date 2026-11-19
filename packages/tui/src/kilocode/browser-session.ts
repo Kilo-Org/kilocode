@@ -11,7 +11,7 @@ type Toast = Parameters<Plugin.Context["ui"]["toast"]["show"]>[0]
 
 type Failure = Extract<
   KiloBrowserRpc.Share | KiloBrowserRpc.Adopt,
-  { kind: "unavailable" | "refused" | "not_extension" }
+  { kind: "unavailable" | "refused" | "not_extension" | "organization_off" }
 >
 
 const ADOPTED = {
@@ -21,7 +21,10 @@ const ADOPTED = {
   unconfirmed: { variant: "info", message: "browser.adopt.unconfirmed" },
 } as const
 
-/** The toast for an answer that did not share or adopt: the setup step, the browser's reason, or the backend to pick. */
+/**
+ * The toast for an answer that did not share or adopt: the setup step, the browser's reason, the organization's block,
+ * or the backend to pick.
+ */
 function failed(result: Failure): Toast {
   if (result.kind === "unavailable")
     return {
@@ -31,6 +34,8 @@ function failed(result: Failure): Toast {
       duration: 10000,
     }
   if (result.kind === "refused") return { variant: "error", message: result.message, duration: 10000 }
+  if (result.kind === "organization_off")
+    return { variant: "warning", message: browserCopy("browser.control.organizationOff"), duration: 10000 }
   return { variant: "warning", message: browserCopy("browser.control.notExtension"), duration: 10000 }
 }
 
@@ -42,10 +47,11 @@ export function shareToast(result: KiloBrowserRpc.Share): Toast {
 
 /** The toast one `/browser adopt` answer shows. */
 export function adoptToast(result: KiloBrowserRpc.Adopt): Toast {
-  if (result.kind === "unavailable" || result.kind === "refused" || result.kind === "not_extension")
-    return failed(result)
-  const toast = ADOPTED[result.kind]
-  return { variant: toast.variant, message: browserCopy(toast.message) }
+  if (result.kind === "adopted" || result.kind === "none" || result.kind === "kept" || result.kind === "unconfirmed") {
+    const toast = ADOPTED[result.kind]
+    return { variant: toast.variant, message: browserCopy(toast.message) }
+  }
+  return failed(result)
 }
 
 /** The toast one failed browser call raises; a session that is not open gets the offer to open it. */

@@ -196,6 +196,7 @@ export const dict = {
     "Pedimos ao navegador que reutilizasse o último grupo de abas encerrado. Atualize a extensão de navegador do Kilo para ver se ele fez isso.",
   "browser.control.notExtension":
     "Compartilhar e reutilizar abas exige a extensão de navegador do Kilo. Escolha-a em /browser.",
+  "browser.control.organizationOff": "Sua organização desativou o controle do navegador no Kilo.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Navegador indisponível",
   "browser.notice.outdatedTitle": "Extensão de navegador desatualizada",

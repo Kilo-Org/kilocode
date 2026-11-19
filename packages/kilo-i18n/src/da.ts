@@ -192,6 +192,7 @@ export const dict = {
   "browser.adopt.unconfirmed":
     "Bad browseren om at genbruge den senest afsluttede fanegruppe. Opdater Kilo-browserudvidelsen for at se, om den gjorde det.",
   "browser.control.notExtension": "Deling og genbrug af faner kræver Kilo-browserudvidelsen. Vælg den i /browser.",
+  "browser.control.organizationOff": "Din organisation har slået browserstyring fra i Kilo.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Browser ikke tilgængelig",
   "browser.notice.outdatedTitle": "Browserudvidelsen er forældet",

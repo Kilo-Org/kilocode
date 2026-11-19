@@ -196,6 +196,7 @@ export const dict = {
     "È stato chiesto al browser di riutilizzare l'ultimo gruppo di schede terminato. Aggiorna l'estensione browser Kilo per vedere se lo ha fatto.",
   "browser.control.notExtension":
     "Condividere e riutilizzare le schede richiede l'estensione browser Kilo. Sceglila in /browser.",
+  "browser.control.organizationOff": "La tua organizzazione ha disattivato il controllo del browser in Kilo.",
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Browser non disponibile",
   "browser.notice.outdatedTitle": "Estensione browser obsoleta",
