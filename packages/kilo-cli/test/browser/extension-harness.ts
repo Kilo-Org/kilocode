@@ -236,6 +236,29 @@ export function startFrameServer() {
   })
 }
 
+/** Every hub and CLI run the harness spawned that has not exited yet, so an interrupted runner can stop them. */
+const liveChildren = new Set<Subprocess>()
+
+function track(child: Subprocess) {
+  liveChildren.add(child)
+  void child.exited.then(() => liveChildren.delete(child))
+}
+
+/** SIGTERM, then SIGKILL if the process is still running 5 s later; resolves once it exited (or 2 s after the kill). */
+export async function terminate(child: Subprocess) {
+  if (child.exitCode !== null || child.signalCode !== null) return
+  child.kill("SIGTERM")
+  await Promise.race([child.exited, Bun.sleep(5_000)])
+  if (child.exitCode !== null || child.signalCode !== null) return
+  child.kill("SIGKILL")
+  await Promise.race([child.exited, Bun.sleep(2_000)])
+}
+
+/** Stops every hub and CLI run still alive: the cleanup of a runner that is interrupted mid-scenario. */
+export async function stopChildren() {
+  await Promise.all([...liveChildren].map((child) => terminate(child)))
+}
+
 export function tap(stream: ReadableStream<Uint8Array>, into: { text: string }, limit = 200_000) {
   void (async () => {
     const reader = stream.getReader()
@@ -611,8 +634,11 @@ export class ServiceWorkerLog {
       this.session = session
       session.on("Target.receivedMessageFromTarget", (event) => this.receive(event))
       session.on("Target.detachedFromTarget", (event) => {
+        // `attached` maps target id to session id; the event names the session.
         const sessionId = record(event)?.["sessionId"]
-        if (typeof sessionId === "string") this.attached.delete(sessionId)
+        for (const [targetId, attachedSession] of this.attached) {
+          if (attachedSession === sessionId) this.attached.delete(targetId)
+        }
       })
       await session.send("Target.setDiscoverTargets", { discover: true })
       session.on("Target.targetCreated", (event) => {
@@ -632,6 +658,7 @@ export class ServiceWorkerLog {
   stop() {
     clearInterval(this.timer)
     this.timer = undefined
+    this.attached.clear()
   }
 
   private mine(info: Record<string, unknown>) {
@@ -804,13 +831,7 @@ export async function launchChromium(options: LaunchOptions): Promise<Launched> 
   })
   tap(child.stdout as ReadableStream<Uint8Array>, chromiumLog, 40_000)
   tap(child.stderr as ReadableStream<Uint8Array>, chromiumLog, 40_000)
-  const kill = async () => {
-    if (exited) return
-    child.kill("SIGTERM")
-    await Promise.race([child.exited, Bun.sleep(5_000)])
-    if (!exited) child.kill("SIGKILL")
-    await Promise.race([child.exited, Bun.sleep(2_000)])
-  }
+  const kill = () => terminate(child)
 
   let proxy: ReturnType<typeof cdpProxy> | undefined
   try {
@@ -1222,6 +1243,7 @@ export async function startHub(
       stderr: "pipe",
       stdout: "pipe",
     })
+    track(child)
     tap(child.stdout as ReadableStream<Uint8Array>, log)
     tap(child.stderr as ReadableStream<Uint8Array>, log)
     const started = Date.now()
@@ -1237,14 +1259,7 @@ export async function startHub(
         log,
         port: chosen,
         root,
-        stop: async () => {
-          try {
-            child.kill("SIGTERM")
-          } catch {
-            // Already gone.
-          }
-          await Promise.race([child.exited, Bun.sleep(5_000)])
-        },
+        stop: () => terminate(child),
       }
     }
     const alive = child.exitCode === null
@@ -1384,6 +1399,7 @@ export async function runCli(options: CliRunOptions): Promise<CliRun> {
       ],
       { cwd: options.root, env: options.env, stderr: "pipe", stdout: "pipe", timeout: options.timeout ?? 240_000 },
     )
+    track(child)
     const [stdout, stderr, code] = await Promise.all([
       new Response(child.stdout as ReadableStream).text(),
       new Response(child.stderr as ReadableStream).text(),

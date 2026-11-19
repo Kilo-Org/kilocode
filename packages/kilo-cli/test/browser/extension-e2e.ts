@@ -53,6 +53,7 @@ import {
   portPool,
   PUBLIC_MARKER,
   startFrameServer,
+  stopChildren,
   decodePng,
   defaultExtensionDirectory,
   enableLocalAgents,
@@ -678,7 +679,11 @@ async function download() {
     if (step.results.length === 1) return { args: {}, name: "browser_snapshot" }
     if (step.results.length >= 2 && step.results.length <= 4) {
       // The repeat's file is written asynchronously; let it land before the third call arms the guard again.
-      if (step.results.length === 4) await until(async () => ((await downloadFiles()).length === 1 ? true : undefined), 10_000, "the repeat's file lands")
+      if (step.results.length === 4) {
+        await until(async () => ((await downloadFiles()).length === 1 ? true : undefined), 10_000, "the repeat's file lands")
+        // The snapshot above was taken before the repeat's file landed; the assertion reads the folder after it.
+        folder[4] = await downloadFiles()
+      }
       const ref = linkRef(step.results[1] ?? "")
       return ref ? { args: { element: "the report link", target: ref }, name: "browser_click" } : undefined
     }
@@ -954,7 +959,13 @@ async function downloadLate() {
   )
   expect(!(text[4] ?? "").includes("permission"), `the repeated click was refused:\n${(text[4] ?? "").slice(0, 600)}`)
   expect((folder[5] ?? []).length === 1, `the repeat did not save exactly one file: ${JSON.stringify(folder[5])}`)
-  expect(!(text[5] ?? "").includes("Approval"), `the third click asked for approval instead of being guarded:\n${(text[5] ?? "").slice(0, 600)}`)
+  // The third click's download arrives after the click answered, so its own text is plain; the linger stops it. Chrome's
+  // download list shows the three attempts: the guarded first, the kept repeat, and the stopped third.
+  const lateItems = (await downloadItems(browserOf().worker)).filter((item) => String(item["url"]).endsWith("/download-late"))
+  expect(
+    lateItems.length === 3 && lateItems.filter((item) => item["state"] === "complete").length === 1,
+    `the browser did not stop the guarded and third downloads and keep the repeat's: ${JSON.stringify(lateItems)}`,
+  )
   expect((folder[6] ?? []).length === 1, `the third click kept a new file: ${JSON.stringify(folder[6])}`)
   expect(hits === 3, `the late route served ${hits} times instead of three`)
   const bodies = await downloadBodies()
@@ -1035,11 +1046,16 @@ function resultOf(outcome: Outcome) {
   return known ? "known-fail" : "FAIL"
 }
 
+/** A scenario that runs longer than this is stopped (SIGTERM, then SIGKILL a minute later). */
+const SCENARIO_TIMEOUT_MS = 15 * 60_000
+
 /** `all`: every scenario in its own child process with its own scratch root, one after another. */
 async function runAll(): Promise<number> {
-  const repeat = Math.max(1, Number(option("--repeat") ?? "1"))
+  const repeat = Number(option("--repeat") ?? "1")
+  if (!Number.isInteger(repeat) || repeat < 1) throw new Error(`--repeat must be a whole number of at least 1, not ${option("--repeat")}`)
   const strict = process.argv.includes("--strict")
   const only = option("--only")?.split(",").filter(Boolean)
+  if (only !== undefined && only.length === 0) throw new Error("--only names no scenario")
   const names = only ?? Object.keys(scenarios)
   const unknown = names.filter((name) => !(name in scenarios))
   if (unknown.length) throw new Error(`unknown scenario(s) ${unknown.join(", ")}; choose ${Object.keys(scenarios).join(", ")}`)
@@ -1056,13 +1072,18 @@ async function runAll(): Promise<number> {
         env: { ...process.env, E2E_HOME: home },
         stderr: "pipe",
         stdout: "pipe",
-        timeout: 15 * 60_000,
       })
+      // A hung scenario gets SIGTERM, which runs its own cleanup (hubs, CLI runs, Chromium); SIGKILL only if that hangs.
+      const deadline = setTimeout(() => {
+        spawned.kill("SIGTERM")
+        setTimeout(() => spawned.kill("SIGKILL"), 60_000).unref()
+      }, SCENARIO_TIMEOUT_MS)
       const [stdout, stderr, code] = await Promise.all([
         new Response(spawned.stdout as ReadableStream).text(),
         new Response(spawned.stderr as ReadableStream).text(),
         spawned.exited,
       ])
+      clearTimeout(deadline)
       const seconds = (performance.now() - started) / 1000
       await fs.writeFile(path.join(out, `${name}-${round}.json`), stdout)
       if (stderr) await fs.writeFile(path.join(out, `${name}-${round}.stderr.txt`), stderr)
@@ -1080,6 +1101,7 @@ async function runAll(): Promise<number> {
       console.error(`${resultOf(outcome)} ${name} #${round} ${seconds.toFixed(1)}s ${outcome.failure}`)
     }
   }
+  if (outcomes.length === 0) throw new Error("no scenario ran")
   const width = Math.max(...outcomes.map((outcome) => outcome.scenario.length), "scenario".length)
   const resultWidth = "UNEXPECTED PASS".length
   const counted = (outcome: Outcome) => !outcome.pass && (strict || !(outcome.scenario in KNOWN_FAILURES))
@@ -1124,6 +1146,20 @@ const extension = promoted
   : extensionDirectory
 // Chrome's own default download directory, set in the profile before launch; every scenario reads it.
 downloadsPath = path.join(base, "downloads")
+
+// `all` (or a person) stops a scenario that runs too long with SIGTERM: report what is known, stop the hubs, the CLI
+// runs and Chromium, and exit. Without this the scenario's `finally` never runs and its browser outlives it.
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.once(signal, () => {
+    failures.push(`harness: interrupted by ${signal}`)
+    console.log(JSON.stringify(report({}), null, 2))
+    void Promise.allSettled([stopChildren(), launched?.close()]).finally(() => {
+      stopFixtures()
+      model.stop()
+      process.exit(1)
+    })
+  })
+}
 
 try {
   launched = await launchChromium({
