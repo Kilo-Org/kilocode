@@ -47,11 +47,15 @@ export function shareToast(result: KiloBrowserRpc.Share): Toast {
 
 /** The toast one `/browser adopt` answer shows. */
 export function adoptToast(result: KiloBrowserRpc.Adopt): Toast {
-  if (result.kind === "adopted" || result.kind === "none" || result.kind === "kept" || result.kind === "unconfirmed") {
-    const toast = ADOPTED[result.kind]
-    return { variant: toast.variant, message: browserCopy(toast.message) }
-  }
-  return failed(result)
+  if (
+    result.kind === "unavailable" ||
+    result.kind === "refused" ||
+    result.kind === "not_extension" ||
+    result.kind === "organization_off"
+  )
+    return failed(result)
+  const toast = ADOPTED[result.kind]
+  return { variant: toast.variant, message: browserCopy(toast.message) }
 }
 
 /** The toast one failed browser call raises; a session that is not open gets the offer to open it. */
