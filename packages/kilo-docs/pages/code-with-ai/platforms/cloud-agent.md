@@ -87,8 +87,15 @@ At the bottom of the **General** tab, **Personal preferences** controls settings
 - **Transcript display** — turn on **Collapse tools** to group consecutive tool calls, reasoning, and other agent activity between visible messages into one expandable row. The group keeps questions, suggestion actions, child-session controls, files, snapshot progress, tool errors, and assistant failures visible without expanding, and shows a working indicator while the agent is streaming. It is off by default, and the choice is saved in your browser and applies to both personal and organization chats.
 - **Agent modes** — toggle **Plan**, **Debug**, **Orchestrator**, and **Ask** in your agent picker. **Code** stays enabled because new sessions start in Code mode. Pick a mode's model in each session.
 - **Background models** — choose a model and thinking variant for **Explore** and **Compaction**, or keep the session model. An override applies only when the chosen model is available to the session.
+- **Model context limits** — cap the context window Kilo uses for a specific model, for example keeping a model at 300,000 tokens instead of its full window. Kilo compacts the conversation against the lowered window, which reduces cost on long sessions. Choose a model, enter a token value between 1,000 and 10,000,000, and reset a model to return it to its full window. You can cap up to 50 models, and limits apply to new sessions.
 
 If you previously saved mode models, the section notes they are still active and offers **Use session model for all modes** to clear them.
+
+### Web search provider
+
+Your personal Cloud Agent settings include a **Web search provider** choice. Pick **Default (Exa)** to use the repository's choice when it has one and Exa otherwise, or choose **Exa**, **Firecrawl**, **Parallel**, **Tavily**, or **TinyFish** to use that provider. Choose **Off** to disable web search for new workspaces.
+
+The choice applies to new workspaces in your personal account. Organization workspaces, and existing workspaces when they restart, use the Exa default and are not affected by your personal choice.
 
 ## Repository environments
 
@@ -449,6 +456,14 @@ Webhook and scheduled triggers can run a specific [agent](/docs/code-with-ai/age
 For models that support it, webhook and scheduled triggers can set a **reasoning effort** next to the model selector. **Default** leaves the model's behavior unchanged; a specific effort applies to each session the trigger starts.
 
 Triggers do not support manual env var or setup command overrides at this time.
+
+### Targeting an existing chat
+
+By default a trigger starts a new workspace. You can instead send a trigger's prompt to an existing chat in a registered workspace by choosing **Existing chat** as the trigger's target and selecting the chat. The trigger renders the same prompt templates and sends through Cloud Agent's follow-up queue, and both webhook and scheduled invocations use the target. The trigger keeps its own mode, model, and variant, while the chat keeps its workspace settings, so the **Environment** field is hidden for this target.
+
+The target chat is fixed after you create the trigger, and an active existing-chat trigger can be paused from its page. Personal triggers run as their owner. Organization triggers that target an existing chat must run as their creator, because the organization webhook bot has a separate identity and does not own the chats you can select; creator-run webhooks still require authentication.
+
+For this target, a successful request means Cloud Agent admitted the message to the chat's queue, not that the agent finished its turn. Messages run in chat admission order, and a retried delivery is deduplicated by a deterministic message ID.
 
 ### Request body validation
 
