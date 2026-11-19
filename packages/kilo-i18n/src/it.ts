@@ -168,8 +168,6 @@ export const dict = {
   "browser.state.extensionHint": "Collega l'estensione browser Kilo per usare il tuo browser",
   "browser.command.usage":
     "Usa /browser per le impostazioni, /browser share per dare a questa sessione la scheda attiva, o /browser adopt per riutilizzare l'ultimo gruppo di schede terminato.",
-  "browser.command.sessionDescription":
-    "Condividi la scheda attiva (/browser share) o riutilizza l'ultimo gruppo di schede terminato (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Leggi le pagine su {{origin}}",
   "browser.permission.act.title": "Fai clic e digita su {{origin}}",

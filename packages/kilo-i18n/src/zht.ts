@@ -157,7 +157,6 @@ export const dict = {
   "browser.state.extensionHint": "連接 Kilo 瀏覽器擴充功能以使用你自己的瀏覽器",
   "browser.command.usage":
     "使用 /browser 開啟設定，使用 /browser share 將你的目前分頁交給此工作階段，或使用 /browser adopt 重複使用上次結束的分頁群組。",
-  "browser.command.sessionDescription": "共用目前分頁（/browser share）或重複使用上次結束的分頁群組（/browser adopt）",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "讀取 {{origin}} 上的頁面",
   "browser.permission.act.title": "在 {{origin}} 上點擊和輸入",

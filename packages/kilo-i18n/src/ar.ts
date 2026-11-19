@@ -164,8 +164,6 @@ export const dict = {
   "browser.state.extensionHint": "اربط إضافة متصفح Kilo لاستخدام متصفحك الخاص",
   "browser.command.usage":
     "استخدم /browser للإعدادات، أو /browser share لمنح هذه الجلسة علامة التبويب النشطة، أو /browser adopt لإعادة استخدام آخر مجموعة علامات تبويب منتهية.",
-  "browser.command.sessionDescription":
-    "شارك علامة التبويب النشطة (/browser share) أو أعد استخدام آخر مجموعة علامات تبويب منتهية (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "قراءة الصفحات على {{origin}}",
   "browser.permission.act.title": "النقر والكتابة على {{origin}}",

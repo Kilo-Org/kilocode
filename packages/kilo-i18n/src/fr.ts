@@ -171,8 +171,6 @@ export const dict = {
   "browser.state.extensionHint": "Connectez l'extension de navigateur Kilo pour piloter votre navigateur",
   "browser.command.usage":
     "Utilisez /browser pour les paramètres, /browser share pour donner l'onglet actif à cette session, ou /browser adopt pour réutiliser le dernier groupe d'onglets terminé.",
-  "browser.command.sessionDescription":
-    "Partagez votre onglet actif (/browser share) ou réutilisez le dernier groupe d'onglets terminé (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Lire les pages sur {{origin}}",
   "browser.permission.act.title": "Cliquer et saisir du texte sur {{origin}}",

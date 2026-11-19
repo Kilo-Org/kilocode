@@ -174,8 +174,6 @@ export const dict = {
   "browser.state.extensionHint": "Povežite Kilo proširenje preglednika da koristite svoj preglednik",
   "browser.command.usage":
     "Koristite /browser za postavke, /browser share da ovoj sesiji date aktivnu karticu, ili /browser adopt da ponovo koristite posljednju završenu grupu kartica.",
-  "browser.command.sessionDescription":
-    "Podijelite aktivnu karticu (/browser share) ili ponovo koristite posljednju završenu grupu kartica (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Čitaj stranice na {{origin}}",
   "browser.permission.act.title": "Klikaj i unosi tekst na {{origin}}",

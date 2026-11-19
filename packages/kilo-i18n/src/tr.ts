@@ -170,8 +170,6 @@ export const dict = {
   "browser.state.extensionHint": "Kendi tarayıcınızı kullanmak için Kilo tarayıcı uzantısını bağlayın",
   "browser.command.usage":
     "Ayarlar için /browser, bu oturuma etkin sekmenizi vermek için /browser share veya en son sona eren sekme grubunu yeniden kullanmak için /browser adopt kullanın.",
-  "browser.command.sessionDescription":
-    "Etkin sekmenizi paylaşın (/browser share) veya en son sona eren sekme grubunu yeniden kullanın (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "{{origin}} üzerindeki sayfaları oku",
   "browser.permission.act.title": "{{origin}} üzerinde tıkla ve yaz",

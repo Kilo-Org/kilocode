@@ -168,8 +168,6 @@ export const dict = {
   "browser.state.extensionHint": "Forbind Kilo-browserudvidelsen for at bruge din egen browser",
   "browser.command.usage":
     "Brug /browser til indstillinger, /browser share til at give denne session din aktive fane, eller /browser adopt til at genbruge den senest afsluttede fanegruppe.",
-  "browser.command.sessionDescription":
-    "Del din aktive fane (/browser share) eller genbrug den senest afsluttede fanegruppe (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Læs sider på {{origin}}",
   "browser.permission.act.title": "Klik og skriv på {{origin}}",

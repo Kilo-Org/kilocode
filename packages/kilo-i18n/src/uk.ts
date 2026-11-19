@@ -170,8 +170,6 @@ export const dict = {
   "browser.state.extensionHint": "Підключіть розширення браузера Kilo, щоб керувати власним браузером",
   "browser.command.usage":
     "Використовуйте /browser для налаштувань, /browser share, щоб передати цій сесії активну вкладку, або /browser adopt, щоб повторно використати останню завершену групу вкладок.",
-  "browser.command.sessionDescription":
-    "Поділіться активною вкладкою (/browser share) або повторно використайте останню завершену групу вкладок (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Читати сторінки на {{origin}}",
   "browser.permission.act.title": "Клацати й вводити текст на {{origin}}",

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import type { TestRendererSetup } from "@opentui/core/testing"
 import { browserOptions, describeState, grantLine, readState } from "../../src/kilocode/browser"
 import { createAppFixture } from "../fixture/app"
 import { directory, json } from "../fixture/tui-client"
@@ -121,6 +122,23 @@ const settings = (document: unknown) => (url: URL) => {
   return undefined
 }
 
+/**
+ * `/browser` from the slash list: picking it fills in `/browser `, and submitting that with no argument opens the
+ * settings. Returns the slash list's frame and the dialog's.
+ */
+async function openSettings(app: TestRendererSetup) {
+  await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
+  await app.mockInput.typeText("/browser")
+  const list = await app.waitForFrame((frame) => frame.includes("Show the browser backend"))
+  app.mockInput.pressEnter()
+  await app.waitForFrame((frame) => !frame.includes("Show the browser backend"))
+  app.mockInput.pressEnter()
+  const dialog = await app.waitForFrame(
+    (frame) => frame.includes("Browser settings") && frame.includes("Sensitive steps:"),
+  )
+  return { list, dialog }
+}
+
 // The dialog takes the widest size the terminal allows, and each backend's hint has its own line, so no hint or state
 // line is cut off. 80 columns is the narrowest pane where the 64-character English hint still fits whole.
 for (const width of [80, 100, 200])
@@ -131,13 +149,9 @@ for (const width of [80, 100, 200])
       fetch: settings({ browser: { backend: "extension", observation: "none", allow_sensitive: true } }),
     })
     await app.ready
-    await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
-    await app.mockInput.typeText("/browser")
-    await app.waitForFrame((frame) => frame.includes("Show the browser backend"))
-    app.mockInput.pressEnter()
-    const frame = await app.waitForFrame(
-      (frame) => frame.includes("Browser settings") && frame.includes("Sensitive steps:"),
-    )
+    const { list, dialog } = await openSettings(app)
+    // One command serves `/browser`, `/browser share` and `/browser adopt`, so the slash list has one `/browser` row.
+    expect(list.split("\n").filter((line) => /\/browser\s{2,}\p{L}/u.test(line))).toHaveLength(1)
     for (const line of [
       "A Kilo-owned Chromium profile, started by the first browser call",
       "Connect the Kilo browser extension to drive your own browser",
@@ -146,7 +160,7 @@ for (const width of [80, 100, 200])
       "Observation: Status only",
       "Sensitive steps: run without asking",
     ])
-      expect(frame).toContain(line)
+      expect(dialog).toContain(line)
   }, 30000)
 
 // 30 rows is a short pane: the dialog list is capped to half the screen, so the hints are dropped and the groups keep
@@ -158,14 +172,7 @@ test("/browser drops the hints on a short terminal", async () => {
     fetch: settings({ browser: { backend: "playwright" } }),
   })
   await app.ready
-  await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
-  await app.mockInput.typeText("/browser")
-  await app.waitForFrame((frame) => frame.includes("Show the browser backend"))
-  app.mockInput.pressEnter()
-  const frame = await app.waitForFrame(
-    (frame) => frame.includes("Browser settings") && frame.includes("Sensitive steps:"),
-  )
-  expect(frame).not.toContain("A Kilo-owned Chromium profile")
+  const { dialog: frame } = await openSettings(app)
   expect(frame).not.toContain("Hide the browser tools from agents")
   expect(frame).toContain("Backend: Bundled browser (Playwright) — ready")
   expect(frame).toContain("Observation: Only what changed")
@@ -182,13 +189,7 @@ test("/browser reports the backend unavailable when no browser is installed", as
         : settings({})(url),
   })
   await app.ready
-  await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
-  await app.mockInput.typeText("/browser")
-  await app.waitForFrame((frame) => frame.includes("Show the browser backend"))
-  app.mockInput.pressEnter()
-  const frame = await app.waitForFrame(
-    (frame) => frame.includes("Browser settings") && frame.includes("Sensitive steps:"),
-  )
+  const { dialog: frame } = await openSettings(app)
   expect(frame).toContain("Backend: Bundled browser (Playwright) — unavailable")
 }, 30000)
 
@@ -205,11 +206,7 @@ test("/browser reads the settings for the TUI's location, not the process direct
     },
   })
   await app.ready
-  await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
-  await app.mockInput.typeText("/browser")
-  await app.waitForFrame((frame) => frame.includes("Show the browser backend"))
-  app.mockInput.pressEnter()
-  await app.waitForFrame((frame) => frame.includes("Browser settings") && frame.includes("Sensitive steps:"))
+  await openSettings(app)
   expect(asked.length).toBeGreaterThan(0)
   expect(new Set(asked)).toEqual(new Set([directory]))
 }, 30000)
@@ -238,11 +235,7 @@ test("/browser writes only the setting that changed", async () => {
     },
   })
   await app.ready
-  await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
-  await app.mockInput.typeText("/browser")
-  await app.waitForFrame((frame) => frame.includes("Show the browser backend"))
-  app.mockInput.pressEnter()
-  await app.waitForFrame((frame) => frame.includes("Browser settings") && frame.includes("Sensitive steps:"))
+  await openSettings(app)
   app.mockInput.pressEnter()
   await written.promise
   expect(writes).toHaveLength(1)
@@ -268,11 +261,7 @@ test("/browser shows the message of a refused write", async () => {
     },
   })
   await app.ready
-  await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
-  await app.mockInput.typeText("/browser")
-  await app.waitForFrame((frame) => frame.includes("Show the browser backend"))
-  app.mockInput.pressEnter()
-  await app.waitForFrame((frame) => frame.includes("Browser settings") && frame.includes("Sensitive steps:"))
+  await openSettings(app)
   app.mockInput.pressEnter()
   const frame = await app.waitForFrame((frame) => frame.includes("Unrecognized key: browser.backend"))
   expect(frame).not.toContain("[object Object]")

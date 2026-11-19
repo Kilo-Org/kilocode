@@ -196,8 +196,6 @@ export const dict = {
   "browser.state.extensionHint": "Connect the Kilo browser extension to drive your own browser",
   "browser.command.usage":
     "Use /browser for settings, /browser share to give this session your active tab, or /browser adopt to reuse the last ended tab group.",
-  "browser.command.sessionDescription":
-    "Share your active tab (/browser share) or reuse the last ended tab group (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Read pages on {{origin}}",
   "browser.permission.act.title": "Click and type on {{origin}}",

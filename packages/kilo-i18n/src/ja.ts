@@ -166,8 +166,6 @@ export const dict = {
   "browser.state.extensionHint": "Kilo ブラウザ拡張機能を接続して自分のブラウザを操作します",
   "browser.command.usage":
     "設定には /browser、このセッションにアクティブなタブを渡すには /browser share、最後に終了したタブグループを再利用するには /browser adopt を使います。",
-  "browser.command.sessionDescription":
-    "アクティブなタブを共有する（/browser share）か、最後に終了したタブグループを再利用します（/browser adopt）",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "{{origin}} のページを読み取る",
   "browser.permission.act.title": "{{origin}} でクリックと入力を行う",

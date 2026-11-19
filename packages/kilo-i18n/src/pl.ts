@@ -170,8 +170,6 @@ export const dict = {
   "browser.state.extensionHint": "Podłącz rozszerzenie przeglądarki Kilo, aby używać własnej przeglądarki",
   "browser.command.usage":
     "Użyj /browser, aby otworzyć ustawienia, /browser share, aby udostępnić tej sesji aktywną kartę, lub /browser adopt, aby ponownie użyć ostatniej zakończonej grupy kart.",
-  "browser.command.sessionDescription":
-    "Udostępnij aktywną kartę (/browser share) lub użyj ponownie ostatniej zakończonej grupy kart (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Odczytuj strony w {{origin}}",
   "browser.permission.act.title": "Klikaj i wpisuj tekst w {{origin}}",

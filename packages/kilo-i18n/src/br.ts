@@ -170,8 +170,6 @@ export const dict = {
   "browser.state.extensionHint": "Conecte a extensão de navegador do Kilo para usar seu próprio navegador",
   "browser.command.usage":
     "Use /browser para as configurações, /browser share para dar sua aba ativa a esta sessão, ou /browser adopt para reutilizar o último grupo de abas encerrado.",
-  "browser.command.sessionDescription":
-    "Compartilhe sua aba ativa (/browser share) ou reutilize o último grupo de abas encerrado (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Ler páginas em {{origin}}",
   "browser.permission.act.title": "Clicar e digitar em {{origin}}",

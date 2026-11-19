@@ -158,7 +158,6 @@ export const dict = {
   "browser.state.extensionHint": "连接 Kilo 浏览器扩展以使用你自己的浏览器",
   "browser.command.usage":
     "使用 /browser 打开设置，使用 /browser share 将你的当前标签页交给此会话，或使用 /browser adopt 复用上次结束的标签页组。",
-  "browser.command.sessionDescription": "共享当前标签页（/browser share）或复用上次结束的标签页组（/browser adopt）",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "读取 {{origin}} 上的页面",
   "browser.permission.act.title": "在 {{origin}} 上点击和输入",

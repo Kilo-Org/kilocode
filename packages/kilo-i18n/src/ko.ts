@@ -164,8 +164,6 @@ export const dict = {
   "browser.state.extensionHint": "Kilo 브라우저 확장을 연결해 자신의 브라우저를 사용하세요",
   "browser.command.usage":
     "설정에는 /browser, 이 세션에 활성 탭을 넘기려면 /browser share, 마지막으로 종료된 탭 그룹을 다시 사용하려면 /browser adopt를 사용하세요.",
-  "browser.command.sessionDescription":
-    "활성 탭 공유(/browser share) 또는 마지막으로 종료된 탭 그룹 다시 사용(/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "{{origin}}의 페이지 읽기",
   "browser.permission.act.title": "{{origin}}에서 클릭 및 입력",

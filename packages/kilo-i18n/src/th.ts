@@ -166,8 +166,6 @@ export const dict = {
   "browser.state.extensionHint": "เชื่อมต่อส่วนขยายเบราว์เซอร์ Kilo เพื่อใช้เบราว์เซอร์ของคุณเอง",
   "browser.command.usage":
     "ใช้ /browser สำหรับการตั้งค่า ใช้ /browser share เพื่อให้เซสชันนี้ใช้แท็บที่ใช้งานอยู่ของคุณ หรือใช้ /browser adopt เพื่อนำกลุ่มแท็บที่สิ้นสุดล่าสุดกลับมาใช้",
-  "browser.command.sessionDescription":
-    "แชร์แท็บที่ใช้งานอยู่ (/browser share) หรือนำกลุ่มแท็บที่สิ้นสุดล่าสุดกลับมาใช้ (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "อ่านหน้าเว็บบน {{origin}}",
   "browser.permission.act.title": "คลิกและพิมพ์บน {{origin}}",

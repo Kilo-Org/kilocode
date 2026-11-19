@@ -172,8 +172,6 @@ export const dict = {
   "browser.state.extensionHint": "Verbind de Kilo-browserextensie om je eigen browser te gebruiken",
   "browser.command.usage":
     "Gebruik /browser voor instellingen, /browser share om deze sessie je actieve tabblad te geven, of /browser adopt om de laatst beëindigde tabbladgroep opnieuw te gebruiken.",
-  "browser.command.sessionDescription":
-    "Deel je actieve tabblad (/browser share) of hergebruik de laatst beëindigde tabbladgroep (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Pagina's lezen op {{origin}}",
   "browser.permission.act.title": "Klikken en typen op {{origin}}",

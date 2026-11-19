@@ -328,22 +328,14 @@ export function browserLayer(context: Plugin.Context) {
   context.keymap.layer(() => ({
     mode: "global",
     commands: [
+      // One command for `/browser`, `/browser share` and `/browser adopt`, so the slash list shows `/browser` once.
+      // The palette and a bare `/browser` open the settings.
       {
         id: "kilo.browser",
         title: copy("browser.command.title"),
         description: copy("browser.command.description"),
         group: "System",
         palette: true,
-        slash: { name: "browser" },
-        run: open,
-      },
-      // The same slash name with arguments: a prompt submitted as `/browser share` or `/browser adopt` runs this one,
-      // while picking `/browser` from the list still opens the settings at once.
-      {
-        id: "kilo.browser.session",
-        title: copy("browser.command.title"),
-        description: copy("browser.command.sessionDescription"),
-        group: "System",
         slash: { name: "browser", arguments: true },
         run: (input) => {
           const action = input?.trim() ?? ""

@@ -171,8 +171,6 @@ export const dict = {
   "browser.state.extensionHint": "Kilo-Browser-Erweiterung verbinden, um den eigenen Browser zu steuern",
   "browser.command.usage":
     "Verwenden Sie /browser für die Einstellungen, /browser share, um dieser Sitzung Ihren aktiven Tab zu geben, oder /browser adopt, um die zuletzt beendete Tab-Gruppe wiederzuverwenden.",
-  "browser.command.sessionDescription":
-    "Aktiven Tab teilen (/browser share) oder die zuletzt beendete Tab-Gruppe wiederverwenden (/browser adopt)",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Seiten auf {{origin}} lesen",
   "browser.permission.act.title": "Auf {{origin}} klicken und Text eingeben",
