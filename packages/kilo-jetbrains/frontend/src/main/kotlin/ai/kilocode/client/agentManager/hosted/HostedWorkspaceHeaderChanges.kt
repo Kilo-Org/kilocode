@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.hosted
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.rpc.dto.HostedWorkspaceChangeFileDto
 import ai.kilocode.rpc.dto.HostedWorkspaceChangesDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
@@ -10,19 +11,34 @@ internal data class HostedWorkspaceHeaderChanges(
     val dirty: WorktreeDirtyDto,
 )
 
-/** Projects the passive saved snapshot into the same header model local worktrees use. */
-internal fun HostedWorkspaceChangesDto.headerChanges(): HostedWorkspaceHeaderChanges? {
-    if (status != "captured") return null
+/**
+ * Projects the passive saved snapshot into the same header model local worktrees use.
+ *
+ * A snapshot that was never captured, or whose capture is inconsistent, is unknown rather than clean.
+ * The header keeps both comparison controls but must not claim `0 files` for data that does not exist,
+ * so those states carry [WorktreeStatsDto.unavailable] and a reason. Truncated snapshots keep their
+ * counts and are marked [WorktreeStatsDto.incomplete] instead.
+ */
+internal fun HostedWorkspaceChangesDto.headerChanges(): HostedWorkspaceHeaderChanges {
+    val missing = when (status) {
+        "captured" -> null
+        "inconsistent" -> KiloBundle.message("diff.editor.hosted.inconsistent")
+        else -> KiloBundle.message("diff.editor.hosted.notCaptured")
+    }
     val groups = comparisons.orEmpty()
     val committed = groups.flatMap { it.files }.filter { it.scope == "against-base-branch" }
     val local = groups.flatMap { it.files }.filter { it.scope == "uncommitted" }
     val bases = groups.filter { group -> group.files.any { it.scope == "against-base-branch" } }
         .map { it.comparison.baseRef }.distinct()
+    val incomplete = missing == null && (truncated || groups.any { it.truncated } ||
+        (committed + local).any { !it.countsComplete })
     return HostedWorkspaceHeaderChanges(
         stats = WorktreeStatsDto(ref.key, committed.additions(), committed.deletions(), files = committed.size,
-            base = bases.singleOrNull().orEmpty()),
+            base = bases.singleOrNull().orEmpty(), unavailable = missing != null, reason = missing.orEmpty(),
+            incomplete = incomplete),
         dirty = WorktreeDirtyDto(ref.key, local.additions(), local.deletions(), files = local.size,
-            untracked = local.count { !it.tracked }),
+            untracked = local.count { !it.tracked }, unavailable = missing != null, reason = missing.orEmpty(),
+            incomplete = incomplete),
     )
 }
 

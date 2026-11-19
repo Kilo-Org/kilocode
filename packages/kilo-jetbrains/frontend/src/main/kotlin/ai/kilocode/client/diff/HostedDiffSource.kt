@@ -3,6 +3,8 @@ package ai.kilocode.client.diff
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.vfs.KiloPath
+import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -100,18 +102,24 @@ internal fun openHostedDiff(
     val source = HostedDiffSource(ref, comparison, HostedDiffSource.account(account), state.profile?.currentOrgId)
     if (!source.current(project)) return
     ensureDiffEditorKind()
-    val manager = project.service<KiloVfsManager>()
-    manager.open(KiloDiffEditorKind.ID, source.params())
-    manager.updatePresentation(KiloDiffEditorKind.ID, source.params())
+    project.service<KiloVfsManager>().open(KiloDiffEditorKind.ID, source.params())
 }
 
+/**
+ * Refreshes tab names for hosted diffs that are already open. It deliberately never creates a VFS
+ * entry: the file system caches paths permanently until their editor closes, so probing every
+ * comparison on each title sync would retain three files per visited workspace.
+ */
 internal fun refreshHostedDiffTitles(project: Project, ref: HostedWorkspaceRefDto) {
     if (project.isDisposed) return
     val state = service<KiloAppService>().state.value
-    val account = state.profile?.email?.takeIf { it.isNotBlank() } ?: return
+    val email = state.profile?.email?.takeIf { it.isNotBlank() } ?: return
+    val account = HostedDiffSource.account(email)
     val manager = project.service<KiloVfsManager>()
+    val files = KiloVirtualFileSystem.getInstance()
     HostedDiffComparison.entries.forEach { comparison ->
-        val source = HostedDiffSource(ref, comparison, HostedDiffSource.account(account), state.profile?.currentOrgId)
-        manager.updatePresentation(KiloDiffEditorKind.ID, source.params())
+        val params = HostedDiffSource(ref, comparison, account, state.profile?.currentOrgId).params()
+        if (files.cached(KiloPath(KiloDiffEditorKind.ID, params)) == null) return@forEach
+        manager.updatePresentation(KiloDiffEditorKind.ID, params)
     }
 }

@@ -52,6 +52,13 @@ data class WorktreeStatsDto(
     val unavailable: Boolean = false,
     /** Why the poll failed, for logs and tooltips. Empty when [unavailable] is false. */
     val reason: String = "",
+    /**
+     * True when the counts are a lower bound because files or line totals were truncated.
+     *
+     * Unlike [unavailable], the numbers are still meaningful: a surface should show them and say
+     * they may be incomplete rather than replacing them with "unknown".
+     */
+    val incomplete: Boolean = false,
 )
 
 @Serializable
@@ -85,6 +92,8 @@ data class WorktreeDirtyDto(
     val unavailable: Boolean = false,
     /** Why the poll failed, for logs and tooltips. Empty when [unavailable] is false. */
     val reason: String = "",
+    /** True when the counts are a lower bound; see [WorktreeStatsDto.incomplete]. */
+    val incomplete: Boolean = false,
 )
 
 @Serializable

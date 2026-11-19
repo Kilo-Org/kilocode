@@ -51,7 +51,7 @@ internal object KiloDiffEditorKind : KiloEditorKind {
 
     override fun title(params: Map<String, String>): String {
         HostedDiffSource.parse(params)?.let {
-            return it.comparison.title(service<HostedWorkspaceCache>().title(it.ref))
+            return it.comparison.title(service<HostedWorkspaceCache>().displayTitle(it.ref))
         }
         params["title"].takeIfPresent()?.let { return it }
         val comparison = KiloDiffComparison.entries.firstOrNull { it.source == params["source"] }

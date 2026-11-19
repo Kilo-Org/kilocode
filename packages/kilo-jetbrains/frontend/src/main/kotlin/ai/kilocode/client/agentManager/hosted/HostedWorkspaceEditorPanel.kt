@@ -371,8 +371,8 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
             val summary = hosted.workspaceChanges(ref).headerChanges()
             withContext(Dispatchers.Main) {
                 if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel) || generation != changesGeneration) return@withContext
-                stats = summary?.stats
-                dirty = summary?.dirty
+                stats = summary.stats
+                dirty = summary.dirty
                 syncHeader()
             }
         } catch (e: CancellationException) {

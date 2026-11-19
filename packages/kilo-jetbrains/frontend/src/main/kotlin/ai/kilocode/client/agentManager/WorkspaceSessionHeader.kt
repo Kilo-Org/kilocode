@@ -74,6 +74,12 @@ internal open class WorkspaceSessionHeader @RequiresEdt constructor(
             localAdditions = dirty?.additions ?: 0,
             localDeletions = dirty?.deletions ?: 0,
             base = stats?.base.orEmpty(),
+            baseUnavailable = stats?.unavailable == true,
+            baseReason = stats?.reason.orEmpty(),
+            baseIncomplete = stats?.incomplete == true,
+            localUnavailable = dirty?.unavailable == true,
+            localReason = dirty?.reason.orEmpty(),
+            localIncomplete = dirty?.incomplete == true,
         )
     }
 }

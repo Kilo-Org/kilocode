@@ -1385,13 +1385,15 @@ class AgentManagerPanel(
 
     @RequiresEdt
     private fun excluded(target: Project): Set<String> {
-        val hidden = tree.hidden().filterIsInstance<WorktreeRow>().filterNot { controller.isPending(it.key) }
+        val hidden = tree.hidden().filterIsInstance<AgentManagerWorkspaceRow<*>>().mapNotNull { row ->
+            ((row.element as? AgentManagerElement.Local)?.dto)?.takeUnless { controller.isPending(it.id) }
+        }
         if (hidden.isEmpty()) return emptySet()
         val matchers = target.service<WorktreeEditorMatchers>()
         val editors = FileEditorManager.getInstance(target).selectedFiles.mapNotNullTo(HashSet()) {
             matchers.match(it)?.let(::normalizeWorktreePath)
         }
-        return hidden.mapTo(HashSet()) { normalizeWorktreePath(it.dto.path) } - editors
+        return hidden.mapTo(HashSet()) { normalizeWorktreePath(it.path) } - editors
     }
 
     override fun dispose() {

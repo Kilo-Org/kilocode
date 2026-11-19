@@ -175,10 +175,19 @@ internal class PrHeaderView @RequiresEdt constructor(
         localAdditions: Int = 0,
         localDeletions: Int = 0,
         base: String = "",
+        baseUnavailable: Boolean = false,
+        baseReason: String = "",
+        baseIncomplete: Boolean = false,
+        localUnavailable: Boolean = false,
+        localReason: String = "",
+        localIncomplete: Boolean = false,
     ) {
         changes.update(
             files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base,
             conflict = conflicted(pull),
+            baseUnavailable = baseUnavailable, baseReason = baseReason, baseIncomplete = baseIncomplete,
+            localUnavailable = localUnavailable, localReason = localReason,
+            localIncomplete = localIncomplete,
         )
         syncSeparator()
         applyPr(pull, name)

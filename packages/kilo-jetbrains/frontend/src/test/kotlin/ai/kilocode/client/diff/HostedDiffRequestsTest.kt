@@ -10,6 +10,7 @@ import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.vfs.KiloPath
 import ai.kilocode.client.vfs.KiloVirtualFile
+import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import ai.kilocode.rpc.KiloHostedRpcApi
 import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
@@ -132,6 +133,16 @@ class HostedDiffRequestsTest : BasePlatformTestCase() {
         assertTrue(source.current(project))
     }
 
+    fun `test title refresh does not create virtual files for unopened comparisons`() {
+        val fs = KiloVirtualFileSystem.getInstance()
+        service<HostedWorkspaceCache>().putTitle(ref, "Task overview")
+        refreshHostedDiffTitles(project, ref)
+        HostedDiffComparison.entries.forEach { comparison ->
+            val path = KiloPath(KiloDiffEditorKind.ID, source.copy(comparison = comparison).params())
+            assertNull(fs.cached(path))
+        }
+    }
+
     fun `test hosted tab names distinguish workspaces and comparisons`() {
         val workspaces = listOf(ref to "Task overview", ref.copy(workspaceID = "two") to "feature/two")
         val cache = service<HostedWorkspaceCache>()
@@ -151,6 +162,23 @@ class HostedDiffRequestsTest : BasePlatformTestCase() {
             }
         }
         assertEquals(6, titles.toSet().size)
+    }
+
+    fun `test same-named workspaces get distinct titles without changing tab identity`() {
+        val cache = service<HostedWorkspaceCache>()
+        val sibling = ref.copy(workspaceID = "sibling-workspace")
+        cache.putTitle(ref, "Same task")
+        cache.putTitle(sibling, "Same task")
+        val first = source.copy(comparison = HostedDiffComparison.COMMITTED).params()
+        val second = source.copy(ref = sibling, comparison = HostedDiffComparison.COMMITTED).params()
+        val firstTitle = KiloDiffEditorKind.title(first)
+        val secondTitle = KiloDiffEditorKind.title(second)
+        assertTrue(firstTitle != secondTitle)
+        assertTrue(firstTitle.contains("Same task"))
+        assertTrue(secondTitle.contains("Same task"))
+        assertTrue(firstTitle.contains(ref.workspaceID.takeLast(8)))
+        assertTrue(secondTitle.contains(sibling.workspaceID.takeLast(8)))
+        assertEquals(first, source.copy(comparison = HostedDiffComparison.COMMITTED).params())
     }
 
     fun `test actual fetch branches before local services and details remain lazy`() {

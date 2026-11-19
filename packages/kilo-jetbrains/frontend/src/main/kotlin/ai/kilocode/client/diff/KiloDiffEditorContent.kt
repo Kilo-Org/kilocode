@@ -354,7 +354,7 @@ internal class DiffEditorView(
         val producers = next.map { file -> producer(file) }.ifEmpty {
             if (snapshot == null) emptyList() else listOf(object : DiffRequestProducer {
                 override fun getName(): String = snapshot.source.comparison.title(
-                    service<HostedWorkspaceCache>().title(snapshot.source.ref),
+                    service<HostedWorkspaceCache>().displayTitle(snapshot.source.ref),
                 )
                 override fun process(context: UserDataHolder, indicator: ProgressIndicator) = MessageDiffRequest(snapshot.message)
             })

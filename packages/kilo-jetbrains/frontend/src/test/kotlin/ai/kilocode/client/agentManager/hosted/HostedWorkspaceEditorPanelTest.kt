@@ -788,8 +788,11 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
             val changes = descendants(header).filterIsInstance<ChangesPanel>().single()
             assertTrue(changes.isVisible)
-            assertEquals(listOf("0 files", "0 files"), descendants(changes).filterIsInstance<JBLabel>()
+            assertEquals(listOf("Unknown", "Unknown"), descendants(changes).filterIsInstance<JBLabel>()
                 .filter { it.isVisible }.mapNotNull { it.text })
+            val tooltip = KiloBundle.message("diff.editor.hosted.notCaptured")
+            assertTrue(descendants(changes).filterIsInstance<JComponent>().filter { it.isVisible }
+                .all { it.toolTipText == null || it.toolTipText.contains(tooltip) })
             assertEquals(2, descendants(changes).filterIsInstance<JComponent>()
                 .count { it.isVisible && it.isFocusable && it.cursor.type == Cursor.HAND_CURSOR })
         }
