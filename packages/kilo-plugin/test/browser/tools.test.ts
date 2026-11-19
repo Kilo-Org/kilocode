@@ -10,7 +10,7 @@ import { toSessionError } from "@opencode/core/session/to-session-error"
 import type { BrowserPermission } from "../../src/browser/permission"
 import { UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
-import { EXTENSION_HINT } from "../../src/browser/extension"
+import { EXTENSION_HINT, STOPPED } from "../../src/browser/extension"
 import { BrowserHub } from "../../src/browser/hub"
 import { hashArguments, resetSteps } from "../../src/browser/steps"
 import { authorize, effective, granted, KiloBrowserToolsPlugin, resetGrants, trim } from "../../src/browser/tools"
@@ -36,6 +36,7 @@ function fakeHub(options: { call?: (input: BrowserHub.CallInput) => Promise<Brow
   const opened: { sessionId: string; title: string; cwd: string }[] = []
   const began: BrowserHub.Upload[] = []
   let handles = 0
+  const revoked = new Set<(input: { sessionHandle: string; reason: string }) => void>()
   const port: BrowserHub.Port = {
     reported: () => Promise.resolve(undefined),
     ready: () =>
@@ -65,9 +66,49 @@ function fakeHub(options: { call?: (input: BrowserHub.CallInput) => Promise<Brow
     },
     chunk: () => Promise.resolve(),
     end: () => Promise.resolve(),
-    onRevoked: () => () => {},
+    onRevoked: (listener) => {
+      revoked.add(listener)
+      return () => revoked.delete(listener)
+    },
   }
-  return { calls, opened, began, service: { port: () => port } satisfies BrowserHub.Interface }
+  return {
+    calls,
+    opened,
+    began,
+    service: { port: () => port } satisfies BrowserHub.Interface,
+    revoke: (input: { sessionHandle: string; reason: string }) => revoked.forEach((listener) => listener(input)),
+  }
+}
+
+/**
+ * Session events the test feeds one at a time. The plugin's subscription pulls the next event only after it handled the
+ * previous one, so each push resolves once the plugin has handled that event.
+ */
+function sessionEvents() {
+  const queue: { event: { type: string; data: { sessionID: string } }; handled: PromiseWithResolvers<void> }[] = []
+  let arrived = Promise.withResolvers<void>()
+  async function* pull() {
+    let last: PromiseWithResolvers<void> | undefined
+    for (;;) {
+      last?.resolve()
+      while (queue.length === 0) {
+        await arrived.promise
+        arrived = Promise.withResolvers<void>()
+      }
+      const next = queue.shift()!
+      last = next.handled
+      yield next.event
+    }
+  }
+  return {
+    stream: () => Stream.fromAsyncIterable(pull(), (error) => error),
+    push: (type: string, sessionID: string) => {
+      const handled = Promise.withResolvers<void>()
+      queue.push({ event: { type, data: { sessionID } }, handled })
+      arrived.resolve()
+      return handled.promise
+    },
+  }
 }
 
 /** No extension is reachable: the backend reports the model-facing unavailable error. */
@@ -102,6 +143,7 @@ async function boot(
     permission?: Option.Option<Permission.Interface>
     /** The conversation's stored title; undefined is a session the title generator has not named yet. */
     sessionTitle?: string
+    events?: ReturnType<typeof sessionEvents>
   } = {},
 ) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
@@ -128,7 +170,7 @@ async function boot(
       transform: (fn: (typeof transforms)[number]) =>
         Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
     },
-    event: { subscribe: () => Stream.empty },
+    event: { subscribe: () => options.events?.stream() ?? Stream.empty },
     session: {
       get: () => Effect.succeed({ title: options.sessionTitle }),
     },
@@ -602,6 +644,27 @@ describe("browser tools over the extension backend", () => {
     expect(hub.opened).toHaveLength(1)
   })
 
+  test("the session's execution events decide which turns a Stop all halts", async () => {
+    const hub = fakeHub()
+    const events = sessionEvents()
+    const host = await boot({ backend: "extension" }, { hub: hub.service, events })
+    const stopped = (result: Awaited<ReturnType<typeof host.call>>) =>
+      result._tag === "Failure" && String((result.failure as Tool.Error).message) === STOPPED
+
+    await events.push("session.execution.started", "ses_open")
+    await events.push("session.execution.started", "ses_waiting")
+    expect((await host.call("browser_snapshot", {}, "ses_open"))._tag).toBe("Success")
+    // Stop all: the revoke names only ses_open, yet the turn ses_waiting is running is halted with it.
+    hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+    expect(stopped(await host.call("browser_snapshot", {}, "ses_waiting"))).toBe(true)
+    // A conversation idle at the stop is untouched.
+    expect((await host.call("browser_snapshot", {}, "ses_idle"))._tag).toBe("Success")
+    // The conversation's next user message starts a new turn, which works.
+    await events.push("session.execution.started", "ses_waiting")
+    expect((await host.call("browser_snapshot", {}, "ses_waiting"))._tag).toBe("Success")
+    expect(hub.opened.map((value) => value.sessionId)).toEqual(["ses_open", "ses_idle", "ses_waiting"])
+  })
+
   test("a needs_permission answer asks and retries once with the grant it approved", async () => {
     const { asserts, service } = recorder()
     let attempts = 0
@@ -689,6 +752,7 @@ describe("browser tools over the extension backend", () => {
       "Permission for navigate on https://x.example was not granted. The tab is still on http://localhost:3000/login. This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action.",
     )
   })
+
 
   test("a refused post-action read still records the page the action reached", async () => {
     const feedback = "Continue without this action."

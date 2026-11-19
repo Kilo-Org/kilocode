@@ -722,6 +722,10 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
     // disposed, so a session that keeps switching profiles cannot grow this map.
     const extensions = new Map<string, Promise<ExtensionBackend>>()
     const EXTENSION_LIMIT = 4
+    // Each conversation's latest turn, numbered once per process: a Stop all halts the turns current at that moment, and
+    // the conversation's next turn gets a new number, so it starts free. A deleted conversation leaves the map.
+    const turns = new Map<string, number>()
+    let turn = 0
     const extension = (target: string | null) => {
       const name = target ?? ""
       const existing = extensions.get(name)
@@ -732,7 +736,7 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
         return existing
       }
       const created = import("./extension").then((module) =>
-        module.backend({ port: hub.port(target), directory: ctx.location.directory }),
+        module.backend({ port: hub.port(target), directory: ctx.location.directory, turns }),
       )
       extensions.set(name, created)
       trim(extensions, EXTENSION_LIMIT)
@@ -752,12 +756,18 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
       }),
     )
 
-    // A deleted session releases its remembered page at once. The stream never ends, so it is forked: awaiting it
-    // here would keep the plugin effect from ever registering its tools.
-    yield* ctx.event.subscribe({ types: ["session.deleted"] }).pipe(
+    // A deleted session releases its remembered page at once, and each execution start numbers the session's turn. The
+    // stream never ends, so it is forked: awaiting it here would keep the plugin effect from ever registering its tools.
+    yield* ctx.event.subscribe({ types: ["session.deleted", "session.execution.started"] }).pipe(
       Stream.runForEach((event) =>
         Effect.sync(() => {
+          if (event.type === "session.execution.started") {
+            turn += 1
+            turns.set(event.data.sessionID, turn)
+            return
+          }
           if (event.type !== "session.deleted") return
+          turns.delete(event.data.sessionID)
           tracker.forget(event.data.sessionID)
           playwright.forgetSession(event.data.sessionID)
           for (const pending of extensions.values()) {
