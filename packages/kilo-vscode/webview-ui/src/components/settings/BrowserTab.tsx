@@ -325,15 +325,22 @@ const BrowserTools: Component = () => {
   const [chosen, setChosen] = createSignal<(typeof BACKENDS)[number]>()
   const v2 = useV2()
   const [saved, setSaved] = createSignal<Saved>({ kind: "loading" })
-  // Saved grants belong to the workspace's project: the project of this panel's directory.
-  const loadSaved = () =>
-    v2.api.location
+  // Saved grants belong to the workspace's project: the project of this panel's directory. Each read is numbered and
+  // only the newest one may publish, so a slow read that started before a revoke cannot bring the revoked row back.
+  let reads = 0
+  const loadSaved = () => {
+    const read = ++reads
+    const publish = (value: Saved) => {
+      if (read === reads) setSaved(value)
+    }
+    return v2.api.location
       .get({ location: { directory: v2.directory } })
       .then((location) => v2.api.permission.saved.list({ projectID: location.project.id }))
       .then(
-        (rows) => setSaved({ kind: "ready", grants: savedGrants(rows) }),
-        () => setSaved({ kind: "failed" }),
+        (rows) => publish({ kind: "ready", grants: savedGrants(rows) }),
+        () => publish({ kind: "failed" }),
       )
+  }
   const revoke = (id: string) =>
     void v2.api.permission.saved
       .remove({ id })

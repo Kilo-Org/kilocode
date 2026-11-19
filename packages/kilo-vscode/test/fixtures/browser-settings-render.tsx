@@ -56,9 +56,12 @@ const saved = [
   { id: "psv_1", projectID: "prj_preview", action: "browser", resource: "read:http://127.0.0.2:48251" },
   { id: "psv_2", projectID: "prj_preview", action: "shell", resource: "git *" },
   { id: "psv_3", projectID: "prj_preview", action: "browser", resource: "act:http://127.0.0.2:48251" },
+  { id: "psv_4", projectID: "prj_preview", action: "browser_open", resource: "navigate:http://localhost:3000" },
 ].map((row) => ({ ...row, time: { created: 0, updated: 0 } }))
 const removed: string[] = []
 const listed: (string | undefined)[] = []
+// A held list reply: the rows are read when the call starts, and the reply lands only when the test releases it.
+let hold: Promise<void> | undefined
 const scope = {
   connection: { status: () => "connected" },
   report: () => undefined,
@@ -75,7 +78,9 @@ const scope = {
       saved: {
         list: async (input: { projectID?: string }) => {
           listed.push(input.projectID)
-          return saved.filter((row) => !removed.includes(row.id))
+          const rows = saved.filter((row) => !removed.includes(row.id))
+          if (hold) await hold
+          return rows
         },
         remove: async (input: { id: string }) => void removed.push(input.id),
       },
@@ -133,17 +138,39 @@ assert.equal(
   1,
   "Backend is named once, as the section header",
 )
-// The chat's grants for this workspace's project are listed under Site permissions, browser grants only.
+// The chat's grants for this workspace's project are listed under Site permissions: browser tool grants by class, and
+// the Integrated Browser's own Allow always grants under its name.
 assert.deepEqual(listed, ["prj_preview"], "the saved grants are read for the panel's project")
 const grants = () =>
   [...root.querySelectorAll('[data-slot="browser-saved-grant"]')].map(
     (node) => `${node.textContent} ${node.nextElementSibling?.textContent}`,
   )
-assert.deepEqual(grants(), ["http://127.0.0.2:48251 Read", "http://127.0.0.2:48251 Act"], "each saved grant is a row")
+assert.deepEqual(
+  grants(),
+  ["http://127.0.0.2:48251 Read", "http://127.0.0.2:48251 Act", "http://localhost:3000 Integrated Browser"],
+  "each saved grant is a row",
+)
+// A slow read that started before a revoke must not put the revoked row back when it lands after the newer read.
+const release = Promise.withResolvers<void>()
+hold = release.promise
+document.dispatchEvent(new Event("visibilitychange"))
+await wait(10)
+hold = undefined
 root.querySelector<HTMLButtonElement>('button[aria-label="Revoke"]')?.click()
 await wait(10)
 assert.deepEqual(removed, ["psv_1"], "revoke removes that saved grant")
-assert.deepEqual(grants(), ["http://127.0.0.2:48251 Act"], "the list is read again after a revoke")
+assert.deepEqual(
+  grants(),
+  ["http://127.0.0.2:48251 Act", "http://localhost:3000 Integrated Browser"],
+  "the list is read again after a revoke",
+)
+release.resolve()
+await wait(10)
+assert.deepEqual(
+  grants(),
+  ["http://127.0.0.2:48251 Act", "http://localhost:3000 Integrated Browser"],
+  "a slower, older read does not bring the revoked grant back",
+)
 
 // A write shows the chosen backend at once, then a failed reply rolls it back and reports the error.
 radios()[0]?.click()
