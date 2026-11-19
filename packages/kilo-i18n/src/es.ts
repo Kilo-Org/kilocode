@@ -200,7 +200,7 @@ export const dict = {
   "browser.notice.unavailableTitle": "Navegador no disponible",
   "browser.notice.outdatedTitle": "Extensión de navegador desactualizada",
   "browser.notice.stopped":
-    "Detuviste el navegador para esta sesión. Ejecuta /browser adopt para devolverle sus pestañas.",
+    "Detuviste el navegador para esta sesión. Ejecuta /browser adopt para devolver sus pestañas a la sesión.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Alternar aprobación automática",

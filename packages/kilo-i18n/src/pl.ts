@@ -201,7 +201,8 @@ export const dict = {
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Przeglądarka niedostępna",
   "browser.notice.outdatedTitle": "Rozszerzenie przeglądarki jest nieaktualne",
-  "browser.notice.stopped": "Zatrzymano przeglądarkę dla tej sesji. Uruchom /browser adopt, aby zwrócić jej karty.",
+  "browser.notice.stopped":
+    "Zatrzymano przeglądarkę dla tej sesji. Uruchom /browser adopt, aby zwrócić tej sesji jej karty.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Przełącz automatyczne zatwierdzanie",

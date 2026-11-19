@@ -201,7 +201,7 @@ export const dict = {
   "browser.notice.unavailableTitle": "Tarayıcı kullanılamıyor",
   "browser.notice.outdatedTitle": "Tarayıcı uzantısı güncel değil",
   "browser.notice.stopped":
-    "Bu oturum için tarayıcıyı durdurdunuz. Sekmelerini geri vermek için /browser adopt çalıştırın.",
+    "Bu oturum için tarayıcıyı durdurdunuz. Sekmeleri bu oturuma geri vermek için /browser adopt çalıştırın.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Otomatik onayı değiştir",

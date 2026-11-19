@@ -196,7 +196,7 @@ export const dict = {
   "browser.notice.unavailableTitle": "Browser ikke tilgængelig",
   "browser.notice.outdatedTitle": "Browserudvidelsen er forældet",
   "browser.notice.stopped":
-    "Du stoppede browseren for denne session. Kør /browser adopt for at give den sine faner tilbage.",
+    "Du stoppede browseren for denne session. Kør /browser adopt for at give sessionen dens faner tilbage.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Skift auto-godkendelse",
