@@ -24,6 +24,7 @@ async function run(env: Record<string, string> = {}) {
     env: {
       ...process.env,
       KILO_TELEMETRY_LEVEL: "all",
+      KILO_TELEMETRY_HOST_DISABLED: "0",
       KILO_APP_NAME: "kilo-cli",
       KILO_APP_VERSION: "",
       KILO_MACHINE_ID: "",
@@ -69,6 +70,34 @@ test("disabled telemetry writes no alias marker and a later enabled run sends th
   expect((await readdir(dir)).filter((file) => file.startsWith("telemetry-alias-"))).toEqual([])
   const events = await run()
   expect(events.filter((event) => event.event === "$create_alias")).toHaveLength(1)
+})
+
+test.each(["OFF", "0", "false", "unexpected"])("disables telemetry with KILO_TELEMETRY_LEVEL=%j", async (level) => {
+  expect(await run({ KILO_TELEMETRY_LEVEL: level })).toEqual([])
+})
+
+test("allows telemetry with KILO_TELEMETRY_LEVEL=ON", async () => {
+  expect(await run({ KILO_TELEMETRY_LEVEL: "ON" })).not.toEqual([])
+})
+
+test("a config opt-out wins over a client that sets KILO_TELEMETRY_LEVEL=all", async () => {
+  expect(await run({ KILO_TELEMETRY_LEVEL: "all", TEST_CONFIG_ENABLED: "0" })).toEqual([])
+  expect((await readdir(dir)).filter((file) => file.startsWith("telemetry-alias-"))).toEqual([])
+})
+
+test("a blank telemetry environment defers to the Kilo preference", async () => {
+  expect(await run({ KILO_TELEMETRY_LEVEL: "  ", TEST_CONFIG_ENABLED: "0" })).toEqual([])
+  expect(await run({ KILO_TELEMETRY_LEVEL: "" })).not.toEqual([])
+})
+
+test("runtime updates cannot turn on telemetry against an environment or host opt-out", async () => {
+  expect(await run({ KILO_TELEMETRY_LEVEL: "off", TEST_HOST_ENABLED: "1", TEST_RUNTIME_ENABLED: "1" })).toEqual([])
+  expect(await run({ KILO_TELEMETRY_HOST_DISABLED: "1", TEST_RUNTIME_ENABLED: "1" })).toEqual([])
+})
+
+test("lifting the host opt-out only resumes telemetry if Kilo allows it", async () => {
+  expect(await run({ KILO_TELEMETRY_HOST_DISABLED: "1", TEST_HOST_ENABLED: "1", TEST_CONFIG_ENABLED: "0" })).toEqual([])
+  expect(await run({ KILO_TELEMETRY_HOST_DISABLED: "1", TEST_HOST_ENABLED: "1" })).not.toEqual([])
 })
 
 test.each(["corrupt", "unreadable"])("an alias marker that is %s does not suppress the alias", async (kind) => {

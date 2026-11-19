@@ -854,8 +854,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetry ถูกควบคุมโดยการตั้งค่า Telemetry ในตัวของ VS Code หากต้องการปิดใช้งาน ให้ไปที่ Settings > Telemetry > Telemetry Level แล้วตั้งค่าเป็น "off" รีสตาร์ท VS Code เพื่อให้การเปลี่ยนแปลงมีผล',
-  "settings.aboutKiloCode.telemetry.openSettings": "เปิดการตั้งค่า Telemetry",
+    "ใช้สวิตช์นี้เพื่อเปลี่ยนการตั้งค่าการส่งข้อมูลเทเลเมทรีของ Kilo หาก VS Code หรือสภาพแวดล้อมปิดการส่งข้อมูลเทเลเมทรี การส่งข้อมูลจะยังคงปิดอยู่",
+  "settings.aboutKiloCode.telemetry.toggle": "เปิดการส่งข้อมูลเทเลเมทรี",
+  "settings.aboutKiloCode.telemetry.saveFailed": "ไม่สามารถอัปเดตการตั้งค่าการส่งข้อมูลเทเลเมทรีได้",
 
   "settings.agentBehaviour.subtab.agents": "ตัวแทน",
   "settings.agentBehaviour.subtab.mcpServers": "เซิร์ฟเวอร์ MCP",

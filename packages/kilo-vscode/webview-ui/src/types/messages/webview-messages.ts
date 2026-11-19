@@ -289,11 +289,6 @@ export interface OpenProfilePanelRequest {
   type: "openProfilePanel"
 }
 
-export interface OpenVSCodeSettingsRequest {
-  type: "openVSCodeSettings"
-  query: string
-}
-
 export interface OpenConfigFileRequest {
   type: "openConfigFile"
   scope: "local" | "global"
@@ -709,6 +704,11 @@ export interface TelemetryRequest {
   type: "telemetry"
   event: string
   properties?: Record<string, unknown>
+}
+
+export interface SetTelemetryLevelRequest {
+  type: "setTelemetryLevel"
+  enabled: boolean
 }
 
 // Create a new worktree (with auto-created first session)
@@ -1792,7 +1792,6 @@ export type WebviewMessage =
   | SetAgentManagerDefaultBaseBranchMessage
   | ConfigureAgentManagerSetupScriptMessage
   | OpenProfilePanelRequest
-  | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest
   | OpenMarketplacePanelRequest
   | OpenAgentManagerRequest
@@ -1892,6 +1891,7 @@ export type WebviewMessage =
   | ForgetSessionRequest
   | RenameWorktreeRequest
   | TelemetryRequest
+  | SetTelemetryLevelRequest
   | RequestRepoInfoMessage
   | RequestStateMessage
   | RequestProjectsMessage

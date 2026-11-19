@@ -5127,7 +5127,6 @@ export type SessionHostWorkspaceProfilePage = {
 
 export type SessionHostWorkspaceProfileDefaultInput = {
   id: string
-  organizationID?: SessionHostOrganizationId
 }
 
 export type SessionHostWorkspaceProfileDefaultResult = {
@@ -20972,6 +20971,68 @@ export type TelemetrySetEnabledResponses = {
 }
 
 export type TelemetrySetEnabledResponse = TelemetrySetEnabledResponses[keyof TelemetrySetEnabledResponses]
+
+export type TelemetryLevelData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/telemetry/level"
+}
+
+export type TelemetryLevelErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type TelemetryLevelError = TelemetryLevelErrors[keyof TelemetryLevelErrors]
+
+export type TelemetryLevelResponses = {
+  /**
+   * Effective telemetry level
+   */
+  200: {
+    enabled: boolean
+  }
+}
+
+export type TelemetryLevelResponse = TelemetryLevelResponses[keyof TelemetryLevelResponses]
+
+export type TelemetrySetLevelData = {
+  body?: {
+    enabled: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/telemetry/level"
+}
+
+export type TelemetrySetLevelErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type TelemetrySetLevelError = TelemetrySetLevelErrors[keyof TelemetrySetLevelErrors]
+
+export type TelemetrySetLevelResponses = {
+  /**
+   * Effective telemetry level after saving the preference
+   */
+  200: {
+    enabled: boolean
+  }
+}
+
+export type TelemetrySetLevelResponse = TelemetrySetLevelResponses[keyof TelemetrySetLevelResponses]
 
 export type MemoryStatusData = {
   body?: never

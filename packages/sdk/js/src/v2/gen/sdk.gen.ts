@@ -521,8 +521,12 @@ import type {
   SyncStealResponses,
   TelemetryCaptureErrors,
   TelemetryCaptureResponses,
+  TelemetryLevelErrors,
+  TelemetryLevelResponses,
   TelemetrySetEnabledErrors,
   TelemetrySetEnabledResponses,
+  TelemetrySetLevelErrors,
+  TelemetrySetLevelResponses,
   TextPartInput,
   ToolIdsErrors,
   ToolIdsResponses,
@@ -10523,9 +10527,9 @@ export class Telemetry extends HeyApiClient {
   }
 
   /**
-   * Set PostHog telemetry enabled state
+   * Set host telemetry permission
    *
-   * Update the PostHog client's opt-in/out state at runtime. The CLI reads KILO_TELEMETRY_LEVEL once at spawn — this route lets clients (e.g. the VS Code extension) propagate runtime telemetry consent changes.
+   * Apply the host editor's telemetry permission at runtime without changing config. This cannot override a config or environment opt-out. Use telemetry.setLevel for the Kilo preference.
    */
   public setEnabled<ThrowOnError extends boolean = false>(
     parameters: {
@@ -10559,6 +10563,73 @@ export class Telemetry extends HeyApiClient {
         },
       },
     )
+  }
+
+  /**
+   * Get effective telemetry level
+   *
+   * Read whether global Kilo config, the host editor, and the environment all allow telemetry.
+   */
+  public level<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<TelemetryLevelResponses, TelemetryLevelErrors, ThrowOnError>({
+      url: "/telemetry/level",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Save the Kilo telemetry preference
+   *
+   * Persist experimental.openTelemetry to the global Kilo config and apply it to the running telemetry client. Return the effective level, which can still be off due to a host or environment opt-out.
+   */
+  public setLevel<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      enabled: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "enabled" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TelemetrySetLevelResponses, TelemetrySetLevelErrors, ThrowOnError>({
+      url: "/telemetry/level",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
   }
 }
 

@@ -129,14 +129,7 @@ export async function activate(context: vscode.ExtensionContext) {
         .reregisterIfEnabled()
         .catch((error) => console.warn("[Kilo New] Playwright MCP re-registration failed:", error))
       const config = connectionService.getServerConfig()
-      if (config) {
-        telemetry.configure(config.baseUrl, config.password)
-        // Sync the CLI's PostHog client with the current consent state. The
-        // CLI reads KILO_TELEMETRY_LEVEL once at spawn, so without this call
-        // a fresh CLI started while VS Code telemetry was off would stay
-        // opted out for the rest of the session.
-        telemetry.setEnabled(vscode.env.isTelemetryEnabled)
-      }
+      if (config) telemetry.configure(config.baseUrl, config.password)
       try {
         remoteService.setClient(connectionService.getClient())
         console.log("[Kilo New] CLI connected, calling remoteService.refresh()")
@@ -151,13 +144,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   })
 
-  // Propagate runtime telemetry consent changes to the CLI subprocess so its
-  // PostHog client stays in sync with the user's VS Code telemetry setting.
-  context.subscriptions.push(
-    vscode.env.onDidChangeTelemetryEnabled((enabled) => {
-      telemetry.setEnabled(enabled)
-    }),
-  )
+  context.subscriptions.push(vscode.env.onDidChangeTelemetryEnabled((enabled) => telemetry.setHostEnabled(enabled)))
 
   for (const folder of vscode.workspace.workspaceFolders ?? []) {
     void markWorkspace(folder.uri.fsPath, (msg) => console.warn(`[Kilo New] ${msg}`))

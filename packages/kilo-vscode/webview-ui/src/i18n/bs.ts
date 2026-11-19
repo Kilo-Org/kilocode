@@ -867,8 +867,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrija",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetrija je kontrolisana ugrađenom postavkom za telemetriju u VS Code-u. Da biste je onemogućili, idite na Postavke > Telemetrija > Nivo telemetrije i postavite na "off". Ponovo pokrenite VS Code da biste primijenili promjenu.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Otvori postavke telemetrije",
+    "Koristite ovaj prekidač za promjenu postavke telemetrije u Kilu. Telemetrija ostaje isključena ako je isključi VS Code ili okruženje.",
+  "settings.aboutKiloCode.telemetry.toggle": "Uključi telemetriju",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Nije bilo moguće ažurirati postavku telemetrije",
 
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "MCP serveri",

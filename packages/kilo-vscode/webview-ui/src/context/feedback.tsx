@@ -1,8 +1,8 @@
 /**
  * Feedback context
  *
- * Tracks per-message thumbs up/down ratings (in-memory only) and the VS Code
- * telemetry-enabled flag. The context exposes a single `rate()` callback that
+ * Tracks per-message thumbs up/down ratings (in-memory only) and effective
+ * telemetry consent. The context exposes a single `rate()` callback that
  * updates local state and fires a telemetry event.
  *
  * State is not persisted — ratings reset on page reload / session switch.

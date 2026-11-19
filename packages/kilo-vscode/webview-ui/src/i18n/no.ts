@@ -829,8 +829,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetri",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetri styres av den innebygde telemetri-innstillingen i VS Code. For å deaktivere den, gå til Innstillinger > Telemetry > Telemetry Level og sett den til "off". Start VS Code på nytt for å ta i bruk endringen.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Åpne innstillinger for telemetri",
+    "Bruk denne bryteren til å endre telemetriinnstillingen din i Kilo. Telemetri forblir av hvis VS Code eller miljøet slår den av.",
+  "settings.aboutKiloCode.telemetry.toggle": "Slå på telemetri",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Kunne ikke oppdatere telemetriinnstillingen",
 
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
