@@ -181,11 +181,13 @@ function follow(linked: Client): Presence {
 }
 
 /**
- * Why no extension answers, from what the client sees now and saw before: an extension that was connected went away;
- * a hub that waits was either paired once (the extension left) or never; without a hub, a selected profile is the
- * missing piece, otherwise the hub itself.
+ * Why no extension answers, from what the client sees now and saw before: a connected extension that did not answer
+ * (a timeout, a cancelled turn, its own `browser_unavailable` on a live socket) is not absent; an extension that was
+ * connected went away; a hub that waits was either paired once (the extension left) or never; without a hub, a
+ * selected profile is the missing piece, otherwise the hub itself.
  */
 export function absence(state: State, presence: { seen: boolean }, profile: string | undefined): BrowserHub.Absence {
+  if (state.kind === "ready") return { kind: "connected" }
   if (presence.seen) return { kind: "disconnected" }
   if (state.kind === "waiting") return state.hub.paired ? { kind: "disconnected" } : { kind: "unpaired" }
   if (profile !== undefined) return { kind: "no_profile", profile }
@@ -248,12 +250,9 @@ export function hub(options: Options = {}): BrowserHub.Interface {
         async ready(timeoutMs = 10_000) {
           const linked = await connection()
           const presence = presenceOf(linked)
-          // A hub whose pairing page went stale shows a fresh one, and this call waits for the extension to redeem it.
-          if (
-            linked.state().kind !== "ready" &&
-            absence(linked.state(), presence, profile).kind === "unpaired" &&
-            linked.pair()
-          ) {
+          // A hub whose pairing page went stale shows a fresh one, and this call waits for the extension to redeem it;
+          // only a page that really opened resets the wait.
+          if (absence(linked.state(), presence, profile).kind === "unpaired" && (await linked.pair())) {
             presence.since = Date.now()
           }
           // An extension connects only shortly after the connection changed, so the wait ends `timeoutMs` after that

@@ -55,14 +55,16 @@ export namespace BrowserHub {
   /**
    * Why no extension answered an `unavailable` call, as far as the hub connection knows: no hub is reachable
    * (`no_hub`), or none whose extension has the selected browser profile (`no_profile`); a hub runs but no extension
-   * ever connected to it (`unpaired`: not installed, "Allow local agents" off, or the pairing page ignored); or an
-   * extension was connected and went away (`disconnected`: the switch turned off, the browser closed).
+   * ever connected to it (`unpaired`: not installed, "Allow local agents" off, or the pairing page ignored); an
+   * extension was connected and went away (`disconnected`: the switch turned off, the browser closed); or one is
+   * connected but did not answer the call (`connected`: a timeout, a cancelled turn).
    */
   export type Absence =
     | { kind: "no_hub" }
     | { kind: "no_profile"; profile: string }
     | { kind: "unpaired" }
     | { kind: "disconnected" }
+    | { kind: "connected" }
 
   export class Failure extends Error {
     readonly kind: Kind

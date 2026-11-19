@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, setSystemTime, test } from "bun:test"
 import { BrowserHub } from "@kilocode/kilo-plugin/browser/hub"
 import { randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
@@ -243,7 +243,7 @@ async function host(dir: string, paired: boolean) {
  * The port a CLI uses, over a real client of the run dir, with the pairing pages it opened. The client is closed
  * before the hub's socket server, which otherwise waits for its connection.
  */
-function linked(dir: string, options: { pairAgain?: number } = {}) {
+function linked(dir: string, options: { pairAgain?: number; opener?: (url: string) => Promise<void> } = {}) {
   const opened: string[] = []
   const port = connection({
     dir,
@@ -260,16 +260,23 @@ function linked(dir: string, options: { pairAgain?: number } = {}) {
   return { port, opened }
 }
 
-/** The failure a `ready` call settles with, and how long it took. */
+/**
+ * The failure a `ready` call settles with. A call made with a window far longer than the test's own timeout proves it
+ * failed without waiting, with no wall-clock bound to flake on a loaded runner.
+ */
 async function refused(port: BrowserHub.Port, timeout: number) {
-  const started = performance.now()
   const error = await port.ready(timeout).then(
     () => undefined,
     (value: unknown) => value,
   )
   if (!(error instanceof BrowserHub.Failure)) throw new Error(`expected a hub failure, got ${String(error)}`)
-  return { error, elapsed: performance.now() - started }
+  return { error }
 }
+
+/** A window no test waits out (bun's default test timeout is 5 s), and a clock moved past it. */
+const LONG = 600_000
+const later = () => setSystemTime(new Date(Date.now() + LONG + 1_000))
+afterEach(() => void setSystemTime())
 
 describe("why no extension answers", () => {
   const waiting = (paired: boolean): State => ({
@@ -288,6 +295,10 @@ describe("why no extension answers", () => {
       kind: "no_profile",
       profile: "Work",
     })
+    // A connected extension that did not answer (a timeout, a cancelled turn) is not reported as gone.
+    const hub = Registry.Entry.parse({ ...Registry.empty({ hubId: randomUUID(), mode: "loopback", socket: "s" }) })
+    const ready: State = { kind: "ready", hub, extension: extensionHello() }
+    expect(absence(ready, { seen: true }, undefined)).toEqual({ kind: "connected" })
   })
 
   test("no reachable hub is no_hub", async () => {
@@ -300,14 +311,14 @@ describe("why no extension answers", () => {
   test("a hub no extension ever paired with is unpaired, and a later call fails at once", async () => {
     const dir = await rundir()
     await host(dir, false)
-    const { port, opened } = linked(dir)
+    const { port, opened } = linked(dir, { pairAgain: 10 * LONG })
     const first = await refused(port, 200)
     expect(first.error.absence).toEqual({ kind: "unpaired" })
     await until(() => (opened.length === 1 ? true : undefined))
     // The pairing page is still current, so nothing changed that could bring an extension: no second wait.
-    const second = await refused(port, 200)
+    later()
+    const second = await refused(port, LONG)
     expect(second.error.absence).toEqual({ kind: "unpaired" })
-    expect(second.elapsed).toBeLessThan(100)
     expect(opened).toHaveLength(1)
   })
 
@@ -324,6 +335,26 @@ describe("why no extension answers", () => {
     expect((await answered).profileLabel).toBe("Default")
   })
 
+  test("a pairing page that could not be opened does not make the call wait for it", async () => {
+    const dir = await rundir()
+    await host(dir, false)
+    let attempts = 0
+    const { port } = linked(dir, {
+      pairAgain: 0,
+      opener: async () => {
+        attempts += 1
+        throw new Error("no opener on this host")
+      },
+    })
+    await refused(port, 200)
+    await until(() => (attempts === 1 ? true : undefined))
+    later()
+    // The stale page is asked for again, the opener fails, and the call fails at once instead of waiting.
+    const { error } = await refused(port, LONG)
+    expect(error.absence).toEqual({ kind: "unpaired" })
+    expect(attempts).toBe(2)
+  })
+
   test("an extension that went away is disconnected; a reconnect inside the window still answers", async () => {
     const dir = await rundir()
     const hub = await host(dir, true)
@@ -333,16 +364,15 @@ describe("why no extension answers", () => {
     await opened
     drop()
     await until(async () => ((await port.reported()) === undefined ? true : undefined))
-    // The window opened when it left: a call waits it out and fails, then the next one fails at once.
-    const first = await refused(port, 600)
-    expect(first.error.absence).toEqual({ kind: "disconnected" })
-    expect(first.elapsed).toBeGreaterThan(200)
-    const second = await refused(port, 600)
-    expect(second.error.absence).toEqual({ kind: "disconnected" })
-    expect(second.elapsed).toBeLessThan(50)
     // A call made while its window is still open gets an extension that reconnects inside it.
-    const pending = port.ready(2_000)
-    hub.connect()
+    const pending = port.ready(LONG)
+    const back = hub.connect()
     expect((await pending).profileLabel).toBe("Default")
+    back()
+    await until(async () => ((await port.reported()) === undefined ? true : undefined))
+    // Once the extension has been gone longer than the window, a call fails at once and names why.
+    later()
+    const { error } = await refused(port, LONG)
+    expect(error.absence).toEqual({ kind: "disconnected" })
   })
 })

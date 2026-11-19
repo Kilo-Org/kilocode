@@ -16,7 +16,7 @@ import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
 import { BrowserHub } from "./hub"
 import { BrowserPermission } from "./permission"
-import { insideOutput, writeConfined } from "./playwright"
+import { contained, insideOutput, writeConfined } from "./playwright"
 import { takeStep } from "./steps"
 
 /** The protocol version this CLI speaks. An extension that does not list it cannot be driven safely. */
@@ -35,12 +35,15 @@ const HINT = EXTENSION_HINT
 function extensionHint(absence: BrowserHub.Absence | undefined): string {
   if (absence === undefined) return EXTENSION_HINT
   switch (absence.kind) {
+    case "connected":
+      return 'The Kilo browser extension is connected but did not answer: try again, and reload the extension if it keeps failing, or set browser.backend to "playwright".'
     case "disconnected":
       return 'The Kilo browser extension is not connected: turn on "Allow local agents" in its settings and keep the browser open, then try again, or set browser.backend to "playwright".'
     case "unpaired":
       return 'No Kilo browser extension has connected yet: install it, or turn on "Allow local agents" in its settings if it is installed, then try again, or set browser.backend to "playwright".'
     case "no_profile":
-      return `No browser profile named "${absence.profile}" is connected: open it and turn on "Allow local agents" in its Kilo extension, or change browser.target.`
+      // The name comes from config a repository can set: quoted as a literal, it cannot reshape the sentence.
+      return `No browser profile named ${JSON.stringify(absence.profile)} is connected: open it and turn on "Allow local agents" in its Kilo extension, or change browser.target.`
     case "no_hub":
       return 'Kilo could not start its connection to the browser: try again in a moment, or set browser.backend to "playwright".'
   }
@@ -57,9 +60,22 @@ export const UPDATE_HINT = "Update the Kilo browser extension to the current ver
 const NO_ORIGIN =
   "The tab has no web page open (about:blank, a browser page or a local file), so there is nothing to grant access to. Open an http(s) page with browser_navigate first."
 
-/** A class grant names an http(s) origin; a sensitive step is approved by its token, whatever its origin. */
-function originless(items: readonly BrowserPermission.Item[]) {
-  return items.some((item) => item.class !== "sensitive" && BrowserPermission.origin(item.origin) === undefined)
+/** What a frame without a web origin reports when nothing else on the page needs a grant. */
+const FRAME_NO_ORIGIN =
+  "A frame on this page has no web origin (a sandboxed or local frame), so it cannot be granted; continue without its content."
+
+/**
+ * The needs a person can be asked for, and the refusal when none is left. A class grant names an http(s) origin; a
+ * sensitive step is approved by its token, whatever its origin. Only the needs without an origin are dropped, so an
+ * opaque frame never hides the page's own grant, and only the tab itself having no origin means it has no web page.
+ */
+function grantable(items: readonly BrowserPermission.Item[]) {
+  const blank = (item: BrowserPermission.Item) =>
+    item.class !== "sensitive" && BrowserPermission.origin(item.origin) === undefined
+  const askable = items.filter((item) => !blank(item))
+  const dropped = items.filter(blank)
+  if (askable.length || !dropped.length) return { items: askable }
+  return { items: askable, refusal: dropped.some((item) => !item.frame) ? NO_ORIGIN : FRAME_NO_ORIGIN }
 }
 
 /**
@@ -161,19 +177,19 @@ function reply(value: BrowserHub.Reply): CallResult {
   if (value.meta !== undefined && meta === undefined) {
     return { content: [{ type: "text", text: UNDESCRIBABLE }], isError: true }
   }
-  // A result that asks to read a page with no web origin cannot be granted: the action ran, and the model is told to
-  // open a web page instead.
-  if (meta?.needs !== undefined && originless(meta.needs)) {
+  // A need without a web origin cannot be granted: it is dropped, and when none is left the result says the action
+  // ran and why nothing is asked. The rest of the meta (page, withheld frames) stays for the tool metadata.
+  const asked = meta?.needs === undefined ? undefined : grantable(meta.needs)
+  if (meta !== undefined && asked !== undefined && !asked.items.length) {
     const { needs: _unaskable, ...kept } = meta
-    return {
-      content: [...content, { type: "text", text: `The action ran. ${NO_ORIGIN}` }],
-      isError: value.isError === true,
-      meta: kept,
-    }
+    const note =
+      asked.refusal === undefined ? [] : [{ type: "text" as const, text: `The action ran. ${asked.refusal}` }]
+    return { content: [...content, ...note], isError: value.isError === true, meta: kept }
   }
   // A need carried by a result is after-action by contract: the call succeeded and then asked for a grant, so the
   // action already ran and the model reads the page instead of repeating the step.
-  const flagged = meta?.needs === undefined ? meta : { ...meta, afterAction: true as const }
+  const flagged =
+    meta === undefined || asked === undefined ? meta : { ...meta, needs: asked.items, afterAction: true as const }
   return { content, isError: value.isError === true, ...(flagged ? { meta: flagged } : {}) }
 }
 
@@ -182,9 +198,10 @@ function reply(value: BrowserHub.Reply): CallResult {
  * described (the caller then refuses rather than asking for half of it).
  */
 function permissionError(error: BrowserHub.Failure): Error {
-  const items = needs(error.items)
-  if (items === undefined) return new Error(UNDESCRIBABLE)
-  if (originless(items)) return new Error(NO_ORIGIN)
+  const described = needs(error.items)
+  if (described === undefined) return new Error(UNDESCRIBABLE)
+  const { items, refusal } = grantable(described)
+  if (refusal !== undefined) return new Error(refusal)
   if (error.kind === "moved" && !items.length) {
     return new Error("The page changed before the step ran. Call the tool again.")
   }
@@ -241,6 +258,27 @@ function screenshotFile(name: string, args: Record<string, unknown>, directory: 
     throw new Error(`The screenshot file name must stay inside ${directory}.`)
   }
 }
+
+/**
+ * The file a screenshot is written to, checked again where it lands: the nearest existing ancestor is resolved, so a
+ * symbolic link anywhere in the path that leads outside the working directory is refused, even for directories the
+ * write would create below it.
+ */
+async function confined(file: string, directory: string): Promise<string> {
+  const root = await fs.realpath(directory)
+  const missing: string[] = []
+  let existing = path.dirname(file)
+  while ((await fs.lstat(existing).catch(() => undefined)) === undefined && path.dirname(existing) !== existing) {
+    missing.unshift(path.basename(existing))
+    existing = path.dirname(existing)
+  }
+  const target = path.join(await fs.realpath(existing), ...missing, path.basename(file))
+  if (!contained(target, root)) throw new Error(`The screenshot file name must stay inside ${directory}.`)
+  return target
+}
+
+/** How many written screenshot files a backend remembers; an older one is treated as foreign, never overwritten. */
+const WRITTEN_LIMIT = 200
 
 /** The backend over one hub connection. `port` is undefined when the host serves no hub at all. */
 export class ExtensionBackend implements BrowserBackend {
@@ -353,16 +391,24 @@ export class ExtensionBackend implements BrowserBackend {
       (block): block is Extract<BrowserHub.Block, { type: "image" }> => block.type === "image",
     )
     if (answer.isError || image === undefined) return answer
-    const foreign = !this.written.has(file) && (await fs.lstat(file).catch(() => undefined)) !== undefined
+    const target = await confined(file, this.input.directory).catch((error: unknown) =>
+      error instanceof Error ? error : new Error(String(error)),
+    )
+    if (target instanceof Error) {
+      return { ...answer, content: [...answer.content, { type: "text", text: target.message }] }
+    }
+    const foreign = !this.written.has(target) && (await fs.lstat(target).catch(() => undefined)) !== undefined
     const note = foreign
-      ? `${file} already exists, so the screenshot was not saved over it. Pass another filename to save it.`
-      : await writeConfined(file, Buffer.from(image.data, "base64")).then(
+      ? `${target} already exists, so the screenshot was not saved over it. Pass another filename to save it.`
+      : await writeConfined(target, Buffer.from(image.data, "base64")).then(
           () => {
-            this.written.add(file)
-            return `- [Screenshot](${file})`
+            this.written.delete(target)
+            this.written.add(target)
+            if (this.written.size > WRITTEN_LIMIT) this.written.delete(this.written.values().next().value ?? target)
+            return `- [Screenshot](${target})`
           },
           (error: unknown) =>
-            `The screenshot could not be saved to ${file}: ${error instanceof Error ? error.message : String(error)}`,
+            `The screenshot could not be saved to ${target}: ${error instanceof Error ? error.message : String(error)}`,
         )
     return { ...answer, content: [...answer.content, { type: "text", text: note }] }
   }
@@ -370,14 +416,22 @@ export class ExtensionBackend implements BrowserBackend {
   /** The action already ran and only its content was withheld: ask for the grants and never repeat the step. */
   private withheld(error: BrowserHub.Failure): CallResult | undefined {
     if (!(error instanceof BrowserHub.Failure) || error.kind !== "permission" || !error.afterAction) return undefined
-    const items = needs(error.items)
-    if (items === undefined) return undefined
-    if (originless(items)) return { content: [{ type: "text", text: `The action ran. ${NO_ORIGIN}` }], isError: false }
+    const described = needs(error.items)
+    if (described === undefined) return undefined
+    const { items, refusal } = grantable(described)
     const meta = finishMeta(
       { ...(error.meta ?? {}), ...(items.length ? { needs: items } : {}) },
       error.stepToken,
       error.step,
     )
+    if (refusal !== undefined) {
+      // Nothing to ask: the action ran, and the page and frame data still reach the tool metadata.
+      return {
+        content: [{ type: "text", text: `The action ran. ${refusal}` }],
+        isError: false,
+        ...(meta === undefined ? {} : { meta }),
+      }
+    }
     const flagged = meta === undefined ? undefined : { ...meta, afterAction: true as const }
     return {
       content: [

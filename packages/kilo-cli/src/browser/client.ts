@@ -78,9 +78,10 @@ export type Client = {
   /**
    * Open the pairing page again for the unpaired loopback hub this client waits on, when the last one is older than
    * `PairAgain`: a page the extension ignored (its switch was off, or it was installed later) cannot pair the hub
-   * any more. True when a page is being opened.
+   * any more. Resolves true once a page was opened; false when none was due, one is still being opened, or opening it
+   * failed (no opener on the host), so a caller never waits for a page that does not exist.
    */
-  pair(): boolean
+  pair(): Promise<boolean>
   session: {
     open(params: proto.Params<"session.open">): Promise<proto.Result<"session.open">>
     close(params: proto.Params<"session.close">): Promise<proto.Result<"session.close">>
@@ -167,6 +168,8 @@ export function create(input: Input = {}): Client {
   // Hubs whose pairing page this client has already opened, and when, so a hub that
   // keeps reporting hub.waiting is surfaced once per start; `pair()` reopens a stale one.
   const pairing = new Map<string, number>()
+  // Hubs whose pairing page is being asked for or opened right now, so two callers never open two tabs.
+  const opening = new Set<string>()
 
   let state: State = { kind: "idle" }
   let link: Link | undefined
@@ -349,17 +352,22 @@ export function create(input: Input = {}): Client {
   // the CLI asks the hub for a pairing URL over this socket, and the URL carries a
   // single-use token instead of the durable key, because the opener's argv is visible
   // to every local process. Open that page once per hub process, and again only when `pair()` asks.
-  async function maybePair(entry: Registry.Entry, active: Link) {
-    if (entry.mode !== "loopback" || entry.paired) return
-    if (pairing.has(entry.hubId)) return
+  async function maybePair(entry: Registry.Entry, active: Link): Promise<boolean> {
+    if (entry.mode !== "loopback" || entry.paired) return false
+    if (pairing.has(entry.hubId) || opening.has(entry.hubId)) return false
     pairing.set(entry.hubId, Date.now())
+    opening.add(entry.hubId)
     try {
       const answer = proto.HubRequests["pairing.url"].result.parse(await rpc(active, "pairing.url", {}))
       const port = entry.port ?? input.port ?? proto.DefaultPort
       await pair.open(answer.url, { opener: input.opener })
       log.info("opened the browser pairing page", { hubId: entry.hubId, port })
+      return true
     } catch (error) {
       log.warn("cannot open the browser pairing page", { error, hubId: entry.hubId })
+      return false
+    } finally {
+      opening.delete(entry.hubId)
     }
   }
 
@@ -593,16 +601,15 @@ export function create(input: Input = {}): Client {
       handlers.set(method, registered)
       return () => registered.delete(entry)
     },
-    pair() {
+    async pair() {
       const active = link
       if (state.kind !== "waiting" || !active) return false
       const entry = active.hub
-      if (entry.mode !== "loopback" || entry.paired) return false
+      if (entry.mode !== "loopback" || entry.paired || opening.has(entry.hubId)) return false
       const opened = pairing.get(entry.hubId)
       if (opened !== undefined && Date.now() - opened < (input.pairAgain ?? PairAgain)) return false
       pairing.delete(entry.hubId)
-      void maybePair(entry, active)
-      return true
+      return maybePair(entry, active)
     },
     session: {
       open: (params) => client.call("session.open", params),
