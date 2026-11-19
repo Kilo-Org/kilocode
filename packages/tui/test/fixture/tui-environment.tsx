@@ -8,6 +8,8 @@ import {
 import type { ParentProps } from "solid-js"
 import { LogProvider, type LogSink } from "../../src/context/log"
 import { ClipboardProvider, type ClipboardService } from "../../src/context/clipboard"
+import { ConfigProvider } from "../../src/config" // kilocode_change - the default config below
+import { createTuiResolvedConfig } from "./tui-runtime" // kilocode_change
 
 const clipboard: ClipboardService = {
   async read() {
@@ -38,7 +40,11 @@ export function TestTuiContexts(
       >
         <TuiTerminalEnvironmentProvider value={{ platform: "linux" }}>
           <TuiStartupProvider value={{ skipInitialLoading: false }}>
-            <ClipboardProvider value={props.clipboard ?? clipboard}>{props.children}</ClipboardProvider>
+            {/* kilocode_change start - upstream DataProvider needs a config context that Kilo fixtures mount without */}
+            <ClipboardProvider value={props.clipboard ?? clipboard}>
+              <ConfigProvider config={createTuiResolvedConfig()}>{props.children}</ConfigProvider>
+            </ClipboardProvider>
+            {/* kilocode_change end */}
           </TuiStartupProvider>
         </TuiTerminalEnvironmentProvider>
       </TuiPathsProvider>

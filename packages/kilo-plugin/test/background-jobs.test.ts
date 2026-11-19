@@ -30,7 +30,6 @@ import { testEffect } from "../../core/test/lib/effect"
 import { executeTool, toolDefinitions, toolIdentity } from "../../core/test/lib/tool"
 import { KiloBackgroundJobs } from "../src/background-jobs"
 import { make } from "../src/background-jobs/tracker"
-import { KiloSubagentBackgroundPlugin } from "../src/subagent-background"
 
 const llmLayer = TestLLM.testLayer({ fallback: TestLLM.text("Review complete", "review") })
 const plugins = makeGlobalNode({
@@ -39,7 +38,6 @@ const plugins = makeGlobalNode({
     SdkPlugins.Service.use((sdk) =>
       Effect.gen(function* () {
         yield* sdk.register(KiloBackgroundJobs.Plugin)
-        yield* sdk.register(KiloSubagentBackgroundPlugin)
       }),
     ),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
@@ -111,99 +109,37 @@ const setup = Effect.gen(function* () {
 })
 
 describe("kilocode.background-jobs", () => {
-  it.live("lists a foreground subagent and continues it in the background", () =>
+  it.live("records a subagent cancelled outside the RPC as cancelled", () =>
     Effect.gen(function* () {
       const env = yield* setup
       const llm = yield* TestLLM.Test
+      const jobs = yield* Job.Service
       const gate = yield* llm.gate()
       const call = yield* env
-        .run({
-          agent: "reviewer",
-          description: "Review fixture",
-          prompt: "Review the fixture",
-          background: false,
-        })
+        .run({ agent: "reviewer", description: "Cancelled review", prompt: "Review it" })
         .pipe(Effect.forkChild)
       yield* gate.started
-      const running = yield* env.until((jobs) => jobs.length === 1)
-      expect(running[0]).toMatchObject({
-        parentSessionID: env.parent.id,
-        agent: "reviewer",
-        title: "Review fixture",
-        status: "running",
-        background: false,
-      })
-      expect(running[0]?.id).toBe(running[0]?.sessionID)
-
-      expect(yield* env.rpc.promote({ jobID: running[0]!.id })).toBe(true)
+      const running = yield* env.until((list) => list[0]?.status === "running")
+      yield* jobs.cancel(running[0]!.id)
       const result = yield* Fiber.join(call)
-      expect(result.status).toBe("completed")
-      expect(yield* env.list).toMatchObject([{ status: "running", background: true }])
-
+      expect(result.output?.status).toBe("running")
+      yield* env.until((list) => list[0]?.status === "cancelled")
       yield* gate.release
-      const done = yield* env.until((jobs) => jobs[0]?.status === "completed")
-      expect(done[0]?.time.completed).toBeNumber()
-      // Promoting a finished job changes nothing.
-      expect(yield* env.rpc.promote({ jobID: running[0]!.id })).toBe(false)
     }),
-    // A real session, plugin activation and two tool calls: the setup dominates, and it took 5.4 s on a loaded CI
-    // runner against bun's 5 s default. Every assertion above still decides the result.
+    // A real session and plugin activation dominate: the same setup took 5.4 s on a loaded CI runner against bun's
+    // 5 s default. Every assertion above still decides the result.
     20_000,
   )
 
-  it.live("records a foreground subagent that finishes in its tool call", () =>
-    Effect.gen(function* () {
-      const env = yield* setup
-      const result = yield* env.run({
-        agent: "reviewer",
-        description: "Quick review",
-        prompt: "Review it",
-        background: false,
-      })
-      expect(result.status).toBe("completed")
-      expect(yield* env.list).toMatchObject([{ title: "Quick review", status: "completed", background: false }])
-    }),
-  )
-
-  // Both modes cancel the child the same way; the tracker learns from the tool result when it waited, and from the
-  // Job registry when the call already returned.
-  for (const background of [true, false])
-    it.live(`records a subagent cancelled outside the RPC as cancelled (background: ${background})`, () =>
-      Effect.gen(function* () {
-        const env = yield* setup
-        const llm = yield* TestLLM.Test
-        const jobs = yield* Job.Service
-        const gate = yield* llm.gate()
-        const call = yield* env
-          .run({ agent: "reviewer", description: "Cancelled review", prompt: "Review it", background })
-          .pipe(Effect.forkChild)
-        yield* gate.started
-        const running = yield* env.until((list) => list[0]?.status === "running")
-        yield* jobs.cancel(running[0]!.id)
-        const result = yield* Fiber.join(call)
-        expect(background ? result.output?.status : result.status).toBe(background ? "running" : "error")
-        yield* env.until((list) => list[0]?.status === "cancelled")
-        yield* gate.release
-      }),
-    )
-
-  it.live("runs a subagent call that omits background in the background", () =>
+  it.live("lists the background job of a subagent call without a background field", () =>
     Effect.gen(function* () {
       const env = yield* setup
       const llm = yield* TestLLM.Test
       const gate = yield* llm.gate()
-      // What the model reads: the definition carries the background default and asks for it.
+      // Upstream runs every subagent in the background and no longer offers a background field.
       const subagent = (yield* toolDefinitions(env.registry)).find((tool) => tool.name === "subagent")
-      expect(subagent?.description).toContain("Runs in the background by default")
-      expect(subagent?.description).not.toContain("Use background only")
-      expect(subagent?.inputSchema).toMatchObject({
-        properties: {
-          background: {
-            description: expect.stringContaining("Set false only when you need the answer before you can continue."),
-          },
-        },
-        required: expect.not.arrayContaining(["background"]),
-      })
+      expect(subagent?.description).toContain("always run in the background")
+      expect(subagent?.inputSchema).not.toHaveProperty("properties.background")
       const result = yield* env.run({ agent: "reviewer", description: "Defaulted review", prompt: "Review it" })
       expect(result.output?.status).toBe("running")
       yield* gate.started

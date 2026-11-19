@@ -101,7 +101,7 @@ test("renders board posts and reads", async () => {
       app: { name: "test", version: "test", channel: "test" },
       server: { endpoint: { url: server.url.toString() } },
       config: {
-        get: async () => ({ animations: false, tabs: { enabled: false } }),
+        get: async () => ({ animations: false, tabs: { enabled: false }, session: { verbosity: "high" } }),
         update: async () => ({}),
       },
       packages: { prepare: async () => ({ directory: "" }) },
