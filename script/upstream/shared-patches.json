@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 160,
-    "markedLines": 2909,
+    "files": 161,
+    "markedLines": 2911,
     "unmarkedLines": 386,
     "deletedFiles": 0
   },
@@ -634,6 +634,10 @@
     "packages/server/test/media.test.ts": {
       "rung": 4,
       "seam": "Test timing only, Kilo CI stability: the experimental-media refs test gets a 20 s budget. A real database import plus three round trips through the SDK cost about 1.3 s idle and 5.6 s on a loaded CI runner, above bun's 5 s default. A wrong payload still fails the assertions. No seam: the deadline is the test's third argument inside an upstream test file (inline patch, option 4)."
+    },
+    "packages/server/test/worktree.test.ts": {
+      "rung": 4,
+      "seam": "The multi-clone refresh and ownership tests run real Git and boot multiple server locations. On Windows CI they hit Bun's five-second default. Use the adjacent integration tests' 30-second budget at those two call sites; all inventory and ownership assertions remain in place."
     },
     "packages/tui/src/component/prompt/index.tsx": {
       "rung": 3,
