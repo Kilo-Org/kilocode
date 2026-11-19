@@ -1,0 +1,47 @@
+name: kilo-v2-jetbrains
+
+on:
+  pull_request:
+    branches: [v2]
+    paths: &inputs
+      - .github/workflows/kilo-v2-jetbrains.yml
+      - packages/kilo-jetbrains/**
+      - packages/protocol/**
+      - packages/schema/**
+      - packages/kilo-plugin/**
+  push:
+    branches: [v2]
+    paths: *inputs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jetbrains-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plugin:
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-bun
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/v2' }}
+      - name: Build and test the plugin
+        working-directory: packages/kilo-jetbrains
+        run: xvfb-run -a ./gradlew --stacktrace --max-workers=3 typecheck test buildPlugin -Pproduction=true
+      - name: Attach installable plugin
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: packages/kilo-jetbrains/build/distributions/*.zip
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
