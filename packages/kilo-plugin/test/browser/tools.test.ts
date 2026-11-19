@@ -225,11 +225,12 @@ describe("browser tools", () => {
     expect(names).toContain("snapshot")
   })
 
-  test("registers the whole pinned contract with the vendored schemas", async () => {
+  test("registers every pinned tool a backend can run, with the vendored schemas", async () => {
     const host = await boot()
     const tools = host.tools()
     expect(host.skills.map((skill) => skill.id)).toEqual([Skill.ID.make("browser-automation")])
-    expect(tools.length).toBe(26)
+    expect(tools.length).toBe(25)
+    expect(tools.map((tool) => tool.name)).not.toContain("run_code_unsafe")
     for (const [index, tool] of tools.entries()) {
       const entry = BrowserContract.entries[index]
       expect(tool.description).toBe(entry.description)
@@ -247,7 +248,7 @@ describe("browser tools", () => {
 
   test("an absent browser block keeps the tools on the default backend", async () => {
     const host = await boot()
-    expect(host.tools().length).toBe(26)
+    expect(host.tools().length).toBe(BrowserContract.entries.length)
   })
 
   test("registers the browser status RPC even when the backend is off", async () => {

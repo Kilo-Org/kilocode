@@ -230,6 +230,12 @@ describe("extension backend", () => {
     expect(hub.calls).toHaveLength(0)
   })
 
+  test("a tool the extension lists but no backend can run stays hidden", async () => {
+    const hub = fake({ contractSha: "another", tools: ["browser_navigate", "browser_run_code_unsafe"] })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    expect((await active.listTools()).map((entry) => entry.name)).toEqual(["browser_navigate"])
+  })
+
   test("the same contract keeps the pinned tool list without asking the extension for it", async () => {
     const hub = fake()
     const active = backend({ port: hub.port, directory: "/tmp/project" })
