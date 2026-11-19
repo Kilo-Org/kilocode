@@ -178,8 +178,9 @@ export function observe(input: { mode: Observation; text: string; previous?: Sna
 
   if (input.mode === "none") {
     const page = sections.find((section) => section.title === "Page")
+    // An untitled section is a result a backend wrote without the MCP's headings (the extension's own answers).
     const kept = sections
-      .filter((section) => section.title === "Error" || section.title === "Result")
+      .filter((section) => section.title === "Error" || section.title === "Result" || section.title === "")
       .filter((section) => trim(section.lines).length > 0)
     return {
       text: render([
@@ -219,6 +220,32 @@ export function observe(input: { mode: Observation; text: string; previous?: Sna
  */
 export function modeFor(tool: string, selected: Observation): Observation {
   return tool === "browser_snapshot" || tool === "browser_find" || tool === "browser_tabs" ? "full" : selected
+}
+
+/** The steps after which the Playwright MCP reports the page snapshot (`setIncludeSnapshot` in the pinned core). */
+const REPORTS_PAGE: Record<string, true> = {
+  browser_click: true,
+  browser_drag: true,
+  browser_drop: true,
+  browser_hover: true,
+  browser_select_option: true,
+  browser_file_upload: true,
+  browser_press_key: true,
+  browser_navigate: true,
+  browser_navigate_back: true,
+  browser_wait_for: true,
+}
+
+/**
+ * Whether the Playwright MCP reports the page after this step. A backend whose results lack the page state reads it
+ * after exactly these steps, so both backends observe the same ones. `browser_type` reports it only when it submits or
+ * types key by key, and `browser_tabs` only when it opens a tab at a URL.
+ */
+export function reportsPage(tool: string, args: Record<string, unknown>): boolean {
+  if (REPORTS_PAGE[tool] === true) return true
+  if (tool === "browser_type") return args.submit === true || args.slowly === true
+  if (tool === "browser_tabs") return args.action === "new" && typeof args.url === "string" && args.url !== ""
+  return false
 }
 
 type SessionState = {

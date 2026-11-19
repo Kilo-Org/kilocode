@@ -1007,3 +1007,231 @@ describe("browser tools over the extension backend", () => {
     expect(error?.metadata).toMatchObject({ hint: EXTENSION_HINT })
   })
 })
+
+// The extension answers a step with its own outcome only: navigate with the page's identity, a click with what it did,
+// a snapshot with the bare tree, the tab list as JSON. The tool layer reads the page state the Playwright MCP reports
+// after the same steps, so every observation mode reads the same on both backends.
+describe("observation over the extension backend", () => {
+  const URL = "http://localhost:3000/list"
+  const tree = (open: string) =>
+    ['- RootWebArea "Checklist"', '  - checkbox "Notes" [ref=e2]', `  - text: Open items: ${open}`].join("\n")
+
+  function extension(options: { snapshot?: (input: BrowserHub.CallInput) => Promise<BrowserHub.Reply> } = {}) {
+    const page = { open: "3" }
+    const text = (value: string) => Promise.resolve({ content: [{ type: "text" as const, text: value }] })
+    return fakeHub({
+      call: (input) => {
+        if (input.name === "browser_navigate") return text(JSON.stringify({ title: "Checklist", url: URL }))
+        if (input.name === "browser_click") {
+          page.open = "2"
+          return text('Clicked "Notes checkbox" with the left button.')
+        }
+        if (input.name === "browser_snapshot") return options.snapshot ? options.snapshot(input) : text(tree(page.open))
+        if (input.name === "browser_tabs") {
+          return text(
+            JSON.stringify({
+              tabs: [
+                { index: 0, selected: false, title: "Mail", url: "[origin withheld]" },
+                { index: 1, selected: true, title: "Checklist", url: URL },
+              ],
+            }),
+          )
+        }
+        if (input.name === "browser_evaluate") return text('{"done":true}')
+        return text("")
+      },
+    })
+  }
+
+  /** One tool call's outcome, as `boot().call` settles it. */
+  type Outcome = { _tag: "Success"; success: unknown } | { _tag: "Failure"; failure: unknown }
+
+  const textIn = (result: Outcome) => {
+    if (result._tag !== "Success") throw new Error(`the call failed: ${String(result.failure)}`)
+    const content = (result.success as Tool.Result).content
+    if (typeof content === "string") return content
+    const block = content?.find((item) => item.type === "text")
+    return block?.type === "text" ? block.text : ""
+  }
+
+  test("full mode reports the URL, the title and the snapshot after navigate and after a click", async () => {
+    const hub = extension()
+    const host = await boot({ backend: "extension", observation: "full" }, { hub: hub.service })
+    const navigated = textIn(await host.call("browser_navigate", { url: URL }))
+    expect(navigated).toContain(`- Page URL: ${URL}`)
+    expect(navigated).toContain("- Page Title: Checklist")
+    expect(navigated).toContain("### Snapshot\n```yaml\n" + tree("3") + "\n```")
+    // The navigate answer's own identity JSON is the Page section now, not repeated as a result.
+    expect(navigated).not.toContain('"title"')
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toContain(`- Page URL: ${URL}`)
+    expect(clicked).toContain("- Page Title: Checklist")
+    expect(clicked).toContain("Open items: 2")
+    expect(clicked).toContain('Clicked "Notes checkbox" with the left button.')
+    expect(hub.calls.map((call) => call.name)).toEqual([
+      "browser_navigate",
+      "browser_snapshot",
+      "browser_click",
+      "browser_snapshot",
+      "browser_tabs",
+    ])
+  })
+
+  test("diff mode reports only the changed snapshot lines after a click", async () => {
+    const hub = extension()
+    const host = await boot({ backend: "extension", observation: "diff" }, { hub: hub.service })
+    const navigated = textIn(await host.call("browser_navigate", { url: URL }))
+    expect(navigated).toContain(tree("3"))
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toContain(`- Page URL: ${URL}`)
+    expect(clicked).toContain("### Page changes\n- changed 1")
+    expect(clicked).toContain("~   - text: Open items: 3\n  - text: Open items: 2")
+    expect(clicked).not.toContain("### Snapshot")
+    expect(clicked).not.toContain('checkbox "Notes"')
+  })
+
+  test("an explicit snapshot is the diff baseline for the next step", async () => {
+    const hub = extension()
+    const host = await boot({ backend: "extension", observation: "diff" }, { hub: hub.service })
+    const read = textIn(await host.call("browser_snapshot"))
+    expect(read).toContain(`- Page URL: ${URL}`)
+    expect(read).toContain(tree("3"))
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toContain("### Page changes\n- changed 1")
+  })
+
+  test("none mode reports status, URL and title without reading the page", async () => {
+    const hub = extension()
+    const host = await boot({ backend: "extension", observation: "none" }, { hub: hub.service })
+    const navigated = textIn(await host.call("browser_navigate", { url: URL }))
+    expect(navigated).toBe(`### Status\n- ok\n- Page URL: ${URL}\n- Page Title: Checklist`)
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toBe(
+      `### Status\n- ok\n- Page URL: ${URL}\n- Page Title: Checklist\n### Result\nClicked "Notes checkbox" with the left button.`,
+    )
+    // A result that is not page state survives none mode too.
+    expect(textIn(await host.call("browser_evaluate", { function: "() => true" }))).toContain('{"done":true}')
+    expect(hub.calls.map((call) => call.name)).toEqual([
+      "browser_navigate",
+      "browser_click",
+      "browser_tabs",
+      "browser_evaluate",
+    ])
+  })
+
+  test("the page read carries the session's grants and no step token, and never prompts", async () => {
+    const { asserts, service } = recorder()
+    const hub = extension({
+      snapshot: () =>
+        Promise.reject(
+          new BrowserHub.Failure({
+            kind: "permission",
+            message: "needs permission",
+            items: [{ class: "read", origin: "https://shop.example.com" }],
+          }),
+        ),
+    })
+    // The click first asks for an act grant with a step token, then runs with both.
+    const port = hub.service.port()
+    const original = port.call
+    let asked = false
+    port.call = (input) => {
+      if (input.name !== "browser_click" || asked) return original(input)
+      asked = true
+      return Promise.reject(
+        new BrowserHub.Failure({
+          kind: "permission",
+          message: "needs permission",
+          items: [{ class: "act", origin: "https://shop.example.com" }],
+          stepToken: "tok",
+        }),
+      )
+    }
+    const host = await boot({ backend: "extension", observation: "diff" }, { hub: hub.service, permission: service })
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toContain(`- Page URL: ${URL}`)
+    expect(clicked).toContain("- Page Title: Checklist")
+    expect(clicked).toContain("reading https://shop.example.com needs the user's permission")
+    expect(clicked).toContain("browser_snapshot")
+    expect(clicked).not.toContain("Open items")
+    // The act grant was asked for the click; the refused follow-up read is never asked for.
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser"])
+    const click = hub.calls.find((call) => call.name === "browser_click")
+    expect(click?.sensitive).toEqual(["tok"])
+    const read = hub.calls.find((call) => call.name === "browser_snapshot")
+    expect(read?.authorized).toEqual([{ class: "act", origin: "https://shop.example.com" }])
+    expect(read?.sensitive).toBeUndefined()
+  })
+
+  test("a read the session's own rules allow is granted for the page read without asking anyone", async () => {
+    const asserts: { action: string }[] = []
+    const service = {
+      assert: (input: { action: string }) => Effect.sync(() => void asserts.push(input)),
+      allows: (input: { action: string; resources: readonly string[] }) =>
+        Effect.succeed(input.action === "browser" && input.resources[0] === "read:http://localhost:3000"),
+    } as unknown as Permission.Interface
+    const hub = extension({
+      snapshot: (input) =>
+        input.authorized.some((pair) => pair.class === "read" && pair.origin === "http://localhost:3000")
+          ? Promise.resolve({ content: [{ type: "text", text: tree("2") }] })
+          : Promise.reject(
+              new BrowserHub.Failure({
+                kind: "permission",
+                message: "needs permission",
+                items: [{ class: "read", origin: "http://localhost:3000" }],
+              }),
+            ),
+    })
+    const host = await boot(
+      { backend: "extension", observation: "full" },
+      { hub: hub.service, permission: Option.some(service) },
+    )
+    expect(textIn(await host.call("browser_click", { target: "e2" }))).toContain(tree("2"))
+    expect(textIn(await host.call("browser_click", { target: "e2" }))).toContain(tree("2"))
+    // No prompt beyond the tools' own keys; the first read is refused and repeated once, the second runs granted.
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser_click"])
+    expect(hub.calls.filter((call) => call.name === "browser_snapshot")).toHaveLength(3)
+  })
+
+  test("a granted post-action read reads the page once and reports it with its URL", async () => {
+    const { service } = recorder()
+    const hub = extension()
+    const port = hub.service.port()
+    const original = port.call
+    port.call = (input) =>
+      input.name === "browser_click"
+        ? Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "The page moved to http://localhost:3000; its content is withheld until read is granted.",
+              items: [{ class: "read", origin: "http://localhost:3000" }],
+              afterAction: true,
+            }),
+          )
+        : original(input)
+    const host = await boot({ backend: "extension", observation: "full" }, { hub: hub.service, permission: service })
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toContain(`- Page URL: ${URL}`)
+    expect(clicked).toContain(tree("3"))
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_snapshot", "browser_tabs"])
+  })
+
+  test("frames the page read withholds stay withheld and reach the metadata", async () => {
+    const hub = extension({
+      snapshot: () =>
+        Promise.resolve({
+          content: [{ type: "text", text: `${tree("2")}\n  - iframe [origin withheld: https://pay.example.com]` }],
+          meta: { withheldFrames: ["https://pay.example.com"] },
+        }),
+    })
+    const host = await boot({ backend: "extension", observation: "full" }, { hub: hub.service })
+    const result = await host.call("browser_click", { target: "e2" })
+    expect(textIn(result)).toContain("- iframe [origin withheld: https://pay.example.com]")
+    const answer = result._tag === "Success" ? (result.success as Tool.Result) : undefined
+    expect(answer?.metadata?.browser).toMatchObject({
+      url: URL,
+      title: "Checklist",
+      withheldFrames: ["https://pay.example.com"],
+    })
+  })
+})

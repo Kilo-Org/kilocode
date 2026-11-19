@@ -25,7 +25,7 @@ import GUIDE from "./browser-skill.txt"
 import type { Entry } from "./contract-shape"
 import type { ExtensionBackend } from "./extension"
 import { BrowserHub } from "./hub"
-import { modeFor, observe, snapshot, split, Tracker } from "./observation"
+import { modeFor, observe, reportsPage, snapshot, split, Tracker } from "./observation"
 import { BrowserPermission } from "./permission"
 import { key, persistStep, playwright, readiness } from "./playwright"
 import { resolve, type Observation, type Settings } from "./settings"
@@ -380,8 +380,15 @@ function postAction(input: PostAction) {
       }),
     )
     if (Result.isSuccess(reread) && !reread.success.isError) {
-      input.result.content = reread.success.content
-      input.result.meta = reread.success.meta
+      const page = yield* settle({
+        ...input,
+        name: "browser_snapshot",
+        args: {},
+        result: reread.success,
+        snapshot: true,
+      })
+      input.result.content = page.content
+      input.result.meta = page.meta
     }
     return { kind: "continue" as const, result: input.result }
   })
@@ -436,28 +443,101 @@ export function granted(input: PostAction) {
   }
 }
 
+/**
+ * Whether the session's own rules let it read an origin without asking a person: the organization allowlist, then the
+ * config, saved choices and built-in defaults through the permission service's evaluation. A yes records the grant,
+ * as an ask those rules answer does in `authorize`; a service that cannot evaluate is a no.
+ */
+function readable(input: Pick<PageRead, "session" | "context" | "permission" | "organization">) {
+  return (origin: string) => {
+    const item: Item = { class: "read", origin }
+    const pattern = BrowserPermission.pattern(item)
+    const grants = grantsFor(input.session)
+    const permission = input.permission
+    const allowed =
+      grants.has(pattern) || KiloBrowserPolicy.allows(input.organization, origin) || Option.isNone(permission)
+        ? Effect.succeed(true)
+        : Effect.suspend(() =>
+            permission.value.allows({
+              ...BrowserPermission.request(item, false),
+              ...Permission.invocation(input.context),
+            } as never),
+          ).pipe(Effect.orElseSucceed(() => false))
+    return Effect.runPromise(
+      allowed.pipe(
+        Effect.tap((yes) =>
+          Effect.sync(() => {
+            if (yes) grants.add(pattern)
+          }),
+        ),
+      ),
+    )
+  }
+}
+
+type PageRead = {
+  active: BrowserBackend
+  name: string
+  args: Record<string, unknown>
+  result: CallResult
+  session: string
+  snapshot: boolean
+  context: Tool.Context
+  permission: Option.Option<Permission.Interface>
+  organization: KiloBrowserPolicy.Policy | undefined
+}
+
+/**
+ * The page state the Playwright MCP reports after a step, for a backend whose answer lacks it (the extension): after a
+ * step the MCP reports the page for, and on an explicit snapshot, the URL and title and, unless `snapshot` is off, the
+ * snapshot. A result that already names its page is left alone, so the Playwright backend never reads twice.
+ */
+function settle(input: PageRead) {
+  const read = input.active.pageState?.bind(input.active)
+  if (!read || snapshot(split(textOf(input.result))) !== undefined) return Effect.succeed(input.result)
+  if (input.name !== "browser_snapshot" && !reportsPage(input.name, input.args)) return Effect.succeed(input.result)
+  return Effect.tryPromise({
+    try: (signal) =>
+      read(input.name, input.result, {
+        signal,
+        session: input.session,
+        authorized: [...grantsFor(input.session)],
+        snapshot: input.snapshot,
+        readable: readable(input),
+      }),
+    catch: (error) => error,
+  }).pipe(Effect.orElseSucceed(() => input.result))
+}
+
 /** The model-facing answer for one call: the observation mode, the images, and the metadata the UI reads. */
 function shaped(input: {
   result: CallResult
   entry: Entry
+  args: Record<string, unknown>
   active: BrowserBackend
   session: string
   context: Tool.Context
   permission: Option.Option<Permission.Interface>
+  organization: KiloBrowserPolicy.Policy | undefined
   observation: Observation
   backend: Settings["backend"]
 }) {
   return Effect.gen(function* () {
-    const text = textOf(input.result)
-    const next = snapshot(split(text))
     const mode = modeFor(input.entry.name, input.observation)
+    const result = yield* settle({
+      ...input,
+      name: input.entry.name,
+      snapshot: mode !== "none",
+    })
+    const text = textOf(result)
+    const next = snapshot(split(text))
     const errors = mode === "diff" ? yield* consoleErrors(input.active, input.session, input.context, input.permission) : []
     const previous = mode === "diff" ? tracker.previous(input.session, input.entry.name, next?.url) : undefined
     const viewed = observe({ mode, text, previous, consoleErrors: errors })
     if (viewed.snapshot) tracker.record(input.session, viewed.snapshot)
 
     const content: Tool.Content[] = [{ type: "text", text: viewed.text }]
-    for (const block of input.result.content) {
+    for (const block of result.content) {
       if (block.type !== "image") continue
       const ext = block.mimeType.split("/")[1] || "png"
       content.push({
@@ -476,7 +556,7 @@ function shaped(input: {
           observation: input.observation,
           ...(next?.url ? { url: next.url } : {}),
           ...(next?.title ? { title: next.title } : {}),
-          ...(input.result.meta?.withheldFrames ? { withheldFrames: input.result.meta.withheldFrames } : {}),
+          ...(result.meta?.withheldFrames ? { withheldFrames: result.meta.withheldFrames } : {}),
         },
       },
     } as Tool.Result
@@ -604,10 +684,12 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     return yield* shaped({
       result,
       entry,
+      args: input,
       active,
       session,
       context,
       permission: deps.permission,
+      organization,
       observation: browser.observation,
       backend: choice.backend,
     })

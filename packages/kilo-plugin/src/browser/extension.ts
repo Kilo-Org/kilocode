@@ -11,6 +11,7 @@ import {
   type CallContext,
   type CallResult,
   type ContentBlock,
+  type PageContext,
 } from "./backend"
 import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
@@ -181,6 +182,91 @@ export function map(error: unknown): Error {
   return new Error(error.message || "The browser call failed.")
 }
 
+/** How long the page read after a step may take before the step's own result is returned without it. */
+const PAGE_STATE_TIMEOUT = 10_000
+
+/** The URL the extension's tab list shows for a tab the session may not read. */
+const WITHHELD_URL = "[origin withheld]"
+
+type Identity = { url?: string; title?: string }
+
+function texts(content: readonly { type: string; text?: string }[]) {
+  return content
+    .flatMap((block) => (block.type === "text" && block.text !== undefined ? [block.text] : []))
+    .join("\n\n")
+}
+
+function record(text: string): Record<string, unknown> | undefined {
+  try {
+    const value: unknown = JSON.parse(text)
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** A page title or URL on one line: page-controlled text must not open a section of its own. */
+function line(value: unknown) {
+  return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : ""
+}
+
+function identityOf(value: Record<string, unknown>): Identity | undefined {
+  const url = line(value.url)
+  if (url === "" || url === WITHHELD_URL) return undefined
+  const title = line(value.title)
+  return title === "" ? { url } : { url, title }
+}
+
+/** The page a navigate or tab step answered with: the extension's `{ title, url }` object. */
+function answered(text: string) {
+  const value = record(text)
+  const page = value && identityOf(value)
+  if (!value || !page) return undefined
+  // An answer that is nothing but the page's identity is the Page section, not a result to repeat.
+  return { page, only: Object.keys(value).every((key) => key === "url" || key === "title") }
+}
+
+/** The session's own tab in a `browser_tabs list` answer. */
+function selected(text: string) {
+  const tabs = record(text)?.tabs
+  if (!Array.isArray(tabs)) return undefined
+  const tab: unknown = tabs.find(
+    (item: unknown) => typeof item === "object" && item !== null && (item as Record<string, unknown>).selected === true,
+  )
+  return tab ? identityOf(tab as Record<string, unknown>) : undefined
+}
+
+/** The page origin a refused read names; a frame's own refusal is not the page's. */
+function refusedRead(error: unknown) {
+  if (!(error instanceof BrowserHub.Failure) || error.kind !== "permission") return undefined
+  return error.items.find((item) => item.class === "read" && item.frame !== true)?.origin
+}
+
+/** Why the page was not read after the step, as the model reads it. */
+function unread(error: unknown) {
+  const origin = refusedRead(error)
+  if (origin) {
+    return `Page content: not shown; reading ${origin} needs the user's permission. Call browser_snapshot to ask for it.`
+  }
+  return "Page content: not read after this step. Call browser_snapshot to read it."
+}
+
+/** The Playwright MCP's sections: the page first, so text inside the step's own result cannot pose as either. */
+function sections(input: { page?: Identity; note?: string; snapshot?: string; result?: string }) {
+  const page = [
+    ...(input.page?.url ? [`- Page URL: ${input.page.url}`] : []),
+    ...(input.page?.title ? [`- Page Title: ${input.page.title}`] : []),
+    ...(input.note ? [`- ${input.note}`] : []),
+  ]
+  return [
+    ...(page.length ? ["### Page", ...page] : []),
+    ...(input.snapshot === undefined ? [] : ["### Snapshot", "```yaml", input.snapshot, "```"]),
+    ...(input.result ? ["### Result", input.result] : []),
+  ].join("\n")
+}
+
 /** The backend over one hub connection. `port` is undefined when the host serves no hub at all. */
 export class ExtensionBackend implements BrowserBackend {
   readonly id = "extension" as const
@@ -317,6 +403,77 @@ export class ExtensionBackend implements BrowserBackend {
       }
       throw map(error)
     }
+  }
+
+  /**
+   * The page state the Playwright MCP reports after a step, which the extension's own answer lacks. The reads run with
+   * the call's grants and never a step token, so an unreadable page stays unread (the note says so) and withheld
+   * frames stay withheld. A failed or slow read leaves the step's answer with whatever page it could name.
+   */
+  async pageState(name: string, result: CallResult, ctx: PageContext): Promise<CallResult> {
+    const port = this.input.port
+    const session = this.session(ctx)
+    if (!port || result.isError || this.stopped.has(session) || this.disposed) return result
+    const text = texts(result.content)
+    const explicit = name === "browser_snapshot"
+    const own = explicit ? undefined : answered(text)
+    let snapshot = explicit ? text : undefined
+    let note: string | undefined
+    let frames = result.meta?.withheldFrames
+    if (!explicit && ctx.snapshot) {
+      const read = await this.snapshotAfter(port, session, ctx)
+      if ("value" in read && read.value.isError !== true) {
+        snapshot = texts(read.value.content)
+        frames = [...new Set([...(frames ?? []), ...(read.value.meta?.withheldFrames ?? [])])]
+      } else note = unread("error" in read ? read.error : undefined)
+    }
+    const page =
+      own?.page ??
+      (await this.read(port, session, "browser_tabs", { action: "list" }, ctx).then(
+        (value) => (value.isError === true ? undefined : selected(texts(value.content))),
+        () => undefined,
+      ))
+    const body = sections({ page, note, snapshot, result: explicit || own?.only ? undefined : text })
+    return {
+      ...result,
+      content: [{ type: "text", text: body }, ...result.content.filter((block) => block.type === "image")],
+      ...(frames?.length ? { meta: { ...result.meta, withheldFrames: frames } } : {}),
+    }
+  }
+
+  /**
+   * The snapshot after a step. A page the session's own rules let it read without a person (the localhost family by
+   * default) is granted and read once more, as the Playwright backend reports the page a granted step stays on; any
+   * other refusal stays one and nobody is asked.
+   */
+  private async snapshotAfter(port: BrowserHub.Port, session: string, ctx: PageContext) {
+    const attempt = (authorized: readonly string[]) =>
+      this.read(port, session, "browser_snapshot", {}, { ...ctx, authorized }).then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      )
+    const first = await attempt(ctx.authorized ?? [])
+    const origin = "error" in first ? refusedRead(first.error) : undefined
+    if (!origin || !ctx.readable || !(await ctx.readable(origin).catch(() => false))) return first
+    return attempt([...(ctx.authorized ?? []), `read:${origin}`])
+  }
+
+  /** One read for the page state: the call's grants, no step token, and its own short deadline. */
+  private async read(
+    port: BrowserHub.Port,
+    session: string,
+    name: string,
+    args: Record<string, unknown>,
+    ctx: CallContext,
+  ) {
+    const deadline = AbortSignal.timeout(PAGE_STATE_TIMEOUT)
+    return port.call({
+      sessionHandle: await this.handle(port, session),
+      name,
+      arguments: args,
+      authorized: grants(ctx.authorized ?? []),
+      signal: ctx.signal ? AbortSignal.any([ctx.signal, deadline]) : deadline,
+    })
   }
 
   /** Release the session's handle; a session the extension already dropped has nothing to close. */
