@@ -108,7 +108,7 @@ async function execute(input: RunCommandInput, prepared: Prepared, endpoint: End
     prepare: async (next) => {
       if (explicit?.variant && !next.model)
         throw new RunTargetError("Cannot select a variant before selecting a model", next.session?.id)
-      if (process.env.OPENCODE_APP_DIR_NAME === "kilo2") await waitForRunCatalog(client, next.location.directory, next.model, signal) // kilocode_change(gateway) - before session creation or prompt admission
+      if (process.env.OPENCODE_APP_DIR_NAME === "kilo2") await waitForRunCatalog(client, next.location.directory, next.model, signal, undefined, input.format) // kilocode_change(gateway) - before session creation or prompt admission
       return { model: next.model, agent: next.agent }
     },
   }).catch((error) => {
