@@ -14,8 +14,8 @@
 //   E2E_HUB_PORTS       hub ports as `<first>-<last>` (default: a free port per hub)
 //   E2E_PREFERENCES     extra profile Preferences as JSON, merged at the top level before launch
 //
-// Scenarios: download-path, navigate-snapshot, permission, frames, sensitive, group, stop, unpaired, download,
-// download-navigate, download-ungranted, download-late, download-tabs-new, download-tabs-new-notoken,
+// Scenarios: download-path, navigate-snapshot, parallel, permission, frames, sensitive, group, stop, unpaired,
+// download, download-navigate, download-ungranted, download-late, download-tabs-new, download-tabs-new-notoken,
 // download-approved-one, download-approved-one-multi. `all` runs every scenario in its own child process (fresh
 // E2E_HOME each, one after another) and prints one summary table.
 //
@@ -1074,6 +1074,37 @@ async function downloadUngranted() {
   return { calls: text.map((value) => value.slice(0, 200)), files, hits: downloadHits.length - hitsBefore, refused: refused.slice(0, 500) }
 }
 
+/**
+ * Parallel calls from one session on one tab (one Code Mode `execute` with `Promise.allSettled`, or several direct
+ * tool calls in one turn): none may end another with tab_taken or an opaque internal error.
+ */
+async function parallel() {
+  const snap: Call = { args: {}, name: "browser_snapshot" }
+  const plan: Plan = (step) => {
+    const n = step.results.length
+    if (n === 0) return { args: { url: localOrigin }, name: "browser_navigate" }
+    if (n === 1) return snap
+    if (n === 2) {
+      const ref = refOf(step.results[1] ?? "", /button "Click me" \[ref=([^\]]+)\]/)
+      return ref ? [{ args: { element: "the Click me button", target: ref }, name: "browser_click" }, snap, snap] : undefined
+    }
+    if (step.calls.length < 10) return [snap, snap, { args: { function: "() => document.title" }, name: "browser_evaluate" }]
+    return undefined
+  }
+  const result = await run(plan, {})
+  const texts = result.last.results
+  const bad = texts.filter((text) => /took over the tab|tab_taken|Local agent request failed/i.test(text))
+  expect(bad.length === 0, `parallel calls ended each other:\n${bad.map((text) => text.slice(0, 300)).join("\n---\n")}`)
+  expect(texts.length >= 6, `the run ended early after ${texts.length} results`)
+  expect(result.code === 0, `run exited ${result.code}\n${result.stderr.slice(-1_500)}`)
+  return {
+    bad: bad.map((text) => text.slice(0, 300)),
+    calls: result.last.calls.length,
+    mode: result.last.tools.includes("execute") ? "code" : "tools",
+    results: texts.length,
+  }
+}
+
 // ---------------------------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------------------------
@@ -1081,6 +1112,7 @@ async function downloadUngranted() {
 const scenarios: Record<string, () => Promise<Record<string, unknown>>> = {
   "download-path": downloadPath,
   "navigate-snapshot": navigateSnapshot,
+  parallel,
   permission,
   frames,
   sensitive,
