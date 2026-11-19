@@ -1,5 +1,4 @@
-// The delivery choices for a prompt while the agent runs: steer the running turn now, queue it until the turn ends,
-// or stop everything (running tools too) and send it now.
+// Steer at the next step, queue until the turn ends, or explicitly stop the running work and send now.
 import type { DataPendingStatus } from "@opencode/client/solid"
 
 export type SendMode = "steer" | "queue" | "now"
@@ -36,12 +35,6 @@ export function pendingRequest(action: PendingAction) {
 }
 
 type Key = Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey">
-type Message = {
-  id: string
-  type: string
-  status?: string
-  content?: readonly { type: string; state?: { status: string } }[]
-}
 
 /**
  * The delivery a composer keystroke asks for. The modifiers only change a send while the session runs: Enter uses the
@@ -63,26 +56,6 @@ export function sendShortcuts(preferred: Delivery = "steer", mac = isMac()) {
 
 export function other(delivery: Delivery): Delivery {
   return delivery === "steer" ? "queue" : "steer"
-}
-
-/**
- * Whether a steer has to stop the current model call to reach the model now. That is the case while the model
- * thinks or writes: the next step boundary only comes after the whole response. A running tool or compaction is not
- * stopped; the steer is delivered when it finishes, which is the next step boundary. `pending` is input with no
- * delivered message yet, so it cannot say what is running. The server enforces the compaction half of this too, so a
- * stale transcript here can only cost a stop that was not needed, never a cancelled checkpoint.
- */
-export function steerInterrupts(messages: readonly Message[], pending: ReadonlySet<string>): boolean {
-  // Scan back to the newest step. Queued and pending input, synthetic notifications and instruction updates can
-  // follow it, and none of them says whether a tool is running.
-  for (let index = messages.length - 1; index >= 0; index--) {
-    const message = messages[index]
-    if (pending.has(message.id) || message.type === "user") continue
-    if (message.type === "assistant")
-      return !message.content?.some((item) => item.type === "tool" && item.state?.status === "running")
-    if (message.type === "compaction") return message.status !== "running"
-  }
-  return true
 }
 
 /** The controls of one pending prompt. Edit needs a text-only prompt, because the composer holds text only. */
