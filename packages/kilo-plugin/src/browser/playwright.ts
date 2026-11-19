@@ -641,8 +641,8 @@ export function contained(target: string, root: string, flavour: typeof path = p
   return first !== ".."
 }
 
-/** Write a file this backend owns, refusing a symbolic link at the target name and creating its parent. */
-async function writeConfined(file: string, body: string | Uint8Array) {
+/** Write a file a browser backend owns, refusing a symbolic link at the target name and creating its parent. */
+export async function writeConfined(file: string, body: string | Uint8Array) {
   const existing = await fs.lstat(file).catch(() => undefined)
   if (existing?.isSymbolicLink()) throw new Error("The file name must not be a symbolic link.")
   await fs.mkdir(path.dirname(file), { recursive: true })

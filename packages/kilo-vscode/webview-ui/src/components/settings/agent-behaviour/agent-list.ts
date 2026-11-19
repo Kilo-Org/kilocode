@@ -7,7 +7,10 @@ import type { ConfigScope } from "../../../../../src/protocol"
 
 // The agents the v2 core plugins register before user config. They have no config document behind them, so the tab
 // shows them as built-in: the override layout, no export and no remove. Mirrors the built-in set in
-// `kilo-plugin/src/agent/index.ts`.
+// `kilo-plugin/src/agent/index.ts`. `orchestrator` stays reserved: its plugin entry is a hidden read-only alias
+// for legacy sessions, so a config-defined `orchestrator` would merge onto it, keep `hidden: true`, and show in
+// Settings while staying unselectable in the picker. Reserving the name keeps Create New Mode / Import from
+// creating that trap, as `build` already does for the same reason.
 export const BUILT_IN_AGENTS = new Set([
   "build",
   "code",
@@ -15,8 +18,8 @@ export const BUILT_IN_AGENTS = new Set([
   "plan",
   "ask",
   "debug",
-  "orchestrator",
   "explore",
+  "orchestrator",
   "compaction",
   "title",
   "summary",
