@@ -1,23 +1,38 @@
 import { describe, expect, test } from "bun:test"
 import { createMarkdownStream, renderBlocksToHtml } from "../src/index"
 
-// These bounds compare one shape at 1x and 4x size instead of timing a fixed input: quadratic parsing needs about 16x
-// the time, linear parsing about 4x, and the ratio does not move when the host is loaded. Each side is the median of
-// several samples, so one scheduling stall cannot decide the outcome.
+// These bounds compare one shape at two sizes instead of timing a fixed input: quadratic parsing needs about 16x the
+// work for a 4x input, linear parsing about 4x, and how loaded the host is does not change how much CPU the parser
+// burns. Each side is the fastest of several samples taken from a fresh heap: a busy host inflates the middle of the
+// distribution, so the minimum is the sample that still reflects the work, and a quadratic pass cannot hide behind it.
 const ratioLimit = 8
 
-/** Median time at 4x size divided by median time at 1x size. */
-function growth(work: (scale: number) => void, samples = 5) {
-  const measure = (scale: number) =>
-    Array.from({ length: samples }, () => {
-      const started = performance.now()
-      work(scale)
-      return performance.now() - started
-    })
-      .sort((left, right) => left - right)
-      .at(Math.floor(samples / 2))!
-  work(1) // warm the JIT and the module caches before measuring
-  return measure(4) / Math.max(measure(1), 1)
+/**
+ * Fastest CPU time at the `to` size divided by the fastest CPU time at the `from` size.
+ *
+ * CPU time, not wall time: a loaded runner has this process off the CPU for most of a sample, which would make a
+ * longer sample look worse than it is.
+ *
+ * Both sizes must add input length, never structure: nesting deeper than the original case is superlinear by nature
+ * (every nested container walks the markers that remain) and emphasis nested 4x deeper overflows the stack.
+ */
+function growth(work: (scale: number) => void, from = 1, to = 4, samples = 5) {
+  const clock = () => {
+    const usage = process.cpuUsage()
+    return (usage.user + usage.system) / 1_000 // microseconds to milliseconds
+  }
+  const fastest = (scale: number) =>
+    Math.min(
+      ...Array.from({ length: samples }, () => {
+        Bun.gc(true) // without it a collection from the previous sample lands inside this one
+        const started = clock()
+        work(scale)
+        return clock() - started
+      }),
+    )
+  work(from) // warm the JIT and the module caches for both sizes before measuring
+  work(to)
+  return fastest(to) / Math.max(fastest(from), 1)
 }
 
 describe("slow-input linear-time bounds", () => {
@@ -31,22 +46,28 @@ describe("slow-input linear-time bounds", () => {
         const links = "[".repeat(5_000 * scale) + "[a](b)".repeat(5_000 * scale)
         const f2 = createMarkdownStream({ renderHtml: true }).update(links, { streaming: false })
         expect(renderBlocksToHtml(f2.blocks)).toContain('<a href="b">a</a>')
-      }),
+      }, 2, 8),
     ).toBeLessThan(ratioLimit)
   })
 
   test("long * and _ delimiter runs and distinct unclosed backtick runs stay linear", () => {
-    // The backtick runs are one fixed batch repeated per scale, so the input length stays proportional to the scale.
+    // Each shape keeps the run lengths of the original case and one paragraph per unit of size. A 4x longer run would
+    // nest emphasis 4x deeper and overflow the stack instead of measuring time.
+    const emph = "*a".repeat(5_000) + " " + "_b".repeat(5_000) + " " + "**c*d".repeat(2_000)
+    const mismatchedHeal = "*a ".repeat(5_000) + "b_ ".repeat(5_000)
     const ticks = Array.from({ length: 500 }, (_, i) => "`".repeat(i + 1) + "a").join(" ")
     expect(
       growth((scale) => {
-        const emph = "*a".repeat(5_000 * scale) + " " + "_b".repeat(5_000 * scale) + " " + "**c*d".repeat(2_000 * scale)
-        const f1 = createMarkdownStream({ renderHtml: true }).update(emph, { streaming: false })
-        expect(f1.blocks).toHaveLength(1)
+        const f1 = createMarkdownStream({ renderHtml: true }).update(Array.from({ length: scale }, () => emph).join("\n\n"), {
+          streaming: false,
+        })
+        expect(f1.blocks).toHaveLength(scale)
 
-        const mismatchedHeal = "*a ".repeat(5_000 * scale) + "b_ ".repeat(5_000 * scale)
-        const fHeal = createMarkdownStream({ renderHtml: false }).update(mismatchedHeal, { streaming: true })
-        expect(fHeal.blocks).toHaveLength(1)
+        const fHeal = createMarkdownStream({ renderHtml: false }).update(
+          Array.from({ length: scale }, () => mismatchedHeal).join("\n\n"),
+          { streaming: true },
+        )
+        expect(fHeal.blocks).toHaveLength(scale)
 
         const f2 = createMarkdownStream({ renderHtml: true }).update(
           Array.from({ length: scale }, () => ticks).join(" "),
@@ -58,13 +79,19 @@ describe("slow-input linear-time bounds", () => {
   })
 
   test("deeply nested blockquotes and lists stay linear", () => {
-    // The nesting arrives in one update, so comparing 1x and 4x catches a quadratic walk over the nesting depth.
+    // Every block keeps the 200-deep nesting of the original case and the size grows by how many of them arrive, so
+    // the ratio measures the document size. Nesting 4x deeper is superlinear by nature: each nested container walks
+    // the markers that remain, which measured 12x to 14x for a 4x depth.
     expect(
-      growth((scale) => {
-        const md = "> ".repeat(200 * scale) + "deep quote\n\n" + "- ".repeat(200 * scale) + "deep list\n"
-        const frame = createMarkdownStream({ renderHtml: true }).update(md, { streaming: false })
-        expect(frame.blocks).toHaveLength(2)
-      }),
+      growth(
+        (blocks) => {
+          const md = ("> ".repeat(200) + "deep quote\n\n" + "- ".repeat(200) + "deep list\n").repeat(blocks)
+          const frame = createMarkdownStream({ renderHtml: true }).update(md, { streaming: false })
+          expect(frame.blocks).toHaveLength(2 * blocks)
+        },
+        32,
+        128,
+      ),
     ).toBeLessThan(ratioLimit)
 
     // The list is appended one line at a time, so bound the scanning work each item costs: a streaming parser must
@@ -83,25 +110,44 @@ describe("slow-input linear-time bounds", () => {
     expect(scanned / 1_000).toBeLessThan(36 * 6)
   })
 
-  test("huge GFM table streamed row-by-row stays linear", () => {
-    expect(
-      growth((scale) => {
-        const stream = createMarkdownStream({ renderHtml: false })
-        stream.append("| Col A | Col B | Col C | Col D |\n|---|---|---|---|\n")
+  test("huge GFM table stays linear", () => {
+    // 250 and 1,000 rows: 4x the table, while both fit under the heap size at which garbage collection starts to
+    // dominate the measurement (2,000 rows already cost 5-7x for 4x the input, which is the collector, not the parser).
+    const tableParse = (rows: number) => {
+      const body = Array.from(
+        { length: rows },
+        (_, i) => `| cell ${i} | **bold ${i}** | \`code ${i}\` | [link](https://example.com/${i}) |\n`,
+      ).join("")
+      const done = createMarkdownStream({ renderHtml: false }).update(
+        "| Col A | Col B | Col C | Col D |\n|---|---|---|---|\n" + body,
+        { streaming: false },
+      )
+      expect(done.blocks).toHaveLength(1)
+      expect(done.blocks[0]!.kind.type).toBe("table")
+      if (done.blocks[0]!.kind.type === "table") expect(done.blocks[0]!.kind.rows).toHaveLength(rows)
+    }
+    expect(growth(tableParse, 250, 1_000)).toBeLessThan(ratioLimit)
 
-        for (let i = 0; i < 1_000 * scale; i++) {
-          stream.append(`| cell ${i} | **bold ${i}** | \`code ${i}\` | [link](https://example.com/${i}) |\n`)
-        }
-
-        const done = stream.finalize()
-        expect(done.blocks).toHaveLength(1)
-        expect(done.blocks[0]!.kind.type).toBe("table")
-
-        if (done.blocks[0]!.kind.type === "table") {
-          expect(done.blocks[0]!.kind.rows).toHaveLength(1_000 * scale)
-        }
-      }),
-    ).toBeLessThan(ratioLimit)
+    // Row by row, what must not grow is the text each append re-reads. Ready time cannot carry this: streaming is
+    // superlinear today (33 ms for 1,000 rows and 5.2 s for 16,000), so no load-independent bound separates that from
+    // a scheduler stall.
+    const scannedPerRow = (rows: number) => {
+      const stream = createMarkdownStream({ renderHtml: false })
+      stream.append("| Col A | Col B | Col C | Col D |\n|---|---|---|---|\n")
+      let scanned = 0
+      for (let i = 0; i < rows; i++) {
+        scanned += stream.append(`| cell ${i} | **bold ${i}** | \`code ${i}\` | [link](https://example.com/${i}) |\n`).charsScanned
+      }
+      const done = stream.finalize()
+      expect(done.blocks).toHaveLength(1)
+      expect(done.blocks[0]!.kind.type).toBe("table")
+      if (done.blocks[0]!.kind.type === "table") expect(done.blocks[0]!.kind.rows).toHaveLength(rows)
+      return (scanned + done.charsScanned) / rows
+    }
+    // Measured 74.6 characters per 50-character row at 1,000 rows and 77.9 at 4,000: an append scans the active row,
+    // never the table. A parser that rebuilds the table per row grows with the row count instead.
+    expect(scannedPerRow(1_000)).toBeLessThan(150)
+    expect(scannedPerRow(4_000)).toBeLessThan(150)
   })
 
   test(
