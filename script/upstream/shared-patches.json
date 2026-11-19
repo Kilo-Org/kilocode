@@ -1,12 +1,16 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 163,
-    "markedLines": 2923,
-    "unmarkedLines": 399,
+    "files": 164,
+    "markedLines": 2938,
+    "unmarkedLines": 387,
     "deletedFiles": 0
   },
   "files": {
+    "packages/cli/src/run/run.ts": {
+      "rung": 4,
+      "seam": "The shared one-shot run handler owns target preparation, including resumed-session model selection. Neither a plugin nor the Kilo host can wait there before admission. The Kilo-only call checks the resolved location's catalog without changing upstream run behavior."
+    },
     "packages/cli/src/run/noninteractive.ts": {
       "rung": 3,
       "seam": "`run --auto` replies `once` to every permission request. A request whose metadata sets `interactive: true` is rejected instead, so a headless run cannot approve it. The Kilo sandbox asks `sandbox_escalation` with that flag before a Git command runs outside the sandbox. No plugin hook reaches the CLI's permission replies (the permission domain has only `evaluate`), and the host does not own the non-interactive run loop. Upstream never sets the flag, so its behavior does not change."
