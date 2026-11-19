@@ -62,25 +62,23 @@ function charsRead(parse: () => void) {
 
 describe("slow-input linear-time bounds", () => {
   test(
-    "deeply nested brackets and bracket-link chains stay linear",
+    "deeply nested brackets and bracket-link chains bound source scans",
     () => {
-      expect(
-        growth(
-          (scale) => {
-            const nested = "[".repeat(10_000 * scale) + "a" + "]".repeat(10_000 * scale)
-            const f1 = createMarkdownStream({ renderHtml: true }).update(nested, { streaming: false })
-            expect(renderBlocksToHtml(f1.blocks)).toContain("[a]")
-
-            const links = "[".repeat(5_000 * scale) + "[a](b)".repeat(5_000 * scale)
-            const f2 = createMarkdownStream({ renderHtml: true }).update(links, { streaming: false })
-            expect(renderBlocksToHtml(f2.blocks)).toContain('<a href="b">a</a>')
-          },
-          // At 2 and 8 both parses are a few milliseconds, which the fixed cost of a sample hides; 16 and 64 keep the
-          // ratio well above it. The 60 s budget below only catches a catastrophic regression.
-          16,
-          64,
-        ),
-      ).toBeLessThan(ratioLimit)
+      for (const scale of [16, 64]) {
+        const nested = "[".repeat(10_000 * scale) + "a" + "]".repeat(10_000 * scale)
+        const prefix = "[".repeat(5_000 * scale)
+        const links = prefix + "[a](b)".repeat(prefix.length)
+        const cases = [[nested, nested], [links, prefix + '<a href="b">a</a>'.repeat(prefix.length)]] as const
+        for (const [source, html] of cases) {
+          const read = charsRead(() => {
+            const frame = createMarkdownStream({ renderHtml: true }).update(source, { streaming: false })
+            expect(renderBlocksToHtml(frame.blocks).trim() === `<p>${html}</p>`).toBe(true)
+          })
+          expect(read / source.length).toBeLessThan(20)
+        }
+      }
+      // Stack traversal does not read source characters. Keep the large link chain and timeout too:
+      // revisiting every previous opener for every link would take over 100 billion visits.
     },
     60_000,
   )
