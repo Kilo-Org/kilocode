@@ -105,7 +105,7 @@
     },
     "packages/client/src/promise/generated/types.ts": {
       "rung": 3,
-      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, the optional PTY create size, and the optional `workspace` restoration outcome on `Session.Revert`. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
+      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, the optional PTY create size, the `hook` action variant of `Automation.Action` that lets a Kilo plugin own an automation row, and the optional `workspace` restoration outcome on `Session.Revert`. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/protocol/openapi.json": {
@@ -137,10 +137,6 @@
     "packages/core/src/command.ts": {
       "rung": 3,
       "seam": "Keep optional template and model metadata on registered commands and return it from command.list. The command editor exposes only add and cannot recover a definition's captured config after registration. Definitions without metadata remain unchanged."
-    },
-    "packages/core/src/ripgrep.ts": {
-      "rung": 4,
-      "seam": "Accept ripgrep's base64 `bytes` shape alongside `text` for the matched path, line and submatch. Ripgrep emits `bytes` as soon as one byte of a record is not valid UTF-8, and the text-only schema then rejected the record and failed the whole search with `Invalid ripgrep match output`. Bytes decode as lossy UTF-8 with the replacement character, and the line and submatch limits still apply after decoding. No plugin hook or host composition reaches this parser: it runs inside the core ripgrep service before any tool result exists, and no knob can express an alternate decoder for the fixed `rg --json` shape. Records that carry `text` behave exactly as before."
     },
     "packages/core/src/config/plugin/command.ts": {
       "rung": 4,
