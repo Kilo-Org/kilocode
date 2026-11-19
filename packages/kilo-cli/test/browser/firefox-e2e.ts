@@ -125,6 +125,20 @@ const framed = (frameOrigin: string) => `<!doctype html>
   <script>document.getElementById("go").addEventListener("click", () => { document.body.style.background = "#00ff00" })</script>
 </body></html>`
 
+/** A cross-origin frame inside an open shadow root and a password field inside a closed one; both must be masked. */
+const shadowed = (frameOrigin: string) => `<!doctype html>
+<html><head><meta charset="utf-8"><title>Shadow E2E</title></head>
+<body style="margin:0;background:#ffffff">
+  <div id="open-host" style="position:fixed;left:0;top:0;width:320px;height:200px"></div>
+  <div id="closed-host" style="position:fixed;left:0;top:260px;width:300px;height:60px"></div>
+  <script>
+    document.getElementById("open-host").attachShadow({ mode: "open" }).innerHTML =
+      '<iframe src="${frameOrigin}/" style="display:block;width:320px;height:200px;border:0"></iframe>'
+    document.getElementById("closed-host").attachShadow({ mode: "closed" }).innerHTML =
+      '<input type="password" value="hunter2" style="display:block;box-sizing:border-box;width:300px;height:60px;border:0;padding:0;background:#ff0000">'
+  </script>
+</body></html>`
+
 const userPage = `<!doctype html>
 <html><head><meta charset="utf-8"><title>User tab</title></head>
 <body><h1>USER PAGE</h1></body></html>`
@@ -210,6 +224,7 @@ const fixture = Bun.serve({
     if (url.pathname === "/page2") return html(pageTwo)
     if (url.pathname === "/download-page") return html(downloadPage)
     if (url.pathname === "/framed") return html(framed(frame.url.origin))
+    if (url.pathname === "/shadow") return html(shadowed(frame.url.origin))
     return html(simple)
   },
 })
@@ -1369,6 +1384,23 @@ async function frames() {
     revealedCss !== undefined && (revealedCss[0] ?? 0) > 200 && (revealedCss[1] ?? 255) < 80 && (revealedCss[2] ?? 255) < 80,
     `the granted frame is not visible in the screenshot: css=${JSON.stringify(revealedCss)}`,
   )
+
+  // Shadow DOM: a cross-origin frame in an open root and a password field in a closed root, no grants.
+  const shadow = await run((step) => {
+    if (step.results.length === 0) return { args: { url: `${localOrigin}/shadow` }, name: "browser_navigate" }
+    if (step.results.length === 1) return { args: { scale: "css", type: "png" }, name: "browser_take_screenshot" }
+    return undefined
+  }, {})
+  const shadowImage = decodePng(shadow.pngs[0] ?? shadow.last.images[0])
+  await savePng("shadow-css", shadow.pngs[0] ?? shadow.last.images[0])
+  const shadowFrame = pixel(shadowImage, 160, 100)
+  const shadowPassword = pixel(shadowImage, 250, 290)
+  const shadowOutside = pixel(shadowImage, 500, 400)
+  const black = (value: (number | undefined)[] | undefined) => value !== undefined && value.every((channel) => (channel ?? 255) < 40)
+  expect(shadowImage !== undefined, `no shadow screenshot came back: ${(shadow.last.results[1] ?? "").slice(0, 400)}`)
+  expect(black(shadowFrame), `the frame in the open shadow root is not masked: ${JSON.stringify(shadowFrame)}`)
+  expect(black(shadowPassword), `the password field in the closed shadow root is not masked: ${JSON.stringify(shadowPassword)}`)
+  expect(shadowOutside !== undefined && shadowOutside.some((value) => (value ?? 0) > 60), `the pixel outside the shadow hosts is black: ${JSON.stringify(shadowOutside)}`)
   return {
     granted: granted.slice(0, 600),
     maskedCss,
@@ -1376,6 +1408,7 @@ async function frames() {
     outsideCss,
     revealedCss,
     results: withheld.last.results.map((value) => value.slice(0, 500)),
+    shadow: { frame: shadowFrame, outside: shadowOutside, password: shadowPassword },
     screenshot: {
       css: { height: cssImage?.height, width: cssImage?.width },
       device: { height: deviceImage?.height, width: deviceImage?.width },
@@ -1634,7 +1667,9 @@ async function parity() {
     const index = step.results.length
     const entry = order[index]
     if (entry === undefined) return undefined
-    return { args: entry.args(step.results[1] ?? "", step.results), name: entry.name }
+    // The find (results[2]) ran after the snapshot (results[1]): its refs come first, the snapshot's still resolve.
+    const refs = `${step.results[2] ?? ""}\n${step.results[1] ?? ""}`
+    return { args: entry.args(refs, step.results), name: entry.name }
   }
   const result = await run(plan, { allowSensitive: true })
   const texts = result.last.results
