@@ -5,29 +5,35 @@ const base = {
   pinned: "ses_a",
   active: "ses_a",
   running: true,
-  goalActive: false,
-  steerInterrupts: true,
   mode: "steer" as const,
 }
 
 describe("sendBinding", () => {
-  test("steers by stopping the run of the session the send came from", () => {
-    expect(sendBinding(base)).toEqual({ same: true, interrupt: true })
+  test("admits a steer for the next step without interrupting the current call or its tools", () => {
+    expect(sendBinding(base)).toEqual({ same: true, delivery: "steer", interrupt: false })
   })
 
-  test("keeps an active goal running instead of stopping it", () => {
-    expect(sendBinding({ ...base, goalActive: true })).toEqual({ same: true, interrupt: false })
+  test("queues for the next turn without interrupting", () => {
+    expect(sendBinding({ ...base, mode: "queue" })).toEqual({ same: true, delivery: "queue", interrupt: false })
   })
 
-  test("does nothing when the pinned session is not running", () => {
-    expect(sendBinding({ ...base, running: false })).toEqual({ same: true, interrupt: false })
+  test("send now delivers normally when the session has already stopped", () => {
+    expect(sendBinding({ ...base, mode: "now", running: false })).toEqual({
+      same: true,
+      delivery: "steer",
+      interrupt: false,
+    })
   })
 
   test("stop and send still stops a pinned session after a tab switch", () => {
-    expect(sendBinding({ ...base, active: "ses_b", mode: "now" })).toEqual({ same: false, interrupt: true })
+    expect(sendBinding({ ...base, active: "ses_b", mode: "now" })).toEqual({
+      same: false,
+      delivery: "steer",
+      interrupt: true,
+    })
   })
 
-  test("a steer after a tab switch waits, because another session's goal is not readable", () => {
-    expect(sendBinding({ ...base, active: "ses_b" })).toEqual({ same: false, interrupt: false })
+  test("a steer after a tab switch waits on the session it was sent to", () => {
+    expect(sendBinding({ ...base, active: "ses_b" })).toEqual({ same: false, delivery: "steer", interrupt: false })
   })
 })
