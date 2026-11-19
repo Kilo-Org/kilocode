@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test"
 import type { PermissionRequest, PermissionSavedInfo, SessionInfo } from "@opencode/client"
-import { allowBroader, displayResource, widenSaved, widerRule } from "../webview-ui/src/v2/permission-rules"
+import { BrowserPermission } from "../../kilo-plugin/src/browser/permission"
+import {
+  allowBroader,
+  displayResource,
+  reasonOf,
+  savable,
+  widenSaved,
+  widerRule,
+} from "../webview-ui/src/v2/permission-rules"
 
 const ORIGIN = "navigate:http://localhost:3000"
 
@@ -159,5 +167,38 @@ describe("Allow all sites", () => {
     )
     await expect(answer).rejects.toThrow("offline")
     expect(api.calls).toEqual([])
+  })
+})
+
+describe("what the dock offers", () => {
+  /** A request exactly as the browser plugin asks it, after the JSON trip to the webview, with the server's ids. */
+  const asked = (item: BrowserPermission.Item): PermissionRequest => {
+    const plugin = BrowserPermission.request(item, false)
+    return {
+      id: "per_browser",
+      sessionID: "ses_browser",
+      action: plugin.action,
+      resources: plugin.resources,
+      save: plugin.save,
+      metadata: JSON.parse(JSON.stringify(plugin.metadata)),
+    }
+  }
+
+  test("a sensitive step saves nothing, so it offers no Allow always, and it says why it asks", () => {
+    const sensitive = asked({ class: "sensitive", origin: "http://127.0.0.2:48251", reason: "password field" })
+    expect(savable(sensitive)).toBe(false)
+    expect(reasonOf(sensitive)).toBe("password field")
+  })
+
+  test("a class grant saves its rule, so it offers Allow always and gives no reason", () => {
+    const grant = asked({ class: "read", origin: "http://127.0.0.2:48251" })
+    expect(savable(grant)).toBe(true)
+    expect(reasonOf(grant)).toBeUndefined()
+  })
+
+  test("a request without save rules offers no Allow always, whatever its action; a blank reason is none", () => {
+    expect(savable(request({ save: undefined }))).toBe(false)
+    expect(savable(request({ action: "shell", save: [] }))).toBe(false)
+    expect(reasonOf(request({ metadata: { reason: "  " } }))).toBeUndefined()
   })
 })

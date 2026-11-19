@@ -17,6 +17,7 @@ import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
 import { BrowserHub } from "./hub"
 import { BrowserPermission } from "./permission"
+import { contained, insideOutput, writeConfined } from "./playwright"
 import { takeStep } from "./steps"
 
 /** The protocol version this CLI speaks. An extension that does not list it cannot be driven safely. */
@@ -28,8 +29,55 @@ export const EXTENSION_HINT =
 
 const HINT = EXTENSION_HINT
 
+/**
+ * The setup step for why no extension answered, as the hub connection explains it: an installed extension whose switch
+ * is off is told to turn it back on, never to install it. Without an explanation the general step stands.
+ */
+function extensionHint(absence: BrowserHub.Absence | undefined): string {
+  if (absence === undefined) return EXTENSION_HINT
+  switch (absence.kind) {
+    case "connected":
+      return 'The Kilo browser extension is connected but did not answer: try again, and reload the extension if it keeps failing, or set browser.backend to "playwright".'
+    case "disconnected":
+      return 'The Kilo browser extension is not connected: turn on "Allow local agents" in its settings and keep the browser open, then try again, or set browser.backend to "playwright".'
+    case "unpaired":
+      return 'No Kilo browser extension has connected yet: install it, or turn on "Allow local agents" in its settings if it is installed, then try again, or set browser.backend to "playwright".'
+    case "no_profile":
+      // The name comes from config a repository can set: quoted as a literal, it cannot reshape the sentence.
+      return `No browser profile named ${JSON.stringify(absence.profile)} is connected: open it and turn on "Allow local agents" in its Kilo extension, or change browser.target.`
+    case "no_hub":
+      return 'Kilo could not start its connection to the browser: try again in a moment, or set browser.backend to "playwright".'
+  }
+}
+
 /** The update notice for an extension this CLI cannot drive. */
 export const UPDATE_HINT = "Update the Kilo browser extension to the current version, then retry."
+
+/**
+ * What a call on a tab with no web origin reports. `about:blank`, a browser page or a local file has no http(s) origin
+ * (the browser spells it `://` or `opaque:null`), so no grant could ever cover it: the model is told to open a web page
+ * instead of the user being asked to approve an empty origin.
+ */
+const NO_ORIGIN =
+  "The tab has no web page open (about:blank, a browser page or a local file), so there is nothing to grant access to. Open an http(s) page with browser_navigate first."
+
+/** What a frame without a web origin reports when nothing else on the page needs a grant. */
+const FRAME_NO_ORIGIN =
+  "A frame on this page has no web origin (a sandboxed or local frame), so it cannot be granted; continue without its content."
+
+/**
+ * The needs a person can be asked for, and the refusal when none is left. A class grant names an http(s) origin; a
+ * sensitive step is approved by its token, whatever its origin. Only the needs without an origin are dropped, so an
+ * opaque frame never hides the page's own grant, and only the tab itself having no origin means it has no web page.
+ */
+function grantable(items: readonly BrowserPermission.Item[]) {
+  const blank = (item: BrowserPermission.Item) =>
+    item.class !== "sensitive" && BrowserPermission.origin(item.origin) === undefined
+  const askable = items.filter((item) => !blank(item))
+  const dropped = items.filter(blank)
+  if (askable.length || !dropped.length) return { items: askable }
+  return { items: askable, refusal: dropped.some((item) => !item.frame) ? NO_ORIGIN : FRAME_NO_ORIGIN }
+}
 
 /**
  * What a call in a stopped conversation reports. The stop is sticky for that conversation: the model is told the user
@@ -130,9 +178,19 @@ function reply(value: BrowserHub.Reply): CallResult {
   if (value.meta !== undefined && meta === undefined) {
     return { content: [{ type: "text", text: UNDESCRIBABLE }], isError: true }
   }
+  // A need without a web origin cannot be granted: it is dropped, and when none is left the result says the action
+  // ran and why nothing is asked. The rest of the meta (page, withheld frames) stays for the tool metadata.
+  const asked = meta?.needs === undefined ? undefined : grantable(meta.needs)
+  if (meta !== undefined && asked !== undefined && !asked.items.length) {
+    const { needs: _unaskable, ...kept } = meta
+    const note =
+      asked.refusal === undefined ? [] : [{ type: "text" as const, text: `The action ran. ${asked.refusal}` }]
+    return { content: [...content, ...note], isError: value.isError === true, meta: kept }
+  }
   // A need carried by a result is after-action by contract: the call succeeded and then asked for a grant, so the
   // action already ran and the model reads the page instead of repeating the step.
-  const flagged = meta?.needs === undefined ? meta : { ...meta, afterAction: true as const }
+  const flagged =
+    meta === undefined || asked === undefined ? meta : { ...meta, needs: asked.items, afterAction: true as const }
   return { content, isError: value.isError === true, ...(flagged ? { meta: flagged } : {}) }
 }
 
@@ -141,8 +199,10 @@ function reply(value: BrowserHub.Reply): CallResult {
  * described (the caller then refuses rather than asking for half of it).
  */
 function permissionError(error: BrowserHub.Failure): Error {
-  const items = needs(error.items)
-  if (items === undefined) return new Error(UNDESCRIBABLE)
+  const described = needs(error.items)
+  if (described === undefined) return new Error(UNDESCRIBABLE)
+  const { items, refusal } = grantable(described)
+  if (refusal !== undefined) return new Error(refusal)
   if (error.kind === "moved" && !items.length) {
     return new Error("The page changed before the step ran. Call the tool again.")
   }
@@ -151,7 +211,8 @@ function permissionError(error: BrowserHub.Failure): Error {
 
 /** Every failure kind the transport reports, as the tool layer sees it. */
 const MAPPED: Record<string, (error: BrowserHub.Failure) => Error> = {
-  unavailable: (error) => new UnavailableError(HINT, UNAVAILABLE_MESSAGE, { effectsUncertain: error.uncertain }),
+  unavailable: (error) =>
+    new UnavailableError(extensionHint(error.absence), UNAVAILABLE_MESSAGE, { effectsUncertain: error.uncertain }),
   permission: permissionError,
   moved: permissionError,
   busy: () => new Error("The tab is busy with another browser action. Try again in a moment."),
@@ -267,6 +328,47 @@ function sections(input: { page?: Identity; note?: string; snapshot?: string; re
   ].join("\n")
 }
 
+/**
+ * Where `browser_take_screenshot`'s `filename` goes. The extension has no file system to write to, so the CLI writes
+ * the image it returns, under the session's working directory with the Playwright backend's rules: a relative name
+ * resolves inside the directory, and a name that escapes it is refused before the browser is asked.
+ */
+function screenshotFile(name: string, args: Record<string, unknown>, directory: string) {
+  if (name !== "browser_take_screenshot") return undefined
+  const filename = typeof args.filename === "string" ? args.filename.trim() : ""
+  if (filename === "") return undefined
+  const { filename: _written, ...rest } = args
+  try {
+    return { path: insideOutput(filename, directory), args: rest }
+  } catch {
+    throw new Error(`The screenshot file name must stay inside ${directory}.`)
+  }
+}
+
+/** A screenshot name that leads outside the working directory. */
+class OutsideError extends Error {}
+
+/**
+ * The file a screenshot is written to, checked again where it lands: the nearest existing ancestor is resolved, so a
+ * symbolic link anywhere in the path that leads outside the working directory is refused, even for directories the
+ * write would create below it.
+ */
+async function confined(file: string, directory: string): Promise<string> {
+  const root = await fs.realpath(directory)
+  const missing: string[] = []
+  let existing = path.dirname(file)
+  while ((await fs.lstat(existing).catch(() => undefined)) === undefined && path.dirname(existing) !== existing) {
+    missing.unshift(path.basename(existing))
+    existing = path.dirname(existing)
+  }
+  const target = path.join(await fs.realpath(existing), ...missing, path.basename(file))
+  if (!contained(target, root)) throw new OutsideError(`The screenshot file name must stay inside ${directory}.`)
+  return target
+}
+
+/** How many written screenshot files a backend remembers; an older one is treated as foreign, never overwritten. */
+const WRITTEN_LIMIT = 200
+
 /** The backend over one hub connection. `port` is undefined when the host serves no hub at all. */
 export class ExtensionBackend implements BrowserBackend {
   readonly id = "extension" as const
@@ -284,19 +386,36 @@ export class ExtensionBackend implements BrowserBackend {
    * there is no CLI-side resume inside the same conversation, so the refusal asks for the browser to be turned back on.
    */
   private readonly stopped = new Set<string>()
+  /** Screenshot files this backend wrote: a screenshot replaces one of these, never a file it did not write. */
+  private readonly written = new Set<string>()
+  /**
+   * Every turn that was current when the user stopped this CLI's browser. Such a turn may not have opened a session
+   * yet, so no revoke names it; it is refused all the same, until the conversation's next turn. Halts accumulate: an
+   * open still in flight for an earlier stopped turn is judged by that turn after later stops. Turn numbers are unique
+   * per process, so an old halt never matches a new turn, and the set grows only with the user's own stops.
+   */
+  private readonly halted = new Set<number>()
   /** Set by `dispose()`: an evicted backend must not open a session for a call that was already in flight. */
   private disposed = false
 
-  constructor(private readonly input: { port?: BrowserHub.Port; directory: string }) {
+  constructor(
+    private readonly input: {
+      port?: BrowserHub.Port
+      directory: string
+      /** Each conversation's latest turn, numbered once per process: a new user message gets a new number. */
+      turns?: ReadonlyMap<string, number>
+    },
+  ) {
     this.off =
       input.port?.onRevoked((event) => {
+        for (const turn of input.turns?.values() ?? []) this.halted.add(turn)
         const session = this.sessions.get(event.sessionHandle)
         if (session === undefined) return
         this.sessions.delete(event.sessionHandle)
         this.handles.delete(session)
-        // Only the user's own decisions stop the conversation. A disconnect is the browser going away (a network drop,
-        // an extension reload): the handle is dropped and the next call reopens when the extension is back.
-        if (event.reason === "user_stop" || event.reason === "switch_off") this.stopped.add(session)
+        // Every revoke is the user's decision: Stop all, the switch, or Disconnect on this CLI. A dropped connection
+        // sends none; its calls fail as unavailable and the next call reopens once the extension is back.
+        this.stopped.add(session)
       }) ?? (() => {})
   }
 
@@ -315,9 +434,13 @@ export class ExtensionBackend implements BrowserBackend {
     return ctx.session ?? ""
   }
 
-  /** A conversation the user stopped is refused before any open, so no session starts behind their back. */
-  private refuse(session: string) {
-    if (this.stopped.has(session)) throw new Error(STOPPED)
+  /**
+   * A conversation the user stopped is refused before any open, so no session starts behind their back. `turn` is the
+   * turn the decision belongs to: an open that was in flight is judged by the turn that started it, which may have
+   * ended (and left `turns`) by the time the open answers.
+   */
+  private halts(session: string, turn: number | undefined) {
+    return this.stopped.has(session) || (turn !== undefined && this.halted.has(turn))
   }
 
   /** An evicted backend refuses a call that was still in flight instead of opening a session nothing will close. */
@@ -355,26 +478,80 @@ export class ExtensionBackend implements BrowserBackend {
     },
   ) {
     const sensitive = this.sensitive(input.ctx, input.session, input.name, input.key)
-    return port.call({
+    const file = screenshotFile(input.name, input.args, this.input.directory)
+    const answer = await port.call({
       sessionHandle: input.handle,
       name: input.name,
-      arguments: input.args,
+      arguments: file ? file.args : input.args,
       authorized: grants(input.ctx.authorized ?? []),
       ...(sensitive === undefined ? {} : { sensitive }),
       ...(input.ctx.signal === undefined ? {} : { signal: input.ctx.signal }),
     })
+    return file ? this.save(file.path, answer) : answer
+  }
+
+  /**
+   * Write a screenshot's image to its file and link it, as the Playwright backend answers. The call already ran, so a
+   * file that cannot be written is a note in the result, never a failed call.
+   */
+  private async save(file: string, answer: BrowserHub.Reply): Promise<BrowserHub.Reply> {
+    const image = answer.content.find(
+      (block): block is Extract<BrowserHub.Block, { type: "image" }> => block.type === "image",
+    )
+    if (answer.isError || image === undefined) return answer
+    // A folder that cannot be resolved (a broken link, a missing working directory) is a file that could not be saved,
+    // said in words; the system's error code tells the model nothing it can act on.
+    const checked = await confined(file, this.input.directory).then(
+      (target) => ({ kind: "inside" as const, target }),
+      (error: unknown) => ({
+        kind: "refused" as const,
+        text:
+          error instanceof OutsideError
+            ? error.message
+            : `The screenshot could not be saved to ${file}: a folder in that path cannot be opened. Pass another filename to save it.`,
+      }),
+    )
+    if (checked.kind === "refused") {
+      return { ...answer, content: [...answer.content, { type: "text", text: checked.text }] }
+    }
+    const target = checked.target
+    const foreign = !this.written.has(target) && (await fs.lstat(target).catch(() => undefined)) !== undefined
+    const note = foreign
+      ? `${target} already exists, so the screenshot was not saved over it. Pass another filename to save it.`
+      : await writeConfined(target, Buffer.from(image.data, "base64")).then(
+          () => {
+            this.written.delete(target)
+            this.written.add(target)
+            if (this.written.size > WRITTEN_LIMIT) this.written.delete(this.written.values().next().value ?? target)
+            return `- [Screenshot](${target})`
+          },
+          (error: unknown) =>
+            `The screenshot could not be saved to ${target}: ${error instanceof Error ? error.message : String(error)}`,
+        )
+    return { ...answer, content: [...answer.content, { type: "text", text: note }] }
   }
 
   /** The action already ran and only its content was withheld: ask for the grants and never repeat the step. */
   private withheld(error: BrowserHub.Failure): CallResult | undefined {
     if (!(error instanceof BrowserHub.Failure) || error.kind !== "permission" || !error.afterAction) return undefined
-    const items = needs(error.items)
-    if (items === undefined) return undefined
+    const described = needs(error.items)
+    if (described === undefined) return undefined
+    const { items, refusal } = grantable(described)
     const meta = finishMeta(
       { ...(error.meta ?? {}), ...(items.length ? { needs: items } : {}) },
       error.stepToken,
       error.step,
     )
+    if (refusal !== undefined) {
+      // Nothing to ask: the action ran, and the page and frame data still reach the tool metadata. A needs list the
+      // browser also sent in the meta names the same unaskable grants, so it is dropped too.
+      const { needs: _unaskable, ...kept } = meta ?? {}
+      return {
+        content: [{ type: "text", text: `The action ran. ${refusal}` }],
+        isError: false,
+        ...(meta === undefined ? {} : { meta: kept }),
+      }
+    }
     const flagged = meta === undefined ? undefined : { ...meta, afterAction: true as const }
     return {
       content: [
@@ -389,7 +566,7 @@ export class ExtensionBackend implements BrowserBackend {
     const port = this.input.port
     if (!port) throw new UnavailableError(HINT)
     const session = this.session(ctx)
-    this.refuse(session)
+    if (this.halts(session, this.input.turns?.get(session))) throw new Error(STOPPED)
     this.live()
     try {
       await this.accepts(name)
@@ -413,7 +590,7 @@ export class ExtensionBackend implements BrowserBackend {
   async pageState(name: string, result: CallResult, ctx: PageContext): Promise<CallResult> {
     const port = this.input.port
     const session = this.session(ctx)
-    if (!port || result.isError || this.stopped.has(session) || this.disposed) return result
+    if (!port || result.isError || this.halts(session, this.input.turns?.get(session)) || this.disposed) return result
     const text = texts(result.content)
     const explicit = name === "browser_snapshot"
     const own = explicit ? undefined : answered(text)
@@ -537,14 +714,21 @@ export class ExtensionBackend implements BrowserBackend {
     // one must not adopt its handle when it answers after the session was forgotten and reopened.
     const attempt = Promise.withResolvers<string>()
     this.handles.set(session, attempt.promise)
-    void this.open(port, session, attempt.promise).then(attempt.resolve, attempt.reject)
+    // The turn that starts the open owns it: a stop of that turn still applies when the open answers after it ended.
+    const turn = this.input.turns?.get(session)
+    void this.open(port, session, attempt.promise, turn).then(attempt.resolve, attempt.reject)
     attempt.promise.catch(() => {
       if (this.handles.get(session) === attempt.promise) this.handles.delete(session)
     })
     return attempt.promise
   }
 
-  private async open(port: BrowserHub.Port, session: string, attempt: Promise<string>): Promise<string> {
+  private async open(
+    port: BrowserHub.Port,
+    session: string,
+    attempt: Promise<string>,
+    turn: number | undefined,
+  ): Promise<string> {
     await this.ready(port)
     // Anything awaited above may have outlived the backend: never open a session from a released instance.
     this.live()
@@ -553,11 +737,12 @@ export class ExtensionBackend implements BrowserBackend {
       title: session || "Kilo agent",
       cwd: this.input.directory,
     })
-    // The session ended, or another attempt replaced this one, while the extension was still opening it: close the
-    // late handle instead of keeping it (or claiming the new attempt's session) alive.
-    if (this.handles.get(session) !== attempt) {
+    // The session ended, another attempt replaced this one, or the user stopped the turn while the extension was still
+    // opening it: close the late handle instead of keeping it (or claiming the new attempt's session) alive.
+    const superseded = this.handles.get(session) !== attempt
+    if (superseded || this.halts(session, turn)) {
       await port.close(opened.sessionHandle).catch(() => undefined)
-      throw new Error("The session ended before its browser session opened.")
+      throw new Error(superseded ? "The session ended before its browser session opened." : STOPPED)
     }
     this.sessions.set(opened.sessionHandle, session)
     return opened.sessionHandle
@@ -608,6 +793,6 @@ export class ExtensionBackend implements BrowserBackend {
   }
 }
 
-export function backend(input: { port?: BrowserHub.Port; directory: string }): ExtensionBackend {
+export function backend(input: ConstructorParameters<typeof ExtensionBackend>[0]): ExtensionBackend {
   return new ExtensionBackend(input)
 }
