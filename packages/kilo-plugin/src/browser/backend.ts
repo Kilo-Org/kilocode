@@ -36,6 +36,8 @@ export type CallContext = {
   sensitive?: readonly string[]
   /** `browser.allow_sensitive`: a download this call starts is kept, with no prompt. */
   allowSensitive?: boolean
+  /** The conversation's own title, when it has one: the browser names the session's tab group after it. */
+  title?: string
 }
 
 /**

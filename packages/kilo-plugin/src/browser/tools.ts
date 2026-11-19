@@ -2,13 +2,14 @@ import { Config } from "@opencode/core/config"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Permission } from "@opencode/core/permission"
 import { Wildcard } from "@opencode/core/util/wildcard"
+import { isFallbackTitle } from "@opencode/util/session-title-fallback"
 import { KiloBrowserPolicy } from "@kilocode/gateway-core/browser-policy"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Tool } from "@opencode/schema/tool"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { Skill } from "@opencode/schema/skill"
 import { KiloBrowserRpc } from "@opencode/schema/kilocode/browser"
-import { Effect, Option, Result, Scope, Stream } from "effect"
+import { Effect, Option, Result, Schema, Scope, Stream } from "effect"
 import type { JsonSchema } from "effect"
 import {
   IncompatibleError,
@@ -93,6 +94,21 @@ function textOf(result: CallResult) {
   return result.content.flatMap((block) => (block.type === "text" ? [block.text] : [])).join("\n\n")
 }
 
+const decodeOpened = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ url: Schema.String })))
+
+/**
+ * The page a result shows: the browser's own report, the Playwright-style `Page URL` line, or the `{ title, url }`
+ * answer the extension gives for a navigation.
+ */
+function pageUrl(result: CallResult) {
+  const text = textOf(result)
+  return (
+    result.meta?.url ??
+    snapshot(split(text))?.url ??
+    Option.getOrUndefined(Option.map(decodeOpened(text), (opened) => opened.url))
+  )
+}
+
 /**
  * Model-facing failures: a tool error the model can act on, never a transport state. An unavailable backend keeps its
  * setup step in the message as well as in the metadata: `run --format json` and other non-interactive hosts surface
@@ -173,6 +189,69 @@ export function evaluate(input: {
   return { effect: "ask", message: "Browser access to this origin needs approval." }
 }
 
+/** What a refusal names: the class on its origin, or a sensitive step on its origin. */
+function subject(item: Item) {
+  return `${item.class === "sensitive" ? "a sensitive step" : item.class} on ${item.origin}`
+}
+
+/** The model-facing text of each way a browser permission can be refused. */
+const REFUSAL = {
+  declined: (what: string, where: string) =>
+    `The user denied ${what}. ${where} Do not retry; ask the user or continue without it.`,
+  blocked: (what: string, where: string) =>
+    `A permission rule denies ${what}. ${where} Do not retry; continue without it, or ask the user to change the rule.`,
+  corrected: (what: string, where: string, feedback: string) =>
+    `Permission for ${what} was not granted. ${where} ${feedback}`,
+}
+
+/**
+ * A plain decline that names what was refused. It stays a `Permission.DeclinedError` defect, so the step still ends
+ * the way any decline does; only the text a Code Mode program reads for it changes.
+ */
+class BrowserDeclinedError extends Permission.DeclinedError {
+  readonly text: string
+  constructor(text: string) {
+    super()
+    this.text = text
+  }
+  override get message() {
+    return this.text
+  }
+}
+
+/**
+ * One permission ask whose refusals name what was refused and the next step. A rule's deny and a decline with
+ * feedback keep their own error types, so the host treats them as before; a plain decline stays a defect.
+ */
+function ask(permission: Permission.Interface, request: Permission.AssertInput, what: string) {
+  // The page the session's last result showed: the model's next step starts from where the tab really is, not from
+  // the page it asked for.
+  const where = () => {
+    const url = tracker.page(String(request.sessionID))
+    return url ? `The tab is still on ${url}.` : "This session has no browser tab yet."
+  }
+  return permission.assert(request).pipe(
+    Effect.catchTags({
+      "Permission.BlockedError": (error) =>
+        Effect.fail(
+          new Permission.BlockedError({
+            rules: error.rules,
+            permission: error.permission,
+            resources: error.resources,
+            reason: REFUSAL.blocked(what, where()),
+          }),
+        ),
+      "Permission.CorrectedError": (error) =>
+        Effect.fail(new Permission.CorrectedError({ feedback: REFUSAL.corrected(what, where(), error.feedback) })),
+    }),
+    Effect.catchDefect((defect) =>
+      Effect.die(
+        defect instanceof Permission.DeclinedError ? new BrowserDeclinedError(REFUSAL.declined(what, where())) : defect,
+      ),
+    ),
+  )
+}
+
 /** Ask for the items this session has not approved yet. Config rules answer without a prompt. */
 export function authorize(
   items: readonly Item[],
@@ -192,7 +271,9 @@ export function authorize(
         continue
       }
       const request = BrowserPermission.request(item, allowSensitive)
-      if (Option.isSome(permission)) yield* permission.value.assert({ ...request, ...Permission.invocation(context) })
+      if (Option.isSome(permission)) {
+        yield* ask(permission.value, { ...request, ...Permission.invocation(context) }, subject(item))
+      }
       // A sensitive step is approved per step through its token, never remembered here.
       if (item.class !== "sensitive") grants.add(pattern)
     }
@@ -286,6 +367,8 @@ type Deps = {
   directory: string
   /** The backend a call runs on, resolved per call so a config change applies without a restart. */
   backend: (choice: Settings) => Promise<BrowserBackend>
+  /** The conversation's generated title, or undefined while it has none. */
+  title: (session: Tool.Context["sessionID"]) => Effect.Effect<string | undefined>
 }
 
 /** A granted post-action need hands the model either the answer or the page it can read now. */
@@ -311,6 +394,9 @@ type PostAction = {
  */
 function postAction(input: PostAction) {
   return Effect.gen(function* () {
+    // The action ran, so the tab is on the page it reported, whatever the answer to the ask.
+    const url = pageUrl(input.result)
+    if (url) tracker.visit(input.session, url)
     const asked = yield* Effect.result(
       authorize(
         input.needs,
@@ -455,6 +541,8 @@ function shaped(input: {
     const previous = mode === "diff" ? tracker.previous(input.session, input.entry.name, next?.url) : undefined
     const viewed = observe({ mode, text, previous, consoleErrors: errors })
     if (viewed.snapshot) tracker.record(input.session, viewed.snapshot)
+    const url = pageUrl(input.result)
+    if (url) tracker.visit(input.session, url)
 
     const content: Tool.Content[] = [{ type: "text", text: viewed.text }]
     for (const block of input.result.content) {
@@ -498,13 +586,17 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
 
     // The tool's own key first, so a config rule like `browser_click: deny` blocks it before anything runs.
     if (Option.isSome(deps.permission)) {
-      yield* deps.permission.value.assert({
-        action: entry.name,
-        resources: ["*"],
-        save: [],
-        metadata: { tool: entry.name },
-        ...Permission.invocation(context),
-      })
+      yield* ask(
+        deps.permission.value,
+        {
+          action: entry.name,
+          resources: ["*"],
+          save: [],
+          metadata: { tool: entry.name },
+          ...Permission.invocation(context),
+        },
+        entry.name,
+      )
     }
 
     // The effect's interruption signal reaches the browser call, so cancelling the turn aborts the browser action.
@@ -520,6 +612,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     const session = String(context.sessionID)
     const grants = grantsFor(session)
     const allowSensitive = browser.allowSensitive
+    const title = yield* deps.title(context.sessionID)
 
     // Ask, then call. A backend that discovers the real origin at action time (redirects, frames, sensitive elements,
     // downloads) reports it as needs_permission; the call is retried once with the new grants and the step token.
@@ -554,6 +647,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
               authorized: [...grants],
               sensitive: [...sensitive],
               allowSensitive,
+              title,
             }),
           catch: (error) => error,
         }),
@@ -754,6 +848,12 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
     yield* ctx.tool.transform((editor) => {
       const backend = (choice: Settings): Promise<BrowserBackend> =>
         choice.backend === "extension" ? extension(choice.target) : playwright.get(key(choice))
+      // A session that is not titled yet, or cannot be read, leaves the backend's own fallback in place.
+      const title = (sessionID: Tool.Context["sessionID"]) =>
+        ctx.session.get({ sessionID }).pipe(
+          Effect.map((session) => (isFallbackTitle(session.title) ? undefined : session.title)),
+          Effect.orElseSucceed(() => undefined),
+        )
       for (const entry of BrowserContract.entries) {
         editor.add({
           // The registry flattens browser.click to browser_click, preserving permission and policy IDs.
@@ -762,7 +862,7 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
           description: entry.description,
           input: entry.inputSchema as JsonSchema.JsonSchema,
           execute: (args: unknown, context: Tool.Context) =>
-            run(entry, args, context, { config, permission, directory: ctx.location.directory, backend }),
+            run(entry, args, context, { config, permission, directory: ctx.location.directory, backend, title }),
         })
       }
     })

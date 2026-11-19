@@ -128,11 +128,16 @@ describe("extension backend", () => {
     const second = await active.callTool("browser_snapshot", {}, ctx())
     expect(first.isError).toBe(false)
     expect(second.isError).toBe(false)
-    expect(hub.opened).toEqual([
-      { sessionId: "ses_extension", title: "ses_extension", cwd: "/tmp/project" },
-    ])
+    expect(hub.opened).toEqual([{ sessionId: "ses_extension", title: "project (ension)", cwd: "/tmp/project" }])
     expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1", "handle-1"])
     expect(hub.calls.map((call) => call.name)).toEqual(["browser_navigate", "browser_snapshot"])
+  })
+
+  test("the session opens under the conversation's title when it has one", async () => {
+    const hub = fake()
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, { ...ctx(), title: "Fix the login form" })
+    expect(hub.opened.map((entry) => entry.title)).toEqual(["Fix the login form"])
   })
 
   test("concurrent first calls share one session", async () => {
@@ -336,7 +341,9 @@ describe("extension backend", () => {
       {
         failure: { kind: "taken", message: "taken" },
         check: (error) => {
-          expect((error as Error).message).toContain("took over the tab")
+          expect((error as Error).message).toBe(
+            "The side panel took over the tab, so the action may have partly run. Take a fresh snapshot before retrying.",
+          )
         },
       },
       {

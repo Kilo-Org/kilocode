@@ -5,7 +5,9 @@ import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Document } from "@opencode/schema/config"
 import { Tool } from "@opencode/schema/tool"
 import { Skill } from "@opencode/schema/skill"
-import { Effect, Exit, Option, Scope, Stream } from "effect"
+import { Cause, Effect, Exit, Option, Scope, Stream } from "effect"
+import { toSessionError } from "@opencode/core/session/to-session-error"
+import type { BrowserPermission } from "../../src/browser/permission"
 import { UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { EXTENSION_HINT } from "../../src/browser/extension"
@@ -95,7 +97,12 @@ type Hook = (event: Record<string, unknown>) => Effect.Effect<void, unknown>
 
 async function boot(
   browser?: Browser | (() => Browser),
-  options: { hub?: BrowserHub.Interface; permission?: Option.Option<Permission.Interface> } = {},
+  options: {
+    hub?: BrowserHub.Interface
+    permission?: Option.Option<Permission.Interface>
+    /** The conversation's stored title; undefined is a session the title generator has not named yet. */
+    sessionTitle?: string
+  } = {},
 ) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const hooks: Hook[] = []
@@ -122,6 +129,9 @@ async function boot(
         Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
     },
     event: { subscribe: () => Stream.empty },
+    session: {
+      get: () => Effect.succeed({ title: options.sessionTitle }),
+    },
     permission: {
       hook: (_: string, callback: Hook) =>
         Effect.sync(() => {
@@ -452,6 +462,66 @@ describe("browser permission flow", () => {
       authorize([{ class: "read", origin: "https://example.com" }], context, false, () => false, Option.none()),
     )
   })
+
+  describe("a refusal names the class, the origin and the next step", () => {
+    const refusing = (refusal: Effect.Effect<void, Permission.Error>) =>
+      Option.some({ assert: () => refusal } as unknown as Permission.Interface)
+    const act = [{ class: "act" as const, origin: "https://x.example" }]
+    const refuse = (refusal: Effect.Effect<void, Permission.Error>, items: BrowserPermission.Item[] = act) =>
+      Effect.runPromiseExit(authorize(items, context, false, () => false, refusing(refusal)))
+    const failed = (exit: Exit.Exit<void, unknown>) => {
+      if (!Exit.isFailure(exit)) throw new Error("the ask was not refused")
+      return Cause.squash(exit.cause)
+    }
+
+    test("a rule's deny", async () => {
+      const error = failed(
+        await refuse(
+          Effect.fail(
+            new Permission.BlockedError({ rules: [], permission: "browser", resources: ["act:https://x.example"] }),
+          ),
+        ),
+      )
+      expect(error).toBeInstanceOf(Permission.BlockedError)
+      expect(toSessionError(error).message).toBe(
+        "A permission rule denies act on https://x.example. This session has no browser tab yet. Do not retry; continue without it, or ask the user to change the rule.",
+      )
+    })
+
+    test("a refusal with feedback, as a non-interactive run sends it", async () => {
+      const feedback =
+        "This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action."
+      const error = failed(await refuse(Effect.fail(new Permission.CorrectedError({ feedback }))))
+      expect(error).toBeInstanceOf(Permission.CorrectedError)
+      expect(toSessionError(error).message).toBe(
+        "Permission for act on https://x.example was not granted. This session has no browser tab yet. This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action.",
+      )
+    })
+
+    test("a plain decline stays a decline and names what it refused", async () => {
+      const exit = await refuse(Effect.die(new Permission.DeclinedError()))
+      if (!Exit.isFailure(exit)) throw new Error("the ask was not refused")
+      const defect = exit.cause.reasons.find(Cause.isDieReason)?.defect
+      expect(defect).toBeInstanceOf(Permission.DeclinedError)
+      expect(toSessionError(defect).message).toBe(
+        "The user denied act on https://x.example. This session has no browser tab yet. Do not retry; ask the user or continue without it.",
+      )
+    })
+
+    test("a declined sensitive step", async () => {
+      const exit = await refuse(Effect.die(new Permission.DeclinedError()), [
+        { class: "sensitive", origin: "https://x.example", reason: "password field" },
+      ])
+      expect(toSessionError(failed(exit)).message).toBe(
+        "The user denied a sensitive step on https://x.example. This session has no browser tab yet. Do not retry; ask the user or continue without it.",
+      )
+    })
+
+    test("another defect passes through unchanged", async () => {
+      const boom = new Error("boom")
+      expect(failed(await refuse(Effect.die(boom)))).toBe(boom)
+    })
+  })
 })
 
 describe("browser permission hook", () => {
@@ -558,6 +628,112 @@ describe("browser tools over the extension backend", () => {
     expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser"])
     expect(asserts[1]).toMatchObject({ resources: ["read:https://example.com"] })
     expect(hub.calls).toHaveLength(2)
+  })
+
+  test("a rule that denies the tool names it and the next step", async () => {
+    const permission = Option.some({
+      assert: (input: { action: string; resources: readonly string[] }) =>
+        Effect.fail(new Permission.BlockedError({ rules: [], permission: input.action, resources: input.resources })),
+    } as unknown as Permission.Interface)
+    const hub = fakeHub()
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission })
+    const result = await host.call("browser_click", { target: "e1" }, "ses_tool_denied")
+    expect(result._tag).toBe("Failure")
+    expect(result._tag === "Failure" ? (result.failure as Tool.Error).message : "").toBe(
+      "A permission rule denies browser_click. This session has no browser tab yet. Do not retry; continue without it, or ask the user to change the rule.",
+    )
+    expect(hub.calls).toEqual([])
+  })
+
+  test("a refusal after the session saw a page says the tab is still there", async () => {
+    const feedback =
+      "This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action."
+    const permission = Option.some({
+      assert: (input: { action: string }) =>
+        input.action === "browser" ? Effect.fail(new Permission.CorrectedError({ feedback })) : Effect.void,
+    } as unknown as Permission.Interface)
+    const hub = fakeHub({
+      call: (input) =>
+        input.name === "browser_navigate" && input.arguments.url === "https://x.example/"
+          ? Promise.reject(
+              new BrowserHub.Failure({
+                kind: "permission",
+                message: "needs permission",
+                items: [{ class: "navigate", origin: "https://x.example" }],
+              }),
+            )
+          : // The extension answers a navigation with the opened tab, not a page section.
+            Promise.resolve({
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    selected: true,
+                    tabId: 7,
+                    title: "Login",
+                    url: "http://localhost:3000/login",
+                  }),
+                },
+              ],
+            }),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission })
+    expect((await host.call("browser_navigate", { url: "http://localhost:3000/login" }))._tag).toBe("Success")
+    const refused = await host.call("browser_navigate", { url: "https://x.example/" })
+    // A session that never saw a page has no tab to report.
+    const fresh = await host.call("browser_navigate", { url: "https://x.example/" }, "ses_no_tab")
+    expect(fresh._tag === "Failure" ? (fresh.failure as Tool.Error).message : "").toContain(
+      "was not granted. This session has no browser tab yet.",
+    )
+    expect(refused._tag === "Failure" ? (refused.failure as Tool.Error).message : "").toBe(
+      "Permission for navigate on https://x.example was not granted. The tab is still on http://localhost:3000/login. This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action.",
+    )
+  })
+
+  test("a refused post-action read still records the page the action reached", async () => {
+    const feedback = "Continue without this action."
+    const permission = Option.some({
+      assert: (input: { action: string }) =>
+        input.action === "browser" ? Effect.fail(new Permission.CorrectedError({ feedback })) : Effect.void,
+    } as unknown as Permission.Interface)
+    const hub = fakeHub({
+      call: (input) =>
+        input.name === "browser_navigate"
+          ? Promise.resolve({
+              content: [{ type: "text", text: "Navigated." }],
+              meta: { url: "https://x.example/a", needs: [{ class: "read", origin: "https://x.example" }] },
+            })
+          : Promise.reject(
+              new BrowserHub.Failure({
+                kind: "permission",
+                message: "needs permission",
+                items: [{ class: "read", origin: "https://x.example" }],
+              }),
+            ),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission })
+    expect((await host.call("browser_navigate", { url: "https://x.example/a" }, "ses_post_action"))._tag).toBe(
+      "Success",
+    )
+    const refused = await host.call("browser_snapshot", {}, "ses_post_action")
+    expect(refused._tag === "Failure" ? (refused.failure as Tool.Error).message : "").toBe(
+      "Permission for read on https://x.example was not granted. The tab is still on https://x.example/a. Continue without this action.",
+    )
+  })
+
+  test("the browser names the session after the conversation's title", async () => {
+    const hub = fakeHub()
+    const host = await boot({ backend: "extension" }, { hub: hub.service, sessionTitle: "Fix the login form" })
+    await host.call("browser_snapshot")
+    expect(hub.opened.map((entry) => entry.title)).toEqual(["Fix the login form"])
+  })
+
+  test("an untitled session is named after its folder and a short id", async () => {
+    const untitled = "New session - 2026-11-19T10:00:00.000Z"
+    const hub = fakeHub()
+    const host = await boot({ backend: "extension" }, { hub: hub.service, sessionTitle: untitled })
+    await host.call("browser_snapshot", {}, "ses_0abc12XyZ789")
+    expect(hub.opened.map((entry) => entry.title)).toEqual(["browser-tools-test (XyZ789)"])
   })
 
   test("a post-action need asks, reads the page again and never repeats the action", async () => {

@@ -119,6 +119,24 @@ function finishMeta(
 
 const UNDESCRIBABLE = "The browser asked for permission the CLI cannot describe."
 
+/**
+ * What a call the side panel took the tab from reports. A take-over can land mid-action (part of a long text typed),
+ * so the model re-reads the page instead of replaying the step; the extension's own text gives the same instruction.
+ */
+export const TAKEN =
+  "The side panel took over the tab, so the action may have partly run. Take a fresh snapshot before retrying."
+
+/**
+ * The name the browser shows for a session in its tab group and settings: the conversation's title, or the project
+ * folder and a short id while the title is not generated yet. The protocol has no title update, so the first open
+ * decides it.
+ */
+export function sessionTitle(input: { title?: string; directory: string; session: string }) {
+  if (input.title) return input.title
+  const folder = path.basename(input.directory) || "Kilo agent"
+  return input.session ? `${folder} (${input.session.slice(-6)})` : folder
+}
+
 function reply(value: BrowserHub.Reply): CallResult {
   const content: ContentBlock[] = []
   for (const block of value.content) {
@@ -154,7 +172,7 @@ const MAPPED: Record<string, (error: BrowserHub.Failure) => Error> = {
   permission: permissionError,
   moved: permissionError,
   busy: () => new Error("The tab is busy with another browser action. Try again in a moment."),
-  taken: () => new Error("Another Kilo surface took over the tab. The action did not run; try again."),
+  taken: () => new Error(TAKEN),
   stopped: () => new Error(STOPPED),
   unsupported: () => new UnsupportedError(),
   blocked: (error) => new Error(error.message || "The browser refused this page."),
@@ -307,7 +325,7 @@ export class ExtensionBackend implements BrowserBackend {
     this.live()
     try {
       await this.accepts(name)
-      const handle = await this.handle(port, session)
+      const handle = await this.handle(port, session, ctx.title)
       const input = name === "browser_file_upload" ? await this.upload(port, args) : args
       return reply(await this.send(port, { session, handle, name, args: input, key: args, ctx }))
     } catch (error) {
@@ -373,27 +391,32 @@ export class ExtensionBackend implements BrowserBackend {
   }
 
   /** One session handle per tool session, opened once and shared by concurrent calls. */
-  private handle(port: BrowserHub.Port, session: string): Promise<string> {
+  private handle(port: BrowserHub.Port, session: string, title: string | undefined): Promise<string> {
     const existing = this.handles.get(session)
     if (existing) return existing
     // Each attempt is its own promise: a later attempt for the same session supersedes an earlier one, and the earlier
     // one must not adopt its handle when it answers after the session was forgotten and reopened.
     const attempt = Promise.withResolvers<string>()
     this.handles.set(session, attempt.promise)
-    void this.open(port, session, attempt.promise).then(attempt.resolve, attempt.reject)
+    void this.open(port, session, title, attempt.promise).then(attempt.resolve, attempt.reject)
     attempt.promise.catch(() => {
       if (this.handles.get(session) === attempt.promise) this.handles.delete(session)
     })
     return attempt.promise
   }
 
-  private async open(port: BrowserHub.Port, session: string, attempt: Promise<string>): Promise<string> {
+  private async open(
+    port: BrowserHub.Port,
+    session: string,
+    title: string | undefined,
+    attempt: Promise<string>,
+  ): Promise<string> {
     await this.ready(port)
     // Anything awaited above may have outlived the backend: never open a session from a released instance.
     this.live()
     const opened = await port.open({
       sessionId: session || "unknown",
-      title: session || "Kilo agent",
+      title: sessionTitle({ title, directory: this.input.directory, session }),
       cwd: this.input.directory,
     })
     // The session ended, or another attempt replaced this one, while the extension was still opening it: close the

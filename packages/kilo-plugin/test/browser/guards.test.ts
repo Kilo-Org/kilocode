@@ -205,6 +205,8 @@ async function boot(options: { permission?: unknown; events?: unknown } = {}) {
         Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
     },
     event: { subscribe: () => options.events ?? Stream.empty },
+    // An untitled conversation: the Playwright backend never shows a title.
+    session: { get: () => Effect.succeed({}) },
     permission: { hook: () => Effect.sync(() => ({ dispose: Effect.void })) },
   }
   const config = { entries: () => Effect.succeed([]) } as unknown as Config.Interface

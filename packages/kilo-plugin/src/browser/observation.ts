@@ -225,6 +225,8 @@ type SessionState = {
   active?: Snapshot
   tabs: Map<string, Snapshot>
   console: Set<string>
+  /** The page URL the session's last result showed. */
+  page?: string
 }
 
 const CONSOLE_SEEN_LIMIT = 500
@@ -287,6 +289,16 @@ export class Tracker {
       if (oldest.done) break
       state.tabs.delete(oldest.value)
     }
+  }
+
+  /** Remember the page URL a result showed, so a later refusal can say where the tab is. */
+  visit(session: string, url: string) {
+    this.state(session).page = url
+  }
+
+  /** The page URL the session's last result showed, or undefined before its first page. */
+  page(session: string): string | undefined {
+    return this.sessions.get(session)?.page
   }
 
   /** Console messages not returned to the model before in this session. */
