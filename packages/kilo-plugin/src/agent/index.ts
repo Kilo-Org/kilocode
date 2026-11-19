@@ -31,6 +31,7 @@ const build = Agent.ID.make("build")
 const code = Agent.ID.make("code")
 const explore = Agent.ID.make("explore")
 const general = Agent.ID.make("general")
+const orchestrator = Agent.ID.make("orchestrator")
 const plan = Agent.ID.make("plan")
 const planTools = [rule("kilo.plan_exit", "*", "deny")]
 // Kilo Swarm coordination stays open to the read-only agents; the board plugin registers the tools only when enabled.
@@ -229,12 +230,17 @@ export const Plugin = define({
         item.permissions = structuredClone(codeInfo?.permissions ?? [])
       })
 
-      editor.update(Agent.ID.make("orchestrator"), (item) => {
+      // v1 removed Orchestrator from the v2 picker (PR #16380) but kept `build`->`code`. Stored
+      // sessions/scheduled jobs/imported v1 sessions can still name `orchestrator`; a hidden read-only
+      // copy keeps them resolving (Agent.Select) without surfacing in the picker or Settings, and
+      // avoids silently widening them to Code's write permissions.
+      editor.update(orchestrator, (item) => {
         item.name = Agent.Name.make("Orchestrator")
         item.description = "Coordinate complex tasks by delegating to specialized agents in parallel."
         item.system = PROMPT_ORCHESTRATOR
         item.mode = "primary"
         item.permissions = structuredClone(guard.orchestrator)
+        item.hidden = true
       })
 
       builtins.clear()
@@ -249,7 +255,7 @@ export const Plugin = define({
       })
 
       // Kilo owns the Plan agent: the host turns off the native Plan plugin. Re-insert Plan last so the agent cycle
-      // keeps the order code, ask, debug, orchestrator, plan.
+      // keeps the order code, ask, debug, plan.
       const native = editor.get(plan)
       editor.remove(plan)
       editor.update(plan, (item) => {
