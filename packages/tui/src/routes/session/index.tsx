@@ -137,6 +137,7 @@ import { containsAnchor, createTimelineAnchors, groupID } from "./anchors"
 import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
 import { RoutedModelBadge, RoutedStep, routedModelLabel } from "../../kilocode/routed-model" // kilocode_change(gateway)
 import { BoardTool, boardTools } from "../../kilocode/board-tool" // kilocode_change(board)
+import { requiresPerson } from "../../kilocode/permission-mode" // kilocode_change(sandbox) - auto-approve leaves human-only requests to the prompt
 export { InlineToolRow } from "./message-parts"
 export { toolDisplay } from "./message-parts"
 
@@ -214,7 +215,11 @@ export function Session(props: {
       (sessionID) => data.session.permission.list(sessionID) ?? [],
     )
   })
-  const promptedPermissions = createMemo(() => (local.permission.mode === "autoaccept" ? [] : permissions()))
+  // kilocode_change start - sandbox: a human-only request keeps its prompt in auto-accept mode
+  const promptedPermissions = createMemo(() =>
+    local.permission.mode === "autoaccept" ? permissions().filter(requiresPerson) : permissions(),
+  )
+  // kilocode_change end
   const forms = createMemo(() => {
     const global = data.session.form.list("global", location()) ?? []
     if (session()?.parentID) return global
@@ -276,7 +281,7 @@ export function Session(props: {
   createEffect(() => {
     if (local.permission.mode !== "autoaccept") return
     permissions().forEach((request) => {
-      if (autoApproved.has(request.id)) return
+      if (autoApproved.has(request.id) || requiresPerson(request)) return // kilocode_change(sandbox) - never auto-approve a human-only request
       autoApproved.add(request.id)
       void data.session.permission
         .reply({
@@ -2818,8 +2823,8 @@ function useToolPermission(part: () => SessionMessageAssistantTool | undefined) 
   const data = useData()
   const local = useLocal()
   return createMemo(() => {
-    if (local.permission.mode === "autoaccept") return false
     const request = data.session.permission.list(ctx.sessionID)?.[0]
+    if (local.permission.mode === "autoaccept" && !requiresPerson(request)) return false // kilocode_change(sandbox) - a human-only request is still awaited
     return request?.source?.type === "tool" && request.source.id === part()?.id
   })
 }
