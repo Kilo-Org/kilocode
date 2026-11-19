@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import type { PermissionReply, PermissionRequest } from "@opencode/client"
 import { requiresPerson, setPermissionMode } from "../../src/kilocode/permission-mode"
 import type { Config } from "../../src/config"
@@ -20,6 +20,8 @@ const shell: PermissionRequest = { id: "per_shell", sessionID, action: "shell", 
 const request = (metadata: PermissionRequest["metadata"]): PermissionRequest => ({ ...shell, metadata })
 
 beforeEach(() => setPermissionMode(undefined))
+// The toggle test leaves the process-wide override on; later test files must start from the configured mode.
+afterEach(() => setPermissionMode(undefined))
 
 describe("requiresPerson", () => {
   test("is true only for a request marked interactive", () => {
