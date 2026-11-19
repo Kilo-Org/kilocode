@@ -253,12 +253,6 @@
     "note": "Agent set (Code, hidden build copy, Ask, Debug, Plan), shell defaults, read-only guards, the config ceiling and the agent-switch reminder. Orchestrator was removed from the v2 picker (PR #16380): v1 still ships agents.orchestrator (deprecated: true) for legacy sessions, so the v2 plugin keeps a hidden read-only alias with its original guard so stored sessions, scheduled jobs and imported v1 sessions keep resolving instead of failing with AgentNotFoundError. Not here: MCP ask rules (follow-up), Explore (U-E2-17), Scout (U-E11-05), rules for tools v2 does not have yet (tool units). Agent remove lives in packages/kilo-plugin/src/agent/plugin.ts (kilocode.agent RPC) and deletes only the markdown file that defines the agent.",
     "by": "agents-plugin"
   },
-  "module:packages/opencode/src/kilocode/agent/orchestrator.txt": {
-    "state": "ported",
-    "v2": "packages/kilo-plugin/src/agent/orchestrator.txt",
-    "note": "Orchestrator prompt. Removed from the v2 picker in PR #16380 and retained as the hidden read-only alias for stored orchestrator sessions; the visible agent set is Code, Ask, Debug, Plan.",
-    "by": "agents-plugin"
-  },
   "module:packages/opencode/src/kilocode/agent/scout.txt": {
     "state": "dropped",
     "note": "Scout prompt. Scout (experimental, default off) is not ported. U-E11-05 records the decision.",
