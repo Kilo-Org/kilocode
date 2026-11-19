@@ -4,10 +4,11 @@ import { isolatedEnv } from "../fixture/environment"
 import { tmpdir } from "../fixture/tmpdir"
 
 // A server that admits the prompt and then keeps the Session running until interrupted.
-async function serve(directory: string) {
+async function serve(directory: string, options: { models?: readonly unknown[] } = {}) {
   const requests: { method: string; path: string; body?: unknown }[] = []
   const prompted = Promise.withResolvers<void>()
   const interrupted = Promise.withResolvers<void>()
+  const released = Promise.withResolvers<void>()
   const location = { directory, project: { id: "project", directory, canonical: directory } }
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -20,6 +21,13 @@ async function serve(directory: string) {
       if (url.pathname === "/api/info")
         return Response.json({ version: "test", pid: 0, urls: [], paths: { tmp: directory } })
       if (request.method === "GET" && url.pathname === "/api/location") return Response.json(location)
+      if (request.method === "GET" && url.pathname === "/api/model") {
+        if (!options.models) return Response.json({ data: [] })
+        await released.promise
+        return Response.json({ data: options.models })
+      }
+      if (request.method === "POST" && url.pathname === "/api/session/ses_1/model")
+        return new Response(null, { status: 204 })
       if (request.method === "POST" && url.pathname === "/api/session")
         return Response.json({
           data: {
@@ -58,18 +66,59 @@ async function serve(directory: string) {
       return new Response(null, { status: 404 })
     },
   })
-  return { server, requests, prompted: prompted.promise }
+  return { server, requests, prompted: prompted.promise, releaseModels: () => released.resolve() }
 }
 
-function spawnRun(url: string, directory: string, message: string[], stdin: "pipe" | "ignore") {
-  return Bun.spawn([process.execPath, "run", "src/index.ts", "run", "--server", url, ...message], {
-    cwd: path.join(import.meta.dir, "../.."),
-    env: isolatedEnv(directory, { PWD: directory }),
-    signal: AbortSignal.timeout(25_000),
-    stdin,
-    stdout: "pipe",
-    stderr: "pipe",
-  })
+function spawnRun(
+  url: string,
+  directory: string,
+  message: string[],
+  stdin: "pipe" | "ignore",
+  options: { model?: string; env?: Record<string, string> } = {},
+) {
+  return Bun.spawn(
+    [
+      process.execPath,
+      "run",
+      "src/index.ts",
+      "run",
+      "--server",
+      url,
+      ...(options.model ? ["--model", options.model] : []),
+      ...message,
+    ],
+    {
+      cwd: path.join(import.meta.dir, "../.."),
+      env: isolatedEnv(directory, { PWD: directory, ...options.env }),
+      signal: AbortSignal.timeout(25_000),
+      stdin,
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  )
+}
+
+const fixtureModel = {
+  id: "fixture",
+  modelID: "fixture",
+  providerID: "kilo",
+  name: "Fixture",
+  capabilities: { tools: true, input: ["text"], output: ["text"] },
+  variants: [],
+  time: { released: 0 },
+  cost: [],
+  status: "active",
+  enabled: true,
+  limit: { context: 100_000, output: 10_000 },
+}
+
+async function until(condition: () => boolean, timeoutMs = 10_000) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (condition()) return
+    await Bun.sleep(20)
+  }
+  throw new Error("Timed out waiting for the run to read the model catalog")
 }
 
 test("run sends the message as typed", async () => {
@@ -81,6 +130,30 @@ test("run sends the message as typed", async () => {
     expect(fake.requests.find((item) => item.path.endsWith("/prompt"))?.body).toMatchObject({
       text: `say hello world it's "quoted"`,
     })
+  } finally {
+    child.kill("SIGKILL")
+    await child.exited
+    await fake.server.stop(true)
+  }
+}, 30_000)
+
+test("run waits for the requested model before admitting the prompt", async () => {
+  await using directory = await tmpdir()
+  const fake = await serve(directory.path, { models: [fixtureModel] })
+  const child = spawnRun(fake.server.url.toString(), directory.path, ["hello"], "ignore", {
+    model: "kilo/fixture",
+    env: { OPENCODE_APP_DIR_NAME: "kilo2" },
+  })
+  try {
+    await until(() => fake.requests.some((item) => item.path === "/api/model"))
+    expect(fake.requests.some((item) => item.path.endsWith("/prompt"))).toBe(false)
+    await Bun.sleep(300)
+    expect(fake.requests.some((item) => item.path.endsWith("/prompt"))).toBe(false)
+    fake.releaseModels()
+    await fake.prompted
+    expect(fake.requests.findIndex((item) => item.path.endsWith("/prompt"))).toBeGreaterThan(
+      fake.requests.findIndex((item) => item.path === "/api/model"),
+    )
   } finally {
     child.kill("SIGKILL")
     await child.exited
