@@ -1,10 +1,9 @@
 package ai.kilocode.client.actions
 
 import ai.kilocode.client.KiloNotifications
-import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
+import ai.kilocode.client.agentManager.AgentManagerCommand
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.rpc.dto.ConfigTargetDto
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -82,40 +81,8 @@ class OpenGlobalConfigAction : ConfigAction(
     }
 }
 
-class OpenSetupScriptAction : AnAction(
+class OpenSetupScriptAction : AgentManagerAction(
+    AgentManagerCommand.SHOW_SETUP,
     KiloBundle.message("action.Kilo.OpenSetupScript.text"),
     KiloBundle.message("action.Kilo.OpenSetupScript.description"),
-    null,
-), DumbAware {
-    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
-
-    /** Worktree-row-only: hidden on the main worktree row, like Run. */
-    override fun update(e: AnActionEvent) {
-        if (e.getData(HostedWorkspaceDataKeys.WORKSPACE) != null ||
-            e.getData(WorktreeDataKeys.WORKTREE)?.main == true
-        ) {
-            e.presentation.isEnabledAndVisible = false
-            return
-        }
-        val dir = e.workspaceDirectory()
-        val service = service<KiloWorkspaceService>()
-        val target = dir?.let { service.setupScript[it] }
-        e.presentation.isEnabledAndVisible = dir != null
-        e.presentation.text = KiloBundle.message(
-            if (target?.exists == false) "action.Kilo.CreateSetupScript.text" else "action.Kilo.OpenSetupScript.text",
-        )
-
-        if (dir != null && target == null) {
-            service.refreshSetupScriptTarget(dir)
-        }
-    }
-
-    override fun actionPerformed(e: AnActionEvent) {
-        if (e.getData(HostedWorkspaceDataKeys.WORKSPACE) != null) return
-        val dir = e.workspaceDirectory() ?: return
-        Telemetry.send("Worktree Setup Script Opened", mapOf("surface" to "worktree_row"))
-        service<KiloWorkspaceService>().openSetupScript(dir) { ok ->
-            if (!ok) KiloNotifications.error(KiloBundle.message("action.Kilo.OpenConfig.failed"))
-        }
-    }
-}
+)

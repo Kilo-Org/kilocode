@@ -6,6 +6,7 @@ import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverArea
+import ai.kilocode.client.ui.PrBadgeActions
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.conflictTooltip
@@ -125,6 +126,69 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test injected handlers independently own the state title and each verdict`() {
+        val browser = installBrowser()
+        val calls = mutableListOf<String>()
+        val view = edt {
+            PrHeaderView(handlers = PrBadgeActions(
+                open = { calls += "open" }, review = { calls += "review" },
+                checks = { calls += "checks" }, comments = { calls += "comments" },
+            )) {}
+        }
+        edt {
+            view.update(0, 0, 0, verdicts(), "feature-x")
+            click(badge(view))
+            click(title(view))
+            click(glyph(view, PrIcons.comments))
+            click(glyph(view, PrIcons.reviewApproved))
+            click(glyph(view, PrIcons.checksFailed))
+        }
+        assertEquals(listOf("open", "open", "comments", "review", "checks"), calls)
+        assertTrue(browser.urls.isEmpty())
+    }
+
+    fun `test explicit null handlers keep status visible without browser or keyboard actions`() {
+        val browser = installBrowser()
+        var calls = 0
+        val view = edt { PrHeaderView(handlers = PrBadgeActions(checks = { calls++ }), openDiff = null) }
+        edt {
+            view.update(0, 0, 0, verdicts(), "feature-x")
+            val areas = hovers(view)
+            assertEquals(5, areas.size)
+            val checks = areas.single { SwingUtilities.isDescendingFrom(glyph(view, PrIcons.checksFailed), it) }
+            assertEquals(Cursor.HAND_CURSOR, checks.cursor.type)
+            for (area in areas - checks) {
+                assertEquals(Cursor.DEFAULT_CURSOR, area.cursor.type)
+                assertFalse(area.isFocusable)
+                assertNull(area.action)
+                assertFalse(area.toolTipText.orEmpty().contains("Click"))
+            }
+            areas.forEach { click(it) }
+        }
+        assertEquals(1, calls)
+        assertTrue(browser.urls.isEmpty())
+    }
+
+    fun `test default handlers follow the latest PR when the retained header updates`() {
+        val browser = installBrowser()
+        val view = edt { PrHeaderView {} }
+        edt {
+            view.update(0, 0, 0, verdicts(), "feature-x")
+            click(glyph(view, PrIcons.checksFailed))
+            view.update(0, 0, 0, verdicts().copy(url = "https://example.test/pr/456"), "feature-x")
+            click(title(view))
+            click(glyph(view, PrIcons.reviewApproved))
+            click(glyph(view, PrIcons.checksFailed))
+        }
+        assertEquals(
+            listOf(
+                "https://github.com/kilo/test/pull/123/checks", "https://example.test/pr/456",
+                "https://example.test/pr/456", "https://example.test/pr/456/checks",
+            ),
+            browser.urls,
+        )
+    }
+
     fun `test a pull request with no verdicts shows no glyphs`() {
         val view = edt { PrHeaderView {} }
 
@@ -171,6 +235,23 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         edt { click(title(view)) }
 
         assertEquals(listOf("https://github.com/kilo/test/pull/123"), browser.urls)
+    }
+
+    fun `test primary pull override keeps verdicts on their default browser actions`() {
+        val browser = installBrowser()
+        var opens = 0
+        val view = edt { PrHeaderView(openPull = { opens++ }, pullHint = "Show published changes", openDiff = null) }
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
+
+        edt {
+            val titleArea = hovers(view).single { SwingUtilities.isDescendingFrom(title(view), it) }
+            assertEquals("Show published changes", titleArea.toolTipText)
+            click(title(view))
+            click(hovers(view).single { SwingUtilities.isDescendingFrom(glyph(view, PrIcons.checksFailed), it) })
+        }
+
+        assertEquals(1, opens)
+        assertEquals(listOf("https://github.com/kilo/test/pull/123/checks"), browser.urls)
     }
 
     fun `test the title hover pill hugs the title instead of the whole header`() {

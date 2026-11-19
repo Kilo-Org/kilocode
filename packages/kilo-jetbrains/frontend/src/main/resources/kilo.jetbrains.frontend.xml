@@ -450,15 +450,6 @@
         <action id="Kilo.HostedWorkspace.Reload"
                 class="ai.kilocode.client.actions.ReloadHostedWorkspaceAction"/>
 
-        <action id="Kilo.HostedWorkspace.OpenInBrowser"
-                class="ai.kilocode.client.actions.HostedOpenInBrowserAction"/>
-
-        <action id="Kilo.HostedWorkspace.Delete"
-                class="ai.kilocode.client.actions.HostedDeleteWorkspaceAction"/>
-
-        <action id="Kilo.HostedWorkspace.Dismiss"
-                class="ai.kilocode.client.actions.HostedDismissWorkspaceAction"/>
-
         <action id="Kilo.WorktreeSession.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
 
@@ -472,16 +463,8 @@
                 class="ai.kilocode.client.actions.ForkWorktreeSessionAction"/>
 
         <group id="Kilo.Worktree.RowMenu">
-            <reference ref="Kilo.HostedWorkspace.OpenInBrowser"/>
-            <reference ref="Kilo.HostedWorkspace.Reload"/>
-            <separator/>
-            <reference ref="Kilo.HostedWorkspace.Delete"/>
-            <reference ref="Kilo.HostedWorkspace.Dismiss"/>
-            <separator/>
-            <reference ref="Kilo.Worktree.Rename"/>
-            <reference ref="Kilo.AgentManager.MoveTo"/>
-            <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
+            <reference ref="Kilo.HostedWorkspace.Reload"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenDiff"/>
             <reference ref="Kilo.Worktree.OpenLocalDiff"/>
@@ -493,6 +476,8 @@
             <separator/>
             <reference ref="Kilo.OpenSetupScript"/>
             <reference ref="Kilo.Worktree.RunSetupScript"/>
+            <separator/>
+            <reference ref="Kilo.AgentManager.MoveTo"/>
             <separator/>
             <reference ref="Kilo.Worktree.Delete"/>
         </group>

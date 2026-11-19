@@ -25,9 +25,25 @@ internal class HostedWorkspaceCache {
 
     fun title(ref: HostedWorkspaceRefDto): String? = titles[ref.key]
 
+    /**
+     * The tab title for [ref], disambiguated only when another cached workspace resolves to the same
+     * name. Task and branch names are not unique, but the raw workspace key in every tab is noise; a
+     * short suffix appears just when two tabs would otherwise read identically.
+     */
+    fun displayTitle(ref: HostedWorkspaceRefDto): String? {
+        val value = title(ref) ?: return null
+        val duplicate = synchronized(titles) { titles.any { (key, name) -> key != ref.key && name == value } }
+        if (!duplicate) return value
+        return "$value (${ref.workspaceID.takeLast(SHORT)})"
+    }
+
+    fun putTitle(ref: HostedWorkspaceRefDto, title: String?) {
+        if (title.isNullOrBlank()) titles.remove(ref.key) else titles[ref.key] = title
+    }
+
     fun put(dto: HostedWorkspaceDto, title: String? = null) {
         items[dto.ref.key] = dto.copy(sessions = emptyList(), sessionCursor = null)
-        if (title != null) titles[dto.ref.key] = title else titles.remove(dto.ref.key)
+        putTitle(dto.ref, title)
     }
 
     fun remove(ref: HostedWorkspaceRefDto) {
@@ -42,5 +58,6 @@ internal class HostedWorkspaceCache {
 
     private companion object {
         const val LIMIT = 256
+        const val SHORT = 8
     }
 }

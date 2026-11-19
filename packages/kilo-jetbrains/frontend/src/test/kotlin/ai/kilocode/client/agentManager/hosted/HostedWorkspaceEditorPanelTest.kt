@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.hosted
 
+import ai.kilocode.client.actions.hostedWorkspaceBrowserUrl
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloSessionService
@@ -11,8 +12,10 @@ import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.testing.FakeAppRpcApi
+import ai.kilocode.client.testing.FakeAgentManagerFacade
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestLog
 import ai.kilocode.client.testing.pumpEdt
@@ -20,8 +23,8 @@ import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.ActiveSection
 import ai.kilocode.client.ui.active.ActiveBadgeCell
 import ai.kilocode.client.ui.FilledBadgeIcon
-import ai.kilocode.client.ui.HoverIcon
-import ai.kilocode.client.ui.active.activeLayout
+import ai.kilocode.client.ui.HoverArea
+import ai.kilocode.client.ui.ChangesPanel
 import javax.swing.SwingUtilities
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.session.SessionHost
@@ -35,7 +38,9 @@ import ai.kilocode.client.session.views.TextView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.client.diff.KiloDiffEditorKind
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
+import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.EditorFactory
@@ -60,6 +65,12 @@ import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangeComparisonDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangeFileDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesDto
+import ai.kilocode.rpc.dto.HostedWorkspaceComparisonDto
+import ai.kilocode.rpc.dto.HostedWorkspaceContentAvailabilityDto
+import ai.kilocode.rpc.dto.HostedWorkspaceDiffAvailabilityDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
 import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
@@ -69,6 +80,7 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.stateLabel
 import ai.kilocode.rpc.dto.MessageErrorDto
@@ -97,8 +109,10 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import java.awt.Component
 import java.awt.Container
+import java.awt.Cursor
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
+import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.JButton
 import javax.swing.JTextArea
@@ -109,6 +123,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     private lateinit var rpc: FakeHosted
     private lateinit var sessions: FakeSessionRpcApi
     private lateinit var hosted: KiloHostedService
+    private lateinit var app: KiloAppService
     private lateinit var pulls: HostedPullRequestService
     private lateinit var panel: HostedWorkspaceEditorPanel
     private var pull: HostedWorkspacePullRequestDto? = null
@@ -120,7 +135,13 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         coroutines = TestCoroutines()
         rpc = FakeHosted(ref)
         sessions = FakeSessionRpcApi().also { it.session = it.session.copy(id = key) }
-        hosted = KiloHostedService(coroutines.scope, rpc, gate = { true }, log = TestLog(), repo = { "repo" })
+        val appRpc = FakeAppRpcApi().also {
+            it.state.value = KiloAppStateDto(KiloAppStatusDto.READY,
+                profile = ProfileDto("person@example.com", currentOrgId = "org"))
+        }
+        app = KiloAppService(coroutines.scope, appRpc)
+        app._state.value = appRpc.state.value
+        hosted = KiloHostedService(coroutines.scope, rpc, app = app, gate = { true }, log = TestLog(), repo = { "repo" })
         project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
         project.replaceService(KiloSessionService::class.java,
             KiloSessionService(project, coroutines.scope, sessions), testRootDisposable)
@@ -135,11 +156,9 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             signedOut = null,
         )
         project.replaceService(HostedPullRequestService::class.java, pulls, testRootDisposable)
-        val app = ApplicationManager.getApplication()
-        app.replaceService(KiloAppService::class.java, KiloAppService(coroutines.scope, FakeAppRpcApi().also {
-            it.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
-        }), testRootDisposable)
-        app.replaceService(KiloWorkspaceService::class.java, KiloWorkspaceService(coroutines.scope, FakeWorkspaceRpcApi().also {
+        val application = ApplicationManager.getApplication()
+        application.replaceService(KiloAppService::class.java, app, testRootDisposable)
+        application.replaceService(KiloWorkspaceService::class.java, KiloWorkspaceService(coroutines.scope, FakeWorkspaceRpcApi().also {
             it.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)
         }), testRootDisposable)
         useInactiveDisposeTimeout()
@@ -495,20 +514,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     }
 
     fun testLinkedPullRequestUsesTheSharedHeaderPillVerdictsAndTitle() {
-        pull = HostedWorkspacePullRequestDto(ref, "available", HostedPullRequestSummaryDto(
-            url = "https://github.com/owner/repo/pull/42",
-            number = 42,
-            state = "open",
-            title = "Fix Cloud PR",
-            headSha = "a".repeat(40),
-            lastSyncedAt = "2026-11-17T00:00:00Z",
-            review = HostedPullRequestReviewDto("approved", available = true, pending = false),
-            checks = HostedPullRequestChecksDto(3, 3, 0, 0, 0, 0, complete = true, available = true),
-            conversations = HostedPullRequestConversationsDto(2, complete = true),
-            mergeability = HostedPullRequestMergeabilityDto(true, "clean", complete = true),
-            partial = false,
-            unavailable = emptyList(),
-        ))
+        pull = linkedPull("https://github.com/owner/repo/pull/42")
         pulls.refresh(ref, revalidate = true)
         var text = ""
         val ok = coroutines.pumpUntil { edtWait {
@@ -531,6 +537,28 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             assertTrue(icons.any { (it as? FilledBadgeIcon)?.text == stateLabel(GhState.OPEN) })
             assertTrue(icons.any { it === PrIcons.reviewApproved })
             assertTrue(icons.any { it === PrIcons.checksPassed })
+        }
+        val editors = FileEditorManager.getInstance(project)
+        try {
+            edtWait {
+                val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
+                click(descendants(header).filterIsInstance<SimpleColoredComponent>().single())
+            }
+            assertTrue(coroutines.pumpUntil { edtWait { editors.openFiles.filterIsInstance<KiloVirtualFile>().size == 1 } })
+            edtWait {
+                val params = (editors.openFiles.single() as KiloVirtualFile).path.params
+                assertEquals("hosted", params["source"])
+                assertEquals(ref.key, params["workspace"])
+                assertEquals("pr", params["comparison"])
+                assertEquals(KiloBundle.message("diff.editor.hosted.pr.title.named", "Selected session"),
+                    KiloDiffEditorKind.title(params))
+            }
+        } finally {
+            edtWait {
+                editors.openFiles.forEach(editors::closeFile)
+                service<KiloEditorKindRegistry>().unregister(KiloDiffEditorKind.ID)
+                KiloVirtualFileSystem.getInstance().clear()
+            }
         }
     }
 
@@ -635,28 +663,33 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         assertFalse(hostedSessionOf("selected", "other", emptyList()))
     }
 
-    fun testHeaderUsesTheRowBadgeAndSeparateHourlyPriceWithoutRefreshControl() {
+    fun testHeaderUsesSharedChangesAndClickableStatusWithoutCloudSpecificControls() {
+        val browser = installBrowser()
         val cell = edtWait { descendants(panel).filterIsInstance<ActiveBadgeCell>().single { it.cellId == "cloud-compute" } }
         val initial = edtWait { badge() }
         val header = edtWait { descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single() }
+        val changes = edtWait { descendants(header).filterIsInstance<ChangesPanel>().single() }
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(changes).filterIsInstance<JBLabel>().mapNotNull { it.text }.containsAll(
+                listOf("1 file", "-2", "+5", "2 files", "-3", "+7"),
+            )
+        } })
         val count = edtWait { descendants(header).size }
         edtWait {
-            assertTrue(descendants(header).filterIsInstance<HoverIcon>().isEmpty())
-            val price = descendants(header).filterIsInstance<JBLabel>().single { it.text == "$1.20/h" }
-            val row = HostedWorkspaceRow(HostedWorkspaceRowData(HostedWorkspaceDto(ref), hosted.state.value.presentation(ref)))
+            val row = hostedWorkspaceRow(
+                HostedWorkspaceRowData(HostedWorkspaceDto(ref), hosted.state.value.presentation(ref)),
+                FakeAgentManagerFacade(),
+            )
             assertEquals(row.badges.single().text, initial.segments.single().text)
             assertSame(row.badges.single().style, initial.segments.single().style)
-            header.setSize(900, header.preferredSize.height)
-            activeLayout(header)
-            val pill = SwingUtilities.convertRectangle(cell.parent, cell.bounds, header)
-            val title = descendants(header).filterIsInstance<SimpleColoredComponent>().single()
-            val name = SwingUtilities.convertRectangle(title.parent, title.bounds, header)
-            val label = SwingUtilities.convertRectangle(price.parent, price.bounds, header)
-            assertTrue("Status sits in the trailing action group", pill.x > header.width / 2)
-            assertTrue("Status stays clear of the title", pill.x > name.x + name.width)
-            assertTrue("Price follows the status badge", label.x > pill.x + pill.width)
-            assertTrue(descendants(header).filterIsInstance<JBLabel>().none { it.text.orEmpty().contains(" · ") })
+            assertTrue(descendants(header).filterIsInstance<JBLabel>().none { it.text.orEmpty().endsWith("/h") })
+            assertTrue(descendants(header).filterIsInstance<JButton>().none { it.text == "Open" || it.text.contains("Build/Run") })
         }
+        edtWait { click(cell) }
+        assertEquals(listOf(hostedWorkspaceBrowserUrl(ref, "org", "selected")), browser.urls)
+        assertEquals(1, rpc.workspaceChangesCalls)
+        assertEquals(0, rpc.refreshWorkspaceChangesCalls)
+        assertEquals(0, rpc.starts)
         repeat(100) {
             emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "active",
                 sandboxDetail = "sandbox_ready", observedAt = 200.0 + it * 2))
@@ -667,6 +700,104 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             edtWait { assertSame(cell, descendants(panel).filterIsInstance<ActiveBadgeCell>().single { it.cellId == "cloud-compute" }) }
         }
         edtWait { assertEquals("Sleeping", badge().segments.single().text); assertEquals(count, descendants(header).size) }
+        assertEquals(1, rpc.workspaceChangesCalls)
+    }
+
+    fun testAccountChangeDisablesBrowserStatusUntilTheWorkspaceReloads() {
+        val browser = installBrowser()
+        val before = rpc.workspaceCalls
+        rpc.gate = CompletableDeferred()
+        edtWait {
+            app._state.value = app.state.value.copy(profile = ProfileDto("other@example.com", currentOrgId = "other"))
+        }
+        assertTrue(coroutines.pumpUntil { rpc.workspaceCalls > before && edtWait { statusArea().action == null } })
+        edtWait { click(descendants(statusArea()).filterIsInstance<ActiveBadgeCell>().single()) }
+        assertEmpty(browser.urls)
+
+        rpc.gate!!.complete(Unit)
+        assertTrue(coroutines.pumpUntil { edtWait { statusArea().action != null } })
+        edtWait { click(descendants(statusArea()).filterIsInstance<ActiveBadgeCell>().single()) }
+        assertEquals(listOf(hostedWorkspaceBrowserUrl(ref, "other", "selected")), browser.urls)
+    }
+
+    fun testHeaderChangeGroupsOpenDistinctHostedComparisons() {
+        val editors = FileEditorManager.getInstance(project)
+        try {
+            val changes = edtWait {
+                descendants(descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single())
+                    .filterIsInstance<ChangesPanel>().single()
+            }
+            assertTrue(coroutines.pumpUntil { edtWait { changes.isVisible } })
+            edtWait {
+                val targets = descendants(changes).filterIsInstance<JComponent>().associateBy { it.toolTipText }
+                click(requireNotNull(targets[KiloBundle.message("worktree.dirty.tooltip", 1, 5, 2)]))
+                click(requireNotNull(targets[KiloBundle.message("worktree.stats.base.tooltip", 2, 7, 3, "origin/main")]))
+            }
+            assertTrue(coroutines.pumpUntil { edtWait { editors.openFiles.filterIsInstance<KiloVirtualFile>().size == 2 } })
+            edtWait {
+                val params = editors.openFiles.filterIsInstance<KiloVirtualFile>().map { it.path.params }
+                assertEquals(setOf("committed", "uncommitted"), params.mapNotNull { it["comparison"] }.toSet())
+                assertTrue(params.all { it["source"] == "hosted" && it["workspace"] == ref.key && it["label"] == null })
+                assertEquals(setOf(
+                    ai.kilocode.client.diff.KiloDiffComparison.BASE.title("Selected session"),
+                    ai.kilocode.client.diff.KiloDiffComparison.LOCAL.title("Selected session"),
+                ), params.map { KiloDiffEditorKind.title(it) }.toSet())
+            }
+        } finally {
+            edtWait {
+                editors.openFiles.forEach(editors::closeFile)
+                service<KiloEditorKindRegistry>().unregister(KiloDiffEditorKind.ID)
+                KiloVirtualFileSystem.getInstance().clear()
+            }
+        }
+    }
+
+    fun testDeletedWorkspaceRemovesPrAndDisablesHeaderActions() {
+        pull = linkedPull("https://github.com/kilo/test/pull/42")
+        project.service<HostedPullRequestService>().refresh(ref, revalidate = true)
+        assertTrue(coroutines.pumpUntil { edtWait {
+            val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
+            descendants(header).filterIsInstance<JBLabel>().count { it.icon is FilledBadgeIcon } == 2
+        } })
+        rpc.deletionState = "deleted"
+        edtWait { hosted.refresh("/deleted") }
+        assertTrue(coroutines.pumpUntil { edtWait {
+            val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
+            val changes = descendants(header).filterIsInstance<ChangesPanel>().single()
+            descendants(header).filterIsInstance<JBLabel>().count { it.icon is FilledBadgeIcon } == 1 &&
+                descendants(changes).filterIsInstance<JComponent>().none { it.isFocusable } && statusArea().action == null
+        } })
+    }
+
+    fun testDeletingWorkspaceDisablesStatusAndDiffActions() {
+        rpc.deletionState = "deleting"
+        edtWait { hosted.refresh("/deleting") }
+        assertTrue(coroutines.pumpUntil { edtWait {
+            val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
+            val changes = descendants(header).filterIsInstance<ChangesPanel>().single()
+            statusArea().action == null && descendants(changes).filterIsInstance<JComponent>().none { it.isFocusable }
+        } })
+    }
+
+    fun testUnavailableSavedSnapshotKeepsBothDirectDiffControls() {
+        val before = rpc.workspaceChangesCalls
+        rpc.changes = HostedWorkspaceChangesDto(ref, "not_captured", null, null, false, null)
+        edtWait { hosted.refresh("/empty") }
+        assertTrue(coroutines.pumpUntil { rpc.workspaceChangesCalls > before })
+        edtWait {
+            val header = descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single()
+            val changes = descendants(header).filterIsInstance<ChangesPanel>().single()
+            assertTrue(changes.isVisible)
+            assertEquals(listOf("Unknown", "Unknown"), descendants(changes).filterIsInstance<JBLabel>()
+                .filter { it.isVisible }.mapNotNull { it.text })
+            val tooltip = KiloBundle.message("diff.editor.hosted.notCaptured")
+            assertTrue(descendants(changes).filterIsInstance<JComponent>().filter { it.isVisible }
+                .all { it.toolTipText == null || it.toolTipText.contains(tooltip) })
+            assertEquals(2, descendants(changes).filterIsInstance<JComponent>()
+                .count { it.isVisible && it.isFocusable && it.cursor.type == Cursor.HAND_CURSOR })
+        }
+        assertEquals(0, rpc.refreshWorkspaceChangesCalls)
+        assertEquals(0, rpc.starts)
     }
 
     fun testInitialPanelShowsABlankSessionInsteadOfAPlaceholder() {
@@ -772,11 +903,29 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         rpc.list = HostedWorkspaceListDto(signedOut = true)
         hosted.refresh("/signed-out")
         assertTrue(coroutines.pumpUntil { hosted.state.value.signedOut && rpc.active == 0 })
+        assertTrue(coroutines.pumpUntil { edtWait {
+            val status = descendants(panel).filterIsInstance<HoverArea>().single {
+                descendants(it).any { child -> child is ActiveBadgeCell && child.cellId == "cloud-compute" }
+            }
+            assertNull(status.action)
+            val changes = descendants(descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single())
+                .filterIsInstance<ChangesPanel>().single()
+            changes.isVisible && descendants(changes).filterIsInstance<JComponent>().none { it.isFocusable }
+        } })
 
         rpc.list = HostedWorkspaceListDto(items = listOf(HostedWorkspaceDto(ref)))
         hosted.refresh("/signed-in")
 
         assertTrue(coroutines.pumpUntil { rpc.collectors > initial && rpc.active == 1 })
+        assertTrue(coroutines.pumpUntil { edtWait {
+            val status = descendants(panel).filterIsInstance<HoverArea>().single {
+                descendants(it).any { child -> child is ActiveBadgeCell && child.cellId == "cloud-compute" }
+            }
+            assertNotNull(status.action)
+            val changes = descendants(descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single())
+                .filterIsInstance<ChangesPanel>().single()
+            changes.isVisible && descendants(changes).filterIsInstance<JComponent>().count { it.isFocusable } == 2
+        } })
         emit(HostedSystemEventDto(key, "cloud.status", message = "Preparing after sign-in",
             cloudStatus = "preparing", observedAt = 500.0))
         // The progress panel mounts asynchronously after the event, so keep polling until it exists.
@@ -925,6 +1074,22 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     private fun labels() = descendants(panel).filterIsInstance<JBLabel>().filter { it.text != null }
     private fun badge(): FilledBadgeIcon = descendants(panel).filterIsInstance<ActiveBadgeCell>()
         .single { it.cellId == "cloud-compute" }.icon as FilledBadgeIcon
+    private fun linkedPull(url: String) = HostedWorkspacePullRequestDto(ref, "available", HostedPullRequestSummaryDto(
+        url = url, number = 42, state = "open", title = "Fix Cloud PR", headSha = "a".repeat(40),
+        lastSyncedAt = "2026-11-17T00:00:00Z",
+        review = HostedPullRequestReviewDto("approved", available = true, pending = false),
+        checks = HostedPullRequestChecksDto(3, 3, 0, 0, 0, 0, complete = true, available = true),
+        conversations = HostedPullRequestConversationsDto(2, complete = true),
+        mergeability = HostedPullRequestMergeabilityDto(true, "clean", complete = true),
+        partial = false, unavailable = emptyList(),
+    ))
+    private fun statusArea(): HoverArea = descendants(panel).filterIsInstance<HoverArea>().single {
+        descendants(it).any { child -> child is ActiveBadgeCell && child.cellId == "cloud-compute" }
+    }
+    private fun click(component: Component) {
+        component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0,
+            1, 1, 1, false, MouseEvent.BUTTON1))
+    }
     private fun toggle() {
         val toggle = descendants(panel).filterIsInstance<WorkspaceSessionListToggle>().single()
         val key = toggle.getInputMap(JComponent.WHEN_FOCUSED).get(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0))
@@ -938,6 +1103,24 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     }
 
     private class FakeHosted(private val ref: HostedWorkspaceRefDto) : KiloHostedRpcApi {
+        var workspaceChangesCalls = 0
+        var refreshWorkspaceChangesCalls = 0
+        var changes = HostedWorkspaceChangesDto(ref, "captured", 1, "2026-11-18T00:00:00Z", false, listOf(
+            HostedWorkspaceChangeComparisonDto(null, HostedWorkspaceComparisonDto("origin/main", "a".repeat(40), "b".repeat(40)), false,
+                listOf(change("base-a.kt", "against-base-branch", 4, 1),
+                    change("base-b.kt", "against-base-branch", 3, 2), change("local.kt", "uncommitted", 5, 2))),
+        ))
+        override suspend fun workspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceChangesDto {
+            workspaceChangesCalls++
+            return changes
+        }
+        override suspend fun refreshWorkspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing {
+            refreshWorkspaceChangesCalls++
+            error("unexpected changes refresh")
+        }
+        override suspend fun workspaceChangeFile(ref: HostedWorkspaceRefDto, path: String, scope: String?, expectedRevision: Long, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspacePullRequestDiff(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspacePullRequestDiffFile(ref: HostedWorkspaceRefDto, path: String, expectedHeadSha: String, organizationID: String?): Nothing = error("unused")
         override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
         override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
 
@@ -949,18 +1132,26 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         var starts = 0
         var gate: CompletableDeferred<Unit>? = null
         var name: String? = null
+        var deletionState = "active"
         var list = HostedWorkspaceListDto()
         var mutation = HostedMutationResultDto()
         var rootSessions = listOf(
             HostedWorkspaceSessionDto("${ref.key}:selected", "selected", "Selected session", updated = 2.0),
             HostedWorkspaceSessionDto("${ref.key}:other", "other", "New session - 2026-07-30T19:01:40.945Z", updated = 1.0),
         )
+        companion object {
+            private fun change(path: String, scope: String, additions: Long, deletions: Long) =
+                HostedWorkspaceChangeFileDto(path, "modified", additions, deletions, true, false, true, 1, null,
+                    HostedWorkspaceDiffAvailabilityDto("available"),
+                    HostedWorkspaceContentAvailabilityDto("available", "current"), scope)
+        }
         override suspend fun providers(): List<HostedProviderDto> = emptyList()
         override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) = list
         override suspend fun workspace(ref: HostedWorkspaceRefDto, sessionCursor: String?, organizationID: String?): HostedWorkspaceDto {
             workspaceCalls++
             gate?.await()
-            return HostedWorkspaceDto(ref, name = name, branch = "feature/cloud", sessions = rootSessions)
+            return HostedWorkspaceDto(ref, name = name, branch = "feature/cloud", sessions = rootSessions,
+                deletionState = deletionState)
         }
         override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceStatusDto {
             statusCalls++
