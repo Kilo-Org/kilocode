@@ -43,7 +43,14 @@ export type Context<M extends Metadata = Metadata> = {
   extra?: { [key: string]: unknown }
   messages: SessionV1.WithParts[]
   metadata(input: { title?: string; metadata?: M }): Effect.Effect<void>
-  ask(input: Omit<PermissionV1.Request, "id" | "sessionID" | "tool">): Effect.Effect<void>
+  // kilocode_change start
+  ask(
+    input: Omit<PermissionV1.Request, "id" | "sessionID" | "tool" | "managed"> &
+      Partial<Pick<Permission.AskInput, "managedShell" | "managedFallback" | "managedOnly">>,
+  ): Effect.Effect<void>
+  checkManaged?: (input: Omit<PermissionV1.Request, "id" | "sessionID" | "tool" | "managed">) => Effect.Effect<void>
+  recheck?: () => Effect.Effect<void>
+  // kilocode_change end
 }
 
 export interface ExecuteResult<M extends Metadata = Metadata> {

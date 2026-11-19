@@ -21,7 +21,7 @@ import { TuiConfigProvider } from "../../../src/config"
 import { createPluginRuntime, PluginRuntimeProvider } from "../../../src/plugin/runtime"
 import { PermissionPrompt } from "../../../src/routes/session/permission"
 import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
-import { createEventSource, createFetch, directory } from "../../fixture/tui-sdk"
+import { createEventSource, createFetch, directory, json } from "../../fixture/tui-sdk"
 import { TestTuiContexts } from "../../fixture/tui-environment"
 import { tmpdir } from "../../fixture/fixture"
 
@@ -68,7 +68,7 @@ async function mount(
 ) {
   await Bun.write(`${root}/kv.json`, JSON.stringify({ animations_enabled: false, vim_enabled: false }))
   const events = createEventSource()
-  const calls = createFetch(undefined, events)
+  const calls = createFetch((url) => (url.pathname.endsWith("/reply") ? json(true) : undefined), events)
   const fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input))
     const raw = input instanceof Request ? await input.clone().text() : await new Response(init?.body).text()
@@ -150,6 +150,23 @@ async function mount(
     throw error
   }
 }
+
+test("managed prompts only offer once or reject and send a manual reply", async () => {
+  await using tmp = await tmpdir()
+  const requests: { path: string; body: unknown }[] = []
+  const app = await mount(tmp.path, requests, { ...request(), managed: { revision: 7 } })
+  try {
+    const frame = await capture(app, "Allow once")
+    expect(frame).not.toContain("Allow always")
+    expect(requests).toEqual([])
+    app.mockInput.pressEnter()
+    await app.flush()
+    await wait(() => requests.length > 0)
+    expect(requests).toEqual([{ path: "/permission/perm-reject-1/reply", body: { reply: "once", interactive: true } }])
+  } finally {
+    app.renderer.destroy()
+  }
+})
 
 for (const key of ["c", "x"]) {
   for (const stage of ["permission", "feedback", "always"]) {

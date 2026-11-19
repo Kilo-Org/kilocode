@@ -82,6 +82,7 @@ export const permissionHandlers = HttpApiBuilder.group(InstanceHttpApi, "permiss
     return handlers
       .handle("list", list)
       .handle("reply", reply)
+      .handle("policy", () => svc.managedState())
       .handle("saveAlwaysRules", saveAlwaysRules)
       .handle("allowEverything", allowEverything)
     // kilocode_change end

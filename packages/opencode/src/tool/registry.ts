@@ -209,7 +209,17 @@ const layer = Layer.effect(
                 const bridge = yield* EffectBridge.make()
                 const pluginCtx: PluginToolContext = {
                   ...toolCtx,
-                  ask: (req) => bridge.promise(toolCtx.ask(req)),
+                  // kilocode_change start - do not accept runtime-only policy descriptors from plugins
+                  ask: (req) =>
+                    bridge.promise(
+                      toolCtx.ask({
+                        permission: req.permission,
+                        patterns: req.patterns,
+                        always: req.always,
+                        metadata: req.metadata,
+                      }),
+                    ),
+                  // kilocode_change end
                   directory: ctx.directory,
                   worktree: ctx.worktree,
                 }

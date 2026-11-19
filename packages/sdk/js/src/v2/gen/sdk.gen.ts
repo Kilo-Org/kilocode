@@ -329,6 +329,8 @@ import type {
   PermissionAllowEverythingResponses,
   PermissionListErrors,
   PermissionListResponses,
+  PermissionPolicyErrors,
+  PermissionPolicyResponses,
   PermissionReplyErrors,
   PermissionReplyResponses,
   PermissionRespondErrors,
@@ -4044,6 +4046,36 @@ export class Permission extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+
+  /**
+   * Get managed permission policy state
+   *
+   * Get the effective organization permission policy status without rules or credentials.
+   */
+  public policy<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<PermissionPolicyResponses, PermissionPolicyErrors, ThrowOnError>({
+      url: "/permission/policy",
+      ...options,
+      ...params,
     })
   }
 

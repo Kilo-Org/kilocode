@@ -19,6 +19,9 @@ import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
+import { Auth } from "@/auth"
+import * as Managed from "@/kilocode/permission/managed"
+import { resolve as resolvePolicy } from "@/kilocode/permission/managed-context"
 // kilocode_change end
 
 export const Event = PermissionV1.Event
@@ -42,11 +45,15 @@ export const DeniedError = PermissionV1.DeniedError
 export type DeniedError = PermissionV1.DeniedError
 export const NotFoundError = PermissionV1.NotFoundError
 export type NotFoundError = PermissionV1.NotFoundError
-export type Error = PermissionV1.Error
+export type Error = PermissionV1.Error | Managed.Refused
 export const ReplyInput = PermissionV1.ReplyInput
 export type ReplyInput = PermissionV1.ReplyInput
 // Kilo extends upstream's AskInput with an optional hardRuleset (consumed by drain + session/prompt)
-export type AskInput = PermissionV1.AskInput & { hardRuleset?: PermissionV1.Ruleset }
+export type AskInput = Omit<PermissionV1.AskInput, "managed"> &
+  Managed.Check & {
+    hardRuleset?: PermissionV1.Ruleset
+    reload?: () => Effect.Effect<{ ruleset: PermissionV1.Ruleset; hardRuleset?: PermissionV1.Ruleset }, Managed.Refused>
+  }
 // kilocode_change end
 
 // kilocode_change start
@@ -69,6 +76,8 @@ export interface AskOutcome {
   manual: boolean
   /** The winning rule (carries an optional `source` marker set at ruleset-build time). */
   rule?: Rule
+  recheck?: () => Effect.Effect<void, Managed.Refused>
+  enforced?: boolean
 }
 // kilocode_change end
 
@@ -78,8 +87,14 @@ export interface Interface {
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
   // kilocode_change start
   readonly saveAlwaysRules: (input: z.infer<typeof SaveAlwaysRulesInput>) => Effect.Effect<void, NotFoundError>
-  readonly allowEverything: (input: z.infer<typeof AllowEverythingInput>) => Effect.Effect<void>
+  readonly allowEverything: (
+    input: z.infer<typeof AllowEverythingInput>,
+    persist?: Effect.Effect<void>,
+  ) => Effect.Effect<boolean>
   readonly pending: (id: string) => Effect.Effect<Request | undefined>
+  readonly managedState: () => Effect.Effect<PermissionV1.ManagedState>
+  readonly authorizationScope: () => Effect.Effect<string>
+  readonly canEnableUnrestricted: () => Effect.Effect<boolean>
   // kilocode_change end
 }
 
@@ -89,8 +104,9 @@ interface PendingEntry {
   ruleset: Ruleset
   hardRuleset?: Ruleset
   saved?: boolean
+  check: () => Effect.Effect<boolean, Managed.Refused>
   // kilocode_change end
-  deferred: Deferred.Deferred<void, RejectedError | CorrectedError>
+  deferred: Deferred.Deferred<void, RejectedError | CorrectedError | Managed.Refused> // kilocode_change
 }
 
 interface State {
@@ -162,6 +178,7 @@ const layer = Layer.effect(
     const events = yield* EventV2Bridge.Service
     const config = yield* Config.Service // kilocode_change
     const database = yield* Database.Service // kilocode_change
+    const auth = yield* Auth.Service // kilocode_change
     const state = yield* InstanceState.make<State>(
       Effect.fn("Permission.state")(function* (ctx) {
         void ctx
@@ -184,14 +201,59 @@ const layer = Layer.effect(
       }),
     )
 
+    // kilocode_change start
+    const policy = () => resolvePolicy(auth, config)
+    const managedState = () => policy().pipe(Effect.map(Managed.publicState))
+    const authorizationScope = () => policy().pipe(Effect.map(Managed.scope))
+    const canEnableUnrestricted = () =>
+      managedState().pipe(
+        Effect.map((state) => state.status !== "unavailable" && (state.status !== "active" || state.unrestricted)),
+      )
+
+    const authorize = (request: Managed.Check) =>
+      Managed.authorize(request, policy(), () =>
+        config.mdmPermissions(request.agent).pipe(Effect.map((layers) => layers.map(fromConfig))),
+      )
+    // kilocode_change end
+
     const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
       const { approved, pending } = yield* InstanceState.get(state)
       // kilocode_change start
-      const { ruleset, hardRuleset, ...request } = input
+      const { ruleset, hardRuleset, reload, ...request } = input
       const s = yield* InstanceState.get(state)
       const local = s.session[request.sessionID] ?? []
+      const initial = yield* authorize(request)
+      const check = Effect.fnUntraced(function* (approvedOnce?: boolean) {
+        const next = yield* authorize(request)
+        if (Managed.stamp(next.state) !== Managed.stamp(initial.state) || (approvedOnce === false && next.ask)) {
+          return yield* Managed.refusal("changed")
+        }
+        if (
+          next.state.status !== "active" ||
+          !reload ||
+          ((request.managedOnly || request.managedFallback) && !next.enforced)
+        )
+          return next.ask
+        const latest = yield* reload()
+        for (const pattern of request.patterns) {
+          const rule = resolve(
+            request.permission,
+            pattern,
+            latest.ruleset,
+            approved,
+            s.session[request.sessionID] ?? [],
+          )
+          if (veto(request.permission, pattern, latest.hardRuleset) || rule.action === "deny")
+            return yield* Managed.refusal("changed")
+          if (approvedOnce === false && rule.action === "ask" && !request.managedOnly)
+            return yield* Managed.refusal("changed")
+        }
+        return next.ask
+      })
       // kilocode_change end
-      let needsAsk = false
+      if (request.managedFallback && !initial.enforced)
+        return { manual: false, recheck: () => Effect.asVoid(check(false)) } // kilocode_change
+      let needsAsk = initial.ask // kilocode_change
       let approvedRule: Rule | undefined // kilocode_change - remember the rule that auto-approved
 
       // kilocode_change start - protect config access while honoring explicit global skill trust
@@ -214,7 +276,8 @@ const layer = Layer.effect(
       // kilocode_change end
 
       const forceAsk = request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true // kilocode_change
-      for (const pattern of request.patterns) {
+      for (const pattern of request.managedOnly && !initial.enforced ? [] : request.patterns) {
+        // kilocode_change
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
@@ -226,6 +289,7 @@ const layer = Layer.effect(
           // kilocode_change - carry the deciding rule (not just the permission subset) for provenance
           return yield* new DeniedError({ ruleset: rule })
         }
+        if (request.managedOnly) continue // kilocode_change - explicitly selected agents skip legacy prompts, not denials
         // kilocode_change start - skill shell forces a prompt instead of honoring an allow/auto-approve rule
         if (forceAsk) {
           needsAsk = true
@@ -241,10 +305,17 @@ const layer = Layer.effect(
         needsAsk = true
       }
 
-      if (!needsAsk) return { manual: false, rule: approvedRule } // kilocode_change - report auto-approval
+      if (!needsAsk)
+        return {
+          manual: false,
+          rule: approvedRule,
+          enforced: initial.enforced,
+          recheck: () => Effect.asVoid(check(false)),
+        } // kilocode_change
 
       // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
       if (yield* KiloHeadless.denies(request.sessionID).pipe(Effect.provideService(Database.Service, database))) {
+        if (initial.ask) return yield* Managed.refusal("interactive-required", request.permission)
         return yield* new DeniedError({ ruleset: subset(request.permission, ruleset) })
       }
       // kilocode_change end
@@ -259,18 +330,22 @@ const layer = Layer.effect(
         metadata: {
           ...request.metadata,
           ...(skill ? { rules: [skill] } : {}),
+          ...(initial.ask ? { [ConfigProtection.DISABLE_ALWAYS_KEY]: true } : {}),
           ...(isProtected && skill === undefined
             ? { [ConfigProtection.DISABLE_ALWAYS_KEY]: true, [ConfigProtection.CONFIG_PROTECTED_KEY]: true }
             : {}),
         },
         // kilocode_change end
-        always: skill ? [skill] : request.always, // kilocode_change - persist only the exact global skill subtree
+        always: initial.ask ? [] : skill ? [skill] : request.always, // kilocode_change
+        ...(initial.ask && initial.state.status === "active"
+          ? { managed: { revision: initial.state.policy.revision } }
+          : {}), // kilocode_change
         tool: request.tool,
       }
       yield* Effect.logInfo("asking", { id, permission: info.permission, patterns: info.patterns })
 
-      const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
-      pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
+      const deferred = yield* Deferred.make<void, RejectedError | CorrectedError | Managed.Refused>() // kilocode_change
+      pending.set(id, { info, ruleset, hardRuleset, deferred, check }) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
       // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
       yield* Effect.ensuring(
@@ -279,9 +354,29 @@ const layer = Layer.effect(
           pending.delete(id)
         }),
       )
-      return { manual: true } // the user was prompted and replied
+      yield* check(true)
+      return { manual: true, enforced: initial.enforced, recheck: () => Effect.asVoid(check(true)) }
       // kilocode_change end
     })
+
+    // kilocode_change start
+    const current = Effect.fn("Permission.pendingAuthorization")(function* (
+      pending: State["pending"],
+      entry: PendingEntry,
+    ) {
+      const check = yield* entry.check().pipe(Effect.result)
+      if (pending.get(entry.info.id) !== entry) return "gone" as const
+      if (check._tag === "Success") return check.success || entry.info.managed ? ("manual" as const) : ("ok" as const)
+      pending.delete(entry.info.id)
+      yield* events.publish(Event.Replied, {
+        sessionID: entry.info.sessionID,
+        requestID: entry.info.id,
+        reply: "reject",
+      })
+      yield* Deferred.fail(entry.deferred, check.failure)
+      return "gone" as const
+    })
+    // kilocode_change end
 
     const reply = Effect.fn("Permission.reply")(function* (input: PermissionV1.ReplyInput) {
       const { approved, pending } = yield* InstanceState.get(state)
@@ -289,6 +384,21 @@ const layer = Layer.effect(
       if (!existing) return yield* new PermissionV1.NotFoundError({ requestID: input.requestID })
 
       // kilocode_change start - skill-shell batches must be answered by a human; ignore machine approvals
+      if (input.reply !== "reject") {
+        if (
+          input.reply === "always" &&
+          existing.info.permission === "*" &&
+          existing.info.always.includes("*") &&
+          !(yield* canEnableUnrestricted())
+        )
+          return undefined
+        const approval = yield* current(pending, existing)
+        if (approval === "gone") return undefined
+        if (approval === "manual" && (input.reply !== "once" || input.interactive !== true)) {
+          yield* Effect.logWarning("Managed permission requires an interactive one-time reply", { id: input.requestID })
+          return undefined
+        }
+      }
       // (auto-approve/YOLO clients omit `interactive`) so the prompt stays pending for a real decision.
       // Log rather than fail silently: a genuine human client sets `interactive`, so a refused reply here
       // means an auto-approver tried to answer — the request intentionally stays pending for a human.
@@ -300,7 +410,7 @@ const layer = Layer.effect(
         yield* Effect.logWarning("sensitive permission approval refused: requires an interactive human reply", {
           id: input.requestID,
         })
-        return
+        return undefined
       }
       // kilocode_change end
 
@@ -329,14 +439,15 @@ const layer = Layer.effect(
           })
           yield* Deferred.fail(item.deferred, new PermissionV1.RejectedError())
         }
-        return
+        return undefined // kilocode_change
       }
 
       yield* Deferred.succeed(existing.deferred, undefined)
-      if (input.reply === "once") return
+      if (input.reply === "once") return undefined // kilocode_change
 
       // kilocode_change start - downgrade "always" to "once" for protected config paths
-      if (ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info)) return
+      if (ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info))
+        return undefined
       // kilocode_change end
 
       for (const pattern of existing.info.always) {
@@ -350,8 +461,11 @@ const layer = Layer.effect(
         }
       }
 
-      yield* drainCovered(pending as unknown as Map<string, PendingEntry>, approved, (data) =>
-        Effect.asVoid(events.publish(Event.Replied, data)),
+      yield* drainCovered(
+        pending,
+        approved,
+        (data) => Effect.asVoid(events.publish(Event.Replied, data)),
+        (entry) => current(pending, entry).pipe(Effect.map((status) => status === "ok")),
       ) // kilocode_change - drain publishes replies through the same EventV2Bridge channel
 
       if (!existing.saved) {
@@ -379,8 +493,17 @@ const layer = Layer.effect(
       const s = yield* InstanceState.get(state)
       const existing = s.pending.get(input.requestID)
       if (!existing) return yield* new NotFoundError({ requestID: input.requestID })
+      if (
+        existing.info.permission === "*" &&
+        input.approvedAlways?.includes("*") &&
+        !(yield* canEnableUnrestricted())
+      ) {
+        return undefined
+      }
+      if ((yield* current(s.pending, existing)) !== "ok") return undefined
 
-      if (ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info)) return
+      if (ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info))
+        return undefined
 
       const skill = ConfigProtection.globalSkillPattern(existing.info)
       const validRules = new Set(
@@ -404,26 +527,30 @@ const layer = Layer.effect(
 
       // kilocode_change - drain publishes replies through the same EventV2Bridge channel (was DeniedError)
       yield* drainCovered(
-        s.pending as unknown as Map<string, PendingEntry>,
+        s.pending,
         s.approved,
         (data) => Effect.asVoid(events.publish(Event.Replied, data)),
-        input.requestID as unknown as string,
+        (entry) => current(s.pending, entry).pipe(Effect.map((status) => status === "ok")),
+        input.requestID,
       )
     })
 
     const allowEverything = Effect.fn("Permission.allowEverything")(function* (
       input: z.infer<typeof AllowEverythingInput>,
+      persist?: Effect.Effect<void>,
     ) {
       const s = yield* InstanceState.get(state)
 
+      if (input.enable && !(yield* canEnableUnrestricted())) return false
+      if (persist) yield* persist
       if (!input.enable) {
         if (input.sessionID) {
           delete s.session[input.sessionID]
-          return
+          return true
         }
         const idx = s.approved.findLastIndex((r) => r.permission === "*" && r.pattern === "*" && r.action === "allow")
         if (idx >= 0) s.approved.splice(idx, 1)
-        return
+        return true
       }
 
       const rule = { permission: "*", pattern: "*", action: "allow" } as const
@@ -433,7 +560,12 @@ const layer = Layer.effect(
       if (input.requestID) {
         const entry = s.pending.get(input.requestID)
         const ok = entry ? covered(entry, s.approved, s.session[entry.info.sessionID] ?? []) : false
-        if (entry && ok && (!input.sessionID || entry.info.sessionID === input.sessionID)) {
+        if (
+          entry &&
+          ok &&
+          (!input.sessionID || entry.info.sessionID === input.sessionID) &&
+          (yield* current(s.pending, entry)) === "ok"
+        ) {
           s.pending.delete(input.requestID)
           yield* events.publish(Event.Replied, {
             sessionID: entry.info.sessionID,
@@ -447,6 +579,7 @@ const layer = Layer.effect(
       for (const [id, entry] of s.pending) {
         if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
         if (!covered(entry, s.approved, s.session[entry.info.sessionID] ?? [])) continue
+        if ((yield* current(s.pending, entry)) !== "ok") continue
         s.pending.delete(id)
         yield* events.publish(Event.Replied, {
           sessionID: entry.info.sessionID,
@@ -455,6 +588,7 @@ const layer = Layer.effect(
         })
         yield* Deferred.succeed(entry.deferred, undefined)
       }
+      return true
     })
 
     const pending = Effect.fn("Permission.pending")(function* (id: string) {
@@ -463,7 +597,17 @@ const layer = Layer.effect(
     })
     // kilocode_change end
 
-    return Service.of({ ask, reply, list, saveAlwaysRules, allowEverything, pending }) // kilocode_change
+    return Service.of({
+      ask,
+      reply,
+      list,
+      saveAlwaysRules,
+      allowEverything,
+      pending,
+      managedState,
+      authorizationScope,
+      canEnableUnrestricted,
+    }) // kilocode_change
   }),
 )
 
@@ -551,7 +695,7 @@ export function visibleTools<T>(tools: Record<string, T>, ruleset: PermissionV1.
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [EventV2Bridge.node, Config.node, Database.node], // kilocode_change
+  deps: [EventV2Bridge.node, Config.node, Database.node, Auth.node], // kilocode_change
 })
 
 export * as Permission from "."

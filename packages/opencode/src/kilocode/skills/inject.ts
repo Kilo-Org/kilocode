@@ -2,6 +2,8 @@ import { Effect } from "effect"
 import { ConfigMarkdown } from "@/config/markdown"
 import { Process } from "@/util/process"
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display"
+import { shellKind } from "@/kilocode/tool/managed-shell"
+import type { PolicyShell } from "@kilocode/kilo-gateway/permission-policy"
 import type * as Tool from "@/tool/tool"
 
 // A `!`cmd`` placeholder in SKILL.md is replaced by the command's stdout before the
@@ -25,7 +27,7 @@ export namespace SkillInject {
     command: string
     cwd: string
     shell: string
-  }) => Effect.Effect<{ patterns: string[]; dirs: string[] }>
+  }) => Effect.Effect<{ patterns: string[]; dirs: string[]; managedShell?: PolicyShell; managedDirs?: string[] }>
 
   export type Options = {
     content: string
@@ -65,11 +67,20 @@ export namespace SkillInject {
     // `cd $HOME; cat secret` would otherwise dodge the `*;*`/`*|*`/`*\n*` deny rules.
     const patterns = new Set<string>()
     const dirs = new Set<string>()
+    const managed = new Set<string>()
+    const external = new Set<string>()
+    const kind = shellKind(shell)
+    let uncertain = false
     for (const command of commands) {
       patterns.add(command)
       const scan = yield* opts.decompose({ command, cwd: opts.cwd, shell })
       for (const pattern of scan.patterns) patterns.add(pattern)
       for (const dir of scan.dirs) dirs.add(dir)
+      for (const dir of scan.managedDirs ?? []) external.add(dir)
+      if (scan.managedShell?.kind === kind) {
+        for (const segment of scan.managedShell.commands) managed.add(segment)
+      }
+      if (scan.managedShell?.kind !== kind || scan.managedShell.uncertain) uncertain = true
     }
 
     // Fail closed: an empty pattern set would auto-approve the ask below. Unreachable since
@@ -88,11 +99,22 @@ export namespace SkillInject {
         metadata,
       })
     }
+    const paths = [...external].filter((dir) => !dirs.has(dir))
+    if (paths.length > 0) {
+      yield* opts.ctx.ask({
+        permission: "external_directory",
+        patterns: paths,
+        always: [],
+        metadata,
+        managedOnly: true,
+      })
+    }
     yield* opts.ctx.ask({
       permission: "bash",
       patterns: Array.from(patterns),
       always: [],
       metadata,
+      managedShell: { kind, commands: [...managed], uncertain },
     })
 
     // Run each command, bounded per-command by ctx.abort/timeout and by an aggregate budget.
@@ -103,14 +125,16 @@ export namespace SkillInject {
         outputs.set(command, "[skill shell batch time budget exceeded]")
         continue
       }
-      outputs.set(command, yield* run(command, shell, opts.cwd, opts.ctx.abort))
+      outputs.set(command, yield* run(command, shell, opts.cwd, opts.ctx))
     }
 
     // Mark commands capped out of `commands` rather than silently inlining "".
     return replace((command) => outputs.get(command) ?? LIMIT_NOTE)
   })
 
-  const run = Effect.fn("SkillInject.run")(function* (command: string, shell: string, cwd: string, abort: AbortSignal) {
+  const run = Effect.fn("SkillInject.run")(function* (command: string, shell: string, cwd: string, ctx: Tool.Context) {
+    if (ctx.recheck) yield* ctx.recheck()
+    const abort = ctx.abort
     const timeout = new AbortController()
     const signal = AbortSignal.any([abort, timeout.signal])
     const timer = setTimeout(() => timeout.abort(), TIMEOUT_MS)

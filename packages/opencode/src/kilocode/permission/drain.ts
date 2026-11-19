@@ -1,12 +1,13 @@
 import { Deferred, Effect } from "effect"
 import { Permission } from "@/permission"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import type { Refused } from "@/kilocode/permission/managed"
 
 interface PendingEntry {
   info: Permission.Request
   ruleset: Permission.Ruleset
   hardRuleset?: Permission.Ruleset
-  deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError>
+  deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError | Refused>
 }
 
 // The caller supplies the reply publisher so drain uses the same EventV2Bridge channel as permission/index.ts.
@@ -21,11 +22,12 @@ type PublishReply = (data: {
  * When the user approves/denies a rule on subagent A, sibling subagent B's
  * pending permission for the same pattern resolves or rejects automatically.
  */
-export function drainCovered(
-  pending: Map<string, PendingEntry>,
+export function drainCovered<Entry extends PendingEntry>(
+  pending: Map<Permission.Request["id"], Entry>,
   approved: Permission.Ruleset,
   publishReply: PublishReply,
-  exclude?: string,
+  authorize: (entry: Entry) => Effect.Effect<boolean>,
+  exclude?: Permission.Request["id"],
 ): Effect.Effect<void> {
   return Effect.gen(function* () {
     for (const [id, entry] of pending) {
@@ -50,6 +52,7 @@ export function drainCovered(
       const denied = actions.some((r: Permission.Rule) => r.action === "deny")
       const allowed = !denied && actions.every((r: Permission.Rule) => r.action === "allow")
       if (!denied && !allowed) continue
+      if (allowed && !(yield* authorize(entry))) continue
       pending.delete(id)
       if (denied) {
         yield* publishReply({ sessionID: entry.info.sessionID, requestID: entry.info.id, reply: "reject" })

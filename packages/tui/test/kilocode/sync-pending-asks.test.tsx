@@ -304,7 +304,13 @@ test("auto mode settles recovered asks but keeps protected ones visible", async 
         replies.push(match.at(1) ?? "")
         return json(true)
       }
-      if (url.pathname === "/permission") return json([permission("per_normal"), protectedPermission("per_protected")])
+      if (url.pathname === "/permission") {
+        return json([
+          permission("per_normal"),
+          protectedPermission("per_protected"),
+          { ...permission("per_managed"), managed: { revision: 7 } },
+        ])
+      }
       return serveSessions([parent, child], () => ({}))(url)
     },
     tmp.path,
@@ -317,10 +323,10 @@ test("auto mode settles recovered asks but keeps protected ones visible", async 
     // The normal ask was settled: replied once and cleared from the store.
     expect(sync.data.permission[childID]?.some((item) => item.id === "per_normal")).toBe(false)
 
-    // The protected ask (skill shell batch) cannot be settled by a machine reply:
-    // the server refuses non-interactive approvals, so it must stay visible.
+    // Protected asks require a human decision, so they stay visible.
     expect(sync.data.permission[childID]?.some((item) => item.id === "per_protected")).toBe(true)
-    expect(replies).not.toContain("per_protected")
+    expect(sync.data.permission[childID]?.some((item) => item.id === "per_managed")).toBe(true)
+    expect(replies).toEqual(["per_normal"])
   } finally {
     app.renderer.destroy()
   }
@@ -345,10 +351,16 @@ test("auto mode stores a protected ask delivered by SSE instead of replying", as
 
   try {
     emit(wrap({ id: "evt_ask", type: "permission.asked", properties: protectedPermission("per_protected") }))
-    await wait(() => (sync.data.permission[childID] ?? []).length === 1)
+    emit(
+      wrap({
+        id: "evt_managed",
+        type: "permission.asked",
+        properties: { ...permission("per_managed"), managed: { revision: 7 } },
+      }),
+    )
+    await wait(() => (sync.data.permission[childID] ?? []).length === 2)
 
-    // The server refuses machine replies for skill shell batches, so auto mode
-    // must not attempt one; the ask stays pending for a human decision.
+    // Both requests stay pending for a human decision.
     expect(replies).toEqual([])
   } finally {
     app.renderer.destroy()

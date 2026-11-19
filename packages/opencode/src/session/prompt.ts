@@ -461,6 +461,20 @@ export const layer = Layer.effect(
       let error: Error | undefined
       const taskAbort = new AbortController()
       // kilocode_change start - shared reader for the child session id written by task.ts ctx.metadata (#6321)
+      const scope = yield* permission.authorizationScope()
+      const grants: NonNullable<Permission.AskOutcome["recheck"]>[] = []
+      const authorize = (req: Parameters<Tool.Context["ask"]>[0], managedOnly?: boolean) =>
+        KiloSessionPrompt.askPermission({
+          permission,
+          agents,
+          sessions,
+          agent: taskAgent,
+          session,
+          request: { ...req, sessionID, managedOnly: managedOnly ?? req.managedOnly, scope },
+          authorized: (outcome) => {
+            if (outcome.recheck) grants.push(outcome.recheck)
+          },
+        }).pipe(Effect.asVoid, Effect.orDie)
       const childID = () => {
         const meta = part.state.status !== "pending" ? part.state.metadata : undefined
         return (meta as { sessionId?: string } | undefined)?.sessionId
@@ -490,18 +504,9 @@ export const layer = Layer.effect(
               } satisfies SessionV1.ToolPart)
             }),
           // kilocode_change start - resolve permissions at ask time so active tools see config edits
-          ask: (req: any) =>
-            KiloSessionPrompt.askPermission({
-              permission,
-              agents,
-              sessions,
-              agent: taskAgent,
-              session,
-              request: {
-                ...req,
-                sessionID,
-              },
-            }).pipe(Effect.orDie),
+          ask: authorize,
+          checkManaged: (req) => authorize(req, true),
+          recheck: () => Effect.forEach(grants, (check) => check(), { discard: true }).pipe(Effect.orDie),
           // kilocode_change end
         })
         .pipe(
@@ -1471,6 +1476,7 @@ export const layer = Layer.effect(
 
         const permissions: PermissionV1.Rule[] = []
         for (const [t, enabled] of Object.entries(input.tools ?? {})) {
+          if (t === "*" && enabled && !(yield* permission.canEnableUnrestricted())) continue // kilocode_change
           permissions.push({ permission: t, action: enabled ? "allow" : "deny", pattern: "*" })
         }
         if (permissions.length > 0) {

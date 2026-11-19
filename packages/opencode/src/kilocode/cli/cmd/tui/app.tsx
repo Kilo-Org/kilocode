@@ -298,10 +298,13 @@ export function init() {
         run: async () => {
           const enabled = isAllowEverything(sync.data.config.permission)
           const result = await sdk.client.permission.allowEverything({ enable: !enabled })
-          if (result.error) {
+          if (result.data !== true) {
             toast.show({
               variant: "error",
-              message: `Failed to ${!enabled ? "enable" : "disable"} auto-approve mode`,
+              message:
+                result.data === false && !enabled
+                  ? "Organization policy does not permit saved auto-approve mode"
+                  : `Failed to ${!enabled ? "enable" : "disable"} auto-approve mode`,
             })
             return
           }

@@ -54,6 +54,7 @@ import { SandboxConfig } from "@/kilocode/sandbox/config"
 import { ExternalMarkdown } from "@/kilocode/config/external-markdown"
 import { ClaudeMigration } from "@/kilocode/config/claude-migration" // kilocode_change
 import { ProviderModels } from "@/kilocode/config/provider-models"
+import * as Mdm from "@/kilocode/config/mdm-permissions"
 import * as ReservedCommand from "@/kilocode/command/reserved" // kilocode_change
 import type { KilocodeMarkdown } from "@/kilocode/config/markdown"
 import {
@@ -179,6 +180,7 @@ type State = {
   directories: string[]
   deps: Fiber.Fiber<void>[]
   warnings: Warning[] // kilocode_change
+  mdm: Mdm.Source[] // kilocode_change
   consoleState: ConsoleState
 }
 
@@ -197,6 +199,7 @@ export interface Interface {
   readonly directories: () => Effect.Effect<string[]>
   readonly waitForDependencies: () => Effect.Effect<void>
   readonly warnings: () => Effect.Effect<Warning[]> // kilocode_change
+  readonly mdmPermissions: (agent?: string) => Effect.Effect<readonly ConfigPermissionV1.Info[]> // kilocode_change
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Config") {}
@@ -973,11 +976,15 @@ const layer = Layer.effect(
 
         const managedDir = ConfigManaged.managedConfigDir()
         // kilocode_change start - include kilo.json/kilo.jsonc in managed dir loading
+        const mdm: Mdm.Source[] = []
+        const mergeMdm = Effect.fnUntraced(function* (source: string, next: Info) {
+          mdm.push({ permission: next.permission, tools: next.tools, agent: next.agent, mode: next.mode })
+          yield* merge(source, next, "global")
+        })
         if (existsSync(managedDir)) {
           for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
             const source = path.join(managedDir, file)
-            // kilocode_change - MDM/enterprise-managed config is a trusted source
-            yield* merge(source, yield* loadFile(source, undefined, true, undefined, warnings), "global")
+            yield* mergeMdm(source, yield* loadFile(source, undefined, true, undefined, warnings))
           }
         }
         // kilocode_change end
@@ -986,7 +993,7 @@ const layer = Layer.effect(
         // kilocode_change start
         const managed = yield* Effect.promise(() => ConfigManaged.readManagedPreferences())
         if (managed) {
-          yield* merge(
+          yield* mergeMdm(
             managed.source,
             yield* loadConfig(
               managed.text,
@@ -999,7 +1006,6 @@ const layer = Layer.effect(
               undefined,
               warnings, // kilocode_change - retain excess-key diagnostics from managed preferences
             ),
-            "global",
           )
         }
         // kilocode_change end
@@ -1062,6 +1068,7 @@ const layer = Layer.effect(
           directories,
           deps,
           warnings, // kilocode_change
+          mdm, // kilocode_change
           consoleState: {
             consoleManagedProviders: Array.from(consoleManagedProviders),
             activeOrgName,
@@ -1233,6 +1240,7 @@ const layer = Layer.effect(
       directories,
       waitForDependencies,
       warnings, // kilocode_change
+      mdmPermissions: (agent) => InstanceState.use(state, (s) => Mdm.layers(s.mdm, agent)), // kilocode_change
     })
   }),
 )

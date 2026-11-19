@@ -141,6 +141,7 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
 }
 
 export function temporaryPermission(request: PermissionRequest) {
+  if (request.managed) return true // kilocode_change
   return request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
 }
 
@@ -167,7 +168,7 @@ export function permissionReply(requestID: string, reply: PermissionReply["reply
   return {
     requestID,
     reply,
-    interactive: true, // kilocode_change - footer replies are human-driven; the server refuses non-interactive skill-shell approvals
+    interactive: true, // kilocode_change - footer replies are human-driven
     ...(message && message.trim() ? { message: message.trim() } : {}),
   }
 }

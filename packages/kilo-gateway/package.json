@@ -19,6 +19,7 @@
     ".": "./src/index.ts",
     "./autocomplete": "./src/autocomplete.ts",
     "./fim": "./src/fim.ts",
+    "./permission-policy": "./src/permission-policy.ts",
     "./provider-usage": "./src/provider-usage.ts",
     "./event-service": "./src/event-service/client.ts",
     "./tui": "./src/tui.ts"

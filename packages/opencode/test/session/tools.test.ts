@@ -63,7 +63,10 @@ const fakePermission = Permission.Service.of({
   list: () => Effect.succeed([]),
   // kilocode_change start - Kilo-only Permission.Interface members, unused here
   saveAlwaysRules: () => Effect.void,
-  allowEverything: () => Effect.void,
+  allowEverything: () => Effect.succeed(true),
+  canEnableUnrestricted: () => Effect.succeed(true),
+  managedState: () => Effect.succeed({ status: "personal" }),
+  authorizationScope: () => Effect.succeed("personal"),
   pending: () => Effect.succeed(undefined),
   // kilocode_change end
 } satisfies Permission.Interface)

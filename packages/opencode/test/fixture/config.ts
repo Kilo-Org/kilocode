@@ -13,6 +13,7 @@ export function make(overrides: Partial<Config.Interface> = {}) {
     directories: () => Effect.succeed([]),
     waitForDependencies: () => Effect.void,
     warnings: () => Effect.succeed([]),
+    mdmPermissions: () => Effect.succeed([]), // kilocode_change
     ...overrides,
   })
 }

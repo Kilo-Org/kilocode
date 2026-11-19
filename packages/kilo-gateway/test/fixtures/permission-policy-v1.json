@@ -1,0 +1,111 @@
+{
+  "layered": {
+    "schema_version": 1,
+    "organization_id": "9d278969-5453-4ae3-a51f-a8d2274a7b56",
+    "managed": true,
+    "revision": 12,
+    "max_age_seconds": 300,
+    "policy": {
+      "agent_permissions": {
+        "layers": [
+          {
+            "schema_version": 1,
+            "unrestricted_mode": "deny",
+            "tools": {
+              "edit": "allow",
+              "webfetch": {
+                "rules": [
+                  { "pattern": "*", "action": "ask" },
+                  { "pattern": "docs.example.test/*", "action": "allow" }
+                ],
+                "fallback": "deny"
+              }
+            },
+            "shell": {
+              "bash": {
+                "fallback": "ask",
+                "rules": [
+                  { "pattern": "git *", "action": "allow" },
+                  { "pattern": "git push *", "action": "deny" }
+                ]
+              }
+            }
+          },
+          {
+            "schema_version": 1,
+            "tools": {
+              "websearch": "deny",
+              "external_directory": { "rules": [{ "pattern": "/shared/reference/*", "action": "ask" }] }
+            }
+          },
+          {
+            "schema_version": 1,
+            "shell": {
+              "bash": { "fallback": "deny", "rules": [{ "pattern": "git *", "action": "allow" }] },
+              "powershell": { "fallback": "ask", "rules": [{ "pattern": "Get-Location *", "action": "allow" }] }
+            }
+          }
+        ]
+      },
+      "client_access": {
+        "layers": [
+          {
+            "schema_version": 1,
+            "mode": "allowlist",
+            "clients": [{ "feature": "cli", "min_version": "1.2.3" }, { "feature": "desktop" }]
+          },
+          { "schema_version": 1, "mode": "blocklist", "clients": [{ "feature": "desktop" }] }
+        ]
+      }
+    }
+  },
+  "layered_expectations": {
+    "shell": [
+      { "kind": "bash", "command": "git status --short", "decision": "allow" },
+      { "kind": "bash", "command": "git push origin main", "decision": "deny" },
+      { "kind": "powershell", "command": "Get-Location -Verbose", "decision": "deny" }
+    ],
+    "tools": [
+      { "tool": "websearch", "decision": "deny" },
+      { "tool": "webfetch", "resource": "docs.example.test/start", "decision": "allow" },
+      { "tool": "external_directory", "resource": "/other", "decision": "inherit" }
+    ],
+    "admission": [
+      { "feature": "cli", "version": "1.2.3", "admitted": true },
+      { "feature": "cli", "version": "1.2.2", "admitted": false },
+      { "feature": "desktop", "admitted": false },
+      { "feature": "vscode-extension", "admitted": false },
+      { "feature": null, "admitted": false }
+    ]
+  },
+  "enabled_empty": {
+    "schema_version": 1,
+    "organization_id": "9d278969-5453-4ae3-a51f-a8d2274a7b56",
+    "managed": true,
+    "revision": 0,
+    "max_age_seconds": 300,
+    "policy": {}
+  },
+  "disabled": {
+    "schema_version": 1,
+    "organization_id": "9d278969-5453-4ae3-a51f-a8d2274a7b56",
+    "managed": false,
+    "revision": 0,
+    "max_age_seconds": 300,
+    "policy": {}
+  },
+  "invalid_future_version": {
+    "schema_version": 2,
+    "organization_id": "9d278969-5453-4ae3-a51f-a8d2274a7b56",
+    "managed": true,
+    "revision": 12,
+    "max_age_seconds": 300,
+    "policy": {}
+  },
+  "conditional": {
+    "etag": "\"bLuFqPScBQ4k9T9_PlOk_YQGTsdbnj-2X95E-7kaqrk\"",
+    "same_authorized_representation": { "status": 304, "body": null },
+    "different_account_org_or_representation": { "status": 200 },
+    "bare_revision_or_wildcard": { "status": 200 }
+  }
+}

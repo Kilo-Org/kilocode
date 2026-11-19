@@ -102,6 +102,7 @@ const sessions = Layer.mock(Session.Service)({
   get: () => Effect.succeed(session("/workspace/project/.kilo/worktrees/a")),
 })
 const permission = Layer.mock(Permission.Service)({
+  authorizationScope: () => Effect.succeed("personal"),
   ask: (input) =>
     Effect.sync(() => {
       approvals.push(input)
@@ -368,6 +369,7 @@ it.live("records why a denied tool call was refused on the tool part's metadata"
     const overrides = Layer.mergeAll(
       TestConfig.layer({ get: () => Effect.succeed({ sandbox: { enabled: false } }) }),
       Layer.mock(Permission.Service)({
+        authorizationScope: () => Effect.succeed("personal"),
         ask: () => Effect.fail(new Permission.DeniedError({ ruleset: deniedRule })),
       }),
     )

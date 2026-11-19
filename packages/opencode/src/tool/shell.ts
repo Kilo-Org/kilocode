@@ -23,6 +23,7 @@ import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
 import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
 import { pattern } from "@/kilocode/tool/shell-pattern" // kilocode_change
+import { classify } from "@/kilocode/tool/managed-shell" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -284,11 +285,25 @@ const parse = Effect.fn("ShellTool.parse")(function* (command: string, ps: boole
   return tree
 })
 
+// kilocode_change start - managed scan for launch paths that do not use the local shell analyzer
+export const classifyShell = Effect.fn("ShellTool.classify")(function* (command: string, shell: string) {
+  return yield* Effect.scoped(
+    Effect.gen(function* () {
+      const tree = yield* Effect.acquireRelease(parse(command, Shell.ps(shell)), (tree) =>
+        Effect.sync(() => tree.delete()),
+      )
+      return classify(tree.rootNode, shell, command)
+    }),
+  )
+})
+// kilocode_change end
+
 const ask = Effect.fn("ShellTool.ask")(function* (
   ctx: Tool.Context,
   scan: Scan,
   command: string,
   metadata: ReturnType<typeof heredocs>, // kilocode_change
+  managed: { managedShell: ReturnType<typeof classify>["managedShell"]; managedDirs: string[] }, // kilocode_change
   description?: string, // kilocode_change
 ) {
   // kilocode_change
@@ -315,12 +330,24 @@ const ask = Effect.fn("ShellTool.ask")(function* (
     })
   }
 
-  if (scan.patterns.size === 0) return
+  // kilocode_change start
+  if (managed.managedDirs.length > 0) {
+    yield* ctx.ask({
+      permission: "external_directory",
+      patterns: managed.managedDirs,
+      always: [],
+      metadata: { command, ...(description ? { description } : {}), ...metadata },
+      managedOnly: true,
+    })
+  }
+  // kilocode_change end
   yield* ctx.ask({
     permission: ShellID.ToolID,
-    patterns: Array.from(scan.patterns),
+    patterns: scan.patterns.size ? Array.from(scan.patterns) : [command], // kilocode_change
     always: Array.from(scan.always),
     metadata: { command: normalizeUrls(command), ...(description ? { description } : {}), ...metadata }, // kilocode_change
+    managedShell: managed.managedShell, // kilocode_change
+    ...(scan.patterns.size ? {} : { managedOnly: true }), // kilocode_change
   })
 })
 
@@ -421,6 +448,26 @@ export const ShellPermission = Effect.gen(function* () {
     return scan
   })
 
+  const dirGlob = (dir: string) =>
+    process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(dir, "*")) : path.join(dir, "*")
+
+  const managed = Effect.fn("ShellTool.managed")(function* (
+    root: Node,
+    input: PermissionInput,
+    instance: InstanceContext,
+    scanned: Set<string>,
+  ) {
+    const { managedShell, paths } = classify(root, input.shell, input.command)
+    const dirs = new Set<string>()
+    for (const file of paths) {
+      const resolved = yield* resolve(file, input.cwd, input.shell)
+      if (containsPath(resolved, instance)) continue
+      const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
+      if (!scanned.has(dir)) dirs.add(dirGlob(dir))
+    }
+    return { managedShell, managedDirs: [...dirs] }
+  })
+
   const check = Effect.fn("ShellTool.permission")(function* (ctx: Tool.Context, input: PermissionInput) {
     const instance = yield* InstanceState.context
     const ps = Shell.ps(input.shell)
@@ -433,7 +480,8 @@ export const ShellPermission = Effect.gen(function* () {
           scan.dirs.add(input.cwd)
           scan.access = "unknown"
         }
-        yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
+        const descriptor = yield* managed(tree.rootNode, input, instance, scan.dirs)
+        yield* ask(ctx, scan, input.command, metadata, descriptor, input.description)
         const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
         if (input.escalate && gitMutation) {
           yield* ctx.ask({
@@ -452,8 +500,6 @@ export const ShellPermission = Effect.gen(function* () {
   })
 
   // kilocode_change start - expose the tree-sitter scan (sub-command patterns + external-dir globs) for skill-shell batching
-  const dirGlob = (dir: string) =>
-    process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(dir, "*")) : path.join(dir, "*")
   const decompose = Effect.fn("ShellTool.decompose")(function* (input: {
     command: string
     cwd: string
@@ -466,7 +512,8 @@ export const ShellPermission = Effect.gen(function* () {
         const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
         const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
         if (!containsPath(input.cwd, instance)) scan.dirs.add(input.cwd)
-        return { patterns: Array.from(scan.patterns), dirs: Array.from(scan.dirs, dirGlob) }
+        const descriptor = yield* managed(tree.rootNode, input, instance, scan.dirs)
+        return { patterns: Array.from(scan.patterns), dirs: Array.from(scan.dirs, dirGlob), ...descriptor }
       }),
     )
   })
@@ -600,6 +647,7 @@ export const ShellTool = Tool.define(
       const code: number | null = yield* Effect.scoped(
         Effect.gen(function* () {
           yield* Effect.addFinalizer(closeSink)
+          if (ctx.recheck) yield* ctx.recheck() // kilocode_change
           const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
 
           const reader = yield* Effect.forkScoped(

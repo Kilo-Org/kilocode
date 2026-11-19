@@ -18,6 +18,7 @@ import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { KiloSessionTurn } from "@/kilocode/session/turn"
 import { Permission } from "@/permission"
+import { refusal } from "@/kilocode/permission/managed"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { Question } from "@/question"
 import { InstanceRef } from "@/effect/instance-ref"
@@ -362,7 +363,8 @@ export namespace KiloSessionPrompt {
     origins?: PermissionProvenance.Origins
     agent: Agent.Info
     session: Session.Info
-    request: Omit<Permission.AskInput, "ruleset" | "hardRuleset">
+    request: Omit<Permission.AskInput, "ruleset" | "hardRuleset" | "reload">
+    authorized?: (outcome: Permission.AskOutcome) => void
   }) {
     const agent = (yield* input.agents.get(input.agent.name)) ?? input.agent
     const session = yield* input.sessions
@@ -374,7 +376,14 @@ export namespace KiloSessionPrompt {
       session,
       origins: input.origins,
     })
-    const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset })
+    const reload = () =>
+      Effect.gen(function* () {
+        const agent = (yield* input.agents.get(input.agent.name)) ?? input.agent
+        const session = yield* input.sessions.get(input.session.id).pipe(Effect.mapError(() => refusal("changed")))
+        return buildAskRuleset({ agent, session, origins: input.origins })
+      })
+    const outcome = yield* input.permission.ask({ ...input.request, agent: agent.name, ruleset, hardRuleset, reload })
+    input.authorized?.(outcome)
 
     if (outcome.manual) return { source: "manual" } satisfies PermissionProvenance.Approval
     return PermissionProvenance.classify({ rule: outcome.rule, agent: agent.name, origins: input.origins })

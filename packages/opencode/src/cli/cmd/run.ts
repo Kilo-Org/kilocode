@@ -512,6 +512,14 @@ export const RunCommand = effectCmd({
       }
 
       async function session(sdk: KiloClient): Promise<SessionInfo | undefined> {
+        // kilocode_change start - do not enter unrestricted mode without the policy decision
+        if (skipPermissions) {
+          const { data: policy } = await sdk.permission.policy()
+          if (!policy || policy.status === "unavailable" || (policy.status === "active" && !policy.unrestricted)) {
+            die("Cannot skip permissions: unrestricted approval is not permitted by the organization policy.")
+          }
+        }
+        // kilocode_change end
         // kilocode_change start - import cloud session before local lookup
         if (args.session && args["cloud-fork"]) {
           try {
@@ -945,6 +953,16 @@ export const RunCommand = effectCmd({
             if (event.type === "permission.asked") {
               const permission = event.properties
               if (!KiloRunAuto.allowed(tracked, permission.sessionID)) continue // kilocode_change
+              // kilocode_change start - managed requests require a human even under --auto or --yolo
+              if (permission.managed) {
+                const msg = "managed permission requires interactive approval; auto-rejecting"
+                error = error ? error + EOL + msg : msg
+                UI.error(msg)
+                emit("error", { error: msg })
+                await client.permission.reply({ requestID: permission.id, reply: "reject" }, { throwOnError: true })
+                continue
+              }
+              // kilocode_change end
               // kilocode_change start - skill shell batches need an interactive human decision. The server ignores
               // non-interactive approvals, so headless runs must reject explicitly rather than leave them pending.
               if (permission.metadata?.["skillShell"] === true || permission.metadata?.["sandboxEscalation"] === true) {

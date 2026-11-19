@@ -5628,6 +5628,60 @@
         ]
       }
     },
+    "/permission/policy": {
+      "get": {
+        "tags": ["permission"],
+        "operationId": "permission.policy",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Managed permission policy state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionManagedState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get the effective organization permission policy status without rules or credentials.",
+        "summary": "Get managed permission policy state",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.permission.policy({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/permission/{requestID}/always-rules": {
       "post": {
         "tags": ["permission"],
@@ -37065,6 +37119,18 @@
                         },
                         "required": ["messageID", "callID"],
                         "additionalProperties": false
+                      },
+                      "managed": {
+                        "type": "object",
+                        "properties": {
+                          "revision": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": ["revision"],
+                        "additionalProperties": false,
+                        "description": "Requires an interactive, one-time approval under the organization policy."
                       }
                     },
                     "required": ["id", "sessionID", "permission", "patterns", "metadata", "always"],
@@ -41090,6 +41156,18 @@
             },
             "required": ["messageID", "callID"],
             "additionalProperties": false
+          },
+          "managed": {
+            "type": "object",
+            "properties": {
+              "revision": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["revision"],
+            "additionalProperties": false,
+            "description": "Requires an interactive, one-time approval under the organization policy."
           }
         },
         "required": ["id", "sessionID", "permission", "patterns", "metadata", "always"],
@@ -41111,6 +41189,60 @@
         },
         "required": ["_tag", "requestID", "message"],
         "additionalProperties": false
+      },
+      "PermissionManagedState": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["personal"]
+              }
+            },
+            "required": ["status"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["disabled", "active"]
+              },
+              "organization": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "unrestricted": {
+                "type": "boolean"
+              }
+            },
+            "required": ["status", "organization", "revision", "unrestricted"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["unavailable"]
+              },
+              "organization": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["unavailable", "unauthorized", "invalid", "update-required", "client-denied"]
+              }
+            },
+            "required": ["status", "organization", "reason"],
+            "additionalProperties": false
+          }
+        ]
       },
       "ProviderFailure": {
         "type": "object",
@@ -46878,6 +47010,9 @@
             "type": "string",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
             "format": "uuid"
+          },
+          "organizationID": {
+            "$ref": "#/components/schemas/SessionHostOrganizationID"
           }
         },
         "required": ["id"],
@@ -53378,6 +53513,18 @@
                 },
                 "required": ["messageID", "callID"],
                 "additionalProperties": false
+              },
+              "managed": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": ["revision"],
+                "additionalProperties": false,
+                "description": "Requires an interactive, one-time approval under the organization policy."
               }
             },
             "required": ["id", "sessionID", "permission", "patterns", "metadata", "always"],
@@ -62009,6 +62156,18 @@
                 },
                 "required": ["messageID", "callID"],
                 "additionalProperties": false
+              },
+              "managed": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": ["revision"],
+                "additionalProperties": false,
+                "description": "Requires an interactive, one-time approval under the organization policy."
               }
             },
             "required": ["id", "sessionID", "permission", "patterns", "metadata", "always"],
@@ -65826,6 +65985,18 @@
                 },
                 "required": ["messageID", "callID"],
                 "additionalProperties": false
+              },
+              "managed": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": ["revision"],
+                "additionalProperties": false,
+                "description": "Requires an interactive, one-time approval under the organization policy."
               }
             },
             "required": ["id", "sessionID", "permission", "patterns", "metadata", "always"],
