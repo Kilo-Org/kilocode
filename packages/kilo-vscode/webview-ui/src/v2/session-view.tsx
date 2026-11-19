@@ -47,7 +47,7 @@ import { createBackgroundJobs } from "./background-jobs"
 import { createWorking } from "./working"
 import { createGoal } from "./goal"
 import { createPending } from "./pending"
-import { promptInterrupt, steerInterrupts, type SendMode } from "./pending-actions"
+import { promptInterrupt, type SendMode } from "./pending-actions"
 import { mergeCatalog, type SlashEntry } from "./slash"
 import { reviewScopes, slashActions, worktreeAction, type SlashHandlers } from "./slash-actions"
 import { createSlashCatalog } from "./slash-catalog"
@@ -186,14 +186,7 @@ export function SessionView(props: {
     return transcriptChildren(v2.data.session.message.list(id))
   })
   const permissions = createMemo(() => family().flatMap((id) => v2.data.session.permission.list(id) ?? []))
-  const forms = () => formsOf(session())
-  // The same reads for a named session, for a send that outlives the tab it came from.
-  function formsOf(id: string | undefined) {
-    if (!id) return []
-    return [id, ...v2.data.session.family(id).filter((item) => item !== id)].flatMap(
-      (member) => v2.data.session.form.list(member) ?? [],
-    )
-  }
+  const forms = createMemo(() => family().flatMap((id) => v2.data.session.form.list(id) ?? []))
 
   const inbox = createInboxRefresh(v2.data.session.pending.sync)
   // The session-start loader lasts until the first transcript page lands. createData reports loading only for pages it
@@ -245,8 +238,7 @@ export function SessionView(props: {
   const runningOf = (id: string | undefined) => !!id && v2.data.session.status(id) === "running"
   const running = () => runningOf(session())
 
-  // Questions do not block the prompt, as in v1: a pending question is dismissed when the user sends instead.
-  // Only a permission blocks sending, and the composer stays writable so typing remains possible.
+  // Users can steer while a question is open and still answer it. Only a permission blocks sending.
   const blocked = () => permissions().length > 0
   const dockBlocked = () => blocked() || forms().length > 0
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
@@ -385,8 +377,7 @@ export function SessionView(props: {
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
 
-  // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, a pending
-  // question is dismissed, and a send that should stop the running model call stops it.
+  // Prompts and slash commands share the same session binding and delivery rules.
   const begin = async (mode: SendMode, target?: SendTarget) => {
     // A workspace restore can take a while and the composer stays enabled, so the send is bound to the session and
     // draft it was pressed in. Reading them after the wait would send this text into the tab the user switched to.
@@ -407,37 +398,22 @@ export function SessionView(props: {
     // The prompt runs on what the composer shows: its draft, which the send commits, or the session's own model.
     // Read both before onSession changes the session identity. The active selection belongs to the active tab, so it
     // only describes this send while that tab is still open; otherwise the pinned session's own selection applies.
-    const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
     const binding = sendBinding({
       pinned: existing,
       active: session(),
       running: runningOf(id),
-      goalActive: !!goal.active(),
-      steerInterrupts: steerInterrupts(v2.data.session.message.list(id), waiting),
       mode,
     })
     const model = choice ? choice.model : binding.same ? selection.model() : selection.selected(id)
     const draft = selection.draft(id)
-    // A pending question of this session is dismissed when the user sends instead.
-    const questions = formsOf(id)
     props.onSession(id, key)
     // The first prompt settles the draft tab into a session key. Carry the history a late append still targets.
     const scopedHistory = kiloSettings()["experimental.conversationPromptHistory"] === true
     if (key !== id && scopedHistory) movePromptHistory(key, id)
-    for (const form of questions) {
-      void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
-    }
-    // A steer reaches a thinking or writing model only by stopping that model call; a running tool finishes first.
-    // Stop before admitting: if the prompt were admitted first, the run could start answering it at a step boundary
-    // and the stop would then end that answer. The partial response stays in the transcript and the run continues
-    // with the prompt. A failed stop still sends the prompt as a steer. Sending a prompt never cancels a running
-    // compaction either way: `now` still stops the model call and running tools, but the checkpoint finishes first
-    // and the prompt follows it. Only Stop itself, and Escape with it, may cancel a compaction.
-    // The goal plugin pauses a goal whose run the user interrupts, so with an active goal a steer waits for the next
-    // step boundary instead of stopping the model call: a new message takes priority, then the goal continues, as in
-    // v1. Stop and "stop and send" still stop the run and pause the goal.
+    // Force stops before admission so it cannot interrupt the answer to the new prompt. The runner cleans up its
+    // interrupted tools, including questions; sending must not dismiss an unrelated child session's form.
     if (binding.interrupt) await v2.api.session.interrupt(promptInterrupt(id)).catch((err: unknown) => v2.report(err))
-    return { id, gate, model, draft }
+    return { id, gate, model, draft, delivery: binding.delivery }
   }
 
   // The prompt is admitted on the server; the Most used group counts sent prompts per model, as v1.
@@ -457,7 +433,7 @@ export function SessionView(props: {
       target?: SendTarget
     },
   ) => {
-    const { id, gate, model, draft } = await begin(mode, input?.target)
+    const { id, gate, model, draft, delivery } = await begin(mode, input?.target)
     const files = promptFiles(input?.items ?? [], input?.files ?? [])
     return v2.data.session
       .prompt({
@@ -469,7 +445,7 @@ export function SessionView(props: {
         prepare: () => selection.commit(id, draft),
         metadata: input?.metadata,
         files,
-        delivery: mode === "queue" ? "queue" : "steer",
+        delivery,
       })
       .then(() => prompted(id, text, model))
       .catch((err: unknown) => {
@@ -541,7 +517,7 @@ export function SessionView(props: {
     mentions: MentionFile[] = [],
     target?: SendTarget,
   ) => {
-    const { id, gate, model } = await begin(mode, target)
+    const { id, gate, model, delivery } = await begin(mode, target)
     const text = args ? `/${entry.name} ${args}` : `/${entry.name}`
     // A command with its own model runs on that model, which the server switches the session to.
     const own = entry.kind === "command" ? parseCommandModel(entry.command.model) : undefined
@@ -550,7 +526,7 @@ export function SessionView(props: {
         entry,
         args,
         files: promptFiles(items, mentions),
-        delivery: mode === "queue" ? "queue" : "steer",
+        delivery,
       },
       {
         session: async () => {

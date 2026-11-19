@@ -4,9 +4,8 @@ import type { SendMode } from "./pending-actions"
 
 /**
  * What a send does to the session it was pressed in. `same` says the active tab is still that session, which is the
- * only case where the live selection and the goal of the open session describe this send. With the tab switched, the
- * goal of the pinned session is not readable, so a steer waits for the next step boundary instead of stopping a run
- * that may belong to an active goal. Stop and "stop and send" keep stopping the pinned run.
+ * only case where the live model selection describes this send. Ordinary steers use the inbox even if the transcript
+ * still shows reasoning: a tool may already have started on the server. Only an explicit "stop and send" interrupts.
  */
 export function sendBinding(input: {
   /** The session the send was pressed in; undefined for a new draft. */
@@ -14,16 +13,11 @@ export function sendBinding(input: {
   /** The session the view selects now. */
   active: string | undefined
   running: boolean
-  goalActive: boolean
-  steerInterrupts: boolean
   mode: SendMode
 }) {
-  const same = input.pinned === input.active
   return {
-    same,
-    interrupt:
-      input.running &&
-      (input.mode === "now" ||
-        (input.mode === "steer" && same && !input.goalActive && input.steerInterrupts)),
-  }
+    same: input.pinned === input.active,
+    delivery: input.mode === "queue" ? "queue" : "steer",
+    interrupt: input.running && input.mode === "now",
+  } as const
 }

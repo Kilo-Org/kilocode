@@ -1,4 +1,5 @@
 import { useConfig } from "../config"
+import { permissionModeOverride } from "../kilocode/permission-mode" // kilocode_change(autoapprove) - runtime auto-approve switch
 import { useArgs } from "./args"
 import { createSimpleContext } from "./helper"
 
@@ -11,7 +12,7 @@ export const { use: usePermission, provider: PermissionProvider } = createSimple
     const config = useConfig()
     return {
       get mode(): PermissionMode {
-        return args.auto ? "autoaccept" : config.data.session.permissions
+        return permissionModeOverride() ?? (args.auto ? "autoaccept" : config.data.session.permissions) // kilocode_change(autoapprove) - a runtime toggle overrides the configured mode
       },
     }
   },
