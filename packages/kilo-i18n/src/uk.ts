@@ -167,6 +167,16 @@ export const dict = {
   "browser.state.unavailable": "недоступний",
   "browser.state.readyHint": "Профіль Chromium, що належить Kilo, запускається під час першого виклику браузера",
   "browser.state.extensionHint": "Підключіть розширення браузера Kilo, щоб керувати власним браузером",
+  "browser.notice.extension":
+    "Розширення браузера Kilo підключено в {{browser}}. Використовувати власний браузер для інструментів браузера замість вбудованого?",
+  "browser.notice.switch": "Використовувати мій браузер",
+  "settings.browser.status.extension.waiting": "Очікування розширення браузера",
+  "settings.browser.origins.saved.title": "Дозволено в чатах",
+  "settings.browser.origins.saved.description":
+    "Сайти, які ви дозволили в чаті кнопкою «Дозволяти завжди», для цього робочого простору. Вони діють понад правила вище.",
+  "settings.browser.origins.saved.empty": "У чатах ще не дозволено жодного сайту.",
+  "settings.browser.origins.saved.failed": "Збережені дозволи недоступні",
+  "settings.browser.origins.saved.revoke": "Відкликати",
   "ui.permission.reason": "Причина: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

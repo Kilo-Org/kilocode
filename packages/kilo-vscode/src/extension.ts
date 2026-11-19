@@ -35,6 +35,8 @@ import { registerAutocompleteProvider } from "./services/autocomplete"
 import { BrowserBroker } from "./services/browser-automation"
 import { browserSettingsService } from "./browser-settings"
 import { cancelChromiumInstall } from "./browser-settings/install-chromium"
+import { BrowserNotice } from "./browser-settings/notice"
+import { t } from "./services/i18n"
 import {
   integratedBrowserEnabled,
   integratedBrowserFallback,
@@ -236,6 +238,18 @@ export function activate(context: ExtensionContext) {
           `Browser settings migration failed: ${error instanceof Error ? error.message : String(error)}`,
         ),
     )
+  // SPEC D2: once, when a browser extension connects while the backend is Playwright, offer the switch.
+  context.subscriptions.push(
+    BrowserNotice.watch({
+      service: browserSettings,
+      store: context.globalState,
+      log: (...args) => output.appendLine(`Browser settings: ${args.map((item) => String(item)).join(" ")}`),
+      show: async (browser) => {
+        const use = t("browser.notice.switch")
+        return (await window.showInformationMessage(t("browser.notice.extension", { browser }), use)) === use
+      },
+    }),
+  )
   const indexingService = indexingHost({
     context,
     server,
