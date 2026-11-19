@@ -10,6 +10,9 @@ import { canonicalToolPart } from "../mini/fixture/tool-part"
 
 const password = "hunter2"
 
+/** A Code Mode program that types the password, the shape `execute` receives. */
+const code = `await browser.type({ target: "e2", text: "${password}" })`
+
 const typed = (status: "running" | "completed") =>
   canonicalToolPart(
     "browser_type",
@@ -79,5 +82,16 @@ describe("browser typed text outside the transcript", () => {
     })
     expect(shown(typing, "start")).not.toContain(password)
     expect(toolInlineInfo(typing).title).not.toContain(password)
+  })
+
+  test("the turn-token table leaves out a Code Mode program, which can type text", () => {
+    const done = canonicalToolPart("execute", { status: "completed", input: { code }, metadata: {} })
+    expect(turnTokenToolSummary(done)).not.toContain(password)
+    // Streaming, the program is raw JSON text: no fragment of it may reach the row either.
+    const streaming = canonicalToolPart("execute", {
+      status: "streaming",
+      input: `{"code":${JSON.stringify(code.slice(0, code.indexOf(password) + password.length))}`,
+    })
+    expect(turnTokenToolSummary(streaming)).not.toContain(password)
   })
 })

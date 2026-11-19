@@ -85,3 +85,6 @@ export function browserDisplayMetadata(metadata: Record<string, unknown>): Recor
 
 /** Input keys a one-line row never shows: Code Mode's program can type text (`browser.type({ text })`) inline. */
 export const ROW_INPUT_OMIT = ["code"]
+
+/** Code Mode's own tool: its whole input is the program, so a one-line row shows none of it, streaming or not. */
+export const ROW_PROGRAM_TOOL = "execute"
