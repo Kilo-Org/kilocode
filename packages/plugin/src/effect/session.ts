@@ -7,7 +7,7 @@ import type { Session } from "@opencode/schema/session"
 import type { SessionInbox } from "@opencode/schema/session-inbox"
 import type { SessionError } from "@opencode/schema/session-error"
 import type { SessionMessage } from "@opencode/schema/session-message"
-import type { Schedule } from "@opencode/schema/schedule" // kilocode_change(flows) seam - due schedule hook payload
+import type { Automation } from "@opencode/schema/automation" // kilocode_change(flows) seam - due automation hook payload
 import type { TokenUsage } from "@opencode/schema/token-usage"
 import type { JsonSchema, Types } from "effect"
 import type { ModelHooks } from "./registration.js"
@@ -208,14 +208,14 @@ export interface SessionIdle {
   readonly background: ReadonlyArray<SessionIdleBackground>
 }
 
-// kilocode_change start - flows seam: let a location plugin claim a due schedule before it prompts the Session
+// kilocode_change start - flows seam: let a location plugin claim a due automation before it prompts the Session
 /**
- * Runs before a due time schedule prompts its Session. Set `claimed` to suppress the prompt while preserving the
- * schedule's normal advancement. Experimental.
+ * Runs before a due automation prompts its Session. Set `claimed` to suppress the prompt while preserving the
+ * automation's normal advancement. Experimental.
  */
-export interface SessionSchedule {
+export interface SessionAutomation {
   readonly sessionID: Session.ID
-  readonly schedule: Schedule.Info
+  readonly automation: Automation.Info
   claimed?: boolean
 }
 // kilocode_change end
@@ -237,7 +237,7 @@ export interface SessionHooks {
   readonly "experimental.ws.receive": SessionWebSocketReceive
   readonly retry: SessionRetry
   readonly "experimental.idle": SessionIdle
-  readonly "experimental.schedule": SessionSchedule // kilocode_change(flows) seam - scheduled action claim hook
+  readonly "experimental.automation": SessionAutomation // kilocode_change(flows) seam - due automation claim hook
 }
 
 export type SessionDomain = Pick<

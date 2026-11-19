@@ -440,12 +440,13 @@ function eventually<A>(effect: Effect.Effect<A>, predicate: (value: A) => boolea
 }
 
 test("keeps scheduling on unless OPENCODE_FLAGS opts out explicitly", () => {
-  expect(KiloHost.schedulingOverrides(undefined)).toBe("schedules")
-  expect(KiloHost.schedulingOverrides("")).toBe("schedules")
-  expect(KiloHost.schedulingOverrides("media_blob")).toBe("media_blob,schedules")
-  expect(KiloHost.schedulingOverrides("-media_blob")).toBe("-media_blob,schedules")
-  expect(KiloHost.schedulingOverrides("all")).toBe("all,schedules")
+  expect(KiloHost.schedulingOverrides(undefined)).toBe("automations")
+  expect(KiloHost.schedulingOverrides("")).toBe("automations")
+  expect(KiloHost.schedulingOverrides("media_blob")).toBe("media_blob,automations")
+  expect(KiloHost.schedulingOverrides("-media_blob")).toBe("-media_blob,automations")
+  expect(KiloHost.schedulingOverrides("all")).toBe("all,automations")
   // An explicit opt-out stays an escape hatch: it wins over the always-on default.
+  expect(KiloHost.schedulingOverrides("-automations")).toBe("-automations")
   expect(KiloHost.schedulingOverrides("-schedules")).toBe("-schedules")
   expect(KiloHost.schedulingOverrides("all,-schedules")).toBe("all,-schedules")
   expect(KiloHost.schedulingOverrides("-media_blob, -schedules")).toBe("-media_blob, -schedules")
@@ -454,16 +455,16 @@ test("keeps scheduling on unless OPENCODE_FLAGS opts out explicitly", () => {
 test("turns scheduling on in release channels, even against a config that turns it off", () => {
   const off = new Document({
     type: "document",
-    info: new Info({ experimental: new ConfigExperimental.Info({ schedules: false }) }),
+    info: new Info({ experimental: new ConfigExperimental.Info({ automations: false }) }),
   })
   for (const channel of ["latest", "beta"]) {
-    expect(Flag.resolve({ entries: [], channel }).schedules.enabled).toBeFalse()
-    expect(Flag.resolve({ entries: [off], channel, overrides: KiloHost.schedulingOverrides(undefined) }).schedules).toEqual({
+    expect(Flag.resolve({ entries: [], channel }).automations.enabled).toBeFalse()
+    expect(Flag.resolve({ entries: [off], channel, overrides: KiloHost.schedulingOverrides(undefined) }).automations).toEqual({
       enabled: true,
       source: "env",
     })
     expect(
-      Flag.resolve({ entries: [off], channel, overrides: KiloHost.schedulingOverrides("-schedules") }).schedules.enabled,
+      Flag.resolve({ entries: [off], channel, overrides: KiloHost.schedulingOverrides("-automations") }).automations.enabled,
     ).toBeFalse()
   }
 })

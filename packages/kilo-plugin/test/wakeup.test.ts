@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Schedule } from "@opencode/core/schedule"
+import { Automation } from "@opencode/core/automation"
 import { KiloWakeupRpc } from "@opencode/schema/kilocode/wakeup"
 import { SessionID } from "@opencode/schema/session-id"
 import { Effect, Layer, Schema } from "effect"
@@ -16,34 +16,35 @@ function setup() {
   const memory = new Map<string, Schema.Json>()
   const events: KiloWakeupRpc.Changed[] = []
   const prompts: { sessionID: string; text: string; metadata?: Record<string, unknown> }[] = []
-  const infos = new Map<string, Schedule.Info>()
-  const creates: { input: Parameters<Schedule.Interface["create"]>[0] }[] = []
+  const infos = new Map<string, Automation.Info>()
+  const creates: { input: Parameters<Automation.Interface["create"]>[0] }[] = []
   let sequence = 0
 
-  const dueAt = (input: Parameters<Schedule.Interface["create"]>[0]) => {
-    const when = input.when
-    if (when === undefined) return Date.now() + 60_000
-    if (when.type === "at") return Date.parse(when.at)
+  const dueAt = (input: Parameters<Automation.Interface["create"]>[0]) => {
+    const trigger = input.trigger
+    if (trigger.type === "at") return Date.parse(trigger.at)
     return Date.now() + 60_000
   }
 
   const schedules = {
-    create: (input: Parameters<Schedule.Interface["create"]>[0]) =>
+    create: (input: Parameters<Automation.Interface["create"]>[0]) =>
       Effect.sync(() => {
         creates.push({ input })
-        const id = Schedule.ID.make(`sch_${++sequence}`)
+        const id = Automation.ID.make(`aut_${++sequence}`)
         const now = Date.now()
         const info = {
           id,
-          sessionID: input.sessionID,
           name: input.name,
-          when: input.when,
+          projectID: "prj_test",
+          sessionID: input.sessionID,
+          directory: input.directory ?? "/workspace",
+          trigger: input.trigger,
           tz: "UTC",
           action: input.action,
           status: "active",
           nextDueAt: dueAt(input),
           runCount: 0,
-          ...(input.ends?.at === undefined ? {} : { endsAt: Date.parse(input.ends.at) }),
+          ...(input.expires === undefined ? {} : { expires: Date.parse(input.expires) }),
           time: { created: now, updated: now },
         } satisfies Record<string, unknown>
         const decoded = decodeInfo(info)
@@ -57,11 +58,11 @@ function setup() {
     get: (id: string) =>
       Effect.sync(() => {
         const found = infos.get(id)
-        if (found === undefined) throw new Schedule.NotFoundError({ scheduleID: id as Schedule.ID })
+        if (found === undefined) throw new Automation.NotFoundError({ automationID: id as Automation.ID })
         return found
       }),
     remove: (id: string) =>
-      infos.delete(id) ? Effect.void : Effect.fail(new Schedule.NotFoundError({ scheduleID: id as Schedule.ID })),
+      infos.delete(id) ? Effect.void : Effect.fail(new Automation.NotFoundError({ automationID: id as Automation.ID })),
   }
 
   const storage = {
@@ -101,13 +102,13 @@ function setup() {
 
   const wake = makeService(
     { session, storage },
-    schedules as unknown as Schedule.Interface,
+    schedules as unknown as Automation.Interface,
     () => (event) => Effect.sync(() => void events.push(event)),
   )
   return { wake, memory, events, prompts, infos, creates, failure }
 }
 
-const decodeInfo = (value: unknown) => Schema.decodeUnknownSync(Schedule.Info)(value)
+const decodeInfo = (value: unknown) => Schema.decodeUnknownSync(Automation.Info)(value)
 
 const record = (id: string, scheduleID: string, over: Partial<WakeupRecord> = {}): WakeupRecord => ({
   id,
@@ -134,7 +135,7 @@ describe("wakeup service", () => {
       expect(result.notice).toContain("10-second minimum")
       expect(creates).toHaveLength(1)
       expect(creates[0]?.input.action).toEqual({ type: "hook", prompt: "check the build" })
-      expect(creates[0]?.input.when?.type).toBe("at")
+      expect(creates[0]?.input.trigger.type).toBe("at")
       expect(memory.has(`wakeup:${result.wakeup.id}`)).toBe(true)
       expect(events.at(-1)).toMatchObject({ sessionID, directory, pending: 1 })
     }),
@@ -156,7 +157,7 @@ describe("wakeup service", () => {
       const { wake, memory, infos, creates } = setup()
       for (let index = 0; index < MAX_PER_SESSION; index++) {
         const id = `wku_${index}`
-        const scheduleID = `sch_seed_${index}`
+        const scheduleID = `aut_seed_${index}`
         infos.set(scheduleID, decodeInfo({ ...seed(scheduleID), id: scheduleID }))
         memory.set(`wakeup:${id}`, record(id, scheduleID) as Schema.Json)
       }
@@ -190,8 +191,8 @@ describe("wakeup service", () => {
       expect(result.wakeup.recurring).toBe(true)
       expect(result.wakeup.schedule).toBe("*/5 * * * *")
       const input = creates[0]?.input
-      expect(input?.when).toEqual({ type: "cron", cron: "*/5 * * * *" })
-      const ends = input?.ends?.at === undefined ? undefined : Date.parse(input.ends.at)
+      expect(input?.trigger).toEqual({ type: "cron", cron: "*/5 * * * *" })
+      const ends = input?.expires === undefined ? undefined : Date.parse(input.expires)
       expect(ends).toBeGreaterThan(Date.now() + 6.9 * 24 * 60 * 60 * 1000)
     }),
   )
@@ -310,22 +311,22 @@ describe("wakeup service", () => {
   it.effect("reads prompts without reconciling away a paused schedule or its record", () =>
     Effect.gen(function* () {
       const { wake, memory, infos } = setup()
-      infos.set("sch_active", decodeInfo(seed("sch_active")))
-      memory.set("wakeup:wku_active", record("wku_active", "sch_active", { prompt: "check the build" }) as Schema.Json)
-      infos.set("sch_paused", decodeInfo({ ...seed("sch_paused"), status: "paused" }))
-      memory.set("wakeup:wku_paused", record("wku_paused", "sch_paused", { prompt: "check the deploy" }) as Schema.Json)
+      infos.set("aut_active", decodeInfo(seed("aut_active")))
+      memory.set("wakeup:wku_active", record("wku_active", "aut_active", { prompt: "check the build" }) as Schema.Json)
+      infos.set("aut_paused", decodeInfo({ ...seed("aut_paused"), status: "paused" }))
+      memory.set("wakeup:wku_paused", record("wku_paused", "aut_paused", { prompt: "check the deploy" }) as Schema.Json)
 
-      expect(yield* wake.prompts(["sch_active", "sch_paused"])).toEqual({
-        sch_active: "check the build",
-        sch_paused: "check the deploy",
+      expect(yield* wake.prompts(["aut_active", "aut_paused"])).toEqual({
+        aut_active: "check the build",
+        aut_paused: "check the deploy",
       })
       expect(memory.has("wakeup:wku_paused")).toBe(true)
-      expect(infos.has("sch_paused")).toBe(true)
+      expect(infos.has("aut_paused")).toBe(true)
 
       // `list` reconciles, so it drops the paused row and its record; `prompts` above left them intact.
       expect(yield* wake.list(sessionID)).toHaveLength(1)
       expect(memory.has("wakeup:wku_paused")).toBe(false)
-      expect(infos.has("sch_paused")).toBe(false)
+      expect(infos.has("aut_paused")).toBe(false)
     }),
   )
 
@@ -333,10 +334,10 @@ describe("wakeup service", () => {
     Effect.gen(function* () {
       const { wake, memory, infos } = setup()
       const past = Date.now() - 1_000
-      infos.set("sch_past", decodeInfo({ ...seed("sch_past"), nextDueAt: past }))
-      memory.set("wakeup:wku_past", record("wku_past", "sch_past", { dueAt: past }) as Schema.Json)
-      infos.set("sch_future", decodeInfo(seed("sch_future")))
-      memory.set("wakeup:wku_future", record("wku_future", "sch_future") as Schema.Json)
+      infos.set("aut_past", decodeInfo({ ...seed("aut_past"), nextDueAt: past }))
+      memory.set("wakeup:wku_past", record("wku_past", "aut_past", { dueAt: past }) as Schema.Json)
+      infos.set("aut_future", decodeInfo(seed("aut_future")))
+      memory.set("wakeup:wku_future", record("wku_future", "aut_future") as Schema.Json)
       expect(yield* wake.pending(directory)).toEqual([
         { sessionID: SessionID.make(sessionID), directory, pending: 1, dueAt: expect.any(Number) },
       ])
@@ -348,8 +349,11 @@ function seed(scheduleID: string) {
   const now = Date.now()
   return {
     id: scheduleID,
+    name: "Wakeup",
+    projectID: "prj_test",
     sessionID,
-    when: { type: "at" as const, at: new Date(now + 60_000).toISOString() },
+    directory,
+    trigger: { type: "at" as const, at: new Date(now + 60_000).toISOString() },
     tz: "UTC",
     action: { type: "hook" as const, prompt: "" },
     status: "active" as const,

@@ -111,10 +111,18 @@ export const CodeAction = Schema.Struct({
 }).annotate({ identifier: "Automation.Action.Code" })
 export interface CodeAction extends Schema.Schema.Type<typeof CodeAction> {}
 
-export const Action = Schema.Union([PromptAction, CodeAction]).pipe(
+// kilocode_change start - flows seam: hook-owned actions never fall back to native prompt admission
+export const HookAction = Schema.Struct({ type: Schema.tag("hook"), prompt: Schema.String }).annotate({
+  identifier: "Automation.Action.Hook",
+  description: "An action owned by the experimental automation hook. The prompt is descriptive and is never admitted.",
+})
+export interface HookAction extends Schema.Schema.Type<typeof HookAction> {}
+
+export const Action = Schema.Union([PromptAction, CodeAction, HookAction]).pipe(
   Schema.toTaggedUnion("type"),
   Schema.annotate({ identifier: "Automation.Action" }),
 )
+// kilocode_change end
 export type Action = typeof Action.Type
 
 export const Status = Schema.Literals(["active", "paused", "done"]).annotate({ identifier: "Automation.Status" })
@@ -176,10 +184,20 @@ export const CodeActionInput = Schema.Struct({
 }).annotate({ identifier: "Automation.CodeActionInput" })
 export interface CodeActionInput extends Schema.Schema.Type<typeof CodeActionInput> {}
 
-export const ActionInput = Schema.Union([PromptActionInput, CodeActionInput]).pipe(
+// kilocode_change start - flows seam: the Kilo plugins create hook-owned rows through the service
+export const HookActionInput = Schema.Struct({
+  type: Schema.tag("hook"),
+  prompt: Schema.String.check(Schema.isMinLength(1)).annotate({
+    description: "Descriptive prompt for a row whose owner delivers it. The native loop never admits it.",
+  }),
+}).annotate({ identifier: "Automation.HookActionInput" })
+export interface HookActionInput extends Schema.Schema.Type<typeof HookActionInput> {}
+
+export const ActionInput = Schema.Union([PromptActionInput, CodeActionInput, HookActionInput]).pipe(
   Schema.toTaggedUnion("type"),
   Schema.annotate({ identifier: "Automation.ActionInput" }),
 )
+// kilocode_change end
 export type ActionInput = typeof ActionInput.Type
 
 /** An automation as callers describe it: a name, when it runs, what it does, and when it stops. */

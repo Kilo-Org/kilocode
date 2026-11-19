@@ -55,6 +55,7 @@ import { Location } from "./location.js"
 import { LocationServiceMap } from "./location-service-map.js"
 import { Permission } from "./permission.js"
 import { Plugin } from "./plugin.js"
+import { PluginHooks } from "./plugin/hooks.js"
 import { Project } from "./project.js"
 import { Session } from "./session.js"
 import { SessionExecution } from "./session/execution.js"
@@ -488,6 +489,10 @@ const layer = Layer.effect(
           )
         }
 
+        // kilocode_change start - flows seam: a hook action is never admitted natively
+        if (action.type === "hook") return yield* complete({ last_output: null })
+        // kilocode_change end
+
         if (action.type === "prompt") {
           const text = event ? AutomationEvent.prompt(action.prompt, event) : action.prompt
           if (event && Buffer.byteLength(text) > 32_768)
@@ -558,6 +563,31 @@ const layer = Layer.effect(
         effect.pipe(Effect.catchTag("Automation.InvalidError", (error) => pauseWith(row, now, error.reason))),
     )
 
+    // kilocode_change start - flows seam: a due automation is offered to the plugins that own it before delivery
+    /** Offers one due row to the location plugins; a claimed run is advanced by the caller without being delivered. */
+    const claimDue = Effect.fnUntraced(function* (row: Row) {
+      if (row.session_id === null || row.trigger.type === "event") return false
+      const owner = yield* existing(row.session_id)
+      if (!owner) return false
+      const attempt = Effect.gen(function* () {
+        const hooks = yield* PluginHooks.Service
+        // Without a Kilo owner the row keeps upstream behavior, including activation and directory failures.
+        if (!(yield* hooks.has("session", "experimental.automation"))) return false
+        yield* Plugin.awaitActivation
+        const result = yield* hooks.trigger("session", "experimental.automation", {
+          sessionID: owner.id,
+          automation: toInfo(row),
+        })
+        return result.claimed === true
+      })
+      // The seam is advisory: a hook that cannot run leaves the row unclaimed instead of changing the run.
+      return yield* attempt.pipe(
+        instances.provide(owner),
+        Effect.catchCause((cause) => (Cause.hasInterruptsOnly(cause) ? Effect.interrupt : Effect.succeed(false))),
+      )
+    })
+    // kilocode_change end
+
     /** Runs one due automation, after the checks both kinds of action share: leadership, expiry and the flag. */
     const runDue = Effect.fnUntraced(function* (row: Row, now: number) {
       const due = row.next_due_at
@@ -580,6 +610,23 @@ const layer = Layer.effect(
         yield* settle(row, { last_outcome: "disabled", retry_at: now + DISABLED_RETRY, time_updated: now })
         return
       }
+      // kilocode_change start - flows seam: a claimed occurrence is advanced here instead of being delivered
+      if (yield* claimDue(row)) {
+        const ended = yield* Clock.currentTimeMillis
+        return yield* settle(
+          row,
+          {
+            run_count: row.run_count + 1,
+            last_run_at: now,
+            last_outcome: now - due >= LATE_AFTER ? "late" : "fired",
+            retry_at: null,
+            ...advance(row, ended),
+            time_updated: ended,
+          },
+          { evenIfPaused: true },
+        )
+      }
+      // kilocode_change end
       return yield* runAction(row, now)
     })
 
@@ -984,6 +1031,9 @@ const layer = Layer.effect(
         }
         return { type: "prompt" as const, prompt: action.prompt, to }
       }
+      // kilocode_change start - flows seam: a hook action is owned by a plugin, not by a model call
+      if (action.type === "hook") return { type: "hook" as const, prompt: action.prompt }
+      // kilocode_change end
       // Tool permissions are asked in, and checked against, the creating Session.
       if (owner === undefined) return yield* new InvalidError({ reason: "A code action needs a session" })
       const code = { type: "code" as const, code: action.code, args: action.args }

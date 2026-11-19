@@ -7,8 +7,8 @@ import type { DialogPromptOptions, DialogSelectOption } from "@opencode/plugin/t
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { KiloFlowPermissions } from "@opencode/schema/kilocode/flow-permissions"
 import { KiloSchedule } from "@opencode/schema/kilocode/schedule"
+import { durationMillis } from "@opencode/schema/automation"
 import { Project } from "@opencode/schema/project"
-import { Schedule } from "@opencode/schema/schedule"
 import { Cron, DateTime, Option, Result, Schema } from "effect"
 import { errorMessage } from "../util/error"
 
@@ -29,7 +29,7 @@ export type Initial = {
 export type Open = (initial?: Initial) => void
 
 type Mode = "create" | "edit" | "repair"
-type ScheduleType = Schedule.When["type"]
+type ScheduleType = KiloFlowRpc.When["type"]
 type End = { readonly type: "none" } | { readonly type: "times" | "at" | "after"; readonly value: string }
 
 /** The answers of the wizard, also the prefill of its steps. */
@@ -610,7 +610,7 @@ export function trigger(value: KiloFlowRpc.Trigger) {
 }
 
 /** The limits of `ends`, joined by "or": a repeating schedule stops at the first one reached. */
-export function endsLabel(value: Schedule.Ends) {
+export function endsLabel(value: KiloFlowRpc.Ends) {
   const limits = [
     value.times === undefined ? undefined : `after ${value.times} run${value.times === 1 ? "" : "s"}`,
     value.after === undefined ? undefined : `after ${value.after}`,
@@ -963,7 +963,7 @@ function endsInput(end: End): CreateInput["ends"] {
 }
 
 /** The wizard sets one limit; a combination written by an agent shows its first limit and stays unless edited. */
-function endOf(ends: Schedule.Ends | undefined): End {
+function endOf(ends: KiloFlowRpc.Ends | undefined): End {
   if (ends?.times !== undefined) return { type: "times", value: String(ends.times) }
   if (ends?.at !== undefined) return { type: "at", value: ends.at }
   if (ends?.after !== undefined) return { type: "after", value: ends.after }
@@ -974,7 +974,7 @@ function endValue(end: End) {
   return end.type === "none" ? "" : end.value
 }
 
-function scheduleValue(value: Schedule.When) {
+function scheduleValue(value: KiloFlowRpc.When) {
   if (value.type === "every") return value.every
   if (value.type === "cron") return value.cron
   if (value.type === "at") return value.at
@@ -986,7 +986,7 @@ function required(message: string) {
 }
 
 function durationOf(value: string) {
-  return Option.getOrElse(Schedule.durationMillis(value), () => 0)
+  return Option.getOrElse(durationMillis(value), () => 0)
 }
 
 function duration(value: string) {

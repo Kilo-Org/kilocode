@@ -212,7 +212,7 @@ Full guides: <https://kilo.ai/docs/automate/agent-manager> and <https://kilo.ai/
 
 ## Scheduled Flows and wakeups
 
-Scheduling is always on in Kilo (no `experimental.schedules` flag is needed) and offers two separate local surfaces:
+Scheduling is always on in Kilo (no `experimental.automations` flag is needed) and offers two separate local surfaces:
 
 | Surface | TUI and tools | Execution |
 |---|---|---|

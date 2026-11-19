@@ -2,7 +2,7 @@
 // hook action, so the native loop owns timing, persistence, leadership across processes and restart recovery; this
 // service owns the task semantics (ids, caps, clamps, fire text) and the pending state clients show.
 import type { Context } from "@opencode/plugin/effect/plugin"
-import { Schedule } from "@opencode/core/schedule"
+import { Automation } from "@opencode/core/automation"
 import type { KiloWakeupRpc } from "@opencode/schema/kilocode/wakeup"
 import { Identifier } from "@opencode/schema/identifier"
 import { SessionMessage } from "@opencode/schema/session-message"
@@ -64,7 +64,7 @@ const present = (value: string | undefined) => (value != null && value !== "" ? 
 const millis = (time: DateTime.Utc | undefined) => (time === undefined ? undefined : DateTime.toEpochMillis(time))
 const iso = (time: number) => DateTime.formatIso(DateTime.makeUnsafe(time))
 
-export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () => Emit) {
+export function makeService(ctx: Ctx, schedules: Automation.Interface, emit: () => Emit) {
   const emitChanged = (event: KiloWakeupRpc.Changed) => emit()(event).pipe(Effect.ignore)
   // The caps are read-then-write, and a fire/cancel can race a create. Serialize task mutations so two parallel tool
   // calls cannot both pass the cap or leave a record behind a removal.
@@ -97,7 +97,7 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
   const write = (record: WakeupRecord) => ctx.storage.set(KEY + record.id, record).pipe(Effect.orDie)
 
   const removeSchedule = (id: string) =>
-    schedules.remove(Schedule.ID.make(id)).pipe(Effect.catchTag("Schedule.NotFoundError", () => Effect.void))
+    schedules.remove(Automation.ID.make(id)).pipe(Effect.catchTag("Automation.NotFoundError", () => Effect.void))
 
   const drop = (record: WakeupRecord) =>
     ctx.storage.remove(KEY + record.id).pipe(Effect.ignore, Effect.andThen(removeSchedule(record.scheduleID)))
@@ -106,12 +106,12 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
   const reconcile = (records: readonly WakeupRecord[]) =>
     Effect.gen(function* () {
       const sessions = [...new Set(records.map((record) => record.sessionID))]
-      const infos = new Map<string, Schedule.Info>()
+      const infos = new Map<string, Automation.Info>()
       for (const sessionID of sessions) {
         const list = yield* schedules.list({ sessionID: SessionID.make(sessionID) })
         for (const info of list) infos.set(info.id, info)
       }
-      const live: { record: WakeupRecord; info: Schedule.Info }[] = []
+      const live: { record: WakeupRecord; info: Automation.Info }[] = []
       for (const record of records) {
         const info = infos.get(record.scheduleID)
         // Only an active row can fire. A paused row keeps its due time, so counting it would leave the session
@@ -130,14 +130,14 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
       return live
     })
 
-  const view = (record: WakeupRecord, info: Schedule.Info): KiloWakeupRpc.Wakeup => ({
+  const view = (record: WakeupRecord, info: Automation.Info): KiloWakeupRpc.Wakeup => ({
     id: record.id,
     sessionID: SessionID.make(record.sessionID),
     kind: record.kind,
     prompt: record.prompt,
     reason: record.reason,
     dueAt: record.dueAt,
-    recurring: info.when.type === "cron",
+    recurring: info.trigger.type === "cron",
     schedule: record.schedule,
     scheduleID: record.scheduleID,
   })
@@ -202,8 +202,8 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
   const create = (
     kind: Kind,
     input: CreateInput | CreateCronInput,
-    when: Schedule.When,
-    ends: { at: string } | undefined,
+    when: Automation.Trigger,
+    expires: string | undefined,
     notice?: string,
   ) =>
     serial(
@@ -229,16 +229,16 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
                   ? "Wakeup"
                   : `Wakeup: ${input.reason}`
                 : `Cron: ${"cron" in input && input.cron ? input.cron : "one-shot"}`,
-            when,
-            ...(ends === undefined ? {} : { ends }),
-            // A hook prompt is never admitted; it only lets a schedule inventory show what the task will send.
+            trigger: when,
+            ...(expires === undefined ? {} : { expires }),
+            // A hook action is never admitted; it only lets a schedule inventory show what the task will send.
             action: { type: "hook", prompt: input.prompt },
           },
         )
         .pipe(
           Effect.map((info) => ({ ok: true as const, info })),
           Effect.catchTags({
-            "Schedule.InvalidError": (error) => Effect.succeed({ ok: false as const, error: error.message }),
+            "Automation.InvalidError": (error) => Effect.succeed({ ok: false as const, error: error.message }),
             "Session.NotFoundError": () =>
               Effect.succeed({ ok: false as const, error: `Session not found: ${input.sessionID}` }),
             "Permission.BlockedError": (error) => Effect.succeed({ ok: false as const, error: error.message }),
@@ -287,8 +287,8 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
       if ([cron, when, delay].filter((value) => value !== undefined).length !== 1)
         return { ok: false as const, error: "Provide exactly one of cron, when or delay" } satisfies CreateResult
       const now = Date.now()
-      const ends = { at: iso(now + CRON_TTL_MS) }
-      if (cron !== undefined) return yield* create("cron", input, { type: "cron", cron }, ends)
+      const expires = iso(now + CRON_TTL_MS)
+      if (cron !== undefined) return yield* create("cron", input, { type: "cron", cron }, expires)
       const resolved = resolveTime({ when, delay }, now)
       if ("error" in resolved)
         return { ok: false as const, error: resolved.error.message, past: resolved.error.past } satisfies CreateResult
@@ -296,7 +296,7 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
         "cron",
         input,
         { type: "at", at: iso(resolved.dueAt) },
-        ends,
+        expires,
         clampNotice({ when, delay }, resolved.dueAt, now),
       )
     })
@@ -325,7 +325,7 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
     )
 
   /** Deliver a due occurrence to its session and retire or re-arm the record. Returns false for a foreign schedule. */
-  const fire = (info: Schedule.Info) =>
+  const fire = (info: Automation.Info) =>
     serial(
       Effect.gen(function* () {
       const record = (yield* scan).find((item) => item.scheduleID === info.id)
@@ -361,7 +361,7 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
         return false
       }
       const next = record.schedule === undefined ? undefined : nextOccurrence(record.schedule, info.tz, now)
-      const endsAt = millis(info.endsAt)
+      const endsAt = millis(info.expires)
       if (next === undefined || (endsAt !== undefined && next > endsAt)) yield* drop(record)
       else yield* write({ ...record, dueAt: next })
       yield* announce(record.sessionID, record.directory)
