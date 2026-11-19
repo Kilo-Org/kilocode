@@ -270,6 +270,28 @@ export const CatalogFailure = Schema.Struct({
 
 export interface CatalogFailure extends Schema.Schema.Type<typeof CatalogFailure> {}
 
+export function catalogFailureMessage(failure: CatalogFailure) {
+  const status = failure.status ? ` (HTTP ${failure.status})` : ""
+  switch (failure.kind) {
+    case "unauthorized":
+      return `Credentials rejected${status} - sign in again`
+    case "unauthenticated":
+      return "Not signed in - sign in to continue"
+    case "network":
+      return "Couldn't reach the provider - check your connection"
+    case "http":
+      return `Provider error${status}`
+    case "schema":
+      return "Unexpected response from the provider"
+    case "organization_missing":
+      return "Selected team is no longer available - use /teams"
+    case "scope_conflict":
+      return "Selected team conflicts with the Kilo token - use /teams"
+    case "personal_unavailable":
+      return "No personal account - select a team with /teams"
+  }
+}
+
 // The catalog state of the location. `failure` is `null` while the catalog is usable or still loading.
 export const CatalogStatus = Schema.Struct({
   failure: Schema.NullOr(CatalogFailure),
