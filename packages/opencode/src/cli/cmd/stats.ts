@@ -184,7 +184,9 @@ export const aggregateSessionStats = Effect.fn("Cli.stats.aggregate")(function* 
         > = {}
 
         for (const message of messages) {
-          if (message.info.role === "assistant") {
+          // kilocode_change start - skip copied fork history
+          if (message.info.role === "assistant" && !message.info.forked) {
+            // kilocode_change end
             // kilocode_change start - count propagated subagent cost once but keep child model stats (#6321)
             const parts = message.parts.filter((part) => part.type === "step-finish")
             const cost = parts.length ? parts.reduce((sum, part) => sum + part.cost, 0) : message.info.cost || 0

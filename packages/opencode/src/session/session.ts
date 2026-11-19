@@ -37,7 +37,7 @@ import { Global } from "@opencode-ai/core/global"
 import { BackgroundProcess } from "@/kilocode/background-process"
 import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
 import { KiloSession } from "@/kilocode/session"
-import { forkWriter } from "@/kilocode/session/fork"
+import { forkWriter, forkedMessage, forkedPart } from "@/kilocode/session/fork"
 import { GoalState } from "@/kilocode/session/goal/state"
 import { kiloSessionFork } from "@/kilocode/session/fork-command"
 import { KiloSessionEvent } from "@/kilocode/session/event"
@@ -883,12 +883,11 @@ export const layer: Layer.Layer<
         idMap.set(msg.info.id, newID)
 
         const parentID = msg.info.role === "assistant" && msg.info.parentID ? idMap.get(msg.info.parentID) : undefined
-        // kilocode_change start
+        // kilocode_change start - copied turns keep their transcript, not their usage
         const cloned = yield* writer.updateMessage({
-          ...msg.info,
+          ...forkedMessage(msg.info),
           sessionID: session.id,
           id: newID,
-          ...(msg.info.role === "assistant" && { cost: 0 }), // kilocode_change - count only spend incurred after the fork
           ...(parentID && { parentID }),
         })
         // kilocode_change end
@@ -898,11 +897,10 @@ export const layer: Layer.Layer<
           const prepared = KiloSession.prepareForkedPart(part)
           if (!prepared) continue
           const p: SessionV1.Part = {
-            ...prepared,
+            ...forkedPart(prepared), // kilocode_change - copied steps keep no spend or tokens
             id: PartID.ascending(),
             messageID: cloned.id,
             sessionID: session.id,
-            ...(prepared.type === "step-finish" && { cost: 0 }), // kilocode_change - exclude pre-fork spend from model stats
           }
           if (p.type === "compaction" && p.tail_start_id) {
             p.tail_start_id = idMap.get(p.tail_start_id)

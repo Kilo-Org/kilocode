@@ -8,7 +8,26 @@ import { resumeHint } from "../task-resume"
 import { KiloPartLifecycle } from "./part-lifecycle"
 
 const task = "task"
+const cleared = { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
 type Ops = Pick<Session.Interface, "get" | "messages" | "create" | "updateMessage" | "updatePart">
+
+// Copied assistant turns stay in the transcript, but they are not a new execution.
+// `forked` is how usage reports skip them. Message token counts and timestamps stay:
+// context compaction reads the prompt size, and the turn should still look finished.
+// Step-finish cost and tokens are cleared because those rows are summed directly.
+export function forkedMessage(info: MessageV2.Info): MessageV2.Info {
+  if (info.role !== "assistant") return info
+  return { ...info, cost: 0, forked: true }
+}
+
+export function forkedPart<T extends MessageV2.Part>(part: T): T {
+  if (part.type !== "step-finish") return part
+  return {
+    ...part,
+    cost: 0,
+    tokens: { ...cleared, ...(part.tokens.total === undefined ? {} : { total: 0 }) },
+  }
+}
 
 export function forkWriter(events: EventV2.Interface, ops: Pick<Ops, "get" | "messages" | "create">) {
   const pending: Parameters<EventV2.Interface["publishAll"]>[0][number][] = []
@@ -126,10 +145,9 @@ function copy(input: { source: Session.Info; parentID: SessionID; ops: Ops }) {
       ids.set(msg.info.id, id)
       const parentID = msg.info.role === "assistant" ? ids.get(msg.info.parentID) : undefined
       const cloned = yield* input.ops.updateMessage({
-        ...msg.info,
+        ...forkedMessage(msg.info),
         id,
         sessionID: target.id,
-        ...(msg.info.role === "assistant" && { cost: 0 }),
         ...(parentID && { parentID }),
       })
 
@@ -137,11 +155,10 @@ function copy(input: { source: Session.Info; parentID: SessionID; ops: Ops }) {
         const prepared = prepareForkedPart(part)
         if (!prepared) continue
         const next: MessageV2.Part = {
-          ...prepared,
+          ...forkedPart(prepared),
           id: PartID.ascending(),
           messageID: cloned.id,
           sessionID: target.id,
-          ...(prepared.type === "step-finish" && { cost: 0 }),
         }
         if (next.type === "compaction" && next.tail_start_id) next.tail_start_id = ids.get(next.tail_start_id)
         yield* input.ops.updatePart(next)
