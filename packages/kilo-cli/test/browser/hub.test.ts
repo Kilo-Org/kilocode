@@ -45,6 +45,12 @@ const info: proto.ExtensionInfo = {
   },
 }
 
+// The same extension after it learned to accept `hub.keepalive`; before that it drops the connection over it.
+const keepaliveInfo: proto.ExtensionInfo = {
+  ...info,
+  capabilities: { ...info.capabilities, keepalive: true },
+}
+
 function call(id: number) {
   return { type: "rpc" as const, message: { jsonrpc: "2.0" as const, id, method: "tools.list", params: {} } }
 }
@@ -309,12 +315,28 @@ describe("hub multiplexing", () => {
 describe("hub keepalive", () => {
   const keepalives = (frames: proto.HubToExtension[]) => frames.filter((frame) => frame.type === "hub.keepalive").length
 
-  test("a loopback hub pings its extension while a CLI is attached, and only then", () => {
+  test("never pings an extension that does not advertise the capability", () => {
     jest.useFakeTimers()
     try {
       const hub = create({ mode: "loopback", version: "test", keepalive: 1_000 })
       const ext = link()
       hub.attach(ext.link.send, ext.link.close)!.hello(info)
+      hub.join(controller().send, controller().close)
+      // Chrome 140's extension build drops the connection over an unknown frame, ending every session in it.
+      jest.advanceTimersByTime(5_000)
+      expect(keepalives(ext.frames)).toBe(0)
+      hub.close("done")
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  test("a loopback hub pings its extension while a CLI is attached, and only then", () => {
+    jest.useFakeTimers()
+    try {
+      const hub = create({ mode: "loopback", version: "test", keepalive: 1_000 })
+      const ext = link()
+      hub.attach(ext.link.send, ext.link.close)!.hello(keepaliveInfo)
       jest.advanceTimersByTime(3_000)
       // No CLI uses the browser: the hub keeps nothing alive.
       expect(keepalives(ext.frames)).toBe(0)
@@ -337,7 +359,7 @@ describe("hub keepalive", () => {
       const loopback = create({ mode: "loopback", version: "test", keepalive: 1_000 })
       const dropped = link()
       const sink = loopback.attach(dropped.link.send, dropped.link.close)!
-      sink.hello(info)
+      sink.hello(keepaliveInfo)
       loopback.join(controller().send, controller().close)
       jest.advanceTimersByTime(1_000)
       sink.drop()
@@ -345,14 +367,14 @@ describe("hub keepalive", () => {
       expect(keepalives(dropped.frames)).toBe(1)
       // The restarted worker attaches again: one ping per period, never one per attach.
       const back = link()
-      loopback.attach(back.link.send, back.link.close)!.hello(info)
+      loopback.attach(back.link.send, back.link.close)!.hello(keepaliveInfo)
       jest.advanceTimersByTime(2_000)
       expect(keepalives(back.frames)).toBe(2)
 
       // Chrome keeps a worker with an open native port alive by itself.
       const native = create({ mode: "native", version: "test", keepalive: 1_000 })
       const port = link()
-      native.attach(port.link.send, port.link.close)!.hello(info)
+      native.attach(port.link.send, port.link.close)!.hello(keepaliveInfo)
       native.join(controller().send, controller().close)
       jest.advanceTimersByTime(5_000)
       expect(keepalives(port.frames)).toBe(0)

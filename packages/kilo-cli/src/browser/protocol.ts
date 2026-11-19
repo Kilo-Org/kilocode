@@ -26,6 +26,8 @@ export const ExtensionInfo = z.object({
     dialogs: z.boolean(),
     fileUpload: z.boolean(),
     tabGroups: z.boolean(),
+    // Extensions built before the loopback hub sent keepalives omit it; a hub keeps such an extension alive no other way.
+    keepalive: z.boolean().optional(),
   }),
 })
 export type ExtensionInfo = z.infer<typeof ExtensionInfo>

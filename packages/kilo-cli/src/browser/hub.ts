@@ -169,7 +169,9 @@ export function create(input: Options): Hub {
         }
         slot = { kind: "ready", info, link }
         // A native port keeps the worker alive by itself (Chrome 105+); a WebSocket only while messages cross it.
-        if (input.mode === "loopback") {
+        // An extension built before `hub.keepalive` drops the connection over that unknown frame, which would end
+        // every session in it, so only an extension that advertises the capability is kept alive this way.
+        if (input.mode === "loopback" && info.capabilities.keepalive === true) {
           keepalive = setInterval(() => {
             if (slot.kind === "ready" && controllers.size > 0) slot.link.send({ type: "hub.keepalive" })
           }, input.keepalive ?? Keepalive)
