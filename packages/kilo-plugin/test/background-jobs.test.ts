@@ -126,8 +126,8 @@ describe("kilocode.background-jobs", () => {
       yield* env.until((list) => list[0]?.status === "cancelled")
       yield* gate.release
     }),
-    // A real session, plugin activation and two tool calls: the setup dominates, and it took 5.4 s on a loaded CI
-    // runner against bun's 5 s default. Every assertion above still decides the result.
+    // A real session and plugin activation dominate: the same setup took 5.4 s on a loaded CI runner against bun's
+    // 5 s default. Every assertion above still decides the result.
     20_000,
   )
 
