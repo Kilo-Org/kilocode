@@ -10,7 +10,7 @@ Kilo Desktop is distributed as a native installer for your operating system. Dow
 ## System requirements
 
 - **Operating system:** macOS (Apple Silicon), Windows (`x64` or `ARM64`), or Linux (`x64` or `ARM64`).
-- **Account:** a [Kilo account](/docs/desktop/settings/ai#ai-providers). Signing in is required to use the local model server, notebooks, and conda environments.
+- **Account (optional):** a [Kilo account](/docs/desktop/settings/ai#ai-providers) to use models through the Kilo Gateway, notebooks, and conda environments. Without one, you can use your own provider API keys or a [local model](/docs/desktop/features/local-inference).
 
 ## Install the app
 

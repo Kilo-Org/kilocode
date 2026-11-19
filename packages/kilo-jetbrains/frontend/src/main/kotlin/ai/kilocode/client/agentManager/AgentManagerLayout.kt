@@ -17,8 +17,7 @@ import java.util.UUID
 internal class AgentManagerLayout(private val properties: PropertiesComponent? = null) {
     @Serializable
     data class Section(override val key: String, override val title: String, val color: String? = null) : ActiveItem {
-        // A section is structure, not a selectable target: it keeps the selected backdrop so it reads
-        // as a constant group header instead of flickering on hover or selection.
+        // The backdrop stays the same on hover and selection; selection is painted as an underline.
         override val alwaysSelected = true
     }
 

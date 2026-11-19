@@ -497,8 +497,6 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a pr lookup cancelled by a disable cannot publish after a re-enable`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
-        val key = normalizeWorktreePath(path)
         val gate = CompletableDeferred<Unit>()
         // The lookup that gets abandoned. It answers empty and OK, which is what the RPC layer
         // synthesizes when it swallows the cancellation. NonCancellable holds it open past the
@@ -509,19 +507,17 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
 
         github(false)
-        // The fresh lookup after re-enabling sees a real PR and an unauthorized gh.
+        // The fresh lookup after re-enabling sees an unauthorized gh.
         rpc.beforePrStatus = {}
-        rpc.prResult = WorktreePrListDto(GhAvailability.UNAUTH, listOf(WorktreePrDto(path, 7, GhState.OPEN, "https://pr/7")))
+        rpc.prResult = WorktreePrListDto(GhAvailability.UNAUTH)
         github(true)
         drain()
-        assertEquals(7, service.pr.value[key]?.number)
         assertEquals(GhAvailability.UNAUTH, service.gh.value)
 
-        // Now let the abandoned lookup finish. It must not wipe the badge or report a false OK.
+        // Now let the abandoned lookup finish. It must not report a false OK.
         gate.complete(Unit)
         drain()
 
-        assertEquals(7, service.pr.value[key]?.number)
         assertEquals(GhAvailability.UNAUTH, service.gh.value)
         handle.close()
     }
@@ -582,6 +578,35 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
 
         assertEquals(1, service.pr.value[key]?.number)
         assertEquals(GhAvailability.RATE_LIMITED, service.gh.value)
+        handle.close()
+    }
+
+    fun `test transient PR failures retain hidden badges but auth or git failures clear them`() {
+        val path = normalizeWorktreePath("${project.basePath}/.kilo/worktrees/hidden")
+        val badge = WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")
+        var hidden = emptySet<String>()
+        val handle = service.attach { hidden }
+        drain()
+
+        for (status in listOf(GhAvailability.UNAUTH, GhAvailability.GIT_MISSING)) {
+            hidden = emptySet()
+            rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(badge))
+            service.refreshPr(force = true)
+            drain()
+            hidden = setOf(path)
+            for (transient in listOf(GhAvailability.TIMEOUT, GhAvailability.RATE_LIMITED)) {
+                rpc.prResult = WorktreePrListDto(transient)
+                service.refreshPr(force = true)
+                drain()
+                assertEquals(listOf(path), rpc.prExcluded.last())
+                assertEquals(badge, service.pr.value[path])
+            }
+            rpc.prResult = WorktreePrListDto(status)
+            service.refreshPr(force = true)
+            drain()
+            assertEquals(status, service.gh.value)
+            assertEmpty(service.pr.value.keys)
+        }
         handle.close()
     }
 
@@ -810,6 +835,38 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test a hidden worktree keeps its fresh lookup until it is revealed`() {
+        val path = normalizeWorktreePath("${project.basePath}/.kilo/worktrees/hidden")
+        var hidden = setOf(path)
+        val handle = service.attach { hidden }
+        drain()
+        timers.advanceBy(PR_FLOOR)
+        working(path)
+        drain()
+        idle()
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals(listOf(path), rpc.prExcluded.last())
+        assertEmpty(rpc.prFresh.last())
+
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 9, GhState.OPEN, "https://pr/9")))
+        hidden = emptySet()
+        service.visibilityChanged()
+        timers.advanceBy(PR_FLOOR)
+        drain()
+        assertEquals(3, rpc.prCalls.size)
+        assertEmpty(rpc.prExcluded.last())
+        assertEquals(listOf(path), rpc.prFresh.last())
+        assertNull(rpc.prAges.last())
+        assertEquals(9, service.pr.value[path]?.number)
+
+        service.refreshPr(force = true)
+        drain()
+        assertEmpty(rpc.prFresh.last())
+        handle.close()
+    }
+
     fun `test an agent that stops to ask something still pays a lookup`() {
         val path = "${project.basePath}/.kilo/worktrees/feature-x"
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
@@ -996,11 +1053,11 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     fun `test disabling clears pr state and stops the poll`() {
         val path = "${project.basePath}/.kilo/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
-        rpc.prResult = WorktreePrListDto(GhAvailability.UNAUTH, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
         val handle = service.attach()
         drain()
         assertEquals(1, service.pr.value[key]?.number)
-        assertEquals(GhAvailability.UNAUTH, service.gh.value)
+        assertEquals(GhAvailability.OK, service.gh.value)
         val before = rpc.prCalls.size
 
         github(false)
