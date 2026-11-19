@@ -38,7 +38,7 @@ import {
   Target,
   Trigger,
 } from "@opencode/schema/automation"
-import type { HookAction, ServiceCreateInput } from "@opencode/schema/automation"
+import type { HookAction, ServiceCreateInput } from "@opencode/schema/automation" // kilocode_change - flows seam types
 import type { ProjectID } from "@opencode/schema/project-id"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { Agent } from "./agent.js"
@@ -67,7 +67,7 @@ import { SubagentDepth } from "./session/subagent-depth.js"
 
 export { Action, ActionInput, CreateInput, ID, Info, Outcome, Request, Status, Target, Trigger }
 // kilocode_change - flows seam: the service-only create input is part of the automation namespace
-export type { ServiceCreateInput } from "@opencode/schema/automation"
+export type { ServiceCreateInput } from "@opencode/schema/automation" // kilocode_change - flows seam
 
 export class NotFoundError extends Schema.TaggedError<NotFoundError>()("Automation.NotFoundError", {
   automationID: ID,
@@ -98,7 +98,7 @@ export interface ListInput {
 
 export interface Interface {
   readonly create: (
-    input: ServiceCreateInput,
+    input: ServiceCreateInput, // kilocode_change - flows seam: plugins may write a hook-owned row
     invocation?: Invocation,
   ) => Effect.Effect<Info, InvalidError | DisabledError | Session.NotFoundError | Permission.Error>
   readonly list: (input?: ListInput) => Effect.Effect<Info[]>
@@ -969,7 +969,7 @@ const layer = Layer.effect(
     /** The trigger as stored, with a relative `at` fixed to an instant, and its first due time. */
     const firstDue = Effect.fnUntraced(function* (
       trigger: Trigger,
-      action: ActionInput | HookAction,
+      action: ActionInput | HookAction, // kilocode_change - flows seam: hook rows are timed like prompts
       zone: DateTime.TimeZone,
       now: number,
     ) {
@@ -1009,7 +1009,7 @@ const layer = Layer.effect(
 
     /** Resolves a prompt's target and checks a code action, both in the automation's directory. */
     const resolveAction = Effect.fnUntraced(function* (
-      input: ServiceCreateInput,
+      input: ServiceCreateInput, // kilocode_change - flows seam
       owner: SessionSchema.Info | undefined,
       trigger: Trigger,
       directory: string,

@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 162,
-    "markedLines": 2909,
-    "unmarkedLines": 492,
+    "files": 164,
+    "markedLines": 2913,
+    "unmarkedLines": 497,
     "deletedFiles": 0
   },
   "files": {
@@ -286,6 +286,11 @@
     "packages/core/test/plugin/supervisor-reload.test.ts": {
       "rung": 3,
       "seam": "Test timing only: the organization integration test waits up to 15 s (1500 retries of 10 ms) for each plugin reload instead of 2 s. The 2 s budget and a 5 s budget both ran out on loaded Linux CI runners, where the plugin supervisor restart outran the window. No product code changes. No seam: the retry budget is a literal inside the upstream test."
+    },
+    "packages/core/test/database-migration.test.ts": {
+      "rung": 4,
+      "seam": "Cover the automation carry-over of a hook-owned schedule row: the fixture inserts an action of type `hook` with a `times` limit and asserts the row becomes a hook action instead of a native prompt. The behaviour under test is Kilo's migration seam, so this coverage exists only for Kilo.",
+      "unmarked": "The insert helper and the expected-row fixture are upstream test bodies edited in place, so markers would obscure the test; the whole change is Kilo-only coverage."
     },
     "packages/core/test/filesystem/watcher.test.ts": {
       "rung": 4,
