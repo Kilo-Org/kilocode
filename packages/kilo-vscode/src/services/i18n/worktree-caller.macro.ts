@@ -11,9 +11,8 @@ const entries = await Promise.all(
       {
         "agentManager.setup.failed": manager.dict["agentManager.setup.failed"],
         "session.workspaceScope.alternatives": app.dict["session.workspaceScope.alternatives"],
-        "prompt.action.autoApprove.enabled": app.dict["prompt.action.autoApprove.enabled"],
-        "prompt.action.autoApprove.disabled": app.dict["prompt.action.autoApprove.disabled"],
-        "prompt.action.autoApprove.sandboxExcluded": app.dict["prompt.action.autoApprove.sandboxExcluded"],
+        "prompt.action.autoApprove.enabledNotification": app.dict["prompt.action.autoApprove.enabledNotification"],
+        "prompt.action.autoApprove.disabledNotification": app.dict["prompt.action.autoApprove.disabledNotification"],
       },
     ]
   }),

@@ -207,6 +207,8 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "自动审批已启用。权限请求将自动获批。",
   "prompt.action.autoApprove.disabled": "自动审批已禁用。点击以自动批准权限请求。",
   "prompt.action.autoApprove.sandboxExcluded": "离开沙盒的提示始终被排除。",
+  "prompt.action.autoApprove.enabledNotification": "已启用自动批准。沙箱升级请求始终被排除。",
+  "prompt.action.autoApprove.disabledNotification": "已停用自动批准。",
   "prompt.action.send": "发送",
   "prompt.action.continue": "继续",
   "prompt.action.send.blocked": "请先回答或忽略待处理的问题",

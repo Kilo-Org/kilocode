@@ -227,6 +227,8 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "Автоодобрение отключено. Нажмите, чтобы автоматически одобрять запросы разрешений.",
   "prompt.action.autoApprove.sandboxExcluded": "Запросы на выход из песочницы всегда исключены.",
+  "prompt.action.autoApprove.enabledNotification": "Автоодобрение включено. Запросы на выход из песочницы исключены.",
+  "prompt.action.autoApprove.disabledNotification": "Автоодобрение отключено.",
   "prompt.action.indexing": "Настройки индексации",
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
