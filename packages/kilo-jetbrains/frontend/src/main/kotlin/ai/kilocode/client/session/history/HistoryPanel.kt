@@ -114,6 +114,7 @@ class HistoryPanel(
         bindTheme()
         controller.onRepoOnlyChanged = { value ->
             repoOnly.isSelected = value
+            repoOnly.isVisible = controller.gitUrl != null
         }
         addHierarchyListener { e ->
             if (e.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener

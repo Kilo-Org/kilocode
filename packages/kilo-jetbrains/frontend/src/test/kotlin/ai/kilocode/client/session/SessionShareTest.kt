@@ -55,7 +55,7 @@ class SessionShareTest : SessionUiTestBase() {
     fun `test unshare calls the backend and clears the link`() {
         open()
         rpc.listed.add(session("ses_test").copy(share = SessionShareDto("https://app.kilo.ai/s/token")))
-        controller().model.setSession(session("ses_test").copy(share = SessionShareDto("https://app.kilo.ai/s/token")))
+        controller().model.setSession(session("ses_test").copy(share = SessionShareDto("https://app.kilo.ai/s/token"), publicLinks = true))
         assertNotNull(actions().share)
 
         actions().stopShare()

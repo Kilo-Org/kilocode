@@ -47,6 +47,7 @@ import { KiloSubagentDelegationPlugin } from "./subagent-delegation"
 import { KiloRecallPlugin } from "./recall"
 import { KiloIndexingPlugin } from "./indexing"
 import { KiloPagesPlugin } from "./pages"
+import { KiloCloudHistory } from "./cloud-history"
 import { KiloSandbox } from "./sandbox"
 import { KiloBoard } from "./board"
 import { KiloSoulPlugin } from "./soul"
@@ -82,6 +83,7 @@ export const KiloPlugins = [
   KiloMarketplacePlugin,
   KiloFlowPlugin,
   KiloSessionSync.plugin,
+  KiloCloudHistory,
   KiloRemote.plugin,
   KiloSkillPlugin,
   // Replaces the upstream OpenCode and report built-in skills with Kilo's config guide.

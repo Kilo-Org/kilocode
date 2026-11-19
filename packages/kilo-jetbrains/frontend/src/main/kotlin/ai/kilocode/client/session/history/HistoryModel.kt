@@ -90,6 +90,8 @@ open class HistoryModel<T : HistoryItem> : AbstractListModel<T>() {
                 fireIntervalAdded(this, old, new - 1)
             }
             new > 0 -> fireContentsChanged(this, 0, new - 1)
+            // A page can be empty but still carry a cursor or change the loading/error state.
+            else -> refresh()
         }
     }
 

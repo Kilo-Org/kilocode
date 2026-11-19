@@ -380,11 +380,13 @@ class SessionUi(
 
     @RequiresEdt
     override fun startShare() {
+        if (!publicLinks) return
         controller.setShare(true) { url, err -> onShareResult(url, err, on = true) }
     }
 
     @RequiresEdt
     override fun stopShare() {
+        if (!publicLinks) return
         controller.setShare(false) { _, err -> onShareResult(null, err, on = false) }
     }
 
