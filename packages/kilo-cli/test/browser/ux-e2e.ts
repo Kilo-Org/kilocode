@@ -27,6 +27,8 @@
 //   tui-redirect  a redirect to an ungranted origin in the TUI: one prompt, then the navigate lands there
 //   settings-faults  the settings page's load/save/command error lines (Stop all and Disconnect worded for
 //             themselves), with storage and messaging faults injected
+//   share-adopt  `/browser share` (own session, a tab another session holds) and `/browser adopt` (an ended group,
+//             nothing ended, typed before the TUI's server loaded its plugins) in TUI sessions that share one hub
 //   signed-out  the local-agent switch and a run while signed out of Kilo, then sign-out and token expiry mid-run:
 //             which storage keys survive (the local-agent ones must, the account token must not)
 //   stop-race  Stop all while a second conversation of the same `kilo2 serve` is mid-turn: its call must not open a
@@ -73,6 +75,8 @@ import {
   type Run,
   type RunOptions,
   runAgent,
+  groupById,
+  openUserTab,
   type Settings,
   startBridgeHub,
   startModel,
@@ -100,7 +104,12 @@ declare const chrome: {
     session: { get(key: string | null): Promise<unknown> }
   }
   tabGroups: { get(groupId: number): Promise<unknown>; query(query: Record<string, unknown>): Promise<unknown> }
-  tabs: { query(query: Record<string, unknown>): Promise<unknown> }
+  tabs: {
+    get(tabId: number): Promise<unknown>
+    query(query: Record<string, unknown>): Promise<unknown>
+    update(tabId: number, properties: Record<string, unknown>): Promise<{ windowId: number }>
+  }
+  windows: { update(windowId: number, properties: Record<string, unknown>): Promise<unknown> }
   commands: { getAll(): Promise<unknown> }
 }
 
@@ -182,6 +191,8 @@ function observe(condition: boolean, message: string) {
 }
 
 const SETTINGS_FIX = "cloud fix/extension-agents-settings + kilocode browser-disconnect (PRs #11929/#16385)"
+const PROMPTS_FIX = "kilocode #16390 (browser prompts name the class and origin, typed text masked)"
+const SHARE_ADOPT_FIX = "kilocode #16392 (/browser share, /browser adopt and browser notices)"
 
 /**
  * What fails today for a reason owned elsewhere: whole scenarios, with the failure messages they are expected to
@@ -190,18 +201,20 @@ const SETTINGS_FIX = "cloud fix/extension-agents-settings + kilocode browser-dis
  * (see `finish`); a known scenario or check that passes is reported as an unexpected pass, so its entry can go.
  */
 const KNOWN_FAILURES: Record<string, { reason: string; failures?: RegExp[] }> = {
-  "signed-out": {
-    reason: "local agents settings signed out: cloud fix/extension-agents-signin",
+  "stop-race": { reason: SETTINGS_FIX, failures: [/^a turn running at Stop all opened a new session/] },
+  "share-adopt": {
+    reason: SHARE_ADOPT_FIX,
     failures: [
-      /^signed out, the "Allow local agents" switch is unreachable/,
-      /^signed out, pairing and a local agent run failed/,
-      /^signing out of the Kilo account stopped the local agent/,
-      /^sign-out must keep the local-agent keys/,
-      /^an expired Kilo token stopped the local agent/,
-      /^token expiry must keep the local-agent keys/,
+      /^share: no "Your active tab is now in this session's tab group\." toast/,
+      /^share: the user tab is not in A's group/,
+      /^held: no "The active tab belongs to another agent session…" toast/,
+      /^adopt: no "This session now uses the last ended tab group\." toast/,
+      /^adopt: A's group is not back to/,
+      /^adopt: C's snapshot did not read the adopted tab/,
+      /^adopt with nothing ended: no "There is no ended tab group to reuse\." toast/,
+      /^a "\/browser adopt" typed right after the TUI drew answered neither/,
     ],
   },
-  "stop-race": { reason: SETTINGS_FIX, failures: [/^a turn running at Stop all opened a new session/] },
   "tui-redirect": {
     reason: "cloud #11921 + kilocode #16382",
     failures: [/^redirect: expected one permission prompt/, /^redirect: the navigate did not land/],
@@ -212,6 +225,9 @@ const KNOWN_FAILURES: Record<string, { reason: string; failures?: RegExp[] }> = 
   "controls:disconnect": { reason: SETTINGS_FIX },
   "settings-faults:stop-all-text": { reason: SETTINGS_FIX },
   "settings-faults:disconnect-text": { reason: SETTINGS_FIX },
+  "tui:prompt-text": { reason: PROMPTS_FIX },
+  "tui:masked-text": { reason: PROMPTS_FIX },
+  "tui:notices": { reason: SHARE_ADOPT_FIX },
 }
 /** The known checks this run evaluated: their outcome and, when they failed, the message. */
 const knownChecks: { check: string; message?: string; passed: boolean; reason: string }[] = []
@@ -931,8 +947,12 @@ async function tmux(args: string[]) {
 
 const pane = (name: string) => tmux(["capture-pane", "-t", name, "-p", "-S", "-200"])
 
-async function savePane(name: string, label: string) {
-  const text = await pane(name)
+/** The tmux session names of this run: unique per process, so runs of several agents on one machine never collide. */
+const TMUX_PREFIX = `ux-e2e-${process.pid}`
+
+/** Saves the pane as `<scenario>-<label>.pane.txt`: the given capture, or a fresh one. */
+async function savePane(name: string, label: string, captured?: string) {
+  const text = captured ?? (await pane(name))
   await fs.mkdir(evidence, { recursive: true })
   const file = path.join(evidence, `${scenarioLabel}-${label}.pane.txt`)
   await fs.writeFile(file, text)
@@ -940,7 +960,7 @@ async function savePane(name: string, label: string) {
   return text
 }
 
-async function startTui(root: string, settings: Settings, name: string) {
+async function startTui(root: string, settings: Settings, name: string, settleMs = 1_500) {
   const env = environment(root, settings)
   const lines = Object.entries(env)
     .filter(([key]) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(key))
@@ -954,7 +974,7 @@ async function startTui(root: string, settings: Settings, name: string) {
   await tmux(["kill-session", "-t", name]).catch(() => undefined)
   await tmux(["new-session", "-d", "-s", name, "-x", "200", "-y", "50", "-c", root, `bash ${shellQuote(launcher)}`])
   await until(async () => ((await pane(name)).trim().length > 40 ? true : undefined), 30_000, "the TUI draws")
-  await Bun.sleep(1_500)
+  await Bun.sleep(settleMs)
 }
 
 /** Types the prompt and submits it; an Enter the TUI drops while it is still booting is pressed again. */
@@ -989,13 +1009,20 @@ async function tuiPermission(choice: "once" | "always" | "reject") {
     if (step.results.length === 2) return snapshot
     return undefined
   }
-  const name = `UxExplore-tui-${choice}`
+  const name = `${TMUX_PREFIX}-tui-${choice}`
   try {
     await startTui(root, settings, name)
     await prompt(name, "Open the public page twice.")
     const first = await waitPane(name, /Permission required/, 60_000)
-    out["firstPrompt"] = first === undefined ? null : await savePane(name, "01-prompt")
+    out["firstPrompt"] = first === undefined ? null : await savePane(name, "01-prompt", first)
     expect(first !== undefined, `${choice}: no permission prompt for navigate:${publicOrigin}`)
+    expectKnown(
+      "tui:prompt-text",
+      first === undefined ||
+        (first.includes(`Open pages on ${publicOrigin}`) &&
+          first.includes(`Approving lets this conversation open pages on ${publicOrigin} until it ends.`)),
+      `${choice}: the navigate prompt does not read "Open pages on ${publicOrigin}" with "Approving lets this conversation open pages on ${publicOrigin} until it ends."`,
+    )
     if (choice === "once") await tmux(["send-keys", "-t", name, "Enter"])
     if (choice === "always") await tmux(["send-keys", "-t", name, "Right", "Enter"])
     if (choice === "reject") await tmux(["send-keys", "-t", name, "Escape"])
@@ -1004,15 +1031,30 @@ async function tuiPermission(choice: "once" | "always" | "reject") {
     const second = await waitPane(name, /Permission required/, 8_000)
     out["secondPrompted"] = second !== undefined
     if (second !== undefined) {
-      await savePane(name, "03-second-prompt")
+      out["secondPrompt"] = await savePane(name, "03-second-prompt", second)
       await tmux(["send-keys", "-t", name, "Enter"])
       await Bun.sleep(3_000)
     }
     const third = await waitPane(name, /Permission required/, 6_000)
     out["thirdPrompted"] = third !== undefined
     if (third !== undefined) {
-      await savePane(name, "04-third-prompt")
+      out["thirdPrompt"] = await savePane(name, "04-third-prompt", third)
       await tmux(["send-keys", "-t", name, "Enter"])
+    }
+    const prompts = [first, second, third].filter((text): text is string => text !== undefined)
+    expectKnown(
+      "tui:prompt-text",
+      !prompts.some((text) => text.includes("Call tool browser")),
+      `${choice}: a browser prompt still reads "Call tool browser"`,
+    )
+    if (choice === "once") observe(second?.includes(`Open pages on ${publicOrigin}`) === true, `once: "Allow once" on the first navigate did not ask again for the second navigate to ${publicOrigin}`)
+    if (choice !== "reject") {
+      const read = prompts.find((text) => text.includes(`Read pages on ${publicOrigin}`))
+      expectKnown(
+        "tui:prompt-text",
+        read !== undefined && read.includes(`Approving lets this conversation read pages on ${publicOrigin} until it ends.`),
+        `${choice}: no prompt reads "Read pages on ${publicOrigin}" with "Approving lets this conversation read pages on ${publicOrigin} until it ends." for the snapshot`,
+      )
     }
     await maybe(async () => (history.at(-1)?.results.length ?? 0) >= 3 || (choice === "reject" && (history.at(-1)?.results.length ?? 0) >= 1) ? true : undefined, 30_000)
     await Bun.sleep(2_000)
@@ -1027,11 +1069,76 @@ async function tuiPermission(choice: "once" | "always" | "reject") {
 }
 
 /**
- * Every distinct pane line that mentions a browser state, sampled every 250 ms: toasts and spinners that are gone by
- * the time the run ends still land here.
+ * The toast on screen, as one line of text: the TUI draws it at the top right between two `┃` borders, word-wrapped
+ * inside at most 60 columns, so its rows are the right-edge `┃ … ┃` segments of the first rows of the pane.
+ */
+function toastOf(text: string) {
+  const parts: string[] = []
+  for (const line of text.split("\n").slice(0, 20)) {
+    const match = /┃([^┃]*)┃\s*$/.exec(line)
+    if (match === null || match.index < line.length - 66) continue
+    // The first row ends with the dismiss affordance "x".
+    const part = (match[1] ?? "").replace(/\s+/g, " ").trim().replace(/\s+x$/, "")
+    if (part) parts.push(part)
+  }
+  return parts.join(" ")
+}
+
+/**
+ * Whether a toast reads `expected`. Spacing is ignored: the toast word-wraps at "/" too ("Run /" | "browser adopt"),
+ * and `toastOf` joins its rows with a space.
+ */
+const toastReads = (toast: string | undefined, expected: string) =>
+  toast !== undefined && toast.replace(/\s+/g, "").includes(expected.replace(/\s+/g, ""))
+
+/** Waits for a toast that reads `expected` (or one of them); the pane is saved the moment it shows. `seen` lists every toast meanwhile. */
+async function waitToast(name: string, expected: string | string[], label: string, timeout = 20_000) {
+  const accepted = typeof expected === "string" ? [expected] : expected
+  const seen = new Set<string>()
+  const shown = await maybe(async () => {
+    const text = await pane(name)
+    const toast = toastOf(text)
+    if (toast) seen.add(toast)
+    return accepted.some((one) => toastReads(toast, one)) ? text : undefined
+  }, timeout)
+  const saved = await savePane(name, shown === undefined ? `${label}-no-toast` : label, shown)
+  return { pane: saved, seen: [...seen], shown: shown !== undefined, toast: toastOf(saved) }
+}
+
+/** The server runs (`run=<id>` in the shared opencode.log of `root`) that have announced their commands, i.e. loaded their plugins. */
+async function loadedRuns(root: string) {
+  const log = await fs.readFile(path.join(root, "data", "kilo2", "log", "opencode.log"), "utf8").catch(() => "")
+  return new Set([...log.matchAll(/run=([0-9a-f]+) message=event .*event\.type=command\.updated/g)].map((match) => match[1]!))
+}
+
+/**
+ * Starts a TUI and waits until its server loaded the location's plugins: a new run id announces `command.updated` in
+ * the shared log, and the pane names the model with no startup line left. A `/browser` command typed earlier reaches
+ * the server before the browser plugin registered its RPC (see the `early` step of share-adopt).
+ */
+async function startSettledTui(root: string, settings: Settings, name: string) {
+  const known = await loadedRuns(root)
+  await startTui(root, settings, name)
+  const started = Date.now()
+  await until(async () => {
+    const runs = await loadedRuns(root)
+    const text = await pane(name)
+    return [...runs].some((run) => !known.has(run)) && text.includes("Echo") && !/Loading plugins|Finishing startup/.test(text) ? true : undefined
+  }, 60_000, `${name} finishes starting`)
+  await Bun.sleep(1_000)
+  return Date.now() - started
+}
+
+/**
+ * Every distinct pane line that mentions a browser state, and every toast, sampled every 250 ms: toasts and spinners
+ * that are gone by the time the run ends still land here. `masked` and `leaks` keep whole lines that show the masked
+ * typed text or the password itself.
  */
 function watchPane(name: string) {
   const seen = new Set<string>()
+  const toasts = new Set<string>()
+  const masked = new Set<string>()
+  const leaks = new Set<string>()
   const pattern = /Allow local agents|stopped|not available|Permission|sensitive|password|Error|browser\./i
   let running = true
   const loop = (async () => {
@@ -1040,14 +1147,18 @@ function watchPane(name: string) {
       for (const line of text.split("\n")) {
         const trimmed = line.replace(/\s{3,}.*$/, "").trim()
         if (trimmed && pattern.test(trimmed)) seen.add(trimmed)
+        if (line.includes("•••")) masked.add(line.trim())
+        if (line.includes(PASSWORD_VALUE)) leaks.add(line.trim())
       }
+      const toast = toastOf(text)
+      if (toast) toasts.add(toast)
       await Bun.sleep(250)
     }
   })()
   return async () => {
     running = false
     await loop
-    return [...seen]
+    return { leaks: [...leaks], lines: [...seen], masked: [...masked], toasts: [...toasts] }
   }
 }
 
@@ -1086,26 +1197,54 @@ async function tuiSensitiveAndStop(mode: "ask" | "allow-all") {
     }
     return undefined
   }
-  const name = `UxExplore-tui-sensitive-${mode}`
+  const name = `${TMUX_PREFIX}-tui-sensitive-${mode}`
   try {
     await startTui(root, settings, name)
     const watched = watchPane(name)
     await prompt(name, "Type the password.")
     const sensitivePrompt = await waitPane(name, /Permission required/i, 60_000)
-    out["sensitivePrompt"] = sensitivePrompt === undefined ? null : await savePane(name, "01-sensitive-prompt")
+    out["sensitivePrompt"] = sensitivePrompt === undefined ? null : await savePane(name, "01-sensitive-prompt", sensitivePrompt)
     expect(mode !== "ask" || sensitivePrompt !== undefined, `${mode}: no sensitive-step prompt in the TUI for a password fill`)
+    if (sensitivePrompt !== undefined) {
+      out["sensitiveReason"] = /Reason: .*?(?=\s{3,}|$)/m.exec(sensitivePrompt)?.[0] ?? null
+      expectKnown(
+        "tui:prompt-text",
+        sensitivePrompt.includes(`Sensitive browser step on ${localOrigin}`) &&
+          out["sensitiveReason"] !== null &&
+          !sensitivePrompt.includes("Call tool browser"),
+        `${mode}: the sensitive prompt does not read "Sensitive browser step on ${localOrigin}" with a "Reason: …" line`,
+      )
+    }
     if (sensitivePrompt !== undefined) await tmux(["send-keys", "-t", name, "Enter"])
     await Bun.sleep(2_000)
     const again = await waitPane(name, /Permission required/i, 5_000)
     if (again !== undefined) {
-      out["secondPrompt"] = await savePane(name, "02-second-prompt")
+      out["secondPrompt"] = await savePane(name, "02-second-prompt", again)
       await tmux(["send-keys", "-t", name, "Enter"])
     }
     await maybe(() => (stopDone ? true : undefined), 40_000)
     await maybe(async () => ((history.at(-1)?.results.length ?? 0) >= 5 ? true : undefined), 20_000)
     await Bun.sleep(2_500)
     out["afterStop"] = await savePane(name, "03-after-stop")
-    out["paneLines"] = await watched()
+    const watchedState = await watched()
+    out["paneLines"] = watchedState.lines
+    out["toasts"] = watchedState.toasts
+    out["maskedLines"] = watchedState.masked
+    out["leakedLines"] = watchedState.leaks
+    const panes = [sensitivePrompt, again, String(out["afterStop"])].filter((text): text is string => text !== undefined)
+    // The running browser.type row sits above the sensitive prompt, so the saved prompt pane holds it for certain.
+    expectKnown(
+      "tui:masked-text",
+      watchedState.leaks.length === 0 &&
+        !panes.some((text) => text.includes(PASSWORD_VALUE)) &&
+        (watchedState.masked.some((line) => line.includes("text=•••")) || panes.some((text) => text.includes("text=•••"))),
+      `${mode}: the pane shows the typed password or no tool row shows "text=•••": ${watchedState.leaks.join(" / ")}`,
+    )
+    expectKnown(
+      "tui:notices",
+      watchedState.toasts.some((toast) => toastReads(toast, "You stopped the browser for this session. Run /browser adopt to give it its tabs back.")),
+      `${mode}: no "You stopped the browser for this session…" toast after Stop all; toasts: ${JSON.stringify(watchedState.toasts)}`,
+    )
     out["recorded"] = [...recorded]
     out["modelResults"] = (history.at(-1)?.results ?? []).map((text) => text.slice(0, 600))
   } finally {
@@ -1123,7 +1262,7 @@ async function tuiUnavailable() {
   const hub = await startHub(root, settings)
   history.length = 0
   model.plan = (step) => (step.results.length === 0 ? navigate(localOrigin) : undefined)
-  const name = "UxExplore-tui-unavailable"
+  const name = `${TMUX_PREFIX}-tui-unavailable`
   const out: Record<string, unknown> = {}
   try {
     await startTui(root, settings, name)
@@ -1132,10 +1271,18 @@ async function tuiUnavailable() {
     await maybe(async () => ((history.at(-1)?.results.length ?? 0) >= 1 ? true : undefined), 40_000)
     await Bun.sleep(4_000)
     out["pane"] = await savePane(name, "01-unavailable")
-    out["paneLines"] = await watched()
+    const watchedState = await watched()
+    out["paneLines"] = watchedState.lines
+    out["toasts"] = watchedState.toasts
     out["modelResults"] = (history.at(-1)?.results ?? []).map((text) => text.slice(0, 600))
-    const text = `${String(out["pane"])}\n${(out["paneLines"] as string[]).join("\n")}`
-    observe(text.includes("Allow local agents"), `the TUI shows no setup hint for browser_unavailable; pane tail: ${text.split("\n").filter(Boolean).slice(-12).join(" / ")}`)
+    const toast = watchedState.toasts.find((text) => text.startsWith("Browser not available"))
+    out["unavailableToast"] = toast ?? null
+    // The hub runs but no extension ever paired, so the hint is the "unpaired" one (kilo-plugin extensionHint).
+    expectKnown(
+      "tui:notices",
+      toastReads(toast, 'No Kilo browser extension has connected yet: install it, or turn on "Allow local agents"'),
+      `the TUI shows no "Browser not available" toast with the unpaired install hint; toasts: ${JSON.stringify(watchedState.toasts)}`,
+    )
   } finally {
     model.plan = undefined
     await tmux(["kill-session", "-t", name]).catch(() => undefined)
@@ -1154,7 +1301,7 @@ async function tuiRedirect() {
   history.length = 0
   const out: Record<string, unknown> = {}
   model.plan = (step) => (step.results.length === 0 ? navigate(`${localOrigin}/redirect`) : undefined)
-  const name = "UxExplore-tui-redirect"
+  const name = `${TMUX_PREFIX}-tui-redirect`
   let prompts = 0
   try {
     await startTui(root, settings, name)
@@ -1197,6 +1344,240 @@ async function tuiScenario() {
     sensitiveAllowAll: await tuiSensitiveAndStop("allow-all"),
     unavailable: await tuiUnavailable(),
   }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Scenario: `/browser share` and `/browser adopt` in the TUI (SPEC D9, D12). Every TUI shares one hub and one home.
+// ---------------------------------------------------------------------------------------------
+
+/** Types a slash command into the TUI's prompt and submits it. */
+async function command(name: string, text: string) {
+  await tmux(["send-keys", "-t", name, "-l", text])
+  await Bun.sleep(700)
+  await tmux(["send-keys", "-t", name, "Enter"])
+}
+
+/**
+ * Types `/browser` alone and returns the slash-list rows it shows (the `/browser` rows with the command's description,
+ * and every pane line naming `/browser`), then types ` <rest>` (the space closes the list) and submits it.
+ */
+async function browserCommandWithList(name: string, rest: string) {
+  await tmux(["send-keys", "-t", name, "-l", "/browser"])
+  const text = (await waitPane(name, /\/browser\s+Show the browser/, 10_000)) ?? (await pane(name))
+  const saved = await savePane(name, "a-02a-browser-autocomplete", text)
+  const lines = saved.split("\n").filter((line) => line.includes("/browser"))
+  const rows = lines.filter((line) => /\/browser\s+Show the browser/.test(line))
+  await tmux(["send-keys", "-t", name, "-l", ` ${rest}`])
+  await Bun.sleep(700)
+  await tmux(["send-keys", "-t", name, "Enter"])
+  return { lines: lines.map((line) => line.trim()), rows: rows.length }
+}
+
+/** Makes `tabId` the active tab of a focused window, and returns what `tabs.query({ active, lastFocusedWindow })` answers. */
+async function activate(tabId: number) {
+  return worker.evaluate(async (id: number) => {
+    const tab = await chrome.tabs.update(id, { active: true })
+    await chrome.windows.update(tab.windowId, { focused: true })
+    const active = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+    return Array.isArray(active) ? ((active[0] as { id?: number } | undefined)?.id ?? null) : null
+  }, tabId)
+}
+
+type TabFacts = { group: GroupInfo | null; groupId: number; tabId: number; url: string | null }
+
+async function tabFacts(tabId: number): Promise<TabFacts> {
+  const tab = record(await worker.evaluate(async (id: number) => chrome.tabs.get(id), tabId))
+  const groupId = typeof tab?.["groupId"] === "number" ? (tab["groupId"] as number) : -1
+  return {
+    group: groupId >= 0 ? await groupById(worker, groupId) : null,
+    groupId,
+    tabId,
+    url: typeof tab?.["url"] === "string" ? (tab["url"] as string) : null,
+  }
+}
+
+/** The tab whose URL carries `marker`, once it exists and sits in a group. */
+async function groupedTab(marker: string) {
+  const id = await until(
+    async () => (await tabState()).tabs.find((tab) => tab.url?.includes(marker) && typeof tab.groupId === "number" && tab.groupId >= 0)?.id,
+    30_000,
+    `a grouped tab at ${marker}`,
+  )
+  return tabFacts(id)
+}
+
+/** One TUI session whose model navigates once to `?session=<label>`; the TUI stays open. */
+async function navigatingSession(root: string, settings: Settings, label: string) {
+  const name = `${TMUX_PREFIX}-sa-${label}`
+  history.length = 0
+  model.plan = (step) => (step.results.length === 0 ? navigate(`${localOrigin}/?session=${label}`) : undefined)
+  let startMs = 0
+  try {
+    startMs = await startSettledTui(root, settings, name)
+    await prompt(name, `Open the local page for session ${label}.`)
+    await until(async () => ((history.at(-1)?.results.length ?? 0) >= 1 ? true : undefined), 60_000, `session ${label} navigates`)
+    await Bun.sleep(2_000)
+  } finally {
+    model.plan = undefined
+  }
+  return { name, result: history.at(-1)?.results[0]?.slice(0, 300) ?? null, startMs, tab: await groupedTab(`session=${label}`) }
+}
+
+async function tmuxAlive(name: string) {
+  return tmux(["has-session", "-t", name]).then(
+    () => true,
+    () => false,
+  )
+}
+
+async function shareAdoptScenario() {
+  scenarioLabel = "share-adopt"
+  await setSwitch(true)
+  const root = await freshRoot("share-adopt")
+  const settings: Settings = {}
+  const hub = await startHub(root, settings)
+  const out: Record<string, unknown> = {}
+  const sessions: string[] = []
+  try {
+    await pair(hub)
+    // (a) Share: session A has a group; the user's own new tab, made active, joins it on `/browser share`.
+    const a = await navigatingSession(root, settings, "A")
+    sessions.push(a.name)
+    await savePane(a.name, "a-01-navigated")
+    const groupA = a.tab.group
+    expect(groupA !== null && groupA.title?.startsWith("Kilo · ") === true && groupA.title !== "Kilo · ended", `A's tab is not in a live Kilo group: ${JSON.stringify(a.tab)}`)
+    const userTab = await openUserTab(launched!, `${localOrigin}/?user=share`)
+    const activeBeforeShare = await activate(userTab)
+    const userBefore = await tabFacts(userTab)
+    const list = await browserCommandWithList(a.name, "share")
+    out["autocomplete"] = list
+    expect(list.rows === 1, `typing "/browser" shows ${list.rows} "/browser" rows in the slash list, not one: ${JSON.stringify(list.lines)}`)
+    const shareToast = await waitToast(a.name, "Your active tab is now in this session's tab group.", "a-02-share-toast")
+    const userAfter = await tabFacts(userTab)
+    out["share"] = { activeBeforeShare, groupA, sessionATab: a.tab, toast: shareToast.toast, userAfter, userBefore, userTab }
+    expect(activeBeforeShare === userTab, `the user tab ${userTab} was not the active tab before the share (active: ${activeBeforeShare})`)
+    expect(shareToast.shown, `share: no "Your active tab is now in this session's tab group." toast; toast: "${shareToast.toast}"`)
+    expect(userAfter.groupId === a.tab.groupId && userAfter.group?.title === groupA?.title, `share: the user tab is not in A's group: ${JSON.stringify(userAfter)}`)
+
+    // (b) Held: session B has its own group; A's tab is active; B's `/browser share` is refused and the tab stays.
+    const b = await navigatingSession(root, settings, "B")
+    sessions.push(b.name)
+    await savePane(b.name, "b-01-navigated")
+    expect(b.tab.groupId !== a.tab.groupId && b.tab.groupId >= 0, `B has no group of its own: ${JSON.stringify(b.tab)}`)
+    const activeBeforeHeld = await activate(a.tab.tabId)
+    await command(b.name, "/browser share")
+    const heldToast = await waitToast(b.name, "The active tab belongs to another agent session. Switch to another tab, then share again.", "b-02-held-toast")
+    const heldAfter = await tabFacts(a.tab.tabId)
+    out["held"] = { activeBeforeHeld, groupB: b.tab.group, heldAfter, sessionBTab: b.tab, toast: heldToast.toast }
+    expect(activeBeforeHeld === a.tab.tabId, `A's tab ${a.tab.tabId} was not active before B's share (active: ${activeBeforeHeld})`)
+    expect(heldToast.shown, `held: no "The active tab belongs to another agent session…" toast; toast: "${heldToast.toast}"`)
+    expect(heldAfter.groupId === a.tab.groupId, `held: A's tab left A's group: ${JSON.stringify(heldAfter)}`)
+
+    // (c) Adopt: TUI A quits, so its session closes and the group ends; a fresh session C adopts it.
+    await savePane(a.name, "c-01-a-before-exit")
+    await command(a.name, "/exit")
+    let exited = await maybe(async () => ((await tmuxAlive(a.name)) ? undefined : true), 15_000)
+    if (!exited) {
+      await savePane(a.name, "c-01b-a-exit-pending")
+      await tmux(["send-keys", "-t", a.name, "C-c"]).catch(() => undefined)
+      await Bun.sleep(500)
+      await tmux(["send-keys", "-t", a.name, "C-c"]).catch(() => undefined)
+      exited = await maybe(async () => ((await tmuxAlive(a.name)) ? undefined : true), 15_000)
+    }
+    const ended = await maybe(async () => {
+      const group = await groupById(worker, a.tab.groupId)
+      return group.title === "Kilo · ended" ? group : undefined
+    }, 20_000)
+    let endedVia = "TUI A quit (/exit)"
+    if (ended === undefined) {
+      endedVia = "Stop all (TUI A's exit did not end its group)"
+      await panel.getByRole("button", { name: "Stop all" }).click()
+    }
+    const endedGroup =
+      ended ??
+      (await maybe(async () => {
+        const group = await groupById(worker, a.tab.groupId)
+        return group.title === "Kilo · ended" ? group : undefined
+      }, 15_000)) ??
+      null
+    out["ended"] = { endedGroup, endedVia, exited: exited === true, state: await tabState() }
+    expect(ended !== undefined, `quitting TUI A did not turn its group "Kilo · ended": ${JSON.stringify(await groupById(worker, a.tab.groupId))}`)
+
+    const cName = `${TMUX_PREFIX}-sa-C`
+    sessions.push(cName)
+    out["startMsC"] = await startSettledTui(root, settings, cName)
+    await command(cName, "/browser adopt")
+    const adoptToast = await waitToast(cName, "This session now uses the last ended tab group.", "c-02-adopt-toast")
+    const adoptedGroup = await groupById(worker, a.tab.groupId)
+    expect(adoptToast.shown, `adopt: no "This session now uses the last ended tab group." toast; toast: "${adoptToast.toast}"`)
+    expect(
+      adoptedGroup.title === groupA?.title && adoptedGroup.collapsed === false,
+      `adopt: A's group is not back to "${groupA?.title}" and expanded: ${JSON.stringify(adoptedGroup)}`,
+    )
+    history.length = 0
+    model.plan = (step) => (step.results.length === 0 ? snapshot : undefined)
+    let snapshotText: string | null = null
+    try {
+      await prompt(cName, "Read the page.")
+      await until(async () => ((history.at(-1)?.results.length ?? 0) >= 1 ? true : undefined), 60_000, "C's snapshot")
+      snapshotText = history.at(-1)?.results[0] ?? null
+      await Bun.sleep(2_000)
+    } finally {
+      model.plan = undefined
+    }
+    await savePane(cName, "c-03-snapshot")
+    out["adopt"] = {
+      adoptedGroup,
+      seenToasts: adoptToast.seen,
+      snapshot: snapshotText?.slice(0, 800) ?? null,
+      state: await tabState(),
+      toast: adoptToast.toast,
+    }
+    expect(
+      snapshotText !== null && !/no tab yet/i.test(snapshotText) && snapshotText.includes("Browser E2E"),
+      `adopt: C's snapshot did not read the adopted tab: ${String(snapshotText).slice(0, 300)}`,
+    )
+
+    // (d) Nothing has ended now: session D's `/browser adopt` has nothing to reuse.
+    const dName = `${TMUX_PREFIX}-sa-D`
+    sessions.push(dName)
+    out["startMsD"] = await startSettledTui(root, settings, dName)
+    await command(dName, "/browser adopt")
+    const noneToast = await waitToast(dName, "There is no ended tab group to reuse.", "d-01-adopt-none-toast")
+    out["adoptNone"] = { seenToasts: noneToast.seen, state: await tabState(), toast: noneToast.toast }
+    expect(noneToast.shown, `adopt with nothing ended: no "There is no ended tab group to reuse." toast; toast: "${noneToast.toast}"`)
+
+    // (e) Early: the same `/browser adopt` typed as soon as a fresh TUI draws, before its server loaded the plugins.
+    // Nothing has ended, so the TUI either waits for the plugins and answers "nothing to reuse", or says Kilo is still
+    // starting; the raw "RPC is unavailable" error must never show. The server's status line is kept as well.
+    const eName = `${TMUX_PREFIX}-sa-E`
+    sessions.push(eName)
+    const before = await loadedRuns(root)
+    await startTui(root, settings, eName, 0)
+    await command(eName, "/browser adopt")
+    const early = await waitToast(eName, ["There is no ended tab group to reuse.", "Kilo is still starting. Try again in a moment."], "e-01-early-adopt-toast", 15_000)
+    const log = await fs.readFile(path.join(root, "data", "kilo2", "log", "opencode.log"), "utf8").catch(() => "")
+    const serverLines = log
+      .split("\n")
+      .filter((line) => line.includes("kilocode.browser/adopt") && ![...before].some((run) => line.includes(`run=${run} `)))
+    out["early"] = { seenToasts: early.seen, serverLines, shown: early.shown, toast: early.toast }
+    expect(
+      early.shown,
+      `a "/browser adopt" typed right after the TUI drew answered neither "There is no ended tab group to reuse." nor "Kilo is still starting. Try again in a moment."; toasts seen: ${JSON.stringify(early.seen)}; server: ${serverLines.map((line) => /http\.status=\d+/.exec(line)?.[0]).join(", ")}`,
+    )
+    expect(
+      !early.seen.some((toast) => /RPC\s*is\s*unavailable/i.test(toast)),
+      `a "/browser adopt" typed right after the TUI drew showed the raw RPC error; toasts seen: ${JSON.stringify(early.seen)}`,
+    )
+
+    out["hubLog"] = hub.log.text.slice(-1_500)
+    await screen("final")
+  } finally {
+    model.plan = undefined
+    for (const name of sessions) await tmux(["kill-session", "-t", name]).catch(() => undefined)
+    await hub.stop()
+  }
+  return out
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1638,6 +2019,7 @@ const scenarios: Record<string, () => Promise<Record<string, unknown>>> = {
   errors: errorsScenario,
   pairing: pairingScenario,
   "settings-faults": settingsFaultsScenario,
+  "share-adopt": shareAdoptScenario,
   "signed-out": signedOutScenario,
   "stop-race": stopRaceScenario,
   tui: tuiScenario,
