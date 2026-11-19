@@ -60,6 +60,7 @@ it.live("answers a permission reply only once, and only through a session of the
     // A session of another Location (directory) cannot answer it, and the request stays pending.
     expect(yield* reply(other, asked.id, "once")).toEqual(missing(asked.id))
     expect((yield* request(`/api/session/${owner}/permission`)).body).toMatchObject({ data: [{ id: asked.id }] })
+    expect((yield* request(`/api/session/${other}/permission`)).body).toEqual({ data: [] })
 
     // The owner answers it once; a second reply finds nothing pending.
     expect(yield* reply(owner, asked.id, "once")).toEqual({ status: 204, body: "" })
