@@ -186,6 +186,17 @@ Grow the test surface with each PR.
 - Never delete or skip a test silently. List every skip in the PR with its reason.
 - Self-test each user-visible behavior you add, and record the scenario so the next PR can repeat it. Attach the proof (v1 and v2 screenshots, or another proof) as described in Evidence.
 
+### Unit tests
+
+- Match the package's `test` script flags. From `packages/core`, run `bun run script/test.ts <file>` to get the isolated environment and CI timeout.
+- Wait for an observable signal instead of sleeping. For Effect timers, use `it.effect` and `TestClock`; use `it.live` when a real process, socket, or filesystem event must arrive before a deadline. Both helpers are in [`packages/core/test/lib/effect.ts`](../../../packages/core/test/lib/effect.ts).
+- Keep temporary directories per test, use ephemeral ports for fixture servers, and clean up processes, watchers, and modified process state. Do not mask races by raising timeouts or skipping a platform.
+
+### OpenTUI renderer tests
+
+- For a component, pass explicit dimensions to `testRender`, drive updates with `renderOnce()`, and inject `ManualClock` when time drives the behavior. For a flow that spans routes or data, use [`createAppFixture`](../../../packages/tui/test/fixture/app.ts) and await `setup.ready` before interacting.
+- Wait on frames only for frame-driven changes. Wait for focus before sending input, and use [`waitForHighlightedFrame`](../../../packages/tui/test/fixture/frame.ts) when asserting on text painted asynchronously by tree-sitter. Run focused tests from `packages/tui` with `bun test --timeout 30000 test/<file>`.
+
 ## Progress map
 
 `migration-tracking/progress/README.md` is the generated map of Kilo's v1 feature delta: one cell per Kilo-owned file, `/kilocode/*` API operation and feature-attributed patch in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it. On pushes to v2, CI regenerates the map and opens or updates a bot PR when the generated files (`progress.json`, `README.md`, `*.svg`) change; the map on v2 updates when that PR is reviewed and merged. Other PRs do not commit the generated files, because parallel PRs would conflict on them. Module and API cells turn done on their own only when the file name or path literal lands on v2. Renamed files, patch cells and decisions need a proof from you. Every port closes the cells it replaces in the same PR, so for every port:
