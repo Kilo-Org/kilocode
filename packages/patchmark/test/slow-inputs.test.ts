@@ -14,8 +14,9 @@ const ratioLimit = 8
  * CPU time, not wall time: a loaded runner has this process off the CPU for most of a sample, which would make a
  * longer sample look worse than it is.
  *
- * Both sizes must add input length, never structure: nesting deeper than the original case is superlinear by nature
- * (every nested container walks the markers that remain) and emphasis nested 4x deeper overflows the stack.
+ * Both sizes must add input length, not block structure: a block container nested 4x deeper is superlinear by nature
+ * (every level walks the markers that remain) and emphasis nested 4x deeper overflows the stack. The bracket and link
+ * stacks are the exception: they stay linear at any depth.
  */
 function growth(work: (scale: number) => void, from = 1, to = 4, samples = 5) {
   const clock = () => {
@@ -139,8 +140,9 @@ describe("slow-input linear-time bounds", () => {
       return read / md.length
     }
     // Measured 4.7 characters read per input character at 32 blocks and at 128: the nesting depth is fixed, so the
-    // scanning per character cannot depend on how many blocks arrive. A nesting step that re-reads the quote stack
-    // of every line seen so far grows with the document instead and passes this bound by orders of magnitude.
+    // scanning per character cannot depend on how many blocks arrive. A nesting step that re-reads the quote stack of
+    // every line seen so far grows with the document instead and exceeds this ceiling at both sizes, by 3.5x at 32
+    // blocks (52) and 13x at 128 (195).
     expect(readPerChar(32)).toBeLessThan(15)
     expect(readPerChar(128)).toBeLessThan(15)
 
@@ -177,10 +179,13 @@ describe("slow-input linear-time bounds", () => {
       if (done.blocks[0]!.kind.type === "table") expect(done.blocks[0]!.kind.rows).toHaveLength(rows)
     }
     expect(growth(tableParse, 250, 1_000)).toBeLessThan(ratioLimit)
+  })
 
-    // Row by row, what must not grow is the text each append re-reads. Ready time cannot carry this: streaming is
-    // superlinear today (33 ms for 1,000 rows and 5.2 s for 16,000), so no load-independent bound separates that from
-    // a scheduler stall.
+  test("a streamed table row scans only the active row", () => {
+    // Work, not time. What must not grow is the text each append re-reads, so this bounds characters scanned per row;
+    // the ready time of the same appends is superlinear today (33 ms for 1,000 rows and 5.2 s for 16,000), which no
+    // load-independent bound would separate from a scheduler stall. A parser that rebuilds the table per row without
+    // re-reading text is out of scope here and is caught by the CPU-time ratio of the parse above.
     const scannedPerRow = (rows: number) => {
       const stream = createMarkdownStream({ renderHtml: false })
       stream.append("| Col A | Col B | Col C | Col D |\n|---|---|---|---|\n")
@@ -195,9 +200,9 @@ describe("slow-input linear-time bounds", () => {
       return (scanned + done.charsScanned) / rows
     }
     // Measured 74.6 characters per 50-character row at 1,000 rows and 77.9 at 4,000: an append scans the active row,
-    // never the table. A parser that rebuilds the table per row grows with the row count instead.
-    expect(scannedPerRow(1_000)).toBeLessThan(150)
-    expect(scannedPerRow(4_000)).toBeLessThan(150)
+    // never the table. A parser that rescans the table per row grows with the row count instead.
+    expect(scannedPerRow(1_000), "characters scanned per row at 1,000 rows").toBeLessThan(150)
+    expect(scannedPerRow(4_000), "characters scanned per row at 4,000 rows").toBeLessThan(150)
   })
   // kilocode_change end
 

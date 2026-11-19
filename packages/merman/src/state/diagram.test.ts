@@ -269,7 +269,7 @@ ${ids
       expect(renderedStateDimensions(output).width).toBeLessThanOrEqual(stringWidth(label) + 8)
     },
     // Layout work for 300 labelled transitions: about 11.8 s idle and 44.9 s on a loaded CI runner, above the 30 s
-    // that the package's `test` script passes to bun. A wrong width still fails the assertions below.
+    // that the package's `test` script passes to bun. A wrong width still fails the assertions above.
     90_000,
   )
   // kilocode_change end
