@@ -5,7 +5,7 @@ import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Document } from "@opencode/schema/config"
 import { Tool } from "@opencode/schema/tool"
 import { Skill } from "@opencode/schema/skill"
-import { Effect, Exit, Option, Scope, Stream } from "effect"
+import { Effect, Exit, Option, PubSub, Scope, Stream } from "effect"
 import { UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { EXTENSION_HINT, STOPPED } from "../../src/browser/extension"
@@ -144,14 +144,24 @@ async function boot(
 ) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const hooks: Hook[] = []
-  const skills: Skill.Info[] = []
+  const skillTransforms: ((editor: { add: (skill: Skill.Info) => void }) => void)[] = []
+  // The domain reloads the plugin asks for, and the event stream a test publishes `config.updated` on.
+  const reloads = { tool: 0, skill: 0 }
+  const wakers: (() => void)[] = []
+  const bump = (domain: keyof typeof reloads) =>
+    Effect.sync(() => {
+      reloads[domain] += 1
+      wakers.splice(0).forEach((wake) => wake())
+    })
+  const events = await Effect.runPromise(PubSub.unbounded<{ type: string; data: unknown }>())
   const registrations: string[] = []
   const statuses: (() => Effect.Effect<unknown>)[] = []
   const ctx = {
     location: { directory: "/tmp/browser-tools-test" },
     skill: {
-      transform: (fn: (editor: { add: (skill: Skill.Info) => void }) => void) =>
-        Effect.sync(() => fn({ add: (skill) => skills.push(skill) })),
+      transform: (fn: (typeof skillTransforms)[number]) =>
+        Effect.sync(() => (skillTransforms.push(fn), { dispose: Effect.void })),
+      reload: () => bump("skill"),
     },
     // The status RPC the settings dialog reads; `status` below calls the handler the plugin registers.
     rpc: {
@@ -165,8 +175,16 @@ async function boot(
     tool: {
       transform: (fn: (typeof transforms)[number]) =>
         Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
+      reload: () => bump("tool"),
     },
-    event: { subscribe: () => options.events?.stream() ?? Stream.empty },
+    event: {
+      // The session-event fixture is one shared queue, so only the subscriber for session events reads it; every other
+      // subscription (the config reload) reads the published events of its own types.
+      subscribe: (input?: { types?: readonly string[] }) =>
+        options.events && input?.types?.some((type) => type.startsWith("session."))
+          ? options.events.stream()
+          : Stream.fromPubSub(events).pipe(Stream.filter((event) => input?.types?.includes(event.type) ?? true)),
+    },
     permission: {
       hook: (_: string, callback: Hook) =>
         Effect.sync(() => {
@@ -230,7 +248,31 @@ async function boot(
     if (!handler) throw new Error("the plugin registered no status RPC")
     return Effect.runPromise(handler())
   }
-  return { tools, skills, call, evaluate, registrations, status }
+  const publish = (type: string) => Effect.runPromise(PubSub.publish(events, { type, data: {} }))
+  /** Resolves once both domains were reloaded `count` times: the plugin's subscriber runs a moment after a publish. */
+  const reloaded = async (count: number) => {
+    while (reloads.tool < count || reloads.skill < count) {
+      const woken = Promise.withResolvers<void>()
+      wakers.push(woken.resolve)
+      await woken.promise
+    }
+  }
+  return {
+    tools,
+    // The registry reruns every transform on a reload, so a read applies them afresh, as the next turn would.
+    get skills() {
+      const added: Skill.Info[] = []
+      skillTransforms.forEach((fn) => fn({ add: (skill) => added.push(skill) }))
+      return added
+    },
+    call,
+    evaluate,
+    registrations,
+    status,
+    reloads,
+    publish,
+    reloaded,
+  }
 }
 
 describe("browser tools", () => {
@@ -298,6 +340,49 @@ describe("browser tools", () => {
   test("registers the browser status RPC even when the backend is off", async () => {
     const host = await boot({ backend: "off" })
     expect(host.registrations).toEqual(["kilocode.browser"])
+  })
+
+  test("a config change hides the tools and the skill for the next turn and shows them again, without a restart", async () => {
+    let backend: Browser["backend"] = "extension"
+    const host = await boot(() => ({ backend }))
+    expect(host.tools().length).toBe(26)
+
+    backend = "off"
+    await host.publish("config.updated")
+    await host.reloaded(1)
+    expect(host.tools()).toEqual([])
+    expect(host.skills).toEqual([])
+    expect(((await host.status()) as { backend: string }).backend).toBe("off")
+
+    backend = "playwright"
+    await host.publish("config.updated")
+    await host.reloaded(2)
+    expect(host.tools().length).toBe(26)
+    expect(host.skills.map((skill) => skill.id)).toEqual([Skill.ID.make("browser-automation")])
+    expect(((await host.status()) as { backend: string }).backend).toBe("playwright")
+  })
+
+  test("a backend that is off at start shows its tools once the config turns it on", async () => {
+    let backend: Browser["backend"] = "off"
+    const host = await boot(() => ({ backend }))
+    expect(host.tools()).toEqual([])
+    backend = "extension"
+    await host.publish("config.updated")
+    await host.reloaded(1)
+    expect(host.tools().length).toBe(26)
+  })
+
+  test("a call made after the user turned the tools off says so and never asks the model to turn them on", async () => {
+    let backend: Browser["backend"] = "extension"
+    const host = await boot(() => ({ backend }))
+    // A call the model planned against the tool list it already had.
+    backend = "off"
+    const result = await host.call("browser_snapshot")
+    expect(result._tag).toBe("Failure")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    expect(error?.message).toContain("The user turned the browser tools off")
+    expect(error?.message).not.toContain("Set browser.backend")
+    expect(error?.metadata?.hint).toBeUndefined()
   })
 
   test("the extension backend answers every call with the actionable setup step the model can relay", async () => {
@@ -626,6 +711,28 @@ describe("browser tools over the extension backend", () => {
     expect(hub.calls).toHaveLength(2)
   })
 
+  test("a tab with no web origin is answered with the next step and asks the user nothing", async () => {
+    const { asserts, service } = recorder()
+    const hub = fakeHub({
+      call: () =>
+        Promise.reject(
+          new BrowserHub.Failure({
+            kind: "permission",
+            message: "needs permission",
+            items: [{ class: "read", origin: "://" }],
+          }),
+        ),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_snapshot")
+    expect(result._tag).toBe("Failure")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    expect(error?.message).toContain("no web page open")
+    // Only the tool's own key was asked: no grant for an empty origin ever reached the user.
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_snapshot"])
+    expect(hub.calls).toHaveLength(1)
+  })
+
   test("a post-action need asks, reads the page again and never repeats the action", async () => {
     const { asserts, service } = recorder()
     const hub = fakeHub({
@@ -670,6 +777,32 @@ describe("browser tools over the extension backend", () => {
     const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
     expect(error?.message).toBe(`${UNAVAILABLE_MESSAGE} ${EXTENSION_HINT}`)
     expect(error?.metadata).toMatchObject({ hint: EXTENSION_HINT, effectsUncertain: true })
+  })
+
+  test("an extension that went away is told to turn its switch back on, in the message and the UI hint", async () => {
+    const gone: BrowserHub.Interface = {
+      port: () =>
+        ({
+          ready: () =>
+            Promise.reject(
+              new BrowserHub.Failure({
+                kind: "unavailable",
+                message: "not connected",
+                absence: { kind: "disconnected" },
+              }),
+            ),
+          reported: () => Promise.resolve(undefined),
+          onRevoked: () => () => {},
+        }) as never,
+    }
+    const host = await boot({ backend: "extension" }, { hub: gone })
+    const result = await host.call("browser_snapshot")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    const hint = String(error?.metadata?.hint)
+    expect(hint).toContain('turn on "Allow local agents"')
+    expect(hint).not.toContain("Install")
+    // Both surfaces carry the same step: a `run --format json` caller sees only the message.
+    expect(error?.message).toBe(`${UNAVAILABLE_MESSAGE} ${hint}`)
   })
 
   test("browser_snapshot diff mode compares the extension's snapshots", async () => {
