@@ -315,6 +315,13 @@ export function createData(config: CreateDataInput) {
   })
 
   const [defaultLocation, setDefaultLocation] = createSignal<LocationRef>({ directory: config.directory })
+  // kilocode_change(startup) - a reactive initial directory can resolve to the server fallback after mount.
+  // kilocode_change start - startup
+  createEffect(() => {
+    const directory = config.directory
+    setDefaultLocation((ref) => ref.directory === directory ? ref : { directory })
+  })
+  // kilocode_change end
   const sessions = createMemo(() =>
     Object.values(store.session.info).toSorted((a, b) => b.time.updated - a.time.updated),
   )

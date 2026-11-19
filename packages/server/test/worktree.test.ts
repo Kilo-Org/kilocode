@@ -87,6 +87,7 @@ it.live("refresh discovers both clones while list alone never discovers external
       expect(rows).toContainEqual({ directory: b, strategy: "git" })
     })
   }),
+  30_000, // kilocode_change(ci-stability) - two real clones, linked worktrees and server locations on Windows CI
 )
 
 it.live("remove loads canonical strategies and enforces project ownership", () =>
@@ -118,6 +119,7 @@ it.live("remove loads canonical strategies and enforces project ownership", () =
       expect(await api.worktree.list({ projectID: session.projectID })).toEqual([{ directory }])
     })
   }),
+  30_000, // kilocode_change(ci-stability) - two real repositories and canonical strategy discovery on Windows CI
 )
 
 it.live(

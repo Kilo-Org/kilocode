@@ -32,7 +32,11 @@ const inherited = [
   ...(args.includes("--stdio") ? [] : ["OPENCODE_CLIENT", "KILO_CLIENT", "KILO_PLATFORM", "KILO_AGENT_MANAGER_HOST"]),
 ]
 
-const child = Bun.spawn([process.execPath, path.join(host, "src/index.ts"), ...args], {
+// Exercise a packaged build through the same isolated profile as source development.
+const executable = process.env.KILO_V2_TEST_BINARY
+const entry = executable ? [path.resolve(executable)] : [process.execPath, path.join(host, "src/index.ts")]
+if (executable && process.env.KILO_V2_TIME_EXEC === "1") console.error(`kilo-test-exec-ms=${Date.now()}`)
+const child = Bun.spawn([...entry, ...args], {
   // The CLI uses the working directory as the project directory.
   cwd: process.env.INIT_CWD ?? process.cwd(),
   env: {
@@ -41,14 +45,18 @@ const child = Bun.spawn([process.execPath, path.join(host, "src/index.ts"), ...a
     ...(process.env.OPENCODE_CONFIG_CONTENT
       ? {}
       : { OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: "kilo/kilo-auto/free" }) }),
-    // Bun children must load the same JSX transform, even when their cwd has no CLI bunfig.toml.
-    BUN_OPTIONS: [
-      process.env.BUN_OPTIONS,
-      "--preload",
-      path.join(host, "src/branding/preload.ts").replace(/[\s\\"']/g, (char) => `\\${char}`),
-    ]
-      .filter(Boolean)
-      .join(" "),
+    // Source children need the JSX transform outside the package cwd. A built binary already includes it.
+    ...(executable
+      ? {}
+      : {
+          BUN_OPTIONS: [
+            process.env.BUN_OPTIONS,
+            "--preload",
+            path.join(host, "src/branding/preload.ts").replace(/[\s\\"']/g, (char) => `\\${char}`),
+          ]
+            .filter(Boolean)
+            .join(" "),
+        }),
     XDG_DATA_HOME: dirs[0],
     XDG_CONFIG_HOME: dirs[1],
     XDG_STATE_HOME: dirs[2],

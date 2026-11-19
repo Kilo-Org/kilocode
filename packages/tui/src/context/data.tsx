@@ -17,7 +17,11 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       api: () => withMediaRefs(client.api),
       event: client.event,
       connection: client.connection,
-      directory: props.directory,
+      // kilocode_change start - startup
+      get directory() {
+        return props.directory
+      // kilocode_change end
+      }, // kilocode_change(startup) - server-confirmed initial directory
     })
     data satisfies Plugin.Context["data"]
     const [generatingTitles, setGeneratingTitles] = createStore<Record<string, boolean | undefined>>({})
