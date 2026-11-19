@@ -137,7 +137,7 @@ import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
 import { RoutedModelBadge, RoutedStep, routedModelLabel } from "../../kilocode/routed-model" // kilocode_change(gateway)
 import { BoardTool, boardTools } from "../../kilocode/board-tool" // kilocode_change(board)
 import { requiresPerson } from "../../kilocode/permission-mode" // kilocode_change(sandbox) - auto-approve leaves human-only requests to the prompt
-import { browserDisplayCalls, browserDisplayInput } from "../../kilocode/browser-display" // kilocode_change(browser) - browser rows never show typed text
+import { browserDisplayCalls, browserDisplayInput, browserDisplayText } from "../../kilocode/browser-display" // kilocode_change(browser) - browser rows never show typed text
 export { InlineToolRow } from "./message-parts"
 export { toolDisplay } from "./message-parts"
 
@@ -1897,9 +1897,11 @@ function TurnTokenToolCalls(props: { tools: SessionMessageAssistantTool[] }) {
   )
 }
 
-function turnTokenToolSummary(tool: SessionMessageAssistantTool) {
-  const data = tool.state.input
-  if (typeof data === "string") return data
+export function turnTokenToolSummary(tool: SessionMessageAssistantTool) { // kilocode_change(browser) - exported for its mask test
+  // kilocode_change start - browser: mask typed text
+  if (typeof tool.state.input === "string") return browserDisplayText(tool.name, tool.state.input)
+  const data = browserDisplayInput(tool.name, tool.state.input)
+  // kilocode_change end
   const primaryKey = ["command", "id", "pattern", "url", "query", "path", "description", "code"].find(
     (key) => key in data,
   )

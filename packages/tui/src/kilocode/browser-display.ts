@@ -15,10 +15,6 @@ const Field = Schema.StructWithRest(
 )
 const decodeFill = Schema.decodeUnknownOption(Schema.Struct({ fields: Schema.Array(Field) }))
 
-function mask(input: Record<string, unknown>, key: string): Record<string, unknown> {
-  return key in input ? { ...input, [key]: MASK } : input
-}
-
 /** `browser_drop` data is a map of MIME type to dropped text: the types stay, every value is masked. */
 function maskDrop(input: Record<string, unknown>): Record<string, unknown> {
   if (!("data" in input)) return input
@@ -41,20 +37,48 @@ function maskFill(input: Record<string, unknown>): Record<string, unknown> {
   }
 }
 
+type Mask = (input: Record<string, unknown>) => Record<string, unknown>
+
+/** The browser tools whose input carries text a person typed or pasted, and how each is masked. */
+const MASKS: Record<string, Mask> = {
+  browser_type: (input) => ("text" in input ? { ...input, text: MASK } : input),
+  browser_handle_dialog: (input) => ("promptText" in input ? { ...input, promptText: MASK } : input),
+  browser_drop: maskDrop,
+  browser_fill_form: maskFill,
+}
+
+function masker(tool: string): Mask | undefined {
+  const name = tool.replace(/^browser\./, "browser_")
+  return Object.prototype.hasOwnProperty.call(MASKS, name) ? MASKS[name] : undefined
+}
+
 /**
  * The input as a row shows it. `tool` is the tool's own name (`browser_type`) or its Code Mode path (`browser.type`);
  * every other tool's input is returned as is. Input of an unexpected shape is masked whole, never shown raw.
  */
 export function browserDisplayInput(tool: string, input: Record<string, unknown>): Record<string, unknown> {
-  const name = tool.replace(/^browser\./, "browser_")
-  if (name === "browser_type") return mask(input, "text")
-  if (name === "browser_handle_dialog") return mask(input, "promptText")
-  if (name === "browser_drop") return maskDrop(input)
-  if (name === "browser_fill_form") return maskFill(input)
-  return input
+  return masker(tool)?.(input) ?? input
+}
+
+/** Input still streaming in as raw JSON text: masked whole for a tool that types text, else unchanged. */
+export function browserDisplayText(tool: string, text: string): string {
+  return masker(tool) ? MASK : text
 }
 
 /** Code Mode's nested call rows, with each browser call's typed text masked. */
 export function browserDisplayCalls<T extends { tool: string; input?: Record<string, unknown> }>(calls: T[]): T[] {
   return calls.map((call) => (call.input ? { ...call, input: browserDisplayInput(call.tool, call.input) } : call))
+}
+
+function displayCall(call: unknown): unknown {
+  if (!isRecord(call)) return MASK
+  if (!("input" in call)) return call
+  if (typeof call.tool !== "string" || !isRecord(call.input)) return { ...call, input: MASK }
+  return { ...call, input: browserDisplayInput(call.tool, call.input) }
+}
+
+/** Tool metadata as a row shows it: Code Mode's raw `toolCalls` list with every browser call's typed text masked. */
+export function browserDisplayMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(metadata.toolCalls)) return metadata
+  return { ...metadata, toolCalls: metadata.toolCalls.map(displayCall) }
 }
