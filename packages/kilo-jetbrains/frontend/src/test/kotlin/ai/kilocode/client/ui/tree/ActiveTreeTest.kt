@@ -433,7 +433,17 @@ class ActiveTreeTest : BasePlatformTestCase() {
     fun `test empty or collapsed section keeps its target across repeated hover events`() {
         for (empty in listOf(true, false)) {
             val moves = mutableListOf<ActiveMove>()
-            val tree = ActiveTree("", reorder = sections(moves))
+            lateinit var tree: ActiveTree
+            val reorder = ActiveReorder(
+                reparent = { _, parent -> parent == null || parent.key == "section" },
+                onMove = { move ->
+                    moves += move
+                    val view = tree.preferredFocus() as ActiveTreeView
+                    assertFalse(view.isExpanded(TreePath(view.hierarchy.entries.getValue("section").path)))
+                    tree.update(listOf(section("section", *move.keys.toTypedArray())))
+                },
+            )
+            tree = ActiveTree("", reorder = reorder)
             val view = tree.preferredFocus() as ActiveTreeView
             view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
             tree.update(listOf(ActiveTreeNode(Row("a", "A")),
@@ -457,7 +467,8 @@ class ActiveTreeTest : BasePlatformTestCase() {
             }
             view.drop()
             assertEquals(ActiveMove("a", 0, if (empty) 0 else 1, keys(entry), "section", null), moves.single())
-            assertTrue("A successful drop leaves the receiving section expanded", view.isExpanded(path))
+            assertFalse("A successful drop restores the receiving section's collapsed state", view.isExpanded(path))
+            assertEquals(listOf("section"), tree.selectedKeys())
         }
     }
 
