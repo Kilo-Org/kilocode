@@ -190,7 +190,6 @@ function observe(condition: boolean, message: string) {
   return condition
 }
 
-const SETTINGS_FIX = "cloud fix/extension-agents-settings + kilocode browser-disconnect (PRs #11929/#16385)"
 const PROMPTS_FIX = "kilocode #16390 (browser prompts name the class and origin, typed text masked)"
 const SHARE_ADOPT_FIX = "kilocode #16392 (/browser share, /browser adopt and browser notices)"
 
@@ -202,7 +201,10 @@ const SHARE_ADOPT_FIX = "kilocode #16392 (/browser share, /browser adopt and bro
  * A known scenario or check that passes is reported as an unexpected pass, so its entry can go.
  */
 const KNOWN_FAILURES: Record<string, { reason: string; failures?: RegExp[] }> = {
-  "stop-race": { reason: SETTINGS_FIX, failures: [/^a turn running at Stop all opened a new session/] },
+  "stop-race": {
+    reason: "kilocode browser-disconnect (#16385; cloud #11929 is in the extension build)",
+    failures: [/^a turn running at Stop all opened a new session/],
+  },
   "share-adopt": {
     reason: SHARE_ADOPT_FIX,
     failures: [
@@ -220,12 +222,6 @@ const KNOWN_FAILURES: Record<string, { reason: string; failures?: RegExp[] }> = 
     reason: "cloud #11921 + kilocode #16382",
     failures: [/^redirect: expected one permission prompt/, /^redirect: the navigate did not land/],
   },
-  "pairing:hub-reconnecting": { reason: SETTINGS_FIX },
-  "pairing:hub-unreachable": { reason: SETTINGS_FIX },
-  "pairing:broken-link-notice": { reason: SETTINGS_FIX },
-  "controls:disconnect": { reason: SETTINGS_FIX },
-  "settings-faults:stop-all-text": { reason: SETTINGS_FIX },
-  "settings-faults:disconnect-text": { reason: SETTINGS_FIX },
   "tui:prompt-text": {
     reason: PROMPTS_FIX,
     failures: [

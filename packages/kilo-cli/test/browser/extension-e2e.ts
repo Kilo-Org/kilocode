@@ -230,22 +230,38 @@ const APPROVED_ONE_FAILURES = [
 /**
  * What fails today for a reason owned elsewhere. A whole scenario lists the failure messages it is expected to
  * produce; a failure that matches none of them (a harness error, a plan that threw, another regression) stays `FAIL`.
- * A single check (`<scenario>:<check>`) is evaluated with `expectKnown`.
+ * A single check (`<scenario>:<check>`) is evaluated with `expectKnown`; when its entry lists `failures`, a miss with
+ * any other message is a plain failure too.
  */
 const KNOWN_FAILURES: Record<string, { reason: string; failures?: RegExp[] }> = {
   "download-approved-one": { reason: DOWNLOAD_GUARD_FIX, failures: APPROVED_ONE_FAILURES },
   "download-approved-one-multi": { reason: DOWNLOAD_GUARD_FIX, failures: APPROVED_ONE_FAILURES },
-  "group:tabs-list-hides-user-tab": { reason: TABS_LIST_FIX },
-  "group:select-past-list-refused": { reason: TABS_LIST_FIX },
+  "group:tabs-list-hides-user-tab": {
+    reason: TABS_LIST_FIX,
+    failures: [
+      /^the agent's tab list reported the user's tab:\n\{"tabs":\[\{"index":0,"selected":false,"title":"User tab","url":"http:\/\/127\.0\.0\.1:\d+\/user"\},\{"index":1,"selected":true,"title":"Browser E2E","url":"http:\/\/127\.0\.0\.1:\d+\/"\}\]\}$/,
+    ],
+  },
+  "group:select-past-list-refused": {
+    reason: TABS_LIST_FIX,
+    failures: [
+      /^selecting past the agent's list was not refused:\n\{"selected":true,"tabId":\d+,"title":"Browser E2E","url":"http:\/\/127\.0\.0\.1:\d+\/"\}$/,
+    ],
+  },
 }
 
 /** The known checks this run evaluated: their outcome and, when they failed, the message. */
 const knownChecks: { check: string; message?: string; passed: boolean; reason: string }[] = []
 
-/** A hard check that is a known failure today: a miss is recorded against its reason instead of failing the run. */
+/**
+ * A hard check that is a known failure today: a miss is recorded against its reason instead of failing the run, as
+ * long as its message is one the entry expects (when the entry lists any).
+ */
 function expectKnown(check: string, condition: boolean, message: string) {
   const known = KNOWN_FAILURES[check]
   if (known === undefined) return expect(condition, message)
+  if (!condition && known.failures && !known.failures.some((pattern) => pattern.test(message)))
+    return expect(false, `${check} (known for ${known.reason}) failed with an unexpected message: ${message}`)
   knownChecks.push({ check, passed: condition, reason: known.reason, ...(condition ? {} : { message }) })
 }
 
