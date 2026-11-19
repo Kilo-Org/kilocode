@@ -230,6 +230,8 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "Automatsko odobravanje je isključeno. Kliknite za automatsko odobravanje zahtjeva za dozvole.",
   "prompt.action.autoApprove.sandboxExcluded": "Zahtjevi za napuštanje sandboxa uvijek su izuzeti.",
+  "prompt.action.autoApprove.enabledNotification": "Automatsko odobravanje uključeno. Zahtjevi za eskalaciju iz sandboxa su isključeni.",
+  "prompt.action.autoApprove.disabledNotification": "Automatsko odobravanje isključeno.",
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
   "prompt.action.sandbox.enable": "Omogući sandbox",

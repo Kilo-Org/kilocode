@@ -531,6 +531,7 @@ export function activate(context: ExtensionContext) {
     // the selection live in the webview, and only the server owns the committed value.
     commands.registerCommand("kilo-code.v2.cycleAgentMode", () => cycle("cycleAgentMode")),
     commands.registerCommand("kilo-code.v2.cyclePreviousAgentMode", () => cycle("cyclePreviousAgentMode")),
+    commands.registerCommand("kilo-code.v2.toggleAutoApprove", view.toggleAutoApprove),
     commands.registerCommand(
       "kilo-code.v2.generateCommitMessage",
       commitMessageCommand({

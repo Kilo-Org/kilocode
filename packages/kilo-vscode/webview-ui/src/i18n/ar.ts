@@ -223,6 +223,8 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "الموافقة التلقائية مفعلة. ستتم الموافقة على طلبات الأذونات تلقائياً.",
   "prompt.action.autoApprove.disabled": "الموافقة التلقائية معطلة. انقر للموافقة على طلبات الأذونات تلقائياً.",
   "prompt.action.autoApprove.sandboxExcluded": "تُستثنى دائماً مطالبات الخروج من البيئة المعزولة.",
+  "prompt.action.autoApprove.enabledNotification": "تم تفعيل الموافقة التلقائية. تُستثنى مطالبات الخروج من البيئة المعزولة.",
+  "prompt.action.autoApprove.disabledNotification": "تم تعطيل الموافقة التلقائية.",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
   "prompt.action.sandbox.enable": "تفعيل sandbox",

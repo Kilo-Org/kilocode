@@ -236,6 +236,8 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "Automatische Genehmigung ist deaktiviert. Klicken, um Berechtigungsanfragen automatisch zu genehmigen.",
   "prompt.action.autoApprove.sandboxExcluded": "Sandbox-Eskalationsanfragen sind immer ausgeschlossen.",
+  "prompt.action.autoApprove.enabledNotification": "Automatische Genehmigung aktiviert. Sandbox-Eskalierungsanfragen sind ausgeschlossen.",
+  "prompt.action.autoApprove.disabledNotification": "Automatische Genehmigung deaktiviert.",
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
   "prompt.action.sandbox.enable": "Sandbox aktivieren",
