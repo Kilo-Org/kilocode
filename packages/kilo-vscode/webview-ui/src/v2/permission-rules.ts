@@ -9,6 +9,20 @@ export function displayResource(action: string, resource: string) {
 }
 
 /**
+ * Whether "Allow always" can save anything. The server saves exactly the request's `save` rules (`core/src/permission.ts`),
+ * so a request with none (a sensitive browser step, a sandbox escalation) is approved for one call whatever the answer.
+ */
+export function savable(request: PermissionRequest) {
+  return (request.save?.length ?? 0) > 0
+}
+
+/** Why the request asks, when it says: a sensitive browser step names the field or page it touches. */
+export function reasonOf(request: PermissionRequest) {
+  const value = request.metadata?.reason
+  return typeof value === "string" && value.trim() !== "" ? value : undefined
+}
+
+/**
  * The broader rule a request offers next to the one "Allow always" saves. browser_open lists its origin and
  * "navigate:*" in `metadata.rules`; only the origin travels in `save`, so a plain approval never allows every site.
  */
