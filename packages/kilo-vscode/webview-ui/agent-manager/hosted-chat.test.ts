@@ -73,7 +73,8 @@ function relay() {
     if (!value) throw new Error("Missing request")
     expect(value.url.pathname).toBe(`/api/rpc/kilocode.hosted/${method}`)
     expect(value.url.searchParams.get("location[directory]")).toBe("/project")
-    expect(value.input.target).toEqual(selection)
+    if (method === "stageImage") expect(value.input.scope).toBe(selection.scope)
+    else expect(value.input.target).toEqual(selection)
     return value
   }
   const chat = createHostedChat(client, "/project", target)
@@ -119,20 +120,138 @@ test("only sends plain Cloud prompts and keeps their ID and draft after an ambig
   await r.open({ ...idle, connection: "disconnected", status: "unknown" })
   r.chat.setDraft(" first prompt ")
   const send = r.chat.send()
+  const projected = r.chat.messages()[0]
+  expect(projected).toMatchObject({ type: "user", text: "first prompt", time: { created: expect.any(Number) } })
+  expect(r.chat.queued()).toEqual([])
+  expect(r.chat.sending()).toBe(projected.id)
   const first = await r.next("prompt")
   expect(first.input.messageID).toMatch(/^msg_[0-9a-f]{12}[0-9A-Za-z]{14}$/)
-  expect(first.input).toEqual({ target, attachmentID: "lease", messageID: first.input.messageID, text: "first prompt" })
+  expect(first.input).toEqual({ target, attachmentID: "lease", messageID: projected.id, text: "first prompt" })
   first.fail()
-  await send
+  expect(await send).toBe(false)
+  expect(r.chat.sending()).toBeUndefined()
+  expect(r.chat.messages()).toEqual([])
   expect(r.chat.failure()).toBe("prompt")
   expect(r.chat.draft()).toBe(" first prompt ")
   const resend = r.chat.send()
+  expect(r.chat.messages().map((m) => m.id)).toEqual([projected.id])
   const retry = await r.next("prompt")
   expect(retry.input).toEqual(first.input)
   r.chat.setDraft("next draft")
   retry.respond({})
-  await resend
+  expect(await resend).toBe(true)
   expect(r.chat.draft()).toBe("next draft")
+  r.chat.close()
+})
+
+test("acknowledged sends stay visible until their exact ID is echoed, even for identical drafts", async () => {
+  const r = relay()
+  const watch = await r.open(idle)
+  r.chat.setDraft("again")
+  const first = r.chat.send()
+  const firstPrompt = await r.next("prompt")
+  firstPrompt.respond({})
+  expect(await first).toBe(true)
+  const firstID = String(firstPrompt.input.messageID)
+  expect(r.chat.messages().map((m) => m.id)).toEqual([firstID])
+
+  r.chat.setDraft("again")
+  const second = r.chat.send()
+  const secondPrompt = await r.next("prompt")
+  const secondID = String(secondPrompt.input.messageID)
+  expect(secondID).not.toBe(firstID)
+  secondPrompt.respond({})
+  expect(await second).toBe(true)
+  const other = message("msg_from_another_client", "again")
+  watch.respond({ revision: 2, snapshot: { ...idle, messages: [other] } })
+  const updated = await r.next("read")
+  expect(r.chat.messages().map((m) => m.id)).toEqual([other.id, firstID, secondID])
+  expect(r.chat.queued()).toEqual([])
+
+  const canonical = message(firstID, "expanded on the server")
+  updated.respond({ revision: 3, order: [other.id, firstID], snapshot: { ...idle, messages: [canonical] } })
+  await r.next("read")
+  expect(r.chat.messages()).toEqual([other, canonical, expect.objectContaining({ id: secondID, text: "again" })])
+  r.chat.close()
+  expect(r.chat.messages()).toEqual([])
+})
+
+test("a canonical echo wins over a lost prompt receipt", async () => {
+  const r = relay()
+  const watch = await r.open(idle)
+  r.chat.setDraft("original")
+  const send = r.chat.send()
+  const prompt = await r.next("prompt")
+  const canonical = message(String(prompt.input.messageID), "canonical")
+  watch.respond({ revision: 2, snapshot: { ...idle, messages: [canonical] } })
+  await r.next("read")
+  expect(r.chat.messages()).toEqual([canonical])
+  expect(await send).toBe(true)
+  expect(r.chat.sending()).toBeUndefined()
+  prompt.fail()
+  expect(r.chat.failure()).toBeUndefined()
+  expect(r.chat.draft()).toBe("")
+  expect(r.chat.messages()).toEqual([canonical])
+  r.chat.close()
+})
+
+test("the server queue confirms admission despite a lost receipt; only a successful drop removes its projection", async () => {
+  const r = relay()
+  const otherID = "msg_000000000001aaaaaaaaaaaaaa"
+  const watch = await r.open({ ...idle, status: "busy", queued: [otherID] })
+  r.chat.setDraft("next")
+  const send = r.chat.send()
+  const prompt = await r.next("prompt")
+  const id = String(prompt.input.messageID)
+  expect(r.chat.queued()).toEqual([otherID])
+  watch.respond({ revision: 2, snapshot: { ...idle, status: "busy", queued: [otherID, id] } })
+  await r.next("read")
+  expect(r.chat.queued()).toEqual([otherID, id])
+  prompt.fail()
+  expect(await send).toBe(true)
+  expect(r.chat.failure()).toBeUndefined()
+  expect(r.chat.draft()).toBe("")
+  expect(r.chat.messages().map((m) => m.id)).toEqual([id])
+
+  const missed = r.chat.cancelQueued(id)
+  ;(await r.next("cancelQueued")).respond({ dropped: false })
+  await missed
+  expect(r.chat.messages().map((m) => m.id)).toEqual([id])
+  expect(r.chat.queued()).toEqual([otherID, id])
+  const cancel = r.chat.cancelQueued(id)
+  const drop = await r.next("cancelQueued")
+  expect(drop.input.messageID).toBe(id)
+  drop.respond({ dropped: true })
+  await cancel
+  expect(r.chat.messages()).toEqual([])
+  expect(r.chat.queued()).toEqual([otherID])
+  r.chat.close()
+})
+
+test("an image is a native transcript file before staging returns a handle", async () => {
+  const r = relay()
+  await r.open(idle)
+  const image = {
+    id: crypto.randomUUID(),
+    kind: "image" as const,
+    name: "sample.gif",
+    uri: "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=",
+  }
+  const send = r.chat.send(undefined, [image])
+  const row = r.chat.messages()[0]
+  expect(row).toMatchObject({
+    type: "user",
+    files: [{ name: image.name, mime: "image/gif", data: image.uri.split(",")[1], source: { type: "inline" } }],
+  })
+  const stage = await r.next("stageImage")
+  expect(stage.input).toMatchObject({ messageID: row.id, image: { id: image.id, mime: "image/gif" } })
+  const handle = crypto.randomUUID()
+  stage.respond({ handle })
+  const prompt = await r.next("prompt")
+  expect(prompt.input).toMatchObject({ messageID: row.id, attachments: [handle] })
+  prompt.respond({})
+  expect(await send).toBe(true)
+  expect(r.chat.messages()).toEqual([row])
   r.chat.close()
 })
 
@@ -210,7 +329,7 @@ test("reattachment keeps the last transcript while offline and starts again with
   r.chat.close()
 })
 
-test("revoking a live lease also clears previously paged private history", async () => {
+test("revoking a live lease clears private pages and unmaterialized sends", async () => {
   const r = relay()
   try {
     const watch = await r.open({ ...idle, before: "older", messages: [message("latest", "private")] })
@@ -218,6 +337,12 @@ test("revoking a live lease also clears previously paged private history", async
     ;(await r.next("history")).respond({ messages: [message("first", "also private")] })
     await earlier
     expect(r.chat.messages()).toHaveLength(2)
+    r.chat.setDraft("private draft")
+    const send = r.chat.send()
+    const prompt = await r.next("prompt")
+    prompt.respond({})
+    expect(await send).toBe(true)
+    expect(r.chat.messages().map((m) => m.id)).toEqual(["first", "latest", prompt.input.messageID])
     watch.deny()
     ;(await r.next("detach")).respond({})
     expect(r.chat.messages()).toEqual([])

@@ -13,7 +13,7 @@ import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid
 import { useLanguage } from "../../src/context/language"
 import type { CloudNavigation, CreateRoute } from "./route"
 import type { PromptAttachment } from "../../../src/protocol"
-import { stageCloudImages } from "./attachments"
+import { cloudImages, stageCloudImages } from "./attachments"
 import { cloudDraftMayFocus } from "./focus"
 
 export function CloudCreate(props: {
@@ -73,7 +73,7 @@ export function CloudCreate(props: {
         route.directory,
         route.scope,
         previous.messageID,
-        items,
+        cloudImages(items),
         life.signal,
       )
       const result = route.workspaceID

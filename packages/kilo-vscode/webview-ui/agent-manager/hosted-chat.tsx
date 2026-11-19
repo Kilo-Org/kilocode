@@ -93,26 +93,31 @@ export function HostedChat(props: {
     if (rows().length || setup() || chat.snapshot()?.error || notice() || chat.phase() === "failed") return
     return chat.snapshot()?.historyReady ? "empty" : "loading"
   }
+  // A prompt in transit already shows Sending on its bubble. Thinking belongs to the running turn.
   const working = () =>
-    !notice() && !setup() && chat.phase() !== "opening" && (activity() === "busy" || activity() === "retry")
+    !notice() &&
+    !setup() &&
+    chat.phase() !== "opening" &&
+    (activity() === "retry" || (activity() === "busy" && (chat.busy() || preparing(chat))))
   // Snapshots deserialize fresh objects; keep the same form and its focused answer until that request is resolved.
   const request = createMemo(() => chat.questions()[0], undefined, { equals: (a, b) => a?.id === b?.id })
   const queued = createMemo(() => new Set(chat.queued()))
-  const pending = (id: string): UserMessagePending | undefined =>
-    queued().has(id)
-      ? {
-          status: t("session.pending.status.queued"),
-          actions: [
-            {
-              key: "delete",
-              icon: "close-small",
-              label: t("common.cancel"),
-              disabled: chat.pending(),
-              onClick: () => void chat.cancelQueued(id),
-            },
-          ],
-        }
-      : undefined
+  const pending = (id: string): UserMessagePending | undefined => {
+    if (queued().has(id))
+      return {
+        status: t("session.pending.status.queued"),
+        actions: [
+          {
+            key: "delete",
+            icon: "close-small",
+            label: t("common.cancel"),
+            disabled: chat.pending(),
+            onClick: () => void chat.cancelQueued(id),
+          },
+        ],
+      }
+    if (chat.sending() === id) return { status: t("session.pending.status.starting"), actions: [] }
+  }
   const unpublished = createMemo(() => {
     const ids = new Set(queued())
     for (const message of chat.messages()) ids.delete(message.id)
@@ -204,9 +209,6 @@ export function HostedChat(props: {
                   <For each={unpublished()}>
                     {(id) => (
                       <div data-component="user-message" class="am-hosted-queued" data-queued-message={id}>
-                        <Show when={chat.queueText(id)}>
-                          {(text) => <span data-slot="user-message-text">{text()}</span>}
-                        </Show>
                         <div data-slot="user-message-queued-indicator">
                           {t("session.pending.status.queued")}
                           <IconButton

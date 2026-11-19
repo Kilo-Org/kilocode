@@ -1,9 +1,9 @@
 import type { OpenCodeClient } from "@opencode/client"
 import { KiloHostedRpc } from "@opencode/schema/kilocode/hosted"
-import { SessionMessage } from "@opencode/schema/session-message"
 import { batch, createSignal } from "solid-js"
 import type { PromptAttachment } from "../../src/protocol"
-import { stageCloudImages } from "./cloud/attachments"
+import { cloudImages, stageCloudImages } from "./cloud/attachments"
+import { createSendFeedback } from "./cloud/send-feedback"
 import { cloudCommands } from "./cloud/commands"
 
 type Lease = { target: KiloHostedRpc.Target; attachmentID: string }
@@ -25,8 +25,7 @@ export function createHostedChat(client: OpenCodeClient, directory: string, targ
   const [failure, setFailure] = createSignal<"prompt" | "request">()
   const [answered, setAnswered] = createSignal<string[]>([])
   const [dismissed, setDismissed] = createSignal<string[]>([])
-  const [submitted, setSubmitted] = createSignal(new Map<string, string>())
-  let outgoing: { text: string; messageID: string; imageKey: string } | undefined
+  const feedback = createSendFeedback()
   let active: Connection | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
   let failures = 0
@@ -39,10 +38,9 @@ export function createHostedChat(client: OpenCodeClient, directory: string, targ
   const canSend = (hasImages = false) =>
     phase() === "ready" && !pending() && !questions().length && !permissions().length && (!!draft().trim() || hasImages)
 
-  function accept(message: { text: string; messageID: string }) {
-    if (outgoing?.messageID !== message.messageID) return
-    outgoing = undefined
-    if (draft().trim() === message.text) setDraft("")
+  function accepted(text: string | undefined) {
+    if (text === undefined) return
+    if (draft().trim() === text) setDraft("")
     if (failure() === "prompt") setFailure(undefined)
   }
 
@@ -64,7 +62,7 @@ export function createHostedChat(client: OpenCodeClient, directory: string, targ
       setAnswered((ids) =>
         ids.filter((id) => next.questions.some((q) => q.id === id) || next.permissions.some((p) => p.id === id)),
       )
-      if (outgoing && next.messages.some((message) => message.id === outgoing?.messageID)) accept(outgoing)
+      accepted(feedback.observe(next.messages, next.queued))
     })
   }
 
@@ -80,6 +78,7 @@ export function createHostedChat(client: OpenCodeClient, directory: string, targ
     old?.controller.abort()
     if (old?.lease) detach(old.lease)
     batch(() => {
+      feedback.rollback()
       setAnswered([])
       setPaging(false)
       setPending(false)
@@ -120,6 +119,8 @@ export function createHostedChat(client: OpenCodeClient, directory: string, targ
       // A transport interruption, in contrast, can keep the last verified view while reconnecting.
       if (error && typeof error === "object" && error.type === "HostedError") {
         setReason(error.message)
+        feedback.clear()
+        setDismissed([])
         setSnapshot(undefined)
         setEarlier(undefined)
       }
@@ -172,39 +173,41 @@ export function createHostedChat(client: OpenCodeClient, directory: string, targ
   ) {
     if (!canSend(items.length > 0)) return
     const text = draft().trim()
-    const imageKey = JSON.stringify(items.map((i) => i.id))
-    if (!outgoing || outgoing.text !== text || outgoing.imageKey !== imageKey)
-      outgoing = { text, imageKey, messageID: SessionMessage.ID.create() }
-    const message = outgoing
-    setSubmitted((prev) => {
-      const next = new Map(prev)
-      if (next.size >= 32) next.delete(next.keys().next().value!)
-      return next.set(message.messageID, text)
-    })
-    const accepted = await act("prompt", async (lease, options) => {
-      if (stopFirst && busy() && live()) await rpc.interrupt(lease, options)
-      if (command) {
-        if (items.length) throw { type: "HostedError", message: "Cloud commands cannot include attachments." }
-        return rpc.command(
-          { ...lease, messageID: message.messageID, command: command.name, arguments: command.args, ...selection },
-          options,
-        )
+    return act("prompt", async (lease, options) => {
+      if (command && items.length) throw { type: "HostedError", message: "Cloud commands cannot include attachments." }
+      const images = cloudImages(items)
+      const key = JSON.stringify([text, items.map((i) => i.id), selection?.agent, selection?.model, command])
+      const attempt = feedback.begin(
+        key,
+        text,
+        images.map(({ image, name, description }) => ({
+          data: image.base64,
+          mime: image.mime,
+          source: { type: "inline" },
+          name,
+          description,
+        })),
+      )
+      const messageID = attempt.id
+      const dispatch = async () => {
+        if (stopFirst && busy() && live()) await rpc.interrupt(lease, options)
+        const attachments = await stageCloudImages(client, directory, target.scope, messageID, images, options.signal)
+        if (options.signal.aborted || feedback.sending() !== messageID) return
+        if (command)
+          return rpc.command(
+            { ...lease, messageID, command: command.name, arguments: command.args, ...selection },
+            options,
+          )
+        return rpc.prompt({ ...lease, messageID, text, ...selection, ...(attachments && { attachments }) }, options)
       }
-      const attachments = await stageCloudImages(
-        client,
-        directory,
-        target.scope,
-        message.messageID,
-        items,
-        options.signal,
-      )
-      return rpc.prompt(
-        { ...lease, messageID: message.messageID, text, ...selection, ...(attachments && { attachments }) },
-        options,
-      )
+      try {
+        await Promise.race([dispatch(), attempt.echo.promise])
+        if (!options.signal.aborted) accepted(feedback.accept(messageID))
+      } catch (error) {
+        if (!options.signal.aborted) feedback.rollback()
+        throw error
+      }
     })
-    if (accepted) accept(message)
-    return accepted
   }
 
   async function loadEarlier() {
@@ -219,7 +222,10 @@ export function createHostedChat(client: OpenCodeClient, directory: string, targ
         { location, signal: connection.controller.signal },
       )
       if (connection === active && cursor === before()) {
-        setEarlier({ before: page.before, messages: [...page.messages, ...(earlier()?.messages ?? [])] })
+        batch(() => {
+          setEarlier({ before: page.before, messages: [...page.messages, ...(earlier()?.messages ?? [])] })
+          accepted(feedback.observe(page.messages))
+        })
       }
     } catch {
       if (active === connection) setFailure("request")
@@ -246,13 +252,17 @@ export function createHostedChat(client: OpenCodeClient, directory: string, targ
     messages: () => {
       const page = earlier()?.messages ?? []
       const recent = snapshot()?.messages ?? []
-      if (!page.length) return recent
-      const latestIDs = new Set(recent.map((item) => item.id))
-      return [...page.filter((item) => !latestIDs.has(item.id)), ...recent]
+      const tail = feedback.rows().length ? [...recent, ...feedback.rows()] : recent
+      if (!page.length) return tail
+      const latestIDs = new Set(tail.map((item) => item.id))
+      return [...page.filter((item) => !latestIDs.has(item.id)), ...tail]
     },
     open,
     close() {
       disconnect()
+      feedback.clear()
+      setDraft("")
+      setDismissed([])
       setSnapshot(undefined)
       setEarlier(undefined)
     },
@@ -273,7 +283,7 @@ export function createHostedChat(client: OpenCodeClient, directory: string, targ
     },
     send,
     queued: () => snapshot()?.queued?.filter((id) => !dismissed().includes(id)) ?? [],
-    queueText: (id: string) => submitted().get(id),
+    sending: feedback.sending,
     commands,
     discover() {
       const connection = active
@@ -289,7 +299,11 @@ export function createHostedChat(client: OpenCodeClient, directory: string, targ
     cancelQueued: (messageID: string) =>
       act("request", async (_, options) => {
         const result = await rpc.cancelQueued({ target, messageID }, options)
-        if (!options.signal.aborted && result.dropped) setDismissed((ids) => [...ids, messageID])
+        if (!options.signal.aborted && result.dropped)
+          batch(() => {
+            feedback.remove(messageID)
+            setDismissed((ids) => [...ids, messageID])
+          })
       }),
     retry() {
       failures = 0
