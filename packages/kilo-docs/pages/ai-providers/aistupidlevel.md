@@ -89,7 +89,7 @@ When the leading models on `auto-best`, `auto-coding`, `auto-reasoning` or `auto
 
 - **Text only:** the routing modes take and return text. A request with images, audio or files is rejected with a `400 unsupported_content` error.
 - **Context and output:** each routing mode is listed with a 262,144-token context window and a 64,000-token output limit. These are the smallest limits among the models the router can pick, so they hold whichever model answers.
-- **Pricing:** the routing modes have no price in the [models.dev](https://models.dev/providers/aistupidlevel) catalog. Each request is billed by the provider of the model that answers it, to the provider key you added.
+- **Pricing:** the routing modes have no price in the [models.dev](https://models.dev/providers/aistupidlevel) catalog. Kilo Code calculates spend from catalog prices, so it records no spend for them. Each request is billed by the provider of the model that answers it, to the provider key you added, and that provider's billing is the record of what you spent.
 
 ## Troubleshooting
 
