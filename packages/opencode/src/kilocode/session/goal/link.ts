@@ -68,8 +68,44 @@ export namespace GoalLink {
   export type Pending = { note: string; wait: Wait }
   const pending = new Map<string, Pending[]>()
 
+  /**
+   * A process watch owns the session's wait until the token it was forked with
+   * is replaced. Taking the watch over issues a new token, so a re-wait on the
+   * same process supersedes the previous watch: otherwise both would resume
+   * the goal for one exit. Re-recording the *same* wait (a recovery or a
+   * mid-turn re-confirmation) keeps the token, so it does not stop a live
+   * watch that still owns the wait. Tokens are unique across sessions and are
+   * never reused, so releasing a session cannot hand a stale watch the token
+   * it is still holding.
+   */
+  const tokens = new Map<string, number>()
+  let sequence = 0
+
+  export function epoch(sessionID: string) {
+    return tokens.get(sessionID) ?? 0
+  }
+
+  function advance(sessionID: string) {
+    sequence += 1
+    tokens.set(sessionID, sequence)
+    return sequence
+  }
+
+  /** Take the session's watch over: a new process watch owns the wait from here on. */
+  export function watch(sessionID: string) {
+    return advance(sessionID)
+  }
+
+  /**
+   * Record the wait. A different wait is a replacement, so it takes the watch
+   * over; the same wait is a re-confirmation and leaves the token alone.
+   */
   export function set(sessionID: string, wait: Wait) {
+    const current = waits.get(sessionID)
+    const same = current !== undefined && current.kind === wait.kind && current.id === wait.id
     waits.set(sessionID, wait)
+    if (same) return epoch(sessionID)
+    return advance(sessionID)
   }
 
   export function get(sessionID: string) {
@@ -79,6 +115,7 @@ export namespace GoalLink {
   export function clear(sessionID: string) {
     waits.delete(sessionID)
     pending.delete(sessionID)
+    advance(sessionID)
   }
 
   /** Clear and return the wait only when it is still the one the caller awaits. */
@@ -86,6 +123,7 @@ export namespace GoalLink {
     const wait = waits.get(sessionID)
     if (!wait || wait.id !== waitID) return undefined
     waits.delete(sessionID)
+    advance(sessionID)
     return wait
   }
 
@@ -112,6 +150,10 @@ export namespace GoalLink {
     waits.delete(sessionID)
     pending.delete(sessionID)
     arms.delete(sessionID)
+    // Archiving or deleting the session drops its wait, so its watches must
+    // stop. The token is never reissued, which is why dropping the entry cannot
+    // let a stale watch match a later goal in the same session.
+    tokens.delete(sessionID)
   }
 
   /**
@@ -158,6 +200,36 @@ export namespace GoalLink {
       return Effect.void
     }
     return arm(sessionID, { sessionID, action: "resume", note }, directory)
+  }
+
+  export type Rewait = { kind: "fire"; note: string } | { kind: "process"; id: string } | { kind: "none" }
+
+  /**
+   * The decision a no-action goal turn makes against the session's background
+   * processes, so a goal that still owns a non-terminal process is not
+   * stranded by a pause. Reading the process list is the only await on this
+   * path, so a fire that lands while it runs wins: a fire that reaches an
+   * active goal only queues, and the pause that may follow clears the queue,
+   * so taking it here is what keeps it from being dropped or held back behind
+   * the re-wait. The lister is a parameter so the race can be tested without
+   * wall-clock timing.
+   */
+  export function rewait(
+    sessionID: SessionID,
+    list: (input: { sessionID: SessionID }) => Promise<BackgroundProcess.Info[]> = (input) =>
+      BackgroundProcess.list(input),
+  ): Effect.Effect<Rewait> {
+    return Effect.gen(function* () {
+      // list() also reports persistent processes from other sessions, and a
+      // process on its way down is not a live wait to re-arm.
+      const running = (yield* Effect.promise(() => list({ sessionID }))).find(
+        (info) => info.sessionID === sessionID && !STOPPED.includes(info.status),
+      )
+      const fired = takePending(sessionID)
+      if (fired.length) return { kind: "fire" as const, note: fired.map((entry) => entry.note).join("\n\n") }
+      if (running) return { kind: "process" as const, id: running.id }
+      return { kind: "none" as const }
+    })
   }
 
   /**
@@ -217,18 +289,29 @@ export namespace GoalLink {
   /**
    * The background-process wait (D10): poll the process and resume the goal
    * once it is gone or terminal. The caller forks it in the instance scope so
-   * it outlives the goal loop fiber.
+   * it outlives the goal loop fiber. The watch only resumes the goal while it
+   * still owns the session's token, and re-checks that ownership after reading
+   * the status, so a superseding suspend, re-wait, clear or release never
+   * resumes the goal. The status reader is a parameter so the supersede race
+   * can be tested without wall-clock timing.
    */
-  export function processWatch(sessionID: SessionID, wait: Wait) {
+  export function processWatch(
+    sessionID: SessionID,
+    wait: Wait,
+    watch: number,
+    status: () => Effect.Effect<BackgroundProcess.Info | undefined> = () =>
+      Effect.promise(() => BackgroundProcess.get(wait.id as BackgroundProcess.ID)),
+  ) {
     return Effect.gen(function* () {
-      while (true) {
-        const info = yield* Effect.promise(() => BackgroundProcess.get(wait.id as BackgroundProcess.ID))
-        const status = info?.status
-        if (!info || (status !== undefined && FINISHED.includes(status))) {
+      while (epoch(sessionID) === watch) {
+        const info = yield* status()
+        const current = info?.status
+        if (!info || (current !== undefined && FINISHED.includes(current))) {
+          if (epoch(sessionID) !== watch) return
           yield* arm(sessionID, {
             sessionID,
             action: "resume",
-            note: `[background process] ${wait.id} ${status ?? "gone"}`,
+            note: `[background process] ${wait.id} ${current ?? "gone"}`,
           })
           return
         }
