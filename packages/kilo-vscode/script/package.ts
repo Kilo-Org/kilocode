@@ -99,7 +99,6 @@ export async function packageTarget(
     preRelease,
     updatePackageJson: false,
     dependencies: false,
-    skipLicense: true,
   })
   return output
 }

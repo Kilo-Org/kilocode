@@ -9,6 +9,7 @@ import { Effect, Exit, Queue, Scope, Stream } from "effect"
 import { NeedsPermissionError } from "../../src/browser/backend"
 import type { CallContext } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
+import { BrowserHub } from "../../src/browser/hub"
 import * as Png from "../../src/browser/png"
 import { key, outputDirectory, playwright } from "../../src/browser/playwright"
 import { resolve } from "../../src/browser/settings"
@@ -211,6 +212,10 @@ async function boot(options: { permission?: unknown; events?: unknown } = {}) {
   const plugin = KiloBrowserToolsPlugin.effect(ctx as never).pipe(
     Effect.provideService(Scope.Scope, scope),
     Effect.provideService(Config.Service, config),
+    // These guards run against the Playwright backend; the extension transport is never reached.
+    Effect.provideService(BrowserHub.Service, {
+      port: () => ({ ready: () => Promise.reject(new Error("no extension in this test")) }) as never,
+    }),
   )
   await Effect.runPromise(
     options.permission ? plugin.pipe(Effect.provideService(Permission.Service, options.permission as never)) : plugin,
@@ -531,6 +536,30 @@ describe("a screenshot this backend allows", () => {
 })
 
 describe("a refused screenshot", () => {
+  test("disposes the frame element when measuring it fails without publishing the capture", async () => {
+    const dispose = mock(async () => {})
+    state.pages[0].children = [
+      Object.assign(new Page("b", "https://pay.example.net/"), {
+        async frameElement() {
+          return {
+            async boundingBox() {
+              throw new Error("Frame detached during measurement")
+            },
+            dispose,
+          }
+        },
+      }),
+    ]
+    const backend = await browser()
+    const result = await backend.callTool("browser_take_screenshot", { filename: "detached-frame.png" }, context)
+    expect(result.isError).toBe(true)
+    expect(result.content).toEqual([
+      { type: "text", text: "The screenshot is unavailable: part of the page is withheld." },
+    ])
+    expect(await fs.readdir(outputDirectory())).not.toContain("detached-frame.png")
+    expect(dispose).toHaveBeenCalledTimes(1)
+  })
+
   test("does not delete an existing file at the requested name", async () => {
     const keep = path.join(outputDirectory(), "keep.png")
     await fs.mkdir(outputDirectory(), { recursive: true })

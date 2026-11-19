@@ -349,10 +349,11 @@ export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash
   await copyTreeSitterWasms(bin)
   await NativeArch.verify(path.join(outdir, name, "bin", item.os === "win32" ? `${binary}.exe` : binary), item.arch)
 
-  // Kilo: a Linux package ships the sandbox runtime helper and Bubblewrap, so its LICENSE carries their notices.
+  // Kilo: Linux packages also carry the licenses of the bundled sandbox helpers.
+  const license = Bun.file(path.resolve(import.meta.dirname, "../../../LICENSE"))
   if (item.os === "linux") {
     const content = await Promise.all([
-      Bun.file(path.resolve(import.meta.dirname, "../../../LICENSE")).text(),
+      license.text(),
       Bun.file(path.join(bin, "licenses/sandbox-runtime/LICENSE")).text(),
       ...(bwrap
         ? ["NOTICE", "COPYING", "MUSL-COPYRIGHT"].map((file) =>
@@ -362,6 +363,7 @@ export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash
     ])
     await Bun.write(path.join(outdir, name, "LICENSE"), content.join("\n\n---\n\n"))
   }
+  if (item.os !== "linux") await Bun.write(path.join(outdir, name, "LICENSE"), license)
 
   // Kilo: the platform packages have the same names as v1's. script/publish.ts publishes them with the `kilo-v2` npm
   // dist-tag, so v1's `latest` and `rc` tags do not change.

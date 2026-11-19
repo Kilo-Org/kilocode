@@ -30,6 +30,7 @@ const name = "@kilocode/cli"
 const tag = "kilo-v2"
 const repository = { type: "git", url: "git+https://github.com/Kilo-Org/kilocode.git" }
 const dryRun = process.argv.includes("--dry-run")
+const license = Bun.file(path.resolve(dir, "../../LICENSE"))
 // Every target that script/build.ts builds without --single or --target (`allTargets`). The launcher lists the platform
 // packages it finds, so a partial build would publish a launcher that has no binary on the other platforms. CI checks
 // this list against the full build in the dry run of every PR that changes script/build.ts.
@@ -81,6 +82,7 @@ if ((missing.length > 0 || unexpected.length > 0) && (!dryRun || process.env.CI)
 const launcher = path.join(root, "cli")
 await rm(launcher, { recursive: true, force: true })
 await mkdir(path.join(launcher, "bin"), { recursive: true })
+await Bun.write(path.join(launcher, "LICENSE"), license)
 // Kilo: copy the platform's runtime sidecars along with the binary.
 await Bun.write(path.join(launcher, "postinstall.mjs"), await launcherPostinstall())
 // The postinstall script replaces this placeholder with the binary. It stays only when install scripts are disabled.
@@ -132,6 +134,8 @@ async function publish(directory: string, pkg: string, version: string) {
   await $`bun pm pack --quiet`.cwd(directory)
   const tarball = Array.from(new Bun.Glob("*.tgz").scanSync({ cwd: directory }))[0]
   if (!tarball) throw new Error(`bun pm pack did not write a tarball for ${pkg}`)
+  const notice = (await $`tar -xOf ${tarball} package/LICENSE`.cwd(directory).quiet()).text()
+  if (!notice.startsWith(await license.text())) throw new Error(`${pkg} does not include the repository MIT license`)
   if (dryRun) {
     await $`npm publish ${tarball} --dry-run --access public --tag ${tag}`.cwd(directory)
     return

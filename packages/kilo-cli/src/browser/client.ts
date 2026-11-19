@@ -17,6 +17,14 @@ const RequestTimeout = 60_000
 const DialTimeout = 5_000
 const StartTimeout = 8_000
 
+/**
+ * Whether an extension may serve a client that selected `profile`. No selection accepts any profile; a selection
+ * accepts only the profile it names, so a browser that reconnects as another one is refused instead of adopted.
+ */
+export function accepts(profile: string | undefined, extension: { profileLabel: string }) {
+  return profile === undefined || extension.profileLabel === profile
+}
+
 export class HubError extends Error {
   readonly code: number
   readonly data: unknown
@@ -59,7 +67,7 @@ export type Client = {
   call<M extends proto.Method>(
     method: M,
     params: proto.Params<M>,
-    options?: { timeout?: number },
+    options?: { timeout?: number; signal?: AbortSignal },
   ): Promise<proto.Result<M>>
   notify(method: proto.Method, params?: unknown): void
   on<M extends proto.NotificationMethod>(method: M, listener: (params: proto.NotificationParams<M>) => void): () => void
@@ -71,7 +79,10 @@ export type Client = {
   }
   tools: {
     list(): Promise<proto.Result<"tools.list">>
-    call(params: proto.Params<"tools.call">): Promise<proto.Result<"tools.call">>
+    call(
+      params: proto.Params<"tools.call">,
+      options?: { timeout?: number; signal?: AbortSignal },
+    ): Promise<proto.Result<"tools.call">>
   }
   upload: {
     begin(params: proto.Params<"upload.begin">): Promise<proto.Result<"upload.begin">>
@@ -88,6 +99,10 @@ export type Input = {
   // Run directory override (sockets and the registry live under it); tests point
   // it at a temp dir.
   dir?: string
+  // Only dial a hub whose connected extension reports this profile label. A profile
+  // the user selected is never replaced by whichever extension connects first, so a
+  // client with a profile does not start a hub of its own.
+  profile?: string
   // Replaces the detached-hub spawn in tests or in hosts that manage processes.
   start?: () => void
   // Replaces the command `bin()` builds for the detached hub (tests spawn a script
@@ -214,6 +229,16 @@ export function create(input: Input = {}): Client {
       return
     }
     if (envelope.data.type === "hub.ready") {
+      // A selected profile is a constraint on the browser, not only on the hub it was dialled through: an extension
+      // that reconnects with another profile must not serve this client's session tabs.
+      if (!accepts(input.profile, envelope.data.extension)) {
+        log.warn("the extension reports another profile than the one selected", {
+          profile: input.profile,
+          reported: envelope.data.extension.profileLabel,
+        })
+        detach("the extension reported another browser profile")
+        return
+      }
       backoff.level = 0
       lifecycle.tried = false
       set({ kind: "ready", hub: active.hub, extension: envelope.data.extension })
@@ -299,6 +324,8 @@ export function create(input: Input = {}): Client {
 
   async function discover() {
     for (const entry of await Registry.list({ dir: hubs() })) {
+      // A selected profile is a constraint: a hub whose extension reports another one is not a fallback for it.
+      if (input.profile !== undefined && entry.profileLabel !== input.profile) continue
       const active = await dial(entry)
       if (active) return active
     }
@@ -406,6 +433,12 @@ export function create(input: Input = {}): Client {
         link = found
         return
       }
+      // A selected profile only exists on a hub its extension already paired with; a hub this CLI starts would serve
+      // whichever extension connects to it, which is exactly what the profile excludes.
+      if (input.profile !== undefined) {
+        schedule(`no browser profile labelled ${input.profile} is connected`)
+        return
+      }
       lifecycle.failed = false
       start()
       const entry = await waitForHub(Date.now() + StartTimeout)
@@ -441,7 +474,12 @@ export function create(input: Input = {}): Client {
 
   // `active` is passed rather than read from `link`: the pairing ask runs from the
   // frame reader, and a socket that was replaced meanwhile must not receive it.
-  function rpc(active: Link | undefined, method: string, params: unknown, options?: { timeout?: number }) {
+  function rpc(
+    active: Link | undefined,
+    method: string,
+    params: unknown,
+    options?: { timeout?: number; signal?: AbortSignal },
+  ) {
     if (!active) {
       return Promise.reject(
         new HubError({
@@ -450,13 +488,35 @@ export function create(input: Input = {}): Client {
         }),
       )
     }
+    // A cancelled turn stops waiting for the answer; the browser may already have
+    // acted on the request, so the caller is told the effects are uncertain.
+    if (options?.signal?.aborted) {
+      return Promise.reject(
+        new HubError({
+          code: proto.ErrorCodes.browser_unavailable,
+          message: `The browser call was cancelled before it was sent.`,
+        }),
+      )
+    }
     const id = active.next++
     const timeout = options?.timeout ?? input.timeout ?? RequestTimeout
     const deferred = Promise.withResolvers<unknown>()
     let timer: NodeJS.Timeout | undefined
+    const signal = options?.signal
+    const cancel = () => {
+      if (!active.pending.delete(String(id))) return
+      pending.settle(
+        new HubError({
+          code: proto.ErrorCodes.browser_unavailable,
+          message: `The browser call was cancelled while it was running.`,
+          data: { effectsUncertain: true },
+        }),
+      )
+    }
     const pending: Pending = {
       settle(error, value) {
         clearTimeout(timer)
+        signal?.removeEventListener("abort", cancel)
         if (error) deferred.reject(error)
         else deferred.resolve(value)
       },
@@ -465,7 +525,7 @@ export function create(input: Input = {}): Client {
       if (!active.pending.delete(String(id))) return
       // Silence is not proof that the browser did nothing, so the caller must look
       // at the page before retrying.
-      deferred.reject(
+      pending.settle(
         new HubError({
           code: proto.ErrorCodes.browser_unavailable,
           message: `The browser did not answer ${method} within ${timeout}ms.`,
@@ -473,6 +533,7 @@ export function create(input: Input = {}): Client {
         }),
       )
     }, timeout)
+    signal?.addEventListener("abort", cancel, { once: true })
     active.pending.set(String(id), pending)
     active.socket.write(encode({ type: "rpc", message: { jsonrpc: "2.0", id, method, params } }))
     return deferred.promise
@@ -527,7 +588,7 @@ export function create(input: Input = {}): Client {
     },
     tools: {
       list: () => client.call("tools.list", {}),
-      call: (params) => client.call("tools.call", params),
+      call: (params, options) => client.call("tools.call", params, options),
     },
     upload: {
       begin: (params) => client.call("upload.begin", params),

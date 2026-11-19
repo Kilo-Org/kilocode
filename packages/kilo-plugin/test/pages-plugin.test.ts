@@ -398,10 +398,13 @@ test("switching the account forgets the previous account's token at once", async
       expect(PagesToken.peek(previous, PagesToken.DEFAULT).kind).toBe("valid")
       pages.state.account = { token: "other", server: backend.url, baseURL: backend.url, organizationID: null }
       KiloGatewayAccounts.changed(pages.directory)
-      for (let i = 0; i < 200 && backend.count() < 2; i++) await Bun.sleep(10)
+      // The token is written after the client parses the response, so the server's request count is not the state the
+      // assertions read. Wait for the token itself; the second response cannot exist without the second request.
+      const other = { server: backend.url, token: "other" }
+      for (let i = 0; i < 400 && PagesToken.peek(other, PagesToken.DEFAULT).kind !== "valid"; i++) await Bun.sleep(10)
       expect(backend.count()).toBe(2)
       expect(PagesToken.peek(previous, PagesToken.DEFAULT).kind).toBe("none")
-      expect(PagesToken.peek({ server: backend.url, token: "other" }, PagesToken.DEFAULT).kind).toBe("valid")
+      expect(PagesToken.peek(other, PagesToken.DEFAULT).kind).toBe("valid")
     },
   }).finally(backend.stop)
 })

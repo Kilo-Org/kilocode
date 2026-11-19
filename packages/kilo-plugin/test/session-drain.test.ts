@@ -149,6 +149,9 @@ describe("kilocode.session-drain", () => {
       expect(yield* finish(waiting)).toBe(true)
       expect([...(yield* env.sessions.active)]).not.toContain(env.root.id)
     }),
+    // The setup builds a real session service; it took 5.1 s on a loaded CI runner against bun's 5 s default. The
+    // pending-drain and idle assertions still decide the result.
+    20_000,
   )
 
   it.live("waits for a coalesced follow-up run", () =>

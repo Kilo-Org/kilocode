@@ -4,6 +4,7 @@ import { build } from "esbuild"
 import path from "node:path"
 import { chromium } from "playwright-core"
 import { createSolidPlugin } from "../../script/solid-cache"
+import { launchTimeout } from "../fixtures/chromium"
 
 declare global {
   interface Window {
@@ -29,7 +30,7 @@ test("Agent Manager search meets automated WCAG checks and supports keyboard sel
   const styles = bundle.outputFiles.find((file) => file.path.endsWith(".css"))
   if (!script || !styles) throw new Error("Expected both a webview script and a stylesheet")
 
-  const browser = await chromium.launch({ timeout: 10_000 })
+  const browser = await chromium.launch({ channel: "chromium", timeout: launchTimeout })
   try {
     const page = await browser.newPage({ colorScheme: "dark", reducedMotion: "reduce" })
     page.setDefaultTimeout(5_000)
@@ -100,4 +101,4 @@ test("Agent Manager search meets automated WCAG checks and supports keyboard sel
   } finally {
     await browser.close()
   }
-}, 30_000)
+}, launchTimeout + 20_000)
