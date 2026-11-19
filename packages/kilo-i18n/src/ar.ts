@@ -193,6 +193,7 @@ export const dict = {
   "browser.notice.unavailableTitle": "المتصفح غير متاح",
   "browser.notice.outdatedTitle": "إضافة المتصفح قديمة",
   "browser.notice.stopped": "أوقفت المتصفح لهذه الجلسة. شغّل /browser adopt لإرجاع علامات التبويب إلى هذه الجلسة.",
+  "ui.permission.reason": "السبب: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "تبديل الموافقة التلقائية",

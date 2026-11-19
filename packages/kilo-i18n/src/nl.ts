@@ -204,6 +204,7 @@ export const dict = {
   "browser.notice.outdatedTitle": "Browserextensie is verouderd",
   "browser.notice.stopped":
     "Je hebt de browser voor deze sessie gestopt. Voer /browser adopt uit om de sessie haar tabbladen terug te geven.",
+  "ui.permission.reason": "Reden: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Automatisch goedkeuren wisselen",

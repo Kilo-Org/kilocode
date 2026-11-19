@@ -193,6 +193,7 @@ export const dict = {
   "browser.notice.unavailableTitle": "브라우저를 사용할 수 없음",
   "browser.notice.outdatedTitle": "브라우저 확장이 오래됨",
   "browser.notice.stopped": "이 세션의 브라우저를 중지했습니다. 탭을 돌려주려면 /browser adopt를 실행하세요.",
+  "ui.permission.reason": "이유: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "자동 승인 전환",

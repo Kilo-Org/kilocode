@@ -198,6 +198,7 @@ export const dict = {
   "browser.notice.outdatedTitle": "ブラウザ拡張機能が古くなっています",
   "browser.notice.stopped":
     "このセッションのブラウザを停止しました。タブを戻すには /browser adopt を実行してください。",
+  "ui.permission.reason": "理由: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "自動承認を切り替え",

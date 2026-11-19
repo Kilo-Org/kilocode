@@ -184,6 +184,7 @@ export const dict = {
   "browser.notice.unavailableTitle": "瀏覽器無法使用",
   "browser.notice.outdatedTitle": "瀏覽器擴充功能已過時",
   "browser.notice.stopped": "你已停止此工作階段的瀏覽器。執行 /browser adopt 將分頁還給此工作階段。",
+  "ui.permission.reason": "原因：{{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "切換自動核准",

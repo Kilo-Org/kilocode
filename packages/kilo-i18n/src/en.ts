@@ -225,6 +225,7 @@ export const dict = {
   "browser.notice.unavailableTitle": "Browser not available",
   "browser.notice.outdatedTitle": "Browser extension out of date",
   "browser.notice.stopped": "You stopped the browser for this session. Run /browser adopt to give it its tabs back.",
+  "ui.permission.reason": "Reason: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Toggle auto-approve",

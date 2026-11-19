@@ -204,6 +204,7 @@ export const dict = {
   "browser.notice.outdatedTitle": "Rozszerzenie przeglądarki jest nieaktualne",
   "browser.notice.stopped":
     "Zatrzymano przeglądarkę dla tej sesji. Uruchom /browser adopt, aby zwrócić tej sesji jej karty.",
+  "ui.permission.reason": "Powód: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Przełącz automatyczne zatwierdzanie",

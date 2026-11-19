@@ -59,6 +59,18 @@ describe("browser permission prompt", () => {
     })
   })
 
+  test("shows a reason and an origin with `$` patterns verbatim", () => {
+    const reason = "typing $& into $' with $$ and $`"
+    const origin = "http://$&.example"
+    const shown = permissionPresentation({
+      action: "browser_sensitive",
+      resources: [origin],
+      metadata: { origin, reason, browserSensitive: true },
+    })
+    expect(shown.title).toBe(`Sensitive browser step on ${origin}`)
+    expect(shown.lines[0]).toBe(`Reason: ${reason}`)
+  })
+
   test("a request it cannot read keeps the upstream fallback", () => {
     expect(permissionPresentation({ action: "browser", resources: ["*"] })).toEqual({
       icon: "⚙",

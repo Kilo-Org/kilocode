@@ -200,6 +200,7 @@ export const dict = {
   "browser.notice.outdatedTitle": "Nettleserutvidelsen er utdatert",
   "browser.notice.stopped":
     "Du stoppet nettleseren for denne økten. Kjør /browser adopt for å gi økten fanene tilbake.",
+  "ui.permission.reason": "Årsak: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Veksle automatisk godkjenning",

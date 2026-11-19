@@ -196,6 +196,7 @@ export const dict = {
   "browser.notice.unavailableTitle": "เบราว์เซอร์ไม่พร้อมใช้งาน",
   "browser.notice.outdatedTitle": "ส่วนขยายเบราว์เซอร์ล้าสมัย",
   "browser.notice.stopped": "คุณหยุดเบราว์เซอร์สำหรับเซสชันนี้แล้ว เรียกใช้ /browser adopt เพื่อคืนแท็บให้กับเซสชันนี้",
+  "ui.permission.reason": "เหตุผล: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "สลับการอนุมัติอัตโนมัติ",

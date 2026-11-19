@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { browserDisplayCalls, browserDisplayInput } from "../../src/kilocode/browser-display"
 import { subagentToolLabel } from "../../src/routes/session"
 import { executeCallSummary, primitiveInputSummary } from "../../src/util/tool-display"
+import { canonicalToolPart } from "../mini/fixture/tool-part"
 
 const password = "hunter2"
 
@@ -61,6 +62,33 @@ describe("browser tool rows", () => {
     }
   })
 
+  test("browser_handle_dialog masks the prompt text and keeps the choice", () => {
+    for (const tool of ["browser_handle_dialog", "browser.handle_dialog"]) {
+      const input = browserDisplayInput(tool, { accept: true, promptText: password })
+      expect(primitiveInputSummary(input)).toBe("[accept=true, promptText=•••]")
+    }
+  })
+
+  test("browser_drop masks every data value and keeps the MIME types and paths", () => {
+    const input = browserDisplayInput("browser.drop", {
+      target: "e4",
+      paths: ["/tmp/a.png"],
+      data: { "text/plain": password, "text/uri-list": "https://example.com" },
+    })
+    expect(input).toEqual({
+      target: "e4",
+      paths: ["/tmp/a.png"],
+      data: { "text/plain": "•••", "text/uri-list": "•••" },
+    })
+  })
+
+  test("browser_drop hides data that is not a map", () => {
+    for (const data of [password, [password]]) {
+      const input = browserDisplayInput("browser_drop", { target: "e4", data })
+      expect(JSON.stringify(input)).not.toContain(password)
+    }
+  })
+
   test("every other tool's input is unchanged", () => {
     const navigate = { url: "https://example.com" }
     expect(browserDisplayInput("browser.navigate", navigate)).toBe(navigate)
@@ -76,5 +104,14 @@ describe("browser tool rows", () => {
       state: { status: "running", input: { target: "e2", text: password }, metadata: {} },
     }
     expect(subagentToolLabel(part as never)).toBe("Browser_type [target=e2, text=•••]")
+  })
+
+  test("a subagent's live child line leaves out a Code Mode program, which can type text", () => {
+    const part = canonicalToolPart("execute", {
+      status: "running",
+      input: { code: `await browser.type({ target: "e2", text: "${password}" })` },
+      metadata: {},
+    })
+    expect(subagentToolLabel(part)).toBe("Execute")
   })
 })

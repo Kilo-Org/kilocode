@@ -137,7 +137,14 @@ import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
 import { RoutedModelBadge, RoutedStep, routedModelLabel } from "../../kilocode/routed-model" // kilocode_change(gateway)
 import { BoardTool, boardTools } from "../../kilocode/board-tool" // kilocode_change(board)
 import { requiresPerson } from "../../kilocode/permission-mode" // kilocode_change(sandbox) - auto-approve leaves human-only requests to the prompt
-import { browserDisplayCalls, browserDisplayInput } from "../../kilocode/browser-display" // kilocode_change(browser) - browser rows never show typed text
+// kilocode_change start - browser: browser rows never show typed text
+import {
+  browserDisplayCalls,
+  browserDisplayInput,
+  browserDisplayText,
+  ROW_INPUT_OMIT,
+} from "../../kilocode/browser-display"
+// kilocode_change end
 export { InlineToolRow } from "./message-parts"
 export { toolDisplay } from "./message-parts"
 
@@ -1897,9 +1904,11 @@ function TurnTokenToolCalls(props: { tools: SessionMessageAssistantTool[] }) {
   )
 }
 
-function turnTokenToolSummary(tool: SessionMessageAssistantTool) {
-  const data = tool.state.input
-  if (typeof data === "string") return data
+// kilocode_change start - browser: exported for its mask test, and typed text is masked
+export function turnTokenToolSummary(tool: SessionMessageAssistantTool) {
+  if (typeof tool.state.input === "string") return browserDisplayText(tool.name, tool.state.input)
+  const data = browserDisplayInput(tool.name, tool.state.input)
+  // kilocode_change end
   const primaryKey = ["command", "id", "pattern", "url", "query", "path", "description", "code"].find(
     (key) => key in data,
   )
@@ -3432,7 +3441,7 @@ export function subagentDetail(messages: readonly SessionMessageInfo[]) {
   return { tools, retry, current, duration }
 }
 
-const SUBAGENT_TOOL_OMIT = ["content", "patchText", "newString", "oldString"]
+const SUBAGENT_TOOL_OMIT = ["content", "patchText", "newString", "oldString", ...ROW_INPUT_OMIT]
 
 export function subagentToolLabel(part: SessionMessageAssistantTool) {
   if (part.state.status === "streaming") return Locale.titlecase(canonicalToolName(part.name))

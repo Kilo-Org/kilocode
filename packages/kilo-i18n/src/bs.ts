@@ -205,6 +205,7 @@ export const dict = {
   "browser.notice.unavailableTitle": "Preglednik nije dostupan",
   "browser.notice.outdatedTitle": "Proširenje preglednika je zastarjelo",
   "browser.notice.stopped": "Zaustavili ste preglednik za ovu sesiju. Pokrenite /browser adopt da joj vratite kartice.",
+  "ui.permission.reason": "Razlog: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Uključi/isključi automatsko odobravanje",

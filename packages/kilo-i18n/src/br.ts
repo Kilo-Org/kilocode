@@ -202,6 +202,7 @@ export const dict = {
   "browser.notice.outdatedTitle": "Extensão de navegador desatualizada",
   "browser.notice.stopped":
     "Você parou o navegador para esta sessão. Execute /browser adopt para devolver as abas a esta sessão.",
+  "ui.permission.reason": "Motivo: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Alternar aprovação automática",
