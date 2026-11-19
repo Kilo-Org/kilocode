@@ -57,6 +57,7 @@ export const files: readonly string[] = [
   "core/src/tool/plugin/artifact.ts",
   "core/src/tool/plugin/schedule.ts",
   "core/src/tool/plugin/mcp-resource.ts",
+  "core/src/tool/plugin/mcp-events.ts",
   "core/src/schedule/check.ts",
   "core/src/tool/plugin/websearch.ts",
   "core/src/artifact.ts",
@@ -71,7 +72,6 @@ export const files: readonly string[] = [
   "core/src/plugin/provider/claude-agent/tools/server.ts",
   "core/src/oauth/page.ts",
   "server/src/handlers/server.ts",
-  "server/src/handlers/persistent-pty.ts",
   "server/src/process.ts",
   // The loader the host installs for user plugins: the error names the host a plugin has to take `effect` from.
   "plugin/src/runtime.ts",

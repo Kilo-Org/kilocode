@@ -97,6 +97,7 @@ const connect = (url: string, host?: McpHost.Host) => {
     Effect.scoped(
       Effect.gen(function* () {
         const authProvider = yield* McpOAuth.connectProvider({
+          server: "axiom",
           config,
           credential: rows.get(Credential.ID.make("cred_test")),
         })
@@ -187,13 +188,15 @@ test("a refresh failure whose host looks like an authorization endpoint is not a
   expect(authFailure((error as Error).message)).toBe(false)
 })
 
-test("a 408 from the token server asks to sign in without the host and is retryable with it", async () => {
+test("a 408 from the token server is retryable with and without the host", async () => {
   const port = reservePort()
   const server = protectedServer(port)
   const token = Bun.serve({ hostname: "127.0.0.1", port, fetch: () => new Response(null, { status: 408 }) })
   try {
+    // Upstream now reports a token-server status as temporarily unavailable instead of a lost login, so both
+    // connections keep the credential and fail the attempt; the host only changes the retry classification.
     const upstream = await connect(new URL("/mcp", server.url).href)
-    expect(Exit.isFailure(upstream.exit) && Cause.squash(upstream.exit.cause)).toBeInstanceOf(McpClient.NeedsAuthError)
+    expect(Exit.isFailure(upstream.exit) && Cause.squash(upstream.exit.cause)).toBeInstanceOf(McpClient.ConnectError)
     const kilo = await connect(new URL("/mcp", server.url).href, host)
     expect(Exit.isFailure(kilo.exit) && Cause.squash(kilo.exit.cause)).toBeInstanceOf(McpClient.ConnectError)
   } finally {
@@ -210,7 +213,7 @@ test("treats a refresh the token server cannot serve yet as retryable", async ()
     try {
       const kilo = await connect(new URL("/mcp", server.url).href, host)
       const error = Exit.isFailure(kilo.exit) ? Cause.squash(kilo.exit.cause) : undefined
-      expect(`${(error as Error)?.constructor?.name} ${(error as Error)?.message}`).toContain(`HTTP ${status}`)
+      expect((error as Error)?.message).toContain("Could not refresh the OAuth token")
       expect(error).toBeInstanceOf(McpClient.ConnectError)
       expect((error as Error).message).toContain("temporarily_unavailable")
       expect(authFailure((error as Error).message)).toBe(false)

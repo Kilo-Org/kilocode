@@ -70,7 +70,7 @@ test("production session shows each route while keeping Auto selected", async ()
       app: { name: "test", version: "test", channel: "test" },
       server: { endpoint: { url: server.url.toString() } },
       config: {
-        get: async () => ({ animations: false, tabs: { enabled: false }, debug: { turn_tokens: true } }),
+        get: async () => ({ animations: false, tabs: { enabled: false }, session: { verbosity: "high" }, debug: { turn_tokens: true } }),
         update: async () => ({}),
       },
       packages: { prepare: async () => ({ directory: "" }) },

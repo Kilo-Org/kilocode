@@ -175,7 +175,14 @@ describe("MCP client ID metadata document", () => {
     // The document's loopback is still the callback the client registers, so the redirect stays valid.
     expect(result.url.searchParams.get("redirect_uri")).toBe(McpClientMetadata.callbackUrl)
     expect(registrations).toHaveLength(1)
-    expect(registrations[0]?.redirect_uris).toEqual([McpClientMetadata.callbackUrl])
+    // Upstream registers the rewritten-localhost variant next to the loopback the hosted document lists.
+    expect(registrations[0]?.redirect_uris).toEqual([
+      McpClientMetadata.callbackUrl,
+      McpClientMetadata.callbackUrl.replace("127.0.0.1", "localhost"),
+    ])
+    // The host identity reaches the registration the login makes.
+    expect(registrations[0]?.client_name).toBe("Kilo")
+    expect(registrations[0]?.client_uri).toBe("https://kilo.ai")
   })
 
   test("keeps a configured client out of the document and never stores its secret", async () => {
@@ -216,8 +223,12 @@ describe("MCP client ID metadata document", () => {
     expect(result.redirect.origin).toBe(`http://127.0.0.1:${port}`)
     expect(result.redirect.pathname).toBe("/callback")
     expect(registrations).toHaveLength(1)
-    // DCR must record the loopback the listener bound, not upstream's placeholder.
-    expect(registrations[0]?.redirect_uris).toEqual([result.redirect.origin + result.redirect.pathname])
+    // DCR records the loopback the listener bound, not upstream's placeholder, plus upstream's
+    // localhost variant that a server which rewrites the redirect sends the browser back to.
+    expect(registrations[0]?.redirect_uris).toEqual([
+      result.redirect.origin + result.redirect.pathname,
+      (result.redirect.origin + result.redirect.pathname).replace("127.0.0.1", "localhost"),
+    ])
   })
 
   test("lets an explicit document redirect own the listener even with a custom port", async () => {

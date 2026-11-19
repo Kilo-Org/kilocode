@@ -27,6 +27,16 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      # kilocode_change start - an upstream sync can merge a renamed file with conflict markers inside a file git
+      # reports as resolved, and neither typecheck nor lint parses every fixture. Fail the pull request instead.
+      - name: Check for conflict markers
+        run: |
+          if git grep -nE '^(<<<<<<<|>>>>>>>)' -- .; then
+            echo "Conflict markers found"
+            exit 1
+          fi
+      # kilocode_change end
+
       - name: Lint
         run: bun run lint
 

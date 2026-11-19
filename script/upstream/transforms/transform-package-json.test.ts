@@ -13,6 +13,7 @@ import {
   mergeWithNewestVersions,
   preserveWorkspacePackages,
   prunePatchedDependencies,
+  pruneSkippedWorkspaces,
   selectBunPackageManager,
   transformDependencies,
   type PackageJsonResult,
@@ -228,6 +229,23 @@ test("preserveWorkspacePackages keeps Kilo packages only when they differ from b
 
   expect((pkg.workspaces as { packages: string[] }).packages).toEqual(["packages/core", "packages/kilo-x"])
   expect(changes).toEqual(["workspaces.packages: preserved Kilo's workspace configuration"])
+})
+
+test("pruneSkippedWorkspaces drops workspace globs for product areas Kilo does not ship", () => {
+  const pkg: Record<string, unknown> = {
+    workspaces: { packages: ["packages/*", "services/*", "packages/data/*"] },
+  }
+  const changes: string[] = []
+
+  pruneSkippedWorkspaces(pkg, "package.json", changes)
+
+  expect((pkg.workspaces as { packages: string[] }).packages).toEqual(["packages/*", "services/*"])
+  expect(changes).toEqual(["workspaces.packages: removed packages/data/* (Kilo does not ship it)"])
+
+  // A nested package.json has no workspace list of its own.
+  const nested: Record<string, unknown> = { workspaces: { packages: ["packages/data/*"] } }
+  pruneSkippedWorkspaces(nested, "packages/x/package.json", changes)
+  expect((nested.workspaces as { packages: string[] }).packages).toEqual(["packages/data/*"])
 })
 
 test("mergeWithNewestVersions preserves an absent dependency section", () => {

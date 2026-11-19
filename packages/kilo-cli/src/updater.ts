@@ -12,6 +12,7 @@ export const layer = Layer.succeed(
     check: () => Effect.succeed({ type: "unavailable", message }),
     apply: () => Effect.fail(new Error(message)),
     method: () => Effect.succeed(undefined),
+    managed: () => Effect.succeed(undefined),
     latest: () => Effect.fail(new Error(message)),
     upgrade: () => Effect.fail(new Error(message)),
     // `kilo2 uninstall` runs the upstream handler with this service. `method` reports no install method, so the
