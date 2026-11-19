@@ -22,12 +22,22 @@
 // hub (started here on the run's port so parallel runs never share 47917), finds it unpaired and opens the pairing page
 // with the system opener. `xdg-open` on PATH is a recorder: the harness opens each recorded URL in the Chromium that
 // holds the extension, the way a default browser would. Everything the user sees is driven through the UI: the Kilo
-// sidebar, the Settings panel's Web Tools tab, the permission dock, and the extension's Local agents settings.
+// sidebar, the Settings panel's Web Tools tab, the permission dock, and the extension's Local agents settings. The
+// Chromium launch (a real profile, no DevTools download override), the account API routes and the pairing page come
+// from extension-harness.ts; the hub keeps VS Code's own layout (XDG state dir), so it is started here.
 import fs from "node:fs/promises"
 import { existsSync, readFileSync, readdirSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import net from "node:net"
+import {
+  acceptPermissionPrompts,
+  acceptPermissionsCopy,
+  hubRequest as harnessHubRequest,
+  launchChromium as harnessLaunchChromium,
+  type Launched,
+  openPairing,
+  routeKiloApi,
+} from "./extension-harness"
 
 // biome-ignore lint: the harness drives Playwright objects through a narrow dynamic surface.
 type Any = any
@@ -41,7 +51,6 @@ const playwright = (await import(Bun.resolveSync("playwright-core", pluginDirect
 const codeExecutable = required("VSC_E2E_CODE")
 const vsix = required("VSC_E2E_VSIX")
 const extensionDirectory = required("E2E_EXTENSION_DIR")
-const chromiumExecutable = process.env.E2E_CHROMIUM ?? playwright.chromium.executablePath()
 const root = process.env.VSC_E2E_ROOT ?? path.join(os.tmpdir(), `vscode-e2e-${process.pid}`)
 const evidence = process.env.VSC_E2E_EVIDENCE ?? path.join(root, "evidence")
 const basePort = Number(process.env.VSC_E2E_PORT ?? 48250)
@@ -213,6 +222,7 @@ function fixture(hostname: string) {
 // Chromium with the real extension, "Allow local agents" on, and the opener recorder replayed into it.
 // ---------------------------------------------------------------------------------------------
 
+let launched: Launched | undefined
 let context: Any
 let panel: Any
 let worker: Any
@@ -224,55 +234,26 @@ let worker: Any
  */
 async function extensionCopy() {
   if (process.env.VSC_E2E_GRANT_DOWNLOADS === "0") return extensionDirectory
-  const target = path.join(root, "extension")
-  await fs.cp(extensionDirectory, target, { recursive: true })
-  const file = path.join(target, "manifest.json")
-  const manifest = JSON.parse(await fs.readFile(file, "utf8"))
-  manifest.optional_permissions = (manifest.optional_permissions ?? []).filter((name: string) => name !== "downloads")
-  manifest.permissions = [...new Set([...(manifest.permissions ?? []), "downloads"])]
-  await fs.writeFile(file, JSON.stringify(manifest, null, 2))
-  return target
+  return acceptPermissionsCopy(extensionDirectory, path.join(root, "extension"), ["downloads"])
 }
 
 async function launchChromium() {
   await fs.access(path.join(extensionDirectory, "manifest.json"))
   const extension = await extensionCopy()
-  context = await playwright.chromium.launchPersistentContext(dirs.chromium, {
-    args: [
-      `--disable-extensions-except=${extension}`,
-      `--load-extension=${extension}`,
-      "--disable-blink-features=AutomationControlled",
-      "--window-position=1150,0",
-      "--window-size=770,1050",
-    ],
-    executablePath: chromiumExecutable,
-    headless: false,
-    ignoreDefaultArgs: ["--enable-automation"],
-    viewport: null,
-  })
-  context.setDefaultTimeout(20_000)
-  worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"))
-  extensionId = new URL(worker.url()).host
+  // The harness's window flags come first; Chromium keeps the last value of a repeated switch.
+  launched = await harnessLaunchChromium({ args: ["--window-position=1150,0", "--window-size=770,1050"], extension, profile: dirs.chromium })
+  context = launched.context
+  worker = launched.worker
+  extensionId = launched.extensionId
 }
 
 /** Turns on "Allow local agents" through the extension's own settings page, as a signed-in user would. */
 async function enableLocalAgents() {
   // The account API the side panel validates against: app.kilo.ai for a production build, localhost:3000 for a
   // development build. Both are faked, so a service another process runs on :3000 cannot sign the panel out.
-  const account = (url: URL) => url.origin === "https://app.kilo.ai" || url.origin === "http://localhost:3000"
-  await context.route(
-    (url: URL) => account(url) && url.pathname.startsWith("/api/"),
-    (route: Any) => {
-      const pathname = new URL(route.request().url()).pathname
-      if (pathname === "/api/user") return route.fulfill({ json: { google_user_email: "e2e@kilo.ai" }, status: 200 })
-      if (pathname === "/api/organizations") return route.fulfill({ json: { organizations: [] }, status: 200 })
-      return route.fulfill({ json: {}, status: 200 })
-    },
-  )
+  await routeKiloApi(launched!.context)
   // A real user answers the optional-permission prompt; automation cannot.
-  await context.addInitScript({
-    content: "Object.defineProperty(chrome.permissions, 'request', { value: () => Promise.resolve(true) });",
-  })
+  await acceptPermissionPrompts(launched!.context)
   panel = await context.newPage()
   panel.setDefaultTimeout(20_000)
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`)
@@ -320,8 +301,7 @@ async function replayOpener() {
       opened.push({ url: url.replace(/#.*/, "#<redacted>"), at: Date.now() })
       // A new window: a tab CDP adds to an existing window inherits the active tab as its opener, and the extension
       // ignores a pairing page that has an opener (a page could open it itself).
-      const cdp = await context.browser().newBrowserCDPSession()
-      await cdp.send("Target.createTarget", { newWindow: true, url }).catch(() => undefined)
+      await openPairing(launched!, url).catch(() => undefined)
     }
     seen = lines.length
     await sleep(250)
@@ -374,34 +354,7 @@ async function stopHub() {
 }
 
 /** One JSON-RPC call the hub answers itself (`pairing.url`), over the 4-byte-framed CLI socket. */
-async function hubRequest(socketPath: string, method: string) {
-  const socket = net.createConnection(socketPath)
-  const connected = Promise.withResolvers<void>()
-  socket.once("connect", connected.resolve)
-  socket.once("error", connected.reject)
-  await connected.promise
-  const { promise, resolve, reject } = Promise.withResolvers<Any>()
-  let buffer = Buffer.alloc(0)
-  socket.on("data", (chunk: Buffer) => {
-    buffer = Buffer.concat([buffer, chunk])
-    while (buffer.length >= 4) {
-      const length = buffer.readUInt32LE(0)
-      if (buffer.length < 4 + length) return
-      const frame = JSON.parse(buffer.subarray(4, 4 + length).toString("utf8"))
-      buffer = buffer.subarray(4 + length)
-      if (frame?.type === "rpc" && frame.message?.id === 1) {
-        socket.end()
-        if (frame.message.error) reject(new Error(frame.message.error.message))
-        else resolve(frame.message.result)
-      }
-    }
-  })
-  const body = Buffer.from(JSON.stringify({ type: "rpc", message: { jsonrpc: "2.0", id: 1, method, params: {} } }))
-  const header = Buffer.alloc(4)
-  header.writeUInt32LE(body.length, 0)
-  socket.write(Buffer.concat([header, body]))
-  return await promise
-}
+const hubRequest = (socketPath: string, method: string): Promise<Any> => harnessHubRequest(socketPath, method, {})
 
 // ---------------------------------------------------------------------------------------------
 // VS Code: install the VSIX into the isolated extensions dir, launch through Playwright's Electron driver.
@@ -616,7 +569,7 @@ async function serve() {
   console.log(`control server on http://127.0.0.1:${controlPort}`)
   const stop = async () => {
     await app?.close().catch(() => undefined)
-    await context?.close().catch(() => undefined)
+    await launched?.close().catch(() => undefined)
     await stopHub()
     process.exit(0)
   }
@@ -770,8 +723,7 @@ async function run() {
     // Playwright stays the backend; an extension connects to the hub. D2: a one-time notice offers the switch.
     const entry = (await hubEntries())[0]
     const answer = await hubRequest(entry.socket, "pairing.url")
-    const cdp = await context.browser().newBrowserCDPSession()
-    await cdp.send("Target.createTarget", { newWindow: true, url: answer.url })
+    await openPairing(launched!, answer.url)
     await until(async () => ((await hubEntries())[0]?.paired ? true : undefined), 30_000, "the extension pairs")
     await sleep(10_000)
     const notifications = await code.$$eval(".notifications-toasts .notification-toast", (els: Any[]) =>
@@ -871,7 +823,7 @@ async function run() {
   await fs.writeFile(path.join(evidence, "report.json"), JSON.stringify(report, null, 2))
   console.log(`report: ${path.join(evidence, "report.json")}`)
   await app?.close().catch(() => undefined)
-  await context?.close().catch(() => undefined)
+  await launched?.close().catch(() => undefined)
   await stopHub()
   process.exit(0)
 }

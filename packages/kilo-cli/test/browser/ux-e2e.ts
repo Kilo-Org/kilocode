@@ -2,7 +2,8 @@
 // UX end-to-end runner for the Kilo browser bridge: every human-visible surface (the extension's "Local agents"
 // settings, the pairing notices, the tab groups, the Alt+Shift+K command, the CLI TUI prompts) and the exact text the
 // model receives for each error, against the real built Chrome MV3 extension and the real `kilo2` binary.
-// Not a `bun test` file: it needs a display (run it under `xvfb-run -a`), a built CLI binary and the built extension.
+// Not a `bun test` file: it needs a display (run it under `xvfb-run -a -s "-screen 0 1920x1080x24"`; the window is a
+// real 1280x900 one), a built CLI binary and the built extension.
 //
 //   bun test/browser/ux-e2e.ts <kilo2> <scenario>
 //
@@ -12,6 +13,8 @@
 //   E2E_EVIDENCE        where screenshots and pane captures go (default: $E2E_HOME/evidence)
 //   E2E_PORTS           an inclusive hub port range "<from>-<to>" (default: any free port)
 //   E2E_EXPIRY_WAIT_MS  how long the expired-token case waits past issuing (default: 62000; the hub TTL is 60 s)
+//   E2E_DOWNLOADS_GRANTED=0  load the shipped build (no optional permission accepted)
+//   E2E_NATIVE_GRANTED=0     accept only `downloads`, not `nativeMessaging`
 //
 // Scenarios:
 //   pairing   settings empty states and the four pairing notices (expired, invalid, not_allowed, unreachable)
@@ -26,30 +29,55 @@
 // Each scenario prints one JSON report and exits non-zero when a hard expectation fails. Findings that are UX judgments
 // rather than broken contracts go to `observations`, not `failures`.
 //
-// This is a minimal copy of the launch, pairing and run helpers of extension-e2e.ts (that file runs its own main on
-// import); the shared harness extraction will replace the copy.
+// The Chromium launch (a real profile, no DevTools download override), the API routes, the hub, pairing, the
+// scripted model and the CLI runs come from extension-harness.ts.
 import fs from "node:fs/promises"
-import { existsSync } from "node:fs"
-import net from "node:net"
 import os from "node:os"
 import path from "node:path"
+import {
+  acceptPermissionPrompts,
+  acceptPermissionsCopy,
+  bridgeEnvironment,
+  type Bridge,
+  type Call,
+  defaultExtensionDirectory,
+  field,
+  freshRoot as harnessFreshRoot,
+  type GroupInfo,
+  type Hub,
+  html,
+  launchChromium,
+  type Launched,
+  openPairing as harnessOpenPairing,
+  pair as harnessPair,
+  pairingUrl,
+  type Page,
+  type Plan,
+  portPool,
+  PUBLIC_MARKER,
+  record,
+  refOf,
+  routeKiloApi,
+  type Run,
+  type RunOptions,
+  runAgent,
+  type Settings,
+  startBridgeHub,
+  startModel,
+  tabState as harnessTabState,
+  type TabInfo,
+  until,
+  type Worker,
+} from "./extension-harness"
 
 const binaryInput = process.argv[2]
 const scenario = process.argv[3] ?? "all"
 if (!binaryInput) throw new Error("usage: bun test/browser/ux-e2e.ts <kilo2> <scenario>")
 const binary = path.resolve(binaryInput)
 
-// playwright-core belongs to the plugin workspace, not this package: the specifier is resolved from there at runtime.
-const pluginDirectory = path.resolve(import.meta.dirname, "../../../kilo-plugin")
-const playwright = (await import(Bun.resolveSync("playwright-core", pluginDirectory))) as unknown as Playwright
-const chromium = playwright.chromium
-
-const extensionDirectory =
-  process.env.E2E_EXTENSION_DIR ?? path.resolve(import.meta.dirname, "../../../../cloud/apps/extension/.output/chrome-mv3")
-const executablePath = process.env.E2E_CHROMIUM ?? chromium.executablePath()
+const extensionDirectory = defaultExtensionDirectory
 const EXPIRY_WAIT_MS = Number(process.env.E2E_EXPIRY_WAIT_MS ?? "62000")
 
-const PUBLIC_MARKER = "PUBLIC-ORIGIN"
 const PASSWORD_VALUE = "hunter2"
 
 declare const chrome: {
@@ -60,69 +88,6 @@ declare const chrome: {
   tabGroups: { get(groupId: number): Promise<unknown>; query(query: Record<string, unknown>): Promise<unknown> }
   tabs: { query(query: Record<string, unknown>): Promise<unknown> }
   commands: { getAll(): Promise<unknown> }
-}
-
-type Locator = {
-  click(): Promise<void>
-  count(): Promise<number>
-  getAttribute(name: string): Promise<string | null>
-  innerText(): Promise<string>
-  screenshot(options: { path: string }): Promise<unknown>
-  waitFor(options?: { timeout?: number; state?: string }): Promise<void>
-}
-
-type CdpSession = {
-  on(event: string, listener: (payload: unknown) => void): void
-  send(method: string, params?: Record<string, unknown>): Promise<unknown>
-}
-
-type Worker = {
-  evaluate<T>(fn: () => T | Promise<T>): Promise<T>
-  evaluate<T, A>(fn: (arg: A) => T | Promise<T>, arg: A): Promise<T>
-  url(): string
-}
-
-type Page = {
-  bringToFront(): Promise<void>
-  close(): Promise<void>
-  evaluate<T>(fn: () => T | Promise<T>): Promise<T>
-  evaluate<T, A>(fn: (arg: A) => T | Promise<T>, arg: A): Promise<T>
-  getByRole(role: string, options?: { name?: string | RegExp; exact?: boolean }): Locator
-  goto(url: string): Promise<unknown>
-  locator(selector: string): Locator
-  reload(): Promise<unknown>
-  screenshot(options: { path: string; fullPage?: boolean }): Promise<unknown>
-  setDefaultTimeout(timeout: number): void
-  url(): string
-}
-
-type Route = { fulfill(options: { json: unknown; status: number }): Promise<void> }
-
-type Context = {
-  addInitScript(script: { content: string }): Promise<void>
-  close(): Promise<void>
-  newCDPSession(page: Page): Promise<CdpSession>
-  newPage(): Promise<Page>
-  pages(): Page[]
-  route(url: string | ((url: URL) => boolean), handler: (route: Route) => Promise<void> | void): Promise<void>
-  serviceWorkers(): Worker[]
-  setDefaultTimeout(timeout: number): void
-  waitForEvent(event: string): Promise<Worker>
-}
-
-type Playwright = {
-  chromium: {
-    executablePath(): string
-    launchPersistentContext(directory: string, options: Record<string, unknown>): Promise<unknown>
-  }
-}
-
-function record(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined
-}
-
-function field(value: unknown, key: string): unknown {
-  return record(value)?.[key]
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -150,8 +115,6 @@ const simple = `<!doctype html>
     pw.addEventListener("change", send)
   </script>
 </body></html>`
-
-const html = (body: string) => new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } })
 
 const frame = Bun.serve({
   hostname: "127.0.0.2",
@@ -183,128 +146,11 @@ const fixture = Bun.serve({
 })
 const localOrigin = fixture.url.origin
 
-// ---------------------------------------------------------------------------------------------
-// Scripted model. A plan returns one call, several parallel calls, or nothing (the run ends with a text answer).
-// Every tool message the CLI sends back is kept verbatim: that is the text the model reads.
-// ---------------------------------------------------------------------------------------------
-
-type Call = { name: string; args: unknown }
-type Step = { calls: Call[]; results: string[]; raw: unknown[]; tools: string[] }
-type Plan = (step: Step) => Promise<Call | Call[] | undefined> | Call | Call[] | undefined
-
-function textOf(content: unknown): string {
-  if (typeof content === "string") return content
-  if (!Array.isArray(content)) return ""
-  return content
-    .flatMap((part) => {
-      const text = field(part, "text")
-      return field(part, "type") === "text" && typeof text === "string" ? [text] : []
-    })
-    .join("\n")
-}
-
-function callsOf(toolCalls: unknown): Call[] {
-  if (!Array.isArray(toolCalls)) return []
-  return toolCalls.flatMap((call) => {
-    const fn = field(call, "function")
-    const name = field(fn, "name")
-    if (typeof name !== "string") return []
-    const raw = field(fn, "arguments")
-    try {
-      return [{ args: typeof raw === "string" ? JSON.parse(raw) : raw, name }]
-    } catch {
-      return [{ args: raw, name }]
-    }
-  })
-}
-
-function readStep(messages: unknown, tools: string[]): Step {
-  const step: Step = { calls: [], raw: [], results: [], tools }
-  if (!Array.isArray(messages)) return step
-  for (const message of messages) {
-    const role = field(message, "role")
-    if (role === "assistant") step.calls.push(...callsOf(field(message, "tool_calls")))
-    if (role !== "tool") continue
-    const content = field(message, "content")
-    step.raw.push(content)
-    step.results.push(textOf(content))
-  }
-  return step
-}
-
-const usage = { completion_tokens: 2, prompt_tokens: 10, total_tokens: 12 }
-const chunk = (model: string, delta: object, finish: string | null) =>
-  `data: ${JSON.stringify({ choices: [{ delta, finish_reason: finish, index: 0 }], id: "local", model, object: "chat.completion.chunk" })}\n\n`
-const tail = (model: string) =>
-  `data: ${JSON.stringify({ choices: [], id: "local", model, object: "chat.completion.chunk", usage })}\n\ndata: [DONE]\n\n`
-
-let callSerial = 0
-const toolCalls = (model: string, calls: Call[]) =>
-  [
-    chunk(
-      model,
-      {
-        role: "assistant",
-        tool_calls: calls.map((call, index) => ({
-          function: { arguments: JSON.stringify(call.args), name: call.name },
-          id: `call_${call.name}_${++callSerial}`,
-          index,
-          type: "function",
-        })),
-      },
-      null,
-    ),
-    chunk(model, {}, "tool_calls"),
-    tail(model),
-  ].join("")
-
-const answer = (model: string, text: string) =>
-  [chunk(model, { content: text, role: "assistant" }, null), chunk(model, {}, "stop"), tail(model)].join("")
-
-/** Every chat request the model server saw, so the TUI driver can tell a submitted prompt from a dropped Enter. */
-let modelRequests = 0
-let activePlan: Plan | undefined
-const history: Step[] = []
-const sse = (body: string) => new Response(body, { headers: { "content-type": "text/event-stream" } })
-
-/** Code Mode exposes the browser tools through `execute`; parallel calls become one `Promise.allSettled`. */
-function codeFor(calls: Call[]) {
-  const expression = (call: Call) => {
-    const method = call.name.startsWith("browser_") ? call.name.slice("browser_".length) : call.name
-    return `tools.browser.${method}(${JSON.stringify(call.args)})`
-  }
-  if (calls.length === 1) return `return await ${expression(calls[0]!)}`
-  return `const settled = await Promise.allSettled([${calls.map(expression).join(", ")}]);\nreturn settled.map((item) => item.status === "fulfilled" ? item.value : String(item.reason?.message ?? item.reason))`
-}
-
-const model = Bun.serve({
-  hostname: "127.0.0.1",
-  port: 0,
-  idleTimeout: 0,
-  async fetch(request) {
-    if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
-    modelRequests += 1
-    const body: unknown = await request.json()
-    const name = typeof field(body, "model") === "string" ? (field(body, "model") as string) : "local"
-    const declared = field(body, "tools")
-    const tools = Array.isArray(declared)
-      ? declared.flatMap((tool) => {
-          const id = field(field(tool, "function"), "name")
-          return typeof id === "string" ? [id] : []
-        })
-      : []
-    if (!tools.some((tool) => tool.startsWith("browser_")) && !tools.includes("execute")) {
-      return sse(answer(name, "Browser UX E2E"))
-    }
-    const step = readStep(field(body, "messages"), tools)
-    history.push(step)
-    const next = activePlan === undefined ? undefined : await activePlan(step)
-    if (next === undefined) return sse(answer(name, "Browser UX E2E finished"))
-    const calls = Array.isArray(next) ? next : [next]
-    if (tools.some((tool) => tool.startsWith("browser_"))) return sse(toolCalls(name, calls))
-    return sse(toolCalls(name, [{ args: { code: codeFor(calls) }, name: "execute" }]))
-  },
-})
+// Scripted model: a plan returns one call, several parallel calls, or nothing; every tool message the CLI sends back
+// is kept verbatim in `model.history` (that is the text the model reads), and `model.requests` counts every request.
+const model = startModel({ label: "Browser UX E2E" })
+/** The model's request log, cleared in place before each TUI run (runAgent clears it for CLI runs). */
+const history = model.history
 
 // ---------------------------------------------------------------------------------------------
 // Chromium and the settings page.
@@ -321,57 +167,17 @@ function observe(condition: boolean, message: string) {
   return condition
 }
 
-async function until<T>(check: () => Promise<T | undefined> | T | undefined, timeout = 20_000, label = "condition"): Promise<T> {
-  const deadline = Date.now() + timeout
-  let last: unknown
-  while (Date.now() < deadline) {
-    try {
-      const value = await check()
-      if (value !== undefined) return value
-    } catch (error) {
-      last = error
-    }
-    await Bun.sleep(100)
-  }
-  throw new Error(`${label} was not met before ${timeout}ms${last === undefined ? "" : `: ${String(last)}`}`)
-}
-
 /** The same check as `until`, but a miss is a value instead of a throw. */
 async function maybe<T>(check: () => Promise<T | undefined> | T | undefined, timeout: number): Promise<T | undefined> {
   return until(check, timeout).catch(() => undefined)
 }
 
-const portRange = (() => {
-  const match = /^(\d+)-(\d+)$/.exec(process.env.E2E_PORTS ?? "")
-  return match ? { from: Number(match[1]), to: Number(match[2]) } : undefined
-})()
-let nextPort = portRange?.from ?? 0
-
-async function bindable(port: number): Promise<number | undefined> {
-  const { promise, resolve } = Promise.withResolvers<number | undefined>()
-  const server = net.createServer()
-  server.once("error", () => resolve(undefined))
-  server.listen(port, "127.0.0.1", () => {
-    const address = server.address()
-    const bound = typeof address === "object" && address !== null ? address.port : undefined
-    server.close(() => resolve(bound))
-  })
-  return promise
-}
-
 /** A port in the assigned range (cycling), or any free one when no range is set. */
-async function freePort(): Promise<number> {
-  if (!portRange) return (await bindable(0)) ?? 0
-  for (let tries = 0; tries <= portRange.to - portRange.from; tries++) {
-    const port = nextPort
-    nextPort = nextPort >= portRange.to ? portRange.from : nextPort + 1
-    if ((await bindable(port)) !== undefined) return port
-  }
-  throw new Error(`no free port in ${portRange.from}-${portRange.to}`)
-}
+const freePort = portPool(process.env.E2E_PORTS)
 
+let launched: Launched | undefined
+let bridge!: Bridge
 let extensionId = ""
-let context!: Context
 let panel: Page
 let worker: Worker
 let base = ""
@@ -381,73 +187,35 @@ const shots: string[] = []
 /**
  * The extension this run loads. By default a copy with the optional `downloads` permission promoted to required: the
  * state after the user accepts the switch's permission prompt, which automation cannot answer. Without it every
- * navigation is refused (see the "downloads-ungranted" evidence). `E2E_DOWNLOADS_GRANTED=0` loads the shipped build.
+ * navigation is refused (see the "downloads-ungranted" evidence). `E2E_DOWNLOADS_GRANTED=0` loads the shipped build;
+ * `E2E_NATIVE_GRANTED=0` accepts `downloads` only.
  */
 let loadedExtension = extensionDirectory
 
-async function acceptedCopy(source: string, target: string) {
-  await fs.rm(target, { force: true, recursive: true })
-  await fs.cp(source, target, { recursive: true })
-  const manifestPath = path.join(target, "manifest.json")
-  const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8")) as { optional_permissions?: string[]; permissions?: string[] }
-  const permissions = [...(manifest.permissions ?? [])]
-  // Both optional permissions the switch requests: the state after the user accepts its prompt.
-  const accepted = ["downloads", ...(process.env.E2E_NATIVE_GRANTED === "0" ? [] : ["nativeMessaging"])]
-  for (const permission of accepted) if (!permissions.includes(permission)) permissions.push(permission)
-  const optional = (manifest.optional_permissions ?? []).filter((permission) => !accepted.includes(permission))
-  await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, optional_permissions: optional, permissions }, null, 2))
-  return target
-}
-
 async function launch() {
   await fs.access(path.join(extensionDirectory, "manifest.json"))
-  if (process.env.E2E_DOWNLOADS_GRANTED !== "0") loadedExtension = await acceptedCopy(extensionDirectory, path.join(base, "extension-accepted"))
-  if (!existsSync(executablePath)) throw new Error(`no Chromium at ${executablePath}; set E2E_CHROMIUM`)
-  context = (await chromium.launchPersistentContext(path.join(base, "profile"), {
-    args: [
-      `--disable-extensions-except=${loadedExtension}`,
-      `--load-extension=${loadedExtension}`,
-      "--disable-blink-features=AutomationControlled",
-      "--window-position=0,0",
-      "--window-size=1280,900",
-    ],
-    executablePath,
-    headless: false,
-    ignoreDefaultArgs: ["--enable-automation"],
-    viewport: { height: 760, width: 1280 },
-  })) as unknown as Context
-  context.setDefaultTimeout(20_000)
-  worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"))
-  extensionId = new URL(worker.url()).host
+  if (process.env.E2E_DOWNLOADS_GRANTED !== "0") {
+    // Both optional permissions the switch requests: the state after the user accepts its prompt.
+    const accepted = ["downloads", ...(process.env.E2E_NATIVE_GRANTED === "0" ? [] : ["nativeMessaging"])]
+    loadedExtension = await acceptPermissionsCopy(extensionDirectory, path.join(base, "extension-accepted"), accepted)
+  }
+  launched = await launchChromium({ args: ["--window-position=0,0"], extension: loadedExtension, profile: path.join(base, "profile") })
+  worker = launched.worker
+  extensionId = launched.extensionId
+  bridge = { base, binary, browser: launched, model, nextPort: freePort, pair }
 }
-
-/**
- * The settings page signed in, the way the existing e2e does it (auth and org fetches answered locally). A production
- * build calls https://app.kilo.ai; a development build (`wxt build` without the production API base) calls
- * http://localhost:3000, where another process on a shared machine may answer 401 and sign the page out.
- */
-const API_ORIGINS: Record<string, true> = { "https://app.kilo.ai": true, "http://localhost:3000": true }
 
 /** What the routed `/api/user` answers: 200 signs the page in, 401 expires the token, 500 is a validation error. */
 let apiUserStatus = 200
 
+/**
+ * The settings page signed in, the way the existing e2e does it (auth and org fetches answered locally, for both the
+ * production API base and a development build's http://localhost:3000).
+ */
 async function openPanel(seed = true) {
-  await context.route(
-    (url) => API_ORIGINS[url.origin] === true && url.pathname.startsWith("/api/"),
-    (route) => route.fulfill({ json: {}, status: 200 }),
-  )
-  await context.route(
-    (url) => API_ORIGINS[url.origin] === true && url.pathname === "/api/organizations",
-    (route) => route.fulfill({ json: { organizations: [] }, status: 200 }),
-  )
-  await context.route(
-    (url) => API_ORIGINS[url.origin] === true && url.pathname === "/api/user",
-    (route) => route.fulfill({ json: apiUserStatus === 200 ? { google_user_email: "e2e@kilo.ai" } : { error: "Invalid token" }, status: apiUserStatus }),
-  )
-  // Automation cannot answer Chrome's optional-permission prompt; resolve it the way an accepted prompt would.
-  await context.addInitScript({
-    content: "Object.defineProperty(chrome.permissions, 'request', { value: () => Promise.resolve(true) });",
-  })
+  const context = launched!.context
+  await routeKiloApi(context, () => apiUserStatus)
+  await acceptPermissionPrompts(context)
   panel = await context.newPage()
   panel.setDefaultTimeout(20_000)
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`)
@@ -537,286 +305,44 @@ async function screen(name: string) {
   else observations.push(`screen capture ${screenPath} failed: ${await new Response(child.stderr as ReadableStream).text()}`)
 }
 
-type TabInfo = { active?: boolean; groupId?: number; id?: number; title?: string; url?: string }
-type GroupInfo = { collapsed?: boolean; color?: string; id?: number; title?: string }
-
-async function tabState() {
-  const tabs = await worker.evaluate(() => chrome.tabs.query({}))
-  const groups = await worker.evaluate(() => chrome.tabGroups.query({}))
-  return {
-    groups: (Array.isArray(groups) ? groups : []).map((group) => ({
-      collapsed: field(group, "collapsed"),
-      color: field(group, "color"),
-      id: field(group, "id"),
-      title: field(group, "title"),
-    })) as GroupInfo[],
-    tabs: (Array.isArray(tabs) ? tabs : []).map((tab) => ({
-      active: field(tab, "active"),
-      groupId: field(tab, "groupId"),
-      id: field(tab, "id"),
-      title: field(tab, "title"),
-      url: field(tab, "url"),
-    })) as TabInfo[],
-  }
-}
+const tabState = () => harnessTabState(worker)
 
 const liveGroup = (groups: GroupInfo[]) =>
   groups.find((group) => typeof group.title === "string" && group.title.startsWith("Kilo · ") && group.title !== "Kilo · ended")
 
 // ---------------------------------------------------------------------------------------------
-// Hub and CLI runs.
+// Hub and CLI runs (extension-harness.ts), with this runner's labels and pairing diagnostics.
 // ---------------------------------------------------------------------------------------------
 
-type HubEntry = { hubId: string; paired?: boolean; port?: number; socket?: string }
-type Hub = { entry: () => Promise<HubEntry | undefined>; log: { text: string }; port: number; root: string; stop: () => Promise<void> }
-type Rule = { action: string; effect: "allow" | "ask" | "deny"; resource: string }
-type Settings = { allowSensitive?: boolean; rules?: Rule[]; strict?: boolean; env?: Record<string, string> }
+const freshRoot = (label: string) => harnessFreshRoot(bridge, label)
+const startHub = (root: string, settings: Settings) => startBridgeHub(bridge, root, settings)
+const openPairing = (url: string) => harnessOpenPairing(launched!, url)
 
-const TOOL_RULES: Rule[] = [
-  "execute",
-  "browser_navigate",
-  "browser_snapshot",
-  "browser_click",
-  "browser_type",
-  "browser_tabs",
-  "browser_wait_for",
-  "browser_take_screenshot",
-  "browser_evaluate",
-].map((action) => ({ action, effect: "allow" as const, resource: "*" }))
-
-const LOCALHOST_RULES: Rule[] = [
-  { action: "browser", effect: "allow", resource: "*:http://localhost:*" },
-  { action: "browser", effect: "allow", resource: "*:http://127.0.0.1:*" },
-  { action: "browser", effect: "allow", resource: "*:http://*.localhost:*" },
-  { action: "browser", effect: "allow", resource: "*:https://localhost:*" },
-]
-
-function config(settings: Settings) {
-  return {
-    model: "local/echo",
-    providers: {
-      local: {
-        models: { echo: { limit: { context: 200_000, output: 4_000 }, name: "Echo" } },
-        name: "Local",
-        package: "@opencode/ai/providers/openai-compatible",
-        settings: { apiKey: "local-key", baseURL: `${model.url.origin}/v1` },
-      },
-    },
-    browser: { backend: "extension", observation: "full", ...(settings.allowSensitive ? { allow_sensitive: true } : {}) },
-    permissions: settings.strict
-      ? [...TOOL_RULES, ...LOCALHOST_RULES, ...(settings.rules ?? [])]
-      : [{ action: "*", effect: "allow" as const, resource: "*" }, ...(settings.rules ?? [])],
-  }
-}
-
+/** The environment a hub or run in `root` gets, without unset variables (the TUI launcher exports each one). */
 function environment(root: string, settings: Settings): Record<string, string> {
-  const run = path.join(root, "run")
-  const inherited = Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined))
-  return {
-    ...inherited,
-    HOME: root,
-    // A spawned process inherits the harness's PWD otherwise, and the CLI reports that as the session's cwd.
-    PWD: root,
-    KILO_API_KEY: "",
-    KILO_AUTH_CONTENT: "",
-    KILO_BROWSER_DATA_DIR: path.join(root, "data", "kilo2", "browser"),
-    KILO_BROWSER_EXTRA_EXTENSION_IDS: extensionId,
-    KILO_BROWSER_RUN_DIR: path.join(run, "browser"),
-    KILO_CONFIG_CONTENT: JSON.stringify(config(settings)),
-    KILO_DISABLE_AUTOUPDATE: "1",
-    KILO_DISABLE_MODELS_FETCH: "1",
-    NO_PROXY: "127.0.0.1,127.0.0.2,localhost",
-    PATH: `${path.join(root, "bin")}:${process.env.PATH ?? ""}`,
-    XDG_CACHE_HOME: path.join(root, "cache"),
-    XDG_CONFIG_HOME: path.join(root, "config"),
-    XDG_DATA_HOME: path.join(root, "data"),
-    XDG_RUNTIME_DIR: run,
-    XDG_STATE_HOME: path.join(root, "state"),
-    no_proxy: "127.0.0.1,127.0.0.2,localhost",
-    ...(settings.env ?? {}),
-  }
-}
-
-let rootCounter = 0
-async function freshRoot(label: string) {
-  rootCounter += 1
-  const root = path.join(base, `run-${rootCounter}-${label}`)
-  await fs.mkdir(path.join(root, "bin"), { recursive: true })
-  await fs.mkdir(path.join(root, "run"), { recursive: true, mode: 0o700 })
-  await fs.writeFile(path.join(root, "bin", "xdg-open"), "#!/bin/sh\nexit 0\n", { mode: 0o755 })
-  return root
-}
-
-async function readHubEntry(root: string): Promise<HubEntry | undefined> {
-  const directory = path.join(root, "run", "browser", "hubs")
-  for (const file of await fs.readdir(directory).catch(() => [] as string[])) {
-    if (!file.endsWith(".json")) continue
-    try {
-      return JSON.parse(await fs.readFile(path.join(directory, file), "utf8")) as HubEntry
-    } catch {
-      // Half-written; the next read sees the whole file.
-    }
-  }
-  return undefined
-}
-
-function tap(stream: ReadableStream<Uint8Array>, into: { text: string }) {
-  void (async () => {
-    const reader = stream.getReader()
-    const decoder = new TextDecoder()
-    try {
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        into.text += decoder.decode(value, { stream: true })
-      }
-    } catch {
-      // Closed with the process.
-    }
-  })()
-}
-
-async function startHub(root: string, settings: Settings): Promise<Hub> {
-  const port = await freePort()
-  const log = { text: "" }
-  const child = Bun.spawn([binary, "browser", "hub", "--loopback", "--port", String(port)], {
-    cwd: root,
-    env: environment(root, settings),
-    stderr: "pipe",
-    stdout: "pipe",
-  })
-  tap(child.stdout as ReadableStream<Uint8Array>, log)
-  tap(child.stderr as ReadableStream<Uint8Array>, log)
-  await until(async () => readHubEntry(root), 30_000, "the hub registers itself")
-  return {
-    entry: () => readHubEntry(root),
-    log,
-    port,
-    root,
-    stop: async () => {
-      try {
-        child.kill("SIGTERM")
-      } catch {
-        // Gone.
-      }
-      await Promise.race([child.exited, Bun.sleep(5_000)])
-    },
-  }
-}
-
-async function hubRequest(socketPath: string, method: string, params: unknown): Promise<unknown> {
-  const socket = net.createConnection(socketPath)
-  await new Promise<void>((resolve, reject) => {
-    socket.once("connect", resolve)
-    socket.once("error", reject)
-  })
-  const { promise, resolve, reject } = Promise.withResolvers<unknown>()
-  let buffer = Buffer.alloc(0)
-  const timer = setTimeout(() => {
-    socket.destroy()
-    reject(new Error(`hub ${method} timed out`))
-  }, 15_000)
-  socket.on("data", (data: Buffer) => {
-    buffer = Buffer.concat([buffer, data])
-    while (buffer.length >= 4) {
-      const length = buffer.readUInt32LE(0)
-      if (buffer.length < 4 + length) return
-      const text = buffer.subarray(4, 4 + length).toString("utf8")
-      buffer = buffer.subarray(4 + length)
-      let parsed: unknown
-      try {
-        parsed = JSON.parse(text)
-      } catch {
-        continue
-      }
-      if (field(parsed, "type") !== "rpc") continue
-      const message = record(field(parsed, "message"))
-      if (message?.["id"] !== 1) continue
-      clearTimeout(timer)
-      socket.end()
-      const error = record(message["error"])
-      if (error) reject(new Error(String(error["message"])))
-      else resolve(message["result"])
-      return
-    }
-  })
-  socket.once("error", (error: Error) => {
-    clearTimeout(timer)
-    reject(error)
-  })
-  const body = Buffer.from(JSON.stringify({ message: { id: 1, jsonrpc: "2.0", method, params }, type: "rpc" }))
-  const header = Buffer.alloc(4)
-  header.writeUInt32LE(body.length, 0)
-  socket.write(Buffer.concat([header, body]))
-  return promise
-}
-
-async function pairingUrl(hub: Hub): Promise<string> {
-  const entry = await hub.entry()
-  if (entry?.socket === undefined) throw new Error("the hub registry has no socket")
-  const url = field(await hubRequest(entry.socket, "pairing.url", {}), "url")
-  if (typeof url !== "string") throw new Error("the hub returned no pairing URL")
-  return url
-}
-
-/**
- * Opens a pairing URL the way the CLI's system opener does: a new window with no opener. A `newWindow: false` target
- * from the panel's CDP session was never redeemed here (the tab stayed on the pairing page, no notice).
- */
-async function openPairing(url: string) {
-  const cdp = await context.newCDPSession(panel)
-  await cdp.send("Target.createTarget", { newWindow: true, url })
-}
-
-async function pair(hub: Hub) {
-  const url = await pairingUrl(hub)
-  await openPairing(url)
-  await until(async () => ((await hub.entry())?.paired === true ? true : undefined), 30_000, "the extension pairs and connects").catch(
-    async (error: unknown) => {
-      const storage = await sessionStorage().catch((caught: unknown) => String(caught))
-      const local = await worker.evaluate(() => chrome.storage.local.get(null)).catch((caught: unknown) => String(caught))
-      const tabs = (await tabState().catch(() => ({ tabs: [] as TabInfo[] }))).tabs.map((tab) => tab.url?.replace(/#.*/, "#…"))
-      throw new Error(
-        `${String(error)}; switch=${await switchState().catch(() => "?")}; session=${JSON.stringify(storage).slice(0, 800)}; local keys=${Object.keys(record(local) ?? {}).join(",")}; endpoints=${JSON.stringify(field(local, "kiloLocalAgentEndpoints") ?? null).slice(0, 300)}; tabs=${JSON.stringify(tabs)}; hub=${JSON.stringify(await hub.entry())}; hubLog=${hub.log.text.slice(-800)}`,
-      )
-    },
+  return Object.fromEntries(
+    Object.entries(bridgeEnvironment(bridge, root, settings)).filter((entry): entry is [string, string] => entry[1] !== undefined),
   )
-  return url
 }
 
-type Run = { code: number; hub: Hub; root: string; stderr: string; steps: Step[]; stdout: string; last: Step }
-type RunOptions = { pair?: boolean; hub?: Hub; keepHub?: boolean; label?: string }
+/** The harness's pairing step; a failure carries the extension's storage, tabs and the hub's state. */
+async function pair(hub: Hub) {
+  return harnessPair(hub, launched!).catch(async (error: unknown) => {
+    const storage = await sessionStorage().catch((caught: unknown) => String(caught))
+    const local = await worker.evaluate(() => chrome.storage.local.get(null)).catch((caught: unknown) => String(caught))
+    const tabs = (await tabState().catch(() => ({ tabs: [] as TabInfo[] }))).tabs.map((tab) => tab.url?.replace(/#.*/, "#…"))
+    throw new Error(
+      `${String(error)}; switch=${await switchState().catch(() => "?")}; session=${JSON.stringify(storage).slice(0, 800)}; local keys=${Object.keys(record(local) ?? {}).join(",")}; endpoints=${JSON.stringify(field(local, "kiloLocalAgentEndpoints") ?? null).slice(0, 300)}; tabs=${JSON.stringify(tabs)}; hub=${JSON.stringify(await hub.entry())}; hubLog=${hub.log.text.slice(-800)}`,
+    )
+  })
+}
 
-async function run(plan: Plan, settings: Settings, options: RunOptions = {}): Promise<Run> {
-  const root = options.hub?.root ?? (await freshRoot(options.label ?? "run"))
-  const hub = options.hub ?? (await startHub(root, settings))
-  try {
-    if (options.pair !== false && options.hub === undefined) await pair(hub)
-    history.length = 0
-    activePlan = plan
-    const child = Bun.spawn([binary, "run", "Check the browser bridge.", "--model", "local/echo", "--standalone", "--format", "json"], {
-      cwd: root,
-      env: environment(root, settings),
-      stderr: "pipe",
-      stdout: "pipe",
-      timeout: 240_000,
-    })
-    const [stdout, stderr, code] = await Promise.all([
-      new Response(child.stdout as ReadableStream).text(),
-      new Response(child.stderr as ReadableStream).text(),
-      child.exited,
-    ])
-    activePlan = undefined
-    const steps = [...history]
-    return { code, hub, last: steps.at(-1) ?? { calls: [], raw: [], results: [], tools: [] }, root, stderr, steps, stdout }
-  } finally {
-    if (!options.keepHub) await hub.stop()
-  }
+function run(plan: Plan, settings: Settings, options: RunOptions = {}): Promise<Run> {
+  return runAgent(bridge, plan, settings, { ...options, label: options.label ?? "run" })
 }
 
 const navigate = (url: string): Call => ({ args: { url }, name: "browser_navigate" })
 const snapshot: Call = { args: {}, name: "browser_snapshot" }
-const refOf = (text: string, pattern: RegExp) => pattern.exec(text)?.[1]
 
 /** The CLI's own tool events: the error string the run recorded for each tool part, when there is one. */
 function toolEvents(stdout: string) {
@@ -882,10 +408,14 @@ function withFragment(url: string, change: (params: URLSearchParams) => void) {
   return `${origin}${pathname}#${params.toString()}`
 }
 
-/** One more character on the 16-byte token still decodes, so the hub sees an unknown token. */
+/**
+ * The same 16-byte token with its first character changed, so the hub sees a well-formed but unknown token (404,
+ * "expired"). The last character of a 22-character base64url token carries only 2 data bits: changing it to "B" made a
+ * non-canonical encoding the hub refuses as malformed (400, "invalid") whenever the token happened to end in "A".
+ */
 function tamperToken(token: string) {
-  const last = token.at(-1) === "A" ? "B" : "A"
-  return `${token.slice(0, -1)}${last}`
+  const first = token.at(0) === "A" ? "B" : "A"
+  return `${first}${token.slice(1)}`
 }
 
 async function noticeAfter(label: string, open: () => Promise<void>, timeout = 15_000) {
@@ -1345,12 +875,12 @@ async function startTui(root: string, settings: Settings, name: string) {
 
 /** Types the prompt and submits it; an Enter the TUI drops while it is still booting is pressed again. */
 async function prompt(name: string, text: string) {
-  const before = modelRequests
+  const before = model.requests
   await tmux(["send-keys", "-t", name, "-l", text])
   for (let tries = 0; tries < 4; tries++) {
     await Bun.sleep(500)
     await tmux(["send-keys", "-t", name, "Enter"])
-    if (await maybe(() => (modelRequests > before ? true : undefined), 8_000)) return
+    if (await maybe(() => (model.requests > before ? true : undefined), 8_000)) return
   }
   throw new Error(`the TUI never sent the prompt: ${(await pane(name)).split("\n").filter((line) => line.trim()).slice(-8).join(" / ")}`)
 }
@@ -1369,7 +899,7 @@ async function tuiPermission(choice: "once" | "always" | "reject") {
   await pair(hub)
   history.length = 0
   const out: Record<string, unknown> = { choice }
-  activePlan = (step) => {
+  model.plan = (step) => {
     if (step.results.length === 0) return navigate(`${publicOrigin}/public`)
     if (step.results.length === 1) return navigate(`${publicOrigin}/public?second=1`)
     if (step.results.length === 2) return snapshot
@@ -1405,7 +935,7 @@ async function tuiPermission(choice: "once" | "always" | "reject") {
     out["final"] = await savePane(name, "05-final")
     out["modelResults"] = (history.at(-1)?.results ?? []).map((text) => text.slice(0, 600))
   } finally {
-    activePlan = undefined
+    model.plan = undefined
     await tmux(["kill-session", "-t", name]).catch(() => undefined)
     await hub.stop()
   }
@@ -1451,7 +981,7 @@ async function tuiSensitiveAndStop(mode: "ask" | "allow-all") {
   let stopDone = false
   // A click first establishes the act grant (as extension-e2e's `sensitive` does), so the fill's own call is the one
   // classified sensitive; the errors scenario covers the fill without it.
-  activePlan = (step) => {
+  model.plan = (step) => {
     if (step.results.length === 0) return navigate(localOrigin)
     if (step.results.length === 1) return snapshot
     if (step.results.length === 2) {
@@ -1495,7 +1025,7 @@ async function tuiSensitiveAndStop(mode: "ask" | "allow-all") {
     out["recorded"] = [...recorded]
     out["modelResults"] = (history.at(-1)?.results ?? []).map((text) => text.slice(0, 600))
   } finally {
-    activePlan = undefined
+    model.plan = undefined
     await tmux(["kill-session", "-t", name]).catch(() => undefined)
     await hub.stop()
   }
@@ -1508,7 +1038,7 @@ async function tuiUnavailable() {
   const settings: Settings = {}
   const hub = await startHub(root, settings)
   history.length = 0
-  activePlan = (step) => (step.results.length === 0 ? navigate(localOrigin) : undefined)
+  model.plan = (step) => (step.results.length === 0 ? navigate(localOrigin) : undefined)
   const name = "UxExplore-tui-unavailable"
   const out: Record<string, unknown> = {}
   try {
@@ -1523,7 +1053,7 @@ async function tuiUnavailable() {
     const text = `${String(out["pane"])}\n${(out["paneLines"] as string[]).join("\n")}`
     observe(text.includes("Allow local agents"), `the TUI shows no setup hint for browser_unavailable; pane tail: ${text.split("\n").filter(Boolean).slice(-12).join(" / ")}`)
   } finally {
-    activePlan = undefined
+    model.plan = undefined
     await tmux(["kill-session", "-t", name]).catch(() => undefined)
     await hub.stop()
   }
@@ -1776,7 +1306,7 @@ await fs.mkdir(base, { recursive: true })
 evidence = process.env.E2E_EVIDENCE ?? path.join(base, "evidence")
 
 function report(results: Record<string, unknown>) {
-  return { chromium: executablePath, evidence: shots, extension: loadedExtension, extensionId, failures, observations, scenario, ...results }
+  return { chromium: launched?.executable, evidence: shots, extension: loadedExtension, extensionId, failures, observations, scenario, ...results }
 }
 
 try {
@@ -1791,8 +1321,8 @@ try {
   console.log(JSON.stringify(report({}), null, 2))
   process.exitCode = 1
 } finally {
-  await context?.close().catch(() => undefined)
+  await launched?.close().catch(() => undefined)
   fixture.stop(true)
   frame.stop(true)
-  model.stop(true)
+  model.stop()
 }

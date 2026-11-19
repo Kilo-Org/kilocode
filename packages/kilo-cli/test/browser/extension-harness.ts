@@ -1,19 +1,26 @@
-// Shared harness for the real extension-backend runners (extension-e2e, perf, UX, bench, Firefox ports): a real
-// Chromium launch with the built MV3 extension, the "Allow local agents" switch, a loopback hub with its pairing page,
-// a scripted OpenAI-compatible model and real `kilo2 run` invocations. Not a `bun test` file.
+// Shared harness for the real extension-backend runners (extension-e2e, ux-e2e, perf, bench; firefox-e2e uses the
+// browser-neutral half): a real Chromium launch with the built MV3 extension, the "Allow local agents" switch, a
+// loopback hub with its pairing page, a scripted OpenAI-compatible model and real `kilo2 run` invocations. Not a
+// `bun test` file.
 //
 // API (everything else in this file is a helper these use):
 //
-//   const model = startModel()                                  // scripted Chat Completions server; set model.plan per run
-//   const browser = await launchChromium({ extension, profile, downloads })
+//   const model = startModel({ label, onRequest })              // scripted Chat Completions server; set model.plan
+//   const browser = await launchChromium({ extension, profile, downloads, args, preferences })
 //       // spawns Chromium itself (no Playwright launch), reads DevToolsActivePort, connects Playwright over CDP with
 //       // `noDefaults` through a logging proxy: browser.cdp.methods lists every CDP method the harness sent, and
 //       // browser.cdp.downloadBehavior must stay empty (Browser.setDownloadBehavior hands downloads to DevTools and
 //       // bypasses the extension's chrome.downloads guard). browser.close() disconnects and kills the process.
-//   const panel = await enableLocalAgents(browser)               // side panel → Settings → "Allow local agents"
-//   const bridge: Bridge = { base, binary, browser, model, panel }
+//       // JavaScript dialogs stay open: Playwright auto-dismisses every alert/confirm/prompt/beforeunload on a page it
+//       // knows unless something listens for `dialog`, which would hide dialogs (and dialog hangs) from the extension,
+//       // so the harness registers a do-nothing `dialog` listener on the context and on every page, new ones included.
+//   const { panel } = await enableLocalAgents(browser)          // side panel → Settings → "Allow local agents"
+//   const bridge: Bridge = { base, binary, browser, model }
 //   const result = await runAgent(bridge, plan, settings, { pair })
 //       // fresh home + `kilo2 browser hub --loopback` + pairing.url + pairing page + `kilo2 run`, then stops the hub
+//
+// Browser-neutral pieces (no Playwright is loaded for them): startModel, prepareHome, cliConfig, cliEnvironment,
+// startHub, hubRequest, pairingUrl, runCli, portPool, html/attachment, startFrameServer, until/tap/refOf/decodePng.
 //
 // Environment: E2E_CHROMIUM (executable; default playwright-core's build), E2E_CHROMIUM_ARGS (extra flags, space
 // separated), E2E_DSF (--force-device-scale-factor). Run under `xvfb-run -a -s "-screen 0 1920x1080x24"`: the window
@@ -26,11 +33,20 @@ import net from "node:net"
 import path from "node:path"
 
 // playwright-core belongs to the plugin workspace, not this package, so the specifier is resolved from there at
-// runtime: a static import would depend on hoisting that the workspace does not promise.
+// runtime: a static import would depend on hoisting that the workspace does not promise. It loads on first use, so
+// a runner that only needs the browser-neutral half (Firefox) never loads it.
 const pluginDirectory = path.resolve(import.meta.dirname, "../../../kilo-plugin")
-const playwright = (await import(Bun.resolveSync("playwright-core", pluginDirectory))) as unknown as Playwright
+let playwrightModule: Playwright | undefined
+async function playwright(): Promise<Playwright> {
+  playwrightModule ??= (await import(Bun.resolveSync("playwright-core", pluginDirectory))) as unknown as Playwright
+  return playwrightModule
+}
 
-export const chromiumExecutable = process.env.E2E_CHROMIUM ?? playwright.chromium.executablePath()
+/** The Chromium the harness launches: E2E_CHROMIUM, or playwright-core's own build. */
+export async function chromiumExecutable(): Promise<string> {
+  return process.env.E2E_CHROMIUM ?? (await playwright()).chromium.executablePath()
+}
+
 export const defaultExtensionDirectory =
   process.env.E2E_EXTENSION_DIR ?? path.resolve(import.meta.dirname, "../../../../cloud/apps/extension/.output/chrome-mv3")
 
@@ -61,8 +77,11 @@ declare const chrome: {
 
 export type Locator = {
   click(): Promise<void>
+  count(): Promise<number>
   getAttribute(name: string): Promise<string | null>
-  waitFor(options?: { timeout?: number }): Promise<void>
+  innerText(): Promise<string>
+  screenshot(options: { path: string }): Promise<unknown>
+  waitFor(options?: { timeout?: number; state?: string }): Promise<void>
 }
 
 export type CdpSession = {
@@ -77,11 +96,16 @@ export type Worker = {
 }
 
 export type Page = {
+  bringToFront(): Promise<void>
+  close(): Promise<void>
   evaluate<T>(fn: () => T | Promise<T>): Promise<T>
-  getByRole(role: string, options?: { name?: string }): Locator
+  evaluate<T, A>(fn: (arg: A) => T | Promise<T>, arg: A): Promise<T>
+  getByRole(role: string, options?: { name?: string | RegExp; exact?: boolean }): Locator
   goto(url: string): Promise<unknown>
+  locator(selector: string): Locator
   on(event: string, listener: (payload: unknown) => void): void
   reload(): Promise<unknown>
+  screenshot(options: { path: string; fullPage?: boolean }): Promise<unknown>
   setDefaultTimeout(timeout: number): void
   url(): string
 }
@@ -144,16 +168,71 @@ export async function until<T>(
   throw new Error(`${label} was not met before ${timeout}ms${last === undefined ? "" : `: ${String(last)}`}`)
 }
 
-export async function freePort(): Promise<number> {
-  const { promise, resolve, reject } = Promise.withResolvers<number>()
+/** Whether `port` (0: any) can be bound on 127.0.0.1 right now; the bound port, or undefined. */
+async function bindable(port: number): Promise<number | undefined> {
+  const { promise, resolve } = Promise.withResolvers<number | undefined>()
   const server = net.createServer()
-  server.once("error", reject)
-  server.listen(0, "127.0.0.1", () => {
+  server.once("error", () => resolve(undefined))
+  server.listen(port, "127.0.0.1", () => {
     const address = server.address()
-    resolve(typeof address === "object" && address !== null ? address.port : 0)
-    server.close()
+    const bound = typeof address === "object" && address !== null ? address.port : undefined
+    server.close(() => resolve(bound))
   })
   return promise
+}
+
+export async function freePort(): Promise<number> {
+  const port = await bindable(0)
+  if (port === undefined) throw new Error("no free port on 127.0.0.1")
+  return port
+}
+
+/**
+ * Ports for the hubs and servers a runner picks itself: an inclusive `<first>-<last>` range (cycled, skipping ports
+ * that cannot be bound), or any free port when `range` is unset.
+ */
+export function portPool(range: string | undefined): () => Promise<number> {
+  const match = /^(\d+)-(\d+)$/.exec(range ?? "")
+  if (!match) return freePort
+  const first = Number(match[1])
+  const last = Number(match[2])
+  let next = first
+  return async () => {
+    for (let tries = 0; tries <= last - first; tries++) {
+      const port = next
+      next = next >= last ? first : next + 1
+      if ((await bindable(port)) !== undefined) return port
+    }
+    throw new Error(`no free port in ${first}-${last}`)
+  }
+}
+
+export const html = (body: string) => new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } })
+
+export const attachment = (body: string, filename: string) =>
+  new Response(body, {
+    headers: { "content-disposition": `attachment; filename="${filename}"`, "content-type": "text/plain" },
+  })
+
+export const FRAME_MARKER = "IFRAME-MARKER"
+export const PUBLIC_MARKER = "PUBLIC-ORIGIN"
+
+/**
+ * The cross-origin fixture on 127.0.0.2, which the default rules do not cover: `/public` is a page with
+ * PUBLIC_MARKER, every other path a red frame with FRAME_MARKER.
+ */
+export function startFrameServer() {
+  return Bun.serve({
+    hostname: "127.0.0.2",
+    port: 0,
+    fetch(request) {
+      if (new URL(request.url).pathname === "/public") {
+        return html(`<!doctype html><html><head><title>Public</title></head><body><h1 id="marker">${PUBLIC_MARKER}</h1></body></html>`)
+      }
+      return html(`<!doctype html><html><head><title>Frame</title></head>
+<body style="margin:0;background:#ff0000"><h1 id="marker">${FRAME_MARKER}</h1></body></html>`)
+    },
+  })
 }
 
 export function tap(stream: ReadableStream<Uint8Array>, into: { text: string }, limit = 200_000) {
@@ -212,9 +291,11 @@ export function jsonOf(text: string): unknown {
   }
 }
 
-/** The run's tool events in order, with the CLI's own start/end timestamps. */
-export function toolTimes(stdout: string): { start: number; end: number }[] {
-  const times: { start: number; end: number }[] = []
+export type ToolTime = { bytes: number; end: number; start: number; tool: string }
+
+/** The run's tool events in order, with the CLI's own start/end timestamps and the result size. */
+export function toolTimes(stdout: string): ToolTime[] {
+  const times: ToolTime[] = []
   for (const line of stdout.split("\n")) {
     if (!line.startsWith("{")) continue
     let event: unknown
@@ -226,9 +307,15 @@ export function toolTimes(stdout: string): { start: number; end: number }[] {
     if (field(event, "type") !== "tool_use") continue
     const part = record(field(event, "part"))
     if (part?.["type"] !== "tool") continue
-    const time = record(record(part["state"])?.["time"])
+    const state = record(part["state"])
+    const time = record(state?.["time"])
     if (typeof time?.["start"] === "number" && typeof time?.["end"] === "number") {
-      times.push({ start: time["start"], end: time["end"] })
+      times.push({
+        bytes: JSON.stringify(state?.["content"] ?? state?.["output"] ?? "").length,
+        end: time["end"],
+        start: time["start"],
+        tool: String(part["tool"]),
+      })
     }
   }
   return times
@@ -239,8 +326,15 @@ export function toolTimes(stdout: string): { start: number; end: number }[] {
 // ---------------------------------------------------------------------------------------------
 
 export type Call = { name: string; args: unknown }
-export type Step = { calls: Call[]; results: string[]; images: string[] }
-export type Plan = (step: Step) => Promise<Call | undefined> | Call | undefined
+/**
+ * What the model sees on one browser-capable request: the calls it made so far, every tool result as text (`raw`
+ * keeps the CLI's own content), the PNGs in those results, and the tool names the CLI declared.
+ */
+export type Step = { calls: Call[]; images: string[]; raw: unknown[]; results: string[]; tools: string[] }
+/** One call, several parallel calls, or nothing (the run ends with a plain answer). */
+export type Plan = (step: Step) => Promise<Call | Call[] | undefined> | Call | Call[] | undefined
+
+export const emptyStep = (): Step => ({ calls: [], images: [], raw: [], results: [], tools: [] })
 
 function textOf(content: unknown): string {
   if (typeof content === "string") return content
@@ -291,21 +385,20 @@ function pngOf(value: unknown, depth = 0): string | undefined {
   return undefined
 }
 
-function stepOf(messages: unknown): Step {
-  const calls: Call[] = []
-  const results: string[] = []
-  const images: string[] = []
-  if (!Array.isArray(messages)) return { calls, images, results }
+function stepOf(messages: unknown, tools: string[]): Step {
+  const step: Step = { ...emptyStep(), tools }
+  if (!Array.isArray(messages)) return step
   for (const message of messages) {
     const role = field(message, "role")
-    if (role === "assistant") calls.push(...callsOf(field(message, "tool_calls")))
+    if (role === "assistant") step.calls.push(...callsOf(field(message, "tool_calls")))
     if (role !== "tool") continue
     const content = field(message, "content")
-    results.push(textOf(content))
+    step.raw.push(content)
+    step.results.push(textOf(content))
     const png = pngOf(content)
-    if (png) images.push(png)
+    if (png) step.images.push(png)
   }
-  return { calls, images, results }
+  return step
 }
 
 const chunk = (model: string, delta: object, finish: string | null) =>
@@ -314,15 +407,19 @@ const chunk = (model: string, delta: object, finish: string | null) =>
 const usage = (model: string) =>
   `data: ${JSON.stringify({ choices: [], id: "local", model, object: "chat.completion.chunk", usage: { completion_tokens: 2, prompt_tokens: 10, total_tokens: 12 } })}\n\n`
 
-const toolCall = (model: string, name: string, args: unknown) =>
+let callSerial = 0
+const toolCalls = (model: string, calls: Call[]) =>
   [
     chunk(
       model,
       {
         role: "assistant",
-        tool_calls: [
-          { function: { arguments: JSON.stringify(args), name }, id: `call_${name}_${Date.now()}`, index: 0, type: "function" },
-        ],
+        tool_calls: calls.map((call, index) => ({
+          function: { arguments: JSON.stringify(call.args), name: call.name },
+          id: `call_${call.name}_${++callSerial}`,
+          index,
+          type: "function",
+        })),
       },
       null,
     ),
@@ -336,41 +433,64 @@ const answer = (model: string, text: string) =>
 
 const sse = (body: string) => new Response(body, { headers: { "content-type": "text/event-stream" } })
 
+/** Code Mode (#16317) exposes the browser tools through `execute`; parallel calls become one `Promise.allSettled`. */
+function codeFor(calls: Call[]) {
+  const expression = (call: Call) => {
+    const method = call.name.startsWith("browser_") ? call.name.slice("browser_".length) : call.name
+    return `tools.browser.${method}(${JSON.stringify(call.args)})`
+  }
+  if (calls.length === 1) return `return await ${expression(calls[0]!)}`
+  return `const settled = await Promise.allSettled([${calls.map(expression).join(", ")}]);\nreturn settled.map((item) => item.status === "fulfilled" ? item.value : String(item.reason?.message ?? item.reason))`
+}
+
 export type ScriptedModel = {
-  /** Every browser-tool request of the current run, in order; `runAgent` clears it before each run. */
+  /** Every browser-tool request of the current run, in order; `runCli` clears it before each run. */
   readonly history: Step[]
-  /** Errors the plan threw; the run ended at that step. `runAgent` clears it before each run. */
+  /** Errors the plan threw; the run ended at that step. `runCli` clears it before each run. */
   readonly planErrors: string[]
   readonly origin: string
   /** Answers the next browser-tool request; `undefined` ends the run with a plain answer. */
   plan: Plan | undefined
+  /** Every chat request the server saw, browser-capable or not (a TUI driver uses it to tell a prompt was sent). */
+  requests: number
   stop(): void
+}
+
+export type ModelOptions = {
+  /** The plain answer's text (`<label>`, and `<label> finished` when a plan ends). Default "Browser E2E". */
+  label?: string
+  /** Runs on every browser-capable request before the plan; `tools` is the request's raw `tools` array. */
+  onRequest?: (request: { step: Step; tools: unknown[] }) => Promise<void> | void
 }
 
 /**
  * The scripted model. A request without browser tools (title generation and similar) gets a plain answer; a request
- * with them is answered from `plan`, as a direct `browser_*` call or, when the tools are registered as a Code Mode
+ * with them is answered from `plan`, as direct `browser_*` calls or, when the tools are registered as a Code Mode
  * namespace (#16317), as an `execute` call of `tools.browser.<method>`.
  */
-export function startModel(): ScriptedModel {
+export function startModel(options: ModelOptions = {}): ScriptedModel {
+  const label = options.label ?? "Browser E2E"
   const server = Bun.serve({
     hostname: "127.0.0.1",
+    // A plan may wait on the browser for longer than Bun's default 10 s idle timeout.
+    idleTimeout: 0,
     port: 0,
     async fetch(request) {
       if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
+      state.requests += 1
       const body: unknown = await request.json()
       const name = typeof field(body, "model") === "string" ? (field(body, "model") as string) : "local"
       const declared = field(body, "tools")
-      const tools = Array.isArray(declared)
-        ? declared.flatMap((tool) => {
-            const id = field(field(tool, "function"), "name")
-            return typeof id === "string" ? [id] : []
-          })
-        : []
+      const list = Array.isArray(declared) ? (declared as unknown[]) : []
+      const tools = list.flatMap((tool) => {
+        const id = field(field(tool, "function"), "name")
+        return typeof id === "string" ? [id] : []
+      })
       if (!tools.some((tool) => tool.startsWith("browser_")) && !tools.includes("execute")) {
-        return sse(answer(name, "Browser E2E"))
+        return sse(answer(name, label))
       }
-      const step = stepOf(field(body, "messages"))
+      const step = stepOf(field(body, "messages"), tools)
+      await options.onRequest?.({ step, tools: list })
       state.history.push(step)
       // A throwing plan ends the run: answering 500 would make the CLI retry the same step for minutes.
       const next =
@@ -382,11 +502,10 @@ export function startModel(): ScriptedModel {
                 state.planErrors.push(`step ${step.results.length}: ${error instanceof Error ? error.message : String(error)}`)
                 return undefined
               })
-      if (next === undefined) return sse(answer(name, "Browser E2E finished"))
-      if (tools.some((tool) => tool.startsWith("browser_"))) return sse(toolCall(name, next.name, next.args))
-      const method = next.name.startsWith("browser_") ? next.name.slice("browser_".length) : next.name
-      const code = `return await tools.browser.${method}(${JSON.stringify(next.args)})`
-      return sse(toolCall(name, "execute", { code }))
+      if (next === undefined) return sse(answer(name, `${label} finished`))
+      const calls = Array.isArray(next) ? next : [next]
+      if (tools.some((tool) => tool.startsWith("browser_"))) return sse(toolCalls(name, calls))
+      return sse(toolCalls(name, [{ args: { code: codeFor(calls) }, name: "execute" }]))
     },
   })
   const state: ScriptedModel = {
@@ -394,6 +513,7 @@ export function startModel(): ScriptedModel {
     origin: server.url.origin,
     plan: undefined,
     planErrors: [],
+    requests: 0,
     stop: () => server.stop(true),
   }
   return state
@@ -600,6 +720,8 @@ export type Launched = {
   /** Chromium's stdout and stderr, trimmed. */
   chromiumLog: { text: string }
   context: Context
+  /** The Chromium executable that runs. */
+  executable: string
   extensionId: string
   pid: number
   swLog: ServiceWorkerLog
@@ -637,8 +759,9 @@ async function devtoolsEndpoint(profile: string, exited: () => boolean): Promise
  */
 export async function launchChromium(options: LaunchOptions): Promise<Launched> {
   await fs.access(path.join(options.extension, "manifest.json"))
-  if (!existsSync(chromiumExecutable)) {
-    throw new Error(`no Chromium at ${chromiumExecutable}; install playwright-core's browser or set E2E_CHROMIUM`)
+  const executable = await chromiumExecutable()
+  if (!existsSync(executable)) {
+    throw new Error(`no Chromium at ${executable}; install playwright-core's browser or set E2E_CHROMIUM`)
   }
   await fs.mkdir(path.join(options.profile, "Default"), { recursive: true })
   if (options.downloads !== undefined) await fs.mkdir(options.downloads, { recursive: true })
@@ -674,7 +797,7 @@ export async function launchChromium(options: LaunchOptions): Promise<Launched> 
   ]
   const chromiumLog = { text: "" }
   let exited = false
-  const child = Bun.spawn([chromiumExecutable, ...args], { stderr: "pipe", stdin: "ignore", stdout: "pipe" })
+  const child = Bun.spawn([executable, ...args], { stderr: "pipe", stdin: "ignore", stdout: "pipe" })
   void child.exited.then(() => {
     exited = true
   })
@@ -691,13 +814,20 @@ export async function launchChromium(options: LaunchOptions): Promise<Launched> 
   let proxy: ReturnType<typeof cdpProxy> | undefined
   try {
     proxy = cdpProxy(await devtoolsEndpoint(options.profile, () => exited))
-    const browser = (await playwright.chromium.connectOverCDP(proxy.url, {
+    const browser = (await (await playwright()).chromium.connectOverCDP(proxy.url, {
       noDefaults: true,
       timeout: 30_000,
     })) as PlaywrightBrowser
     const context = browser.contexts()[0]
     if (context === undefined) throw new Error("the CDP connection has no default context")
     context.setDefaultTimeout(20_000)
+    // Without a `dialog` listener Playwright dismisses each dialog itself; leave every dialog to the browser and the
+    // extension, as in a user's browser.
+    const keepDialog = () => {}
+    context.on("dialog", keepDialog)
+    for (const page of context.pages()) page.on("dialog", keepDialog)
+    // Playwright's `page` event always carries the new Page.
+    context.on("page", (page) => (page as Page).on("dialog", keepDialog))
     // Chromium's own component extensions (contextual tasks, hangouts) run service workers too; Playwright's launch
     // switched them off, a real browser does not. The unpacked extension's id is derived from its path.
     const extensionId = await unpackedExtensionId(options.extension)
@@ -714,6 +844,7 @@ export async function launchChromium(options: LaunchOptions): Promise<Launched> 
       cdp: proxy.log,
       chromiumLog,
       context,
+      executable,
       extensionId,
       pid: child.pid,
       swLog,
@@ -742,11 +873,11 @@ export function cdpReport(log: CdpLog) {
 }
 
 /**
- * A copy of the built extension with the optional `downloads` permission promoted to required: automation cannot
- * answer Chrome's optional-permission prompt, and this is the state it is in after the user accepts it (the cloud
- * e2e does the same).
+ * A copy of the built extension with optional permissions promoted to required: automation cannot answer Chrome's
+ * optional-permission prompt, and this is the state the extension is in after the user accepts it (the cloud e2e does
+ * the same). The switch requests `downloads` and `nativeMessaging` in one prompt.
  */
-export async function promoteDownloadsCopy(source: string, target: string) {
+export async function acceptPermissionsCopy(source: string, target: string, accepted: string[]) {
   await fs.rm(target, { force: true, recursive: true })
   await fs.cp(source, target, { recursive: true })
   const manifestPath = path.join(target, "manifest.json")
@@ -754,9 +885,9 @@ export async function promoteDownloadsCopy(source: string, target: string) {
     optional_permissions?: string[]
     permissions?: string[]
   }
-  const optional = (manifest.optional_permissions ?? []).filter((permission) => permission !== "downloads")
   const permissions = [...(manifest.permissions ?? [])]
-  if (!permissions.includes("downloads")) permissions.push("downloads")
+  for (const permission of accepted) if (!permissions.includes(permission)) permissions.push(permission)
+  const optional = (manifest.optional_permissions ?? []).filter((permission) => !accepted.includes(permission))
   await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, optional_permissions: optional, permissions }, null, 2))
   return target
 }
@@ -791,28 +922,46 @@ async function seedAuth(panel: Page) {
 }
 
 /**
- * Turns on "Allow local agents" through the extension's own settings page, as a signed-in user would. Returns the
- * side panel and what the switch stored (`kiloLocalAgentSettings`), for the caller to assert.
+ * Answers the Kilo API the side panel calls: `/api/user` (sign-in validation; `userStatus` 200 signs in, anything else
+ * answers `{ error: "Invalid token" }` with that status), `/api/organizations` (none) and every other `/api/*` path
+ * (`{}`). Both the production API base and a local-stack build (http://localhost:3000) are answered, plus
+ * E2E_API_ORIGIN, so either build signs in without a network.
  */
-export async function enableLocalAgents(launched: Launched): Promise<{ panel: Page; stored: unknown }> {
-  const { context, extensionId, worker } = launched
-  // Auth validation and organization fetches: the settings header only exists for a signed-in session. Both the
-  // production API base and a local-stack build (http://localhost:3000) are answered, so either build signs in.
+export async function routeKiloApi(context: Context, userStatus: () => number = () => 200) {
   const apiOrigins = new Set(["https://app.kilo.ai", "http://localhost:3000", ...(process.env.E2E_API_ORIGIN ? [process.env.E2E_API_ORIGIN] : [])])
   await context.route(
     (url) => apiOrigins.has(url.origin) && url.pathname.startsWith("/api/"),
     (route) => {
       const pathname = new URL(route.request().url()).pathname
-      if (pathname === "/api/user") return route.fulfill({ json: { google_user_email: "e2e@kilo.ai" }, status: 200 })
+      if (pathname === "/api/user") {
+        const status = userStatus()
+        return route.fulfill({ json: status === 200 ? { google_user_email: "e2e@kilo.ai" } : { error: "Invalid token" }, status })
+      }
       if (pathname === "/api/organizations") return route.fulfill({ json: { organizations: [] }, status: 200 })
       return route.fulfill({ json: {}, status: 200 })
     },
   )
-  // A real user answers the optional-permission prompt; automation cannot. The page grants it the way an accepted
-  // prompt would, keeping the flow deterministic (loopback pairing does not need the permission).
+}
+
+/**
+ * A real user answers the optional-permission prompt; automation cannot. Every extension page resolves
+ * `chrome.permissions.request` the way an accepted prompt would (the grant itself comes from acceptPermissionsCopy).
+ */
+export async function acceptPermissionPrompts(context: Context) {
   await context.addInitScript({
     content: "Object.defineProperty(chrome.permissions, 'request', { value: () => Promise.resolve(true) });",
   })
+}
+
+/**
+ * Turns on "Allow local agents" through the extension's own settings page, as a signed-in user would. Returns the
+ * side panel and what the switch stored (`kiloLocalAgentSettings`), for the caller to assert.
+ */
+export async function enableLocalAgents(launched: Launched): Promise<{ panel: Page; stored: unknown }> {
+  const { context, extensionId, worker } = launched
+  // Auth validation and organization fetches: the settings header only exists for a signed-in session.
+  await routeKiloApi(context)
+  await acceptPermissionPrompts(context)
   const panel = await context.newPage()
   panel.setDefaultTimeout(20_000)
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`)
@@ -933,11 +1082,20 @@ export type Hub = {
   entry: () => Promise<HubEntry | undefined>
   log: { text: string }
   port: number
+  /** The home the hub was started in. */
+  root: string
   stop: () => Promise<void>
 }
 
 export type Rule = { action: string; effect: "allow" | "ask" | "deny"; resource: string }
-export type Settings = { allowSensitive?: boolean; auto?: boolean; rules?: Rule[]; strict?: boolean }
+export type Settings = {
+  allowSensitive?: boolean
+  auto?: boolean
+  /** Extra environment for the hub and the run, applied last (e.g. `KILO_BROWSER_EXTRA_EXTENSION_IDS: ""`). */
+  env?: Record<string, string>
+  rules?: Rule[]
+  strict?: boolean
+}
 
 /** A non-interactive run cannot answer a tool-level ask, so the harness config allows the tools it drives. */
 export const TOOL_RULES: Rule[] = [
@@ -947,7 +1105,9 @@ export const TOOL_RULES: Rule[] = [
   "browser_click",
   "browser_type",
   "browser_tabs",
+  "browser_wait_for",
   "browser_take_screenshot",
+  "browser_evaluate",
 ].map((action) => ({ action, effect: "allow" as const, resource: "*" }))
 
 /** The built-in defaults the SPEC documents for the localhost family; without them every act reads as an ask. */
@@ -981,16 +1141,27 @@ export function cliConfig(settings: Settings, modelOrigin: string) {
   }
 }
 
-/** The CLI's environment for one isolated home; `config` is the full `KILO_CONFIG_CONTENT` object. */
-export function cliEnvironment(root: string, extensionId: string, config: unknown) {
+/**
+ * The CLI's environment for one isolated home; `config` is the full `KILO_CONFIG_CONTENT` object. `extensionId`
+ * goes to KILO_BROWSER_EXTRA_EXTENSION_IDS (an unpacked Chromium build has a path-derived id the CLI does not know);
+ * omitted, the variable is not set. `extra` is applied last.
+ */
+export function cliEnvironment(
+  root: string,
+  extensionId: string | undefined,
+  config: unknown,
+  extra: Record<string, string> = {},
+): Record<string, string | undefined> {
   const run = path.join(root, "run")
   return {
     ...process.env,
     HOME: root,
+    // A spawned process inherits the harness's PWD otherwise, and the CLI reports that as the session's cwd.
+    PWD: root,
     KILO_API_KEY: "",
     KILO_AUTH_CONTENT: "",
     KILO_BROWSER_DATA_DIR: path.join(root, "data", "kilo2", "browser"),
-    KILO_BROWSER_EXTRA_EXTENSION_IDS: extensionId,
+    ...(extensionId === undefined ? {} : { KILO_BROWSER_EXTRA_EXTENSION_IDS: extensionId }),
     KILO_BROWSER_RUN_DIR: path.join(run, "browser"),
     KILO_CONFIG_CONTENT: JSON.stringify(config),
     KILO_DISABLE_AUTOUPDATE: "1",
@@ -1003,6 +1174,7 @@ export function cliEnvironment(root: string, extensionId: string, config: unknow
     XDG_RUNTIME_DIR: run,
     XDG_STATE_HOME: path.join(root, "state"),
     no_proxy: "127.0.0.1,127.0.0.2,localhost",
+    ...extra,
   }
 }
 
@@ -1014,7 +1186,8 @@ export async function prepareHome(root: string) {
   await fs.writeFile(path.join(root, "bin", "xdg-open"), "#!/bin/sh\nexit 0\n", { mode: 0o755 })
 }
 
-async function readHubEntry(root: string): Promise<HubEntry | undefined> {
+/** The hub registry entry under `<root>/run/browser/hubs`, once the hub (loopback or native) wrote it. */
+export async function readHubEntry(root: string): Promise<HubEntry | undefined> {
   const directory = path.join(root, "run", "browser", "hubs")
   const files = await fs.readdir(directory).catch(() => [] as string[])
   for (const file of files) {
@@ -1029,13 +1202,18 @@ async function readHubEntry(root: string): Promise<HubEntry | undefined> {
 }
 
 /**
- * Starts `kilo2 browser hub --loopback` and waits until it registers. `ports` are tried in order (an assigned range
- * can overlap the kernel's ephemeral range, so a port may be taken); without them a free port is picked.
+ * Starts `kilo2 browser hub --loopback` and waits until it registers. `nextPort` picks the port; a hub that exits
+ * with EADDRINUSE (an assigned range can overlap the kernel's ephemeral range) is retried on the next one, up to 5.
  */
-export async function startHub(binary: string, root: string, env: Record<string, string | undefined>, ports: number[] = []): Promise<Hub> {
-  const candidates = ports.length ? ports.slice(0, 5) : [await freePort()]
+export async function startHub(
+  binary: string,
+  root: string,
+  env: Record<string, string | undefined>,
+  nextPort: () => Promise<number> = freePort,
+): Promise<Hub> {
   const tried: string[] = []
-  for (const chosen of candidates) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const chosen = await nextPort()
     const log = { text: "" }
     const child = Bun.spawn([binary, "browser", "hub", "--loopback", "--port", String(chosen)], {
       cwd: root,
@@ -1057,6 +1235,7 @@ export async function startHub(binary: string, root: string, env: Record<string,
         entry: () => readHubEntry(root),
         log,
         port: chosen,
+        root,
         stop: async () => {
           try {
             child.kill("SIGTERM")
@@ -1125,16 +1304,28 @@ export async function hubRequest(socketPath: string, method: string, params: unk
   return promise
 }
 
-/** The CLI's pairing step: ask the hub for its one-time URL and open the page in this browser. */
-export async function pair(hub: Hub, launched: Launched) {
+/** The hub's one-time pairing URL, asked over its CLI socket the way `kilo2` asks for it. */
+export async function pairingUrl(hub: Hub): Promise<string> {
   const entry = await hub.entry()
   if (entry?.socket === undefined) throw new Error("the hub registry has no socket")
-  const answer = record(await hubRequest(entry.socket, "pairing.url", {}))
-  const url = answer?.["url"]
+  const url = field(await hubRequest(entry.socket, "pairing.url", {}), "url")
   if (typeof url !== "string") throw new Error("the hub returned no pairing URL")
+  return url
+}
+
+/**
+ * Opens a pairing URL the way the CLI's system opener does: a new window with no opener. The extension observes the
+ * navigation, redeems the token and closes the tab.
+ */
+export async function openPairing(launched: Launched, url: string) {
   const cdp = await launched.browser.newBrowserCDPSession()
-  // A tab with no opener: the extension observes the navigation and closes it after redeeming the token.
   await cdp.send("Target.createTarget", { newWindow: true, url })
+}
+
+/** The CLI's pairing step: the hub's pairing URL opened in this browser, then the hub reports the extension paired. */
+export async function pair(hub: Hub, launched: Launched) {
+  const url = await pairingUrl(hub)
+  await openPairing(launched, url)
   await until(async () => {
     const current = await hub.entry()
     return current?.paired === true ? current : undefined
@@ -1146,58 +1337,41 @@ export async function pair(hub: Hub, launched: Launched) {
 // CLI runs: a fresh home, a fresh hub, the scripted model, and `kilo2 run`.
 // ---------------------------------------------------------------------------------------------
 
-/** Everything one runner process holds: the CLI binary, its scratch root, the browser and the model. */
-export type Bridge = {
-  base: string
-  binary: string
-  browser: Launched
-  model: ScriptedModel
-  /** Runs started so far; each gets `<base>/run-<n>`. */
-  runs?: number
-  /** Hub ports to use in order (e.g. an assigned range); a free port otherwise. */
-  ports?: number[]
-}
-
-export type Run = {
+export type CliRun = {
   code: number
-  hub: Hub
   last: Step
   /** Errors the scenario's plan threw; the run ended at the first one. */
   planErrors: string[]
   pngs: string[]
-  root: string
   stderr: string
   steps: Step[]
   stdout: string
 }
 
-export type RunOptions = {
-  /** Pair the extension with this run's hub first (default true). */
-  pair?: boolean
-  /** The prompt passed to `kilo2 run`. */
-  prompt?: string
+export type CliRunOptions = {
+  binary: string
+  env: Record<string, string | undefined>
+  model: ScriptedModel
+  plan: Plan
+  root: string
   /** Extra `kilo2 run` flags. */
   args?: string[]
+  /** The prompt passed to `kilo2 run`. */
+  prompt?: string
   /** Kill the run after this many milliseconds (default 240 s). */
   timeout?: number
 }
 
-export async function runAgent(bridge: Bridge, plan: Plan, settings: Settings, options: RunOptions = {}): Promise<Run> {
-  bridge.runs = (bridge.runs ?? 0) + 1
-  const root = path.join(bridge.base, `run-${bridge.runs}`)
-  await prepareHome(root)
-  const env = cliEnvironment(root, bridge.browser.extensionId, cliConfig(settings, bridge.model.origin))
-  const ports = bridge.ports ?? []
-  const start = ((bridge.runs - 1) * 5) % Math.max(ports.length, 1)
-  const hub = await startHub(bridge.binary, root, env, [...ports.slice(start), ...ports.slice(0, start)])
+/** One `kilo2 run --standalone --format json` against the scripted model, answering from `plan`. */
+export async function runCli(options: CliRunOptions): Promise<CliRun> {
+  const { model } = options
+  model.history.length = 0
+  model.planErrors.length = 0
+  model.plan = options.plan
   try {
-    if (options.pair !== false) await pair(hub, bridge.browser)
-    bridge.model.history.length = 0
-    bridge.model.planErrors.length = 0
-    bridge.model.plan = plan
     const child = Bun.spawn(
       [
-        bridge.binary,
+        options.binary,
         "run",
         options.prompt ?? "Check the browser bridge.",
         "--model",
@@ -1205,24 +1379,91 @@ export async function runAgent(bridge: Bridge, plan: Plan, settings: Settings, o
         "--standalone",
         "--format",
         "json",
-        ...(settings.auto ? ["--auto"] : []),
         ...(options.args ?? []),
       ],
-      { cwd: root, env, stderr: "pipe", stdout: "pipe", timeout: options.timeout ?? 240_000 },
+      { cwd: options.root, env: options.env, stderr: "pipe", stdout: "pipe", timeout: options.timeout ?? 240_000 },
     )
     const [stdout, stderr, code] = await Promise.all([
       new Response(child.stdout as ReadableStream).text(),
       new Response(child.stderr as ReadableStream).text(),
       child.exited,
     ])
-    bridge.model.plan = undefined
-    const steps = [...bridge.model.history]
-    const last = steps.at(-1) ?? { calls: [], images: [], results: [] }
+    const steps = [...model.history]
     // The screenshot arrives in the run's tool event as a file part with a data URI; the model message may carry only
     // a text reference, so the event stream is the reliable source.
     const pngs = [...stdout.matchAll(/data:image\/png;base64,[A-Za-z0-9+/=]+/g)].map((match) => match[0])
-    return { code, hub, last, planErrors: [...bridge.model.planErrors], pngs, root, stderr, steps, stdout }
+    return { code, last: steps.at(-1) ?? emptyStep(), planErrors: [...model.planErrors], pngs, stderr, steps, stdout }
   } finally {
-    await hub.stop()
+    model.plan = undefined
+  }
+}
+
+/** Everything one Chromium runner process holds: the CLI binary, its scratch root, the browser and the model. */
+export type Bridge = {
+  base: string
+  binary: string
+  browser: Launched
+  model: ScriptedModel
+  /** Homes created so far; each is `<base>/run-<n>[-<label>]`. */
+  runs?: number
+  /** Picks each hub's port (`portPool(range)`); a free port otherwise. */
+  nextPort?: () => Promise<number>
+  /** Replaces the default pairing step (e.g. to add diagnostics on failure). */
+  pair?: (hub: Hub) => Promise<unknown>
+}
+
+/** A fresh, prepared home `<base>/run-<n>[-<label>]`. */
+export async function freshRoot(bridge: Bridge, label?: string) {
+  bridge.runs = (bridge.runs ?? 0) + 1
+  const root = path.join(bridge.base, label ? `run-${bridge.runs}-${label}` : `run-${bridge.runs}`)
+  await prepareHome(root)
+  return root
+}
+
+/** The environment of a hub or run in `root` for these settings. */
+export function bridgeEnvironment(bridge: Bridge, root: string, settings: Settings) {
+  return cliEnvironment(root, bridge.browser.extensionId, cliConfig(settings, bridge.model.origin), settings.env)
+}
+
+export function startBridgeHub(bridge: Bridge, root: string, settings: Settings) {
+  return startHub(bridge.binary, root, bridgeEnvironment(bridge, root, settings), bridge.nextPort)
+}
+
+export type Run = CliRun & { hub: Hub; root: string }
+
+export type RunOptions = {
+  /** Pair the extension with this run's hub first (default true; never for a given `hub`). */
+  pair?: boolean
+  /** Run against this hub (and its home) instead of a fresh one. */
+  hub?: Hub
+  /** Leave the hub running after the run. */
+  keepHub?: boolean
+  /** Names the fresh home `run-<n>-<label>`. */
+  label?: string
+  prompt?: string
+  args?: string[]
+  timeout?: number
+}
+
+export async function runAgent(bridge: Bridge, plan: Plan, settings: Settings, options: RunOptions = {}): Promise<Run> {
+  const root = options.hub?.root ?? (await freshRoot(bridge, options.label))
+  const hub = options.hub ?? (await startBridgeHub(bridge, root, settings))
+  try {
+    if (options.pair !== false && options.hub === undefined) {
+      await (bridge.pair ?? ((fresh: Hub) => pair(fresh, bridge.browser)))(hub)
+    }
+    const result = await runCli({
+      binary: bridge.binary,
+      env: bridgeEnvironment(bridge, root, settings),
+      model: bridge.model,
+      plan,
+      root,
+      args: [...(settings.auto ? ["--auto"] : []), ...(options.args ?? [])],
+      ...(options.prompt === undefined ? {} : { prompt: options.prompt }),
+      ...(options.timeout === undefined ? {} : { timeout: options.timeout }),
+    })
+    return { ...result, hub, root }
+  } finally {
+    if (!options.keepHub) await hub.stop()
   }
 }

@@ -31,13 +31,41 @@
 // `extensions.webextOptionalPermissionPrompts=false`, Firefox's switch for "grant optional permissions without a
 // doorhanger" — the state after a user clicks Allow. Then `kilo2 browser hub --loopback`, the hub's `pairing.url`
 // RPC over the per-user CLI socket, the pairing page opened in a new Firefox window (the extension redeems the token
-// and dials the hub), then `kilo2 run` with a scripted model.
-import * as Png from "@kilocode/kilo-plugin/browser/png"
+// and dials the hub), then `kilo2 run` with a scripted model. The browser-neutral pieces (scripted model, CLI
+// environment and runs, hub, fixtures' frame server, small helpers) come from extension-harness.ts.
 import fs from "node:fs/promises"
 import { existsSync } from "node:fs"
 import net from "node:net"
 import os from "node:os"
 import path from "node:path"
+import {
+  type Call,
+  cliConfig,
+  cliEnvironment,
+  decodePng,
+  field,
+  FRAME_MARKER,
+  type Hub as HarnessHub,
+  html,
+  pairingUrl,
+  pixel,
+  type Plan,
+  prepareHome,
+  readHubEntry,
+  PUBLIC_MARKER,
+  record,
+  refOf,
+  runCli,
+  type Settings,
+  type Step,
+  startFrameServer,
+  startHub as harnessStartHub,
+  startModel,
+  tap,
+  toolTimes,
+  type Rule,
+  until,
+} from "./extension-harness"
 
 const binaryInput = process.argv[2]
 const scenario = process.argv[3] ?? "setup"
@@ -57,8 +85,7 @@ const GECKO_ID = "browser-agent@kilo.ai"
 const EXTENSION_UUID = "5a1f6c1e-7d0b-4a52-9a6e-0f1e2d3c4b5a"
 const EXTENSION_ORIGIN = `moz-extension://${EXTENSION_UUID}`
 
-const MARKER = "IFRAME-MARKER"
-const PUBLIC_MARKER = "PUBLIC-ORIGIN"
+const MARKER = FRAME_MARKER
 const PASSWORD_VALUE = "hunter2"
 
 /**
@@ -78,14 +105,6 @@ declare const browser: {
     onActivated: { addListener(listener: (info: { tabId: number; windowId: number }) => void): void }
     query(query: Record<string, unknown>): Promise<Record<string, unknown>[]>
   }
-}
-
-function record(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined
-}
-
-function field(value: unknown, key: string): unknown {
-  return record(value)?.[key]
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -187,8 +206,6 @@ const downloadPage = `<!doctype html>
 <html><head><meta charset="utf-8"><title>Download E2E</title></head>
 <body><h1>Download E2E</h1><a id="file" href="/download">Get the report</a></body></html>`
 
-const html = (body: string) => new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } })
-
 const fixture = Bun.serve({
   hostname: "127.0.0.1",
   port: 0,
@@ -214,164 +231,30 @@ const fixture = Bun.serve({
   },
 })
 
-const frame = Bun.serve({
-  hostname: "127.0.0.2",
-  port: 0,
-  fetch(request) {
-    if (new URL(request.url).pathname === "/public") {
-      return html(`<!doctype html><html><head><title>Public</title></head><body><h1 id="marker">${PUBLIC_MARKER}</h1></body></html>`)
-    }
-    return html(`<!doctype html><html><head><title>Frame</title></head>
-<body style="margin:0;background:#ff0000"><h1 id="marker">${MARKER}</h1></body></html>`)
-  },
-})
+const frame = startFrameServer()
 
 const publicOrigin = frame.url.origin
 const localOrigin = fixture.url.origin
 
 // ---------------------------------------------------------------------------------------------
-// Scripted model: one Chat Completions endpoint that answers from a per-scenario plan.
+// Scripted model (extension-harness.ts), with this runner's tool census and think time.
 // ---------------------------------------------------------------------------------------------
 
-type Call = { name: string; args: unknown }
-type Step = { calls: Call[]; results: string[]; images: string[] }
-
-function textOf(content: unknown): string {
-  if (typeof content === "string") return content
-  if (!Array.isArray(content)) return ""
-  return content
-    .flatMap((part) => {
-      const type = field(part, "type")
-      const text = field(part, "text")
-      return type === "text" && typeof text === "string" ? [text] : []
-    })
-    .join("\n")
-}
-
-function callsOf(toolCalls: unknown): Call[] {
-  if (!Array.isArray(toolCalls)) return []
-  return toolCalls.flatMap((call) => {
-    const fn = field(call, "function")
-    const name = field(fn, "name")
-    if (typeof name !== "string") return []
-    const raw = field(fn, "arguments")
-    let args: unknown = raw
-    try {
-      args = typeof raw === "string" ? JSON.parse(raw) : raw
-    } catch {
-      args = raw
-    }
-    return [{ args, name }]
-  })
-}
-
-function pngOf(value: unknown, depth = 0): string | undefined {
-  if (depth > 6) return undefined
-  if (typeof value === "string") return value.startsWith("data:image/png;base64,") ? value : undefined
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = pngOf(item, depth + 1)
-      if (found) return found
-    }
-    return undefined
-  }
-  const object = record(value)
-  if (object === undefined) return undefined
-  for (const key of ["uri", "url", "data", "image_url", "source"]) {
-    const found = pngOf(object[key], depth + 1)
-    if (found) return found
-  }
-  return undefined
-}
-
-function readMessages(messages: unknown): Step {
-  const calls: Call[] = []
-  const results: string[] = []
-  const images: string[] = []
-  if (!Array.isArray(messages)) return { calls, images, results }
-  for (const message of messages) {
-    const role = field(message, "role")
-    if (role === "assistant") calls.push(...callsOf(field(message, "tool_calls")))
-    if (role !== "tool") continue
-    const content = field(message, "content")
-    results.push(textOf(content))
-    const png = pngOf(content)
-    if (png) images.push(png)
-  }
-  return { calls, images, results }
-}
-
-const chunk = (name: string, delta: object, finish: string | null) =>
-  `data: ${JSON.stringify({ choices: [{ delta, finish_reason: finish, index: 0 }], id: "local", model: name, object: "chat.completion.chunk" })}\n\n`
-
-const usage = (name: string) =>
-  `data: ${JSON.stringify({ choices: [], id: "local", model: name, object: "chat.completion.chunk", usage: { completion_tokens: 2, prompt_tokens: 10, total_tokens: 12 } })}\n\n`
-
-const toolCall = (name: string, tool: string, args: unknown) =>
-  [
-    chunk(
-      name,
-      {
-        role: "assistant",
-        tool_calls: [
-          { function: { arguments: JSON.stringify(args), name: tool }, id: `call_${tool}_${Date.now()}`, index: 0, type: "function" },
-        ],
-      },
-      null,
-    ),
-    chunk(name, {}, "tool_calls"),
-    usage(name),
-    "data: [DONE]\n\n",
-  ].join("")
-
-const answer = (name: string, text: string) =>
-  [chunk(name, { content: text, role: "assistant" }, null), chunk(name, {}, "stop"), usage(name), "data: [DONE]\n\n"].join("")
-
-type Plan = (step: Step) => Promise<Call | undefined> | Call | undefined
-let activePlan: Plan | undefined
-const history: Step[] = []
 /** The tool names the CLI declared to the model on its first browser-capable request, and the browser names `execute` documents. */
 let declared: { tools: string[]; codeModeBrowser: string[] } | undefined
 
-const sse = (body: string) => new Response(body, { headers: { "content-type": "text/event-stream" } })
-
-const model = Bun.serve({
-  hostname: "127.0.0.1",
-  port: 0,
-  idleTimeout: 0,
-  async fetch(request) {
-    if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
-    const body: unknown = await request.json()
-    const name = typeof field(body, "model") === "string" ? (field(body, "model") as string) : "local"
-    const list = field(body, "tools")
-    const tools = Array.isArray(list)
-      ? list.flatMap((tool) => {
-          const id = field(field(tool, "function"), "name")
-          return typeof id === "string" ? [id] : []
-        })
-      : []
-    if (!tools.some((tool) => tool.startsWith("browser_")) && !tools.includes("execute")) {
-      return sse(answer(name, "Browser E2E"))
-    }
+const model = startModel({
+  onRequest: async ({ step, tools: list }) => {
     if (declared === undefined) {
-      const execute = Array.isArray(list) ? list.find((tool) => field(field(tool, "function"), "name") === "execute") : undefined
+      const execute = list.find((tool) => field(field(tool, "function"), "name") === "execute")
       const description = JSON.stringify(field(execute, "function") ?? "")
       const codeModeBrowser = [...new Set([...description.matchAll(/browser\.([a-z_]+)\(/g)].map((match) => match[1] ?? ""))]
-      declared = { codeModeBrowser, tools }
+      declared = { codeModeBrowser, tools: step.tools }
     }
-
-    const step = readMessages(field(body, "messages"))
     // Model think time after a navigation (E2E_THINK_MS): Firefox's navigate returns before the page loads, so a
     // scripted model that answers in ~1 ms reads the old document; a real model takes longer than that to answer.
     const previous = JSON.stringify(step.calls.at(-1) ?? "")
     if (thinkMs > 0 && /navigate|\\?"action\\?":\\?"new/.test(previous)) await Bun.sleep(thinkMs)
-    history.push(step)
-    const next = activePlan === undefined ? undefined : await activePlan(step)
-    if (next === undefined) return sse(answer(name, "Browser E2E finished"))
-    if (tools.some((tool) => tool.startsWith("browser_"))) return sse(toolCall(name, next.name, next.args))
-    const method = next.name.startsWith("browser_") ? next.name.slice("browser_".length) : next.name
-    const code = `return await tools.browser.${method}(${JSON.stringify(next.args)})`
-    return sse(toolCall(name, "execute", { code }))
   },
 })
 
@@ -383,21 +266,6 @@ const failures: string[] = []
 const notes: string[] = []
 function expect(condition: boolean, message: string) {
   if (!condition) failures.push(message)
-}
-
-async function until<T>(check: () => Promise<T | undefined> | T | undefined, timeout = 20_000, label = "condition"): Promise<T> {
-  const deadline = Date.now() + timeout
-  let last: unknown
-  while (Date.now() < deadline) {
-    try {
-      const value = await check()
-      if (value !== undefined) return value
-    } catch (error) {
-      last = error
-    }
-    await Bun.sleep(50)
-  }
-  throw new Error(`${label} was not met before ${timeout}ms${last === undefined ? "" : `: ${String(last)}`}`)
 }
 
 const usedPorts = new Set<number>()
@@ -416,23 +284,6 @@ async function rangePort(offset = 0): Promise<number> {
     }
   }
   throw new Error(`no free port in ${portBase}-${portBase + 49}`)
-}
-
-function tap(stream: ReadableStream<Uint8Array>, into: { text: string }) {
-  void (async () => {
-    const reader = stream.getReader()
-    const decoder = new TextDecoder()
-    try {
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        into.text += decoder.decode(value, { stream: true })
-        if (into.text.length > 400_000) into.text = into.text.slice(-200_000)
-      }
-    } catch {
-      // The stream closes when the process exits.
-    }
-  })()
 }
 
 function percentile(values: number[], p: number): number {
@@ -631,8 +482,8 @@ async function launch(base: string, options: { extension: string; env?: Record<s
     },
   )
   firefoxChild = child
-  tap(child.stdout as ReadableStream<Uint8Array>, firefoxLog)
-  tap(child.stderr as ReadableStream<Uint8Array>, firefoxLog)
+  tap(child.stdout as ReadableStream<Uint8Array>, firefoxLog, 400_000)
+  tap(child.stderr as ReadableStream<Uint8Array>, firefoxLog, 400_000)
   bidi = await until(() => Bidi.connect(port), 60_000, "the Firefox remote agent listens")
   connected = bidi
   const session = await bidi.send("session.new", {
@@ -912,127 +763,21 @@ async function openUserTab(url: string): Promise<{ context: string; tabId: numbe
 // Hub: start `kilo2 browser hub --loopback`, ask it for a pairing URL over its CLI socket, open that page.
 // ---------------------------------------------------------------------------------------------
 
-type HubEntry = { hubId: string; paired?: boolean; port?: number; socket?: string }
-type Hub = { entry: () => Promise<HubEntry | undefined>; log: { text: string }; stop: () => Promise<void> }
+type Hub = HarnessHub
 
-type Rule = { action: string; effect: "allow" | "ask" | "deny"; resource: string }
-type Settings = { allowSensitive?: boolean; rules?: Rule[]; strict?: boolean }
+/** The CLI environment for one home: no extra extension ids (the Firefox build's Gecko id is the built-in one). */
+const environment = (root: string, settings: Settings) => cliEnvironment(root, undefined, cliConfig(settings, model.origin), settings.env)
 
-function environment(root: string, settings: Settings): Record<string, string | undefined> {
-  const run = path.join(root, "run")
-  return {
-    ...process.env,
-    HOME: root,
-    KILO_API_KEY: "",
-    KILO_AUTH_CONTENT: "",
-    KILO_BROWSER_DATA_DIR: path.join(root, "data", "kilo2", "browser"),
-    KILO_BROWSER_RUN_DIR: path.join(run, "browser"),
-    KILO_CONFIG_CONTENT: JSON.stringify(config(settings)),
-    KILO_DISABLE_AUTOUPDATE: "1",
-    KILO_DISABLE_MODELS_FETCH: "1",
-    NO_PROXY: "127.0.0.1,127.0.0.2,localhost",
-    PATH: `${path.join(root, "bin")}:${process.env.PATH ?? ""}`,
-    XDG_CACHE_HOME: path.join(root, "cache"),
-    XDG_CONFIG_HOME: path.join(root, "config"),
-    XDG_DATA_HOME: path.join(root, "data"),
-    XDG_RUNTIME_DIR: run,
-    XDG_STATE_HOME: path.join(root, "state"),
-    no_proxy: "127.0.0.1,127.0.0.2,localhost",
-  }
-}
-
-async function prepareHome(root: string) {
-  await fs.mkdir(path.join(root, "bin"), { recursive: true })
-  await fs.mkdir(path.join(root, "run"), { mode: 0o700, recursive: true })
-  await fs.writeFile(path.join(root, "bin", "xdg-open"), "#!/bin/sh\nexit 0\n", { mode: 0o755 })
-}
-
-async function readHubEntry(root: string): Promise<HubEntry | undefined> {
-  const directory = path.join(root, "run", "browser", "hubs")
-  const files = await fs.readdir(directory).catch(() => [] as string[])
-  for (const file of files) {
-    if (!file.endsWith(".json")) continue
-    try {
-      return JSON.parse(await fs.readFile(path.join(directory, file), "utf8")) as HubEntry
-    } catch {
-      // A half-written registry file is rewritten by the hub; wait for the next read.
-    }
-  }
-  return undefined
-}
-
+/** The harness's hub on a port from this runner's range, released when the hub stops. */
 async function startHub(root: string, settings: Settings): Promise<Hub> {
-  const port = await rangePort()
-  const log = { text: "" }
-  const child = Bun.spawn([binary, "browser", "hub", "--loopback", "--port", String(port)], {
-    cwd: root,
-    env: environment(root, settings),
-    stderr: "pipe",
-    stdout: "pipe",
-  })
-  tap(child.stdout as ReadableStream<Uint8Array>, log)
-  tap(child.stderr as ReadableStream<Uint8Array>, log)
-  await until(async () => readHubEntry(root), 30_000, "the hub registers itself")
+  const hub = await harnessStartHub(binary, root, environment(root, settings), () => rangePort())
   return {
-    entry: () => readHubEntry(root),
-    log,
+    ...hub,
     stop: async () => {
-      try {
-        child.kill("SIGTERM")
-      } catch {
-        // Already gone.
-      }
-      await Promise.race([child.exited, Bun.sleep(5_000)])
-      usedPorts.delete(port)
+      await hub.stop()
+      usedPorts.delete(hub.port)
     },
   }
-}
-
-async function hubRequest(socketPath: string, method: string, params: unknown): Promise<unknown> {
-  const socket = net.createConnection(socketPath)
-  await new Promise<void>((resolve, reject) => {
-    socket.once("connect", resolve)
-    socket.once("error", reject)
-  })
-  const { promise, resolve, reject } = Promise.withResolvers<unknown>()
-  let buffer = Buffer.alloc(0)
-  const timer = setTimeout(() => {
-    socket.destroy()
-    reject(new Error(`hub ${method} timed out`))
-  }, 15_000)
-  socket.on("data", (data: Buffer) => {
-    buffer = Buffer.concat([buffer, data])
-    while (buffer.length >= 4) {
-      const length = buffer.readUInt32LE(0)
-      if (buffer.length < 4 + length) return
-      const text = buffer.subarray(4, 4 + length).toString("utf8")
-      buffer = buffer.subarray(4 + length)
-      let frame: unknown
-      try {
-        frame = JSON.parse(text)
-      } catch {
-        continue
-      }
-      if (field(frame, "type") !== "rpc") continue
-      const message = record(field(frame, "message"))
-      if (message?.["id"] !== 1) continue
-      clearTimeout(timer)
-      socket.end()
-      const error = record(message["error"])
-      if (error) reject(new Error(String(error["message"])))
-      else resolve(message["result"])
-      return
-    }
-  })
-  socket.once("error", (error: Error) => {
-    clearTimeout(timer)
-    reject(error)
-  })
-  const body = Buffer.from(JSON.stringify({ message: { id: 1, jsonrpc: "2.0", method, params }, type: "rpc" }))
-  const header = Buffer.alloc(4)
-  header.writeUInt32LE(body.length, 0)
-  socket.write(Buffer.concat([header, body]))
-  return promise
 }
 
 let lastPairingMs: number | undefined
@@ -1040,11 +785,7 @@ let lastPairingMs: number | undefined
 /** The CLI's pairing step: ask the hub for its one-time URL and open the page in a new Firefox window. */
 async function pair(hub: Hub) {
   const started = Date.now()
-  const entry = await hub.entry()
-  if (entry?.socket === undefined) throw new Error("the hub registry has no socket")
-  const reply = record(await hubRequest(entry.socket, "pairing.url", {}))
-  const url = reply?.["url"]
-  if (typeof url !== "string") throw new Error("the hub returned no pairing URL")
+  const url = await pairingUrl(hub)
   const created = await bidi.send("browsingContext.create", { type: "window" })
   // The extension observes the navigation, redeems the token and closes the tab; the navigation may never "complete".
   const navigated = await bidi
@@ -1096,45 +837,6 @@ async function pair(hub: Hub) {
 // CLI runs: a fresh home, a fresh hub, the scripted model, and `kilo2 run`.
 // ---------------------------------------------------------------------------------------------
 
-const TOOL_RULES: Rule[] = [
-  "execute",
-  "browser_navigate",
-  "browser_snapshot",
-  "browser_click",
-  "browser_type",
-  "browser_tabs",
-  "browser_take_screenshot",
-].map((action) => ({ action, effect: "allow" as const, resource: "*" }))
-
-const LOCALHOST_RULES: Rule[] = [
-  { action: "browser", effect: "allow", resource: "*:http://localhost:*" },
-  { action: "browser", effect: "allow", resource: "*:http://127.0.0.1:*" },
-  { action: "browser", effect: "allow", resource: "*:http://*.localhost:*" },
-  { action: "browser", effect: "allow", resource: "*:https://localhost:*" },
-]
-
-function config(settings: Settings) {
-  return {
-    model: "local/echo",
-    providers: {
-      local: {
-        models: { echo: { limit: { context: 200_000, output: 4_000 }, name: "Echo" } },
-        name: "Local",
-        package: "@opencode/ai/providers/openai-compatible",
-        settings: { apiKey: "local-key", baseURL: `${model.url.origin}/v1` },
-      },
-    },
-    browser: {
-      backend: "extension",
-      observation: "full",
-      ...(settings.allowSensitive ? { allow_sensitive: true } : {}),
-    },
-    permissions: settings.strict
-      ? [...TOOL_RULES, ...LOCALHOST_RULES, ...(settings.rules ?? [])]
-      : [{ action: "*", effect: "allow" as const, resource: "*" }, ...(settings.rules ?? [])],
-  }
-}
-
 let runCounter = 0
 let base = ""
 
@@ -1148,73 +850,16 @@ async function run(plan: Plan, settings: Settings, options: RunOptions = {}): Pr
   const hub = options.hub === false ? undefined : await startHub(root, settings)
   try {
     if (hub && options.pair !== false) await pair(hub)
-    history.length = 0
-    activePlan = plan
-    const child = Bun.spawn(
-      [binary, "run", "Check the browser bridge.", "--model", "local/echo", "--standalone", "--format", "json"],
-      { cwd: root, env: environment(root, settings), stderr: "pipe", stdout: "pipe", timeout: 480_000 },
-    )
-    const [stdout, stderr, code] = await Promise.all([
-      new Response(child.stdout as ReadableStream).text(),
-      new Response(child.stderr as ReadableStream).text(),
-      child.exited,
-    ])
-    activePlan = undefined
+    const result = await runCli({ binary, env: environment(root, settings), model, plan, root, timeout: 480_000 })
     // The CLI's event stream and stderr stay next to the run for inspection (tool metadata, needs, timings).
-    await fs.writeFile(path.join(root, "run.stdout.jsonl"), stdout)
-    await fs.writeFile(path.join(root, "run.stderr.log"), stderr)
+    await fs.writeFile(path.join(root, "run.stdout.jsonl"), result.stdout)
+    await fs.writeFile(path.join(root, "run.stderr.log"), result.stderr)
     if (hub) await fs.writeFile(path.join(root, "hub.log"), hub.log.text)
-    const steps = [...history]
-    const last = steps.at(-1) ?? { calls: [], images: [], results: [] }
-    const pngs = [...stdout.matchAll(/data:image\/png;base64,[A-Za-z0-9+/=]+/g)].map((match) => match[0])
+    const { code, last, pngs, stderr, steps, stdout } = result
     return { code, last, pngs, root, stderr, steps, stdout, ...(hub ? { hub } : {}) }
   } finally {
     await hub?.stop()
   }
-}
-
-function refOf(snapshot: string, pattern: RegExp): string | undefined {
-  return pattern.exec(snapshot)?.[1]
-}
-
-function decodePng(dataUrl: string | undefined): Png.Image | undefined {
-  if (!dataUrl) return undefined
-  const comma = dataUrl.indexOf(",")
-  if (comma < 0) return undefined
-  try {
-    return Png.decode(Buffer.from(dataUrl.slice(comma + 1), "base64"))
-  } catch {
-    return undefined
-  }
-}
-
-function pixel(image: Png.Image | undefined, x: number, y: number) {
-  if (!image) return undefined
-  const at = (y * image.width + x) * image.channels
-  return [image.data[at], image.data[at + 1], image.data[at + 2]]
-}
-
-/** The run's tool events in order, with the CLI's own start/end timestamps and the result size. */
-function toolTimes(stdout: string): { bytes: number; end: number; start: number; tool: string }[] {
-  const times: { bytes: number; end: number; start: number; tool: string }[] = []
-  for (const line of stdout.split("\n")) {
-    if (!line.startsWith("{")) continue
-    let event: unknown
-    try {
-      event = JSON.parse(line)
-    } catch {
-      continue
-    }
-    if (field(event, "type") !== "tool_use") continue
-    const part = record(field(event, "part"))
-    if (part?.["type"] !== "tool") continue
-    const state = record(part["state"])
-    const time = record(state?.["time"])
-    if (typeof time?.["start"] === "number" && typeof time?.["end"] === "number") {
-      times.push({ bytes: JSON.stringify(state?.["content"] ?? state?.["output"] ?? "").length, end: time["end"], start: time["start"], tool: String(part["tool"]) })
-    }
-  }
-  return times
 }
 
 async function savePng(name: string, dataUrl: string | undefined) {
@@ -2112,6 +1757,6 @@ try {
   }
   fixture.stop(true)
   frame.stop(true)
-  model.stop(true)
+  model.stop()
 }
 process.exit(process.exitCode ?? 0)

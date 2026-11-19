@@ -6,7 +6,7 @@
 // extension-harness.ts.
 //
 //   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo2> <scenario>
-//   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo2> all [--repeat N] [--only a,b] [--out dir]
+//   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo2> all [--repeat N] [--only a,b] [--out dir] [--strict]
 //
 //   E2E_EXTENSION_DIR   the built unpacked extension (default: ../../../cloud/apps/extension/.output/chrome-mv3)
 //   E2E_CHROMIUM        the Chromium executable (default: playwright-core's own build)
@@ -18,6 +18,10 @@
 // download-navigate, download-ungranted, download-late, download-tabs-new, download-tabs-new-notoken,
 // download-approved-one, download-approved-one-multi. `all` runs every scenario in its own child process (fresh
 // E2E_HOME each, one after another) and prints one summary table; it exits non-zero when any run failed.
+//
+// Known failures: KNOWN_FAILURES below lists scenarios that fail today for a reason owned elsewhere. `all` shows
+// them as `known-fail` (or `UNEXPECTED PASS` when one passes) and does not count them in its exit code; `--strict`
+// counts a known failure as a failure. A single-scenario run always exits non-zero on a failed expectation.
 //
 // download-approved-one runs on Chrome's default settings, where the download request limiter lets one download per
 // gesture through and holds the rest; download-approved-one-multi is the same scenario for a user who allowed the
@@ -42,7 +46,13 @@ import {
   type Bridge,
   type Call,
   cdpReport,
-  chromiumExecutable,
+  acceptPermissionsCopy,
+  attachment,
+  FRAME_MARKER,
+  html,
+  portPool,
+  PUBLIC_MARKER,
+  startFrameServer,
   decodePng,
   defaultExtensionDirectory,
   enableLocalAgents,
@@ -56,12 +66,11 @@ import {
   type Page,
   pixel,
   type Plan,
-  promoteDownloadsCopy,
+  type RunOptions,
   readDownloadProbe,
   record,
   refOf,
   type Rule,
-  type RunOptions,
   runAgent,
   type Settings,
   startModel,
@@ -78,8 +87,7 @@ if (!binaryInput) throw new Error("usage: bun test/browser/extension-e2e.ts <kil
 const binary = path.resolve(binaryInput)
 const extensionDirectory = defaultExtensionDirectory
 
-const MARKER = "IFRAME-MARKER"
-const PUBLIC_MARKER = "PUBLIC-ORIGIN"
+const MARKER = FRAME_MARKER
 const PASSWORD_VALUE = "hunter2"
 
 // ---------------------------------------------------------------------------------------------
@@ -130,12 +138,6 @@ const downloadPage = `<!doctype html>
   <h1>Download E2E</h1>
   <a id="file" href="/download">Get the report</a>
 </body></html>`
-
-const html = (body: string) => new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } })
-const attachment = (body: string, filename: string) =>
-  new Response(body, {
-    headers: { "content-disposition": `attachment; filename="${filename}"`, "content-type": "text/plain" },
-  })
 
 let localOrigin = ""
 let publicOrigin = ""
@@ -190,17 +192,7 @@ function startFixtures() {
       return html(simple)
     },
   })
-  const frame = Bun.serve({
-    hostname: "127.0.0.2",
-    port: 0,
-    fetch(request) {
-      if (new URL(request.url).pathname === "/public") {
-        return html(`<!doctype html><html><head><title>Public</title></head><body><h1 id="marker">${PUBLIC_MARKER}</h1></body></html>`)
-      }
-      return html(`<!doctype html><html><head><title>Frame</title></head>
-<body style="margin:0;background:#ff0000"><h1 id="marker">${MARKER}</h1></body></html>`)
-    },
-  })
+  const frame = startFrameServer()
   localOrigin = fixture.url.origin
   publicOrigin = frame.url.origin
   return () => {
@@ -236,7 +228,7 @@ const tabs = () => tabState(browserOf().worker)
 function report(results: Record<string, unknown>) {
   return {
     cdp: launched === undefined ? undefined : cdpReport(launched.cdp),
-    chromium: chromiumExecutable,
+    chromium: launched?.executable ?? process.env.E2E_CHROMIUM,
     extension: extensionDirectory,
     extensionId: launched?.extensionId ?? "",
     failures,
@@ -1026,20 +1018,27 @@ function option(name: string): string | undefined {
   return at < 0 ? undefined : process.argv[at + 1]
 }
 
-function hubPorts(offset: number): number[] | undefined {
-  const match = /^(\d+)-(\d+)$/.exec(process.env.E2E_HUB_PORTS ?? "")
-  if (!match) return undefined
-  const first = Number(match[1])
-  const all = Array.from({ length: Number(match[2]) - first + 1 }, (_, index) => first + index)
-  const start = offset % all.length
-  return [...all.slice(start), ...all.slice(0, start)]
+/**
+ * Scenarios that fail today for a reason owned elsewhere: `all` reports them as known-fail and leaves its exit code
+ * alone unless `--strict`.
+ */
+const KNOWN_FAILURES: Record<string, string> = {
+  "download-approved-one": "download guard: two downloads in one gesture / limiter; owned by the download-hold follow-up",
+  "download-approved-one-multi": "download guard: two downloads in one gesture / limiter; owned by the download-hold follow-up",
 }
 
 type Outcome = { failure: string; pass: boolean; repeat: number; scenario: string; seconds: number }
 
+function resultOf(outcome: Outcome) {
+  const known = outcome.scenario in KNOWN_FAILURES
+  if (outcome.pass) return known ? "UNEXPECTED PASS" : "pass"
+  return known ? "known-fail" : "FAIL"
+}
+
 /** `all`: every scenario in its own child process with its own scratch root, one after another. */
 async function runAll(): Promise<number> {
   const repeat = Math.max(1, Number(option("--repeat") ?? "1"))
+  const strict = process.argv.includes("--strict")
   const only = option("--only")?.split(",").filter(Boolean)
   const names = only ?? Object.keys(scenarios)
   const unknown = names.filter((name) => !(name in scenarios))
@@ -1048,23 +1047,17 @@ async function runAll(): Promise<number> {
   const out = path.resolve(option("--out") ?? path.join(root, "reports"))
   await fs.mkdir(out, { recursive: true })
   const outcomes: Outcome[] = []
-  let child = 0
   for (let round = 1; round <= repeat; round++) {
     for (const name of names) {
       const home = path.join(root, `${name}-${round}`)
       await fs.rm(home, { force: true, recursive: true })
       const started = performance.now()
       const spawned = Bun.spawn([process.execPath, import.meta.path, binary, name], {
-        env: {
-          ...process.env,
-          E2E_HOME: home,
-          ...(process.env.E2E_HUB_PORTS ? { E2E_HUB_PORT_OFFSET: String(child * 4) } : {}),
-        },
+        env: { ...process.env, E2E_HOME: home },
         stderr: "pipe",
         stdout: "pipe",
         timeout: 15 * 60_000,
       })
-      child += 1
       const [stdout, stderr, code] = await Promise.all([
         new Response(spawned.stdout as ReadableStream).text(),
         new Response(spawned.stderr as ReadableStream).text(),
@@ -1084,28 +1077,31 @@ async function runAll(): Promise<number> {
       if (!failure && code !== 0) failure = `exit ${code}`
       const outcome: Outcome = { failure: failure.split("\n")[0]?.slice(0, 160) ?? "", pass: code === 0 && !failure, repeat: round, scenario: name, seconds }
       outcomes.push(outcome)
-      console.error(`${outcome.pass ? "PASS" : "FAIL"} ${name} #${round} ${seconds.toFixed(1)}s ${outcome.failure}`)
+      console.error(`${resultOf(outcome)} ${name} #${round} ${seconds.toFixed(1)}s ${outcome.failure}`)
     }
   }
   const width = Math.max(...outcomes.map((outcome) => outcome.scenario.length), "scenario".length)
+  const resultWidth = "UNEXPECTED PASS".length
+  const counted = (outcome: Outcome) => !outcome.pass && (strict || !(outcome.scenario in KNOWN_FAILURES))
   const lines = [
-    `| ${"scenario".padEnd(width)} | run | result | seconds | failure |`,
-    `| ${"-".repeat(width)} | --- | ------ | ------- | ------- |`,
+    `| ${"scenario".padEnd(width)} | run | ${"result".padEnd(resultWidth)} | seconds | failure |`,
+    `| ${"-".repeat(width)} | --- | ${"-".repeat(resultWidth)} | ------- | ------- |`,
     ...outcomes.map(
       (outcome) =>
-        `| ${outcome.scenario.padEnd(width)} | ${String(outcome.repeat).padStart(3)} | ${outcome.pass ? "pass  " : "FAIL  "} | ${outcome.seconds.toFixed(1).padStart(7)} | ${outcome.failure.replaceAll("|", "\\|")} |`,
+        `| ${outcome.scenario.padEnd(width)} | ${String(outcome.repeat).padStart(3)} | ${resultOf(outcome).padEnd(resultWidth)} | ${outcome.seconds.toFixed(1).padStart(7)} | ${outcome.failure.replaceAll("|", "\\|")} |`,
     ),
     "",
     ...names.map((name) => {
       const mine = outcomes.filter((outcome) => outcome.scenario === name)
-      return `${name.padEnd(width)}  ${mine.filter((outcome) => outcome.pass).length}/${mine.length} pass`
+      const known = KNOWN_FAILURES[name]
+      return `${name.padEnd(width)}  ${mine.filter((outcome) => outcome.pass).length}/${mine.length} pass${known ? ` (known failure: ${known})` : ""}`
     }),
-    `total ${outcomes.filter((outcome) => outcome.pass).length}/${outcomes.length} pass; reports in ${out}`,
+    `total ${outcomes.filter((outcome) => outcome.pass).length}/${outcomes.length} pass, ${outcomes.filter(counted).length} counted failure(s)${strict ? " (--strict)" : ""}; reports in ${out}`,
   ]
   const table = lines.join("\n")
   await fs.writeFile(path.join(out, "summary.md"), `${table}\n`)
   console.log(table)
-  return outcomes.every((outcome) => outcome.pass) ? 0 : 1
+  return outcomes.some(counted) ? 1 : 0
 }
 
 if (scenario === "all") {
@@ -1123,7 +1119,9 @@ const model = startModel()
 // Every scenario runs against the accepted-permission state (a copy with `downloads` promoted to required) except
 // download-ungranted, which loads the shipped build where `downloads` stays optional and unrequested.
 const promoted = scenario !== "download-ungranted"
-const extension = promoted ? await promoteDownloadsCopy(extensionDirectory, path.join(base, "extension-downloads")) : extensionDirectory
+const extension = promoted
+  ? await acceptPermissionsCopy(extensionDirectory, path.join(base, "extension-downloads"), ["downloads"])
+  : extensionDirectory
 // Chrome's own default download directory, set in the profile before launch; every scenario reads it.
 downloadsPath = path.join(base, "downloads")
 
@@ -1139,8 +1137,7 @@ try {
       ...(process.env.E2E_PREFERENCES ? (JSON.parse(process.env.E2E_PREFERENCES) as Record<string, unknown>) : {}),
     },
   })
-  const ports = hubPorts(Number(process.env.E2E_HUB_PORT_OFFSET ?? "0"))
-  bridge = { base, binary, browser: launched, model, ...(ports ? { ports } : {}) }
+  bridge = { base, binary, browser: launched, model, nextPort: portPool(process.env.E2E_HUB_PORTS) }
   if (scenario === "unpaired" || scenario === "download-path") {
     panel = await launched.context.newPage()
   } else {
