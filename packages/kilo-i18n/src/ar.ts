@@ -160,6 +160,16 @@ export const dict = {
   "browser.state.unavailable": "غير متاح",
   "browser.state.readyHint": "ملف تعريف Chromium مملوك لـ Kilo يبدأ عند أول استدعاء للمتصفح",
   "browser.state.extensionHint": "اربط إضافة متصفح Kilo لاستخدام متصفحك الخاص",
+  "browser.notice.extension":
+    "إضافة متصفح Kilo متصلة في {{browser}}. هل تريد استخدام متصفحك الخاص لأدوات المتصفح بدلًا من المتصفح المرفق؟",
+  "browser.notice.switch": "استخدام متصفحي",
+  "settings.browser.status.extension.waiting": "في انتظار إضافة المتصفح",
+  "settings.browser.origins.saved.title": "مسموح بها في المحادثات",
+  "settings.browser.origins.saved.description":
+    "المواقع التي سمحت بها من محادثة عبر السماح دائمًا، لمساحة العمل هذه. تنطبق إضافةً إلى القواعد أعلاه.",
+  "settings.browser.origins.saved.empty": "لم يُسمح بأي موقع من محادثة بعد.",
+  "settings.browser.origins.saved.failed": "الأذونات المحفوظة غير متاحة",
+  "settings.browser.origins.saved.revoke": "إبطال",
   "ui.permission.reason": "السبب: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
