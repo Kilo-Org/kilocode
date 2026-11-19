@@ -38,6 +38,12 @@ test("server process mirror differs from the branded upstream file only at host 
     ],
     ["        transform,\n", "        (app) => RemoteHttp.transform(transform ? transform(app) : app),\n"],
     ["options.overrides, // kilocode_change(host) seam - pass the overrides through", "options.overrides,"],
+    // The private TUI lease publishes the bound address before the routes are ready. Only the stdio server a TUI
+    // starts opts in, and the client waits for the normal ready line before its first request.
+    [
+      "options.overrides,",
+      'options.overrides,\n        options.mode === "stdio" && process.env.OPENCODE_PRIVATE_TUI_LEASE === "1"\n          ? (address) => console.log(JSON.stringify({ bound: HttpServer.formatAddress(address) }))\n          : undefined,',
+    ],
     // The hint the branding loader produces for the upstream file is the text the mirror renders.
     [
       `"Configure another port with \`${KiloBinary} service set port <port>\` and start the service again.",`,

@@ -54,6 +54,7 @@ export const start = Effect.fn("ServerProcess.start")(function* <E, R>(
   transform?: Transform,
   remoteURLs?: () => ReadonlyArray<string>,
   overrides?: LayerNode.Replacements, // kilocode_change(host) seam - service replacements for the routes, as createRoutes takes them
+  boundAddress?: (address: NetAddress.SocketAddress) => void, // kilocode_change(startup) seam - private TUI lease, before routes are ready
 ) {
   const password = options.password
   if (!password) return yield* Effect.fail(new Error("Missing server password"))
@@ -62,6 +63,7 @@ export const start = Effect.fn("ServerProcess.start")(function* <E, R>(
   const shutdown = yield* Latch.make()
   const status = yield* Status.make()
   const bound = yield* listen({ hostname, port })
+  boundAddress?.(bound.http.address) // kilocode_change(startup)
   const localURLs = () => {
     const address = bound.server.address()
     if (address === null || typeof address === "string") return []

@@ -166,6 +166,9 @@ const processEffect = Effect.fnUntraced(function* (options: Options) {
         (app) => RemoteHttp.transform(transform ? transform(app) : app),
         () => remote.urls,
         options.overrides,
+        options.mode === "stdio" && process.env.OPENCODE_PRIVATE_TUI_LEASE === "1"
+          ? (address) => console.log(JSON.stringify({ bound: HttpServer.formatAddress(address) }))
+          : undefined,
       )
       const server = yield* launch.pipe(
         Effect.catch((error) => {

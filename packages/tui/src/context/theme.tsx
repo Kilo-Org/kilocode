@@ -27,6 +27,7 @@ import { useConfig, useNewDesigns } from "../config"
 import { useStorageOptional } from "./storage"
 import { DevTools } from "../devtools"
 import { configDirectories } from "../util/config-directories"
+import { startupTheme } from "../kilocode/startup-theme" // kilocode_change(startup)
 
 const themePerformance = DevTools.register({ id: "theme-performance", title: "Theme performance" })
 export type ThemeError = { name: string; error: Error }
@@ -122,7 +123,7 @@ subscribeThemes(setThemeSources)
 
 const themeContext = createSimpleContext({
   name: "Theme",
-  init: (props: { mode: "dark" | "light"; source: ThemeSource }): ThemeContextValue => {
+  init: (props: { mode: "dark" | "light"; source: ThemeSource; detecting?: Promise<unknown> }): ThemeContextValue => { // kilocode_change(startup)
     const renderer = useRenderer()
     const configState = useConfig()
     const newDesigns = useNewDesigns()
@@ -309,7 +310,12 @@ const themeContext = createSimpleContext({
     })
     const modes = () => selected().modes
     const mode = () => selected().mode
-    const tokens = () => selected().theme
+    // kilocode_change(startup) - resolve initial colors in place, without touching the focused editor.
+    // kilocode_change start - startup
+    const [detecting, setDetecting] = createSignal(!!props.detecting && !renderer.themeMode)
+    void props.detecting?.then(() => setDetecting(false))
+    const tokens = createMemo(() => (detecting() && !store.lock ? startupTheme(selected().theme) : selected().theme))
+    // kilocode_change end
     tokens()
     themePerformance.set("Init", `${(performance.now() - initStarted).toFixed(2)} ms`)
     const current = createComponentTheme(tokens)

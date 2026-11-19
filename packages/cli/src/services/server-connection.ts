@@ -11,6 +11,7 @@ import { errorMessage } from "../util/error"
 export type Args = {
   readonly server?: string
   readonly standalone?: boolean
+  readonly earlyLease?: boolean // kilocode_change(startup)
   readonly mismatch?: "replace" | "ignore" | "error"
   /** Start the background service when none is running. When false, use a standalone server instead. */
   readonly autostart?: boolean
@@ -19,6 +20,7 @@ export type Args = {
 
 export type Resolved = {
   readonly endpoint: Endpoint
+  readonly whenReady?: (signal?: AbortSignal) => Promise<void> // kilocode_change(startup)
   readonly service?: ReturnType<typeof managedService>
   /** A private server started for this command alone. */
   readonly standalone?: boolean
@@ -49,7 +51,10 @@ export const resolve = Effect.fn("cli.server-connection.resolve")(function* (arg
     return { endpoint } satisfies Resolved
   }
   if (standalone || (yield* ServiceConfig.read()).disabled === true) {
-    return { endpoint: yield* Standalone.start(), standalone: true } satisfies Resolved
+    // kilocode_change start - startup
+    const endpoint = yield* Standalone.start({ earlyLease: args.earlyLease })
+    return { endpoint, whenReady: endpoint.whenReady, standalone: true } satisfies Resolved
+    // kilocode_change end
   }
 
   const mismatch = args.mismatch ?? "ignore"

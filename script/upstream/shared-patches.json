@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 157,
-    "markedLines": 2890,
+    "files": 164,
+    "markedLines": 2970,
     "unmarkedLines": 387,
     "deletedFiles": 0
   },
@@ -339,10 +339,6 @@
       "rung": 4,
       "seam": "Full TUI default selection (Gateway): call the Kilo-owned default-model loader, then use SDK model.default after CLI/config and recent models, within the existing user/agent selection precedence. Keep the first catalog model when the server supplies no valid default. Without a higher-priority selection, catalog readiness waits for the default request so --prompt cannot submit the catalog's first model before the recommendation arrives. The host-enabled model-startup adapter additionally requires actual selected-model availability and preserves explicit selections while their provider catalog is empty, so a saved --prompt is not consumed prematurely. Rungs 1 and 2 cannot reach LocalProvider's private fallback memo or readiness flag; the TUI plugin API has no model-default resolver, and the host runs in the server process. A generic seam would add a resolver registration API for these private memos instead of small call-outs. Loading, refresh and location isolation stay in tui/src/kilocode/default-model.ts and model-startup.ts."
     },
-    "packages/tui/src/component/prompt/index.tsx": {
-      "rung": 4,
-      "seam": "Delegate model-dependent admission to the host-enabled Kilo-owned model-startup adapter before session mutations. Source readiness does not cover command model overrides or newly created worktree destinations. The public TUI plugin API has no universal asynchronous submit/destination-preparation hook, keymap interception misses direct submit calls, and server host composition cannot reach the private composer closure. Small call-outs preserve draft recovery, shell execution and unhosted behavior without adding a general submission framework."
-    },
     "packages/tui/src/mini/runtime.ts": {
       "rung": 4,
       "seam": "Call the host-enabled Kilo-owned model-startup adapter before mini compaction and cancel that client-side admission on interrupt. Compaction bypasses the prompt transport, and no plugin hook, service replacement or existing host option reaches this private callback; adding a generic callback API for this single preparation would add more coupling than the import and call-outs. Unhosted behavior is unchanged."
@@ -650,6 +646,38 @@
     "packages/server/test/media.test.ts": {
       "rung": 4,
       "seam": "Test timing only, Kilo CI stability: the experimental-media refs test gets a 20 s budget. A real database import plus three round trips through the SDK cost about 1.3 s idle and 5.6 s on a loaded CI runner, above bun's 5 s default. A wrong payload still fails the assertions. No seam: the deadline is the test's third argument inside an upstream test file (inline patch, option 4)."
+    },
+    "packages/server/test/worktree.test.ts": {
+      "rung": 4,
+      "seam": "The multi-clone refresh and ownership tests run real Git and boot multiple server locations. On Windows CI they hit Bun's five-second default. Use the adjacent integration tests' 30-second budget at those two call sites; all inventory and ownership assertions remain in place."
+    },
+    "packages/tui/src/component/prompt/index.tsx": {
+      "rung": 4,
+      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. On first Home render, reveal the confirmed agent label while the model catalog is pending. Delegate model-dependent admission to the host-enabled Kilo-owned model-startup adapter before session mutations: source readiness does not cover command model overrides or cold worktree destinations. No plugin hook or host option reaches those private submit paths; narrow call-outs preserve draft recovery, shell execution and unhosted behavior."
+    },
+    "packages/tui/src/component/startup-loading.tsx": {
+      "rung": 3,
+      "seam": "Share the existing startup status copy with the Home submit-readiness feedback."
+    },
+    "packages/tui/src/context/data.tsx": {
+      "rung": 3,
+      "seam": "Forward the directory as an accessor so the existing store accepts the server-confirmed initial location without remounting the composer."
+    },
+    "packages/tui/src/context/location.tsx": {
+      "rung": 3,
+      "seam": "Expose the current location sync's terminal failure after retries to the early Home editor. Only a typed missing directory is a location-unavailable error for existing consumers."
+    },
+    "packages/tui/src/context/runtime.tsx": {
+      "rung": 3,
+      "seam": "Optional workspace readiness for an already mounted local Home. Server plugins cannot attach before the frontend is mounted."
+    },
+    "packages/cli/src/services/server-connection.ts": {
+      "rung": 3,
+      "seam": "Forward the optional private TUI lease and its readiness wait. Managed and remote connections retain their discovery and reconnect paths."
+    },
+    "packages/cli/src/services/standalone.ts": {
+      "rung": 4,
+      "seam": "An opted-in private TUI lease receives the real bound URL before route readiness, with a separate scoped readiness wait. Other stdio owners retain their original single ready line; a server plugin cannot change process negotiation."
     }
   }
 }

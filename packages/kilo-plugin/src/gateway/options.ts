@@ -8,6 +8,16 @@ import { Effect, Option, Schema } from "effect"
 export const Plugin = define({
   id: "kilocode.gateway.options",
   effect: Effect.fn(function* (ctx) {
+    // Account selection reads the token and organization from config and sends them as headers. Left in the
+    // provider settings, they would serialize into every request body.
+    yield* ctx.provider.transform((editor) => {
+      if (!editor.get("kilo")) return
+      editor.update("kilo", (provider) => {
+        if (!provider.settings) return
+        const { kilocodeToken: _token, kilocodeOrganizationId: _organization, ...settings } = provider.settings
+        provider.settings = settings
+      })
+    })
     yield* ctx.model.transform((editor) => {
       for (const model of editor.list("kilo")) {
         const provider =

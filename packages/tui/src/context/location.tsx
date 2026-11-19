@@ -9,6 +9,7 @@ const context = createContext<{
   // The target location as set, available before the server-synced info in `current` arrives.
   readonly ref: LocationRef | undefined
   readonly error: { readonly location: LocationRef; readonly cause: unknown } | undefined
+  readonly syncFailure?: { readonly location: LocationRef; readonly cause: unknown } // kilocode_change(startup) - final failure after retries
   set: (location?: LocationRef) => void
 }>()
 
@@ -36,7 +37,6 @@ export function LocationProvider(props: ParentProps) {
     }).catch((cause) => {
       const current = ref()
       if (
-        !isLocationNotFoundError(cause) ||
         generation !== attempt ||
         current?.directory !== location.directory ||
         current.workspaceID !== location.workspaceID
@@ -63,7 +63,11 @@ export function LocationProvider(props: ParentProps) {
           return ref()
         },
         get error() {
-          return error()
+          const failure = error() // kilocode_change(startup) - only a missing directory marks the location unavailable
+          return failure && isLocationNotFoundError(failure.cause) ? failure : undefined // kilocode_change(startup)
+        }, // kilocode_change(startup)
+        get syncFailure() { // kilocode_change(startup)
+          return error() // kilocode_change(startup)
         },
         set,
       }}
