@@ -99,14 +99,14 @@ describe("slow-input linear-time bounds", () => {
           })
           expect(reads / source.length).toBeLessThan(6)
         }
-        // The inline parser indexes backticks using regexp matches rather than charCodeAt.
-        // Repeatedly searching the suffix for each unmatched opener would revisit many runs.
+        // Charge the global backtick search for skipped characters too, including the suffix on a miss.
         const source = Array(scale).fill(ticks).join(" ")
-        let matches = 0
+        let searched = 0
         const exec = RegExp.prototype.exec
         RegExp.prototype.exec = function (text) {
+          const start = this.lastIndex
           const match = exec.call(this, text)
-          if (match?.[0][0] === "`") matches++
+          if (this.global && this.source === "`+") searched += (match ? this.lastIndex : text.length) - start
           return match
         }
         try {
@@ -115,7 +115,7 @@ describe("slow-input linear-time bounds", () => {
         } finally {
           RegExp.prototype.exec = exec
         }
-        expect(matches).toBeLessThan(500 * scale * 4)
+        expect(searched / source.length).toBeWithin(0.9, 2)
       }
     },
     60_000,
