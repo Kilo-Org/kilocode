@@ -291,6 +291,29 @@ describe("registerCodeActions", () => {
       expect(post.text).toContain("[eslint] Missing semicolon")
     })
 
+    it("uses the marshalled quick fix range that lost its prototype over the extension host RPC", async () => {
+      const state = setup()
+      const seen = emptySelection()
+      const marshalled = { start: { line: 2, character: 0 }, end: { line: 4, character: 0 } }
+
+      await state.commands.get("kilo-code.new.fixCode")?.(marshalled)
+
+      expect(seen).toEqual([marshalled])
+      const post = state.posts.at(0) as { type: string; text: string }
+      expect(post.type).toBe("triggerTask")
+      expect(post.text).toContain("src/file.ts:3-5")
+    })
+
+    it("does nothing when the marshalled quick fix range is empty", async () => {
+      const state = setup()
+      emptySelection()
+      const marshalled = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }
+
+      await state.commands.get("kilo-code.new.fixCode")?.(marshalled)
+
+      expect(state.posts).toEqual([])
+    })
+
     it("passes the code action diagnostics through the prompt", async () => {
       const state = setup()
       emptySelection()
