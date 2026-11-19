@@ -150,11 +150,15 @@ export function createSideTerminal(deps: SideTerminalDeps) {
    * terminal tab deliberately keeps the panel open — without this the panel
    * would be stranded with no way to dismiss it. Terminals stay alive and
    * reappear when the destination is switched back and the button is pressed.
+   *
+   * Activation always starts inside the panel, so focus moves to the button
+   * (mousedown or keyboard) before the click clears the terminal's
+   * focusedId — the composer always receives the handoff, like the diff
+   * panel's close button.
    */
   const closePanel = () => {
-    const was = deps.focusedId() !== undefined
     deps.hide()
-    handoff(was)
+    handoff(true)
   }
 
   /** Toolbar button and `Cmd/Ctrl+/`: follow the user's destination. */

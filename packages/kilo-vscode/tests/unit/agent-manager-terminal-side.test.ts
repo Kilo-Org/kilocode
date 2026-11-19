@@ -151,7 +151,9 @@ describe("Agent Manager side terminal controller", () => {
     expect(item.calls.refocus).toBe(0)
   })
 
-  it("panel close button hides the panel without killing terminals, handing focus back", () => {
+  it("panel close button hides the panel without killing terminals and always hands focus back", () => {
+    // Focus moves to the button on mousedown (or keyboard tab), clearing
+    // focusedId, so the composer always receives the handoff.
     const focused = scene({ visible: true, focusedId: "terminal:side" })
     focused.ctl.closePanel()
     expect(focused.calls.hide).toBe(1)
@@ -161,7 +163,8 @@ describe("Agent Manager side terminal controller", () => {
     const unfocused = scene({ visible: true })
     unfocused.ctl.closePanel()
     expect(unfocused.calls.hide).toBe(1)
-    expect(unfocused.calls.refocus).toBe(0)
+    expect(unfocused.calls.closed).toEqual([])
+    expect(unfocused.calls.refocus).toBe(1)
   })
 
   it("panel close button still works after the destination was switched away", () => {
