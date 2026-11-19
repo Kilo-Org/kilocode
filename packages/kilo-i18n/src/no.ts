@@ -198,7 +198,8 @@ export const dict = {
   // Notices for a browser call the user has to act on.
   "browser.notice.unavailableTitle": "Nettleseren er ikke tilgjengelig",
   "browser.notice.outdatedTitle": "Nettleserutvidelsen er utdatert",
-  "browser.notice.stopped": "Du stoppet nettleseren for denne økten. Kjør /browser adopt for å gi økten fanene tilbake.",
+  "browser.notice.stopped":
+    "Du stoppet nettleseren for denne økten. Kjør /browser adopt for å gi økten fanene tilbake.",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Veksle automatisk godkjenning",
