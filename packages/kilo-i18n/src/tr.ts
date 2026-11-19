@@ -167,6 +167,7 @@ export const dict = {
   "browser.state.unavailable": "kullanılamıyor",
   "browser.state.readyHint": "Kilo'ya ait bir Chromium profili; ilk tarayıcı çağrısında başlar",
   "browser.state.extensionHint": "Kendi tarayıcınızı kullanmak için Kilo tarayıcı uzantısını bağlayın",
+  "ui.permission.reason": "Neden: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Otomatik onayı değiştir",

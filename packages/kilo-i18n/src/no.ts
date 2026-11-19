@@ -166,6 +166,7 @@ export const dict = {
   "browser.state.unavailable": "utilgjengelig",
   "browser.state.readyHint": "En Chromium-profil eid av Kilo, startet ved det første nettleserkallet",
   "browser.state.extensionHint": "Koble til Kilo-nettleserutvidelsen for å bruke din egen nettleser",
+  "ui.permission.reason": "Årsak: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Veksle automatisk godkjenning",
