@@ -63,6 +63,8 @@ const child = Bun.spawn([...entry, ...args], {
     XDG_CACHE_HOME: dirs[3],
     OPENCODE_TEST_HOME: dirs[4],
     TMPDIR: dirs[5],
+    // Marks the dev launcher. The nono sandbox POC requires it, so a release cannot select that backend.
+    KILO_V2_DEV: "1",
     OPENCODE_DISABLE_AUTOUPDATE: "1",
   },
   stdin: "inherit",

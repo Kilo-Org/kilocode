@@ -3,6 +3,7 @@ import { ChildProcess } from "effect/process"
 import { bubblewrap } from "./bubblewrap"
 import { current } from "./context"
 import { assertProcessNetwork, networkEnvironment } from "./network"
+import { nono } from "./nono"
 import type { Profile } from "./profile"
 import { seatbelt } from "./seatbelt"
 import { currentProxy, type ProxyRuntime } from "./proxy"
@@ -22,6 +23,8 @@ export interface Support {
 
 export interface Backend {
   readonly support: (network?: Profile["network"]) => Support
+  /** The backend mediates egress itself, so Kilo's proxy must not reach the child's environment. */
+  readonly mediatesNetwork?: boolean
   readonly prepare: (
     profile: Profile,
     launch: Launch,
@@ -37,6 +40,8 @@ function unavailable(reason: string): Backend {
 }
 
 function select(): Backend {
+  // POC only: requires the dev launcher, which sets KILO_V2_DEV, so a release never selects it.
+  if (process.env.KILO_V2_DEV === "1" && process.env.KILO_SANDBOX_BACKEND === "nono") return nono
   switch (process.platform) {
     case "darwin":
       return seatbelt
@@ -49,7 +54,14 @@ function select(): Backend {
   }
 }
 
-const backend = select()
+let selected: { readonly key: string; readonly value: Backend } | undefined
+
+/** Resolves the backend, re-reading the POC switch so a process can flip it before its first launch. */
+function preferred() {
+  const key = `${process.env.KILO_V2_DEV ?? ""}|${process.env.KILO_SANDBOX_BACKEND ?? ""}`
+  if (selected?.key !== key) selected = { key, value: select() }
+  return selected.value
+}
 
 function environment(profile: Profile, launch: Launch, proxy?: ProxyRuntime) {
   const source = { ...launch.environment, ...profile.environment.set }
@@ -57,7 +69,7 @@ function environment(profile: Profile, launch: Launch, proxy?: ProxyRuntime) {
   const entries = Object.entries(source).filter(
     (entry): entry is [string, string] => entry[1] !== undefined && !denied.has(entry[0]),
   )
-  return networkEnvironment(profile, Object.fromEntries(entries), proxy)
+  return networkEnvironment(profile, Object.fromEntries(entries), preferred().mediatesNetwork ? undefined : proxy)
 }
 
 export function prepare(launch: Launch) {
@@ -67,9 +79,10 @@ export function prepare(launch: Launch) {
     const proxy = yield* currentProxy
     const next = { ...launch, environment: environment(profile, launch, proxy) }
     yield* assertProcessNetwork(profile, launch.command)
-    const support = backend.support(profile.network)
+    const target = preferred()
+    const support = target.support(profile.network)
     if (!support.available) return yield* Effect.fail(unsupported(launch.command, "prepare", support))
-    return yield* backend.prepare(profile, next, proxy)
+    return yield* target.prepare(profile, next, proxy)
   })
 }
 
@@ -88,9 +101,10 @@ export function confine(profile: Profile, launch: Launch) {
     const proxy = yield* currentProxy
     const next = { ...launch, environment: environment(profile, launch, proxy) }
     yield* assertProcessNetwork(profile, launch.command)
-    const support = backend.support(profile.network)
+    const target = preferred()
+    const support = target.support(profile.network)
     if (!support.available) return yield* Effect.fail(unsupported(launch.command, "confine", support))
-    return yield* backend.prepare(profile, next, proxy)
+    return yield* target.prepare(profile, next, proxy)
   })
 }
 
@@ -120,7 +134,7 @@ export function prepareCommand(
 }
 
 export function backendSupport(network?: Profile["network"]) {
-  return backend.support(network)
+  return preferred().support(network)
 }
 
 // A command can carry redacted words; the confined launcher needs their plain text.

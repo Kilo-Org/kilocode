@@ -55,8 +55,20 @@ export interface Inputs {
   readonly cwd?: string
 }
 
+const loader = ["NODE_OPTIONS", "PYTHONPATH", "PYTHONHOME", "GOFLAGS", "LD_LIBRARY_PATH"]
+
 /** nono's own XDG roots must not reach the child; the profile restores the user's values when they existed. */
 const xdg = ["XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME"]
+
+/** Variables nono strips or redirects that the child gets back from the original environment. */
+export function restoreEnvironment(env: Readonly<Record<string, string | undefined>>) {
+  return Object.fromEntries(
+    [...loader, ...xdg].flatMap((key) => {
+      const value = env[key]
+      return value === undefined ? [] : [[key, value] as [string, string]]
+    }),
+  )
+}
 
 /**
  * nono grants write access to every temporary directory by default. Kilo grants only its own temp directory, so
@@ -203,7 +215,14 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
       ...(inputs.secret ?? []),
     ]),
   ]
-  const set = { ...(inputs.restore ?? {}), ...profile.environment.set }
+  // A masked credential name must not come back through a restored loader variable or the profile's own set map.
+  // The XDG roots stay: the child gets the user's values back, and the deny list only hides nono's own roots from it.
+  const masked = new Set([...(inputs.secret ?? []), ...provided.flatMap((route) => aliases(route.envVar))])
+  const set = Object.fromEntries(
+    Object.entries({ ...(inputs.restore ?? {}), ...profile.environment.set }).filter(
+      ([key]) => !masked.has(key),
+    ),
+  )
   return {
     extends: "default",
     meta: { name: "kilo", description: "Kilo sandbox profile" },
