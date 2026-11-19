@@ -17,23 +17,29 @@
 //   E2E_NATIVE_GRANTED=0     accept only `downloads`, not `nativeMessaging`
 //
 // Scenarios:
-//   pairing   settings empty states and the four pairing notices (expired, invalid, not_allowed, unreachable)
+//   pairing   settings empty states, the paired CLI reconnecting and unreachable, and the pairing notices (expired,
+//             invalid incl. a broken link, not_allowed, unreachable)
 //   controls  Stop all, the switch turned off mid-run, per-controller Disconnect and the Alt+Shift+K command, each
 //             against a live run: tab group before/after, the settings list, and the next call's model text
 //   errors    the verbatim model-visible text of every reachable error code
 //   tui       the TUI in tmux: browser permission prompt (allow once, always, reject), the sensitive step, the
 //             unavailable hint and the stopped session
-//   settings-faults  the settings page's load/save/command error lines, with storage and messaging faults injected
+//   tui-redirect  a redirect to an ungranted origin in the TUI: one prompt, then the navigate lands there
+//   settings-faults  the settings page's load/save/command error lines (Stop all and Disconnect worded for
+//             themselves), with storage and messaging faults injected
 //   signed-out  the local-agent switch and a run while signed out of Kilo, then sign-out and token expiry mid-run:
 //             which storage keys survive (the local-agent ones must, the account token must not)
+//   stop-race  Stop all while a second conversation of the same `kilo2 serve` is mid-turn: its call must not open a
+//             new group, and its next turn works
 //   all       pairing, controls, errors, tui and settings-faults in one browser
 //
 // Each scenario prints one JSON report and exits non-zero when a hard expectation fails. Findings that are UX judgments
 // rather than broken contracts go to `observations`, not `failures`.
 //
-// Known failures: KNOWN_FAILURES (near the end of this file) lists scenarios that fail today for a reason owned
-// elsewhere (`signed-out`: the cloud fix fix/extension-agents-signin). Such a run reports `status: "known-fail"` with
-// the reason and exits 0, or `UNEXPECTED PASS` when it passes; `--strict` makes a known failure exit non-zero.
+// Known failures: KNOWN_FAILURES lists whole scenarios and single checks (`<scenario>:<check>`) that fail today for a
+// reason owned elsewhere. Their misses go to `knownChecks` (or, for a whole scenario, its failures) and the run
+// reports `status: "known-fail"` and exits 0; when every known check passes the status is `UNEXPECTED PASS`, so the
+// entry can go. `--strict` makes a known failure exit non-zero. Any other failure is `FAIL` and exits 1.
 //
 // The Chromium launch (a real profile, no DevTools download override), the API routes, the hub, pairing, the
 // scripted model and the CLI runs come from extension-harness.ts.
@@ -70,6 +76,7 @@ import {
   type Settings,
   startBridgeHub,
   startModel,
+  tap,
   tabState as harnessTabState,
   type TabInfo,
   until,
@@ -170,6 +177,35 @@ function expect(condition: boolean, message: string) {
 }
 function observe(condition: boolean, message: string) {
   if (!condition) observations.push(message)
+  return condition
+}
+
+const SETTINGS_FIX = "cloud fix/extension-agents-settings + kilocode browser-disconnect (PRs #11929/#16385)"
+
+/**
+ * What fails today for a reason owned elsewhere: whole scenarios, and single checks (`<scenario>:<check>`) inside
+ * scenarios that otherwise must pass. A known failure is reported, not counted (see `finish`); a known check that
+ * passes is reported as an unexpected pass, so the entry can be removed once its fix lands.
+ */
+const KNOWN_FAILURES: Record<string, string> = {
+  "signed-out": "local agents settings signed out: cloud fix/extension-agents-signin",
+  "stop-race": SETTINGS_FIX,
+  "tui-redirect": "cloud #11921 + kilocode #16382",
+  "pairing:hub-reconnecting": SETTINGS_FIX,
+  "pairing:hub-unreachable": SETTINGS_FIX,
+  "pairing:broken-link-notice": SETTINGS_FIX,
+  "controls:disconnect": SETTINGS_FIX,
+  "settings-faults:stop-all-text": SETTINGS_FIX,
+  "settings-faults:disconnect-text": SETTINGS_FIX,
+}
+/** The known checks this run evaluated: their outcome and, when they failed, the message. */
+const knownChecks: { check: string; message?: string; passed: boolean; reason: string }[] = []
+
+/** A hard check that is a known failure today: a miss is recorded against its reason instead of failing the run. */
+function expectKnown(check: string, condition: boolean, message: string) {
+  const reason = KNOWN_FAILURES[check]
+  if (reason === undefined) return expect(condition, message)
+  knownChecks.push({ check, passed: condition, reason, ...(condition ? {} : { message }) })
   return condition
 }
 
@@ -466,15 +502,33 @@ async function pairingScenario() {
   results["happy"] = { pairMs, section: await sectionText(), storage: await sessionStorage(), tabs: (await tabState()).tabs.map((tab) => tab.url) }
   await shot("03-paired-idle")
 
-  // Unhappy, retryable: the hub stops. The settings page should say the CLI is gone, not keep "No agents connected".
+  // Unhappy, retryable: the hub stops. The settings page names the paired CLI and says it is reconnecting.
   await hub.stop()
   const afterStop = await maybe(async () => {
     const text = await sectionText()
-    return text.includes("No agents connected") ? undefined : text
+    return text.includes("Reconnecting") ? text : undefined
   }, 20_000)
   results["hub-stopped"] = { section: afterStop ?? (await sectionText()), storage: await sessionStorage() }
-  observe(afterStop !== undefined, `20 s after the paired hub stopped the settings still read "No agents connected": ${await sectionText()}`)
+  expectKnown(
+    "pairing:hub-reconnecting",
+    afterStop !== undefined && afterStop.includes(`Kilo CLI · 127.0.0.1:${hub.port}`) && !afterStop.includes("Kilo CLI not found"),
+    `20 s after the paired hub stopped the settings do not show it reconnecting: ${await sectionText()}`,
+  )
   await shot("04-paired-hub-stopped")
+  {
+    // The stopped hub has been gone for longer than the reconnect grace: its row now says it cannot be reached.
+    const later = await maybe(async () => {
+      const text = await sectionText()
+      return text.includes("Not reachable") ? text : undefined
+    }, 70_000)
+    results["hub-stopped-later"] = { section: later ?? (await sectionText()) }
+    expectKnown(
+      "pairing:hub-unreachable",
+      later !== undefined && later.includes(`Kilo CLI · 127.0.0.1:${hub.port}`),
+      `a hub gone for over a minute is not shown as unreachable: ${await sectionText()}`,
+    )
+    await shot("04b-paired-hub-unreachable")
+  }
 
   // expired: a real token issued more than 60 s before the browser opens it.
   {
@@ -506,7 +560,11 @@ async function pairingScenario() {
     const silent = await noticeAfter("08-tampered-hub-id", () => openPairing(hubTampered), 5_000)
     const leftOpen = (await tabState()).tabs.filter((tab) => typeof tab.url === "string" && tab.url.includes("__kilo_browser_pair"))
     results["tampered-hub-id"] = { ...silent, pairingTabsLeftOpen: leftOpen.map((tab) => tab.url?.replace(/#.*/, "#…")), tabsBefore }
-    observe(silent.notice !== null, `a pairing URL with a broken hub id shows no notice at all; the tab stays open on the hub's page: ${JSON.stringify(results["tampered-hub-id"])}`)
+    expectKnown(
+      "pairing:broken-link-notice",
+      silent.notice === "invalid" && leftOpen.length === 0,
+      `a pairing URL with a broken hub id did not show "invalid" and close its tab: ${JSON.stringify(results["tampered-hub-id"])}`,
+    )
     for (const tab of leftOpen) {
       if (typeof tab.id === "number") await worker.evaluate(async (id: number) => (globalThis as unknown as { chrome: { tabs: { remove(id: number): Promise<void> } } }).chrome.tabs.remove(id), tab.id)
     }
@@ -656,9 +714,14 @@ async function controlsScenario() {
     if (action === "switch-off") await setSwitch(true)
     const next = String(item?.["next"] ?? "")
     if (action === "disconnect") {
-      observe(
-        next.includes("stopped"),
-        `Disconnect did not stop the agent: its next call ran (${next.slice(0, 200).replace(/\n/g, " ")}); settings after: ${String(field(item?.["final"], "section"))}`,
+      const afterNext = String(item?.["afterNext"] ?? "")
+      const finalGroups = (field(item?.["final"], "groups") ?? []) as GroupInfo[]
+      expectKnown(
+        "controls:disconnect",
+        next.includes("The user stopped this browser session") &&
+          afterNext.includes("The user stopped this browser session") &&
+          liveGroup(finalGroups) === undefined,
+        `Disconnect did not stop the agent for good: next=${next.slice(0, 200).replace(/\n/g, " ")}; afterNext=${afterNext.slice(0, 200).replace(/\n/g, " ")}; groups=${JSON.stringify(finalGroups)}`,
       )
     } else {
       expect(next.includes("The user stopped this browser session"), `${action}: the next call was not user_stopped: ${next.slice(0, 300)}`)
@@ -1066,6 +1129,49 @@ async function tuiUnavailable() {
   return out
 }
 
+/** A redirect to an ungranted origin, answered "Allow once" by a person: one prompt, and the navigate lands there. */
+async function tuiRedirect() {
+  scenarioLabel = "tui-redirect"
+  const root = await freshRoot("tui-redirect")
+  const settings: Settings = { strict: true }
+  const hub = await startHub(root, settings)
+  await pair(hub)
+  history.length = 0
+  const out: Record<string, unknown> = {}
+  model.plan = (step) => (step.results.length === 0 ? navigate(`${localOrigin}/redirect`) : undefined)
+  const name = "UxExplore-tui-redirect"
+  let prompts = 0
+  try {
+    await startTui(root, settings, name)
+    await prompt(name, "Open the redirecting page twice.")
+    for (;;) {
+      const asked = await waitPane(name, /Permission required/, prompts === 0 ? 60_000 : 8_000)
+      if (asked === undefined) break
+      prompts += 1
+      out[`prompt${prompts}`] = await savePane(name, `0${prompts}-prompt`)
+      await tmux(["send-keys", "-t", name, "Enter"])
+      await Bun.sleep(3_000)
+      if (prompts >= 4) break
+    }
+    await maybe(async () => ((history.at(-1)?.results.length ?? 0) >= 1 ? true : undefined), 30_000)
+    await Bun.sleep(1_500)
+    out["final"] = await savePane(name, "09-final")
+    out["prompts"] = prompts
+    const results = (history.at(-1)?.results ?? []).map((text) => text.slice(0, 600))
+    out["modelResults"] = results
+    expect(prompts === 1, `redirect: expected one permission prompt, saw ${prompts}`)
+    expect(
+      results.length === 1 && (results[0] ?? "").includes(`${publicOrigin}/public`),
+      `redirect: the navigate did not land on ${publicOrigin}: ${JSON.stringify(results)}`,
+    )
+  } finally {
+    model.plan = undefined
+    await tmux(["kill-session", "-t", name]).catch(() => undefined)
+    await hub.stop()
+  }
+  return out
+}
+
 async function tuiScenario() {
   await setSwitch(true)
   return {
@@ -1115,21 +1221,48 @@ async function settingsFaultsScenario() {
     ).catch((error: unknown) => ({ error: String(error) }))
     return { section: await sectionText(), result: "error" in result ? result.error : result.last.results.map((text) => text.slice(0, 200)) }
   })()
-  observe(
-    String(field(out["command-not-ok"], "section")).includes("Couldn't"),
-    `Stop all answered { ok: false } and the settings page shows no error: ${String(field(out["command-not-ok"], "section"))}`,
+  expectKnown(
+    "settings-faults:stop-all-text",
+    String(field(out["command-not-ok"], "section")).includes("Couldn't stop the agents. Try again."),
+    `Stop all answered { ok: false } and the settings page shows no Stop all error: ${String(field(out["command-not-ok"], "section"))}`,
   )
   await panel.reload()
   await openSettings()
 
-  // Command rejected (no receiver): the page shows its save error line, worded for a setting.
-  await panel.evaluate(() => {
-    const api = (globalThis as unknown as { chrome: { runtime: { sendMessage: (...args: unknown[]) => Promise<unknown> } } }).chrome
-    Object.defineProperty(api.runtime, "sendMessage", { configurable: true, value: () => Promise.reject(new Error("Receiving end does not exist.")) })
-  })
-  const stopButton = panel.getByRole("button", { name: "Stop all" })
-  out["command-rejected"] = (await stopButton.count()) > 0 ? await (async () => (await stopButton.click(), await Bun.sleep(500), await sectionText()))() : "no Stop all button (no agents connected)"
-  await shot("02-command-rejected")
+  // Command rejected (no receiver) during a live run: Disconnect says it failed, worded for Disconnect.
+  out["command-rejected"] = await (async () => {
+    let section = "no Disconnect button (no agents connected)"
+    const result = await run(
+      (step) => {
+        if (step.results.length === 0) return navigate(localOrigin)
+        if (step.results.length === 1) {
+          return (async () => {
+            await panel.evaluate(() => {
+              const api = (globalThis as unknown as { chrome: { runtime: { sendMessage: (...args: unknown[]) => Promise<unknown> } } }).chrome
+              Object.defineProperty(api.runtime, "sendMessage", { configurable: true, value: () => Promise.reject(new Error("Receiving end does not exist.")) })
+            })
+            const button = panel.getByRole("button", { name: /^Disconnect / })
+            if ((await button.count()) > 0) {
+              await button.click()
+              await Bun.sleep(500)
+              section = await sectionText()
+            }
+            await shot("02-command-rejected")
+            return undefined
+          })()
+        }
+        return undefined
+      },
+      {},
+      { hub, keepHub: true },
+    ).catch((error: unknown) => ({ error: String(error) }))
+    return { section, result: "error" in result ? result.error : result.last.results.map((text) => text.slice(0, 200)) }
+  })()
+  expectKnown(
+    "settings-faults:disconnect-text",
+    String(field(out["command-rejected"], "section")).includes("Couldn't disconnect the agent. Try again."),
+    `a Disconnect nothing answered shows no Disconnect error: ${String(field(out["command-rejected"], "section"))}`,
+  )
   await panel.reload()
   await openSettings()
 
@@ -1313,6 +1446,160 @@ async function signedOutScenario() {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Scenario: Stop all while a second conversation of the same CLI is mid-turn without a browser session yet.
+// One `kilo2 serve` process holds both conversations, so the revoke for the first one reaches the CLI that runs the
+// second. Conversation A opens a session and finishes its turn; conversation B starts a turn, the user presses Stop all
+// before B's first browser call, and B's call must not open a new group. B's next user message starts a normal turn.
+// ---------------------------------------------------------------------------------------------
+
+async function startServe(root: string) {
+  const port = await freePort()
+  const password = crypto.randomUUID()
+  const log = { text: "" }
+  const child = Bun.spawn([binary, "serve", "--port", String(port)], {
+    cwd: root,
+    env: {
+      ...environment(root, {}),
+      KILO_PASSWORD: password,
+      KILO_SERVER_PASSWORD: password,
+      OPENCODE_PASSWORD: password,
+      OPENCODE_SERVER_PASSWORD: password,
+    },
+    stderr: "pipe",
+    stdout: "pipe",
+  })
+  tap(child.stdout as ReadableStream<Uint8Array>, log)
+  tap(child.stderr as ReadableStream<Uint8Array>, log)
+  const origin = `http://127.0.0.1:${port}`
+  // The server's Basic-auth user is the branded binary name; try both names once the port answers.
+  const user = await until(
+    async () => {
+      for (const name of ["kilo", "opencode"]) {
+        const response = await fetch(`${origin}/api/session`, {
+          headers: { authorization: `Basic ${Buffer.from(`${name}:${password}`).toString("base64")}` },
+        }).catch(() => undefined)
+        if (response?.ok) return name
+      }
+      return undefined
+    },
+    60_000,
+    `kilo2 serve answers on ${origin}`,
+  ).catch((error: unknown) => {
+    throw new Error(`${String(error)}; serve log: ${log.text.slice(-1_500)}`)
+  })
+  const authorization = `Basic ${Buffer.from(`${user}:${password}`).toString("base64")}`
+  const api = async (method: string, pathname: string, body?: unknown) => {
+    const response = await fetch(`${origin}${pathname}`, {
+      method,
+      headers: { authorization, ...(body === undefined ? {} : { "content-type": "application/json" }) },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    })
+    const text = await response.text()
+    if (!response.ok) throw new Error(`${method} ${pathname} → ${response.status}: ${text.slice(0, 600)}`)
+    return text === "" ? undefined : (JSON.parse(text) as unknown)
+  }
+  return {
+    api,
+    log,
+    stop: async () => {
+      try {
+        child.kill("SIGTERM")
+      } catch {
+        // Gone.
+      }
+      await Promise.race([child.exited, Bun.sleep(5_000)])
+    },
+  }
+}
+
+async function stopRaceScenario() {
+  scenarioLabel = "stop-race"
+  await setSwitch(true)
+  const out: Record<string, unknown> = {}
+  const root = await freshRoot("stop-race")
+  const hub = await startHub(root, {})
+  await pair(hub)
+  const serve = await startServe(root)
+  try {
+    const create = async () => {
+      const created = await serve.api("POST", "/api/session", { model: { id: "echo", providerID: "local" } })
+      const id = field(field(created, "data"), "id")
+      if (typeof id !== "string") throw new Error(`session.create returned no id: ${JSON.stringify(created)}`)
+      return id
+    }
+    /** One user message to a conversation and the tool results of its turn, after the model's final answer. */
+    const turn = async (session: string, plan: Plan) => {
+      history.length = 0
+      const finished = Promise.withResolvers<void>()
+      model.plan = async (step) => {
+        const next = await plan(step)
+        if (next === undefined) finished.resolve()
+        return next
+      }
+      await serve.api("POST", `/api/session/${session}/prompt`, { text: "Check the browser bridge." })
+      const timer = setTimeout(() => finished.reject(new Error(`the turn of ${session} did not finish`)), 120_000)
+      await finished.promise.finally(() => clearTimeout(timer))
+      await serve.api("POST", `/api/experimental/session/${session}/wait`)
+      model.plan = undefined
+      return history.at(-1)?.results ?? []
+    }
+    const first = await create()
+    const second = await create()
+
+    // A: opens its browser session; its turn ends, the session stays open.
+    const a = await turn(first, (step) => (step.results.length === 0 ? navigate(localOrigin) : undefined))
+    out["a"] = a.map((text) => text.slice(0, 200))
+    const groupsAfterA = (await tabState()).groups
+    out["groupsAfterA"] = groupsAfterA
+    expect(liveGroup(groupsAfterA) !== undefined, `conversation A opened no tab group: ${JSON.stringify(groupsAfterA)}`)
+    await shot("01-a-open")
+
+    // B: mid-turn, before its first browser call, the user presses Stop all.
+    const b = await turn(second, (step) => {
+      if (step.results.length > 0) return undefined
+      return (async () => {
+        await panel.getByRole("button", { name: "Stop all" }).click()
+        out["groupsAtStop"] = await until(
+          async () => {
+            const groups = (await tabState()).groups
+            return liveGroup(groups) === undefined ? groups : undefined
+          },
+          10_000,
+          "Stop all ends A's group",
+        )
+        return navigate(`${localOrigin}/?after=stop-race`)
+      })()
+    })
+    out["b"] = b.map((text) => text.slice(0, 300))
+    const groupsAfterB = (await tabState()).groups
+    out["groupsAfterB"] = groupsAfterB
+    out["sectionAfterB"] = await sectionText()
+    expect(
+      (b[0] ?? "").includes("The user stopped this browser session") && liveGroup(groupsAfterB) === undefined,
+      `a turn running at Stop all opened a new session: result=${(b[0] ?? "").slice(0, 200)}; groups=${JSON.stringify(groupsAfterB)}`,
+    )
+    await shot("02-b-stopped")
+
+    // B's next user message is a new turn: the stop no longer applies to it.
+    const again = await turn(second, (step) => (step.results.length === 1 ? navigate(`${localOrigin}/?after=next-turn`) : undefined))
+    out["bNextTurn"] = again.map((text) => text.slice(0, 300))
+    const groupsAfterNext = (await tabState()).groups
+    out["groupsAfterNextTurn"] = groupsAfterNext
+    const nextResult = again.at(-1) ?? ""
+    expect(
+      nextResult.includes("after=next-turn") && !nextResult.includes("stopped") && liveGroup(groupsAfterNext) !== undefined,
+      `B's next turn could not use the browser: result=${nextResult.slice(0, 200)}; groups=${JSON.stringify(groupsAfterNext)}`,
+    )
+    await shot("03-b-next-turn")
+  } finally {
+    out["serveLog"] = serve.log.text.slice(-800)
+    await serve.stop()
+    await hub.stop()
+  }
+  return out
+}
+
+// ---------------------------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------------------------
 
@@ -1322,7 +1609,12 @@ const scenarios: Record<string, () => Promise<Record<string, unknown>>> = {
   pairing: pairingScenario,
   "settings-faults": settingsFaultsScenario,
   "signed-out": signedOutScenario,
+  "stop-race": stopRaceScenario,
   tui: tuiScenario,
+  "tui-redirect": async () => {
+    await setSwitch(true)
+    return { redirect: await tuiRedirect() }
+  },
   all: async () => ({
     pairing: await pairingScenario(),
     controls: await controlsScenario(),
@@ -1335,21 +1627,28 @@ const scenarios: Record<string, () => Promise<Record<string, unknown>>> = {
 const selected = scenarios[scenario]
 if (!selected) throw new Error(`unknown scenario ${scenario}; choose ${Object.keys(scenarios).join(", ")}`)
 
-/**
- * Scenarios that fail today for a reason owned elsewhere. A failing run reports `status: "known-fail"` and exits 0; a
- * passing one reports `UNEXPECTED PASS`; `--strict` makes a known failure exit non-zero (as extension-e2e's `all`).
- */
-const KNOWN_FAILURES: Record<string, string> = {
-  "signed-out": "local agents settings signed out: cloud fix/extension-agents-signin",
-}
 const knownFailure = KNOWN_FAILURES[scenario]
 const strict = process.argv.includes("--strict")
 
+/**
+ * The run's status and exit code. A failure of a known scenario, or of a known check, is `known-fail` (exit 0, or 1
+ * with `--strict`); any other failure is `FAIL` (exit 1); a known scenario or known check that passes is an
+ * `UNEXPECTED PASS` (exit 0).
+ */
 function finish() {
-  const failed = failures.length > 0
-  if (failed && (knownFailure === undefined || strict)) process.exitCode = 1
-  if (!failed) return knownFailure === undefined ? "pass" : "UNEXPECTED PASS"
-  return knownFailure === undefined ? "FAIL" : "known-fail"
+  const knownMissed = knownChecks.filter((item) => !item.passed)
+  const status =
+    failures.length > 0
+      ? knownFailure === undefined
+        ? "FAIL"
+        : "known-fail"
+      : knownMissed.length > 0
+        ? "known-fail"
+        : knownFailure !== undefined || knownChecks.length > 0
+          ? "UNEXPECTED PASS"
+          : "pass"
+  if (status === "FAIL" || (status === "known-fail" && strict)) process.exitCode = 1
+  return status
 }
 
 base = process.env.E2E_HOME ?? (await fs.mkdtemp(path.join(os.tmpdir(), "bridge-ux-")))
@@ -1365,6 +1664,7 @@ function report(results: Record<string, unknown>) {
     extensionId,
     failures,
     ...(knownFailure === undefined ? {} : { knownFailure }),
+    knownChecks,
     observations,
     scenario,
     status,
