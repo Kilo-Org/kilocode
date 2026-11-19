@@ -87,6 +87,15 @@ function hubFailure(error: unknown) {
   }
 }
 
+/**
+ * `browser_unavailable` reports two different states: the CLI stopped waiting on a browser that is still connected (a
+ * slow step that may have run in part), and a browser that is not there. Only the second one is a missing browser.
+ */
+function unavailableFailure(value: { message: string; uncertain: boolean; timedOut: boolean }): BrowserHub.Failure {
+  if (value.timedOut) return new BrowserHub.Failure({ kind: "timeout", message: value.message, uncertain: true })
+  return new BrowserHub.Failure({ kind: "unavailable", message: value.message, uncertain: value.uncertain })
+}
+
 /** One transport failure as the backend reads it. A kind the CLI does not know stays `unknown` and is refused. */
 export function failure(error: unknown): BrowserHub.Failure {
   const value = hubFailure(error)
@@ -112,9 +121,7 @@ export function failure(error: unknown): BrowserHub.Failure {
   })
   switch (value.kind) {
     case "browser_unavailable":
-      // The CLI gave up waiting on a browser that is still connected: that is a slow step, not a missing browser.
-      if (value.timedOut) return new BrowserHub.Failure({ kind: "timeout", message: value.message, uncertain: true })
-      return new BrowserHub.Failure({ kind: "unavailable", message: value.message, uncertain: value.uncertain })
+      return unavailableFailure(value)
     case "tab_busy":
       return new BrowserHub.Failure({ kind: "busy", message: value.message })
     case "tab_taken":
