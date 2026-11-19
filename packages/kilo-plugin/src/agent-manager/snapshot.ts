@@ -148,9 +148,11 @@ export const remove = Effect.fn("SnapshotCleanup.remove")(function* (input: Inpu
   const root = path.resolve(yield* real(input.data), "snapshot")
   const directory = path.resolve(yield* real(input.directory))
   const worktree = path.resolve(input.worktree)
-  const managed = path.resolve(directory, ".kilo", "worktrees")
+  const managed = [".kilo", ".kilo2"]
+    .map((name) => path.join(directory, name, "worktrees"))
+    .find((root) => managedLexically(root, worktree))
   if (!component(input.project)) return yield* invalid("project must be a safe path component")
-  if (!path.isAbsolute(input.worktree) || worktree === managed || !managedLexically(managed, worktree))
+  if (!managed || !path.isAbsolute(input.worktree) || worktree === managed)
     return yield* invalid("worktree must be an absolute path inside the managed worktrees directory")
 
   // Snapshot repositories are keyed by the canonical worktree path, also when the worktree is gone.

@@ -63,6 +63,20 @@ it.effect("removes an explicitly deleted snapshot repository recursively", () =>
   }),
 )
 
+it.effect("cleans an isolated IDE worktree without touching the same-named worktree in the release root", () =>
+  Effect.gen(function* () {
+    const { path: base } = yield* tmpdirScoped()
+    const release = yield* repo(item(base))
+    const ide = yield* repo({ ...release, worktree: path.join(release.directory, ".kilo2", "worktrees", "worktree") })
+    expect((yield* remove(ide).pipe(Effect.flip))._tag).toBe("AgentManager.InvalidWorktreeError")
+    yield* drop(ide.worktree)
+    expect(yield* remove(ide)).toBe(true)
+    expect(yield* exist(ide.dir)).toBe(false)
+    expect(yield* exist(release.dir)).toBe(true)
+    expect(yield* exist(release.worktree)).toBe(true)
+  }),
+)
+
 it.effect("leaves unrelated project entries untouched", () =>
   Effect.gen(function* () {
     const { path: base } = yield* tmpdirScoped()
