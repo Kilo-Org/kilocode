@@ -8,9 +8,11 @@
 import type { AgentInfo, CommandInfo, ModelInfo, ProviderInfo } from "@opencode/client"
 import { createEffect, createMemo, on, onCleanup, type Accessor } from "solid-js"
 import type { AgentManagerSendInitialMessage } from "../src/types/messages/agent-manager"
+import { readableMessage } from "../src/v2/error"
 import { sessionMissing, type V2 } from "../src/v2/scope"
 import type { VSCodeContext } from "./v2/bridge"
 import type { AppDirectories } from "./app-directories"
+import { reportFailure, type FailureToastDeps } from "./failure-toast"
 import { createPanelData } from "./v2/panel-data"
 import { createSessions } from "./v2/sessions"
 import { dispatchInitialPrompt, initialModel } from "./initial-message"
@@ -122,26 +124,30 @@ export function createAppSession(opts: {
       if (!lifetime.signal.aborted && !retained().some((dir) => panel.find(dir) === target)) panel.release(target.directory)
     }
   }
-  const sendInitial = async (ev: AgentManagerSendInitialMessage, t: (key: string) => string) => {
+  const sendInitial = async (ev: AgentManagerSendInitialMessage, feedback: FailureToastDeps) => {
     const directory = ev.worktreeId
       ? opts.directories.worktreePathIn(ev.projectId, ev.worktreeId)
       : ev.projectId
         ? opts.directories.root(ev.projectId)
         : undefined
-    const lookup = ev.worktreeId && !directory && (ev.text || ev.command) && initialModel(ev)
-    const signal = lookup ? AbortSignal.any([lifetime.signal, AbortSignal.timeout(30_000)]) : lifetime.signal
-    const store = storeFor(directory ?? opts.directories.directoryOf(ev.sessionId))
-    try {
-      if (lookup) return await sendRecovered(ev, signal)
-      if (store) await dispatchInitialPrompt(store, ev, signal)
-    } catch (error) {
-      if (lifetime.signal.aborted) return
-      if (signal.aborted || (error instanceof DOMException && error.name === "TimeoutError")) {
-        store?.report(t("error.failure.timeout"))
-        return
-      }
-      store?.report(lookup && sessionMissing(error) ? t("agentManager.project.missing") : error)
+    if (ev.worktreeId && !directory && (ev.text || ev.command) && initialModel(ev)) {
+      const signal = AbortSignal.any([lifetime.signal, AbortSignal.timeout(30_000)])
+      return sendRecovered(ev, signal).catch((error: unknown) => {
+        if (lifetime.signal.aborted) return
+        const message =
+          signal.aborted || timedOut(error)
+            ? feedback.t("error.failure.timeout")
+            : sessionMissing(error)
+              ? feedback.t("agentManager.project.missing")
+              : readableMessage(error, feedback.t)
+        reportFailure({ type: "error", message }, feedback)
+      })
     }
+    const store = storeFor(directory ?? opts.directories.directoryOf(ev.sessionId))
+    if (!store) return
+    await dispatchInitialPrompt(store, ev, lifetime.signal).catch((error: unknown) => {
+      if (!lifetime.signal.aborted) store.report(timedOut(error) ? feedback.t("error.failure.timeout") : error)
+    })
   }
 
   return {
@@ -156,4 +162,8 @@ export function createAppSession(opts: {
     switchModel,
     sendInitial,
   }
+}
+
+function timedOut(error: unknown) {
+  return error instanceof DOMException && error.name === "TimeoutError"
 }

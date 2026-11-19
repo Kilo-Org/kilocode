@@ -279,15 +279,24 @@ describe("createAppSession.sendInitial", () => {
     text: "Fix it",
   }
   const translate = (key: string) => `translated: ${key}`
+  const errorToast = (key: string) => ({
+    variant: "error",
+    title: translate("agentManager.error.title"),
+    description: translate(key),
+  })
   const unmapped = { ...initial, worktreeId: "not-indexed", variant: "high" }
   const target = `/api/session/${initial.sessionId}`
 
-  function openPanel(pause: "model" | "lookup" | "publication" = "model") {
+  function openPanel(
+    pause: "model" | "lookup" | "publication" = "model",
+    directories = pause === "model" ? [ROOT, WORKTREE] : [ROOT],
+  ) {
     const requested = Promise.withResolvers<void>()
     const late = Promise.withResolvers<void>()
-    const directories = pause === "model" ? [ROOT, WORKTREE] : [ROOT]
+    const root = () => directories[0]
     const [retained, setRetained] = createSignal(directories)
     const mutations: [string, unknown][] = []
+    const toasts: unknown[] = []
     let published = false
     sessions.set(initial.sessionId, WORKTREE)
     const relay = panelRelay({ url: server.url.href, authorization: "Basic fixture" }, async (request) => {
@@ -297,6 +306,7 @@ describe("createAppSession.sendInitial", () => {
         mutations.push([url.pathname, body])
         return url.pathname.endsWith("/prompt") ? json({ data: { id: body.id } }) : new Response(null, { status: 204 })
       }
+      if (url.pathname === "/api/session/ses_unavailable") return json({}, 503)
       if (pause === "lookup" && url.pathname === target) {
         const response = await fetch(request)
         requested.resolve()
@@ -315,17 +325,17 @@ describe("createAppSession.sendInitial", () => {
     return createRoot((dispose) => ({
       app: createAppSession({
         vscode: relay.vscode,
-        rootDirectory: () => ROOT,
+        rootDirectory: root,
         commandProject: () => undefined,
         directories: {
-          root: () => ROOT,
+          root,
           worktreePath: () => undefined,
           worktreePathIn: (project, id) => (project === "project" && id === "one" ? WORKTREE : undefined),
           sessionDirectories: () => directories,
-          visibleDirectories: () => [ROOT],
+          visibleDirectories: () => directories.slice(0, 1),
           retained,
           missingDirectories: () => [],
-          directoryOf: () => ROOT,
+          directoryOf: root,
         },
       }),
       requested: requested.promise,
@@ -336,6 +346,8 @@ describe("createAppSession.sendInitial", () => {
         emit({ id: "evt_publish", type: "model.updated", created: 1, location: { directory: WORKTREE }, data: {} })
       },
       mutations,
+      toasts,
+      feedback: { t: translate, toast: (value: unknown) => toasts.push(value), project: "other-project" },
       dispose,
       [Symbol.dispose]() {
         late.resolve()
@@ -357,7 +369,7 @@ describe("createAppSession.sendInitial", () => {
     expect(panel.app.panel.find(WORKTREE)).toBeUndefined()
 
     const ev = kind === "command" ? { ...unmapped, text: undefined, command: "goal", arguments: "ship it" } : unmapped
-    const pending = panel.app.sendInitial(ev, translate)
+    const pending = panel.app.sendInitial(ev, panel.feedback)
     await Promise.race([panel.requested, pending])
     expect(root.failure()?.message).not.toBe(translate("agentManager.project.missing"))
     const worktree = panel.app.panel.find(WORKTREE)!
@@ -379,41 +391,64 @@ describe("createAppSession.sendInitial", () => {
         kind === "command" ? { name: "goal", text: "ship it" } : { id: expect.any(String), text: initial.text },
       ],
     ])
+    expect(panel.toasts).toEqual([])
   })
 
-  test("reports a missing worktree instead of sending through the warm fallback store", async () => {
-    using panel = openPanel()
+  test("notifies once for a missing session even without a root store", async () => {
+    using panel = openPanel("publication", [])
+    expect(panel.app.rootStore()).toBeUndefined()
+    await panel.app.sendInitial({ ...unmapped, sessionId: "ses_missing" }, panel.feedback)
+    expect(panel.toasts).toEqual([errorToast("agentManager.project.missing")])
+    expect(panel.app.panel.directories()).toEqual([])
+    expect(panel.mutations).toEqual([])
+  })
+
+  test("reports a failed lookup instead of sending through the warm fallback store", async () => {
+    using panel = openPanel("publication")
     const root = panel.app.rootStore()!
     await root.data.location.model.sync()
     expect(panel.app.models().find((row) => row.enabled && row.providerID === model.providerID)?.id).toBe(model.id)
-
-    await panel.app.sendInitial({ ...initial, worktreeId: "missing", sessionId: "ses_missing" }, translate)
-    expect(root.failure()?.message).toBe(translate("agentManager.project.missing"))
+    await panel.app.sendInitial({ ...unmapped, sessionId: "ses_unavailable" }, panel.feedback)
+    expect(panel.toasts).toEqual([errorToast("error.failure.trouble")])
+    expect(root.failure()?.key).not.toBe("error.failure.trouble")
     expect(panel.mutations).toEqual([])
   })
 
-  test.each(["timeout", "disposal"])("ignores a late session lookup after %s", async (reason) => {
-    using panel = openPanel("lookup")
-    const root = panel.app.rootStore()!
-    if (reason === "timeout") jest.useFakeTimers()
-    const pending = panel.app.sendInitial(unmapped, translate)
-    await Promise.race([panel.requested, pending])
-    if (reason === "timeout") jest.advanceTimersByTime(30_000)
-    else panel.dispose()
-    await pending
-    panel.release()
-    await setImmediate()
-    if (reason === "timeout") expect(root.failure()?.message).toBe(translate("error.failure.timeout"))
-    else expect(root.failure()?.message).not.toBe(translate("agentManager.project.missing"))
-    expect(panel.app.panel.find(WORKTREE)).toBeUndefined()
-    expect(panel.mutations).toEqual([])
+  describe.each(["lookup", "publication"] as const)("recovery waiting for %s", (pause) => {
+    test.each(["timeout", "disposal"])("does not switch or send after %s", async (reason) => {
+      using panel = openPanel(pause)
+      const root = panel.app.rootStore()!
+      await when("panel connection", () => panel.app.panel.connection.status() === "connected")
+      if (reason === "timeout") jest.useFakeTimers()
+      const pending = panel.app.sendInitial(unmapped, panel.feedback)
+      await Promise.race([panel.requested, pending])
+      const worktree = panel.app.panel.find(WORKTREE)
+      if (pause === "publication") {
+        await worktree?.data.location.model.sync()
+        expect(worktree?.data.location.model.list()).toEqual([])
+      } else expect(worktree).toBeUndefined()
+      expect(panel.mutations).toEqual([])
+      expect(panel.toasts).toEqual([])
+
+      if (reason === "timeout") jest.advanceTimersByTime(30_000)
+      else panel.dispose()
+      await pending
+      panel.release()
+      panel.publish()
+      await setImmediate()
+      expect(panel.app.panel.find(WORKTREE)).toBeUndefined()
+      expect(panel.toasts).toEqual(reason === "timeout" ? [errorToast("error.failure.timeout")] : [])
+      expect(root.failure()?.message).not.toBe(translate("error.failure.timeout"))
+      expect(worktree?.failure()).toBeUndefined()
+      expect(panel.mutations).toEqual([])
+    })
   })
 
   test.each(["timeout", "disposal"])("does not switch or send after a worktree model wait ends by %s", async (reason) => {
     using panel = openPanel()
     const store = panel.app.panel.store(WORKTREE)
     if (reason === "timeout") jest.useFakeTimers()
-    const pending = panel.app.sendInitial(initial, translate)
+    const pending = panel.app.sendInitial(initial, panel.feedback)
     await panel.requested
     if (reason === "timeout") jest.advanceTimersByTime(30_000)
     else panel.dispose()
@@ -423,6 +458,7 @@ describe("createAppSession.sendInitial", () => {
     await setImmediate() // Deliver the late model reply before checking for a report or session mutation.
     if (reason === "timeout") expect(store.failure()?.message).toBe(translate("error.failure.timeout"))
     else expect(store.failure()).toBeUndefined()
+    expect(panel.toasts).toEqual([])
     expect(panel.mutations).toEqual([])
   })
 })

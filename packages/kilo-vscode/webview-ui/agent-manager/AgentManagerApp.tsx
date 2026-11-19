@@ -2171,7 +2171,7 @@ const AgentManagerContent: Component = () => {
       }
       if (message.type === "agentManager.sendInitialMessage") {
         applySendInitial(message, {
-          sendInitial: (ev) => appSession.sendInitial(ev, t),
+          sendInitial: (ev) => appSession.sendInitial(ev, { t, toast: showToast, project: currentProjectId() }),
           clearBusy: (projectId, worktreeId) => {
             const store = projectId ? registry.ensure(projectId) : registry.active()
             store.setBusy((prev) => {
