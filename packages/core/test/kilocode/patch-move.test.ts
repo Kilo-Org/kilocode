@@ -90,7 +90,8 @@ describe("patch tool move", () => {
             )
             expect(settled.status).toBe("completed")
             if (settled.status !== "completed") return
-            expect(settled.output.files).toMatchObject([
+            // Upstream moved the per-file diffs from the tool output to its metadata.
+            expect(settled.metadata?.files).toMatchObject([
               { file: "renamed/dir/name.txt", status: "modified", moved: true },
             ])
           }),
@@ -113,7 +114,7 @@ describe("patch tool move", () => {
             )
             expect(settled.status).toBe("completed")
             if (settled.status !== "completed") return
-            expect(settled.output.files[0].moved).toBeUndefined()
+            expect(settled.metadata?.files?.[0].moved).toBeUndefined()
           }),
         ),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
@@ -136,7 +137,7 @@ describe("patch tool move", () => {
             )
             expect(settled.status).toBe("completed")
             if (settled.status !== "completed") return
-            expect(settled.output.files[0].moved).toBeUndefined()
+            expect(settled.metadata?.files?.[0].moved).toBeUndefined()
           }),
         ),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),

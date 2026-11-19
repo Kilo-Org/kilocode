@@ -29,7 +29,6 @@
     "kilocode.agent-manager": 10,
     "kilocode.background-jobs": 10,
     "kilocode.session-drain": 10,
-    "kilocode.subagent-background": 10,
     "kilocode.recall": 10,
     "kilocode.indexing": 30,
     "kilocode.pages": 10,
@@ -52,5 +51,5 @@
     "kilocode.soul": 10
   },
   "overhead": 75,
-  "modules": 140
+  "modules": 180
 }

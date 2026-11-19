@@ -100,7 +100,6 @@ export const Plugin = define({
                     description: command.description ?? name,
                   }
                   yield* subagents.start(recovery)
-                  yield* subagents.background(recovery)
                   return
                 }
                 // kilocode_change start - workflow-model seam: admit the selection with the prompt instead of switching the running session

@@ -15,6 +15,7 @@ import { info, success, warn, debug } from "../utils/logger"
 import { getCurrentVersion } from "./preserve-versions"
 import { oursHasKilocodeChanges } from "../utils/git"
 import { defaultConfig } from "../utils/config"
+import { matches } from "../utils/match"
 
 /**
  * Extract clean version string from a version specifier
@@ -185,6 +186,25 @@ export function preserveWorkspacePackages(
   workspaces.packages = ourPackages
   pkg.workspaces = workspaces
   changes.push("workspaces.packages: preserved Kilo's workspace configuration")
+}
+
+/**
+ * Drop workspace globs for product areas Kilo does not ship. Upstream adds a workspace for a
+ * hosted or desktop package that `skipFiles` removes, so the glob would point at nothing.
+ */
+export function pruneSkippedWorkspaces(
+  pkg: Record<string, unknown>,
+  relativePath: string,
+  changes: string[],
+): void {
+  if (relativePath !== "package.json") return
+  const packages = (pkg.workspaces as { packages?: string[] } | undefined)?.packages
+  if (!packages) return
+  const kept = packages.filter((entry) => !defaultConfig.skipFiles.some((pattern) => matches(entry, [pattern])))
+  if (kept.length === packages.length) return
+  for (const entry of packages.filter((item) => !kept.includes(item)))
+    changes.push(`workspaces.packages: removed ${entry} (Kilo does not ship it)`)
+  ;(pkg.workspaces as { packages?: string[] }).packages = kept
 }
 
 export function assertBunPackageManager(current: unknown, base: unknown, upstream: unknown): void {
@@ -676,6 +696,7 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
       }
 
       fixCatalog(pkg, relativePath, changes)
+      pruneSkippedWorkspaces(pkg, relativePath, changes)
       fixTrustedDependencies(pkg, relativePath, changes)
     }
 

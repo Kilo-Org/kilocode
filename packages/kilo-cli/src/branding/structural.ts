@@ -72,6 +72,7 @@ const logic: Record<string, ReadonlyArray<readonly [string, string, number]>> = 
     ["opencode_list_mcp_resources", "kilo_list_mcp_resources", 1],
     ["opencode_read_mcp_resource", "kilo_read_mcp_resource", 1],
   ],
+  "core/src/tool/plugin/mcp-events.ts": [['namespace: "opencode"', 'namespace: "kilo"', 1]],
   // Code Mode paths of the tools a schedule check may not call.
   "core/src/schedule/check.ts": [['"opencode.', '"kilo.', 8]],
   // The schedule command prompt names the namespace in prose, which the command rule would turn into `kilo2`.

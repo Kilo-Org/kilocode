@@ -33,14 +33,6 @@ export function document(config: McpHost.OAuthConfig | undefined): string | unde
 }
 
 /**
- * The redirect a non-interactive registration must record. Only the hosted document's loopback is fixed, so only
- * that attempt pins it; everything else keeps upstream's placeholder and relies on a login-time registration.
- */
-export function redirectUrl(config: McpHost.OAuthConfig | undefined): string | undefined {
-  return document(config) ? callbackUrl : undefined
-}
-
-/**
  * The loopback the attempt must listen on, or undefined to keep the caller's own default chain. A configured
  * `redirect_uri` owns the port and path and wins over `callback_port`, as it did in v1. The fixed port is only
  * bound for the hosted document; anything else keeps an ephemeral port so parallel or repeated logins do not
@@ -63,6 +55,5 @@ export const oauth: McpHost.OAuth = {
   uri: "https://kilo.ai",
   document,
   callback,
-  redirectUrl,
   binding,
 }

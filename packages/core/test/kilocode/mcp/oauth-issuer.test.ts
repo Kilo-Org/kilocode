@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test"
-import { auth } from "@modelcontextprotocol/client"
 import { ConfigMCP } from "@opencode/schema/config/mcp"
 import { Credential } from "@opencode/core/credential"
 import { Integration } from "@opencode/core/integration"
@@ -18,7 +17,16 @@ const memoryCredentials = (initial: Credential.Info[] = []) => {
   const rows = new Map(initial.map((row) => [row.id, row]))
   const unused = () => Effect.die("unused credential method")
   const service = Credential.Service.of({
-    refresh: unused,
+    // The stored-row rules of Credential.refresh, without the cross-process lock.
+    refresh: (id, input) =>
+      Effect.gen(function* () {
+        const row = rows.get(id)
+        if (row?.value.type !== "oauth") return undefined
+        if (!input.stale(row.value, Date.now())) return row.value
+        const value = yield* input.refresh(row.value)
+        rows.set(id, new Credential.Info({ ...row, value }))
+        return value
+      }),
     all: unused,
     create: unused,
     activate: unused,
@@ -131,11 +139,19 @@ const connect = (
 ) =>
   Effect.runPromise(
     McpOAuth.connectProvider({
+      server: "test",
       config: new ConfigMCP.Remote({ type: "remote", url, ...(oauth ? { oauth } : {}) }),
       credential: Array.from(store.rows.values()).at(-1),
       clientMetadata,
     }).pipe(Effect.provideService(Credential.Service, store.service)),
   )
+
+// The transport calls this after a 401; the provider refreshes under the credential lock.
+const unauthorized = (url: string) => ({
+  response: new Response(null, { status: 401 }),
+  serverUrl: new URL(url),
+  fetchFn: fetch,
+})
 
 const cases: { name: string; oauth?: ConfigMCP.OAuth; secret?: string }[] = [
   { name: "dynamically registered client" },
@@ -228,7 +244,8 @@ describe("MCP OAuth issuer binding", () => {
 
         // Later sessions refresh against the server that issued the current tokens.
         const provider = await connect(mcp.url, item.oauth, store)
-        expect(await auth(provider, { serverUrl: mcp.url })).toBe("AUTHORIZED")
+        expect(await provider.token()).toBe("access")
+        await provider.onUnauthorized?.(unauthorized(mcp.url))
 
         const tokens = second.requests.filter((request) => request.path === "/token")
         expect(tokens.map((request) => new URLSearchParams(request.body).get("grant_type"))).toEqual([
@@ -253,27 +270,28 @@ describe("MCP OAuth issuer binding", () => {
       }
     })
 
-  test("a silent connect registers at the new issuer without presenting the configured secret", async () => {
+  test("a moved issuer does not send the stored credential to the new authorization server", async () => {
     const first = server()
     const second = server()
     const mcp = resource(first.url)
     const oauth = new ConfigMCP.OAuth({ client_id: "static", client_secret: "configured-secret" })
     const store = memoryCredentials()
     try {
-      await login({ url: mcp.url, oauth, store })
       persist(store, (await login({ url: mcp.url, oauth, store })).credential)
       mcp.state.issuer = second.url
 
+      // A refresh keeps using the issuer saved with the credential, so nothing reaches the moved server.
       const provider = await connect(mcp.url, oauth, store)
-      const error = await auth(provider, { serverUrl: mcp.url }).catch((cause: unknown) => cause)
-      // The silent provider registers and stores the new client, then needs the user for the redirect.
-      expect(String(error)).toContain("requires user authorization")
-      expect(second.requests.filter((request) => request.path === "/register")).toHaveLength(1)
+      expect(await provider.token()).toBe("access")
+      await provider.onUnauthorized?.(unauthorized(second.url))
+      expect(second.requests).toHaveLength(0)
+      expect(
+        first.requests
+          .filter((request) => request.path === "/token")
+          .map((request) => new URLSearchParams(request.body).get("grant_type")),
+      ).toEqual(["authorization_code", "refresh_token"])
+      // The refresh keeps the client and issuer the credential stored, so the moved server sees nothing.
       expect(second.requests.some((request) => request.body.includes("configured-secret"))).toBe(false)
-      expect(Array.from(store.rows.values()).at(-1)?.value.metadata?.client).toMatchObject({
-        client_id: `registered-${new URL(second.url).port}`,
-        issuer: second.url,
-      })
     } finally {
       first.http.stop(true)
       second.http.stop(true)
@@ -318,30 +336,26 @@ describe("MCP OAuth issuer binding", () => {
     }
   })
 
-  test("a silent registration records the loopback the interactive login will use", async () => {
+  test("an interactive registration records the loopback the hosted document lists", async () => {
     const first = server()
-    const second = server()
     const mcp = resource(first.url)
     const store = memoryCredentials()
     try {
       persist(store, (await login({ url: mcp.url, store, clientMetadata: McpClientMetadata.oauth })).credential)
-      // The MCP server moves to a second authorization server; a silent connect registers there.
-      mcp.state.issuer = second.url
-      const provider = await connect(mcp.url, undefined, store, McpClientMetadata.oauth)
-      await auth(provider, { serverUrl: mcp.url }).catch(() => undefined)
-
-      const registration = second.requests.find((request) => request.path === "/register")
+      const registration = first.requests.find((request) => request.path === "/register")
       expect(registration).toBeDefined()
-      // The registration must list the same loopback the interactive login requests, not upstream's placeholder.
-      expect(JSON.parse(registration?.body ?? "{}").redirect_uris).toEqual([McpClientMetadata.callbackUrl])
+      // The registration lists the loopback the interactive login requests, not upstream's placeholder.
+      expect(JSON.parse(registration?.body ?? "{}").redirect_uris).toEqual([
+        McpClientMetadata.callbackUrl,
+        McpClientMetadata.callbackUrl.replace("127.0.0.1", "localhost"),
+      ])
 
       const again = await login({ url: mcp.url, store, clientMetadata: McpClientMetadata.oauth })
-      expect(again.url.searchParams.get("client_id")).toBe(`registered-${new URL(second.url).port}`)
+      expect(again.url.searchParams.get("client_id")).toBe(`registered-${new URL(first.url).port}`)
       expect(again.url.searchParams.get("redirect_uri")).toBe(McpClientMetadata.callbackUrl)
-      expect(second.requests.filter((request) => request.path === "/register")).toHaveLength(1)
+      expect(first.requests.filter((request) => request.path === "/register")).toHaveLength(1)
     } finally {
       first.http.stop(true)
-      second.http.stop(true)
       mcp.http.stop(true)
     }
   })
