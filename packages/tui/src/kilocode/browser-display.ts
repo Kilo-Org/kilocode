@@ -12,19 +12,18 @@ const Field = Schema.StructWithRest(
   Schema.Struct({ type: Schema.optional(Schema.String), value: Schema.optional(Schema.Unknown) }),
   [Schema.Record(Schema.String, Schema.Unknown)],
 )
-const decodeType = Schema.decodeUnknownOption(Schema.Struct({ text: Schema.String }))
 const decodeFill = Schema.decodeUnknownOption(Schema.Struct({ fields: Schema.Array(Field) }))
 
 /**
  * The input as a row shows it. `tool` is the tool's own name (`browser_type`) or its Code Mode path (`browser.type`);
- * every other tool's input is returned as is.
+ * every other tool's input is returned as is. Input of an unexpected shape is masked whole, never shown raw.
  */
 export function browserDisplayInput(tool: string, input: Record<string, unknown>): Record<string, unknown> {
   const name = tool.replace(/^browser\./, "browser_")
-  if (name === "browser_type") return Option.isSome(decodeType(input)) ? { ...input, text: MASK } : input
-  if (name !== "browser_fill_form") return input
+  if (name === "browser_type") return "text" in input ? { ...input, text: MASK } : input
+  if (name !== "browser_fill_form" || !("fields" in input)) return input
   const parsed = decodeFill(input)
-  if (Option.isNone(parsed)) return input
+  if (Option.isNone(parsed)) return { ...input, fields: MASK }
   return {
     ...input,
     fields: parsed.value.fields.map((field) =>

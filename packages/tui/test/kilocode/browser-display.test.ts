@@ -38,6 +38,29 @@ describe("browser tool rows", () => {
     ])
   })
 
+  test("browser_fill_form hides every value when a field is not an object", () => {
+    const input = browserDisplayInput("browser_fill_form", {
+      fields: ["stray", { name: "Password", type: "textbox", target: "e1", value: password }],
+    })
+    expect(JSON.stringify(input)).not.toContain(password)
+    expect(primitiveInputSummary(input)).not.toContain(password)
+  })
+
+  test("browser_fill_form hides fields that are not an array", () => {
+    const input = browserDisplayInput("browser.fill_form", { fields: { Password: password } })
+    expect(JSON.stringify(input)).not.toContain(password)
+    expect(primitiveInputSummary(input)).not.toContain(password)
+  })
+
+  test("browser_type masks text that is not a string", () => {
+    for (const text of [1234567, { value: password }]) {
+      const input = browserDisplayInput("browser_type", { target: "e2", text })
+      expect(JSON.stringify(input)).not.toContain(password)
+      expect(JSON.stringify(input)).not.toContain("1234567")
+      expect(primitiveInputSummary(input)).toBe("[target=e2, text=•••]")
+    }
+  })
+
   test("every other tool's input is unchanged", () => {
     const navigate = { url: "https://example.com" }
     expect(browserDisplayInput("browser.navigate", navigate)).toBe(navigate)
