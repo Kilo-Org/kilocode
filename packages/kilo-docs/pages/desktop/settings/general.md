@@ -15,7 +15,10 @@ The **About** section shows the app's version and manages updates:
 - **Support** — information to include when you contact support:
   - **Application logs** — shows the path to the app's log file. Select **Show in Finder** (macOS), **Show in File Explorer** (Windows), or **Show in File Manager** (Linux) to find it.
   - **Kilo config** — shows the path to your global Kilo config file (for example `~/.config/kilo/kilo.json`), with the same button. If you haven't created one, it reads *No global config file has been created yet.*
-- **Legal** — select **View** next to **Third-party notices** to read the licenses of the third-party software Kilo Desktop includes. Next to **Chromium**, select **Show in Finder** (macOS), **Show in File Explorer** (Windows), or **Show in File Manager** (Linux) to find Chromium's notices.
+- **Legal**:
+  - **Third-party notices** — select **View** to read the licenses of the third-party software Kilo Desktop includes.
+  - **Terms of service** — select **View** to open Kilo's [terms of service](https://kilo.ai/terms) in your browser.
+  - **Chromium** — select **Show in Finder** (macOS), **Show in File Explorer** (Windows), or **Show in File Manager** (Linux) to find Chromium's notices.
 
 When an update is ready, select **Restart to update**, then **Install and restart**, to relaunch and apply it. The sidebar also shows **Restart to update** (on Linux, **Update available**, which opens **About**). When release notes are available, the **About** section also shows a **What's changed** section for the update; notes from earlier versions are labeled with their version. See [Updates](/docs/desktop/installation#updates).
 

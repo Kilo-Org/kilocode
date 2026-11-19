@@ -141,7 +141,8 @@ class KiloWorktreeRpcApiImpl(
 
     /** Shared across every polling path in this service; see [parallel]. */
     private val budget = Semaphore(PROCESS_BUDGET)
-    private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
+    private data class PrSnapshot(val excluded: Set<String>, val result: WorktreePrListDto)
+    private val prs = ConcurrentHashMap<String, Timed<PrSnapshot>>()
     private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
     private val resolver = PrResolver(gh = { dir, args, ms -> runGh(dir, args, ms) }, git = ::runGit)
     private val ghLock = Any()
@@ -478,15 +479,27 @@ class KiloWorktreeRpcApiImpl(
         probeGh(Path.of(directory).normalize(), "rpc", github, maxAge)
     }
 
-    override suspend fun prStatus(directory: String, maxAge: Long?, fresh: List<String>): WorktreePrListDto = withContext(Dispatchers.IO) {
+    override suspend fun prStatus(
+        directory: String,
+        maxAge: Long?,
+        fresh: List<String>,
+        excluded: List<String>,
+    ): WorktreePrListDto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        val named = prPaths(fresh)
+        val hidden = prPaths(excluded)
+        val named = prPaths(fresh) - hidden
         // A caller naming paths knows something about them this cache cannot: it was written before
         // whatever prompted the call. Only the shared list is refused, though — every path it did
         // not name still answers from the resolver's own caches below, which is what makes this
         // cheaper than the `maxAge = 0` it replaces.
         if (named.isEmpty()) {
-            prs[directory]?.takeIf { usable(it.time, now, prTtl(it.value.availability), maxAge) }?.let { return@withContext it.value }
+            prs[directory]?.takeIf {
+                it.value.excluded == hidden && usable(it.time, now, prTtl(it.value.result.availability), maxAge)
+            }?.let { return@withContext it.value.result }
+        }
+        fun cache(dto: WorktreePrListDto): WorktreePrListDto {
+            prs[directory] = Timed(System.currentTimeMillis(), PrSnapshot(hidden, dto))
+            return dto
         }
         val root = Path.of(directory).normalize()
         // A gone directory reports nothing and is not cached, so a real availability problem found
@@ -498,13 +511,13 @@ class KiloWorktreeRpcApiImpl(
         // A caller that rejected the cached PR list would not accept a cached availability verdict
         // from the same moment either, so the ceiling carries into the gh probe.
         val available = ghAvailable(root, maxAge = maxAge)
-        if (available != GhAvailability.OK) return@withContext WorktreePrListDto(available).also { prs[directory] = Timed(now, it) }
+        if (available != GhAvailability.OK) return@withContext cache(WorktreePrListDto(available))
         // Sync the worktree list before the per-worktree lookups so a worktree that was added and
         // then deleted on disk is pruned instead of resolved from a directory that no longer exists.
         // sync() (via live()) already drops anything mid-removal, so prTargets never fans `gh` out
         // into a directory this process is in the middle of deleting.
-        val all = sync(root) ?: return@withContext WorktreePrListDto().also { prs[directory] = Timed(now, it) }
-        val items = prTargets(all)
+        val all = sync(root) ?: return@withContext cache(WorktreePrListDto())
+        val items = prTargets(all, hidden)
         val base = baseBranch(all)
         var status = GhAvailability.OK
         val data = parallel(items) { item ->
@@ -519,9 +532,7 @@ class KiloWorktreeRpcApiImpl(
             if (lookup.availability != GhAvailability.OK) status = lookup.availability
             lookup.pr
         }.filterNotNull()
-        val dto = WorktreePrListDto(status, if (status == GhAvailability.OK) data else emptyList())
-        prs[directory] = Timed(System.currentTimeMillis(), dto)
-        dto
+        cache(WorktreePrListDto(status, if (status == GhAvailability.OK) data else emptyList()))
     }
 
     override suspend fun branchStatus(directory: String, github: Boolean, maxAge: Long?): BranchStatusDto = withContext(Dispatchers.IO) {
@@ -1975,16 +1986,15 @@ internal fun staleWorktrees(items: List<WorktreeDto>, trash: WorktreeTrash? = nu
  * just like a linked worktree — while detached heads have no branch to resolve and prunable entries
  * have no checkout left.
  */
-internal fun prTargets(items: List<WorktreeDto>): List<WorktreeDto> {
-    return items.filter { !it.prunable && it.branch != "(detached)" }
+internal fun prTargets(items: List<WorktreeDto>, excluded: Set<String> = emptySet()): List<WorktreeDto> {
+    return items.filter {
+        !it.prunable && it.branch != "(detached)" && Path.of(it.path).normalize().toString() !in excluded
+    }
 }
 
-/**
- * The paths a `prStatus` caller named as no longer covered by any cache, in the shape the worktree
- * list reports them, so a trailing separator or a `..` segment on the way in still matches a row.
- */
-internal fun prPaths(fresh: List<String>): Set<String> =
-    fresh.mapTo(HashSet()) { Path.of(it).normalize().toString() }
+/** Normalizes caller-supplied worktree paths to match the paths reported by git. */
+internal fun prPaths(paths: List<String>): Set<String> =
+    paths.mapTo(HashSet()) { Path.of(it).normalize().toString() }
 
 /**
  * The freshness ceiling one worktree's lookup runs under: nothing cached at all for a path the

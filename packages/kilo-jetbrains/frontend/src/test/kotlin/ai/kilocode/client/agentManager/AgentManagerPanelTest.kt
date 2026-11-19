@@ -477,7 +477,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test move submenu follows section order and colors and reveals the selected local row`() {
+    fun `test move submenu follows section order and colors and leaves the destination collapsed`() {
         val item = worktree("aardvark")
         rpc.listed += listOf(main(), item)
         val sections = edt {
@@ -530,9 +530,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             view.collapsePath(TreePath(destination.path))
             actions.first().actionPerformed(event)
             assertSame(destination, view.hierarchy.entries.getValue(item.id).parent)
-            assertEquals(item.id, view.selected()?.key)
+            assertEquals(destination.key, view.selected()?.key)
             assertEquals(destination.key, panel.section())
-            assertTrue(view.isVisible(TreePath(view.hierarchy.entries.getValue(item.id).path)))
+            assertFalse(view.isVisible(TreePath(view.hierarchy.entries.getValue(item.id).path)))
             val current = AnActionEvent.createFromAnAction(actions.first(), null, ActionPlaces.POPUP, event.dataContext)
             actions.first().update(current)
             assertFalse(current.presentation.isEnabled)
@@ -1033,6 +1033,69 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         pump()
 
         assertEquals(second.id, edt { (selectedValue(list) as ActiveItem).key })
+    }
+
+    fun `test PR polls skip collapsed worktrees unless an editor is visible`() {
+        val item = worktree("hidden")
+        rpc.listed += listOf(main(), item)
+        rpc.prResult = prs(item)
+        val section = edt {
+            val layout = AgentManagerLayout(PropertiesComponent.getInstance(project))
+            layout.create("Planning").also { layout.move(item.id, it.key) }
+        }
+        val timers = TestUiTimers()
+        val status = WorktreeStatusService(project, coroutines.scope, timers)
+        project.replaceService(WorktreeStatusService::class.java, status, testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        val view = tree(panel)
+        val path = edt { TreePath(view.hierarchy.entries.getValue(section.key).path) }
+        val file = myFixture.addFileToProject("src/Worktree.kt", "fun worktree() = Unit").virtualFile
+        val other = myFixture.addFileToProject("src/Other.kt", "fun other() = Unit").virtualFile
+        val editors = FileEditorManager.getInstance(project)
+        edt {
+            project.service<WorktreeEditorMatchers>().register { if (it == file) item.path else null }
+            view.collapsePath(path)
+        }
+        assertEquals(listOf(emptyList<String>()), rpc.prExcluded.toList())
+        assertEquals(rpc.prResult.items.single(), status.pr.value[item.path])
+
+        rpc.prResult = WorktreePrListDto()
+        rpc.listed[1] = item.copy(name = "Renamed")
+        edt { controller.reload() }
+        flush()
+        edt { assertFalse(view.isExpanded(path)) }
+        timers.advanceBy(120_000)
+        flush()
+        assertEquals(listOf(item.path), rpc.prExcluded.last())
+        assertEquals(7, status.pr.value[item.path]?.number)
+
+        edt { editors.openFile(file, true) }
+        pump()
+        edt {
+            assertFalse(view.isExpanded(path))
+            assertEquals(section.key, selectedValue(view)?.key)
+        }
+        timers.advanceBy(120_000)
+        flush()
+        assertEmpty(rpc.prExcluded.last())
+        assertNull(status.pr.value[item.path])
+
+        edt { editors.openFile(other, true) }
+        pump()
+        timers.advanceBy(120_000)
+        flush()
+        assertEquals(listOf(item.path), rpc.prExcluded.last())
+
+        val before = rpc.prCalls.size
+        edt { view.expandPath(path) }
+        timers.advanceBy(30_000)
+        flush()
+        assertEquals(before + 1, rpc.prCalls.size)
+        assertEmpty(rpc.prExcluded.last())
     }
 
     fun `test selecting non worktree editor tab clears worktree row selection`() {
