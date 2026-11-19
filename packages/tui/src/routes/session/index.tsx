@@ -143,6 +143,7 @@ import {
   browserDisplayInput,
   browserDisplayText,
   ROW_INPUT_OMIT,
+  ROW_PROGRAM_TOOL,
 } from "../../kilocode/browser-display"
 // kilocode_change end
 export { InlineToolRow } from "./message-parts"
@@ -1906,6 +1907,8 @@ function TurnTokenToolCalls(props: { tools: SessionMessageAssistantTool[] }) {
 
 // kilocode_change start - browser: exported for its mask test, and typed text is masked
 export function turnTokenToolSummary(tool: SessionMessageAssistantTool) {
+  // Code Mode's whole input is the program, which can type text inline: the row shows its name only, streaming or not.
+  if (canonicalToolName(tool.name) === ROW_PROGRAM_TOOL) return ""
   if (typeof tool.state.input === "string") return browserDisplayText(tool.name, tool.state.input)
   const data = browserDisplayInput(tool.name, tool.state.input)
   // kilocode_change end
