@@ -12,11 +12,17 @@
 //   E2E_CHROMIUM        the Chromium executable (default: playwright-core's own build)
 //   E2E_HOME            the run's scratch root (default: a fresh mkdtemp); the harness creates run-<n> under it
 //   E2E_HUB_PORTS       hub ports as `<first>-<last>` (default: a free port per hub)
+//   E2E_PREFERENCES     extra profile Preferences as JSON, merged at the top level before launch
 //
 // Scenarios: download-path, navigate-snapshot, permission, frames, sensitive, group, stop, unpaired, download,
 // download-navigate, download-ungranted, download-late, download-tabs-new, download-tabs-new-notoken,
-// download-approved-one. `all` runs every scenario in its own child process (fresh E2E_HOME each, one after another)
-// and prints one summary table; it exits non-zero when any run failed.
+// download-approved-one, download-approved-one-multi. `all` runs every scenario in its own child process (fresh
+// E2E_HOME each, one after another) and prints one summary table; it exits non-zero when any run failed.
+//
+// download-approved-one runs on Chrome's default settings, where the download request limiter lets one download per
+// gesture through and holds the rest; download-approved-one-multi is the same scenario for a user who allowed the
+// site "automatic downloads" (`profile.default_content_setting_values.automatic_downloads = 1`), so both downloads
+// of one gesture reach the download manager.
 //
 // Each scenario prints one JSON report and exits non-zero when an expectation fails. Every CLI run gets a fresh home,
 // a fresh hub and a fresh loopback pairing; two CLI runs in one scenario never overlap. Every report carries the CDP
@@ -32,6 +38,7 @@ import os from "node:os"
 import path from "node:path"
 import {
   armDownloadProbe,
+  downloadItems,
   type Bridge,
   type Call,
   cdpReport,
@@ -219,7 +226,11 @@ const browserOf = () => {
   if (launched === undefined) throw new Error("the browser is not running")
   return launched
 }
-const run = (plan: Plan, settings: Settings, options: RunOptions = {}) => runAgent(bridge, plan, settings, options)
+const run = async (plan: Plan, settings: Settings, options: RunOptions = {}) => {
+  const result = await runAgent(bridge, plan, settings, options)
+  expect(result.planErrors.length === 0, `the scenario's plan threw, so the run ended early: ${result.planErrors.join("; ")}`)
+  return result
+}
 const tabs = () => tabState(browserOf().worker)
 
 function report(results: Record<string, unknown>) {
@@ -850,12 +861,16 @@ async function downloadApprovedOne() {
     if (step.results.length === 0) return { args: { url: `${localOrigin}/download-two` }, name: "browser_navigate" }
     if (step.results.length === 1) return { args: {}, name: "browser_snapshot" }
     if (step.results.length === 2 || step.results.length === 3) {
-      // The approved file is written asynchronously; let it land before the next call reads the folder.
-      if (step.results.length === 3) await until(async () => ((await downloadFiles()).length === 1 ? true : undefined), 10_000, "the approved file lands")
+      // The guarded click left the folder empty; the approved repeat follows at once.
       const ref = linkRef(step.results[1] ?? "")
       return ref ? { args: { element: "the report link", target: ref }, name: "browser_click" } : undefined
     }
-    if (step.results.length === 4) return { args: {}, name: "browser_snapshot" }
+    if (step.results.length === 4) {
+      // The approved file is written asynchronously; let it land before the folder is read for this step.
+      await until(async () => ((await downloadFiles()).length >= 1 ? true : undefined), 10_000, "the approved file lands").catch(() => undefined)
+      folder[4] = await downloadFiles()
+      return { args: {}, name: "browser_snapshot" }
+    }
     if (step.results.length === 5) {
       // A stopped download must not surface a file later either.
       await Bun.sleep(2500)
@@ -1003,6 +1018,7 @@ const scenarios: Record<string, () => Promise<Record<string, unknown>>> = {
   "download-tabs-new": downloadTabsNew,
   "download-tabs-new-notoken": downloadTabsNewNoToken,
   "download-approved-one": downloadApprovedOne,
+  "download-approved-one-multi": downloadApprovedOne,
 }
 
 function option(name: string): string | undefined {
@@ -1112,7 +1128,17 @@ const extension = promoted ? await promoteDownloadsCopy(extensionDirectory, path
 downloadsPath = path.join(base, "downloads")
 
 try {
-  launched = await launchChromium({ downloads: downloadsPath, extension, profile: path.join(base, "profile") })
+  launched = await launchChromium({
+    downloads: downloadsPath,
+    extension,
+    profile: path.join(base, "profile"),
+    preferences: {
+      ...(scenario === "download-approved-one-multi"
+        ? { profile: { default_content_setting_values: { automatic_downloads: 1 } } }
+        : {}),
+      ...(process.env.E2E_PREFERENCES ? (JSON.parse(process.env.E2E_PREFERENCES) as Record<string, unknown>) : {}),
+    },
+  })
   const ports = hubPorts(Number(process.env.E2E_HUB_PORT_OFFSET ?? "0"))
   bridge = { base, binary, browser: launched, model, ...(ports ? { ports } : {}) }
   if (scenario === "unpaired" || scenario === "download-path") {
@@ -1124,6 +1150,13 @@ try {
     expect(settings?.["enabled"] === true, `the switch did not persist: ${JSON.stringify(enabled.stored)}`)
   }
   const results = await selected()
+  // Chrome's own record of every download (state, error, final name), the ground truth next to the folder.
+  if (promoted && scenario.startsWith("download")) results["downloadItems"] = await downloadItems(launched.worker)
+  // A failed run keeps a picture of the whole virtual screen: Chrome's own prompts and bubbles are outside the page.
+  if (failures.length && process.env.DISPLAY) {
+    await Bun.spawn(["import", "-window", "root", path.join(base, "screen-final.png")], { stderr: "ignore", stdout: "ignore" }).exited.catch(() => 1)
+    results["screen"] = path.join(base, "screen-final.png")
+  }
   expect(
     launched.cdp.downloadBehavior.length === 0,
     `the harness sent a DevTools download override: ${JSON.stringify(launched.cdp.downloadBehavior)}`,

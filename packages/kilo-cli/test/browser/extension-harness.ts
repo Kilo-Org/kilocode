@@ -41,6 +41,7 @@ export const defaultExtensionDirectory =
 declare const chrome: {
   downloads: {
     onCreated: { addListener(listener: (item: Record<string, unknown>) => void): void }
+    search(query: Record<string, unknown>): Promise<unknown>
     onDeterminingFilename: {
       addListener(listener: (item: Record<string, unknown>, suggest: () => void) => void): void
     }
@@ -338,6 +339,8 @@ const sse = (body: string) => new Response(body, { headers: { "content-type": "t
 export type ScriptedModel = {
   /** Every browser-tool request of the current run, in order; `runAgent` clears it before each run. */
   readonly history: Step[]
+  /** Errors the plan threw; the run ended at that step. `runAgent` clears it before each run. */
+  readonly planErrors: string[]
   readonly origin: string
   /** Answers the next browser-tool request; `undefined` ends the run with a plain answer. */
   plan: Plan | undefined
@@ -369,7 +372,16 @@ export function startModel(): ScriptedModel {
       }
       const step = stepOf(field(body, "messages"))
       state.history.push(step)
-      const next = state.plan === undefined ? undefined : await state.plan(step)
+      // A throwing plan ends the run: answering 500 would make the CLI retry the same step for minutes.
+      const next =
+        state.plan === undefined
+          ? undefined
+          : await Promise.resolve()
+              .then(() => state.plan?.(step))
+              .catch((error: unknown) => {
+                state.planErrors.push(`step ${step.results.length}: ${error instanceof Error ? error.message : String(error)}`)
+                return undefined
+              })
       if (next === undefined) return sse(answer(name, "Browser E2E finished"))
       if (tools.some((tool) => tool.startsWith("browser_"))) return sse(toolCall(name, next.name, next.args))
       const method = next.name.startsWith("browser_") ? next.name.slice("browser_".length) : next.name
@@ -377,7 +389,13 @@ export function startModel(): ScriptedModel {
       return sse(toolCall(name, "execute", { code }))
     },
   })
-  const state: ScriptedModel = { history: [], origin: server.url.origin, plan: undefined, stop: () => server.stop(true) }
+  const state: ScriptedModel = {
+    history: [],
+    origin: server.url.origin,
+    plan: undefined,
+    planErrors: [],
+    stop: () => server.stop(true),
+  }
   return state
 }
 
@@ -572,6 +590,8 @@ export type LaunchOptions = {
   downloads?: string
   /** Extra Chromium flags after the harness's own. */
   args?: string[]
+  /** Extra top-level `Default/Preferences` keys, e.g. `profile.default_content_setting_values`. */
+  preferences?: Record<string, unknown>
 }
 
 export type Launched = {
@@ -630,6 +650,7 @@ export async function launchChromium(options: LaunchOptions): Promise<Launched> 
           download: { default_directory: options.downloads, directory_upgrade: true, prompt_for_download: false },
           savefile: { default_directory: options.downloads },
         }),
+    ...options.preferences,
   }
   await fs.writeFile(path.join(options.profile, "Default", "Preferences"), JSON.stringify(preferences))
 
@@ -890,6 +911,17 @@ export async function readDownloadProbe(worker: Worker): Promise<DownloadEvent[]
   return Array.isArray(events) ? (events as DownloadEvent[]) : []
 }
 
+/** Chrome's own download list (`chrome.downloads.search`): state, error and final filename of every item. */
+export async function downloadItems(worker: Worker): Promise<Record<string, unknown>[]> {
+  const items = await worker.evaluate(() => chrome.downloads.search({}))
+  if (!Array.isArray(items)) return []
+  return items.map((item) => {
+    const value = record(item) ?? {}
+    const keep = ["id", "url", "filename", "state", "error", "danger", "exists", "bytesReceived", "byExtensionId"]
+    return Object.fromEntries(keep.filter((key) => key in value).map((key) => [key, value[key]]))
+  })
+}
+
 // ---------------------------------------------------------------------------------------------
 // Hub: start `kilo2 browser hub --loopback`, ask it for a pairing URL over its CLI socket, open that page.
 // ---------------------------------------------------------------------------------------------
@@ -996,35 +1028,53 @@ async function readHubEntry(root: string): Promise<HubEntry | undefined> {
   return undefined
 }
 
-export async function startHub(binary: string, root: string, env: Record<string, string | undefined>, port?: number): Promise<Hub> {
-  const chosen = port ?? (await freePort())
-  const log = { text: "" }
-  const child = Bun.spawn([binary, "browser", "hub", "--loopback", "--port", String(chosen)], {
-    cwd: root,
-    env,
-    stderr: "pipe",
-    stdout: "pipe",
-  })
-  tap(child.stdout as ReadableStream<Uint8Array>, log)
-  tap(child.stderr as ReadableStream<Uint8Array>, log)
-  await until(async () => readHubEntry(root), 30_000, "the hub registers itself").catch((error: unknown) => {
-    child.kill("SIGKILL")
-    throw new Error(`${String(error)} (port ${chosen}); hub output:\n${log.text.slice(-2_000)}`)
-  })
-  return {
-    child,
-    entry: () => readHubEntry(root),
-    log,
-    port: chosen,
-    stop: async () => {
-      try {
-        child.kill("SIGTERM")
-      } catch {
-        // Already gone.
+/**
+ * Starts `kilo2 browser hub --loopback` and waits until it registers. `ports` are tried in order (an assigned range
+ * can overlap the kernel's ephemeral range, so a port may be taken); without them a free port is picked.
+ */
+export async function startHub(binary: string, root: string, env: Record<string, string | undefined>, ports: number[] = []): Promise<Hub> {
+  const candidates = ports.length ? ports.slice(0, 5) : [await freePort()]
+  const tried: string[] = []
+  for (const chosen of candidates) {
+    const log = { text: "" }
+    const child = Bun.spawn([binary, "browser", "hub", "--loopback", "--port", String(chosen)], {
+      cwd: root,
+      env,
+      stderr: "pipe",
+      stdout: "pipe",
+    })
+    tap(child.stdout as ReadableStream<Uint8Array>, log)
+    tap(child.stderr as ReadableStream<Uint8Array>, log)
+    const started = Date.now()
+    const registered = await until(
+      async () => (child.exitCode !== null || log.text.includes("EADDRINUSE") ? false : await readHubEntry(root)),
+      30_000,
+      "the hub registers itself",
+    ).catch((error: unknown) => String(error))
+    if (typeof registered === "object") {
+      return {
+        child,
+        entry: () => readHubEntry(root),
+        log,
+        port: chosen,
+        stop: async () => {
+          try {
+            child.kill("SIGTERM")
+          } catch {
+            // Already gone.
+          }
+          await Promise.race([child.exited, Bun.sleep(5_000)])
+        },
       }
-      await Promise.race([child.exited, Bun.sleep(5_000)])
-    },
+    }
+    const alive = child.exitCode === null
+    child.kill("SIGKILL")
+    tried.push(
+      `port ${chosen}: ${registered === false ? `hub failed after ${Date.now() - started} ms (exit ${alive ? "none, still running" : child.exitCode})` : registered}\n${log.text.slice(-1_500)}`,
+    )
+    if (!log.text.includes("EADDRINUSE")) break
   }
+  throw new Error(`the hub did not start:\n${tried.join("\n---\n")}`)
 }
 
 /** One JSON-RPC call the hub answers itself, over the same 4-byte-framed socket the CLI uses. */
@@ -1112,6 +1162,8 @@ export type Run = {
   code: number
   hub: Hub
   last: Step
+  /** Errors the scenario's plan threw; the run ended at the first one. */
+  planErrors: string[]
   pngs: string[]
   root: string
   stderr: string
@@ -1135,10 +1187,13 @@ export async function runAgent(bridge: Bridge, plan: Plan, settings: Settings, o
   const root = path.join(bridge.base, `run-${bridge.runs}`)
   await prepareHome(root)
   const env = cliEnvironment(root, bridge.browser.extensionId, cliConfig(settings, bridge.model.origin))
-  const hub = await startHub(bridge.binary, root, env, bridge.ports?.[(bridge.runs - 1) % bridge.ports.length])
+  const ports = bridge.ports ?? []
+  const start = ((bridge.runs - 1) * 5) % Math.max(ports.length, 1)
+  const hub = await startHub(bridge.binary, root, env, [...ports.slice(start), ...ports.slice(0, start)])
   try {
     if (options.pair !== false) await pair(hub, bridge.browser)
     bridge.model.history.length = 0
+    bridge.model.planErrors.length = 0
     bridge.model.plan = plan
     const child = Bun.spawn(
       [
@@ -1166,7 +1221,7 @@ export async function runAgent(bridge: Bridge, plan: Plan, settings: Settings, o
     // The screenshot arrives in the run's tool event as a file part with a data URI; the model message may carry only
     // a text reference, so the event stream is the reliable source.
     const pngs = [...stdout.matchAll(/data:image\/png;base64,[A-Za-z0-9+/=]+/g)].map((match) => match[0])
-    return { code, hub, last, pngs, root, stderr, steps, stdout }
+    return { code, hub, last, planErrors: [...bridge.model.planErrors], pngs, root, stderr, steps, stdout }
   } finally {
     await hub.stop()
   }
