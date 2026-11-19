@@ -13,6 +13,13 @@ const UNSERVED: Record<string, true> = { browser_run_code_unsafe: true }
 export namespace BrowserContract {
   /** The tools every backend offers: the pinned list without the ones none can run. */
   export const entries: readonly Entry[] = ENTRIES.filter((entry) => !UNSERVED[entry.name])
+  /**
+   * Whether a pinned tool is one no backend runs. The registry hides it; a backend that is handed it directly
+   * refuses it instead of forwarding it, so the capability cannot come back through another caller.
+   */
+  export function unserved(name: string): boolean {
+    return UNSERVED[name] === true
+  }
   export const sha256 = SHA256
   export const upstream = UPSTREAM
 }

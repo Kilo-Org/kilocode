@@ -8,6 +8,7 @@ import type { Browser, BrowserContext, Download, Frame, Page } from "playwright-
 import { Global } from "@opencode/util/global"
 import {
   NeedsPermissionError,
+  UnsupportedError,
   type BrowserBackend,
   type CallContext,
   type CallMeta,
@@ -985,6 +986,8 @@ class PlaywrightBackend implements BrowserBackend {
   }
 
   async callTool(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<CallResult> {
+    // The pinned MCP still serves this tool, so the registry is not the only way in: a direct caller is refused here.
+    if (BrowserContract.unserved(name)) throw new UnsupportedError()
     const authorized = ctx.authorized ?? []
     const session = ctx.session ?? ""
     const pagesBefore = this.conn.context.pages()

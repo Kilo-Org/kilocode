@@ -54,6 +54,14 @@ describe("generated browser contract", () => {
     )
   })
 
+  test("marks the pinned tool no backend runs, so a backend handed it directly can refuse it", () => {
+    expect(BrowserContract.unserved("browser_run_code_unsafe")).toBe(true)
+    expect(BrowserContract.entries.filter((entry) => BrowserContract.unserved(entry.name))).toEqual([])
+    for (const name of ["browser_navigate", "browser_evaluate", "browser_constructor", ""]) {
+      expect(BrowserContract.unserved(name)).toBe(false)
+    }
+  })
+
   test("every tool carries an object input schema and a description", () => {
     for (const entry of BrowserContract.entries) {
       expect(entry.inputSchema).toMatchObject({ type: "object" })
