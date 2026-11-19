@@ -20,7 +20,6 @@ import path from "path"
 import AGENT_SWITCH from "./agent-switch.txt"
 import PROMPT_ASK from "./ask.txt"
 import PROMPT_DEBUG from "./debug.txt"
-import PROMPT_ORCHESTRATOR from "./orchestrator.txt"
 
 // Kilo's v1 agent set on the v2 agent registry. The Kilo host registers `Plugin` after the native
 // agent plugins and before the config plugins, so a user agent with the same ID merges over these
@@ -174,7 +173,7 @@ export const Plugin = define({
     // Agents that exist before user config. Only their catch-all edit rule describes them reliably.
     const builtins = new Set<string>()
 
-    // v1 patched the agent map in agent.ts: build renamed to code, debug, orchestrator and ask added, plan limited.
+    // v1 patched the agent map in agent.ts: build renamed to code, debug and ask added, plan limited.
     // kilo_port(unattributed:agent:b6727a425792)
     yield* ctx.agent.transform((editor) => {
       // v1 renamed the native build agent to code. The TUI shows the title-cased ID, so this shows "Code".
@@ -229,14 +228,6 @@ export const Plugin = define({
         item.permissions = structuredClone(codeInfo?.permissions ?? [])
       })
 
-      editor.update(Agent.ID.make("orchestrator"), (item) => {
-        item.name = Agent.Name.make("Orchestrator")
-        item.description = "Coordinate complex tasks by delegating to specialized agents in parallel."
-        item.system = PROMPT_ORCHESTRATOR
-        item.mode = "primary"
-        item.permissions = structuredClone(guard.orchestrator)
-      })
-
       builtins.clear()
       for (const agent of editor.list()) builtins.add(agent.id)
       // This plugin defines Plan itself below, so Plan is a built-in although it is not in the list yet.
@@ -249,7 +240,7 @@ export const Plugin = define({
       })
 
       // Kilo owns the Plan agent: the host turns off the native Plan plugin. Re-insert Plan last so the agent cycle
-      // keeps the order code, ask, debug, orchestrator, plan.
+      // keeps the order code, ask, debug, plan.
       const native = editor.get(plan)
       editor.remove(plan)
       editor.update(plan, (item) => {
@@ -311,7 +302,7 @@ export const Plugin = define({
 
 // Runs in the post phase, after the config plugins and the other upstream post plugins. v1 reapplied
 // the read-only limits after global config rules (#12053), so a broad global allow cannot open shell,
-// edit or delegation in Ask and Plan, or shell in Orchestrator. Rules configured for one agent by ID
+// edit or delegation in Ask and Plan. Rules configured for one agent by ID
 // still come after the limits, which keeps them the opt-in.
 export const Ceiling = define({
   id: "kilo.agent.ceiling",
@@ -341,11 +332,6 @@ export const Ceiling = define({
       for (const [id, base, ceiling] of [
         ["ask", guard.ask, (global: Permission.Rule[]) => seal(guard.ask, global)],
         ["plan", guard.plan, (global: Permission.Rule[]) => seal(guard.plan, global)],
-        [
-          "orchestrator",
-          guard.orchestrator,
-          (global: Permission.Rule[]) => [...guard.orchestrator, ...global, rule("shell", "*", "deny")],
-        ],
       ] as const) {
         const agent = editor.get(id)
         // Leave an agent alone when config replaced the Kilo built-in with its own definition.
@@ -424,12 +410,6 @@ function guards(global: Global.Interface, location: Location.Info) {
       rule("external_directory", data, "allow"),
       rule("edit", "*", "deny"),
       ...rules("edit", Object.fromEntries(stored.map((entry) => [entry, "allow" as const]))),
-    ],
-    orchestrator: [
-      rule("*", "*", "deny"),
-      ...allow("read", "grep", "glob", "question", "skill", "subagent", "webfetch", "websearch", ...board),
-      ...output,
-      rule("shell", "*", "deny"),
     ],
   }
 }

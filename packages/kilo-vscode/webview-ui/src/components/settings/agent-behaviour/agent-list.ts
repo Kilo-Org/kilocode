@@ -15,7 +15,6 @@ export const BUILT_IN_AGENTS = new Set([
   "plan",
   "ask",
   "debug",
-  "orchestrator",
   "explore",
   "compaction",
   "title",

@@ -150,7 +150,6 @@ test("the server runs the Kilo agent ceiling after the config plugins", async ()
             "code",
             "ask",
             "debug",
-            "orchestrator",
             "plan",
           ])
           expect(effect("code", "edit", "src/index.ts")).toBe("allow")
@@ -159,8 +158,8 @@ test("the server runs the Kilo agent ceiling after the config plugins", async ()
             expect(effect(id, "shell", "rm -rf src")).toBe("deny")
           }
           expect(effect("plan", "shell", "cargo search serde")).toBe("allow")
-          expect(effect("orchestrator", "shell", "ls")).toBe("deny")
           expect(list.map((agent) => agent.id)).not.toContain("kilo-config-permissions")
+          expect(list.map((agent) => agent.id)).not.toContain("orchestrator")
         }),
       ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
     )
