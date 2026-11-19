@@ -20,7 +20,7 @@ Review and accept Kilo's [terms of service](https://kilo.ai/terms). You need to 
 Sign in to your **Kilo account** to use frontier models, credits, and organization settings through the [Kilo Gateway](/docs/gateway). You can skip this step and connect later from [Settings](/docs/desktop/settings/ai#ai-providers). 
 
 {% callout type="note" %}
-A Kilo account is also required to use [conda environments](/docs/desktop/features/environments), the [local model server](/docs/desktop/features/local-inference), and [notebooks](/docs/desktop/features/notebooks). You can sign in during onboarding or later from the **Account** section in [Settings](/docs/desktop/settings/general#account).
+A Kilo account is also required to use [conda environments](/docs/desktop/features/environments) and [notebooks](/docs/desktop/features/notebooks). You can sign in during onboarding or later from the **Account** section in [Settings](/docs/desktop/settings/general#account).
 {% /callout %}
 
 ### 3. Choose an autonomy level
@@ -92,7 +92,7 @@ Access the app settings by clicking the {% svgIcon src="/docs/img/desktop/settin
 
 ## Chat with the agent
 
-The rest of the window is where you chat with the agent. Type a message, use `@` to mention workspace files, or `/` to run a command. Type `/compact` between turns to summarize the chat so far and free up context.
+The rest of the window is where you chat with the agent. Type a message, use `@` to mention workspace files, or `/` to run a command. Type `/compact` between turns to summarize the chat so far and free up context. Code blocks in the agent's replies are syntax-highlighted and follow your light or dark theme.
 
 ### Input controls
 
