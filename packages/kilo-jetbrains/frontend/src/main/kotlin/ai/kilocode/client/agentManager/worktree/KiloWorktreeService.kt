@@ -114,8 +114,8 @@ class KiloWorktreeService internal constructor(
     suspend fun ghStatus(directory: String, github: Boolean = true, maxAge: Long? = null): GhAvailability =
         call { ghStatus(directory, github, maxAge) }
 
-    suspend fun prStatus(directory: String, maxAge: Long? = null, fresh: List<String> = emptyList()): WorktreePrListDto = try {
-        call { prStatus(directory, maxAge, fresh) }
+    suspend fun prStatus(directory: String, maxAge: Long?, fresh: List<String>, excluded: List<String>): WorktreePrListDto = try {
+        call { prStatus(directory, maxAge, fresh, excluded) }
     } catch (e: Exception) {
         LOG.warn("worktree PR status failed for $directory", e)
         WorktreePrListDto()
