@@ -383,6 +383,10 @@ export function effective(browser: Settings, organization: KiloBrowserPolicy.Pol
   return browser.backend
 }
 
+/** What a call reports once the user turned the browser off: their decision, which the model must not undo. */
+const OFF_MESSAGE =
+  "The user turned the browser tools off. Do not change browser settings to turn them back on; continue without the browser."
+
 type Deps = {
   config: Option.Option<Config.Interface>
   permission: Option.Option<Permission.Interface>
@@ -595,8 +599,9 @@ function shaped(input: {
 function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
   return Effect.gen(function* () {
     const browser = yield* settings(deps.config)
-    // The tools are not registered while the backend is off; a config edit during the session still refuses.
-    if (browser.backend === "off") return yield* failure(new UnavailableError("Set browser.backend to playwright."))
+    // The tools leave the registry when the backend turns off; a call already planned against the old list still
+    // refuses, and the model is told the user decided it, so it does not try to turn the browser back on.
+    if (browser.backend === "off") return yield* new Tool.Error({ message: OFF_MESSAGE })
 
     const organization = yield* policy(deps.directory)
     if (organization?.control === "off")
@@ -822,21 +827,36 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
       }),
     )
 
-    const browser = yield* settings(config)
-    const organization = yield* policy(ctx.location.directory)
+    // The tool set follows the config: a `config.updated` re-reads the browser block and the organization policy and
+    // rebuilds the tools and the skill, so `off` hides them for the next turn and turning a backend on shows them,
+    // without a restart. Subscribed before the first read, so an update racing it still rebuilds.
+    const live: { browser: Settings; organization: KiloBrowserPolicy.Policy | undefined } = {
+      browser: resolve(undefined),
+      organization: undefined,
+    }
+    const read = Effect.gen(function* () {
+      live.browser = yield* settings(config)
+      live.organization = yield* policy(ctx.location.directory)
+    })
+    yield* ctx.event.subscribe({ types: ["config.updated"] }).pipe(
+      Stream.runForEach(() =>
+        read.pipe(
+          Effect.andThen(ctx.tool.reload()),
+          Effect.andThen(ctx.skill.reload()),
+          Effect.catchCause((cause) => Effect.logError("failed to reload the browser tools", { cause })),
+        ),
+      ),
+      Effect.forkScoped({ startImmediately: true }),
+    )
+    yield* read
 
     // What a settings editor shows before it offers a backend: whether the Playwright one has a browser to start, the
     // backend after the organization policy, and the policy itself. The Playwright answer is read through the same
-    // `locate` check the backend runs, so the dialog never calls it ready when a call would fail.
-    const backend = effective(browser, organization)
-    const organizationStatus = organization
-      ? { organization: { control: organization.control, origins: [...organization.origins] } }
-      : {}
-    // Both answers are what a call would find: the same `locate` check for Playwright, and the hub connection's own
-    // report for the extension, connected or not. Neither starts a browser or a hub.
+    // `locate` check the backend runs, so the dialog never calls it ready when a call would fail; the extension answer
+    // is the hub connection's own report, connected or not. Neither starts a browser or a hub.
     const extensionStatus = (): Promise<KiloBrowserRpc.Extension> =>
       hub
-        .port(browser.target)
+        .port(live.browser.target)
         .reported()
         .then(
           (info): KiloBrowserRpc.Extension =>
@@ -859,16 +879,17 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
               () => ({ ready: false as const }),
             ),
             extension: await extensionStatus(),
-            backend,
-            ...organizationStatus,
+            backend: effective(live.browser, live.organization),
+            ...(live.organization
+              ? { organization: { control: live.organization.control, origins: [...live.organization.origins] } }
+              : {}),
           })),
       })
       .pipe(Effect.orDie)
 
-    // `off` hides the tools: an agent never sees a browser tool it cannot use.
-    if (browser.backend === "off" || organization?.control === "off") return
-
-    yield* ctx.skill.transform((editor) =>
+    yield* ctx.skill.transform((editor) => {
+      // `off` hides the tools: an agent never sees a browser tool it cannot use.
+      if (effective(live.browser, live.organization) === "off") return
       editor.add(
         Skill.Info.make({
           id: Skill.ID.make("browser-automation"),
@@ -877,9 +898,10 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
           path: AbsolutePath.make("/builtin/browser-automation.md"),
           content: GUIDE,
         }),
-      ),
-    )
+      )
+    })
     yield* ctx.tool.transform((editor) => {
+      if (effective(live.browser, live.organization) === "off") return
       const backend = (choice: Settings): Promise<BrowserBackend> =>
         choice.backend === "extension" ? extension(choice.target) : playwright.get(key(choice))
       // A session that is not titled yet, or cannot be read, leaves the backend's own fallback in place.
