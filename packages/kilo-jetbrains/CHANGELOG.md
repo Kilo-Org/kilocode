@@ -742,6 +742,27 @@
 
 ## [Unreleased]
 
+## [7.2.1-rc.9] - 2026-11-19
+
+### Added
+
+- Added native Cloud workspace diffs, so Cloud sessions can show their changes in the IDE diff viewer.
+- Agent Manager now shows pull request status for Cloud workspaces.
+- Added a core telemetry level API so the plugin reports telemetry at the level configured in Kilo Core.
+- Bundled Kilo Core CLI provides the new core telemetry level API.
+
+### Fixed
+
+- Fixed reused worktrees inheriting old history from previous sessions.
+- Fixed Cloud sessions not recovering and reloading after reconnect.
+- Fixed collapsed Agent Manager sections expanding again after a refresh.
+- Fixed the dictation button not showing its recording indicator.
+- Fixed Gemini type arrays leaving sibling keywords on `anyOf` in generated tool schemas.
+
+### Changed
+
+- Bundled Kilo Core CLI updated to 7.8.31.
+
 ## [7.2.1-rc.8] - 2026-11-17
 
 ### Added
