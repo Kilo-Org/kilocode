@@ -1,7 +1,9 @@
 package ai.kilocode.client.settings
 
+import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
@@ -14,6 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -32,13 +35,18 @@ class AdvancedConfigurable(
 
     override fun createComponent(): JComponent {
         settings.applyLocal()
-        val panel = AdvancedSettingsUi()
+        val panel = AdvancedSettingsUi(app.telemetryConfig())
         ui = panel
         val cs = newScope()
         scope = cs
         cs.launch {
             val value = app.indexWorktrees()
             withContext(edt) { panel.refreshIndexWorktrees(value) }
+        }
+        cs.launch {
+            app.state.collect { state ->
+                withContext(edt) { panel.refreshTelemetry(state.config?.telemetry) }
+            }
         }
         return panel
     }
@@ -53,10 +61,28 @@ class AdvancedConfigurable(
         settings.update(value.level, value.mode, value.preview)
         save(settings)
         val indexWorktreesChanged = value.indexWorktrees != panel.savedIndexWorktrees()
+        val telemetryChanged = value.telemetry != panel.savedTelemetry()
+        val previousTelemetry = panel.savedTelemetry()
+        if (telemetryChanged) panel.markTelemetryPending()
         panel.sync()
         // Runs on the app scope, not ours: OK calls apply() then disposeUIResources(), which cancels
         // this configurable's scope before a coroutine launched here could reach the RPC.
         if (indexWorktreesChanged) app.setIndexWorktreesAsync(value.indexWorktrees)
+        if (telemetryChanged) {
+            app.setTelemetryLevelAsync(value.telemetry) { saved ->
+                ApplicationManager.getApplication().invokeLater({
+                    if (!saved) {
+                        KiloNotifications.error(
+                            KiloBundle.message("settings.advanced.telemetry.failed.title"),
+                            KiloBundle.message("settings.advanced.telemetry.failed.content"),
+                        )
+                    }
+                    if (ui === panel) {
+                        panel.finishTelemetry(app.telemetryConfig(), previousTelemetry)
+                    }
+                }, ModalityState.any())
+            }
+        }
     }
 
     override fun reset() {

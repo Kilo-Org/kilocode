@@ -6,6 +6,9 @@ import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.log.LogConfig
+import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -34,6 +37,7 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         ui = TestCoroutines()
         appRpc = FakeAppRpcApi()
         app = KiloAppService(coroutines.scope, appRpc)
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = true))
     }
 
     override fun tearDown() {
@@ -128,7 +132,7 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
 
         ui.drain()
 
-        assertTrue(edt { toggle(root).isSelected })
+        assertTrue(edt { indexToggle(root).isSelected })
         assertFalse(edt { cfg.isModified })
     }
 
@@ -137,7 +141,7 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         val root = edt { cfg.createComponent() as Container }
         ui.drain()
 
-        edt { toggle(root).doClick() }
+        edt { indexToggle(root).doClick() }
 
         assertTrue(edt { cfg.isModified })
     }
@@ -153,7 +157,7 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         assertEquals(emptyList<Boolean>(), appRpc.indexWorktreesSaves)
 
         edt {
-            toggle(root).doClick()
+            indexToggle(root).doClick()
             cfg.apply()
         }
 
@@ -172,7 +176,7 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         ui.drain()
 
         edt {
-            toggle(root).doClick()
+            indexToggle(root).doClick()
             cfg.apply()
         }
         assertTrue(coroutines.pumpUntil { appRpc.indexWorktreesSaveAttempts == 1 })
@@ -192,17 +196,169 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         val root = edt { cfg.createComponent() as Container }
 
         // The user flips the switch on before the slow split-mode fetch (which reports off) lands.
-        edt { toggle(root).doClick() }
+        edt { indexToggle(root).doClick() }
         gate.complete(Unit)
         ui.drain()
 
-        assertTrue("late fetch cleared the user's toggle", edt { toggle(root).isSelected })
+        assertTrue("late fetch cleared the user's toggle", edt { indexToggle(root).isSelected })
         assertTrue("late fetch cleared the dirty state", edt { cfg.isModified })
+    }
+
+    fun `test telemetry toggle reflects the CLI config opt-out`() {
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = false))
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        assertFalse(edt { telemetryToggle(root).isSelected })
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test telemetry toggle is disabled until a supported CLI reports its level`() {
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto())
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        assertFalse(edt { telemetryToggle(root).isEnabled })
+        edt { telemetryToggle(root).doClick(); cfg.apply() }
+        coroutines.drain()
+        assertTrue(appRpc.telemetryLevels.isEmpty())
+        assertFalse(edt { cfg.isModified })
+
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = true))
+        assertTrue(ui.pumpUntil { edt { telemetryToggle(root).isEnabled && telemetryToggle(root).isSelected } })
+    }
+
+    fun `test isModified tracks the telemetry toggle`() {
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        edt { telemetryToggle(root).doClick() }
+
+        assertTrue(edt { cfg.isModified })
+    }
+
+    fun `test apply writes the telemetry opt-out to config only when changed`() {
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        edt { cfg.apply() }
+        coroutines.drain()
+        assertEquals(emptyList<Boolean>(), appRpc.telemetryLevels)
+
+        edt {
+            telemetryToggle(root).doClick()
+            cfg.apply()
+        }
+
+        assertTrue(coroutines.pumpUntil { appRpc.telemetryLevels.isNotEmpty() })
+        assertEquals(listOf(false), appRpc.telemetryLevels)
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test telemetry save survives dialog dispose on ok`() {
+        val gate = CompletableDeferred<Unit>()
+        appRpc.telemetryLevelGate = gate
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        edt {
+            telemetryToggle(root).doClick()
+            cfg.apply()
+        }
+        assertTrue(coroutines.pumpUntil { appRpc.telemetryLevelAttempts == 1 })
+
+        edt { cfg.disposeUIResources() }
+        gate.complete(Unit)
+
+        assertTrue(coroutines.pumpUntil { appRpc.telemetryLevels.isNotEmpty() })
+        assertEquals(listOf(false), appRpc.telemetryLevels)
+    }
+
+    fun `test telemetry toggle refreshes from a later app state`() {
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = true))
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = false))
+
+        assertTrue(ui.pumpUntil { edt { !telemetryToggle(root).isSelected } })
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test reconnect keeps the opt-out until config is available`() {
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = false))
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.LOADING)
+        ui.drain()
+
+        assertFalse(edt { telemetryToggle(root).isSelected })
+        assertFalse(edt { telemetryToggle(root).isEnabled })
+        assertFalse(edt { cfg.isModified })
+
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = true))
+        assertTrue(ui.pumpUntil { edt { telemetryToggle(root).isSelected } })
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test successful opt-in stays off when the CLI reports an effective opt-out`() {
+        appRpc.telemetryAllowed = false
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = false))
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        edt {
+            telemetryToggle(root).doClick()
+            cfg.apply()
+        }
+
+        assertTrue(coroutines.pumpUntil { edt { telemetryToggle(root).isEnabled && !telemetryToggle(root).isSelected } })
+        assertEquals(listOf(true), appRpc.telemetryLevels)
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test telemetry refresh does not overwrite an in-flight write`() {
+        val gate = CompletableDeferred<Unit>()
+        appRpc.telemetryLevelGate = gate
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        edt {
+            telemetryToggle(root).doClick()
+            cfg.apply()
+        }
+        assertTrue(coroutines.pumpUntil { appRpc.telemetryLevelAttempts == 1 })
+
+        // A stale pre-write state (still true) must not flip the toggle while the write is pending.
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(telemetry = true))
+        ui.drain()
+        assertFalse(edt { telemetryToggle(root).isSelected })
+
+        gate.complete(Unit)
+        assertTrue(coroutines.pumpUntil { appRpc.telemetryLevels.isNotEmpty() })
+    }
+
+    fun `test failed telemetry write reverts the toggle`() {
+        appRpc.telemetryLevelError = IllegalStateException("write failed")
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        edt {
+            telemetryToggle(root).doClick()
+            cfg.apply()
+        }
+
+        assertTrue(coroutines.pumpUntil { edt { telemetryToggle(root).isSelected } })
+        assertFalse(edt { cfg.isModified })
+        assertTrue(appRpc.telemetryLevels.isEmpty())
     }
 
     private fun configurable() = AdvancedConfigurable(settings, { it.applyLocal() }, app) { ui.scope }
 
-    private fun toggle(root: Container): SettingsToggle = toggles(root).single()
+    private fun telemetryToggle(root: Container): SettingsToggle = toggles(root).first()
+
+    private fun indexToggle(root: Container): SettingsToggle = toggles(root).last()
 
     private fun toggles(root: Container): List<SettingsToggle> = buildList {
         collect(root) { if (it is SettingsToggle) add(it) }

@@ -86,6 +86,9 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /** Patch global CLI config values. */
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto
 
+    /** Persist and apply telemetry consent through the CLI core. */
+    suspend fun setTelemetryLevel(enabled: Boolean): KiloAppStateDto
+
     /** Read the machine-wide session-retention policy, progress, and last run. */
     suspend fun retentionStatus(): RetentionStatusDto
 
