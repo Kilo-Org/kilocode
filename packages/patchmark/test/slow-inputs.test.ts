@@ -184,8 +184,8 @@ describe("slow-input linear-time bounds", () => {
   test("a streamed table row scans only the active row", () => {
     // Work, not time. What must not grow is the text each append re-reads, so this bounds characters scanned per row;
     // the ready time of the same appends is superlinear today (33 ms for 1,000 rows and 5.2 s for 16,000), which no
-    // load-independent bound would separate from a scheduler stall. A parser that rebuilds the table per row without
-    // re-reading text is out of scope here and is caught by the CPU-time ratio of the parse above.
+    // load-independent bound would separate from a scheduler stall. It catches a rebuild that re-reads the rows; a
+    // rebuild that only copies state without re-reading text is not bounded by any assertion in this file.
     const scannedPerRow = (rows: number) => {
       const stream = createMarkdownStream({ renderHtml: false })
       stream.append("| Col A | Col B | Col C | Col D |\n|---|---|---|---|\n")
