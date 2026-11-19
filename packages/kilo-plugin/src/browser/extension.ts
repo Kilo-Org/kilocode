@@ -4,6 +4,7 @@ import path from "node:path"
 import {
   IncompatibleError,
   NeedsPermissionError,
+  TimeoutError,
   UNAVAILABLE_MESSAGE,
   UnavailableError,
   UnsupportedError,
@@ -151,6 +152,7 @@ function permissionError(error: BrowserHub.Failure): Error {
 /** Every failure kind the transport reports, as the tool layer sees it. */
 const MAPPED: Record<string, (error: BrowserHub.Failure) => Error> = {
   unavailable: (error) => new UnavailableError(HINT, UNAVAILABLE_MESSAGE, { effectsUncertain: error.uncertain }),
+  timeout: () => new TimeoutError(),
   permission: permissionError,
   moved: permissionError,
   busy: () => new Error("The tab is busy with another browser action. Try again in a moment."),

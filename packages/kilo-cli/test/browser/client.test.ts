@@ -9,6 +9,7 @@ import { HubError, create as createClient, type Client, type State } from "../..
 import { create as createHub, type Hub } from "../../src/browser/hub"
 import * as pair from "../../src/browser/pair"
 import * as proto from "../../src/browser/protocol"
+import { failure as mapped } from "../../src/browser/port"
 import { Registry } from "../../src/browser/registry"
 import { serve } from "../../src/browser/socket"
 import { until as eventually } from "./fixture"
@@ -214,7 +215,32 @@ describe("browser client", () => {
     // The call may have reached the browser before the transport went away, so the
     // caller must look at the page rather than retry blind.
     expect(failure.uncertain).toBe(true)
+    expect(mapped(failure).kind).toBe("unavailable")
     expect(target.state().kind).toBe("waiting")
+  })
+
+  test("a call the connected extension does not answer in time is a timeout, not a missing browser", async () => {
+    const at = await tmp()
+    const { hub } = await host({ ...at, paired: true })
+    const target = client({ dir: at.dir, start: () => {} })
+    await until(target, "waiting")
+    const extension = hub.attach(
+      () => true,
+      () => undefined,
+    )!
+    extension.hello(info)
+    await until(target, "ready")
+
+    // The hub routes the call to a live extension that never answers it.
+    const timedOut = await target.tools
+      .call({ sessionHandle: "s", name: "browser_click", arguments: {}, authorized: [] }, { timeout: 50 })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      )
+
+    expect(mapped(timedOut)).toMatchObject({ kind: "timeout", uncertain: true })
+    expect(target.state().kind).toBe("ready")
   })
 
   test("does not open the pairing page for a hub that already paired", async () => {

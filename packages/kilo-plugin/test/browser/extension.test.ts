@@ -5,6 +5,8 @@ import path from "node:path"
 import {
   IncompatibleError,
   NeedsPermissionError,
+  TIMEOUT_MESSAGE,
+  TimeoutError,
   UNAVAILABLE_MESSAGE,
   UnavailableError,
   UnsupportedError,
@@ -325,6 +327,13 @@ describe("extension backend", () => {
           expect(error).toBeInstanceOf(UnavailableError)
           expect((error as UnavailableError).message).toBe(UNAVAILABLE_MESSAGE)
           expect((error as UnavailableError).effectsUncertain).toBe(true)
+        },
+      },
+      {
+        failure: { kind: "timeout", message: "The browser did not answer tools.call within 120000ms.", uncertain: true },
+        check: (error) => {
+          expect(error).toBeInstanceOf(TimeoutError)
+          expect((error as Error).message).toBe(TIMEOUT_MESSAGE)
         },
       },
       {

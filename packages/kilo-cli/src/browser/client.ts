@@ -50,6 +50,12 @@ export class HubError extends Error {
     const data = this.data
     return typeof data === "object" && data !== null && "effectsUncertain" in data && data.effectsUncertain === true
   }
+
+  // The CLI stopped waiting: the browser is still there and may still be running the call.
+  get timedOut() {
+    const data = this.data
+    return typeof data === "object" && data !== null && "timedOut" in data && data.timedOut === true
+  }
 }
 
 export type State =
@@ -529,7 +535,7 @@ export function create(input: Input = {}): Client {
         new HubError({
           code: proto.ErrorCodes.browser_unavailable,
           message: `The browser did not answer ${method} within ${timeout}ms.`,
-          data: { effectsUncertain: true },
+          data: { effectsUncertain: true, timedOut: true },
         }),
       )
     }, timeout)

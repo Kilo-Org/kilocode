@@ -91,6 +91,20 @@ export class UnavailableError extends Error {
   }
 }
 
+export const TIMEOUT_MESSAGE =
+  "The browser did not finish this step in time. It may have run in part: take a snapshot (browser_snapshot) to see the page before you repeat it."
+
+/**
+ * Raised when a connected browser did not answer a call within the CLI's bound. The browser is not missing, so the
+ * setup hint does not apply; the step may have run in part, which the metadata marks as uncertain.
+ */
+export class TimeoutError extends Error {
+  constructor() {
+    super(TIMEOUT_MESSAGE)
+    this.name = "BrowserTimeoutError"
+  }
+}
+
 /**
  * Raised when the browser side speaks a protocol this CLI cannot drive. The message is model-facing; `hint` is the
  * update notice the UI shows.

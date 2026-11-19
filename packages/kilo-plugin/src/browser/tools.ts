@@ -13,6 +13,7 @@ import type { JsonSchema } from "effect"
 import {
   IncompatibleError,
   NeedsPermissionError,
+  TimeoutError,
   UNAVAILABLE_MESSAGE,
   UNSUPPORTED_MESSAGE,
   UnavailableError,
@@ -108,6 +109,9 @@ function failure(error: unknown) {
       message: error.hint ? `${UNAVAILABLE_MESSAGE} ${error.hint}` : UNAVAILABLE_MESSAGE,
       metadata: { hint: error.hint, ...(error.effectsUncertain ? { effectsUncertain: true } : {}) },
     })
+  }
+  if (error instanceof TimeoutError) {
+    return new Tool.Error({ message: error.message, metadata: { effectsUncertain: true } })
   }
   if (error instanceof IncompatibleError) {
     return new Tool.Error({ message: error.message, metadata: { hint: error.hint } })

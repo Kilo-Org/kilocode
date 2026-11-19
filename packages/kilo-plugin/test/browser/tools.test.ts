@@ -6,7 +6,7 @@ import { Document } from "@opencode/schema/config"
 import { Tool } from "@opencode/schema/tool"
 import { Skill } from "@opencode/schema/skill"
 import { Effect, Exit, Option, Scope, Stream } from "effect"
-import { UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
+import { TIMEOUT_MESSAGE, UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { EXTENSION_HINT } from "../../src/browser/extension"
 import { BrowserHub } from "../../src/browser/hub"
@@ -604,6 +604,25 @@ describe("browser tools over the extension backend", () => {
     const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
     expect(error?.message).toBe(`${UNAVAILABLE_MESSAGE} ${EXTENSION_HINT}`)
     expect(error?.metadata).toMatchObject({ hint: EXTENSION_HINT, effectsUncertain: true })
+  })
+
+  test("a call the browser did not finish in time says so, and does not call the browser missing", async () => {
+    const hub = fakeHub({
+      call: () =>
+        Promise.reject(
+          new BrowserHub.Failure({
+            kind: "timeout",
+            message: "The browser did not answer tools.call within 120000ms.",
+            uncertain: true,
+          }),
+        ),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag).toBe("Failure")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    expect(error?.message).toBe(TIMEOUT_MESSAGE)
+    expect(error?.metadata).toEqual({ effectsUncertain: true })
   })
 
   test("browser_snapshot diff mode compares the extension's snapshots", async () => {

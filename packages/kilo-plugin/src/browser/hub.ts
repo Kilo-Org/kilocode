@@ -42,6 +42,8 @@ export namespace BrowserHub {
    */
   export type Kind =
     | "unavailable"
+    /** The browser is connected but did not finish the call in time; it may have run in part. */
+    | "timeout"
     | "busy"
     | "taken"
     | "stopped"

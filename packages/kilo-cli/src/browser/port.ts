@@ -6,10 +6,12 @@ import z from "zod"
 import type { Client, Input } from "./client"
 
 /**
- * A tool call can wait inside the extension (a tab lease, a navigation, an explicit wait), so the transport's own
- * request timeout is too short for it.
+ * A tool call can wait inside the extension, so the transport's own request timeout is too short for it. The longest
+ * step the extension runs by design is a tab lease wait (30 s) followed by `browser_wait_for` at its cap (60 s); a
+ * navigation's commit and load bounds (10 s and 15 s) are shorter than that wait. 120 s covers that worst case with
+ * margin, and a call still unanswered then is reported as a timeout, never as a missing browser.
  */
-const CALL_TIMEOUT = 180_000
+const CALL_TIMEOUT = 120_000
 
 export type Options = Input & {
   /** The CLI version the extension records with the session. */
@@ -67,13 +69,21 @@ type Payload = z.infer<typeof Payload>
 /** A hub error, read structurally: a malformed frame is not an error object and never becomes one. */
 function hubFailure(error: unknown) {
   if (typeof error !== "object" || error === null) return undefined
-  const value = error as { kind?: unknown; code?: unknown; message?: unknown; data?: unknown; uncertain?: unknown }
+  const value = error as {
+    kind?: unknown
+    code?: unknown
+    message?: unknown
+    data?: unknown
+    uncertain?: unknown
+    timedOut?: unknown
+  }
   if (typeof value.kind !== "string" || typeof value.code !== "number") return undefined
   return {
     kind: value.kind,
     message: typeof value.message === "string" ? value.message : "",
     data: Payload.safeParse(value.data).data,
     uncertain: value.uncertain === true,
+    timedOut: value.timedOut === true,
   }
 }
 
@@ -102,6 +112,8 @@ export function failure(error: unknown): BrowserHub.Failure {
   })
   switch (value.kind) {
     case "browser_unavailable":
+      // The CLI gave up waiting on a browser that is still connected: that is a slow step, not a missing browser.
+      if (value.timedOut) return new BrowserHub.Failure({ kind: "timeout", message: value.message, uncertain: true })
       return new BrowserHub.Failure({ kind: "unavailable", message: value.message, uncertain: value.uncertain })
     case "tab_busy":
       return new BrowserHub.Failure({ kind: "busy", message: value.message })
