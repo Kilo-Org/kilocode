@@ -503,6 +503,31 @@ describe("extension backend", () => {
     expect((error as Error).message).toBe(STOPPED)
   })
 
+  test("a stop the user makes while a share or adopt runs is kept and reported", async () => {
+    for (const method of ["share", "adopt"] as const) {
+      const started = Promise.withResolvers<void>()
+      const finish = Promise.withResolvers<void>()
+      const answer = () => {
+        started.resolve()
+        return finish.promise
+      }
+      const hub = fake({ share: answer, adopt: () => answer().then(() => "adopted" as const) })
+      const active = backend({ port: hub.port, directory: "/tmp/project" })
+      await active.callTool("browser_snapshot", {}, ctx())
+      const pending = (method === "share" ? active.share("ses_extension") : active.adopt("ses_extension")).catch(
+        (value: unknown) => value,
+      )
+      await started.promise
+      // The user stops the session after the command reached the browser and before its answer came back.
+      hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+      finish.resolve()
+      expect(await pending).toBeInstanceOf(StoppedError)
+      const error = await active.callTool("browser_snapshot", {}, ctx()).catch((value: unknown) => value)
+      expect((error as Error).message).toBe(STOPPED)
+      expect(hub.opened).toHaveLength(1)
+    }
+  })
+
   test("share and adopt without a hub report the setup step", async () => {
     const active = backend({ directory: "/tmp/project" })
     const error = await active.adopt("ses_extension").catch((value: unknown) => value)

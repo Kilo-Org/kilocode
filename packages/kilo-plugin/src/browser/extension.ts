@@ -194,7 +194,9 @@ export class ExtensionBackend implements BrowserBackend {
    * undo the user's Stop all, so a call refuses instead. A new conversation starts with a fresh id and is unaffected;
    * there is no CLI-side resume inside the same conversation, so the refusal asks for the browser to be turned back on.
    */
-  private readonly stopped = new Set<string>()
+  private readonly stopped = new Map<string, number>()
+  /** Numbers each stop, so a share or adopt lifts only the stop it saw, never one that arrived while it ran. */
+  private stops = 0
   /** Set by `dispose()`: an evicted backend must not open a session for a call that was already in flight. */
   private disposed = false
 
@@ -207,7 +209,7 @@ export class ExtensionBackend implements BrowserBackend {
         this.handles.delete(session)
         // Only the user's own decisions stop the conversation. A disconnect is the browser going away (a network drop,
         // an extension reload): the handle is dropped and the next call reopens when the extension is back.
-        if (event.reason === "user_stop" || event.reason === "switch_off") this.stopped.add(session)
+        if (event.reason === "user_stop" || event.reason === "switch_off") this.stopped.set(session, ++this.stops)
       }) ?? (() => {})
   }
 
@@ -319,24 +321,36 @@ export class ExtensionBackend implements BrowserBackend {
   /** `/browser share`: the browser's active tab joins this conversation's group. The user's own command lifts a stop. */
   async share(session: string): Promise<void> {
     const port = this.available()
+    const stop = this.stopped.get(session)
     try {
       await port.share(await this.handle(port, session))
     } catch (error) {
       throw map(error)
     }
-    this.stopped.delete(session)
+    this.resume(session, stop)
   }
 
   /** `/browser adopt`: the most recent ended group becomes this conversation's. The user's own command lifts a stop. */
   async adopt(session: string): Promise<BrowserHub.Adoption> {
     const port = this.available()
+    const stop = this.stopped.get(session)
     try {
       const adopted = await port.adopt(await this.handle(port, session))
-      this.stopped.delete(session)
+      this.resume(session, stop)
       return adopted
     } catch (error) {
       throw map(error)
     }
+  }
+
+  /**
+   * Lift the stop `stop` that a share or adopt saw when it started. A stop the user made while the command ran is newer
+   * than the command, so it stays and the command reports the session stopped.
+   */
+  private resume(session: string, stop: number | undefined) {
+    const current = this.stopped.get(session)
+    if (current !== undefined && current !== stop) throw new StoppedError(STOPPED)
+    this.stopped.delete(session)
   }
 
   private available(): BrowserHub.Port {
