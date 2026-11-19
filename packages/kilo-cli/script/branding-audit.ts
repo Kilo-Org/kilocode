@@ -29,6 +29,7 @@
 export * as KiloBrandingAudit from "./branding-audit"
 
 import { $ } from "bun"
+import { existsSync } from "node:fs"
 import path from "node:path"
 import { KiloBranding } from "../src/branding/text"
 import { KiloBrandingRules } from "../src/branding/rules"
@@ -164,6 +165,8 @@ export interface AuditResult {
   findings: Finding[]
   unexpected: Finding[]
   unparseable: { file: string; error: string }[]
+  /** Intercepted paths that no longer exist in the tree: a rename or deletion left the mapping behind. */
+  staleIntercepts: string[]
   stale: string[]
   bare: string[]
 }
@@ -236,6 +239,9 @@ export async function run(entries: typeof allow = allow): Promise<AuditResult> {
     unparseable: [...text, ...namespace].flatMap((item) =>
       "error" in item.result ? [{ file: item.key, error: item.result.error }] : [],
     ),
+    // A deleted or renamed upstream file leaves a dead entry that no span check can reach, so the mapping itself is
+    // checked. A stale entry would have silently stopped branding the replacement file.
+    staleIntercepts: KiloBranding.files.filter((file) => !existsSync(path.join(repo, "packages", file))),
     stale: [
       // A whole-file entry is stale without a finding in its file; a snippet entry, when its file left the surface.
       ...[...entries].flatMap(([file, entry]) =>
@@ -271,9 +277,15 @@ async function scope(pathspecs: string[], include: RegExp[]) {
 
 /** The exit code of a run against `entries`, and the lines the command prints. */
 export async function main(entries: typeof allow = allow) {
-  const { scoped, unexpected, unparseable, stale, bare } = await run(entries)
+  const { scoped, unexpected, unparseable, stale, staleIntercepts, bare } = await run(entries)
 
-  if (unexpected.length === 0 && unparseable.length === 0 && stale.length === 0 && bare.length === 0)
+  if (
+    unexpected.length === 0 &&
+    unparseable.length === 0 &&
+    stale.length === 0 &&
+    staleIntercepts.length === 0 &&
+    bare.length === 0
+  )
     return { code: 0, lines: [`branding-audit: ok (${scoped} files, ${entries.size} allowlisted)`] }
 
   return {
@@ -281,6 +293,10 @@ export async function main(entries: typeof allow = allow) {
     lines: [
       // A stale entry fails too: the text it was reviewed for moved or changed, so a person looks at it again.
       ...stale.map((entry) => `branding-audit: stale allowlist entry (accounts for no finding): packages/${entry}`),
+      ...staleIntercepts.map(
+        (file) =>
+          `branding-audit: intercepted file no longer exists, so remove it from KiloBranding.files and brand its replacement: packages/${file}`,
+      ),
       ...bare.map(
         (entry) =>
           `branding-audit: allowlist snippet is only the product name and would hide every later use of it: packages/${entry}`,

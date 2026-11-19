@@ -76,6 +76,7 @@ export type FileDiffInfo = {
   additions: number
   deletions: number
   status: "added" | "deleted" | "modified"
+  moved?: boolean
   more?: true
 }
 
@@ -300,7 +301,12 @@ export type PermissionSource = { type: "tool"; messageID: string; id: string }
 
 export type PermissionSavedID = string
 
-export type CommandInfo = { name: string; description?: string }
+export type CommandInfo = {
+  name: string
+  description?: string
+  template?: string
+  model?: string | { providerID: string; model: string; variant?: string }
+}
 
 export type RpcOutput = { output?: any }
 
@@ -338,6 +344,8 @@ export type AutomationTriggerCron = { type: "cron"; cron: string; tz?: string }
 export type AutomationTriggerEvent = { type: "event"; server: string; event: string; args?: { [x: string]: JsonValue } }
 
 export type AutomationActionCode = { type: "code"; code: string; args?: JsonValue }
+
+export type AutomationActionHook = { type: "hook"; prompt: string }
 
 export type AutomationStatus = "active" | "paused" | "done"
 
@@ -471,6 +479,7 @@ export type SessionRevert = {
   partID?: string
   snapshot?: SnapshotID
   files?: Array<FileDiffInfo>
+  workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
 }
 
 export type GenerateImageOutput2 = { type: "image"; data: PromptBase64; mime: string; name?: string }
@@ -1054,6 +1063,8 @@ export type ReferenceSource = ReferenceLocalSource | ReferenceGitSource
 
 export type WorktreeList = Array<WorktreeDirectory>
 
+export type SessionInboxSelection = { agent?: AgentID; model?: ModelRef }
+
 export type SessionMessageModelSelected = {
   id: SessionMessageID
   metadata?: { [x: string]: JsonValue }
@@ -1144,14 +1155,6 @@ export type GenerateImageResult = {
   native?: GenerateNative
 }
 
-export type SessionInboxUserPayload = {
-  text: string
-  files?: Array<PromptFileAttachment>
-  agents?: Array<PromptAgentAttachment>
-  skills?: Array<PromptSkillAttachment>
-  metadata?: { [x: string]: JsonValue }
-}
-
 export type SessionMessageUser = {
   id: SessionMessageID
   metadata?: { [x: string]: JsonValue }
@@ -1161,14 +1164,6 @@ export type SessionMessageUser = {
   agents?: Array<PromptAgentAttachment>
   skills?: Array<PromptSkillAttachment>
   type: "user"
-}
-
-export type SessionInboxUserPayload1 = {
-  text: string
-  files?: Array<PromptFileAttachment>
-  agents?: Array<PromptAgentAttachment>
-  skills?: Array<PromptSkillAttachment>
-  metadata?: { [x: string]: any }
 }
 
 export type SessionMessageToolStateCompleted = {
@@ -2322,6 +2317,24 @@ export type ReferenceInfo = {
   source: ReferenceSource
 }
 
+export type SessionInboxUserPayload = {
+  text: string
+  files?: Array<PromptFileAttachment>
+  agents?: Array<PromptAgentAttachment>
+  skills?: Array<PromptSkillAttachment>
+  metadata?: { [x: string]: JsonValue }
+  selection?: SessionInboxSelection
+}
+
+export type SessionInboxUserPayload1 = {
+  text: string
+  files?: Array<PromptFileAttachment>
+  agents?: Array<PromptAgentAttachment>
+  skills?: Array<PromptSkillAttachment>
+  metadata?: { [x: string]: any }
+  selection?: SessionInboxSelection
+}
+
 export type SessionMessageCompaction =
   | SessionMessageCompactionRunning
   | SessionMessageCompactionCompleted
@@ -2654,7 +2667,7 @@ export type ConfigEntry =
     }
   | { type: "directory"; path: AbsolutePath }
 
-export type AutomationAction = AutomationActionPrompt | AutomationActionCode
+export type AutomationAction = AutomationActionPrompt | AutomationActionCode | AutomationActionHook
 
 export type UsageLimitsInfo = {
   workspace: { id: string; name?: string; usageURL: string }
@@ -2663,15 +2676,6 @@ export type UsageLimitsInfo = {
 }
 
 export type GenerateImageResponse = { data: GenerateImageResult }
-
-export type SessionInboxUser = {
-  id: SessionMessageID
-  sessionID: SessionID
-  time: { created: number }
-  type: "user"
-  payload: SessionInboxUserPayload
-  delivery: SessionInboxDelivery
-}
 
 export type SessionMessageAssistantTool = {
   type: "tool"
@@ -2688,12 +2692,6 @@ export type SessionMessageAssistantTool = {
 }
 
 export type FormFields = [FormField, ...Array<FormField>]
-
-export type SessionInboxItem =
-  | { type: "user"; payload: SessionInboxUserPayload1; delivery: SessionInboxDelivery }
-  | { type: "synthetic"; payload: SessionInboxSyntheticPayload1; delivery: SessionInboxDelivery }
-  | { type: "compaction"; payload: SessionInboxCompactionPayload; delivery: SessionInboxDelivery }
-  | { type: "move"; payload: SessionInboxMovePayload1; delivery: SessionInboxDelivery }
 
 export type SessionMessageAssistantTool1 = {
   type: "tool"
@@ -2727,6 +2725,21 @@ export type CredentialEntry = {
 }
 
 export type FormFields1 = [FormField1, ...Array<FormField1>]
+
+export type SessionInboxUser = {
+  id: SessionMessageID
+  sessionID: SessionID
+  time: { created: number }
+  type: "user"
+  payload: SessionInboxUserPayload
+  delivery: SessionInboxDelivery
+}
+
+export type SessionInboxItem =
+  | { type: "user"; payload: SessionInboxUserPayload1; delivery: SessionInboxDelivery }
+  | { type: "synthetic"; payload: SessionInboxSyntheticPayload1; delivery: SessionInboxDelivery }
+  | { type: "compaction"; payload: SessionInboxCompactionPayload; delivery: SessionInboxDelivery }
+  | { type: "move"; payload: SessionInboxMovePayload1; delivery: SessionInboxDelivery }
 
 export type AgentInfo = {
   id: AgentID
@@ -2767,8 +2780,6 @@ export type AutomationInfo = {
   time: { created: number; updated: number }
 }
 
-export type SessionInboxInfo = SessionInboxUser | SessionInboxSynthetic | SessionInboxCompaction | SessionInboxMove
-
 export type SessionMessageAssistant = {
   id: SessionMessageID
   metadata?: { [x: string]: JsonValue }
@@ -2804,16 +2815,6 @@ export type IntegrationKeyMethod = { type: "key"; label?: string; form?: FormFie
 
 export type IntegrationExternalMethod = { id: IntegrationMethodID; type: "external"; label: string; form?: FormFields }
 
-export type SessionInboxEnqueued = {
-  id: EventID
-  created: number
-  metadata?: { [x: string]: any }
-  type: "session.inbox.enqueued"
-  durable: { aggregateID: string; seq: EventSeq; version: 1 }
-  location?: LocationRef
-  data: { sessionID: SessionID; inboxID: SessionMessageID; item: SessionInboxItem }
-}
-
 export type SessionMessageAssistantContentEncoded =
   | SessionMessageAssistantText1
   | SessionMessageAssistantReasoning1
@@ -2824,6 +2825,18 @@ export type GenerateVideoGetResponse = { data: GenerateVideoJob }
 export type GenerateDecisionsResponse = { data: GenerateDecisionResult }
 
 export type FormInfo1 = { id: FormID; sessionID: string; title: string; metadata?: FormMetadata1; fields: FormFields1 }
+
+export type SessionInboxInfo = SessionInboxUser | SessionInboxSynthetic | SessionInboxCompaction | SessionInboxMove
+
+export type SessionInboxEnqueued = {
+  id: EventID
+  created: number
+  metadata?: { [x: string]: any }
+  type: "session.inbox.enqueued"
+  durable: { aggregateID: string; seq: EventSeq; version: 1 }
+  location?: LocationRef
+  data: { sessionID: SessionID; inboxID: SessionMessageID; item: SessionInboxItem }
+}
 
 export type SessionMessageInfo =
   | SessionMessageAgentSelected
@@ -3629,7 +3642,11 @@ export type SessionGenerateInput = { readonly sessionID: string; readonly prompt
 
 export type SessionGenerateOutput = SessionGenerateResponse["data"]
 
-export type SessionInterruptInput = { readonly sessionID: string; readonly resume?: boolean | undefined }
+export type SessionInterruptInput = {
+  readonly sessionID: string
+  readonly resume?: boolean | undefined
+  readonly steer?: boolean | undefined
+}
 
 export type SessionInterruptOutput = SessionInterruptResponse
 
@@ -3948,8 +3965,10 @@ export type ExperimentalSessionImportInput = {
         readonly additions: number
         readonly deletions: number
         readonly status: "added" | "deleted" | "modified"
+        readonly moved?: boolean
         readonly more?: true
       }>
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
     readonly location: { readonly directory: string }
   }
@@ -4581,6 +4600,7 @@ export type PtyCreateInput = {
   readonly cwd?: string | undefined
   readonly title?: string | undefined
   readonly env?: { readonly [x: string]: string } | undefined
+  readonly size?: { readonly rows: number; readonly cols: number } | undefined
 }
 
 export type PtyCreateOutput = { location: LocationPublicRef; data: Pty }
@@ -4699,6 +4719,7 @@ export type ExperimentalAutomationCreateInput = {
           | { readonly subagent: string; readonly session?: never }
       }
     | { readonly type: "code"; readonly code: string; readonly args?: JsonValue }
+    | { readonly type: "hook"; readonly prompt: string }
   readonly expires?: string | undefined
 }
 

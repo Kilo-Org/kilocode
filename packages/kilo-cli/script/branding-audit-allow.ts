@@ -174,6 +174,10 @@ export const allow: ReadonlyMap<string, string | readonly Identity[]> = new Map<
   ],
   ["core/src/plugin/provider/opencode-watches.ts", [["OpenCode Console", CONSOLE]]],
   [
+    "core/src/plugin/provider/opencode-artifacts.ts",
+    [["OpenCode Console", "Messages about the upstream OpenCode Console artifacts SaaS, not host branding."]],
+  ],
+  [
     "core/src/session/to-session-error.ts",
     [
       ["OpenCode Go", GO],

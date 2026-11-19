@@ -66,17 +66,20 @@ const logic: Record<string, ReadonlyArray<readonly [string, string, number]>> = 
     ["tools.opencode.session_move", "tools.kilo.session_move", 1],
   ],
   "core/src/tool/plugin/artifact.ts": [['namespace: "opencode"', 'namespace: "kilo"', 4]],
-  "core/src/tool/plugin/schedule.ts": [['namespace: "opencode"', 'namespace: "kilo"', 5]],
+  "core/src/tool/plugin/automation.ts": [['namespace: "opencode"', 'namespace: "kilo"', 5]],
   "core/src/tool/plugin/mcp-resource.ts": [
     ['namespace: "opencode"', 'namespace: "kilo"', 2],
     ["opencode_list_mcp_resources", "kilo_list_mcp_resources", 1],
     ["opencode_read_mcp_resource", "kilo_read_mcp_resource", 1],
   ],
   "core/src/tool/plugin/mcp-events.ts": [['namespace: "opencode"', 'namespace: "kilo"', 1]],
-  // Code Mode paths of the tools a schedule check may not call.
-  "core/src/schedule/check.ts": [['"opencode.', '"kilo.', 8]],
-  // The schedule command prompt names the namespace in prose, which the command rule would turn into `kilo2`.
-  "core/src/plugin/command/schedule.txt": [["the `opencode` namespace", "the `kilo` namespace", 1]],
+  // Code Mode paths of the tools an automation action may not call.
+  "core/src/automation/code.ts": [['"opencode.', '"kilo.', 8]],
+  // The automation command prompt names the namespace in prose, which the command rule would turn into `kilo2`.
+  "core/src/plugin/command/automation.txt": [
+    ["the `opencode` namespace", "the `kilo` namespace", 1],
+    ["tools.opencode.automation_create", "tools.kilo.automation_create", 1],
+  ],
 }
 
 const OAUTH_PAGE = "core/src/oauth/page.ts"

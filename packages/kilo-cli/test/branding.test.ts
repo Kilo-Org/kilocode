@@ -33,7 +33,7 @@ test("brands the built-in tool namespace to kilo", async () => {
   for (const file of [
     "core/src/tool/plugin/opencode.ts",
     "core/src/tool/plugin/artifact.ts",
-    "core/src/tool/plugin/schedule.ts",
+    "core/src/tool/plugin/automation.ts",
     "core/src/tool/plugin/mcp-resource.ts",
   ]) {
     const filename = path.join(repo, "packages", file)
@@ -43,11 +43,11 @@ test("brands the built-in tool namespace to kilo", async () => {
   }
 })
 
-test("brands the namespace of the tools a schedule check may not call", async () => {
-  const filename = path.join(repo, "packages/core/src/schedule/check.ts")
+test("brands the namespace of the tools an automation action may not call", async () => {
+  const filename = path.join(repo, "packages/core/src/automation/code.ts")
   const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
   expect(branded).not.toContain('"opencode.')
-  expect(branded).toContain('"kilo.session_move"')
+  expect(branded).toContain('"kilo.automation_create"')
 })
 
 test("does not rewrite the upstream theme registry", async () => {
@@ -74,7 +74,7 @@ test("brands the lowercase prompt names to Kilo and the tool namespace, not the 
   // Without their structural transform or override, the command rule turns these lowercase `opencode`
   // tokens into `kilo2`, which the no-OpenCode check above and the audit both accept.
   for (const [file, expected] of [
-    ["core/src/plugin/command/schedule.txt", "the `kilo` namespace"],
+    ["core/src/plugin/command/automation.txt", "the `kilo` namespace"],
     ["core/src/plugin/system-prompt/trinity.txt", "You are Kilo, an interactive"],
   ] as const) {
     const filename = path.join(repo, "packages", file)
