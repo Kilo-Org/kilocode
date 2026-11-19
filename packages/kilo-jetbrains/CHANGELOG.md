@@ -4,6 +4,24 @@
 
 ### Minor Changes
 
+- [#16257](https://github.com/Kilo-Org/kilocode/pull/16257) [`dbfbeb4`](https://github.com/Kilo-Org/kilocode/commit/dbfbeb443b480a936b8259c1bb7e20e7152dd17b) - Show Cloud workspace pull request status in Agent Manager: hosted rows and workspace editor headers now display the PR number, state, review, and check verdicts backed by Cloud, with the same browsable detail as a local worktree pull request.
+
+### Patch Changes
+
+- [#16279](https://github.com/Kilo-Org/kilocode/pull/16279) [`46e4dd4`](https://github.com/Kilo-Org/kilocode/commit/46e4dd47e524d79ddd40c57ad633b13fc6b6bcec) - Reload individual Cloud workspaces and reconnect their session streams from the workspace menu.
+
+- [#16279](https://github.com/Kilo-Org/kilocode/pull/16279) [`46e4dd4`](https://github.com/Kilo-Org/kilocode/commit/46e4dd47e524d79ddd40c57ad633b13fc6b6bcec) - Make failed Cloud turns retryable and avoid treating recoverable setup steps as workspace failures.
+
+- [#16343](https://github.com/Kilo-Org/kilocode/pull/16343) [`00a5d30`](https://github.com/Kilo-Org/kilocode/commit/00a5d30cf76f2a826bdfb305fea631beb9d2ce76) - Keep Agent Manager sections collapsed when their contents change, skip pull request polling for hidden worktrees unless their editor is visible, and underline the selected section.
+
+- [#16241](https://github.com/Kilo-Org/kilocode/pull/16241) [`37d6024`](https://github.com/Kilo-Org/kilocode/commit/37d602483c338cba749fd68b9e4be2c61554bb82) - Show a recording badge on the prompt dictation button so it is visible that the microphone is recording instead of looking idle.
+
+- [#16250](https://github.com/Kilo-Org/kilocode/pull/16250) [`49c8ff7`](https://github.com/Kilo-Org/kilocode/commit/49c8ff793da0b99491efe156098a253017b27a03) - Keep a new Agent Manager worktree from inheriting a previous worktree's merged pull request badge or conversations when a branch name is reused.
+
+## 7.9.0
+
+### Minor Changes
+
 - [#16182](https://github.com/Kilo-Org/kilocode/pull/16182) [`c9212a6`](https://github.com/Kilo-Org/kilocode/commit/c9212a6158e00ffea059582f7307c96ca17c8a7f) - Move Agent Manager worktrees and Cloud tasks between sections, choose a section when creating tasks with the current tree selection prefilled, and dictate prompts in the creation dialogs.
 
 - [#16100](https://github.com/Kilo-Org/kilocode/pull/16100) [`ac9f2e3`](https://github.com/Kilo-Org/kilocode/commit/ac9f2e3b625f40eee6700cf2f1541e8b9f053b42) - Organize local and Cloud workspaces in a unified Agent Manager list with reorderable, color-coded sections and keep the primary checkout pinned at the top.
