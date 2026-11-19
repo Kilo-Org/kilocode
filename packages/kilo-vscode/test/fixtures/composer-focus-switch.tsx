@@ -43,7 +43,6 @@ Object.assign(globalThis, {
 })
 
 const { render } = await import("solid-js/web")
-const { createSignal } = await import("solid-js")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
 const { LanguageProvider } = await import("../../webview-ui/src/context/language")
 const { SpeechToTextStatusProvider } = await import("../../webview-ui/src/components/speech-to-text/status")
@@ -79,8 +78,6 @@ const workspace = (directory: string) =>
 
 function Composer(props: {
   session: string
-  sendDisabled?: boolean
-  onSend?: () => Promise<boolean>
   focusOnDraftChange?: () => boolean
   onFocusChange?: (focused: boolean) => void
 }) {
@@ -92,8 +89,7 @@ function Composer(props: {
       draftKey={props.session}
       running={false}
       disabled={false}
-      sendDisabled={props.sendDisabled}
-      onSend={props.onSend ?? (async () => true)}
+      onSend={async () => true}
       onStop={() => undefined}
       focusOnDraftChange={props.focusOnDraftChange}
       onFocusChange={props.onFocusChange}
@@ -210,32 +206,5 @@ await wait(80)
 document.hasFocus = hasFocus
 assert.notEqual(document.activeElement, prompt(unfocused.root), "an unfocused window keeps no prompt focus")
 unfocused.dispose()
-
-// Catalog startup blocks only Send: a draft remains editable and the same text is sent once after readiness.
-const [sendDisabled, setSendDisabled] = createSignal(true)
-const sends: string[] = []
-const startup = isolate(() => (
-  <Composer
-    session="ses_startup"
-    sendDisabled={sendDisabled()}
-    onSend={async () => {
-      sends.push("sent")
-      return true
-    }}
-  />
-))
-const draft = prompt(startup.root)
-draft.value = "Keep my early draft"
-draft.dispatchEvent(new window.Event("input", { bubbles: true }))
-draft.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }))
-assert.equal(draft.readOnly, false, "catalog startup must not lock editing")
-assert.equal(draft.value, "Keep my early draft", "an early Enter keeps the typed draft")
-assert.deepEqual(sends, [], "an early Enter must not reach onSend")
-setSendDisabled(false)
-draft.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }))
-await wait(0)
-assert.deepEqual(sends, ["sent"], "the ready composer sends exactly once")
-assert.equal(draft.value, "", "the draft clears only when submission is allowed")
-startup.dispose()
 
 await window.happyDOM.close()

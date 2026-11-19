@@ -1,15 +1,15 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 165,
-    "markedLines": 2991,
-    "unmarkedLines": 388,
+    "files": 164,
+    "markedLines": 2938,
+    "unmarkedLines": 387,
     "deletedFiles": 0
   },
   "files": {
     "packages/cli/src/run/run.ts": {
-      "rung": 3,
-      "seam": "Expose an optional SessionTargetPreparation on the existing non-interactive run input and call it at the existing prepare boundary. The Kilo host's run handler supplies the catalog wait; no plugin hook or service replacement reaches this private client-side preparation. Omitting the callback preserves upstream behavior and tests."
+      "rung": 4,
+      "seam": "The shared one-shot run handler owns target preparation, including resumed-session model selection. Neither a plugin nor the Kilo host can wait there before admission. The Kilo-only call checks the resolved location's catalog without changing upstream run behavior."
     },
     "packages/cli/src/run/noninteractive.ts": {
       "rung": 3,
@@ -333,15 +333,7 @@
     },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
-      "seam": "Full TUI default selection (Gateway): call the Kilo-owned default-model loader, then use SDK model.default after CLI/config and recent models, within the existing user/agent selection precedence. Keep the first catalog model when the server supplies no valid default. Without a higher-priority selection, catalog readiness waits for the default request so --prompt cannot submit the catalog's first model before the recommendation arrives. The host-enabled model-startup adapter additionally requires actual selected-model availability and preserves explicit selections while their provider catalog is empty, so a saved --prompt is not consumed prematurely. Rungs 1 and 2 cannot reach LocalProvider's private fallback memo or readiness flag; the TUI plugin API has no model-default resolver, and the host runs in the server process. A generic seam would add a resolver registration API for these private memos instead of small call-outs. Loading, refresh and location isolation stay in tui/src/kilocode/default-model.ts and model-startup.ts."
-    },
-    "packages/tui/src/mini/runtime.ts": {
-      "rung": 4,
-      "seam": "Call the host-enabled Kilo-owned model-startup adapter before mini compaction and cancel that client-side admission on interrupt. Compaction bypasses the prompt transport, and no plugin hook, service replacement or existing host option reaches this private callback; adding a generic callback API for this single preparation would add more coupling than the import and call-outs. Unhosted behavior is unchanged."
-    },
-    "packages/tui/src/mini/stream-v2.transport.ts": {
-      "rung": 4,
-      "seam": "Call the host-enabled Kilo-owned model-startup adapter before mini prompt, queued prompt and command mutations, and cancel pending preparation on interrupt. The first empty model-list response is not readiness. No public plugin hook or host option reaches these private client admission paths; narrow call-outs preserve upstream transport/queue behavior and never retry an admitted prompt."
+      "seam": "Full TUI default selection (Gateway): call the Kilo-owned default-model loader, then use SDK model.default after CLI/config and recent models, within the existing user/agent selection precedence. Keep the first catalog model when the server supplies no valid default. Without a higher-priority selection, catalog readiness waits for the default request so --prompt cannot submit the catalog's first model before the recommendation arrives. Rungs 1 and 2 cannot reach LocalProvider's private fallback memo or readiness flag; the TUI plugin API has no model-default resolver, and the host runs in the server process. A generic seam would add a resolver registration API for this single SDK read instead of these small call-outs. Loading, refresh and location isolation stay in tui/src/kilocode/default-model.ts."
     },
     "packages/plugin/src/tui/context.ts": {
       "rung": 3,
@@ -355,13 +347,17 @@
       "rung": 4,
       "seam": "Call the Kilo-owned `registerMiniParsers` before the mini renderer starts, so fenced code in mini highlights the languages the full TUI supports instead of only OpenTUI's bundled JavaScript, TypeScript, Markdown and Zig. The full TUI registers the same upstream parser config at module load in `tui/src/routes/session/index.tsx`; mini has no equivalent call, so a Kotlin fence renders as plain text. This is a defect fix in upstream's mini lifecycle. Rung 1 has no hook for the CLI frontend's parser registry, rung 2 cannot reach it from `packages/kilo-cli` because the parser config is a package-local module rather than an exported surface, and rung 3 would add a host knob on `MiniHost` for one call. The marked lines only import and call `tui/src/kilocode/mini-parsers.ts`; no Kilo value changes."
     },
+    "packages/tui/src/context/permission.tsx": {
+      "rung": 4,
+      "seam": "A runtime override for the permission mode (feature `autoapprove`): the `Permission` context reads Kilo-owned `permissionModeOverride()` before the launch flag and the configured `session.permissions`, so `/auto-approve` and Ctrl+Alt+A can switch auto-approve while the TUI runs. Upstream derives the mode from the arguments and config only, and the TUI plugin API exposes no permission-mode setter, so rung 1 cannot change it, rung 2 cannot reach the TUI process-local context, and a generic seam would still need a public plugin API addition for the setter. One import line and the existing return line; the state and the toggle live in tui/src/kilocode/permission-mode.ts."
+    },
     "packages/tui/src/routes/home.tsx": {
       "rung": 3,
       "seam": "Render the `home.bottom` plugin slot directly below the home prompt (the v1 `home_bottom` position). Without a claim it renders nothing, so the upstream home screen is unchanged. Rungs 1 and 2 cannot add a slot boundary to the home route. One generic line with no Kilo value; the Kilo news banner lives in tui/src/kilocode/kilo-news.tsx."
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
-      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY), `KiloPeriodic` (`/periodic`, local scheduled Flows) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
+      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY), `KiloPeriodic` (`/periodic`, local scheduled Flows), `KiloAutoApprove` (`/auto-approve` and Ctrl+Alt+A for the runtime auto-approve toggle) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -410,7 +406,7 @@
     },
     "packages/tui/src/routes/session/index.tsx": {
       "rung": 4,
-      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows. The private compact action also delegates to the host-enabled model-startup adapter because it bypasses the composer, and no plugin hook or host option reaches its pre-admission boundary."
+      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows."
     },
     "packages/tui/src/routes/session/group-view.tsx": {
       "rung": 4,
@@ -490,7 +486,7 @@
     },
     "packages/client/package.json": {
       "rung": 4,
-      "seam": "Export the Kilo-owned model-startup client helper so CLI, TUI and VS Code share target-location catalog readiness without server waits; package exports cannot be extended by a plugin or host. Also raises the per-test timeout from 5000 ms to 30000 ms for generation and filesystem suites, matching the workspace (ported from #15879). JSON script values have no host override.",
+      "seam": "Test timing only: the `test` script raises the per-test timeout from 5000 ms to 30000 ms, matching the rest of the workspace. The 5 s ceiling was tight for the suites that regenerate or compile client output and hit the filesystem, and it timed out on slower shared CI runners before the tests themselves failed. Ported from #15879. No seam: the flag is a literal inside upstream's script string and no host or plugin can pass bun test options in its place.",
       "unmarked": "JSON has no comments."
     },
     "packages/httpapi-codegen/package.json": {
@@ -656,8 +652,8 @@
       "seam": "The multi-clone refresh and ownership tests run real Git and boot multiple server locations. On Windows CI they hit Bun's five-second default. Use the adjacent integration tests' 30-second budget at those two call sites; all inventory and ownership assertions remain in place."
     },
     "packages/tui/src/component/prompt/index.tsx": {
-      "rung": 4,
-      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. On first Home render, reveal the confirmed agent label while the model catalog is pending. Delegate model-dependent admission to the host-enabled Kilo-owned model-startup adapter before session mutations: source readiness does not cover command model overrides or cold worktree destinations. No plugin hook or host option reaches those private submit paths; narrow call-outs preserve draft recovery, shell execution and unhosted behavior."
+      "rung": 3,
+      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. On first Home render, reveal the confirmed agent label while the model catalog is pending."
     },
     "packages/tui/src/component/startup-loading.tsx": {
       "rung": 3,

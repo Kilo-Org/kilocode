@@ -1,7 +1,6 @@
 // Session creation for a worktree, split out of AgentManagerProvider. Preparation and MCP warmup stay detached
 // from the awaited session.create so the first prompt can arrive early.
 import type { OpenCodeClient, SessionInfo } from "@opencode/client"
-import { waitForModel } from "@opencode/client/kilocode/model-startup"
 import type { AgentManagerConnection } from "./connection"
 import type { AgentManagerOutMessage } from "./types"
 import { getErrorMessage } from "./errors"
@@ -52,12 +51,6 @@ export async function createSessionInWorktree(
       host.log("Worktree preparation failed:", err),
     )
     const metadata = await boot?.metadata()
-    if (model)
-      await waitForModel(client, {
-        location: { directory: worktreePath },
-        model: { providerID: model.providerID, id: model.modelID },
-        signal: host.connection.signal(),
-      })
     const created = await client.session.create(sessionCreateBody({ directory: worktreePath, model, agent, metadata }))
     timing?.mark("session")
     return created

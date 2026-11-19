@@ -22,8 +22,6 @@ const KILO_AUTO: Ref = { providerID: KILO, id: "kilo-auto/free" }
 export function initialModel(input: {
   /** A pick in this composer or dialog sticks for the next new session of that agent. */
   pick?: Ref | undefined
-  /** Keep an explicit request while its provider's catalog has not arrived. */
-  preserveSelection?: boolean
   agent: Ref | undefined
   configured: Ref | undefined
   /** The selected team of the account; undefined while it is unknown, false for Personal or a signed-out client. */
@@ -41,15 +39,7 @@ export function initialModel(input: {
   const inCatalog = (ref: Ref | undefined) => (ref && input.valid(ref) ? ref : undefined)
   const candidate = (ref: Ref | undefined) =>
     ref && (accountKnown || ref.providerID !== KILO) ? inCatalog(ref) : undefined
-  const preference = [input.pick, input.agent, input.configured].find((ref) => {
-    if (!ref) return false
-    if (
-      input.preserveSelection &&
-      (input.valid(ref) || !input.models.some((item) => item.providerID === ref.providerID))
-    )
-      return true
-    return !!candidate(ref)
-  })
+  const preference = candidate(input.pick) ?? candidate(input.agent) ?? candidate(input.configured)
   if (preference) return preference
   // The account read can fail for good: `kilo-models.ts` keeps `ready` false after a rejected `authStatus`, and it
   // reads again only on a catalog change. The server default is resolved for this scope, so it fills the picker here

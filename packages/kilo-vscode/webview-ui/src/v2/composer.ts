@@ -1,16 +1,10 @@
-import type { JsonValue, ModelRef } from "@opencode/client"
+import type { JsonValue } from "@opencode/client"
 import { onCleanup } from "solid-js"
 import type { PromptAttachment } from "../../../src/protocol"
 import type { ComposerDraft } from "./revert"
 
 /** Metadata a host request attaches to its prompt, for example the title of a prompt Kilo composed. */
 type PromptMetadata = { [key: string]: JsonValue }
-
-/** The agent and model a draft's first send creates its session with. */
-export type SendChoice = { agent: string | undefined; model: ModelRef | undefined }
-
-/** The tab and selection captured before resolving mentions or waiting for catalog readiness. */
-export type SendTarget = { session: string | undefined; key: string | undefined; choice?: SendChoice }
 
 /** What the host may ask of the visible composer: editor and terminal context actions use it. */
 export type ComposerHandle = {

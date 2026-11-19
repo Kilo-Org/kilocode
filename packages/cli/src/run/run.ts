@@ -7,11 +7,11 @@ import path from "node:path"
 import { readStdin, readStdinIfReady } from "../util/io"
 import { ServerConnection } from "../services/server-connection"
 import { createWorktreeLocation, parseSessionTargetModel, resolveSessionTarget } from "../session-target"
-import type { SessionTargetPreparation } from "../session-target" // kilocode_change(gateway) seam - allow the host to prepare the target catalog
 import { toolInlineInfo } from "@opencode/tui/mini/tool"
 import { runNonInteractivePrompt } from "./noninteractive"
 import { UI } from "./ui"
 import { Env } from "../env"
+import { waitForRunCatalog } from "../kilocode/run-catalog" // kilocode_change(gateway)
 import { errorMessage } from "../util/error"
 
 export type RunCommandInput = {
@@ -29,7 +29,6 @@ export type RunCommandInput = {
   archived?: boolean
   thinking?: boolean
   auto?: boolean
-  prepare?: SessionTargetPreparation // kilocode_change(gateway) seam - optional client-side preparation before session creation
 }
 
 type FilePart = { text: string } | { attachment: { uri: string; name: string } }
@@ -109,7 +108,8 @@ async function execute(input: RunCommandInput, prepared: Prepared, endpoint: End
     prepare: async (next) => {
       if (explicit?.variant && !next.model)
         throw new RunTargetError("Cannot select a variant before selecting a model", next.session?.id)
-      return input.prepare ? input.prepare(next) : { model: next.model, agent: next.agent } // kilocode_change(gateway) seam - preserve the unhosted preparation
+      if (process.env.OPENCODE_APP_DIR_NAME === "kilo2") await waitForRunCatalog(client, next.location.directory, next.model, signal, undefined, input.format) // kilocode_change(gateway) - before session creation or prompt admission
+      return { model: next.model, agent: next.agent }
     },
   }).catch((error) => {
     if (!(error instanceof RunTargetError)) throw error

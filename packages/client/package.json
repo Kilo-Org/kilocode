@@ -24,7 +24,6 @@
     "./effect": "./src/effect/index.ts",
     "./effect/api": "./src/effect/api.ts",
     "./effect/service": "./src/effect/service.ts",
-    "./kilocode/model-startup": "./src/kilocode/model-startup.ts",
     "./mcp": "./src/mcp.ts"
   },
   "scripts": {

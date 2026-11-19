@@ -116,8 +116,7 @@ const Handlers = Runtime.handlers(KiloCommands, {
   models: () => import("@opencode/cli/commands/handlers/models"),
   stats: () => import("@opencode/cli/commands/handlers/stats"),
   mini: () => import("@opencode/cli/commands/handlers/mini"),
-  // Kilo: wait for the target catalog before admitting a non-interactive prompt.
-  run: () => import("./commands/run"),
+  run: () => import("@opencode/cli/commands/handlers/run"),
   pair: () => import("@opencode/cli/commands/handlers/pair"),
   reload: () => import("@opencode/cli/commands/handlers/reload"),
   session: {

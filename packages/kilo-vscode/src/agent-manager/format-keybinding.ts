@@ -8,6 +8,7 @@ const SIDE_TERMINAL_FOCUSED = "kilo-code.v2.agentManager.sideTerminalFocused"
 
 /** Global commands whose keybindings are forwarded to the webview. */
 const GLOBAL_KEYBINDINGS: Record<string, string> = {
+  "kilo-code.v2.toggleAutoApprove": "toggleAutoApprove",
   "kilo-code.v2.cycleAgentMode": "cycleAgentMode",
   "kilo-code.v2.cyclePreviousAgentMode": "cyclePreviousAgentMode",
   "kilo-code.v2.settingsSearch": "settingsSearch",

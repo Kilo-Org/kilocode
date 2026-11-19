@@ -230,6 +230,8 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "Автоматичне схвалення вимкнено. Натисніть, щоб автоматично схвалювати запити дозволів.",
   "prompt.action.autoApprove.sandboxExcluded": "Запити на вихід із пісочниці завжди виключено.",
+  "prompt.action.autoApprove.enabledNotification": "Автосхвалення увімкнено. Запити на вихід із пісочниці виключено.",
+  "prompt.action.autoApprove.disabledNotification": "Автосхвалення вимкнено.",
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
   "prompt.action.sandbox.enable": "Увімкнути пісочницю",

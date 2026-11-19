@@ -2,11 +2,10 @@ import { expect, test } from "bun:test"
 import { names, storage, translate } from "../src/env"
 
 test.each([undefined, "0", "1"])("startup defaults preserve an explicit host setting (%s)", (setting) => {
-  const env = { OPENCODE_TUI_USE_PINNED_MODE: setting, OPENCODE_TUI_OVERLAP_STARTUP: setting, KILO_MODEL_STARTUP: setting }
+  const env = { OPENCODE_TUI_USE_PINNED_MODE: setting, OPENCODE_TUI_OVERLAP_STARTUP: setting }
   translate(env)
   expect(env.OPENCODE_TUI_USE_PINNED_MODE).toBe(setting ?? "1")
   expect(env.OPENCODE_TUI_OVERLAP_STARTUP).toBe(setting ?? "1")
-  expect(env.KILO_MODEL_STARTUP).toBe(setting ?? "1")
 })
 
 test("KILO_ variables reach their OPENCODE_ name, and the Kilo name wins", () => {

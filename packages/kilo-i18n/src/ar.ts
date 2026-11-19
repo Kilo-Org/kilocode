@@ -160,4 +160,10 @@ export const dict = {
   "browser.state.unavailable": "غير متاح",
   "browser.state.readyHint": "ملف تعريف Chromium مملوك لـ Kilo يبدأ عند أول استدعاء للمتصفح",
   "browser.state.extensionHint": "اربط إضافة متصفح Kilo لاستخدام متصفحك الخاص",
+
+  // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
+  "tui.autoApprove.title": "تبديل الموافقة التلقائية",
+  "tui.autoApprove.description": "الموافقة على طلبات الأذونات تلقائياً لهذه العملية",
+  "tui.autoApprove.enabled": "تم تفعيل الموافقة التلقائية. ستتم الموافقة على طلبات الأذونات تلقائياً.",
+  "tui.autoApprove.disabled": "تم تعطيل الموافقة التلقائية.",
 }

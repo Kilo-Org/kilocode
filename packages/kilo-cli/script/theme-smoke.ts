@@ -116,8 +116,10 @@ export async function runThemeSmoke(executable?: string) {
         console.log(`PASS: ${binary ? "compiled" : "source"} default Kilo ${mode} home screen`)
         await send("/themes", "theme command", (output) => Bun.stripANSI(output).includes("Switch theme"))
         await settle()
-        await send("\r", "Kilo in theme picker", isKiloThemePicker)
-        await send("opencode", "OpenCode preview", (output) =>
+        await send("\r", "theme picker", (output) => Bun.stripANSI(output).includes("Themes"))
+        await send("kilo", "current Kilo theme in search results", hasCurrentKiloRow)
+        // Ctrl+U clears the picker search without closing it or confirming a theme.
+        await send("\x15opencode", "OpenCode preview", (output) =>
           output.includes(mode === "dark" ? ";250;178;131" : ";59;125;216"),
         )
         // Escape cancels the preview and is safe to repeat when a slow runner drops or delays it.
@@ -141,9 +143,8 @@ export function isKiloHome(output: string, mode: "light" | "dark") {
   return Bun.stripANSI(output).includes("ctrl+p commands") && hasKiloPrompt(output, mode)
 }
 
-export function isKiloThemePicker(output: string) {
-  const screen = Bun.stripANSI(output)
-  return screen.includes("Themes") && /[●▪]\s*kilo(?:\s|$)/.test(screen)
+export function hasCurrentKiloRow(output: string) {
+  return /[●▪]\s*kilo(?:\s|$)/.test(Bun.stripANSI(output))
 }
 
 export function hasKiloPrompt(output: string, mode: "light" | "dark") {

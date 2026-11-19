@@ -68,7 +68,6 @@ function providerFor(workspace: string, projects: string[]) {
   const connection = {
     client: async () => client,
     current: () => client,
-    signal: () => undefined,
     state: () => "connected",
     onState: () => () => undefined,
     onEvent: () => () => undefined,

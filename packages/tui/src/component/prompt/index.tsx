@@ -71,7 +71,6 @@ import { useWorkingDirectoryActions } from "../../ui/working-directory-actions"
 import { truncateFilePath } from "../../ui/file-path"
 import { PromptMetadataRow } from "./metadata"
 import { limitLabel, useUsageLimits } from "../usage"
-import { createModelAdmission } from "../../kilocode/model-startup" // kilocode_change(gateway)
 
 export type PromptProps = {
   sessionID?: string
@@ -212,7 +211,6 @@ export function Prompt(props: PromptProps) {
   const cursorStyle = useCursorStyle()
   const dialog = useDialog()
   const toast = useToast()
-  const modelAdmission = createModelAdmission() // kilocode_change(gateway)
   const status = createMemo(() => data.session.status(props.sessionID ?? ""))
   const stash = usePromptStash()
   const keymap = Keymap.use()
@@ -1168,7 +1166,6 @@ export function Prompt(props: PromptProps) {
     }
     const agent = local.agent.current()
     if (!agent) return false
-    if (store.mode !== "shell" && local.model.catalogPending()) return false // kilocode_change(gateway)
     const selection = local.model.selection()
     if (!selection) {
       void promptModelWarning()
@@ -1224,20 +1221,6 @@ export function Prompt(props: PromptProps) {
     let finishMoveProgress = false
     // New-session sends wait for creation and environment setup.
     let newSession: { gate: Promise<unknown>; recover: (error: unknown) => void } | undefined
-    // kilocode_change start - gateway: wait for the command's effective catalog before mutating an existing session.
-    if (
-      sessionID &&
-      usesModel &&
-      !(await modelAdmission.wait(
-        session?.location ?? currentLocation.ref ?? data.location.default(),
-        selection,
-        isCommand ? slashHead?.name : undefined,
-      ))
-    ) {
-      restoreEntry()
-      return false
-    }
-    // kilocode_change end
     if (sessionID == null) {
       const directory = await move.getDirectory()
       if (move.pending() && !directory) {
@@ -1249,20 +1232,6 @@ export function Prompt(props: PromptProps) {
       // route (launch cwd, inherited session location, or picked project) and updated
       // by /cd before a session exists.
       const location = currentLocation.ref ?? data.location.default()
-      // kilocode_change start - gateway: a source catalog does not make a newly created worktree ready.
-      if (
-        currentMode !== "shell" &&
-        !(await modelAdmission.wait(
-          directory ? { directory } : location,
-          selection,
-          isCommand ? slashHead?.name : undefined,
-        ))
-      ) {
-        restoreEntry()
-        move.finishSubmit()
-        return false
-      }
-      // kilocode_change end
 
       // Optimistic create: the data layer mints the ID client-side and admits
       // a local session record synchronously, so the navigation below happens

@@ -1,6 +1,6 @@
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { JsonValue, ModelRef } from "@opencode/client"
 import {
@@ -68,7 +68,7 @@ import { expandPastes, isPathMention } from "../components/chat/prompt-input-uti
 import { convertToMentionPath, insertPathMentions } from "../utils/path-mentions"
 import { promptMentionOver, registerPromptMentionDrop, type WorktreeReference } from "../utils/prompt-mention-drop"
 import { message, useV2 } from "./client"
-import { registerComposer, type ComposerHandle, type SendChoice, type SendTarget } from "./composer"
+import { registerComposer, type ComposerHandle } from "./composer"
 import { MentionMenu } from "./mention-menu"
 import { attachmentDrafts, imageAttachment, mergeAttachments, pasteDrafts } from "./prompt-attachments"
 import { type ComposerDraft, visibleMessages } from "./revert"
@@ -151,15 +151,21 @@ const SEND_ICONS = ["send", "arrow-up", "clock", "arrow-right"] as const
 
 const NO_KEYS = { altKey: false, ctrlKey: false, metaKey: false }
 
+/** The agent and model a draft's first send creates its session with. */
+export type SendChoice = { agent: string | undefined; model: ModelRef | undefined }
+
+/**
+ * The tab a send was pressed in: its session, or the draft key and the draft's agent and model before a session
+ * exists. A tab switch resets the composer's draft choice, so the choice is taken with the tab.
+ */
+export type SendTarget = { session: string | undefined; key: string | undefined; choice?: SendChoice }
+
 export function PromptInput(props: {
   session?: string
   /** Draft identity: the session id, or the pending tab id before a session exists. */
   draftKey?: string
   running: boolean
   disabled: boolean
-  /** Catalog preparation blocks submission without making the draft read-only. */
-  sendDisabled?: boolean
-  sendDisabledReason?: string
   /** The model the composer shows; Enhance uses it so the rewrite never depends on another provider. */
   model?: ModelRef
   /** A pending permission blocks sending. Drives the blocked Send tooltip. */
@@ -450,7 +456,6 @@ export function PromptInput(props: {
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
   const ready = () =>
     !props.disabled &&
-    !props.sendDisabled &&
     !props.blocked &&
     !sending() &&
     images.pending() === 0 &&
@@ -464,17 +469,7 @@ export function PromptInput(props: {
         (goalMode()
           ? !!text().trim()
           : !!text().trim() || attachments().length > 0 || browsers().length > 0 || comments().length > 0)))
-  // The label is the pending-permission hint while blocked, otherwise Send.
-  const sendLabel = () => {
-    if (props.blocked) return language.t("prompt.action.send.blocked")
-    if (props.sendDisabled) return props.sendDisabledReason ?? language.t("common.loading")
-    if (speech.state() === "recording") return language.t("prompt.action.send.recording")
-    if (goalMode()) return language.t("prompt.goal.start")
-    return language.t("prompt.action.send")
-  }
-  // While the agent runs, a held modifier previews its send action on the Send button, so the user sees what Enter or
-  // a click will do before pressing it. The accessible name stays "Send". The modifiers are kept rather than the
-  // action, so changing what Enter does in the settings updates the preview at once.
+  // Keep the modifiers rather than the action so the preview also follows changes to the Enter preference.
   const [held, setHeld] = createSignal<Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey">>(NO_KEYS)
   const hold = (event: KeyboardEvent) =>
     setHeld({ altKey: event.altKey, ctrlKey: event.ctrlKey, metaKey: event.metaKey })
@@ -561,26 +556,30 @@ export function PromptInput(props: {
       ? language.t("prompt.placeholder.plain")
       : language.t("prompt.placeholder.connecting")
   const busySend = () => props.running && !props.blocked && speech.state() !== "recording"
-  const sendAction = (): SendMode => (busySend() ? sendMode(held(), true, runningDelivery()) : "steer")
-  // While the agent runs, Send draws the icon the pending prompt rows use for its action: the steer arrow ("join this
-  // turn") or the clock ("after this turn"). The other delivery is ⌥↵, previewed here, or the pending row's controls.
+  const sendAction = (keys = held()) => sendMode(keys, busySend(), runningDelivery())
+  const sendLabel = () => {
+    if (props.blocked) return language.t("prompt.action.send.blocked")
+    if (speech.state() === "recording") return language.t("prompt.action.send.recording")
+    if (!busySend()) return language.t(goalMode() ? "prompt.goal.start" : "prompt.action.send")
+    const action = sendAction()
+    const label = language.t(action === "now" ? "prompt.action.stopAndSend" : `prompt.action.${action}`)
+    return goalMode() ? `${language.t("prompt.goal.start")}: ${label}` : label
+  }
+  const sendDetail = () =>
+    busySend() && sendAction() === "steer" ? language.t("session.pending.status.steering") : undefined
   const sendIcon = () =>
     busySend() ? ({ steer: "arrow-up", queue: "clock", now: "arrow-right" } as const)[sendAction()] : "send"
-  // While the agent runs, the tooltip names what Send does now and its key, like the other composer tooltips. Holding a
-  // modifier switches it to that action; the placeholder suggests the other delivery.
-  const sendHint = () => {
-    if (!busySend()) return sendLabel()
-    const action = sendAction()
-    return (
-      <div data-slot="tooltip-keybind">
-        <span>{language.t(action === "now" ? "prompt.action.stopAndSend" : `prompt.action.${action}`)}</span>
-        <span data-slot="tooltip-keybind-key">{sendShortcuts(runningDelivery())[action]}</span>
-      </div>
-    )
-  }
-  // Stop replaces Send while the agent runs and the draft is empty. Typing during a run turns it back into Send,
-  // whose prompt steers the running turn at its next step. A pending question is not running work. Stop is not shown
-  // while the prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
+  const sendHint = () =>
+    busySend() ? (
+      <>
+        <div data-slot="tooltip-keybind">
+          <span>{sendLabel()}</span>
+          <span data-slot="tooltip-keybind-key">{sendShortcuts(runningDelivery())[sendAction()]}</span>
+        </div>
+        <Show when={sendDetail()}>{(detail) => <div>{detail()}</div>}</Show>
+      </>
+    ) : sendLabel()
+  // An empty composer offers Stop only when there is a run to interrupt.
   const showStop = () =>
     props.running &&
     !goalMode() &&
@@ -1006,6 +1005,9 @@ export function PromptInput(props: {
     sendDraft(mode)
   }
 
+  // A keyboard-activated button can receive a synthetic click without the held modifiers.
+  const clickSend = (event: MouseEvent) => send(sendAction(event.detail === 0 ? held() : event))
+
   registerComposer(props.onComposerReady, {
     attach: (items) => {
       setAttachments((current) => mergeAttachments(current, items))
@@ -1243,6 +1245,9 @@ export function PromptInput(props: {
       run: openIndexingSettings,
     }
   }
+  const approveKey = () => v2.bindings().toggleAutoApprove ?? ""
+  const approveLabel = (enabled: boolean) =>
+    language.t(enabled ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable")
   const foldable = createMemo<OverflowItem[]>(() => {
     const list: OverflowItem[] = indexing.buttonVisible() ? [indexingAction()] : []
     const sandbox = props.sandbox
@@ -1273,9 +1278,8 @@ export function PromptInput(props: {
       list.push({
         key: "approve",
         icon: "shield",
-        label: language.t(
-          autoApprove.enabled ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable",
-        ),
+        label: approveLabel(autoApprove.enabled),
+        keybind: approveKey(),
         description: language.t("prompt.action.autoApprove.sandboxExcluded"),
         tone: autoApprove.enabled ? "success" : undefined,
         dot: autoApprove.enabled ? "success" : undefined,
@@ -1286,13 +1290,8 @@ export function PromptInput(props: {
   const shown = createMemo(() => fold({ ...metrics(), count: foldable().length }))
   const hidden = createMemo(() => foldable().slice(0, foldable().length - shown()))
   const folded = (key: string) => hidden().some((item) => item.key === key)
-  const approveTooltip = () => {
-    const autoApprove = props.autoApprove
-    if (!autoApprove) return ""
-    return `${language.t(
-      autoApprove.enabled ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
-    )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`
-  }
+  const approveTooltip = (enabled: boolean) =>
+    `${language.t(enabled ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled")} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`
 
   return (
     <div
@@ -1511,7 +1510,7 @@ export function PromptInput(props: {
               if (historyKey(e)) return
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
-              send(sendMode(e, props.running, runningDelivery()))
+              send(sendAction(e))
             }}
             onKeyUp={(e) => {
               speechUp(e)
@@ -1586,20 +1585,23 @@ export function PromptInput(props: {
           <Show when={props.autoApprove}>
             {(autoApprove) => (
               <div class="prompt-action" data-folded={folded("approve") ? "" : undefined}>
-                <Tooltip value={approveTooltip()} placement="top" openDelay={0}>
+                <TooltipKeybind
+                  title={approveTooltip(autoApprove().enabled)}
+                  keybind={approveKey()}
+                  placement="top"
+                  openDelay={0}
+                >
                   <IconButton
                     icon="shield"
                     variant="ghost"
                     size="small"
                     onClick={autoApprove().onToggle}
-                    aria-label={language.t(
-                      autoApprove().enabled ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable",
-                    )}
+                    aria-label={approveLabel(autoApprove().enabled)}
                     aria-pressed={autoApprove().enabled}
                     class="prompt-status-button"
                     classList={{ "prompt-status-button--active": autoApprove().enabled }}
                   />
-                </Tooltip>
+                </TooltipKeybind>
               </div>
             )}
           </Show>
@@ -1613,15 +1615,16 @@ export function PromptInput(props: {
                 <Show
                   when={!goalMode()}
                   fallback={
-                    <Tooltip value={sendLabel()} placement="top" openDelay={0}>
+                    <Tooltip value={sendHint()} placement="top" openDelay={0}>
                       <IconButton
                         icon="send"
                         variant="ghost"
                         size="small"
                         class="prompt-goal-start"
-                        onClick={() => send()}
+                        onClick={clickSend}
                         disabled={!canSend()}
                         aria-label={sendLabel()}
+                        aria-description={sendDetail()}
                       >
                         {language.t("prompt.goal.start")}
                       </IconButton>
@@ -1636,9 +1639,10 @@ export function PromptInput(props: {
                       data-variant="ghost"
                       data-icon={sendIcon()}
                       class="prompt-send-button"
-                      onClick={(event) => send(sendMode(event, props.running, runningDelivery()))}
+                      onClick={clickSend}
                       disabled={!canSend()}
                       aria-label={sendLabel()}
+                      aria-description={sendDetail()}
                     >
                       <For each={SEND_ICONS}>
                         {(name) => (

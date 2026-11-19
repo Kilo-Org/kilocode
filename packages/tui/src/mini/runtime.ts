@@ -13,7 +13,6 @@ import type { LocationRef } from "@opencode/client/promise"
 import type { Config } from "../config"
 import { newSessionLocation } from "../config/new-session-location"
 import { errorMessage } from "../util/error"
-import { createModelWait } from "../kilocode/model-startup" // kilocode_change(gateway)
 import { loadRunAgents, loadRunCommands, loadRunReferences } from "./catalog.shared"
 import {
   resolveMiniSettings,
@@ -202,7 +201,6 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
   })
   const ctx = await input.boot()
   const runtimeController = new AbortController()
-  const modelStartup = createModelWait(runtimeController.signal) // kilocode_change(gateway)
   const session = {
     first: true,
     history: [] as RunPrompt[],
@@ -372,7 +370,6 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     },
     onInterrupt: () => {
       if (state.demo?.interrupt()) return true
-      modelStartup.cancel() // kilocode_change(gateway) - pending compaction has no server execution to interrupt yet.
       if (!state.sessionID) {
         return false
       }
@@ -919,7 +916,6 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
       },
       onAdmissionError: renderPromptError,
       onCompact: async () => {
-        if (!(await modelStartup.wait(state.sdk, { sessionID: state.sessionID, location: state.location }))) return // kilocode_change(gateway)
         await state.sdk.session.compact({ sessionID: state.sessionID }, formRequestOptions(state.location))
       },
       settle: async () => {

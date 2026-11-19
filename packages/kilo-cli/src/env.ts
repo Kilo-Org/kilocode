@@ -48,8 +48,6 @@ export function translate(env: Record<string, string | undefined>) {
   }
   env.OPENCODE_TUI_USE_PINNED_MODE ??= "1"
   env.OPENCODE_TUI_OVERLAP_STARTUP ??= "1"
-  // Client-side catalog readiness is a host opt-in; unhosted OpenCode keeps its submission behavior.
-  env.KILO_MODEL_STARTUP ??= "1"
 }
 
 /**

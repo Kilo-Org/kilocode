@@ -106,6 +106,13 @@
   overflow: visible clip;
 }
 
+/* Virtua already removes offscreen rows. When steering moves a mounted edit
+   into history, content-visibility: auto can make Chromium skip the preview
+   even though the row is still on screen. */
+.message-list-turns :is([data-component="file"], [data-component="code"], [data-component="tool-trigger"]) {
+  content-visibility: visible;
+}
+
 .message-list-loading {
   display: flex;
   flex-direction: column;

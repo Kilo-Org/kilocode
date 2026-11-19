@@ -113,12 +113,9 @@ export function createAppSession(opts: {
         : undefined
     const store = storeFor(directory ?? opts.directories.directoryOf(ev.sessionId))
     if (!store) return Promise.resolve()
-    const startup = store.startup.start(ev.sessionId)
-    return dispatchInitialPrompt(store, ev, startup.signal)
-      .catch((error: unknown) => {
-        if (!startup.signal.aborted) store.report(error)
-      })
-      .finally(startup.done)
+    return dispatchInitialPrompt(store, ev).catch((error: unknown) => {
+      store.report(error)
+    })
   }
 
   return {
