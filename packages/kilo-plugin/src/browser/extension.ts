@@ -4,6 +4,7 @@ import path from "node:path"
 import {
   IncompatibleError,
   NeedsPermissionError,
+  PageMovedError,
   UNAVAILABLE_MESSAGE,
   UnavailableError,
   UnsupportedError,
@@ -220,9 +221,7 @@ function permissionError(error: BrowserHub.Failure): Error {
   if (described === undefined) return new Error(UNDESCRIBABLE)
   const { items, refusal } = grantable(described)
   if (refusal !== undefined) return new Error(refusal)
-  if (error.kind === "moved" && !items.length) {
-    return new Error("The page changed before the step ran. Call the tool again.")
-  }
+  if (error.kind === "moved" && !items.length) return new PageMovedError()
   // A redirect names only the origin it reached, which is the read it asks for.
   return new NeedsPermissionError(items, error.stepToken, error.kind === "moved" ? items[0]?.origin : undefined)
 }

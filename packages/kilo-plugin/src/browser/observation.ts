@@ -306,11 +306,6 @@ export class Tracker {
     if (tab) this.state(session).tab = tab
   }
 
-  /** The browser moved the tab to another origin (a redirect); undefined means it did not move. */
-  moved(session: string, origin: string | undefined) {
-    if (origin !== undefined) this.state(session).tab = { kind: "moved", origin }
-  }
-
   /** Where the session's tab is, or undefined before its first page. */
   tab(session: string): Tab | undefined {
     return this.sessions.get(session)?.tab

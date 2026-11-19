@@ -910,6 +910,27 @@ describe("browser tools over the extension backend", () => {
         "Permission for read on https://y.example was not granted. The tab is now on a page at https://y.example. Continue without this action.",
       )
     })
+
+    test("after a move to a page the browser did not name, the model is told to look first", async () => {
+      const moving = fakeHub({
+        call: (input) =>
+          input.name === "browser_navigate" && input.arguments.url === "http://localhost:3000/go"
+            ? Promise.reject(new BrowserHub.Failure({ kind: "moved", message: "the page moved" }))
+            : input.name === "browser_navigate" && input.arguments.url === "https://x.example/"
+              ? refusal("https://x.example")
+              : Promise.resolve({ content: [{ type: "text", text: login }] }),
+      })
+      const host = await boot({ backend: "extension" }, { hub: moving.service, permission: refusing })
+      expect((await host.call("browser_navigate", { url: "http://localhost:3000/login" }))._tag).toBe("Success")
+      const moved = await host.call("browser_navigate", { url: "http://localhost:3000/go" })
+      expect(moved._tag === "Failure" ? (moved.failure as Tool.Error).message : "").toBe(
+        "The page changed before the step ran. Call the tool again.",
+      )
+      const refused = await host.call("browser_navigate", { url: "https://x.example/" })
+      expect(refused._tag === "Failure" ? (refused.failure as Tool.Error).message : "").toBe(
+        "Permission for navigate on https://x.example was not granted. Take a snapshot to see which page the tab is on. Continue without this action.",
+      )
+    })
   })
 
   test("a refused post-action read still records the page the action reached", async () => {

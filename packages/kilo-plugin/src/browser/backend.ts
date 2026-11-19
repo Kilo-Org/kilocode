@@ -79,6 +79,14 @@ export class NeedsPermissionError extends Error {
   }
 }
 
+/** The browser moved the tab to a page it did not name before the step ran; the step did not run. */
+export class PageMovedError extends Error {
+  constructor() {
+    super("The page changed before the step ran. Call the tool again.")
+    this.name = "BrowserPageMovedError"
+  }
+}
+
 /**
  * Raised for a tool call when no browser can serve it. The message is model-facing; `hint` is the setup step the UI
  * shows, never the model. `effectsUncertain` marks a call that may have run before the backend lost the browser; the

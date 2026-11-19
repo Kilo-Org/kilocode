@@ -14,6 +14,7 @@ import type { JsonSchema } from "effect"
 import {
   IncompatibleError,
   NeedsPermissionError,
+  PageMovedError,
   UNAVAILABLE_MESSAGE,
   UNSUPPORTED_MESSAGE,
   UnavailableError,
@@ -118,6 +119,16 @@ function placed(tool: string, args: Record<string, unknown>, result: CallResult)
   if (url) return { kind: "page", url }
   if (tool === "browser_close") return { kind: "closed" }
   if (tool === "browser_tabs" && args.action !== "list") return { kind: "unknown" }
+  return undefined
+}
+
+/**
+ * Where a failed call left the session's tab: on the origin a redirect reached, unknown after a move to a page the
+ * browser did not name, unchanged (undefined) for any other failure.
+ */
+function movedTo(error: unknown): Tab | undefined {
+  if (error instanceof PageMovedError) return { kind: "unknown" }
+  if (error instanceof NeedsPermissionError && error.moved !== undefined) return { kind: "moved", origin: error.moved }
   return undefined
 }
 
@@ -683,9 +694,10 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
         break
       }
       const error = outcome.failure
+      // A move already happened whether or not it asks for a grant: record it first, so a refusal never says the tab
+      // is still on the page it left.
+      tracker.place(session, movedTo(error))
       if (!(error instanceof NeedsPermissionError)) return yield* failure(error)
-      // A redirect already moved the tab: a refusal must not say it is still on the page it left.
-      tracker.moved(session, error.moved)
       if (attempt === 1 || !error.items.length) {
         return yield* failure(
           new Error("The browser page changed while permission was requested. Call the tool again."),
