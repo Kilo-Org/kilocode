@@ -1,18 +1,17 @@
 import { expect, test } from "bun:test"
-import { hasKiloPrompt, isKiloHome, isKiloThemePicker, stopProcessGroup } from "../script/theme-smoke"
+import { hasCurrentKiloRow, hasKiloPrompt, isKiloHome, stopProcessGroup } from "../script/theme-smoke"
 
 for (const marker of ["●", "▪"]) {
   test(`recognizes the selected Kilo row with marker ${marker}`, () => {
-    expect(isKiloThemePicker(`Themes\n\x1b[33m${marker}\x1b[0m   kilo  \n opencode`)).toBe(true)
+    expect(hasCurrentKiloRow(`\x1b[33m${marker}\x1b[0m   kilo  `)).toBe(true)
   })
 }
 
-test("a Kilo path in the footer does not count as a selected theme row", () => {
-  expect(isKiloThemePicker("/tmp/kilo-theme-smoke-123/workspace")).toBe(false)
-  expect(isKiloThemePicker("Themes\n● opencode\n/tmp/kilo-theme-smoke-123/workspace")).toBe(false)
-  expect(isKiloThemePicker("Themes\n● kilo-v1\n/tmp/kilo-theme-smoke-123/workspace")).toBe(false)
-  expect(isKiloThemePicker("Themes\nkilo\n● opencode")).toBe(false)
-  expect(isKiloThemePicker("● kilo")).toBe(false)
+test("the search query and footer don't count as a current Kilo row", () => {
+  expect(hasCurrentKiloRow("/tmp/kilo-theme-smoke-123/workspace")).toBe(false)
+  expect(hasCurrentKiloRow("Themes\n● opencode\n/tmp/kilo-theme-smoke-123/workspace")).toBe(false)
+  expect(hasCurrentKiloRow("Themes\n● kilo-v1\n/tmp/kilo-theme-smoke-123/workspace")).toBe(false)
+  expect(hasCurrentKiloRow("Themes\nkilo\n● opencode")).toBe(false)
 })
 
 for (const frame of [
