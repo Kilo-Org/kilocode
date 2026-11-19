@@ -422,6 +422,35 @@ test("missing Sessions and malformed stored records are isolated", () => {
   expect(storedRecord(`flow:v1:${legacy.id}`, JSON.stringify(legacy))).toEqual({ record: legacy })
 })
 
+it.live("fails a create with an unreadable limit before storing the Flow", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    const schedules = yield* Automation.Service
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const runtime = { locks: new Map(), changed: () => Effect.void }
+    const input = {
+      sourceSessionID: source.id,
+      name: "Bad limit",
+      when: { every: "1 day" as const, tz: "UTC" },
+      ends: { at: "not-a-time" },
+      prompt: "Check once",
+      worktree: "reuse" as const,
+      permissions: [],
+      requestID: "102132435465768798a9bacbdcedfe0f",
+    }
+    const failure = yield* create(context, schedules, input, source.projectID, runtime).pipe(Effect.flip)
+    expect(failure.message).toBe("Invalid ends.at: not-a-time")
+    expect(yield* context.storage.get(`flow:v1:flw_${input.requestID}`)).toBeUndefined()
+    expect(backingSchedules.size).toBe(0)
+  }),
+)
+
 it.live("drops the lock of a create that fails before its Flow exists", () =>
   Effect.gen(function* () {
     backingSchedules.clear()
