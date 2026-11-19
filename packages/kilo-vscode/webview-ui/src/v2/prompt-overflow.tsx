@@ -4,6 +4,7 @@ import { Icon, type IconProps } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { ShortcutKeys } from "../components/shared/ShortcutKeys"
 import { useLanguage } from "../context/language"
 
 type Tone = "success" | "warning" | "error"
@@ -12,6 +13,7 @@ export interface OverflowItem {
   key: string
   icon: IconProps["name"]
   label: string
+  keybind?: string
   /** The tooltip text of the toolbar button, so a folded action keeps its hint. */
   description?: string
   /** Icon color, the same as the toolbar button (for example indexing status). */
@@ -67,7 +69,9 @@ export const PromptOverflow: Component<Props> = (props) => {
                   </Show>
                 </span>
                 <span class="prompt-more-text">
-                  <DropdownMenu.ItemLabel>{item.label}</DropdownMenu.ItemLabel>
+                  <DropdownMenu.ItemLabel>
+                    {item.label} <Show when={item.keybind}>{(binding) => <ShortcutKeys binding={binding()} />}</Show>
+                  </DropdownMenu.ItemLabel>
                   <Show when={item.description}>
                     <DropdownMenu.ItemDescription>{item.description}</DropdownMenu.ItemDescription>
                   </Show>

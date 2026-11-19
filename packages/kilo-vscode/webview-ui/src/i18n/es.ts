@@ -231,6 +231,8 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "La aprobación automática está desactivada. Haz clic para aprobar solicitudes de permisos automáticamente.",
   "prompt.action.autoApprove.sandboxExcluded": "Las solicitudes de escalado de la sandbox siempre se excluyen.",
+  "prompt.action.autoApprove.enabledNotification": "Aprobación automática activada. Las solicitudes de escalado del sandbox quedan excluidas.",
+  "prompt.action.autoApprove.disabledNotification": "Aprobación automática desactivada.",
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
   "prompt.action.indexing": "Configuración de indexación",

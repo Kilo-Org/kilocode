@@ -30,6 +30,7 @@ describe("Agent Manager keybindings", () => {
       agentManagerOpen: "⌘⇧M",
       cycleAgentMode: "⌘.",
       cyclePreviousAgentMode: "⌘⇧.",
+      toggleAutoApprove: "⌘⌥A",
       search: "⌘⇧F",
       previousSession: "⌘⌥↑",
       nextSession: "⌘⌥↓",
@@ -71,6 +72,11 @@ describe("Agent Manager keybindings", () => {
         when: "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus",
       },
     ])
+  })
+
+  it("keeps the auto-approve toggle global, without a focus condition", () => {
+    const toggle = manifestKeybindings().filter((binding) => binding.command === "kilo-code.v2.toggleAutoApprove")
+    expect(toggle).toEqual([{ command: "kilo-code.v2.toggleAutoApprove", key: "ctrl+alt+a", mac: "cmd+alt+a" }])
   })
 
   it("shows user keybindings.json overrides", () => {

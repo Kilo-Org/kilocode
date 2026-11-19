@@ -1,6 +1,6 @@
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { JsonValue, ModelRef } from "@opencode/client"
 import {
@@ -1247,6 +1247,9 @@ export function PromptInput(props: {
       run: openIndexingSettings,
     }
   }
+  const approveKey = () => v2.bindings().toggleAutoApprove ?? ""
+  const approveLabel = (enabled: boolean) =>
+    language.t(enabled ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable")
   const foldable = createMemo<OverflowItem[]>(() => {
     const list: OverflowItem[] = indexing.buttonVisible() ? [indexingAction()] : []
     const sandbox = props.sandbox
@@ -1277,9 +1280,8 @@ export function PromptInput(props: {
       list.push({
         key: "approve",
         icon: "shield",
-        label: language.t(
-          autoApprove.enabled ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable",
-        ),
+        label: approveLabel(autoApprove.enabled),
+        keybind: approveKey(),
         description: language.t("prompt.action.autoApprove.sandboxExcluded"),
         tone: autoApprove.enabled ? "success" : undefined,
         dot: autoApprove.enabled ? "success" : undefined,
@@ -1290,13 +1292,8 @@ export function PromptInput(props: {
   const shown = createMemo(() => fold({ ...metrics(), count: foldable().length }))
   const hidden = createMemo(() => foldable().slice(0, foldable().length - shown()))
   const folded = (key: string) => hidden().some((item) => item.key === key)
-  const approveTooltip = () => {
-    const autoApprove = props.autoApprove
-    if (!autoApprove) return ""
-    return `${language.t(
-      autoApprove.enabled ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
-    )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`
-  }
+  const approveTooltip = (enabled: boolean) =>
+    `${language.t(enabled ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled")} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`
 
   return (
     <div
@@ -1590,20 +1587,23 @@ export function PromptInput(props: {
           <Show when={props.autoApprove}>
             {(autoApprove) => (
               <div class="prompt-action" data-folded={folded("approve") ? "" : undefined}>
-                <Tooltip value={approveTooltip()} placement="top" openDelay={0}>
+                <TooltipKeybind
+                  title={approveTooltip(autoApprove().enabled)}
+                  keybind={approveKey()}
+                  placement="top"
+                  openDelay={0}
+                >
                   <IconButton
                     icon="shield"
                     variant="ghost"
                     size="small"
                     onClick={autoApprove().onToggle}
-                    aria-label={language.t(
-                      autoApprove().enabled ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable",
-                    )}
+                    aria-label={approveLabel(autoApprove().enabled)}
                     aria-pressed={autoApprove().enabled}
                     class="prompt-status-button"
                     classList={{ "prompt-status-button--active": autoApprove().enabled }}
                   />
-                </Tooltip>
+                </TooltipKeybind>
               </div>
             )}
           </Show>
