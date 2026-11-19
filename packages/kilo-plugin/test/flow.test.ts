@@ -14,7 +14,7 @@ import path from "node:path"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { assemble, create, flowPermissions, list, permissionInstructions, scheduled, storedRecord } from "../src/flow"
 import { KiloFlowPlugin } from "../src/flow"
-import { backingSchedule, automationID, legacyScheduleKey } from "../src/flow/native"
+import { automationID, backingSchedule, endsError, legacyScheduleKey } from "../src/flow/native"
 import { validatePermissions } from "../src/flow/permissions"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Session } from "@opencode/schema/session"
@@ -124,7 +124,7 @@ const schedule = (input: { id: string; sessionID?: string; status?: "active" | "
     time: { created: 10, updated: 20 },
   })
 
-const record = (id: string, scheduleID?: Automation.ID) =>
+const record = (id: string, scheduleID?: KiloFlowRpc.ScheduleID) =>
   Schema.decodeUnknownSync(KiloFlowRpc.Record)({
     version: 1,
     id,
@@ -169,6 +169,26 @@ test("keeps the earlier ends limit when both are present", () => {
   )
   expect(input.expires).toBeDefined()
   expect(Date.parse(input.expires!)).toBeLessThan(Date.parse(far))
+})
+
+test("lists a carried Flow once, under its renamed row", () => {
+  const carried = record("flw_carried", "sch_carried")
+  const backing = schedule({ id: "aut_carried", sessionID: session.id })
+  const output = assemble({
+    records: [carried],
+    schedules: [backing],
+    sessions: new Map(),
+    warnings: [],
+    observedAt: 1,
+  })
+  expect(output.flows).toHaveLength(1)
+  expect(output.flows[0]?.reference).toMatchObject({ type: "managed", flowID: carried.id })
+})
+
+test("reports an unreadable ends value before it can be saved", () => {
+  expect(endsError({ at: "not-a-time" }, "UTC")).toBe("Invalid ends.at: not-a-time")
+  expect(endsError({ after: "soon" }, "UTC")).toBe("Invalid ends.after: soon")
+  expect(endsError({ at: "2026-12-31T18:00" }, "UTC")).toBeUndefined()
 })
 
 test("aggregates timed native automations with Session metadata and status mapping", () => {

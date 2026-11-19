@@ -16,8 +16,11 @@ import {
   backingSchedule,
   instant,
   legacyScheduleKey,
+  outcome,
   remaining,
+  requireEnds,
   scheduleKey,
+  settledStatus,
   status,
   time,
   trigger,
@@ -417,6 +420,9 @@ export function create(
             : undefined
           return managed(existing, schedule)
         }
+        // Validate the limit before anything is saved, so a bad value fails the request instead of leaving a Flow
+        // record behind with no backing row.
+        yield* requireEnds(record.ends, record.trigger.timezone)
         yield* ctx.permission.assert({
           action: permissionAction,
           resources:
@@ -544,6 +550,8 @@ export function update(
           ...(record.scheduleID ? { scheduleID: record.scheduleID } : {}),
           time: { ...record.time, updated: Date.now() },
         }
+        // Validate the limit before rewriting the record or replacing the row, so a bad value fails the update.
+        yield* requireEnds(next.ends, next.trigger.timezone)
         const key = `${prefix}${record.id}`
         const previous = record.scheduleID
           ? Option.getOrUndefined(yield* schedules.get(automationID(record.scheduleID)).pipe(Effect.option))
@@ -1199,7 +1207,9 @@ export function assemble(input: {
   readonly observedAt: number
 }): KiloFlowRpc.ListOutput {
   const native = new Map(input.schedules.map((schedule) => [schedule.id, schedule]))
-  const managedSchedules = new Set(input.records.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])))
+  const managedSchedules = new Set(
+    input.records.flatMap((record) => (record.scheduleID ? [automationID(record.scheduleID)] : [])),
+  )
   const latest = new Map(
     input.records.flatMap((record) => {
       const run = latestRun(input.runs ?? [], record.id)
@@ -1279,17 +1289,6 @@ function managed(
     ...(run ? { latestRun: run } : {}),
     health,
   }
-}
-
-/** A Flow whose `times` limit is used up is finished even though the row is paused. */
-function settledStatus(value: KiloFlowRpc.Status, left: number | undefined) {
-  return left === 0 ? "completed" : value
-}
-
-function outcome(run: KiloFlowRpc.Run): KiloFlowRpc.RunOutcome | undefined {
-  if (run.status === "succeeded" || run.status === "failed" || run.status === "interrupted" || run.status === "skipped")
-    return run.status
-  return undefined
 }
 
 function unmanaged(schedule: Automation.Info, session: Session.Info | undefined): KiloFlowRpc.Info {

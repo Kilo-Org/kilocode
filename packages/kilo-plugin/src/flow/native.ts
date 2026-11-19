@@ -3,7 +3,7 @@ import type { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import type { Session } from "@opencode/schema/session"
 import { durationMillis } from "@opencode/schema/automation"
 import { parseAt } from "@opencode/schema/kilocode/schedule"
-import { DateTime, Option } from "effect"
+import { DateTime, Effect, Option } from "effect"
 import { automationID } from "../schedule-id"
 
 export { automationID }
@@ -76,12 +76,38 @@ function triggerOf(when: KiloFlowRpc.When, timezone: string): Automation.Trigger
   return { type: "cron", cron: when.cron, tz }
 }
 
+/** The run outcome the Flow shows, or undefined while the run has not settled. */
+export function outcome(run: KiloFlowRpc.Run): KiloFlowRpc.RunOutcome | undefined {
+  if (run.status === "succeeded" || run.status === "failed" || run.status === "interrupted" || run.status === "skipped")
+    return run.status
+  return undefined
+}
+
+/** A Flow whose `times` limit is used up is finished even though the row is paused. */
+export function settledStatus(value: KiloFlowRpc.Status, left: number | undefined) {
+  return left === 0 ? "completed" : value
+}
+
+/** The user-facing reason a Flow's `ends` cannot be represented, or undefined when it can. */
+export function endsError(ends: KiloFlowRpc.Ends | undefined, timezone: string) {
+  if (!ends) return undefined
+  if (ends.at !== undefined && Option.isNone(parseAt(ends.at, timezone))) return `Invalid ends.at: ${ends.at}`
+  if (ends.after !== undefined && Option.isNone(durationMillis(ends.after)))
+    return `Invalid ends.after: ${ends.after}`
+  return undefined
+}
+
+/** Fails before any write when the Flow's limit cannot be represented. */
+export function requireEnds(ends: KiloFlowRpc.Ends | undefined, timezone: string) {
+  const error = endsError(ends, timezone)
+  return error ? Effect.fail(new Error(error)) : Effect.void
+}
+
 /** Automation rows carry one expiry; a `times` limit is enforced by the Flow claim hook. */
 function expiry(ends: KiloFlowRpc.Ends | undefined, timezone: string) {
   if (!ends) return undefined
   // `ends.at` is a wall-clock time in the Flow's zone, so it must be read there rather than as host-local time.
   const at = ends.at === undefined ? undefined : Option.getOrUndefined(parseAt(ends.at, timezone))
-  if (ends.at !== undefined && at === undefined) throw new Error(`Invalid ends.at: ${ends.at}`)
   const after =
     ends.after === undefined ? undefined : Date.now() + Option.getOrElse(durationMillis(ends.after), () => 0)
   // The Flow stops at whichever limit comes first, as the RPC documents, so keep the earlier instant.
