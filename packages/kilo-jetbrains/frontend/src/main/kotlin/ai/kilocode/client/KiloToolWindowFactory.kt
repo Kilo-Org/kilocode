@@ -4,6 +4,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.actions.EditorSelectionTarget
+import ai.kilocode.client.actions.ChatInput
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionSidePanelManager
 import ai.kilocode.client.telemetry.Telemetry
@@ -193,9 +194,13 @@ internal class KiloToolWindowSetupService(
             Disposer.register(manager) { toolWindow.contentManager.removeContentManagerListener(listener) }
             toolWindow.contentManager.setSelectedContent(chatContent)
             manager.newSession()
-            project.service<EditorSelectionTarget>().bind(manager) { attachment ->
+            project.service<EditorSelectionTarget>().bind(manager) { input ->
                 toolWindow.contentManager.setSelectedContent(chatContent, true)
-                manager.addSelection(attachment)
+                when (input) {
+                    is ChatInput.Attach -> manager.addSelection(input.file)
+                    is ChatInput.Draft -> manager.appendDraft(input.text)
+                    is ChatInput.Task -> manager.startSelectionTask(input.text, input.file)
+                }
             }
 
             // Notification dot on the Agents tab: up for as long as any worktree session is waiting

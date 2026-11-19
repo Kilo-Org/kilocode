@@ -461,6 +461,16 @@ class SessionUi(
     internal val promptFocusedComponent: JComponent get() = if (readonly) scroll.component else prompt.defaultFocusedComponent
 
     @RequiresEdt
+    internal fun submitSelection(text: String, attachment: PromptAttachment?) {
+        sendPrompt(text, listOfNotNull(attachment?.part()))
+    }
+
+    @RequiresEdt
+    internal fun appendDraft(text: String) {
+        if (!readonly) prompt.appendDraft(text)
+    }
+
+    @RequiresEdt
     internal fun addSelection(attachment: PromptAttachment) {
         if (!readonly) prompt.addAttachment(attachment)
     }

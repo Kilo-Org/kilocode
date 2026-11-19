@@ -44,6 +44,10 @@ public final class Smoke implements ProjectActivity {
             try {
                 run(project);
                 mark("done");
+                if (Files.exists(dir.resolve("rollback"))) {
+                    var application = ApplicationManager.getApplication();
+                    application.invokeLater(() -> application.exit(true, true, false));
+                }
             } catch (Throwable e) {
                 try {
                     if (chat != null) edt(() -> { capture("failure"); return null; });
@@ -63,11 +67,49 @@ public final class Smoke implements ProjectActivity {
         });
         mark("frame", "pid=" + ProcessHandle.current().pid() + " project=" + project.getName());
         if (phase.equals("probe")) return;
+        if (Files.exists(dir.resolve("rollback"))) {
+            boolean stable = phase.startsWith("stable-");
+            var action = await("active-plugin-action", () -> ActionManager.getInstance().getAction("Kilo.NewSession"));
+            var loader = action.getClass().getClassLoader();
+            var settings = loader.loadClass("ai.kilocode.client.plugin.KiloPluginSettings");
+            var prefs = settings.getField("INSTANCE").get(null);
+            // The action and settings must belong to the enabled plugin, not a leftover module.
+            var descriptor = ((com.intellij.ide.plugins.cl.PluginAwareClassLoader) loader).getPluginId().getIdString();
+            if (!descriptor.equals(stable ? "ai.kilocode.jetbrains" : "ai.kilocode.jetbrains.v2"))
+                throw new AssertionError("Unexpected active plugin: " + descriptor);
+            boolean approved = (boolean) settings.getMethod("getAutoApprove").invoke(prefs);
+            if (approved != phase.equals("stable-after")) throw new AssertionError("Unexpected auto-approve: " + phase);
+            if (phase.equals("stable-before")) {
+                settings.getMethod("setAutoApprove", boolean.class).invoke(prefs, true);
+                // The harness stops the process immediately after the assertion, before IDE autosave.
+                edt(() -> { ApplicationManager.getApplication().saveSettings(); return null; });
+            }
+            mark("plugin", descriptor + " autoApprove=" + approved);
+            if (stable) return;
+        }
         window = await("tool-window", () -> ToolWindowManager.getInstance(project).getToolWindow("Kilo Code"));
         edt(() -> { window.activate(null); return null; });
         tab = await("chat-tab", () -> Arrays.stream(window.getContentManager().getContents())
             .filter(c -> c.getDisplayName().equals("Chat")).findFirst().orElse(null));
         edt(() -> { window.getContentManager().setSelectedContent(tab, true); chat = tab.getComponent(); return null; });
+        if (phase.equals("editor")) {
+            var file = com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByNioFile(
+                dir.resolve("kilo-smoke-project/fixture.txt"));
+            var editor = edt(() -> com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).openTextEditor(
+                new com.intellij.openapi.fileEditor.OpenFileDescriptor(project, file), true));
+            if (editor == null) throw new AssertionError("Could not open fixture source editor");
+            edt(() -> {
+                ApplicationManager.getApplication().runWriteAction(() -> editor.getDocument().setText("top\nfixture_selection_42\nend\n"));
+                var doc = editor.getDocument();
+                editor.getSelectionModel().setSelection(doc.getLineStartOffset(1), doc.getLineEndOffset(1));
+                return null;
+            });
+            var actions = ActionManager.getInstance();
+            var callback = edt(() -> actions.tryToExecute(actions.getAction("Kilo.ExplainSelection"), null, editor.getContentComponent(), null, true));
+            await("explain-action", () -> callback.isDone() ? true : null);
+            transcript("KILO_FIXTURE_EXPLAINED");
+            return;
+        }
         if (phase.equals("create")) {
             act("Kilo.NewSession");
             send("Update the smoke fixture");

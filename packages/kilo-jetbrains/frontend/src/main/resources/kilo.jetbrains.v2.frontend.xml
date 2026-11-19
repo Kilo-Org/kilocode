@@ -206,6 +206,25 @@
         <action id="Kilo.AddSelectionToChat" class="ai.kilocode.client.actions.AddSelectionToChatAction">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </action>
+        <action id="Kilo.ExplainSelection" class="ai.kilocode.client.actions.ExplainSelectionAction">
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="Kilo.AddSelectionToChat"/>
+        </action>
+        <action id="Kilo.FixSelection" class="ai.kilocode.client.actions.FixSelectionAction">
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="Kilo.ExplainSelection"/>
+        </action>
+        <action id="Kilo.ImproveSelection" class="ai.kilocode.client.actions.ImproveSelectionAction">
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="Kilo.FixSelection"/>
+        </action>
+        <action id="Kilo.AddTerminalSelection" class="ai.kilocode.client.actions.AddTerminalSelectionAction">
+            <add-to-group group-id="Terminal.ReworkedTerminalContextMenu" anchor="last"/>
+        </action>
+        <action id="Kilo.ExplainTerminalSelection" class="ai.kilocode.client.actions.ExplainTerminalSelectionAction">
+            <add-to-group group-id="Terminal.ReworkedTerminalContextMenu" anchor="last"/>
+        </action>
+        <action id="Kilo.FixTerminalSelection" class="ai.kilocode.client.actions.FixTerminalSelectionAction">
+            <add-to-group group-id="Terminal.ReworkedTerminalContextMenu" anchor="last"/>
+        </action>
+        <action id="Kilo.GenerateTerminalCommand" class="ai.kilocode.client.actions.GenerateTerminalCommandAction"/>
         <action id="Kilo.Restart"
                 class="ai.kilocode.client.actions.RestartKiloAction"/>
 

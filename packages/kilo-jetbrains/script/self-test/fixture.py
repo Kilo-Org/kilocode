@@ -33,7 +33,10 @@ class Fixture(BaseHTTPRequestHandler):
         finish = "stop"
         delta = {"role": "assistant", "content": "Kilo fixture history"}
         event = "title"
-        if names and "Check fixture continuity" in user:
+        if names and "Explain the selected code from fixture.txt:2" in user and "fixture_selection_42" in json.dumps(messages):
+            delta["content"] = "KILO_FIXTURE_EXPLAINED"
+            event = "editor-selection"
+        elif names and "Check fixture continuity" in user:
             restored = any(m["role"] == "assistant" and "KILO_FIXTURE_EDIT_FINISHED" in json.dumps(m.get("content")) for m in messages)
             delta["content"] = "KILO_FIXTURE_RECONNECTED" if restored else "KILO_FIXTURE_MISSING_HISTORY"
             event = "reconnected" if restored else "missing-history"

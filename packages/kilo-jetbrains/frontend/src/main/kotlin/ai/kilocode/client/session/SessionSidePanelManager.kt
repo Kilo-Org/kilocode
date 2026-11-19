@@ -71,6 +71,20 @@ class SessionSidePanelManager(
     val defaultFocusedComponent: JComponent? get() = currentUi()?.defaultFocusedComponent ?: (panel as? HistoryPanel)?.defaultFocusedComponent
 
     @RequiresEdt
+    internal fun startSelectionTask(text: String, attachment: PromptAttachment?) {
+        newSession()
+        currentUi()?.submitSelection(text, attachment)
+        focusPrompt()
+    }
+
+    @RequiresEdt
+    internal fun appendDraft(text: String) {
+        if (currentUi() == null) latestUi()?.let { show(it) } ?: newSession()
+        currentUi()?.appendDraft(text)
+        focusPrompt()
+    }
+
+    @RequiresEdt
     internal fun addSelection(attachment: PromptAttachment) {
         if (currentUi() == null) latestUi()?.let { show(it) } ?: newSession()
         currentUi()?.addSelection(attachment)

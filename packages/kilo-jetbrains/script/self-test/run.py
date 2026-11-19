@@ -123,7 +123,7 @@ def wait(proc, what, check, timeout):
     raise TimeoutError(f"timed out after {timeout}s: {what}")
 
 
-def session(files, root, mode, artifact, probe, keep):
+def session(files, root, mode, artifact, probe, keep, stable=None, editor=False):
     home, meta, product, manifest = files
     root.mkdir(mode=0o700)
     project = root / "kilo-smoke-project"
@@ -143,6 +143,9 @@ def session(files, root, mode, artifact, probe, keep):
             if artifact:
                 with zipfile.ZipFile(artifact) as z:
                     z.extractall(plugins)
+            if stable:
+                with zipfile.ZipFile(stable) as z:
+                    z.extractall(plugins)
             if target == side:
                 install_driver(meta / manifest["javaExecutablePath"], home, root, plugins)
         args = [str(project)]
@@ -161,7 +164,22 @@ def session(files, root, mode, artifact, probe, keep):
                 link = wait(backend, "loopback backend join link (backend-host.log)", join_link, 120).group(0)
                 args = ["thinClient", link + ("&" if "#" in link else "#") + "remoteId=Split%20Mode", "--refresh-split-mode-token=true"]
                 report["backendPid"] = backend.pid
-            for phase in (["probe"] if probe else ["create", "reconnect"]):
+            phases = ["probe"] if probe else ["create", "reconnect"]
+            if editor:
+                phases = ["editor"]
+            if stable:
+                phases = ["stable-before", "create", "stable-after", "reconnect"]
+                report["stableSha256"] = hashlib.sha256(stable.read_bytes()).hexdigest()
+            for phase in phases:
+                if stable:
+                    config_dir = root / side / "config"
+                    config_dir.mkdir(parents=True, exist_ok=True)
+                    disabled = config_dir / "disabled_plugins.txt"
+                    ids = set(disabled.read_text().splitlines()) if disabled.exists() else set()
+                    ids -= {"ai.kilocode.jetbrains", "ai.kilocode.jetbrains.v2"}
+                    ids.add("ai.kilocode.jetbrains.v2" if phase.startswith("stable-") else "ai.kilocode.jetbrains")
+                    disabled.write_text("\n".join(sorted(ids)) + "\n")
+                    (root / "rollback").touch()
                 ui = launch(files, root, side, phase, args, env)
                 try:
                     with (root / f"{side}-{phase}.log").open(errors="replace") as log:
@@ -178,9 +196,15 @@ def session(files, root, mode, artifact, probe, keep):
                     if not frame.startswith(f"pid={ui.pid} "):
                         raise AssertionError("Driver did not run inside the expected IDE process")
                     report["phases"].append({"name": phase, "frame": frame})
+                    if stable:
+                        # Let the IDE flush its internal state database before switching plugins.
+                        ui.wait(timeout=60)
                 finally:
                     stop(ui)
-            if not probe:
+            if editor:
+                if "editor-selection" not in model.events:
+                    raise AssertionError("Selected source and prompt did not reach the model together")
+            elif not probe:
                 if "edit-complete" not in model.events or "reconnected" not in model.events:
                     raise AssertionError("Missing fixture-model edit result or post-reconnect request")
             report["status"] = "passed"
@@ -211,11 +235,17 @@ if __name__ == "__main__":
     parser.add_argument("--mode", choices=["local", "split", "both"], default="both")
     parser.add_argument("--output-parent", type=Path, help="Existing directory for a fresh private evidence directory")
     parser.add_argument("--keep-sandbox", action="store_true", help="Keep private profiles and IDE logs for troubleshooting")
+    parser.add_argument("--stable-plugin", type=Path, help="Signed stable ZIP for a local stable/preview rollback test")
+    parser.add_argument("--editor-actions", action="store_true", help="Exercise Explain Selection on a native editor")
     cli = parser.parse_args()
+    if cli.editor_actions and (not cli.plugin or cli.stable_plugin):
+        parser.error("--editor-actions requires --plugin without --stable-plugin")
+    if cli.stable_plugin and (not cli.plugin or cli.mode != "local" or not cli.stable_plugin.is_file()):
+        parser.error("--stable-plugin requires an existing ZIP, --plugin and --mode local")
     if cli.plugin and not cli.plugin.is_file():
         parser.error(f"Missing plugin artifact: {cli.plugin}")
     files = ide_files(cli.ide)
     root = Path(tempfile.mkdtemp(prefix="kjs-", dir=cli.output_parent)).resolve()
     print(f"Evidence: {root}", flush=True)
-    results = [session(files, root / m, m, cli.plugin, cli.probe, cli.keep_sandbox) for m in (["local", "split"] if cli.mode == "both" else [cli.mode])]
+    results = [session(files, root / m, m, cli.plugin, cli.probe, cli.keep_sandbox, cli.stable_plugin, cli.editor_actions) for m in (["local", "split"] if cli.mode == "both" else [cli.mode])]
     sys.exit(0 if all(results) else 1)

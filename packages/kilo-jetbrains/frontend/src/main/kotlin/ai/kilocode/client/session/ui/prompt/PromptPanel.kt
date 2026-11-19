@@ -564,6 +564,12 @@ class PromptPanel(
     fun hasDraft(): Boolean = text().isNotEmpty() || attachments.isNotEmpty()
 
     @RequiresEdt
+    internal fun appendDraft(value: String) {
+        val existing = editor.text
+        setText(if (existing.isEmpty()) value else "$existing\n\n$value")
+    }
+
+    @RequiresEdt
     fun hasAttachments(): Boolean = attachments.isNotEmpty()
 
     @RequiresEdt
