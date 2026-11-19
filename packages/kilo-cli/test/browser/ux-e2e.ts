@@ -1197,8 +1197,10 @@ async function settingsFaultsScenario() {
   const hub = await startHub(root, {})
   await pair(hub)
 
-  // Command answered `{ ok: false }`: the worker could not run Stop all. Does the page say so?
+  // Command answered `{ ok: false }`: the worker could not run Stop all. Does the page say so? The error line belongs
+  // to the Stop all control and goes with the agent rows when the run ends, so it is read while the run is live.
   out["command-not-ok"] = await (async () => {
+    let section = "no Stop all button (no agents connected)"
     const result = await run(
       (step) => {
         if (step.results.length === 0) return navigate(localOrigin)
@@ -1210,6 +1212,7 @@ async function settingsFaultsScenario() {
             })
             await panel.getByRole("button", { name: "Stop all" }).click()
             await Bun.sleep(800)
+            section = await sectionText()
             await shot("01-stop-all-not-ok")
             return undefined
           })()
@@ -1219,7 +1222,7 @@ async function settingsFaultsScenario() {
       {},
       { hub, keepHub: true },
     ).catch((error: unknown) => ({ error: String(error) }))
-    return { section: await sectionText(), result: "error" in result ? result.error : result.last.results.map((text) => text.slice(0, 200)) }
+    return { section, result: "error" in result ? result.error : result.last.results.map((text) => text.slice(0, 200)) }
   })()
   expectKnown(
     "settings-faults:stop-all-text",
