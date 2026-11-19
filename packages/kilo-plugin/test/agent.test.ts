@@ -128,8 +128,9 @@ describe("KiloAgentPlugin", () => {
       })
       expect((yield* agents.get(Agent.ID.make("ask")))?.system).toContain("You are in Ask mode")
       expect((yield* agents.get(Agent.ID.make("debug")))?.system).toContain("expert software debugger")
-      expect(yield* agents.get(Agent.ID.make("orchestrator"))).toBeUndefined()
-      expect(list.map((agent) => agent.id)).not.toContain(Agent.ID.make("orchestrator"))
+      // `orchestrator` stays as a hidden read-only copy so stored sessions that still name it resolve.
+      expect(yield* agents.get(Agent.ID.make("orchestrator"))).toMatchObject({ name: "Orchestrator", hidden: true })
+      expect(list.filter((agent) => agent.hidden).map((agent) => agent.id)).toContain(Agent.ID.make("orchestrator"))
     }),
   )
 
@@ -174,6 +175,17 @@ describe("KiloAgentPlugin", () => {
       expect(effect("skill", "review")).toBe("allow")
       expect(effect("external_directory", path.join(global.data, "tool-output", "*"))).toBe("allow")
       expect(effect("external_directory", "/outside/*")).toBe("deny")
+    }),
+  )
+
+  it.effect("lets the hidden Orchestrator alias delegate but not run shell commands or edit", () =>
+    Effect.gen(function* () {
+      yield* setup()
+      const rules = yield* permissions("orchestrator")
+      expect(Permission.evaluate("subagent", "general", rules).effect).toBe("allow")
+      expect(Permission.evaluate("skill", "review", rules).effect).toBe("allow")
+      expect(Permission.evaluate("shell", "ls", rules).effect).toBe("deny")
+      expect(Permission.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
     }),
   )
 
@@ -419,9 +431,10 @@ describe("KiloAgentPlugin", () => {
       expect(yield* effect("ask", "shell", "cargo search serde")).toBe("deny")
       expect(yield* effect("plan", "shell", "cargo search serde")).toBe("allow")
       expect(yield* effect("plan", "edit", path.join(global.data, "plans", "cache.md"))).toBe("allow")
+      expect(yield* effect("orchestrator", "shell", "ls")).toBe("deny")
       expect(yield* effect("code", "shell", "rm -rf src")).toBe("allow")
       // A rule a later post plugin appends to every agent stays in place after the ceiling.
-      for (const id of ["ask", "plan", "code"]) expect(yield* effect(id, "browser", "*")).toBe("deny")
+      for (const id of ["ask", "plan", "orchestrator", "code"]) expect(yield* effect(id, "browser", "*")).toBe("deny")
       expect((yield* agents.list()).map((agent) => agent.id)).not.toContain(Agent.ID.make("kilo-config-permissions"))
     }),
   )

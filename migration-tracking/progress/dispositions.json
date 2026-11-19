@@ -250,7 +250,13 @@
   "module:packages/opencode/src/kilocode/agent/index.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/agent/index.ts",
-    "note": "Agent set (Code, hidden build copy, Ask, Debug, Orchestrator, Plan), shell defaults, read-only guards, the config ceiling and the agent-switch reminder. Not here: MCP ask rules (follow-up), Explore (U-E2-17), Scout (U-E11-05), rules for tools v2 does not have yet (tool units). Agent remove lives in packages/kilo-plugin/src/agent/plugin.ts (kilocode.agent RPC) and deletes only the markdown file that defines the agent.",
+    "note": "Agent set (Code, hidden build copy, Ask, Debug, Plan), shell defaults, read-only guards, the config ceiling and the agent-switch reminder. Orchestrator was removed from the v2 picker (PR #16380): v1 still ships agents.orchestrator (deprecated: true) for legacy sessions, so the v2 plugin keeps a hidden read-only alias with its original guard so stored sessions, scheduled jobs and imported v1 sessions keep resolving instead of failing with AgentNotFoundError. Not here: MCP ask rules (follow-up), Explore (U-E2-17), Scout (U-E11-05), rules for tools v2 does not have yet (tool units). Agent remove lives in packages/kilo-plugin/src/agent/plugin.ts (kilocode.agent RPC) and deletes only the markdown file that defines the agent.",
+    "by": "agents-plugin"
+  },
+  "module:packages/opencode/src/kilocode/agent/orchestrator.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/agent/orchestrator.txt",
+    "note": "Orchestrator prompt. Removed from the v2 picker in PR #16380 and retained as the hidden read-only alias for stored orchestrator sessions; the visible agent set is Code, Ask, Debug, Plan.",
     "by": "agents-plugin"
   },
   "module:packages/opencode/src/kilocode/agent/scout.txt": {
@@ -294,7 +300,7 @@
   "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/test/agent.test.ts",
-    "note": "Skill allowed for Code, Ask, Debug, Orchestrator, Plan and General. Native Explore denies skill (U-E2-17); system agents run without tools (native).",
+    "note": "Skill allowed for Code, Ask, Debug, Plan, General and the hidden Orchestrator alias. Native Explore denies skill (U-E2-17); system agents run without tools (native).",
     "by": "agents-plugin"
   },
   "module:packages/opencode/test/kilocode/ask-agent-permissions.test.ts": {
