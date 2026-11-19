@@ -23,6 +23,7 @@ async function resume(
   catalog: (typeof selected)[] = [],
   options: {
     agent?: string
+    buildModel?: ReturnType<typeof agent>["model"]
     sync?: Promise<void>
     rejectPrompt?: boolean
     navigation?: "picker" | "child"
@@ -47,7 +48,8 @@ async function resume(
       keybinds: { "agent.cycle": "f6", "session.child.first": "f7", "diff.open": "f8" },
     },
     fetch: async (url, request) => {
-      if (url.pathname === "/api/agent") return json({ location, data: [agent("build"), agent("plan")] })
+      if (url.pathname === "/api/agent")
+        return json({ location, data: [agent("build", options.buildModel), agent("plan")] })
       if (url.pathname === "/api/model") return json({ location, data: catalog })
       if (url.pathname === "/api/vcs/base")
         return json({ location, data: { name: "v2", ref: "refs/heads/v2", source: "default" } })
@@ -171,6 +173,26 @@ test("editing the waiting startup draft disarms auto-send even if its text is re
   expect(app.writes).toEqual([])
 })
 
+test("entering and leaving shell mode disarms the untouched launch draft", async () => {
+  await using app = await resume()
+  await app.ready
+  await app.waitForFrame(
+    (frame) => frame.includes("saved (unavailable)") && app.renderer.currentFocusedEditor?.plainText === prompt,
+  )
+  app.mockInput.pressKey("a", { ctrl: true })
+  await app.waitForFrame(() => app.renderer.currentFocusedEditor?.cursorOffset === 0)
+  app.mockInput.pressKey("!")
+  await app.waitForFrame((frame) => frame.includes("Shell"))
+  expect(app.renderer.currentFocusedEditor?.plainText).toBe(prompt)
+  app.mockInput.pressEscape()
+  await app.waitForFrame((frame) => frame.includes("saved (unavailable)"))
+
+  app.update([{ ...selected, name: "Available model" }])
+  await app.waitForFrame((frame) => frame.includes("Available model"))
+  expect(app.renderer.currentFocusedEditor?.plainText).toBe(prompt)
+  expect(app.writes).toEqual([])
+})
+
 test("undoing an edit on the remounted composer does not re-arm the launch draft", async () => {
   await using app = await resume()
   await app.ready
@@ -211,12 +233,14 @@ test("recalling identical user text from history before a remount leaves it for 
   expect(app.writes).toEqual([])
 })
 
-test("a missing saved model leaves the launch draft for an explicit send with a replacement", async () => {
+test.each([undefined, "build"])("a replacement needs an explicit send on resume (agent: %s)", async (agent) => {
   const replacement = model("replacement")
   const sync = Promise.withResolvers<void>()
-  await using app = await resume([replacement], { sync: sync.promise })
+  await using app = await resume([replacement], { agent, sync: sync.promise })
   await app.ready
-  await app.waitForFrame((frame) => frame.includes("saved (unavailable)") && frame.includes(prompt))
+  await app.waitForFrame(
+    (frame) => frame.includes("saved (unavailable)") && app.renderer.currentFocusedEditor?.plainText === prompt,
+  )
   app.mockInput.pressKey("F6")
   await app.waitForFrame((frame) => frame.includes("Plan") && frame.includes(replacement.name))
   sync.resolve()
@@ -289,6 +313,21 @@ test("an explicit agent on resume uses its own model", async () => {
     { model: { providerID: replacement.providerID, id: replacement.id } },
     expect.objectContaining({ text: prompt }),
   ])
+})
+
+test("explicitly resuming with the saved agent keeps its saved provider, model and variant", async () => {
+  const replacement = model("replacement", ["low"])
+  await using app = await resume([replacement], {
+    agent: "build",
+    buildModel: { providerID: replacement.providerID, id: replacement.id, variant: "low" },
+  })
+  await app.ready
+  await app.waitForFrame((frame) => frame.includes("saved (unavailable)") && frame.includes(prompt))
+  expect(app.writes).toEqual([])
+
+  app.update([replacement, selected])
+  await app.submitted
+  expect(app.writes).toEqual([{ model: savedModel }, expect.objectContaining({ text: prompt })])
 })
 
 test("unhosted startup keeps its original unavailable-model behavior", async () => {
