@@ -201,10 +201,6 @@ const SHARE_ADOPT_FIX = "kilocode #16392 (/browser share, /browser adopt and bro
  * A known scenario or check that passes is reported as an unexpected pass, so its entry can go.
  */
 const KNOWN_FAILURES: Record<string, { reason: string; failures?: RegExp[] }> = {
-  "stop-race": {
-    reason: "kilocode browser-disconnect (#16385; cloud #11929 is in the extension build)",
-    failures: [/^a turn running at Stop all opened a new session/],
-  },
   "share-adopt": {
     reason: SHARE_ADOPT_FIX,
     failures: [
