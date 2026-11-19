@@ -167,9 +167,10 @@ export const dict = {
   "browser.permission.read.title": "อ่านหน้าเว็บบน {{origin}}",
   "browser.permission.act.title": "คลิกและพิมพ์บน {{origin}}",
   "browser.permission.navigate.title": "เปิดหน้าเว็บบน {{origin}}",
-  "browser.permission.read.detail": "เอเจนต์สามารถอ่านข้อความในหน้า สแนปช็อต และภาพหน้าจอจากต้นทางนี้",
-  "browser.permission.act.detail": "เอเจนต์สามารถคลิก พิมพ์ และเรียกใช้สคริปต์ของหน้าบนต้นทางนี้",
-  "browser.permission.navigate.detail": "เอเจนต์สามารถเปิดหน้าเว็บบนต้นทางนี้",
+  "browser.permission.read.detail": "การอนุมัติจะให้เซสชันนี้อ่านหน้าเว็บบน {{origin}} ได้จนกว่าเซสชันจะสิ้นสุด",
+  "browser.permission.act.detail":
+    "การอนุมัติจะให้เซสชันนี้คลิก พิมพ์ และเรียกใช้สคริปต์ของหน้าบน {{origin}} ได้จนกว่าเซสชันจะสิ้นสุด",
+  "browser.permission.navigate.detail": "การอนุมัติจะให้เซสชันนี้เปิดหน้าเว็บบน {{origin}} ได้จนกว่าเซสชันจะสิ้นสุด",
   "browser.permission.frame": "ต้นทางนี้เป็นเฟรมภายในหน้า ไม่ใช่ตัวหน้าเอง",
   "browser.permission.sensitive.title": "ขั้นตอนเบราว์เซอร์ที่ละเอียดอ่อนบน {{origin}}",
   "browser.permission.sensitive.reason": "เหตุผล: {{reason}}",

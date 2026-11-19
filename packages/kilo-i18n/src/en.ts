@@ -197,9 +197,10 @@ export const dict = {
   "browser.permission.read.title": "Read pages on {{origin}}",
   "browser.permission.act.title": "Click and type on {{origin}}",
   "browser.permission.navigate.title": "Open pages on {{origin}}",
-  "browser.permission.read.detail": "The agent can read page text, snapshots and screenshots from this origin.",
-  "browser.permission.act.detail": "The agent can click, type and run page scripts on this origin.",
-  "browser.permission.navigate.detail": "The agent can open pages on this origin.",
+  "browser.permission.read.detail": "Approving lets this conversation read pages on {{origin}} until it ends.",
+  "browser.permission.act.detail":
+    "Approving lets this conversation click, type and run page scripts on {{origin}} until it ends.",
+  "browser.permission.navigate.detail": "Approving lets this conversation open pages on {{origin}} until it ends.",
   "browser.permission.frame": "This origin is a frame inside the page, not the page itself.",
   "browser.permission.sensitive.title": "Sensitive browser step on {{origin}}",
   "browser.permission.sensitive.reason": "Reason: {{reason}}",

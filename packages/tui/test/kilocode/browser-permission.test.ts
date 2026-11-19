@@ -16,23 +16,25 @@ describe("browser permission prompt", () => {
     expect(navigate).toEqual({
       icon: "◎",
       title: "Open pages on https://example.com",
-      lines: ["The agent can open pages on this origin."],
+      lines: ["Approving lets this conversation open pages on https://example.com until it ends."],
     })
     expect(read).toEqual({
       icon: "◎",
       title: "Read pages on https://example.com",
-      lines: ["The agent can read page text, snapshots and screenshots from this origin."],
+      lines: ["Approving lets this conversation read pages on https://example.com until it ends."],
     })
     expect(act).toEqual({
       icon: "◎",
       title: "Click and type on https://shop.example",
-      lines: ["The agent can click, type and run page scripts on this origin."],
+      lines: [
+        "Approving lets this conversation click, type and run page scripts on https://shop.example until it ends.",
+      ],
     })
   })
 
   test("says when the origin is a frame inside the page", () => {
     expect(permissionPresentation(grant("read", "https://ads.example", { frame: true })).lines).toEqual([
-      "The agent can read page text, snapshots and screenshots from this origin.",
+      "Approving lets this conversation read pages on https://ads.example until it ends.",
       "This origin is a frame inside the page, not the page itself.",
     ])
   })

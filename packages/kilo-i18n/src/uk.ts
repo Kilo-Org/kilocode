@@ -171,9 +171,11 @@ export const dict = {
   "browser.permission.read.title": "Читати сторінки на {{origin}}",
   "browser.permission.act.title": "Клацати й вводити текст на {{origin}}",
   "browser.permission.navigate.title": "Відкривати сторінки на {{origin}}",
-  "browser.permission.read.detail": "Агент може читати текст сторінки, знімки та знімки екрана з цього джерела.",
-  "browser.permission.act.detail": "Агент може клацати, вводити текст і запускати скрипти сторінки на цьому джерелі.",
-  "browser.permission.navigate.detail": "Агент може відкривати сторінки на цьому джерелі.",
+  "browser.permission.read.detail": "Схвалення дозволяє цій сесії читати сторінки на {{origin}} до її завершення.",
+  "browser.permission.act.detail":
+    "Схвалення дозволяє цій сесії клацати, вводити текст і запускати скрипти сторінки на {{origin}} до її завершення.",
+  "browser.permission.navigate.detail":
+    "Схвалення дозволяє цій сесії відкривати сторінки на {{origin}} до її завершення.",
   "browser.permission.frame": "Це джерело — фрейм усередині сторінки, а не сама сторінка.",
   "browser.permission.sensitive.title": "Чутливий крок браузера на {{origin}}",
   "browser.permission.sensitive.reason": "Причина: {{reason}}",

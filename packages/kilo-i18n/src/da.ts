@@ -169,9 +169,10 @@ export const dict = {
   "browser.permission.read.title": "Læs sider på {{origin}}",
   "browser.permission.act.title": "Klik og skriv på {{origin}}",
   "browser.permission.navigate.title": "Åbn sider på {{origin}}",
-  "browser.permission.read.detail": "Agenten kan læse sidetekst, snapshots og skærmbilleder fra denne oprindelse.",
-  "browser.permission.act.detail": "Agenten kan klikke, skrive og køre sideskripter på denne oprindelse.",
-  "browser.permission.navigate.detail": "Agenten kan åbne sider på denne oprindelse.",
+  "browser.permission.read.detail": "Godkendelse lader denne session læse sider på {{origin}}, indtil den slutter.",
+  "browser.permission.act.detail":
+    "Godkendelse lader denne session klikke, skrive og køre sideskripter på {{origin}}, indtil den slutter.",
+  "browser.permission.navigate.detail": "Godkendelse lader denne session åbne sider på {{origin}}, indtil den slutter.",
   "browser.permission.frame": "Denne oprindelse er en ramme inde i siden, ikke selve siden.",
   "browser.permission.sensitive.title": "Følsomt browsertrin på {{origin}}",
   "browser.permission.sensitive.reason": "Årsag: {{reason}}",

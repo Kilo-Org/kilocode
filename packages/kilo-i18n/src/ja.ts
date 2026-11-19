@@ -167,10 +167,10 @@ export const dict = {
   "browser.permission.read.title": "{{origin}} のページを読み取る",
   "browser.permission.act.title": "{{origin}} でクリックと入力を行う",
   "browser.permission.navigate.title": "{{origin}} のページを開く",
-  "browser.permission.read.detail":
-    "エージェントはこのオリジンのページテキスト、スナップショット、スクリーンショットを読み取れます。",
-  "browser.permission.act.detail": "エージェントはこのオリジンでクリック、入力、ページスクリプトの実行ができます。",
-  "browser.permission.navigate.detail": "エージェントはこのオリジンのページを開けます。",
+  "browser.permission.read.detail": "承認すると、このセッションが終わるまで {{origin}} のページを読み取れます。",
+  "browser.permission.act.detail":
+    "承認すると、このセッションが終わるまで {{origin}} でクリック、入力、ページスクリプトの実行ができます。",
+  "browser.permission.navigate.detail": "承認すると、このセッションが終わるまで {{origin}} のページを開けます。",
   "browser.permission.frame": "このオリジンはページ内のフレームであり、ページそのものではありません。",
   "browser.permission.sensitive.title": "{{origin}} の機密ブラウザステップ",
   "browser.permission.sensitive.reason": "理由: {{reason}}",

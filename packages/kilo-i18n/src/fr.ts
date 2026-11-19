@@ -173,10 +173,11 @@ export const dict = {
   "browser.permission.act.title": "Cliquer et saisir du texte sur {{origin}}",
   "browser.permission.navigate.title": "Ouvrir des pages sur {{origin}}",
   "browser.permission.read.detail":
-    "L'agent peut lire le texte de la page, les instantanés et les captures d'écran de cette origine.",
+    "L'approbation permet à cette session de lire des pages sur {{origin}} jusqu'à sa fin.",
   "browser.permission.act.detail":
-    "L'agent peut cliquer, saisir du texte et exécuter des scripts de page sur cette origine.",
-  "browser.permission.navigate.detail": "L'agent peut ouvrir des pages sur cette origine.",
+    "L'approbation permet à cette session de cliquer, de saisir du texte et d'exécuter des scripts de page sur {{origin}} jusqu'à sa fin.",
+  "browser.permission.navigate.detail":
+    "L'approbation permet à cette session d'ouvrir des pages sur {{origin}} jusqu'à sa fin.",
   "browser.permission.frame": "Cette origine est un cadre à l'intérieur de la page, pas la page elle-même.",
   "browser.permission.sensitive.title": "Étape sensible du navigateur sur {{origin}}",
   "browser.permission.sensitive.reason": "Motif : {{reason}}",
