@@ -170,7 +170,7 @@ export const dict = {
   "browser.state.extensionHint": "Connectez l'extension de navigateur Kilo pour piloter votre navigateur",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Lire les pages sur {{origin}}",
-  "browser.permission.act.title": "Cliquer et saisir sur {{origin}}",
+  "browser.permission.act.title": "Cliquer et saisir du texte sur {{origin}}",
   "browser.permission.navigate.title": "Ouvrir des pages sur {{origin}}",
   "browser.permission.read.detail":
     "L'agent peut lire le texte de la page, les instantanés et les captures d'écran de cette origine.",
