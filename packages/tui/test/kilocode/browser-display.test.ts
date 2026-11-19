@@ -61,6 +61,33 @@ describe("browser tool rows", () => {
     }
   })
 
+  test("browser_handle_dialog masks the prompt text and keeps the choice", () => {
+    for (const tool of ["browser_handle_dialog", "browser.handle_dialog"]) {
+      const input = browserDisplayInput(tool, { accept: true, promptText: password })
+      expect(primitiveInputSummary(input)).toBe("[accept=true, promptText=•••]")
+    }
+  })
+
+  test("browser_drop masks every data value and keeps the MIME types and paths", () => {
+    const input = browserDisplayInput("browser.drop", {
+      target: "e4",
+      paths: ["/tmp/a.png"],
+      data: { "text/plain": password, "text/uri-list": "https://example.com" },
+    })
+    expect(input).toEqual({
+      target: "e4",
+      paths: ["/tmp/a.png"],
+      data: { "text/plain": "•••", "text/uri-list": "•••" },
+    })
+  })
+
+  test("browser_drop hides data that is not a map", () => {
+    for (const data of [password, [password]]) {
+      const input = browserDisplayInput("browser_drop", { target: "e4", data })
+      expect(JSON.stringify(input)).not.toContain(password)
+    }
+  })
+
   test("every other tool's input is unchanged", () => {
     const navigate = { url: "https://example.com" }
     expect(browserDisplayInput("browser.navigate", navigate)).toBe(navigate)
