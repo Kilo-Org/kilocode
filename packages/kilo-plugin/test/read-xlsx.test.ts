@@ -18,7 +18,7 @@ const run = (file: string, page: { limit?: number; offset?: number } = {}) =>
   Effect.gen(function* () {
     const environment = yield* Environment.Service
     const value = yield* read(environment.files, AbsolutePath.make(file), path.basename(file), page)
-    if (value.type !== "text-page") throw new Error(`expected a text page, got ${value.type}`)
+    if (value.type !== "text") throw new Error(`expected a text page, got ${value.type}`)
     return { page: value, output: ReadTool.toModelContent(path.basename(file), undefined, value) }
   })
 
@@ -224,7 +224,7 @@ describe("kilo XLSX reads", () => {
 
         const result = yield* run(file, { limit: 2 })
 
-        expect(result.page.truncated).toBe(true)
+        expect(result.page.next).toBeDefined()
         expect(result.page.next).toBe(3)
         expect(result.output).toContain("1: --- Sheet: Visible ---")
         expect(result.output).toContain("2: one")
@@ -320,10 +320,9 @@ describe("kilo XLSX reads", () => {
         const environment = yield* Environment.Service
         const value = yield* read(environment.files, AbsolutePath.make(file), path.basename(file))
 
-        expect(value.type).toBe("file")
-        if (value.type === "file") {
+        expect(value.type).toBe("media")
+        if (value.type === "media") {
           expect(value.mime).toBe("application/pdf")
-          expect(value.encoding).toBe("base64")
         }
       }),
     ),
@@ -458,7 +457,7 @@ describe("kilo ODS reads", () => {
 
         const result = yield* run(file, { limit: 2 })
 
-        expect(result.page.truncated).toBe(true)
+        expect(result.page.next).toBeDefined()
         expect(result.output).toContain("1: --- Sheet: Visible ---")
         expect(result.output).toContain("2: one")
         expect(result.output).not.toContain("3: two")

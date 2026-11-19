@@ -3,6 +3,7 @@ import path from "path"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Config } from "@opencode/core/config"
+import { Flag } from "@opencode/core/flag"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Environment } from "@opencode/core/environment/index"
 import { FileAccess } from "@opencode/core/file-access"
@@ -48,7 +49,7 @@ const node = (directory: string, worktree = directory) =>
         })
       }),
     ),
-    deps: [Tool.node, FileWrite.node, FSUtil.node],
+    deps: [Tool.node, FileWrite.node, FSUtil.node, Config.node, Flag.node],
   })
 
 const withTool = <A, E, R>(

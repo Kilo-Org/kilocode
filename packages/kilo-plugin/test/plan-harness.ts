@@ -192,6 +192,11 @@ export async function handoff(input: {
                       ? Effect.fail(input.handover)
                       : Effect.succeed(input.handover ?? "")
                   }),
+                video: {
+                  start: () => Effect.die("unused Generate.video.start"),
+                  status: () => Effect.die("unused Generate.video.status"),
+                  result: () => Effect.die("unused Generate.video.result"),
+                },
               }),
             ),
           ),

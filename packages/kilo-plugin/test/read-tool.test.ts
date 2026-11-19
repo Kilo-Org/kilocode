@@ -2,10 +2,12 @@ import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import path from "path"
 import { Config } from "@opencode/core/config"
+import { Flag } from "@opencode/core/flag"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Environment } from "@opencode/core/environment/index"
 import { FileAccess } from "@opencode/core/file-access"
 import { Image } from "@opencode/core/image"
+import { InstructionDiscovery } from "@opencode/core/instruction-discovery"
 import { Location } from "@opencode/core/location"
 import { Permission } from "@opencode/core/permission"
 import { Project } from "@opencode/core/project"
@@ -45,9 +47,12 @@ const node = makeLocationNode({
     Permission.node,
     Skill.node,
     SessionInstructions.node,
+    InstructionDiscovery.node,
     FSUtil.node,
     Environment.node,
     Location.node,
+    Config.node,
+    Flag.node,
   ],
 })
 

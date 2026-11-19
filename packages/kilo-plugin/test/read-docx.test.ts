@@ -55,10 +55,8 @@ const document = async (paragraphs: string[], extra = "") => {
   return writer.close()
 }
 
-const text = (
-  value: ReadToolFileSystem.FileContent | ReadToolFileSystem.TextPage | ReadToolFileSystem.ListPage,
-) => {
-  if (value.type !== "text-page") throw new Error(`expected a text page, got ${value.type}`)
+const text = (value: ReadToolFileSystem.Output) => {
+  if (value.type !== "text") throw new Error(`expected a text page, got ${value.type}`)
   return value
 }
 
@@ -91,7 +89,7 @@ describe("kilo DOCX reads", () => {
         expect(output).toContain("1: First paragraph")
         expect(output).not.toContain("Second paragraph")
         expect(output).toContain("Continue reading with offset: 2")
-        expect(value.truncated).toBe(true)
+        expect(value.next).toBeDefined()
       }),
     ),
   )
@@ -133,7 +131,7 @@ describe("kilo DOCX reads", () => {
 
         const value = yield* run(folder)
 
-        expect(value.type).toBe("list-page")
+        expect(value.type).toBe("directory")
         expect(ReadTool.toModelContent(folder, undefined, value)).toContain("sample.docx")
         expect(ReadTool.toModelContent(folder, undefined, value)).not.toContain("Hidden paragraph")
       }),
@@ -158,7 +156,7 @@ describe("kilo DOCX reads", () => {
         )
         const capped = text(yield* run(many))
 
-        expect(capped.truncated).toBe(true)
+        expect(capped.next).toBeDefined()
         expect(capped.next).toBeDefined()
         expect(Buffer.byteLength(capped.content, "utf-8")).toBeLessThanOrEqual(ReadToolFileSystem.MAX_READ_BYTES)
 
@@ -180,14 +178,14 @@ describe("kilo DOCX reads", () => {
         const all = text(yield* run(filepath)).content.split("\n")
 
         const tail = text(yield* run(filepath, { offset: 50 }))
-        expect(tail).toMatchObject({ content: all.join("\n"), offset: 1, truncated: false })
+        expect(tail).toMatchObject({ content: all.join("\n"), offset: 1, type: "text" })
         expect(tail.next).toBeUndefined()
         expect(ReadTool.toModelContent("short.docx", 50, tail)).toContain(
           `(offset 50 is past the end; the file has ${all.length} lines)`,
         )
 
         const limited = text(yield* run(filepath, { offset: 50, limit: 2 }))
-        expect(limited).toMatchObject({ content: all.slice(-2).join("\n"), offset: all.length - 1, truncated: false })
+        expect(limited).toMatchObject({ content: all.slice(-2).join("\n"), offset: all.length - 1, type: "text" })
       }),
     ),
   )
@@ -200,19 +198,19 @@ describe("kilo DOCX reads", () => {
         const all = text(yield* run(filepath)).content.split("\n")
 
         const last = text(yield* run(filepath, { offset: -2 }))
-        expect(last).toMatchObject({ content: all.slice(-2).join("\n"), offset: all.length - 1, truncated: false })
+        expect(last).toMatchObject({ content: all.slice(-2).join("\n"), offset: all.length - 1, type: "text" })
 
         const paged = text(yield* run(filepath, { offset: -3, limit: 1 }))
         expect(paged).toMatchObject({
           content: all[all.length - 3],
           offset: all.length - 2,
-          truncated: true,
+          next: expect.any(Number),
           next: all.length - 1,
         })
 
         // Counting back past the first line starts at line 1.
         const whole = text(yield* run(filepath, { offset: -500 }))
-        expect(whole).toMatchObject({ content: all.join("\n"), offset: 1, truncated: false })
+        expect(whole).toMatchObject({ content: all.join("\n"), offset: 1, type: "text" })
       }),
     ),
   )
@@ -243,10 +241,9 @@ describe("kilo DOCX reads", () => {
         yield* Effect.promise(() => Bun.write(doc, new Uint8Array([0x00, 0x01, 0x02])))
 
         const value = yield* run(pdf)
-        expect(value.type).toBe("file")
-        if (value.type === "file") {
+        expect(value.type).toBe("media")
+        if (value.type === "media") {
           expect(value.mime).toBe("application/pdf")
-          expect(value.encoding).toBe("base64")
         }
 
         const error = yield* run(doc).pipe(Effect.flip)

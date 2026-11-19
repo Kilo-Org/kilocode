@@ -85,6 +85,8 @@ const emptyCredentialsLayer = Layer.effect(
           ),
         resolveDecision: (ref) =>
           emptyToken(ref).pipe(Effect.flatMap((empty) => (empty ? Effect.undefined : resolver.resolveDecision(ref)))),
+        resolveVideo: (ref) =>
+          emptyToken(ref).pipe(Effect.flatMap((empty) => (empty ? Effect.undefined : resolver.resolveVideo(ref)))),
       })
     }),
   )
