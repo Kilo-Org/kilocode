@@ -181,12 +181,12 @@ A warm first reply matters most for people who are new here.
 
 - The PR is not a draft, its author is a community member, and it is not waiting for the contributor.
 - The last commit has passing checks, and GitHub reports the PR as mergeable.
-- No changed file is risky: `.github/`, `.kilo/`, `script/`, `patches/`, `packages/kilo-gateway/`, `package.json` or `bun.lock`.
+- No changed file is risky: `.github/`, `script/`, `patches/`, `packages/kilo-gateway/`, a file named `package.json` or `bun.lock` (the whole name, anywhere in the tree), or a file that steers coding agents (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md` and `SKILL.md`, matched by exact name, so a docs page like `gemini.md` is fine, and the `.kilo/`, `.kilocode/`, `.claude/`, `.cursor/` and similar directories).
 - One of these shapes fits:
 
 | Shape | Rule |
 |---|---|
-| Docs only | Every file is a `.md` or `.mdx` file, or is under `docs/` or `packages/kilo-docs/`. Files under `.kilo/` and `.changeset/` do not count as docs. At most 150 changed lines |
+| Docs only | Every file is a `.md` or `.mdx` file, or an image (png, jpg, gif, webp) under `docs/` or `packages/kilo-docs/`. Code under a docs directory is not docs, and neither are files in `.changeset/`. At most 150 changed lines |
 | Tests only | Every file is a test file. At most 150 changed lines |
 | Small change | At most 50 changed lines in at most 3 files |
 
