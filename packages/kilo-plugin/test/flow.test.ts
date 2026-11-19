@@ -12,7 +12,7 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { AbsolutePath } from "@opencode/schema/schema"
-import { assemble, create, flowPermissions, list, permissionInstructions, scheduled, storedRecord } from "../src/flow"
+import { assemble, create, flowPermissions, list, permissionInstructions, scheduled, storedRecord, update } from "../src/flow"
 import { KiloFlowPlugin } from "../src/flow"
 import { automationID, backingSchedule, endsError, legacyScheduleKey } from "../src/flow/native"
 import { validatePermissions } from "../src/flow/permissions"
@@ -448,6 +448,49 @@ it.live("fails a create with an unreadable limit before storing the Flow", () =>
     expect(failure.message).toBe("Invalid ends.at: not-a-time")
     expect(yield* context.storage.get(`flow:v1:flw_${input.requestID}`)).toBeUndefined()
     expect(backingSchedules.size).toBe(0)
+  }),
+)
+
+it.live("fails an update with an unreadable limit before rewriting the Flow", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    const schedules = yield* Automation.Service
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const fs = yield* FSUtil.Service
+    const runtime = { fs, locks: new Map(), changed: () => Effect.void }
+    const flowID = KiloFlowRpc.ID.make("flw_203142536475869708b9cadbecfd0e1f")
+    yield* create(
+      context,
+      schedules,
+      {
+        sourceSessionID: source.id,
+        name: "Bad limit update",
+        when: { every: "1 day" as const, tz: "UTC" },
+        prompt: "Check once",
+        worktree: "reuse" as const,
+        permissions: [],
+        requestID: "203142536475869708b9cadbecfd0e1f",
+      },
+      source.projectID,
+      runtime,
+    )
+    const before = yield* context.storage.get(`flow:v1:${flowID}`)
+    const failure = yield* update(
+      context,
+      schedules,
+      { flowID, ends: { at: "not-a-time" } },
+      source.projectID,
+      runtime,
+    ).pipe(Effect.flip)
+    expect(failure.message).toBe("Invalid ends.at: not-a-time")
+    expect(yield* context.storage.get(`flow:v1:${flowID}`)).toEqual(before)
+    expect(backingSchedules.size).toBe(1)
   }),
 )
 

@@ -1,6 +1,6 @@
 import { describe, expect } from "bun:test"
 import { FileSystem } from "@opencode/core/filesystem"
-import { Clock, DateTime, Effect, Fiber, Latch, Layer, LayerMap, Queue, Schema, Stream } from "effect"
+import { Clock, DateTime, Effect, Fiber, Latch, Layer, LayerMap, Queue, Schema, Scope, Stream } from "effect"
 import { TestClock } from "effect/testing"
 import { eq } from "drizzle-orm"
 import { Agent } from "@opencode/core/agent"
@@ -368,6 +368,57 @@ describe("Automation", () => {
       yield* TestClock.adjust("10 minutes")
       yield* automations.tick
       expect(yield* pendingIDs).toEqual([messageID(automation, 1)])
+    }),
+  )
+
+  it.effect("offers a hook row only after activation and retries a failing hook", () =>
+    Effect.gen(function* () {
+      const automations = yield* setup()
+      const claimed: Automation.ID[] = []
+      let mode: "claim" | "fail" = "claim"
+      // Activation registers the hook, as a real plugin does. A seam that checked before activation would see none
+      // and complete the hook row without ever offering it to its owner. Registration lives in the test's scope.
+      const scope = yield* Effect.scope
+      // SAFETY: the scheduler evaluates this gate inside the owner Location's context, which provides PluginHooks,
+      // and the scope is supplied here. The harness stores it as a plain activation effect, so it is typed as one.
+      activationGate = Effect.suspend(() =>
+        Effect.gen(function* () {
+          const hooks = yield* PluginHooks.Service
+          yield* hooks
+            .register("session", "experimental.automation", (event) =>
+              Effect.suspend(() => {
+                if (mode === "fail") return Effect.die("hook exploded")
+                claimed.push(event.automation.id)
+                event.claimed = true
+                return Effect.void
+              }),
+            )
+            .pipe(Effect.provideService(Scope.Scope, scope))
+        }),
+      ) as Effect.Effect<void>
+      const automation = yield* automations.create({
+        sessionID,
+        name: "owned",
+        trigger: { type: "at", at: "in 5 minutes" },
+        action: { type: "hook", prompt: "run it" },
+      })
+      yield* TestClock.adjust("5 minutes")
+      yield* automations.tick
+      expect(claimed).toEqual([automation.id])
+      expect(yield* pendingIDs).toEqual([])
+      expect(yield* automations.get(automation.id)).toMatchObject({ runCount: 1, lastOutcome: "fired" })
+
+      // A failing owner keeps the occurrence: no run is counted and the row retries with the failed backoff.
+      const failing = yield* automations.create({
+        sessionID,
+        name: "failing owner",
+        trigger: { type: "at", at: "in 1 minute" },
+        action: { type: "hook", prompt: "run it" },
+      })
+      mode = "fail"
+      yield* TestClock.adjust("1 minute")
+      yield* automations.tick
+      expect(yield* automations.get(failing.id)).toMatchObject({ runCount: 0, lastOutcome: "failed" })
     }),
   )
 
