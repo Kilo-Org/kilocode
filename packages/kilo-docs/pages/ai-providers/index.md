@@ -52,6 +52,7 @@ Route requests through unified APIs with additional features:
 - **[DaoXE](/docs/ai-providers/daoxe)** - Connect multiple model families through one API
 - **[Cloudflare AI Gateway](/docs/ai-providers/cloudflare)** - Route providers through your Cloudflare account
 - **[Eden AI](/docs/ai-providers/edenai)** - EU-based gateway with one key across vendors
+- **[AI Stupid Level](/docs/ai-providers/aistupidlevel)** - Routes each request to a model picked from benchmark scores, using your own provider keys
 
 ## Choosing a Provider
 
