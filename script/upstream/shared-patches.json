@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 162,
-    "markedLines": 2926,
+    "markedLines": 2939,
     "unmarkedLines": 468,
     "deletedFiles": 0
   },
@@ -646,7 +646,7 @@
     },
     "packages/tui/src/component/prompt/index.tsx": {
       "rung": 3,
-      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. On first Home render, reveal the confirmed agent label while the model catalog is pending."
+      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. Its programmatic submit reports a reversible preflight refusal synchronously so a waiting caller can retry without replaying a dispatched request. On first Home render, reveal the confirmed agent label while the model catalog is pending."
     },
     "packages/tui/src/component/startup-loading.tsx": {
       "rung": 3,

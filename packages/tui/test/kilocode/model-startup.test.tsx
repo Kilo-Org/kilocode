@@ -17,7 +17,10 @@ afterEach(() => {
   else process.env.OPENCODE_APP_DIR_NAME = originalHost
 })
 
-async function resume(catalog: (typeof selected)[] = [], options: { agent?: string; sync?: Promise<void> } = {}) {
+async function resume(
+  catalog: (typeof selected)[] = [],
+  options: { agent?: string; sync?: Promise<void>; rejectPrompt?: boolean } = {},
+) {
   const saved = session(`ses_${crypto.randomUUID()}`, savedModel)
   const path = `/api/session/${saved.id}`
   const location = { directory }
@@ -28,11 +31,14 @@ async function resume(catalog: (typeof selected)[] = [], options: { agent?: stri
     config: {
       animations: false,
       tabs: { mode: "off" },
-      keybinds: { "agent.cycle": "f6", "session.child.first": "f7" },
+      keybinds: { "agent.cycle": "f6", "session.child.first": "f7", "diff.open": "f8" },
     },
     fetch: async (url, request) => {
       if (url.pathname === "/api/agent") return json({ location, data: [agent("build"), agent("plan")] })
       if (url.pathname === "/api/model") return json({ location, data: catalog })
+      if (url.pathname === "/api/vcs/base")
+        return json({ location, data: { name: "v2", ref: "refs/heads/v2", source: "default" } })
+      if (url.pathname === "/api/vcs/diff") return json({ location, data: [] })
       if (url.pathname === path) return json({ data: saved })
       if (url.pathname === `${path}/permission`) {
         await options.sync
@@ -47,6 +53,7 @@ async function resume(catalog: (typeof selected)[] = [], options: { agent?: stri
         const body = await request.json()
         writes.push(body)
         submitted.resolve()
+        if (options.rejectPrompt) return new Response(null, { status: 409 })
         return json({
           data: {
             id: body.id,
@@ -80,6 +87,35 @@ test("an initial prompt retains its saved model and submits once after model.upd
 
   app.update([model("saved"), selected])
   await app.submitted
+  app.update([{ ...selected, name: "Refreshed model" }])
+  await app.waitForFrame((frame) => frame.includes("Refreshed model"))
+  expect(app.writes).toEqual([{ model: savedModel }, expect.objectContaining({ text: prompt })])
+})
+
+test("a launch prompt waits for the composer when its model arrives while the diff panel owns input", async () => {
+  await using app = await resume()
+  app.resize(180, 36)
+  await app.ready
+  await app.waitForFrame((frame) => frame.includes("saved (unavailable)") && frame.includes(prompt))
+  app.mockInput.pressKey("F8")
+  await app.waitForFrame(() => app.renderer.currentFocusedRenderable?.id === "session-panel")
+
+  app.update([{ ...selected, name: "Published model" }])
+  await app.waitForFrame((frame) => frame.includes("Published model"))
+  expect(app.writes).toEqual([])
+  app.mockInput.pressKey("q")
+  await app.submitted
+  app.update([{ ...selected, name: "Refreshed model" }])
+  await app.waitForFrame((frame) => frame.includes("Refreshed model"))
+  expect(app.writes).toEqual([{ model: savedModel }, expect.objectContaining({ text: prompt })])
+})
+
+test("a rejected request restores the launch draft without resending it on a model update", async () => {
+  await using app = await resume([selected], { rejectPrompt: true })
+  await app.submitted
+  await app.waitForFrame(
+    (frame) => frame.includes("Failed to send prompt") && app.renderer.currentFocusedEditor?.plainText === prompt,
+  )
   app.update([{ ...selected, name: "Refreshed model" }])
   await app.waitForFrame((frame) => frame.includes("Refreshed model"))
   expect(app.writes).toEqual([{ model: savedModel }, expect.objectContaining({ text: prompt })])

@@ -96,7 +96,7 @@ export type PromptRef = {
   reset(): void
   blur(): void
   focus(): void
-  submit(): void
+  submit(): boolean // kilocode_change(startup) seam - whether the composer started handling this submission
 }
 
 const DRAFT_RETENTION_MIN_CHARS = 20
@@ -703,7 +703,7 @@ export function Prompt(props: PromptProps) {
       resetComposer()
     },
     submit() {
-      void submit()
+      return submit() !== false // kilocode_change(startup) seam - only synchronous preflight refusals are retryable
     },
   }
 
@@ -1091,8 +1091,10 @@ export function Prompt(props: PromptProps) {
     }
   })
 
-  let submitting = false
-  async function submit(delivery: SessionInbox.Delivery = "steer") {
+  // kilocode_change start - startup seam: expose temporary refusals before starting asynchronous dispatch.
+  const [submitting, setSubmitting] = createSignal(false)
+  function submit(delivery: SessionInbox.Delivery = "steer") {
+    // kilocode_change end
     if (disabled()) return false
     // Prevent overlapping invocations (e.g. a double-pressed Enter, or the
     // input's native onSubmit racing another dispatch). Without this guard,
@@ -1100,16 +1102,7 @@ export function Prompt(props: PromptProps) {
     // clears `store.prompt.text`, then awaits its own `session.create` and
     // ultimately reads the now-empty store — sending a phantom empty prompt
     // to a freshly created session.
-    if (submitting) return false
-    submitting = true
-    try {
-      return await submitInner(delivery)
-    } finally {
-      submitting = false
-    }
-  }
-
-  async function submitInner(delivery: SessionInbox.Delivery) {
+    if (submitting()) return false // kilocode_change(startup) seam
     // IME: double-defer may fire before onContentChange flushes the last
     // composed character (e.g. Korean hangul) to the store, so read
     // plainText directly and sync before any downstream reads.
@@ -1119,6 +1112,13 @@ export function Prompt(props: PromptProps) {
     }
     if (move.creating()) return false
     if (auto()?.visible) return false
+    // kilocode_change start - startup seam: an accepted dispatch owns the draft even if later network preparation fails.
+    setSubmitting(true)
+    return submitInner(delivery).finally(() => setSubmitting(false))
+  }
+
+  async function submitInner(delivery: SessionInbox.Delivery) {
+    // kilocode_change end
     const trimmed = store.prompt.text.trim()
     if (!trimmed && (!props.sessionID || store.mode === "shell" || delivery === "queue"))
       return delivery === "steer" ? (await props.onEmptySubmit?.()) === true : false

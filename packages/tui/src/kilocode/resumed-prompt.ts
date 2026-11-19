@@ -39,7 +39,6 @@ export function submitResumedPrompt(
       return
     }
     if (!local.model.available(model)) return
-    done = true
-    ref.submit()
+    done = ref.submit()
   })
 }
