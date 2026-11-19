@@ -16,11 +16,17 @@ type Api = typeof vscode & {
 }
 
 const api = vscode as Api
+const documents = api.workspace as unknown as { textDocuments: unknown[] }
 const original = {
   register: api.commands.registerCommand,
   execute: api.commands.executeCommand,
   editor: api.window.activeTextEditor,
   diagnostics: api.languages.getDiagnostics,
+  documents: documents.textDocuments,
+}
+
+function setDocuments(docs: unknown[]) {
+  documents.textDocuments = docs
 }
 
 function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "tab", tabbed = false) {
@@ -100,6 +106,7 @@ afterEach(() => {
   api.commands.executeCommand = original.execute
   api.window.activeTextEditor = original.editor
   api.languages.getDiagnostics = original.diagnostics
+  documents.textDocuments = original.documents
 })
 
 function emptySelection() {
@@ -383,6 +390,49 @@ describe("registerCodeActions", () => {
       })
 
       expect(state.posts).toEqual([])
+    })
+  })
+
+  describe("target document", () => {
+    const marshalled = { start: { line: 2, character: 0 }, end: { line: 4, character: 0 } }
+
+    it("reads from the code action document when the active editor shows a different file", async () => {
+      const state = setup()
+      const seen: unknown[] = []
+      setDocuments([
+        {
+          uri: vscode.Uri.file("/repo/src/other.ts"),
+          getText: (selection: unknown) => {
+            seen.push(selection)
+            return "let other = 1"
+          },
+        },
+      ])
+
+      await state.commands.get("kilo-code.new.fixCode")?.(marshalled, undefined, "file:///repo/src/other.ts")
+
+      expect(seen).toEqual([marshalled])
+      const post = state.posts.at(0) as { type: string; text: string }
+      expect(post.text).toContain("src/other.ts:3-5")
+      expect(post.text).toContain("let other = 1")
+      expect(post.text).not.toContain("const value = 1")
+    })
+
+    it("does nothing when the code action document is no longer open", async () => {
+      const state = setup()
+
+      await state.commands.get("kilo-code.new.explainCode")?.(marshalled, "file:///repo/src/gone.ts")
+
+      expect(state.posts).toEqual([])
+    })
+
+    it("uses the editor selection when the uri matches the active editor", async () => {
+      const state = setup()
+
+      await state.commands.get("kilo-code.new.addToContext")?.(undefined, "file:///repo/src/file.ts")
+
+      expect(state.posts).toHaveLength(1)
+      expectContextPost(state.posts.at(0))
     })
   })
 })

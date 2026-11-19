@@ -5,6 +5,13 @@ const { KiloCodeActionProvider } = await import("../../src/services/code-actions
 
 const provider = new KiloCodeActionProvider()
 
+function makeDocument() {
+  return { uri: { toString: () => "file:///repo/src/file.ts" } }
+}
+
+const document = makeDocument()
+const uri = document.uri.toString()
+
 function makeRange(isEmpty: boolean) {
   return { isEmpty }
 }
@@ -16,18 +23,22 @@ function makeContext(diagnosticCount: number) {
 describe("KiloCodeActionProvider", () => {
   describe("provideCodeActions", () => {
     it("returns empty array when range is empty", () => {
-      const result = provider.provideCodeActions({} as never, makeRange(true) as never, makeContext(0) as never)
+      const result = provider.provideCodeActions(document as never, makeRange(true) as never, makeContext(0) as never)
       expect(result).toEqual([])
     })
 
     it("returns empty array when range is empty even with diagnostics", () => {
-      const result = provider.provideCodeActions({} as never, makeRange(true) as never, makeContext(3) as never)
+      const result = provider.provideCodeActions(document as never, makeRange(true) as never, makeContext(3) as never)
       expect(result).toEqual([])
     })
 
     describe("non-empty range, no diagnostics", () => {
       it("returns Add, Explain, Improve actions", () => {
-        const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(0) as never)
+        const result = provider.provideCodeActions(
+          document as never,
+          makeRange(false) as never,
+          makeContext(0) as never,
+        )
         const titles = result.map((a) => a.title)
         expect(titles).toContain("Add to Kilo Code")
         expect(titles).toContain("Explain with Kilo Code")
@@ -35,17 +46,29 @@ describe("KiloCodeActionProvider", () => {
       })
 
       it("does not include Fix action", () => {
-        const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(0) as never)
+        const result = provider.provideCodeActions(
+          document as never,
+          makeRange(false) as never,
+          makeContext(0) as never,
+        )
         expect(result.map((a) => a.title)).not.toContain("Fix with Kilo Code")
       })
 
       it("returns exactly 3 actions", () => {
-        const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(0) as never)
+        const result = provider.provideCodeActions(
+          document as never,
+          makeRange(false) as never,
+          makeContext(0) as never,
+        )
         expect(result).toHaveLength(3)
       })
 
       it("uses correct command IDs", () => {
-        const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(0) as never)
+        const result = provider.provideCodeActions(
+          document as never,
+          makeRange(false) as never,
+          makeContext(0) as never,
+        )
         const commands = result.map((a) => a.command?.command)
         expect(commands).toContain("kilo-code.new.addToContext")
         expect(commands).toContain("kilo-code.new.explainCode")
@@ -53,69 +76,101 @@ describe("KiloCodeActionProvider", () => {
       })
 
       it("no action is preferred", () => {
-        const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(0) as never)
+        const result = provider.provideCodeActions(
+          document as never,
+          makeRange(false) as never,
+          makeContext(0) as never,
+        )
         expect(result.every((a) => !a.isPreferred)).toBe(true)
       })
 
-      it("passes the range as command argument on every action", () => {
+      it("passes the range and document uri as command argument on every action", () => {
         const range = makeRange(false)
-        const result = provider.provideCodeActions({} as never, range as never, makeContext(0) as never)
+        const result = provider.provideCodeActions(document as never, range as never, makeContext(0) as never)
         expect(result).toHaveLength(3)
-        expect(result.map((a) => a.command?.arguments)).toEqual([[range], [range], [range]])
+        expect(result.map((a) => a.command?.arguments)).toEqual([
+          [range, uri],
+          [range, uri],
+          [range, uri],
+        ])
       })
     })
 
     describe("non-empty range, with diagnostics", () => {
       it("returns Add and Fix actions", () => {
-        const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(2) as never)
+        const result = provider.provideCodeActions(
+          document as never,
+          makeRange(false) as never,
+          makeContext(2) as never,
+        )
         const titles = result.map((a) => a.title)
         expect(titles).toContain("Add to Kilo Code")
         expect(titles).toContain("Fix with Kilo Code")
       })
 
       it("does not include Explain or Improve actions", () => {
-        const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(1) as never)
+        const result = provider.provideCodeActions(
+          document as never,
+          makeRange(false) as never,
+          makeContext(1) as never,
+        )
         const titles = result.map((a) => a.title)
         expect(titles).not.toContain("Explain with Kilo Code")
         expect(titles).not.toContain("Improve with Kilo Code")
       })
 
       it("returns exactly 2 actions", () => {
-        const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(1) as never)
+        const result = provider.provideCodeActions(
+          document as never,
+          makeRange(false) as never,
+          makeContext(1) as never,
+        )
         expect(result).toHaveLength(2)
       })
 
       it("Fix action is preferred", () => {
-        const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(1) as never)
+        const result = provider.provideCodeActions(
+          document as never,
+          makeRange(false) as never,
+          makeContext(1) as never,
+        )
         const fix = result.find((a) => a.title === "Fix with Kilo Code")
         expect(fix?.isPreferred).toBe(true)
       })
 
       it("Fix action uses QuickFix kind", () => {
-        const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(1) as never)
+        const result = provider.provideCodeActions(
+          document as never,
+          makeRange(false) as never,
+          makeContext(1) as never,
+        )
         const fix = result.find((a) => a.title === "Fix with Kilo Code")
         expect(fix?.kind.value).toBe("quickfix")
       })
 
       it("uses correct Fix command ID", () => {
-        const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(1) as never)
+        const result = provider.provideCodeActions(
+          document as never,
+          makeRange(false) as never,
+          makeContext(1) as never,
+        )
         const fix = result.find((a) => a.title === "Fix with Kilo Code")
         expect(fix?.command?.command).toBe("kilo-code.new.fixCode")
       })
 
-      it("passes the range and diagnostics as Fix command arguments", () => {
+      it("passes the range, diagnostics and document uri as Fix command arguments", () => {
         const range = makeRange(false)
         const context = makeContext(2)
-        const result = provider.provideCodeActions({} as never, range as never, context as never)
+        const result = provider.provideCodeActions(document as never, range as never, context as never)
         const fix = result.find((a) => a.title === "Fix with Kilo Code")
-        expect(fix?.command?.arguments).toEqual([range, context.diagnostics])
+        expect(fix?.command?.arguments).toEqual([range, context.diagnostics, uri])
       })
 
-      it("passes the range as Add command argument", () => {
+      it("passes the range and document uri as Add command argument", () => {
         const range = makeRange(false)
-        const result = provider.provideCodeActions({} as never, range as never, makeContext(1) as never)
+        const result = provider.provideCodeActions(document as never, range as never, makeContext(1) as never)
         const add = result.find((a) => a.title === "Add to Kilo Code")
-        expect(add?.command?.arguments).toEqual([range])
+        expect(add?.command?.arguments).toEqual([range, uri])
       })
     })
   })

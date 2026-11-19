@@ -41,8 +41,8 @@ export function registerCodeActions(
   }
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("kilo-code.new.explainCode", async (range?: vscode.Range) => {
-      const ctx = getEditorContext(range)
+    vscode.commands.registerCommand("kilo-code.new.explainCode", async (range?: vscode.Range, uri?: string) => {
+      const ctx = getEditorContext(range, undefined, uri)
       if (!ctx) return
       const prompt = createPrompt("EXPLAIN", {
         filePath: ctx.filePath,
@@ -57,8 +57,8 @@ export function registerCodeActions(
 
     vscode.commands.registerCommand(
       "kilo-code.new.fixCode",
-      async (range?: vscode.Range, diagnostics?: vscode.Diagnostic[]) => {
-        const ctx = getEditorContext(range, diagnostics)
+      async (range?: vscode.Range, diagnostics?: vscode.Diagnostic[], uri?: string) => {
+        const ctx = getEditorContext(range, diagnostics, uri)
         if (!ctx) return
         const prompt = createPrompt("FIX", {
           filePath: ctx.filePath,
@@ -73,8 +73,8 @@ export function registerCodeActions(
       },
     ),
 
-    vscode.commands.registerCommand("kilo-code.new.improveCode", async (range?: vscode.Range) => {
-      const ctx = getEditorContext(range)
+    vscode.commands.registerCommand("kilo-code.new.improveCode", async (range?: vscode.Range, uri?: string) => {
+      const ctx = getEditorContext(range, undefined, uri)
       if (!ctx) return
       const prompt = createPrompt("IMPROVE", {
         filePath: ctx.filePath,
@@ -87,8 +87,8 @@ export function registerCodeActions(
       provider.postMessage({ type: "triggerTask", text: prompt, injectedTitle: "Improve selected code" })
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.addToContext", async (range?: vscode.Range) => {
-      const ctx = getEditorContext(range)
+    vscode.commands.registerCommand("kilo-code.new.addToContext", async (range?: vscode.Range, uri?: string) => {
+      const ctx = getEditorContext(range, undefined, uri)
       if (!ctx) return
       const view = lastFocusedChat?.() ?? target()
       if (!(await revealTarget(view))) return

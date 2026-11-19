@@ -14,13 +14,20 @@ const kind = (value: string): { value: string; append: (part: string) => ReturnT
 
 const noop = () => {}
 
+const uri = (scheme: string, path: string, query = "", fragment = "") => ({
+  scheme,
+  authority: "",
+  path,
+  query,
+  fragment,
+  fsPath: path,
+  toString: () => `${scheme}://${path}${query ? `?${query}` : ""}${fragment ? `#${fragment}` : ""}`,
+})
+
 const mockUri = {
-  parse: (value: string) => ({ scheme: "https", authority: "", path: value, query: "", fragment: "", fsPath: value }),
-  file: (path: string) => ({ scheme: "file", authority: "", path, query: "", fragment: "", fsPath: path }),
-  joinPath: (base: { fsPath: string }, ...segments: string[]) => {
-    const joined = [base.fsPath, ...segments].join("/")
-    return { scheme: "file", authority: "", path: joined, query: "", fragment: "", fsPath: joined }
-  },
+  parse: (value: string) => uri("https", value),
+  file: (path: string) => uri("file", path),
+  joinPath: (base: { fsPath: string }, ...segments: string[]) => uri("file", [base.fsPath, ...segments].join("/")),
 }
 
 const mockVscode = {
