@@ -477,6 +477,10 @@ describe("DatabaseMigration", () => {
           action: '{"type":"hook","prompt":"run the flow"}',
           remaining: 3,
         })
+        yield* insert("sch_finished", '{"type":"every","every":"1 day"}', {
+          action: '{"type":"hook","prompt":"finished flow"}',
+          status: "done",
+        })
         yield* insert("sch_in", '{"type":"in","in":"1 minute"}', { status: "paused" })
         yield* insert("sch_gated", '{"type":"every","every":"1 minute"}', {
           check: '{"mode":"if","condition":{"type":"shell","run":"true"}}',
@@ -503,6 +507,20 @@ describe("DatabaseMigration", () => {
             next_due_at: 60000,
             run_count: 2,
             last_message_id: "msg_sch_cron_2",
+            event_position: null,
+          },
+          {
+            id: "aut_finished",
+            project_id: "prj_1",
+            session_id: "ses_1",
+            directory: "/repo",
+            name: "finished flow",
+            trigger: '{"type":"every","every":"1 day"}',
+            action: '{"type":"hook","prompt":"finished flow"}',
+            status: "done",
+            next_due_at: 60000,
+            run_count: 2,
+            last_message_id: "msg_sch_finished_2",
             event_position: null,
           },
           {

@@ -141,7 +141,7 @@
     },
     "packages/schema/src/automation.ts": {
       "rung": 3,
-      "seam": "Add a generic hook-owned automation action alongside the native prompt and code actions, and widen only the service create input (`ServiceCreateInput`) so a plugin can write it; the public tool, RPC and OpenAPI create schemas stay prompt-only. The scheduler advances a hook row without native prompt admission even when its plugin owner is unavailable. A plugin hook cannot make the stored action safe before plugin activation, and host composition cannot persist ownership in the shared automation model."
+      "seam": "Add a generic hook-owned automation action alongside the native prompt and code actions, and widen only the service create input (`ServiceCreateInput`) so a plugin can write it; the public tool, RPC and OpenAPI create schemas stay prompt-and-code, without hook. The scheduler advances a hook row without native prompt admission even when its plugin owner is unavailable. A plugin hook cannot make the stored action safe before plugin activation, and host composition cannot persist ownership in the shared automation model."
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,

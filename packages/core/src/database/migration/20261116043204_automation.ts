@@ -74,11 +74,14 @@ const migration: DatabaseMigration.Migration = {
           s.\`time_updated\`
         FROM \`schedule\` s
         JOIN \`session_v2\` v ON v.\`id\` = s.\`session_id\`
-        WHERE s.\`status\` IN ('active', 'paused')
-          AND s.\`check\` IS NULL
-          -- A hook-owned row (Kilo Flow or wakeup) becomes a hook action and keeps its times limit in the owner.
-          AND (json_extract(s.\`action\`, '$.type') = 'hook' OR s.\`remaining_runs\` IS NULL)
-          AND s.\`next_due_at\` IS NOT NULL;
+        WHERE s.\`check\` IS NULL
+          AND CASE
+            -- A hook-owned row (Kilo Flow or wakeup) keeps its status, including a finished one, and its times limit.
+            WHEN json_extract(s.\`action\`, '$.type') = 'hook' THEN
+              s.\`status\` = 'done' OR (s.\`status\` IN ('active', 'paused') AND s.\`next_due_at\` IS NOT NULL)
+            ELSE
+              s.\`status\` IN ('active', 'paused') AND s.\`remaining_runs\` IS NULL AND s.\`next_due_at\` IS NOT NULL
+          END;
       `)
       // kilocode_change end
       yield* tx.run(`DROP TABLE \`schedule\`;`)

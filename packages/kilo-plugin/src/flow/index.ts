@@ -1151,7 +1151,7 @@ export function list(
       { concurrency: lookups },
     ).pipe(Effect.map((ids) => new Set(ids.flat())))
     const managedScheduleIDs = new Set(
-      stored.records.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])),
+      stored.records.flatMap((record) => (record.scheduleID ? [automationID(record.scheduleID)] : [])),
     )
     const unowned = native.filter((schedule) => !managedScheduleIDs.has(schedule.id))
     const sessions = yield* Effect.forEach(
@@ -1169,7 +1169,7 @@ export function list(
       { concurrency: lookups },
     ).pipe(Effect.map((entries) => new Map(entries)))
     const scopedManagedScheduleIDs = new Set(
-      scopedRecords.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])),
+      scopedRecords.flatMap((record) => (record.scheduleID ? [automationID(record.scheduleID)] : [])),
     )
     const scopedSchedules = native.filter(
       (schedule) =>

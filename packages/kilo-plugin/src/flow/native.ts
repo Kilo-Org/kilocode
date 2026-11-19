@@ -2,6 +2,7 @@ import { Automation } from "@opencode/core/automation"
 import type { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import type { Session } from "@opencode/schema/session"
 import { durationMillis } from "@opencode/schema/automation"
+import { parseAt } from "@opencode/schema/kilocode/schedule"
 import { DateTime, Option } from "effect"
 import { automationID } from "../schedule-id"
 
@@ -11,7 +12,7 @@ const schedulePrefix = "flow-schedule:v1:"
 
 /** The native automation row that fires a Flow. Its hook prompt is descriptive only: the scheduler never admits it. */
 export function backingSchedule(record: KiloFlowRpc.Record, sessionID: Session.ID): Automation.ServiceCreateInput {
-  const expires = expiry(record.ends)
+  const expires = expiry(record.ends, record.trigger.timezone)
   return {
     sessionID,
     name: `Flow: ${record.name}`,
@@ -76,13 +77,15 @@ function triggerOf(when: KiloFlowRpc.When, timezone: string): Automation.Trigger
 }
 
 /** Automation rows carry one expiry; a `times` limit is enforced by the Flow claim hook. */
-function expiry(ends: KiloFlowRpc.Ends | undefined) {
+function expiry(ends: KiloFlowRpc.Ends | undefined, timezone: string) {
   if (!ends) return undefined
-  const at = ends.at === undefined ? undefined : Date.parse(ends.at)
+  // `ends.at` is a wall-clock time in the Flow's zone, so it must be read there rather than as host-local time.
+  const at = ends.at === undefined ? undefined : Option.getOrUndefined(parseAt(ends.at, timezone))
+  if (ends.at !== undefined && at === undefined) throw new Error(`Invalid ends.at: ${ends.at}`)
   const after =
     ends.after === undefined ? undefined : Date.now() + Option.getOrElse(durationMillis(ends.after), () => 0)
   // The Flow stops at whichever limit comes first, as the RPC documents, so keep the earlier instant.
   const first = at !== undefined && after !== undefined ? Math.min(at, after) : (at ?? after)
-  if (first === undefined || Number.isNaN(first)) return undefined
+  if (first === undefined) return undefined
   return new Date(first).toISOString()
 }
