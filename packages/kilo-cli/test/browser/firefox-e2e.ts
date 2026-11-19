@@ -1904,7 +1904,16 @@ async function inactiveTab(url: string): Promise<number> {
     const tabs = browser.tabs as unknown as { create(props: Record<string, unknown>): Promise<{ id: number }> }
     return (await tabs.create({ active: false, url: target })).id
   }, url)
-  await until(async () => ((await tabStatus(tabId)) === "complete" ? true : undefined), 15_000, "the inactive tab loads")
+  // Firefox reports a created tab `complete` at its initial about:blank before the real navigation starts, so the
+  // document only counts as loaded once the tab shows the requested url too.
+  await until(async () => {
+    const tab = await ext<{ status?: string; url?: string }>(async (id: number) => {
+      const tabs = browser.tabs as unknown as { get(id: number): Promise<{ status?: string; url?: string }> }
+      const { status, url } = await tabs.get(id)
+      return { status, url }
+    }, tabId)
+    return tab.status === "complete" && tab.url?.startsWith(url) === true ? true : undefined
+  }, 15_000, "the inactive tab loads")
   return tabId
 }
 
