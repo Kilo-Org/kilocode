@@ -26,7 +26,7 @@ const flag = (name: string, fallback: string) => {
   const at = process.argv.indexOf(`--${name}`)
   return at > 0 && process.argv[at + 1] !== undefined ? process.argv[at + 1]! : fallback
 }
-const ALL_AREAS = ["tools", "cold", "large", "profile", "tabs", "concurrent", "memory", "reconnect"] as const
+const ALL_AREAS = ["tools", "refs", "cold", "large", "profile", "tabs", "concurrent", "memory", "reconnect"] as const
 type Area = (typeof ALL_AREAS)[number]
 const reps = Number(flag("reps", "20"))
 const memoryCalls = Number(flag("memory-calls", "1000"))
@@ -229,10 +229,11 @@ function memoryOf(pids: number[]) {
 const isChrome = (table: Map<number, { ppid: number; cmd: string }>) => (pid: number) => /chrom(e|ium)/i.test(table.get(pid)?.cmd.split(" ")[0] ?? "")
 
 type Sample = { label: string; ms: number; start: number; end: number; status: string; ok: boolean; bytes: number; imageBytes: number; text: string }
-type RunOutcome = { id: string; backend: Backend; code: number | null; spawnedAt: number; firstRequestAt?: number; exitedAt: number; samples: Sample[]; stderr: string; results: Result[] }
+type RunOutcome = { id: string; backend: Backend; code: number | null; spawnedAt: number; firstRequestAt?: number; exitedAt: number; samples: Sample[]; stderr: string; results: Result[]; steps: Step[] }
 type Stat = { n: number; failures: number; median: number; p95: number; min: number; max: number; bytesMedian: number; imageBytesMedian: number; failureSamples: string[] }
 
-const FAILURE = /\b(browser_unavailable|tab_busy|tab_taken|user_stopped|unsupported_in_browser|needs_permission|blocked|origin_changed|protocol_mismatch)\b|Error:|is not available|not connected|unavailable/i
+// Model-visible failure: a named browser error, a thrown error, or a tool that reports its own failure in text.
+const FAILURE = /\b(browser_unavailable|tab_busy|tab_taken|user_stopped|unsupported_in_browser|needs_permission|blocked|origin_changed|protocol_mismatch)\b|Error:|is not available|not connected|unavailable|field\(s\) failed|stale or unknown|is not open/i
 
 function stat(samples: Sample[]): Stat {
   const values = samples.map((sample) => sample.ms)
@@ -623,7 +624,7 @@ async function runCli(backend: Backend, plan: Plan, options: { timeoutMs?: numbe
   runs.delete(id)
   if (code !== 0 || samples.length !== state.steps.length)
     console.error(`[${id}] exit ${code}, ${samples.length} tool events for ${state.steps.length} steps; stderr: ${stderr.slice(-400)}`)
-  return { id, backend, code, spawnedAt, firstRequestAt: state.firstRequestAt, exitedAt, samples, stderr: stderr.slice(-1500), results: state.results }
+  return { id, backend, code, spawnedAt, firstRequestAt: state.firstRequestAt, exitedAt, samples, stderr: stderr.slice(-1500), results: state.results, steps: state.steps }
 }
 
 /** A plan from a fixed sequence of step builders; each builder sees the results so far. */
@@ -657,7 +658,14 @@ const TOOL_CYCLE: ((results: Result[]) => Step)[] = [
       ],
     }),
   () => step("screenshot", "take_screenshot", { scale: "css", type: "png" }, { keepImage: true }),
-  () => step("evaluate", "evaluate", { function: "() => document.title" }, { expect: /Form/ }),
+  // The page state the previous steps produced: type + press_key give "helloa", fill_form gives the email and the tick.
+  () =>
+    step(
+      "evaluate",
+      "evaluate",
+      { function: "() => JSON.stringify([document.title, document.getElementById('name').value, document.getElementById('email').value, document.getElementById('agree').checked])" },
+      { expect: /Form\\?",\\?"helloa\\?",\\?"a@b\.c\\?",true/ },
+    ),
   () => step("tabs_list", "tabs", { action: "list" }),
   () => step("wait_for", "wait_for", { text: "Ready" }),
   () => step("find", "find", { text: "Click me" }, { expect: /Click me/ }),
@@ -729,7 +737,11 @@ async function areaTools(backend: Backend) {
   ]
   const outcome = await runCli(backend, sequence(builders))
   const files = [await saveImage(`${backend}-tools-screenshot`, firstImage(outcome, "screenshot")), await saveImage(`${backend}-tools-screenshot-masked`, firstImage(outcome, "screenshot_masked"))]
-  return { run: runSummary(outcome), stats: byLabel(outcome.samples), evidence: files.filter(Boolean) }
+  // What the model reads back from each tool, once: the payload comparison in words, not only in bytes.
+  const examples = Object.fromEntries(
+    outcome.samples.map((sample, index) => [sample.label, { args: JSON.stringify(outcome.steps[index]?.call.args).slice(0, 300), text: sample.text.replace(/\s+/g, " ").slice(0, 400) }]).reverse(),
+  )
+  return { run: runSummary(outcome), stats: byLabel(outcome.samples), examples, evidence: files.filter(Boolean) }
 }
 
 async function areaCold(backend: Backend, index: number) {
@@ -798,6 +810,71 @@ async function areaTabs(backend: Backend) {
     listChars: list.length,
     listExcerpt: list.slice(0, 700),
   }
+}
+
+/**
+ * Whether a snapshot's refs still resolve after other actions: fill_form on the Email and Agree refs of one snapshot,
+ * right after it and after each single action, plus two controls that tell a ref failure from a fill_form failure
+ * (the same refs through type and click, and fill_form with CSS selectors). A failed fill is a failed step.
+ */
+const fillByRef = (r: Result[]) =>
+  step("fill_form", "fill_form", {
+    fields: [
+      { name: "Email", type: "textbox", target: ref(r, "textbox", "Email", "#email"), value: "a@b.c" },
+      { name: "Agree", type: "checkbox", target: ref(r, "checkbox", "Agree", "#agree"), value: "true" },
+    ],
+  })
+const REF_VARIANTS: { name: string; pre: ((results: Result[]) => Step)[]; act?: ((results: Result[]) => Step)[] }[] = [
+  { name: "fresh", pre: [] },
+  { name: "after_click", pre: [(r) => step("pre_click", "click", { element: "Click me button", target: ref(r, "button", "Click me", "#go") })] },
+  { name: "after_type", pre: [(r) => step("pre_type", "type", { element: "Name field", target: ref(r, "textbox", "Name", "#name"), text: "hello" })] },
+  { name: "after_press_key", pre: [() => step("pre_press_key", "press_key", { key: "a" })] },
+  { name: "after_evaluate", pre: [() => step("pre_evaluate", "evaluate", { function: "() => 1" })] },
+  { name: "after_screenshot", pre: [() => step("pre_screenshot", "take_screenshot", { scale: "css", type: "png" })] },
+  {
+    name: "control_type_click_same_refs",
+    pre: [],
+    act: [
+      (r) => step("fill_form", "type", { element: "Email field", target: ref(r, "textbox", "Email", "#email"), text: "a@b.c" }),
+      (r) => step("click_agree", "click", { element: "Agree checkbox", target: ref(r, "checkbox", "Agree", "#agree") }),
+    ],
+  },
+  {
+    name: "control_fill_form_selectors",
+    pre: [],
+    act: [
+      () =>
+        step("fill_form", "fill_form", {
+          fields: [
+            { name: "Email", type: "textbox", target: "#email", value: "a@b.c" },
+            { name: "Agree", type: "checkbox", target: "#agree", value: "true" },
+          ],
+        }),
+    ],
+  },
+]
+async function areaRefs(backend: Backend) {
+  const named = (prefix: string, make: (results: Result[]) => Step) => (r: Result[]) => {
+    const made = make(r)
+    return { ...made, label: `${prefix}:${made.label}` }
+  }
+  const builders = REF_VARIANTS.flatMap((variant) => [
+    () => step(`${variant.name}:navigate`, "navigate", { url: `${A}/form` }),
+    () => step(`${variant.name}:snapshot`, "snapshot", {}, { expect: /Email/ }),
+    ...variant.pre.map((make) => named(variant.name, make)),
+    ...(variant.act ?? [fillByRef]).map((make) => named(variant.name, make)),
+    () =>
+      step(`${variant.name}:state`, "evaluate", { function: "() => JSON.stringify([document.getElementById('email').value, document.getElementById('agree').checked])" }, { expect: /a@b\.c\\?",true/ }),
+  ])
+  const outcome = await runCli(backend, sequence(builders))
+  return Object.fromEntries(
+    REF_VARIANTS.map((variant) => {
+      const mine = outcome.samples.filter((sample) => sample.label.startsWith(`${variant.name}:`))
+      const fill = mine.find((sample) => sample.label.endsWith(":fill_form"))
+      const state = mine.find((sample) => sample.label.endsWith(":state"))
+      return [variant.name, { fillOk: fill?.ok, stateOk: state?.ok, fill: fill?.text.replace(/\s+/g, " ").slice(0, 200), state: state?.text.slice(0, 80) }]
+    }),
+  )
 }
 
 function concurrentPlan(k: number): Plan {
@@ -1038,6 +1115,7 @@ for (const [index, area] of areas.entries()) {
     if (area === "memory") for (const backend of order) entry[backend] = await areaMemory(backend)
     if (area === "reconnect") entry.extension = await areaReconnect()
     if (area === "profile") entry.extension = await areaProfile()
+    if (area === "refs") for (const backend of order) entry[backend] = await areaRefs(backend)
   } catch (error) {
     entry.error = String((error as Error)?.stack ?? error)
     console.error(`[area ${area}] failed: ${entry.error}`)
@@ -1091,6 +1169,11 @@ if (areaEntry("tools")) {
   const entry = areaEntry("tools")
   md.push("## 1. Per-tool latency", "", loadLine(entry), "", ...compare("tool", entry.extension?.stats, entry.playwright?.stats), "")
   md.push(`Runs: ext ${JSON.stringify(entry.extension?.run)}; pw ${JSON.stringify(entry.playwright?.run)}`, "")
+  const cell = (text: unknown) => `\`${String(text ?? "–").slice(0, 160).replaceAll("`", "'").replaceAll("|", "/")}\``
+  md.push("| tool | extension result text (first 160 chars) | playwright result text |", "|---|---|---|")
+  for (const label of Object.keys(entry.extension?.examples ?? {}))
+    md.push(`| ${label} | ${cell(entry.extension.examples[label]?.text)} | ${cell(entry.playwright?.examples?.[label]?.text)} |`)
+  md.push("")
 }
 if (areaEntry("cold")) {
   const entry = areaEntry("cold")
@@ -1157,6 +1240,17 @@ if (areaEntry("profile")) {
     if (!summary) continue
     md.push(`| ${name} top self time | ms |`, "|---|---|", ...summary.top.map((row: any) => `| \`${row.fn}\` | ${row.selfMs} |`), "")
   }
+}
+if (areaEntry("refs")) {
+  const entry = areaEntry("refs")
+  md.push("## 1b. Ref stability: fill_form with refs from one snapshot, after one other action", "", loadLine(entry), "")
+  md.push("| variant | ext fill_form | ext page state | pw fill_form | pw page state | ext text |", "|---|---|---|---|---|---|")
+  for (const variant of REF_VARIANTS.map((v) => v.name)) {
+    const e = entry.extension?.[variant]
+    const p = entry.playwright?.[variant]
+    md.push(`| ${variant} | ${e?.fillOk ? "ok" : "FAIL"} | ${e?.stateOk ? "ok" : "FAIL"} | ${p?.fillOk ? "ok" : "FAIL"} | ${p?.stateOk ? "ok" : "FAIL"} | \`${String(e?.fill ?? "").slice(0, 120).replaceAll("`", "'")}\` |`)
+  }
+  md.push("")
 }
 if (areaEntry("tabs")) {
   const entry = areaEntry("tabs")
