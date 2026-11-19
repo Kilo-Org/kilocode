@@ -22,6 +22,7 @@
     "diff-viewer/index.tsx",
     "diff-virtual/index.tsx",
     "src/assets.d.ts",
+    "../test/browser/edit-handoff.tsx",
     "../test/browser/sidebar-search.tsx"
   ]
 }
