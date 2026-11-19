@@ -355,6 +355,16 @@
         "@typescript/native": "catalog:",
       },
     },
+    "packages/kilo-jetbrains": {
+      "name": "@kilocode/kilo-jetbrains",
+      "version": "0.0.0-v2-194",
+      "devDependencies": {
+        "@opencode/protocol": "workspace:*",
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "effect": "catalog:",
+      },
+    },
     "packages/kilo-plugin": {
       "name": "@kilocode/kilo-plugin",
       "version": "0.0.0",
@@ -1490,6 +1500,8 @@
     "@kilocode/kilo-i18n": ["@kilocode/kilo-i18n@workspace:packages/kilo-i18n"],
 
     "@kilocode/kilo-indexing": ["@kilocode/kilo-indexing@workspace:packages/kilo-indexing"],
+
+    "@kilocode/kilo-jetbrains": ["@kilocode/kilo-jetbrains@workspace:packages/kilo-jetbrains"],
 
     "@kilocode/kilo-plugin": ["@kilocode/kilo-plugin@workspace:packages/kilo-plugin"],
 
