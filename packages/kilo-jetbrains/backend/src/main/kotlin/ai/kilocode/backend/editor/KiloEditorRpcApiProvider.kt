@@ -11,6 +11,8 @@ import com.intellij.platform.rpc.backend.RemoteApiProvider
 import fleet.rpc.remoteApiDescriptor
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -25,6 +27,14 @@ internal class KiloEditorRpcApiProvider : RemoteApiProvider {
 }
 
 internal object KiloEditorGeneration : KiloEditorRpcApi {
+    override suspend fun commitMessage(directory: String, selected: List<String>, previous: String?, language: String): String =
+        rpc(directory, "kilocode.commit-message", "generate", buildJsonObject {
+            put("path", directory)
+            if (selected.isNotEmpty()) put("selectedFiles", JsonArray(selected.map(::JsonPrimitive)))
+            previous?.let { put("previousMessage", it) }
+            put("language", language)
+        }).getValue("message").jsonPrimitive.content
+
     override suspend fun complete(directory: String, prefix: String, suffix: String, directMistral: Boolean): String {
         val output = rpc(directory, "kilocode.gateway", "autocomplete.fim", buildJsonObject {
             put("prefix", prefix)

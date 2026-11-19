@@ -76,7 +76,7 @@ def env_for(root, config, origin):
     return env
 
 
-def launch(files, root, side, phase, args, env):
+def launch(files, root, side, phase, args, env, installed=False):
     home, meta, _, launch = files
     target = next(c for c in launch["customCommands"] if "thinClient" in c["commands"]) if side == "frontend" else launch
     replace = lambda s: s.replace("$APP_PACKAGE/Contents", str(home)).replace("$IDE_HOME", str(home))
@@ -89,12 +89,14 @@ def launch(files, root, side, phase, args, env):
     props.write_text("".join(f"idea.{k}.path={v}\n" for k, v in dirs.items()))
     options.extend(f"-Didea.{k}.path={v}" for k, v in dirs.items())
     options.extend([f"-Didea.properties.file={props}", f"-Didea.home.path={home}", f"-Duser.home={env['HOME']}",
-                    f"-Djava.io.tmpdir={env['TMPDIR']}", f"-Dkilo.dev.worktree.root={REPO}", f"-Dkilo.smoke.root={root}",
+                    f"-Djava.io.tmpdir={env['TMPDIR']}", f"-Dkilo.smoke.root={root}",
                     f"-Dkilo.smoke.phase={phase}", "-Didea.is.internal=true", "-Didea.plugin.in.sandbox.mode=true",
                     "-Didea.trust.all.projects=true", "-Didea.initially.ask.config=never", "-Dide.no.platform.update=true",
                     "-Didea.load.shell.env=false", "-Didea.suppress.statistics.report=true", "-Djb.consents.confirmation.enabled=false",
                     "-Dide.experimental.ui.onboarding=false", "-Dide.show.tips.on.startup.default.value=false",
                     "-Dide.mac.screenmenu=false", "-Dnosplash=true", "-Xmx2g"])
+    if not installed:
+        options.append(f"-Dkilo.dev.worktree.root={REPO}")
     cp = os.pathsep.join(str(home / "lib" / jar) for jar in target["bootClassPathJarNames"])
     with (root / f"{side}-{phase}.log").open("w") as log:
         return subprocess.Popen([meta / launch["javaExecutablePath"], *options, "-cp", cp, target["mainClass"], *args],
@@ -123,7 +125,7 @@ def wait(proc, what, check, timeout):
     raise TimeoutError(f"timed out after {timeout}s: {what}")
 
 
-def session(files, root, mode, artifact, probe, keep, stable=None, editor=False):
+def session(files, root, mode, artifact, probe, keep, stable=None, editor=False, installed=False):
     home, meta, product, manifest = files
     root.mkdir(mode=0o700)
     project = root / "kilo-smoke-project"
@@ -133,9 +135,16 @@ def session(files, root, mode, artifact, probe, keep, stable=None, editor=False)
     report = {"mode": mode, "ideBuild": product["buildNumber"], "probe": probe, "phases": [], "modelEvents": model.events}
     try:
         env = env_for(root, config, base)
+        report["cli"] = "pinned" if installed else "checkout"
+        if installed:
+            cfg = Path(env["XDG_CONFIG_HOME"]) / "kilo2/kilo2.json"
+            cfg.parent.mkdir(parents=True)
+            cfg.write_text(json.dumps(config))
         if artifact:
             report["pluginSha256"] = hashlib.sha256(artifact.read_bytes()).hexdigest()
         subprocess.run(["git", "init", "-q", project], env=env, check=True)
+        if editor:
+            subprocess.run(["git", "-C", project, "add", "fixture.txt"], env=env, check=True)
         side = "local" if mode == "local" else "frontend"
         for target in ([side] if mode == "local" else ["backend", side]):
             plugins = root / target / "plugins"
@@ -156,7 +165,7 @@ def session(files, root, mode, artifact, probe, keep, stable=None, editor=False)
                     port = sock.getsockname()[1]
                 # The same local split-mode entrypoints used by IntelliJ Platform's runIdeSplitMode.
                 env.update(CWM_HOST_PASSWORD="fixture-only", CWM_CLIENT_PASSWORD="fixture-only")
-                backend = launch(files, root, "backend", "host", ["serverMode", "-l", "127.0.0.1", "-p", str(port), str(project)], env)
+                backend = launch(files, root, "backend", "host", ["serverMode", "-l", "127.0.0.1", "-p", str(port), str(project)], env, installed)
                 cleanup.callback(stop, backend)
                 def join_link():
                     text = (root / "backend-host.log").read_text(errors="replace")
@@ -180,7 +189,7 @@ def session(files, root, mode, artifact, probe, keep, stable=None, editor=False)
                     ids.add("ai.kilocode.jetbrains.v2" if phase.startswith("stable-") else "ai.kilocode.jetbrains")
                     disabled.write_text("\n".join(sorted(ids)) + "\n")
                     (root / "rollback").touch()
-                ui = launch(files, root, side, phase, args, env)
+                ui = launch(files, root, side, phase, args, env, installed)
                 try:
                     with (root / f"{side}-{phase}.log").open(errors="replace") as log:
                         def check():
@@ -202,8 +211,8 @@ def session(files, root, mode, artifact, probe, keep, stable=None, editor=False)
                 finally:
                     stop(ui)
             if editor:
-                if "editor-selection" not in model.events:
-                    raise AssertionError("Selected source and prompt did not reach the model together")
+                if not {"editor-selection", "commit-message"}.issubset(model.events):
+                    raise AssertionError("Missing editor selection or staged commit generation")
             elif not probe:
                 if "edit-complete" not in model.events or "reconnected" not in model.events:
                     raise AssertionError("Missing fixture-model edit result or post-reconnect request")
@@ -237,6 +246,7 @@ if __name__ == "__main__":
     parser.add_argument("--keep-sandbox", action="store_true", help="Keep private profiles and IDE logs for troubleshooting")
     parser.add_argument("--stable-plugin", type=Path, help="Signed stable ZIP for a local stable/preview rollback test")
     parser.add_argument("--editor-actions", action="store_true", help="Exercise Explain Selection on a native editor")
+    parser.add_argument("--pinned-cli", action="store_true", help="Use the plugin's pinned distribution instead of the checkout CLI")
     cli = parser.parse_args()
     if cli.editor_actions and (not cli.plugin or cli.stable_plugin):
         parser.error("--editor-actions requires --plugin without --stable-plugin")
@@ -247,5 +257,5 @@ if __name__ == "__main__":
     files = ide_files(cli.ide)
     root = Path(tempfile.mkdtemp(prefix="kjs-", dir=cli.output_parent)).resolve()
     print(f"Evidence: {root}", flush=True)
-    results = [session(files, root / m, m, cli.plugin, cli.probe, cli.keep_sandbox, cli.stable_plugin, cli.editor_actions) for m in (["local", "split"] if cli.mode == "both" else [cli.mode])]
+    results = [session(files, root / m, m, cli.plugin, cli.probe, cli.keep_sandbox, cli.stable_plugin, cli.editor_actions, cli.pinned_cli) for m in (["local", "split"] if cli.mode == "both" else [cli.mode])]
     sys.exit(0 if all(results) else 1)

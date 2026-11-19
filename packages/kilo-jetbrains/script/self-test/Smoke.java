@@ -108,6 +108,28 @@ public final class Smoke implements ProjectActivity {
             var callback = edt(() -> actions.tryToExecute(actions.getAction("Kilo.ExplainSelection"), null, editor.getContentComponent(), null, true));
             await("explain-action", () -> callback.isDone() ? true : null);
             transcript("KILO_FIXTURE_EXPLAINED");
+            var repo = dir.resolve("kilo-smoke-project");
+            var vcs = com.intellij.openapi.vcs.ProjectLevelVcsManager.getInstance(project);
+            edt(() -> {
+                vcs.setDirectoryMappings(java.util.List.of(new com.intellij.openapi.vcs.VcsDirectoryMapping(repo.toString(), "Git")));
+                return null;
+            });
+            await("git-root", () -> vcs.getAllVcsRoots().length == 1 ? true : null);
+            var commit = edt(() -> new com.intellij.openapi.vcs.ui.CommitMessage(project));
+            edt(() -> {
+                var action = actions.getAction("Kilo.GenerateCommitMessage");
+                var ctx = com.intellij.openapi.actionSystem.impl.SimpleDataContext.builder()
+                    .add(com.intellij.openapi.actionSystem.CommonDataKeys.PROJECT, project)
+                    .add(com.intellij.openapi.vcs.VcsDataKeys.COMMIT_MESSAGE_CONTROL, commit)
+                    .add(com.intellij.openapi.vcs.VcsDataKeys.COMMIT_MESSAGE_DOCUMENT, commit.getEditorField().getDocument()).build();
+                action.actionPerformed(com.intellij.openapi.actionSystem.AnActionEvent.createFromAnAction(action, null, "fixture", ctx));
+                return null;
+            });
+            await("commit-input", () -> commit.getEditorField().getText().equals("test: add staged fixture") ? true : null);
+            // The Git index stat cache may refresh; verify the indexed blob rather than its metadata.
+            var git = new ProcessBuilder("git", "show", ":fixture.txt").directory(repo.toFile()).start();
+            if (!new String(git.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).equals("before\n") || git.waitFor() != 0)
+                throw new AssertionError("Commit generation changed the staged fixture");
             return;
         }
         if (phase.equals("create")) {

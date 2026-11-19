@@ -225,6 +225,9 @@
             <add-to-group group-id="Terminal.ReworkedTerminalContextMenu" anchor="last"/>
         </action>
         <action id="Kilo.GenerateTerminalCommand" class="ai.kilocode.client.actions.GenerateTerminalCommandAction"/>
+        <action id="Kilo.GenerateCommitMessage" class="ai.kilocode.client.actions.GenerateCommitMessageAction" icon="/icons/kilo.svg">
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="last"/>
+        </action>
         <action id="Kilo.Restart"
                 class="ai.kilocode.client.actions.RestartKiloAction"/>
 

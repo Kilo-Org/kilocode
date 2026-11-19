@@ -14,6 +14,8 @@ interface KiloEditorRpcApi : RemoteApi<Unit> {
 
     suspend fun complete(directory: String, prefix: String, suffix: String, directMistral: Boolean): String
 
+    suspend fun commitMessage(directory: String, selected: List<String>, previous: String?, language: String): String
+
     /** Returns null when the recent conversation doesn't yet identify a clear task. */
     suspend fun branchName(directory: String, sessionId: String): String?
 }

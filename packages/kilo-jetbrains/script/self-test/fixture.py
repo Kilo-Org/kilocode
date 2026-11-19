@@ -33,7 +33,10 @@ class Fixture(BaseHTTPRequestHandler):
         finish = "stop"
         delta = {"role": "assistant", "content": "Kilo fixture history"}
         event = "title"
-        if names and "Explain the selected code from fixture.txt:2" in user and "fixture_selection_42" in json.dumps(messages):
+        if "Generate a commit message for the following changes:" in user and "fixture.txt" in user and "+before" in user:
+            delta["content"] = "test: add staged fixture"
+            event = "commit-message"
+        elif names and "Explain the selected code from fixture.txt:2" in user and "fixture_selection_42" in json.dumps(messages):
             delta["content"] = "KILO_FIXTURE_EXPLAINED"
             event = "editor-selection"
         elif names and "Check fixture continuity" in user:
