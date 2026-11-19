@@ -5,7 +5,7 @@
 // it needs a display, a built CLI binary and the built extension. The launch, pairing, model and CLI-run steps live in
 // extension-harness.ts.
 //
-//   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo2> <scenario>
+//   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo2> <scenario> [--strict]
 //   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo2> all [--repeat N] [--only a,b] [--out dir] [--strict]
 //
 //   E2E_EXTENSION_DIR   the built unpacked extension (default: ../../../cloud/apps/extension/.output/chrome-mv3)
@@ -17,11 +17,13 @@
 // Scenarios: download-path, navigate-snapshot, permission, frames, sensitive, group, stop, unpaired, download,
 // download-navigate, download-ungranted, download-late, download-tabs-new, download-tabs-new-notoken,
 // download-approved-one, download-approved-one-multi. `all` runs every scenario in its own child process (fresh
-// E2E_HOME each, one after another) and prints one summary table; it exits non-zero when any run failed.
+// E2E_HOME each, one after another) and prints one summary table.
 //
-// Known failures: KNOWN_FAILURES below lists scenarios that fail today for a reason owned elsewhere. `all` shows
-// them as `known-fail` (or `UNEXPECTED PASS` when one passes) and does not count them in its exit code; `--strict`
-// counts a known failure as a failure. A single-scenario run always exits non-zero on a failed expectation.
+// Known failures: KNOWN_FAILURES lists what fails today for a reason owned elsewhere: whole scenarios, with the exact
+// failure messages that are expected, and single checks (`<scenario>:<check>`). A run whose only failures are those
+// reports `status: "known-fail"` and exits 0 (`--strict`: 1); any other failure, a harness error included, is `FAIL`
+// and exits 1; a known scenario or check that passes reports `UNEXPECTED PASS`, so its entry can go. `all` reads each
+// run's status, shows it in its table and counts only `FAIL` (and, with `--strict`, `known-fail`).
 //
 // download-approved-one runs on Chrome's default settings, where the download request limiter lets one download per
 // gesture through and holds the rest; download-approved-one-multi is the same scenario for a user who allowed the
@@ -57,10 +59,8 @@ import {
   decodePng,
   defaultExtensionDirectory,
   enableLocalAgents,
-  field,
   groupById,
   type GroupInfo,
-  jsonOf,
   launchChromium,
   type Launched,
   openUserTab,
@@ -211,6 +211,54 @@ function expect(condition: boolean, message: string) {
   if (!condition) failures.push(message)
 }
 
+const TABS_LIST_FIX = "cloud fix/extension-tabs-list (PR stacked on #11923)"
+const DOWNLOAD_GUARD_FIX = "download guard: two downloads in one gesture / limiter; owned by the download-hold follow-up"
+/** The failure messages downloadApprovedOne produces while the download guard has the two-downloads gap. */
+const APPROVED_ONE_FAILURES = [
+  /^the guarded click saved a file/,
+  /^the approved repeat did not keep exactly one file/,
+  /^the folder changed after the approved repeat/,
+  /^the folder holds \d+ files/,
+  /^the approved file was not kept/,
+  /^the second download was kept/,
+  /^the second download was not reported/,
+  /^the second download was not refused/,
+  /^the approved route was hit/,
+  /^the second route was hit/,
+]
+
+/**
+ * What fails today for a reason owned elsewhere. A whole scenario lists the failure messages it is expected to
+ * produce; a failure that matches none of them (a harness error, a plan that threw, another regression) stays `FAIL`.
+ * A single check (`<scenario>:<check>`) is evaluated with `expectKnown`.
+ */
+const KNOWN_FAILURES: Record<string, { reason: string; failures?: RegExp[] }> = {
+  "download-approved-one": { reason: DOWNLOAD_GUARD_FIX, failures: APPROVED_ONE_FAILURES },
+  "download-approved-one-multi": { reason: DOWNLOAD_GUARD_FIX, failures: APPROVED_ONE_FAILURES },
+  "group:tabs-list-hides-user-tab": { reason: TABS_LIST_FIX },
+  "group:select-past-list-refused": { reason: TABS_LIST_FIX },
+}
+
+/** The known checks this run evaluated: their outcome and, when they failed, the message. */
+const knownChecks: { check: string; message?: string; passed: boolean; reason: string }[] = []
+
+/** A hard check that is a known failure today: a miss is recorded against its reason instead of failing the run. */
+function expectKnown(check: string, condition: boolean, message: string) {
+  const known = KNOWN_FAILURES[check]
+  if (known === undefined) return expect(condition, message)
+  knownChecks.push({ check, passed: condition, reason: known.reason, ...(condition ? {} : { message }) })
+}
+
+type Status = "pass" | "FAIL" | "known-fail" | "UNEXPECTED PASS"
+
+/** This run's status: see the header. */
+function statusOf(): Status {
+  const expected = KNOWN_FAILURES[scenario]?.failures ?? []
+  if (failures.some((failure) => !expected.some((pattern) => pattern.test(failure)))) return "FAIL"
+  if (failures.length > 0 || knownChecks.some((check) => !check.passed)) return "known-fail"
+  return KNOWN_FAILURES[scenario] !== undefined || knownChecks.length > 0 ? "UNEXPECTED PASS" : "pass"
+}
+
 let launched: Launched | undefined
 let bridge: Bridge
 let panel: Page
@@ -233,11 +281,25 @@ function report(results: Record<string, unknown>) {
     extension: extensionDirectory,
     extensionId: launched?.extensionId ?? "",
     failures,
+    ...(KNOWN_FAILURES[scenario] === undefined ? {} : { knownFailure: KNOWN_FAILURES[scenario].reason }),
+    knownChecks,
     scenario,
+    status: statusOf(),
     serviceWorker: launched?.swLog.lines.slice(-120) ?? [],
     ...(failures.length && launched ? { chromiumLog: launched.chromiumLog.text.slice(-3_000) } : {}),
     ...results,
   }
+}
+
+let reported = false
+
+/** Prints this run's one JSON report and sets the exit code; later calls (after an interrupt) print nothing. */
+function emit(results: Record<string, unknown>) {
+  if (reported) return
+  reported = true
+  const document = report(results)
+  console.log(JSON.stringify(document, null, 2))
+  if (document.status === "FAIL" || (document.status === "known-fail" && process.argv.includes("--strict"))) process.exitCode = 1
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -510,12 +572,9 @@ async function group() {
       listed = step.results[2]
       return (async () => {
         during = await tabs()
-        const parsed = jsonOf(step.results[2] ?? "")
-        const listedTabs = field(parsed, "tabs")
-        const user = Array.isArray(listedTabs) ? listedTabs.find((tab) => field(tab, "url") === userUrl) : undefined
-        const withheld = Array.isArray(listedTabs) ? listedTabs.find((tab) => field(tab, "url") === "[origin withheld]") : undefined
-        const index = field(user ?? withheld, "index")
-        return typeof index === "number" ? { args: { action: "select", index }, name: "browser_tabs" } : undefined
+        // The list should hold only the agent's own tab, numbered 0. Selecting the position the user's tab would have
+        // had (one past the list's end) must not reach the user's tab (D9).
+        return { args: { action: "select", index: 1 }, name: "browser_tabs" }
       })()
     }
     return undefined
@@ -543,9 +602,18 @@ async function group() {
   expect(kiloGroup !== undefined, `no live "Kilo · …" tab group: ${JSON.stringify(during.groups)}`)
   expect(agentTab !== undefined, `the agent has no tab in its group: ${JSON.stringify(during.tabs)}`)
   expect(agentTab?.id !== userTabId, "the agent's tab is the user's tab")
-  expect(
-    refused.includes("not in the agent session"),
-    `selecting the user's tab was not refused:\n${refused.slice(0, 500)}`,
+  expectKnown(
+    "group:tabs-list-hides-user-tab",
+    !(listed ?? "").includes(userUrl) && !(listed ?? "").includes("[origin withheld]"),
+    `the agent's tab list reported the user's tab:\n${(listed ?? "").slice(0, 800)}`,
+  )
+  // Whatever index 1 means in the list a build returns, the call must not select the user's tab (D9).
+  expect(!refused.includes(userUrl), `selecting index 1 selected the user's tab:\n${refused.slice(0, 500)}`)
+  // With the agent's list holding only its own tab, index 1 is past its end and is refused.
+  expectKnown(
+    "group:select-past-list-refused",
+    !refused.includes('"selected":true') && (refused.includes("No tab at index") || refused.includes("not in the agent session")),
+    `selecting past the agent's list was not refused:\n${refused.slice(0, 500)}`,
   )
   return {
     agentTab: agentTab?.id,
@@ -947,6 +1015,9 @@ async function downloadLate() {
   }
 
   await clearDownloads()
+  // Chrome's download history lives in the profile, which a rerun with the same E2E_HOME reuses: only the items this
+  // run creates count.
+  const itemsBefore = new Set((await downloadItems(browserOf().worker)).map((item) => item["id"]))
   const hitsBefore = downloadHits.length
   const result = await run(plan, { allowSensitive: true })
   const text = result.last.results
@@ -961,7 +1032,9 @@ async function downloadLate() {
   expect((folder[5] ?? []).length === 1, `the repeat did not save exactly one file: ${JSON.stringify(folder[5])}`)
   // The third click's download arrives after the click answered, so its own text is plain; the linger stops it. Chrome's
   // download list shows the three attempts: the guarded first, the kept repeat, and the stopped third.
-  const lateItems = (await downloadItems(browserOf().worker)).filter((item) => String(item["url"]).endsWith("/download-late"))
+  const lateItems = (await downloadItems(browserOf().worker)).filter(
+    (item) => !itemsBefore.has(item["id"]) && String(item["url"]).endsWith("/download-late"),
+  )
   expect(
     lateItems.length === 3 && lateItems.filter((item) => item["state"] === "complete").length === 1,
     `the browser did not stop the guarded and third downloads and keep the repeat's: ${JSON.stringify(lateItems)}`,
@@ -1024,26 +1097,21 @@ const scenarios: Record<string, () => Promise<Record<string, unknown>>> = {
   "download-approved-one-multi": downloadApprovedOne,
 }
 
+/** The value after `name`; a flag given without a value is an error, not a default. */
 function option(name: string): string | undefined {
   const at = process.argv.indexOf(name)
-  return at < 0 ? undefined : process.argv[at + 1]
+  if (at < 0) return undefined
+  const value = process.argv[at + 1]
+  if (value === undefined || value.startsWith("--")) throw new Error(`${name} needs a value`)
+  return value
 }
 
-/**
- * Scenarios that fail today for a reason owned elsewhere: `all` reports them as known-fail and leaves its exit code
- * alone unless `--strict`.
- */
-const KNOWN_FAILURES: Record<string, string> = {
-  "download-approved-one": "download guard: two downloads in one gesture / limiter; owned by the download-hold follow-up",
-  "download-approved-one-multi": "download guard: two downloads in one gesture / limiter; owned by the download-hold follow-up",
-}
+type Outcome = { failure: string; repeat: number; scenario: string; seconds: number; status: Status }
 
-type Outcome = { failure: string; pass: boolean; repeat: number; scenario: string; seconds: number }
-
-function resultOf(outcome: Outcome) {
-  const known = outcome.scenario in KNOWN_FAILURES
-  if (outcome.pass) return known ? "UNEXPECTED PASS" : "pass"
-  return known ? "known-fail" : "FAIL"
+/** The last JSON document a scenario run printed (its report). */
+function lastReport(stdout: string): Record<string, unknown> | undefined {
+  const start = stdout.lastIndexOf("\n{")
+  return record(JSON.parse(start >= 0 ? stdout.slice(start + 1) : stdout.slice(stdout.indexOf("{"))))
 }
 
 /** A scenario that runs longer than this is stopped (SIGTERM, then SIGKILL a minute later). */
@@ -1088,37 +1156,49 @@ async function runAll(): Promise<number> {
       await fs.writeFile(path.join(out, `${name}-${round}.json`), stdout)
       if (stderr) await fs.writeFile(path.join(out, `${name}-${round}.stderr.txt`), stderr)
       let failure = ""
+      let status: Status = "FAIL"
       try {
-        const parsed = record(JSON.parse(stdout.slice(stdout.indexOf("{"))))
+        const parsed = lastReport(stdout)
         const list = parsed?.["failures"]
+        const checks = parsed?.["knownChecks"]
+        const missed = Array.isArray(checks) ? checks.map(record).find((check) => check?.["passed"] === false) : undefined
         if (Array.isArray(list) && list.length) failure = String(list[0])
+        else if (missed) failure = `${String(missed["check"])}: ${String(missed["message"])}`
+        const reportedStatus = parsed?.["status"]
+        if (reportedStatus === "pass" || reportedStatus === "known-fail" || reportedStatus === "UNEXPECTED PASS") status = reportedStatus
       } catch {
         failure = `no JSON report (exit ${code}): ${(stderr.trim().split("\n").at(-1) ?? "").trim()}`
       }
-      if (!failure && code !== 0) failure = `exit ${code}`
-      const outcome: Outcome = { failure: failure.split("\n")[0]?.slice(0, 160) ?? "", pass: code === 0 && !failure, repeat: round, scenario: name, seconds }
+      if (status !== "FAIL" && code !== 0) {
+        status = "FAIL"
+        failure ||= `exit ${code}`
+      }
+      const outcome: Outcome = { failure: failure.split("\n")[0]?.slice(0, 160) ?? "", repeat: round, scenario: name, seconds, status }
       outcomes.push(outcome)
-      console.error(`${resultOf(outcome)} ${name} #${round} ${seconds.toFixed(1)}s ${outcome.failure}`)
+      console.error(`${outcome.status} ${name} #${round} ${seconds.toFixed(1)}s ${outcome.failure}`)
     }
   }
   if (outcomes.length === 0) throw new Error("no scenario ran")
   const width = Math.max(...outcomes.map((outcome) => outcome.scenario.length), "scenario".length)
   const resultWidth = "UNEXPECTED PASS".length
-  const counted = (outcome: Outcome) => !outcome.pass && (strict || !(outcome.scenario in KNOWN_FAILURES))
+  const counted = (outcome: Outcome) => outcome.status === "FAIL" || (strict && outcome.status === "known-fail")
+  const passed = (outcome: Outcome) => outcome.status === "pass" || outcome.status === "UNEXPECTED PASS"
   const lines = [
     `| ${"scenario".padEnd(width)} | run | ${"result".padEnd(resultWidth)} | seconds | failure |`,
     `| ${"-".repeat(width)} | --- | ${"-".repeat(resultWidth)} | ------- | ------- |`,
     ...outcomes.map(
       (outcome) =>
-        `| ${outcome.scenario.padEnd(width)} | ${String(outcome.repeat).padStart(3)} | ${resultOf(outcome).padEnd(resultWidth)} | ${outcome.seconds.toFixed(1).padStart(7)} | ${outcome.failure.replaceAll("|", "\\|")} |`,
+        `| ${outcome.scenario.padEnd(width)} | ${String(outcome.repeat).padStart(3)} | ${outcome.status.padEnd(resultWidth)} | ${outcome.seconds.toFixed(1).padStart(7)} | ${outcome.failure.replaceAll("|", "\\|")} |`,
     ),
     "",
     ...names.map((name) => {
       const mine = outcomes.filter((outcome) => outcome.scenario === name)
-      const known = KNOWN_FAILURES[name]
-      return `${name.padEnd(width)}  ${mine.filter((outcome) => outcome.pass).length}/${mine.length} pass${known ? ` (known failure: ${known})` : ""}`
+      const known = Object.entries(KNOWN_FAILURES)
+        .filter(([key]) => key === name || key.startsWith(`${name}:`))
+        .map(([key, value]) => `${key === name ? "" : `${key.slice(name.length + 1)}: `}${value.reason}`)
+      return `${name.padEnd(width)}  ${mine.filter(passed).length}/${mine.length} pass${known.length ? ` (known failure: ${known.join("; ")})` : ""}`
     }),
-    `total ${outcomes.filter((outcome) => outcome.pass).length}/${outcomes.length} pass, ${outcomes.filter(counted).length} counted failure(s)${strict ? " (--strict)" : ""}; reports in ${out}`,
+    `total ${outcomes.filter(passed).length}/${outcomes.length} pass, ${outcomes.filter(counted).length} counted failure(s)${strict ? " (--strict)" : ""}; reports in ${out}`,
   ]
   const table = lines.join("\n")
   await fs.writeFile(path.join(out, "summary.md"), `${table}\n`)
@@ -1152,7 +1232,7 @@ downloadsPath = path.join(base, "downloads")
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
   process.once(signal, () => {
     failures.push(`harness: interrupted by ${signal}`)
-    console.log(JSON.stringify(report({}), null, 2))
+    emit({})
     void Promise.allSettled([stopChildren(), launched?.close()]).finally(() => {
       stopFixtures()
       model.stop()
@@ -1194,12 +1274,10 @@ try {
     launched.cdp.downloadBehavior.length === 0,
     `the harness sent a DevTools download override: ${JSON.stringify(launched.cdp.downloadBehavior)}`,
   )
-  console.log(JSON.stringify(report(results), null, 2))
-  if (failures.length) process.exitCode = 1
+  emit(results)
 } catch (error) {
   failures.push(`harness: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`)
-  console.log(JSON.stringify(report({}), null, 2))
-  process.exitCode = 1
+  emit({})
 } finally {
   await launched?.close().catch(() => undefined)
   stopFixtures()

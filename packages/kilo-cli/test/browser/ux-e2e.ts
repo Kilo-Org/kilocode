@@ -77,6 +77,7 @@ import {
   startBridgeHub,
   startModel,
   tap,
+  terminate,
   tabState as harnessTabState,
   type TabInfo,
   until,
@@ -183,29 +184,43 @@ function observe(condition: boolean, message: string) {
 const SETTINGS_FIX = "cloud fix/extension-agents-settings + kilocode browser-disconnect (PRs #11929/#16385)"
 
 /**
- * What fails today for a reason owned elsewhere: whole scenarios, and single checks (`<scenario>:<check>`) inside
- * scenarios that otherwise must pass. A known failure is reported, not counted (see `finish`); a known check that
- * passes is reported as an unexpected pass, so the entry can be removed once its fix lands.
+ * What fails today for a reason owned elsewhere: whole scenarios, with the failure messages they are expected to
+ * produce, and single checks (`<scenario>:<check>`) inside scenarios that otherwise must pass. A failure that matches
+ * none of a scenario's messages (a harness error, a TUI or serve that never starts, another regression) stays `FAIL`
+ * (see `finish`); a known scenario or check that passes is reported as an unexpected pass, so its entry can go.
  */
-const KNOWN_FAILURES: Record<string, string> = {
-  "signed-out": "local agents settings signed out: cloud fix/extension-agents-signin",
-  "stop-race": SETTINGS_FIX,
-  "tui-redirect": "cloud #11921 + kilocode #16382",
-  "pairing:hub-reconnecting": SETTINGS_FIX,
-  "pairing:hub-unreachable": SETTINGS_FIX,
-  "pairing:broken-link-notice": SETTINGS_FIX,
-  "controls:disconnect": SETTINGS_FIX,
-  "settings-faults:stop-all-text": SETTINGS_FIX,
-  "settings-faults:disconnect-text": SETTINGS_FIX,
+const KNOWN_FAILURES: Record<string, { reason: string; failures?: RegExp[] }> = {
+  "signed-out": {
+    reason: "local agents settings signed out: cloud fix/extension-agents-signin",
+    failures: [
+      /^signed out, the "Allow local agents" switch is unreachable/,
+      /^signed out, pairing and a local agent run failed/,
+      /^signing out of the Kilo account stopped the local agent/,
+      /^sign-out must keep the local-agent keys/,
+      /^an expired Kilo token stopped the local agent/,
+      /^token expiry must keep the local-agent keys/,
+    ],
+  },
+  "stop-race": { reason: SETTINGS_FIX, failures: [/^a turn running at Stop all opened a new session/] },
+  "tui-redirect": {
+    reason: "cloud #11921 + kilocode #16382",
+    failures: [/^redirect: expected one permission prompt/, /^redirect: the navigate did not land/],
+  },
+  "pairing:hub-reconnecting": { reason: SETTINGS_FIX },
+  "pairing:hub-unreachable": { reason: SETTINGS_FIX },
+  "pairing:broken-link-notice": { reason: SETTINGS_FIX },
+  "controls:disconnect": { reason: SETTINGS_FIX },
+  "settings-faults:stop-all-text": { reason: SETTINGS_FIX },
+  "settings-faults:disconnect-text": { reason: SETTINGS_FIX },
 }
 /** The known checks this run evaluated: their outcome and, when they failed, the message. */
 const knownChecks: { check: string; message?: string; passed: boolean; reason: string }[] = []
 
 /** A hard check that is a known failure today: a miss is recorded against its reason instead of failing the run. */
 function expectKnown(check: string, condition: boolean, message: string) {
-  const reason = KNOWN_FAILURES[check]
-  if (reason === undefined) return expect(condition, message)
-  knownChecks.push({ check, passed: condition, reason, ...(condition ? {} : { message }) })
+  const known = KNOWN_FAILURES[check]
+  if (known === undefined) return expect(condition, message)
+  knownChecks.push({ check, passed: condition, reason: known.reason, ...(condition ? {} : { message }) })
   return condition
 }
 
@@ -1244,8 +1259,14 @@ async function settingsFaultsScenario() {
               const api = (globalThis as unknown as { chrome: { runtime: { sendMessage: (...args: unknown[]) => Promise<unknown> } } }).chrome
               Object.defineProperty(api.runtime, "sendMessage", { configurable: true, value: () => Promise.reject(new Error("Receiving end does not exist.")) })
             })
+            // The row renders after the session opens; wait for it, or the check would read the placeholder.
             const button = panel.getByRole("button", { name: /^Disconnect / })
-            if ((await button.count()) > 0) {
+            const shown = await button.waitFor({ timeout: 10_000 }).then(
+              () => true,
+              () => false,
+            )
+            expect(shown, `settings-faults: no Disconnect button appeared during the live run: ${await sectionText()}`)
+            if (shown) {
               await button.click()
               await Bun.sleep(500)
               section = await sectionText()
@@ -1374,14 +1395,24 @@ async function signedOutScenario() {
 
   // (1) A signed-out user reaches the switch through the header's Settings entry, pairs and runs an agent.
   await panel.getByText("Sign in to continue").waitFor()
-  const settingsButtons = await panel.getByRole("button", { name: "Settings" }).count()
+  const settingsButton = panel.getByRole("button", { name: "Settings" })
+  const settingsShown = await settingsButton.waitFor({ timeout: 5_000 }).then(
+    () => true,
+    () => false,
+  )
   await pageShot("01-signed-out-panel")
-  await openSettings()
-  const switches = await toggle().count()
-  out["signed-out"] = { page: await pageText(), settingsButtons, switches, url: panel.url() }
-  await pageShot("02-signed-out-settings")
   const manifest = JSON.parse(await fs.readFile(path.join(extensionDirectory, "manifest.json"), "utf8")) as Record<string, unknown>
   out["other-surfaces"] = { action: manifest["action"] ?? null, options_page: manifest["options_page"] ?? null, options_ui: manifest["options_ui"] ?? null }
+  if (!settingsShown) {
+    // Without a way into the settings nothing else in this scenario can run.
+    out["signed-out"] = { page: await pageText(), settingsButtons: 0, switches: 0, url: panel.url() }
+    expect(false, `signed out, the "Allow local agents" switch is unreachable (SPEC D15): no Settings button; ${String(record(out["signed-out"])?.["page"]).slice(0, 300)}`)
+    return out
+  }
+  await openSettings()
+  const switches = await toggle().count()
+  out["signed-out"] = { page: await pageText(), settingsButtons: 1, switches, url: panel.url() }
+  await pageShot("02-signed-out-settings")
   expect(switches > 0, `signed out, the "Allow local agents" switch is unreachable (SPEC D15): ${String(record(out["signed-out"])?.["page"]).slice(0, 300)}`)
   await setSwitch(true)
   await pageShot("03-signed-out-switch-on")
@@ -1487,7 +1518,8 @@ async function startServe(root: string) {
     },
     60_000,
     `kilo2 serve answers on ${origin}`,
-  ).catch((error: unknown) => {
+  ).catch(async (error: unknown) => {
+    await terminate(child)
     throw new Error(`${String(error)}; serve log: ${log.text.slice(-1_500)}`)
   })
   const authorization = `Basic ${Buffer.from(`${user}:${password}`).toString("base64")}`
@@ -1504,14 +1536,7 @@ async function startServe(root: string) {
   return {
     api,
     log,
-    stop: async () => {
-      try {
-        child.kill("SIGTERM")
-      } catch {
-        // Gone.
-      }
-      await Promise.race([child.exited, Bun.sleep(5_000)])
-    },
+    stop: () => terminate(child),
   }
 }
 
@@ -1521,11 +1546,13 @@ async function stopRaceScenario() {
   const out: Record<string, unknown> = {}
   const root = await freshRoot("stop-race")
   const hub = await startHub(root, {})
-  await pair(hub)
-  const serve = await startServe(root)
+  let serve: Awaited<ReturnType<typeof startServe>> | undefined
   try {
+    await pair(hub)
+    serve = await startServe(root)
+    const { api } = serve
     const create = async () => {
-      const created = await serve.api("POST", "/api/session", { model: { id: "echo", providerID: "local" } })
+      const created = await api("POST", "/api/session", { model: { id: "echo", providerID: "local" } })
       const id = field(field(created, "data"), "id")
       if (typeof id !== "string") throw new Error(`session.create returned no id: ${JSON.stringify(created)}`)
       return id
@@ -1539,10 +1566,10 @@ async function stopRaceScenario() {
         if (next === undefined) finished.resolve()
         return next
       }
-      await serve.api("POST", `/api/session/${session}/prompt`, { text: "Check the browser bridge." })
+      await api("POST", `/api/session/${session}/prompt`, { text: "Check the browser bridge." })
       const timer = setTimeout(() => finished.reject(new Error(`the turn of ${session} did not finish`)), 120_000)
       await finished.promise.finally(() => clearTimeout(timer))
-      await serve.api("POST", `/api/experimental/session/${session}/wait`)
+      await api("POST", `/api/experimental/session/${session}/wait`)
       model.plan = undefined
       return history.at(-1)?.results ?? []
     }
@@ -1595,8 +1622,8 @@ async function stopRaceScenario() {
     )
     await shot("03-b-next-turn")
   } finally {
-    out["serveLog"] = serve.log.text.slice(-800)
-    await serve.stop()
+    out["serveLog"] = serve?.log.text.slice(-800)
+    await serve?.stop()
     await hub.stop()
   }
   return out
@@ -1634,22 +1661,20 @@ const knownFailure = KNOWN_FAILURES[scenario]
 const strict = process.argv.includes("--strict")
 
 /**
- * The run's status and exit code. A failure of a known scenario, or of a known check, is `known-fail` (exit 0, or 1
- * with `--strict`); any other failure is `FAIL` (exit 1); a known scenario or known check that passes is an
- * `UNEXPECTED PASS` (exit 0).
+ * The run's status and exit code. Failures that are all among the known scenario's expected messages, or misses of
+ * known checks, are `known-fail` (exit 0, or 1 with `--strict`); any other failure, a harness error included, is `FAIL`
+ * (exit 1); a known scenario or known check that passes is an `UNEXPECTED PASS` (exit 0).
  */
 function finish() {
-  const knownMissed = knownChecks.filter((item) => !item.passed)
-  const status =
-    failures.length > 0
-      ? knownFailure === undefined
-        ? "FAIL"
-        : "known-fail"
-      : knownMissed.length > 0
-        ? "known-fail"
-        : knownFailure !== undefined || knownChecks.length > 0
-          ? "UNEXPECTED PASS"
-          : "pass"
+  const expected = knownFailure?.failures ?? []
+  const unexpected = failures.some((failure) => !expected.some((pattern) => pattern.test(failure)))
+  const status = unexpected
+    ? "FAIL"
+    : failures.length > 0 || knownChecks.some((item) => !item.passed)
+      ? "known-fail"
+      : knownFailure !== undefined || knownChecks.length > 0
+        ? "UNEXPECTED PASS"
+        : "pass"
   if (status === "FAIL" || (status === "known-fail" && strict)) process.exitCode = 1
   return status
 }
@@ -1666,7 +1691,7 @@ function report(results: Record<string, unknown>) {
     extension: loadedExtension,
     extensionId,
     failures,
-    ...(knownFailure === undefined ? {} : { knownFailure }),
+    ...(knownFailure === undefined ? {} : { knownFailure: knownFailure.reason }),
     knownChecks,
     observations,
     scenario,

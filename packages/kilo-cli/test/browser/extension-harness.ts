@@ -236,7 +236,7 @@ export function startFrameServer() {
   })
 }
 
-/** Every hub and CLI run the harness spawned that has not exited yet, so an interrupted runner can stop them. */
+/** Every Chromium, hub and CLI run the harness spawned that has not exited yet, so an interrupted runner can stop them. */
 const liveChildren = new Set<Subprocess>()
 
 function track(child: Subprocess) {
@@ -254,7 +254,7 @@ export async function terminate(child: Subprocess) {
   await Promise.race([child.exited, Bun.sleep(2_000)])
 }
 
-/** Stops every hub and CLI run still alive: the cleanup of a runner that is interrupted mid-scenario. */
+/** Stops every Chromium, hub and CLI run still alive: the cleanup of a runner that is interrupted mid-scenario. */
 export async function stopChildren() {
   await Promise.all([...liveChildren].map((child) => terminate(child)))
 }
@@ -804,6 +804,8 @@ export async function launchChromium(options: LaunchOptions): Promise<Launched> 
     ...options.preferences,
   }
   await fs.writeFile(path.join(options.profile, "Default", "Preferences"), JSON.stringify(preferences))
+  // A reused profile still holds the previous run's DevToolsActivePort; reading it would connect to a dead browser.
+  await fs.rm(path.join(options.profile, "DevToolsActivePort"), { force: true })
 
   const args = [
     `--user-data-dir=${options.profile}`,
@@ -826,6 +828,8 @@ export async function launchChromium(options: LaunchOptions): Promise<Launched> 
   const chromiumLog = { text: "" }
   let exited = false
   const child = Bun.spawn([executable, ...args], { stderr: "pipe", stdin: "ignore", stdout: "pipe" })
+  // Tracked from the spawn on, so an interrupt during the launch itself (up to 30 s) stops this Chromium too.
+  track(child)
   void child.exited.then(() => {
     exited = true
   })
