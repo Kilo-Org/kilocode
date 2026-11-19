@@ -118,4 +118,74 @@ setVisible("pending:two")
 assert.equal(tab(), mounted, "the tab stays mounted")
 assert.equal(tab()!.getAttribute("aria-selected"), "false")
 assert.equal(tab()!.getAttribute("tabindex"), "-1")
+
+const { CloudWorkspaceBar } = await import("../../webview-ui/agent-manager/cloud/CloudWorkspaceBar")
+const { createCloudNavigation } = await import("../../webview-ui/agent-manager/cloud/route")
+const { createTabFocus } = await import("../../webview-ui/src/utils/tab-navigation")
+const { DialogProvider } = await import("@kilocode/kilo-ui/context/dialog")
+const { OpenCode } = await import("@opencode/client")
+const nav = createCloudNavigation()
+const routes = ["one", "two", "three"].map((id) => ({
+  kind: "session" as const,
+  title: id,
+  projectID: "fixture",
+  directory: "/fixture",
+  repository: "fixture",
+  scope: "fixture",
+  target: { providerID: "kilo-cloud" as const, scope: "fixture", workspaceID: "workspace", sessionID: id },
+}))
+nav.workspace(routes)
+const host = document.createElement("div")
+document.body.append(host)
+const select = (id: string) => nav.select(nav.tabs().find((item) => item.target.sessionID === id)!)
+const terminalTargets: string[] = []
+const dispose = render(
+  () => (
+    <VSCodeProvider>
+      <LanguageProvider>
+        <DialogProvider>
+          <CloudWorkspaceBar
+            nav={nav}
+            api={OpenCode.make({ baseUrl: "http://relay.invalid" })}
+            bindings={() => ({})}
+            collapsed={false}
+            toggle={noop}
+            openSide={(_name, route) => terminalTargets.push(route.target.sessionID)}
+            newTerminal={noop}
+            refresh={noop}
+            activate={select}
+            focus={createTabFocus({
+              ids: () => nav.tabs().map((item) => item.target.sessionID),
+              select,
+              root: () => host,
+            })}
+          />
+        </DialogProvider>
+      </LanguageProvider>
+    </VSCodeProvider>
+  ),
+  host,
+)
+const strip = host.querySelector<HTMLElement>('[role="tablist"]')!
+const cloudTab = (id: string) => host.querySelector<HTMLElement>(`[data-tab-id="${id}"] [role="tab"]`)!
+const secondCloudTab = cloudTab("two")
+const shellButton = host.querySelector<HTMLElement>(".am-tab-actions button[aria-pressed]:not(.am-diff-toggle-btn)")!
+strip.scrollLeft = 41
+secondCloudTab.click()
+assert.equal(host.querySelector('[role="tablist"]'), strip)
+assert.equal(strip.scrollLeft, 41, "selecting an already visible tab preserves its scroll container")
+assert.equal(secondCloudTab.getAttribute("aria-selected"), "true")
+shellButton.click()
+assert.deepEqual(terminalTargets, ["two"], "a retained toolbar action targets the selected session")
+nav.renamed(routes[1]!, "Retitled")
+assert.equal(cloudTab("two"), secondCloudTab, "replacing the route object does not remount the tab")
+assert.equal(secondCloudTab.getAttribute("aria-label"), "Retitled")
+host.querySelector<HTMLElement>(".am-tab-add-split button")!.click()
+assert.equal(cloudTab("cloud-draft").getAttribute("aria-selected"), "true")
+assert.equal(cloudTab("two"), secondCloudTab)
+host.querySelector<HTMLElement>('[data-tab-id="cloud-draft"] [data-tab-close]')!.click()
+assert.equal(secondCloudTab.getAttribute("aria-selected"), "true")
+host.querySelector<HTMLElement>('[data-tab-id="one"] [data-tab-close]')!.click()
+assert.equal(cloudTab("two"), secondCloudTab, "closing the tab to the left preserves the selected tab")
+dispose()
 process.exit(0)

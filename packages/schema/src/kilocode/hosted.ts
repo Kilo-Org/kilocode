@@ -137,6 +137,7 @@ export const Permission = Schema.Struct({
 }).annotate({ identifier: "KiloHosted.Permission" })
 export interface Snapshot extends Schema.Schema.Type<typeof Snapshot> {}
 export const Snapshot = Schema.Struct({
+  historyReady: optional(Schema.Boolean),
   connection: Schema.Literals(["connecting", "preparing", "live", "sleeping", "disconnected"]),
   error: optional(Schema.String),
   progress: optional(Progress),

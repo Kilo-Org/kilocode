@@ -1,17 +1,12 @@
-import { For, Show, createEffect, createSignal, onCleanup, type JSX } from "solid-js"
+import { Show, createEffect, createSignal, onCleanup, type JSX } from "solid-js"
 import { KiloHostedRpc } from "@opencode/schema/kilocode/hosted"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { readListed } from "../../../src/shared/plugin-inventory"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { createSessionPool } from "./session-pool"
 import { CloudInspector } from "./inspector"
 import { createCloudToolPreview, type DiffPreferences } from "./tool-diff"
 import { createCloudStatus } from "./status"
-import { ActivityIcon } from "../../src/components/shared/ActivityIcon"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { label } from "../v2/activity"
 import { createCloudShells, cloudShellAction, type CloudShells } from "./shell-tabs"
-import { ClosableTabChrome } from "../ClosableTab"
 import { V2Scope } from "../../src/v2/client"
 import { useBridge } from "../v2/vscode"
 
@@ -20,12 +15,7 @@ import type { AgentProjectSnapshot } from "../../src/types/messages/agent-manage
 import { cloudWorkspacesVisible } from "../../src/v2/kilo-settings"
 import { HostedChat } from "../hosted-chat"
 import type { PanelData } from "../v2/panel-data"
-import { SessionTabList } from "../SessionTabList"
-import { WorkspaceTabBar, WorkspaceTerminalButton } from "../WorkspaceTabBar"
-import { useTabScroll } from "../tab-scroll"
-import { renderNewTabButton } from "../tab-rendering"
-import { SessionMenu } from "./SessionMenu"
-import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { CloudWorkspaceBar } from "./CloudWorkspaceBar"
 import { CloudCreate } from "./CloudCreate"
 import { createTabFocus } from "../../src/utils/tab-navigation"
 import { bindCloudFocus, focusCloudChat } from "./focus"
@@ -80,10 +70,6 @@ export function createCloudSurface(input: {
   createEffect(() => {
     if (panel() !== "edit") edits.clear()
     else if (!edits.preview()) edits.close()
-  })
-  const scroll = useTabScroll(nav.tabs, () => {
-    const r = nav.current()
-    return r?.kind === "session" ? r.target.sessionID : "cloud-draft"
   })
   const openSide = (name: "terminal" | "review", route: ChatRoute) => {
     if (panel() === name) {
@@ -227,109 +213,19 @@ export function createCloudSurface(input: {
               }
               data-agent-manager-native-text-shortcuts
             >
-              <Show when={selected()} keyed>
-                {(route) => (
-                  <WorkspaceTabBar
-                    collapsed={input.collapsed()}
-                    toggle={input.toggle}
-                    add={
-                      route.kind === "session" &&
-                      renderNewTabButton({
-                        contextSelected: () => true,
-                        kb: input.panel.store(route.directory).bindings,
-                        newSessionLabel: t("agentManager.session.new"),
-                        newSessionMenuLabel: t("agentManager.session.newSession"),
-                        moreOptionsLabel: t("agentManager.tab.newOptions"),
-                        newTerminalLabel: t("agentManager.terminal.new"),
-                        onNewSession: () =>
-                          nav.select({ ...route, kind: "create", workspaceID: route.target.workspaceID }),
-                        onNewTerminal: () => newTerminal(route),
-                      })
-                    }
-                    actions={
-                      route.kind === "session" && (
-                        <>
-                          <SessionMenu
-                            route={route}
-                            api={input.panel.api}
-                            nav={nav}
-                            refresh={() => refresh(route.directory)}
-                          />
-                          <TooltipKeybind
-                            title={t("agentManager.diff.toggle")}
-                            keybind={input.panel.store(route.directory).bindings().toggleDiff ?? ""}
-                            placement="bottom"
-                            openDelay={0}
-                          >
-                            <IconButton
-                              icon="layers"
-                              size="small"
-                              variant="ghost"
-                              class="am-diff-toggle-btn"
-                              aria-label={t("agentManager.diff.toggle")}
-                              aria-pressed={panel() === "review"}
-                              onClick={() => openSide("review", route)}
-                            />
-                          </TooltipKeybind>
-                          <WorkspaceTerminalButton
-                            active={panel() === "terminal"}
-                            keybind={input.panel.store(route.directory).bindings().showTerminal ?? ""}
-                            open={() => openSide("terminal", route)}
-                          />
-                        </>
-                      )
-                    }
-                  >
-                    <SessionTabList
-                      scroll={scroll}
-                      count={nav.tabs().length + Number(route.kind === "create")}
-                      label={t("agentManager.shortcuts.category.tabs")}
-                    >
-                      <For each={nav.tabs()}>
-                        {(tab) => (
-                          <ClosableTabChrome
-                            id={tab.target.sessionID}
-                            role="tab"
-                            selected={route === tab}
-                            active={route === tab}
-                            tabIndex={route === tab ? 0 : -1}
-                            label={tab.title}
-                            tooltip={tab.title}
-                            state={nav.state(tab)}
-                            icon="cloud"
-                            stateLabel={t(label(nav.state(tab)))}
-                            iconNode={() => (
-                              <ActivityIcon state={nav.state(tab)} idle={<Icon name="cloud" size="small" />} />
-                            )}
-                            onSelect={() => activateTab(tab.target.sessionID)}
-                            onClose={() => sessionTabFocus.run(() => nav.close(tab))}
-                            onKeyDown={(e) => sessionTabFocus.key(tab.target.sessionID, e)}
-                          />
-                        )}
-                      </For>
-                      <Show when={route.kind === "create"}>
-                        <ClosableTabChrome
-                          id="cloud-draft"
-                          role="tab"
-                          selected
-                          active
-                          tabIndex={0}
-                          label={t(
-                            route.kind === "create" && route.workspaceID
-                              ? "agentManager.cloud.newSession"
-                              : "agentManager.cloud.newWorkspace",
-                          )}
-                          tooltip={t("session.tab.cloud")}
-                          icon={nav.state(route) === "busy" ? "spinner" : "cloud"}
-                          onSelect={() => focusCloudChat()}
-                          onClose={() => sessionTabFocus.run(nav.cancelDraft)}
-                          onKeyDown={(e) => sessionTabFocus.key("cloud-draft", e)}
-                        />
-                      </Show>
-                    </SessionTabList>
-                  </WorkspaceTabBar>
-                )}
-              </Show>
+              <CloudWorkspaceBar
+                nav={nav}
+                api={input.panel.api}
+                bindings={input.panel.store(selected().directory).bindings}
+                collapsed={input.collapsed()}
+                toggle={input.toggle}
+                visible={panel()}
+                openSide={openSide}
+                newTerminal={newTerminal}
+                refresh={refresh}
+                activate={activateTab}
+                focus={sessionTabFocus}
+              />
               <V2Scope value={input.panel.store(selected().directory)}>
                 <div class="am-detail-stack">
                   <CloudInspector

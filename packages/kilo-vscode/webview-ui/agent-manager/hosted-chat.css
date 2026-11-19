@@ -19,4 +19,40 @@
 .am-hosted-queued {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+.am-hosted-history-load,
+.am-hosted-empty {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 18px 12px;
+  color: var(--vscode-descriptionForeground);
+}
+.am-hosted-history-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.am-hosted-history-shapes {
+  display: grid;
+  gap: 8px;
+  margin-block: 20px;
+}
+.am-hosted-history-shapes i {
+  display: block;
+  height: 0.8em;
+  border-radius: 4px;
+  background: var(--vscode-descriptionForeground);
+  opacity: 0.12;
+  width: 78%;
+}
+.am-hosted-history-shapes i:first-child {
+  justify-self: end;
+  width: 43%;
+  height: 2.2em;
+  margin-block-end: 20px;
+}
+.am-hosted-history-shapes i:last-child {
+  width: 58%;
 }

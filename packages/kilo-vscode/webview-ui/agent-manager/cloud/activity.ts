@@ -50,6 +50,6 @@ export function hostedActivity(chat: HostedChatModel): Activity {
     return "error"
   if (chat.questions().length || chat.permissions().length) return "waiting"
   if (chat.phase() === "reconnecting" || snapshot?.status === "retry") return "retry"
-  if (chat.phase() === "opening" || chat.busy() || chat.pending() || preparing(chat)) return "busy"
+  if (chat.busy() || chat.pending() || preparing(chat)) return "busy"
   return "idle"
 }

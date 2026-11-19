@@ -39,6 +39,7 @@ class Lease {
   private readonly preparation = new Preparation()
   private retry = new AbortController()
   private historyPending = false
+  private historyReady = false
   private delivered?: { revision: number; rows: Map<string, KiloHostedRpc.Message> }
 
   constructor(
@@ -101,6 +102,7 @@ class Lease {
     if (revision === this.revision) return { revision }
     const snapshot = {
       ...this.projection.snapshot(this.displayConnection()),
+      historyReady: this.historyReady,
       ...(error && { error }),
       ...(this.progress && { progress: this.progress }),
     }
@@ -188,7 +190,8 @@ class Lease {
   private restorePreparation(saved: Page) {
     const pending = "pending" in saved && saved.pending === true
     const progress = this.preparation.fromPage("attempts" in saved ? saved.attempts : undefined)
-    if (this.historyPending === pending && !progress) return
+    if (this.historyPending === pending && (this.historyReady || pending) && !progress) return
+    if (!pending) this.historyReady = true
     this.historyPending = pending
     if (progress) this.progress = progress
     this.notify()

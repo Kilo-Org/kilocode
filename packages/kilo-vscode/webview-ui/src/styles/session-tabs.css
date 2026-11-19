@@ -87,6 +87,7 @@
   background: linear-gradient(to left, var(--surface-base) 0%, transparent 100%);
 }
 
+.am-tab-item,
 .am-tab-sortable,
 .session-tab-bar .am-tab-sortable {
   display: flex;
@@ -95,12 +96,15 @@
   max-width: var(--am-tab-width);
   height: 100%;
   flex: 0 0 var(--am-tab-width);
-  touch-action: none;
   transition:
     flex-basis 140ms ease,
     max-width 140ms ease,
     min-width 140ms ease,
     width 140ms ease;
+}
+
+.am-tab-sortable {
+  touch-action: none;
 }
 
 .session-tab-bar .am-tab-list[data-tab-widths-frozen] .am-tab-sortable,

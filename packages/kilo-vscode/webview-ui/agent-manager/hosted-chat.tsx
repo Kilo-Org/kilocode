@@ -1,5 +1,5 @@
 import { WorkingIndicator } from "../src/components/shared/WorkingIndicator"
-import { TranscriptLoading } from "../src/v2/transcript-loading"
+import { CloudHistoryPlaceholder } from "./cloud/history-placeholder"
 import { cloudNotice, hostedActivity, preparing } from "./cloud/activity"
 import { Selectors } from "../src/v2/selectors"
 import { createCloudSelection } from "./cloud/selection"
@@ -89,6 +89,10 @@ export function HostedChat(props: {
       chat.snapshot()?.progress?.step ?? chat.snapshot()?.progress?.steps.findLast((s) => s.status === "running")?.step
     )?.replaceAll("_", " ") ?? t("migration.sessionProgress.preparing")
   const setup = () => !rows().length && (preparing(chat) || (!!props.initial && chat.phase() === "opening"))
+  const historyState = () => {
+    if (rows().length || setup() || chat.snapshot()?.error || notice() || chat.phase() === "failed") return
+    return chat.snapshot()?.historyReady ? "empty" : "loading"
+  }
   const working = () =>
     !notice() && !setup() && chat.phase() !== "opening" && (activity() === "busy" || activity() === "retry")
   // Snapshots deserialize fresh objects; keep the same form and its focused answer until that request is resolved.
@@ -162,21 +166,27 @@ export function HostedChat(props: {
               onScroll={() => (follow = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 32)}
             >
               <div ref={content} class="message-list-content" data-slot="message-list-content">
-                <TranscriptLoading
-                  session={chat.phase() === "opening" && !rows().length ? props.target.sessionID : undefined}
-                  label={t("session.messages.loading")}
-                />
+                <Show when={historyState() === "loading"}>
+                  <CloudHistoryPlaceholder />
+                </Show>
+                <Show when={historyState() === "empty"}>
+                  <div class="am-hosted-empty" role="status">
+                    {t("agentManager.cloud.chat.empty")}
+                  </div>
+                </Show>
                 <Show when={!setup() && chat.snapshot()?.progress?.phase !== "ready" && chat.snapshot()?.progress}>
                   {(p) => <PreparationProgress progress={p()} />}
                 </Show>
                 <Show when={chat.before()}>
-                  <button
-                    class="message-list-load-older"
-                    disabled={chat.paging()}
-                    onClick={() => void chat.loadEarlier()}
-                  >
-                    {t("session.messages.loadEarlier")}
-                  </button>
+                  <div class="message-list-history">
+                    <button
+                      class="message-list-load-older"
+                      disabled={chat.paging()}
+                      onClick={() => void chat.loadEarlier()}
+                    >
+                      {t("session.messages.loadEarlier")}
+                    </button>
+                  </div>
                 </Show>
                 <div class="message-list-turns">
                   <For each={rows().map((r) => r.key)}>
@@ -262,24 +272,27 @@ export function HostedChat(props: {
           </div>
         </Show>
         <SessionDockFrame active={working()}>
-          <Show when={working()}>
-            <div class="session-dock-state" data-active="">
-              <div class="session-working">
-                <WorkingIndicator
-                  status="running"
-                  submitting={chat.pending()}
-                  timing={undefined}
-                  text={statusText()}
-                  retry={undefined}
-                  onCancel={() => void chat.interrupt()}
-                  onScrollToBottom={() => {
-                    follow = true
-                    scroll.scrollTop = scroll.scrollHeight
-                  }}
-                />
-              </div>
+          <div
+            class="session-dock-state"
+            data-active={working() ? "" : undefined}
+            inert={!working()}
+            aria-hidden={!working()}
+          >
+            <div class="session-working">
+              <WorkingIndicator
+                status="running"
+                submitting={chat.pending()}
+                timing={undefined}
+                text={statusText()}
+                retry={undefined}
+                onCancel={() => void chat.interrupt()}
+                onScrollToBottom={() => {
+                  follow = true
+                  scroll.scrollTop = scroll.scrollHeight
+                }}
+              />
             </div>
-          </Show>
+          </div>
         </SessionDockFrame>
         <For each={chat.permissions()}>
           {(p) => (

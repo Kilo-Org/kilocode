@@ -10,8 +10,8 @@ import { createSolidPlugin } from "../script/solid-cache"
 const root = path.resolve(import.meta.dir, "..")
 const webview = path.join(root, "webview-ui")
 
-describe("terminal tab selection", () => {
-  test("the rendered terminal tab follows the visible tab", async () => {
+describe("Agent Manager tab selection", () => {
+  test("native terminal and Cloud session tabs retain their nodes and follow selection", async () => {
     const solid = path.dirname(Bun.resolveSync("solid-js/package.json", webview))
     const aliases: Record<string, string> = {
       "solid-js": path.join(solid, "dist/solid.js"),

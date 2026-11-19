@@ -69,6 +69,7 @@ test("preparation reaches an authorized reader before registration and pending i
     feed.push("cloud.sandbox.status", { sandbox: { status: "sleeping" } })
     const first = await h.until((s) => s.progress?.sandbox === "sleeping")
     expect(first).toMatchObject({
+      historyReady: false,
       connection: "preparing",
       progress: { phase: "preparing", step: "cloning" },
       messages: [],
@@ -81,6 +82,7 @@ test("preparation reaches an authorized reader before registration and pending i
     events.push("session.status", { status: { type: "busy" } })
     events.push("kilo.native.fence", { snapshotComplete: true, fence: 9 })
     const ready = await h.until((s) => s.connection === "live")
+    expect(ready.historyReady).toBe(true)
     expect(ready.status).toBe("busy")
     expect(ready.progress?.step).toBeUndefined()
   } finally {
