@@ -3,6 +3,7 @@ import { Bus } from "@opencode/core/bus"
 import { Credential } from "@opencode/core/credential"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Environment } from "@opencode/core/environment/index"
+import { Flag } from "@opencode/core/flag"
 import { Form } from "@opencode/core/form"
 import { Integration } from "@opencode/core/integration"
 import { authFailure } from "@opencode/core/kilocode/mcp/auth-failure"
@@ -23,7 +24,7 @@ import { testEffect } from "../../lib/effect"
 
 const it = testEffect(
   AppNodeBuilder.build(
-    LayerNode.group([Bus.node, Credential.node, Environment.node, Form.node, Integration.node, McpPool.node]),
+    LayerNode.group([Bus.node, Credential.node, Environment.node, Flag.node, Form.node, Integration.node, McpPool.node]),
     [Location.node.replace(tempLocationLayer), Environment.node.replace(hostEnvironmentLayer)],
   ),
 )

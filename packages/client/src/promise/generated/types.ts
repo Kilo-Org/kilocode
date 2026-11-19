@@ -31,6 +31,8 @@ export type ProviderTransport = "http" | "websocket"
 
 export type ProviderEncoding = "zstd" | "gzip" | "none"
 
+export type ProviderTls = { cert: string; key: string; passphrase?: string }
+
 export type AgentColor = string
 
 export type PermissionEffect = "allow" | "deny" | "ask"
@@ -187,7 +189,7 @@ export type ModelCacheFormat = "anthropic" | "alibaba"
 
 export type ModelMediaInput = "assets" | "state" | "root"
 
-export type ModelCapabilities = { tools: boolean; input: Array<string>; output: Array<string>; temperature?: boolean }
+export type ToolFreeformFormat = "text" | "regex" | "lark"
 
 export type MoneyUSDPerMillionTokens = number
 
@@ -722,6 +724,14 @@ export type ProviderCompatibility = {
   mediaInput?: ModelMediaInput
 }
 
+export type ModelCapabilities = {
+  tools: boolean
+  freeform?: Array<ToolFreeformFormat>
+  input: Array<string>
+  output: Array<string>
+  temperature?: boolean
+}
+
 export type ModelCost = {
   tier?: { type: "context"; size: number }
   input: MoneyUSDPerMillionTokens
@@ -992,6 +1002,7 @@ export type UsageLimitsGo = { rolling: UsageLimitsMeter; weekly: UsageLimitsMete
 
 export type ConfigModelCapabilities = {
   tools?: boolean
+  freeform?: Array<ToolFreeformFormat>
   input?: Array<string>
   output?: Array<string>
   temperature?: boolean
@@ -1067,6 +1078,7 @@ export type ProviderSettings = {
   cache?: ProviderCache
   transport?: ProviderTransport
   encoding?: ProviderEncoding
+  tls?: ProviderTls
 } & { [x: string]: any }
 
 export type ModelSettings = { compaction?: ProviderCompaction; cache?: ProviderCache; encoding?: ProviderEncoding } & {
@@ -1081,6 +1093,7 @@ export type ConfigProviderSettings = {
   cache?: ProviderCache
   transport?: ProviderTransport
   encoding?: ProviderEncoding
+  tls?: ProviderTls
 } & { [x: string]: JsonValue | null }
 
 export type ConfigModelSettings = {
@@ -1406,6 +1419,16 @@ export type SessionStepStarted = {
     snapshot?: SnapshotID
     started: number
   }
+}
+
+export type SessionStepFirstToken = {
+  id: EventID
+  created: number
+  metadata?: { [x: string]: any }
+  type: "session.step.first-token"
+  durable: { aggregateID: string; seq: EventSeq; version: 1 }
+  location?: LocationRef
+  data: { sessionID: SessionID; assistantMessageID: SessionMessageID }
 }
 
 export type SessionStepStreamed = {
@@ -2097,6 +2120,24 @@ export type McpResourcesChanged = {
   data: { server: string }
 }
 
+export type ExperimentalMcpEvent = {
+  id: EventID
+  created: number
+  metadata?: { [x: string]: any }
+  type: "experimental.mcp.event"
+  location?: LocationRef
+  data: {
+    id: string
+    server: string
+    name: string
+    eventId: string
+    timestamp: string
+    data: JsonValue
+    cursor: string | null
+    truncated?: boolean | undefined
+  }
+}
+
 export type SessionToolSuccess = {
   id: EventID
   created: number
@@ -2558,14 +2599,16 @@ export type ConfigEntry =
         }
         experimental?: {
           portable_shell_scanner?: boolean
+          codemode_vm?: boolean
           all_flags?: boolean
           todo?: boolean
           background_compaction?: boolean
           media_blob?: boolean
           schedules?: boolean
           artifacts?: boolean
-          codemode_vm?: boolean
+          shell_timeout_background?: boolean
           console_watches?: boolean
+          mcp_events?: boolean
           part_rows?: boolean
           image_generate?: boolean | { model?: string | { providerID: string; model: string; variant?: string } }
           subagent_depth?: number
@@ -2700,7 +2743,7 @@ export type SessionsResponse = {
 export type SessionMessageAssistant = {
   id: SessionMessageID
   metadata?: { [x: string]: JsonValue }
-  time: { created: number; streamed?: number; completed?: number }
+  time: { created: number; firstToken?: number; streamed?: number; completed?: number }
   type: "assistant"
   agent: AgentID
   model: ModelRef
@@ -2834,6 +2877,7 @@ export type SessionEventDurable =
   | SessionShellStarted
   | SessionShellEnded
   | SessionStepStarted
+  | SessionStepFirstToken
   | SessionStepStreamed
   | SessionStepEnded
   | SessionStepFailed
@@ -2892,6 +2936,7 @@ export type V2Event =
   | SessionShellStarted
   | SessionShellEnded
   | SessionStepStarted
+  | SessionStepFirstToken
   | SessionStepStreamed
   | SessionStepEnded
   | SessionStepFailed
@@ -2953,6 +2998,7 @@ export type V2Event =
   | VcsBranchUpdated
   | McpStatusChanged
   | McpResourcesChanged
+  | ExperimentalMcpEvent
   | V2EventRpc
   | V2EventServerConnected
 
@@ -4395,6 +4441,7 @@ export type EventSubscribeInput = {
         | "session.shell.started"
         | "session.shell.ended"
         | "session.step.started"
+        | "session.step.first-token"
         | "session.step.streamed"
         | "session.step.ended"
         | "session.step.failed"
@@ -4456,6 +4503,7 @@ export type EventSubscribeInput = {
         | "vcs.branch.updated"
         | "mcp.status.changed"
         | "mcp.resources.changed"
+        | "experimental.mcp.event"
         | `${"rpc."}${string}`
       >
     | undefined

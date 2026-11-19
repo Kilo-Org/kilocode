@@ -424,6 +424,29 @@ async function guards(sync: report.SyncReport) {
       sync.notes.push(`\`${name}\` fails after the merge. Fix it in the sync PR`)
     }
   }
+  // A directory-rename merge can leave a four-way conflict block inside a file git reports as resolved, and the
+  // marker scan only runs on conflicted files. This runs after the merge commit, so it reports the markers in the
+  // sync notes before the branch is pushed; the check.yml step fails the pull request on them.
+  const markers = await $`git grep -nE '^(<<<<<<<|>>>>>>>)' -- .`.quiet().nothrow()
+  if (markers.exitCode === 0) {
+    const found = markers.stdout.toString().trim().split("\n")
+    logger.warn("conflict markers found")
+    for (const line of found.slice(0, 10)) console.log(line)
+    sync.notes.push(`Conflict markers remain in:\n${found.map((line) => `- \`${line}\``).join("\n")}`)
+  }
+  // New upstream user-visible text and new builtin tool namespaces are not covered by the anchor tests,
+  // so a clean merge can silently revert Kilo branding. Run the audit the CLI CI runs.
+  if (await Bun.file("packages/kilo-cli/script/branding-audit.ts").exists()) {
+    const result = await $`bun run --cwd packages/kilo-cli branding:audit`.quiet().nothrow()
+    console.log(result.stdout.toString() + result.stderr.toString())
+    if (result.exitCode === 0) logger.success("branding audit: ok")
+    if (result.exitCode !== 0) {
+      logger.warn("branding audit failed")
+      sync.notes.push(
+        "`bun run branding:audit` fails after the merge: map new upstream product text or tool namespaces in packages/kilo-cli/src/branding/",
+      )
+    }
+  }
 }
 
 /**

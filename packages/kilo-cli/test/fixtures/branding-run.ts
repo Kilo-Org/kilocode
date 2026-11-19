@@ -15,11 +15,6 @@ export const repo = path.resolve(import.meta.dir, "../../../..")
 export const serverText = [
   ["server/src/handlers/server.ts", "Run `opencode pair` to get a new one.", "Run `kilo2 pair` to get a new one."],
   ["server/src/process.ts", "Run `opencode service restart` after", "Run `kilo2 service restart` after"],
-  [
-    "server/src/handlers/persistent-pty.ts",
-    "after OpenCode's terminal service restarts",
-    "after Kilo's terminal service restarts",
-  ],
 ] as const
 
 // The intercepted core modules: each upstream text that names the host to a person or to the model, and its Kilo form.

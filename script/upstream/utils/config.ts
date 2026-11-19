@@ -134,9 +134,24 @@ export const defaultConfig: MergeConfig = {
     "salesforce/**",
     // opencode.ai site Worker: upstream v2.2.6 merged the docs (`services/www`) and `packages/console/app` into it
     "services/site/**",
-    // opencode.ai share Worker: upstream v2.2.7 moved the retired session-sharing host (opncd.ai) here. V2 has no
-    // sharing, so Kilo does not ship it. Kilo does ship services/files and services/update, so skip only this subtree.
+    // opencode.ai data site and workers: upstream v2.3.0 split them out of services/site into packages/data plus
+    // services/data. Kilo ships no hosted model data, so neither path ships. The packages/ pattern also resolves the
+    // rename/delete conflicts git reports when upstream moves the files back out of services/site.
+    "packages/data/**",
+    "services/data/**",
+    // opencode.ai share/api Worker: upstream v2.2.7 moved the retired session-sharing host (opncd.ai) to
+    // services/share and v2.3.0 moved the api Worker next to it as services/legacy. V2 has no sharing, so Kilo does
+    // not ship either. Kilo does ship services/files and services/update, so skip only these subtrees.
     "services/share/**",
+    "services/legacy/**",
+    // Hosted deployment targets and the scripts that deploy them. Kilo's release workflows publish the CLI and
+    // services/files and services/update; they do not deploy the site, data or legacy Workers.
+    ".github/release/targets/data/**",
+    ".github/release/targets/site/**",
+    ".github/release/targets/legacy/**",
+    ".github/release/deploy-data.sh",
+    ".github/release/deploy-site.sh",
+    ".github/release/deploy-legacy.sh",
     // Upstream VS Code extension (Kilo ships its own)
     "sdks/vscode/**",
     // Upstream's own project config for developing OpenCode: contributor agents, commands, skills, glossaries,

@@ -44,7 +44,7 @@
     },
     "packages/cli/src/acp/agent.ts": {
       "mirror": "packages/kilo-cli/src/acp-agent.ts",
-      "sha": "bb2f7c809fd2b13c441521219eec729097ab8b68",
+      "sha": "bbfd4b2537e99dd6f88578a43cadb5d3c8f5526a",
       "why": "Kilo's ACP surface reports Kilo's name and adds Kilo's initialize metadata and auth methods; upstream builds both inside this module.",
       "invariants": [
         "The ACP agent name comes from `KiloBinary`, never a literal.",

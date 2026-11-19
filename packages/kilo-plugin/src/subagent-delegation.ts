@@ -8,7 +8,7 @@ const upstreamOptIn = /(?:^|\n{2,})# Delegation\n\nDo not spawn subagents unless
 
 const guidance = `# Kilo delegation
 - Use subagents without waiting for an explicit request when a focused subtask would benefit from parallel work, specialist research, or independent verification. This is Kilo's default even if the built-in model template requires an explicit request. Respect the user's, project's, and agent's specific instructions.
-- Prefer background subagents. Give each a clear scope, the context it needs, and an expected result. Start independent work early and continue with non-overlapping work; use a foreground call only if you need the result before you can make progress.
+- Every subagent runs in the background and reports each time it goes idle. Give each a clear scope, the context it needs, and an expected result. Start independent work early and continue with non-overlapping work while it runs.
 - Handle quick lookups and tightly coupled work directly. Do not duplicate work, assign overlapping edits, or expand the user's scope. Integrate needed results before reporting the task complete.`
 
 export const KiloSubagentDelegationPlugin = define({
