@@ -137,7 +137,7 @@ import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
 import { RoutedModelBadge, RoutedStep, routedModelLabel } from "../../kilocode/routed-model" // kilocode_change(gateway)
 import { BoardTool, boardTools } from "../../kilocode/board-tool" // kilocode_change(board)
 import { requiresPerson } from "../../kilocode/permission-mode" // kilocode_change(sandbox) - auto-approve leaves human-only requests to the prompt
-import { browserDisplayCalls, browserDisplayInput, browserDisplayText } from "../../kilocode/browser-display" // kilocode_change(browser) - browser rows never show typed text
+import { browserDisplayCalls, browserDisplayInput, browserDisplayText, ROW_INPUT_OMIT } from "../../kilocode/browser-display" // kilocode_change(browser) - browser rows never show typed text
 export { InlineToolRow } from "./message-parts"
 export { toolDisplay } from "./message-parts"
 
@@ -3434,7 +3434,7 @@ export function subagentDetail(messages: readonly SessionMessageInfo[]) {
   return { tools, retry, current, duration }
 }
 
-const SUBAGENT_TOOL_OMIT = ["content", "patchText", "newString", "oldString"]
+const SUBAGENT_TOOL_OMIT = ["content", "patchText", "newString", "oldString", ...ROW_INPUT_OMIT]
 
 export function subagentToolLabel(part: SessionMessageAssistantTool) {
   if (part.state.status === "streaming") return Locale.titlecase(canonicalToolName(part.name))

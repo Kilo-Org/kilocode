@@ -82,3 +82,6 @@ export function browserDisplayMetadata(metadata: Record<string, unknown>): Recor
   if (!Array.isArray(metadata.toolCalls)) return metadata
   return { ...metadata, toolCalls: metadata.toolCalls.map(displayCall) }
 }
+
+/** Input keys a one-line row never shows: Code Mode's program can type text (`browser.type({ text })`) inline. */
+export const ROW_INPUT_OMIT = ["code"]

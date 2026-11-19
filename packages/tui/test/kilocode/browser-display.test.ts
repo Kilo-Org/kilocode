@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { browserDisplayCalls, browserDisplayInput } from "../../src/kilocode/browser-display"
 import { subagentToolLabel } from "../../src/routes/session"
 import { executeCallSummary, primitiveInputSummary } from "../../src/util/tool-display"
+import { canonicalToolPart } from "../mini/fixture/tool-part"
 
 const password = "hunter2"
 
@@ -103,5 +104,14 @@ describe("browser tool rows", () => {
       state: { status: "running", input: { target: "e2", text: password }, metadata: {} },
     }
     expect(subagentToolLabel(part as never)).toBe("Browser_type [target=e2, text=•••]")
+  })
+
+  test("a subagent's live child line leaves out a Code Mode program, which can type text", () => {
+    const part = canonicalToolPart("execute", {
+      status: "running",
+      input: { code: `await browser.type({ target: "e2", text: "${password}" })` },
+      metadata: {},
+    })
+    expect(subagentToolLabel(part)).toBe("Execute")
   })
 })

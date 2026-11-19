@@ -70,4 +70,14 @@ describe("browser typed text outside the transcript", () => {
     const streaming = canonicalToolPart("browser_type", { status: "streaming", input: `{"text":"${password}` })
     expect(turnTokenToolSummary(streaming)).not.toContain(password)
   })
+
+  test("mini's one-line Code Mode rows leave out the program, which can type text", () => {
+    const typing = canonicalToolPart("execute", {
+      status: "running",
+      input: { code: `await browser.type({ target: "e2", text: "${password}" })` },
+      metadata: {},
+    })
+    expect(shown(typing, "start")).not.toContain(password)
+    expect(toolInlineInfo(typing).title).not.toContain(password)
+  })
 })

@@ -29,7 +29,7 @@ import { formatPath } from "../util/path-format"
 import { isRecord } from "../util/record"
 import { parseTodos, todoMarker } from "../util/todo"
 import type { RunEntryBody, StreamCommit, ToolSnapshot } from "./types"
-import { browserDisplayInput, browserDisplayMetadata } from "../kilocode/browser-display" // kilocode_change(browser) - mini rows never show typed text
+import { browserDisplayInput, browserDisplayMetadata, ROW_INPUT_OMIT } from "../kilocode/browser-display" // kilocode_change(browser) - mini rows never show typed text
 
 export { canonicalToolName } from "../util/tool-display"
 
@@ -301,7 +301,7 @@ function toolError(ctx: ToolFrame): string {
 }
 
 function fallbackStart(ctx: ToolFrame): string {
-  const extra = primitiveInputSummary(ctx.input)
+  const extra = primitiveInputSummary(ctx.input, ROW_INPUT_OMIT) // kilocode_change(browser) - Code Mode's program can type text
   if (!extra) {
     return `⚙ ${ctx.name}`
   }
@@ -339,7 +339,10 @@ function displayPath(p: ToolProps, input?: string, opts: { home?: boolean } = {}
 }
 
 function fallbackInline(ctx: ToolFrame): ToolInline {
-  const title = Object.keys(ctx.input).length > 0 ? JSON.stringify(ctx.input) : "Unknown"
+  // kilocode_change start - browser: Code Mode's program can type text
+  const input = Object.fromEntries(Object.entries(ctx.input).filter(([key]) => !ROW_INPUT_OMIT.includes(key)))
+  const title = Object.keys(input).length > 0 ? JSON.stringify(input) : "Unknown"
+  // kilocode_change end
 
   return {
     icon: "⚙",
