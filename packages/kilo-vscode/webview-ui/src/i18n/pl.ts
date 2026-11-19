@@ -230,6 +230,8 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "Automatyczne zatwierdzanie jest wyłączone. Kliknij, aby automatycznie zatwierdzać prośby o uprawnienia.",
   "prompt.action.autoApprove.sandboxExcluded": "Żądania wyjścia z sandboxa są zawsze wykluczone.",
+  "prompt.action.autoApprove.enabledNotification": "Automatyczne zatwierdzanie włączone. Prośby o eskalację z piaskownicy są wykluczone.",
+  "prompt.action.autoApprove.disabledNotification": "Automatyczne zatwierdzanie wyłączone.",
   "prompt.action.enhanceDescription":
     "Przycisk 'Ulepsz podpowiedź' pomaga ulepszyć Twoją prośbę, dostarczając dodatkowy kontekst, wyjaśnienia lub przeformułowania. Spróbuj wpisać prośbę tutaj i kliknij przycisk ponownie, aby zobaczyć, jak to działa.",
   "prompt.action.indexing": "Ustawienia indeksowania",

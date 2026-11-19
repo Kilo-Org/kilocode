@@ -234,6 +234,8 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "Auto-approve is enabled. Permission prompts will be approved automatically.",
   "prompt.action.autoApprove.disabled": "Auto-approve is disabled. Click to approve permission prompts automatically.",
   "prompt.action.autoApprove.sandboxExcluded": "Sandbox escalation prompts are always excluded.",
+  "prompt.action.autoApprove.enabledNotification": "Auto-approve enabled. Sandbox escalation prompts are excluded.",
+  "prompt.action.autoApprove.disabledNotification": "Auto-approve disabled.",
   "prompt.action.sandbox.enable": "Enable sandbox",
   "prompt.action.sandbox.disable": "Disable sandbox",
   "prompt.action.sandbox.enabled":

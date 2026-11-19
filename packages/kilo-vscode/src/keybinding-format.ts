@@ -130,6 +130,7 @@ export function userKeybindingFiles(storage: string): string[] {
  * names one of them at a time, so the webview decides from the same labels VS Code shows.
  */
 export const PROMPT_COMMANDS: Record<string, string> = {
+  "kilo-code.v2.toggleAutoApprove": "toggleAutoApprove",
   "kilo-code.v2.cycleAgentMode": "cycleAgentMode",
   "kilo-code.v2.cyclePreviousAgentMode": "cyclePreviousAgentMode",
   "kilo-code.v2.addToContext": "addToContext",
