@@ -56,6 +56,13 @@ describe("KiloCodeActionProvider", () => {
         const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(0) as never)
         expect(result.every((a) => !a.isPreferred)).toBe(true)
       })
+
+      it("passes the range as command argument on every action", () => {
+        const range = makeRange(false)
+        const result = provider.provideCodeActions({} as never, range as never, makeContext(0) as never)
+        expect(result).toHaveLength(3)
+        expect(result.map((a) => a.command?.arguments)).toEqual([[range], [range], [range]])
+      })
     })
 
     describe("non-empty range, with diagnostics", () => {
@@ -102,6 +109,13 @@ describe("KiloCodeActionProvider", () => {
         const result = provider.provideCodeActions({} as never, range as never, context as never)
         const fix = result.find((a) => a.title === "Fix with Kilo Code")
         expect(fix?.command?.arguments).toEqual([range, context.diagnostics])
+      })
+
+      it("passes the range as Add command argument", () => {
+        const range = makeRange(false)
+        const result = provider.provideCodeActions({} as never, range as never, makeContext(1) as never)
+        const add = result.find((a) => a.title === "Add to Kilo Code")
+        expect(add?.command?.arguments).toEqual([range])
       })
     })
   })

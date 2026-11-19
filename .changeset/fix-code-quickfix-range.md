@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Fix "Fix with Kilo Code" quick fix doing nothing when triggered without a selection
+Fix "Add/Explain/Improve/Fix with Kilo Code" doing nothing when triggered from the lightbulb without a selection

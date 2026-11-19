@@ -102,6 +102,22 @@ afterEach(() => {
   api.languages.getDiagnostics = original.diagnostics
 })
 
+function emptySelection() {
+  const seen: unknown[] = []
+  api.window.activeTextEditor = {
+    selection: { isEmpty: true, start: { line: 0 }, end: { line: 0 } },
+    document: {
+      uri: vscode.Uri.file("/repo/src/file.ts"),
+      getText: (selection: unknown) => {
+        seen.push(selection)
+        return "const value = 1"
+      },
+    },
+  }
+  api.languages.getDiagnostics = () => []
+  return seen
+}
+
 function expectContextPost(post: unknown) {
   const value = post as { type: string; context: Record<string, unknown> }
   expect(value.type).toBe("appendChatContext")
@@ -260,22 +276,6 @@ describe("registerCodeActions", () => {
   })
 
   describe("fixCode", () => {
-    function emptySelection() {
-      const seen: unknown[] = []
-      api.window.activeTextEditor = {
-        selection: { isEmpty: true, start: { line: 0 }, end: { line: 0 } },
-        document: {
-          uri: vscode.Uri.file("/repo/src/file.ts"),
-          getText: (selection: unknown) => {
-            seen.push(selection)
-            return "const value = 1"
-          },
-        },
-      }
-      api.languages.getDiagnostics = () => []
-      return seen
-    }
-
     it("uses the quick fix range when the editor selection is empty", async () => {
       const state = setup()
       const seen = emptySelection()
@@ -340,6 +340,47 @@ describe("registerCodeActions", () => {
       emptySelection()
 
       await state.commands.get("kilo-code.new.fixCode")?.()
+
+      expect(state.posts).toEqual([])
+    })
+  })
+
+  describe("lightbulb actions", () => {
+    const marshalled = { start: { line: 2, character: 0 }, end: { line: 4, character: 0 } }
+
+    it.each(["kilo-code.new.explainCode", "kilo-code.new.improveCode"] as const)(
+      "%s uses the code action range when the editor selection is empty",
+      async (command) => {
+        const state = setup()
+        const seen = emptySelection()
+
+        await state.commands.get(command)?.(marshalled)
+
+        expect(seen).toEqual([marshalled])
+        const post = state.posts.at(0) as { type: string; text: string }
+        expect(post.type).toBe("triggerTask")
+        expect(post.text).toContain("src/file.ts:3-5")
+      },
+    )
+
+    it("kilo-code.new.addToContext uses the code action range when the editor selection is empty", async () => {
+      const state = setup()
+      emptySelection()
+
+      await state.commands.get("kilo-code.new.addToContext")?.(marshalled)
+
+      expect(state.posts).toHaveLength(1)
+      expectContextPost(state.posts.at(0))
+    })
+
+    it("does nothing when the marshalled code action range is empty", async () => {
+      const state = setup()
+      emptySelection()
+
+      await state.commands.get("kilo-code.new.explainCode")?.({
+        start: { line: 0, character: 0 },
+        end: { line: 0, character: 0 },
+      })
 
       expect(state.posts).toEqual([])
     })

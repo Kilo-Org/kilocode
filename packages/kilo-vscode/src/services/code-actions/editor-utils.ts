@@ -29,7 +29,7 @@ function isEmpty(range: vscode.Range): boolean {
 }
 
 /**
- * @param range code action range; Quick Fix passes it because the editor selection is usually empty there
+ * @param range code action range; code actions pass it because the editor selection is usually empty there
  * @param diagnostics diagnostics of the code action; looked up for the range if not given
  */
 export function getEditorContext(range?: vscode.Range, diagnostics?: vscode.Diagnostic[]): EditorContext | undefined {
