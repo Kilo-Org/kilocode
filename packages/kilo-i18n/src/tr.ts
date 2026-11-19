@@ -172,11 +172,10 @@ export const dict = {
   "browser.permission.act.title": "{{origin}} üzerinde tıkla ve yaz",
   "browser.permission.navigate.title": "{{origin}} üzerinde sayfa aç",
   "browser.permission.read.detail":
-    "Onay, bu oturumun sona erene kadar {{origin}} üzerindeki sayfaları okumasına izin verir.",
+    "Onaylarsanız bu oturum, sona erene kadar {{origin}} üzerindeki sayfaları okuyabilir.",
   "browser.permission.act.detail":
-    "Onay, bu oturumun sona erene kadar {{origin}} üzerinde tıklamasına, yazmasına ve sayfa betikleri çalıştırmasına izin verir.",
-  "browser.permission.navigate.detail":
-    "Onay, bu oturumun sona erene kadar {{origin}} üzerinde sayfa açmasına izin verir.",
+    "Onaylarsanız bu oturum, sona erene kadar {{origin}} üzerinde tıklayabilir, yazı yazabilir ve sayfa betikleri çalıştırabilir.",
+  "browser.permission.navigate.detail": "Onaylarsanız bu oturum, sona erene kadar {{origin}} üzerinde sayfa açabilir.",
   "browser.permission.frame": "Bu kaynak sayfanın içindeki bir çerçevedir, sayfanın kendisi değildir.",
   "browser.permission.sensitive.title": "{{origin}} üzerinde hassas tarayıcı adımı",
   "browser.permission.sensitive.reason": "Neden: {{reason}}",
