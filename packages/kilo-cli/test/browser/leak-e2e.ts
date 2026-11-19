@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 // Temporary leak check: 400 mixed cycles on one CLI session, forcing GC on the extension service worker every
 // 50 cycles and reading used heap; heap snapshots at cycle 100 and 300 when the usage keeps growing.
-import * as Png from "@kilocode/kilo-plugin/browser/png"
 import fs from "node:fs/promises"
 import net from "node:net"
 import os from "node:os"
@@ -44,7 +43,12 @@ const toolCall = (model: string, name: string, args: unknown) =>
       {
         role: "assistant",
         tool_calls: [
-          { function: { arguments: JSON.stringify(args), name }, id: `call_${name}_${Date.now()}`, index: 0, type: "function" },
+          {
+            function: { arguments: JSON.stringify(args), name },
+            id: `call_${name}_${Date.now()}`,
+            index: 0,
+            type: "function",
+          },
         ],
       },
       null,
@@ -143,14 +147,21 @@ await fs.writeFile(path.join(root, "bin", "xdg-open"), "#!/bin/sh\nexit 0\n", { 
 const loaded = path.join(base, "extension-downloads")
 await fs.cp(extensionDirectory, loaded, { recursive: true })
 const manifestPath = path.join(loaded, "manifest.json")
-const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8")) as { optional_permissions?: string[]; permissions?: string[] }
+const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8")) as {
+  optional_permissions?: string[]
+  permissions?: string[]
+}
 const optional = (manifest.optional_permissions ?? []).filter((permission) => permission !== "downloads")
 const permissions = [...(manifest.permissions ?? [])]
 if (!permissions.includes("downloads")) permissions.push("downloads")
 await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, optional_permissions: optional, permissions }, null, 2))
 
 const context = await playwright.chromium.launchPersistentContext(path.join(base, "profile"), {
-  args: [`--disable-extensions-except=${loaded}`, `--load-extension=${loaded}`, "--disable-blink-features=AutomationControlled"],
+  args: [
+    `--disable-extensions-except=${loaded}`,
+    `--load-extension=${loaded}`,
+    "--disable-blink-features=AutomationControlled",
+  ],
   executablePath: playwright.chromium.executablePath(),
   headless: false,
   ignoreDefaultArgs: ["--enable-automation"],
@@ -163,16 +174,30 @@ const extensionId = new URL(worker.url()).host
 const userTab = await context.newPage()
 await userTab.goto(`${origin}/?user=1`)
 
-await context.route("https://app.kilo.ai/api/user", (route: any) => route.fulfill({ json: { google_user_email: "leak@kilo.ai" }, status: 200 }))
-await context.route("https://app.kilo.ai/api/organizations", (route: any) => route.fulfill({ json: { organizations: [] }, status: 200 }))
-await context.route((url: URL) => url.origin === "https://app.kilo.ai" && url.pathname.startsWith("/api/trpc/"), (route: any) => route.fulfill({ json: {}, status: 200 }))
-await context.addInitScript({ content: "Object.defineProperty(chrome.permissions, 'request', { value: () => Promise.resolve(true) });" })
+await context.route("https://app.kilo.ai/api/user", (route: any) =>
+  route.fulfill({ json: { google_user_email: "leak@kilo.ai" }, status: 200 }),
+)
+await context.route("https://app.kilo.ai/api/organizations", (route: any) =>
+  route.fulfill({ json: { organizations: [] }, status: 200 }),
+)
+await context.route(
+  (url: URL) => url.origin === "https://app.kilo.ai" && url.pathname.startsWith("/api/trpc/"),
+  (route: any) => route.fulfill({ json: {}, status: 200 }),
+)
+await context.addInitScript({
+  content: "Object.defineProperty(chrome.permissions, 'request', { value: () => Promise.resolve(true) });",
+})
 const panel = await context.newPage()
 await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`)
 await panel.evaluate(
   () =>
     new Promise<void>((resolve, reject) => {
-      const global = globalThis as { chrome?: { runtime?: { lastError?: { message?: string } }; storage?: { local?: { set(items: Record<string, unknown>, callback: () => void): void } } } }
+      const global = globalThis as {
+        chrome?: {
+          runtime?: { lastError?: { message?: string } }
+          storage?: { local?: { set(items: Record<string, unknown>, callback: () => void): void } }
+        }
+      }
       const api = global.chrome
       if (!api?.storage?.local) return reject(new Error("no storage"))
       api.storage.local.set({ kiloAuth: { token: "token-1", userEmail: "leak@kilo.ai" } }, () => {
@@ -200,9 +225,14 @@ class SwProbe {
     if (!browser) throw new Error("no browser")
     this.session = await browser.newBrowserCDPSession()
     const { targetInfos } = await this.session.send("Target.getTargets")
-    const target = targetInfos.find((info: any) => info.type === "service_worker" && String(info.url).includes(extensionId))
+    const target = targetInfos.find(
+      (info: any) => info.type === "service_worker" && String(info.url).includes(extensionId),
+    )
     if (!target) throw new Error("no service worker target")
-    const { sessionId } = await this.session.send("Target.attachToTarget", { targetId: target.targetId, flatten: false })
+    const { sessionId } = await this.session.send("Target.attachToTarget", {
+      targetId: target.targetId,
+      flatten: false,
+    })
     this.sessionId = sessionId
     this.session.on("Target.receivedMessageFromTarget", (event: any) => {
       if (event.sessionId !== this.sessionId) return
@@ -282,7 +312,12 @@ const env = {
 }
 
 const hubPort = await freePort()
-const hub = Bun.spawn([binary, "browser", "hub", "--loopback", "--port", String(hubPort)], { cwd: root, env, stderr: "pipe", stdout: "pipe" })
+const hub = Bun.spawn([binary, "browser", "hub", "--loopback", "--port", String(hubPort)], {
+  cwd: root,
+  env,
+  stderr: "pipe",
+  stdout: "pipe",
+})
 const hubLog = { text: "" }
 for (const stream of [hub.stdout, hub.stderr]) {
   void (async () => {
@@ -299,11 +334,12 @@ for (const stream of [hub.stdout, hub.stderr]) {
 async function readEntry() {
   const directory = path.join(root, "run", "browser", "hubs")
   const files = await fs.readdir(directory).catch(() => [] as string[])
-  for (const file of files) if (file.endsWith(".json")) {
-    try {
-      return JSON.parse(await fs.readFile(path.join(directory, file), "utf8"))
-    } catch {}
-  }
+  for (const file of files)
+    if (file.endsWith(".json")) {
+      try {
+        return JSON.parse(await fs.readFile(path.join(directory, file), "utf8"))
+      } catch {}
+    }
   return undefined
 }
 
@@ -361,7 +397,8 @@ const child = Bun.spawn([binary, "run", "Leak check.", "--model", "local/echo", 
   stdout: "pipe",
   timeout: 3_600_000,
 })
-const [stdout, stderr, code] = await Promise.all([
+// stdout is drained so the pipe never blocks the run; the heap series is the result.
+const [, stderr, code] = await Promise.all([
   new Response(child.stdout as ReadableStream).text(),
   new Response(child.stderr as ReadableStream).text(),
   child.exited,
