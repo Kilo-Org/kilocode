@@ -3,10 +3,9 @@ import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { createRoot, createSignal } from "solid-js"
-import { bridge } from "../../src/relay"
 import { createAppSession } from "../../webview-ui/agent-manager/app-session"
 import { createDialogCommandMenu } from "../../webview-ui/agent-manager/dialog-commands"
-import type { InMessage, OutMessage } from "../../webview-ui/agent-manager/v2/bridge"
+import { panelRelay } from "./panel-relay"
 
 // The panel's event connection uses page lifecycle events in the webview.
 Object.assign(globalThis, {
@@ -77,23 +76,15 @@ async function verify(url: string, alpha: string, bravo: string) {
   const [commandProject, setCommandProject] = createSignal<string>()
   let alphaReply = false
   const releaseAlpha = Promise.withResolvers<void>()
-  const listeners = new Set<(message: InMessage) => void>()
-  const relay = bridge({
-    target: async () => ({ url, authorization: `Basic ${btoa("opencode:fixture")}` }),
-    post: (message) => listeners.forEach((listener) => listener(message)),
-    fetch: Object.assign(
-      async (input: Parameters<typeof fetch>[0], init: Parameters<typeof fetch>[1]) => {
-        const response = await fetch(input, init)
-        const request = new URL(String(input))
-        if (request.pathname === "/api/command" && request.searchParams.get("location[directory]") === alpha) {
-          // Delay delivery of Alpha's actual server response, not the server or its catalog.
-          alphaReply = true
-          await releaseAlpha.promise
-        }
-        return response
-      },
-      { preconnect: fetch.preconnect },
-    ),
+  const relay = panelRelay({ url, authorization: `Basic ${btoa("opencode:fixture")}` }, async (request) => {
+    const response = await fetch(request)
+    const target = new URL(request.url)
+    if (target.pathname === "/api/command" && target.searchParams.get("location[directory]") === alpha) {
+      // Delay delivery of Alpha's actual server response, not the server or its catalog.
+      alphaReply = true
+      await releaseAlpha.promise
+    }
+    return response
   })
   const panel = createRoot((dispose) => {
     const options = {
@@ -109,21 +100,7 @@ async function verify(url: string, alpha: string, bravo: string) {
         worktreePath: () => undefined,
         worktreePathIn: () => undefined,
       },
-      vscode: {
-        postMessage: (message: OutMessage) => {
-          if (message.type === "fetch" || message.type === "abort") relay.receive(message)
-        },
-        onMessage: (listener: (message: InMessage) => void) => {
-          listeners.add(listener)
-          return () => listeners.delete(listener)
-        },
-        getState: () => undefined,
-        setState: () => {},
-        sidebarSide: () => undefined,
-        active: () => true,
-        getModelSelectorExpanded: () => false,
-        setModelSelectorExpanded: () => {},
-      },
+      vscode: relay.vscode,
     }
     const app = createAppSession(options)
     const menu = createDialogCommandMenu({ commands: app.commands, hidden: () => new Set() })

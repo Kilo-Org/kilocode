@@ -1,12 +1,14 @@
 // The Agent Manager panel shares one event stream between per-directory `createData` stores. A local server streams
 // real server events, and each store must receive only the events of its own directory.
-import { afterAll, describe, expect, mock, setDefaultTimeout, test } from "bun:test"
+import { afterAll, afterEach, describe, expect, jest, mock, setDefaultTimeout, test } from "bun:test"
 import { OpenCode, type OpenCodeEvent } from "@opencode/client"
 import { once } from "node:events"
 import path from "node:path"
+import { setImmediate } from "node:timers/promises"
 import { git, initGit } from "../../core/test/fixture/git"
 import { tmpdir } from "../../core/test/fixture/tmpdir"
 import { command, start, stop } from "../src/server"
+import { panelRelay } from "./fixtures/panel-relay"
 
 // Real server round trips and loaded CI runners need more than the default deadline.
 setDefaultTimeout(30_000)
@@ -24,6 +26,7 @@ Object.assign(globalThis, {
   document: Object.assign(new EventTarget(), { visibilityState: "visible" }),
 })
 const { createPanelData, key, targets } = await import("../webview-ui/agent-manager/v2/panel-data")
+const { createAppSession } = await import("../webview-ui/agent-manager/app-session")
 const { createSessions } = await import("../webview-ui/agent-manager/v2/sessions")
 const { createSessionActivity } = await import("../webview-ui/agent-manager/project/session-busy")
 
@@ -258,6 +261,94 @@ describe("targets", () => {
 
   test("drops an event for a directory without a store", () => {
     expect(targets(event("session.created", "/elsewhere"), [ROOT])).toEqual([])
+  })
+})
+
+describe("createAppSession.sendInitial", () => {
+  const model = { providerID: "fixture", id: "selected", enabled: true }
+  const initial = {
+    type: "agentManager.sendInitialMessage" as const,
+    sessionId: "ses_initial",
+    projectId: "project",
+    worktreeId: "one",
+    providerID: model.providerID,
+    modelID: model.id,
+    agent: "code",
+    text: "Fix it",
+  }
+  const translate = (key: string) => `translated: ${key}`
+
+  function openPanel() {
+    const requested = Promise.withResolvers<void>()
+    const late = Promise.withResolvers<void>()
+    const mutations: string[] = []
+    const relay = panelRelay({ url: server.url.href, authorization: "Basic fixture" }, async (request) => {
+      const url = new URL(request.url)
+      if (url.pathname.startsWith("/api/session") && request.method !== "GET") mutations.push(url.pathname)
+      if (url.pathname !== "/api/model") return fetch(request)
+      const directory = url.searchParams.get("location[directory]")
+      if (directory === WORKTREE) {
+        requested.resolve()
+        await late.promise
+      }
+      return json({ location: { directory }, data: [model] })
+    })
+    return createRoot((dispose) => ({
+      app: createAppSession({
+        vscode: relay.vscode,
+        rootDirectory: () => ROOT,
+        commandProject: () => undefined,
+        directories: {
+          root: () => ROOT,
+          worktreePath: () => undefined,
+          worktreePathIn: (project, id) => (project === "project" && id === "one" ? WORKTREE : undefined),
+          sessionDirectories: () => [ROOT, WORKTREE],
+          visibleDirectories: () => [ROOT],
+          retained: () => [ROOT, WORKTREE],
+          missingDirectories: () => [],
+          directoryOf: () => ROOT,
+        },
+      }),
+      requested: requested.promise,
+      release: late.resolve,
+      mutations,
+      dispose,
+      [Symbol.dispose]() {
+        late.resolve()
+        dispose()
+        relay.dispose()
+      },
+    }))
+  }
+
+  afterEach(() => jest.useRealTimers())
+
+  test("reports a missing worktree instead of sending through the warm fallback store", async () => {
+    using panel = openPanel()
+    const root = panel.app.rootStore()!
+    await root.data.location.model.sync()
+    expect(panel.app.models().find((row) => row.enabled && row.providerID === model.providerID)?.id).toBe(model.id)
+
+    await panel.app.sendInitial({ ...initial, worktreeId: "missing" }, translate)
+    expect(root.failure()?.message).toBe(translate("agentManager.project.missing"))
+    expect(panel.mutations).toEqual([])
+  })
+
+  test.each(["timeout", "disposal"])("does not switch or send after a worktree model wait ends by %s", async (reason) => {
+    using panel = openPanel()
+    const store = panel.app.panel.store(WORKTREE)
+    if (reason === "timeout") jest.useFakeTimers()
+    const pending = panel.app.sendInitial(initial, translate)
+    await panel.requested
+    if (reason === "timeout") jest.advanceTimersByTime(30_000)
+    else panel.dispose()
+    await pending
+
+    panel.release()
+    await setImmediate() // Deliver the late model reply before checking for a report or session mutation.
+    if (reason === "timeout") expect(store.failure()?.message).toBe(translate("error.failure.timeout"))
+    else expect(store.failure()).toBeUndefined()
+    expect(panel.mutations).toEqual([])
   })
 })
 
