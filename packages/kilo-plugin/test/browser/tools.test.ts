@@ -687,6 +687,32 @@ describe("browser tools over the extension backend", () => {
     expect(error?.metadata).toMatchObject({ hint: EXTENSION_HINT, effectsUncertain: true })
   })
 
+  test("an extension that went away is told to turn its switch back on, in the message and the UI hint", async () => {
+    const gone: BrowserHub.Interface = {
+      port: () =>
+        ({
+          ready: () =>
+            Promise.reject(
+              new BrowserHub.Failure({
+                kind: "unavailable",
+                message: "not connected",
+                absence: { kind: "disconnected" },
+              }),
+            ),
+          reported: () => Promise.resolve(undefined),
+          onRevoked: () => () => {},
+        }) as never,
+    }
+    const host = await boot({ backend: "extension" }, { hub: gone })
+    const result = await host.call("browser_snapshot")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    const hint = String(error?.metadata?.hint)
+    expect(hint).toContain('turn on "Allow local agents"')
+    expect(hint).not.toContain("Install")
+    // Both surfaces carry the same step: a `run --format json` caller sees only the message.
+    expect(error?.message).toBe(`${UNAVAILABLE_MESSAGE} ${hint}`)
+  })
+
   test("browser_snapshot diff mode compares the extension's snapshots", async () => {
     let index = 0
     const hub = fakeHub({

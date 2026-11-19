@@ -3,7 +3,7 @@
 import { BrowserHub } from "@kilocode/kilo-plugin/browser/hub"
 import { OPENCODE_VERSION } from "@opencode/cli/version"
 import z from "zod"
-import type { Client, Input } from "./client"
+import type { Client, Input, State } from "./client"
 
 /**
  * A tool call can wait inside the extension (a tab lease, a navigation, an explicit wait), so the transport's own
@@ -161,10 +161,60 @@ function reply(value: { content: readonly unknown[]; isError?: boolean; _meta?: 
   }
 }
 
+/**
+ * When the connection last changed in a way that can bring an extension (the client started, a hub turned up and, if
+ * it was never paired, showed its pairing page, an extension went away and may come straight back after a reload, a
+ * pairing page was opened again), and whether an extension was ever connected through it.
+ */
+type Presence = { since: number; seen: boolean }
+
+/** Follow one client's states, so a call can tell how long the extension has been away and whether it was there. */
+function follow(linked: Client): Presence {
+  const presence: Presence = { since: Date.now(), seen: linked.state().kind === "ready" }
+  let previous = linked.state().kind
+  linked.subscribe((next) => {
+    if (next.kind === "ready") presence.seen = true
+    else if (previous === "ready" || (next.kind === "waiting" && previous !== "waiting")) presence.since = Date.now()
+    previous = next.kind
+  })
+  return presence
+}
+
+/**
+ * Why no extension answers, from what the client sees now and saw before: an extension that was connected went away;
+ * a hub that waits was either paired once (the extension left) or never; without a hub, a selected profile is the
+ * missing piece, otherwise the hub itself.
+ */
+export function absence(state: State, presence: { seen: boolean }, profile: string | undefined): BrowserHub.Absence {
+  if (presence.seen) return { kind: "disconnected" }
+  if (state.kind === "waiting") return state.hub.paired ? { kind: "disconnected" } : { kind: "unpaired" }
+  if (profile !== undefined) return { kind: "no_profile", profile }
+  return { kind: "no_hub" }
+}
+
 /** The hub interface the host provides: one client per profile target, created on the first use of that target. */
 export function hub(options: Options = {}): BrowserHub.Interface {
   const { install, create: factory, version, ...input } = options
   const clients = new Map<string, Promise<Client>>()
+  const presences = new WeakMap<Client, Presence>()
+  const presenceOf = (linked: Client) => {
+    const known = presences.get(linked)
+    if (known) return known
+    const followed = follow(linked)
+    presences.set(linked, followed)
+    return followed
+  }
+  /** A failure as `failure` maps it, and an unavailable one explained by the client it came from. */
+  const explained = (linked: Client, profile: string | undefined, error: unknown) => {
+    const mapped = failure(error)
+    if (mapped.kind !== "unavailable") return mapped
+    return new BrowserHub.Failure({
+      kind: "unavailable",
+      message: mapped.message,
+      uncertain: mapped.uncertain,
+      absence: absence(linked.state(), presenceOf(linked), profile),
+    })
+  }
   const client = (target: string | null) => {
     const key = target ?? ""
     const existing = clients.get(key)
@@ -178,7 +228,9 @@ export function hub(options: Options = {}): BrowserHub.Interface {
       // native messaging host it does not need.
       const installer = install ?? (async () => (await import("./install")).install())
       await installer().catch(() => undefined)
-      return (factory ?? create)({ ...input, ...(key ? { profile: key } : {}) })
+      const linked = (factory ?? create)({ ...input, ...(key ? { profile: key } : {}) })
+      presenceOf(linked)
+      return linked
     })()
     clients.set(key, created)
     // A transport that could not be created is not a fact: the next call tries again.
@@ -189,15 +241,27 @@ export function hub(options: Options = {}): BrowserHub.Interface {
   }
   return {
     port(target) {
+      const profile = target || undefined
       // Loading the transport can fail too, and a raw loader error must not escape the backend's error contract.
       const connection = () => client(target ?? null).catch((error: unknown) => Promise.reject(failure(error)))
       return {
-        async ready(timeoutMs) {
-          const info = await (await connection())
-            .ready(timeoutMs)
-            .catch((error: unknown) => {
-              throw failure(error)
-            })
+        async ready(timeoutMs = 10_000) {
+          const linked = await connection()
+          const presence = presenceOf(linked)
+          // A hub whose pairing page went stale shows a fresh one, and this call waits for the extension to redeem it.
+          if (
+            linked.state().kind !== "ready" &&
+            absence(linked.state(), presence, profile).kind === "unpaired" &&
+            linked.pair()
+          ) {
+            presence.since = Date.now()
+          }
+          // An extension connects only shortly after the connection changed, so the wait ends `timeoutMs` after that
+          // moment, not after this call: one that has stayed away longer fails the call at once.
+          const wait = Math.max(0, presence.since + timeoutMs - Date.now())
+          const info = await linked.ready(wait).catch((error: unknown) => {
+            throw explained(linked, profile, error)
+          })
           return {
             protocol: info.protocol,
             contractSha: info.contractSha,
@@ -239,8 +303,9 @@ export function hub(options: Options = {}): BrowserHub.Interface {
           }
         },
         async call(params) {
+          const linked = await connection()
           try {
-            const answer = await (await connection()).tools.call(
+            const answer = await linked.tools.call(
               {
                 sessionHandle: params.sessionHandle,
                 name: params.name,
@@ -252,7 +317,7 @@ export function hub(options: Options = {}): BrowserHub.Interface {
             )
             return reply(answer)
           } catch (error) {
-            throw failure(error)
+            throw explained(linked, profile, error)
           }
         },
         async begin(params) {

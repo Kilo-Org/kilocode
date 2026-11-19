@@ -27,6 +27,24 @@ export const EXTENSION_HINT =
 
 const HINT = EXTENSION_HINT
 
+/**
+ * The setup step for why no extension answered, as the hub connection explains it: an installed extension whose switch
+ * is off is told to turn it back on, never to install it. Without an explanation the general step stands.
+ */
+function extensionHint(absence: BrowserHub.Absence | undefined): string {
+  if (absence === undefined) return EXTENSION_HINT
+  switch (absence.kind) {
+    case "disconnected":
+      return 'The Kilo browser extension is not connected: turn on "Allow local agents" in its settings and keep the browser open, then try again, or set browser.backend to "playwright".'
+    case "unpaired":
+      return 'No Kilo browser extension has connected yet: install it, or turn on "Allow local agents" in its settings if it is installed, then try again, or set browser.backend to "playwright".'
+    case "no_profile":
+      return `No browser profile named "${absence.profile}" is connected: open it and turn on "Allow local agents" in its Kilo extension, or change browser.target.`
+    case "no_hub":
+      return 'Kilo could not start its connection to the browser: try again in a moment, or set browser.backend to "playwright".'
+  }
+}
+
 /** The update notice for an extension this CLI cannot drive. */
 export const UPDATE_HINT = "Update the Kilo browser extension to the current version, then retry."
 
@@ -150,7 +168,8 @@ function permissionError(error: BrowserHub.Failure): Error {
 
 /** Every failure kind the transport reports, as the tool layer sees it. */
 const MAPPED: Record<string, (error: BrowserHub.Failure) => Error> = {
-  unavailable: (error) => new UnavailableError(HINT, UNAVAILABLE_MESSAGE, { effectsUncertain: error.uncertain }),
+  unavailable: (error) =>
+    new UnavailableError(extensionHint(error.absence), UNAVAILABLE_MESSAGE, { effectsUncertain: error.uncertain }),
   permission: permissionError,
   moved: permissionError,
   busy: () => new Error("The tab is busy with another browser action. Try again in a moment."),

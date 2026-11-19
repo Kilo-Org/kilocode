@@ -400,6 +400,24 @@ describe("extension backend", () => {
     expect((error as UnavailableError).effectsUncertain).toBe(true)
   })
 
+  test("an unavailable answer names the next step for why no extension answered", () => {
+    const hint = (absence?: BrowserHub.Absence) => {
+      const error = map(new BrowserHub.Failure({ kind: "unavailable", message: "not connected", absence }))
+      expect(error).toBeInstanceOf(UnavailableError)
+      expect(error.message).toBe(UNAVAILABLE_MESSAGE)
+      return (error as UnavailableError).hint
+    }
+    // An extension that was connected and left is installed: the step turns its switch back on, never installs it.
+    expect(hint({ kind: "disconnected" })).toContain('turn on "Allow local agents"')
+    expect(hint({ kind: "disconnected" })).not.toContain("Install")
+    expect(hint({ kind: "unpaired" })).toContain("install it")
+    expect(hint({ kind: "unpaired" })).toContain("then try again")
+    expect(hint({ kind: "no_profile", profile: "Work" })).toContain('"Work"')
+    expect(hint({ kind: "no_hub" })).toContain("try again in a moment")
+    // Without an explanation the general step stands.
+    expect(hint()).toBe(EXTENSION_HINT)
+  })
+
   test("a stop is sticky: the next call fails stopped and opens no session", async () => {
     const hub = fake()
     const active = backend({ port: hub.port, directory: "/tmp/project" })
