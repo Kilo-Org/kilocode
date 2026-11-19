@@ -398,6 +398,16 @@ export const dict = {
   "common.edit": "Bewerken",
   "common.loadMore": "Meer laden",
 
+  "sidebar.upsell.title": "Zet een vloot Kilo-agenten aan het werk",
+  "sidebar.upsell.body": "Je hoeft niet te wachten tot een taak klaar is.",
+  "sidebar.upsell.parallel": "Voer meerdere sessies tegelijk uit",
+  "sidebar.upsell.worktree": "Geef elke sessie een eigen worktree zodat wijzigingen niet conflicteren",
+  "sidebar.upsell.attention": "Zie in één oogopslag welke sessie je nodig heeft",
+  "sidebar.upsell.open": "Agent Manager openen",
+  "sidebar.upsell.later": "Niet nu",
+  "sidebar.upsell.never": "Dit niet meer tonen",
+  "sidebar.upsell.confirmation": "Begrepen. We zullen Agent Manager hier niet meer voorstellen.",
+  "sidebar.upsell.undo": "Ongedaan maken",
   "sidebar.settings": "Instellingen",
 
   "sound.option.alert01": "Melding 01",
@@ -1496,6 +1506,9 @@ export const dict = {
   "chat.search.close": "Zoeken sluiten",
   "chat.search.invalidRegex": "Ongeldige reguliere expressie",
   "chat.search.noResults": "Geen resultaten",
+  "settings.experimental.agentManagerUpsell.title": "Uitnodiging voor Agent Manager in de zijbalk",
+  "settings.experimental.agentManagerUpsell.description":
+    "Toon na programmeertaken een optionele uitnodiging om Agent Manager te proberen in de Kilo-zijbalk. Standaard uitgeschakeld.",
   "settings.experimental.browserAutomation.title": "Geïntegreerde browser",
   "settings.experimental.browserAutomation.description":
     "Toon voorbeelden van lokale applicaties in Agent Manager en stel de tool browser_open beschikbaar aan Agent Manager-sessies.",

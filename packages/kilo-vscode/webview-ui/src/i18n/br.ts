@@ -398,6 +398,16 @@ export const dict = {
   "common.edit": "Editar",
   "common.loadMore": "Carregar mais",
 
+  "sidebar.upsell.title": "Coloque uma frota de agentes Kilo para trabalhar",
+  "sidebar.upsell.body": "Você não precisa esperar uma tarefa terminar.",
+  "sidebar.upsell.parallel": "Execute várias sessões ao mesmo tempo",
+  "sidebar.upsell.worktree": "Dê a cada sessão seu próprio worktree para evitar conflitos entre alterações",
+  "sidebar.upsell.attention": "Veja de relance qual sessão precisa de você",
+  "sidebar.upsell.open": "Abrir Agent Manager",
+  "sidebar.upsell.later": "Agora não",
+  "sidebar.upsell.never": "Não mostrar novamente",
+  "sidebar.upsell.confirmation": "Entendido. Não vamos sugerir o Agent Manager aqui novamente.",
+  "sidebar.upsell.undo": "Desfazer",
   "sidebar.settings": "Configurações",
 
   "sound.option.alert01": "Alerta 01",
@@ -1484,6 +1494,9 @@ export const dict = {
   "chat.search.close": "Fechar pesquisa",
   "chat.search.invalidRegex": "Expressão regular inválida",
   "chat.search.noResults": "Nenhum resultado",
+  "settings.experimental.agentManagerUpsell.title": "Convite para o Agent Manager na barra lateral",
+  "settings.experimental.agentManagerUpsell.description":
+    "Mostre um convite opcional para experimentar o Agent Manager na barra lateral do Kilo após tarefas de programação. Desativado por padrão.",
   "settings.experimental.browserAutomation.title": "Navegador Integrado",
   "settings.experimental.browserAutomation.description":
     "Mostre pré-visualizações de aplicativos locais no Agent Manager e exponha a ferramenta browser_open para sessões do Agent Manager.",

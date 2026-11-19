@@ -6,6 +6,7 @@
  */
 
 @import "./session-title-editor.css";
+@import "./agent-manager-upsell.css";
 @import "./task-header.css";
 @import "./search-menu.css";
 @import "./session-tabs.css";

@@ -392,6 +392,16 @@ export const dict = {
   "common.edit": "แก้ไข",
   "common.loadMore": "โหลดเพิ่มเติม",
 
+  "sidebar.upsell.title": "ให้กองทัพเอเจนต์ Kilo ลงมือทำงาน",
+  "sidebar.upsell.body": "คุณไม่ต้องรอให้งานหนึ่งเสร็จก่อน",
+  "sidebar.upsell.parallel": "รันหลายเซสชันพร้อมกัน",
+  "sidebar.upsell.worktree": "ให้แต่ละเซสชันมี worktree ของตัวเองเพื่อไม่ให้การเปลี่ยนแปลงขัดแย้งกัน",
+  "sidebar.upsell.attention": "ดูได้ทันทีว่าเซสชันไหนต้องการคุณ",
+  "sidebar.upsell.open": "เปิด Agent Manager",
+  "sidebar.upsell.later": "ยังไม่ใช่ตอนนี้",
+  "sidebar.upsell.never": "ไม่ต้องแสดงอีก",
+  "sidebar.upsell.confirmation": "รับทราบ เราจะไม่แนะนำ Agent Manager ที่นี่อีก",
+  "sidebar.upsell.undo": "เลิกทำ",
   "sidebar.settings": "การตั้งค่า",
 
   "sound.option.alert01": "เสียงเตือน 01",
@@ -1440,6 +1450,9 @@ export const dict = {
   "chat.search.close": "ปิดการค้นหา",
   "chat.search.invalidRegex": "นิพจน์ทั่วไปไม่ถูกต้อง",
   "chat.search.noResults": "ไม่มีผลลัพธ์",
+  "settings.experimental.agentManagerUpsell.title": "คำเชิญให้ลองใช้ Agent Manager ในแถบด้านข้าง",
+  "settings.experimental.agentManagerUpsell.description":
+    "แสดงคำเชิญที่เลือกได้ให้ลองใช้ Agent Manager ในแถบด้านข้างของ Kilo หลังจากงานเขียนโค้ด ปิดใช้งานตามค่าเริ่มต้น",
   "settings.experimental.browserAutomation.title": "เบราว์เซอร์ในตัว",
   "settings.experimental.browserAutomation.description":
     "แสดงตัวอย่างแอปพลิเคชันในเครื่องใน Agent Manager และเปิดเผยเครื่องมือ browser_open ให้กับเซสชัน Agent Manager",

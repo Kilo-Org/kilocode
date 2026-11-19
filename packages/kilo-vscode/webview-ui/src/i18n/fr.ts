@@ -399,6 +399,16 @@ export const dict = {
   "common.edit": "Modifier",
   "common.loadMore": "Charger plus",
 
+  "sidebar.upsell.title": "Mettez une flotte d'agents Kilo au travail",
+  "sidebar.upsell.body": "Vous n'avez pas à attendre qu'une tâche se termine.",
+  "sidebar.upsell.parallel": "Exécutez plusieurs sessions en même temps",
+  "sidebar.upsell.worktree": "Attribuez à chacune son propre worktree pour éviter les conflits entre modifications",
+  "sidebar.upsell.attention": "Voyez en un coup d'œil laquelle a besoin de vous",
+  "sidebar.upsell.open": "Ouvrir Agent Manager",
+  "sidebar.upsell.later": "Pas maintenant",
+  "sidebar.upsell.never": "Ne plus afficher ceci",
+  "sidebar.upsell.confirmation": "Compris. Nous ne vous suggérerons plus Agent Manager ici.",
+  "sidebar.upsell.undo": "Annuler",
   "sidebar.settings": "Paramètres",
 
   "settings.indexing.dimension.description":
@@ -1507,6 +1517,9 @@ export const dict = {
   "chat.search.close": "Fermer la recherche",
   "chat.search.invalidRegex": "Expression régulière non valide",
   "chat.search.noResults": "Aucun résultat",
+  "settings.experimental.agentManagerUpsell.title": "Invitation à Agent Manager dans la barre latérale",
+  "settings.experimental.agentManagerUpsell.description":
+    "Affichez une invitation facultative à essayer Agent Manager dans la barre latérale de Kilo après les tâches de programmation. Désactivé par défaut.",
   "settings.experimental.browserAutomation.title": "Navigateur intégré",
   "settings.experimental.browserAutomation.description":
     "Affichez des aperçus d'applications locales dans Agent Manager et exposez l'outil browser_open aux sessions Agent Manager.",

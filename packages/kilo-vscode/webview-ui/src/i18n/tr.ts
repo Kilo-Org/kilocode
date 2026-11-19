@@ -393,6 +393,16 @@ export const dict = {
   "common.edit": "Düzenle",
   "common.loadMore": "Daha fazla yükle",
 
+  "sidebar.upsell.title": "Bir Kilo ajan filosunu işe koyun",
+  "sidebar.upsell.body": "Bir görevin bitmesini beklemek zorunda değilsiniz.",
+  "sidebar.upsell.parallel": "Aynı anda birden fazla oturum çalıştırın",
+  "sidebar.upsell.worktree": "Değişikliklerin çakışmaması için her oturuma ayrı bir worktree verin",
+  "sidebar.upsell.attention": "Hangi oturumun size ihtiyaç duyduğunu bir bakışta görün",
+  "sidebar.upsell.open": "Agent Manager'ı aç",
+  "sidebar.upsell.later": "Şimdi değil",
+  "sidebar.upsell.never": "Bunu bir daha gösterme",
+  "sidebar.upsell.confirmation": "Anlaşıldı. Burada bir daha Agent Manager'ı önermeyeceğiz.",
+  "sidebar.upsell.undo": "Geri al",
   "sidebar.settings": "Ayarlar",
 
   "sound.option.alert01": "Uyarı 01",
@@ -1484,6 +1494,9 @@ export const dict = {
   "chat.search.close": "Aramayı kapat",
   "chat.search.invalidRegex": "Geçersiz normal ifade",
   "chat.search.noResults": "Sonuç yok",
+  "settings.experimental.agentManagerUpsell.title": "Kenar Çubuğunda Agent Manager Daveti",
+  "settings.experimental.agentManagerUpsell.description":
+    "Kodlama görevlerinden sonra Kilo kenar çubuğunda Agent Manager'ı denemek için isteğe bağlı bir davet gösterin. Varsayılan olarak devre dışıdır.",
   "settings.experimental.browserAutomation.title": "Entegre Tarayıcı",
   "settings.experimental.browserAutomation.description":
     "Agent Manager'da yerel uygulama önizlemelerini gösterin ve browser_open aracını Agent Manager oturumlarına sunun.",

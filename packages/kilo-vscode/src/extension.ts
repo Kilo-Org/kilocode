@@ -680,6 +680,7 @@ export async function activate(context: vscode.ExtensionContext) {
       taskTarget().postMessage({ type: "action", action: "closeAllTasks" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManagerOpen", () => {
+      provider.rememberAgentManagerOpen()
       agentManagerProvider.openPanel()
     }),
     vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string | null) => {

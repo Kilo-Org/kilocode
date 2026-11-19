@@ -394,6 +394,16 @@ export const dict = {
   "common.edit": "編集",
   "common.loadMore": "さらに読み込む",
 
+  "sidebar.upsell.title": "Kilo エージェントのチームを稼働させましょう",
+  "sidebar.upsell.body": "ひとつのタスクが終わるのを待つ必要はありません。",
+  "sidebar.upsell.parallel": "複数のセッションを同時に実行",
+  "sidebar.upsell.worktree": "各セッションに専用の worktree を割り当て、変更の競合を防止",
+  "sidebar.upsell.attention": "対応が必要なセッションをひと目で確認",
+  "sidebar.upsell.open": "Agent Manager を開く",
+  "sidebar.upsell.later": "今はしない",
+  "sidebar.upsell.never": "今後表示しない",
+  "sidebar.upsell.confirmation": "承知しました。ここでは Agent Manager を再びおすすめしません。",
+  "sidebar.upsell.undo": "元に戻す",
   "sidebar.settings": "設定",
 
   "sound.option.alert01": "アラート 01",
@@ -1460,6 +1470,9 @@ export const dict = {
   "chat.search.close": "検索を閉じる",
   "chat.search.invalidRegex": "正規表現が無効です",
   "chat.search.noResults": "見つかりませんでした",
+  "settings.experimental.agentManagerUpsell.title": "サイドバーでの Agent Manager への招待",
+  "settings.experimental.agentManagerUpsell.description":
+    "コーディングタスクの完了後、Kilo サイドバーに Agent Manager を試すための任意の招待を表示します。デフォルトでは無効です。",
   "settings.experimental.browserAutomation.title": "統合ブラウザー",
   "settings.experimental.browserAutomation.description":
     "Agent Manager でローカルアプリケーションのプレビューを表示し、browser_open ツールを Agent Manager セッションに公開します。",
