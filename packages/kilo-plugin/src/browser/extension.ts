@@ -16,6 +16,7 @@ import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
 import { BrowserHub } from "./hub"
 import { BrowserPermission } from "./permission"
+import { insideOutput, writeConfined } from "./playwright"
 import { takeStep } from "./steps"
 
 /** The protocol version this CLI speaks. An extension that does not list it cannot be driven safely. */
@@ -224,6 +225,23 @@ export function map(error: unknown): Error {
   return new Error(error.message || "The browser call failed.")
 }
 
+/**
+ * Where `browser_take_screenshot`'s `filename` goes. The extension has no file system to write to, so the CLI writes
+ * the image it returns, under the session's working directory with the Playwright backend's rules: a relative name
+ * resolves inside the directory, and a name that escapes it is refused before the browser is asked.
+ */
+function screenshotFile(name: string, args: Record<string, unknown>, directory: string) {
+  if (name !== "browser_take_screenshot") return undefined
+  const filename = typeof args.filename === "string" ? args.filename.trim() : ""
+  if (filename === "") return undefined
+  const { filename: _written, ...rest } = args
+  try {
+    return { path: insideOutput(filename, directory), args: rest }
+  } catch {
+    throw new Error(`The screenshot file name must stay inside ${directory}.`)
+  }
+}
+
 /** The backend over one hub connection. `port` is undefined when the host serves no hub at all. */
 export class ExtensionBackend implements BrowserBackend {
   readonly id = "extension" as const
@@ -241,6 +259,8 @@ export class ExtensionBackend implements BrowserBackend {
    * there is no CLI-side resume inside the same conversation, so the refusal asks for the browser to be turned back on.
    */
   private readonly stopped = new Set<string>()
+  /** Screenshot files this backend wrote: a screenshot replaces one of these, never a file it did not write. */
+  private readonly written = new Set<string>()
   /** Set by `dispose()`: an evicted backend must not open a session for a call that was already in flight. */
   private disposed = false
 
@@ -312,14 +332,39 @@ export class ExtensionBackend implements BrowserBackend {
     },
   ) {
     const sensitive = this.sensitive(input.ctx, input.session, input.name, input.key)
-    return port.call({
+    const file = screenshotFile(input.name, input.args, this.input.directory)
+    const answer = await port.call({
       sessionHandle: input.handle,
       name: input.name,
-      arguments: input.args,
+      arguments: file ? file.args : input.args,
       authorized: grants(input.ctx.authorized ?? []),
       ...(sensitive === undefined ? {} : { sensitive }),
       ...(input.ctx.signal === undefined ? {} : { signal: input.ctx.signal }),
     })
+    return file ? this.save(file.path, answer) : answer
+  }
+
+  /**
+   * Write a screenshot's image to its file and link it, as the Playwright backend answers. The call already ran, so a
+   * file that cannot be written is a note in the result, never a failed call.
+   */
+  private async save(file: string, answer: BrowserHub.Reply): Promise<BrowserHub.Reply> {
+    const image = answer.content.find(
+      (block): block is Extract<BrowserHub.Block, { type: "image" }> => block.type === "image",
+    )
+    if (answer.isError || image === undefined) return answer
+    const foreign = !this.written.has(file) && (await fs.lstat(file).catch(() => undefined)) !== undefined
+    const note = foreign
+      ? `${file} already exists, so the screenshot was not saved over it. Pass another filename to save it.`
+      : await writeConfined(file, Buffer.from(image.data, "base64")).then(
+          () => {
+            this.written.add(file)
+            return `- [Screenshot](${file})`
+          },
+          (error: unknown) =>
+            `The screenshot could not be saved to ${file}: ${error instanceof Error ? error.message : String(error)}`,
+        )
+    return { ...answer, content: [...answer.content, { type: "text", text: note }] }
   }
 
   /** The action already ran and only its content was withheld: ask for the grants and never repeat the step. */

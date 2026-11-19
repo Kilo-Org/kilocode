@@ -204,6 +204,73 @@ describe("extension backend", () => {
     ])
   })
 
+  /** Screenshot answers: the extension's own text and the image it captured, one frame per call, the last repeated. */
+  const shot = (...frames: Buffer[]) => {
+    let index = 0
+    return fake({
+      call: () => {
+        const data = frames[Math.min(index++, frames.length - 1)] ?? Buffer.alloc(0)
+        return Promise.resolve({
+          content: [
+            { type: "text", text: "Screenshot captured (png, viewport)." },
+            { type: "image", data: data.toString("base64"), mimeType: "image/png" },
+          ],
+        })
+      },
+    })
+  }
+
+  const workspace = async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-shot-"))
+    roots.push(directory)
+    return fs.realpath(directory)
+  }
+
+  test("a screenshot's filename is written under the working directory and linked in the result", async () => {
+    const directory = await workspace()
+    const png = Buffer.from("png bytes")
+    const hub = shot(png)
+    const active = backend({ port: hub.port, directory })
+    const result = await active.callTool("browser_take_screenshot", { filename: "shots/page.png", type: "png" }, ctx())
+    const file = path.join(directory, "shots", "page.png")
+    expect(await fs.readFile(file)).toEqual(png)
+    // The extension has no file system: it is never handed a name it cannot write.
+    expect(hub.calls[0]?.arguments).toEqual({ type: "png" })
+    expect(result.content.at(-1)).toEqual({ type: "text", text: `- [Screenshot](${file})` })
+    expect(result.content.some((block) => block.type === "image")).toBe(true)
+  })
+
+  test("a screenshot name outside the working directory is refused before the browser is asked", async () => {
+    const directory = await workspace()
+    const hub = shot(Buffer.from("png"))
+    const active = backend({ port: hub.port, directory })
+    const error = await active
+      .callTool("browser_take_screenshot", { filename: "../escape.png" }, ctx())
+      .catch((value: unknown) => value)
+    expect((error as Error).message).toContain("must stay inside")
+    expect(hub.calls).toHaveLength(0)
+  })
+
+  test("a screenshot never replaces a file it did not write, and replaces its own", async () => {
+    const directory = await workspace()
+    const theirs = path.join(directory, "notes.png")
+    await fs.writeFile(theirs, "the user's file")
+    const active = backend({
+      port: shot(Buffer.from("first"), Buffer.from("second"), Buffer.from("third")).port,
+      directory,
+    })
+    const kept = await active.callTool("browser_take_screenshot", { filename: "notes.png" }, ctx())
+    expect(await fs.readFile(theirs, "utf8")).toBe("the user's file")
+    expect(kept.content.at(-1)).toMatchObject({ type: "text", text: expect.stringContaining("already exists") })
+    // The image still reaches the model: only the file was not written.
+    expect(kept.content.some((block) => block.type === "image")).toBe(true)
+
+    await active.callTool("browser_take_screenshot", { filename: "mine.png" }, ctx())
+    const again = await active.callTool("browser_take_screenshot", { filename: "mine.png" }, ctx())
+    expect(again.content.at(-1)).toEqual({ type: "text", text: `- [Screenshot](${path.join(directory, "mine.png")})` })
+    expect(await fs.readFile(path.join(directory, "mine.png"), "utf8")).toBe("third")
+  })
+
   test("no hub at all is the model-facing unavailable error with the setup hint", async () => {
     const active = backend({ directory: "/tmp/project" })
     const error = await active.callTool("browser_snapshot", {}, ctx()).catch((value: unknown) => value)
