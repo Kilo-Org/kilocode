@@ -1244,7 +1244,7 @@ module.exports = [
     permanent: true,
   },
   {
-    source: "/docs/code-with-ai/gastown",
+    source: "/docs/code-with-ai/gastown/:path*",
     destination: "/docs/getting-started",
     basePath: false,
     permanent: true,
