@@ -101,6 +101,7 @@ export type Page = {
   evaluate<T>(fn: () => T | Promise<T>): Promise<T>
   evaluate<T, A>(fn: (arg: A) => T | Promise<T>, arg: A): Promise<T>
   getByRole(role: string, options?: { name?: string | RegExp; exact?: boolean }): Locator
+  getByText(text: string | RegExp): Locator
   goto(url: string): Promise<unknown>
   locator(selector: string): Locator
   on(event: string, listener: (payload: unknown) => void): void

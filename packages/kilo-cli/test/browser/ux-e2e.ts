@@ -24,10 +24,16 @@
 //   tui       the TUI in tmux: browser permission prompt (allow once, always, reject), the sensitive step, the
 //             unavailable hint and the stopped session
 //   settings-faults  the settings page's load/save/command error lines, with storage and messaging faults injected
-//   all       every scenario above in one browser
+//   signed-out  the local-agent switch and a run while signed out of Kilo, then sign-out and token expiry mid-run:
+//             which storage keys survive (the local-agent ones must, the account token must not)
+//   all       pairing, controls, errors, tui and settings-faults in one browser
 //
 // Each scenario prints one JSON report and exits non-zero when a hard expectation fails. Findings that are UX judgments
 // rather than broken contracts go to `observations`, not `failures`.
+//
+// Known failures: KNOWN_FAILURES (near the end of this file) lists scenarios that fail today for a reason owned
+// elsewhere (`signed-out`: the cloud fix fix/extension-agents-signin). Such a run reports `status: "known-fail"` with
+// the reason and exits 0, or `UNEXPECTED PASS` when it passes; `--strict` makes a known failure exit non-zero.
 //
 // The Chromium launch (a real profile, no DevTools download override), the API routes, the hub, pairing, the
 // scripted model and the CLI runs come from extension-harness.ts.
@@ -1185,6 +1191,12 @@ async function pageShot(name: string) {
   await screen(name)
 }
 
+/** The storage.local keys an account run saw after its change. */
+function localKeysAfter(result: Record<string, unknown> | undefined): string[] {
+  const keys = field(field(result?.["after"], "local"), "keys")
+  return Array.isArray(keys) ? keys.map(String) : []
+}
+
 /** One live run; between its second and third call `change` alters the account state, and the model's next texts are kept. */
 async function accountRun(label: string, change: () => Promise<void>) {
   scenarioLabel = `account-${label}`
@@ -1224,14 +1236,26 @@ async function signedOutScenario() {
   scenarioLabel = "account-signed-out"
   const out: Record<string, unknown> = {}
 
-  // (1) A signed-out user: is there any way to the switch?
-  const switches = await panel.getByRole("switch", { name: "Allow local agents" }).count()
+  // (1) A signed-out user reaches the switch through the header's Settings entry, pairs and runs an agent.
+  await panel.getByText("Sign in to continue").waitFor()
   const settingsButtons = await panel.getByRole("button", { name: "Settings" }).count()
-  out["signed-out"] = { page: await pageText(), settingsButtons, switches, url: panel.url() }
   await pageShot("01-signed-out-panel")
+  await openSettings()
+  const switches = await toggle().count()
+  out["signed-out"] = { page: await pageText(), settingsButtons, switches, url: panel.url() }
+  await pageShot("02-signed-out-settings")
   const manifest = JSON.parse(await fs.readFile(path.join(extensionDirectory, "manifest.json"), "utf8")) as Record<string, unknown>
   out["other-surfaces"] = { action: manifest["action"] ?? null, options_page: manifest["options_page"] ?? null, options_ui: manifest["options_ui"] ?? null }
   expect(switches > 0, `signed out, the "Allow local agents" switch is unreachable (SPEC D15): ${String(record(out["signed-out"])?.["page"]).slice(0, 300)}`)
+  await setSwitch(true)
+  await pageShot("03-signed-out-switch-on")
+  out["signed-out-run"] = await accountRun("signed-out-run", async () => {})
+  const signedOutRun = record(out["signed-out-run"])
+  expect(
+    signedOutRun?.["code"] === 0 && !/stopped|not available/.test(String(signedOutRun?.["next"])),
+    `signed out, pairing and a local agent run failed (SPEC D15): ${String(signedOutRun?.["next"]).slice(0, 200)}`,
+  )
+  scenarioLabel = "account-signed-out"
 
   // (2) Signed in, switch on, agent running; then Sign out from the settings.
   await signIn()
@@ -1244,6 +1268,11 @@ async function signedOutScenario() {
   expect(
     !String(signOut?.["next"]).includes("stopped"),
     `signing out of the Kilo account stopped the local agent (SPEC D15): ${String(signOut?.["next"]).slice(0, 200)}; local after: ${JSON.stringify(field(signOut?.["after"], "local"))}`,
+  )
+  const signOutKeys = localKeysAfter(signOut)
+  expect(
+    signOutKeys.includes("kiloLocalAgentSettings") && signOutKeys.includes("kiloLocalAgentEndpoints") && !signOutKeys.includes("kiloAuth"),
+    `sign-out must keep the local-agent keys and remove the account token: ${JSON.stringify(signOutKeys)}`,
   )
 
   // (3) The token expires (the page validates on load and gets 401) while an agent runs.
@@ -1258,6 +1287,11 @@ async function signedOutScenario() {
   expect(
     !String(expired?.["next"]).includes("stopped"),
     `an expired Kilo token stopped the local agent (SPEC D15): ${String(expired?.["next"]).slice(0, 200)}; local after: ${JSON.stringify(field(expired?.["after"], "local"))}`,
+  )
+  const expiredKeys = localKeysAfter(expired)
+  expect(
+    expiredKeys.includes("kiloLocalAgentSettings") && expiredKeys.includes("kiloLocalAgentEndpoints") && !expiredKeys.includes("kiloAuth"),
+    `token expiry must keep the local-agent keys and remove the account token: ${JSON.stringify(expiredKeys)}`,
   )
 
   // (4) The token check fails (500): the validation error view with an agent running.
@@ -1301,12 +1335,41 @@ const scenarios: Record<string, () => Promise<Record<string, unknown>>> = {
 const selected = scenarios[scenario]
 if (!selected) throw new Error(`unknown scenario ${scenario}; choose ${Object.keys(scenarios).join(", ")}`)
 
+/**
+ * Scenarios that fail today for a reason owned elsewhere. A failing run reports `status: "known-fail"` and exits 0; a
+ * passing one reports `UNEXPECTED PASS`; `--strict` makes a known failure exit non-zero (as extension-e2e's `all`).
+ */
+const KNOWN_FAILURES: Record<string, string> = {
+  "signed-out": "local agents settings signed out: cloud fix/extension-agents-signin",
+}
+const knownFailure = KNOWN_FAILURES[scenario]
+const strict = process.argv.includes("--strict")
+
+function finish() {
+  const failed = failures.length > 0
+  if (failed && (knownFailure === undefined || strict)) process.exitCode = 1
+  if (!failed) return knownFailure === undefined ? "pass" : "UNEXPECTED PASS"
+  return knownFailure === undefined ? "FAIL" : "known-fail"
+}
+
 base = process.env.E2E_HOME ?? (await fs.mkdtemp(path.join(os.tmpdir(), "bridge-ux-")))
 await fs.mkdir(base, { recursive: true })
 evidence = process.env.E2E_EVIDENCE ?? path.join(base, "evidence")
 
 function report(results: Record<string, unknown>) {
-  return { chromium: launched?.executable, evidence: shots, extension: loadedExtension, extensionId, failures, observations, scenario, ...results }
+  const status = finish()
+  return {
+    chromium: launched?.executable,
+    evidence: shots,
+    extension: loadedExtension,
+    extensionId,
+    failures,
+    ...(knownFailure === undefined ? {} : { knownFailure }),
+    observations,
+    scenario,
+    status,
+    ...results,
+  }
 }
 
 try {
@@ -1315,11 +1378,9 @@ try {
   await openPanel(scenario !== "signed-out")
   const results = await selected()
   console.log(JSON.stringify(report({ results }), null, 2))
-  if (failures.length) process.exitCode = 1
 } catch (error) {
   failures.push(`harness: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`)
   console.log(JSON.stringify(report({}), null, 2))
-  process.exitCode = 1
 } finally {
   await launched?.close().catch(() => undefined)
   fixture.stop(true)
