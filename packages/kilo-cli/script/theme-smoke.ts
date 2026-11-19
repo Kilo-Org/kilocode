@@ -23,7 +23,8 @@ export async function runThemeSmoke(executable?: string) {
       const decoder = new TextDecoder()
       const terminal = new Bun.Terminal({
         cols: 120,
-        rows: 40,
+        // Fit the built-in theme list so checking the current marker doesn't depend on scrolling.
+        rows: 96,
         data(terminal, data) {
           const text = decoder.decode(data, { stream: true })
           state.output = (state.output + text).slice(-200_000)
