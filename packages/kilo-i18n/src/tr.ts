@@ -168,7 +168,7 @@ export const dict = {
   "browser.state.readyHint": "Kilo'ya ait bir Chromium profili; ilk tarayıcı çağrısında başlar",
   "browser.state.extensionHint": "Kendi tarayıcınızı kullanmak için Kilo tarayıcı uzantısını bağlayın",
   "browser.notice.extension":
-    "Kilo tarayıcı uzantısı {{browser}} içinde bağlı. Tarayıcı araçları için paketli tarayıcı yerine kendi tarayıcınız kullanılsın mı?",
+    "Kilo tarayıcı uzantısı {{browser}} içinde bağlı. Tarayıcı araçları için yerleşik tarayıcı yerine kendi tarayıcınız kullanılsın mı?",
   "browser.notice.switch": "Tarayıcımı kullan",
   "settings.browser.status.extension.waiting": "Tarayıcı uzantısı bekleniyor",
   "settings.browser.origins.saved.title": "Sohbetlerde izin verilenler",

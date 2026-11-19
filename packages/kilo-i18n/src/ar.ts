@@ -169,7 +169,7 @@ export const dict = {
     "المواقع التي سمحت بها من محادثة عبر السماح دائمًا، لمساحة العمل هذه. تنطبق إضافةً إلى القواعد أعلاه.",
   "settings.browser.origins.saved.empty": "لم يُسمح بأي موقع من محادثة بعد.",
   "settings.browser.origins.saved.failed": "الأذونات المحفوظة غير متاحة",
-  "settings.browser.origins.saved.revoke": "إلغاء",
+  "settings.browser.origins.saved.revoke": "إبطال",
   "ui.permission.reason": "السبب: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
