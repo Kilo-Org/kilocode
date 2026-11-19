@@ -36,64 +36,113 @@ function growth(work: (scale: number) => void, from = 1, to = 4, samples = 5) {
   return fastest(to) / Math.max(fastest(from), 1)
 }
 
+/**
+ * Characters a full parse reads through `charCodeAt`, which is how the block and inline parsers peek at the source.
+ *
+ * A count, not a clock, for shapes whose samples the collector owns: one node per nesting level means a sample is
+ * mostly allocation and sweep, so the same 4x step measures anywhere from 4x to 8x between runs. The count is the
+ * same number on every run, and it grows only with the characters the parser looks at.
+ */
+function charsRead(parse: () => void) {
+  const proto = String.prototype as unknown as { charCodeAt: (this: string, pos: number) => number }
+  const native = proto.charCodeAt
+  let read = 0
+  proto.charCodeAt = function (this: string, pos: number) {
+    read++
+    return native.call(this, pos)
+  }
+  try {
+    parse()
+  } finally {
+    proto.charCodeAt = native // the rest of the suite runs with the built-in
+  }
+  return read
+}
+
 describe("slow-input linear-time bounds", () => {
-  test("deeply nested brackets and bracket-link chains stay linear", () => {
-    expect(
-      growth((scale) => {
-        const nested = "[".repeat(10_000 * scale) + "a" + "]".repeat(10_000 * scale)
-        const f1 = createMarkdownStream({ renderHtml: true }).update(nested, { streaming: false })
-        expect(renderBlocksToHtml(f1.blocks)).toContain("[a]")
+  test(
+    "deeply nested brackets and bracket-link chains stay linear",
+    () => {
+      expect(
+        growth(
+          (scale) => {
+            const nested = "[".repeat(10_000 * scale) + "a" + "]".repeat(10_000 * scale)
+            const f1 = createMarkdownStream({ renderHtml: true }).update(nested, { streaming: false })
+            expect(renderBlocksToHtml(f1.blocks)).toContain("[a]")
 
-        const links = "[".repeat(5_000 * scale) + "[a](b)".repeat(5_000 * scale)
-        const f2 = createMarkdownStream({ renderHtml: true }).update(links, { streaming: false })
-        expect(renderBlocksToHtml(f2.blocks)).toContain('<a href="b">a</a>')
-      }, 2, 8),
-    ).toBeLessThan(ratioLimit)
-  })
+            const links = "[".repeat(5_000 * scale) + "[a](b)".repeat(5_000 * scale)
+            const f2 = createMarkdownStream({ renderHtml: true }).update(links, { streaming: false })
+            expect(renderBlocksToHtml(f2.blocks)).toContain('<a href="b">a</a>')
+          },
+          // At 2 and 8 both parses are a few milliseconds, which the fixed cost of a sample hides; 16 and 64 keep the
+          // ratio well above it. The 60 s budget below only catches a catastrophic regression.
+          16,
+          64,
+        ),
+      ).toBeLessThan(ratioLimit)
+    },
+    60_000,
+  )
 
-  test("long * and _ delimiter runs and distinct unclosed backtick runs stay linear", () => {
-    // Each shape keeps the run lengths of the original case and one paragraph per unit of size. A 4x longer run would
-    // nest emphasis 4x deeper and overflow the stack instead of measuring time.
-    const emph = "*a".repeat(5_000) + " " + "_b".repeat(5_000) + " " + "**c*d".repeat(2_000)
-    const mismatchedHeal = "*a ".repeat(5_000) + "b_ ".repeat(5_000)
-    const ticks = Array.from({ length: 500 }, (_, i) => "`".repeat(i + 1) + "a").join(" ")
-    expect(
-      growth((scale) => {
-        const f1 = createMarkdownStream({ renderHtml: true }).update(Array.from({ length: scale }, () => emph).join("\n\n"), {
-          streaming: false,
-        })
-        expect(f1.blocks).toHaveLength(scale)
+  test(
+    "long * and _ delimiter runs and distinct unclosed backtick runs stay linear",
+    () => {
+      // Each shape keeps the run lengths of the original case and one paragraph per unit of size. A 4x longer run would
+      // nest emphasis 4x deeper and overflow the stack instead of measuring time.
+      const emph = "*a".repeat(5_000) + " " + "_b".repeat(5_000) + " " + "**c*d".repeat(2_000)
+      const mismatchedHeal = "*a ".repeat(5_000) + "b_ ".repeat(5_000)
+      const ticks = Array.from({ length: 500 }, (_, i) => "`".repeat(i + 1) + "a").join(" ")
+      expect(
+        growth(
+          (scale) => {
+            const f1 = createMarkdownStream({ renderHtml: true }).update(
+              Array.from({ length: scale }, () => emph).join("\n\n"),
+              { streaming: false },
+            )
+            expect(f1.blocks).toHaveLength(scale)
 
-        const fHeal = createMarkdownStream({ renderHtml: false }).update(
-          Array.from({ length: scale }, () => mismatchedHeal).join("\n\n"),
-          { streaming: true },
-        )
-        expect(fHeal.blocks).toHaveLength(scale)
+            const fHeal = createMarkdownStream({ renderHtml: false }).update(
+              Array.from({ length: scale }, () => mismatchedHeal).join("\n\n"),
+              { streaming: true },
+            )
+            expect(fHeal.blocks).toHaveLength(scale)
 
-        const f2 = createMarkdownStream({ renderHtml: true }).update(
-          Array.from({ length: scale }, () => ticks).join(" "),
-          { streaming: false },
-        )
-        expect(f2.blocks).toHaveLength(1)
-      }),
-    ).toBeLessThan(ratioLimit)
-  })
+            const f2 = createMarkdownStream({ renderHtml: true }).update(
+              Array.from({ length: scale }, () => ticks).join(" "),
+              { streaming: false },
+            )
+            expect(f2.blocks).toHaveLength(1)
+          },
+          // 1 and 4 are too short for the fixed cost of a sample to disappear from the ratio; 8 and 32 are not. The
+          // 60 s budget below only catches a catastrophic regression.
+          8,
+          32,
+        ),
+      ).toBeLessThan(ratioLimit)
+    },
+    60_000,
+  )
 
   test("deeply nested blockquotes and lists stay linear", () => {
     // Every block keeps the 200-deep nesting of the original case and the size grows by how many of them arrive, so
-    // the ratio measures the document size. Nesting 4x deeper is superlinear by nature: each nested container walks
+    // the bound measures the document size. Nesting 4x deeper is superlinear by nature: each nested container walks
     // the markers that remain, which measured 12x to 14x for a 4x depth.
-    expect(
-      growth(
-        (blocks) => {
-          const md = ("> ".repeat(200) + "deep quote\n\n" + "- ".repeat(200) + "deep list\n").repeat(blocks)
-          const frame = createMarkdownStream({ renderHtml: true }).update(md, { streaming: false })
-          expect(frame.blocks).toHaveLength(2 * blocks)
-        },
-        32,
-        128,
-      ),
-    ).toBeLessThan(ratioLimit)
+    //
+    // A wall-clock ratio cannot carry this shape: the parse allocates one node per nesting level, so the collector
+    // sets the sample and the same step measured 7.8x to 8.3x for 4x the input at both 32 -> 128 and 64 -> 256.
+    const readPerChar = (blocks: number) => {
+      const md = ("> ".repeat(200) + "deep quote\n\n" + "- ".repeat(200) + "deep list\n").repeat(blocks)
+      const read = charsRead(() => {
+        const frame = createMarkdownStream({ renderHtml: true }).update(md, { streaming: false })
+        expect(frame.blocks).toHaveLength(2 * blocks)
+      })
+      return read / md.length
+    }
+    // Measured 4.7 characters read per input character at 32 blocks and at 128: the nesting depth is fixed, so the
+    // scanning per character cannot depend on how many blocks arrive. A nesting step that re-reads the quote stack
+    // of every line seen so far grows with the document instead and passes this bound by orders of magnitude.
+    expect(readPerChar(32)).toBeLessThan(15)
+    expect(readPerChar(128)).toBeLessThan(15)
 
     // The list is appended one line at a time, so bound the scanning work each item costs: a streaming parser must
     // never rescan earlier lines. (A wall-clock ratio cannot carry this: appending is currently superlinear at 33 ms
