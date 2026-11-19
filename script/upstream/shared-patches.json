@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 163,
-    "markedLines": 2949,
+    "markedLines": 2967,
     "unmarkedLines": 468,
     "deletedFiles": 0
   },
@@ -345,8 +345,8 @@
       "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Also declare `app.header` for plugin status above the main view; existing slots are below the view or inside the session composer/sidebar, so none can supply a process-wide header indicator. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. Two generic lines with no Kilo value."
     },
     "packages/tui/src/app.tsx": {
-      "rung": 3,
-      "seam": "Render the optional `app.header` slot above the main view and session tabs. Existing slots cannot place a process-wide status indicator at the top of both home and session screens, and server host composition cannot alter the TUI layout. One generic line; without a claim it renders nothing and preserves upstream defaults."
+      "rung": 4,
+      "seam": "The optional `app.header` slot above the main view and session tabs remains a generic rung-3 seam. Existing slots cannot place a process-wide status indicator there; without a claim it renders nothing. The Kilo launch-prompt provider is rung 4: only App holds the original --prompt object above the keyed session views. A server plugin, host override or TUI slot cannot bind that draft to its session across route remounts."
     },
     "packages/tui/src/mini/runtime.lifecycle.ts": {
       "rung": 4,
@@ -650,7 +650,7 @@
     },
     "packages/tui/src/component/prompt/index.tsx": {
       "rung": 3,
-      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. Its programmatic submit reports a reversible preflight refusal synchronously so a waiting caller can retry without replaying a dispatched request. On first Home render, reveal the confirmed agent label while the model catalog is pending."
+      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. Its programmatic submit reports a reversible preflight refusal synchronously so a waiting caller can retry without replaying a dispatched request. Only the editor sees which stashed draft it restored, when history or user input replaced it, and pending native edits at unmount. An optional callback exposes those distinctions without changing manual submission. On first Home render, reveal the confirmed agent label while the model catalog is pending."
     },
     "packages/tui/src/component/startup-loading.tsx": {
       "rung": 3,

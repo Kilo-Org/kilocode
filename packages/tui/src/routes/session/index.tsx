@@ -33,7 +33,7 @@ import {
   MouseEvent,
 } from "@opentui/core"
 import { Prompt, type PromptRef } from "../../component/prompt"
-import { submitResumedPrompt } from "../../kilocode/resumed-prompt" // kilocode_change(startup)
+import { useResumedPrompt } from "../../kilocode/resumed-prompt" // kilocode_change(startup)
 import {
   mediaHashFromUri,
   type PromptAttachment,
@@ -381,7 +381,6 @@ export function Session(props: {
 
   let seeded = false
   let sent = false
-  const launch = process.env.OPENCODE_APP_DIR_NAME === "kilo2" ? args.prompt : undefined // kilocode_change(startup)
   let restored = false
   let scroll: ScrollBoxRenderable
   createEffect(() => {
@@ -401,13 +400,13 @@ export function Session(props: {
     saveScrollAnchor(true)
   })
   const [prompt, setPrompt] = createSignal<PromptRef>()
+  const launch = useResumedPrompt(sessionID, prompt, synced, session) // kilocode_change(startup)
   const bind = (r: PromptRef | undefined) => {
     setPrompt(r)
     promptRef.set(r)
     if (seeded || !route.prompt || !r) return
     seeded = true
     r.set(route.prompt)
-    if (launch && route.prompt.text === launch) submitResumedPrompt(r, launch, synced, session) // kilocode_change(startup)
   }
 
   /** Runs after the next frame's layout and before it paints, unless the transcript was torn down. */
@@ -633,7 +632,7 @@ export function Session(props: {
   }
 
   createEffect(() => {
-    if (launch) return // kilocode_change(startup) - the seeded Kilo composer owns its launch prompt
+    if (launch) return // kilocode_change(startup) - the launch route owns its pending submission
     const current = prompt()
     if (sent || !current || !synced() || !local.model.ready || !local.model.catalogReady) return
     if (!local.agent.current() || !local.model.current()) return
@@ -1661,6 +1660,7 @@ export function Session(props: {
                   <Prompt
                     visible={true}
                     ref={bind}
+                    onDraftSet={launch} /* kilocode_change(startup) */
                     muted={props.promptMuted}
                     onSubmit={() => {
                       if (config.session?.submit_scroll !== "keep") toBottom()

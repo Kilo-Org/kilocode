@@ -80,6 +80,7 @@ export type PromptProps = {
   muted?: boolean
   onSubmit?: () => void
   onEmptySubmit?: () => boolean | Promise<boolean>
+  onDraftSet?: (ref: PromptRef, source?: PromptInfo) => void // kilocode_change(startup) seam - distinguish restored and replaced drafts
   ref?: (ref: PromptRef | undefined) => void
   placeholders?: {
     normal?: string[]
@@ -580,6 +581,7 @@ export function Prompt(props: PromptProps) {
           })
           restoreExtmarksFromPrompt(store.prompt)
           input.cursorOffset = measure(normalized)
+          props.onDraftSet?.(ref) // kilocode_change(startup) seam - external editor replacement
         },
       },
       {
@@ -698,6 +700,7 @@ export function Prompt(props: PromptProps) {
       setStore("prompt", prompt)
       restoreExtmarksFromPrompt(prompt)
       input.gotoBufferEnd()
+      props.onDraftSet?.(ref, prompt) // kilocode_change(startup) seam
     },
     reset() {
       resetComposer()
@@ -715,6 +718,13 @@ export function Prompt(props: PromptProps) {
     input.clear()
   }
 
+  // kilocode_change start - startup seam: setting initial or stashed text resets native undo history; input and undo do not.
+  function notifyDraftEdit() {
+    if (!props.onDraftSet || input.isDestroyed) return
+    if (input.editBuffer.canUndo() || input.editBuffer.canRedo()) props.onDraftSet(ref)
+  }
+  // kilocode_change end
+
   // Captured once: the session route is keyed by sessionID, so this Prompt
   // instance belongs to exactly one tab. Reading props.sessionID lazily would
   // observe the *next* route during onCleanup and stash under the wrong tab.
@@ -729,11 +739,13 @@ export function Prompt(props: PromptProps) {
       setStore("prompt", saved.prompt)
       restoreExtmarksFromPrompt(saved.prompt)
       input.cursorOffset = Math.min(saved.cursor, measure(saved.prompt.text))
+      props.onDraftSet?.(ref, saved.prompt) // kilocode_change(startup) seam
     }
   })
 
   onCleanup(() => {
     disposed = true
+    notifyDraftEdit() // kilocode_change(startup) seam - native edit notifications can still be pending at unmount
     if (store.prompt.text) {
       saveDraft(stashSessionID, { prompt: unwrap(store.prompt), cursor: input.cursorOffset })
     }
@@ -1045,6 +1057,7 @@ export function Prompt(props: PromptProps) {
             setStore("mode", item.mode ?? "normal")
             restoreExtmarksFromPrompt(item)
             input.cursorOffset = 0
+            props.onDraftSet?.(ref, item) // kilocode_change(startup) seam
           },
         },
       ],
@@ -1085,6 +1098,7 @@ export function Prompt(props: PromptProps) {
             setStore("mode", item.mode ?? "normal")
             restoreExtmarksFromPrompt(item)
             input.cursorOffset = measure(item.text)
+            props.onDraftSet?.(ref, item) // kilocode_change(startup) seam
           },
         },
       ],
@@ -1787,6 +1801,7 @@ export function Prompt(props: PromptProps) {
               maxHeight={maxHeight()}
               cursorStyle={cursorStyle()}
               onContentChange={() => {
+                notifyDraftEdit() // kilocode_change(startup) seam
                 const value = input.plainText
                 setStore("prompt", "text", value)
                 auto()?.onInput(value)
