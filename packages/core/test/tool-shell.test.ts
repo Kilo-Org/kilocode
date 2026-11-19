@@ -224,16 +224,11 @@ const permissionIt = testEffect(
   ]),
 )
 
-// kilocode_change start - the description is required; defaulting it to the command keeps the upstream notice assertions
-const call = (
-  input: Omit<typeof ShellTool.Input.Type, "description"> & { description?: string },
-  id = "call-shell",
-) => ({
+const call = (input: typeof ShellTool.Input.Type, id = "call-shell") => ({
   sessionID,
   ...toolIdentity,
-  call: { type: "tool-call" as const, id, name: "shell", input: { description: input.command, ...input } },
+  call: { type: "tool-call" as const, id, name: "shell", input },
 })
-// kilocode_change end
 
 const isWindows = process.platform === "win32"
 
@@ -909,11 +904,7 @@ describe("ShellTool", () => {
             }),
           )
           const command = isWindows ? helloCommand : `${helloCommand}; sleep 0.1`
-          // kilocode_change start - the shell description is required
-          const inputs = ["one", "two"].map((text) =>
-            JSON.stringify({ description: `Prints ${text}`, command: command.replace("hello", text) }),
-          )
-          // kilocode_change end
+          const inputs = ["one", "two"].map((text) => JSON.stringify({ command: command.replace("hello", text) }))
           const result = yield* executeTool(registry, {
             sessionID,
             ...toolIdentity,
@@ -977,7 +968,7 @@ describe("ShellTool", () => {
 
   // kilocode_change start - the model's description is the tool card title, so it must survive to metadata
   productionIt.live(
-    "requires the model description and carries it into result metadata",
+    "runs without a model description and preserves it in metadata when supplied",
     () =>
       withTempDir((tmp) => {
         reset()
@@ -986,7 +977,8 @@ describe("ShellTool", () => {
             // Models write arguments in schema order; first lets the card show the summary before the command.
             const definition = (yield* toolDefinitions(registry)).find((tool) => tool.name === "shell")
             expect(Object.keys(definition?.inputSchema.properties ?? {})[0]).toBe("description")
-            expect(definition?.inputSchema.required).toContain("description")
+            expect(definition?.inputSchema.required).toContain("command")
+            expect(definition?.inputSchema.required).not.toContain("description")
 
             const described = yield* executeTool(
               registry,
@@ -995,11 +987,11 @@ describe("ShellTool", () => {
             expect(described.status).toBe("completed")
             expect(described.metadata).toMatchObject({ exit: 0, description: "Prints hello" })
 
-            const missing = yield* executeTool(registry, {
-              ...call({ command: helloCommand }, "call-shell-missing"),
-              call: { type: "tool-call", id: "call-shell-missing", name: "shell", input: { command: helloCommand } },
-            })
-            expect(missing.status).toBe("error")
+            const missing = yield* executeTool(registry, call({ command: helloCommand }, "call-shell-missing"))
+            expect(missing.status).toBe("completed")
+            expect(missing.content).toEqual([{ type: "text", text: "hello" }])
+            expect(missing.metadata).toMatchObject({ exit: 0 })
+            expect(missing.metadata).not.toHaveProperty("description")
           }),
         )
       }),
