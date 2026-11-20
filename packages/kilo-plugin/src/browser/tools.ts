@@ -32,7 +32,7 @@ import type { ExtensionBackend } from "./extension"
 import { BrowserHub } from "./hub"
 import { modeFor, observe, reportsPage, snapshot, split } from "./observation"
 import { BrowserPermission } from "./permission"
-import { ask, exhausted, movedTo, need, placed, subject, tracker } from "./refusal"
+import { ask, exhausted, movedTo, need, pageUrl, placed, subject, tracker } from "./refusal"
 import { key, persistStep, playwright, readiness } from "./playwright"
 import { resolve, type Observation, type Settings } from "./settings"
 import { hashArguments, rememberHash, rememberStep } from "./steps"
@@ -590,8 +590,13 @@ function shaped(input: {
     const previous = mode === "diff" ? tracker.previous(input.session, input.entry.name, next?.url) : undefined
     const viewed = observe({ mode, text, previous, consoleErrors: errors })
     if (viewed.snapshot) tracker.record(input.session, viewed.snapshot)
-    // The step's own answer places the tab: the page state is a read after it and names no move of its own.
-    tracker.place(input.session, placed(input.entry.name, input.args, input.result))
+    // A step that reports a page places the tab from it, so a click that navigated is not left on the page it left; one
+    // that names no move keeps its own answer, where a select that names no page stays unknown.
+    const named = pageUrl(result)
+    tracker.place(
+      input.session,
+      named === undefined ? placed(input.entry.name, input.args, input.result) : { kind: "page", url: named },
+    )
 
     const content: Tool.Content[] = [{ type: "text", text: viewed.text }]
     for (const block of result.content) {
@@ -618,6 +623,11 @@ function shaped(input: {
       },
     } as Tool.Result
   })
+}
+
+/** Only the extension names its tab group after the conversation, so only it pays the session read. */
+function titleFor(deps: Deps, backend: Settings["backend"], context: Tool.Context) {
+  return backend === "extension" ? deps.title(context.sessionID) : Effect.succeed<string | undefined>(undefined)
 }
 
 function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
@@ -662,7 +672,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     const session = String(context.sessionID)
     const grants = grantsFor(session)
     const allowSensitive = browser.allowSensitive
-    const title = yield* deps.title(context.sessionID)
+    const title = yield* titleFor(deps, choice.backend, context)
 
     // Ask, then call. A backend that discovers the real origin at action time (redirects, frames, sensitive elements,
     // downloads) reports it as needs_permission; the call is retried once per distinct need it reports, with the new

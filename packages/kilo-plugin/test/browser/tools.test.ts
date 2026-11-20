@@ -176,6 +176,8 @@ async function boot(
   const statuses: (() => Effect.Effect<unknown>)[] = []
   const controls: Record<"share" | "adopt", (input: { sessionID: string }) => Effect.Effect<unknown>>[] = []
   const notices: unknown[] = []
+  // Every session-store read the tools make: only the extension backend's calls may need one.
+  const titles: string[] = []
   const ctx = {
     location: { directory: "/tmp/browser-tools-test" },
     skill: {
@@ -214,7 +216,10 @@ async function boot(
           : Stream.fromPubSub(events).pipe(Stream.filter((event) => input?.types?.includes(event.type) ?? true)),
     },
     session: {
-      get: () => Effect.succeed({ title: options.sessionTitle }),
+      get: (input: { sessionID: string }) => {
+        titles.push(String(input.sessionID))
+        return Effect.succeed({ title: options.sessionTitle })
+      },
     },
     permission: {
       hook: (_: string, callback: Hook) =>
@@ -302,6 +307,7 @@ async function boot(
     call,
     evaluate,
     registrations,
+    titles,
     status,
     control,
     notices,
@@ -1020,6 +1026,66 @@ describe("browser tools over the extension backend", () => {
     const refused = await host.call("browser_snapshot", {}, "ses_post_action")
     expect(refused._tag === "Failure" ? (refused.failure as Tool.Error).message : "").toBe(
       "Permission for read on https://x.example was not granted. The tab is still on https://x.example/a. Continue without this action.",
+    )
+  })
+
+  test("only an extension call reads the conversation's title", async () => {
+    // The extension names its tab group after the conversation; another backend has nothing to name.
+    const extension = await boot(
+      { backend: "extension" },
+      { hub: fakeHub().service, sessionTitle: "Fix the login form" },
+    )
+    await extension.call("browser_snapshot")
+    expect(extension.titles).toEqual(["ses_browser"])
+    const playwright = await boot({ backend: "playwright" }, { sessionTitle: "Fix the login form" })
+    await playwright.call("browser_snapshot").catch(() => undefined)
+    expect(playwright.titles).toEqual([])
+  })
+
+  test("a click that navigates places the tab where the page state found it", async () => {
+    const feedback = "Continue without this action."
+    // The session's rules let the page state read a snapshot; only the action itself is refused.
+    const permission = Option.some({
+      assert: (input: { action: string }) =>
+        input.action === "browser" ? Effect.fail(new Permission.CorrectedError({ feedback })) : Effect.void,
+      allows: () => Effect.succeed(true),
+    } as unknown as Permission.Interface)
+    const login = page("http://localhost:3000/login", "Login")
+    const welcome = page("http://localhost:3000/welcome", "Welcome")
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name === "browser_click") return Promise.resolve({ content: [{ type: "text", text: "Clicked." }] })
+        if (input.name === "browser_navigate" && input.arguments.url === "https://x.example/")
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "needs permission",
+              items: [{ class: "navigate", origin: "https://x.example" }],
+            }),
+          )
+        if (input.name === "browser_tabs")
+          return Promise.resolve({
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  tabs: [{ selected: true, title: "Welcome", url: "http://localhost:3000/welcome" }],
+                }),
+              },
+            ],
+          })
+        return Promise.resolve({
+          content: [{ type: "text", text: input.name === "browser_snapshot" ? welcome : login }],
+        })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission })
+    expect((await host.call("browser_navigate", { url: "http://localhost:3000/login" }))._tag).toBe("Success")
+    // The click's own answer names no page: where it left the tab is what its page state read found.
+    expect((await host.call("browser_click", { target: "e1" }))._tag).toBe("Success")
+    const refused = await host.call("browser_navigate", { url: "https://x.example/" })
+    expect(refused._tag === "Failure" ? (refused.failure as Tool.Error).message : "").toBe(
+      "Permission for navigate on https://x.example was not granted. The tab is still on http://localhost:3000/welcome. Continue without this action.",
     )
   })
 

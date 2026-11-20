@@ -22,7 +22,7 @@ const decodeOpened = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Str
  * The page a result shows: the browser's own report, the Playwright-style `Page URL` line, or the `{ title, url }`
  * answer the extension gives for a navigation.
  */
-function pageUrl(result: CallResult) {
+export function pageUrl(result: CallResult) {
   const text = textOf(result)
   return (
     result.meta?.url ??
