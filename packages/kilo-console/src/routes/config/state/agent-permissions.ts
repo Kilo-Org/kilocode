@@ -22,6 +22,9 @@ export function removeRule(permission: Permission, item: { tool: string; pattern
   }
   const only = keys.length === 1 && keys[0] === "*"
   const value = map["*"]
+  // A scalar "allow" belongs to the agent tool allowlist rather than the
+  // permission map, so an allow catch-all stays a map. Only ask and deny
+  // become scalars.
   if (only && (value === "ask" || value === "deny")) {
     next[item.tool] = value
     return next
