@@ -57,6 +57,11 @@ if (expected.toLowerCase() !== data.mergeCommit.oid.toLowerCase()) {
   )
 }
 
+const head = (await $`git rev-parse HEAD`.text()).trim()
+if (head.toLowerCase() !== data.mergeCommit.oid.toLowerCase()) {
+  throw new Error(`Checked out ${head}, which is not merge commit ${data.mergeCommit.oid} of release PR ${pr}`)
+}
+
 const ver = need(data.body, "JetBrains-Version")
 const kind = need(data.body, "JetBrains-Kind")
 const tag = need(data.body, "JetBrains-Tag")
