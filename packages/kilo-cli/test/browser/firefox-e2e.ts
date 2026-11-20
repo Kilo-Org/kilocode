@@ -314,6 +314,20 @@ function statusOf(): Status {
 }
 
 /**
+ * A plain run ends with exit 1 when the CLI auto-rejected at least one ask, with this diagnostic on stderr
+ * (`packages/cli/src/kilocode/run-permission.ts`). That is the documented contract, not a harness failure, so the
+ * scenario keeps checking what it was written to check. Any other non-zero exit still fails.
+ */
+const AUTO_REJECTED = "run ended with an auto-rejected permission"
+
+function expectRunCompleted(name: string, result: Run) {
+  expect(
+    result.code === 0 || (result.code === 1 && result.stderr.includes(AUTO_REJECTED)),
+    `${name}: the run exited ${result.code}: ${result.stderr.slice(-600)}`,
+  )
+}
+
+/**
  * A run whose calls the CLI refused for permission measured nothing: in a non-interactive run every ask is
  * auto-rejected, so the message names the browser permissions the CLI asked for (`<class>:<origin>`).
  */
@@ -987,7 +1001,7 @@ async function navigateSnapshot() {
   const after = results[3] ?? ""
   expect(snapshot.includes('button "Click me"'), `the snapshot has no button:\n${snapshot.slice(0, 500)}`)
   expect(clicked.includes("clicked") || after.includes("clicked"), `the click did not change the page:\n${clicked.slice(0, 500)}\n---\n${after.slice(0, 500)}`)
-  expect(result.code === 0, `run exited ${result.code}\n${result.stderr.slice(-1_500)}`)
+  expectRunCompleted(scenario, result)
   const shot = await evidence("after-run")
   return {
     hubLog: result.hub?.log.text.slice(-2_000),
@@ -1381,7 +1395,7 @@ async function parity() {
   })
   const shot = await evidence("after-parity")
   // Parity reports which tools Firefox lacks; it fails only when the run broke or a tool gave no answer at all.
-  expect(result.code === 0, `parity: the run exited ${result.code}: ${result.stderr.slice(-600)}`)
+  expectRunCompleted("parity", result)
   expectNoRefusals("parity", result)
   const silent = rows.filter((row) => row.text === "(no result)").map((row) => `${row.index} ${row.tool}`)
   expect(silent.length === 0, `parity: ${silent.length} of ${order.length} tools gave no result: ${silent.join(", ")}`)
@@ -1408,7 +1422,7 @@ async function dialog() {
   const result = await run(plan, { allowSensitive: true })
   clearTimeout(watcher)
   const times = toolTimes(result.stdout)
-  expect(result.code === 0, `dialog: the run exited ${result.code}: ${result.stderr.slice(-600)}`)
+  expectRunCompleted("dialog", result)
   expectNoRefusals("dialog", result)
   expect(result.last.results.length === 6, `dialog: ${result.last.results.length} of 6 tool calls answered`)
   return {
@@ -1534,7 +1548,7 @@ async function perf() {
   }).length
   const visibility = await inContext<[number, string][]>(user.context, () => (window as unknown as { __vis: [number, string][] }).__vis)
   const state = await tabState()
-  expect(result.code === 0, `perf run exited ${result.code}: ${result.stderr.slice(-800)}`)
+  expectRunCompleted("perf", result)
   // Timings of refused calls are not browser latency: with the gate reading every page as opaque:null the clicks,
   // snapshots and screenshots are all auto-rejected, and the run read as a pass.
   expectNoRefusals("perf", result)
