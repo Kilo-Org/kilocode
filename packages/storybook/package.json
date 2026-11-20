@@ -28,7 +28,7 @@
     "@opencode-ai/session-ui": "workspace:*",
     "react-dom": "18.2.0"
   },
-  "version": "7.8.30",
+  "version": "7.8.31",
   "dependencies": {},
   "peerDependencies": {}
 }

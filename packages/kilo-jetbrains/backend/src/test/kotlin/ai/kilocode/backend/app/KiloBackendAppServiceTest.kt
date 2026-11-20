@@ -346,6 +346,101 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `startup reads the telemetry opt-out from the config file`() = runBlocking {
+        mock.config = """{"experimental":{"openTelemetry":false}}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.telemetry == false }
+        }
+
+        assertEquals(false, svc.config?.telemetry)
+    }
+
+    @Test
+    fun `older CLI still reaches ready with telemetry settings unavailable`() = runBlocking {
+        mock.telemetryStatus = 404
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertTrue(mock.awaitRequestCount("/telemetry/level", 1))
+        assertEquals(null, svc.config?.telemetry)
+        assertEquals(null, mock.lastTelemetryLevelBody)
+    }
+
+    @Test
+    fun `effective level stays off after saving and refreshing an opt-in under a host opt-out`() = runBlocking {
+        mock.telemetryAllowed = false
+        mock.config = """{"model":"initial","experimental":{"openTelemetry":true}}"""
+        val svc = create()
+        svc.connect()
+        withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.telemetry == false }
+        }
+
+        val state = svc.setTelemetryLevel(true)
+        assertEquals("""{"enabled":true}""", mock.lastTelemetryLevelBody)
+        assertEquals(false, appStateDto(state).config?.telemetry)
+        mock.awaitSseConnection()
+        mock.config = """{"model":"updated","experimental":{"openTelemetry":true}}"""
+        mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
+        val refreshed = withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.model == "updated" }
+        }
+        assertEquals(false, appStateDto(refreshed).config?.telemetry)
+    }
+
+    @Test
+    fun `core telemetry save updates state even when config reads fail`() = runBlocking {
+        mock.config = """{"model":"initial","experimental":{"openTelemetry":true}}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        mock.configStatus = 500
+        val reads = mock.requestCount("/global/config")
+
+        val state = svc.setTelemetryLevel(false)
+
+        assertEquals("""{"enabled":false}""", mock.lastTelemetryLevelBody)
+        assertEquals(false, appStateDto(state).config?.telemetry)
+        assertEquals(false, svc.config?.telemetry)
+        assertEquals("initial", svc.config?.model)
+        assertEquals(reads, mock.requestCount("/global/config"))
+    }
+
+    @Test
+    fun `telemetry save preserves config refreshed while the write was in flight`() = runBlocking {
+        mock.config = """{"model":"initial","experimental":{"openTelemetry":true}}"""
+        val svc = create()
+        svc.connect()
+        withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.telemetry == true }
+        }
+        mock.awaitSseConnection()
+        val gate = CountDownLatch(1)
+        mock.telemetryGate = gate
+        val requests = mock.requestCount("/telemetry/level")
+        val save = async(start = CoroutineStart.UNDISPATCHED) { svc.setTelemetryLevel(false) }
+
+        try {
+            assertTrue(mock.awaitRequestCount("/telemetry/level", requests + 1))
+            mock.config = """{"model":"updated","experimental":{"openTelemetry":true}}"""
+            mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
+            withTimeout(5_000) {
+                svc.appState.first { it is KiloAppState.Ready && it.data.config.model == "updated" }
+            }
+        } finally {
+            gate.countDown()
+        }
+
+        val cfg = appStateDto(save.await()).config
+        assertEquals("updated", cfg?.model)
+        assertEquals(false, cfg?.telemetry)
+    }
+
+    @Test
     fun `update config patches retention and reloads`() = runBlocking {
         val svc = create()
         svc.connect()
