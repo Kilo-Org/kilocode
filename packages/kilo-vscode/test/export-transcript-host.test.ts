@@ -52,7 +52,7 @@ beforeAll(async () => {
 afterAll(async () => {
   // `stop` closes stdin and resolves before the child exits, so the profile and database it holds stay open.
   const exited = new Promise<void>((resolve) => {
-    if (!target || target.process.exitCode !== null) {
+    if (!target || target.process.exitCode !== null || target.process.signalCode !== null) {
       resolve()
       return
     }
