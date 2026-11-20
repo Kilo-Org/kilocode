@@ -256,10 +256,8 @@ jobs:
           NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: |
           set -o pipefail
-          # The rebuild decides the outcome, not the agent's exit code: under
-          # `set -o pipefail` + the default `bash -e` a mid-stream session error
-          # would otherwise abort before verify2.log is written and the status
-          # step would report VERIFIED=false even when the docs build fine.
+          # This step decides the outcome: a failed build or test fails it, and
+          # `set -o pipefail` is what carries that through the tee.
           { bun run --filter @kilocode/kilo-docs build && bun run --filter @kilocode/kilo-docs test; } 2>&1 | tee docs-sync-out/verify2.log
 
       - name: Re-verify status

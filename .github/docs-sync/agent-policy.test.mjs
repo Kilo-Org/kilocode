@@ -59,7 +59,7 @@ check("tools-denied denies every tool", () => {
   assert.equal(permission["*"], "deny", "tools-denied must deny everything")
 })
 
-check("docs-write confines edits to the docs package and the agent summary file", () => {
+check("docs-write confines edits to the docs content and the agent summary file", () => {
   const edit = policy().modes["docs-write"].permission.edit
   const keys = Object.keys(edit)
   assert.equal(keys[0], "*", "the catch-all must come first: permission evaluation takes the last matching rule")
@@ -67,9 +67,22 @@ check("docs-write confines edits to the docs package and the agent summary file"
   const allowed = keys.filter((k) => edit[k] === "allow")
   assert.deepEqual(
     allowed,
-    ["packages/kilo-docs/*", "docs-sync-out/edit-summary-*.json", "edit-summary-*.json"],
-    "only the docs package and the agent's own summary file may be written",
+    ["packages/kilo-docs/pages/*", "packages/kilo-docs/lib/nav/*", "docs-sync-out/edit-summary-*.json", "edit-summary-*.json"],
+    "only docs pages, navigation files and the agent's own summary file may be written",
   )
+  assert.ok(!allowed.includes("packages/kilo-docs/*"), "the package root must stay out: it holds the build and test definitions")
+})
+
+check("docs-write denies every tool it does not name", () => {
+  const permission = policy().modes["docs-write"].permission
+  assert.equal(Object.keys(permission)[0], "*", "the catch-all must come first")
+  assert.equal(permission["*"], "deny")
+})
+
+check("both modes allow read, which the CLI uses for a -f attachment", () => {
+  for (const mode of ["tools-denied", "docs-write"]) {
+    assert.equal(policy().modes[mode].permission.read, "allow", `${mode} must allow read`)
+  }
 })
 
 check("docs-write denies bash by default and allows no interpreter", () => {
@@ -116,7 +129,7 @@ check("configContent merges over an existing KILO_CONFIG_CONTENT", () => {
   const base = JSON.stringify({ provider: { test: { npm: "@ai-sdk/openai-compatible" } } })
   const cfg = JSON.parse(configContent(MODE.toolsDenied, base))
   assert.ok(cfg.provider.test, "existing provider config must survive")
-  assert.deepEqual(cfg.permission, { "*": "deny" })
+  assert.deepEqual(cfg.permission, { ...policy().modes["tools-denied"].permission })
 })
 
 check("configContent rejects an unknown mode", () => {

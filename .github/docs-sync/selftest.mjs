@@ -574,7 +574,9 @@ function case2b_autoFlag() {
       assert.ok(typeof policy === "string" && policy.length > 0, "every kilo invocation must carry KILO_CONFIG_CONTENT")
       const permission = JSON.parse(policy).permission
       assert.equal(permission.edit["*"], "deny", "the edit policy must deny writes by default")
-      assert.equal(permission.edit["packages/kilo-docs/*"], "allow", "the edit policy must allow the docs package")
+      assert.equal(permission.edit["packages/kilo-docs/pages/*"], "allow", "the edit policy must allow the docs pages")
+      assert.equal(permission.edit["packages/kilo-docs/lib/nav/*"], "allow", "the edit policy must allow the docs navigation")
+      assert.equal(permission.read, "allow", "the edit policy must allow read, which the CLI uses for a -f attachment")
       assert.equal(permission.bash["git *"], "deny", "the edit policy must deny git")
     }
   }
