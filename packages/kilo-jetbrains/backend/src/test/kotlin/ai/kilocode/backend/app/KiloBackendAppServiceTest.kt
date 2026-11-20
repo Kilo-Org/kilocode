@@ -1428,6 +1428,30 @@ class KiloBackendAppServiceTest {
     }
 
     /**
+     * A read that reports an error is a read that could not complete, not a signed-out answer, so a
+     * reload keeps the account it holds instead of failing the whole load over an optional resource.
+     */
+    @Test
+    fun `reload after an account step keeps the account when the profile read reports an error`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertEquals("alice@test.com", svc.profile?.profile?.email, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        // A status the tolerant read does not map to a signed-out answer, so it reports an error.
+        mock.profileStatus = 429
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    /**
      * A definitive 401 is a signed-out answer: the reload publishes no account.
      */
     @Test

@@ -800,7 +800,7 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test a retry that answers signed out leaves the notice and offers the sign-in again`() {
+    fun `test a retry that answers signed out clears the notice and offers the sign-in again`() {
         val profile = ProfileDto(email = "alice@test.com", name = "Alice")
         rpc.completeResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
         rpc.completeGate = CompletableDeferred()

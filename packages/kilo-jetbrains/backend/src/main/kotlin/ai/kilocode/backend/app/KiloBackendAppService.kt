@@ -423,20 +423,23 @@ class KiloBackendAppService private constructor(
                         launch {
                             val result = fetchProfile()
                             val held = profile
+                            // A reload keeps the account it already holds whenever its own read did not
+                            // produce one: a definitive signed-out answer alone may clear it.
+                            val keep = held != null && !result.signedOut
                             val status = when {
-                                result.error != null -> {
+                                result.error != null && !keep -> {
                                     errors.add(result.error)
                                     throw LoadFailure(result.error)
+                                }
+                                result.error != null -> {
+                                    prof = held
+                                    ProfileResult.LOADED
                                 }
                                 result.value != null -> {
                                     prof = result.value
                                     ProfileResult.LOADED
                                 }
-                                // A definitive signed-out answer publishes no account. A read that
-                                // could not complete keeps the account this service holds, so a reload
-                                // leaves the published account in place; only a load with nothing held
-                                // yet publishes no account.
-                                held != null && !result.signedOut -> {
+                                keep -> {
                                     prof = held
                                     ProfileResult.LOADED
                                 }
