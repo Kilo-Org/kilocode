@@ -11,6 +11,7 @@ const { values } = parseArgs({
   args: Bun.argv.slice(2),
   options: {
     pr: { type: "string" },
+    merge: { type: "string" },
     dry: { type: "boolean", default: false },
     help: { type: "boolean", short: "h", default: false },
   },
@@ -18,7 +19,8 @@ const { values } = parseArgs({
 
 if (values.help) {
   console.log(`
-Usage: bun script/jetbrains-release-validate.ts --pr <number> [--dry]
+Usage: bun script/jetbrains-release-validate.ts --pr <number> --merge <sha> [--dry]
+--merge is the commit checked out for this release; it must equal the release PR merge commit.
 
 Validates a merged JetBrains release PR and the pre-created immutable release tag.
 This helper never creates, moves, deletes, or pushes tags.
@@ -28,6 +30,9 @@ This helper never creates, moves, deletes, or pushes tags.
 
 const pr = values.pr ?? process.env.PR_NUMBER
 if (!pr) throw new Error("--pr is required")
+const expected = values.merge ?? process.env.MERGE_COMMIT
+if (!expected) throw new Error("--merge is required")
+if (!/^[0-9a-f]{40}$/i.test(expected)) throw new Error(`Invalid expected merge commit: ${expected}`)
 
 type Pull = {
   body: string
@@ -46,6 +51,11 @@ if (!labels.has("jetbrains-release")) throw new Error("PR is missing jetbrains-r
 if (data.isCrossRepository) throw new Error("JetBrains release PR must come from this repository")
 if (data.state !== "MERGED" || !data.mergedAt) throw new Error("JetBrains release PR must be merged")
 if (!data.mergeCommit?.oid) throw new Error("PR has no merge commit")
+if (expected.toLowerCase() !== data.mergeCommit.oid.toLowerCase()) {
+  throw new Error(
+    `Merge commit mismatch: this run checked out ${expected}, release PR ${pr} merged as ${data.mergeCommit.oid}`,
+  )
+}
 
 const ver = need(data.body, "JetBrains-Version")
 const kind = need(data.body, "JetBrains-Kind")
