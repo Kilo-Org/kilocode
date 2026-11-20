@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import kotlinx.coroutines.CancellationException
 
 /** A decision the local server refuses must stay visible: the card reports it and remains answerable. */
 class ReplyFailureTest : SessionControllerTestBase() {
@@ -183,6 +184,28 @@ class ReplyFailureTest : SessionControllerTestBase() {
         assertEquals("perm1", state.permission.id)
         assertEquals(PermissionRequestState.ERROR, state.permission.state)
         assertEquals("refused", state.permission.message)
+    }
+
+    fun `test cancelled auto approval leaves no error card`() {
+        val (m, _, _) = prompted()
+        rpc.pendingPermissionList.add(permission("perm1"))
+        rpc.pendingPermissionList.add(permission("perm2"))
+        // A cancelled reply is not a refusal: the batch was superseded, so the service never said no.
+        rpc.replyPermissionThrows = CancellationException("superseded")
+        rpc.replyPermissionThrowsFor = setOf("perm1")
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        // The cancellation stops the batch: the second request is never attempted and nothing is replied.
+        assertEquals(listOf("perm1"), rpc.permissionReplyAttempts)
+        assertTrue(rpc.permissionReplies.isEmpty())
+        // No card claims a refusal the service never sent.
+        val card = m.model.state as? SessionState.AwaitingPermission
+        assertTrue(
+            "A cancelled batch must publish no ERROR card, but got ${card?.permission}",
+            card?.permission?.state != PermissionRequestState.ERROR,
+        )
     }
 
     fun `test refused child auto approval during recovery leaves an error card`() {

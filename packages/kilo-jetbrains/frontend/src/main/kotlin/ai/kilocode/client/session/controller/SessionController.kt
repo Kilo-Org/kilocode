@@ -1288,6 +1288,8 @@ class SessionController(
                         model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(id)} kind=permission-auto-drain dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
             }
@@ -1313,6 +1315,8 @@ class SessionController(
             if (manual(request.metadata)) continue
             try {
                 sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(request.sessionID)} kind=permission-auto rid=${request.id} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 refused.add(request to (e.message ?: KiloBundle.message("session.permission.error")))
@@ -2016,6 +2020,8 @@ class SessionController(
                     updateModel { promote() }
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             LOG.warn("${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
         }
