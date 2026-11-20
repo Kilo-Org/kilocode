@@ -63,7 +63,7 @@ const mcpTest = testEffect(
   ]),
 )
 
-function serveOAuthMcp(hooks?: { beforeToken?: () => Promise<void> }) {
+function serveOAuthMcp(hooks?: { beforeToken?: () => Promise<void>; beforeChallenge?: () => Promise<void> }) {
   return Effect.acquireRelease(
     Effect.promise(async () => {
       const challenges = new Map<string, string>()
@@ -91,6 +91,8 @@ function serveOAuthMcp(hooks?: { beforeToken?: () => Promise<void> }) {
           if (url.pathname === "/mcp") {
             if (request.headers.get("authorization") === "Bearer test-access-token")
               return transport.handleRequest(request)
+            // Lets a test act while the challenge that starts a flow is being issued.
+            if (hooks?.beforeChallenge) await hooks.beforeChallenge()
             return new Response("Unauthorized", {
               status: 401,
               headers: {
@@ -437,6 +439,44 @@ mcpTest.instance("a cancelled sign-in that finishes its exchange stores nothing"
     release.resolve()
 
     const status = yield* awaitWithTimeout(Fiber.join(run), "Timed out discarding the cancelled exchange", "10 seconds")
+
+    expect(status).toEqual({
+      status: "failed",
+      error: "Browser authorization was discarded: this sign-in was cancelled",
+    })
+    expect((yield* auth.get(name))?.tokens).toBeUndefined()
+  }),
+)
+
+mcpTest.instance("a removal during the challenge fetch does not store the flow's credentials", () =>
+  Effect.gen(function* () {
+    yield* withCallbackStop
+    const started = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    // `add` answers the same challenge once, before the flow under test starts.
+    let armed = false
+    const server = yield* serveOAuthMcp({
+      beforeChallenge: () => {
+        if (!armed) return Promise.resolve()
+        started.resolve()
+        return release.promise
+      },
+    })
+    const auth = yield* McpAuth.Service
+    const name = "test-oauth-removed-during-challenge"
+    const mcp = yield* addServer(name, server.url)
+
+    // The challenge that starts the flow arrives while this flow's connect is still under way.
+    armed = true
+    const run = yield* Effect.forkScoped(mcp.authenticate(name))
+    yield* Effect.promise(() => started.promise)
+
+    // The removal lands before the flow has an entry of its own to bump, so only the epoch the
+    // flow captured when it started can stop it from storing the credential.
+    yield* mcp.removeAuth(name)
+    release.resolve()
+
+    const status = yield* awaitWithTimeout(Fiber.join(run), "Timed out discarding the challenged flow", "10 seconds")
 
     expect(status).toEqual({
       status: "failed",

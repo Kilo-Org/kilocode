@@ -196,7 +196,7 @@ interface AuthResult {
   // kilocode_change start - identifies the flow that opened the browser
   provider?: McpOAuthPendingProvider
   transport?: TransportWithAuth
-  epoch?: number
+  epoch: number // kilocode_change - captured before the connect, so every path carries it
   // kilocode_change end
 }
 
@@ -997,20 +997,23 @@ const layer = Layer.effect(
         requestInit: mcpConfig.headers ? { headers: mcpConfig.headers } : undefined,
       })
       const directory = yield* InstanceState.directory
+      // kilocode_change - the flow records the epoch it started in, before the connect that can be
+      // overtaken by a removal or a cancelled sign-in; reading it afterwards would read theirs
+      const epoch = epochOf(mcpName)
 
       return yield* Effect.tryPromise({
         try: () => {
           const client = createClient(directory)
           return client.connect(transport).then(async () => {
-            await authProvider.commit()
-            return { authorizationUrl: "", oauthState, client } satisfies AuthResult
+            // kilocode_change - a connect that needs no browser still stores nothing once its epoch moved
+            await authProvider.commit(() => epochOf(mcpName) === epoch)
+            return { authorizationUrl: "", oauthState, client, epoch } satisfies AuthResult // kilocode_change
           })
         },
         catch: (error) => error,
       }).pipe(
         Effect.catch((error) => {
           if (error instanceof UnauthorizedError && capturedUrl) {
-            const epoch = epochOf(mcpName) // kilocode_change - the flow records the epoch it started in
             pendingOAuthTransports.set(mcpName, { transport, provider: authProvider, epoch }) // kilocode_change
             return Effect.succeed({
               authorizationUrl: capturedUrl.toString(),
@@ -1114,7 +1117,7 @@ const layer = Layer.effect(
       const flow: PendingFlow = {
         transport: result.transport!,
         provider: result.provider,
-        epoch: result.epoch ?? epochOf(mcpName),
+        epoch: result.epoch, // kilocode_change - startAuth captures it before the connect
       }
       if (!callback.ok) {
         // A newer attempt for the same server can take this flow's callback listener over
