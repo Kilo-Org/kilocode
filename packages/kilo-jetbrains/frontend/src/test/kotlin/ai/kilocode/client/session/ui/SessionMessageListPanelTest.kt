@@ -74,6 +74,8 @@ import java.awt.Component
 import java.awt.Container
 import java.awt.Cursor
 import java.awt.Point
+import java.awt.event.ContainerAdapter
+import java.awt.event.ContainerEvent
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import javax.swing.JButton
@@ -1652,6 +1654,75 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     // ------ active view tests ------
 
+    fun `test footer stays attached through state churn and transcript changes`() {
+        UIUtil.dispatchAllInvocationEvents()
+        val factory = EditorFactory.getInstance()
+        val editors = factory.allEditors.size
+        val banner = RevertBanner(model, {}, {}, {})
+        val item = panelWithPrompts(banner)
+        val footer = item.components.toList()
+        val changes = mutableListOf<Component>()
+        item.addContainerListener(object : ContainerAdapter() {
+            override fun componentAdded(event: ContainerEvent) {
+                if (event.child !is TurnView) changes.add(event.child)
+            }
+
+            override fun componentRemoved(event: ContainerEvent) {
+                if (event.child !is TurnView) changes.add(event.child)
+            }
+        })
+
+        val busy = SessionState.Busy("Working")
+        val awaiting = SessionState.AwaitingQuestion(question())
+        model.setState(busy)
+        model.setState(awaiting)
+        val size = count(item)
+        repeat(200) {
+            model.setState(busy)
+            model.setState(awaiting)
+        }
+        assertTrue("state changes must not detach or reattach footer cards", changes.isEmpty())
+        assertEquals(footer, item.components.toList())
+        assertEquals(size, count(item))
+
+        val history = listOf(MessageWithPartsDto(msg("u1", "user"), emptyList()))
+        model.loadHistory(history)
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "```kotlin\nval answer = 1\n```"))
+        model.upsertMessage(msg("u2", "user"))
+        assertTrue(factory.allEditors.size > editors)
+        assertEquals(listOf(item.findTurn("u1"), item.findTurn("u2")) + footer, item.components.toList())
+        model.removeMessage("u2")
+        assertEquals(listOf(item.findTurn("u1")) + footer, item.components.toList())
+
+        model.clear()
+        UIUtil.dispatchAllInvocationEvents()
+        assertEquals(footer, item.components.toList())
+        assertEquals(editors, factory.allEditors.size)
+        assertTrue("history, new turns and clear must not reattach footer cards", changes.isEmpty())
+        Disposer.dispose(parent)
+        assertEquals(0, item.componentCount)
+    }
+
+    fun `test replacing the outcome card preserves footer order`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        val item = panelWithPrompts(banner)
+        val previous = item.outcome
+        val next = SessionOutcomeView()
+        val before = item.components.takeWhile { it !== previous }
+
+        model.setState(SessionState.Error("Failed"))
+        item.outcome = next
+
+        assertNull(previous!!.parent)
+        assertTrue(next.isVisible)
+        assertEquals(before + listOf(next, banner, item.progress), item.components.toList())
+
+        item.outcome = null
+        assertNull(next.parent)
+        assertEquals(before + listOf(banner, item.progress), item.components.toList())
+    }
+
     fun `test active question is anchored before progress footer`() {
         val item = panelWithPrompts()
         model.upsertMessage(msg("u1", "user"))
@@ -2452,7 +2523,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     // ------ helpers ------
 
-    private fun panelWithPrompts(): SessionMessageListPanel {
+    private fun panelWithPrompts(banner: RevertBanner? = null): SessionMessageListPanel {
         val q = QuestionView(
             project = project,
             reply = { _, _, _ -> },
@@ -2463,7 +2534,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         )
         val l = LoginRequiredView(openProfile = {}, dismiss = {})
         val o = SessionOutcomeView()
-        return SessionMessageListPanel(model, parent, q, p, l, openFile, schedule = { it() }).also { it.outcome = o }
+        return SessionMessageListPanel(model, parent, q, p, l, openFile, banner = banner, schedule = { it() }).also { it.outcome = o }
     }
 
     private inline fun <reified T> find(root: Container): T? = findCls(root, T::class.java)
