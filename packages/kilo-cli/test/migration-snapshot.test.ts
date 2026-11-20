@@ -117,7 +117,8 @@ test("insufficient space on the backup volume leaves no partial file", async () 
   const probe = spyOn(fs, "statfsSync").mockReturnValueOnce(full)
   try {
     await expect(snapshot(source, backup)).rejects.toThrow(/Insufficient space/)
-    expect(path.dirname(String(probe.mock.calls[0]?.[0]))).toBe(fs.realpathSync(dir))
+    // Match the native path used for staging (Windows TEMP may use an 8.3 alias).
+    expect(path.dirname(String(probe.mock.calls[0]?.[0]))).toBe(fs.realpathSync.native(dir))
     expect(fs.readdirSync(dir)).toEqual([])
     expect(fs.readFileSync(source)).toEqual(before)
   } finally {

@@ -46,10 +46,13 @@ async function interactive(p: ReturnType<typeof profile>, reply: string, args = 
   let text = ""
   let replied = false
   const decoder = new TextDecoder()
+  const rendered = Promise.withResolvers<void>()
   const terminal = new Bun.Terminal({
     cols: 160,
+    rows: 40,
     data(tty, bytes) {
       text += decoder.decode(bytes, { stream: true })
+      if (/result: (true|false)/.test(Bun.stripANSI(text))) rendered.resolve()
       if (!replied && text.includes("[y/N]")) {
         replied = true
         tty.write(reply)
@@ -57,7 +60,15 @@ async function interactive(p: ReturnType<typeof profile>, reply: string, args = 
     },
   })
   try {
-    const child = Bun.spawn(args, { cwd: p.root, env: p.env, terminal, timeout: 10_000 })
+    const child = Bun.spawn(args, {
+      cwd: p.root,
+      env: p.env,
+      terminal,
+      timeout: 10_000,
+      ...(args === command && { ipc() {} }),
+    })
+    if (args === command && (await Promise.race([rendered.promise.then(() => true), child.exited.then(() => false)])))
+      child.send("observed")
     const code = await child.exited
     return { code, text: Bun.stripANSI(text).replaceAll("\r", "") }
   } finally {
@@ -129,7 +140,11 @@ test("shows the full plan before accepting and reports phases and real row count
   const wal = statSync(`${p.source}-wal`).size
   const result = await interactive(p, "yes\r")
   expect(result.code, result.text).toBe(0)
-  const [plan, run] = result.text.split("[y/N]")
+  // ConPTY can repaint the prompt while echoing the reply. Keep the whole transcript after its first occurrence.
+  const prompt = result.text.indexOf("[y/N]")
+  expect(prompt).toBeGreaterThanOrEqual(0)
+  const plan = result.text.slice(0, prompt)
+  const run = result.text.slice(prompt)
   expect(plan).toContain(`Source: ${p.source}`)
   expect(plan).toContain(`${(size + wal).toLocaleString("en-US")} bytes`)
   expect(plan).toContain(`WAL: ${wal.toLocaleString("en-US")} bytes`)
@@ -137,7 +152,7 @@ test("shows the full plan before accepting and reports phases and real row count
   expect(plan).toContain(`Proposed backup: ${p.backup}`)
   expect(plan).toContain("Close all Kilo v1 and preview clients")
   expect(plan).toContain("JetBrains cannot use this database")
-  expect(run).toContain("Backing up\nChecking sessions 0/1\nChecking sessions 1/1\nresult: true")
+  expect(run).toMatch(/Backing up[\s\S]*?Checking sessions 0\/1[\s\S]*?Checking sessions 1\/1[\s\S]*?result: true/)
   using copy = new Database(p.backup, { readonly: true })
   expect(copy.query("SELECT id FROM session").all()).toEqual([{ id: 1 }])
 })

@@ -19,7 +19,16 @@ try {
     report({ phase: "Checking sessions", done: 0, total })
     report({ phase: "Checking sessions", done: total, total })
   })
+  // ConPTY paints asynchronously. Keep the fixture alive until the driver has
+  // actually seen the result, instead of racing the last paint against process exit.
+  const observed = process.connected
+    ? new Promise<void>((resolve) => process.once("message", () => resolve()))
+    : undefined
   console.log(`result: ${accepted}`)
+  if (observed) {
+    await observed
+    process.disconnect?.()
+  }
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error))
   process.exitCode = 1
