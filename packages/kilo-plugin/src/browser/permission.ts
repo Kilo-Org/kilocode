@@ -109,7 +109,6 @@ export namespace BrowserPermission {
     browser_press_key: true,
     browser_type: true,
     browser_navigate_back: true,
-    browser_run_code_unsafe: true,
     browser_click: true,
     browser_drag: true,
     browser_hover: true,
@@ -130,7 +129,7 @@ export namespace BrowserPermission {
   }
 
   /**
-   * The class a tool's call needs. `browser_evaluate` and `browser_run_code_unsafe` are `act` (D11). An unknown tool
+   * The class a tool's call needs. `browser_evaluate` is `act` (D11). An unknown tool
    * needs `act`: the strictest class of the three.
    */
   export function classOf(tool: string): Class {
