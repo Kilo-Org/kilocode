@@ -453,6 +453,38 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertEquals("connected", signIn.await().status)
     }
 
+    /**
+     * The reset publishes [KiloMcpAuthService.needsAuth] from a `finally`, so a cancelled reset
+     * still runs its cleanup. That cleanup must not leave the attempt abandoned when nothing was
+     * released, or a sign-in the user never lost reports `cancelled` and strands its own result.
+     */
+    fun `test reset keeps a running sign in alive when it is cancelled before either call lands`() =
+        runBlocking(Dispatchers.Default) {
+            val gate = CompletableDeferred<Unit>()
+            val entered = CompletableDeferred<Unit>()
+            rpc.beforeAuthenticate = { gate.await() }
+            rpc.mcpAuthenticateResult = McpAuthResultDto("connected")
+            // The cancel never lands: the reset is cancelled while it is still inside it.
+            rpc.mcpAuthCancelResult = false
+            rpc.mcpAuthRemoveResult = false
+            rpc.beforeMcpAuthCancel = {
+                entered.complete(Unit)
+                CompletableDeferred<Unit>().await()
+            }
+            val service = service(authTimeoutMs = 60_000L)
+            val signIn = async { service.signIn("/test", "linear") }
+            withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+            val reset = async { service.reset("/test", "linear") }
+            withTimeout(5000) { entered.await() }
+            reset.cancel()
+            withTimeout(2000) { reset.join() }
+
+            gate.complete(Unit)
+            assertEquals("the sign-in was never released", "connected", withTimeout(2000) { signIn.await() }.status)
+            assertTrue(service.busy.value.isEmpty())
+        }
+
     fun `test reset keeps needs auth state when reconnect fails`() = runBlocking(Dispatchers.Default) {
         rpc.mcps = listOf(McpStatusDto("linear", "connected"))
         rpc.mcpConnectError = RuntimeException("offline")

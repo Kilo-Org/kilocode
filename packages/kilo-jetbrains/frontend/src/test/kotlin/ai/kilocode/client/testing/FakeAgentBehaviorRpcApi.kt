@@ -52,6 +52,9 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var afterRemove: (suspend (String, String) -> Unit)? = null
     var afterMcpConnect: (suspend (String, String) -> Unit)? = null
     var afterMcpAuthCancel: (suspend () -> Unit)? = null
+
+    /** Runs at the top of `mcpAuthCancel`, before the call is recorded, so a test can hold it open. */
+    var beforeMcpAuthCancel: (suspend () -> Unit)? = null
     var createError: Exception? = null
     var agentsError: Exception? = null
     var skillsError: Exception? = null
@@ -234,6 +237,7 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
 
     override suspend fun mcpAuthCancel(directory: String, name: String): Boolean {
         assertNotEdt("agentBehavior.mcpAuthCancel")
+        beforeMcpAuthCancel?.invoke()
         mcpAuthCancels.add(name)
         mcpAuthCalls.add("cancel:$name")
         afterMcpAuthCancel?.invoke()
