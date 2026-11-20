@@ -351,20 +351,25 @@ async function downloadPath() {
   await clearDownloads()
   const url = `${localOrigin}/download`
   const expected = path.resolve(downloadsPath ?? "", "report.txt")
+  // A reused profile (E2E_HOME set) keeps Chrome's download list, so a rerun's second item for the same URL must not
+  // count against this run: only items that were not there before the navigation do.
+  const before = new Set((await downloadItems(worker)).map((item) => Number(item["id"])))
   const cdp = await browser.newBrowserCDPSession()
   await cdp.send("Target.createTarget", { newWindow: false, url })
   const items = await until(
     async () => {
       const listed = await downloadItems(worker)
-      return listed.some((item) => item["url"] === url && item["state"] === "complete") ? listed : undefined
+      return listed.some((item) => item["url"] === url && item["state"] === "complete" && !before.has(Number(item["id"])))
+        ? listed
+        : undefined
     },
     15_000,
     `Chrome's download list completes ${url}`,
   ).catch(async () => downloadItems(worker))
   const files = await downloadFiles()
   const bodies = await downloadBodies()
-  const mine = items.filter((item) => item["url"] === url)
-  expect(mine.length === 1, `Chrome's download list holds ${mine.length} items for ${url}: ${JSON.stringify(items)}`)
+  const mine = items.filter((item) => item["url"] === url && !before.has(Number(item["id"])))
+  expect(mine.length === 1, `the run added ${mine.length} download items for ${url}: ${JSON.stringify(mine)}`)
   expect(
     mine[0]?.["state"] === "complete" && mine[0]["filename"] === expected && mine[0]["exists"] === true,
     `the user download did not complete as ${expected}: ${JSON.stringify(mine[0])}`,
