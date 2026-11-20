@@ -26,6 +26,7 @@ import {
 } from "./backend"
 import { BrowserContract } from "./contract"
 import GUIDE from "./browser-skill.txt"
+import GUIDE_EXTENSION from "./browser-skill-extension.txt"
 import type { Entry } from "./contract-shape"
 import type { ExtensionBackend } from "./extension"
 import { BrowserHub } from "./hub"
@@ -827,14 +828,21 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
 
     yield* ctx.skill.transform((editor) => {
       // `off` hides the tools: an agent never sees a browser tool it cannot use.
-      if (effective(live.browser, live.organization) === "off") return
+      const chosen = effective(live.browser, live.organization)
+      if (chosen === "off") return
+      // Which browser the tools drive is the one thing the instructions cannot say the same way on both backends: the
+      // extension drives the user's own browser, which asks per site and can be taken back, while Playwright runs a
+      // browser this client owns. The rest of the guide is shared.
+      const ownBrowser = chosen === "extension"
       editor.add(
         Skill.Info.make({
           id: Skill.ID.make("browser-automation"),
           name: Skill.Name.make("browser-automation"),
-          description: "Use to inspect or interact with a web page using Playwright.",
+          description: ownBrowser
+            ? "Use to inspect or interact with the user's own browser through the Kilo extension."
+            : "Use to inspect or interact with a web page using Playwright.",
           path: AbsolutePath.make("/builtin/browser-automation.md"),
-          content: GUIDE,
+          content: ["# Browser automation", ...(ownBrowser ? [GUIDE_EXTENSION] : []), GUIDE].join("\n\n"),
         }),
       )
     })
