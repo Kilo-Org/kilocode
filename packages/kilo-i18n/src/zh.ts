@@ -185,6 +185,14 @@ export const dict = {
   "browser.notice.unavailableTitle": "浏览器不可用",
   "browser.notice.outdatedTitle": "浏览器扩展已过时",
   "browser.notice.stopped": "你已停止此会话的浏览器。运行 /browser adopt 将标签页还给此会话。",
+  "browser.notice.extension": "Kilo 浏览器扩展已在 {{browser}} 中连接。要让浏览器工具使用你自己的浏览器而不是内置浏览器吗？",
+  "browser.notice.switch": "使用我的浏览器",
+  "settings.browser.status.extension.waiting": "正在等待浏览器扩展",
+  "settings.browser.origins.saved.title": "在聊天中允许",
+  "settings.browser.origins.saved.description": "你在此工作区的聊天中通过“始终允许”允许的站点。它们在上方规则之外生效。",
+  "settings.browser.origins.saved.empty": "尚未在聊天中允许任何站点。",
+  "settings.browser.origins.saved.failed": "无法获取已保存的权限",
+  "settings.browser.origins.saved.revoke": "撤销",
   "ui.permission.reason": "原因：{{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

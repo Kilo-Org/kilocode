@@ -196,6 +196,16 @@ export const dict = {
   "browser.notice.unavailableTitle": "เบราว์เซอร์ไม่พร้อมใช้งาน",
   "browser.notice.outdatedTitle": "ส่วนขยายเบราว์เซอร์ล้าสมัย",
   "browser.notice.stopped": "คุณหยุดเบราว์เซอร์สำหรับเซสชันนี้แล้ว เรียกใช้ /browser adopt เพื่อคืนแท็บให้กับเซสชันนี้",
+  "browser.notice.extension":
+    "ส่วนขยายเบราว์เซอร์ Kilo เชื่อมต่ออยู่ใน {{browser}} ต้องการใช้เบราว์เซอร์ของคุณเองกับเครื่องมือเบราว์เซอร์แทนเบราว์เซอร์ที่มาพร้อมหรือไม่",
+  "browser.notice.switch": "ใช้เบราว์เซอร์ของฉัน",
+  "settings.browser.status.extension.waiting": "กำลังรอส่วนขยายเบราว์เซอร์",
+  "settings.browser.origins.saved.title": "อนุญาตในแชท",
+  "settings.browser.origins.saved.description":
+    "เว็บไซต์ที่คุณอนุญาตจากแชทด้วยอนุญาตเสมอ สำหรับพื้นที่ทำงานนี้ โดยมีผลเพิ่มเติมจากกฎด้านบน",
+  "settings.browser.origins.saved.empty": "ยังไม่มีเว็บไซต์ที่อนุญาตจากแชท",
+  "settings.browser.origins.saved.failed": "ไม่สามารถใช้สิทธิ์ที่บันทึกไว้ได้",
+  "settings.browser.origins.saved.revoke": "เพิกถอน",
   "ui.permission.reason": "เหตุผล: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

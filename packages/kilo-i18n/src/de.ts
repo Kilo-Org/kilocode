@@ -205,6 +205,16 @@ export const dict = {
   "browser.notice.outdatedTitle": "Browser-Erweiterung veraltet",
   "browser.notice.stopped":
     "Sie haben den Browser für diese Sitzung gestoppt. Führen Sie /browser adopt aus, um der Sitzung ihre Tabs zurückzugeben.",
+  "browser.notice.extension":
+    "Die Kilo-Browser-Erweiterung ist in {{browser}} verbunden. Für die Browser-Tools den eigenen Browser statt des mitgelieferten verwenden?",
+  "browser.notice.switch": "Meinen Browser verwenden",
+  "settings.browser.status.extension.waiting": "Warten auf die Browser-Erweiterung",
+  "settings.browser.origins.saved.title": "In Chats erlaubt",
+  "settings.browser.origins.saved.description":
+    "Websites, die du in einem Chat mit Immer erlauben freigegeben hast, für diesen Arbeitsbereich. Sie gelten zusätzlich zu den Regeln oben.",
+  "settings.browser.origins.saved.empty": "Noch keine Website in einem Chat erlaubt.",
+  "settings.browser.origins.saved.failed": "Gespeicherte Berechtigungen nicht verfügbar",
+  "settings.browser.origins.saved.revoke": "Widerrufen",
   "ui.permission.reason": "Grund: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

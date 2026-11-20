@@ -29,9 +29,14 @@ export function createBrowserSettings() {
     const message = raw as unknown as ToWebview
     if (message.type === "browserSettingsLoaded") {
       if (!tracker.accepts(message.requestId)) return
-      // Every attempt ends on its own reply, whichever operation it was: a read or a write answers with the state, and
-      // an install the host could not start answers with this message instead of `browserSettingsInstalled`.
       const operation = tracker.kindOf(message.requestId)
+      // A status refresh only replaces the status: it never ends another attempt or clears an error it did not cause.
+      if (operation === "status") {
+        if (message.status) setStatus(message.status)
+        return
+      }
+      // Every other attempt ends on its own reply, whichever operation it was: a read or a write answers with the
+      // state, and an install the host could not start answers with this message instead of `browserSettingsInstalled`.
       if (operation === "install") {
         setInstalling(false)
         setProgress(undefined)
@@ -81,5 +86,7 @@ export function createBrowserSettings() {
       setError(undefined)
       send({ type: "browserSettingsInstall", requestId: tracker.start("install") })
     },
+    /** Read the machine status again, for the live status rows. */
+    refresh: () => send({ type: "browserSettingsStatus", requestId: tracker.start("status") }),
   }
 }

@@ -225,6 +225,16 @@ export const dict = {
   "browser.notice.unavailableTitle": "Browser not available",
   "browser.notice.outdatedTitle": "Browser extension out of date",
   "browser.notice.stopped": "You stopped the browser for this session. Run /browser adopt to give it its tabs back.",
+  "browser.notice.extension":
+    "The Kilo browser extension is connected in {{browser}}. Use your own browser for the browser tools instead of the bundled one?",
+  "browser.notice.switch": "Use my browser",
+  "settings.browser.status.extension.waiting": "Waiting for the browser extension",
+  "settings.browser.origins.saved.title": "Allowed in chats",
+  "settings.browser.origins.saved.description":
+    "Sites you allowed from a chat with Allow always, for this workspace. They apply on top of the rules above.",
+  "settings.browser.origins.saved.empty": "No site allowed from a chat yet.",
+  "settings.browser.origins.saved.failed": "Saved permissions unavailable",
+  "settings.browser.origins.saved.revoke": "Revoke",
   "ui.permission.reason": "Reason: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

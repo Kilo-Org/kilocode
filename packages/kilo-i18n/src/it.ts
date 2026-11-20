@@ -202,6 +202,16 @@ export const dict = {
   "browser.notice.outdatedTitle": "Estensione browser obsoleta",
   "browser.notice.stopped":
     "Hai fermato il browser per questa sessione. Esegui /browser adopt per restituirle le sue schede.",
+  "browser.notice.extension":
+    "L'estensione browser Kilo è connessa in {{browser}}. Usare il tuo browser per gli strumenti browser invece di quello incluso?",
+  "browser.notice.switch": "Usa il mio browser",
+  "settings.browser.status.extension.waiting": "In attesa dell'estensione browser",
+  "settings.browser.origins.saved.title": "Consentiti nelle chat",
+  "settings.browser.origins.saved.description":
+    "Siti che hai consentito da una chat con Consenti sempre, per questo workspace. Valgono in aggiunta alle regole sopra.",
+  "settings.browser.origins.saved.empty": "Nessun sito ancora consentito da una chat.",
+  "settings.browser.origins.saved.failed": "Permessi salvati non disponibili",
+  "settings.browser.origins.saved.revoke": "Revoca",
   "ui.permission.reason": "Motivo: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

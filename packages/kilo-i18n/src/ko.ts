@@ -193,6 +193,16 @@ export const dict = {
   "browser.notice.unavailableTitle": "브라우저를 사용할 수 없음",
   "browser.notice.outdatedTitle": "브라우저 확장이 오래됨",
   "browser.notice.stopped": "이 세션의 브라우저를 중지했습니다. 탭을 돌려주려면 /browser adopt를 실행하세요.",
+  "browser.notice.extension":
+    "Kilo 브라우저 확장이 {{browser}}에 연결되었습니다. 브라우저 도구에 내장 브라우저 대신 내 브라우저를 사용할까요?",
+  "browser.notice.switch": "내 브라우저 사용",
+  "settings.browser.status.extension.waiting": "브라우저 확장을 기다리는 중",
+  "settings.browser.origins.saved.title": "채팅에서 허용됨",
+  "settings.browser.origins.saved.description":
+    "이 작업 영역에서 채팅의 항상 허용으로 허용한 사이트입니다. 위 규칙에 더해 적용됩니다.",
+  "settings.browser.origins.saved.empty": "아직 채팅에서 허용한 사이트가 없습니다.",
+  "settings.browser.origins.saved.failed": "저장된 권한을 사용할 수 없음",
+  "settings.browser.origins.saved.revoke": "철회",
   "ui.permission.reason": "이유: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

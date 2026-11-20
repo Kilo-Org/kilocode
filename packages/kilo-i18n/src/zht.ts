@@ -184,6 +184,14 @@ export const dict = {
   "browser.notice.unavailableTitle": "瀏覽器無法使用",
   "browser.notice.outdatedTitle": "瀏覽器擴充功能已過時",
   "browser.notice.stopped": "你已停止此工作階段的瀏覽器。執行 /browser adopt 將分頁還給此工作階段。",
+  "browser.notice.extension": "Kilo 瀏覽器擴充功能已在 {{browser}} 中連線。要讓瀏覽器工具使用你自己的瀏覽器而不是內建瀏覽器嗎？",
+  "browser.notice.switch": "使用我的瀏覽器",
+  "settings.browser.status.extension.waiting": "正在等待瀏覽器擴充功能",
+  "settings.browser.origins.saved.title": "在聊天中允許",
+  "settings.browser.origins.saved.description": "你在此工作區的聊天中透過「永遠允許」允許的網站。它們會在上方規則之外生效。",
+  "settings.browser.origins.saved.empty": "尚未在聊天中允許任何網站。",
+  "settings.browser.origins.saved.failed": "無法取得已儲存的權限",
+  "settings.browser.origins.saved.revoke": "撤銷",
   "ui.permission.reason": "原因：{{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

@@ -205,6 +205,16 @@ export const dict = {
   "browser.notice.unavailableTitle": "Preglednik nije dostupan",
   "browser.notice.outdatedTitle": "Proširenje preglednika je zastarjelo",
   "browser.notice.stopped": "Zaustavili ste preglednik za ovu sesiju. Pokrenite /browser adopt da joj vratite kartice.",
+  "browser.notice.extension":
+    "Kilo proširenje preglednika je povezano u pregledniku {{browser}}. Koristiti vlastiti preglednik za alate preglednika umjesto ugrađenog?",
+  "browser.notice.switch": "Koristi moj preglednik",
+  "settings.browser.status.extension.waiting": "Čeka se proširenje preglednika",
+  "settings.browser.origins.saved.title": "Dozvoljeno u razgovorima",
+  "settings.browser.origins.saved.description":
+    "Sajtovi koje ste dozvolili iz razgovora opcijom Uvijek dozvoli, za ovaj radni prostor. Važe uz pravila iznad.",
+  "settings.browser.origins.saved.empty": "Još nijedan sajt nije dozvoljen iz razgovora.",
+  "settings.browser.origins.saved.failed": "Sačuvane dozvole nisu dostupne",
+  "settings.browser.origins.saved.revoke": "Opozovi",
   "ui.permission.reason": "Razlog: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

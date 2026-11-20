@@ -198,6 +198,16 @@ export const dict = {
   "browser.notice.outdatedTitle": "ブラウザ拡張機能が古くなっています",
   "browser.notice.stopped":
     "このセッションのブラウザを停止しました。タブを戻すには /browser adopt を実行してください。",
+  "browser.notice.extension":
+    "Kilo ブラウザ拡張機能が {{browser}} で接続されています。ブラウザツールで同梱ブラウザの代わりに自分のブラウザを使いますか？",
+  "browser.notice.switch": "自分のブラウザを使う",
+  "settings.browser.status.extension.waiting": "ブラウザ拡張機能を待機中",
+  "settings.browser.origins.saved.title": "チャットで許可済み",
+  "settings.browser.origins.saved.description":
+    "このワークスペースで、チャットから「常に許可」で許可したサイトです。上のルールに加えて適用されます。",
+  "settings.browser.origins.saved.empty": "チャットから許可したサイトはまだありません。",
+  "settings.browser.origins.saved.failed": "保存済みの権限を取得できません",
+  "settings.browser.origins.saved.revoke": "取り消す",
   "ui.permission.reason": "理由: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

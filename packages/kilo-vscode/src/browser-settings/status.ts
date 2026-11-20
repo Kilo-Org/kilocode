@@ -1,6 +1,7 @@
 // Whether the browser tools can run right now, as the Settings panel shows it. The Playwright backend needs a Chrome,
 // an Edge or the Chromium build `kilo browser install-chromium` writes into the server's data directory; the extension
-// backend needs a browser that connected to a hub. Both paths are read from disk, so the answer costs no server call.
+// backend needs a browser extension connected to a hub. Both are read from disk (the hub registry records the connected
+// extension), so the answer costs no server call and never dials a hub.
 import { existsSync, readFileSync, readdirSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
@@ -8,9 +9,18 @@ import path from "node:path"
 /** Which executable the Playwright backend starts: a system channel, or the Chromium the CLI installed. */
 export type Target = "chrome" | "msedge" | "chromium"
 
+/**
+ * The browser extension as the hub registry reports it: no hub running, a hub with no extension connected yet, or the
+ * browser and profile of the extension connected to it.
+ */
+export type Extension =
+  | { state: "none" }
+  | { state: "waiting" }
+  | { state: "connected"; browser: string; profile?: string }
+
 export type Status = {
   playwright: { ready: boolean; target?: Target }
-  extension: { connected: boolean }
+  extension: Extension
 }
 
 /** The filesystem reads, injectable so a test can describe a machine instead of having one. */
@@ -134,26 +144,61 @@ export function hubsDirectory(state: string, env: Record<string, string | undefi
   return path.join(run, "hubs")
 }
 
-/** True while a hub that an extension can connect to is registered and its process is alive. */
-export function extensionConnected(input: Input): boolean {
+/**
+ * The extension as the live hubs report it. A hub writes the connected extension's browser and profile into its entry
+ * on every connect and clears them on disconnect (`packages/kilo-cli/src/browser/hub.ts` `onChange`), so an entry with
+ * a live pid and no browser is a hub waiting for an extension: unpaired, or with "Allow local agents" off.
+ */
+export function extensionStatus(input: Input): Extension {
   const env = input.env ?? process.env
   const read: Reader = { ...reader, ...input.reader }
   const directory = hubsDirectory(input.state, env)
-  let entries: string[]
-  try {
-    entries = read.entries(directory)
-  } catch {
-    return false
-  }
-  return entries.some((entry) => {
-    if (!entry.endsWith(".json")) return false
-    try {
-      const record = JSON.parse(read.text(path.join(directory, entry))) as { pid?: unknown }
-      return typeof record.pid === "number" && read.alive(record.pid)
-    } catch {
-      return false
-    }
+  const hubs = entriesOf(read, directory).flatMap((entry) => {
+    if (!entry.endsWith(".json")) return []
+    const hub = hubOf(read, path.join(directory, entry))
+    return hub && read.alive(hub.pid) ? [hub] : []
   })
+  const connected = hubs.find((hub) => hub.browser !== undefined)
+  if (connected?.browser !== undefined)
+    return {
+      state: "connected",
+      browser: connected.browser,
+      ...(connected.profile ? { profile: connected.profile } : {}),
+    }
+  return hubs.length > 0 ? { state: "waiting" } : { state: "none" }
+}
+
+function entriesOf(read: Reader, directory: string) {
+  try {
+    return read.entries(directory)
+  } catch {
+    return []
+  }
+}
+
+/** One registry entry (`packages/kilo-cli/src/browser/registry.ts` `Entry`): the fields the status needs, or nothing. */
+function hubOf(read: Reader, file: string): { pid: number; browser?: string; profile?: string } | undefined {
+  const value = parsed(read, file)
+  if (typeof value !== "object" || value === null) return undefined
+  const entry: { pid?: unknown; browser?: unknown; profileLabel?: unknown } = value
+  if (typeof entry.pid !== "number") return undefined
+  const browser =
+    typeof entry.browser === "object" && entry.browser !== null && "name" in entry.browser
+      ? entry.browser.name
+      : undefined
+  return {
+    pid: entry.pid,
+    ...(typeof browser === "string" && browser ? { browser } : {}),
+    ...(typeof entry.profileLabel === "string" && entry.profileLabel ? { profile: entry.profileLabel } : {}),
+  }
+}
+
+function parsed(read: Reader, file: string): unknown {
+  try {
+    return JSON.parse(read.text(file))
+  } catch {
+    return undefined
+  }
 }
 
 export function status(input: Input): Status {
@@ -163,6 +208,6 @@ export function status(input: Input): Status {
     target ?? (installedChromium(input.data, input.platform ?? process.platform, read) ? "chromium" : undefined)
   return {
     playwright: found ? { ready: true, target: found } : { ready: false },
-    extension: { connected: extensionConnected(input) },
+    extension: extensionStatus(input),
   }
 }

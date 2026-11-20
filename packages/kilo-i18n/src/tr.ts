@@ -202,6 +202,16 @@ export const dict = {
   "browser.notice.outdatedTitle": "Tarayıcı uzantısı güncel değil",
   "browser.notice.stopped":
     "Bu oturum için tarayıcıyı durdurdunuz. Sekmeleri bu oturuma geri vermek için /browser adopt çalıştırın.",
+  "browser.notice.extension":
+    "Kilo tarayıcı uzantısı {{browser}} içinde bağlı. Tarayıcı araçları için yerleşik tarayıcı yerine kendi tarayıcınız kullanılsın mı?",
+  "browser.notice.switch": "Tarayıcımı kullan",
+  "settings.browser.status.extension.waiting": "Tarayıcı uzantısı bekleniyor",
+  "settings.browser.origins.saved.title": "Sohbetlerde izin verilenler",
+  "settings.browser.origins.saved.description":
+    "Bu çalışma alanı için bir sohbetten Her zaman izin ver ile izin verdiğiniz siteler. Yukarıdaki kurallara ek olarak uygulanır.",
+  "settings.browser.origins.saved.empty": "Henüz bir sohbetten izin verilen site yok.",
+  "settings.browser.origins.saved.failed": "Kayıtlı izinler kullanılamıyor",
+  "settings.browser.origins.saved.revoke": "İptal et",
   "ui.permission.reason": "Neden: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
