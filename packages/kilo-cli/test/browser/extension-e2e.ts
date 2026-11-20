@@ -1137,7 +1137,7 @@ async function parallel() {
   expect(texts.length >= 6, `the run ended early after ${texts.length} results`)
   expect(
     batches > 0 && evaluated === batches,
-    `${batches - evaluated} of ${batches} page scripts did not answer:\n${(texts.at(-1) ?? "").slice(0, 600)}`,
+    `${batches === 0 ? "no page-script batch ran" : `${batches - evaluated} of ${batches} page scripts did not answer`}:\n${(texts.at(-1) ?? "").slice(0, 600)}`,
   )
   expect(result.code === 0, `run exited ${result.code}\n${result.stderr.slice(-1_500)}`)
   return {
