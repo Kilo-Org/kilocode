@@ -63,6 +63,9 @@ class MockCliServer : AutoCloseable {
     @Volatile var authorizeStatus = 200
     @Volatile var callbackStatus = 200
     @Volatile var authRemoveStatus = 200
+
+    /** Response body of `DELETE /auth/{id}`; `false` models a CLI that refused the removal. */
+    @Volatile var authRemoveBody = "true"
     @Volatile var authPutStatus = 200
     @Volatile var disposeStatus = 200
     @Volatile var organizationSetStatus = 200
@@ -288,11 +291,31 @@ class MockCliServer : AutoCloseable {
     }
     private val feeds = ConcurrentHashMap<String, Feed>()
     private val openings = ConcurrentHashMap<String, AtomicInteger>()
+    private val closings = ConcurrentHashMap<String, AtomicInteger>()
 
     fun awaitFeed(path: String, target: Int = 1, timeout: Long = 5_000): Boolean {
         val end = System.currentTimeMillis() + timeout
         synchronized(streams) {
             while ((openings[path]?.get() ?: 0) < target) {
+                val wait = end - System.currentTimeMillis()
+                if (wait <= 0) return false
+                streams.wait(wait)
+            }
+            return true
+        }
+    }
+
+    /** Number of times the SSE feed for [path] opened, so a test can spot a re-open. */
+    fun feedCount(path: String): Int = openings[path]?.get() ?: 0
+
+    /** Number of times the client closed the SSE feed for [path]. */
+    fun feedClosedCount(path: String): Int = closings[path]?.get() ?: 0
+
+    /** Waits until the client has closed the SSE feed for [path] [target] times. */
+    fun awaitFeedClosed(path: String, target: Int = 1, timeout: Long = 5_000): Boolean {
+        val end = System.currentTimeMillis() + timeout
+        synchronized(streams) {
+            while (feedClosedCount(path) < target) {
                 val wait = end - System.currentTimeMillis()
                 if (wait <= 0) return false
                 streams.wait(wait)
@@ -559,7 +582,7 @@ class MockCliServer : AutoCloseable {
                 }
                 bare.matches(Regex("/auth/[^/]+")) && method == "DELETE" -> {
                     lastAuthDeletePath = bare
-                    respond(output, authRemoveStatus, "true")
+                    respond(output, authRemoveStatus, authRemoveBody)
                 }
                 bare.matches(Regex("/auth/[^/]+")) && method == "PUT" -> {
                     lastAuthPutBody = body
@@ -900,6 +923,8 @@ class MockCliServer : AutoCloseable {
         // Client cancellation must release passive discovery streams without a test-side close.
         socket.getInputStream().read()
         feeds.remove(path, feed)
+        closings.computeIfAbsent(path) { AtomicInteger() }.incrementAndGet()
+        synchronized(streams) { streams.notifyAll() }
         feed.latch.countDown()
     }
 

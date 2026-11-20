@@ -299,6 +299,10 @@ class KiloBackendHostedManager(
     @Volatile
     private var started = false
 
+    // start/stop/close are serialized on the manager monitor: the app service calls them from the
+    // app load coroutine (a CLI restart) and from sign-out/shutdown at the same time, and an
+    // interleaved pair would leave `started` true with null transport fields.
+    @Synchronized
     fun start(api: DefaultApi, http: OkHttpClient, port: Int, chat: KiloBackendChatManager) {
         val endpoint = "http://127.0.0.1:$port"
         val changed = started && (this.api !== api || this.http !== http || base != endpoint || this.chat !== chat)
@@ -358,6 +362,7 @@ class KiloBackendHostedManager(
      * the replacement transport. Cached transcript/status data is dropped and rebuilt from the new
      * CLI. Use [reset] only when ownership itself is gone.
      */
+    @Synchronized
     fun stop() {
         if (!started && attachments.isEmpty()) return
         started = false
@@ -374,6 +379,7 @@ class KiloBackendHostedManager(
     }
 
     /** Full teardown for application disposal, where no RPC collector can survive the service. */
+    @Synchronized
     fun close() {
         started = false
         reset(detach = true)

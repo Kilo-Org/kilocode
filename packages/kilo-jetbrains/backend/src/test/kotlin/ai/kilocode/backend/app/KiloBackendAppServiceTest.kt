@@ -12,6 +12,8 @@ import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.HostedIDs
+import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WatcherPatchDto
@@ -1187,6 +1189,95 @@ class KiloBackendAppServiceTest {
         assertTrue(ok)
         assertNull(svc.profile)
         assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    private val hostedSession = HostedIDs.session("cloud", "wrk_1", "ses_cloud")
+    private val hostedNativeFeed = "/event?workspace=wrk_att_test"
+    private val hostedSystemFeed = "/cloud-agent/event?workspace=wrk_att_test"
+    private val hostedAttachPath = "/kilocode/session-host/session/cloud/ses_cloud/attach"
+
+    /** Opens both hosted SSE feeds for one retained session, so logout has live state to drop. */
+    private suspend fun hostedLive(svc: KiloBackendAppService) {
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            svc.hosted.systemEvents(HostedWorkspaceRefDto("cloud", "wrk_1"), "ses_cloud", null).collect {}
+        }
+        svc.hosted.retain(hostedSession, null)
+        svc.hosted.messages(hostedSession, null)
+        assertTrue(mock.awaitFeed(hostedNativeFeed), "native stream did not open")
+        assertTrue(mock.awaitFeed(hostedSystemFeed), "system stream did not open")
+        assertTrue(mock.requestCount(hostedAttachPath) >= 1, "no attachment was minted")
+    }
+
+    @Test
+    fun `logout resets hosted session state and asks the CLI to rebuild`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        mock.authRemoveStatus = 200
+        val ok = svc.logout()
+
+        assertTrue(ok)
+        assertEquals("/auth/kilo", mock.lastAuthDeletePath)
+        assertEquals(1, mock.requestCount("/global/dispose"))
+        assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1), "attachment was not detached")
+        assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+        // The manager cancelled both transports, so the mock observes the client closing each feed.
+        assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+        assertTrue(mock.awaitFeedClosed(hostedSystemFeed), "system stream stayed open")
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `logout leaves the hosted manager usable for the next sign-in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        svc.logout()
+        assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+
+        // A later sign-in is a different account: a fresh attachment must be minted through the
+        // restarted manager and stream from it, not from the signed-out one.
+        mock.hostedAttach =
+            """{"attachmentID":"wrk_att_next","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":${System.currentTimeMillis() + 600_000}}"""
+        svc.hosted.retain(hostedSession, null)
+        svc.hosted.messages(hostedSession, null)
+
+        assertTrue(mock.awaitFeed("/event?workspace=wrk_att_next"), "restarted manager did not open a native stream")
+        assertTrue(mock.lastHostedMessagePath.orEmpty().contains("workspace=wrk_att_next"))
+        assertEquals(attaches + 1, mock.requestCount(hostedAttachPath))
+        assertEquals(1, mock.feedCount(hostedNativeFeed), "signed-out native feed reopened")
+    }
+
+    @Test
+    fun `refused logout leaves hosted state and CLI untouched`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        mock.authRemoveStatus = 200
+        mock.authRemoveBody = "false"
+        assertFalse(svc.logout())
+
+        assertEquals("/auth/kilo", mock.lastAuthDeletePath)
+        assertEquals(0, mock.requestCount("/global/dispose"))
+        assertEquals(0, mock.feedClosedCount(hostedNativeFeed))
+        assertEquals(0, mock.feedClosedCount(hostedSystemFeed))
+        // The still-valid attachment keeps serving the retained session.
+        svc.hosted.messages(hostedSession, null)
+        assertTrue(mock.lastHostedMessagePath.orEmpty().contains("workspace=wrk_att_test"))
+        assertEquals(attaches, mock.requestCount(hostedAttachPath))
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
     }
 
     @Test

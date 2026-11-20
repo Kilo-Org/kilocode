@@ -984,11 +984,25 @@ class KiloBackendAppService private constructor(
 
     /**
      * Log out from Kilo Gateway.
-     * Removes credentials and clears the profile from app state.
+     * Removes credentials and clears the profile from app state. A successful sign-out also drops
+     * the hosted session state derived from that credential — attachments, transcripts, statuses,
+     * retained owners — and asks the CLI to rebuild its global state, so the next sign-in starts
+     * from an empty hosted manager. A refused removal changes nothing.
      */
     suspend fun logout(): Boolean {
         val client = connection.api ?: throw IllegalStateException("Not connected")
         val result = client.authRemove(providerID = "kilo")
+        if (!result) return false
+        // Close before start: close() forgets retained owners, while start() on a started manager
+        // only rebinds transports and would restore the previous credential's continuity.
+        hosted.close()
+        val http = connection.apiClient
+        val port = connection.port
+        val api = connection.api
+        // The CLI may already be gone; the manager just stays closed instead of throwing.
+        if (api != null && http != null && port != 0) hosted.start(api, http, port, chat)
+        // After the credential removal: the CLI rebuilds global state without the account.
+        disposeGlobal(http, port)
         synchronized(loadLock) {
             val current = _appState.value
             if (current is KiloAppState.Ready) {
@@ -997,6 +1011,19 @@ class KiloBackendAppService private constructor(
             }
         }
         return result
+    }
+
+    /** Best-effort `POST /global/dispose` so the CLI rebuilds global state; a failure never blocks sign-out. */
+    private suspend fun disposeGlobal(http: OkHttpClient?, port: Int) {
+        if (http == null || port == 0) return
+        val request = Request.Builder()
+            .url("http://127.0.0.1:$port/global/dispose")
+            .header("Accept", "application/json")
+            .post("{}".toRequestBody("application/json".toMediaType()))
+            .build()
+        runCatching {
+            withContext(Dispatchers.IO) { http.newCall(request).execute().use { it.body?.string() } }
+        }.onFailure { log.debug { "Global dispose skipped after logout: ${it.message}" } }
     }
 
     /**
