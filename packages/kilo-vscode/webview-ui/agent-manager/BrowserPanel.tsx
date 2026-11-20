@@ -1,6 +1,7 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, type Accessor } from "solid-js"
 import { useLanguage } from "../src/context/language"
 import { useVSCode } from "../src/context/vscode"
+import { blurOnHide, skipInactiveFocus } from "../src/v2/view-active"
 import type { ExtensionMessage, WebviewMessage } from "../src/types/messages/agent-manager"
 import type { BrowserReference } from "../../src/shared/browser-feedback"
 import { BrowserPanel as BrowserPanelView } from "../browser"
@@ -185,6 +186,7 @@ function BrowserPanelCache(props: {
   onChange: (value: boolean) => void
 }) {
   const [scopes, setScopes] = createSignal<BrowserScopes>({ entries: [], recent: [] })
+
   const current = () => {
     const session = props.sessionId()
     return session ? browserScopeKey(props.projectId(), session) : undefined
@@ -210,8 +212,17 @@ function BrowserPanelCache(props: {
         {(entry) => {
           const parts = browserScopeParts(entry)
           const shown = createMemo(() => props.active() && current() === entry)
+          let slotEl: HTMLDivElement | undefined
+          blurOnHide(shown, () => slotEl)
           return (
-            <div class="am-browser-cache" classList={{ "am-browser-cache-active": shown() }} inert={!shown()}>
+            <div
+              ref={slotEl}
+              class="am-browser-cache"
+              classList={{ "am-browser-cache-active": shown() }}
+              onFocusIn={(event) => {
+                if (!shown() && slotEl) skipInactiveFocus(event, slotEl)
+              }}
+            >
               <BrowserAdapter
                 sessionId={() => parts.session}
                 projectId={() => (parts.project === "single" ? undefined : parts.project)}

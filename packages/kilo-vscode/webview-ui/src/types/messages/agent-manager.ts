@@ -375,10 +375,8 @@ export interface AgentManagerProjectParentMessage {
   parent?: string
 }
 
-export interface AgentManagerSelectionActivatedMessage {
-  type: "agentManager.selectionActivated"
-  target: AgentManagerSidebarTarget
-}
+import type { ActivateSelectionMessage, AgentManagerSelectionActivatedMessage } from "./agent-manager-selection"
+export type { ActivateSelectionMessage, AgentManagerSelectionActivatedMessage } from "./agent-manager-selection"
 
 /** Host request to select a managed session and scroll its chat to the latest message. */
 export interface AgentManagerRevealSessionMessage {
@@ -1023,13 +1021,6 @@ export interface RemoveProjectMessage {
 export interface SelectProjectMessage {
   type: "agentManager.selectProject"
   projectId: string
-}
-
-export interface ActivateSelectionMessage {
-  type: "agentManager.activateSelection"
-  target: AgentManagerSidebarTarget
-  /** Resolve the project's persisted target instead of using `target` verbatim. */
-  restore?: boolean
 }
 
 /** Persist the current selection for seamless restore after switching back. */
