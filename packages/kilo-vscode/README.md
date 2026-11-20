@@ -22,6 +22,18 @@ The opt-in internal profile cutover (`KILO_INTERNAL_PROFILE_CUTOVER=1`) is an ex
 
 For private bundles, build both the extension host and its matching CLI with `KILO_INTERNAL_PROFILE_CUTOVER_BUILD=1`. The resulting host enables the consent screen even when the IDE starts from the Dock. A public build does not enable it. The runtime `KILO_INTERNAL_PROFILE_CUTOVER=1` switch is for unbundled source testing. Keep the private VSIX out of public publish jobs.
 
+## Updates
+
+When extension auto-update is enabled, VS Code updates gallery-installed extensions automatically. After an update, reload the window or restart the extension host when VS Code asks. Install the pre-release version with `--pre-release` or **Install Pre-Release Version**, and VS Code keeps updating it on the pre-release channel. To install or update it from a terminal:
+
+```sh
+code --install-extension kilocode.kilo-code-v2 --pre-release --force
+```
+
+The extension includes the matching `kilo2` server binary for its platform. It starts that private binary and does not use a `kilo2` from `PATH`, npm, or a separately downloaded installer, so updating the extension also updates its server. The npm CLI and the alpha installer are separate installations.
+
+A VSIX installed with **Install from VSIX** or `code --install-extension <file>.vsix` is not updated automatically by default. Install a newer VSIX or the gallery version to update it.
+
 ## Webview accessibility checks
 
 From `packages/kilo-vscode`, run `bun run playwright-core install --no-shell chromium` once, then `bun run test:accessibility`. The CI gate runs the Agent Manager sidebar search in Chromium with the production webview component and styles. It fails on axe WCAG violations or broken keyboard selection and dismissal. It does not require VS Code, a server, or an account.

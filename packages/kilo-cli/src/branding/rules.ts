@@ -9,8 +9,7 @@ import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 // the whole-file overrides below.
 
 // Semantic rewrites that are Kilo product copy rather than a mechanical brand
-// swap (for example, upgrades are disabled, so the upgrade description changes
-// meaning). File-scoped and applied whole-file before the generic rules so a
+// swap. File-scoped and applied whole-file before the generic rules so a
 // later OpenCode -> Kilo pass cannot pre-empt them. Few by design; like the
 // structural transforms these are exact, so a reworded upstream anchor fails
 // loud (`Kilo branding no longer matches`) and a human re-decides the Kilo copy
@@ -20,10 +19,9 @@ export const overrides = [
   {
     file: "cli/src/commands/commands.ts",
     from: "Upgrade OpenCode to the latest or a specific version",
-    to: "Show manual Kilo update instructions",
+    to: "Install the latest Kilo v2 npm preview update",
   },
   { file: "cli/src/acp/service.ts", from: "Login with opencode", to: "Login with Kilo" },
-  { file: "tui/src/app.tsx", from: "Update OpenCode", to: "Kilo update instructions" },
   // The lowercase product name as the agent's identity, which the command rule would turn into `kilo2`.
   {
     file: "core/src/plugin/system-prompt/trinity.txt",
