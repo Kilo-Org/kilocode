@@ -218,6 +218,7 @@ export const dict = {
   "tui.permissions.applying": "プロジェクトの権限を適用中…",
   "tui.permissions.apply": "適用",
   "tui.permissions.skip": "スキップ",
+  "tui.permissions.cancel": "キャンセル",
   "tui.permissions.none": "(なし)",
   "tui.permissions.noneDescription": "適用済みの権限セットを削除",
   "tui.permissions.applied": "適用済み",
@@ -228,6 +229,7 @@ export const dict = {
     "プロジェクトのスクリプトはリポジトリのコードを実行できます。既存の拒否ルールは引き続き適用されます。",
   "tui.permissions.installWarning":
     "依存関係のインストールでパッケージコードがダウンロードされ、実行される場合があります。",
+  "tui.permissions.helpers": "tail、head、grep はコマンド出力の絞り込みにのみ使用でき、ファイルを開くことはできません。echo と ls は変数を展開できません。ls は任意のディレクトリを一覧表示できます。",
   "tui.permissions.preset.kilo-bun-checks": "Kilo / Bun のチェック",
   "tui.permissions.preset.typescript-checks": "TypeScript のチェック",
   "tui.permissions.preset.dependency-install": "依存関係のインストール",
@@ -235,6 +237,7 @@ export const dict = {
   "tui.permissions.kiloDescription": "開発用チェックと Kilo リポジトリのチェック",
   "tui.permissions.installDescription": "パッケージの依存関係をインストール・追加",
   "tui.permissions.noMatches": "このプロジェクトに一致する権限の既定値はありません。",
+  "tui.permissions.unidentified": "このリポジトリにはまだコミットもリモートもないため、ほかの新しいリポジトリとプロジェクトを共有しています。コミットするかリモートを追加してから、もう一度お試しください。",
   "tui.permissions.disabled": "このサーバーではプロジェクト権限の設定を利用できません。",
   "tui.permissions.loadFailed": "プロジェクトの権限を確認できませんでした。通常の承認プロンプトを使用してください。",
   "tui.permissions.applyFailed": "権限の適用を完了できませんでした。通常の承認プロンプトを確認してください。",

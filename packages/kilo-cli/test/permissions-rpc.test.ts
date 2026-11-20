@@ -76,7 +76,7 @@ async function withServer<T>(
   }
 }
 
-async function project(root: string, name: string, kilo = true) {
+async function project(root: string, name: string, kilo = true, commit = true) {
   const directory = path.join(root, name)
   await mkdir(path.join(directory, "packages", "kilo-cli"), { recursive: true })
   await mkdir(path.join(directory, "packages", "kilo-plugin"), { recursive: true })
@@ -94,9 +94,10 @@ async function project(root: string, name: string, kilo = true) {
   // repository without commits resolves to the shared global project. A root commit named after the
   // directory gives each fixture its own project ID.
   await Bun.$`git init --quiet`.cwd(directory)
-  await Bun.$`git -c user.name=kilo -c user.email=kilo@example.com commit --quiet --allow-empty -m ${directory}`.cwd(
-    directory,
-  )
+  if (commit)
+    await Bun.$`git -c user.name=kilo -c user.email=kilo@example.com commit --quiet --allow-empty -m ${directory}`.cwd(
+      directory,
+    )
   return directory
 }
 
@@ -167,6 +168,30 @@ test("persists decisions and applied sets by project across a file-backed restar
         applied: [{ id: "typescript-checks" }],
       })
       expect(await client.permission.saved.list({ projectID: projectAID })).toEqual([])
+    })
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("keeps sets out of repositories that share the global project", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "kilo-permissions-global-"))
+  const database = path.join(root, "data", "permissions.sqlite")
+  await mkdir(path.dirname(database), { recursive: true })
+  // Without a commit or a remote, both repositories resolve to the same global project.
+  const first = await project(root, "first", false, false)
+  const second = await project(root, "second", false, false)
+  try {
+    await withServer({ database, directory: path.join(root, "config") }, async (client, ready) => {
+      await ready(first)
+      await ready(second)
+      const rpc = client.rpc(rpcDefinition)
+      const a = { location: { directory: first } }
+      const b = { location: { directory: second } }
+      expect(await rpc.list({}, a)).toMatchObject({ unidentified: true, presets: [], applied: [] })
+      await expect(rpc.apply({ presetID: "typescript-checks" }, a)).rejects.toMatchObject({ type: "not_applicable" })
+      await rpc.skip({}, a)
+      expect(await rpc.list({}, b)).toMatchObject({ unidentified: true, decision: null, presets: [], applied: [] })
     })
   } finally {
     await rm(root, { recursive: true, force: true })

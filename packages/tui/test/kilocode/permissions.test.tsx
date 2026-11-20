@@ -47,6 +47,9 @@ type State = {
   readonly applyFailure?: boolean
   readonly delayApply?: Promise<void>
   readonly delaySkip?: Promise<void>
+  /** The sets that match the project now; every set by default. */
+  readonly presets?: readonly (typeof presets)[number][]
+  readonly unidentified?: boolean
   readonly applied: string[]
   skipped: number
   cleared: number
@@ -119,8 +122,9 @@ function fixtureFetch(
           output: {
             enabled: true,
             projectID: url.search.includes("child") ? "child-project" : sessionLocation.project.id,
+            unidentified: current.unidentified ?? false,
             decision: current.decision,
-            presets,
+            presets: current.presets ?? presets,
             applied: presets.filter((preset) => current.applied.includes(preset.id)),
           },
         })
@@ -454,4 +458,92 @@ test("/permissions offers (None) only while a set is applied", async () => {
   const chooser = await until(app, "manual chooser", (value) => value.includes("Apply Kilo / Bun checks"))
   expect(chooser).not.toContain("(None)")
   expect(chooser).not.toContain("Permission sets")
+})
+
+async function openManualChooser(app: Awaited<ReturnType<typeof createAppFixture>>, label: string) {
+  await app.mockInput.typeText("/permissions")
+  await until(app, "permission command", (value) =>
+    value.includes("Choose development permissions to add to this project"),
+  )
+  await Bun.sleep(0)
+  app.mockInput.pressEnter()
+  return until(app, label, (value) => value.includes(label))
+}
+
+test("/permissions shows a set's shell patterns and warnings before applying, and cancelling applies nothing", async () => {
+  const current = state({ pending: false, decision: "skipped" })
+  await using app = await createAppFixture({
+    width: 100,
+    height: 60,
+    args: { sessionID },
+    config: { animations: false, tabs: { mode: "off" } },
+    fetch: fixtureFetch(current),
+  })
+  await app.ready
+  await until(app, "composer", (value) => value.includes("ctrl+p commands"))
+  await openManualChooser(app, "Apply Kilo / Bun checks")
+  app.mockInput.pressEnter()
+  const review = await until(app, "set review", (value) =>
+    value.includes("Project scripts can execute repository code"),
+  )
+  expect(review).toContain("bun run check:architecture *")
+  expect(review).toContain("tail, head and grep only filter command output")
+  expect(review).toContain("Cancel")
+  app.mockInput.pressEscape()
+  await until(app, "review closed", (value) => !value.includes("Project scripts can execute repository code"))
+  expect(current.applied).toEqual([])
+
+  await openManualChooser(app, "Apply Kilo / Bun checks")
+  app.mockInput.pressEnter()
+  await until(app, "set review again", (value) => value.includes("Project scripts can execute repository code"))
+  app.mockInput.pressEnter()
+  await until(app, "apply request", () => current.applied.length > 0)
+  expect(current.applied).toEqual(["kilo-bun-checks"])
+})
+
+test("/permissions still removes an applied set after the project stops matching", async () => {
+  const current = state({ pending: false, decision: "accepted", presets: [], applied: ["typescript-checks"] })
+  await using app = await createAppFixture({
+    width: 100,
+    height: 34,
+    args: { sessionID },
+    config: { animations: false, tabs: { mode: "off" } },
+    fetch: fixtureFetch(current),
+  })
+  await app.ready
+  await until(app, "composer", (value) => value.includes("ctrl+p commands"))
+  const chooser = await openManualChooser(app, "(None)")
+  expect(chooser).not.toContain("Apply Kilo / Bun checks")
+  expect(chooser).not.toContain("No permission defaults match this project.")
+  await app.mockInput.typeText("None")
+  app.mockInput.pressEnter()
+  await until(app, "clear request", () => current.cleared > 0)
+  expect(current.applied).toEqual([])
+})
+
+test("a repository without its own project identity gets no offer, and /permissions says why", async () => {
+  const pending = state({ unidentified: true, presets: [] })
+  await using offerApp = await createAppFixture({
+    width: 100,
+    height: 34,
+    args: { sessionID },
+    config: { animations: false, tabs: { mode: "off" } },
+    fetch: fixtureFetch(pending),
+  })
+  await offerApp.ready
+  await until(offerApp, "normal prompt", (value) => value.includes("Permission required"))
+  expect(offerApp.captureCharFrame()).not.toContain("Set up project permissions")
+
+  const manual = state({ pending: false, unidentified: true, presets: [] })
+  await using app = await createAppFixture({
+    width: 100,
+    height: 34,
+    args: { sessionID: "ses_permissions_unidentified" },
+    config: { animations: false, tabs: { mode: "off" } },
+    fetch: fixtureFetch(manual, { sessionID: "ses_permissions_unidentified" }),
+  })
+  await app.ready
+  await until(app, "composer", (value) => value.includes("ctrl+p commands"))
+  await openManualChooser(app, "This repository has no commit or remote yet")
+  expect(manual.applied).toEqual([])
 })

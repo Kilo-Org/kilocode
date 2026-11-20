@@ -53,8 +53,16 @@ const it = testEffect(
 )
 
 const sessionID = Session.ID.make("ses_permission_sets")
+const projectID = Project.ID.make("prj_permission_sets")
 
-function setup(input: { rules?: Permission.Ruleset; flags?: string; store?: Map<string, Schema.Json> } = {}) {
+function setup(
+  input: {
+    rules?: Permission.Ruleset
+    flags?: string
+    store?: Map<string, Schema.Json>
+    projectID?: Project.ID
+  } = {},
+) {
   return Effect.gen(function* () {
     const { db } = yield* Database.Service
     yield* db
@@ -87,7 +95,7 @@ function setup(input: { rules?: Permission.Ruleset; flags?: string; store?: Map<
     const rpc = yield* Rpc.Service
     const store = input.store ?? new Map<string, Schema.Json>()
     const ctx = {
-      location: { project: { id: Project.ID.global, directory: root, canonical: root } },
+      location: { project: { id: input.projectID ?? projectID, directory: root, canonical: root } },
       storage: {
         get: (key: string) => Effect.sync(() => store.get(key)),
         set: (key: string, value: Schema.Json) => Effect.sync(() => void store.set(key, value)),
@@ -137,7 +145,7 @@ describe("KiloPermissionsPlugin", () => {
     Effect.gen(function* () {
       const store = new Map<string, Schema.Json>([
         [
-          `applied:${Project.ID.global}`,
+          `applied:${projectID}`,
           [
             { id: "typescript-install", resources: ["bun install *"] },
             { id: "typescript-checks", resources: ["bun run test *"] },
@@ -220,6 +228,47 @@ describe("KiloPermissionsPlugin", () => {
     }),
   )
 
+  it.effect("leaves a waiting request pending when the sets cover only part of it", () =>
+    Effect.gen(function* () {
+      // The agent's own rule allows `git push`; a pending request does not say which agent asked, so applying a set
+      // never settles a request on the strength of rules other than the set's own.
+      const { call } = yield* setup({ rules: [{ action: "shell", resource: "git push", effect: "allow" }] })
+      const permission = yield* Permission.Service
+      const bus = yield* Bus.Service
+      const requestID = Permission.ID.create("per_partial")
+      const asked = yield* Deferred.make<void>()
+      const unsubscribe = yield* bus.listen((event) =>
+        event.type === Permission.Event.Asked.type
+          ? Deferred.succeed(asked, undefined).pipe(Effect.asVoid)
+          : Effect.void,
+      )
+      yield* Effect.addFinalizer(() => unsubscribe)
+      yield* permission.assert(shell(["bun run test", "git push"], { id: requestID })).pipe(Effect.forkScoped)
+      yield* Deferred.await(asked)
+
+      yield* call("apply", { presetID: "typescript-checks" })
+      expect((yield* permission.list()).map((request) => request.id)).toEqual([requestID])
+      // A new request with the same parts is decided by the live evaluation, which sees the asking agent's rules.
+      expect(yield* permission.ask(shell(["bun run test", "git push"]))).toMatchObject({ effect: "allow" })
+    }),
+  )
+
+  it.effect("offers and applies nothing for the shared global project", () =>
+    Effect.gen(function* () {
+      const store = new Map<string, Schema.Json>([
+        [`applied:${Project.ID.global}`, [{ id: "typescript-checks", resources: ["bun run test *"] }]],
+      ])
+      const { call } = yield* setup({ projectID: Project.ID.global, store })
+      const permission = yield* Permission.Service
+      expect(yield* call("list")).toMatchObject({ unidentified: true, presets: [], applied: [] })
+      expect(yield* permission.ask(shell(["bun run test"]))).toMatchObject({ effect: "ask" })
+      const failed = yield* call("apply", { presetID: "typescript-checks" }).pipe(Effect.flip)
+      expect(failed).toMatchObject({ type: "not_applicable" })
+      yield* call("skip")
+      expect(store.has(`offer:${Project.ID.global}`)).toBe(false)
+    }),
+  )
+
   it.effect("resets the decision, and with all the applied sets, without touching saved grants", () =>
     Effect.gen(function* () {
       const { call } = yield* setup()
@@ -263,8 +312,8 @@ describe("KiloPermissionsPlugin", () => {
         expect(yield* call("list")).toMatchObject({ decision: "skipped", applied: [] })
         expect(yield* permission.ask(shell(["bun run test"]))).toMatchObject({ effect: "ask" })
         expect(yield* Fiber.join(updates)).toMatchObject([
-          { projectID: Project.ID.global, applied: [{ id: "typescript-checks" }] },
-          { projectID: Project.ID.global, applied: [] },
+          { projectID, applied: [{ id: "typescript-checks" }] },
+          { projectID, applied: [] },
         ])
       }),
     ),
@@ -273,7 +322,7 @@ describe("KiloPermissionsPlugin", () => {
   it.effect("ignores applied sets and refuses changes while the flag is off", () =>
     Effect.gen(function* () {
       const store = new Map<string, Schema.Json>([
-        [`applied:${Project.ID.global}`, [{ id: "typescript-checks", resources: ["bun run test *"] }]],
+        [`applied:${projectID}`, [{ id: "typescript-checks", resources: ["bun run test *"] }]],
       ])
       const { call } = yield* setup({ flags: "-permission_setup", store })
       const permission = yield* Permission.Service

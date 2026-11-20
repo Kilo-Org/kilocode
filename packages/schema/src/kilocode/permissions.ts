@@ -30,8 +30,13 @@ export interface ListOutput extends Schema.Schema.Type<typeof ListOutput> {}
 export const ListOutput = Schema.Struct({
   enabled: Schema.Boolean,
   projectID: Project.ID,
+  /**
+   * The project has no identity of its own: a repository without a remote or a commit resolves to the shared global
+   * project. Sets are neither offered nor applied there, so one repository's choice never reaches another.
+   */
+  unidentified: Schema.Boolean,
   decision: Decision,
-  /** Sets that match the project now. */
+  /** Sets that match the project now; empty while the project is unidentified. */
   presets: Schema.Array(Preset),
   /** Sets applied to the project, with the shell rules the user approved when applying each one. */
   applied: Schema.Array(Preset),

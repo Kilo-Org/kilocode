@@ -222,6 +222,7 @@ export const dict = {
   "tui.permissions.applying": "Proje izinleri uygulanıyor…",
   "tui.permissions.apply": "Uygula",
   "tui.permissions.skip": "Atla",
+  "tui.permissions.cancel": "İptal",
   "tui.permissions.none": "(Hiçbiri)",
   "tui.permissions.noneDescription": "Uygulanan izin kümelerini kaldır",
   "tui.permissions.applied": "Uygulandı",
@@ -231,6 +232,7 @@ export const dict = {
   "tui.permissions.trust":
     "Proje betikleri depo kodunu çalıştırabilir. Mevcut reddetme kuralları uygulanmaya devam eder.",
   "tui.permissions.installWarning": "Bağımlılık kurulumu paket kodunu indirip çalıştırabilir.",
+  "tui.permissions.helpers": "tail, head ve grep yalnızca komut çıktısını süzer; dosya açamaz. echo ve ls değişkenleri genişletemez; ls herhangi bir dizini listeleyebilir.",
   "tui.permissions.preset.kilo-bun-checks": "Kilo / Bun denetimleri",
   "tui.permissions.preset.typescript-checks": "TypeScript denetimleri",
   "tui.permissions.preset.dependency-install": "Bağımlılık kurulumları",
@@ -238,6 +240,7 @@ export const dict = {
   "tui.permissions.kiloDescription": "Geliştirme ve Kilo deposu denetimleri",
   "tui.permissions.installDescription": "Paket bağımlılıklarını kur ve ekle",
   "tui.permissions.noMatches": "Bu projeyle eşleşen varsayılan izin yok.",
+  "tui.permissions.unidentified": "Bu deponun henüz commit'i veya uzak deposu yok, bu nedenle diğer yeni depolarla bir projeyi paylaşıyor. Commit oluşturun veya uzak depo ekleyin, ardından yeniden deneyin.",
   "tui.permissions.disabled": "Proje izinlerini ayarlama bu sunucuda kullanılamıyor.",
   "tui.permissions.loadFailed": "Proje izinleri denetlenemedi. Normal onay istemini kullanın.",
   "tui.permissions.applyFailed": "İzinlerin uygulanması tamamlanamadı. Normal onay istemini kontrol edin.",

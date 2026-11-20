@@ -8,10 +8,11 @@ import { Permission } from "@opencode/core/permission"
 import { define, type Context } from "@opencode/plugin/effect/plugin"
 import { KiloPermission } from "@opencode/schema/kilocode/permission"
 import { KiloPermissionsRpc } from "@opencode/schema/kilocode/permissions"
+import { Project } from "@opencode/schema/project"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Effect, Option, Schema, type Scope } from "effect"
 import { catalog } from "./presets"
-import { allowsRequest, missing } from "./rules"
+import { allowsRequest, covers, missing } from "./rules"
 
 const Decision = Schema.Literals(["accepted", "skipped"])
 const Applied = Schema.Array(KiloPermissionsRpc.Preset)
@@ -32,10 +33,13 @@ export const installPermissionSets = Effect.fn("KiloPermissionsPlugin")(function
     : false
   const permission = yield* Effect.serviceOption(Permission.Service)
   const projectID = ctx.location.project.id
+  // Every repository without a remote or a commit shares the global project, so state keyed by it would carry one
+  // repository's sets into another. Sets stay off there until the repository has an identity of its own.
+  const unidentified = projectID === Project.ID.global
   const directory = ctx.location.project.directory
   const decisionKey = `offer:${projectID}`
   const appliedKey = `applied:${projectID}`
-  const current = () => catalog(fs, directory).pipe(Effect.orDie)
+  const current = () => (unidentified ? Effect.succeed({ presets: [] }) : catalog(fs, directory).pipe(Effect.orDie))
   const stored = <S extends Schema.Top>(key: string, schema: S) =>
     ctx.storage
       .get(key)
@@ -47,18 +51,25 @@ export const installPermissionSets = Effect.fn("KiloPermissionsPlugin")(function
         ),
       )
   const decision = () => stored(decisionKey, Decision).pipe(Effect.map((value) => value ?? null))
-  const applied = () =>
-    stored(appliedKey, Stored).pipe(
-      Effect.map((value): typeof Applied.Type =>
-        (value ?? []).flatMap((set) => (isPresetID(set.id) ? [{ id: set.id, resources: set.resources }] : [])),
-      ),
-    )
+  const applied = (): Effect.Effect<typeof Applied.Type> =>
+    unidentified
+      ? Effect.succeed([])
+      : stored(appliedKey, Stored).pipe(
+          Effect.map((value) =>
+            (value ?? []).flatMap((set) => (isPresetID(set.id) ? [{ id: set.id, resources: set.resources }] : [])),
+          ),
+        )
 
-  // Settles the waiting requests the applied sets now cover, as if the user had answered each one once.
+  // Settles the waiting requests the applied sets now cover, as if the user had answered each one once. A pending
+  // request does not carry the agent that asked, so `allows` evaluates the session's current agent, whose rules may be
+  // wider. A request settles only when the sets alone cover every resource; `allows` still applies configured denies,
+  // saved rules and the later hardening hooks.
   const drain = Effect.gen(function* () {
     if (Option.isNone(permission)) return
+    const rules = (yield* applied()).flatMap((set) => set.resources)
     for (const request of yield* permission.value.list()) {
       if (request.action !== "shell" || KiloPermission.requiresPerson(request.metadata)) continue
+      if (!request.resources.every((resource) => covers(resource, rules))) continue
       const allowed = yield* permission.value
         .allows({ ...request })
         .pipe(Effect.catchTag("Session.NotFoundError", () => Effect.succeed(false)))
@@ -84,7 +95,7 @@ export const installPermissionSets = Effect.fn("KiloPermissionsPlugin")(function
     return removed
   })
 
-  if (enabled) {
+  if (enabled && !unidentified) {
     yield* ctx.permission.hook("evaluate", (event) =>
       Effect.gen(function* () {
         if (event.effect !== "ask" || event.action !== "shell") return
@@ -107,11 +118,15 @@ export const installPermissionSets = Effect.fn("KiloPermissionsPlugin")(function
       list: () =>
         Effect.gen(function* () {
           const presets = enabled ? (yield* current()).presets : []
-          return { enabled, projectID, decision: yield* decision(), presets, applied: yield* applied() }
+          return { enabled, projectID, unidentified, decision: yield* decision(), presets, applied: yield* applied() }
         }),
       apply: (input, context) =>
         Effect.gen(function* () {
           if (!enabled) return yield* Effect.fail(context.error("unavailable", "Permission setup is disabled"))
+          if (unidentified)
+            return yield* Effect.fail(
+              context.error("not_applicable", "Commit to this repository or add a remote before applying a set"),
+            )
           const selected = (yield* current()).presets.find((preset) => preset.id === input.presetID)
           if (selected === undefined)
             return yield* Effect.fail(context.error("not_applicable", "The permission set no longer applies"))
@@ -129,14 +144,15 @@ export const installPermissionSets = Effect.fn("KiloPermissionsPlugin")(function
       skip: (_input, context) =>
         Effect.gen(function* () {
           if (!enabled) return yield* Effect.fail(context.error("unavailable", "Permission setup is disabled"))
-          yield* ctx.storage.set(decisionKey, "skipped")
+          // The shared global project records no decision for any one repository.
+          if (!unidentified) yield* ctx.storage.set(decisionKey, "skipped")
           return {}
         }),
       clear: (_input, context) =>
         Effect.gen(function* () {
           if (!enabled) return yield* Effect.fail(context.error("unavailable", "Permission setup is disabled"))
           yield* removeApplied
-          yield* ctx.storage.set(decisionKey, "skipped")
+          if (!unidentified) yield* ctx.storage.set(decisionKey, "skipped")
           return {}
         }),
       reset: (input) =>

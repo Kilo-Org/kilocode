@@ -2,6 +2,7 @@ import type { KiloPermissionsRpc } from "@opencode/schema/kilocode/permissions"
 import { FSUtil } from "@opencode/util/fs-util"
 import path from "path"
 import { Effect, Option, Schema } from "effect"
+import { helpers } from "./rules"
 
 const PackageManifest = Schema.Struct({
   packageManager: Schema.optionalKey(Schema.String),
@@ -53,10 +54,6 @@ const genericStems = (manager: PackageManager) => [
   "node -v",
 ]
 
-// Output helpers agents chain onto a check or install to trim or report its output. Their wildcards would also match
-// a redirected file write; `covers` in rules.ts refuses those, so they stay read-only.
-const outputStems = ["tail", "head", "grep", "echo", "ls"] as const
-
 const kiloStems = [
   "bun run typecheck:tsc",
   "bun typecheck:tsc",
@@ -72,7 +69,9 @@ function resources(stems: readonly string[]) {
 }
 
 function checkResources(manager: PackageManager, kilo: boolean) {
-  return resources([...genericStems(manager), ...(kilo ? kiloStems : []), ...outputStems])
+  // The helpers' wildcards would also match a file read, an expansion or a redirected write; `covers` in rules.ts
+  // refuses those, so a helper only trims or reports the output it is given.
+  return resources([...genericStems(manager), ...(kilo ? kiloStems : []), ...helpers])
 }
 
 // Sets are additive, so the install set holds only the install commands and is applied alongside a checks set.
@@ -82,7 +81,7 @@ function installResources(manager: PackageManager) {
   if (manager === "bun" || manager === "pnpm" || manager === "yarn") install.push(`${manager} add`)
   // bun, npm and pnpm accept `i` for `install`; yarn does not.
   if (manager !== "yarn") install.push(`${manager} i`)
-  return resources([...install, ...outputStems])
+  return resources([...install, ...helpers])
 }
 
 export function classify(input: Classification): Catalog {

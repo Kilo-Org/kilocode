@@ -219,6 +219,46 @@ describe("permission setup catalog", () => {
     }
   })
 
+  test("limits output helpers to filtering output: no file operand, recursion, pattern file or expansion", () => {
+    for (const presetValue of classify({ manager: "bun", kilo: true }).presets) {
+      for (const command of [
+        "head .env",
+        "head -n 5 .env",
+        "tail 30",
+        "tail -f ~/.ssh/id_ed25519",
+        "grep . .env",
+        "grep -e KEY .env",
+        "grep -r KEY",
+        "grep -rn KEY",
+        "grep -f .env",
+        "grep --recursive KEY",
+        "grep --file=.env",
+        "grep -- KEY",
+        "echo $OPENAI_API_KEY",
+        'echo "${HOME}"',
+        "ls $HOME",
+      ]) {
+        expect(effects(presetValue, command)).toEqual(["ask"])
+      }
+      for (const command of [
+        "tail -30",
+        "tail -n 30",
+        "head --lines=5",
+        "head -c 100",
+        'grep -iE "error|warn"',
+        "grep -e foo",
+        "grep -m 5 error",
+        "grep -m5 error",
+        'echo "exit code: $?"',
+        "echo done",
+        "ls node_modules",
+        "ls -la",
+      ]) {
+        expect(effects(presetValue, command)).toEqual(["allow"])
+      }
+    }
+  })
+
   test("includes the Kilo-only development checks without broad shell grants", () => {
     const checks = classify({ manager: "bun", kilo: true })
     const kilo = preset(checks, "kilo-bun-checks")

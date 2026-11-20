@@ -225,6 +225,7 @@ export const dict = {
   "tui.permissions.applying": "Primjena dozvola projekta…",
   "tui.permissions.apply": "Primijeni",
   "tui.permissions.skip": "Preskoči",
+  "tui.permissions.cancel": "Otkaži",
   "tui.permissions.none": "(Nijedan)",
   "tui.permissions.noneDescription": "Uklonite primijenjene skupove dozvola",
   "tui.permissions.applied": "Primijenjeno",
@@ -234,6 +235,7 @@ export const dict = {
   "tui.permissions.trust":
     "Projektne skripte mogu izvršavati kod iz repozitorija. Postojeća pravila zabrane i dalje važe.",
   "tui.permissions.installWarning": "Instalacija zavisnosti može preuzeti i izvršiti kod paketa.",
+  "tui.permissions.helpers": "tail, head i grep samo filtriraju izlaz komandi; ne mogu otvarati datoteke. echo i ls ne mogu proširivati varijable, a ls može izlistati bilo koji direktorij.",
   "tui.permissions.preset.kilo-bun-checks": "Kilo / Bun provjere",
   "tui.permissions.preset.typescript-checks": "TypeScript provjere",
   "tui.permissions.preset.dependency-install": "Instalacije zavisnosti",
@@ -241,6 +243,7 @@ export const dict = {
   "tui.permissions.kiloDescription": "Razvojne provjere i provjere Kilo repozitorija",
   "tui.permissions.installDescription": "Instaliraj i dodaj zavisnosti paketa",
   "tui.permissions.noMatches": "Nijedna zadana dozvola ne odgovara ovom projektu.",
+  "tui.permissions.unidentified": "Ovaj repozitorij još nema commit ni remote, pa dijeli projekat s drugim novim repozitorijima. Napravite commit ili dodajte remote, pa pokušajte ponovo.",
   "tui.permissions.disabled": "Postavljanje dozvola projekta nije dostupno na ovom serveru.",
   "tui.permissions.loadFailed": "Nije moguće provjeriti dozvole projekta. Koristite uobičajeni upit za odobrenje.",
   "tui.permissions.applyFailed": "Nije moguće dovršiti primjenu dozvola. Provjerite uobičajeni upit za odobrenje.",

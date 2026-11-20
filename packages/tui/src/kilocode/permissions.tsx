@@ -6,7 +6,10 @@ import type { Plugin } from "@opencode/plugin/tui"
 import { createEffect, createMemo, createSignal, For, Match, on, onCleanup, Show, Switch } from "solid-js"
 import { createStore } from "solid-js/store"
 import type { ScrollBoxRenderable } from "@opentui/core"
+import { useTerminalDimensions } from "@opentui/solid"
+import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
+import { DialogHeader, DialogLayout } from "../ui/dialog"
 import { PermissionPrompt, SessionQuestion } from "../routes/session/permission"
 
 type CopyKey = Extract<keyof typeof dict, `tui.permissions.${string}`>
@@ -37,7 +40,7 @@ type Decision = "apply" | "skip" | "clear"
 
 type Offer = Extract<ControllerState, { status: "offer" }>
 
-type LoadResult = Offer | "active" | "disabled" | "no_matches" | "failed" | undefined
+type LoadResult = Offer | "active" | "disabled" | "unidentified" | "no_matches" | "failed" | undefined
 
 type Controller = {
   readonly state: () => ControllerState
@@ -223,7 +226,12 @@ function createController(context: Plugin.Context, byProject: Map<string, Contro
         setState({ status: "normal", projectID: result.projectID })
         return manual ? "disabled" : undefined
       }
-      if (result.presets.length === 0) {
+      if (result.unidentified) {
+        setState({ status: "normal", projectID: result.projectID })
+        return manual ? "unidentified" : undefined
+      }
+      // A set applied before the project stopped matching still applies, so the chooser stays open to remove it.
+      if (result.presets.length === 0 && (!manual || result.applied.length === 0)) {
         setState({ status: "normal", projectID: result.projectID })
         return manual ? "no_matches" : undefined
       }
@@ -378,13 +386,10 @@ async function openManual(context: Plugin.Context, getController: (directory: st
   const result = await selectedController.manual(location, route.type === "session" ? route.sessionID : undefined)
   if (typeof result !== "object") {
     if (result === "active") return
-    const message =
-      result === "disabled"
-        ? t("tui.permissions.disabled")
-        : result === "failed"
-          ? t("tui.permissions.loadFailed")
-          : t("tui.permissions.noMatches")
-    await context.ui.dialog.alert({ title: t("tui.permissions.title"), message })
+    await context.ui.dialog.alert({
+      title: t("tui.permissions.title"),
+      message: t(manualMessages[result ?? "no_matches"]),
+    })
     return
   }
   const applied = new Set(result.applied.map((preset) => preset.id))
@@ -422,7 +427,99 @@ async function openManual(context: Plugin.Context, getController: (directory: st
     selectedController.decide(choice)
     return
   }
+  // The chooser names a set; its shell patterns and warnings are reviewed before anything is applied.
+  const preset = result.presets.find((item) => item.id === choice)
+  if (!preset || !(await reviewPreset(context, preset))) {
+    selectedController.dismiss()
+    return
+  }
   selectedController.decide("apply", choice)
+}
+
+const manualMessages = {
+  disabled: "tui.permissions.disabled",
+  unidentified: "tui.permissions.unidentified",
+  failed: "tui.permissions.loadFailed",
+  no_matches: "tui.permissions.noMatches",
+} as const satisfies Record<Exclude<LoadResult, Offer | "active" | undefined>, CopyKey>
+
+function reviewPreset(context: Plugin.Context, preset: Preset) {
+  return new Promise<boolean>((resolve) => {
+    context.ui.dialog.show(
+      () => (
+        <PresetReview
+          preset={preset}
+          onChoose={(confirmed) => {
+            resolve(confirmed)
+            context.ui.dialog.clear()
+          }}
+        />
+      ),
+      () => resolve(false),
+    )
+    context.ui.dialog.set({ size: "large" })
+  })
+}
+
+/** The set's description, every shell pattern and the warnings, scrollable on short terminals. */
+function PresetReview(props: { readonly preset: Preset; readonly onChoose: (confirmed: boolean) => void }) {
+  const dimensions = useTerminalDimensions()
+  let preview: ScrollBoxRenderable | undefined
+  const scroll = (pages: number) => preview?.scrollBy(pages * Math.max(1, preview.viewport.height))
+  Keymap.createLayer(() => ({
+    mode: "modal",
+    commands: [
+      { bind: "return", run: () => props.onChoose(true) },
+      { bind: "escape", run: () => props.onChoose(false) },
+      { bind: "pageup", run: () => scroll(-1) },
+      { bind: "pagedown", run: () => scroll(1) },
+    ],
+  }))
+  return (
+    <DialogLayout
+      header={<DialogHeader title={`${t("tui.permissions.apply")} ${presetLabel(props.preset.id)}`} />}
+      footer={{
+        actions: {
+          primary: [
+            { title: t("tui.permissions.cancel"), key: "esc", onTrigger: () => props.onChoose(false) },
+            { title: t("tui.permissions.apply"), key: "enter", onTrigger: () => props.onChoose(true) },
+          ],
+        },
+      }}
+    >
+      <scrollbox
+        id="permission-set-review"
+        ref={(value: ScrollBoxRenderable) => {
+          preview = value
+        }}
+        maxHeight={Math.max(1, Math.floor(dimensions().height * 0.75) - 8)}
+        contentOptions={{ minHeight: 0 }}
+      >
+        <box flexDirection="column" gap={1}>
+          <PresetDetails preset={props.preset} />
+        </box>
+      </scrollbox>
+    </DialogLayout>
+  )
+}
+
+/** What applying a set allows: the same content in the automatic offer and in the `/permissions` review. */
+function PresetDetails(props: { readonly preset: Preset }) {
+  const theme = useTheme()
+  return (
+    <>
+      <text fg={theme.text.muted}>{presetDescription(props.preset.id)}</text>
+      <text fg={theme.text.muted}>{t("tui.permissions.rules")}</text>
+      <box>
+        <For each={props.preset.resources}>{(resource) => <text fg={theme.text.base}>{resource}</text>}</For>
+      </box>
+      <text fg={theme.text.muted}>{t("tui.permissions.helpers")}</text>
+      <text fg={theme.text.feedback.warning.base}>{t("tui.permissions.trust")}</text>
+      <Show when={props.preset.id.endsWith("-install")}>
+        <text fg={theme.text.feedback.warning.base}>{t("tui.permissions.installWarning")}</text>
+      </Show>
+    </>
+  )
 }
 
 function PermissionGate(props: {
@@ -537,19 +634,7 @@ function PermissionOffer(props: {
                 )
               }}
             </For>
-            <Show when={preset()}>
-              {(current) => (
-                <>
-                  <text fg={theme.text.muted}>{presetDescription(current().id)}</text>
-                  <text fg={theme.text.muted}>{t("tui.permissions.rules")}</text>
-                  <For each={current().resources}>{(resource) => <text fg={theme.text.base}>{resource}</text>}</For>
-                  <text fg={theme.text.feedback.warning.base}>{t("tui.permissions.trust")}</text>
-                  <Show when={current().id.endsWith("-install")}>
-                    <text fg={theme.text.feedback.warning.base}>{t("tui.permissions.installWarning")}</text>
-                  </Show>
-                </>
-              )}
-            </Show>
+            <Show when={preset()}>{(current) => <PresetDetails preset={current()} />}</Show>
           </box>
         </scrollbox>
       }
