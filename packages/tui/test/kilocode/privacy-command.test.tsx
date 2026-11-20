@@ -43,7 +43,7 @@ async function launch(options: {
         return json({
           output: {
             scope: body.input.scope,
-            path: `${directory}/${body.input.scope}-kilo2.json`,
+            path: `${directory}/${body.input.scope}-kilo.json`,
             revision: `${body.input.scope}-rev`,
             exists: true,
           },
@@ -60,7 +60,7 @@ async function launch(options: {
             scope: body.input.scope,
             target: {
               scope: body.input.scope,
-              path: `${directory}/${body.input.scope}-kilo2.json`,
+              path: `${directory}/${body.input.scope}-kilo.json`,
               exists: true,
               revision: `${body.input.scope}-rev`,
             },
@@ -102,7 +102,7 @@ test("the command enables privacy mode by writing the global value", async () =>
     {
       scope: "global",
       set: { privacy_mode: true },
-      expected: { path: `${directory}/global-kilo2.json`, revision: "global-rev" },
+      expected: { path: `${directory}/global-kilo.json`, revision: "global-rev" },
     },
   ])
   expect(app.privacy.enabled).toBe(true)
@@ -116,12 +116,12 @@ test("the command disables the global value and unsets the project value", async
     {
       scope: "global",
       set: { privacy_mode: false },
-      expected: { path: `${directory}/global-kilo2.json`, revision: "global-rev" },
+      expected: { path: `${directory}/global-kilo.json`, revision: "global-rev" },
     },
     {
       scope: "project",
       unset: [["privacy_mode"]],
-      expected: { path: `${directory}/project-kilo2.json`, revision: "project-rev" },
+      expected: { path: `${directory}/project-kilo.json`, revision: "project-rev" },
     },
   ])
   expect(app.privacy.enabled).toBe(false)
@@ -172,12 +172,12 @@ test("a conflict retries the write once and then succeeds", async () => {
     {
       scope: "global",
       set: { privacy_mode: true },
-      expected: { path: `${directory}/global-kilo2.json`, revision: "global-rev" },
+      expected: { path: `${directory}/global-kilo.json`, revision: "global-rev" },
     },
     {
       scope: "global",
       set: { privacy_mode: true },
-      expected: { path: `${directory}/global-kilo2.json`, revision: "global-rev" },
+      expected: { path: `${directory}/global-kilo.json`, revision: "global-rev" },
     },
   ])
 })

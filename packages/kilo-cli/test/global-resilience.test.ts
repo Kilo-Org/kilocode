@@ -66,7 +66,7 @@ describe("resolveState", () => {
   test.skipIf(skip)("falls back when the preferred directory cannot be created", async () => {
     await using tmp = await tmpdir()
     const parent = path.join(tmp.path, "preferred")
-    const preferred = path.join(parent, "kilo2")
+    const preferred = path.join(parent, "kilo")
     const fallback = path.join(tmp.path, "data", "state")
     await fs.mkdir(parent)
     await fs.chmod(parent, 0o500)

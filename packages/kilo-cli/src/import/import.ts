@@ -6,13 +6,10 @@ export const ImportCommand = Spec.make("import", {
   commands: [
     Spec.make("v1", {
       description:
-        "Import the Kilo v1 sessions into the kilo2 session store. A new store gets the v1 store; an existing one gets the v1 sessions it does not have yet. The v1 store is only read and stays as it is.",
+        "Import the Kilo v1 sessions into the kilo session store. A new store gets the v1 store; an existing one gets the v1 sessions it does not have yet. The v1 store is only read and stays as it is.",
       params: {
         from: Flag.String("from").pipe(
-          Flag.withDescription(
-            "Kilo v1 kilo.db file or its data directory (default: the kilo directory beside the kilo2 data directory)",
-          ),
-          Flag.optional,
+          Flag.withDescription("Separate v1 database file or its data directory; use migrate for the active profile"),
         ),
         since: Flag.String("since").pipe(
           Flag.withDescription(
@@ -22,7 +19,7 @@ export const ImportCommand = Spec.make("import", {
         ),
         config: Flag.Boolean("config").pipe(
           Flag.withDescription(
-            "Also copy the Kilo v1 global config (kilo.json, skills, agents, commands, modes, rules, AGENTS.md) into the kilo2 config directory, without overwriting kilo2 files",
+            "Also copy the Kilo v1 global config (kilo.json, skills, agents, commands, modes, rules, AGENTS.md) into the kilo config directory, without overwriting kilo files",
           ),
           Flag.withDefault(false),
         ),

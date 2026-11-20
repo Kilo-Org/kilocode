@@ -4,8 +4,8 @@ import { extensionStatus, hubsDirectory, installedChromium, status, systemBrowse
 
 const noFiles = { exists: () => false, entries: () => [], text: () => "", alive: () => false }
 
-const data = "/data/kilo2"
-const state = "/state/kilo2"
+const data = "/data/kilo"
+const state = "/state/kilo"
 
 /** A reader for a data directory whose Chromium builds have exactly these paths. */
 function machine(files: string[], entries: string[] = ["chromium-1200"]) {

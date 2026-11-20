@@ -2,8 +2,8 @@ import { Database } from "bun:sqlite"
 import { existsSync, statSync } from "node:fs"
 import path from "node:path"
 import { inputs, receipt } from "./receipt"
-import { currentPreviewStores, explicitConfig, preflight } from "./preflight"
-import { previewRevisions } from "./preview"
+import { preflight } from "./preflight"
+import { nativeStore } from "./schema-probe"
 import {
   observeOwner,
   readOwner,
@@ -21,17 +21,22 @@ type Plan = ReturnType<typeof preflight>
 type Report = (progress: MigrationProgress) => void
 
 export function migrationStatus(plan: Plan) {
-  if (plan.status === "required") explicitConfig(plan)
   const owner = plan.status === "required" ? readOwner(plan.source) : undefined
   // The marker was checkpointed before publication. An immutable probe checks the canonical file
   // without creating SHM or adopting a restored store on the strength of an old owner journal.
   if (owner?.status === "completed") ready(plan)
+  if (!owner && existsSync(plan.backup))
+    throw new Error(`Recovery copy exists without matching migration state: ${plan.backup}`)
+  if (!owner && plan.status === "required" && nativeStore(plan.source)) {
+    assertProjectConfig([process.cwd()], plan.home)
+    return { ...plan, status: "native" as const, canObserve: false }
+  }
   return { ...plan, ...owner, canObserve: owner?.status === "running" }
 }
 
 export async function applyCutover(plan: Plan, report: Report) {
   if (plan.status !== "required") throw new Error(`No session database at ${plan.source}`)
-  explicitConfig(plan)
+  if (migrationStatus(plan).status === "native") throw new Error("The selected store already uses v2")
   // Catch conflicts on a closed source without even creating the pilot owner journal.
   // A WAL-backed source gets its authoritative inspection on the consistent private stage below.
   if (!readOwner(plan.source) && !existsSync(`${plan.source}-wal`) && !existsSync(`${plan.source}-journal`))
@@ -59,7 +64,6 @@ export async function observeCutover(plan: Plan, report: Report) {
 
 /** Recovery is a separate consent, never an implicit response to a stale lock. */
 export async function recoverCutover(plan: Plan, report: Report) {
-  explicitConfig(plan)
   const { requireV1Store } = await import("../v1-store")
   const { linkedOriginal, retryPublication } = await import("./publish")
   if (existsSync(plan.backup) && !linkedOriginal(plan.source, plan.backup)) {
@@ -88,16 +92,10 @@ export async function recoverCutover(plan: Plan, report: Report) {
 
 async function convert(plan: Plan, update: Report) {
   process.env.OPENCODE_APP_DIR_NAME = "kilo"
-  process.env.KILO_USE_RELEASE_CONFIG = "1"
   const { resources } = await import("./resources")
   const intent = resources(plan)
   if (existsSync(plan.backup))
     throw new Error(`A recovery copy already exists: ${plan.backup}. Inspect it before retrying.`)
-  const previews = previewRevisions(plan.previewStores)
-  const checkPreviews = () => {
-    if (JSON.stringify(previewRevisions(currentPreviewStores(plan))) !== JSON.stringify(previews))
-      throw new Error("A preview store changed during migration. Close all preview clients and retry.")
-  }
   const { planAuth } = await import("./auth")
   const auth = planAuth(plan.authFiles)
   const { stageAndPublish } = await import("./publish")
@@ -106,61 +104,41 @@ async function convert(plan: Plan, update: Report) {
     plan.backup,
     async (stage) => {
       const projects = projectLocations(stage)
-      const originalIDs = plan.previewStores.length ? credentialIDs(stage) : undefined
       assertProjectConfig(projects, plan.home)
       await import("../preload")
       const { convertProfile } = await import("../v1-store")
-      const { reconcilePreview } = await import("./preview")
       update({ phase: "Converting sessions" })
       await convertProfile(stage, {
         data: plan.legacyData,
         authFiles: auth.sources,
         progress: (done, total) => update({ phase: "Converting sessions", done, total }),
       })
-      update({ phase: "Checking preview profiles" })
-      reconcilePreview(stage, plan.previewStores, originalIDs)
-      // Use each original profile's known locations; project rows synthesized by the
-      // converter are not evidence that the user had local preview resources there.
-      for (const file of plan.previewStores) for (const location of projectLocations(file)) projects.add(location)
       assertProjectConfig(projects, plan.home)
       update({ phase: "Verifying converted sessions" })
       using db = new Database(stage, { readwrite: true })
       auth.verify(db)
       if (db.query("SELECT id FROM session EXCEPT SELECT id FROM session_v2 LIMIT 1").get())
         throw new Error("Session verification failed; the source profile was not switched.")
-      checkPreviews()
       if (resources(plan).digest !== intent.digest) throw new Error("Profile resources changed during staging")
       db.run(
         "CREATE TABLE _kilo_profile_cutover (version INTEGER PRIMARY KEY, original_file TEXT NOT NULL, inputs TEXT NOT NULL, resources TEXT NOT NULL)",
       )
       const original = statSync(plan.source, { bigint: true })
-      db.run("INSERT INTO _kilo_profile_cutover VALUES (3, ?, ?, ?)", [
+      db.run("INSERT INTO _kilo_profile_cutover VALUES (4, ?, ?, ?)", [
         `${original.dev}:${original.ino}`,
-        JSON.stringify({ ...inputs(plan), previews }),
+        JSON.stringify(inputs(plan)),
         intent.digest,
       ])
       db.run("PRAGMA wal_checkpoint(TRUNCATE)")
     },
     (phase) => update({ phase }),
-    { checkInputs: checkPreviews, journal: stageJournal(plan.source) },
+    { journal: stageJournal(plan.source) },
   )
   update({ phase: "Reconciling configuration" })
   await finishResources(plan)
   recordedStage(stageJournal(plan.source), plan.backup)?.remove()
   for (const item of intent.skipped) update({ phase: `Skipped: ${item}` })
   update({ phase: "Profile ready" })
-}
-
-function credentialIDs(stage: string) {
-  using db = new Database(stage, { readonly: true })
-  return new Set(
-    db.query("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='credential'").get()
-      ? db
-          .query<{ id: string }, []>("SELECT id FROM credential")
-          .all()
-          .map((row) => row.id)
-      : [],
-  )
 }
 
 async function finishResources(plan: Plan) {
@@ -173,9 +151,22 @@ async function finishResources(plan: Plan) {
 }
 
 export async function beforeBoot() {
+  if (process.env.OPENCODE_DB === ":memory:") return true
   const plan = preflight(process.env)
-  if (plan.status === "absent") return true
   const current = migrationStatus(plan)
+  if (current.status === "absent" || current.status === "native") {
+    if (current.status === "absent") {
+      assertProjectConfig([process.cwd()], plan.home)
+      // Native bootstrap imports supported auth.json entries. Refuse malformed ones
+      // before initialization rather than letting the upstream importer skip them.
+      if (plan.authFiles.some((file) => existsSync(file))) {
+        const { planAuth } = await import("./auth")
+        planAuth(plan.authFiles)
+      }
+    }
+    selectProfile(plan)
+    return true
+  }
   if (current.status === "failed" || current.status === "interrupted")
     throw new Error(
       `Migration ${current.status}: ${"message" in current ? current.message : "inspect recovery state"}. Recovery path: ${plan.backup}`,
@@ -197,11 +188,12 @@ export async function beforeBoot() {
   if (!db.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='_kilo_profile_cutover'").get())
     throw new Error("Migrated database marker is missing. Inspect the recovery copy before starting Kilo.")
   receipt(plan)
-  // Child launchers need the same preview selectors after releaseProfile sets runtime paths.
-  process.env.KILO2_CONFIG_DIR = plan.previewConfig
-  if (plan.previewDatabase) process.env.KILO2_DB = plan.previewDatabase
+  selectProfile(plan)
+  return true
+}
+
+function selectProfile(plan: Plan) {
   process.env.XDG_STATE_HOME = path.dirname(plan.legacyState)
   if (plan.implicitState) process.env.KILO_INTERNAL_CUTOVER_IMPLICIT_STATE = process.env.XDG_STATE_HOME
-  releaseProfile(plan.source, plan.legacyConfig, explicitConfig(plan))
-  return true
+  releaseProfile(plan.source, plan.legacyConfig, plan.legacyConfigFile)
 }

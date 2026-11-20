@@ -1,21 +1,21 @@
 #!/usr/bin/env bun
 
 import "./env"
-import { pilotEnabled } from "./migration/pilot"
+import { KiloBinary } from "./binary"
 import { ensurePluginRuntime } from "@opencode/plugin/runtime"
 
 export { ensurePluginRuntime }
 
-// Normal boot creates profile directories and may adopt an earlier DB. Even a declined
-// migration must return before either happens.
-if (process.argv[2] === "migrate") {
+// Version checks and consent must finish before normal boot initializes the profile.
+if (process.argv.length === 3 && process.argv[2] === "--version") {
+  const { OPENCODE_VERSION } = await import("@opencode/cli/version")
+  console.log(`${KiloBinary} v${OPENCODE_VERSION}`)
+} else if (process.argv[2] === "migrate") {
   const { migrationCommand } = await import("./migration/preflight")
   await migrationCommand(process.argv.slice(3))
 } else {
-  if (pilotEnabled()) {
-    const { beforeBoot } = await import("./migration/cutover")
-    if (!(await beforeBoot())) process.exit(0)
-  }
+  const { beforeBoot } = await import("./migration/cutover")
+  if (!(await beforeBoot())) process.exit(0)
   await import("./global-boot")
   await import("./preload")
 

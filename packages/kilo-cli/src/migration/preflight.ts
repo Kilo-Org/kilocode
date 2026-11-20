@@ -2,22 +2,20 @@ import { readdirSync, statfsSync, statSync } from "node:fs"
 import { homedir } from "node:os"
 import path from "node:path"
 import { KiloGlobalResilience } from "../global-resilience"
-import { pilotEnabled } from "./pilot"
 import { checkResourceOnly } from "./resource-only"
 import { statePaths } from "./state-paths"
 
-/** Filesystem inventory only. Opening even a read-only SQLite connection to a live WAL
- * can change the shared-memory file. Schema validation belongs after consent. */
+/** Inventory the selected profile without opening SQLite. The separate schema probe
+ * uses an immutable main-file read or a bounded private WAL copy. */
 export function preflight(environment: NodeJS.ProcessEnv, cwd = process.cwd()) {
   const env = { ...environment }
   KiloGlobalResilience.cleanEnv(env)
   const home = KiloGlobalResilience.resolveHome(env, homedir())
   const base = path.resolve(env.XDG_DATA_HOME || path.join(home, ".local", "share"))
-  const preview = path.join(base, "kilo2")
   const configBase = path.resolve(env.XDG_CONFIG_HOME || path.join(home, ".config"))
-  const previewFile = env.KILO2_CONFIG ?? env.OPENCODE_CONFIG
-  if (env.KILO_DB === ":memory:") throw new Error("Cannot migrate an in-memory session store")
-  const source = legacySource(path.join(base, "kilo"), env.KILO_DB)
+  const selected = env.KILO_DB ?? env.OPENCODE_DB
+  if (selected === ":memory:") throw new Error("Cannot migrate an in-memory session store")
+  const source = legacySource(path.join(base, "kilo"), selected)
   const sourceBytes = fileSize(source)
   const plan = {
     version: 1 as const,
@@ -27,15 +25,12 @@ export function preflight(environment: NodeJS.ProcessEnv, cwd = process.cwd()) {
     ...statePaths(env, base, home),
     configBase,
     legacyData: path.join(base, "kilo"),
-    authFiles: [path.join(base, "kilo", "auth.json"), path.join(preview, "auth.json")],
-    legacyConfig: path.resolve(env.KILO_CONFIG_DIR || path.join(configBase, "kilo")),
+    authFiles: [path.join(base, "kilo", "auth.json")],
+    legacyConfig: path.resolve((env.KILO_CONFIG_DIR ?? env.OPENCODE_CONFIG_DIR) || path.join(configBase, "kilo")),
     legacyDefaultConfig: path.join(configBase, "kilo"),
-    previewConfig: path.resolve((env.KILO2_CONFIG_DIR ?? env.OPENCODE_CONFIG_DIR) || path.join(configBase, "kilo2")),
-    legacyConfigFile: env.KILO_CONFIG ? path.resolve(env.KILO_CONFIG) : undefined,
-    previewConfigFile: previewFile ? path.resolve(previewFile) : undefined,
+    legacyConfigFile: absolute(env.KILO_CONFIG ?? env.OPENCODE_CONFIG),
     sourceBytes: sourceBytes ?? 0,
     walBytes: fileSize(`${source}-wal`) ?? 0,
-    ...previewInventory(preview, env.KILO2_DB || env.OPENCODE_DB, source),
     backup: `${source}.pre-v2`,
     availableBytes: available(path.dirname(source)),
   }
@@ -43,51 +38,24 @@ export function preflight(environment: NodeJS.ProcessEnv, cwd = process.cwd()) {
   return plan
 }
 
-function previewInventory(dir: string, selected: string | undefined, source: string) {
-  const file = selected && selected !== ":memory:" ? path.resolve(dir, selected) : selected
-  const extra = file && file !== ":memory:" ? [file] : []
-  const names = statSync(dir, { throwIfNoEntry: false }) ? readdirSync(dir) : []
-  const files = names
-    .filter((name) => /^(?:kilo2.*|opencode(?:-.+)?)\.db$/.test(name))
-    .map((name) => path.join(dir, name))
-  return {
-    previewDatabase: file && file !== source ? file : null,
-    previewStores: [...new Set([...files, ...extra])]
-      .filter((file) => file !== source && fileSize(file) !== undefined)
-      .sort(),
-  }
-}
-
-export function currentPreviewStores(plan: ReturnType<typeof preflight>) {
-  return previewInventory(
-    path.join(path.dirname(plan.legacyData), "kilo2"),
-    plan.previewDatabase ?? undefined,
-    plan.source,
-  ).previewStores
+function absolute(file: string | undefined) {
+  return file ? path.resolve(file) : undefined
 }
 
 /** A channel may have both its current filename and its older fallback, with different histories.
  * Do not infer that either is disposable, even when the caller normally opens a specific KILO_DB. */
 function legacySource(dir: string, override?: string) {
   const selected = path.resolve(dir, override || "kilo.db")
+  // An explicit selection or the canonical install selects exactly one store. Other channels stay untouched.
+  if (override || statSync(selected, { throwIfNoEntry: false })) return selected
   const names = statSync(dir, { throwIfNoEntry: false }) ? readdirSync(dir) : []
-  const discovered = names
+  const candidates = names
     .filter((name) => name === "kilo.db" || /^(?:kilo|opencode)-[a-zA-Z0-9._-]+\.db$/.test(name))
     .map((name) => path.join(dir, name))
-  const candidates = [...new Set(override ? [...discovered, selected] : discovered)].sort()
+    .sort()
   if (candidates.length > 1)
-    throw new Error(`Cannot switch profiles until these v1 database paths are reconciled:\n${candidates.join("\n")}`)
+    throw new Error(`Cannot switch profiles until you select a v1 database with KILO_DB:\n${candidates.join("\n")}`)
   return candidates[0] ?? selected
-}
-
-/** Explicit documents can have arbitrary names and relative references. Keep the selected
- * document in place; two different sources cannot both occupy the runtime's single file slot. */
-export function explicitConfig(plan: ReturnType<typeof preflight>) {
-  if (plan.legacyConfigFile && plan.previewConfigFile && plan.legacyConfigFile !== plan.previewConfigFile)
-    throw new Error(
-      `Conflicting explicit config files: ${plan.legacyConfigFile} and ${plan.previewConfigFile}. Reconcile the settings and point both overrides at the same file before switching.`,
-    )
-  return plan.legacyConfigFile ?? plan.previewConfigFile
 }
 
 function fileSize(file: string) {
@@ -113,11 +81,9 @@ export async function migrationCommand(args: string[]) {
       return void (await Bun.write(Bun.stdout, '{"version":1,"status":"declined"}\n'))
     const plan = preflight(process.env)
     if (args.length === 1 && args[0] === "preflight") {
-      if (!pilotEnabled()) return void (await Bun.write(Bun.stdout, `${JSON.stringify(plan)}\n`))
       const { migrationStatus } = await import("./cutover")
       return void (await Bun.write(Bun.stdout, `${JSON.stringify(migrationStatus(plan))}\n`))
     }
-    if (!pilotEnabled()) throw new Error("Profile cutover is disabled in this installation.")
     const output = (event: object) => process.stdout.write(`${JSON.stringify(event)}\n`)
     if (args.length === 1 && args[0] === "observe") {
       const { observeCutover } = await import("./cutover")

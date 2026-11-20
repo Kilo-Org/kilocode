@@ -8,10 +8,9 @@ type Roots = {
   home: string
   legacyState: string
   v1State: string
-  previewState: string
   configBase: string
   legacyConfig: string
-  previewConfig: string
+  legacyDefaultConfig: string
 }
 type Kind = "model" | "workflow" | "skill"
 type Item = { kind: Kind; source: string; target: string; digest: string }
@@ -54,7 +53,7 @@ function inventory(roots: Roots) {
     return plan
   }
   const stable = path.join(roots.legacyState, "model.json")
-  for (const dir of new Set([roots.legacyState, roots.v1State, roots.previewState])) {
+  for (const dir of new Set([roots.legacyState, roots.v1State])) {
     const file = path.join(dir, "model.json")
     inspect(plan, () => {
       if (entry(file)) record(plan, "model", file, stable)
@@ -64,7 +63,7 @@ function inventory(roots: Roots) {
   const { dot, storage, modes: modeFiles } = legacyRoots(roots.home, roots.configBase)
   for (const dir of [...dot, ...storage]) {
     // The config plan owns the complete inventory if an explicit override points here.
-    if (dir === roots.legacyConfig || dir === roots.previewConfig) continue
+    if (dir === roots.legacyConfig || dir === roots.legacyDefaultConfig) continue
     inspect(plan, () => workflows(plan, roots, dir))
     for (const name of dot.includes(dir) ? ["skills", "skill"] : ["skills"]) {
       inspect(plan, () => skills(plan, roots, path.join(dir, name)))
@@ -72,7 +71,7 @@ function inventory(roots: Roots) {
   }
   for (const file of modeFiles) inspect(plan, () => modes(file, roots.legacyConfig))
   for (const dir of dot) {
-    if (dir === roots.legacyConfig || dir === roots.previewConfig) continue
+    if (dir === roots.legacyConfig || dir === roots.legacyDefaultConfig) continue
     for (const name of ["mode", "modes"])
       inspect(plan, () => {
         for (const child of children(path.join(dir, name)).filter((file) => file.name.endsWith(".md")))
@@ -83,7 +82,7 @@ function inventory(roots: Roots) {
   }
   const resources = [...plan.items.values()].filter((item) => item.kind !== "model")
   if (resources.length) {
-    for (const dir of [roots.legacyConfig, roots.previewConfig])
+    for (const dir of new Set([roots.legacyConfig, roots.legacyDefaultConfig]))
       for (const check of [commandClaims, skillClaims])
         inspect(plan, () => check(plan, dir, roots.legacyConfig, resources))
   }
@@ -238,7 +237,7 @@ function commandClaims(plan: Inventory, dir: string, stable: string, resources: 
       if (resource.target !== target || resource.digest !== hash(content)) clash(plan, resource, source)
     }
   }
-  for (const file of ["kilo.json", "kilo.jsonc", "kilo2.json", "kilo2.jsonc"].map((name) => path.join(dir, name))) {
+  for (const file of ["kilo.json", "kilo.jsonc"].map((name) => path.join(dir, name))) {
     if (!entry(file)) continue
     for (const name of commandNames(file)) {
       const resource = commands.get(fold(name))

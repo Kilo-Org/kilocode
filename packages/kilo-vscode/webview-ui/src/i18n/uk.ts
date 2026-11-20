@@ -1138,11 +1138,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Час очікування каталогу (мс)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Час очікування виконання (мс)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCP-серверів не налаштовано. Додайте MCP-сервери до kilo2.json або попросіть агента додати їх.",
+    "MCP-серверів не налаштовано. Додайте MCP-сервери до kilo.json або попросіть агента додати їх.",
   "settings.agentBehaviour.workflows.description":
     "Робочі процеси це власні команди, визначені у вашій конфігурації або у файлах Markdown з командами. Для кожного робочого процесу можна задати модель і варіант міркування.",
   "settings.agentBehaviour.workflows.empty":
-    "Власних команд не знайдено. Додайте команди до kilo2.json або до файлу Markdown у .kilo2/command.",
+    "Власних команд не знайдено. Додайте команди до kilo.json або до файлу Markdown у .kilo/command.",
   "settings.agentBehaviour.workflows.detail.description": "Опис",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
   "settings.agentBehaviour.workflows.model": "модель",

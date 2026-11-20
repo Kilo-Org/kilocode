@@ -13,11 +13,10 @@ function roots(root: string) {
     home: path.join(root, "home"),
     stateBase: path.join(root, "xdg-state"),
     legacyState: path.join(root, "xdg-state/kilo"),
-    v1State: path.join(root, "xdg-state/kilo"),
-    previewState: path.join(root, "xdg-state/kilo2"),
+    v1State: path.join(root, "xdg-state/v1-fallback"),
     configBase: path.join(root, "xdg-config"),
     legacyConfig: path.join(root, "custom-stable-config"),
-    previewConfig: path.join(root, "custom-preview-config"),
+    legacyDefaultConfig: path.join(root, "custom-preview-config"),
   }
 }
 
@@ -66,7 +65,7 @@ test("opening HOME does not block a global workflow handled by the resource plan
 test("preview model preferences are published privately and load through the TUI reader; repeated apply changes nothing", async () => {
   await using tmp = await tmpdir()
   const opts = roots(tmp.path)
-  const source = put(opts.stateBase, "kilo2/model.json", prefs)
+  const source = put(opts.stateBase, "v1-fallback/model.json", prefs)
   put(opts.stateBase, "kilo/state.json", "Not model preferences")
   const target = path.join(opts.stateBase, "kilo", "model.json")
   const before = image(tmp.path)
@@ -106,7 +105,7 @@ test("divergent model documents block before any addition without exposing their
   await using tmp = await tmpdir()
   const opts = roots(tmp.path)
   const stable = put(opts.stateBase, "kilo/model.json", prefs)
-  const preview = put(opts.stateBase, "kilo2/model.json", '{"fixture":"PRIVATE-VALUE"}')
+  const preview = put(opts.stateBase, "v1-fallback/model.json", '{"fixture":"PRIVATE-VALUE"}')
   put(opts.home, ".kilocode/workflows/example.md", workflow)
   const before = image(tmp.path)
   const plan = planExtra(opts)
@@ -180,13 +179,13 @@ test("config reconciliation may publish matching preview definitions before appl
   await using tmp = await tmpdir()
   const opts = roots(tmp.path)
   put(opts.home, ".kilocode/workflows/review.md", workflow)
-  put(opts.previewConfig, "workflows/review.md", workflow)
+  put(opts.legacyDefaultConfig, "workflows/review.md", workflow)
   put(opts.home, ".kilo/skill/trace/SKILL.md", skill)
-  put(opts.previewConfig, "skills/trace/SKILL.md", skill)
-  put(opts.stateBase, "kilo2/model.json", prefs)
+  put(opts.legacyDefaultConfig, "skills/trace/SKILL.md", skill)
+  put(opts.stateBase, "v1-fallback/model.json", prefs)
   const extra = planExtra(opts)
   expect(extra.conflicts).toEqual([])
-  applyConfig(planConfig(opts.legacyConfig, opts.previewConfig))
+  applyConfig(planConfig(opts.legacyConfig, opts.legacyDefaultConfig))
   const config = image(opts.legacyConfig)
   extra.apply()
   expect(image(opts.legacyConfig)).toEqual(config)
@@ -195,21 +194,21 @@ test("config reconciliation may publish matching preview definitions before appl
 
 test.each([
   ["legacyConfig", "commands/review.md", "Other template"],
-  ["previewConfig", "workflows/REVIEW.md", "Other template"],
-  ["previewConfig", "kilo2.jsonc", '{ "command": {"review":{"template":"Other"}}}'],
+  ["legacyDefaultConfig", "workflows/REVIEW.md", "Other template"],
+  ["legacyDefaultConfig", "kilo.jsonc", '{ "command": {"review":{"template":"Other"}}}'],
   ["legacyConfig", "skill/other/trace/SKILL.md", skill],
-  ["previewConfig", "skills/trace/lib.sh", "Other asset"],
-  ["previewConfig", "skills/SKILL.md", "Root skill hides nested manifests"],
+  ["legacyDefaultConfig", "skills/trace/lib.sh", "Other asset"],
+  ["legacyDefaultConfig", "skills/SKILL.md", "Root skill hides nested manifests"],
   ["home", ".kilocode/workflows/review.md", "Other template"],
   ["home", ".kilo/skills/trace/rules.md", "Bundle asset"],
   ["home", ".kilocode/workflows/read.md", "Read {file:./secret}"],
-  ["stateBase", "kilo2/model.json", "[not model preferences]"],
+  ["stateBase", "v1-fallback/model.json", "[not model preferences]"],
 ] as const)("conflicting or unsafe %s/%s prevents all writes", async (which, rel, text) => {
   await using tmp = await tmpdir()
   const opts = roots(tmp.path)
   put(opts.home, ".kilo/workflows/review.md", workflow)
   put(opts.home, ".kilo/skills/trace/SKILL.md", skill)
-  put(opts.stateBase, "kilo2/model.json", prefs)
+  put(opts.stateBase, "v1-fallback/model.json", prefs)
   const issue = put(opts[which], rel, text)
   const before = image(tmp.path)
   const plan = planExtra(opts)
@@ -222,12 +221,12 @@ test("new destinations, changed input and substituted parent links invalidate th
   await using tmp = await tmpdir()
   const opts = roots(tmp.path)
   put(opts.home, ".kilo/workflows/review.md", workflow)
-  put(opts.stateBase, "kilo2/model.json", prefs)
+  put(opts.stateBase, "v1-fallback/model.json", prefs)
   const plan = planExtra(opts)
-  put(opts.stateBase, "kilo2/model.json", "{}")
+  put(opts.stateBase, "v1-fallback/model.json", "{}")
   expect(plan.apply).toThrow(/changed/)
   expect(fs.existsSync(path.join(opts.stateBase, "kilo"))).toBe(false)
-  put(opts.stateBase, "kilo2/model.json", prefs)
+  put(opts.stateBase, "v1-fallback/model.json", prefs)
   const collision = put(opts.legacyConfig, "command/review.md", "Manual edit")
   expect(plan.apply).toThrow(/conflict/)
   expect(fs.readFileSync(collision, "utf8")).toBe("Manual edit")
@@ -239,8 +238,8 @@ test("new destinations, changed input and substituted parent links invalidate th
   fs.symlinkSync(outside, opts.legacyConfig, "junction")
   expect(plan.apply).toThrow(/link/)
   fs.unlinkSync(opts.legacyConfig)
-  fs.rmSync(path.join(opts.stateBase, "kilo2"), { recursive: true })
-  fs.symlinkSync(outside, path.join(opts.stateBase, "kilo2"), "junction")
+  fs.rmSync(path.join(opts.stateBase, "v1-fallback"), { recursive: true })
+  fs.symlinkSync(outside, path.join(opts.stateBase, "v1-fallback"), "junction")
   expect(planExtra(opts).conflicts.join()).toContain("link")
   expect(image(outside)).toEqual(untouched)
 })

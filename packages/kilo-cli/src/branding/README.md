@@ -7,13 +7,13 @@ This directory rebrands the upstream OpenCode product text and artwork to Kilo. 
 Branding is applied by a Bun loader, not by editing committed upstream files:
 
 - **dev** — `preload.ts` registers `plugin.ts` as a Bun `onLoad` plugin. Each intercepted upstream module is rebranded in memory as it loads.
-- **compiled build** — `script/build.ts` runs the same `brandingPlugin` during `Bun.build` and defines `KILO_BRANDING_COMPILED`, so the branded output is baked into the `kilo2` binary and the runtime loader never runs.
+- **compiled build** — `script/build.ts` runs the same `brandingPlugin` during `Bun.build` and defines `KILO_BRANDING_COMPILED`, so the branded output is baked into the `kilo` binary and the runtime loader never runs.
 
 Both paths call `KiloBranding.transform(file, source)` in `text.ts`, which is the single entry point. For an intercepted file it applies three stages in order:
 
 1. **Overrides** (`rules.ts`, `overrides`) — whole-file, file-scoped exact replacements for Kilo _product copy_ that is not a mechanical brand swap. Applied first so a later OpenCode -> Kilo pass cannot pre-empt them.
 2. **Structural transforms** (`structural.ts`) — not branding text: they rewrite imports and logic so the TUI uses Kilo's logo art (`logo-art.ts`), and swap the OAuth wordmark SVG. These are exact and **fail loudly** when upstream moves the code, so a human re-inspects the new implementation during a sync. The `logo.ts` wordmark export is replaced the same way (`brandLogoModule`).
-3. **Rule engine** (`engine.ts` + `rules.ts`) — the dynamic part. The module is parsed with Babel and the rules run over **user-visible text only** (string literals, template text, JSX text), located by AST offsets and spliced into the original source so every other byte is preserved. The rules are, per span: a literal map (domains, repo URL, config file name, title prefix), then `\bOpenCode\b` -> `Kilo`, then the command token `opencode` -> `kilo2`.
+3. **Rule engine** (`engine.ts` + `rules.ts`) — the dynamic part. The module is parsed with Babel and the rules run over **user-visible text only** (string literals, template text, JSX text), located by AST offsets and spliced into the original source so every other byte is preserved. The rules are, per span: a literal map (domains, repo URL, config file name, title prefix), then `\bOpenCode\b` -> `Kilo`, then the command token `opencode` -> `kilo`.
 
 ### What is protected
 
@@ -45,7 +45,7 @@ The audit still reads those modules. `script/branding-audit-allow.ts` records ea
 
 `bun run branding:audit` (from `packages/kilo-cli`, also a CI step) prints each finding as `packages/<file>:<line>:<column>` with the text around the place, also inside a prompt file. It reads upstream `packages/{cli,tui,server,core,plugin}/src` and Kilo's own `packages/kilo-plugin/src`. What to do depends on the file and on the text:
 
-- **A Kilo-owned file** (`packages/kilo-*`): correct the text in its source. Name Kilo, the `kilo2` command or the `kilo` tool namespace, not their upstream names.
+- **A Kilo-owned file** (`packages/kilo-*`): correct the text in its source. Name Kilo, the `kilo` command or the `kilo` tool namespace, not their upstream names.
 - **An upstream file**: add it to `files` in `text.ts` (see "Adding coverage"); never edit the upstream text.
 - **An identity, not branding** (a provider or SaaS name, a value sent to a third party, code the host replaces): add a reviewed entry to `script/branding-audit-allow.ts`, an exact snippet with its reason (see "What is not branded").
 

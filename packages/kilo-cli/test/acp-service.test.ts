@@ -34,7 +34,7 @@ test("wraps the real ACP service without changing capability or authentication s
     const expected = structuredClone(original)
     const terminal = expected.authMethods?.[0]?._meta?.["terminal-auth"]
     if (terminal && typeof terminal === "object" && !Array.isArray(terminal)) {
-      Object.assign(terminal, { command: "kilo2" })
+      Object.assign(terminal, { command: "kilo" })
     }
     expect(result).toEqual(expected)
     expect(await Effect.runPromise(Ref.get(capabilities))).toEqual(ACPCapabilities.parse(params.clientCapabilities))
@@ -81,7 +81,7 @@ test("preserves unknown response and auth metadata without mutating it", async (
         ...snapshot.authMethods[0],
         _meta: {
           ...snapshot.authMethods[0]._meta,
-          "terminal-auth": { command: "kilo2", args: ["x", "y"], label: "Label", extra: { x: 1 } },
+          "terminal-auth": { command: "kilo", args: ["x", "y"], label: "Label", extra: { x: 1 } },
         },
       },
       ...snapshot.authMethods.slice(1),

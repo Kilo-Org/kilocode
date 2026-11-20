@@ -33,7 +33,7 @@ test("a block highlighted again after its state was released replaces the render
     id: 1,
     key: "block",
     reset: true,
-    stable: tokens("kilo2", " ", "--for"),
+    stable: tokens("kilo", " ", "--for"),
     unstable: [],
   })
   const second = applyMarkdownWorkerResponse(undefined, {
@@ -41,7 +41,7 @@ test("a block highlighted again after its state was released replaces the render
     id: 2,
     key: "block",
     reset: true,
-    stable: tokens("kilo2", " ", "--format", " ", "json"),
+    stable: tokens("kilo", " ", "--format", " ", "json"),
     unstable: [],
   })
 
@@ -49,12 +49,12 @@ test("a block highlighted again after its state was released replaces the render
   const code = document.createElement("code")
   expect(second.generation).not.toBe(first.generation)
   expect(
-    shouldResetCodeTokens(rendered(first, "```bash\nkilo2 --for", code), {
+    shouldResetCodeTokens(rendered(first, "```bash\nkilo --for", code), {
       code,
       language: "bash",
       generation: second.generation,
       stableCount: second.stable.length,
-      raw: "```bash\nkilo2 --format json",
+      raw: "```bash\nkilo --format json",
     }),
   ).toBe(true)
 })
@@ -65,7 +65,7 @@ test("a streamed continuation keeps the generation", () => {
     id: 1,
     key: "block",
     reset: true,
-    stable: tokens("kilo2", " "),
+    stable: tokens("kilo", " "),
     unstable: tokens("--for"),
   })
   const next = applyMarkdownWorkerResponse(first, {
@@ -78,14 +78,14 @@ test("a streamed continuation keeps the generation", () => {
   })
 
   expect(next.generation).toBe(first.generation)
-  expect(next.stable.map((token) => token[0])).toEqual(["kilo2", " ", "--format", " "])
+  expect(next.stable.map((token) => token[0])).toEqual(["kilo", " ", "--format", " "])
 })
 
 test("a replaced code element resets the tokens instead of appending to it", () => {
   const code = document.createElement("code")
   const state = rendered(
-    { id: 1, generation: 1, stable: tokens("kilo2"), unstable: [] },
-    "```bash\nkilo2",
+    { id: 1, generation: 1, stable: tokens("kilo"), unstable: [] },
+    "```bash\nkilo",
     code,
   )
 
@@ -96,7 +96,7 @@ test("a replaced code element resets the tokens instead of appending to it", () 
       language: "bash",
       generation: state.generation,
       stableCount: 2,
-      raw: "```bash\nkilo2",
+      raw: "```bash\nkilo",
     }),
   ).toBe(true)
 })

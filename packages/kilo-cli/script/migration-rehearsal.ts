@@ -71,7 +71,6 @@ try {
         TMPDIR: path.join(profile, "tmp"),
         KILO_V2_PROFILE: profile,
         INIT_CWD: profile,
-        KILO_INTERNAL_PROFILE_CUTOVER: "1",
       },
       stdin: "ignore",
       stdout: "inherit",

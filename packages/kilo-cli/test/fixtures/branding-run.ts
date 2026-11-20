@@ -13,8 +13,8 @@ export const repo = path.resolve(import.meta.dir, "../../../..")
 
 // The intercepted server modules: the upstream text each one answers with, and its Kilo form.
 export const serverText = [
-  ["server/src/handlers/server.ts", "Run `opencode pair` to get a new one.", "Run `kilo2 pair` to get a new one."],
-  ["server/src/process.ts", "Run `opencode service restart` after", "Run `kilo2 service restart` after"],
+  ["server/src/handlers/server.ts", "Run `opencode pair` to get a new one.", "Run `kilo pair` to get a new one."],
+  ["server/src/process.ts", "Run `opencode service restart` after", "Run `kilo service restart` after"],
 ] as const
 
 // The intercepted core modules: each upstream text that names the host to a person or to the model, and its Kilo form.
@@ -207,10 +207,10 @@ export function checkEpilogue(output: string, hosted: boolean, columns: number, 
   )
   if (scenario === "session" || scenario === "both") {
     expect(output).toContain("Session")
-    expect(output).toContain(`${hosted ? "kilo2" : "opencode"} -s ses_example`)
+    expect(output).toContain(`${hosted ? "kilo" : "opencode"} -s ses_example`)
   }
   if (scenario === "update" || scenario === "both") {
-    expect(Bun.stripANSI(output)).toContain(`Run ${hosted ? "kilo2" : "opencode"} to use 2.1.4`)
+    expect(Bun.stripANSI(output)).toContain(`Run ${hosted ? "kilo" : "opencode"} to use 2.1.4`)
   }
   if (columns > 0) for (const line of artLines) expect(Bun.stringWidth(line)).toBeLessThanOrEqual(columns)
 }

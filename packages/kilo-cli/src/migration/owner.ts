@@ -154,9 +154,7 @@ export async function observeOwner(source: string, observe: (state: OwnerState) 
 function sidecar(source: string) {
   const file = realpathSync.native(source)
   const dir = path.dirname(file)
-  return path.basename(dir) === "kilo"
-    ? path.join(dir, "..", "kilo2", "migration", path.basename(file))
-    : `${file}.kilo2-migration`
+  return path.join(dir, ".kilo-migration", path.basename(file))
 }
 
 export function stageJournal(source: string) {

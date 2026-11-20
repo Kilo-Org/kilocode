@@ -44,12 +44,16 @@ async function removeDir(dir: string) {
   }
 }
 
-/** A test directory with an empty kilo2 data directory; the Kilo v1 store goes in `kilo` beside it. */
+/** A test directory with an empty kilo data directory; the Kilo v1 store goes in `kilo` beside it. */
 async function root() {
   const dir = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-import-v1-")))
   dirs.push(dir)
-  await mkdir(path.join(dir, "kilo2"))
-  return { dir, data: path.join(dir, "kilo2") }
+  await mkdir(path.join(dir, "destination"))
+  return { dir, data: path.join(dir, "destination") }
+}
+
+function fixtureSource(destination: string) {
+  return path.join(path.dirname(destination), "kilo", "kilo.db")
 }
 
 const model = { providerID: "kilo", modelID: "kilo-auto/free" }
@@ -258,15 +262,15 @@ const strays = async (data: string) =>
 
 test("refuses a Kilo v1 store as the target, so a naming mistake cannot migrate the user's only copy", async () => {
   const { dir, data } = await root()
-  const target = path.join(data, "kilo2.db")
+  const target = path.join(data, "kilo.db")
   await v1Store(target, path.join(dir, "work"))
   const before = createHash("sha256")
     .update(await readFile(target))
     .digest("hex")
-  await expect(KiloDatabase.refuseV1Store(target)).rejects.toThrow("Kilo v1 session store")
-  // `KILO2_DB` reaches `select` as `OPENCODE_DB`, which must run the same guard as the default store file.
+  await expect(KiloDatabase.refuseV1Store(target)).rejects.toThrow("v1 session store")
+  // `KILO_DB` reaches `select` as `OPENCODE_DB`, which must run the same guard as the default store file.
   await expect(KiloDatabase.select({ OPENCODE_DB: target }, { data, channel: "local" })).rejects.toThrow(
-    "Kilo v1 session store",
+    "v1 session store",
   )
   expect(
     createHash("sha256")
@@ -277,7 +281,7 @@ test("refuses a Kilo v1 store as the target, so a naming mistake cannot migrate 
 
 test("a file that cannot be read stops the start instead of counting as a normal store", async () => {
   const { data } = await root()
-  await writeFile(path.join(data, "kilo2-local.db"), "not a database")
+  await writeFile(path.join(data, "kilo.db"), "not a database")
   await expect(KiloDatabase.select({}, { data, channel: "local" })).rejects.toThrow("could not be read")
 })
 
@@ -285,14 +289,14 @@ test("a Kilo v1 store is not adopted, so the start cannot create the store the g
   const { dir, data } = await root()
   // The upstream-named file of an earlier build for this channel is the one `adopt` copies when no file has sessions.
   await v1Store(path.join(data, "opencode-local.db"), path.join(dir, "work"))
-  expect(await KiloDatabase.select({}, { data, channel: "local" })).toBe(path.join(data, "kilo2-local.db"))
-  expect(existsSync(path.join(data, "kilo2-local.db"))).toBe(false)
+  expect(await KiloDatabase.select({}, { data, channel: "local" })).toBe(path.join(data, "kilo.db"))
+  expect(existsSync(path.join(data, "kilo.db"))).toBe(false)
   expect(existsSync(path.join(data, "opencode-local.db"))).toBe(true)
 })
 
 test("the next start opens a store that was just imported, although it has no -wal or -shm file yet", async () => {
   const { dir, data } = await root()
-  await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
+  await v1Store(fixtureSource(data), path.join(dir, "work"))
   const file = await importStore(data)
   expect(existsSync(`${file}-wal`) || existsSync(`${file}-shm`)).toBe(false)
   expect(await KiloDatabase.select({}, { data, channel: "latest" })).toBe(file)
@@ -302,14 +306,14 @@ test("the next start opens a store that was just imported, although it has no -w
 test("a v1 store at rest, after v1 closed it, is imported without creating files beside it", async () => {
   for (const since of [undefined, Date.now() - 7 * 86_400_000]) {
     const { dir, data } = await root()
-    const v1 = await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"), Date.now())
+    const v1 = await v1Store(fixtureSource(data), path.join(dir, "work"), Date.now())
     v1.db.run("PRAGMA wal_checkpoint(TRUNCATE)")
     // A copy of the checkpointed file is a store at rest: in WAL mode, with no -wal or -shm file beside it.
     const store = path.join(dir, "rest", "kilo.db")
     await mkdir(path.dirname(store), { recursive: true })
-    await copyFile(KiloDatabase.v1Store(data), store)
+    await copyFile(fixtureSource(data), store)
     const before = await hashes(path.dirname(store))
-    expect(await KiloDatabase.importV1({ store, file: path.join(data, "kilo2.db"), data, since })).toEqual({
+    expect(await KiloDatabase.importV1({ store, file: path.join(data, "kilo.db"), data, since })).toEqual({
       imported: 2,
       skipped: false,
     })
@@ -318,13 +322,13 @@ test("a v1 store at rest, after v1 closed it, is imported without creating files
   }
 })
 
-test("a v1 store from before the Kilo tables is still imported, and is not taken for a store to protect", async () => {
+test("a v1 store from before the Kilo tables is still imported, and must also be protected", async () => {
   const { dir, data } = await root()
-  const store = KiloDatabase.v1Store(data)
+  const store = fixtureSource(data)
   const v1 = await v1Store(store, path.join(dir, "work"))
   for (const table of ["kilo_board_message", "kilo_board", "kilo_continuation_intent"]) v1.db.run(`DROP TABLE ${table}`)
-  await expect(KiloDatabase.refuseV1Store(store)).resolves.toBeUndefined()
-  expect(await KiloDatabase.importV1({ store, file: path.join(data, "kilo2.db"), data })).toEqual({
+  await expect(KiloDatabase.refuseV1Store(store)).rejects.toThrow("v1 session store")
+  expect(await KiloDatabase.importV1({ store, file: path.join(data, "kilo.db"), data })).toEqual({
     imported: 2,
     skipped: false,
   })
@@ -332,9 +336,9 @@ test("a v1 store from before the Kilo tables is still imported, and is not taken
 
 test("the import API returns the session count and reports an existing store as skipped", async () => {
   const { dir, data } = await root()
-  const store = KiloDatabase.v1Store(data)
+  const store = fixtureSource(data)
   await v1Store(store, path.join(dir, "work"))
-  const file = path.join(data, "kilo2.db")
+  const file = path.join(data, "kilo.db")
   expect(await KiloDatabase.importV1({ store, file, data })).toEqual({ imported: 2, skipped: false })
   expect(await KiloDatabase.importV1({ store, file, data })).toEqual({ imported: 0, skipped: true })
   expect(await strays(data)).toEqual([])
@@ -361,7 +365,7 @@ test("full profile conversion preserves session ids, provider credentials and th
 
 test("the Kilo-specific steps: no hidden or transient text, editor context kept, no credentials", async () => {
   const { dir, data } = await root()
-  await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
+  await v1Store(fixtureSource(data), path.join(dir, "work"))
   // The v2 migration `import_legacy_credentials` imports an `auth.json` of the data directory into the copy, and records
   // the origins of well-known entries in the `wellknown:sources` key.
   await writeFile(
@@ -396,7 +400,7 @@ test("the Kilo-specific steps: no hidden or transient text, editor context kept,
 
 test("a part with malformed JSON does not stop the import", async () => {
   const { dir, data } = await root()
-  const source = await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
+  const source = await v1Store(fixtureSource(data), path.join(dir, "work"))
   source.db.run(
     "INSERT INTO part VALUES ('prt_broken', 'msg_ses_plain_user', 'ses_plain', 11, 11, '{\"type\":\"text\",')",
   )
@@ -406,9 +410,9 @@ test("a part with malformed JSON does not stop the import", async () => {
 
 test("an import lock that cannot be taken fails the import instead of writing a store", async () => {
   const { dir, data } = await root()
-  const store = KiloDatabase.v1Store(data)
+  const store = fixtureSource(data)
   await v1Store(store, path.join(dir, "work"))
-  const file = path.join(data, "kilo2.db")
+  const file = path.join(data, "kilo.db")
   await mkdir(`${file}.import.lock`)
   await expect(KiloDatabase.importV1({ store, file, data })).rejects.toThrow()
   expect(await Bun.file(file).exists()).toBe(false)
@@ -416,9 +420,9 @@ test("an import lock that cannot be taken fails the import instead of writing a 
 
 test("a lock of a live process that stopped reporting progress is taken over", async () => {
   const { dir, data } = await root()
-  const store = KiloDatabase.v1Store(data)
+  const store = fixtureSource(data)
   await v1Store(store, path.join(dir, "work"))
-  const file = path.join(data, "kilo2.db")
+  const file = path.join(data, "kilo.db")
   // A live PID (this process) whose lock has not been touched for ten minutes: a stuck owner or a reused PID.
   await writeFile(`${file}.import.lock`, String(process.pid))
   const old = new Date(Date.now() - 10 * 60_000)
@@ -429,9 +433,9 @@ test("a lock of a live process that stopped reporting progress is taken over", a
 
 test("parallel imports convert once, and a lock of a process that no longer runs is taken over", async () => {
   const { dir, data } = await root()
-  const store = KiloDatabase.v1Store(data)
+  const store = fixtureSource(data)
   await v1Store(store, path.join(dir, "work"))
-  const file = path.join(data, "kilo2.db")
+  const file = path.join(data, "kilo.db")
   // A crashed import: its lock names a process ID that cannot be running.
   await writeFile(`${file}.import.lock`, "2147483646")
   const results = await Promise.all([0, 1, 2].map(() => KiloDatabase.importV1({ store, file, data })))
@@ -442,7 +446,7 @@ test("parallel imports convert once, and a lock of a process that no longer runs
 
 test("the v1 files stay byte-identical", async () => {
   const { dir, data } = await root()
-  await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
+  await v1Store(fixtureSource(data), path.join(dir, "work"))
   const before = await hashes(path.join(dir, "kilo"))
   await importStore(data)
   expect(await hashes(path.join(dir, "kilo"))).toEqual(before)
@@ -452,13 +456,10 @@ test("after the release renames the data directory to kilo, the default source i
   const { dir } = await root()
   const data = path.join(dir, "kilo")
   await v1Store(path.join(data, "kilo.db"), path.join(dir, "work"))
-  expect(KiloDatabase.v1Store(data)).toBe(path.join(data, "kilo.db"))
-  const file = path.join(data, "kilo2.db")
-  expect(await KiloDatabase.importV1({ store: KiloDatabase.v1Store(data), file, data })).toEqual({
-    imported: 2,
-    skipped: false,
-  })
-  read(file, (db) => expect(db.query("SELECT count(*) AS n FROM session_v2").get()).toEqual({ n: 2 }))
+  expect(fixtureSource(data)).toBe(path.join(data, "kilo.db"))
+  const before = await hashes(data)
+  await expect(KiloDatabase.refuseV1Store(fixtureSource(data))).rejects.toThrow("v1 session store")
+  expect(await hashes(data)).toEqual(before)
 })
 
 test("--since parses durations and ISO dates", () => {
@@ -476,10 +477,10 @@ test("--since rejects invalid values", () => {
 
 test("--since imports the recent sessions and the complete parent and child tree", async () => {
   const { dir, data } = await root()
-  const store = KiloDatabase.v1Store(data)
+  const store = fixtureSource(data)
   const now = Date.now()
   await windowStore(store, path.join(dir, "work"), now)
-  const file = path.join(data, "kilo2.db")
+  const file = path.join(data, "kilo.db")
   expect(await KiloDatabase.importV1({ store, file, data, since: now - 7 * 86_400_000 })).toEqual({
     imported: 5,
     skipped: false,
@@ -506,7 +507,7 @@ test("--since imports the recent sessions and the complete parent and child tree
 
 test("--since leaves the v1 files byte-identical and still applies the Kilo steps", async () => {
   const { dir, data } = await root()
-  await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"), Date.now())
+  await v1Store(fixtureSource(data), path.join(dir, "work"), Date.now())
   const before = await hashes(path.join(dir, "kilo"))
   const file = await importStore(data, Date.now() - 7 * 86_400_000)
   expect(await hashes(path.join(dir, "kilo"))).toEqual(before)
@@ -522,29 +523,29 @@ test("--since leaves the v1 files byte-identical and still applies the Kilo step
 
 test("--since with an empty window fails instead of publishing an empty store", async () => {
   const { dir, data } = await root()
-  await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"), Date.now())
-  const file = path.join(data, "kilo2.db")
+  await v1Store(fixtureSource(data), path.join(dir, "work"), Date.now())
+  const file = path.join(data, "kilo.db")
   const since = Date.now() + 86_400_000
-  await expect(KiloDatabase.importV1({ store: KiloDatabase.v1Store(data), file, data, since })).rejects.toThrow(
+  await expect(KiloDatabase.importV1({ store: fixtureSource(data), file, data, since })).rejects.toThrow(
     "No Kilo v1 sessions were updated since",
   )
   expect(existsSync(file)).toBe(false)
 })
 
-/** Imports the v1 store beside `data` into `<data>/kilo2.db`, the way the command does without `--from`. */
+/** Imports the v1 store beside `data` into `<data>/kilo.db`, the way the command does without `--from`. */
 async function importStore(data: string, since?: number) {
-  const file = path.join(data, "kilo2.db")
-  await KiloDatabase.importV1({ store: KiloDatabase.v1Store(data), file, data, since })
+  const file = path.join(data, "kilo.db")
+  await KiloDatabase.importV1({ store: fixtureSource(data), file, data, since })
   return file
 }
 
 test("an existing store gets only the v1 sessions it does not have, in the project it already lists", async () => {
   const { dir, data } = await root()
-  const store = KiloDatabase.v1Store(data)
+  const store = fixtureSource(data)
   const now = Date.now()
   await windowStore(store, path.join(dir, "work"), now)
   const file = await importStore(data, now - 7 * 86_400_000)
-  // kilo2 changed an imported session, and knows the project under its own ID.
+  // kilo changed an imported session, and knows the project under its own ID.
   read(file, (db) => {
     db.run("UPDATE session_v2 SET title = 'kept' WHERE id = 'ses_recent'")
     db.run("UPDATE project SET id = 'prj_v2' WHERE id = 'prj_window'")
@@ -571,7 +572,7 @@ test("an existing store gets only the v1 sessions it does not have, in the proje
 
 test("a private store left behind by an earlier merge is removed instead of merged", async () => {
   const { dir, data } = await root()
-  const store = KiloDatabase.v1Store(data)
+  const store = fixtureSource(data)
   const now = Date.now()
   await windowStore(store, path.join(dir, "work"), now)
   const file = await importStore(data, now - 7 * 86_400_000)
@@ -587,10 +588,10 @@ test("a private store left behind by an earlier merge is removed instead of merg
   expect((await readdir(data)).filter((name) => name.includes(".import"))).toEqual([])
 })
 
-test("--config copies the v1 global config without overwriting kilo2 files", async () => {
+test("--config copies the v1 global config without overwriting kilo files", async () => {
   const { dir } = await root()
   const from = path.join(dir, "config", "kilo")
-  const to = path.join(dir, "config", "kilo2")
+  const to = path.join(dir, "config", "destination")
   await mkdir(path.join(from, "skills", "shared"), { recursive: true })
   await mkdir(path.join(from, "skills", "v1-only"), { recursive: true })
   await mkdir(path.join(from, "plugins"), { recursive: true })
@@ -602,15 +603,15 @@ test("--config copies the v1 global config without overwriting kilo2 files", asy
   await writeFile(path.join(from, "skills", "shared", "SKILL.md"), "v1")
   await writeFile(path.join(from, "skills", "v1-only", "SKILL.md"), "v1")
   await writeFile(path.join(from, "plugins", "plugin.ts"), "")
-  await writeFile(path.join(to, "skills", "shared", "SKILL.md"), "kilo2")
+  await writeFile(path.join(to, "skills", "shared", "SKILL.md"), "kilo")
   expect(copyConfig(from, to)).toEqual(["kilo.jsonc", "skills"])
-  const copied = await readFile(path.join(to, "kilo2.jsonc"), "utf8")
+  const copied = await readFile(path.join(to, "kilo.jsonc"), "utf8")
   expect(copied).toContain("// v1 model")
   expect(copied).toContain('"model": "kilo/v1"')
   expect(copied).not.toContain("plugin")
   // The v1 file stays as it is.
   expect(await readFile(path.join(from, "kilo.jsonc"), "utf8")).toContain("v1-plugin")
-  expect(await readFile(path.join(to, "skills", "shared", "SKILL.md"), "utf8")).toBe("kilo2")
+  expect(await readFile(path.join(to, "skills", "shared", "SKILL.md"), "utf8")).toBe("kilo")
   expect(await readFile(path.join(to, "skills", "v1-only", "SKILL.md"), "utf8")).toBe("v1")
   expect(existsSync(path.join(to, "plugins"))).toBe(false)
   // A symlinked, read-only v1 config is read, never written through, and the copy is a writable file of its own.
@@ -626,12 +627,12 @@ test("--config copies the v1 global config without overwriting kilo2 files", asy
   const fresh = path.join(dir, "config", "fresh")
   expect(copyConfig(linked, fresh)).toEqual(["kilo.json"])
   expect(await readFile(path.join(dotfiles, "kilo.json"), "utf8")).toContain("v1-plugin")
-  expect((await lstat(path.join(fresh, "kilo2.json"))).isSymbolicLink()).toBe(false)
-  expect(await readFile(path.join(fresh, "kilo2.json"), "utf8")).not.toContain("plugin")
+  expect((await lstat(path.join(fresh, "kilo.json"))).isSymbolicLink()).toBe(false)
+  expect(await readFile(path.join(fresh, "kilo.json"), "utf8")).not.toContain("plugin")
   await chmod(path.join(dotfiles, "kilo.json"), 0o644)
-  // Once kilo2 has its own config file, the v1 file stays out.
-  await rm(path.join(to, "kilo2.jsonc"))
-  await writeFile(path.join(to, "kilo2.json"), "{}")
+  // Once kilo has its own config file, the v1 file stays out.
+  await rm(path.join(to, "kilo.jsonc"))
+  await writeFile(path.join(to, "kilo.json"), "{}")
   expect(copyConfig(from, to)).toEqual(["skills"])
-  expect(existsSync(path.join(to, "kilo2.jsonc"))).toBe(false)
+  expect(existsSync(path.join(to, "kilo.jsonc"))).toBe(false)
 })

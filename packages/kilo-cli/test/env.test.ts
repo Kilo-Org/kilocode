@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { names, storage, translate } from "../src/env"
+import { storage, translate } from "../src/env"
 
 test.each([undefined, "0", "1"])("startup defaults preserve an explicit host setting (%s)", (setting) => {
   const env = { OPENCODE_TUI_USE_PINNED_MODE: setting, OPENCODE_TUI_OVERLAP_STARTUP: setting }
@@ -33,31 +33,10 @@ test("the Kilo Gateway token does not become the OpenCode Zen key", () => {
   expect(env.OPENCODE_API_KEY).toBeUndefined()
 })
 
-test("v1 storage variables do not reach v2, the KILO2_ names do", () => {
-  const v1: Record<string, string | undefined> = {
-    KILO_CONFIG: "/v1/kilo.json",
-    KILO_CONFIG_DIR: "/v1/config",
-    KILO_DB: "/v1/kilo.db",
+test("KILO storage overrides win over inherited runtime paths", () => {
+  for (const key of storage) {
+    const env = { [`KILO_${key}`]: "/selected", [`OPENCODE_${key}`]: "/inherited" }
+    translate(env)
+    expect(env[`OPENCODE_${key}`]).toBe("/selected")
   }
-  translate(v1)
-  expect(v1.OPENCODE_CONFIG).toBeUndefined()
-  expect(v1.OPENCODE_CONFIG_DIR).toBeUndefined()
-  expect(v1.OPENCODE_DB).toBeUndefined()
-
-  const v2: Record<string, string | undefined> = {
-    ...v1,
-    KILO2_CONFIG: "/v2/kilo2.json",
-    KILO2_CONFIG_DIR: "/v2/config",
-    KILO2_DB: "/v2/kilo2.db",
-  }
-  translate(v2)
-  expect(v2.OPENCODE_CONFIG).toBe("/v2/kilo2.json")
-  expect(v2.OPENCODE_CONFIG_DIR).toBe("/v2/config")
-  expect(v2.OPENCODE_DB).toBe("/v2/kilo2.db")
-})
-
-// KILO_CONFIG, KILO_CONFIG_DIR and KILO_DB belong to v1 while v1 and v2 ship side by side (D-4). Fails if a later
-// change copies them to the OPENCODE_ names again.
-test("v1 storage variables are not in the translated KILO_ names", () => {
-  for (const name of storage) expect(names).not.toContain(name)
 })

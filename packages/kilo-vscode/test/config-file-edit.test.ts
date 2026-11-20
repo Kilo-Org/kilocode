@@ -198,17 +198,17 @@ describe("aliasOf", () => {
 
 describe("isKiloConfigFile", () => {
   test("accepts only the Kilo v2 config file names", () => {
-    expect(isKiloConfigFile("/home/.config/kilo2/kilo2.json")).toBe(true)
-    expect(isKiloConfigFile("/home/.config/kilo2/kilo2.jsonc")).toBe(true)
-    expect(isKiloConfigFile("/home/.config/kilo2/kilo.json")).toBe(false)
-    expect(isKiloConfigFile("/home/.config/kilo2/other.json")).toBe(false)
+    expect(isKiloConfigFile("/home/.config/kilo/kilo.json")).toBe(true)
+    expect(isKiloConfigFile("/home/.config/kilo/kilo.jsonc")).toBe(true)
+    expect(isKiloConfigFile("/home/.config/kilo/opencode.json")).toBe(false)
+    expect(isKiloConfigFile("/home/.config/kilo/other.json")).toBe(false)
   })
 })
 
 describe("serialize", () => {
   test("runs two overlapping read-modify-writes so both edits land", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "kilo-write-"))
-    const file = path.join(dir, "kilo2.json")
+    const file = path.join(dir, "kilo.json")
     await writeFile(file, "{}\n")
     const enqueue = serialize()
     const write = (key: string, value: unknown) =>

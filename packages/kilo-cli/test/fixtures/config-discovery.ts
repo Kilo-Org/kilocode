@@ -1,5 +1,5 @@
 // Prints the project config sources, commands and skills the Kilo host's server finds for a directory. Run in a
-// child process: `KiloConfigFiles` reads KILO_USE_RELEASE_CONFIG when it loads.
+// child process: the test owns HOME, XDG and the server.
 // Usage: config-discovery.ts <project> <global> <command the project config adds>
 import { createRoutes } from "@opencode/server/routes"
 import { Context, Effect, Layer, References, Schedule } from "effect"

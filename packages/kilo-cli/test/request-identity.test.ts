@@ -89,7 +89,7 @@ test("without the host, every provider gets the upstream identity", async () => 
 }, 60_000)
 
 test.each([
-  [{}, "kilo2"],
+  [{}, "kilo"],
   [{ KILO_CLIENT: "vscode" }, "vscode"],
   [{ OPENCODE_CLIENT: "desktop" }, "desktop"],
   [{ KILO_CLIENT: "jetbrains", OPENCODE_CLIENT: "desktop" }, "jetbrains"],

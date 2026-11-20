@@ -8,7 +8,7 @@ coverage audit, while keeping the v2 pristine-source model intact.
 
 `packages/kilo-cli/src/branding/text.ts` holds a per-file list of exact
 `[from, to]` string pairs. `KiloBranding.transform()` applies them through the
-Bun loader (`plugin.ts`) in dev and bakes them into the compiled `kilo2` binary
+Bun loader (`plugin.ts`) in dev and bakes them into the compiled `kilo` binary
 at build time (`script/build.ts`, guarded by `KILO_BRANDING_COMPILED`). Upstream
 source stays byte-identical; branding is applied only at load/build time.
 
@@ -128,7 +128,7 @@ even though they are string literals:
      filename definition, never hardcoded)
    - `` `OC |  `` -> `` `Kilo |  `` (terminal title prefix)
 2. **Word rule** (case-aware, word boundary): `\bOpenCode\b` -> `Kilo`.
-3. **Command-token rule** (guarded): `opencode` -> `kilo2` **only** when it is
+3. **Command-token rule** (guarded): `opencode` -> `kilo` **only** when it is
    embedded in display text, recognised by an adjacent display context — a
    trailing space (`"opencode "`), a wrapping backtick/`${bold}…${reset}`, a
    trailing `:` (`"opencode acp:"`), or surrounding prose. A span whose entire

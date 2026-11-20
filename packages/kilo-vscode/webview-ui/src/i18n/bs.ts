@@ -1178,11 +1178,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Vrijeme kataloga (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Vrijeme izvršavanja (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo2.json ili zamolite agenta da ih doda.",
+    "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo.json ili zamolite agenta da ih doda.",
   "settings.agentBehaviour.workflows.description":
     "Tokovi rada su prilagođene komande definirane u vašoj konfiguraciji ili u Markdown datotekama komandi. Možete postaviti model i varijantu zaključivanja za svaki tok rada.",
   "settings.agentBehaviour.workflows.empty":
-    "Nisu pronađene prilagođene komande. Dodajte komande u kilo2.json ili Markdown datoteku u .kilo2/command.",
+    "Nisu pronađene prilagođene komande. Dodajte komande u kilo.json ili Markdown datoteku u .kilo/command.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Predložak",
   "settings.agentBehaviour.workflows.model": "model",

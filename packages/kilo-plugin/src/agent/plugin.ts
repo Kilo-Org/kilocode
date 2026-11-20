@@ -37,7 +37,7 @@ export const KiloAgentRemovePlugin = define<Bus.Service | FSUtil.Service | Globa
       // Both reference directories are resolved too: on macOS `/var` resolves to `/private/var`, and a resolved
       // candidate compared against an unresolved reference would look like it sits outside the project. The project
       // bound is the one config discovery walks to (the worktree root inside VCS, the filesystem root outside it), so
-      // an ancestor `.kilo2` that discovery loads stays removable from a subdirectory workspace.
+      // an ancestor `.kilo` that discovery loads stays removable from a subdirectory workspace.
       const project = yield* projectBoundary(fs, ctx.location)
       const home = yield* fs.resolve(global.config)
       // Outside VCS the project boundary is the filesystem root, so the managed system directory must be excluded

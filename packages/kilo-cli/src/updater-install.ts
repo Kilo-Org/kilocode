@@ -2,7 +2,7 @@ import { Effect, FileSystem, Option, Schema } from "effect"
 import path from "node:path"
 import { isPreview } from "./update-version"
 
-// The v2 CLI is published as a compiled launcher whose postinstall copies the platform binary into `bin/kilo2.exe`.
+// The v2 CLI is published as a compiled launcher whose postinstall copies the platform binary into `bin/kilo.exe`.
 // A source checkout runs under Bun, and the v1 line uses the same package name, so ownership is decided from the
 // installed package manifest and the running executable rather than from a global package list.
 export const packageName = "@kilocode/cli"
@@ -75,7 +75,7 @@ const sameFile = (fs: FileSystem.FileSystem, left: string, right: string) =>
   }).pipe(Effect.orElseSucceed(() => false))
 
 /**
- * Reads a package manifest and confirms that its `bin.kilo2` is the running executable. A manifest that exists next
+ * Reads a package manifest and confirms that its `bin.kilo` is the running executable. A manifest that exists next
  * to a similarly named package is not enough: the exact bin target has to resolve to this process.
  */
 const owns = (fs: FileSystem.FileSystem, manifest: string, executable: string) =>
@@ -85,7 +85,7 @@ const owns = (fs: FileSystem.FileSystem, manifest: string, executable: string) =
     // The v1 line shares the package name. Only the v2 channel has this version shape, and an installed manifest may
     // be newer than the still-running process after an upgrade.
     if (!isPreview(pkg.version)) return undefined
-    const bin = pkg.bin?.["kilo2"]
+    const bin = pkg.bin?.["kilo"]
     if (!bin) return undefined
     const target = path.resolve(path.dirname(manifest), bin)
     const real = yield* resolved(fs, target)
@@ -155,7 +155,7 @@ export const ownsGlobalBin = (
   platform: string = process.platform,
 ): Effect.Effect<boolean> =>
   Effect.gen(function* () {
-    const slots = platform === "win32" ? ["kilo2", "kilo2.cmd", "kilo2.ps1", "kilo2.exe"] : ["kilo2"]
+    const slots = platform === "win32" ? ["kilo", "kilo.cmd", "kilo.ps1", "kilo.exe"] : ["kilo"]
     const checked = yield* Effect.forEach(slots, (slot) => {
       const file = path.join(directory, slot)
       const present = fs.lstat(file).pipe(
@@ -167,7 +167,7 @@ export const ownsGlobalBin = (
       )
       return present.pipe(
         Effect.flatMap((exists) =>
-          exists ? slotOwned(fs, file, executable, slot !== "kilo2.exe") : Effect.succeed(true),
+          exists ? slotOwned(fs, file, executable, slot !== "kilo.exe") : Effect.succeed(true),
         ),
       )
     })
@@ -267,7 +267,7 @@ const fromNpm = (fs: FileSystem.FileSystem, exec: Exec, executable: string) =>
     if (!lockDirectory) return undefined
     if (
       process.platform !== "win32" &&
-      !samePath(yield* resolved(fs, path.join(lockDirectory, "bin", "kilo2")), executable)
+      !samePath(yield* resolved(fs, path.join(lockDirectory, "bin", "kilo")), executable)
     )
       return undefined
     // Verify the exact global root rather than trusting the shape alone. A project node_modules or a pnpm/Bun/Yarn
@@ -376,10 +376,10 @@ const fromYarn = (fs: FileSystem.FileSystem, exec: Exec, executable: string) =>
     const manifest = path.join(lockDirectory, "node_modules", packageName, "package.json")
     if (!(yield* owns(fs, manifest, executable))) return undefined
     // A Yarn global directory can be paired with a separate bin prefix. Verify the link too, so Yarn cannot
-    // overwrite a kilo2 link installed by npm or by the native installer when it refreshes its global commands.
+    // overwrite a kilo link installed by npm or by the native installer when it refreshes its global commands.
     const bin = yield* directory(exec, ["yarn", "--no-default-rc", "global", "bin"])
     if (!bin || path.basename(bin) !== "bin") return undefined
-    if (!samePath(yield* resolved(fs, path.join(bin, "kilo2")), executable)) return undefined
+    if (!samePath(yield* resolved(fs, path.join(bin, "kilo")), executable)) return undefined
     // --no-default-rc ignores files, not npm_config_* environment settings. Yarn's --registry only sets its default.
     const scoped = yield* output(exec, ["yarn", "--no-default-rc", "config", "get", "@kilocode:registry"])
     if (scoped !== "undefined" && scoped !== registry && scoped !== `${registry}/`) return undefined

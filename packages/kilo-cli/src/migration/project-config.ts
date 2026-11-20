@@ -59,21 +59,9 @@ function primaryCheckout(dir: string) {
 }
 
 function projectIssues(dir: string, home: string) {
-  const result = ["kilo2.json", "kilo2.jsonc", ".kilocodeignore"]
+  const result = [".kilocodeignore"]
     .map((name) => path.join(dir, name))
     .filter((file) => lstatSync(file, { throwIfNoEntry: false }))
-  const preview = path.join(dir, ".kilo2")
-  const entry = lstatSync(preview, { throwIfNoEntry: false })
-  if (entry && !entry.isDirectory()) result.push(preview)
-  if (entry?.isDirectory()) {
-    // Agent Manager continues to use its preview state, even after the release config rename.
-    for (const name of readdirSync(preview)) if (name !== "agent-manager.json") result.push(path.join(preview, name))
-  }
-  // Session rows do not contain the editor's session-to-worktree assignments. An
-  // existing preview state is not proof the editor imported every legacy assignment.
-  const manager = path.join(dir, ".kilo", "agent-manager.json")
-  if (lstatSync(manager, { throwIfNoEntry: false }))
-    result.push(`Agent Manager worktree associations require reconciliation: ${manager}`)
   // The global resource planner already migrates these directories under HOME.
   if (dir === home) return result
   for (const name of [".kilo/workflows", ".kilocode/workflows", ".kilocode/skills", ".kilocode/skill"]) {

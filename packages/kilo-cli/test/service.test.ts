@@ -12,7 +12,7 @@ afterAll(() => rm(transpiled, { recursive: true, force: true }))
 
 function hostEnv(root: string, bin: string, extra: Record<string, string> = {}) {
   const inherited = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith("XDG_") && !/^(OPENCODE|KILO2?)_/.test(key)),
+    Object.entries(process.env).filter(([key]) => !key.startsWith("XDG_") && !/^(OPENCODE|KILO?)_/.test(key)),
   )
   return prependPath(
     {
@@ -136,7 +136,7 @@ const unit = KiloLoginService.unit({
   log: "/tmp/log",
   config: "/tmp/config",
   uid: process.getuid?.() ?? 0,
-  app: "kilo2",
+  app: "kilo",
   channel: "local",
 })
 
@@ -157,7 +157,7 @@ test.skipIf(unit === undefined)(
 
       const app = path.join(root, "app")
       await mkdir(app, { recursive: true })
-      const executable = path.join(app, process.platform === "win32" ? "kilo2.exe" : "kilo2")
+      const executable = path.join(app, process.platform === "win32" ? "kilo.exe" : "kilo")
       await writeFile(executable, "#!/bin/sh\n", { mode: 0o755 })
 
       const installed = await cli.run("service", "install", "--command", executable)
@@ -209,7 +209,7 @@ test.skipIf(unit === undefined)(
       expect(await cli.run("service", "status")).toEqual({
         code: 0,
         stdout: "stopped",
-        stderr: `login: stale (${expected.kind}, ${expected.name}), run \`kilo2 service install\` again`,
+        stderr: `login: stale (${expected.kind}, ${expected.name}), run \`kilo service install\` again`,
       })
 
       await writeFile(executable, "#!/bin/sh\n", { mode: 0o755 })

@@ -1,21 +1,15 @@
 import { Database } from "bun:sqlite"
 import { expect, test } from "bun:test"
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
-import { Effect, Layer } from "effect"
-import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
-import { Global } from "@opencode/util/global"
-import { LayerNode } from "@opencode/util/effect/layer-node"
 import { tmpdir } from "../../core/test/fixture/tmpdir"
 
-test("conflicting file credentials block publication; explicit recovery imports sign-ins found only in the preview", async () => {
+test("conflicting DB and file sign-ins block publication; explicit recovery preserves stable enterprise OAuth", async () => {
   await using fixture = await tmpdir()
   const root = fixture.path
   const stable = path.join(root, "data/kilo/auth.json")
-  const preview = path.join(root, "data/kilo2/auth.json")
   const source = path.join(path.dirname(stable), "kilo.db")
-  for (const dir of [path.dirname(stable), path.dirname(preview), path.join(root, ".git")])
-    mkdirSync(dir, { recursive: true })
+  for (const dir of [path.dirname(stable), path.join(root, ".git")]) mkdirSync(dir, { recursive: true })
   {
     using db = new Database(source)
     db.exec(readFileSync(path.join(import.meta.dir, "fixture/kilo-v1-schema.sql"), "utf8"))
@@ -23,6 +17,13 @@ test("conflicting file credentials block publication; explicit recovery imports 
     db.run(
       "INSERT INTO session (id,project_id,slug,directory,title,version,time_created,time_updated) VALUES ('ses_auth','global','auth',?,'Synthetic sign-in rehearsal','7',1,2)",
       [root],
+    )
+  }
+  {
+    using db = new Database(source)
+    db.run(
+      "INSERT INTO credential(id,integration_id,label,value,active,time_created,time_updated) VALUES('crd_existing','provider','API key',?,1,1,1)",
+      [JSON.stringify({ type: "key", key: "synthetic-preview-key", metadata: { org: "fixture" } })],
     )
   }
   const before = readFileSync(source)
@@ -38,7 +39,7 @@ test("conflicting file credentials block publication; explicit recovery imports 
   }
   writeFileSync(stable, JSON.stringify({ provider: legacyKey }), { mode: 0o600 })
   const previewText = JSON.stringify({ provider: previewKey, openai: oauth })
-  writeFileSync(preview, previewText, { mode: 0o600 })
+
   async function run(...args: string[]) {
     const child = Bun.spawn(
       [process.execPath, path.resolve(import.meta.dir, "../../../script/dev-isolated.ts"), "migrate", ...args],
@@ -50,7 +51,6 @@ test("conflicting file credentials block publication; explicit recovery imports 
           HOME: root,
           USERPROFILE: root,
           KILO_V2_PROFILE: root,
-          KILO_INTERNAL_PROFILE_CUTOVER: "1",
         },
         stdin: "ignore",
         stdout: "pipe",
@@ -70,21 +70,12 @@ test("conflicting file credentials block publication; explicit recovery imports 
   const blocked = await run("apply", consent)
   expect(blocked.code).not.toBe(0)
   expect(blocked.stderr).toContain(stable)
-  expect(blocked.stderr).toContain(preview)
+  if (blocked.stderr.includes("Safe database replacement requires local")) return
   expect(JSON.parse((await run("preflight")).stdout).status).toBe("failed")
   expect(readFileSync(source)).toEqual(before)
   expect(existsSync(`${source}.pre-v2`)).toBe(false)
-  expect(readFileSync(preview, "utf8")).toBe(previewText)
   expect(readFileSync(stable, "utf8")).toBe(JSON.stringify({ provider: legacyKey }))
-  // Resolve the conflict in the disposable input, leaving both preview-only entries intact.
-  writeFileSync(stable, JSON.stringify({ other: legacyKey }))
-  const previewStore = path.join(path.dirname(preview), "kilo2.db")
-  await bootstrap(previewStore, root)
-  const originalID = (() => {
-    using db = new Database(previewStore, { readonly: true })
-    return db.query("SELECT id FROM credential WHERE integration_id='openai'").get()
-  })()
-  expect(originalID).toBeTruthy()
+  writeFileSync(stable, JSON.stringify({ other: legacyKey, ...JSON.parse(previewText) }))
   const migrated = await run("recover", consent)
   if (migrated.code && migrated.stderr.includes("Safe database replacement requires local")) return
   expect(migrated.code, migrated.stderr).toBe(0)
@@ -103,42 +94,6 @@ test("conflicting file credentials block publication; explicit recovery imports 
     expires: oauth.expires,
     metadata: { accountID: oauth.accountId, enterpriseUrl: oauth.enterpriseUrl },
   })
-  expect(db.query("SELECT id FROM credential WHERE integration_id='openai'").get()).toEqual(originalID)
-  expect(readFileSync(preview, "utf8")).toBe(previewText)
+  expect(db.query("SELECT id FROM credential WHERE integration_id='provider'").get()).toEqual({ id: "crd_existing" })
   expect(JSON.parse((await run("preflight")).stdout).status).toBe("completed")
-  renameSync(previewStore, `${previewStore}.archived`)
-  expect(JSON.parse((await run("preflight")).stdout).status).toBe("completed")
-  renameSync(`${previewStore}.archived`, previewStore)
-  expect(JSON.parse((await run("preflight")).stdout).status).toBe("completed")
-  {
-    using writer = new Database(previewStore)
-    writer.run("INSERT INTO project(id,worktree,time_created,time_updated,sandboxes) VALUES('fixture',?,1,1,'[]')", [
-      root,
-    ])
-    writer.run(
-      "INSERT INTO session_v2(id,project_id,slug,directory,title,version,time_created,time_updated) VALUES('ses_later','fixture','later',?,'Later preview history','2',1,2)",
-      [root],
-    )
-  }
-  const changed = await run("preflight")
-  expect(changed.code).not.toBe(0)
-  expect(changed.stderr).toContain(previewStore)
 }, 90_000)
-
-async function bootstrap(file: string, root: string) {
-  const { Database } = await import("@opencode/core/database/database")
-  const { FSUtil } = await import("@opencode/util/fs-util")
-  const paths = Object.fromEntries(
-    ["home", "cache", "config", "state", "tmp", "bin", "log", "repos"].map((k) => [k, path.join(root, k)]),
-  )
-  await Effect.runPromise(
-    Effect.scoped(
-      Layer.build(
-        AppNodeBuilder.build(LayerNode.group([Database.node, Global.node, FSUtil.node]), [
-          Database.node.replace(Database.configured({ path: file })),
-          Global.node.replace(Global.layerWith({ ...paths, data: path.dirname(file) })),
-        ]),
-      ),
-    ),
-  )
-}

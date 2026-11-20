@@ -27,7 +27,7 @@ export function globalSpeechWriteTarget(env: NodeJS.ProcessEnv, profile: string)
 
 /**
  * The effective global speech settings. The root files load in `KiloConfigFiles.names` order, where a later file
- * wins, so a value in `kilo2.jsonc` overrides `kilo2.json`. A malformed file is skipped, as core skips it.
+ * wins, so a value in `kilo.jsonc` overrides `kilo.json`. A malformed file is skipped, as core skips it.
  */
 export async function readSpeechSettings(input: {
   env: NodeJS.ProcessEnv

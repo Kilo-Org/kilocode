@@ -1,14 +1,14 @@
 import { createHash } from "node:crypto"
 import { applyConfig, planConfig } from "./config"
 import { planExtra } from "./extra-state"
-import { explicitConfig, type preflight } from "./preflight"
+import type { preflight } from "./preflight"
 
 /** Journal the intended output set, not the initial list of sources. A restart can
  * see both a newly created target and its original input following partial installation. */
 export function resources(plan: ReturnType<typeof preflight>) {
-  const config = planConfig(plan.legacyConfig, plan.previewConfig, explicitConfig(plan), plan.legacyDefaultConfig)
-  const { home, legacyState, v1State, previewState, configBase, legacyConfig, previewConfig } = plan
-  const extra = planExtra({ home, legacyState, v1State, previewState, configBase, legacyConfig, previewConfig })
+  const config = planConfig(plan.legacyConfig, plan.legacyDefaultConfig, plan.legacyConfigFile)
+  const { home, legacyState, v1State, configBase, legacyConfig, legacyDefaultConfig } = plan
+  const extra = planExtra({ home, legacyState, v1State, configBase, legacyConfig, legacyDefaultConfig })
   const conflicts = [...config.conflicts, ...extra.conflicts]
   if (conflicts.length) throw new Error(`Resolve configuration conflicts before migration: ${conflicts.join("; ")}`)
   const outputs = new Map<string, string>()

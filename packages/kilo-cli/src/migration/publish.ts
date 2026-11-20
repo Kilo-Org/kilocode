@@ -13,7 +13,7 @@ export async function stageAndPublish(
   backup: string,
   build: (stage: string) => Promise<void>,
   progress: (phase: string) => void,
-  options: { checkInputs?: () => void; journal?: string } = {},
+  options: { journal?: string } = {},
 ): Promise<void> {
   const dir = fs.realpathSync.native(path.dirname(source))
   const file = path.join(dir, path.basename(source)) // Resolve parent aliases, never follow a database symlink.
@@ -39,10 +39,7 @@ export async function stageAndPublish(
     unused(dest)
     unchanged(file, before)
     const standalone = checkpointSource(file, before)
-    publish(file, standalone, stage, dest, () => {
-      options.checkInputs?.()
-      beforeLink?.()
-    })
+    publish(file, standalone, stage, dest, beforeLink)
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true })
     // If publication was interrupted, explicit recovery consumes its journal.
@@ -211,7 +208,7 @@ function checkpointSource(file: string, before: string) {
   return `${stamp(fs.lstatSync(file, { bigint: true }))}|`
 }
 
-function publish(file: string, expected: string, stage: string, dest: string, checkInputs: () => void) {
+function publish(file: string, expected: string, stage: string, dest: string, beforeLink?: () => void) {
   const dir = path.dirname(file)
   // Open no non-SQLite fds on the original inside the fence: closing one releases POSIX process locks.
   sync(file)
@@ -234,7 +231,7 @@ function publish(file: string, expected: string, stage: string, dest: string, ch
   unused(dest)
   // Tighten the existing inode before a second name can expose it. Do not
   // open and close another fd on it while SQLite holds its POSIX lock.
-  checkInputs()
+  beforeLink?.()
   protectRecovery(file)
   fs.linkSync(file, dest) // Atomic no-replace. Never remove an existing recovery path, even on error.
   sync(dir)

@@ -76,7 +76,7 @@ function policyFixture(input: {
   system?: ProviderPolicy[]
   optimistic?: { scope: Scope; value: unknown }
 }) {
-  const paths = { global: "/global/kilo2.json", project: "/project/kilo2.json" }
+  const paths = { global: "/global/kilo.json", project: "/project/kilo.json" }
   const files = {
     global: input.global === undefined ? "" : (JSON.stringify(input.global) ?? ""),
     project: input.project === undefined ? "" : (JSON.stringify(input.project) ?? ""),
@@ -89,7 +89,7 @@ function policyFixture(input: {
   }
   const config = {
     entries: () => [
-      ...(input.system ? [{ type: "document", path: "/system/kilo2.json", info: { policies: input.system } }] : []),
+      ...(input.system ? [{ type: "document", path: "/system/kilo.json", info: { policies: input.system } }] : []),
       ...(["global", "project"] as const).flatMap((scope) => {
         if (!files[scope]) return []
         const result = ConfigNormalize.normalize(parse(files[scope]))

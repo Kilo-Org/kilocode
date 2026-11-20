@@ -112,7 +112,7 @@ describe("sandbox configuration entries", () => {
   test("a later global document replaces the arrays of an earlier one", () => {
     const entries = [
       document(`${global}/kilo.json`, { writable_paths: ["/tmp/one"], allowed_hosts: ["api.github.com"] }),
-      document(`${global}/kilo2.json`, { writable_paths: ["/tmp/two"], allowed_hosts: ["github.com"] }),
+      document(`${global}/kilo.json`, { writable_paths: ["/tmp/two"], allowed_hosts: ["github.com"] }),
     ]
     expect(SandboxConfig.fromEntries(entries, global)).toEqual({
       sandbox: {

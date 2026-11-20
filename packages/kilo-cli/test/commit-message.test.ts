@@ -58,8 +58,8 @@ const boot =
     await $`git -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q --allow-empty -m init`
       .cwd(directory)
       .quiet()
-    await Bun.write(path.join(directory, "kilo2.json"), JSON.stringify(config))
-    await $`git add kilo2.json`.cwd(directory).quiet()
+    await Bun.write(path.join(directory, "kilo.json"), JSON.stringify(config))
+    await $`git add kilo.json`.cwd(directory).quiet()
     await $`git -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m config`.cwd(directory).quiet()
     const previous = { KILO_API_URL: process.env.KILO_API_URL, KILO_API_KEY: process.env.KILO_API_KEY }
     process.env.KILO_API_URL = backend.url

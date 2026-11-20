@@ -112,7 +112,7 @@ const settings = (document: unknown) => (url: URL) => {
     return json({
       output: {
         scope: "global",
-        target: { scope: "global", path: `${directory}/kilo2.json`, revision: "rev", exists: true },
+        target: { scope: "global", path: `${directory}/kilo.json`, revision: "rev", exists: true },
         document,
       },
     })
@@ -226,7 +226,7 @@ test("/browser writes only the setting that changed", async () => {
         return json({
           output: {
             scope: "global",
-            target: { scope: "global", path: `${directory}/kilo2.json`, revision: "next", exists: true },
+            target: { scope: "global", path: `${directory}/kilo.json`, revision: "next", exists: true },
             changed: true,
           },
         })

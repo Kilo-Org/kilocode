@@ -32,7 +32,7 @@ afterAll(() => server.stop(true))
 describe("readDisplaySettings", () => {
   test("reads every config document in priority order and keeps the v1 defaults", async () => {
     const root = await directory()
-    const global = join(root, "kilo2.json")
+    const global = join(root, "kilo.json")
     const project = join(root, "project.json")
     await writeFile(global, '{"terminal_command_display": "collapsed"}')
     await writeFile(project, '{"code_edit_display": "expanded"}')
@@ -76,7 +76,7 @@ describe("readDisplaySettings", () => {
 
   test("reads the reasoning mode and maps the legacy boolean", async () => {
     const root = await directory()
-    const global = join(root, "kilo2.json")
+    const global = join(root, "kilo.json")
     const project = join(root, "project.json")
     await writeFile(global, '{"auto_collapse_reasoning": true}')
     await writeFile(project, '{"reasoning_display": "preview"}')

@@ -119,7 +119,7 @@ test("marketplace remote install uses native OAuth, reconnects and retains crede
             const input = { registry: "kilo", kind: "mcp", id: "fixture/oauth", scope: "global" } as const
             const installed = await rpc.install(input, options)
             expect(installed.server).toBe("fixture-oauth")
-            expect(installed.config).toBe(path.join(directory, "kilo2.json"))
+            expect(installed.config).toBe(path.join(directory, "kilo.json"))
             // Deterministic public reload; watcher convergence has its own integration test.
             await client.location.reload()
             const server = await eventually(

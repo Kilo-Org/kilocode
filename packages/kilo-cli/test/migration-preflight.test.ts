@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite"
 import { expect, test } from "bun:test"
 import { createHash } from "node:crypto"
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { tmpdir } from "../../core/test/fixture/tmpdir"
 import { preflight } from "../src/migration/preflight"
@@ -48,64 +48,20 @@ function store(file: string, scratch: string) {
   copyFileSync(`${writer}-wal`, `${file}-wal`)
 }
 
-function preview(file: string) {
-  mkdirSync(path.dirname(file), { recursive: true })
-  using db = new Database(file)
-  db.exec("CREATE TABLE session_v2 (id TEXT PRIMARY KEY); INSERT INTO session_v2 VALUES ('ses_preview')")
-}
-
-async function isolatedRun(root: string, ...args: string[]) {
-  const temp = path.join(root, "tmp")
-  const child = Bun.spawn([process.execPath, path.join(import.meta.dir, "../../../script/dev-isolated.ts"), ...args], {
-    cwd: root,
-    env: {
-      PATH: process.env.PATH,
-      SystemRoot: process.env.SystemRoot,
-      ...profile(root),
-      KILO_V2_PROFILE: root,
-      KILO_INTERNAL_PROFILE_CUTOVER: "1",
-      BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0",
-      TMPDIR: temp,
-      TEMP: temp,
-      TMP: temp,
-    },
-    stdin: "ignore",
-    stdout: "pipe",
-    stderr: "pipe",
-  })
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ])
-  return { code, stdout, stderr }
-}
-
-test("a resource-only profile blocks startup and preflight without changing v1 or an existing preview", async () => {
+test("stable resource-only profiles can start; unresolved v1 workflows stop without touching the profile", async () => {
   await using root = await tmpdir()
   const env = profile(root.path)
-  for (const dir of [...new Set(Object.values(env)), path.join(root.path, "tmp"), path.join(root.path, ".git")])
-    mkdirSync(dir, { recursive: true })
-  const auth = path.join(env.XDG_DATA_HOME, "kilo/auth.json")
-  const skill = path.join(env.XDG_CONFIG_HOME, "kilo/skills/fixture")
-  mkdirSync(path.dirname(auth), { recursive: true })
-  mkdirSync(skill, { recursive: true })
-  writeFileSync(auth, JSON.stringify({ fixture: { type: "api", key: "synthetic-only-api-key" } }), { mode: 0o600 })
-  writeFileSync(path.join(skill, "SKILL.md"), "---\ndescription: Fixture skill\n---\nSynthetic private skill text")
-  preview(path.join(env.XDG_DATA_HOME, "kilo2/kilo2.db"))
+  mkdirSync(path.join(root.path, ".git"))
+  const config = path.join(env.XDG_CONFIG_HOME, "kilo")
+  mkdirSync(config, { recursive: true })
+  writeFileSync(path.join(config, "kilo.json"), "{}")
+  expect(preflight(env, root.path).status).toBe("absent")
+  const wf = path.join(env.HOME, ".kilocode/workflows/legacy.md")
+  mkdirSync(path.dirname(wf), { recursive: true })
+  writeFileSync(wf, "private workflow")
   const before = snapshot(root.path)
-  for (const args of [
-    ["migrate", "preflight"],
-    ["debug", "paths"],
-    ["migrate", "apply", "--accept-jetbrains-breakage"],
-  ]) {
-    const result = await isolatedRun(root.path, ...args)
-    expect(result.code).not.toBe(0)
-    expect(result.stderr).toContain(auth)
-    expect(result.stderr).toContain(skill)
-    expect(result.stderr + result.stdout).not.toMatch(/synthetic-only-api-key|Synthetic private skill text/)
-    expect(snapshot(root.path)).toEqual(before)
-  }
+  expect(() => preflight(env, root.path)).toThrow(wf)
+  expect(snapshot(root.path)).toEqual(before)
 })
 
 test("an absent source reports zero bytes without creating even the XDG directories", async () => {
@@ -120,46 +76,23 @@ test("an absent source reports zero bytes without creating even the XDG director
     source: path.join(env.XDG_DATA_HOME, "kilo", "kilo.db"),
     sourceBytes: 0,
     walBytes: 0,
-    previewStores: [],
   })
   expect(result.availableBytes).toBeGreaterThan(0)
   expect(snapshot(root.path)).toEqual(before)
 })
 
-test("explicit source and preview paths are inventoried alongside all preview channels without adopting them", async () => {
+test("relative and absolute KILO_DB select the same store without adopting sibling files", async () => {
   await using root = await tmpdir()
-  mkdirSync(path.join(root.path, ".git"))
   const env = profile(root.path)
-  const source = path.join(env.XDG_DATA_HOME, "kilo", "branches", "custom.db")
+  const source = path.join(env.XDG_DATA_HOME, "kilo/branches/custom.db")
   store(source, root.path)
-  const data = path.join(env.XDG_DATA_HOME, "kilo2")
-  const extra = path.join(root.path, "external.db")
-  const stores = [
-    path.join(data, "kilo2.db"),
-    path.join(data, "kilo2-local.db"),
-    path.join(data, "kilo2preview.db"),
-    extra,
-  ]
-  for (const file of [...stores, path.join(data, "unrelated.db")]) preview(file)
   const before = snapshot(root.path)
-  for (const override of [path.join("branches", "custom.db"), source]) {
-    const result = preflight({ ...env, KILO_DB: override, KILO2_DB: extra })
-    expect(result).toMatchObject({
-      version: 1,
+  for (const selected of [source, "branches/custom.db"])
+    expect(preflight({ ...env, KILO_DB: selected })).toMatchObject({
       status: "required",
       source,
-      sourceBytes: statSync(source).size,
-      walBytes: statSync(`${source}-wal`).size,
+      walBytes: statSync(source + "-wal").size,
     })
-    expect(result.walBytes).toBeGreaterThan(0)
-    expect(result.previewStores.toSorted()).toEqual(stores.toSorted())
-    expect(result.availableBytes).toBeGreaterThan(0)
-    expect(result.backup.startsWith(root.path + path.sep)).toBe(true)
-    expect(result.backup).not.toBe(source)
-    expect(existsSync(result.backup)).toBe(false)
-    expect(snapshot(root.path)).toEqual(before)
-  }
-  expect(preflight(env, root.path)).toMatchObject({ status: "absent", sourceBytes: 0, walBytes: 0 })
   expect(snapshot(root.path)).toEqual(before)
 })
 
@@ -183,14 +116,12 @@ test.each(["kilo-feature.rc-1.db", "opencode-feature.rc-1.db"])(
   },
 )
 
-test("mixed v1 stores report every current and fallback path, even with an explicit selection", async () => {
+test("ambiguous channels require selection; the canonical store and explicit selectors are authoritative", async () => {
   await using root = await tmpdir()
   const env = profile(root.path)
   const data = path.join(env.XDG_DATA_HOME, "kilo")
   mkdirSync(data, { recursive: true })
-  const files = ["kilo.db", "kilo-nightly.db", "opencode-nightly.db", "opencode-old.db"].map((name) =>
-    path.join(data, name),
-  )
+  const files = ["kilo-nightly.db", "opencode-nightly.db", "opencode-old.db"].map((name) => path.join(data, name))
   for (const file of files) {
     using db = new Database(file)
     db.exec("CREATE TABLE session (id TEXT PRIMARY KEY)")
@@ -199,15 +130,17 @@ test("mixed v1 stores report every current and fallback path, even with an expli
   const before = snapshot(root.path)
   const paths = files.toSorted().join("\n")
   expect(() => preflight(env)).toThrow(paths)
-  expect(() => preflight({ ...env, KILO_DB: "kilo-nightly.db" })).toThrow(paths)
+  expect(preflight({ ...env, KILO_DB: "kilo-nightly.db" }).source).toBe(files[0]!)
   expect(snapshot(root.path)).toEqual(before)
+  copyFileSync(files[0]!, path.join(data, "kilo.db"))
+  expect(preflight(env).source).toBe(path.join(data, "kilo.db"))
 })
 
 test("the client can preflight then decline a real store without initializing a profile or touching any file", async () => {
   await using root = await tmpdir()
   const env = profile(root.path)
   const temp = path.join(root.path, "tmp")
-  // bun dev supplies these six root directories to the host. No kilo2 app directories exist yet.
+  // bun dev supplies these six root directories to the host. The fixture supplies only its v1 input.
   for (const dir of [...new Set(Object.values(env)), temp]) mkdirSync(dir, { recursive: true })
   const source = path.join(env.XDG_DATA_HOME, "kilo", "kilo.db")
   store(source, root.path)
@@ -248,7 +181,6 @@ test("the client can preflight then decline a real store without initializing a 
     source,
     sourceBytes: statSync(source).size,
     walBytes: statSync(`${source}-wal`).size,
-    previewStores: [],
     availableBytes: expect.any(Number),
     backup: expect.any(String),
   })

@@ -54,7 +54,7 @@ The legacy sync branding passes exist but are disabled by default and process co
 
 - Run the CLI only through `bun dev` (`script/dev-isolated.ts`, which starts the Kilo host entry `packages/kilo-cli/src/index.ts`). It keeps all data in one profile directory. Never run `bun run --cwd packages/cli`, `dev:live` or `opencode` directly. They use the installed OpenCode data and service.
 - Use a fresh profile per test: `KILO_V2_PROFILE=/tmp/kilo-v2-<id>`. Add `--standalone` so parallel agents do not share the service port.
-- `bun dev` ignores the database, config file and directory, home, session, server password and client identity that a shell inherits from a Kilo or OpenCode process (`OPENCODE_DB`, `KILO2_DB`, `KILO2_CONFIG`, `KILO2_CONFIG_DIR`, their `OPENCODE_` names, `OPENCODE_HOME_DIR`, `OPENCODE_SESSION_ID`, `KILO_CLIENT`, `KILO_PLATFORM`, ...), so it is safe from an agent shell inside VS Code. Only `serve --stdio`, the server a client starts for itself, keeps the client identity. To pass config, use `OPENCODE_CONFIG_CONTENT`; to use another home, set `KILO_TEST_HOME`.
+- `bun dev` ignores the database, config file and directory, home, session, server password and client identity that a shell inherits from a Kilo or OpenCode process (`OPENCODE_DB`, `KILO_DB`, `KILO_CONFIG`, `KILO_CONFIG_DIR`, their `OPENCODE_` names, `OPENCODE_HOME_DIR`, `OPENCODE_SESSION_ID`, `KILO_CLIENT`, `KILO_PLATFORM`, ...), so it is safe from an agent shell inside VS Code. Only `serve --stdio`, the server a client starts for itself, keeps the client identity. To pass config, use `OPENCODE_CONFIG_CONTENT`; to use another home, set `KILO_TEST_HOME`.
 - `bun dev` starts signed out and does not read the v1 login. Signed out, the Kilo Gateway serves its free models, but their free tier can rate-limit with "You need to sign up to keep going"; do not wait on it. Sign in with `/connect`, or start a signed-in test with `KILO_API_KEY` (and `KILO_ORG_ID` for a team) from the v1 auth file, so that no secret shows on screen.
 - Do not edit the main checkout, `~/.config/kilo`, `~/.local/share/kilo` or OpenCode directories.
 - Models: use a cheap model such as `kilo/deepseek/deepseek-v4.1-flash` for self-tests; a paid request of this size is fine and does not need approval. `kilo/kilo-auto/free` is fine when it answers.
@@ -159,7 +159,7 @@ st stop-vscode --cleanup true >/dev/null; st stop >/dev/null; rm -rf $T
 - Headless runs cannot take screenshots. Set `HEADLESS=false` only for visual review and for the PR screenshots (section `## Proof` under Evidence), because the window then opens on the user's screen.
 - New tabs get their title a few seconds after the first answer. The active tab title scrolls, so match a short part.
 - Never type real credentials. Stop auth flows before the secret input, or use a test account.
-- CLI data of a test: log in `$T/profile/data/kilo2/log/opencode-local.log`, database files in `$T/profile/data/kilo2/`.
+- CLI data of a test: log in `$T/profile/data/kilo/log/opencode-local.log`, database files in `$T/profile/data/kilo/`.
 - Parallel agents use different `ID` values.
 
 The VS Code extension uses the same harness later with `--mode dev`, after the v2 worktree has `packages/kilo-vscode`.
@@ -170,7 +170,7 @@ The TUI is an HTTP client of a server process. `bun dev` uses the profile's back
 
 - **Service:** `env KILO_V2_PROFILE=$P bun dev service status|start|restart|stop`. `status` prints the server URL. Stop the service when the test is done.
 - **API:** `bun dev api` sends one request through the same discovery and auth as the CLI, so you can compare what the TUI shows with the server state. Pass a method and path as separate arguments, or an OpenAPI operation ID: `bun dev api get /api/info`, `bun dev api server.info`, `bun dev api get /api/agent`. Use `--param key=value`, `--data '<json>'` and `-H name:value` as needed. `/api/info` returns the server `pid`.
-- **Logs:** one shared file per profile, `$P/data/kilo2/log/opencode-local.log`. Each line is `key=value` text with `level`, `run=<id>` (one process) and `role=cli|server`; filter with `grep 'run=<id>'` or `grep 'role=server'`. For more detail, set `OPENCODE_LOG_LEVEL=DEBUG` before the server starts (restart the service). `--print-logs` copies logs to stderr (server logs only with `--standalone`).
+- **Logs:** one shared file per profile, `$P/data/kilo/log/opencode-local.log`. Each line is `key=value` text with `level`, `run=<id>` (one process) and `role=cli|server`; filter with `grep 'run=<id>'` or `grep 'role=server'`. For more detail, set `OPENCODE_LOG_LEVEL=DEBUG` before the server starts (restart the service). `--print-logs` copies logs to stderr (server logs only with `--standalone`).
 - **Heap snapshot:** `kill -USR1 <server pid>`. Wait for `heap snapshot written` in the log; the file is `heap-<pid>-<time>.heapsnapshot` in the log directory, and its `path=` is authoritative. A large heap takes seconds to write.
 - **CPU profile:** `kill -PROF <server pid>` records ten seconds. Wait for `CPU profile written`; the file is `cpu-<pid>-<time>.cpuprofile` in the log directory. Open both files in Chrome DevTools.
 - **Inspector:** `env KILO_V2_PROFILE=$P BUN_OPTIONS=--inspect=127.0.0.1:0 bun dev <args>` prints two inspector URLs: the first is the `bun dev` wrapper, the second the CLI process.

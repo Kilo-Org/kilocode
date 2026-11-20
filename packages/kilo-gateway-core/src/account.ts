@@ -52,7 +52,7 @@ export function authContent(env: Record<string, string | undefined> = process.en
 }
 
 /**
- * The team of the Kilo v1 login on this machine: its `auth.json` in `<XDG data>/kilo`, beside the kilo2 data directory
+ * The team of the Kilo v1 login on this machine: its `auth.json` in `<XDG data>/kilo`, beside the kilo data directory
  * `data` (the same directory once the release renames it). The file is only read. A team ID, `null` for the personal
  * account (an OAuth login without a team), or undefined without a v1 OAuth login.
  *

@@ -13,7 +13,7 @@ import path from "node:path"
 import { KiloHost } from "../src/host"
 import { loadPlugins } from "./lib/plugins"
 
-// The kilocode.settings RPC through the real host and the generated client, with real global and project kilo2.json
+// The kilocode.settings RPC through the real host and the generated client, with real global and project kilo.json
 // files. The settings plugin resolves each write to the reader's effective document, so the round trip, the revision
 // conflict, ancestor precedence, the project-wide unset, the symlink guard, and the watcher-driven reload all run
 // against the real files.
@@ -46,15 +46,15 @@ const boot =
     else await mkdir(repoRoot, { recursive: true })
     if (files.global !== undefined) {
       await mkdir(global, { recursive: true })
-      await Bun.write(path.join(global, "kilo2.json"), JSON.stringify(files.global))
+      await Bun.write(path.join(global, "kilo.json"), JSON.stringify(files.global))
     }
-    if (files.project !== undefined) await Bun.write(path.join(repoRoot, "kilo2.json"), JSON.stringify(files.project))
+    if (files.project !== undefined) await Bun.write(path.join(repoRoot, "kilo.json"), JSON.stringify(files.project))
     if (files.projectDir !== undefined) {
-      await mkdir(path.join(repoRoot, ".kilo2"), { recursive: true })
-      await Bun.write(path.join(repoRoot, ".kilo2", "kilo2.json"), JSON.stringify(files.projectDir))
+      await mkdir(path.join(repoRoot, ".kilo"), { recursive: true })
+      await Bun.write(path.join(repoRoot, ".kilo", "kilo.json"), JSON.stringify(files.projectDir))
     }
     // A document above the worktree root: reached only when the reader walks to the filesystem root outside VCS.
-    if (files.outside !== undefined) await Bun.write(path.join(root, "kilo2.json"), JSON.stringify(files.outside))
+    if (files.outside !== undefined) await Bun.write(path.join(root, "kilo.json"), JSON.stringify(files.outside))
     if (options.subdirectory) await mkdir(directory, { recursive: true })
     const filePaths = { directory, repoRoot, global }
     await options.setup?.(filePaths)
@@ -127,7 +127,7 @@ const waitFor = async (predicate: () => boolean, timeout = 10_000) => {
 test(
   "target resolves the created global file and write sets a key in it",
   boot({}, async (client, { directory, global }) => {
-    const file = path.join(global, "kilo2.json")
+    const file = path.join(global, "kilo.json")
     expect(await settingsTarget(client, directory, "global")).toEqual({
       scope: "global",
       path: file,
@@ -145,7 +145,7 @@ test(
 test(
   "a stale revision fails with a structured conflict and the current target",
   boot({ global: { privacy_mode: true } }, async (client, { directory, global }) => {
-    const file = path.join(global, "kilo2.json")
+    const file = path.join(global, "kilo.json")
     const before = await settingsTarget(client, directory, "global")
     expect(before.exists).toBe(true)
     await Bun.write(file, JSON.stringify({ privacy_mode: false, shell: "sh" }))
@@ -172,7 +172,7 @@ test(
     const failure = await settingsWrite(client, directory, {
       scope: "global",
       set: { privacy_mode: true },
-      expected: { path: path.join(directory, "kilo2.json"), revision: "deadbeef" },
+      expected: { path: path.join(directory, "kilo.json"), revision: "deadbeef" },
     }).then(
       () => undefined,
       (error: unknown) => error as { type: string; data: { code: string } },
@@ -190,8 +190,8 @@ test(
     async (client, { directory }) => {
       const result = await settingsWrite(client, directory, { scope: "project", unset: [["privacy_mode"]] })
       expect(result.changed).toBe(true)
-      expect(JSON.parse(await Bun.file(path.join(directory, ".kilo2", "kilo2.json")).text())).toEqual({})
-      expect(JSON.parse(await Bun.file(path.join(directory, "kilo2.json")).text())).toEqual({})
+      expect(JSON.parse(await Bun.file(path.join(directory, ".kilo", "kilo.json")).text())).toEqual({})
+      expect(JSON.parse(await Bun.file(path.join(directory, "kilo.json")).text())).toEqual({})
     },
   ),
   30_000,
@@ -200,7 +200,7 @@ test(
 test(
   "a write preserves the target's comments and 0600 mode",
   boot({ global: { privacy_mode: true } }, async (client, { directory, global }) => {
-    const file = path.join(global, "kilo2.json")
+    const file = path.join(global, "kilo.json")
     await Bun.write(file, '{\n  // keep this comment\n  "privacy_mode": false\n}\n')
     await settingsWrite(client, directory, { scope: "global", set: { privacy_mode: true } })
     const text = await Bun.file(file).text()
@@ -245,13 +245,13 @@ test(
   boot(
     { projectDir: { privacy_mode: true } },
     async (client, { directory, repoRoot }) => {
-      const winner = path.join(repoRoot, ".kilo2", "kilo2.json")
+      const winner = path.join(repoRoot, ".kilo", "kilo.json")
       expect(await settingsTarget(client, directory, "project")).toMatchObject({ path: winner, exists: true })
       const result = await settingsWrite(client, directory, { scope: "project", set: { shell: "zsh" } })
       expect(result.changed).toBe(true)
       expect(result.target.path).toBe(winner)
       // The write does not create a lower-precedence file that the reader would ignore.
-      expect(await Bun.file(path.join(directory, "kilo2.json")).exists()).toBe(false)
+      expect(await Bun.file(path.join(directory, "kilo.json")).exists()).toBe(false)
       expect(JSON.parse(await Bun.file(winner).text())).toEqual({ privacy_mode: true, shell: "zsh" })
     },
     { subdirectory: "packages/app" },
@@ -264,7 +264,7 @@ test(
   boot(
     { outside: { privacy_mode: true } },
     async (client, { directory, repoRoot }) => {
-      const winner = path.join(path.dirname(repoRoot), "kilo2.json")
+      const winner = path.join(path.dirname(repoRoot), "kilo.json")
       expect(await settingsTarget(client, directory, "project")).toMatchObject({ path: winner })
       const result = await settingsWrite(client, directory, { scope: "project", set: { shell: "zsh" } })
       expect(result.target.path).toBe(winner)
@@ -280,8 +280,8 @@ test(
   boot(
     { outside: { privacy_mode: true } },
     async (client, { directory, repoRoot }) => {
-      const outside = path.join(path.dirname(repoRoot), "kilo2.json")
-      const fallback = path.join(directory, "kilo2.json")
+      const outside = path.join(path.dirname(repoRoot), "kilo.json")
+      const fallback = path.join(directory, "kilo.json")
       expect(await settingsTarget(client, directory, "project")).toMatchObject({ path: fallback, exists: false })
       const result = await settingsWrite(client, directory, { scope: "project", set: { shell: "zsh" } })
       expect(result.target.path).toBe(fallback)
@@ -304,14 +304,14 @@ test.skipIf(process.platform === "win32")(
         (error: unknown) => error as { type: string },
       )
       expect(failure?.type).toBe("failed")
-      expect(JSON.parse(await Bun.file(path.join(external, "kilo2.json")).text())).toEqual({ privacy_mode: true })
+      expect(JSON.parse(await Bun.file(path.join(external, "kilo.json")).text())).toEqual({ privacy_mode: true })
     },
     {
       setup: async ({ repoRoot }) => {
         const external = path.join(path.dirname(repoRoot), "external")
         await mkdir(external, { recursive: true })
-        await Bun.write(path.join(external, "kilo2.json"), JSON.stringify({ privacy_mode: true }))
-        await symlink(external, path.join(repoRoot, ".kilo2"), "dir")
+        await Bun.write(path.join(external, "kilo.json"), JSON.stringify({ privacy_mode: true }))
+        await symlink(external, path.join(repoRoot, ".kilo"), "dir")
       },
     },
   ),
@@ -327,7 +327,7 @@ const failure = (promise: Promise<unknown>) =>
 test(
   "an unrecognized key is refused as invalid and the file is left unchanged",
   boot({ global: { shell: "sh" } }, async (client, { directory, global }) => {
-    const file = path.join(global, "kilo2.json")
+    const file = path.join(global, "kilo.json")
     const before = await Bun.file(file).text()
     const error = await failure(settingsWrite(client, directory, { scope: "global", set: { bogus: 1, permission: {} } }))
     expect(error?.type).toBe("invalid")
@@ -340,7 +340,7 @@ test(
 test(
   "a value the reader would skip is refused as invalid and the file is left unchanged",
   boot({ global: { shell: "sh" } }, async (client, { directory, global }) => {
-    const file = path.join(global, "kilo2.json")
+    const file = path.join(global, "kilo.json")
     const before = await Bun.file(file).text()
     const upstream = await failure(settingsWrite(client, directory, { scope: "global", set: { shell: 5 } }))
     expect(upstream?.type).toBe("invalid")
@@ -359,7 +359,7 @@ test(
 test(
   "an object set over a non-object value replaces it, and a removal of an absent path is a no-op",
   boot({ global: { mcp: { servers: "none" }, shell: "sh" } }, async (client, { directory, global }) => {
-    const file = path.join(global, "kilo2.json")
+    const file = path.join(global, "kilo.json")
     const server = { type: "remote", url: "https://mcp.example.com" }
     const result = await settingsWrite(client, directory, { scope: "global", set: { mcp: { servers: { docs: server } } } })
     expect(result.changed).toBe(true)
@@ -374,7 +374,7 @@ test(
 test(
   "a malformed or non-object target is reported as invalid, not as a no-op or an internal error",
   boot({ global: { shell: "sh" } }, async (client, { directory, global }) => {
-    const file = path.join(global, "kilo2.json")
+    const file = path.join(global, "kilo.json")
     await Bun.write(file, "{")
     const malformed = await failure(settingsWrite(client, directory, { scope: "global", unset: [["privacy_mode"]] }))
     expect(malformed?.type).toBe("invalid")

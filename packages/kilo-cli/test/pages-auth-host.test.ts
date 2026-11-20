@@ -37,7 +37,7 @@ test("the host puts the Pages bearer on a remote server that carries a registere
   })
   const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-pages-host-")))
   await Bun.write(
-    path.join(directory, "kilo2.json"),
+    path.join(directory, "kilo.json"),
     JSON.stringify({
       mcp: {
         servers: {

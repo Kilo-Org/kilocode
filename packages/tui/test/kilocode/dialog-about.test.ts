@@ -8,7 +8,7 @@ const base = {
   runtime: "Bun 1.2.3",
   platform: "darwin",
   arch: "arm64",
-  configPath: "/home/user/.config/kilo2/kilo2.json",
+  configPath: "/home/user/.config/kilo/kilo.json",
   projectPath: "/home/user/code/project",
   providers: "kilo",
   defaultModel: "kilo/kilo-auto/free",
@@ -21,7 +21,7 @@ test("diagnostics renders the version, runtime, paths, providers and default mod
     [
       "Kilo CLI 1.2.3 (dev)",
       "Runtime: Bun 1.2.3 (darwin/arm64)",
-      "Config: ~/.config/kilo2/kilo2.json",
+      "Config: ~/.config/kilo/kilo.json",
       "Project: ~/code/project",
       "Providers: kilo",
       "Default model: kilo/kilo-auto/free",
@@ -71,10 +71,10 @@ test("runtime reports the Bun version when available", () => {
 
 test("the config path is the highest-precedence document with a path", () => {
   const entries = [
-    { type: "document", path: "/etc/kilo2.jsonc", info: {} },
+    { type: "document", path: "/etc/kilo.jsonc", info: {} },
     { type: "document", info: {} },
-    { type: "document", path: "/home/user/.config/kilo2/kilo2.json", info: {} },
+    { type: "document", path: "/home/user/.config/kilo/kilo.json", info: {} },
   ] as unknown as ConfigEntry[]
-  expect(effectiveConfigPath(entries)).toBe("/home/user/.config/kilo2/kilo2.json")
+  expect(effectiveConfigPath(entries)).toBe("/home/user/.config/kilo/kilo.json")
   expect(effectiveConfigPath([])).toBeUndefined()
 })

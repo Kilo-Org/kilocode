@@ -1,21 +1,13 @@
-import { commands, env, ProgressLocation, window, type OutputChannel } from "vscode"
+import { env, ProgressLocation, window, type OutputChannel } from "vscode"
 import { prepareProfile, verifyProfile } from "./profile-cutover"
 import { activeProfile, useProfile } from "./active-profile"
 import { t } from "./services/i18n"
 import type { Command } from "./server"
 
-declare const KILO_INTERNAL_PROFILE_CUTOVER_BUILD: boolean
-
 export function profileCutover(cwd: string, output: OutputChannel, environment = process.env) {
-  const enabled =
-    typeof KILO_INTERNAL_PROFILE_CUTOVER_BUILD === "undefined"
-      ? environment.KILO_INTERNAL_PROFILE_CUTOVER === "1"
-      : KILO_INTERNAL_PROFILE_CUTOVER_BUILD
-  if (!enabled) return undefined
   const input = { cwd, env: environment, log: (line: string) => output.append(line) }
   return {
     async activate(command: Command | undefined, settings: Record<string, string>) {
-      await commands.executeCommand("setContext", "kilo-code.v2.internalProfileCutover", true)
       try {
         const ready = await prepareProfile(
           { ...input, command, settings },
@@ -71,7 +63,7 @@ export function profileCutover(cwd: string, output: OutputChannel, environment =
     },
     async beforeStart(command: Command, settings?: Record<string, string>) {
       try {
-        await verifyProfile({ ...input, command, settings }, activeProfile)
+        useProfile(await verifyProfile({ ...input, command, settings }, activeProfile))
       } catch (error) {
         throw new Error(`${t("migration.stopped")}\n${error instanceof Error ? error.message : String(error)}`)
       }

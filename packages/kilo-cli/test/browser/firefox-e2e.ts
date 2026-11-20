@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 // Real end-to-end check of the Kilo browser bridge on Firefox: the built Firefox MV3 extension installed into a real
 // Firefox (temporary add-on, isolated profile) through WebDriver BiDi, paired over loopback (or connected through
-// the native messaging host the CLI installs) with the real CLI (`kilo2 run`, `browser.backend: "extension"`), driven
+// the native messaging host the CLI installs) with the real CLI (`kilo run`, `browser.backend: "extension"`), driven
 // by a scripted OpenAI-compatible model. Not a `bun test` file: it needs a display (run it under xvfb), a built CLI
 // binary, the built Firefox extension and a Firefox with the remote agent.
 //
-//   xvfb-run -a bun test/browser/firefox-e2e.ts <kilo2> <scenario> [--strict]
+//   xvfb-run -a bun test/browser/firefox-e2e.ts <kilo> <scenario> [--strict]
 //
 //   E2E_EXTENSION_DIR   the built unpacked Firefox extension (default: ../../../cloud/apps/extension/.output/firefox-mv3)
 //   E2E_FIREFOX         the Firefox executable (default: /opt/firefox/firefox)
@@ -35,9 +35,9 @@
 // "Allow local agents" switch is clicked with real input (`input.performActions`), so the extension's own
 // `permissions.request` runs inside a user gesture. Firefox answers that prompt itself: the profile sets
 // `extensions.webextOptionalPermissionPrompts=false`, Firefox's switch for "grant optional permissions without a
-// doorhanger" — the state after a user clicks Allow. Then `kilo2 browser hub --loopback`, the hub's `pairing.url`
+// doorhanger" — the state after a user clicks Allow. Then `kilo browser hub --loopback`, the hub's `pairing.url`
 // RPC over the per-user CLI socket, the pairing page opened in a new Firefox window (the extension redeems the token
-// and dials the hub), then `kilo2 run` with a scripted model. The browser-neutral pieces (scripted model, CLI
+// and dials the hub), then `kilo run` with a scripted model. The browser-neutral pieces (scripted model, CLI
 // environment and runs, hub, fixtures' frame server, small helpers) come from extension-harness.ts.
 import fs from "node:fs/promises"
 import { existsSync } from "node:fs"
@@ -75,7 +75,7 @@ import {
 
 const binaryInput = process.argv[2]
 const scenario = process.argv[3] ?? "setup"
-if (!binaryInput) throw new Error("usage: bun test/browser/firefox-e2e.ts <kilo2> <scenario>")
+if (!binaryInput) throw new Error("usage: bun test/browser/firefox-e2e.ts <kilo> <scenario>")
 const binary = path.resolve(binaryInput)
 
 const extensionDirectory =
@@ -820,7 +820,7 @@ async function openUserTab(url: string): Promise<{ context: string; tabId: numbe
 }
 
 // ---------------------------------------------------------------------------------------------
-// Hub: start `kilo2 browser hub --loopback`, ask it for a pairing URL over its CLI socket, open that page.
+// Hub: start `kilo browser hub --loopback`, ask it for a pairing URL over its CLI socket, open that page.
 // ---------------------------------------------------------------------------------------------
 
 type Hub = HarnessHub
@@ -894,7 +894,7 @@ async function pair(hub: Hub) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// CLI runs: a fresh home, a fresh hub, the scripted model, and `kilo2 run`.
+// CLI runs: a fresh home, a fresh hub, the scripted model, and `kilo run`.
 // ---------------------------------------------------------------------------------------------
 
 let runCounter = 0
@@ -1552,7 +1552,7 @@ async function perf() {
 
 /**
  * Native messaging on Firefox: Firefox runs with the run's HOME, the CLI writes the Firefox host manifest
- * (`kilo2 browser install-host`), the switch is turned on, and `kilo2 run` connects with no loopback hub at all.
+ * (`kilo browser install-host`), the switch is turned on, and `kilo run` connects with no loopback hub at all.
  */
 async function native(root: string) {
   const settings: Settings = {}

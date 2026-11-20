@@ -1,6 +1,6 @@
 /**
  * One Chromium with the built Kilo extension, "Allow local agents" on, paired over loopback with one
- * `kilo2 browser hub --loopback` for the whole benchmark matrix. Each `kilo2 run` that uses `environment()` reaches
+ * `kilo browser hub --loopback` for the whole benchmark matrix. Each `kilo run` that uses `environment()` reaches
  * the same hub through the shared browser run directory, so every task run is its own CLI session on one browser.
  *
  * The launch, settings and pairing steps follow test/browser/extension-e2e.ts.
@@ -182,7 +182,7 @@ async function hubRequest(socketPath: string, method: string, params: unknown): 
 
 export type ExtensionBrowser = {
   extensionId: string
-  /** Environment for `kilo2 run` and the hub: the shared browser directories and the unpacked extension id. */
+  /** Environment for `kilo run` and the hub: the shared browser directories and the unpacked extension id. */
   environment: () => Record<string, string>
   /** Tabs open in the browser right now, so a run that leaves tabs behind shows in the results. */
   tabCount: () => Promise<number>

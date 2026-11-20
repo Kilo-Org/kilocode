@@ -11,7 +11,6 @@ import { KiloRead } from "@kilocode/kilo-plugin/read"
 import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
-import { pilotEnabled } from "./migration/pilot"
 import { ConfigPluginSource } from "@opencode/core/config/plugin/source"
 import { Flag } from "@opencode/core/flag"
 import { ModelResolver } from "@opencode/core/model-resolver"
@@ -150,7 +149,6 @@ export function schedulingOverrides(overrides: string | undefined) {
 // A long-lived server can open another project after the launching client's preflight.
 function guardedLayout(): ConfigDiscovery.Layout {
   const layout = KiloConfigDiscovery.layout
-  if (!pilotEnabled() || process.env.OPENCODE_APP_DIR_NAME !== "kilo") return layout
   return {
     ...layout,
     walk: (input) =>
@@ -167,8 +165,8 @@ function guardedLayout(): ConfigDiscovery.Layout {
 
 /**
  * Service replacements that the Kilo host gives the server it starts. `createRoutes` applies them after its
- * standard set, so they win: the Kilo plugins, Kilo's app identity and Kilo's config discovery (`kilo2.json`,
- * `.kilo2`, worktree boundary).
+ * standard set, so they win: the Kilo plugins, Kilo's app identity and Kilo's config discovery (`kilo.json`,
+ * `.kilo`, worktree boundary).
  */
 export const overrides: LayerNode.Replacements = [
   KiloWorkflowDelivery.override,

@@ -58,8 +58,8 @@ process.exit(0)
 
 async function project(name: string) {
   const directory = path.join(root, name)
-  await mkdir(path.join(directory, ".kilo2", "command"), { recursive: true })
-  await Bun.write(path.join(directory, ".kilo2", "command", `audit-${name}-only.md`), `Audit ${name}.\n`)
+  await mkdir(path.join(directory, ".kilo", "command"), { recursive: true })
+  await Bun.write(path.join(directory, ".kilo", "command", `audit-${name}-only.md`), `Audit ${name}.\n`)
   const git = (...args: string[]) => {
     const result = Bun.spawnSync(["git", "-C", directory, ...args], {
       env: { PATH: process.env.PATH, HOME: root, GIT_CONFIG_NOSYSTEM: "1" },
@@ -67,7 +67,7 @@ async function project(name: string) {
     assert.equal(result.exitCode, 0, result.stderr.toString())
   }
   git("init", "-b", "main", "--template=")
-  git("add", ".kilo2")
+  git("add", ".kilo")
   git("-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-m", name)
   return directory
 }

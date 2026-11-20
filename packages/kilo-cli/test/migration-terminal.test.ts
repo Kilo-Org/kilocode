@@ -93,8 +93,8 @@ test("a headless affirmative is refused with explicit migration commands", async
   ])
   expect(code, err).toBe(1)
   expect(out).toBe("")
-  expect(err).toContain("kilo2 migrate preflight")
-  expect(err).toContain("kilo2 migrate apply --accept-jetbrains-breakage")
+  expect(err).toContain("kilo migrate preflight")
+  expect(err).toContain("kilo migrate apply --accept-jetbrains-breakage")
   expect(existsSync(p.backup)).toBe(false)
 })
 
@@ -117,52 +117,55 @@ for (const [key, reply] of [
   ["Ctrl+D", "\x04"],
   ["Ctrl+C", "\x03"],
 ] as const) {
-  // ConPTY does not implement POSIX terminal control characters.
-  test.skipIf(process.platform === "win32" && key.startsWith("Ctrl"))(
-    `${key} declines without invoking the migration`,
-    async () => {
-      await using root = await tmpdir()
-      const p = profile(root.path)
-      const result = await interactive(p, reply)
-      expect(result.code, result.text).toBe(0)
-      expect(result.text).toContain("Not now")
-      expect(result.text).toContain("result: false")
-      expect(result.text).not.toContain("Backing up")
-      expect(existsSync(p.backup)).toBe(false)
-    },
-  )
+  // Bun.Terminal rejects the IPC side channel on Windows, and ConPTY does not implement POSIX control characters.
+  test.skipIf(process.platform === "win32")(`${key} declines without invoking the migration`, async () => {
+    await using root = await tmpdir()
+    const p = profile(root.path)
+    const result = await interactive(p, reply)
+    expect(result.code, result.text).toBe(0)
+    expect(result.text).toContain("Not now")
+    expect(result.text).toContain("result: false")
+    expect(result.text).not.toContain("Backing up")
+    expect(existsSync(p.backup)).toBe(false)
+  })
 }
 
-test("shows the full plan before accepting and reports phases and real row counts", async () => {
-  await using root = await tmpdir()
-  const p = profile(root.path)
-  const size = statSync(p.source).size
-  const wal = statSync(`${p.source}-wal`).size
-  const result = await interactive(p, "yes\r")
-  expect(result.code, result.text).toBe(0)
-  // ConPTY can repaint the prompt while echoing the reply. Keep the whole transcript after its first occurrence.
-  const prompt = result.text.indexOf("[y/N]")
-  expect(prompt).toBeGreaterThanOrEqual(0)
-  const plan = result.text.slice(0, prompt)
-  const run = result.text.slice(prompt)
-  expect(plan).toContain(`Source: ${p.source}`)
-  expect(plan).toContain(`${(size + wal).toLocaleString("en-US")} bytes`)
-  expect(plan).toContain(`WAL: ${wal.toLocaleString("en-US")} bytes`)
-  expect(plan).toMatch(/Free space: [\d,]+ bytes/)
-  expect(plan).toContain(`Proposed backup: ${p.backup}`)
-  expect(plan).toContain("Close all Kilo v1 and preview clients")
-  expect(plan).toContain("JetBrains cannot use this database")
-  expect(run).toMatch(/Backing up[\s\S]*?Checking sessions 0\/1[\s\S]*?Checking sessions 1\/1[\s\S]*?result: true/)
-  using copy = new Database(p.backup, { readonly: true })
-  expect(copy.query("SELECT id FROM session").all()).toEqual([{ id: 1 }])
-})
+test.skipIf(process.platform === "win32")(
+  "shows the full plan before accepting and reports phases and real row counts",
+  async () => {
+    await using root = await tmpdir()
+    const p = profile(root.path)
+    const size = statSync(p.source).size
+    const wal = statSync(`${p.source}-wal`).size
+    const result = await interactive(p, "yes\r")
+    expect(result.code, result.text).toBe(0)
+    // ConPTY can repaint the prompt while echoing the reply. Keep the whole transcript after its first occurrence.
+    const prompt = result.text.indexOf("[y/N]")
+    expect(prompt).toBeGreaterThanOrEqual(0)
+    const plan = result.text.slice(0, prompt)
+    const run = result.text.slice(prompt)
+    expect(plan).toContain(`Source: ${p.source}`)
+    expect(plan).toContain(`${(size + wal).toLocaleString("en-US")} bytes`)
+    expect(plan).toContain(`WAL: ${wal.toLocaleString("en-US")} bytes`)
+    expect(plan).toMatch(/Free space: [\d,]+ bytes/)
+    expect(plan).toContain(`Proposed backup: ${p.backup}`)
+    expect(plan).toContain("Close all Kilo v1 and preview clients")
+    expect(plan).toContain("JetBrains cannot use this database")
+    expect(run).toMatch(/Backing up[\s\S]*?Checking sessions 0\/1[\s\S]*?Checking sessions 1\/1[\s\S]*?result: true/)
+    using copy = new Database(p.backup, { readonly: true })
+    expect(copy.query("SELECT id FROM session").all()).toEqual([{ id: 1 }])
+  },
+)
 
-test("renders the selected message locale, including Traditional Chinese", async () => {
-  await using root = await tmpdir()
-  const p = profile(root.path, "zh_TW.UTF-8")
-  const result = await interactive(p, "n\r")
-  expect(result.code, result.text).toBe(0)
-  expect(result.text).toContain("暫不移轉")
-  expect(result.text).toContain("JetBrains 專用 Kilo 外掛程式將無法使用此資料庫")
-  expect(result.text).toContain("result: false")
-})
+test.skipIf(process.platform === "win32")(
+  "renders the selected message locale, including Traditional Chinese",
+  async () => {
+    await using root = await tmpdir()
+    const p = profile(root.path, "zh_TW.UTF-8")
+    const result = await interactive(p, "n\r")
+    expect(result.code, result.text).toBe(0)
+    expect(result.text).toContain("暫不移轉")
+    expect(result.text).toContain("JetBrains 專用 Kilo 外掛程式將無法使用此資料庫")
+    expect(result.text).toContain("result: false")
+  },
+)

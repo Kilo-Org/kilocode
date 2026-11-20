@@ -9,14 +9,12 @@ export function statePaths(env: NodeJS.ProcessEnv, data: string, home: string) {
       ? env.XDG_STATE_HOME
       : undefined
   const stateBase = path.resolve(explicit || path.join(home, ".local", "state"))
-  const stable = path.join(stateBase, "kilo"),
-    preview = path.join(stateBase, "kilo2")
+  const stable = path.join(stateBase, "kilo")
   return {
     stateBase,
     implicitState: !explicit,
     legacyState: explicit ? stable : choose(stable, path.join(data, "kilo/kilo")),
     v1State: explicit ? stable : choose(stable, path.join(data, "kilo/state")),
-    previewState: explicit ? preview : choose(preview, path.join(data, "kilo2/kilo2")),
   }
 }
 

@@ -13,7 +13,6 @@ function project() {
     fs.mkdirSync(path.join(dir, "src"), { recursive: true })
     fs.writeFileSync(path.join(dir, "src", "math.ts"), "")
   }
-  fs.mkdirSync(path.join(root, ".kilo2"))
   dirs.push(root)
   return { root, worktree }
 }

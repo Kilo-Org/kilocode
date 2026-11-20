@@ -20,11 +20,11 @@ afterEach(async () => {
 })
 
 describe("worktree pool home", () => {
-  it("lives next to the kilo2 CLI data, apart from the Kilo v1 pool, and honors XDG_DATA_HOME", () => {
+  it("lives next to the kilo CLI data, apart from the Kilo v1 pool, and honors XDG_DATA_HOME", () => {
     process.env.XDG_DATA_HOME = path.join(os.tmpdir(), "data")
-    expect(poolHome()).toBe(path.join(os.tmpdir(), "data", "kilo2", "worktree-pool"))
+    expect(poolHome()).toBe(path.join(os.tmpdir(), "data", "kilo", "worktree-pool-v2"))
     delete process.env.XDG_DATA_HOME
-    expect(poolHome()).toBe(path.join(os.homedir(), ".local", "share", "kilo2", "worktree-pool"))
+    expect(poolHome()).toBe(path.join(os.homedir(), ".local", "share", "kilo", "worktree-pool-v2"))
     expect(poolHome()).not.toBe(path.join(os.homedir(), ".local", "share", "kilo", "worktree-pool"))
   })
 

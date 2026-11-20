@@ -140,9 +140,6 @@ const host = Bun.build({
   target: "node",
   format: "cjs",
   external: ["vscode", "playwright-core"],
-  define: {
-    KILO_INTERNAL_PROFILE_CUTOVER_BUILD: JSON.stringify(process.env.KILO_INTERNAL_PROFILE_CUTOVER_BUILD === "1"),
-  },
   sourcemap: "linked",
 })
 

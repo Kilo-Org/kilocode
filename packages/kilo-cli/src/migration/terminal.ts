@@ -37,8 +37,8 @@ export async function terminalCutover(
 
   if (!process.stdin.isTTY || !process.stdout.isTTY || !process.stderr.isTTY) {
     const guidance = t("migration.headless", {
-      preflight: "kilo2 migrate preflight",
-      apply: "kilo2 migrate apply --accept-jetbrains-breakage",
+      preflight: "kilo migrate preflight",
+      apply: "kilo migrate apply --accept-jetbrains-breakage",
     })
     throw new Error(`${t("migration.warning")}\n${guidance}`)
   }

@@ -74,7 +74,7 @@ const CHECKS: Check[] = [
   {
     name: "kilo-host-smoke",
     cwd: ".",
-    argv: ["bash", "-c", `bun script/kilocode/smoke-host.ts packages/kilo-cli/dist/cli-${process.platform}-${process.arch}/bin/kilo2`],
+    argv: ["bash", "-c", `bun script/kilocode/smoke-host.ts packages/kilo-cli/dist/cli-${process.platform}-${process.arch}/bin/kilo`],
     isolate: true,
   },
   // kilo-v2.yml

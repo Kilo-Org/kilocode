@@ -20,7 +20,7 @@ const config = Layer.succeed(
 )
 const context = (skill: Skill.Interface) =>
   host({
-    app: { name: "kilo2", version: "1.2.3", channel: "beta" },
+    app: { name: "kilo", version: "1.2.3", channel: "beta" },
     skill: {
       list: () => Effect.die("unused skill.list"),
       transform: skill.transform,
@@ -41,12 +41,12 @@ describe("Kilo builtin config skill", () => {
       expect(items.map((item) => String(item.id))).toEqual(["kilo-config"])
       expect(String(items[0]?.name)).toBe("kilo-config")
       expect(items[0]?.path).toBe(AbsolutePath.make("/builtin/kilo-config.md"))
-      expect(items[0]?.description).toContain("kilo2.json")
+      expect(items[0]?.description).toContain("kilo.json")
       expect(items[0]?.description).toContain("/periodic")
       expect(items[0]?.description).toContain("service install")
-      expect(items[0]?.content).toContain("kilo2.json")
-      expect(items[0]?.content).toContain(".kilo2")
-      expect(items[0]?.content).toContain("KILO2_CONFIG")
+      expect(items[0]?.content).toContain("kilo.json")
+      expect(items[0]?.content).toContain(".kilo")
+      expect(items[0]?.content).toContain("KILO_CONFIG")
       expect(items[0]?.content).toContain("/periodic")
       expect(items[0]?.content).toContain("flow_create")
       expect(items[0]?.content).toContain("schedule_wakeup")
@@ -67,7 +67,7 @@ describe("Kilo builtin config skill", () => {
             id: Skill.ID.make("kilo-config"),
             name: Skill.Name.make("kilo-config"),
             description: "User override",
-            path: AbsolutePath.make("/repo/.kilo2/skills/kilo-config/SKILL.md"),
+            path: AbsolutePath.make("/repo/.kilo/skills/kilo-config/SKILL.md"),
             content: "User content",
           }),
         )
@@ -76,7 +76,7 @@ describe("Kilo builtin config skill", () => {
       const items = yield* skill.list()
       expect(items).toHaveLength(1)
       expect(items[0]?.description).toBe("User override")
-      expect(items[0]?.path).toBe(AbsolutePath.make("/repo/.kilo2/skills/kilo-config/SKILL.md"))
+      expect(items[0]?.path).toBe(AbsolutePath.make("/repo/.kilo/skills/kilo-config/SKILL.md"))
     }),
   )
 })

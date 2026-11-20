@@ -335,7 +335,7 @@ describe("config document writes", () => {
     let text = JSON.stringify(initial)
     const revision = () => createHash("sha256").update(text).digest("hex")
     return {
-      read: async () => ({ path: "/kilo2.json", revision: revision(), document: JSON.parse(text) as unknown }),
+      read: async () => ({ path: "/kilo.json", revision: revision(), document: JSON.parse(text) as unknown }),
       write: async (set: unknown, expected?: { path: string; revision: string }) => {
         if (expected && expected.revision !== revision()) throw new Error("revision-conflict")
         text = JSON.stringify(leaves(JSON.parse(text), set))

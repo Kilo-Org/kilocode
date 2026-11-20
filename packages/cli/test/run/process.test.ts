@@ -142,7 +142,7 @@ test("run waits for the requested model before admitting the prompt", async () =
   const fake = await serve(directory.path, { models: [fixtureModel] })
   const child = spawnRun(fake.server.url.toString(), directory.path, ["hello"], "ignore", {
     model: "kilo/fixture",
-    env: { OPENCODE_APP_DIR_NAME: "kilo2" },
+    env: { OPENCODE_APP_DIR_NAME: "kilo" },
   })
   try {
     await until(() => fake.requests.some((item) => item.path === "/api/model"))

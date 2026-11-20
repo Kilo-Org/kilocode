@@ -223,7 +223,7 @@ export const allow: ReadonlyMap<string, string | readonly Identity[]> = new Map<
     [
       ["Kilo runs on the OpenCode V2 runtime.", "Kilo's own guide naming the upstream runtime it is built on."],
       [
-        "the OpenCode V2 docs at <https://opencode.ai/docs/> apply, with `opencode` read as `kilo2`, `opencode.json` as `kilo2.json`",
+        "the OpenCode V2 docs at <https://opencode.ai/docs/> apply, with `opencode` read as `kilo`, `opencode.json` as `kilo.json`",
         "Kilo's own guide pointing at the upstream docs for the shared runtime and saying how to read their names.",
       ],
       ["or OpenCode config as a fallback", "Kilo's own guide saying that OpenCode config files are not read."],

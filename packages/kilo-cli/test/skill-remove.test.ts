@@ -29,7 +29,7 @@ test(
   "a configured skill is removable, its manifest is deleted, and the registry refreshes",
   async () => {
     const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-skill-rpc-")))
-    const file = path.join(directory, ".kilo2", "skills", "demo", "SKILL.md")
+    const file = path.join(directory, ".kilo", "skills", "demo", "SKILL.md")
     await mkdir(path.dirname(file), { recursive: true })
     await writeFile(file, SKILL)
     try {

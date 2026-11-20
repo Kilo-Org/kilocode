@@ -80,7 +80,7 @@
         "`../../../script/kilocode/release-env` is imported before `@opencode/script`, which reads the `OPENCODE_*` names when it loads.",
         "`hostMirrorsPlugin` and `brandingPlugin` stay in the plugin list, so the bundle resolves Kilo's copies of upstream files and Kilo's branding.",
         "Upstream's entrypoints, plugins and steps stay: the app archive, solid transform, PTY binary, plugin runtime, ws re-export, artifact verification, simulation graph, native-arch check, release assets and the `upstreamBinary` target names that `--target` and the output layout depend on. New ones upstream adds must be carried over.",
-        "`define` keeps Kilo's values (`KILO2_CHANNEL`, `KILO_BRANDING_COMPILED`, `OPENCODE_CLI_NAME` as `kilo2`, `process.env.OPENCODE_APP_DIR_NAME`, `KILO_LIBC` and the sandbox helper paths) while upstream's `OPENCODE_*` values still come from `Script`.",
+        "`define` keeps Kilo's values (`KILO_BRANDING_COMPILED`, `OPENCODE_CLI_NAME` as `kilo`, `process.env.OPENCODE_APP_DIR_NAME`, `KILO_LIBC` and the sandbox helper paths) while upstream's `OPENCODE_*` values still come from `Script`.",
         "Kilo's steps after upstream's verification stay in order: the sandbox helper copies and their smoke test, the tree-sitter wasms, then the Linux LICENSE union."
       ]
     },
@@ -92,7 +92,7 @@
         "The launcher publishes last, after the platform packages it depends on.",
         "The dist-tag is `kilo-v2`, never the build channel, so a v2 publish cannot replace v1's `latest` or `rc`.",
         "`targets` matches the targets `script/build.ts` builds; a target upstream adds or removes changes both scripts.",
-        "The launcher exposes only `kilo2` with no `kilo` alias, and `release-env` is imported before `@opencode/script`.",
+        "The launcher exposes the stable `kilo` command on the separate `kilo-v2` npm tag, and `release-env` is imported before `@opencode/script`.",
         "`script/postinstall.ts` asserts the copy anchor in upstream's `cli/script/postinstall.mjs`. Keep the sandbox helpers and the macOS renderer sidecar next to the launcher executable, copied from the selected platform package."
       ]
     }

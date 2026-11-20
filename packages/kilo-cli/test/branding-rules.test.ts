@@ -5,21 +5,21 @@ const span = (text: string, bareStringLiteral = false) => KiloBrandingRules.bran
 
 test("brands the product word and the command token", () => {
   expect(span("OpenCode crashed")).toBe("Kilo crashed")
-  expect(span("run opencode now")).toBe("run kilo2 now")
-  expect(span("OpenCode runs opencode")).toBe("Kilo runs kilo2")
+  expect(span("run opencode now")).toBe("run kilo now")
+  expect(span("OpenCode runs opencode")).toBe("Kilo runs kilo")
 })
 
 test("brands domains, the upstream repo and the config file name", () => {
   expect(span("see https://opencode.ai/docs")).toBe("see https://kilo.ai/docs")
   expect(span("github.com/anomalyco/opencode/issues")).toBe("github.com/Kilo-Org/kilocode/issues")
   expect(span("opencode.ai")).toBe("kilo.ai")
-  expect(span("edit opencode.json")).toBe("edit kilo2.json")
+  expect(span("edit opencode.json")).toBe("edit kilo.json")
 })
 
 test("leaves the bare executable-name string literal alone", () => {
   // `command: "opencode"` resolves at runtime; a template token does not.
   expect(span("opencode", true)).toBe("opencode")
-  expect(span("opencode", false)).toBe("kilo2")
+  expect(span("opencode", false)).toBe("kilo")
 })
 
 test("does not touch code that only looks like branding", () => {

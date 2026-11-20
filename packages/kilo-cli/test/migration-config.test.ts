@@ -23,10 +23,10 @@ function snapshot(root: string) {
 test("plan is read-only; apply keeps models, Markdown discovery, skill assets and both original profiles", async () => {
   await using root = await tmpdir()
   const stable = path.join(root.path, "kilo")
-  const preview = path.join(root.path, "kilo2")
+  const preview = path.join(root.path, "config-default")
   const stableDoc = put(stable, "kilo.json", '{"model":"kilo/stable", "instructions":["rules/*.md"]}')
   const jsonc = '{// fixture\n "providers":{"synthetic":{"models":{"demo":{}}}},\n}'
-  put(preview, "kilo2.jsonc", jsonc)
+  put(preview, "kilo.jsonc", jsonc)
   const workflow = "# Inspect changes\n\nReview this diff: $ARGUMENTS.\n"
   put(stable, "workflows/inspect.md", workflow)
   put(stable, "mode/explain.md", "Explain the code.")
@@ -76,9 +76,9 @@ test("plan is read-only; apply keeps models, Markdown discovery, skill assets an
 test("both extension layers of a single profile retain their original precedence", async () => {
   await using root = await tmpdir()
   const stable = path.join(root.path, "missing/config/kilo")
-  const preview = path.join(root.path, "kilo2")
-  put(preview, "kilo2.json", '{"model":"kilo/low"}')
-  put(preview, "kilo2.jsonc", '{"model":"kilo/high"}')
+  const preview = path.join(root.path, "config-default")
+  put(preview, "kilo.json", '{"model":"kilo/low"}')
+  put(preview, "kilo.jsonc", '{"model":"kilo/high"}')
   const plan = planConfig(stable, preview)
   expect(plan.conflicts).toEqual([])
   expect(fs.existsSync(stable)).toBe(false)
@@ -88,9 +88,9 @@ test("both extension layers of a single profile retain their original precedence
 })
 
 test.each([
-  ["kilo.json", '{"model":"kilo/one"}', "kilo2.json", '{"model":"kilo/two"}', "Different files"],
-  ["kilo.jsonc", '{"provider":{"p":{}}}', "kilo2.json", '{"providers":{"p":{}}}', "precedence"],
-  ["kilo2.json", '{"model":"kilo/one"}', "kilo.json", '{"model":"kilo/two"}', "Different files"],
+  ["kilo.json", '{"model":"kilo/one"}', "kilo.json", '{"model":"kilo/two"}', "Different files"],
+  ["kilo.jsonc", '{"provider":{"p":{}}}', "kilo.json", '{"providers":{"p":{}}}', "precedence"],
+  ["kilo.json", '{"model":"kilo/one"}', "kilo.json", '{"model":"kilo/two"}', "Different files"],
   ["modes/check.md", "Primary", "agent/check.md", "Subagent", "agent:check"],
   ["commands/test.md", "Old command", "workflows/test.md", "Other workflow", "command:test"],
   ["skill/group/trace/SKILL.md", "One", "skills/other/trace/SKILL.md", "Two", "skill:trace"],
@@ -98,7 +98,7 @@ test.each([
 ])("detects conflicts before any additive writes: %s vs %s", async (existing, oldText, incoming, newText, issue) => {
   await using root = await tmpdir()
   const stable = path.join(root.path, "kilo")
-  const preview = path.join(root.path, "kilo2")
+  const preview = path.join(root.path, "config-default")
   put(stable, existing, oldText)
   put(preview, incoming, newText)
   put(preview, "AGENTS.md", "Must not be copied")
@@ -112,18 +112,18 @@ test.each([
 test.each([
   ["stable", "kilo.json", '{"plugin":["legacy-api"]}', "compatibility"],
   ["stable", "plugins/legacy.ts", "import './legacy'", "compatibility"],
-  ["preview", "kilo2.json", '{"providers":{"p":{"settings":{"apiKey":"PRIVATE-FIXTURE"}}}}', "credential"],
-  ["preview", "kilo2.jsonc", '{"model":"{file:./selector}"}', "Relative path"],
-  ["preview", "kilo2.jsonc", '{"instructions":["notes/*.md"]}', "Relative path"],
+  ["preview", "kilo.json", '{"providers":{"p":{"settings":{"apiKey":"PRIVATE-FIXTURE"}}}}', "credential"],
+  ["preview", "kilo.jsonc", '{"model":"{file:./selector}"}', "Relative path"],
+  ["preview", "kilo.jsonc", '{"instructions":["notes/*.md"]}', "Relative path"],
   ["stable", "workflows/read.md", "Read {file:./notes}", "substitution"],
   ["stable", "modes/name.md", "---\nname: other\n---\nLegacy primary", "name and discovery path"],
   ["stable", "workflows/read.md", "Read [the guide](guide.md)", "Relative Markdown link"],
-  ["stable", "kilo2.json", '{"provider":{"p":{"options":{"apiKey":"PRIVATE-FIXTURE"}}}}', "credential"],
+  ["preview", "kilo.json", '{"provider":{"p":{"options":{"apiKey":"PRIVATE-FIXTURE"}}}}', "credential"],
   ["stable", "kilo.json", '{"provider":{"p":{"blacklist":["model1"]}}}', "Runtime would ignore"],
   ["stable", "skills/directory/SKILL.md", "---\nname: different-legacy-id\n---\nSkill", "name and discovery directory"],
   ["preview", "skills/trace/metadata.json", '{"refresh":"PRIVATE-FIXTURE"}', "Manual"],
-  ["preview", "kilo2.json", "{oops}", "Invalid JSON"],
-  ["preview", "kilo2.json", '{"model":"a/b","model":"c/d"}', "Duplicate"],
+  ["preview", "kilo.json", "{oops}", "Invalid JSON"],
+  ["preview", "kilo.json", '{"model":"a/b","model":"c/d"}', "Duplicate"],
   ["stable", "settings/custom_modes.yaml", "customModes: []", "Manual"],
 ])("requires manual review for %s %s without revealing values", async (dir, name, text, issue) => {
   await using root = await tmpdir()

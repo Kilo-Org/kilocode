@@ -1,4 +1,4 @@
-// The merge step of `import v1` into a kilo2 store that already exists. The window is first converted into a private
+// The merge step of `import v1` into a kilo store that already exists. The window is first converted into a private
 // store by the normal import (../database), so this module only copies finished v2 rows. It adds the sessions the
 // target does not hold yet and never changes a session the target already has, so a second run imports only what is
 // new. The target can be open in a running server: the copy is one write transaction that waits for the server's
@@ -7,7 +7,7 @@ import { Database as SQLite } from "bun:sqlite"
 
 /**
  * The v2 tables the conversion fills for a session, with the column that names the session. The legacy v1 tables the
- * private store still holds (`session`, `message`, `part`, `todo`, `kilo_board`) are not read by kilo2, so they stay out.
+ * private store still holds (`session`, `message`, `part`, `todo`, `kilo_board`) are not read by kilo, so they stay out.
  */
 const tables = [
   ["session_v2", "id"],

@@ -296,7 +296,7 @@ v1 UI that was never wired into the v2 composition.
       `task-runner.ts:17` still creates that task type.
     - `kilo-code.v2.showShortcutHints` has no settings row and is absent from
       `KiloSettingKey`, so users can only edit settings.json.
-    - No `.vscodeignore`/`files` and no packaging step that places `bin/kilo2`, so
+    - No `.vscodeignore`/`files` and no packaging step that places `the bundled preview executable`, so
       packaged content is undefined.
 
 ---
@@ -309,7 +309,7 @@ v1 UI that was never wired into the v2 composition.
 2. The sidebar has no consumer for edit-permission previews
    (`src/v2/permission.tsx:94-99` needs `onPreview`; `src/v2/chat.tsx:107-118` does not
    pass it). v1 rendered the diff inline.
-3. `.kilo2/agent-manager.json` has no migration marker and `apply` ignores `version`
+3. `<historical preview state>/agent-manager.json` has no migration marker and `apply` ignores `version`
    (`WorktreeStateManager.ts:755-800`). A corrupt-file backup re-imports the stale v1
    file instead of using it only for recovery.
 4. `STATE_DIRECTORIES` lost `.kilocode` (`packages/kilo-plugin/src/agent-manager/protection.ts:4`),
@@ -403,7 +403,7 @@ v1 UI that was never wired into the v2 composition.
 ## Verified as correctly migrated
 
 - Worktree creation, start-point resolution, "already checked out" handling, pool
-  claim, and the `.kilo2` git exclude entry.
+  claim, and the `the historical preview directory` git exclude entry.
 - State schema, sections, tab order, pinned tabs, closed sessions, worktree order,
   active target, and corrupt-file backup.
 - Worktree reconcile, recovery, health, doctor, diagnostics, file path, state recovery,

@@ -33,7 +33,7 @@ describe("Agent Manager session filing", () => {
     two = path.join(root, ".kilo", "worktrees", "two")
     fs.mkdirSync(one, { recursive: true })
     fs.mkdirSync(two, { recursive: true })
-    fs.mkdirSync(path.join(root, ".kilo2"), { recursive: true })
+    fs.mkdirSync(path.join(root, ".kilo"), { recursive: true })
     state = new WorktreeStateManager(root, () => undefined)
     ctx = new ProjectContext("project", root, true, { log: () => undefined, state: () => state })
     await ctx.ensureReady(async () => {

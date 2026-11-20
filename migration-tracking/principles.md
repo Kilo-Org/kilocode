@@ -31,12 +31,10 @@ Every client (VS Code, JetBrains, Kilo Desktop, other consumers) is a new packag
 
 ## 4. Identity and config names
 
-- The internal v2 line is `kilo2`: binary `kilo2`, and separate `kilo2` config, data, cache and state directories. v1 directories and files are never written; an opt-in v1 import leaves the originals unchanged.
-- The opt-in [internal cutover pilot](technical-notes/profile-cutover.md) is the exception: `KILO_INTERNAL_PROFILE_CUTOVER=1` enables a pre-boot consent gate. Only after explicit consent may it create migration state and publish a verified conversion at the stable path with a v1 recovery copy. Installation, probing and declining are not consent. This is not the public release default.
-- Runtime config uses `kilo2.json` and `kilo2.jsonc` (project roots and ancestors up to the worktree root, or to the filesystem root outside version control; global directories) and the project directory `.kilo2`. Contents use the v2 schema; explicit config paths still accept any filename. The CLI creates `kilo2.json`; the server's global writer creates `kilo2.jsonc` if neither file exists.
+- Distribution and profile identity are separate. Keep the `kilocode.kilo-code-v2` extension product and the `kilo-v2` npm dist-tag. The executable is `kilo` and uses the stable `kilo` data, config, cache and state directories, `kilo.db` and the `KILO_*` overrides. Separate extension IDs do not imply isolated session stores.
+- The [profile cutover](technical-notes/profile-cutover.md) checks the selected store before normal startup. Only explicit consent permits conversion of a v1 database at its existing path with a private recovery copy. Installation, probing and declining are not consent. Fresh profiles and native v2 stores need no conversion.
+- Runtime config uses `kilo.json` and `kilo.jsonc` at global and project roots, and `.kilo` for project resources. Contents use the v2 schema; explicit config paths still accept any filename. Do not adopt the discontinued preview profile.
 - The platform-managed system directory (`/etc/kilo`, `/Library/Application Support/kilo`, `%ProgramData%\kilo`) is the exception to the isolation: it keeps the stable product names `kilo.json` and `kilo.jsonc`, because an administrator deploys it once and the policy must keep applying across internal renames (#15326).
-- There is no fallback to v1 `kilo.json`, `kilo.jsonc`, `.kilo` or `.kilocode`, nor to OpenCode config.
-- Opt-in exception to both rules above: `KILO_USE_RELEASE_CONFIG=1` switches the config file and directory names to `kilo.json`, `kilo.jsonc` and `.kilo` for reads and writes, in project and global directories, so a Cloud Agent reads a repository's existing `.kilo` config. It is a switch, not a fallback: `.kilo2` is then not read. The app directories, the database and the Agent Manager state (`.kilo2/agent-manager.json`) keep `kilo2`. It becomes the default at the release rename, and the variable is then removed.
 - The repository's own `.kilo/` contributor tooling (skills, agents, commands) stays where it is.
 
 ## 5. Behavioral reference

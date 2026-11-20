@@ -9,14 +9,13 @@ type File = { source: string; target: string; digest: string; executable: boolea
 export type ConfigPlan = {
   legacyDir: string
   legacyDefaultDir: string
-  previewDir: string
   conflicts: string[]
   skipped: string[]
   files: File[]
   explicit?: { file: string; digest: string }
 }
 
-const configName = /^kilo2?\.jsonc?$/
+const configName = /^kilo\.jsonc?$/
 const trees = new Set([
   "skill",
   "skills",
@@ -46,16 +45,13 @@ const generated = new Set([
 // project/managed config, XDG state/model.json and credential stores have separate owners.
 export function planConfig(
   legacyDir: string,
-  previewDir: string,
-  explicitFile?: string,
   legacyDefaultDir = legacyDir,
+  explicitFile?: string,
 ): ConfigPlan {
   const stable = path.resolve(legacyDir)
-  const preview = path.resolve(previewDir)
   const plan: ConfigPlan = {
     legacyDir: stable,
     legacyDefaultDir: path.resolve(legacyDefaultDir),
-    previewDir: preview,
     conflicts: [],
     skipped: [],
     files: [],
@@ -74,9 +70,7 @@ export function planConfig(
     const top = parts[0]!
     const source = path.join(root, relative)
     const workflow = top === "workflows"
-    const target = configName.test(top)
-      ? top.replace("kilo2", "kilo")
-      : path.join(workflow ? "command" : top, ...parts.slice(1))
+    const target = path.join(workflow ? "command" : top, ...parts.slice(1))
     const absolute = path.join(stable, target)
     const content = read(source)
     const bytes = workflow ? command(content.bytes, source) : content.bytes
@@ -104,7 +98,7 @@ export function planConfig(
     const file = path.join(root, relative)
     const top = relative.split(path.sep)[0]!
     const name = path.basename(file)
-    if (credentialFile.test(name) || stagingName.test(name) || (relative === name && generated.has(name))) {
+    if (name === ".DS_Store" || credentialFile.test(name) || stagingName.test(name) || (relative === name && generated.has(name))) {
       plan.skipped.push(`${file}: credential or generated dependency; left in place`)
       return
     }
@@ -163,8 +157,7 @@ export function planConfig(
 }
 
 function configRoots(plan: ConfigPlan) {
-  const stableRoots = [...new Set([plan.legacyDir, plan.legacyDefaultDir])]
-  const roots = [...stableRoots, plan.previewDir]
+  const roots = [...new Set([plan.legacyDir, plan.legacyDefaultDir])]
   for (const [i, root] of roots.entries()) {
     for (const other of roots.slice(i + 1)) {
       if (root === other || root.startsWith(other + path.sep) || other.startsWith(root + path.sep))
@@ -372,7 +365,7 @@ function checked(plan: ConfigPlan) {
  * a failed/interrupted run can reuse matching files. Existing files are never replaced. */
 export function applyConfig(plan: ConfigPlan) {
   const expected = checked(plan)
-  const fresh = planConfig(plan.legacyDir, plan.previewDir, plan.explicit?.file, plan.legacyDefaultDir)
+  const fresh = planConfig(plan.legacyDir, plan.legacyDefaultDir, plan.explicit?.file)
   if (expected !== checked(fresh) || plan.explicit?.digest !== fresh.explicit?.digest)
     throw new Error("Configuration changed after planning; repeat preflight")
   for (const file of fresh.files) {

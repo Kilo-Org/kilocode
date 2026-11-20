@@ -77,7 +77,6 @@ function fixture(status: string, extras: Record<string, unknown> = {}) {
       XDG_CONFIG_HOME: path.join(cwd, "config"),
       XDG_CACHE_HOME: path.join(cwd, "cache"),
       XDG_STATE_HOME: path.join(cwd, "state"),
-      KILO_INTERNAL_PROFILE_CUTOVER: "1",
       OPENCODE_PASSWORD: "synthetic-old-password",
       PREFLIGHT: JSON.stringify({
         version: 1,
@@ -108,11 +107,9 @@ const never = (): never => {
 }
 const silent = { confirm: never, progress: never }
 
-test("native gate requires the exact opt-in and presents the localized inventory before any apply", async () => {
+test("native gate always presents the localized inventory before any apply", async () => {
   const { input, calls, detail } = fixture("required")
   const out = window.createOutputChannel("fixture")
-  expect(profileCutover(input.cwd, out, {})).toBeUndefined()
-  expect(profileCutover(input.cwd, out, { KILO_INTERNAL_PROFILE_CUTOVER: "true" })).toBeUndefined()
   using warning = spyOn(window, "showWarningMessage").mockResolvedValue(undefined)
   using info = spyOn(window, "showInformationMessage").mockResolvedValue(undefined)
   const gate = profileCutover(input.cwd, out, input.env)!
@@ -137,6 +134,7 @@ test("the selected dev CLI probes only the synthetic profile; declining a WAL st
   const { input, detail } = fixture("required")
   input.command.args = [path.resolve(import.meta.dir, "../../../script/dev-isolated.ts"), "serve", "--stdio"]
   using db = new Database(detail.source)
+  db.exec(readFileSync(path.join(import.meta.dir, "../../kilo-cli/test/fixture/kilo-v1-schema.sql"), "utf8"))
   db.run("PRAGMA journal_mode = WAL")
   db.run("INSERT INTO fixture VALUES (2)")
   const inventory = () =>
@@ -157,9 +155,11 @@ test("the selected dev CLI probes only the synthetic profile; declining a WAL st
   expect(inventory()).toEqual(before)
 }, 30000)
 
-test.each(["absent", "completed"])("%s needs no prompt or migration process", async (status) => {
+test.each(["absent", "native", "completed"])("%s needs no prompt or migration process", async (status) => {
   const { input, calls, profile } = fixture(status)
-  expect(await prepareProfile(input, silent)).toEqual(status === "absent" ? {} : { profile })
+  expect(await prepareProfile(input, silent)).toEqual({
+    profile: status === "absent" ? { ...profile, fresh: true } : profile,
+  })
   expect(calls()).toEqual(["migrate preflight"])
 })
 
@@ -229,7 +229,9 @@ test("a failed start-time recheck never spawns serve, including on restart", asy
   const server = manager({
     ...input,
     command: () => input.command,
-    beforeStart: (command, settings) => verifyProfile({ ...input, command, settings }),
+    beforeStart: async (command, settings) => {
+      await verifyProfile({ ...input, command, settings })
+    },
   })
   await expect(server.get()).rejects.toThrow("failed")
   await server.stop()
@@ -262,4 +264,10 @@ test("missing completion after exit zero does not permit activation", async () =
   const { input } = fixture("running", { canObserve: true })
   input.env.NO_COMPLETION = "1"
   await expect(prepareProfile(input, { confirm: never, progress: (run) => run(() => {}) })).rejects.toThrow("running")
+})
+
+test("a known native database disappearing is not a new installation", async () => {
+  const { input, profile } = fixture("absent")
+  await expect(verifyProfile(input, profile)).rejects.toThrow("profile changed")
+  expect((await verifyProfile(input, { ...profile, fresh: true })).fresh).toBe(true)
 })

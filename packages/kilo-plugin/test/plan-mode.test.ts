@@ -72,7 +72,7 @@ async function install(run: (input: {
             }),
           })
           if (!context || !after) throw new Error("Plan mode registered no hooks")
-          yield* run({ context, after, events, persisted, dir: path.join(space.project, ".kilo2", "plans") })
+          yield* run({ context, after, events, persisted, dir: path.join(space.project, ".kilo", "plans") })
         }).pipe(Effect.provide(Layer.mock(SessionStore.Service, { get: () => Effect.succeed(session) }))),
       ),
     )
@@ -99,7 +99,7 @@ test("a Plan request gets one Kilo Plan reminder that names the plan file, and t
   )
   expect(persisted).toHaveLength(1)
   expect(persisted[0]).toContain("You are Kilo Code, an experienced technical leader")
-  expect(persisted[0]).toMatch(/otherwise create it in \S+\.kilo2[\\/]plans\. For generated/)
+  expect(persisted[0]).toMatch(/otherwise create it in \S+\.kilo[\\/]plans\. For generated/)
   expect(persisted[0]).toContain("1000-<concise-kebab-case-suffix>.md")
   expect(persisted[0]).not.toContain(".opencode")
   expect(persisted[0]).not.toContain("open_plan")

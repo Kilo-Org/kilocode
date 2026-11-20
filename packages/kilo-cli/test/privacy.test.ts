@@ -12,7 +12,7 @@ import path from "node:path"
 import { KiloHost } from "../src/host"
 import { loadPlugins } from "./lib/plugins"
 
-// The kilocode.privacy RPC through the real host and the generated client, with real global and project kilo2.json
+// The kilocode.privacy RPC through the real host and the generated client, with real global and project kilo.json
 // files. The Kilo API is a local stand-in.
 const boot = (files: { global?: unknown; project?: unknown }, body: (client: Client, directory: string) => Promise<void>) => async () => {
   using backend = fixture()
@@ -20,8 +20,8 @@ const boot = (files: { global?: unknown; project?: unknown }, body: (client: Cli
   const directory = path.join(root, "repo")
   const global = path.join(root, "global")
   await $`git init -q -b main ${directory}`.quiet()
-  if (files.global !== undefined) await Bun.write(path.join(global, "kilo2.json"), JSON.stringify(files.global))
-  if (files.project !== undefined) await Bun.write(path.join(directory, "kilo2.json"), JSON.stringify(files.project))
+  if (files.global !== undefined) await Bun.write(path.join(global, "kilo.json"), JSON.stringify(files.global))
+  if (files.project !== undefined) await Bun.write(path.join(directory, "kilo.json"), JSON.stringify(files.project))
   const previous = { KILO_API_URL: process.env.KILO_API_URL, KILO_API_KEY: process.env.KILO_API_KEY }
   process.env.KILO_API_URL = backend.url
   delete process.env.KILO_API_KEY

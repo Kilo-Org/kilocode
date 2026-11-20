@@ -58,7 +58,6 @@ import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
 import { indexingHost, type IndexingHost } from "./indexing/host"
-import { importV1, summarize, v1Store } from "./import-v1"
 import { profileCutover } from "./profile-cutover-ui"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { gitChanges } from "./git-changes"
@@ -68,7 +67,6 @@ import { tabShortcutTarget } from "./tab-shortcuts"
 let shutdownExtension: (() => Promise<void>) | undefined
 
 /** globalState key of the temporary Kilo v1 import offer: "imported" or "declined" once answered. */
-const V1_IMPORT = "kilo-code.v2.importV1"
 
 /** @knipExternal VS Code calls this through the extension's manifest main. */
 export async function activate(context: ExtensionContext) {
@@ -78,7 +76,7 @@ export async function activate(context: ExtensionContext) {
   const directory = workspace.workspaceFolders?.[0]?.uri.fsPath ?? homedir()
   const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
   const cutover = profileCutover(directory, output)
-  if (cutover && !(await cutover.activate(serverCommand(), serverPreferences()))) return
+  if (!(await cutover.activate(serverCommand(), serverPreferences()))) return
   const alerts = createCostAlerts({
     notify: async (alert) => {
       // This package ships no l10n bundles, so these strings remain English in every VS Code locale.
@@ -189,7 +187,7 @@ export async function activate(context: ExtensionContext) {
     cwd: directory,
     env: process.env,
     settings: serverSettings,
-    beforeStart: cutover?.beforeStart,
+    beforeStart: cutover.beforeStart,
     log: (text) => output.append(text),
     // The autocomplete connection is declared below; the server starts only after activation returns.
     onStart: (started) => {
@@ -317,87 +315,6 @@ export async function activate(context: ExtensionContext) {
   agentManagerRef = agentManager
   agentManager.onBrowserDebug = (...args) =>
     output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
-  // Temporary import of Kilo v1 data for internal users. A machine with a v1 store is offered it at startup until the
-  // user imports or chooses "Don't Ask Again"; closing the notification only postpones it to the next start.
-  const importFromV1 = async (days: number) => {
-    const found = serverCommand()
-    if (!found) return void window.showErrorMessage(l10n.t("No Kilo v2 server found."))
-    const result = await window.withProgress(
-      { location: ProgressLocation.Notification, title: l10n.t("Importing from Kilo v1…"), cancellable: true },
-      async (_progress, token) => {
-        const abort = new AbortController()
-        token.onCancellationRequested(() => abort.abort())
-        const run = await importV1({
-          command: found,
-          cwd: directory,
-          env: process.env,
-          days,
-          log: (text) => output.append(text),
-          signal: abort.signal,
-        })
-        if (!run.ok || abort.signal.aborted) return { ...run, ok: false, cancelled: abort.signal.aborted, sessions: 0 }
-        // The CLI imported every v1 session updated in the window, which includes every session created in it.
-        const sessions = await agentManager
-          .importLegacySessions(Date.now() - days * 86_400_000)
-          .catch((error: unknown) => {
-            output.appendLine(`Agent Manager v1 import failed: ${String(error)}`)
-            return 0
-          })
-        return { ...run, cancelled: false, sessions }
-      },
-    )
-    if (result.cancelled) return
-    if (!result.ok) {
-      const show = l10n.t("Show Output")
-      const message = result.output.split("\n").at(-1) || l10n.t("The Kilo v1 import failed.")
-      if ((await window.showErrorMessage(message, show)) === show) output.show()
-      return
-    }
-    await context.globalState.update(V1_IMPORT, "imported")
-    const summary = summarize(result.output)
-    void window.showInformationMessage(
-      [
-        l10n.t("Imported {0} Kilo v1 sessions and {1} Agent Manager sessions.", summary.sessions, result.sessions),
-        ...(summary.config.length > 0 ? [l10n.t("Copied {0}.", summary.config.join(", "))] : []),
-      ].join(" "),
-    )
-  }
-  const pickV1Timespan = async () =>
-    (
-      await window.showQuickPick(
-        [
-          { label: l10n.t("Last 2 weeks"), days: 14 },
-          { label: l10n.t("Last week"), days: 7 },
-          { label: l10n.t("Last 4 weeks"), days: 28 },
-          { label: l10n.t("Last 3 months"), days: 90 },
-        ],
-        { placeHolder: l10n.t("How far back should Kilo import your v1 sessions?") },
-      )
-    )?.days
-  const offerV1Import = async () => {
-    if (context.globalState.get(V1_IMPORT) || !v1Store(process.env) || !serverCommand()) return
-    const recent = l10n.t("Import Last 2 Weeks")
-    const other = l10n.t("Other Timespan…")
-    const never = l10n.t("Don't Ask Again")
-    const choice = await window.showInformationMessage(
-      l10n.t("Bring your Kilo v1 sessions, Agent Manager sessions, skills and config into Kilo v2?"),
-      recent,
-      other,
-      never,
-    )
-    if (choice === never) return void context.globalState.update(V1_IMPORT, "declined")
-    const days = choice === recent ? 14 : choice === other ? await pickV1Timespan() : undefined
-    if (days) await importFromV1(days)
-  }
-  if (!cutover) {
-    void offerV1Import()
-    context.subscriptions.push(
-      commands.registerCommand("kilo-code.v2.importV1", async () => {
-        const days = await pickV1Timespan()
-        if (days) await importFromV1(days)
-      }),
-    )
-  }
   browserTab = new BrowserTabProvider(
     context.extensionUri,
     { browser: broker, version: (context.extension.packageJSON as { version?: string }).version },

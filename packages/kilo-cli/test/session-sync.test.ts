@@ -867,7 +867,7 @@ for (const setting of ["signed-out", "off"] as const)
     Effect.gen(function* () {
       const f = yield* fixture
       if (setting === "off")
-        yield* Effect.promise(() => writeFile(path.join(f.root, "config", "kilo2.jsonc"), '{"session_sync":false}'))
+        yield* Effect.promise(() => writeFile(path.join(f.root, "config", "kilo.jsonc"), '{"session_sync":false}'))
       const s = yield* boot(f)
       if (setting === "off") yield* signIn(s.credentials)
       yield* seed(s.db, f.directory)
@@ -932,9 +932,9 @@ it.live("global jsonc session_sync overrides json and workspace settings cannot 
   Effect.gen(function* () {
     const f = yield* fixture
     yield* Effect.promise(() => Promise.all([
-      writeFile(path.join(f.root, "config", "kilo2.json"), '{"session_sync":true}'),
-      writeFile(path.join(f.root, "config", "kilo2.jsonc"), '{"session_sync":false,"destination":"https://other.invalid"}'),
-      writeFile(path.join(f.directory, "kilo2.jsonc"), '{"session_sync":true}'),
+      writeFile(path.join(f.root, "config", "kilo.json"), '{"session_sync":true}'),
+      writeFile(path.join(f.root, "config", "kilo.jsonc"), '{"session_sync":false,"destination":"https://other.invalid"}'),
+      writeFile(path.join(f.directory, "kilo.jsonc"), '{"session_sync":true}'),
     ]))
     const s = yield* boot(f)
     yield* signIn(s.credentials)

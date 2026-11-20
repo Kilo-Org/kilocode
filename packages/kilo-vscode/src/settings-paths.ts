@@ -1,6 +1,6 @@
 // The global config directory the spawned server uses, for the case where `api.config.get` has no global directory
 // entry because the directory does not exist yet. Mirrors `packages/util/src/global.ts` and the dev entry:
-// `KILO2_CONFIG_DIR`/`OPENCODE_CONFIG_DIR` wins; in dev (`KILO_V2_PROFILE`) the server config home is
+// `KILO_CONFIG_DIR`/`OPENCODE_CONFIG_DIR` wins; in dev (`KILO_V2_PROFILE`) the server config home is
 // `<profile>/config`; otherwise `<XDG_CONFIG_HOME or ~/.config>/<app>`.
 import { existsSync } from "node:fs"
 import { realpath } from "node:fs/promises"
@@ -17,34 +17,34 @@ export function resolveKiloProfile(
   env: NodeJS.ProcessEnv = process.env,
   platform: NodeJS.Platform = process.platform,
 ): string {
-  const bundled = existsSync(path.join(context.extensionPath, "bin", platform === "win32" ? "kilo2.exe" : "kilo2"))
+  const bundled = existsSync(path.join(context.extensionPath, "bin", platform === "win32" ? "kilo.exe" : "kilo"))
   if (bundled) return ""
   return env.KILO_V2_PROFILE ?? path.join(context.globalStorageUri.fsPath, "profile")
 }
 
 export function resolveGlobalConfigDir(env: NodeJS.ProcessEnv, profile: string): string {
   if (activeProfile) return activeProfile.config
-  // The server runs `packages/kilo-cli/src/env.ts` first: `KILO2_CONFIG_DIR` wins over `OPENCODE_CONFIG_DIR`, and the
-  // app directory is fixed to `kilo2` regardless of the environment, so the host must match both.
-  const configured = env.KILO2_CONFIG_DIR ?? env.OPENCODE_CONFIG_DIR
+  // The server runs `packages/kilo-cli/src/env.ts` first: `KILO_CONFIG_DIR` wins over `OPENCODE_CONFIG_DIR`, and the
+  // app directory is fixed to `kilo` regardless of the environment, so the host must match both.
+  const configured = env.KILO_CONFIG_DIR ?? env.OPENCODE_CONFIG_DIR
   if (configured) return configured
   const base = profile ? path.join(profile, "config") : (env.XDG_CONFIG_HOME ?? path.join(os.homedir(), ".config"))
-  return path.join(base, "kilo2")
+  return path.join(base, "kilo")
 }
 
 /**
  * The data directory the spawned server writes, for files the host inspects outside the server: with the dev entry
- * it is `<profile>/data/kilo2`, and a bundled server uses `<XDG_DATA_HOME or ~/.local/share>/kilo2`.
+ * it is `<profile>/data/kilo`, and a bundled server uses `<XDG_DATA_HOME or ~/.local/share>/kilo`.
  */
 export function resolveDataDir(env: NodeJS.ProcessEnv, profile: string): string {
   if (activeProfile) return activeProfile.data
   const base = profile ? path.join(profile, "data") : (env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"))
-  return path.join(base, "kilo2")
+  return path.join(base, "kilo")
 }
 
 /**
  * The state directory the spawned server writes, for the files that describe live processes: with the dev entry it is
- * `<profile>/state/kilo2`, and a bundled server uses `<XDG_STATE_HOME or ~/.local/state>/kilo2`. Mirrors
+ * `<profile>/state/kilo`, and a bundled server uses `<XDG_STATE_HOME or ~/.local/state>/kilo`. Mirrors
  * `packages/util/src/global-roots.ts` and the app directory `packages/kilo-cli/src/env.ts` fixes; the browser hub
  * registry lives under it (`packages/kilo-cli/src/browser/paths.ts`).
  */
@@ -53,7 +53,7 @@ export function resolveStateDir(env: NodeJS.ProcessEnv, profile: string): string
   const base = profile
     ? path.join(profile, "state")
     : (env.XDG_STATE_HOME ?? path.join(os.homedir(), ".local", "state"))
-  return path.join(base, "kilo2")
+  return path.join(base, "kilo")
 }
 
 /**

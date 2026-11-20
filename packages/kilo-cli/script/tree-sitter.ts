@@ -3,7 +3,7 @@ import path from "path"
 
 // Copies the web-tree-sitter runtime and the language grammars into `<bin>/tree-sitter`. The indexing engine resolves
 // grammars from the executable's directory (`packages/kilo-indexing/src/tree-sitter/languageParser.ts`), so the
-// compiled `kilo2` parses source files without node_modules.
+// compiled `kilo` parses source files without node_modules.
 export async function copyTreeSitterWasms(bin: string) {
   const engine = path.dirname(Bun.resolveSync("@kilocode/kilo-indexing/engine", import.meta.dir))
   const runtime = Bun.resolveSync("web-tree-sitter/tree-sitter.wasm", engine)

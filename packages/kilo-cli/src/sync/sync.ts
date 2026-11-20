@@ -26,7 +26,7 @@ export const SyncCommand = Spec.make("sync", {
     "Syncs sessions you create or continue after sync is on; continuing an existing session includes its historical snapshot. " +
     "Untouched history stays local. " +
     "Uploads persisted transcripts, pending input, instructions, and required assets, not credentials or environment variables. " +
-    "Set session_sync: false in global kilo2.jsonc to pause capture and network for all workspaces and keep the cloud copy. " +
+    "Set session_sync: false in global kilo.jsonc to pause capture and network for all workspaces and keep the cloud copy. " +
     "Re-enabling does not recapture completed history from the pause. Account changes pause pinned workspaces.",
   commands: [
     Spec.make("enable", {

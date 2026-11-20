@@ -1,6 +1,3 @@
-// Kilo's session database file (host composition, rung 2). The host chooses the file before a server starts and gives
-// it to the server as OPENCODE_DB, so the file name depends only on the Kilo build channel. A git branch or an upstream
-// file name never selects it, and a rebuild from another branch opens the same sessions.
 export * as KiloDatabase from "./database"
 
 import {
@@ -17,110 +14,16 @@ import {
 import path from "node:path"
 import { Global } from "@opencode/util/global"
 
-declare const KILO2_CHANNEL: string | undefined
-
-/** The build channel (`KILO_CHANNEL` when `script/build.ts` ran). A run from source is `local`. */
-export const channel = typeof KILO2_CHANNEL === "string" ? KILO2_CHANNEL : "local"
-
-/** The release channels share `kilo2.db`. Each other channel has its own file, so a preview never migrates it. */
-const release = ["latest", "beta", "prod"]
-
-/**
- * Sets OPENCODE_DB to the Kilo database file and returns it. `KILO2_DB` (copied to OPENCODE_DB by ./env) wins, and a
- * child process keeps the file of its parent. `KILO_DISABLE_CHANNEL_DB` puts every channel in `kilo2.db`.
- */
+/** All distribution channels share the stable profile. Normal boot resolves the absolute path before this guard. */
 export async function select(
   env: Record<string, string | undefined>,
-  input = { data: Global.Path.data, channel },
-): Promise<string> {
-  // A store named by the caller or by `KILO2_DB` goes through the same guard: the server would migrate a Kilo v1 store
-  // in place and v1 could no longer read it.
-  if (env.OPENCODE_DB) {
-    await refuseV1Store(env.OPENCODE_DB)
-    return env.OPENCODE_DB
-  }
-  const shared = env.KILO_DISABLE_CHANNEL_DB === "1" || env.KILO_DISABLE_CHANNEL_DB === "true"
-  // kilo_port(unattributed:core/database:a155cf41e765)
-  const file =
-    shared || release.includes(input.channel)
-      ? path.join(input.data, "kilo2.db")
-      : path.join(input.data, `kilo2-${safe(input.channel)}.db`)
+  input: { data: string; channel?: string } = { data: Global.Path.data },
+) {
+  const selected = env.OPENCODE_DB || "kilo.db" // kilo_port(unattributed:core/database:a155cf41e765)
+  const file = selected === ":memory:" ? selected : path.resolve(input.data, selected)
   await refuseV1Store(file)
-  await adopt(file, input.data, input.channel, shared)
   env.OPENCODE_DB = file
   return file
-}
-
-function safe(value: string) {
-  return value.replace(/[^a-zA-Z0-9._-]/g, "-")
-}
-
-// Builds before the Kilo file names let the upstream server name the file. Remove when no preview install has one.
-function legacy(data: string, channel: string, shared: boolean) {
-  if (shared || ["latest", "dev", "beta", "next", "prod"].includes(channel)) return path.join(data, "opencode.db")
-  return path.join(data, `opencode-${safe(channel)}.db`)
-}
-
-// The file of an earlier build for this channel, plus every other earlier build file on the machine. A build from
-// another branch wrote its sessions to its own file, and only the copy can bring them forward.
-function candidates(data: string, channel: string, shared: boolean) {
-  const primary = legacy(data, channel, shared)
-  const siblings = readdirSync(data)
-    .filter((name) => name.startsWith("opencode") && name.endsWith(".db"))
-    .map((name) => path.join(data, name))
-  return [...new Set([primary, ...siblings])].filter(existsSync)
-}
-
-/**
- * Copies the database of an earlier build to `file` once, so its sessions stay. The source is the earlier file with the
- * most sessions, so an empty file of this channel cannot hide the sessions of another branch. The copy is written next
- * to `file` and linked into place, so a process that starts at the same time never opens a half-written file, and it is
- * owner-only like the file the server opens. If the copy fails, the server starts with a new database, the old file
- * stays as it is, and stderr names both files.
- */
-async function adopt(file: string, data: string, channel: string, shared: boolean) {
-  if (existsSync(file)) return
-  const { Database } = await import("bun:sqlite")
-  const sessions = (source: string) => {
-    try {
-      const db = new Database(source, { readonly: true })
-      try {
-        return db.query<{ n: number }, []>("SELECT count(*) AS n FROM session_v2").get()?.n ?? 0
-      } finally {
-        db.close()
-      }
-    } catch {
-      return -1
-    }
-  }
-  const files = candidates(data, channel, shared)
-  // The earlier file with the most sessions, so an empty file of this channel cannot hide the sessions of a branch.
-  // Each candidate is opened once.
-  const populated = files
-    .map((candidate) => ({ file: candidate, sessions: sessions(candidate) }))
-    .filter((entry) => entry.sessions > 0)
-    .toSorted((a, b) => b.sessions - a.sessions)
-  const primary = legacy(data, channel, shared)
-  const source = populated[0]?.file ?? (files.includes(primary) ? primary : undefined)
-  if (!source) return
-  // A Kilo v1 store stays where it is. Copying it would create the store that `refuseV1Store` protects, and only the
-  // explicit import may convert it.
-  if ((await import("./v1-store")).KiloV1Store.isKiloV1Store(source)) {
-    console.error(
-      `kilo2: ${source} is a Kilo v1 session store, so it stays as it is and its sessions are not adopted. Run \`kilo2 import v1\` to bring them forward, and kilo2 starts with a new database meanwhile.`,
-    )
-    return
-  }
-  try {
-    await copy(source, file)
-  } catch (error) {
-    // Another process linked its copy first. That copy is the same database.
-    if (existsSync(file)) return
-    console.error(
-      `kilo2: could not copy the sessions of ${source} to ${file}, starting with a new database. Free the space or stop the other process, delete ${file} if it holds no sessions, and start again:`,
-      error,
-    )
-  }
 }
 
 export type ImportResult = { readonly imported: number; readonly skipped: boolean }
@@ -168,7 +71,7 @@ export async function importV1(input: {
 }
 
 /**
- * Imports the Kilo v1 store at `store` into the existing kilo2 store at `file`, and returns the number of sessions it
+ * Imports the Kilo v1 store at `store` into the existing kilo store at `file`, and returns the number of sessions it
  * added. The window is converted into a private store beside `file` first, so a failed conversion leaves `file` as it
  * is. Sessions `file` already holds are kept as they are, so running it again only adds new sessions.
  */
@@ -195,7 +98,7 @@ export async function mergeV1(input: {
   } finally {
     for (const suffix of ["", "-wal", "-shm", "-journal"])
       if (!remove(`${scratch}${suffix}`))
-        console.error(`kilo2: could not remove ${scratch}${suffix}. Delete it by hand.`)
+        console.error(`kilo: could not remove ${scratch}${suffix}. Delete it by hand.`)
   }
 }
 
@@ -211,7 +114,7 @@ function sweepScratch(file: string) {
     if (pid === undefined || (Number(pid) !== process.pid && alive(Number(pid)))) continue
     const leftover = path.join(path.dirname(file), name)
     if (!remove(leftover))
-      throw new Error(`kilo2: could not remove ${leftover} of an earlier import. Delete it by hand.`)
+      throw new Error(`kilo: could not remove ${leftover} of an earlier import. Delete it by hand.`)
   }
 }
 
@@ -252,7 +155,7 @@ async function acquire(lock: string, file: string, log?: (line: string) => void)
     }
     if (Date.now() - notice.last >= 5_000) {
       notice.last = Date.now()
-      log?.(`kilo2: importing Kilo v1 sessions in process ${held.owner ?? "?"}, waiting for it.`)
+      log?.(`kilo: importing Kilo v1 sessions in process ${held.owner ?? "?"}, waiting for it.`)
     }
     await Bun.sleep(250)
   }
@@ -289,7 +192,7 @@ function releaseLock(lock: string, log?: (line: string) => void) {
   try {
     rmSync(lock, { force: true })
   } catch (error) {
-    log?.(`kilo2: could not remove the import lock ${lock}: ${String(error)}`)
+    log?.(`kilo: could not remove the import lock ${lock}: ${String(error)}`)
   }
 }
 
@@ -302,7 +205,7 @@ function removeLock(lock: string) {
     rmSync(lock, { force: true })
   } catch (error) {
     throw new Error(
-      `kilo2: could not remove the stale import lock ${lock}, so the import did not start. Delete it and run the import again: ${String(error)}`,
+      `kilo: could not remove the stale import lock ${lock}, so the import did not start. Delete it and run the import again: ${String(error)}`,
     )
   }
 }
@@ -326,35 +229,16 @@ function alive(pid: number) {
   }
 }
 
-/**
- * The release session store of Kilo v1: `kilo.db` in the `kilo` data directory. While kilo2 runs from its own `kilo2`
- * directory (D-4) that is the directory beside it; once the release renames the directory to `kilo`, it is the same
- * directory, and this keeps working as long as the kilo2 file names (`kilo2.db`, `kilo2-<channel>.db`) stay distinct
- * from v1's (`kilo.db`, `kilo-<channel>.db`).
- */
-export function v1Store(data = Global.Path.data) {
-  return path.join(path.dirname(data), "kilo", "kilo.db")
-}
-
-/**
- * Refuses to open a Kilo v1 store as the v2 store. The server would migrate that file in place, which rewrites the
- * user's only copy, and v1 could no longer read it. The v2 file name must stay distinct from v1's (`kilo2.db` and
- * `kilo2-<channel>.db` against `kilo.db` and `kilo-<channel>.db`), also after the release renames the data directory
- * from `kilo2` to `kilo`: at that point the v1 store lies in the same directory as the v2 store.
- */
+/** Last line of defense before handing a database to the server. */
 export async function refuseV1Store(file: string) {
   if (!existsSync(file)) return
   const { KiloV1Store } = await import("./v1-store")
   const verdict = KiloV1Store.inspect(file)
   // Silence is only safe when the file is known not to be a v1 store, so an unreadable file stops the start instead.
   if (verdict === "unreadable")
-    throw new Error(
-      `${file} could not be read, so kilo2 cannot check that it is not a Kilo v1 session store. Fix its permissions or move it away, then start kilo2 again.`,
-    )
+    throw new Error(`${file} could not be read. Check its permissions before starting Kilo.`)
   if (verdict !== "v1") return
-  throw new Error(
-    `${file} is a Kilo v1 session store, and kilo2 never migrates it in place: v1 could no longer read it. Keep the kilo2 store name distinct from v1's (kilo2.db or kilo2-<channel>.db), or move the v1 store before starting kilo2.`,
-  )
+  throw new Error(`${file} is a v1 session store. Use kilo migrate preflight before starting the server.`)
 }
 
 /**
@@ -407,7 +291,7 @@ async function copy<A>(
     for (const suffix of ["", "-wal", "-shm", "-journal"]) {
       const leftover = `${temp}${suffix}`
       // A temporary copy that cannot be removed holds session data, so it is reported rather than dropped silently.
-      if (!remove(leftover)) console.error(`kilo2: could not remove the temporary copy ${leftover}. Delete it by hand.`)
+      if (!remove(leftover)) console.error(`kilo: could not remove the temporary copy ${leftover}. Delete it by hand.`)
     }
   }
 }

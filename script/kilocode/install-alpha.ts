@@ -4,8 +4,8 @@
  * `bun run install:alpha`: installs the CLI binary that the newest successful `kilo-v2` run on the `v2`
  * branch built (.github/workflows/kilo-v2.yml, `build` job), for local dogfooding.
  *
- * macOS arm64 only for now. Requires an authenticated `gh`. The binary is installed as `kilo2`
- * (override with KILO_ALPHA_BIN_DIR / KILO_ALPHA_NAME) so it never replaces an installed `kilo`.
+ * macOS arm64 only for now. Requires an authenticated `gh`. The binary is installed as `kilo`
+ * (override with KILO_ALPHA_BIN_DIR / KILO_ALPHA_NAME). An existing command owned by another installer is not replaced.
  * An update replaces only the symlink this script created; a regular file or a link from npm or another
  * installer at that path is refused.
  */
@@ -34,7 +34,7 @@ const branch = "v2"
 const target = "darwin-arm64"
 const artifact = `kilo-v2-cli-${target}.tar.gz`
 const binDir = process.env.KILO_ALPHA_BIN_DIR ?? path.join(os.homedir(), ".local", "bin")
-const name = process.env.KILO_ALPHA_NAME ?? "kilo2"
+const name = process.env.KILO_ALPHA_NAME ?? "kilo"
 
 class InstallError extends Error {}
 
@@ -106,7 +106,7 @@ async function install(runID: number, tmp: string) {
 // Each install lives in its own `release-*` directory so the sidecars (tree-sitter assets, sandbox worker) stay
 // beside the executable: Bun reports the symlink-resolved path as `process.execPath`, which is where they are found.
 export async function installFiles(bin: string, binDir: string, name: string) {
-  if (!(await Bun.file(path.join(bin, "kilo2")).exists())) fail(`No kilo2 executable found in ${bin}.`)
+  if (!(await Bun.file(path.join(bin, "kilo")).exists())) fail(`No kilo executable found in ${bin}.`)
   const dest = path.resolve(binDir, name)
   const data = path.join(path.dirname(dest), `.${path.basename(dest)}-alpha`)
   // `mkdir` and the link move below change shared state, so check ownership once before creating anything and
@@ -133,13 +133,13 @@ export async function installFiles(bin: string, binDir: string, name: string) {
 // previous install stays live, so a failure only discards the staged directory.
 async function activate(bin: string, release: string, dest: string) {
   await cp(bin, release, { recursive: true })
-  const executable = path.join(release, "kilo2")
+  const executable = path.join(release, "kilo")
   await chmod(executable, 0o755)
   if (process.platform === "darwin") await $`xattr -d com.apple.quarantine ${executable}`.quiet().nothrow()
   // Validate before the symlink moves so a release that cannot start never replaces a working install.
   const check = await $`${executable} --version`.quiet().nothrow()
   if (check.exitCode !== 0) fail(`The new release failed to start:\n${check.stderr.toString().trim()}`)
-  const version = kilo2Version(check.stdout.toString())
+  const version = kiloVersion(check.stdout.toString())
   const link = path.join(release, "link")
   await symlink(executable, link)
   await rename(link, dest)
@@ -165,7 +165,7 @@ export async function withInstallLock<T>(data: string, task: () => Promise<T>) {
   }
 }
 
-// Only a symlink that install:alpha created may be replaced: it has to point at the direct `kilo2` entry of an
+// Only a symlink that install:alpha created may be replaced: it has to point at the direct `kilo` entry of an
 // existing real `release-*` directory in this name's own `.${name}-alpha` directory. Anything else is a regular
 // file, a missing or non-executable file, a sidecar, or a link from npm, another installer, or another alpha
 // name, and must be left alone.
@@ -191,9 +191,9 @@ export async function assertInstallOwned(dest: string, data: string) {
     )
 
   const [release, file, ...rest] = relative.split(path.sep)
-  if (rest.length > 0 || !release?.startsWith("release-") || file !== "kilo2")
+  if (rest.length > 0 || !release?.startsWith("release-") || file !== "kilo")
     fail(
-      `Refusing to replace ${dest}: it points to ${target}, not a direct release-*/kilo2 entry in ${data}. install:alpha only replaces its own link.`,
+      `Refusing to replace ${dest}: it points to ${target}, not a direct release-*/kilo entry in ${data}. install:alpha only replaces its own link.`,
     )
 
   const releasePath = path.join(data, release)
@@ -215,11 +215,11 @@ export async function assertInstallOwned(dest: string, data: string) {
   return releasePath
 }
 
-// `kilo2 --version` prints `kilo2 v<version>`: the Kilo app name plus the Effect CLI formatter. The alpha
+// `kilo --version` prints `kilo v<version>`: the Kilo app name plus the Effect CLI formatter. The alpha
 // workflow builds the `v2` channel, so a v1 `kilo`, upstream `opencode`, or another build is refused before
 // the link moves.
-export function kilo2Version(output: string) {
-  const version = /^kilo2 v(0\.0\.0-v2-\d+(?:\.\d+)?)$/.exec(output.trim())?.[1]
+export function kiloVersion(output: string) {
+  const version = /^kilo v(0\.0\.0-v2-\d+(?:\.\d+)?)$/.exec(output.trim())?.[1]
   if (!version) fail(`The downloaded executable is not a Kilo v2 build: --version reported "${output.trim()}".`)
   return version
 }

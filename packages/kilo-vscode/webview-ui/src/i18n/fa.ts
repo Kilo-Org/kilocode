@@ -1121,11 +1121,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلت فهرست (میلی‌ثانیه)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "مهلت اجرا (میلی‌ثانیه)",
   "settings.agentBehaviour.mcpEmpty":
-    "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo2.json اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
+    "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo.json اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
   "settings.agentBehaviour.workflows.description":
     "Workflow‌ها دستورات سفارشی هستند که در پیکربندی شما یا در فایل‌های Markdown دستورات تعریف شده‌اند. می‌توانید برای هر Workflow یک مدل و یک گونه استدلال تعیین کنید.",
   "settings.agentBehaviour.workflows.empty":
-    "هیچ دستور سفارشی یافت نشد. دستورات را به kilo2.json یا یک فایل Markdown در .kilo2/command اضافه کنید.",
+    "هیچ دستور سفارشی یافت نشد. دستورات را به kilo.json یا یک فایل Markdown در .kilo/command اضافه کنید.",
   "settings.agentBehaviour.workflows.detail.description": "توضیحات",
   "settings.agentBehaviour.workflows.detail.template": "قالب",
   "settings.agentBehaviour.workflows.model": "مدل",

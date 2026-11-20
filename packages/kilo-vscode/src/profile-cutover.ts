@@ -27,34 +27,49 @@ type Ui = {
 }
 
 /** The activation gate runs before registering anything that can request a server or edit the profile. */
-export async function prepareProfile(input: Input, ui: Ui): Promise<false | { profile?: ProfileRoots }> {
+export async function prepareProfile(input: Input, ui: Ui): Promise<false | { profile: ProfileRoots }> {
   const cli = migrationCli(input)
   const result = await preflight(cli)
-  if (result.status === "absent") return {}
-  if (result.status === "completed") return { profile: roots(result) }
+  if (ready(result.status)) return { profile: roots(result) }
   const observe = result.status === "running" && result.canObserve === true
   if (!observe && !(await ui.confirm(inventory(result)))) return false
   await ui.progress((report) => stream(cli, observe ? ["observe"] : ["apply", "--accept-jetbrains-breakage"], report))
-  return { profile: roots(await preflight(cli)) }
+  const completed = await preflight(cli)
+  if (completed.status !== "completed") throw new Error(`migrate preflight: ${completed.status}`)
+  return { profile: roots(completed) }
 }
 
 /** A lazy start or restart may select a different CLI/profile. Only activation can ask for consent. */
 export async function verifyProfile(input: Input, expected?: ProfileRoots) {
   const result = await preflight(migrationCli(input))
-  if (result.status === "absent" && !expected) return
   const actual = roots(result)
-  if (!expected || Object.entries(actual).some(([key, value]) => value !== expected[key as keyof ProfileRoots]))
+  if (
+    !expected ||
+    (actual.fresh && !expected.fresh) ||
+    (["source", "data", "config", "state"] as const).some((key) => actual[key] !== expected[key])
+  )
     throw new Error("The active Kilo profile changed")
+  return actual
+}
+
+function ready(status: unknown) {
+  return status === "absent" || status === "native" || status === "completed"
 }
 
 function roots(value: Record<string, unknown>): ProfileRoots {
-  if (value.status !== "completed") throw new Error(`migrate preflight: ${value.status}`)
+  if (!ready(value.status)) throw new Error(`migrate preflight: ${value.status}`)
   const read = (key: string) => {
     const dir = value[key]
     if (typeof dir !== "string" || !path.isAbsolute(dir)) throw new Error(`migrate preflight: invalid ${key}`)
     return dir
   }
-  return { source: read("source"), data: read("legacyData"), config: read("legacyConfig"), state: read("legacyState") }
+  return {
+    source: read("source"),
+    data: read("legacyData"),
+    config: read("legacyConfig"),
+    state: read("legacyState"),
+    ...(value.status === "absent" ? { fresh: true } : {}),
+  }
 }
 
 function migrationCli(input: Input) {
@@ -79,6 +94,7 @@ async function preflight(cli: Cli) {
   switch (value.status) {
     case "absent":
     case "completed":
+    case "native":
     case "required":
     case "running":
       return value
