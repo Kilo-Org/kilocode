@@ -2,7 +2,7 @@
   "//": "Tool and path scope for the headless Kilo CLI passes of the docs-sync bot. agent-policy.mjs turns one mode into KILO_CONFIG_CONTENT, which the CLI enforces. Rule order matters: permission evaluation takes the LAST matching rule, so every map starts with the catch-all deny and lists exceptions after it. `bash` patterns are matched against the tree-sitter text of each parsed sub-command, with operators masked only where the parser proves them inert.",
   "modes": {
     "tools-denied": {
-      "//": "Batch classification and learnings extraction answer from the attached files. The CLI's read of a -f attachment is a read-tool call, so read is allowed while every other tool is denied.",
+      "//": "Batch classification and learnings extraction answer from the attached files. The CLI's read of a -f attachment is a read-tool call, so read is the only tool this mode permits.",
       "permission": {
         "*": "deny",
         "read": "allow"
@@ -19,7 +19,7 @@
         "external_directory": "deny",
         "edit": {
           "*": "deny",
-          "packages/kilo-docs/pages/*": "allow",
+          "packages/kilo-docs/pages/*.md": "allow",
           "packages/kilo-docs/lib/nav/*": "allow",
           "docs-sync-out/edit-summary-*.json": "allow",
           "edit-summary-*.json": "allow"

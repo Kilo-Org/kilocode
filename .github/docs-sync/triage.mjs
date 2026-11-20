@@ -82,9 +82,8 @@ function triageChunk(chunk, index, budgetDeadline) {
       break
     }
 
-    // Classification reads the attached digest only, so the policy denies every
-    // tool (mode tools-denied). No tool means no ask, and an ask would end a
-    // headless run.
+    // Classification reads the attached digest only. The mode permits nothing
+    // but the attachment read, which the CLI itself issues for a -f file.
     const result = runKilo({
       mode: MODE.toolsDenied,
       args: [

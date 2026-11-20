@@ -54,9 +54,8 @@ check("agent-permissions.json declares both modes", () => {
   assert.deepEqual(Object.keys(modes).sort(), ["docs-write", "tools-denied"])
 })
 
-check("tools-denied denies every tool", () => {
-  const permission = policy().modes["tools-denied"].permission
-  assert.equal(permission["*"], "deny", "tools-denied must deny everything")
+check("tools-denied denies every tool except the attachment read", () => {
+  assert.deepEqual(policy().modes["tools-denied"].permission, { "*": "deny", read: "allow" })
 })
 
 check("docs-write confines edits to the docs content and the agent summary file", () => {
@@ -67,8 +66,12 @@ check("docs-write confines edits to the docs content and the agent summary file"
   const allowed = keys.filter((k) => edit[k] === "allow")
   assert.deepEqual(
     allowed,
-    ["packages/kilo-docs/pages/*", "packages/kilo-docs/lib/nav/*", "docs-sync-out/edit-summary-*.json", "edit-summary-*.json"],
+    ["packages/kilo-docs/pages/*.md", "packages/kilo-docs/lib/nav/*", "docs-sync-out/edit-summary-*.json", "edit-summary-*.json"],
     "only docs pages, navigation files and the agent's own summary file may be written",
+  )
+  assert.ok(
+    !allowed.some((k) => /pages\/\*(?:$|[^.]|\.(?!md$))/.test(k)),
+    "pages/ also holds Next.js app modules and API routes, so a page allow must name the .md extension",
   )
   assert.ok(!allowed.includes("packages/kilo-docs/*"), "the package root must stay out: it holds the build and test definitions")
 })
@@ -136,7 +139,7 @@ check("configContent merges over an existing KILO_CONFIG_CONTENT", () => {
   const base = JSON.stringify({ provider: { test: { npm: "@ai-sdk/openai-compatible" } } })
   const cfg = JSON.parse(configContent(MODE.toolsDenied, base))
   assert.ok(cfg.provider.test, "existing provider config must survive")
-  assert.deepEqual(cfg.permission, { ...policy().modes["tools-denied"].permission })
+  assert.deepEqual(cfg.permission, { "*": "deny", read: "allow" })
 })
 
 check("configContent rejects an unknown mode", () => {
