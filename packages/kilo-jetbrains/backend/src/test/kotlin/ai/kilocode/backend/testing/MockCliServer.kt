@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import java.net.ServerSocket
 import java.net.Socket
@@ -70,6 +71,10 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastAuthPutBody: String? = null
     @Volatile var lastAuthDeletePath: String? = null
     @Volatile var lastConfigPatchBody: String? = null
+    @Volatile var lastTelemetryLevelBody: String? = null
+    @Volatile var telemetryGate: CountDownLatch? = null
+    @Volatile var telemetryStatus = 200
+    @Volatile var telemetryAllowed = true
     @Volatile var lastWorkspaceConfigPatchPath: String? = null
     @Volatile var lastWorkspaceConfigPatchBody: String? = null
     @Volatile var lastOrganizationSetBody: String? = null
@@ -162,6 +167,10 @@ class MockCliServer : AutoCloseable {
     @Volatile var hostedPullRequestHandler: ((Socket, BufferedWriter) -> Unit)? = null
     data class PullRequestCall(val method: String, val path: String, val body: String, val authorization: String?)
     val hostedPullRequestCalls = CopyOnWriteArrayList<PullRequestCall>()
+    @Volatile var hostedDiff = "{}"
+    @Volatile var hostedDiffStatus = 200
+    @Volatile var hostedDiffHandler: ((Socket, BufferedWriter) -> Unit)? = null
+    val hostedDiffCalls = CopyOnWriteArrayList<PullRequestCall>()
     @Volatile var lastHostedCreateBody: String? = null
     @Volatile var lastHostedStartBody: String? = null
     @Volatile var lastHostedDeletePath: String? = null
@@ -490,6 +499,19 @@ class MockCliServer : AutoCloseable {
                     config = mergeConfig(config, body)
                     respond(output, configStatus, config)
                 }
+                bare == "/telemetry/level" && telemetryStatus != 200 -> respond(output, telemetryStatus, "{}")
+                bare == "/telemetry/level" && method == "GET" -> {
+                    val prefs = JSON.parseToJsonElement(config).jsonObject["experimental"] as? JsonObject
+                    val enabled = telemetryAllowed && prefs?.get("openTelemetry") != JsonPrimitive(false)
+                    respond(output, 200, """{"enabled":$enabled}""")
+                }
+                bare == "/telemetry/level" && method == "POST" -> {
+                    lastTelemetryLevelBody = body
+                    telemetryGate?.await()
+                    val enabled = JSON.parseToJsonElement(body).jsonObject.getValue("enabled")
+                    config = mergeConfig(config, """{"experimental":{"openTelemetry":$enabled}}""")
+                    respond(output, 200, """{"enabled":${telemetryAllowed && enabled == JsonPrimitive(true)}}""")
+                }
                 bare == "/global/dispose" && method == "POST" -> respond(output, disposeStatus, "true")
                 path.startsWith("/config/warnings") -> respond(output, warningsStatus, warnings)
                 bare == "/config/overlay" && method == "PATCH" -> {
@@ -669,6 +691,11 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/kilocode/session-host/provider" -> respond(output, 200, hostedProviders)
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+/(changes(/refresh|/file)?|pull-request-diff(/file)?)")) -> {
+                    hostedDiffCalls.add(PullRequestCall(method, path, body, authorization))
+                    val handler = hostedDiffHandler
+                    if (handler != null) handler(socket, output) else respond(output, hostedDiffStatus, hostedDiff)
+                }
                 bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+/pull-request(/refresh)?")) -> {
                     hostedPullRequestCalls.add(PullRequestCall(method, path, body, authorization))
                     val handler = hostedPullRequestHandler

@@ -41,6 +41,7 @@ internal class ChangesPanel @RequiresEdt constructor(
     private val mode: Mode,
     onBase: (() -> Unit)? = null,
     onLocal: (() -> Unit)? = null,
+    private val persistent: Boolean = false,
 ) : JPanel(BorderLayout()) {
     internal enum class Mode { COMPACT, FULL }
 
@@ -129,6 +130,12 @@ internal class ChangesPanel @RequiresEdt constructor(
         localDeletions: Int = 0,
         base: String = "",
         conflict: Boolean = false,
+        baseUnavailable: Boolean = false,
+        baseReason: String = "",
+        baseIncomplete: Boolean = false,
+        localUnavailable: Boolean = false,
+        localReason: String = "",
+        localIncomplete: Boolean = false,
     ) {
         // A compact summary has one group, so uncommitted work is all it can show for a worktree that has
         // committed nothing yet — and hiding instead would read as "this worktree changed nothing", which
@@ -138,19 +145,25 @@ internal class ChangesPanel @RequiresEdt constructor(
             mode == Mode.FULL -> State(
                 files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base,
                 conflict = conflict,
+                unavailable = baseUnavailable, reason = baseReason, incomplete = baseIncomplete,
+                localUnavailable = localUnavailable, localReason = localReason,
+                localIncomplete = localIncomplete,
             )
             // A conflict is measured against the base branch, so it belongs to the committed counts and
             // says nothing about the uncommitted ones standing in for them.
             files == 0 && localFiles > 0 ->
-                State(localFiles, localAdditions, localDeletions, base = base, local = true)
-            else -> State(files, additions, deletions, base = base, conflict = conflict)
+                State(localFiles, localAdditions, localDeletions, base = base, local = true,
+                    unavailable = localUnavailable, reason = localReason, incomplete = localIncomplete)
+            else -> State(files, additions, deletions, base = base, conflict = conflict,
+                unavailable = baseUnavailable, reason = baseReason, incomplete = baseIncomplete)
         }
-        if (state == next) return
+        if (state == next && (!persistent || isVisible)) return
         state = next
         // A compact summary sits inside a row that already prints the file count and the +/- lines, so
         // its tooltip only has to say what a click does. The full form is the one that can be squeezed
         // out of a narrow header, and it keeps the counts and the base branch.
         val counts = when {
+            next.unavailable -> next.reason.ifBlank { KiloBundle.message("worktree.stats.unknown.tooltip") }
             next.local -> KiloBundle.message("worktree.dirty.tooltip.open")
             mode == Mode.COMPACT -> KiloBundle.message("worktree.stats.tooltip.open")
             base.isBlank() -> KiloBundle.message("worktree.stats.tooltip", files, additions, deletions)
@@ -158,18 +171,29 @@ internal class ChangesPanel @RequiresEdt constructor(
         }
         // A conflict is the one thing no form of the summary can print, so whichever one is showing says it
         // in the tooltip: the marker on the badge reports that something is wrong without saying what.
-        val tip = if (next.conflict) conflictTooltip(counts, base) else counts
-        this.base.update(next.files, next.additions, next.deletions, tip, next.conflict)
+        val conflictTip = if (next.conflict) conflictTooltip(counts, base) else counts
+        val tip = if (next.incomplete) "$conflictTip ${KiloBundle.message("worktree.stats.incomplete.note")}"
+        else conflictTip
+        this.base.update(next.files, next.additions, next.deletions, tip, next.conflict, persistent,
+            next.unavailable)
         local?.update(
             next.localFiles, next.localAdditions, next.localDeletions,
-            KiloBundle.message("worktree.dirty.tooltip", next.localFiles, next.localAdditions, next.localDeletions),
+            if (next.localUnavailable) {
+                next.localReason.ifBlank { KiloBundle.message("worktree.stats.unknown.tooltip") } +
+                    if (next.localIncomplete) " ${KiloBundle.message("worktree.stats.incomplete.note")}" else ""
+            } else {
+                KiloBundle.message("worktree.dirty.tooltip", next.localFiles, next.localAdditions, next.localDeletions) +
+                    if (next.localIncomplete) " ${KiloBundle.message("worktree.stats.incomplete.note")}" else ""
+            },
+            persistent = persistent,
+            unavailable = next.localUnavailable,
         )
         this.ahead?.let { counter(it, next.ahead) }
         this.behind?.let { counter(it, next.behind) }
-        val right = next.files > 0 || next.ahead > 0 || next.behind > 0
-        val fence = next.localFiles > 0 && right
+        val right = persistent || next.unavailable || next.files > 0 || next.ahead > 0 || next.behind > 0
+        val fence = persistent || next.localUnavailable || next.localFiles > 0 && right
         separator?.let { if (it.isVisible != fence) it.isVisible = fence }
-        val visible = right || next.localFiles > 0
+        val visible = persistent || right || next.localFiles > 0
         if (isVisible != visible) isVisible = visible
         val tooltip = tip.takeIf { mode == Mode.COMPACT && next.files > 0 }
         if (toolTipText != tooltip) toolTipText = tooltip
@@ -299,16 +323,22 @@ internal class ChangesPanel @RequiresEdt constructor(
         }
 
         @RequiresEdt
-        fun update(files: Int, additions: Int, deletions: Int, tip: String, conflict: Boolean = false) {
-            val text = KiloBundle.message(if (files == 1) "session.changes.count.one" else "session.changes.count.other", files)
+        fun update(files: Int, additions: Int, deletions: Int, tip: String, conflict: Boolean = false,
+            persistent: Boolean = false, unavailable: Boolean = false) {
+            val text = when {
+                unavailable -> KiloBundle.message("worktree.stats.unknown")
+                files == 1 -> KiloBundle.message("session.changes.count.one", files)
+                else -> KiloBundle.message("session.changes.count.other", files)
+            }
             if (count.text != text) count.text = text
-            if (count.isVisible != (files > 0)) count.isVisible = files > 0
+            val shown = persistent || unavailable || files > 0
+            if (count.isVisible != shown) count.isVisible = shown
             stat.update(additions, deletions)
             stat.conflict = conflict
-            val lines = files > 0 && (additions > 0 || deletions > 0)
+            val lines = !unavailable && files > 0 && (additions > 0 || deletions > 0)
             if (stat.isVisible != lines) stat.isVisible = lines
-            if (isVisible != (files > 0)) isVisible = files > 0
-            val tooltip = tip.takeIf { files > 0 }
+            if (isVisible != shown) isVisible = shown
+            val tooltip = tip.takeIf { persistent || unavailable || files > 0 }
             visit(this) { if (it is JComponent && it.toolTipText != tooltip) it.toolTipText = tooltip }
             val name = tooltip?.let { StringUtil.stripHtml(it, " ") }
             if (getAccessibleContext().accessibleName != name) getAccessibleContext().accessibleName = name
@@ -384,6 +414,14 @@ internal class ChangesPanel @RequiresEdt constructor(
         val local: Boolean = false,
         /** The committed counts no longer merge into [base]. Never set alongside [local]. */
         val conflict: Boolean = false,
+        /** The displayed counts are unknown; the reason explains why. */
+        val unavailable: Boolean = false,
+        val reason: String = "",
+        /** The displayed counts are a lower bound and say so in their tooltip. */
+        val incomplete: Boolean = false,
+        val localUnavailable: Boolean = false,
+        val localReason: String = "",
+        val localIncomplete: Boolean = false,
     )
 
     private companion object {

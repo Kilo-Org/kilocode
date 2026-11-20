@@ -12,6 +12,11 @@ import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedAgentDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesRefreshDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangeFileResultDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffFileResultDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
@@ -571,6 +576,30 @@ class KiloHostedService internal constructor(
         HostedWorkspacePullRequestDto(ref, "unreachable", null)
     }
 
+    suspend fun workspaceChanges(ref: HostedWorkspaceRefDto): HostedWorkspaceChangesDto =
+        diff { workspaceChanges(ref, it) }
+
+    suspend fun refreshWorkspaceChanges(ref: HostedWorkspaceRefDto): HostedWorkspaceChangesRefreshDto =
+        diff { refreshWorkspaceChanges(ref, it) }
+
+    suspend fun workspaceChangeFile(
+        ref: HostedWorkspaceRefDto,
+        path: String,
+        scope: String?,
+        expectedRevision: Long,
+    ): HostedWorkspaceChangeFileResultDto =
+        diff { workspaceChangeFile(ref, path, scope, expectedRevision, it) }
+
+    suspend fun workspacePullRequestDiff(ref: HostedWorkspaceRefDto): HostedWorkspacePullRequestDiffDto =
+        diff { workspacePullRequestDiff(ref, it) }
+
+    suspend fun workspacePullRequestDiffFile(
+        ref: HostedWorkspaceRefDto,
+        path: String,
+        expectedHeadSha: String,
+    ): HostedWorkspacePullRequestDiffFileResultDto =
+        diff { workspacePullRequestDiffFile(ref, path, expectedHeadSha, it) }
+
     /** Shares a session feed with passive discovery and releases it with the consumer. */
     fun observe(ref: HostedWorkspaceRefDto, session: String, parent: Disposable): Disposable {
         val key = HostedIDs.session(ref.providerID, ref.workspaceID, session)
@@ -846,6 +875,23 @@ class KiloHostedService internal constructor(
             log.warn("hosted preparation failed code=$code step=${preparation.step}")
         }
         retired[event.sessionID] = item.retired.toSet()
+    }
+
+    private suspend fun <T> diff(block: suspend KiloHostedRpcApi.(String?) -> T): T {
+        val message = "Cloud comparison is unavailable"
+        val state = app?.state?.value
+        check(state == null || state.status == KiloAppStatusDto.READY && state.profile != null &&
+            state.progress?.profile != ProfileStatusDto.NOT_LOGGED_IN) { message }
+        val profile = state?.profile
+        // Keep the captured scope and revalidate it whenever durable retries the callback.
+        return call {
+            check(gate() && !_state.value.signedOut) { message }
+            val state = app?.state?.value
+            check(state == null || state.status == KiloAppStatusDto.READY && state.profile != null &&
+                state.progress?.profile != ProfileStatusDto.NOT_LOGGED_IN &&
+                state.profile?.email == profile?.email && state.profile?.currentOrgId == profile?.currentOrgId) { message }
+            block(profile?.currentOrgId)
+        }
     }
 
     private suspend fun <T> call(block: suspend KiloHostedRpcApi.() -> T): T {
