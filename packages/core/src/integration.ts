@@ -382,10 +382,13 @@ export const locationLayer = Layer.effect(
               ),
             ),
           )
+          // kilocode_change - the publish must not live in the layer scope: teardown would interrupt
+          // it before it completes the deferred, and every caller would wait forever. Detached, it
+          // still publishes for callers that already joined the flight.
           yield* outcome.pipe(
             Effect.flatMap((exit) => finish(exit)),
             Effect.onExit((exit) => (Exit.isFailure(exit) ? finish(Exit.interrupt()) : Effect.void)),
-            Effect.forkIn(scope, { startImmediately: true }),
+            Effect.forkDetach({ startImmediately: true }),
           )
           return yield* restore(Deferred.await(flight.deferred))
         })

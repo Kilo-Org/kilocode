@@ -29,11 +29,10 @@ afterAll(() => {
   if (previous === undefined) delete process.env.KILO_AUTH_CONTENT
   else process.env.KILO_AUTH_CONTENT = previous
 })
-const it = testEffect(
-  AppNodeBuilder.build(LayerNode.group([Integration.node, Credential.node, EventV2.node]), [
-    [Global.node, Global.layerWith({ data: directory })],
-  ]),
-)
+const layer = AppNodeBuilder.build(LayerNode.group([Integration.node, Credential.node, EventV2.node]), [
+  [Global.node, Global.layerWith({ data: directory })],
+])
+const it = testEffect(layer)
 // kilocode_change end
 
 describe("Integration", () => {
@@ -709,6 +708,91 @@ describe("refresh", () => {
 
       expect(count).toBe(1)
       expect(value).toMatchObject({ access: "next", refresh: "next" })
+    }),
+  )
+
+  it.live("still serves every caller when the flight outlives the layer", () =>
+    Effect.gen(function* () {
+      // The shared test layer stays open for the whole file, so it can never exercise teardown.
+      // This case builds its own layer and closes it while a refresh is in flight.
+      const own = AppNodeBuilder.build(LayerNode.group([Integration.node, Credential.node, EventV2.node]), [
+        [Global.node, Global.layerWith({ data: fs.mkdtempSync(path.join(os.tmpdir(), "kilo-flight-")) })],
+      ])
+      const report = yield* Deferred.make<readonly Credential.OAuth[]>()
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const integrations = yield* Integration.Service
+          const credentials = yield* Credential.Service
+          const integrationID = Integration.ID.make("openai")
+          const methodID = Integration.MethodID.make("chatgpt")
+          let count = 0
+          yield* integrations.transform((editor) =>
+            editor.method.update({
+              integrationID,
+              method: { id: methodID, type: "oauth", label: "ChatGPT" },
+              authorize: () =>
+                Effect.succeed({
+                  mode: "auto" as const,
+                  url: "https://example.com/authorize",
+                  instructions: "Sign in",
+                  callback: Effect.never,
+                }),
+              refresh: () =>
+                Effect.sync(() => count++).pipe(
+                  Effect.andThen(Effect.sleep("300 millis")),
+                  Effect.andThen(
+                    Effect.gen(function* () {
+                      const now = yield* Clock.currentTimeMillis
+                      return Credential.OAuth.make({
+                        type: "oauth",
+                        methodID,
+                        access: "next",
+                        refresh: "next",
+                        expires: now + Duration.toMillis(Duration.hours(1)),
+                      })
+                    }),
+                  ),
+                ),
+            }),
+          )
+          const now = yield* Clock.currentTimeMillis
+          const stored = yield* credentials.create({
+            integrationID,
+            label: "Work",
+            value: Credential.OAuth.make({
+              type: "oauth",
+              methodID,
+              access: "stale",
+              refresh: "stale",
+              expires: now + 1,
+            }),
+          })
+          const input = { type: "credential", id: stored.id, label: "Work" } as const
+
+          // Callers outlive the block, so they observe what teardown does to their flight.
+          const owner = yield* integrations.connection.resolve(input).pipe(Effect.forkDetach({ startImmediately: true }))
+          yield* Effect.sleep("80 millis")
+          const waiter = yield* integrations.connection.resolve(input).pipe(Effect.forkDetach({ startImmediately: true }))
+          yield* Effect.sleep("80 millis")
+          expect(count).toBe(1)
+
+          yield* Effect.gen(function* () {
+            const first = yield* Fiber.await(owner).pipe(Effect.timeoutOption("5 seconds"))
+            const second = yield* Fiber.await(waiter).pipe(Effect.timeoutOption("5 seconds"))
+            const values = [first, second].flatMap((r) => {
+              if (r._tag === "None" || Exit.isFailure(r.value)) return []
+              const value = r.value.value
+              return value?.type === "oauth" ? [value] : []
+            })
+            yield* Deferred.succeed(report, values)
+          }).pipe(Effect.forkDetach({ startImmediately: true }))
+        }).pipe(Effect.provide(own, { local: true })),
+      )
+
+      const values = yield* Deferred.await(report).pipe(Effect.timeout("20 seconds"))
+      expect(values.length).toBe(2)
+      expect(values[0]).toMatchObject({ access: "next", refresh: "next" })
+      expect(values[1]).toMatchObject({ access: "next", refresh: "next" })
     }),
   )
 })
