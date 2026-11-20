@@ -14,6 +14,7 @@ import {
   type CallContext,
   type CallResult,
   type ContentBlock,
+  type PageContext,
 } from "./backend"
 import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
@@ -40,6 +41,8 @@ function extensionHint(absence: BrowserHub.Absence | undefined): string {
   switch (absence.kind) {
     case "connected":
       return 'The Kilo browser extension is connected but did not answer: try again, and reload the extension if it keeps failing, or set browser.backend to "playwright".'
+    case "dropped":
+      return 'The Kilo browser extension disconnected a moment ago. The browser usually starts it again within 30 seconds and Kilo reconnects on its own, so try again shortly; if it stays away, keep the browser open and check that "Allow local agents" is on in its settings.'
     case "disconnected":
       return 'The Kilo browser extension is not connected: turn on "Allow local agents" in its settings and keep the browser open, then try again, or set browser.backend to "playwright".'
     case "unpaired":
@@ -219,6 +222,7 @@ const MAPPED: Record<string, (error: BrowserHub.Failure) => Error> = {
   busy: () => new Error("The tab is busy with another browser action. Try again in a moment."),
   taken: () => new Error("Another Kilo surface took over the tab. The action did not run; try again."),
   stopped: () => new StoppedError(STOPPED),
+  lost: (error) => new Error(error.message || "This agent session is no longer open in the browser."),
   unsupported: () => new UnsupportedError(),
   blocked: (error) => new Error(error.message || "The browser refused this page."),
   mismatch: () =>
@@ -242,6 +246,97 @@ export function map(error: unknown): Error {
   const mapped = MAPPED[error.kind]
   if (mapped) return mapped(error)
   return new Error(error.message || "The browser call failed.")
+}
+
+/** How long the page reads after a step may take, together, before the step's own result is returned without them. */
+const PAGE_STATE_TIMEOUT = 10_000
+
+/** The URL the extension's tab list shows for a tab the session may not read. */
+const WITHHELD_URL = "[origin withheld]"
+
+type Identity = { url?: string; title?: string }
+
+/**
+ * The snapshot a page read got, the frames it withheld, or the note that says why the page was not read; `authorized`
+ * is the grant list the read ran with, which a read granted on the spot extends.
+ */
+type SnapshotPart = { snapshot?: string; note?: string; frames?: readonly string[]; authorized?: readonly string[] }
+
+function texts(content: readonly { type: string; text?: string }[]) {
+  return content
+    .flatMap((block) => (block.type === "text" && block.text !== undefined ? [block.text] : []))
+    .join("\n\n")
+}
+
+function record(text: string): Record<string, unknown> | undefined {
+  try {
+    const value: unknown = JSON.parse(text)
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** A page title or URL on one line: page-controlled text must not open a section of its own. */
+function line(value: unknown) {
+  return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : ""
+}
+
+function identityOf(value: Record<string, unknown>): Identity | undefined {
+  const url = line(value.url)
+  if (url === "" || url === WITHHELD_URL) return undefined
+  const title = line(value.title)
+  return title === "" ? { url } : { url, title }
+}
+
+/** The page a navigate or tab step answered with: the extension's `{ title, url }` object. */
+function answered(text: string) {
+  const value = record(text)
+  const page = value && identityOf(value)
+  if (!value || !page) return undefined
+  // An answer that is nothing but the page's identity is the Page section, not a result to repeat.
+  return { page, only: Object.keys(value).every((key) => key === "url" || key === "title") }
+}
+
+/** The session's own tab in a `browser_tabs list` answer. */
+function selected(text: string) {
+  const tabs = record(text)?.tabs
+  if (!Array.isArray(tabs)) return undefined
+  const tab: unknown = tabs.find(
+    (item: unknown) => typeof item === "object" && item !== null && (item as Record<string, unknown>).selected === true,
+  )
+  return tab ? identityOf(tab as Record<string, unknown>) : undefined
+}
+
+/** The page origin a refused read names; a frame's own refusal is not the page's. */
+function refusedRead(error: unknown) {
+  if (!(error instanceof BrowserHub.Failure) || error.kind !== "permission") return undefined
+  return error.items.find((item) => item.class === "read" && item.frame !== true)?.origin
+}
+
+/** Why the page was not read after the step, as the model reads it. */
+function unread(error: unknown) {
+  const origin = refusedRead(error)
+  if (origin) {
+    return `Page content: not shown; reading ${origin} needs the user's permission. Call browser_snapshot to ask for it.`
+  }
+  return "Page content: not read after this step. Call browser_snapshot to read it."
+}
+
+/** The Playwright MCP's sections: the page first, so text inside the step's own result cannot pose as either. */
+function sections(input: { page?: Identity; note?: string; snapshot?: string; result?: string }) {
+  const page = [
+    ...(input.page?.url ? [`- Page URL: ${input.page.url}`] : []),
+    ...(input.page?.title ? [`- Page Title: ${input.page.title}`] : []),
+    ...(input.note ? [`- ${input.note}`] : []),
+  ]
+  return [
+    ...(page.length ? ["### Page", ...page] : []),
+    ...(input.snapshot === undefined ? [] : ["### Snapshot", "```yaml", input.snapshot, "```"]),
+    ...(input.result ? ["### Result", input.result] : []),
+  ].join("\n")
 }
 
 /**
@@ -285,6 +380,28 @@ async function confined(file: string, directory: string): Promise<string> {
 /** How many written screenshot files a backend remembers; an older one is treated as foreign, never overwritten. */
 const WRITTEN_LIMIT = 200
 
+/** One tool call as the backend sends it, before it knows the session handle. */
+type Call = {
+  session: string
+  name: string
+  /** The arguments the extension is sent. */
+  args: Record<string, unknown>
+  ctx: CallContext
+  /** The model's own arguments: a remembered step token is taken against those, whatever the extension is sent. */
+  key: Record<string, unknown>
+  /** The turn that made the call: a stop of that turn ends it, even when the turn ended while the call waited. */
+  turn: number | undefined
+}
+
+/**
+ * A failure the browser answered before the call ran, so sending it again cannot repeat an action: the extension no
+ * longer holds the session (`lost`), or no extension was there to receive it. A call that may have reached the
+ * browser carries `uncertain` and is never sent again, nor is one the turn cancelled.
+ */
+function unsent(error: unknown, signal: AbortSignal | undefined): error is BrowserHub.Failure {
+  if (!(error instanceof BrowserHub.Failure) || signal?.aborted) return false
+  return error.kind === "lost" || (error.kind === "unavailable" && !error.uncertain)
+}
 /** Who opens a session: a turn's tool call, refused once the user stopped it, or the user's own share or adopt. */
 type Opener = { kind: "turn"; turn: number | undefined } | { kind: "user" }
 
@@ -386,29 +503,55 @@ export class ExtensionBackend implements BrowserBackend {
   }
 
   /** The call itself, with the arguments the extension needs and the grants this session approved. */
-  private async send(
-    port: BrowserHub.Port,
-    input: {
-      session: string
-      handle: string
-      name: string
-      args: Record<string, unknown>
-      /** The model's own arguments: a step token is remembered against those, whatever the extension is sent. */
-      key: Record<string, unknown>
-      ctx: CallContext
-    },
-  ) {
-    const sensitive = this.sensitive(input.ctx, input.session, input.name, input.key)
+  private async send(port: BrowserHub.Port, input: Call & { handle: string; sensitive: string[] | undefined }) {
     const file = screenshotFile(input.name, input.args, this.input.directory)
     const answer = await port.call({
       sessionHandle: input.handle,
       name: input.name,
       arguments: file ? file.args : input.args,
       authorized: grants(input.ctx.authorized ?? []),
-      ...(sensitive === undefined ? {} : { sensitive }),
+      ...(input.sensitive === undefined ? {} : { sensitive: input.sensitive }),
       ...(input.ctx.signal === undefined ? {} : { signal: input.ctx.signal }),
     })
     return file ? this.save(file.path, answer) : answer
+  }
+
+  /**
+   * The call on the session's handle, once an extension that dropped a moment ago is back (a short wait). A call the
+   * browser refused before it ran is sent again, once per cause: after another wait when the extension dropped between
+   * the wait and the call, and on a new session when the extension no longer holds this one (it restarted without it),
+   * so a drop followed by a lost session still reaches the browser. A call that may have run, timed out or was
+   * cancelled is never sent again.
+   */
+  private async run(port: BrowserHub.Port, call: Call) {
+    await this.ready(port)
+    const opener: Opener = { kind: "turn", turn: call.turn }
+    let handle = await this.handle(port, call.session, opener)
+    // Taken once the call is about to reach the browser: a call that fails before (the extension not back in time, an
+    // open refused after a stop) leaves a remembered token for its repeat, and a call sent again carries the same one.
+    const sensitive = this.sensitive(call.ctx, call.session, call.name, call.key)
+    const recovered = new Set<BrowserHub.Kind>()
+    for (;;) {
+      try {
+        return await this.send(port, { ...call, handle, sensitive })
+      } catch (error) {
+        if (!unsent(error, call.ctx.signal) || recovered.has(error.kind)) throw error
+        recovered.add(error.kind)
+        await this.ready(port)
+        // A stop that arrived meanwhile ends the call: a stopped conversation never gets a new session.
+        if (this.halts(call.session, call.turn)) throw new StoppedError(STOPPED)
+        this.live()
+        if (error.kind === "lost") this.drop(call.session, handle)
+        handle = await this.handle(port, call.session, opener)
+      }
+    }
+  }
+
+  /** Forget a handle the extension no longer holds, unless a newer one already replaced it. */
+  private drop(session: string, handle: string) {
+    if (this.sessions.get(handle) !== session) return
+    this.sessions.delete(handle)
+    this.handles.delete(session)
   }
 
   /**
@@ -492,9 +635,8 @@ export class ExtensionBackend implements BrowserBackend {
     this.live()
     try {
       await this.accepts(name)
-      const handle = await this.handle(port, session, { kind: "turn", turn })
       const input = name === "browser_file_upload" ? await this.upload(port, args) : args
-      return reply(await this.send(port, { session, handle, name, args: input, key: args, ctx }))
+      return reply(await this.run(port, { session, name, args: input, key: args, ctx, turn }))
     } catch (error) {
       if (error instanceof BrowserHub.Failure) {
         const withheld = this.withheld(error)
@@ -502,6 +644,120 @@ export class ExtensionBackend implements BrowserBackend {
       }
       throw map(error)
     }
+  }
+
+  /**
+   * The page state the Playwright MCP reports after a step, which the extension's own answer lacks. The reads run with
+   * the call's grants and never a step token, so an unreadable page stays unread (the note says so) and withheld
+   * frames stay withheld. A failed or slow read leaves the step's answer with whatever page it could name; all reads
+   * share one deadline.
+   */
+  async pageState(name: string, result: CallResult, ctx: PageContext): Promise<CallResult> {
+    const port = this.input.port
+    const session = this.session(ctx)
+    const turn = this.input.turns?.get(session)
+    if (!port || result.isError || this.halts(session, turn) || this.disposed) return result
+    const deadline = AbortSignal.timeout(PAGE_STATE_TIMEOUT)
+    const scoped = { ...ctx, signal: ctx.signal ? AbortSignal.any([ctx.signal, deadline]) : deadline }
+    const text = texts(result.content)
+    const explicit = name === "browser_snapshot"
+    const own = explicit ? undefined : answered(text)
+    const frames = result.meta?.withheldFrames
+    const read: SnapshotPart = explicit
+      ? { snapshot: text, frames }
+      : await this.snapshotPart(port, session, scoped, frames)
+    const page = own?.page ?? (await this.selectedPage(port, session, scoped, read.authorized))
+    // A stop that landed while the page was read ends the page state too: the stopped turn reads nothing more.
+    if (this.halts(session, turn)) return result
+    const body = sections({
+      page,
+      note: read.note,
+      snapshot: read.snapshot,
+      result: explicit || own?.only ? undefined : text,
+    })
+    return {
+      ...result,
+      content: [{ type: "text", text: body }, ...result.content.filter((block) => block.type === "image")],
+      ...(read.frames?.length ? { meta: { ...result.meta, withheldFrames: read.frames } } : {}),
+    }
+  }
+
+  /** The snapshot after a step with the frames it withheld; without `snapshot`, only the step's own frames. */
+  private async snapshotPart(
+    port: BrowserHub.Port,
+    session: string,
+    ctx: PageContext,
+    frames: readonly string[] | undefined,
+  ): Promise<SnapshotPart> {
+    if (!ctx.snapshot) return { frames }
+    const read = await this.snapshotAfter(port, session, ctx)
+    if ("error" in read) return { note: unread(read.error), frames }
+    // An error result still ran with the grant it was given, and the tab read keeps it.
+    if (read.value.isError === true) return { note: unread(undefined), frames, authorized: read.authorized }
+    return {
+      snapshot: texts(read.value.content),
+      frames: [...new Set([...(frames ?? []), ...(read.value.meta?.withheldFrames ?? [])])],
+      authorized: read.authorized,
+    }
+  }
+
+  /**
+   * The session's own tab as the tab list names it; a list that cannot say names no page, and none is read when the
+   * rules skip it. The list runs with the grant the snapshot read was given, so the page it just read keeps its URL.
+   */
+  private async selectedPage(
+    port: BrowserHub.Port,
+    session: string,
+    ctx: PageContext,
+    authorized: readonly string[] | undefined,
+  ) {
+    if (!ctx.tabs) return undefined
+    const listed = { ...ctx, authorized: authorized ?? ctx.authorized }
+    return this.read(port, session, "browser_tabs", { action: "list" }, listed).then(
+      (value) => (value.isError === true ? undefined : selected(texts(value.content))),
+      () => undefined,
+    )
+  }
+
+  /**
+   * The snapshot after a step. A page the session's own rules let it read without a person (the localhost family by
+   * default) is granted and read once more, as the Playwright backend reports the page a granted step stays on; any
+   * other refusal stays one and nobody is asked.
+   */
+  private async snapshotAfter(port: BrowserHub.Port, session: string, ctx: PageContext) {
+    const attempt = (authorized: readonly string[]) =>
+      this.read(port, session, "browser_snapshot", {}, { ...ctx, authorized }).then(
+        (value) => ({ value, authorized }),
+        (error: unknown) => ({ error }),
+      )
+    const first = await attempt(ctx.authorized ?? [])
+    const origin = "error" in first ? refusedRead(first.error) : undefined
+    if (!origin || !ctx.readable || !(await ctx.readable(origin).catch(() => false))) return first
+    return attempt([...(ctx.authorized ?? []), `read:${origin}`])
+  }
+
+  /**
+   * One read for the page state: the call's grants, no step token, and the page state's deadline. It reuses the handle
+   * the step ran on; a session forgotten since (a deleted conversation) has no page to read and opens no new one, and a
+   * conversation the user stopped since reads nothing more.
+   */
+  private async read(
+    port: BrowserHub.Port,
+    session: string,
+    name: string,
+    args: Record<string, unknown>,
+    ctx: CallContext,
+  ) {
+    if (this.halts(session, this.input.turns?.get(session))) throw new StoppedError(STOPPED)
+    const handle = this.handles.get(session)
+    if (!handle) throw new Error("The browser session ended before its page was read.")
+    return port.call({
+      sessionHandle: await handle,
+      name,
+      arguments: args,
+      authorized: grants(ctx.authorized ?? []),
+      signal: ctx.signal,
+    })
   }
 
   /** `/browser share`: the browser's active tab joins this conversation's group. The user's own command lifts a stop. */

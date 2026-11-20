@@ -39,6 +39,20 @@ export type CallContext = {
 }
 
 /**
+ * What a page read after a step runs with: the call's grants, whether to read the snapshot itself, and whether to read
+ * the tab list for the page's URL and title. Each flag follows the per-tool rule of the read it stands for.
+ */
+export type PageContext = CallContext & {
+  snapshot: boolean
+  tabs: boolean
+  /**
+   * Whether the session's own rules (config, saved choices, organization) allow reading an origin without asking a
+   * person. True records the grant for the session, the way an ask those rules answer does.
+   */
+  readable?: (origin: string) => Promise<boolean>
+}
+
+/**
  * The browser as the tool layer sees it: one tool list and one result shape, whichever backend runs. A backend owns its
  * browser (launch, profiles, lifecycle); the tools own the model-facing output.
  */
@@ -53,6 +67,13 @@ export type BrowserBackend = {
    */
   plan?(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<Item[]>
   callTool(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<CallResult>
+  /**
+   * The page state after a step whose result lacks it, for a backend that answers a step with its outcome only (the
+   * extension): the result with the page's URL and title and, when `snapshot` is set, its snapshot, in the Playwright
+   * MCP's sections. The read runs with the call's grants and never prompts. A backend whose results already carry the
+   * page omits this.
+   */
+  pageState?(name: string, result: CallResult, ctx: PageContext): Promise<CallResult>
   /** Release per-session state when the session ends; a backend without any ignores it. */
   forget?(session: string): void
   dispose(): Promise<void>
@@ -60,7 +81,8 @@ export type BrowserBackend = {
 
 /**
  * Raised when the real origin of a step is not covered by `authorized`. The tool layer asks for the items, then
- * retries the call once with the new pairs and any step token, so the backend never prompts and never retries itself.
+ * retries the call once per distinct need with the new pairs and any step token, so the backend never prompts and
+ * never retries itself.
  */
 export class NeedsPermissionError extends Error {
   readonly items: readonly Item[]
