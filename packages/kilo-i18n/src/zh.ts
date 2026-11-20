@@ -1,4 +1,16 @@
 export const dict = {
+  // Session migration
+  "migration.title": "要将 Kilo 会话迁移到 v2 吗？",
+  "migration.summary":
+    "来源：{{source}}\n大小：{{totalBytes}}（数据库：{{sourceBytes}}；WAL：{{walBytes}}）\n可用空间：{{availableBytes}}\n拟用的备份路径：{{backup}}",
+  "migration.warning":
+    "请关闭所有 Kilo v1 客户端和预览版客户端，直到迁移完成后再启动。迁移后，当前适用于 JetBrains 的 Kilo 插件将无法使用此数据库。请勿再用 v1 客户端打开此数据库。",
+  "migration.accept": "备份并迁移",
+  "migration.notNow": "暂不迁移",
+  "migration.progress": "正在迁移 Kilo 会话",
+  "migration.stopped": "Kilo 未启动。请重新加载窗口后重试。",
+  "migration.headless": "迁移需要确认。请运行 {{preflight}} 查看迁移计划。如果同意，请运行 {{apply}}。",
+
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.byok.prefix": "如需更多使用统计信息，请",
   "provider.connect.kiloGateway.byok.link": "通过 Kilo's Gateway 进行 BYOK",

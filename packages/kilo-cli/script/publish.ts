@@ -10,7 +10,7 @@
 // Upstream's update artifacts, Docker image, AUR and Homebrew steps are not part of this script.
 //
 // v1 publishes the same package names under the `latest` and `rc` dist-tags. This script uses only its own dist-tag,
-// so a v2 build never replaces what v1 users install. Upstream uses the build channel as the dist-tag, but npm rejects
+// so publishing a v2 build does not move the v1 dist-tags. Upstream uses the build channel as the dist-tag, but npm rejects
 // `v2` because it is also a semver range, so the dist-tag is fixed here.
 //
 // Usage: KILO_VERSION=<version> bun script/publish.ts [--dry-run]
@@ -89,7 +89,7 @@ await Bun.write(path.join(launcher, "LICENSE"), license)
 await Bun.write(path.join(launcher, "postinstall.mjs"), await launcherPostinstall())
 // The postinstall script replaces this placeholder with the binary. It stays only when install scripts are disabled.
 await Bun.write(
-  path.join(launcher, "bin", "kilo2.exe"),
+  path.join(launcher, "bin", "kilo.exe"),
   [
     `echo "Error: ${name}'s postinstall script was not run." >&2`,
     'echo "" >&2',
@@ -107,9 +107,8 @@ await Bun.write(
       version,
       license: "MIT",
       repository,
-      // The postinstall script uses the first command as the binary name in the platform packages. Only `kilo2`: a
-      // `kilo` alias would make a v1 user's `kilo` start v2, which keeps its logins and config apart from v1 (D-4).
-      bin: { kilo2: "./bin/kilo2.exe" },
+      // The package channel selects the release; both versions expose the same command.
+      bin: { kilo: "./bin/kilo.exe" },
       scripts: { postinstall: "node ./postinstall.mjs" },
       os: ["darwin", "linux", "win32"],
       cpu: ["arm64", "x64"],

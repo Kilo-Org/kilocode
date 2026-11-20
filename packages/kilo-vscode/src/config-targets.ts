@@ -2,7 +2,7 @@
 // target never depends on the global directory; a missing global directory entry falls back to the path the spawned
 // server uses, and the writer creates it.
 import path from "node:path"
-import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import { activeProfile, configFiles } from "./active-profile"
 import { canonicalPath, matchConfigDocument, resolveGlobalConfigDir } from "./settings-paths"
 
 export type ConfigEntry = {
@@ -25,15 +25,17 @@ export async function configTargets(input: {
   }
 
   const projectRoot = await canonicalPath(input.directory)
+  const files = configFiles()
   const project =
-    (await matchConfigDocument(KiloConfigFiles.writeCandidates(projectRoot, false), documents)) ??
-    path.join(projectRoot, KiloConfigFiles.newFile)
+    (await matchConfigDocument(files.writeCandidates(projectRoot, false), documents)) ??
+    path.join(projectRoot, files.newFile)
   const globalDir = await canonicalPath(
-    directories.find((directory) => !KiloConfigFiles.directories.includes(path.basename(directory))) ??
+    activeProfile?.config ??
+      directories.find((directory) => !files.directories.includes(path.basename(directory))) ??
       resolveGlobalConfigDir(process.env, input.profile),
   )
   const global =
-    (await matchConfigDocument(KiloConfigFiles.writeCandidates(globalDir, true), documents)) ??
-    path.join(globalDir, KiloConfigFiles.newFile)
+    (await matchConfigDocument(files.writeCandidates(globalDir, true), documents)) ??
+    path.join(globalDir, files.newFile)
   return { global, project }
 }

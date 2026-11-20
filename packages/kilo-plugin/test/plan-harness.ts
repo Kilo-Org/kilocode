@@ -27,14 +27,14 @@ export const nextSessionID = Session.ID.make("ses_plan_new_test")
 export const plan = Agent.ID.make("plan")
 export const code = Agent.ID.make("code")
 export const created = DateTime.makeUnsafe(1_000)
-export const planPath = ".kilo2/plans/1000-dark-mode-plan.md"
+export const planPath = ".kilo/plans/1000-dark-mode-plan.md"
 
 /** A temporary project with version control, a Kilo data directory and the session's plan file. */
 export async function workspace() {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-plan-")))
   const project = path.join(root, "project")
   const data = path.join(root, "data")
-  await mkdir(path.join(project, ".kilo2", "plans"), { recursive: true })
+  await mkdir(path.join(project, ".kilo", "plans"), { recursive: true })
   await mkdir(path.join(project, ".git"))
   await Bun.write(path.join(project, planPath), "# Dark mode\n1. Add a toggle.")
   const location = new Location.Info({

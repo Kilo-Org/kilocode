@@ -2,7 +2,7 @@
 
 The `package-vscode` job in `.github/workflows/kilo-v2-publish.yml` packages and uploads the preview VSIXs. The `publish-vscode` job publishes them as a pre-release on the VS Code Marketplace and Open VSX.
 
-- The extension id is separate from v1 (`kilocode.kilo-code`), so both extensions can stay installed. The v2 server keeps its data in the separate `kilo2` directory.
+- The extension id is separate from v1 (`kilocode.kilo-code`), so both extensions can stay installed. The v2 server shares the stable `kilo` profile. Do not run a v1 client against a converted profile.
 - The version is `0.1.<run number>`. The Marketplace accepts only `major.minor.patch` and rejects the CLI's `0.0.0-v2-<number>` version.
 - Initial targets: `darwin-arm64`, `darwin-x64`, `win32-x64`, `linux-x64`, `linux-arm64`. Add `alpine-x64`, `alpine-arm64` and `win32-arm64` after the first preview.
 - Secrets: `VSCE_TOKEN` for the VS Code Marketplace and `OVSX_TOKEN` for Open VSX.
@@ -12,12 +12,12 @@ The `package-vscode` job in `.github/workflows/kilo-v2-publish.yml` packages and
 
 ## Verify before the first publish
 
-- Run the packaged VSIX self-test on macOS, Linux and Windows. Check that the bundled `kilo2` starts, the panels load, and the Linux sandbox helpers are present.
+- Run the packaged VSIX self-test on macOS, Linux and Windows. Check that the bundled `kilo` starts, the panels load, and the Linux sandbox helpers are present.
 - Each VSIX includes the matching CLI's `bin/tree-sitter` resources. Packaging checks that the runtime WASM is present in the final archive; verify autocomplete in the packaged extension as part of the release smoke test.
 
 ## Deferred
 
-- Windows EV code signing of the bundled `kilo2.exe`.
+- Windows EV code signing of the bundled `kilo.exe`.
 - macOS signing of the bundled CLI.
 - CRA SBOM evidence for the VSIX files. v1 blocks publishing until its evidence verifies.
 

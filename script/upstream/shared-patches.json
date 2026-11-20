@@ -1,12 +1,16 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 167,
-    "markedLines": 3024,
+    "files": 168,
+    "markedLines": 2996,
     "unmarkedLines": 560,
     "deletedFiles": 0
   },
   "files": {
+    "packages/core/src/database/v1-migration.bun.ts": {
+      "rung": 3,
+      "seam": "Optional per-session callback exposes typed skipped-row warnings before writing the projection. The host rejects lossy offline cutovers without reimplementing the decoder. There is no plugin hook in this conversion; without a callback upstream retains its warn-and-continue behavior."
+    },
     "packages/cli/src/run/run.ts": {
       "rung": 4,
       "seam": "The shared one-shot run handler owns target preparation, including resumed-session model selection. Neither a plugin nor the Kilo host can wait there before admission. The Kilo-only call checks the resolved location's catalog without changing upstream run behavior."
@@ -106,7 +110,7 @@
     },
     "packages/cli/src/commands/handlers/mcp/add.ts": {
       "rung": 4,
-      "seam": "Kilo config write target for `mcp add` (feature `config`): the first existing file of `.kilo2/kilo2.jsonc`, `.kilo2/kilo2.json`, `kilo2.jsonc`, `kilo2.json`, else `kilo2.json`; the global directory checks only its root files. Internal releases use kilo2 names without a v1 fallback (decision 12); the file order follows v1. Rung 4: the handler imports a Kilo module (util/src/kilocode/config/files.ts, which holds the names and order) and calls out to it. No seam: the CLI never builds Core `Config` and may not import Core (`test/import-boundaries.test.ts`), so the discovery layout node does not reach it, and Kilo's write order (directory before root files, `.jsonc` first, global root-only) differs in shape from upstream's, so a generic knob would be Kilo-shaped. The call-out is unconditional, so the upstream `packages/cli` binary (not shipped) also writes `kilo2.json` while its server reads only `opencode.*`."
+      "seam": "Kilo config write target for `mcp add` (feature `config`): the first existing file of `.kilo/kilo.jsonc`, `.kilo/kilo.json`, `kilo.jsonc`, `kilo.json`, else `kilo.json`; the global directory checks only its root files. Kilo uses the stable names and v1 file precedence. Rung 4: the handler imports a Kilo module (util/src/kilocode/config/files.ts, which holds the names and order) and calls out to it. No seam: the CLI never builds Core `Config` and may not import Core (`test/import-boundaries.test.ts`), so the discovery layout node does not reach it, and Kilo's write order (directory before root files, `.jsonc` first, global root-only) differs in shape from upstream's, so a generic knob would be Kilo-shaped. The call-out is unconditional, so the upstream `packages/cli` binary (not shipped) also writes `kilo.json` while its server reads only `opencode.*`."
     },
     "packages/cli/src/commands/handlers/plugin/add.ts": {
       "rung": 4,
@@ -137,7 +141,7 @@
     },
     "packages/core/src/config.ts": {
       "rung": 3,
-      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Optional systemFiles and parse hooks let a host select managed file order and decode its own config schema from raw and normalized fields; the decoder also preserves host fields when managed policies split from settings. Optional input normalization and command document composition let the host apply model-only overrides after file discovery. Upstream's integration reloads (v2.2) run discovery with a captured layer context, so that context also carries the layout service. Without the hooks, the default graph and canonical schema behave as upstream. The Kilo host supplies kilo2 names, file orders, a worktree boundary and Kilo-owned config policy. Rungs 1 and 2 cannot do it alone: config parsing precedes plugins, the command editor cannot update captured definitions, and replacing Config.node would lose the server's configured options. Codebase indexing (feature `indexing`): an optional `reload` re-reads the config sources after a host write, so a saved `indexing` key applies also when `fs.filewatcher` is false. It runs the same reload as the watcher and publishes `config.updated` when the result changes. Without a caller nothing changes. Rungs 1 and 2 cannot do it: the reload is a closure inside the Config layer."
+      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Optional systemFiles and parse hooks let a host select managed file order and decode its own config schema from raw and normalized fields; the decoder also preserves host fields when managed policies split from settings. Optional input normalization and command document composition let the host apply model-only overrides after file discovery. Upstream's integration reloads (v2.2) run discovery with a captured layer context, so that context also carries the layout service. Without the hooks, the default graph and canonical schema behave as upstream. The Kilo host supplies kilo names, file orders, a worktree boundary and Kilo-owned config policy. Rungs 1 and 2 cannot do it alone: config parsing precedes plugins, the command editor cannot update captured definitions, and replacing Config.node would lose the server's configured options. Codebase indexing (feature `indexing`): an optional `reload` re-reads the config sources after a host write, so a saved `indexing` key applies also when `fs.filewatcher` is false. It runs the same reload as the watcher and publishes `config.updated` when the result changes. Without a caller nothing changes. Rungs 1 and 2 cannot do it: the reload is a closure inside the Config layer."
     },
     "packages/core/src/automation.ts": {
       "rung": 3,
@@ -149,7 +153,7 @@
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,
-      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService` supplies names, discovery, parsing and optional managed directories with upstream defaults. Optional input normalization and command document composition let a host validate extensions and apply overrides after command discovery. Without these hooks the upstream behavior is unchanged; a caller that does not provide the layout node (upstream discovery tests) gets the upstream defaults. The Kilo host supplies kilo2 paths and Kilo-owned policy. Rungs 1 and 2 cannot reach native normalization or update captured command definitions, and replacing Config.node would lose the server's configured options."
+      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService` supplies names, discovery, parsing and optional managed directories with upstream defaults. Optional input normalization and command document composition let a host validate extensions and apply overrides after command discovery. Without these hooks the upstream behavior is unchanged; a caller that does not provide the layout node (upstream discovery tests) gets the upstream defaults. The Kilo host supplies kilo paths and Kilo-owned policy. Rungs 1 and 2 cannot reach native normalization or update captured command definitions, and replacing Config.node would lose the server's configured options."
     },
     "packages/core/src/command.ts": {
       "rung": 3,
@@ -376,7 +380,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
-      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY), `KiloPeriodic` (`/periodic`, local scheduled Flows), `KiloAutoApprove` (`/auto-approve` and Ctrl+Alt+A for the runtime auto-approve toggle) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
+      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY), `KiloPeriodic` (`/periodic`, local scheduled Flows), `KiloAutoApprove` (`/auto-approve` and Ctrl+Alt+A for the runtime auto-approve toggle) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -388,7 +392,7 @@
     },
     "packages/util/src/global.ts": {
       "rung": 3,
-      "seam": "Two generic identity knobs with upstream defaults, so an embedding entry can name its own directories. (1) The app directory name under the XDG bases (`const app`) reads `OPENCODE_APP_DIR_NAME` and defaults to `opencode`, naming config, data, cache, state and tmp; the Kilo host sets `kilo2` in packages/kilo-cli/src/env.ts before any upstream module loads (U-E1-01 part 1, D-4). (2) The `home` getter reads `OPENCODE_HOME_DIR` before falling back to os.homedir(), so the host can supply a cleaned home; os.homedir() caches $HOME as read at process start, so a shell newline on HOME survives there and cannot be repaired from the host, and `home` feeds resolvePath's `~` expansion (core/src/file-access.ts) and provider credential paths. The Kilo host sets the cleaned home in packages/kilo-cli/src/global-boot.ts (U-E1-01), matching v1's trimmed getter; OPENCODE_TEST_HOME still wins. No Kilo value in either line. Rung 2 cannot supply them: `Global.layerWith` replaces only the service in one graph, while `Global.Path` and `Flock.setGlobal({ state })` are computed when this module loads and read statically by the log file (util/observability/logging.ts), the server tmp (server/src/process.ts) and the TUI themes (tui/src/mini/theme.ts); `cli/src/server-process.ts` and `cli/src/commands/handlers/default.ts` compile their own `Global` node from those defaults, so the background service and the database stayed under `opencode` with host composition alone (measured: the service read its port from `~/.config/opencode` and logged to `~/.local/share/opencode/log`)."
+      "seam": "Two generic identity knobs with upstream defaults, so an embedding entry can name its own directories. (1) The app directory name under the XDG bases (`const app`) reads `OPENCODE_APP_DIR_NAME` and defaults to `opencode`, naming config, data, cache, state and tmp; the Kilo host sets `kilo` in packages/kilo-cli/src/env.ts before any upstream module loads (U-E1-01 part 1, D-4). (2) The `home` getter reads `OPENCODE_HOME_DIR` before falling back to os.homedir(), so the host can supply a cleaned home; os.homedir() caches $HOME as read at process start, so a shell newline on HOME survives there and cannot be repaired from the host, and `home` feeds resolvePath's `~` expansion (core/src/file-access.ts) and provider credential paths. The Kilo host sets the cleaned home in packages/kilo-cli/src/global-boot.ts (U-E1-01), matching v1's trimmed getter; OPENCODE_TEST_HOME still wins. No Kilo value in either line. Rung 2 cannot supply them: `Global.layerWith` replaces only the service in one graph, while `Global.Path` and `Flock.setGlobal({ state })` are computed when this module loads and read statically by the log file (util/observability/logging.ts), the server tmp (server/src/process.ts) and the TUI themes (tui/src/mini/theme.ts); `cli/src/server-process.ts` and `cli/src/commands/handlers/default.ts` compile their own `Global` node from those defaults, so the background service and the database stayed under `opencode` with host composition alone (measured: the service read its port from `~/.config/opencode` and logged to `~/.local/share/opencode/log`)."
     },
     "turbo.json": {
       "rung": 3,
@@ -397,7 +401,7 @@
     },
     "packages/cli/src/services/updater.ts": {
       "rung": 4,
-      "seam": "Kilo config names for the autoupdate policy (feature `config`): read the `update` or legacy `autoupdate` key from Kilo's global config names (`kilo2.json`, `kilo2.jsonc`, last defined policy wins) instead of `config.json`/`opencode.json(c)` or v1 `kilo.json(c)`. Internal releases have no v1 filename fallback (decision 12). Rung 4: one import and one marked line in an upstream CLI service; the CLI may not import Core (`test/import-boundaries.test.ts`), so it calls out to `util/src/kilocode/config/files.ts`. No hook or node for the updater policy."
+      "seam": "Kilo config names for the autoupdate policy (feature `config`): read the `update` or legacy `autoupdate` key from Kilo's global config names (`kilo.json`, `kilo.jsonc`, last defined policy wins) instead of `config.json`/`opencode.json(c)` or v1 `kilo.json(c)`. Internal releases have no v1 filename fallback (decision 12). Rung 4: one import and one marked line in an upstream CLI service; the CLI may not import Core (`test/import-boundaries.test.ts`), so it calls out to `util/src/kilocode/config/files.ts`. No hook or node for the updater policy."
     },
     "packages/core/src/session/usage.ts": {
       "rung": 4,
@@ -481,7 +485,7 @@
     },
     "packages/cli/test/server-connection.test.ts": {
       "rung": 4,
-      "seam": "Skips upstream's new `local config commands do not start or require a server` test (v2.2). It expects `mcp add --global` to write `opencode.json`, but the existing Kilo patch in `packages/cli/src/commands/handlers/mcp/add.ts` writes the Kilo names (`kilo2.json`) even without the host. Remove the skip when the CLI write commands read their file names from `ConfigDiscovery.LayoutService` (host knob with upstream defaults) instead of `KiloConfigFiles`."
+      "seam": "Skips upstream's new `local config commands do not start or require a server` test (v2.2). It expects `mcp add --global` to write `opencode.json`, but the existing Kilo patch in `packages/cli/src/commands/handlers/mcp/add.ts` writes the Kilo names (`kilo.json`) even without the host. Remove the skip when the CLI write commands read their file names from `ConfigDiscovery.LayoutService` (host knob with upstream defaults) instead of `KiloConfigFiles`."
     },
     "packages/tui/test/usage-limits.test.tsx": {
       "rung": 4,
@@ -576,7 +580,7 @@
     },
     "packages/patchmark/test/slow-inputs.test.ts": {
       "rung": 4,
-      "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4). The slow-input linear-time bounds are also Kilo's: they compare one shape at two sizes instead of timing a fixed input, and the blockquote shape counts characters read through `charCodeAt` because a wall-clock ratio there measures the collector. The 58 marked lines this file adds raise only the markedLines budget from 2773 to 2831 (53 for the bounds, 5 for the streamed-table split and the wording fixes that followed review); file, unmarked-line and deletion budgets are unchanged."
+      "seam": "Kilo CI stability: the one-char-at-a-time streaming test retains its scan-work assertion at 256 KB, with a 60 s guard for catastrophic regressions. Kilo's additional slow-input bounds count scan work instead of timing the parser, including table source reads at two sizes to avoid CPU timing noise on Windows. These checks run against the upstream package without host or plugin changes."
     },
     "packages/server/test/artifact.test.ts": {
       "rung": 4,

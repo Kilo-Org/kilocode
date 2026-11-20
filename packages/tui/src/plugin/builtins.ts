@@ -55,5 +55,5 @@ export const builtins = [
   KiloTerminalActivity, // kilocode_change(terminal-activity)
   KiloPeriodic, // kilocode_change(periodic) - Kilo /periodic command
   KiloAutoApprove, // kilocode_change(autoapprove) - Kilo /auto-approve toggle
-  ...(process.env.OPENCODE_APP_DIR_NAME === "kilo2" ? [KiloRemote] : []), // kilocode_change(remote)
+  ...(process.env.OPENCODE_APP_DIR_NAME === "kilo" ? [KiloRemote] : []), // kilocode_change(remote)
 ]

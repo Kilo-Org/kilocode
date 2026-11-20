@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 // UX end-to-end runner for the Kilo browser bridge: every human-visible surface (the extension's "Local agents"
 // settings, the pairing notices, the tab groups, the Alt+Shift+K command, the CLI TUI prompts) and the exact text the
-// model receives for each error, against the real built Chrome MV3 extension and the real `kilo2` binary.
+// model receives for each error, against the real built Chrome MV3 extension and the real `kilo` binary.
 // Not a `bun test` file: it needs a display (run it under `xvfb-run -a -s "-screen 0 1920x1080x24"`; the window is a
 // real 1280x900 one), a built CLI binary and the built extension.
 //
-//   bun test/browser/ux-e2e.ts <kilo2> <scenario>
+//   bun test/browser/ux-e2e.ts <kilo> <scenario>
 //
 //   E2E_EXTENSION_DIR   the built unpacked extension (default: ../../../cloud/apps/extension/.output/chrome-mv3)
 //   E2E_CHROMIUM        the Chromium executable (default: playwright-core's own build)
@@ -31,7 +31,7 @@
 //             nothing ended, typed before the TUI's server loaded its plugins) in TUI sessions that share one hub
 //   signed-out  the local-agent switch and a run while signed out of Kilo, then sign-out and token expiry mid-run:
 //             which storage keys survive (the local-agent ones must, the account token must not)
-//   stop-race  Stop all while a second conversation of the same `kilo2 serve` is mid-turn: its call must not open a
+//   stop-race  Stop all while a second conversation of the same `kilo serve` is mid-turn: its call must not open a
 //             new group, and its next turn works
 //   all       pairing, controls, errors, tui and settings-faults in one browser
 //
@@ -90,7 +90,7 @@ import {
 
 const binaryInput = process.argv[2]
 const scenario = process.argv[3] ?? "all"
-if (!binaryInput) throw new Error("usage: bun test/browser/ux-e2e.ts <kilo2> <scenario>")
+if (!binaryInput) throw new Error("usage: bun test/browser/ux-e2e.ts <kilo> <scenario>")
 const binary = path.resolve(binaryInput)
 
 const extensionDirectory = defaultExtensionDirectory
@@ -1128,7 +1128,7 @@ async function waitToast(name: string, expected: string | string[], label: strin
 
 /** The server runs (`run=<id>` in the shared opencode.log of `root`) that have announced their commands, i.e. loaded their plugins. */
 async function loadedRuns(root: string) {
-  const log = await fs.readFile(path.join(root, "data", "kilo2", "log", "opencode.log"), "utf8").catch(() => "")
+  const log = await fs.readFile(path.join(root, "data", "kilo", "log", "opencode.log"), "utf8").catch(() => "")
   return new Set([...log.matchAll(/run=([0-9a-f]+) message=event .*event\.type=command\.updated/g)].map((match) => match[1]!))
 }
 
@@ -1597,7 +1597,7 @@ async function shareAdoptScenario() {
     await startTui(root, settings, eName, 0)
     await command(eName, "/browser adopt")
     const early = await waitToast(eName, ["There is no ended tab group to reuse.", "Kilo is still starting. Try again in a moment."], "e-01-early-adopt-toast", 15_000)
-    const log = await fs.readFile(path.join(root, "data", "kilo2", "log", "opencode.log"), "utf8").catch(() => "")
+    const log = await fs.readFile(path.join(root, "data", "kilo", "log", "opencode.log"), "utf8").catch(() => "")
     const serverLines = log
       .split("\n")
       .filter((line) => line.includes("kilocode.browser/adopt") && ![...before].some((run) => line.includes(`run=${run} `)))
@@ -1911,7 +1911,7 @@ async function signedOutScenario() {
 
 // ---------------------------------------------------------------------------------------------
 // Scenario: Stop all while a second conversation of the same CLI is mid-turn without a browser session yet.
-// One `kilo2 serve` process holds both conversations, so the revoke for the first one reaches the CLI that runs the
+// One `kilo serve` process holds both conversations, so the revoke for the first one reaches the CLI that runs the
 // second. Conversation A opens a session and finishes its turn; conversation B starts a turn, the user presses Stop all
 // before B's first browser call, and B's call must not open a new group. B's next user message starts a normal turn.
 // ---------------------------------------------------------------------------------------------
@@ -1947,7 +1947,7 @@ async function startServe(root: string) {
       return undefined
     },
     60_000,
-    `kilo2 serve answers on ${origin}`,
+    `kilo serve answers on ${origin}`,
   ).catch(async (error: unknown) => {
     await terminate(child)
     throw new Error(`${String(error)}; serve log: ${log.text.slice(-1_500)}`)

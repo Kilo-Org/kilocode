@@ -35,12 +35,12 @@ async function repository() {
   return directory
 }
 
-test("a git: plugin in kilo2.json clones and loads through the Kilo host", async () => {
+test("a git: plugin in kilo.json clones and loads through the Kilo host", async () => {
   const repositoryDirectory = await repository()
   const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-git-plugin-project-")))
   const spec = `git:${repositoryDirectory}`
   try {
-    await Bun.write(path.join(directory, "kilo2.json"), JSON.stringify({ plugins: [spec] }))
+    await Bun.write(path.join(directory, "kilo.json"), JSON.stringify({ plugins: [spec] }))
     await Effect.runPromise(
       Effect.scoped(
         Effect.gen(function* () {

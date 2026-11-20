@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { createAppFixture } from "../fixture/app"
 import { directory, json } from "../fixture/tui-client"
 
-const configPath = `${directory}/kilo2.json`
+const configPath = `${directory}/kilo.json`
 
 test("/about opens from the slash menu and shows the diagnostics, masking paths in privacy mode", async () => {
   const privacy = { enabled: false }

@@ -1,7 +1,4 @@
 const STATE_FILE = "agent-manager.json"
-// The v2 state stays in `.kilo2` with KILO_USE_RELEASE_CONFIG (packages/kilo-vscode/src/agent-manager/constants.ts).
-const STATE_DIRECTORIES = [".kilo2", ".kilo"]
-
 export const MESSAGE =
   "Do not edit Agent Manager state directly. Use the agent_manager tool: call action=list to read section and session IDs, then call action=move with the returned IDs."
 
@@ -16,6 +13,6 @@ export function assertMutablePath(filepath: string) {
   const file = parts.at(-1)
   const dir = parts.at(-2)
   if (normalize(file ?? "") !== normalize(STATE_FILE)) return
-  if (!STATE_DIRECTORIES.some((name) => normalize(name) === normalize(dir ?? ""))) return
+  if (normalize(dir ?? "") !== ".kilo") return
   throw new Error(MESSAGE)
 }

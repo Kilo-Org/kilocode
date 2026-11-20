@@ -12,11 +12,6 @@ export const MAX_MULTI_VERSIONS = 4
 
 /** Kilo config directory name (project-level and inside worktrees). */
 export const KILO_DIR = ".kilo"
-/**
- * The project directory that holds the Agent Manager state. It stays `.kilo2` with `KILO_USE_RELEASE_CONFIG=1`:
- * `.kilo/agent-manager.json` is the state file of the v1 extension, which keeps its own session store.
- */
-export const STATE_DIR = ".kilo2"
 
 /** Legacy config directory name for backward compatibility reads. */
 export const LEGACY_DIR = ".kilocode"

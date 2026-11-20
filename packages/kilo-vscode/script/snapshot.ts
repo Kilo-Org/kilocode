@@ -9,6 +9,8 @@ import path from "node:path"
 import { binary, prepare, resolveTarget, root } from "./package"
 
 const mode = Bun.argv[2] ?? "install"
+if (process.env.KILO_INTERNAL_PROFILE_CUTOVER_BUILD === "1")
+  throw new Error("Build the private VSIX with bun run package instead of snapshot")
 if (mode !== "build" && mode !== "install") throw new Error(`Unknown mode ${mode}. Use build or install.`)
 
 const pkg = (await Bun.file(path.join(root, "package.json")).json()) as { version: string }

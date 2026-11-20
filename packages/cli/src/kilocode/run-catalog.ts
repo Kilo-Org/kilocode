@@ -17,7 +17,7 @@ export async function waitForRunCatalog(
   const target = model ? `${model.providerID}/${model.id}` : "a default model"
   const progress =
     format === "default"
-      ? setTimeout(() => UI.println(`${UI.Style.TEXT_DIM}⏳ kilo2 models: ${target}${UI.Style.TEXT_NORMAL}`), 1000)
+      ? setTimeout(() => UI.println(`${UI.Style.TEXT_DIM}⏳ kilo models: ${target}${UI.Style.TEXT_NORMAL}`), 1000)
       : undefined
   // Sample the local Gateway diagnostic shortly before expiry. Never extend the deadline to get it.
   let detail: string | undefined
@@ -58,7 +58,7 @@ export async function waitForRunCatalog(
     cancel.throwIfAborted()
     if (!deadline.aborted) throw error
     throw new Error(
-      `Timed out waiting for ${target} in the local model catalog. No prompt was sent. ${detail ?? "Check the available models with kilo2 models."}`,
+      `Timed out waiting for ${target} in the local model catalog. No prompt was sent. ${detail ?? "Check the available models with kilo models."}`,
     )
   } finally {
     clearTimeout(progress)

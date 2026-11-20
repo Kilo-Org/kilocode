@@ -8,7 +8,7 @@ import { PlanFile } from "../src/plan/plan-file"
 test("creates a missing nested plan directory and is idempotent", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "kilo-plan-dir-"))
   try {
-    const dir = path.join(root, "a", ".kilo2", "plans")
+    const dir = path.join(root, "a", ".kilo", "plans")
     PlanFile.ensure(dir)
     PlanFile.ensure(dir)
     expect(fs.statSync(dir).isDirectory()).toBe(true)

@@ -1152,11 +1152,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلة الكتالوج (مللي ثانية)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "مهلة التنفيذ (مللي ثانية)",
   "settings.agentBehaviour.mcpEmpty":
-    "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo2.json، أو اطلب من الوكيل إضافتها لك.",
+    "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo.json، أو اطلب من الوكيل إضافتها لك.",
   "settings.agentBehaviour.workflows.description":
     "سير العمل هي أوامر مخصصة محددة في التهيئة الخاصة بك أو في ملفات Markdown للأوامر. يمكنك تعيين نموذج ومتغير استدلال لكل سير عمل.",
   "settings.agentBehaviour.workflows.empty":
-    "لم يتم العثور على أوامر مخصصة. أضف أوامر إلى kilo2.json أو إلى ملف Markdown في .kilo2/command.",
+    "لم يتم العثور على أوامر مخصصة. أضف أوامر إلى kilo.json أو إلى ملف Markdown في .kilo/command.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
   "settings.agentBehaviour.workflows.model": "النموذج",

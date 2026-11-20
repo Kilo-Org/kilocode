@@ -1202,11 +1202,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalog-Timeout (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Ausführungs-Timeout (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Keine MCP-Server konfiguriert. Fügen Sie MCP-Server in kilo2.json hinzu oder bitten Sie den Agenten, sie hinzuzufügen.",
+    "Keine MCP-Server konfiguriert. Fügen Sie MCP-Server in kilo.json hinzu oder bitten Sie den Agenten, sie hinzuzufügen.",
   "settings.agentBehaviour.workflows.description":
     "Workflows sind benutzerdefinierte Befehle, die in Ihrer Konfiguration oder in Markdown-Befehlsdateien definiert sind. Für jeden Workflow können Sie ein Modell und eine Reasoning-Variante festlegen.",
   "settings.agentBehaviour.workflows.empty":
-    "Keine benutzerdefinierten Befehle gefunden. Fügen Sie Befehle zu kilo2.json oder einer Markdown-Datei in .kilo2/command hinzu.",
+    "Keine benutzerdefinierten Befehle gefunden. Fügen Sie Befehle zu kilo.json oder einer Markdown-Datei in .kilo/command hinzu.",
   "settings.agentBehaviour.workflows.detail.description": "Beschreibung",
   "settings.agentBehaviour.workflows.detail.template": "Vorlage",
   "settings.agentBehaviour.workflows.model": "Modell",

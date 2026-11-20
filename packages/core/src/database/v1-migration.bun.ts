@@ -95,6 +95,7 @@ type RunResult = {
 
 type Options = {
   readonly nextDatabasePath?: string
+  readonly onSkippedRows?: (warnings: ReadonlyArray<Warning>) => void // kilocode_change(session-import) seam - let the caller reject a lossy conversion before writing the projection
 }
 
 type MigrationState = { readonly phase: "sessions"; readonly cursor?: string } | { readonly phase: "completed" }
@@ -698,6 +699,7 @@ export function run(
                 sql`SELECT id, message_id, session_id, time_created, time_updated, data FROM part WHERE session_id = ${next.id}`,
               )
               const transformed = transformSession({ session: next, messages: sourceMessages, parts: sourceParts })
+              if (transformed.warnings.length) options.onSkippedRows?.(transformed.warnings) // kilocode_change(session-import) seam
               yield* Effect.forEach(transformed.warnings, (warning) =>
                 Effect.logWarning("Skipped V1 migration row", warning),
               )

@@ -18,7 +18,7 @@ The technical rules (direction, placement, clients, identity, behavioral referen
 
 | Milestone | Meaning |
 |---|---|
-| M1 Internal daily use | The team uses `kilo2` daily: config, session policy, tools and permissions, the Kilo TUI surface (usage, picker, sidebar), import of our own v1 sessions |
+| M1 Internal daily use | The team uses `kilo` daily: config, session policy, tools and permissions, the Kilo TUI surface (usage, picker, sidebar), import of our own v1 sessions |
 | M2 Public CLI preview | Distribution, updater, signing, remote, sharing |
 | M3 VS Code on v2 | The trailing client catches up |
 | M4 Cutover | JetBrains, Kilo Desktop, external consumers, flipping `main` |
@@ -30,14 +30,14 @@ The technical rules (direction, placement, clients, identity, behavioral referen
 - [#15171](https://github.com/Kilo-Org/kilocode/issues/15171) Foundation: the Kilo host, plugin and RPC scaffolding, and the v2 CI lane.
 - [#15020](https://github.com/Kilo-Org/kilocode/issues/15020) Upstream sync: merge tooling and regular syncs from `upstream/dev`, with the shared-patch checks.
 - [#14991](https://github.com/Kilo-Org/kilocode/issues/14991) Kilo Gateway, login and enterprise: the Gateway as the only source of Kilo models, accounts, teams and Kilo request identity, as a Kilo-owned layer.
-- [#15298](https://github.com/Kilo-Org/kilocode/issues/15298) Identity, branding and store: v2 runs as Kilo, with its own `kilo2` store that never touches v1 files.
-- [#15299](https://github.com/Kilo-Org/kilocode/issues/15299) Config and settings: `kilo2.json` and `.kilo2` discovery, key mapping, managed policy, a settings RPC that owns reload, and the server extension surface. Open: system and MDM config names.
+- [#15298](https://github.com/Kilo-Org/kilocode/issues/15298) Identity, branding and store: v2 runs as Kilo, with the stable `kilo` store and a pre-open consent gate for v1 files.
+- [#15299](https://github.com/Kilo-Org/kilocode/issues/15299) Config and settings: `kilo.json` and `.kilo` discovery, key mapping, managed policy, a settings RPC that owns reload, and the server extension surface. Open: system and MDM config names.
 - [#15300](https://github.com/Kilo-Org/kilocode/issues/15300) Session policy and snapshots: offline network wait, overflow and compaction thresholds, snapshot policy and retention, transcript recall.
 - [#15301](https://github.com/Kilo-Org/kilocode/issues/15301) Agents, modes and plan: the Kilo agents, mode reminders, the agent builder, the Plan workflow and Plan-to-Code handoff, the review policy. Open: Plan storage.
 - [#15302](https://github.com/Kilo-Org/kilocode/issues/15302) Tools, permissions, commands and skills: the Kilo tool set and client gating, question and suggest tools, permission rules, commands, workflows, skills and rules.
 - [#15303](https://github.com/Kilo-Org/kilocode/issues/15303) Usage, cost and telemetry: model usage and cost, provider usage and quotas (`/usage`), the max-cost alert, telemetry with consent.
 - [#15304](https://github.com/Kilo-Org/kilocode/issues/15304) TUI shell and sidebar: the Kilo terminal UI, slash commands and dialogs, home and sidebar, model picker, notifications.
-- [#15305](https://github.com/Kilo-Org/kilocode/issues/15305) CLI commands, run, ACP and daemon: the Kilo command set, `kilo2 run` and headless use, ACP, the service, startup performance.
+- [#15305](https://github.com/Kilo-Org/kilocode/issues/15305) CLI commands, run, ACP and daemon: the Kilo command set, `kilo run` and headless use, ACP, the service, startup performance.
 - [#15306](https://github.com/Kilo-Org/kilocode/issues/15306) Import and migration: v1 sessions, credentials and config imported into the v2 store without touching v1 files. The team's own sessions first; the public import comes with M2.
 
 ### M2 Public CLI preview
@@ -47,7 +47,7 @@ The technical rules (direction, placement, clients, identity, behavioral referen
 - [#15308](https://github.com/Kilo-Org/kilocode/issues/15308) Memory and indexing: the memory engine and tools, codebase indexing and `semantic_search`.
 - [#15309](https://github.com/Kilo-Org/kilocode/issues/15309) Sandbox: shell, MCP and PTY confinement with network relay on macOS and Linux.
 - [#15310](https://github.com/Kilo-Org/kilocode/issues/15310) Agent coordination and worktrees: background subagents, wakeups and cron, goals, the shared agent board, background processes, worktrees and the Agent Manager control plane.
-- [#15311](https://github.com/Kilo-Org/kilocode/issues/15311) Distribution, updater and signing: a signed `kilo2` that installs beside v1, updates and rolls back, and the release pipeline. Open: updater distribution identity (the open `installation` cells of the progress map).
+- [#15311](https://github.com/Kilo-Org/kilocode/issues/15311) Distribution, updater and signing: a signed `kilo` on the v2 npm channel, updates and rolls back, and the release pipeline. Open: updater distribution identity (the open `installation` cells of the progress map).
 - [#15312](https://github.com/Kilo-Org/kilocode/issues/15312) Remote sessions: `kilo remote` over the Kilo relay.
 - [#15313](https://github.com/Kilo-Org/kilocode/issues/15313) Sharing: individual share, unshare and fork-from-share, and a public viewer for v2 sessions.
 

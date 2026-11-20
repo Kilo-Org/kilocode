@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Real end-to-end exploration of the Kilo v2 VS Code extension (`kilocode.kilo-code-v2`) driving the Kilo browser
 // extension through the CLI's `extension` backend. Not a `bun test` file: it needs a display (run it under xvfb), VS
-// Code stable (tarball), the packaged VSIX (which carries `bin/kilo2`), the built Chrome MV3 extension and, for the
+// Code stable (tarball), the packaged VSIX (which carries `bin/kilo`), the built Chrome MV3 extension and, for the
 // chat scenarios, an OpenRouter key.
 //
 //   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/vscode-e2e.ts serve       # control server, step by step
@@ -19,7 +19,7 @@
 //                      config's `{env:OPENROUTER_API_KEY}`, and is never printed
 //   VSC_E2E_MODEL      the OpenRouter model (default deepseek/deepseek-v4.1-flash)
 //
-// The product path: VS Code starts its bundled `kilo2 serve`; the CLI's extension backend dials the registered loopback
+// The product path: VS Code starts its bundled `kilo serve`; the CLI's extension backend dials the registered loopback
 // hub (started here on the run's port so parallel runs never share 47917), finds it unpaired and opens the pairing page
 // with the system opener. `xdg-open` on PATH is a recorder: the harness opens each recorded URL in the Chromium that
 // holds the extension, the way a default browser would. Everything the user sees is driven through the UI: the Kilo
@@ -114,8 +114,8 @@ const xdg = {
   XDG_RUNTIME_DIR: dirs.run,
 }
 const openerLog = path.join(root, "opener.log")
-const configFile = path.join(xdg.XDG_CONFIG_HOME, "kilo2", "kilo2.jsonc")
-const hubsDirectory = path.join(xdg.XDG_STATE_HOME, "kilo2", "browser", "run", "hubs")
+const configFile = path.join(xdg.XDG_CONFIG_HOME, "kilo", "kilo.jsonc")
+const hubsDirectory = path.join(xdg.XDG_STATE_HOME, "kilo", "browser", "run", "hubs")
 
 function config(browser: Record<string, unknown> = {}) {
   return {
@@ -330,13 +330,13 @@ async function replayOpener() {
 let hub: Any
 const hubLog = { text: "" }
 
-/** The `kilo2` the installed VSIX carries: the same binary VS Code starts as its server. */
-function kilo2() {
+/** The `kilo` the installed VSIX carries: the same binary VS Code starts as its server. */
+function kilo() {
   const found = (existsSync(dirs.extensions) ? readdirSync(dirs.extensions) : []).find((entry) =>
     entry.startsWith("kilocode.kilo-code-v2-"),
   )
   if (!found) throw new Error("the VSIX is not installed")
-  return path.join(dirs.extensions, found, "bin", "kilo2")
+  return path.join(dirs.extensions, found, "bin", "kilo")
 }
 
 async function hubEntries() {
@@ -348,7 +348,7 @@ async function hubEntries() {
 }
 
 async function startHub() {
-  hub = Bun.spawn([kilo2(), "browser", "hub", "--loopback", "--port", String(hubPort)], {
+  hub = Bun.spawn([kilo(), "browser", "hub", "--loopback", "--port", String(hubPort)], {
     cwd: dirs.home,
     env: environment(),
     stdout: "pipe",
@@ -545,7 +545,7 @@ const ctx = {
   setLocalAgents,
   openLocalAgentsSettings,
   config,
-  kilo2,
+  kilo,
   launchVsCode,
 }
 
@@ -559,7 +559,7 @@ async function boot() {
   const installed = await installVsix()
   await startHub()
   await launchVsCode()
-  return { extensionId, installed, kilo2: kilo2(), hub: (await hubEntries())[0], spend: await spend() }
+  return { extensionId, installed, kilo: kilo(), hub: (await hubEntries())[0], spend: await spend() }
 }
 
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor

@@ -10,7 +10,7 @@ import { KiloPlanPlugin } from "../src/plan"
 import { code, created, sessionID, workspace } from "./plan-harness"
 
 const session = { id: sessionID, time: { created, updated: created } } as unknown as Session.Info
-const planPath = ".kilo2/plans/1000-dark-mode-plan.md"
+const planPath = ".kilo/plans/1000-dark-mode-plan.md"
 
 test("keeps and attaches a Code Mode open_plan path when another nested tool fails", async () => {
   const space = await workspace()

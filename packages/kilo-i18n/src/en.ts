@@ -1,6 +1,19 @@
 // Kilo-specific translations and overrides
 // Keys here will override any matching keys from upstream translations
 export const dict = {
+  // Session migration
+  "migration.title": "Migrate your Kilo sessions to v2?",
+  "migration.summary":
+    "Source: {{source}}\nSize: {{totalBytes}} (database: {{sourceBytes}}; WAL: {{walBytes}})\nFree space: {{availableBytes}}\nProposed backup: {{backup}}",
+  "migration.warning":
+    "Close all Kilo v1 and preview clients and keep them closed until migration finishes. After migration, the current Kilo plugin for JetBrains cannot use this database. Do not reopen it with a v1 client.",
+  "migration.accept": "Back up and migrate",
+  "migration.notNow": "Not now",
+  "migration.progress": "Migrating Kilo sessions",
+  "migration.stopped": "Kilo did not start. Reload the window to try again.",
+  "migration.headless":
+    "Migration requires confirmation. Review the plan with {{preflight}}. If you accept, run {{apply}}.",
+
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.byok.prefix": "For more usage stats, ",
   "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",

@@ -2829,7 +2829,7 @@ describe("KiloGatewayPlugin", () => {
                       "x-opencode-parent-session-id": parent.id,
                       "x-opencode-project": "prj_1",
                       "x-opencode-session": child.id,
-                      "x-opencode-client": "kilo2",
+                      "x-opencode-client": "kilo",
                     },
                     body: JSON.stringify({
                       model: "openai/gpt-5.4",

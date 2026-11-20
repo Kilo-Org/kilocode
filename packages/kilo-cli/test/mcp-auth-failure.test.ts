@@ -27,7 +27,7 @@ test("the host reports a remote authentication failure as needs_auth", async () 
   const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-mcp-auth-")))
   const url = new URL("/mcp", remote.url).toString()
   await Bun.write(
-    path.join(directory, "kilo2.json"),
+    path.join(directory, "kilo.json"),
     JSON.stringify({
       mcp: { servers: { "plain-403": { type: "remote", url }, "no-auth": { type: "remote", url, oauth: false } } },
     }),

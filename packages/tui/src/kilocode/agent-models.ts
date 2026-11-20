@@ -5,7 +5,7 @@ import { useStorageOptional } from "../context/storage"
 import type { ModelPreferenceModel } from "../model-preference"
 
 export function createAgentModelPreferences() {
-  if (process.env.OPENCODE_APP_DIR_NAME !== "kilo2") return
+  if (process.env.OPENCODE_APP_DIR_NAME !== "kilo") return
   const storage = useStorageOptional()
   if (!storage) return
   const lifecycle = useTuiLifecycle()

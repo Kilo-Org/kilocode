@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 // kilo_mirror: packages/cli/script/build.ts
-// Builds the Kilo host (packages/kilo-cli/src/index.ts) into a standalone `kilo2` executable for internal releases.
+// Builds the Kilo host (packages/kilo-cli/src/index.ts) into a standalone `kilo` executable for internal releases.
 //
 // Mirror of packages/cli/script/build.ts (v2.2.6). That script compiles the upstream entry as `opencode` and takes
 // no entry option, and changing it would put a Kilo edit into an upstream file. This one keeps the same plugins,
@@ -10,7 +10,7 @@
 // script directory. Keep it in step with the upstream file.
 //
 // Output layout matches upstream's, so `bun run install:alpha` and the CI smoke test find the binary the same way:
-// <outdir>/cli-<os>-<arch>/bin/kilo2. Supported flags: --single, --baseline, --target=, --outdir=, --skip-install,
+// <outdir>/cli-<os>-<arch>/bin/kilo. Supported flags: --single, --baseline, --target=, --outdir=, --skip-install,
 // --skip-web-ui. The release-only targets that CI does not build (musl, baseline) stay available through --target.
 // Kilo: KILO_CHANNEL, KILO_VERSION, KILO_BUMP and KILO_RELEASE set the build channel and version. Load before
 // `@opencode/script`, which reads the OPENCODE_ names when it loads.
@@ -36,20 +36,26 @@ import { hostMirrorsPlugin } from "../src/mirrors"
 import { KiloBinary } from "../src/binary"
 import { createPluginRuntimePlugin } from "./plugin-runtime"
 import { copyTreeSitterWasms } from "./tree-sitter"
+import { executableDigest } from "./pilot-artifact"
 // Kilo: the sandbox mutation worker, network relay and seccomp helper ship next to the executable.
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
 import { stageBubblewrap } from "./kilocode/bubblewrap" // kilo_port(sandbox:7d95c6cc13bc)
 
 const dir = path.resolve(import.meta.dirname, "..")
-// Kilo: internal releases use `kilo2`, separate from v1. The upstream target names stay the build's internal names.
+// Both Kilo distribution channels expose the stable command. Upstream target names stay internal to the build.
 const binary = KiloBinary
 const upstreamBinary = "opencode"
+// Kilo: private rehearsal artifacts must not land in the directory the publisher scans.
+const pilot = process.env.KILO_INTERNAL_PROFILE_CUTOVER_BUILD === "1"
 const outdir = path.resolve(
   dir,
-  process.argv.find((arg) => arg.startsWith("--outdir="))?.slice("--outdir=".length) ?? "dist",
+  process.argv.find((arg) => arg.startsWith("--outdir="))?.slice("--outdir=".length) ??
+    (pilot ? ".cache/pilot" : "dist"),
 )
 if (outdir === dir) throw new Error("--outdir must not be the package directory")
+if (pilot && outdir === path.join(dir, "dist"))
+  throw new Error("Use a separate output directory for a private pilot build")
 process.chdir(dir)
 
 await rm(outdir, { recursive: true, force: true })
@@ -288,7 +294,7 @@ export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash
       execArgv: [
         "--smol",
         // Kilo: the user agent names Kilo.
-        `--user-agent=kilo2/${Script.channel}/${Script.version}/cli`,
+        `--user-agent=kilo/${Script.channel}/${Script.version}/cli`,
         "--use-system-ca",
         "--no-warnings",
         "--",
@@ -297,16 +303,12 @@ export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash
     },
     define: {
       KILO_BRANDING_COMPILED: "true",
-      // Kilo: the build channel, which names the session database (src/database.ts).
-      KILO2_CHANNEL: `'${Script.channel}'`,
       OPENCODE_VERSION: `'${Script.version}'`,
       // Kilo: the command name that help and usage text show.
       OPENCODE_CLI_NAME: `'${binary}'`,
       OPENCODE_CHANNEL: `'${Script.channel}'`,
       OPENCODE_ARTIFACT: `'cli'`,
-      // Kilo: the app directory, fixed at build time. `src/env.ts` also sets it at runtime, but a bundled build
-      // evaluates the `global` chunk (which reads it when it loads) before the entry's own body, so the runtime
-      // assignment is too late and the executable would write to `opencode` instead of `kilo2`.
+      // Some bundled chunks capture Global.Path before the entry's first runtime assignment.
       "process.env.OPENCODE_APP_DIR_NAME": JSON.stringify(directory),
       ...(highlights ? { OPENCODE_RELEASE_HIGHLIGHTS: JSON.stringify(highlights) } : {}),
       OPENCODE_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "undefined",
@@ -372,6 +374,15 @@ export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash
     JSON.stringify(
       {
         name: `@kilocode/${name}`,
+        ...(pilot
+          ? {
+              private: true,
+              kiloProfileCutover: {
+                version: 4,
+                sha256: await executableDigest(path.join(bin, item.os === "win32" ? `${binary}.exe` : binary)),
+              },
+            }
+          : {}),
         version: Script.version,
         license: item.os === "linux" ? "SEE LICENSE IN LICENSE" : "MIT",
         repository: { type: "git", url: "git+https://github.com/Kilo-Org/kilocode.git" },

@@ -105,10 +105,10 @@ test("reads API and OAuth auth content with team or explicit personal selection"
   ).toEqual({ token: "oauth-token", organizationID: null })
 })
 
-test("reads the team of the Kilo v1 login beside the kilo2 data directory without changing it", async () => {
+test("reads the team of the Kilo v1 login beside the kilo data directory without changing it", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "kilo-v1-login-"))
   try {
-    const data = path.join(root, "kilo2")
+    const data = path.join(root, "kilo")
     const file = path.join(root, "kilo", "auth.json")
     const read = async (content?: unknown) => {
       if (content !== undefined) await Bun.write(file, typeof content === "string" ? content : JSON.stringify(content))
@@ -127,7 +127,7 @@ test("reads the team of the Kilo v1 login beside the kilo2 data directory withou
     expect(await read({ kilo: { ...oauth, access: "", accountId: "team" } })).toBeUndefined()
     expect(await read({ openai: oauth })).toBeUndefined()
     expect(await read("not json")).toBeUndefined()
-    // Once the release renames the kilo2 directory to `kilo`, the login is the one in the data directory itself.
+    // Once the release renames the kilo directory to `kilo`, the login is the one in the data directory itself.
     await Bun.write(file, JSON.stringify({ kilo: { ...oauth, accountId: "team" } }))
     expect(await Effect.runPromise(KiloAccount.v1Organization(path.join(root, "kilo")))).toBe("team")
   } finally {

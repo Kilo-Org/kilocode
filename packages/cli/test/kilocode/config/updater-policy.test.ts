@@ -114,28 +114,28 @@ it.live("updater policy is tested in a release-build child", () =>
 )
 
 if (typeof OPENCODE_CHANNEL === "string" && OPENCODE_CHANNEL === "stable") {
-  it.live("release updater policy: kilo2.json disables release requests", () =>
+  it.live("release updater policy: kilo.json disables release requests", () =>
     Effect.gen(function* () {
       const test = yield* fixture()
-      yield* test.fs.writeFileString(path.join(test.config, "kilo2.json"), '{"autoupdate": false}')
+      yield* test.fs.writeFileString(path.join(test.config, "kilo.json"), '{"autoupdate": false}')
       expect(yield* test.updater.run()).toBeUndefined()
       expect(test.requests).toEqual([])
     }),
   )
 
-  it.live("release updater policy: kilo2.jsonc notify overrides kilo2.json disable", () =>
+  it.live("release updater policy: kilo.jsonc notify overrides kilo.json disable", () =>
     Effect.gen(function* () {
       const test = yield* fixture()
-      yield* test.fs.writeFileString(path.join(test.config, "kilo2.json"), '{"autoupdate": false}')
+      yield* test.fs.writeFileString(path.join(test.config, "kilo.json"), '{"autoupdate": false}')
       yield* test.fs.writeFileString(
-        path.join(test.config, "kilo2.jsonc"),
+        path.join(test.config, "kilo.jsonc"),
         '{\n // Notify without installing.\n "update": "notify",\n}',
       )
       expect(yield* test.updater.run()).toEqual({ type: "available", version: "1.0.1" })
       expect(test.requests).toEqual(["https://opencode.ai/update/api/stable/cli/npm?current=1.0.0"])
     }),
   )
-  ;["kilo.json", "kilo.jsonc", "config.json", "opencode.json", "opencode.jsonc"].forEach((name) => {
+  ;["other.json", "other.jsonc", "config.json", "opencode.json", "opencode.jsonc"].forEach((name) => {
     it.live(`release updater policy: ignores legacy ${name}`, () =>
       Effect.gen(function* () {
         const test = yield* fixture()

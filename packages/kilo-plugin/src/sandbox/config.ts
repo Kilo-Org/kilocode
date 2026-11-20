@@ -47,7 +47,7 @@ export namespace SandboxConfig {
 
   /**
    * The effective `sandbox` setting of the location's config entries, in precedence order. Only global documents (the
-   * kilo2 config directory, or a document without a file such as inline config content) can widen the sandbox; a
+   * kilo config directory, or a document without a file such as inline config content) can widen the sandbox; a
    * project document can only enable it or restrict the network.
    */
   export function fromEntries(entries: readonly Config.Entry[], global: string): { sandbox?: Info } {

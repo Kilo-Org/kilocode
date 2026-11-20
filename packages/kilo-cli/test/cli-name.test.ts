@@ -15,7 +15,7 @@ for (const compiled of [false, true]) {
     test(`${compiled ? "compiled" : "source"} ${scenario} command name`, async () => {
       const tmp = await mkdtemp(path.join(os.tmpdir(), "kilo-cli-name-"))
       const hosted = scenario !== "unhosted"
-      const expected = scenario === "unhosted" ? "opencode" : scenario === "hosted" ? "kilo2" : "configured"
+      const expected = scenario === "unhosted" ? "opencode" : scenario === "hosted" ? "kilo" : "configured"
       try {
         const outfile = path.join(tmp, process.platform === "win32" ? "cli-name.exe" : "cli-name")
         if (compiled) {

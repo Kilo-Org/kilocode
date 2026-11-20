@@ -1165,11 +1165,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "카탈로그 시간 초과 (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "실행 시간 초과 (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCP 서버가 구성되지 않았습니다. kilo2.json에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
+    "MCP 서버가 구성되지 않았습니다. kilo.json에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
   "settings.agentBehaviour.workflows.description":
     "워크플로우는 구성 또는 명령 Markdown 파일에 정의된 사용자 정의 명령입니다. 각 워크플로우에 모델과 추론 변형을 설정할 수 있습니다.",
   "settings.agentBehaviour.workflows.empty":
-    "사용자 정의 명령을 찾을 수 없습니다. kilo2.json 또는 .kilo2/command의 Markdown 파일에 명령을 추가하세요.",
+    "사용자 정의 명령을 찾을 수 없습니다. kilo.json 또는 .kilo/command의 Markdown 파일에 명령을 추가하세요.",
   "settings.agentBehaviour.workflows.detail.description": "설명",
   "settings.agentBehaviour.workflows.detail.template": "템플릿",
   "settings.agentBehaviour.workflows.model": "모델",

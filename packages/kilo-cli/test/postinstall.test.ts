@@ -10,7 +10,7 @@ const platforms: Record<string, string> = { darwin: "darwin", linux: "linux", wi
 const architectures: Record<string, string> = { x64: "x64", arm64: "arm64", arm: "arm" }
 const platform = platforms[process.platform] ?? process.platform
 const arch = architectures[process.arch] ?? process.arch
-const binary = process.platform === "win32" ? "kilo2.exe" : "kilo2"
+const binary = process.platform === "win32" ? "kilo.exe" : "kilo"
 const base = `@kilocode/cli-${platform}-${arch}`
 const names = [
   base,
@@ -63,7 +63,7 @@ async function createLauncher(root: string) {
     JSON.stringify({
       name: "@kilocode/cli",
       version,
-      bin: { kilo2: `./bin/${binary}` },
+      bin: { kilo: `./bin/${binary}` },
       optionalDependencies: dependencies,
     }),
   )
@@ -134,11 +134,11 @@ function expectPinned(args: string[]) {
 }
 
 // The fixture uses a POSIX executable; the Linux case also proves a missing macOS sidecar is harmless.
-posix.each([true, false])("npm postinstall stages the renderer next to kilo2 when present (%s)", async (withRenderer) =>
+posix.each([true, false])("npm postinstall stages the renderer next to kilo when present (%s)", async (withRenderer) =>
   withFixture(async (root) => {
     const launcher = await createLauncher(root)
-    await createPlatformPackages(launcher, `kilo2 v${version}`, withRenderer)
-    const { result, calls } = await run(root, `kilo2 v${version}`)
+    await createPlatformPackages(launcher, `kilo v${version}`, withRenderer)
+    const { result, calls } = await run(root, `kilo v${version}`)
 
     expect(result.exitCode, result.stderr.toString()).toBe(0)
     expect(calls).toEqual([])
@@ -153,7 +153,7 @@ posix(
   async () =>
     withFixture(async (root) => {
       await createLauncher(root)
-      const { result, calls, tmp, target } = await run(root, `kilo2 v${version}`)
+      const { result, calls, tmp, target } = await run(root, `kilo v${version}`)
 
       expect(result.exitCode, result.stderr.toString()).toBe(0)
       expect(calls).toHaveLength(1)
@@ -162,14 +162,14 @@ posix(
       expect(prefix.startsWith(`${tmp}${path.sep}`)).toBe(true)
       const installed = Bun.spawnSync([target, "--version"])
       expect(installed.exitCode).toBe(0)
-      expect(installed.stdout.toString().trim()).toBe(`kilo2 v${version}`)
+      expect(installed.stdout.toString().trim()).toBe(`kilo v${version}`)
     }),
 )
 
 posix("npm postinstall rejects a fallback binary that does not report the launcher version", async () =>
   withFixture(async (root) => {
     await createLauncher(root)
-    const { result, calls } = await run(root, `kilo2 v0.0.0-v2-998`)
+    const { result, calls } = await run(root, `kilo v0.0.0-v2-998`)
 
     expect(result.exitCode).toBe(1)
     expect(result.stderr.toString()).toContain("Failed to install Kilo")
@@ -181,8 +181,8 @@ posix("npm postinstall rejects a fallback binary that does not report the launch
 posix("npm postinstall rejects a copied binary that does not report the launcher version", async () =>
   withFixture(async (root) => {
     const launcher = await createLauncher(root)
-    await createPlatformPackages(launcher, "kilo2 v0.0.0-v2-998")
-    const { result, calls } = await run(root, `kilo2 v${version}`)
+    await createPlatformPackages(launcher, "kilo v0.0.0-v2-998")
+    const { result, calls } = await run(root, `kilo v${version}`)
 
     expect(result.exitCode).toBe(1)
     expect(result.stderr.toString()).toContain("Failed to install Kilo")

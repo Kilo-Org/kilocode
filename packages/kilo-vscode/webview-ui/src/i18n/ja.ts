@@ -1174,11 +1174,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "カタログタイムアウト (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "実行タイムアウト (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCPサーバーが設定されていません。kilo2.jsonでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
+    "MCPサーバーが設定されていません。kilo.jsonでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
   "settings.agentBehaviour.workflows.description":
     "ワークフローは、設定またはコマンドの Markdown ファイルで定義されたカスタムコマンドです。各ワークフローにモデルと推論バリアントを設定できます。",
   "settings.agentBehaviour.workflows.empty":
-    "カスタムコマンドが見つかりません。kilo2.json または .kilo2/command の Markdown ファイルにコマンドを追加してください。",
+    "カスタムコマンドが見つかりません。kilo.json または .kilo/command の Markdown ファイルにコマンドを追加してください。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
   "settings.agentBehaviour.workflows.model": "モデル",

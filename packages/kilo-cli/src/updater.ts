@@ -102,7 +102,7 @@ export const make = (
     request: fetch,
   },
   detectOwner = detect,
-  versionCommand = (manifest: string) => [path.join(path.dirname(manifest), "bin", "kilo2.exe"), "--version"],
+  versionCommand = (manifest: string) => [path.join(path.dirname(manifest), "bin", "kilo.exe"), "--version"],
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
@@ -174,7 +174,7 @@ export const make = (
 
     const verifyInstalled = Effect.fnUntraced(function* (manifest: string, version: string) {
       const binary = yield* exec(versionCommand(manifest))
-      if (binary.code !== 0 || binary.stdout.trim() !== `kilo2 v${version}`)
+      if (binary.code !== 0 || binary.stdout.trim() !== `kilo v${version}`)
         return yield* Effect.fail(
           new Error(
             `The installed Kilo executable did not report version ${version}. Reinstall it with its original package manager.`,

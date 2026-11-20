@@ -107,7 +107,7 @@ for (const reinstall of [false, true]) {
             },
           })
           const request = companion ? input : ({ ...input, kind: "skill", id: "guide" } as const)
-          const config = path.join(test.directory, "kilo2.json")
+          const config = path.join(test.directory, "kilo.json")
           yield* Effect.promise(() =>
             Bun.write(config, '{"mcp":{"servers":{"existing":{"url":"https://keep.example.com"}}}}'),
           )
@@ -272,7 +272,7 @@ it.live("persists intent in the database before target mutation and keeps no loc
                   Bun.file(path.join(test.directory, "skills", "guide", "SKILL.md")).exists(),
                 ),
               ).toBe(false)
-              expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "kilo2.json")).exists())).toBe(
+              expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "kilo.json")).exists())).toBe(
                 false,
               )
             }
@@ -290,7 +290,7 @@ it.live("persists intent in the database before target mutation and keeps no loc
     expect(decode(JSON.parse(String(yield* test.host.storage.get(key))))).toEqual(snapshots[1])
     // The stored record names skill ids and a scope-relative config, never absolute locations.
     expect(snapshots[1]).toMatchObject({
-      config: "kilo2.json",
+      config: "kilo.json",
       server: "demo",
       resources: [{ id: "guide" }, { server: "demo" }],
     })
@@ -369,7 +369,7 @@ it.live("skips an invalid stored record instead of failing, leaving files untouc
     expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "skills", "guide", "SKILL.md")).text())).toBe(
       "new guide",
     )
-    expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "kilo2.json")).json())).toMatchObject({
+    expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "kilo.json")).json())).toMatchObject({
       mcp: { servers: { demo: { url: "https://new.example.com/mcp" } } },
     })
   }),
@@ -388,7 +388,7 @@ for (const resource of ["skill", "mcp", "agent"] as const) {
             ? path.join(test.directory, "skills", "guide")
             : resource === "agent"
               ? path.join(test.directory, "agents", "reviewer.md")
-              : path.join(test.directory, "kilo2.json"),
+              : path.join(test.directory, "kilo.json"),
           { recursive: true, force: true },
         ),
       )
@@ -410,7 +410,7 @@ for (const resource of ["skill", "mcp", "agent"] as const) {
           ? path.join(test.directory, "skills", "guide", "SKILL.md")
           : resource === "agent"
             ? path.join(test.directory, "agents", "reviewer.md")
-            : path.join(test.directory, "kilo2.json")
+            : path.join(test.directory, "kilo.json")
       const modified =
         resource === "skill"
           ? "user edited guide"
@@ -428,7 +428,7 @@ for (const resource of ["skill", "mcp", "agent"] as const) {
         expect(yield* Effect.promise(() => Bun.file(file).text())).toBe(modified)
       }
       if (resource === "skill")
-        expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "kilo2.json")).json())).toEqual({
+        expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "kilo.json")).json())).toEqual({
           mcp: { servers: {} },
         })
       if (resource === "mcp")
@@ -495,7 +495,7 @@ it.live("installs an agent as a native document the agent loader accepts, owned 
       // An agent never reads an MCP config, so a config that would refuse an MCP install must not block it. The
       // first write candidate is the one an MCP install would resolve and reject.
       const outside = path.join(test.directory, "outside.json")
-      const first = path.join(project, ".kilo2", "kilo2.jsonc")
+      const first = path.join(project, ".kilo", "kilo.jsonc")
       yield* Effect.promise(async () => {
         await fs.mkdir(path.dirname(first), { recursive: true })
         await Bun.write(outside, "{}")
@@ -606,15 +606,15 @@ it.live("a renamed project has no record, and reinstall adopts the moved files w
     expect(adopted).toMatchObject({
       project: renamed,
       status: "ready",
-      config: path.join(renamed, "kilo2.json"),
+      config: path.join(renamed, "kilo.json"),
       resources: [{ id: "guide" }, { server: "demo" }],
     })
     expect(decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {}))).toHaveLength(1)
     yield* test.rpc.call("kilocode.marketplace", "uninstall", request)
     expect(
-      yield* Effect.promise(() => Bun.file(path.join(renamed, ".kilo2", "skills", "guide", "SKILL.md")).exists()),
+      yield* Effect.promise(() => Bun.file(path.join(renamed, ".kilo", "skills", "guide", "SKILL.md")).exists()),
     ).toBe(false)
-    expect(yield* Effect.promise(() => Bun.file(path.join(renamed, "kilo2.json")).json())).toEqual({
+    expect(yield* Effect.promise(() => Bun.file(path.join(renamed, "kilo.json")).json())).toEqual({
       mcp: { servers: {} },
     })
   }),
@@ -636,7 +636,7 @@ it.live("a renamed project has no record, and reinstall adopts the moved files w
       })
       const request = { ...input, scope: "project" } as const
       decode(yield* test.rpc.call("kilocode.marketplace", "install", request))
-      const config = path.join(project, "kilo2.json")
+      const config = path.join(project, "kilo.json")
       const original = path.join(project, "original.json")
       const changed = path.join(project, "elsewhere.json")
       const content = yield* Effect.promise(() => Bun.file(config).text())
@@ -680,10 +680,10 @@ for (const missing of [false, true]) {
         const request = { ...input, scope: "project" } as const
         const first = decode(yield* test.rpc.call("kilocode.marketplace", "install", request))
         const real = first.config!
-        const config = path.join(test.directory, ".kilo2", "kilo2.jsonc")
+        const config = path.join(test.directory, ".kilo", "kilo.jsonc")
         yield* Effect.promise(async () => {
           await fs.mkdir(path.dirname(config), { recursive: true })
-          await fs.symlink("../kilo2.json", config)
+          await fs.symlink("../kilo.json", config)
           if (missing) await Bun.write(real, '{"mcp":{"servers":{}}}')
         })
         const record = decode(yield* test.rpc.call("kilocode.marketplace", "install", request))
@@ -695,7 +695,7 @@ for (const missing of [false, true]) {
           mcp: { servers: { demo: { type: "remote", url: "https://new.example.com/mcp" } } },
         })
         yield* test.rpc.call("kilocode.marketplace", "uninstall", request)
-        expect(yield* Effect.promise(() => fs.readlink(config))).toBe("../kilo2.json")
+        expect(yield* Effect.promise(() => fs.readlink(config))).toBe("../kilo.json")
         expect(yield* Effect.promise(() => Bun.file(real).json())).toEqual({ mcp: { servers: {} } })
       }),
   )
@@ -708,7 +708,7 @@ for (const destination of ["external", "project-file", "missing"] as const) {
         const test = yield* fixture()
         const project = path.join(test.directory, "project")
         const target = path.join(destination === "project-file" ? project : test.directory, "settings.jsonc")
-        const config = path.join(project, "kilo2.json")
+        const config = path.join(project, "kilo.json")
         const content = '{"keep":"unchanged"}'
         yield* Effect.promise(async () => {
           await fs.mkdir(project)
@@ -769,7 +769,7 @@ for (const failAt of [1, 2]) {
       expect(
         yield* Effect.promise(() => Bun.file(path.join(test.directory, "skills", "guide", "SKILL.md")).exists()),
       ).toBe(failAt === 2)
-      expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "kilo2.json")).exists())).toBe(failAt === 2)
+      expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "kilo.json")).exists())).toBe(failAt === 2)
       if (failAt === 1) expect(yield* test.host.storage.get(key)).toBeUndefined()
       if (failAt === 2) expect(decode(JSON.parse(String(yield* test.host.storage.get(key)))).recovering).toBe(true)
       const listed = decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {}))
@@ -792,11 +792,11 @@ it.live("persists pending ownership before cleanup, retains failures and retries
     const test = yield* fixture()
     const request = { ...input, scope: "project" } as const
     const key = `installed:kilo:mcp:demo:project:${test.directory}`
-    const root = path.join(test.directory, ".kilo2")
-    const unreadable = path.join(test.directory, "kilo2.json")
+    const root = path.join(test.directory, ".kilo")
+    const unreadable = path.join(test.directory, "kilo.json")
     const obsolete = path.join(root, "skills", "obsolete")
     const guide = path.join(root, "skills", "guide")
-    const config = path.join(root, "kilo2.jsonc")
+    const config = path.join(root, "kilo.jsonc")
     const legacy = JSON.stringify({ mcp: { servers: { legacy: { type: "remote", url: "https://legacy" } } } })
     yield* Effect.promise(async () => {
       await Bun.write(unreadable, legacy)
@@ -848,7 +848,7 @@ it.live("persists pending ownership before cleanup, retains failures and retries
               const record = decode(JSON.parse(String(value)))
               if (snapshots.length === 0) {
                 expect(record).toMatchObject({
-                  config: path.join(".kilo2", "kilo2.jsonc"),
+                  config: path.join(".kilo", "kilo.jsonc"),
                   resources: [{ id: "guide" }, { server: "demo" }],
                   recovering: true,
                   pending: wire,

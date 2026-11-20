@@ -28,14 +28,14 @@ Host (extension, Node):
 - Terminals: `terminal-manager.ts`, `terminal-routing.ts`, `ScriptTerminalManager.ts`, `script-terminal-runtime.ts`, `pty-cleanup.ts` (teardown = `client.debug.location.evict`), `pty-relay.ts` (host relays the PTY WebSocket with `ws`, because the server rejects `vscode-webview://` origins; webview uses `terminal/socket.ts`).
 - Diff: `src/diff/SourceController.ts`, `src/diff/sources/*`, `src/diff/context.ts`, `worktree-diff-controller.ts`.
 - Orchestration: `orchestration-bridge.ts`, `orchestration-domain.ts`, `orchestration-setup.ts`, `tool-start.ts`, `tool-project.ts` over RPC `kilocode.agent-manager`.
-- Storage: state file `<root>/.kilo2/agent-manager.json` (`STATE_DIR` in `constants.ts` from `KiloConfigFiles.directories[0]`), one-time read-only import of `.kilo/agent-manager.json`, `version: 1`. Git exclude now includes `.kilo2/agent-manager.json`.
+- Storage: state file `<root>/<historical preview state>/agent-manager.json` (`STATE_DIR` in `constants.ts` from `KiloConfigFiles.directories[0]`), one-time read-only import of `.kilo/agent-manager.json`, `version: 1`. Git exclude now includes `<historical preview state>/agent-manager.json`.
 - Settings `kilo-code.v2.agentManager.{autoBranchNaming,branchPrefix,worktreePool,terminalButtonDestination,pushFixes}` + `kilo-code.v2.showShortcutHints`, all in `KILO_SETTING_KEYS`. `chat.ts` lets the AM view write `showTaskTimeline` and `agentManager.pushFixes`.
 - `extension.ts`: provider, serializer, 34 commands incl. `openInNewWindow`, shutdown.
 - Build guard in `script/build.ts`: fail when `dist/extension.js` contains `import.meta` (a dynamic `import()` in the provider caused activation failure; fixed by static import).
 
 Server (Kilo plugins, rung 1, no shared upstream edits):
 - `packages/schema/src/kilocode/{agent-manager,branch-name}.ts`, `packages/kilo-plugin/src/{agent-manager,branch-name}/*`, registered in `KiloPlugins` with `kilo_port(agent-manager:648a508ad347)`.
-- `kilocode.agent-manager`: list/reply/reject/removeSnapshot, events start/requested/cancelled; tool hook guards patch/edit/write on `.kilo2/` and `.kilo/agent-manager.json`; permission evaluate hook.
+- `kilocode.agent-manager`: list/reply/reject/removeSnapshot, events start/requested/cancelled; tool hook guards patch/edit/write on `the historical preview directory/` and `.kilo/agent-manager.json`; permission evaluate hook.
 - Tests: kilo-plugin (agent-manager-*, branch-name, snapshot), kilo-cli `agent-manager-rpc.test.ts`, `agent-manager-metadata.test.ts`.
 
 Webview:
@@ -102,7 +102,7 @@ Clean up: `st stop-vscode --cleanup true; st stop; rm -rf /tmp/am-st-ws`.
   If a split cannot stand alone, merge PRs (one PR allowed). Splitting needs per-PR build + CI green.
 - Short branch names (<= 3 words, hyphens). No AI attribution, no em dashes, do not merge. Check CI once, then at most every 7 min (schedule_wakeup).
 - Final answer: PR URLs in order, parity checklist, test results, follow-ups for excluded epics.
-- server log: /tmp/am-st-user/User/globalStorage/kilocode.kilo-code-v2/profile/data/kilo2/log/opencode-local.log
+- server log: /tmp/am-st-user/User/globalStorage/kilocode.kilo-code-v2/profile/data/<historical preview profile>/log/opencode-local.log
 - FOLLOW-UP: tracked session missing on the server (state file from another profile/DB) shows raw "Session not found: ses_..." in the AM view and binds the composer to it. Check v1 handling (state-recovery / prune) and match.
 - FOLLOW-UP: reused user-dir restore: AM panel restored but not visible in main window after relaunch; verify "Reload window" flow explicitly.
 

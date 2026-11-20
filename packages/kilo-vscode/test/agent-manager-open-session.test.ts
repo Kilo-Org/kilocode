@@ -49,7 +49,7 @@ describe("Agent Manager opening an existing session", () => {
     roots.push(root)
     worktree = path.join(root, ".kilo", "worktrees", "one")
     fs.mkdirSync(worktree, { recursive: true })
-    fs.mkdirSync(path.join(root, ".kilo2"), { recursive: true })
+    fs.mkdirSync(path.join(root, ".kilo"), { recursive: true })
     projects = []
     const registry = {
       list: () => projects,

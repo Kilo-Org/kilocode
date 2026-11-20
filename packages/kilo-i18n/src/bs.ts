@@ -1,4 +1,17 @@
 export const dict = {
+  // Session migration
+  "migration.title": "Želite li prenijeti Kilo sesije u verziju 2?",
+  "migration.summary":
+    "Izvor: {{source}}\nVeličina: {{totalBytes}} (baza podataka: {{sourceBytes}}; WAL: {{walBytes}})\nSlobodan prostor: {{availableBytes}}\nPredložena lokacija sigurnosne kopije: {{backup}}",
+  "migration.warning":
+    "Zatvorite sve Kilo v1 klijente i probne verzije klijenta. Ne pokrećite ih dok se prijenos ne završi. Nakon prijenosa trenutni Kilo dodatak za JetBrains neće moći koristiti ovu bazu podataka. Nemojte je ponovo otvarati klijentom verzije 1.",
+  "migration.accept": "Napravi sigurnosnu kopiju i prenesi sesije",
+  "migration.notNow": "Ne sada",
+  "migration.progress": "Prijenos Kilo sesija",
+  "migration.stopped": "Kilo se nije pokrenuo. Ponovo učitajte prozor i pokušajte ponovo.",
+  "migration.headless":
+    "Prijenos zahtijeva potvrdu. Pregledajte plan naredbom {{preflight}}. Ako prihvatate, pokrenite {{apply}}.",
+
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.byok.prefix": "Za više statistika korištenja, koristite ",
   "provider.connect.kiloGateway.byok.link": "BYOK putem Kilo's Gateway",

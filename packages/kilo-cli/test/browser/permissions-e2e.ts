@@ -57,7 +57,7 @@ const framed = `<!doctype html>
 
 /** The files a run wrote: the output directory plus the backend's own `.auto/` screenshots. */
 async function written(root: string) {
-  const output = path.join(root, "data", "kilo2", "browser", "output")
+  const output = path.join(root, "data", "kilo", "browser", "output")
   const auto = await fs.readdir(path.join(output, ".auto")).catch(() => [] as string[])
   const files = await fs.readdir(output).catch(() => [] as string[])
   return [...files, ...auto.map((file) => `.auto/${file}`)]
@@ -420,7 +420,7 @@ async function run(settings: { observation?: string; allowSensitive?: boolean; r
   await fs.mkdir(path.join(root, "data"), { recursive: true })
   record.steps = []
   recorded.length = 0
-  const output = path.join(root, "data", "kilo2", "browser", "output")
+  const output = path.join(root, "data", "kilo", "browser", "output")
   await fs.rm(output, { recursive: true, force: true }).catch(() => undefined)
   const child = Bun.spawn(
     [
@@ -478,7 +478,7 @@ async function main() {
     expect(pngs.length === 1, `expected exactly one persisted screenshot: ${files}`)
     expect(shot.includes(`[Screenshot]`), `the result does not link to the saved image:\n${shot.slice(0, 300)}`)
     if (pngs.length === 1) {
-      const image = Png.decode(await fs.readFile(path.join(result.root, "data", "kilo2", "browser", "output", pngs[0])))
+      const image = Png.decode(await fs.readFile(path.join(result.root, "data", "kilo", "browser", "output", pngs[0])))
       const at = (8 * image.width + 8) * image.channels
       const inside = [image.data[at], image.data[at + 1], image.data[at + 2]]
       output.inside = inside
@@ -505,7 +505,7 @@ async function main() {
     expect(files.length === 1, `the granted screenshot was not saved: ${files}`)
     if (files.length === 1) {
       const image = Png.decode(
-        await fs.readFile(path.join(result.root, "data", "kilo2", "browser", "output", files[0])),
+        await fs.readFile(path.join(result.root, "data", "kilo", "browser", "output", files[0])),
       )
       const at = (8 * image.width + 8) * image.channels
       const inside = [image.data[at], image.data[at + 1], image.data[at + 2]]

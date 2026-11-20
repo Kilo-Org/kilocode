@@ -1,4 +1,17 @@
 export const dict = {
+  // Session migration
+  "migration.title": "Kilo 세션을 v2로 마이그레이션할까요?",
+  "migration.summary":
+    "원본: {{source}}\n크기: {{totalBytes}}(데이터베이스: {{sourceBytes}}, WAL: {{walBytes}})\n여유 공간: {{availableBytes}}\n백업 예정 경로: {{backup}}",
+  "migration.warning":
+    "모든 Kilo v1 클라이언트와 미리 보기 버전의 클라이언트를 종료하고 마이그레이션이 끝날 때까지 실행하지 마세요. 마이그레이션 후에는 현재 JetBrains용 Kilo 플러그인에서 이 데이터베이스를 사용할 수 없습니다. v1 클라이언트로 다시 열지 마세요.",
+  "migration.accept": "백업 후 마이그레이션",
+  "migration.notNow": "나중에",
+  "migration.progress": "Kilo 세션 마이그레이션 중",
+  "migration.stopped": "Kilo가 시작되지 않았습니다. 창을 다시 로드한 후 다시 시도하세요.",
+  "migration.headless":
+    "마이그레이션을 진행하려면 확인이 필요합니다. {{preflight}} 명령으로 계획을 검토하세요. 동의하면 {{apply}} 명령을 실행하세요.",
+
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.byok.prefix": "더 많은 사용 통계를 보려면 ",
   "provider.connect.kiloGateway.byok.link": "Kilo's Gateway를 통해 BYOK",

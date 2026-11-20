@@ -14,7 +14,7 @@ Decision: for VS Code, a native rebuild with no v1 wire facade (2026-10-20). The
 
 | Topic | v1 server | v2 server |
 |---|---|---|
-| Start | `kilo serve --port 0`; stdout line `kilo server listening on http://127.0.0.1:<port>` | `kilo2 serve --port 0 --stdio`; stdout prints one JSON line `{"url":"http://127.0.0.1:<port>"}` (`packages/cli/src/server-process.ts`) |
+| Start | `kilo serve --port 0`; stdout line `kilo server listening on http://127.0.0.1:<port>` | `kilo serve --port 0 --stdio`; stdout prints one JSON line `{"url":"http://127.0.0.1:<port>"}` (`packages/cli/src/server-process.ts`) |
 | Process lifetime | The server watches `KILO_PARENT_PID` and exits when the parent dies | The server exits when its stdin closes (`waitForStdinClose`). The client keeps the stdin pipe open and closes it to stop the server. There is no parent PID watchdog |
 | Password | `KILO_SERVER_PASSWORD` | `KILO_SERVER_PASSWORD` still works: the host copies it to `OPENCODE_SERVER_PASSWORD` (`packages/kilo-cli/src/env.ts`). In `--stdio` mode the server removes it from the environment that tools inherit |
 | Auth | HTTP Basic, user `kilo` | HTTP Basic, user `opencode` (`packages/server/src/auth.ts`). Browser and WebSocket clients can send the same credential as `?auth_token=<base64 user:password>` |
@@ -230,7 +230,7 @@ The rows that need a Kilo RPC, here and in the raw routes, name the feature epic
 
 ## Daemon and the port range
 
-v1 had `kilo daemon start|status|stop|restart` over a detached `kilo serve` child, and it warned when `--port` was outside the recommended daemon discovery range. v2 has no v1 daemon port range and no daemon discovery. `kilo2 daemon status|stop|restart` is an alias of `kilo2 service`, which manages the native background service. A fixed port comes from `kilo2 service set port <port>`; the service records its endpoint, so no client scans a range. Decision: do not carry the v1 port warning.
+v1 had `kilo daemon start|status|stop|restart` over a detached `kilo serve` child, and it warned when `--port` was outside the recommended daemon discovery range. v2 has no v1 daemon port range and no daemon discovery. `kilo daemon status|stop|restart` is an alias of `kilo service`, which manages the native background service. A fixed port comes from `kilo service set port <port>`; the service records its endpoint, so no client scans a range. Decision: do not carry the v1 port warning.
 
 ## Mismatches and how a v2-native client handles them
 

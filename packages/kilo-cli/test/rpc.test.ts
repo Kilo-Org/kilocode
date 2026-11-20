@@ -219,7 +219,7 @@ const v1Login = (access: string) =>
 for (const hasPersonalAccount of [true, false])
   test(`a new store keeps the team of an imported Kilo v1 login (Personal: ${hasPersonalAccount})`, async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "kilo-v1-import-"))
-    // Once the release renames the kilo2 data directory to `kilo`, it is v1's own, and a new store imports v1's
+    // Once the release renames the kilo data directory to `kilo`, it is v1's own, and a new store imports v1's
     // auth.json through the upstream `import_legacy_credentials` migration.
     const data = path.join(root, "kilo")
     const auth = v1Login("fixture-token")
@@ -251,7 +251,7 @@ for (const hasPersonalAccount of [true, false])
             server: gateway.server,
           })
         },
-        { data, database: path.join(data, "kilo2-v2.db"), awaitActivation: false },
+        { data, database: path.join(data, "kilo-v2.db"), awaitActivation: false },
       )()
       expect(await Bun.file(path.join(data, "auth.json")).text()).toBe(auth)
     } finally {
@@ -259,7 +259,7 @@ for (const hasPersonalAccount of [true, false])
     }
   }, 30_000)
 
-test("a device sign-in starts on the team of the Kilo v1 login beside the kilo2 data directory", async () => {
+test("a device sign-in starts on the team of the Kilo v1 login beside the kilo data directory", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "kilo-v1-signin-"))
   const file = path.join(root, "kilo", "auth.json")
   const auth = v1Login("v1-token")
@@ -290,7 +290,7 @@ test("a device sign-in starts on the team of the Kilo v1 login beside the kilo2 
           ),
         ).toEqual({ authenticated: true, organizationID: "first", server: gateway.server })
       },
-      { data: path.join(root, "kilo2") },
+      { data: path.join(root, "kilo") },
     )()
     expect(await Bun.file(file).text()).toBe(auth)
   } finally {

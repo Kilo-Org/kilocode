@@ -73,8 +73,8 @@ test(
   async () => {
     const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-agent-rpc-")))
     await $`git init -q -b main ${directory}`.quiet()
-    const file = path.join(directory, ".kilo2", "agents", "demo.md")
-    const neighbour = path.join(directory, ".kilo2", "agents", "writer.md")
+    const file = path.join(directory, ".kilo", "agents", "demo.md")
+    const neighbour = path.join(directory, ".kilo", "agents", "writer.md")
     const global = path.join(directory, "global")
     await mkdir(path.dirname(file), { recursive: true })
     await writeFile(file, AGENT)
@@ -150,7 +150,7 @@ test(
     // resolves it to `/private/var/folders/...`. The location and config directories keep that unresolved form here,
     // so a containment check that resolves only one side drops every root.
     const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-agent-rpc-"))
-    const file = path.join(directory, ".kilo2", "agents", "demo.md")
+    const file = path.join(directory, ".kilo", "agents", "demo.md")
     await mkdir(path.dirname(file), { recursive: true })
     await writeFile(file, AGENT)
     await $`git init -q -b main ${directory}`.quiet()
@@ -219,7 +219,7 @@ test(
     await mkdir(path.dirname(victim), { recursive: true })
     await writeFile(victim, AGENT)
     await $`git init -q -b main ${directory}`.quiet()
-    await symlink(outside, path.join(directory, ".kilo2"))
+    await symlink(outside, path.join(directory, ".kilo"))
     try {
       await Effect.runPromise(
         Effect.scoped(
@@ -353,9 +353,9 @@ test(
     await mkdir(path.dirname(victim), { recursive: true })
     await writeFile(victim, AGENT)
     await $`git init -q -b main ${directory}`.quiet()
-    await mkdir(path.join(directory, ".kilo2"), { recursive: true })
+    await mkdir(path.join(directory, ".kilo"), { recursive: true })
     // The config plugin still discovers through the link; removal must not delete through it.
-    await symlink(path.join(outside, "agents"), path.join(directory, ".kilo2", "agents"))
+    await symlink(path.join(outside, "agents"), path.join(directory, ".kilo", "agents"))
     try {
       await withHost(directory, async (client, options) => {
         const rpc = client.rpc(KiloAgentRpc.Definition)
@@ -387,7 +387,7 @@ test(
     // the copied discovery rules to the real plugin instead of only to their own literals.
     const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-agent-rpc-")))
     await $`git init -q -b main ${directory}`.quiet()
-    const config = path.join(directory, ".kilo2")
+    const config = path.join(directory, ".kilo")
     const files = {
       flat: path.join(config, "agents", "flat.md"),
       single: path.join(config, "agent", "single.md"),
@@ -421,12 +421,12 @@ test(
 )
 
 test(
-  "an ancestor .kilo2 inside the worktree stays removable from a subdirectory workspace",
+  "an ancestor .kilo inside the worktree stays removable from a subdirectory workspace",
   async () => {
     // Config discovery walks up to the worktree root, so these agents are listed; the removal root must match it.
     const repository = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-agent-rpc-")))
     const directory = path.join(repository, "packages", "app")
-    const file = path.join(repository, ".kilo2", "agents", "demo.md")
+    const file = path.join(repository, ".kilo", "agents", "demo.md")
     await mkdir(path.dirname(file), { recursive: true })
     await mkdir(directory, { recursive: true })
     await writeFile(file, AGENT)
@@ -454,11 +454,11 @@ test(
   async () => {
     const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-agent-rpc-")))
     await $`git init -q -b main ${directory}`.quiet()
-    const config = path.join(directory, ".kilo2")
+    const config = path.join(directory, ".kilo")
     const file = path.join(config, "agents", "demo.md")
     await mkdir(path.dirname(file), { recursive: true })
     await writeFile(file, AGENT)
-    await writeFile(path.join(config, "kilo2.jsonc"), JSON.stringify({ agents: { demo: { description: "From config" } } }))
+    await writeFile(path.join(config, "kilo.jsonc"), JSON.stringify({ agents: { demo: { description: "From config" } } }))
     try {
       await withHost(directory, async (client, options) => {
         const rpc = client.rpc(KiloAgentRpc.Definition)

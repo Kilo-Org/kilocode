@@ -1160,14 +1160,14 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Browse Marketplace",
   "settings.agentBehaviour.mcpEmpty":
-    "No MCP servers configured. Add MCP servers in kilo2.json, or ask the agent to add them for you.",
+    "No MCP servers configured. Add MCP servers in kilo.json, or ask the agent to add them for you.",
   "settings.agentBehaviour.mcp.timeout.startup.title": "Startup timeout (ms)",
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Catalog timeout (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Execution timeout (ms)",
   "settings.agentBehaviour.workflows.description":
     "Workflows are custom commands defined in your config or command Markdown files. You can set a model and reasoning variant for each workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "No custom commands found. Add commands to kilo2.json or a .kilo2/command Markdown file.",
+    "No custom commands found. Add commands to kilo.json or a .kilo/command Markdown file.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Template",
   "settings.agentBehaviour.workflows.model": "model",

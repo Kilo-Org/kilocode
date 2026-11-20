@@ -1,6 +1,6 @@
-"""POSIX first-launch benchmark. Pass a built kilo2 binary; --submission uses a loopback model.
+"""POSIX first-launch benchmark. Pass a built kilo binary; --submission uses a loopback model.
 
-python3 packages/kilo-cli/script/prompt-startup.py packages/kilo-cli/dist/cli-darwin-arm64/bin/kilo2
+python3 packages/kilo-cli/script/prompt-startup.py packages/kilo-cli/dist/cli-darwin-arm64/bin/kilo
 Each trial uses an empty project and isolated profile. With --service running, the service is already healthy
 but has not opened the project. Timings include the dev isolation wrapper, not managed-service setup commands.
 """
@@ -177,7 +177,7 @@ def trial(binary, background, pi=False, model=None, service="private", timing=No
             os.close(master)
             if not pi and service != "private":
                 # Only stop the benchmark's own registered child. `service stop` also manages OS login units.
-                for file in (root / "profile/state/kilo2").glob("service*.json"):
+                for file in (root / "profile/state/kilo").glob("service*.json"):
                     registration = json.loads(file.read_text())
                     if registration.get("url") == f"http://127.0.0.1:{port}" and registration.get("pid", 0) > 1:
                         os.kill(registration["pid"], signal.SIGTERM)

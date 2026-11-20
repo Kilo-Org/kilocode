@@ -62,7 +62,7 @@ const fixture = Effect.fn(function* (spec: (repo: string) => string = (repo) => 
   const rpc = yield* Rpc.Service
   return {
     directory,
-    config: path.join(directory, "kilo2.json"),
+    config: path.join(directory, "kilo.json"),
     get spec() {
       return served
     },
@@ -169,7 +169,7 @@ describe("marketplace plugin kind", () => {
       const test = yield* fixture()
       yield* test.start()
       yield* test.rpc.call("kilocode.marketplace", "install", request)
-      const moved = path.join(test.directory, "kilo2.jsonc")
+      const moved = path.join(test.directory, "kilo.jsonc")
       yield* Effect.promise(async () => {
         await Bun.write(moved, JSON.stringify({ plugins: [test.spec] }))
         await fs.rm(test.config)
@@ -208,10 +208,10 @@ describe("marketplace plugin kind", () => {
       id: "kilo-plugin",
       scope: "project",
       installedAt: 0,
-      config: ".kilo2/kilo2.json",
+      config: ".kilo/kilo.json",
       resources: [resource],
     })
-    expect(record).toMatchObject({ kind: "plugin", config: ".kilo2/kilo2.json", resources: [resource] })
+    expect(record).toMatchObject({ kind: "plugin", config: ".kilo/kilo.json", resources: [resource] })
     expect(record.server).toBeUndefined()
   })
 })

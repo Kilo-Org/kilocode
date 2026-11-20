@@ -172,7 +172,7 @@ test("global --server and --standalone flags parse in any position for server-co
   await expect(runArgs(["service", "--server", url, "start"])).rejects.toThrow()
 })
 
-// kilocode_change - TODO: unskip once `mcp add` takes its file names from ConfigDiscovery.LayoutService; the Kilo patch in handlers/mcp/add.ts writes kilo2.json
+// kilocode_change - TODO: unskip once `mcp add` takes its file names from ConfigDiscovery.LayoutService; the Kilo patch in handlers/mcp/add.ts writes kilo.json
 test.skip("local config commands do not start or require a server", async () => { // kilocode_change
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-local-config-cmd-"))
   try {

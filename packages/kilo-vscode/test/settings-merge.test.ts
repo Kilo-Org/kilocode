@@ -4,10 +4,10 @@ import { mergeConfigDocuments } from "../webview-ui/src/v2/settings-merge"
 describe("mergeConfigDocuments", () => {
   test("takes the last document that defines a key and ignores directories", () => {
     const entries = [
-      { type: "directory", path: "/etc/kilo2" },
+      { type: "directory", path: "/etc/kilo" },
       { type: "document", info: { theme: "dark", username: "a" } },
       { type: "document", info: { theme: "light" } },
-      { type: "directory", path: "/project/.kilo2" },
+      { type: "directory", path: "/project/.kilo" },
     ]
     expect(mergeConfigDocuments(entries)).toEqual({ theme: "light", username: "a" })
   })

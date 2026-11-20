@@ -52,7 +52,7 @@ try {
   const unsupported = binary ? "not managed by a supported global package manager" : "This is a source build"
   for (const check of [
     { args: ["--help"], code: 0, text: "Kilo command line interface" },
-    { args: ["auth", "logout", "--help"], code: 0, text: "kilo2 auth logout" },
+    { args: ["auth", "logout", "--help"], code: 0, text: "kilo auth logout" },
     { args: ["upgrade", "99.0.0", "--method", "npm"], code: 1, text: unsupported },
     { args: ["update", "99.0.0", "--method", "curl"], code: 1, text: unsupported },
   ]) {

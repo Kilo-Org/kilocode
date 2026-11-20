@@ -206,7 +206,7 @@ describe("skill installation safety", () => {
     try {
       const skills = path.join(directory, "skills")
       const agents = path.join(directory, "agents")
-      const config = path.join(directory, "kilo2.json")
+      const config = path.join(directory, "kilo.json")
       const archives = new Map<string, Uint8Array<ArrayBuffer>>(
         await Promise.all(
           ["guide", "invalid"].map(
@@ -247,7 +247,7 @@ describe("skill installation safety", () => {
           await tarball({ "SKILL.md": `# ${id} v2`, "ref/nested/new.txt": `${id} new resource` }),
         )
       }
-      expect((await fs.readdir(directory)).toSorted()).toEqual(["kilo2.json", "skills"])
+      expect((await fs.readdir(directory)).toSorted()).toEqual(["kilo.json", "skills"])
       const second = await Installer.install({
         entry,
         skills,
@@ -262,7 +262,7 @@ describe("skill installation safety", () => {
         expect(await fs.readFile(path.join(skills, id, "ref/nested/new.txt"), "utf8")).toBe(`${id} new resource`)
         expect(await fs.readdir(path.join(skills, id, "ref/nested"))).toEqual(["new.txt"])
       }
-      expect((await fs.readdir(directory)).toSorted()).toEqual([".marketplace-trash", "kilo2.json", "skills"])
+      expect((await fs.readdir(directory)).toSorted()).toEqual([".marketplace-trash", "kilo.json", "skills"])
       expect(await fs.readdir(path.join(directory, ".marketplace-trash"))).toEqual([])
       await Installer.uninstall({ id: "demo", ...second })
       expect(await fs.readdir(skills)).toEqual([])

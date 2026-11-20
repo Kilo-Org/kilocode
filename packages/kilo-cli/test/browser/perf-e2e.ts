@@ -3,13 +3,13 @@
 // same machine, the same fixture pages and a scripted OpenAI-compatible model. One command runs every area and writes
 // a JSON and a markdown report. Not a `bun test` file: it needs a display (xvfb), a built CLI and the built extension.
 //
-//   bun test/browser/perf-e2e.ts <kilo2> [--reps 20] [--areas tools,cold,large,profile,tabs,concurrent,memory,reconnect]
+//   bun test/browser/perf-e2e.ts <kilo> [--reps 20] [--areas tools,cold,large,profile,tabs,concurrent,memory,reconnect]
 //                                        [--memory-calls 1000] [--cold-runs 5] [--out <dir>] [--evidence <dir>]
 //
 //   E2E_EXTENSION_DIR   the built unpacked Chrome MV3 extension (required for the extension backend)
 //   E2E_CHROMIUM        the Chromium executable for the extension backend (default: the revision the bundled
 //                       playwright-core drives, chromium-1244 for 1.64-alpha, found by the harness resolver; the
-//                       Playwright backend installs that same revision through `kilo2 browser install-chromium`, so
+//                       Playwright backend installs that same revision through `kilo browser install-chromium`, so
 //                       both backends run one build)
 //   E2E_CHROMIUM_DATA   the XDG data home the Playwright backend's Chromium is installed into, reused across runs
 //                       (default: <tmpdir>/kilo-perf-e2e-chromium); the run's own scratch root is removed at the end
@@ -28,7 +28,7 @@ import { chromiumExecutable } from "./extension-harness"
 
 const binaryInput = process.argv[2]
 if (!binaryInput || binaryInput.startsWith("--"))
-  throw new Error("usage: bun perf-e2e.ts <kilo2> [--reps 20] [--areas a,b] [--out dir]")
+  throw new Error("usage: bun perf-e2e.ts <kilo> [--reps 20] [--areas a,b] [--out dir]")
 const binary = path.resolve(binaryInput)
 const flag = (name: string, fallback: string) => {
   const at = process.argv.indexOf(`--${name}`)
@@ -406,11 +406,11 @@ async function spawnText(argv: string[], env: Record<string, string>, cwd: strin
   return { out, err, code }
 }
 
-// The Playwright backend's Chromium, installed once into `<E2E_CHROMIUM_DATA>/kilo2/browser/browsers` (an install that
+// The Playwright backend's Chromium, installed once into `<E2E_CHROMIUM_DATA>/kilo/browser/browsers` (an install that
 // is already there is kept); every run links that directory into its own data home. The extension runs in the same
 // build unless E2E_CHROMIUM says otherwise.
 const chromiumData = path.resolve(process.env.E2E_CHROMIUM_DATA ?? path.join(os.tmpdir(), "kilo-perf-e2e-chromium"))
-const browsersDir = path.join(chromiumData, "kilo2", "browser", "browsers")
+const browsersDir = path.join(chromiumData, "kilo", "browser", "browsers")
 const install = await spawnText(
   [binary, "browser", "install-chromium"],
   { ...baseEnv("playwright").env, XDG_DATA_HOME: chromiumData },
@@ -710,7 +710,7 @@ function extensionMemory() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// One `kilo2 run` with a plan.
+// One `kilo run` with a plan.
 
 let runSeq = 0
 async function runCli(
@@ -723,8 +723,8 @@ async function runCli(
   runs.set(id, state)
   const { root, env } = baseEnv(backend, ext.id)
   const dir = path.join(root, "runs", id)
-  await fs.mkdir(path.join(dir, "data", "kilo2", "browser"), { recursive: true })
-  await fs.symlink(browsersDir, path.join(dir, "data", "kilo2", "browser", "browsers"))
+  await fs.mkdir(path.join(dir, "data", "kilo", "browser"), { recursive: true })
+  await fs.symlink(browsersDir, path.join(dir, "data", "kilo", "browser", "browsers"))
   const config = {
     model: "local/echo",
     providers: {
@@ -1575,7 +1575,7 @@ if (areaEntry("reconnect")) {
     )
     for (const text of s.failureTexts ?? []) md.push(`- failure text: \`${text.replaceAll("`", "'")}\``)
     md.push(
-      `- a new \`kilo2 run\` afterwards: ${(s.freshRun?.texts ?? []).map((text: string) => `\`${text.replaceAll("`", "'")}\``).join("; ")}`,
+      `- a new \`kilo run\` afterwards: ${(s.freshRun?.texts ?? []).map((text: string) => `\`${text.replaceAll("`", "'")}\``).join("; ")}`,
     )
   }
   md.push("")
@@ -1702,7 +1702,7 @@ if (areaEntry("tabs")) {
 }
 if (areaEntry("concurrent")) {
   const entry = areaEntry("concurrent")
-  md.push("## 7. Three concurrent `kilo2 run` sessions", "", loadLine(entry), "")
+  md.push("## 7. Three concurrent `kilo run` sessions", "", loadLine(entry), "")
   for (const backend of ["extension", "playwright"] as const) {
     const b = entry[backend]
     if (!b) continue

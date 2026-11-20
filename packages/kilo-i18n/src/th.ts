@@ -1,4 +1,16 @@
 export const dict = {
+  // Session migration
+  "migration.title": "ต้องการย้ายเซสชัน Kilo ไปยัง v2 หรือไม่",
+  "migration.summary":
+    "ต้นทาง: {{source}}\nขนาด: {{totalBytes}} (ฐานข้อมูล: {{sourceBytes}}; WAL: {{walBytes}})\nพื้นที่ว่าง: {{availableBytes}}\nตำแหน่งสำรองข้อมูลที่เสนอ: {{backup}}",
+  "migration.warning":
+    "ปิดไคลเอนต์ Kilo v1 และไคลเอนต์รุ่นพรีวิวทั้งหมด อย่าเปิดอีกจนกว่าจะย้ายข้อมูลเสร็จ หลังจากนั้นปลั๊กอิน Kilo สำหรับ JetBrains รุ่นปัจจุบันจะใช้ฐานข้อมูลนี้ไม่ได้ อย่าเปิดฐานข้อมูลนี้อีกด้วยไคลเอนต์ v1",
+  "migration.accept": "สำรองและย้ายข้อมูล",
+  "migration.notNow": "ไม่ใช่ตอนนี้",
+  "migration.progress": "กำลังย้ายเซสชัน Kilo",
+  "migration.stopped": "Kilo ไม่ได้เริ่มทำงาน โหลดหน้าต่างใหม่เพื่อลองอีกครั้ง",
+  "migration.headless": "ต้องยืนยันก่อนย้ายข้อมูล ตรวจสอบแผนด้วยคำสั่ง {{preflight}} หากยอมรับ ให้เรียกใช้ {{apply}}",
+
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.byok.prefix": "สำหรับสถิติการใช้งานเพิ่มเติม โปรดใช้ ",
   "provider.connect.kiloGateway.byok.link": "BYOK ผ่าน Kilo's Gateway",

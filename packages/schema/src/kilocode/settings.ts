@@ -4,7 +4,7 @@ import { Schema } from "effect"
 import { Rpc } from "../rpc.js"
 import { optional } from "../schema.js"
 
-// The `kilocode.settings` RPC contract: write `kilo2.json` at the global or project scope, with the revision conflict
+// The `kilocode.settings` RPC contract: write `kilo.json` at the global or project scope, with the revision conflict
 // guard the v1 `PATCH /config/overlay` carried. The settings plugin in packages/kilo-plugin registers the handler and
 // writes through `KiloConfigWriter`; clients import this contract from `@opencode/schema/kilocode/settings`.
 //

@@ -8,7 +8,7 @@ import path from "node:path"
 
 const binaryInput = process.argv[2]
 const cycles = Number(process.argv[3] ?? "400")
-if (!binaryInput) throw new Error("usage: bun leak-e2e.ts <kilo2> [cycles]")
+if (!binaryInput) throw new Error("usage: bun leak-e2e.ts <kilo> [cycles]")
 const binary = path.resolve(binaryInput)
 
 const pluginDirectory = path.resolve(import.meta.dirname, "../../../kilo-plugin")
@@ -316,7 +316,7 @@ const env = {
   HOME: root,
   KILO_API_KEY: "",
   KILO_AUTH_CONTENT: "",
-  KILO_BROWSER_DATA_DIR: path.join(root, "data", "kilo2", "browser"),
+  KILO_BROWSER_DATA_DIR: path.join(root, "data", "kilo", "browser"),
   KILO_BROWSER_EXTRA_EXTENSION_IDS: extensionId,
   KILO_BROWSER_RUN_DIR: path.join(root, "run", "browser"),
   KILO_CONFIG_CONTENT: JSON.stringify(config),

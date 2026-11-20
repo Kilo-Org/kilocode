@@ -2,15 +2,15 @@ import { describe, expect, test } from "bun:test"
 import { chmod, lstat, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { assertInstallOwned, installFiles, kilo2Version, withInstallLock } from "../install-alpha"
+import { assertInstallOwned, installFiles, kiloVersion, withInstallLock } from "../install-alpha"
 
 type Scratch = { root: string; binDir: string; data: string; dest: string }
 
 async function scratch(run: (paths: Scratch) => Promise<void>) {
   const root = await mkdtemp(path.join(os.tmpdir(), "kilo-alpha-test-"))
   const binDir = path.join(root, "bin")
-  const data = path.join(binDir, ".kilo2-alpha")
-  const dest = path.join(binDir, "kilo2")
+  const data = path.join(binDir, ".kilo-alpha")
+  const dest = path.join(binDir, "kilo")
   await mkdir(binDir, { recursive: true })
   try {
     await run({ root, binDir, data, dest })
@@ -21,7 +21,7 @@ async function scratch(run: (paths: Scratch) => Promise<void>) {
 
 async function release(data: string, name: string) {
   const dir = path.join(data, name)
-  const binary = path.join(dir, "kilo2")
+  const binary = path.join(dir, "kilo")
   await mkdir(dir, { recursive: true })
   await writeFile(binary, "")
   await chmod(binary, 0o755)
@@ -30,9 +30,9 @@ async function release(data: string, name: string) {
 
 async function staged(root: string, version: string) {
   const bin = path.join(root, "staged")
-  const executable = path.join(bin, "kilo2")
+  const executable = path.join(bin, "kilo")
   await mkdir(bin, { recursive: true })
-  await writeFile(executable, `#!/bin/sh\necho "kilo2 v${version}"\n`)
+  await writeFile(executable, `#!/bin/sh\necho "kilo v${version}"\n`)
   await chmod(executable, 0o755)
   return bin
 }
@@ -53,7 +53,7 @@ describe("install:alpha ownership", () => {
   test("accepts a relative symlink into its own release", () =>
     scratch(async ({ data, dest }) => {
       const { dir } = await release(data, "release-abc")
-      await symlink(path.join(".kilo2-alpha", "release-abc", "kilo2"), dest)
+      await symlink(path.join(".kilo-alpha", "release-abc", "kilo"), dest)
       expect(await assertInstallOwned(dest, data)).toBe(dir)
     }))
 
@@ -75,26 +75,26 @@ describe("install:alpha ownership", () => {
 
   test("refuses a symlink to an npm install", () =>
     scratch(async ({ root, data, dest }) => {
-      const npm = path.join(root, "lib", "node_modules", "@kilocode", "cli", "kilo2")
+      const npm = path.join(root, "lib", "node_modules", "@kilocode", "cli", "kilo")
       await mkdir(path.dirname(npm), { recursive: true })
       await writeFile(npm, "")
       await symlink(npm, dest)
-      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/outside .*\.kilo2-alpha/)
+      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/outside .*\.kilo-alpha/)
     }))
 
   test("refuses a symlink owned by another alpha name", () =>
     scratch(async ({ root, data, dest }) => {
-      const { binary } = await release(path.join(root, "bin", ".kilo-alpha"), "release-abc")
+      const { binary } = await release(path.join(root, "bin", ".other-alpha"), "release-abc")
       await symlink(binary, dest)
-      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/outside .*\.kilo2-alpha/)
+      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/outside .*\.kilo-alpha/)
     }))
 
   test("refuses a symlink inside its directory but outside a release", () =>
     scratch(async ({ data, dest }) => {
       const current = path.join(data, "current")
       await mkdir(current, { recursive: true })
-      await symlink(path.join(current, "kilo2"), dest)
-      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/not a direct release-\*\/kilo2 entry/)
+      await symlink(path.join(current, "kilo"), dest)
+      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/not a direct release-\*\/kilo entry/)
     }))
 
   test("refuses a sidecar instead of the executable", () =>
@@ -104,24 +104,24 @@ describe("install:alpha ownership", () => {
       await writeFile(sidecar, "")
       await chmod(sidecar, 0o755)
       await symlink(sidecar, dest)
-      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/not a direct release-\*\/kilo2 entry/)
+      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/not a direct release-\*\/kilo entry/)
     }))
 
   test("refuses a nested file instead of the direct executable", () =>
     scratch(async ({ data, dest }) => {
-      const nested = path.join(data, "release-abc", "bin", "kilo2")
+      const nested = path.join(data, "release-abc", "bin", "kilo")
       await mkdir(path.dirname(nested), { recursive: true })
       await writeFile(nested, "")
       await chmod(nested, 0o755)
       await symlink(nested, dest)
-      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/not a direct release-\*\/kilo2 entry/)
+      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/not a direct release-\*\/kilo entry/)
     }))
 
   test("refuses the release directory itself", () =>
     scratch(async ({ data, dest }) => {
       const { dir } = await release(data, "release-abc")
       await symlink(dir, dest)
-      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/not a direct release-\*\/kilo2 entry/)
+      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/not a direct release-\*\/kilo entry/)
     }))
 
   test("refuses a missing executable", () =>
@@ -135,7 +135,7 @@ describe("install:alpha ownership", () => {
   test("refuses an executable that is a symlink", () =>
     scratch(async ({ root, data, dest }) => {
       const { binary } = await release(data, "release-abc")
-      const outside = path.join(root, "outside-kilo2")
+      const outside = path.join(root, "outside-kilo")
       await writeFile(outside, "")
       await chmod(outside, 0o755)
       await rm(binary)
@@ -164,7 +164,7 @@ describe("install:alpha ownership", () => {
   test("refuses a symlink whose release directory is gone", () =>
     scratch(async ({ data, dest }) => {
       await mkdir(data, { recursive: true })
-      await symlink(path.join(data, "release-gone", "kilo2"), dest)
+      await symlink(path.join(data, "release-gone", "kilo"), dest)
       await expect(assertInstallOwned(dest, data)).rejects.toThrow(
         /release directory .* is missing or not a real directory/,
       )
@@ -173,8 +173,8 @@ describe("install:alpha ownership", () => {
   test("refuses a symlink that leaves the alpha directory through a release name", () =>
     scratch(async ({ data, dest }) => {
       await mkdir(path.join(data, "release-abc"), { recursive: true })
-      await symlink(path.join(data, "release-abc", "..", "..", "elsewhere", "kilo2"), dest)
-      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/outside .*\.kilo2-alpha/)
+      await symlink(path.join(data, "release-abc", "..", "..", "elsewhere", "kilo"), dest)
+      await expect(assertInstallOwned(dest, data)).rejects.toThrow(/outside .*\.kilo-alpha/)
     }))
 
   test("refuses a release directory that is a symlink", () =>
@@ -183,7 +183,7 @@ describe("install:alpha ownership", () => {
       await mkdir(outside, { recursive: true })
       await mkdir(data, { recursive: true })
       await symlink(outside, path.join(data, "release-link"))
-      await symlink(path.join(data, "release-link", "kilo2"), dest)
+      await symlink(path.join(data, "release-link", "kilo"), dest)
       await expect(assertInstallOwned(dest, data)).rejects.toThrow(
         /release directory .* is missing or not a real directory/,
       )
@@ -207,7 +207,7 @@ describe("install:alpha activation", () => {
       await writeFile(path.join(locked, "file"), "")
       await chmod(locked, 0o500)
       try {
-        const installed = await installFiles(source, binDir, "kilo2")
+        const installed = await installFiles(source, binDir, "kilo")
         expect(installed.version).toBe("0.0.0-v2-4242")
         const active = await realpath(dest)
         expect((await lstat(active)).isFile()).toBe(true)
@@ -239,7 +239,7 @@ describe("install:alpha concurrency", () => {
   test("the lock is scoped to one install directory", () =>
     scratch(async ({ root, data }) => {
       await mkdir(data, { recursive: true })
-      const other = path.join(root, "other", ".kilo2-alpha")
+      const other = path.join(root, "other", ".kilo-alpha")
       await mkdir(other, { recursive: true })
       const entered = Promise.withResolvers<undefined>()
       const gate = Promise.withResolvers<undefined>()
@@ -267,9 +267,9 @@ describe("install:alpha concurrency", () => {
 
 describe("install:alpha binary identity", () => {
   test("accepts the v2 preview version line", () => {
-    expect(kilo2Version("kilo2 v0.0.0-v2-226\n")).toBe("0.0.0-v2-226")
-    expect(kilo2Version("kilo2 v0.0.0-v2-226.2")).toBe("0.0.0-v2-226.2")
-    expect(kilo2Version("kilo2 v0.0.0-v2-202611191230")).toBe("0.0.0-v2-202611191230")
+    expect(kiloVersion("kilo v0.0.0-v2-226\n")).toBe("0.0.0-v2-226")
+    expect(kiloVersion("kilo v0.0.0-v2-226.2")).toBe("0.0.0-v2-226.2")
+    expect(kiloVersion("kilo v0.0.0-v2-202611191230")).toBe("0.0.0-v2-202611191230")
   })
 
   test("rejects another binary or channel", () => {
@@ -277,11 +277,11 @@ describe("install:alpha binary identity", () => {
       "",
       "kilo v7.8.27",
       "opencode v2.3.0",
-      "kilo2 v2.2.7",
-      "kilo2 v0.0.0-v1-226",
-      "kilo2 v0.0.0-v2-next",
-      "kilo2 v0.0.0-v2-226\nextra",
+      "kilo v2.2.7",
+      "kilo v0.0.0-v1-226",
+      "kilo v0.0.0-v2-next",
+      "kilo v0.0.0-v2-226\nextra",
     ])
-      expect(() => kilo2Version(output)).toThrow(/not a Kilo v2 build/)
+      expect(() => kiloVersion(output)).toThrow(/not a Kilo v2 build/)
   })
 })

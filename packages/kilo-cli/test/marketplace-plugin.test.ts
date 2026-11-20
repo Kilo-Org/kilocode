@@ -100,7 +100,7 @@ test("installs and removes a plugin from the catalog through the RPC client", as
             const listed = await rpc.list({ kind: "plugin" }, options)
             expect(listed.items).toMatchObject([{ id: "marketplace-plugin", plugin: { spec } }])
             const installed = await rpc.install(request, options)
-            const config = path.join(directory, "kilo2.json")
+            const config = path.join(directory, "kilo.json")
             expect(installed).toMatchObject({
               config,
               status: "ready",

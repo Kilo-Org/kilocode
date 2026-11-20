@@ -4,7 +4,7 @@ import { AgentRemove } from "../src/agent/remove"
 
 // The path rules that decide what a `kilocode.agent` removal may delete, with no host in the way.
 const project = path.resolve("/work/app")
-const root = path.join(project, ".kilo2")
+const root = path.join(project, ".kilo")
 const global = path.resolve("/home/user/.config/kilo")
 
 describe("agent files", () => {
@@ -39,13 +39,13 @@ describe("roots", () => {
   })
 
   test("a directory that resolves outside the project and the global config is not a root", () => {
-    // A project `.kilo2` symlinked to the filesystem root, and one pointing at another user's home.
+    // A project `.kilo` symlinked to the filesystem root, and one pointing at another user's home.
     expect(AgentRemove.roots([candidate(root, "/")], project, global)).toEqual([])
     expect(AgentRemove.roots([candidate(root, "/tmp/elsewhere")], project, global)).toEqual([])
   })
 
   test("a symlink that still resolves inside the project stays a project root", () => {
-    const link = path.join(project, ".kilo2")
+    const link = path.join(project, ".kilo")
     const target = path.join(project, "config")
     expect(AgentRemove.roots([candidate(link, target)], project, global)).toEqual([
       { root: link, reference: project, scope: "project" },
@@ -79,7 +79,7 @@ describe("agents", () => {
   })
 
   test("a symlinked directory below the root cannot point outside the project", () => {
-    // `.kilo2/agents/shared` is a symlink: the scanned path looks contained, the entry it resolves to does not.
+    // `.kilo/agents/shared` is a symlink: the scanned path looks contained, the entry it resolves to does not.
     const file = path.join(root, "agents", "shared", "outside.md")
     expect(AgentRemove.agents([{ file, real: "/tmp/elsewhere/agents/outside.md" }], known)).toEqual([])
   })
@@ -95,8 +95,8 @@ describe("agents", () => {
 
 describe("compare", () => {
   test("orders the removable list by name, not by scan order", () => {
-    const demo = { name: "demo", path: "/project/.kilo2/agents/demo.md", scope: "project" as const }
-    const writer = { name: "writer", path: "/project/.kilo2/agents/writer.md", scope: "project" as const }
+    const demo = { name: "demo", path: "/project/.kilo/agents/demo.md", scope: "project" as const }
+    const writer = { name: "writer", path: "/project/.kilo/agents/writer.md", scope: "project" as const }
     expect([writer, demo].sort(AgentRemove.compare)).toEqual([demo, writer])
   })
 })

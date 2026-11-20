@@ -91,7 +91,7 @@ describe("Kilo config discovery", () => {
     expect(system("win32", { ProgramData: "D:\\ProgramData" })).toBe(AbsolutePath.make("D:\\ProgramData\\kilo"))
     expect(system("win32", { ProgramData: "D:/ProgramData/" })).toBe(AbsolutePath.make("D:\\ProgramData\\kilo"))
     expect(system("win32", {})).toBe(AbsolutePath.make("C:\\ProgramData\\kilo"))
-    // The managed directory keeps the stable product names, not the internal `kilo2.*` names.
+    // The managed directory uses the same stable product names as the client.
     expect(KiloConfigDiscovery.layout.systemFiles).toEqual(["kilo.jsonc", "kilo.json"])
     expect(ConfigDiscovery.systemDirectory("darwin", {})).toBe(
       AbsolutePath.make("/Library/Application Support/opencode"),
@@ -119,9 +119,9 @@ describe("Kilo config discovery", () => {
       const global = path.join(tmp.path, "global")
       const managed = path.join(tmp.path, "managed")
       const explicit = path.join(tmp.path, "explicit.json")
-      yield* write(path.join(global, "kilo2.jsonc"), { hide_prompt_training_models: false, shell: "user" })
+      yield* write(path.join(global, "kilo.jsonc"), { hide_prompt_training_models: false, shell: "user" })
       yield* write(explicit, { hide_prompt_training_models: false, shell: "explicit" })
-      yield* write(path.join(project, ".kilo2", "kilo2.json"), { hide_prompt_training_models: false, shell: "project" })
+      yield* write(path.join(project, ".kilo", "kilo.json"), { hide_prompt_training_models: false, shell: "project" })
       yield* write(path.join(managed, "kilo.jsonc"), { hide_prompt_training_models: false, shell: "managed-jsonc" })
       yield* write(path.join(managed, "kilo.json"), {
         hide_prompt_training_models: true,
@@ -129,7 +129,7 @@ describe("Kilo config discovery", () => {
         policies: [{ effect: "deny", action: "tool.use", resource: "shell:*" }],
       })
       // The managed directory keeps the stable product names, so an internal or OpenCode-named file is ignored.
-      yield* write(path.join(managed, "kilo2.json"), { hide_prompt_training_models: false, shell: "internal-kilo2" })
+      yield* write(path.join(managed, "other.json"), { hide_prompt_training_models: false, shell: "unrelated" })
       yield* write(path.join(managed, "opencode.json"), { hide_prompt_training_models: false, shell: "opencode" })
 
       yield* Effect.gen(function* () {
@@ -171,11 +171,11 @@ describe("Kilo config discovery", () => {
       const global = path.join(tmp.path, "global")
       const managed = path.join(tmp.path, "managed")
       // The managed deny for `shell:*` outranks the nearest project allow for the same resource.
-      yield* write(path.join(global, "kilo2.json"), {
+      yield* write(path.join(global, "kilo.json"), {
         shell: "user",
         policies: [{ effect: "allow", action: "tool.use", resource: "shell:*" }],
       })
-      yield* write(path.join(project, "kilo2.json"), {
+      yield* write(path.join(project, "kilo.json"), {
         shell: "project",
         policies: [{ effect: "allow", action: "tool.use", resource: "shell:*" }],
       })
@@ -205,7 +205,7 @@ describe("Kilo config discovery", () => {
         const global = path.join(tmp.path, "global")
         const managed = path.join(tmp.path, "managed")
         const file = path.join(managed, "kilo.json")
-        yield* write(path.join(project, "kilo2.json"), { hide_prompt_training_models: false })
+        yield* write(path.join(project, "kilo.json"), { hide_prompt_training_models: false })
         yield* write(file, {
           hide_prompt_training_models: "sensitive-invalid-value",
           policies: [{ effect: "deny", action: "tool.use", resource: "shell:*" }],
@@ -234,7 +234,7 @@ describe("Kilo config discovery", () => {
     },
   )
 
-  it.live("privacy_mode in the global or the project kilo2.json turns privacy mode on, and an invalid value is logged", () => {
+  it.live("privacy_mode in the global or the project kilo.json turns privacy mode on, and an invalid value is logged", () => {
     const messages: unknown[] = []
     const logger = Logger.map(Logger.formatStructured, (entry) => messages.push(entry.message))
     return Effect.gen(function* () {
@@ -246,18 +246,18 @@ describe("Kilo config discovery", () => {
         return KiloConfigPolicy.privacyMode(yield* config.entries())
       }).pipe(Effect.provide(configLayer({ directory: project, global })))
 
-      yield* write(path.join(global, "kilo2.json"), { privacy_mode: true })
-      yield* write(path.join(project, "kilo2.json"), { privacy_mode: false })
+      yield* write(path.join(global, "kilo.json"), { privacy_mode: true })
+      yield* write(path.join(project, "kilo.json"), { privacy_mode: false })
       expect(yield* read).toBe(true)
 
-      yield* write(path.join(global, "kilo2.json"), {})
-      yield* write(path.join(project, "kilo2.json"), { privacy_mode: true })
+      yield* write(path.join(global, "kilo.json"), {})
+      yield* write(path.join(project, "kilo.json"), { privacy_mode: true })
       expect(yield* read).toBe(true)
 
-      yield* write(path.join(project, "kilo2.json"), {})
+      yield* write(path.join(project, "kilo.json"), {})
       expect(yield* read).toBe(false)
 
-      const file = path.join(project, "kilo2.json")
+      const file = path.join(project, "kilo.json")
       yield* write(file, { privacy_mode: "yes", shell: "project" })
       expect(yield* read).toBe(false)
       expect(messages).toContainEqual([
@@ -280,7 +280,7 @@ describe("Kilo config discovery", () => {
       const global = path.join(tmp.path, "global")
       const managed = path.join(tmp.path, "managed")
       const plist = path.join(tmp.path, "managed.plist")
-      yield* write(path.join(project, "kilo2.json"), { hide_prompt_training_models: false })
+      yield* write(path.join(project, "kilo.json"), { hide_prompt_training_models: false })
       yield* write(path.join(managed, "kilo.json"), { hide_prompt_training_models: false, shell: "managed" })
       yield* Effect.promise(() =>
         fs.writeFile(
@@ -344,15 +344,15 @@ describe("Kilo config discovery", () => {
     }),
   )
 
-  it.live("reads kilo2.json and kilo2.jsonc at each level, farthest first and .jsonc after .json", () =>
+  it.live("reads kilo.json and kilo.jsonc at each level, farthest first and .jsonc after .json", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "repo")
       const nested = path.join(project, "app")
       const global = path.join(tmp.path, "global")
-      yield* write(path.join(project, "kilo2.jsonc"), { shell: "root-jsonc" })
-      yield* write(path.join(nested, "kilo2.jsonc"), { shell: "nested-jsonc" })
-      yield* write(path.join(nested, "kilo2.json"), { shell: "nested-json" })
+      yield* write(path.join(project, "kilo.jsonc"), { shell: "root-jsonc" })
+      yield* write(path.join(nested, "kilo.jsonc"), { shell: "nested-jsonc" })
+      yield* write(path.join(nested, "kilo.json"), { shell: "nested-json" })
 
       expect(
         yield* shells.pipe(Effect.provide(configLayer({ directory: nested, project, global, git: true }))),
@@ -360,60 +360,54 @@ describe("Kilo config discovery", () => {
     }),
   )
 
-  it.live("ignores v1 Kilo and OpenCode config next to internal v2 files", () =>
+  it.live("ignores unrelated config files next to stable Kilo files", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "repo")
       const global = path.join(tmp.path, "global")
-      yield* write(path.join(project, "kilo2.json"), { shell: "kilo2" })
-      yield* write(path.join(project, "kilo.json"), { shell: "v1-json" })
-      yield* write(path.join(project, "kilo.jsonc"), { shell: "v1-jsonc" })
-      yield* write(path.join(project, ".kilo", "kilo.json"), { shell: "v1-dir" })
-      yield* write(path.join(project, ".kilo", "kilo2.json"), { shell: "v1-dir-v2-file" })
+      yield* write(path.join(project, "kilo.json"), { shell: "kilo" })
       yield* write(path.join(project, "opencode.json"), { shell: "opencode-json" })
       yield* write(path.join(project, "opencode.jsonc"), { shell: "opencode-jsonc" })
       yield* write(path.join(project, ".opencode", "opencode.json"), { shell: "dot-opencode" })
       yield* write(path.join(project, ".kilocode", "kilo.json"), { shell: "dot-kilocode" })
       yield* write(path.join(global, "opencode.jsonc"), { shell: "global-opencode" })
-      yield* write(path.join(global, "kilo.json"), { shell: "global-v1-json" })
-      yield* write(path.join(global, "kilo.jsonc"), { shell: "global-v1-jsonc" })
 
       const layer = configLayer({ directory: project, global, git: true })
-      expect(yield* shells.pipe(Effect.provide(layer))).toEqual(["kilo2"])
+      expect(yield* shells.pipe(Effect.provide(layer))).toEqual(["kilo"])
       expect(yield* directories(tmp.path).pipe(Effect.provide(layer))).toEqual(["global"])
     }),
   )
 
-  it.live("reads the global directory and .kilo2 in their Kilo v1 file orders", () =>
+  it.live("reads the global directory and .kilo in their Kilo v1 file orders", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "repo")
       const global = path.join(tmp.path, "global")
-      for (const name of ["kilo2.jsonc", "kilo2.json"]) {
+      for (const name of ["kilo.jsonc", "kilo.json"]) {
         yield* write(path.join(global, name), { shell: `global-${name}` })
-        yield* write(path.join(project, ".kilo2", name), { shell: `dir-${name}` })
+        yield* write(path.join(project, ".kilo", name), { shell: `dir-${name}` })
       }
 
       const layer = configLayer({ directory: project, global, git: true })
-      // The global directory and project roots let .jsonc win; .kilo2 lets .json win (v1 file order).
+      // The global directory and project roots let .jsonc win; .kilo lets .json win (v1 file order).
       expect(yield* shells.pipe(Effect.provide(layer))).toEqual([
-        "global-kilo2.json",
-        "global-kilo2.jsonc",
-        "dir-kilo2.jsonc",
-        "dir-kilo2.json",
+        "global-kilo.json",
+        "global-kilo.jsonc",
+        "dir-kilo.jsonc",
+        "dir-kilo.json",
       ])
       // Commands, agents, modes, skills and plugins load from every directory entry.
-      expect(yield* directories(tmp.path).pipe(Effect.provide(layer))).toEqual(["global", path.join("repo", ".kilo2")])
+      expect(yield* directories(tmp.path).pipe(Effect.provide(layer))).toEqual(["global", path.join("repo", ".kilo")])
     }),
   )
 
-  it.live("reads only the root files of the global directory, not .kilo2 inside it", () =>
+  it.live("reads only the root files of the global directory, not .kilo inside it", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "repo")
       const global = path.join(tmp.path, "global")
-      yield* write(path.join(global, "kilo2.json"), { shell: "global-root" })
-      yield* write(path.join(global, ".kilo2", "kilo2.json"), { shell: "global-dot-kilo2" })
+      yield* write(path.join(global, "kilo.json"), { shell: "global-root" })
+      yield* write(path.join(global, ".kilo", "kilo.json"), { shell: "global-dot-kilo" })
       yield* Effect.promise(() => fs.mkdir(project, { recursive: true }))
 
       const layer = configLayer({ directory: project, global, git: true })
@@ -422,7 +416,7 @@ describe("Kilo config discovery", () => {
     }),
   )
 
-  it.live("watches the Kilo names and .kilo2 in each project directory", () =>
+  it.live("watches the Kilo names and .kilo in each project directory", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "repo")
@@ -439,7 +433,7 @@ describe("Kilo config discovery", () => {
       expect(subscriptions).toContainEqual({
         type: "entries",
         path: AbsolutePath.make(project),
-        names: [".agents", ".claude", ".kilo2", "kilo2.json", "kilo2.jsonc"],
+        names: [".agents", ".claude", ".kilo", "kilo.json", "kilo.jsonc"],
       })
     }),
   )
@@ -450,9 +444,9 @@ describe("Kilo config discovery", () => {
       const project = path.join(tmp.path, "repo")
       const link = path.join(tmp.path, "link")
       const global = path.join(tmp.path, "global")
-      yield* write(path.join(tmp.path, "kilo2.json"), { shell: "outside" })
-      yield* write(path.join(tmp.path, ".kilo2", "kilo2.json"), { shell: "outside-dot" })
-      yield* write(path.join(project, "kilo2.json"), { shell: "root" })
+      yield* write(path.join(tmp.path, "kilo.json"), { shell: "outside" })
+      yield* write(path.join(tmp.path, ".kilo", "kilo.json"), { shell: "outside-dot" })
+      yield* write(path.join(project, "kilo.json"), { shell: "root" })
       yield* Effect.promise(() => fs.mkdir(path.join(project, "app"), { recursive: true }))
       yield* Effect.promise(() => fs.symlink(project, link, process.platform === "win32" ? "junction" : undefined))
 
@@ -480,10 +474,10 @@ describe("Kilo config discovery", () => {
       const worktree = path.join(primary, ".kilo", "worktrees", "feature")
       const directory = path.join(worktree, "packages", "app")
       const global = path.join(tmp.path, "global")
-      yield* write(path.join(primary, "kilo2.json"), { model: "kilo/primary" })
-      yield* write(path.join(primary, ".kilo2", "kilo2.json"), { shell: "primary-dir", username: "primary-user" })
-      yield* write(path.join(primary, "packages", "app", ".kilo2", "kilo2.json"), { timezone: "Europe/Berlin" })
-      yield* write(path.join(worktree, ".kilo2", "kilo2.json"), { shell: "worktree-dir" })
+      yield* write(path.join(primary, "kilo.json"), { model: "kilo/primary" })
+      yield* write(path.join(primary, ".kilo", "kilo.json"), { shell: "primary-dir", username: "primary-user" })
+      yield* write(path.join(primary, "packages", "app", ".kilo", "kilo.json"), { timezone: "Europe/Berlin" })
+      yield* write(path.join(worktree, ".kilo", "kilo.json"), { shell: "worktree-dir" })
 
       yield* Effect.gen(function* () {
         const config = yield* Config.Service
@@ -504,8 +498,8 @@ describe("Kilo config discovery", () => {
       const project = path.join(tmp.path, "repo")
       const other = path.join(tmp.path, "other")
       const global = path.join(tmp.path, "global")
-      yield* write(path.join(project, ".kilo2", "kilo2.json"), { shell: "project" })
-      yield* write(path.join(other, ".kilo2", "kilo2.json"), { shell: "other", username: "other-user" })
+      yield* write(path.join(project, ".kilo", "kilo.json"), { shell: "project" })
+      yield* write(path.join(other, ".kilo", "kilo.json"), { shell: "other", username: "other-user" })
 
       yield* Effect.gen(function* () {
         const config = yield* Config.Service
@@ -515,30 +509,26 @@ describe("Kilo config discovery", () => {
     }),
   )
 
-  it.live("a linked worktree falls back only to the primary checkout's kilo2 config", () =>
+  it.live("a linked worktree falls back only to the primary checkout's kilo config", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const primary = path.join(tmp.path, "repo")
       const worktree = path.join(primary, ".kilo", "worktrees", "feature")
       const global = path.join(tmp.path, "global")
-      yield* write(path.join(primary, ".kilo2", "kilo2.json"), { shell: "primary-kilo2" })
-      yield* write(path.join(primary, ".kilo", "kilo2.json"), { shell: "primary-v1-dir" })
-      yield* write(path.join(primary, ".kilo", "kilo.json"), { shell: "primary-v1-dir-json" })
+      yield* write(path.join(primary, ".kilo", "kilo.json"), { shell: "primary-kilo" })
       yield* write(path.join(primary, ".kilocode", "kilo.json"), { shell: "primary-kilocode" })
-      yield* write(path.join(primary, "kilo.json"), { shell: "primary-v1-root" })
-      yield* write(path.join(primary, "kilo.jsonc"), { shell: "primary-v1-root-jsonc" })
       yield* write(path.join(primary, "opencode.json"), { shell: "primary-opencode" })
-      yield* write(path.join(worktree, ".kilo2", "kilo2.json"), { shell: "worktree-kilo2" })
+      yield* write(path.join(worktree, ".kilo", "kilo.json"), { shell: "worktree-kilo" })
 
       expect(
         yield* shells.pipe(
           Effect.provide(configLayer({ directory: worktree, project: worktree, canonical: primary, global, git: true })),
         ),
-      ).toEqual(["primary-kilo2", "worktree-kilo2"])
+      ).toEqual(["primary-kilo", "worktree-kilo"])
     }),
   )
 
-  it.live("writes global config to kilo2.jsonc, else an existing kilo2.json, and never to v1 or opencode files", () =>
+  it.live("writes global config to kilo.jsonc, else an existing kilo.json, and never to unrelated config files", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const global = path.join(tmp.path, "global")
@@ -551,28 +541,28 @@ describe("Kilo config discovery", () => {
       const read = (name: string) => Effect.promise(() => Bun.file(path.join(global, name)).json())
 
       yield* write(path.join(global, "opencode.jsonc"), {})
+      yield* write(path.join(global, "other.json"), {})
+      yield* update
+      expect(yield* read("kilo.jsonc")).toEqual({ shell: "/bin/zsh" })
+      expect(yield* read("opencode.jsonc")).toEqual({})
+      expect(yield* read("other.json")).toEqual({})
+
+      yield* Effect.promise(() => fs.rm(path.join(global, "kilo.jsonc")))
       yield* write(path.join(global, "kilo.json"), {})
       yield* update
-      expect(yield* read("kilo2.jsonc")).toEqual({ shell: "/bin/zsh" })
-      expect(yield* read("opencode.jsonc")).toEqual({})
-      expect(yield* read("kilo.json")).toEqual({})
-
-      yield* Effect.promise(() => fs.rm(path.join(global, "kilo2.jsonc")))
-      yield* write(path.join(global, "kilo2.json"), {})
-      yield* update
-      expect(yield* read("kilo2.json")).toEqual({ shell: "/bin/zsh" })
+      expect(yield* read("kilo.json")).toEqual({ shell: "/bin/zsh" })
       expect((yield* Effect.promise(() => fs.readdir(global))).toSorted()).toEqual([
         "kilo.json",
-        "kilo2.json",
         "opencode.jsonc",
+        "other.json",
       ])
 
       // With both files, .jsonc wins, like Kilo v1.
-      yield* write(path.join(global, "kilo2.jsonc"), {})
-      yield* write(path.join(global, "kilo2.json"), {})
+      yield* write(path.join(global, "kilo.jsonc"), {})
+      yield* write(path.join(global, "kilo.json"), {})
       yield* update
-      expect(yield* read("kilo2.jsonc")).toEqual({ shell: "/bin/zsh" })
-      expect(yield* read("kilo2.json")).toEqual({})
+      expect(yield* read("kilo.jsonc")).toEqual({ shell: "/bin/zsh" })
+      expect(yield* read("kilo.json")).toEqual({})
     }),
   )
 })

@@ -78,7 +78,7 @@ for (const hosted of [false, true]) {
         expect(result.standard.authMethods?.[0]?._meta?.["terminal-auth"]).toBeUndefined()
         for (const response of [result.terminal, result.both]) {
           expect(response.authMethods?.[0]?._meta?.["terminal-auth"]).toEqual({
-            command: hosted ? "kilo2" : "opencode",
+            command: hosted ? "kilo" : "opencode",
             args: ["auth", "login"],
             label: hosted ? "Kilo Login" : "OpenCode Login",
           })

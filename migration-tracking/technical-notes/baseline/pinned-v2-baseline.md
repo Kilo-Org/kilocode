@@ -62,7 +62,7 @@ Local runs used Bun 1.4.4 (`packageManager`) on macOS arm64 with isolated `OPENC
 | Sync tooling tests | pass | 100 |
 | `client`, `protocol` `check:generated` | pass | No drift. Upstream removed `services/www` `check:generated` |
 | VS Code extension build | pass | `bun run build` in `packages/kilo-vscode` |
-| Native Kilo build | pass, local | `--single --skip-install`; the compiled `kilo2` answered a Gateway prompt with and without an image attachment |
+| Native Kilo build | pass, local | `--single --skip-install`; the compiled preview executable answered a Gateway prompt with and without an image attachment |
 | CLI and TUI self-test | pass, local | `bun dev run --standalone`, TUI prompt, model picker, `/connect` and Kilo `/usage` |
 | Workflow allowlist, annotations, shared patches, progress map | pass | Shared patches: 68 files, 534 marked and 76 unmarked lines against `958f965d35e` |
 
@@ -70,7 +70,7 @@ Local runs used Bun 1.4.4 (`packageManager`) on macOS arm64 with isolated `OPENC
 
 Both are new in `v2.2` and fail only because of existing Kilo patches. Each skip is marked and listed in `script/upstream/shared-patches.json`; remove it when the patch moves.
 
-1. `packages/cli/test/server-connection.test.ts`, `local config commands do not start or require a server`: `mcp add` writes `kilo2.json` through the Kilo patch in `handlers/mcp/add.ts`.
+1. `packages/cli/test/server-connection.test.ts`, `local config commands do not start or require a server`: `mcp add` writes the then-current preview config file through the Kilo patch in `handlers/mcp/add.ts`.
 2. `packages/tui/test/usage-limits.test.tsx`: expects upstream's model picker row pricing and the OpenCode Console `/usage` dialog.
 
 ## Previous capture: `v2.1.4` (2026-10-27)

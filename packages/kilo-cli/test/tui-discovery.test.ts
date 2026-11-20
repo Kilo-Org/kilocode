@@ -9,10 +9,10 @@ import { localPluginDirectories } from "../src/tui-plugin-discovery"
 
 const entry = path.join(import.meta.dir, "fixtures/tui-discovery.ts")
 const build = path.join(import.meta.dir, "fixtures/tui-discovery-build.ts")
-const names = [".kilo2", ".opencode", ".kilo", ".kilocode"]
+const names = [".kilo", ".opencode", ".kilo", ".kilocode"]
 
 // The TUI reads custom themes (`<dir>/themes`) and local plugins (`<dir>/plugins`) from project directories. Without
-// the host they are upstream's `.opencode`; under the host they are `.kilo2`, with no fallback to `.opencode`. The
+// the host they are upstream's `.opencode`; under the host they are `.kilo`, with no fallback to `.opencode`. The
 // project below has both in the repository root and in a nested package, and the discovery runs from the package.
 for (const compiled of [false, true]) {
   for (const hosted of [false, true]) {
@@ -66,7 +66,7 @@ for (const compiled of [false, true]) {
 
       // Themes are read from every ancestor up to the filesystem root, so a directory above the temporary one can add
       // themes of its own. Only the themes of this project are compared.
-      const used = hosted ? ".kilo2" : ".opencode"
+      const used = hosted ? ".kilo" : ".opencode"
       expect(result.themes.global).toEqual({ source: "global" })
       for (const directory of ["repo", "package"]) {
         for (const name of names) {
@@ -91,8 +91,8 @@ for (const compiled of [false, true]) {
 }
 
 // Upstream lists the repository root's plugin directory before it exists, so the TUI's watcher picks it up when it
-// appears. The mirror keeps that for `.kilo2`, and still skips a nested directory that does not exist.
-test("the hosted plugin directories include a missing .kilo2 of the repository root", async () => {
+// appears. The mirror keeps that for `.kilo`, and still skips a nested directory that does not exist.
+test("the hosted plugin directories include a missing .kilo of the repository root", async () => {
   await using tmp = await temporary()
   const cwd = path.join(tmp.path, "repo", "package")
   await mkdir(cwd, { recursive: true })
@@ -100,12 +100,12 @@ test("the hosted plugin directories include a missing .kilo2 of the repository r
   const config = path.join(tmp.path, "config")
   expect(await localPluginDirectories(cwd, config)).toEqual([
     path.join(config, "plugins"),
-    path.join(tmp.path, "repo", ".kilo2", "plugins"),
+    path.join(tmp.path, "repo", ".kilo", "plugins"),
   ])
 })
 
 test("the hosted project directory is the one of Kilo's config discovery", () => {
-  expect(projectConfigName).toBe(".kilo2")
+  expect(projectConfigName).toBe(".kilo")
   expect(KiloConfigFiles.directories).toEqual([projectConfigName])
 })
 

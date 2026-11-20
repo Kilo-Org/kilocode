@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 
 // Smoke test for a compiled Kilo host executable (packages/kilo-cli/script/build.ts). Usage:
-//   bun script/kilocode/smoke-host.ts <path to the kilo2 executable>
+//   bun script/kilocode/smoke-host.ts <path to the kilo executable>
 //
 // It runs the executable in an isolated profile (its own HOME and XDG directories, a free service port) and fails
 // unless the executable
-// - reports a version and is named `kilo2`, so it is neither v1 `kilo` nor upstream `opencode`;
-// - keeps all of its data in `kilo2` and never creates an `opencode` directory (U-E1-01, so it can sit next to v1);
+// - reports a version and is named `kilo`, on the v2 distribution channel;
+// - keeps all of its data in `kilo` and never creates an `opencode` directory;
 // - starts the background service from itself, reports its URL and stops it again.
 // The service respawns the executable with `serve --service`, which exercises the host's serve handler too.
 import { mkdtemp, readdir, realpath, rm } from "node:fs/promises"
@@ -16,12 +16,12 @@ import path from "node:path"
 import { runThemeSmoke } from "../../packages/kilo-cli/script/theme-smoke"
 
 const binary = process.argv[2]
-if (!binary) throw new Error("Usage: bun script/kilocode/smoke-host.ts <path to the kilo2 executable>")
+if (!binary) throw new Error("Usage: bun script/kilocode/smoke-host.ts <path to the kilo executable>")
 if (!(await Bun.file(binary).exists())) throw new Error(`Missing executable: ${binary}`)
 
 const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-smoke-")))
 const env = {
-  ...process.env,
+  ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(KILO|OPENCODE)_(DB|CONFIG|CONFIG_DIR|HOME_DIR|TEST_HOME)$/.test(key))),
   HOME: root,
   USERPROFILE: root,
   OPENCODE_TEST_HOME: root,
@@ -43,7 +43,7 @@ async function run(args: string[], timeout: number) {
 
 async function ok(args: string[], timeout = 60_000) {
   const result = await run(args, timeout)
-  if (result.code !== 0) throw new Error(`\`kilo2 ${args.join(" ")}\` exited with ${result.code}:\n${result.stderr}`)
+  if (result.code !== 0) throw new Error(`\`kilo ${args.join(" ")}\` exited with ${result.code}:\n${result.stderr}`)
   return result.stdout
 }
 
@@ -61,8 +61,8 @@ function freePort() {
 let failure: unknown
 try {
   const version = await ok(["--version"])
-  if (!version.startsWith("kilo2 "))
-    throw new Error(`Expected the version line to start with "kilo2 ", got: ${version}`)
+  if (!version.startsWith("kilo "))
+    throw new Error(`Expected the version line to start with "kilo ", got: ${version}`)
 
   // A private port, so a service that is already running on this machine (the default port) cannot interfere.
   await ok(["service", "set", "port", String(await freePort())])
@@ -72,11 +72,11 @@ try {
   if (status !== url) throw new Error(`Service status "${status}" does not match the started service "${url}"`)
 
   const directories = await readdir(path.join(root, "data"))
-  if (!directories.includes("kilo2")) throw new Error(`No kilo2 data directory. Found: ${directories.join(", ")}`)
+  if (!directories.includes("kilo")) throw new Error(`No kilo data directory. Found: ${directories.join(", ")}`)
   if (directories.includes("opencode")) throw new Error("The host wrote to the upstream opencode data directory")
   if (process.platform === "win32") console.log("skip: theme smoke requires POSIX process groups")
   if (process.platform !== "win32") await runThemeSmoke(path.resolve(binary))
-  console.log(`ok: ${version}, service ${url}, data in kilo2`)
+  console.log(`ok: ${version}, service ${url}, data in kilo`)
 } catch (error) {
   failure = error
 } finally {

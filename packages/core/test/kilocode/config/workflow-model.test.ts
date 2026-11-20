@@ -197,13 +197,13 @@ function commandLayer(project: string, global: string) {
   return Layer.merge(built, Watcher.testLayer)
 }
 
-function changed(update: Watcher.Update, matches: (info: Command.Info | undefined) => boolean) {
+function changed(update: Watcher.Update, matches: (info: Command.Info | undefined) => boolean, name = "review") {
   return Effect.gen(function* () {
     const watcher = yield* Watcher.Test
     const bus = yield* Bus.Service
     const command = yield* Command.Service
     const pending = yield* bus.subscribe(Command.Event.Updated).pipe(
-      Stream.filterEffect(() => Effect.map(command.get("review"), matches)),
+      Stream.filterEffect(() => Effect.map(command.get(name), matches)),
       Stream.take(1),
       Stream.runDrain,
       Effect.forkScoped({ startImmediately: true }),
@@ -219,10 +219,10 @@ describe("workflow model discovery", () => {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "project")
       const global = path.join(tmp.path, "global")
-      const configFile = path.join(global, "kilo2.json")
-      const projectConfigFile = path.join(project, "kilo2.json")
+      const configFile = path.join(global, "kilo.json")
+      const projectConfigFile = path.join(project, "kilo.json")
       const globalFile = path.join(global, "commands", "review.md")
-      const projectFile = path.join(project, ".kilo2", "commands", "review.md")
+      const projectFile = path.join(project, ".kilo", "commands", "review.md")
       const config = { commands: { review: { model: "test/global#high" }, orphan: { model: "test/orphan" } } }
       yield* Effect.promise(async () => {
         await fs.mkdir(path.dirname(globalFile), { recursive: true })
@@ -256,7 +256,6 @@ describe("workflow model discovery", () => {
             policy: { batchSize: () => 1, prepare: () => Effect.undefined },
           }),
         )
-        yield* Effect.sleep("10 millis")
         expect(yield* command.get("review")).toMatchObject({
           description: "Project review",
           template: "Project $ARGUMENTS",
@@ -328,7 +327,7 @@ describe("workflow model discovery", () => {
             JSON.stringify({ commands: { review: { model: "test/other#low" }, marker: { template: "Marker" } } }),
           ),
         )
-        yield* changed({ type: "update", path: configFile }, (info) => info === undefined)
+        yield* changed({ type: "update", path: configFile }, (info) => info?.template === "Marker", "marker")
         expect(yield* command.get("marker")).toMatchObject({ template: "Marker" })
         expect(yield* command.get("review")).toBeUndefined()
       }).pipe(Effect.provide(commandLayer(project, global)))
@@ -373,7 +372,7 @@ const startWorkflowSession = Effect.fnUntraced(function* () {
   const tmp = yield* tmpdirScoped()
   yield* Effect.promise(() =>
     fs.writeFile(
-      path.join(tmp.path, "kilo2.json"),
+      path.join(tmp.path, "kilo.json"),
       JSON.stringify({
         providers: {
           test: {
@@ -558,11 +557,11 @@ workflows.live("leaves an unavailable command agent pending without changing the
 workflows.live("passes the workflow model and variant to a subagent without changing its parent", () =>
   Effect.gen(function* () {
     const tmp = yield* tmpdirScoped()
-    const directory = path.join(tmp.path, ".kilo2", "commands")
+    const directory = path.join(tmp.path, ".kilo", "commands")
     yield* Effect.promise(async () => {
       await fs.mkdir(directory, { recursive: true })
       await fs.writeFile(
-        path.join(tmp.path, "kilo2.json"),
+        path.join(tmp.path, "kilo.json"),
         JSON.stringify({ command: { review: { model: "test/child", variant: "high" } } }),
       )
       await fs.writeFile(

@@ -64,7 +64,7 @@ describe("BranchNamingController", () => {
 
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "branch-naming-test-"))
-    fs.mkdirSync(path.join(root, ".kilo2"), { recursive: true })
+    fs.mkdirSync(path.join(root, ".kilo"), { recursive: true })
     state = new WorktreeStateManager(root, () => {})
   })
 

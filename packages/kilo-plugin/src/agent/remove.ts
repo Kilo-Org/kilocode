@@ -51,7 +51,7 @@ export function isAgentFile(root: string, file: string) {
 
 /**
  * The config directories a removal may delete from, with the scope each is reported under. Only a directory that
- * resolves inside the project or inside the global config directory qualifies, so a project `.kilo2` that is a
+ * resolves inside the project or inside the global config directory qualifies, so a project `.kilo` that is a
  * symlink to `/` resolves outside both and never becomes a deletion root. The filesystem root is never a root, and
  * the managed system directory is excluded from the project scope as the settings writer also excludes it.
  */

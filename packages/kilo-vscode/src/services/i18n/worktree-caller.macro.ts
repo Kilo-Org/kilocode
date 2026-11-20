@@ -12,6 +12,7 @@ const entries = await Promise.all(
     return [
       path.basename(file, ".ts"),
       {
+        ...Object.fromEntries(Object.entries(own.dict ?? {}).filter(([key]) => key.startsWith("migration."))),
         "agentManager.setup.failed": manager.dict["agentManager.setup.failed"],
         "session.workspaceScope.alternatives": app.dict["session.workspaceScope.alternatives"],
         "prompt.action.autoApprove.enabledNotification": app.dict["prompt.action.autoApprove.enabledNotification"],

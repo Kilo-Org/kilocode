@@ -9,7 +9,7 @@ import type { PromptInfo } from "../prompt/history"
 export const ResumedPrompt = createContext<ReturnType<typeof createResumedPrompt>>()
 
 export function createResumedPrompt(seed?: PromptInfo) {
-  if (!seed || process.env.OPENCODE_APP_DIR_NAME !== "kilo2") return
+  if (!seed || process.env.OPENCODE_APP_DIR_NAME !== "kilo") return
   const [source, setSource] = createSignal<PromptInfo | undefined>(seed)
   const text = seed.text
   let owner: string | undefined

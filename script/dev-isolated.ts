@@ -16,12 +16,14 @@ const args = process.argv.slice(2)
 // A shell or terminal of a Kilo or OpenCode server inherits that server's database, config, home, session and
 // password, and the CLI would use them instead of the profile. Pass config with OPENCODE_CONFIG_CONTENT instead.
 const inherited = [
+  // The migration inventory resolves the old CLI's override as well. A dev probe
+  // must never escape its isolated data directory via an inherited v1 path.
+  "KILO_DB",
+  "KILO_CONFIG",
+  "KILO_CONFIG_DIR",
   "OPENCODE_DB",
-  "KILO2_DB",
   "OPENCODE_CONFIG",
-  "KILO2_CONFIG",
   "OPENCODE_CONFIG_DIR",
-  "KILO2_CONFIG_DIR",
   "OPENCODE_HOME_DIR",
   "OPENCODE_APP_DIR_NAME",
   "OPENCODE_SESSION_ID",
@@ -63,6 +65,8 @@ const child = Bun.spawn([...entry, ...args], {
     XDG_CACHE_HOME: dirs[3],
     OPENCODE_TEST_HOME: dirs[4],
     TMPDIR: dirs[5],
+    // Windows uses TEMP or TMP instead of TMPDIR.
+    ...(process.platform === "win32" ? { TEMP: dirs[5], TMP: dirs[5] } : {}),
     OPENCODE_DISABLE_AUTOUPDATE: "1",
   },
   stdin: "inherit",
