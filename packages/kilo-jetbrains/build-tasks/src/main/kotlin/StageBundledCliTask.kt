@@ -71,6 +71,8 @@ abstract class StageBundledCliTask : DefaultTask() {
             val conn = URI(url).toURL().openConnection() as HttpURLConnection
             conn.connectTimeout = CONNECT_TIMEOUT_MS
             conn.readTimeout = READ_TIMEOUT_MS
+            // Redirect following stays on for both connectors. The release downloads and the API both answer with a
+            // redirect, so the task needs it; no connector adds a cross-host hop of its own.
             conn.instanceFollowRedirects = true
             return conn
         }
