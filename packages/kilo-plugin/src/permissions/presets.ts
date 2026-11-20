@@ -75,34 +75,30 @@ function checkResources(manager: PackageManager, kilo: boolean) {
   return resources([...genericStems(manager), ...(kilo ? kiloStems : []), ...outputStems])
 }
 
-function installResources(manager: PackageManager, kilo: boolean) {
+// Sets are additive, so the install set holds only the install commands and is applied alongside a checks set.
+function installResources(manager: PackageManager) {
   const install = [`${manager} install`]
   if (manager === "npm") install.push("npm ci")
   if (manager === "bun" || manager === "pnpm" || manager === "yarn") install.push(`${manager} add`)
   // bun, npm and pnpm accept `i` for `install`; yarn does not.
   if (manager !== "yarn") install.push(`${manager} i`)
-  return resources([...genericStems(manager), ...(kilo ? kiloStems : []), ...install, ...outputStems])
+  return resources([...install, ...outputStems])
 }
 
 export function classify(input: Classification): Catalog {
-  const checks = checkResources(input.manager, input.kilo)
-  const install = installResources(input.manager, input.kilo)
+  const install = { id: "dependency-install" as const, resources: installResources(input.manager) }
   if (input.kilo) {
     return {
       presets: [
-        { id: "kilo-bun-checks", resources: checks },
-        { id: "kilo-bun-install", resources: install },
+        { id: "kilo-bun-checks", resources: checkResources(input.manager, true) },
         { id: "typescript-checks", resources: checkResources(input.manager, false) },
-        { id: "typescript-install", resources: installResources(input.manager, false) },
+        install,
       ],
       defaultID: "kilo-bun-checks",
     }
   }
   return {
-    presets: [
-      { id: "typescript-checks", resources: checks },
-      { id: "typescript-install", resources: install },
-    ],
+    presets: [{ id: "typescript-checks", resources: checkResources(input.manager, false) }, install],
     defaultID: "typescript-checks",
   }
 }

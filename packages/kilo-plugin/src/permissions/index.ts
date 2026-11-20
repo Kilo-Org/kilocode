@@ -15,6 +15,9 @@ import { allowsRequest, missing } from "./rules"
 
 const Decision = Schema.Literals(["accepted", "skipped"])
 const Applied = Schema.Array(KiloPermissionsRpc.Preset)
+// Stored sets may name a set that no longer exists (the old checks + install sets); reading drops them.
+const Stored = Schema.Array(Schema.Struct({ id: Schema.String, resources: Schema.Array(Schema.String) }))
+const isPresetID = Schema.is(KiloPermissionsRpc.PresetID)
 
 export const installPermissionSets = Effect.fn("KiloPermissionsPlugin")(function* (ctx: {
   readonly location: Pick<Context["location"], "project">
@@ -44,7 +47,12 @@ export const installPermissionSets = Effect.fn("KiloPermissionsPlugin")(function
         ),
       )
   const decision = () => stored(decisionKey, Decision).pipe(Effect.map((value) => value ?? null))
-  const applied = () => stored(appliedKey, Applied).pipe(Effect.map((value) => value ?? []))
+  const applied = () =>
+    stored(appliedKey, Stored).pipe(
+      Effect.map((value): typeof Applied.Type =>
+        (value ?? []).flatMap((set) => (isPresetID(set.id) ? [{ id: set.id, resources: set.resources }] : [])),
+      ),
+    )
 
   // Settles the waiting requests the applied sets now cover, as if the user had answered each one once.
   const drain = Effect.gen(function* () {

@@ -10,12 +10,9 @@ import { optional } from "../schema.js"
 // applied sets are not saved permission grants.
 const portable = Schema.toStandardSchemaV1
 
-export const PresetID = Schema.Literals([
-  "kilo-bun-checks",
-  "kilo-bun-install",
-  "typescript-checks",
-  "typescript-install",
-]).annotate({ identifier: "KiloPermissions.PresetID" })
+export const PresetID = Schema.Literals(["kilo-bun-checks", "typescript-checks", "dependency-install"]).annotate({
+  identifier: "KiloPermissions.PresetID",
+})
 export type PresetID = typeof PresetID.Type
 
 export interface Preset extends Schema.Schema.Type<typeof Preset> {}

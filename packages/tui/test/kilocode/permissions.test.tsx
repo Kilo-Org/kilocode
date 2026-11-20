@@ -36,9 +36,8 @@ const kiloChecks = [
 
 const presets = [
   { id: "kilo-bun-checks", resources: kiloChecks },
-  { id: "kilo-bun-install", resources: [...kiloChecks, "bun install *", "bun add *", "bun i *"] },
   { id: "typescript-checks", resources: ["bun run test *"] },
-  { id: "typescript-install", resources: ["bun install *", "bun i *"] },
+  { id: "dependency-install", resources: ["bun install *", "bun add *", "bun i *", "tail *", "head *"] },
 ] as const
 
 type State = {
@@ -202,14 +201,13 @@ test("offers every preset, pages the bounded preview, and applies the final inst
   })
   await app.ready
   const first = await until(app, "permission offer", (frame) => frame.includes("Set up project permissions"))
-  for (const label of ["Kilo / Bun checks", "Kilo / Bun checks + installs", "TypeScript checks"]) {
+  for (const label of ["Kilo / Bun checks", "TypeScript checks", "Dependency installs"]) {
     expect(first).toContain(label)
   }
-  const fourth = await pageUntil(app, "TypeScript checks + installs", pageDown)
-  expect(fourth).toContain("TypeScript checks + installs")
 
   app.mockInput.pressKey("j")
-  await until(app, "install preset", (frame) => frame.includes("Kilo / Bun checks + installs"))
+  app.mockInput.pressKey("j")
+  await until(app, "install preset", (frame) => frame.includes("● Dependency installs"))
   const final = await pageUntil(app, "bun add *", pageDown)
   expect(final).toContain("bun add *")
   const trust = await pageUntil(
@@ -223,14 +221,14 @@ test("offers every preset, pages the bounded preview, and applies the final inst
   expect(warnings).toContain("Apply")
   expect(warnings).toContain("Skip")
 
-  const previous = await pageUntil(app, "bun run test *", pageUp)
-  expect(previous).toContain("bun run test *")
+  const previous = await pageUntil(app, "bun install *", pageUp)
+  expect(previous).toContain("bun install *")
   const finalAgain = await pageUntil(app, "bun add *", pageDown)
   expect(finalAgain).toContain("bun add *")
 
   app.mockInput.pressEnter()
   await until(app, "offer completion", (frame) => !frame.includes("Set up project permissions"))
-  expect(current.applied).toEqual(["kilo-bun-install"])
+  expect(current.applied).toEqual(["dependency-install"])
   expect(current.replyCalls).toBe(0)
 })
 
@@ -294,6 +292,18 @@ test("accepted projects bypass the automatic offer, while /permissions reopens t
   // Dismissing the chooser records nothing.
   expect(manual.skipped).toBe(0)
   expect(manual.decision).toBe("accepted")
+
+  // The chooser opens again after a dismissal in the same session.
+  await manualApp.mockInput.typeText("/permissions")
+  await until(manualApp, "permission command again", (frame) =>
+    frame.includes("Choose development permissions to add to this project"),
+  )
+  await Bun.sleep(0)
+  manualApp.mockInput.pressEnter()
+  const reopened = await until(manualApp, "manual permission chooser again", (frame) =>
+    frame.includes("Apply Kilo / Bun checks"),
+  )
+  expect(reopened).toContain("Install and add package dependencies")
 })
 
 test("an uncovered apply keeps the authoritative normal prompt and reports RPC failure without replying", async () => {
@@ -397,6 +407,8 @@ test("the sidebar lists the applied sets, and /permissions (None) removes them",
   await app.mockInput.typeText("None")
   await until(app, "filtered chooser", (value) => !value.includes("Apply Kilo / Bun checks"))
   app.mockInput.pressEnter()
+  // The chooser covers part of the sidebar, so wait for the clear itself before checking the sidebar.
+  await until(app, "clear request", () => current.cleared > 0)
   await until(app, "sidebar cleared", (value) => !value.includes("Permission sets"))
   expect(current.cleared).toBe(1)
   expect(current.skipped).toBe(0)

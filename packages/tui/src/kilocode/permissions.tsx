@@ -44,6 +44,7 @@ type Controller = {
   readonly ensure: (request: PermissionRequest) => void
   readonly manual: (location: LocationRef, sessionID?: string) => Promise<LoadResult>
   readonly decide: (decision: Decision, presetID?: PresetID) => void
+  readonly dismiss: () => void
 }
 // Sets applied to each project, keyed by project ID; the sidebar shows them while any are applied.
 type Applied = {
@@ -337,6 +338,12 @@ function createController(context: Plugin.Context, byProject: Map<string, Contro
         operation = undefined
       })
     },
+    // Closing the manual chooser without a choice leaves the offer state behind; without this reset the next
+    // `/permissions` sees an active offer and does nothing.
+    dismiss() {
+      const current = state()
+      if (current.status === "offer") setState({ status: "normal", projectID: current.projectID })
+    },
   }
 
   const syncAfterFailure = async (offer: Offer) => {
@@ -381,7 +388,7 @@ async function openManual(context: Plugin.Context, getController: (directory: st
     return
   }
   const applied = new Set(result.applied.map((preset) => preset.id))
-  const choice = await context.ui.dialog.select<PresetID | "skip" | "clear">({
+  const selection = context.ui.dialog.select<PresetID | "skip" | "clear">({
     title: t("tui.permissions.title"),
     options: [
       ...result.presets.map((preset) => ({
@@ -403,8 +410,14 @@ async function openManual(context: Plugin.Context, getController: (directory: st
     ],
     current: result.presets.find((preset) => applied.has(preset.id))?.id ?? result.presets[0]?.id,
   })
+  // `select` shows the dialog synchronously at the default width; widen it so the descriptions fit.
+  context.ui.dialog.set({ size: "large" })
+  const choice = await selection
   // Dismissing the chooser changes nothing.
-  if (choice === undefined) return
+  if (choice === undefined) {
+    selectedController.dismiss()
+    return
+  }
   if (choice === "skip" || choice === "clear") {
     selectedController.decide(choice)
     return

@@ -60,9 +60,8 @@ describe("permission setup catalog", () => {
     const result = await Effect.runPromise(catalog(projectFilesystem(kiloFiles()), root))
     expect(result.presets.map((item) => item.id)).toEqual([
       "kilo-bun-checks",
-      "kilo-bun-install",
       "typescript-checks",
-      "typescript-install",
+      "dependency-install",
     ])
     expect(result.defaultID).toBe("kilo-bun-checks")
     expect(result.presets[0]?.resources).toEqual([
@@ -109,7 +108,7 @@ describe("permission setup catalog", () => {
           root,
         ),
       )
-      expect(result.presets.map((item) => item.id)).toEqual(["typescript-checks", "typescript-install"])
+      expect(result.presets.map((item) => item.id)).toEqual(["typescript-checks", "dependency-install"])
       expect(result.defaultID).toBe("typescript-checks")
       expect(result.presets[0]?.resources[0]).toBe(`${manager} run test *`)
     },
@@ -134,24 +133,26 @@ describe("permission setup catalog", () => {
     const result = await Effect.runPromise(catalog(projectFilesystem(kiloFiles()), root))
     expect(preset(result, "typescript-checks").resources).toContain("bun run test *")
     expect(preset(result, "typescript-checks").resources).not.toContain("bun run check:architecture *")
-    expect(preset(result, "kilo-bun-install").resources).toContain("bun install *")
-    expect(preset(result, "kilo-bun-install").resources).toContain("bun add *")
-    expect(preset(result, "typescript-install").resources).not.toContain("bun run check:architecture *")
+    expect(preset(result, "dependency-install").resources).toContain("bun install *")
+    expect(preset(result, "dependency-install").resources).toContain("bun add *")
+    expect(preset(result, "dependency-install").resources).not.toContain("bun run check:architecture *")
+    expect(preset(result, "dependency-install").resources).not.toContain("bun run test *")
   })
 
   test("grants bare commands and arguments but not neighboring command names", () => {
     const checks = classify({ manager: "bun", kilo: false })
-    const install = preset(checks, "typescript-install")
-    expect(effects(install, "bun run test")).toEqual(["allow"])
-    expect(effects(install, "bun run test -- unit")).toEqual(["allow"])
-    expect(effects(install, "bun run test-dangerous")).toEqual(["ask"])
+    const install = preset(checks, "dependency-install")
+    expect(effects(preset(checks, "typescript-checks"), "bun run test")).toEqual(["allow"])
+    expect(effects(preset(checks, "typescript-checks"), "bun run test -- unit")).toEqual(["allow"])
+    expect(effects(preset(checks, "typescript-checks"), "bun run test-dangerous")).toEqual(["ask"])
     expect(effects(install, "bun install")).toEqual(["allow"])
+    expect(effects(install, "bun run test")).toEqual(["ask"])
     expect(effects(preset(checks, "typescript-checks"), "bun install")).toEqual(["ask"])
     expect(effects(preset(checks, "typescript-checks"), "bun run publish")).toEqual(["ask"])
   })
 
   test("grants version and help inspection commands without allowing mutating version subcommands", () => {
-    const bun = preset(classify({ manager: "bun", kilo: true }), "kilo-bun-install")
+    const bun = preset(classify({ manager: "bun", kilo: true }), "kilo-bun-checks")
     expect(effects(bun, "bun --version")).toEqual(["allow"])
     expect(effects(bun, "bun -v")).toEqual(["allow"])
     expect(effects(bun, "bun --help")).toEqual(["allow"])
@@ -159,7 +160,7 @@ describe("permission setup catalog", () => {
     expect(effects(bun, "bun help install")).toEqual(["allow"])
     expect(effects(bun, "node --version")).toEqual(["allow"])
     expect(effects(bun, "node -v")).toEqual(["allow"])
-    expect(effects(bun, "bun --version && bun install --help 2>&1")).toEqual(["allow", "allow"])
+    expect(effects(bun, "bun --version && bun help install 2>&1")).toEqual(["allow", "allow"])
     expect(effects(bun, "bun --version || git push")).toEqual(["allow", "ask"])
 
     const npm = preset(classify({ manager: "npm", kilo: false }), "typescript-checks")
@@ -168,17 +169,17 @@ describe("permission setup catalog", () => {
   })
 
   test("grants abbreviated install commands in install sets", () => {
-    const bun = preset(classify({ manager: "bun", kilo: true }), "kilo-bun-install")
+    const bun = preset(classify({ manager: "bun", kilo: true }), "dependency-install")
     expect(effects(bun, "bun i")).toEqual(["allow"])
     expect(effects(bun, "bun i 2>&1 | tail -30")).toEqual(["allow", "allow"])
     expect(effects(bun, "bun install 2>&1 | tail -30")).toEqual(["allow", "allow"])
     expect(effects(preset(classify({ manager: "bun", kilo: true }), "kilo-bun-checks"), "bun i")).toEqual(["ask"])
 
-    const npm = preset(classify({ manager: "npm", kilo: false }), "typescript-install")
+    const npm = preset(classify({ manager: "npm", kilo: false }), "dependency-install")
     expect(effects(npm, "npm i")).toEqual(["allow"])
     expect(effects(npm, "npm ci")).toEqual(["allow"])
 
-    const pnpm = preset(classify({ manager: "pnpm", kilo: false }), "typescript-install")
+    const pnpm = preset(classify({ manager: "pnpm", kilo: false }), "dependency-install")
     expect(effects(pnpm, "pnpm i")).toEqual(["allow"])
   })
 
@@ -194,7 +195,7 @@ describe("permission setup catalog", () => {
   })
 
   test("grants install commands chained with read-only output helpers", () => {
-    const bun = preset(classify({ manager: "bun", kilo: true }), "kilo-bun-install")
+    const bun = preset(classify({ manager: "bun", kilo: true }), "dependency-install")
     expect(effects(bun, "bun install --verbose 2>&1 | head -100")).toEqual(["allow", "allow"])
     expect(effects(bun, 'bun install 2>&1 | grep -iE "error|warn"')).toEqual(["allow", "allow"])
     expect(effects(bun, 'bun install; echo "exit code: $?"')).toEqual(["allow", "allow"])
@@ -210,8 +211,11 @@ describe("permission setup catalog", () => {
       expect(effects(presetValue, "bun run test &> out.log")).toEqual(["ask"])
       expect(effects(presetValue, "bun run test 2>/dev/nullx")).toEqual(["ask"])
       expect(effects(presetValue, "grep foo <(cat secret)")).toEqual(["ask", "ask"])
-      expect(effects(presetValue, "bun run test >/dev/null 2>&1")).toEqual(["allow"])
-      expect(effects(presetValue, "bun run test 2>/dev/null")).toEqual(["allow"])
+    }
+    for (const presetValue of classify({ manager: "bun", kilo: true }).presets) {
+      const command = presetValue.id === "dependency-install" ? "bun install" : "bun run test"
+      expect(effects(presetValue, `${command} >/dev/null 2>&1`)).toEqual(["allow"])
+      expect(effects(presetValue, `${command} 2>/dev/null`)).toEqual(["allow"])
     }
   })
 

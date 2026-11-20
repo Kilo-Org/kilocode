@@ -129,12 +129,11 @@ test("persists decisions and applied sets by project across a file-backed restar
       expect(first).toMatchObject({ enabled: true, decision: null, applied: [] })
       expect(first.presets.map((preset) => preset.id)).toEqual([
         "kilo-bun-checks",
-        "kilo-bun-install",
         "typescript-checks",
-        "typescript-install",
+        "dependency-install",
       ])
       expect(second).toMatchObject({ enabled: true, decision: null, applied: [] })
-      expect(second.presets.map((preset) => preset.id)).toEqual(["typescript-checks", "typescript-install"])
+      expect(second.presets.map((preset) => preset.id)).toEqual(["typescript-checks", "dependency-install"])
 
       await rpc.apply({ presetID: "kilo-bun-checks" }, a)
       await rpc.apply({ presetID: "kilo-bun-checks" }, a)
@@ -205,7 +204,7 @@ test("reconciles a pending request only after every resource is granted", async 
       expect((await client.permission.request.list(options)).data).toContainEqual(
         expect.objectContaining({ id: created.id }),
       )
-      await rpc.apply({ presetID: "kilo-bun-install" }, options)
+      await rpc.apply({ presetID: "dependency-install" }, options)
       await eventually(
         () => client.permission.request.list(options),
         (result) => !result.data.some((request) => request.id === created.id),
@@ -230,7 +229,7 @@ test("reconciles a pending request only after every resource is granted", async 
         { commands: ["bun install 2>&1 | tail -30", "bun install > /tmp/install.log", "git push"] },
         options,
       )
-      expect(checked.presetID).toBe("kilo-bun-install")
+      expect(checked.presetID).toBe("dependency-install")
       expect(checked.results.map((result) => result.missing)).toEqual([
         [],
         ["bun install > /tmp/install.log"],

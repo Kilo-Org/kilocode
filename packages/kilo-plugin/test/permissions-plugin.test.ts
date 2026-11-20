@@ -133,6 +133,25 @@ describe("KiloPermissionsPlugin", () => {
     }),
   )
 
+  it.effect("drops stored sets that no longer exist", () =>
+    Effect.gen(function* () {
+      const store = new Map<string, Schema.Json>([
+        [
+          `applied:${Project.ID.global}`,
+          [
+            { id: "typescript-install", resources: ["bun install *"] },
+            { id: "typescript-checks", resources: ["bun run test *"] },
+          ],
+        ],
+      ])
+      const { call } = yield* setup({ store })
+      const permission = yield* Permission.Service
+      expect(yield* call("list")).toMatchObject({ applied: [{ id: "typescript-checks" }] })
+      expect(yield* permission.ask(shell(["bun install"]))).toMatchObject({ effect: "ask" })
+      expect(yield* permission.ask(shell(["bun run test"]))).toMatchObject({ effect: "allow" })
+    }),
+  )
+
   it.effect("keeps configured denies", () =>
     Effect.gen(function* () {
       const { call } = yield* setup({ rules: [{ action: "shell", resource: "*", effect: "deny" }] })
@@ -195,7 +214,7 @@ describe("KiloPermissionsPlugin", () => {
       yield* Fiber.join(covered)
       expect((yield* permission.list()).map((request) => request.id)).toEqual([uncoveredID])
 
-      yield* call("apply", { presetID: "typescript-install" })
+      yield* call("apply", { presetID: "dependency-install" })
       yield* Fiber.join(uncovered)
       expect(yield* permission.list()).toEqual([])
     }),
