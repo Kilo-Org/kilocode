@@ -22,6 +22,7 @@
     "@agentclientprotocol/sdk": "1.6.0",
     "@babel/core": "7.29.7",
     "@babel/preset-typescript": "7.27.1",
+    "@clack/prompts": "1.0.0-alpha.1",
     "@effect/platform-node": "catalog:",
     "@kilocode/gateway-core": "workspace:*",
     "@kilocode/kilo-indexing": "workspace:*",

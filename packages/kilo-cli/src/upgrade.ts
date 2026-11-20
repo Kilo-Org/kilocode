@@ -31,8 +31,10 @@ export default Runtime.handler(
       const progress = spinner()
       progress.start("Upgrading...")
       const method = Option.getOrUndefined(input.method)
-      yield* method ? updater.upgrade(method, version) : updater.apply(version).pipe(Effect.asVoid)
-      progress.stop("Upgrade complete")
+      yield* (method ? updater.upgrade(method, version) : updater.apply(version)).pipe(
+        Effect.tap(() => Effect.sync(() => progress.stop("Upgrade complete"))),
+        Effect.tapCause(() => Effect.sync(() => progress.stop("Upgrade failed", 1))),
+      )
       outro(`Please restart Kilo to use ${version}`)
     },
     (effect) => handlePromptErrors(effect),
