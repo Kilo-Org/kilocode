@@ -169,6 +169,7 @@ export const dict = {
   "ui.tool.chart.failed": "Failed to render chart",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Browser settings",
+  "browser.command.starting": "Kilo is still starting. Try again in a moment.",
   "browser.command.description": "Show the browser backend, whether it can run, and the origin grants",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Observation",
@@ -193,6 +194,48 @@ export const dict = {
   "browser.state.unavailable": "unavailable",
   "browser.state.readyHint": "A Kilo-owned Chromium profile, started by the first browser call",
   "browser.state.extensionHint": "Connect the Kilo browser extension to drive your own browser",
+  "browser.command.usage":
+    "Use /browser for settings, /browser share to give this session your active tab, or /browser adopt to reuse the last ended tab group.",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Read pages on {{origin}}",
+  "browser.permission.act.title": "Click and type on {{origin}}",
+  "browser.permission.navigate.title": "Open pages on {{origin}}",
+  "browser.permission.read.detail": "Approving lets this conversation read pages on {{origin}} until it ends.",
+  "browser.permission.act.detail":
+    "Approving lets this conversation click, type and run page scripts on {{origin}} until it ends.",
+  "browser.permission.navigate.detail": "Approving lets this conversation open pages on {{origin}} until it ends.",
+  "browser.permission.frame": "This origin is a frame inside the page, not the page itself.",
+  "browser.permission.sensitive.title": "Sensitive browser step on {{origin}}",
+  "browser.permission.sensitive.reason": "Reason: {{reason}}",
+  "browser.permission.sensitive.once": "Only a person can approve this step. The approval covers this one step.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Share the active browser tab",
+  "browser.share.description": "Move your browser's active tab into this session's tab group",
+  "browser.share.done": "Your active tab is now in this session's tab group.",
+  "browser.adopt.title": "Reuse the ended browser tab group",
+  "browser.adopt.description": "Give this session the most recent ended Kilo tab group",
+  "browser.adopt.done": "This session now uses the last ended tab group.",
+  "browser.adopt.none": "There is no ended tab group to reuse.",
+  "browser.adopt.kept": "This session already has its own tabs and keeps them.",
+  "browser.adopt.unconfirmed":
+    "Asked the browser to reuse the last ended tab group. Update the Kilo browser extension to see whether it did.",
+  "browser.control.notExtension": "Sharing and reusing tabs need the Kilo browser extension. Choose it in /browser.",
+  "browser.control.organizationOff": "Your organization turned off browser control in Kilo.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Browser not available",
+  "browser.notice.outdatedTitle": "Browser extension out of date",
+  "browser.notice.stopped": "You stopped the browser for this session. Run /browser adopt to give it its tabs back.",
+  "browser.notice.extension":
+    "The Kilo browser extension is connected in {{browser}}. Use your own browser for the browser tools instead of the bundled one?",
+  "browser.notice.switch": "Use my browser",
+  "settings.browser.status.extension.waiting": "Waiting for the browser extension",
+  "settings.browser.origins.saved.title": "Allowed in chats",
+  "settings.browser.origins.saved.description":
+    "Sites you allowed from a chat with Allow always, for this workspace. They apply on top of the rules above.",
+  "settings.browser.origins.saved.empty": "No site allowed from a chat yet.",
+  "settings.browser.origins.saved.failed": "Saved permissions unavailable",
+  "settings.browser.origins.saved.revoke": "Revoke",
+  "ui.permission.reason": "Reason: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Toggle auto-approve",

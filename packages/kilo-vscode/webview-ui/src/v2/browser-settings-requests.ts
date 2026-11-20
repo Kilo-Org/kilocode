@@ -1,12 +1,12 @@
-// Attempt ids for the Browser section's three requests. A reply names the operation it answers, so a slow read never
-// drops a write's reply and only the newest attempt of an operation may change that operation's flags.
+// Attempt ids for the Browser section's requests. A reply names the operation it answers, so a slow read never drops a
+// write's reply and only the newest attempt of an operation may change that operation's flags.
 
-export type Operation = "read" | "write" | "install"
+export type Operation = "read" | "write" | "install" | "status"
 
-const OPERATIONS: readonly Operation[] = ["read", "write", "install"]
+const OPERATIONS: readonly Operation[] = ["read", "write", "install", "status"]
 
 export function requestTracker() {
-  const current: Record<Operation, string> = { read: "", write: "", install: "" }
+  const current: Record<Operation, string> = { read: "", write: "", install: "", status: "" }
   let sequence = 0
   const kindOf = (requestId: string): Operation | undefined => {
     const kind = requestId.slice(0, requestId.indexOf(":"))

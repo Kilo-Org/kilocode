@@ -130,6 +130,27 @@ describe("browser_open permission request", () => {
   )
 })
 
+describe("browser_open description", () => {
+  // The model picks between this tool and the browser tools; the description is the only place it reads the split.
+  it.effect("opens a page for the user and leaves acting on it to the browser tools", () =>
+    Effect.gen(function* () {
+      const tools: { description: string }[] = []
+      const context = {
+        location: { directory: "/project" },
+        permission: { hook: () => Effect.void },
+        tool: {
+          transform: (edit: (editor: unknown) => void) =>
+            Effect.sync(() => edit({ add: (tool: { description: string }) => tools.push(tool) })),
+        },
+      }
+      yield* KiloBrowserToolPlugin.effect(context as never)
+      expect(tools).toHaveLength(1)
+      expect(tools[0]?.description).toContain("open a page for the user to look at")
+      expect(tools[0]?.description).toContain("use the browser automation tools (browser_snapshot, browser_click")
+    }),
+  )
+})
+
 describe("browser_open permission through the permission service", () => {
   it.effect("asks under the built-in allow-all policy", () =>
     Effect.gen(function* () {

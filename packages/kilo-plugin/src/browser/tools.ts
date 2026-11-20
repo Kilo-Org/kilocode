@@ -2,19 +2,24 @@ import { Config } from "@opencode/core/config"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Permission } from "@opencode/core/permission"
 import { Wildcard } from "@opencode/core/util/wildcard"
+import { isFallbackTitle } from "@opencode/util/session-title-fallback"
 import { KiloBrowserPolicy } from "@kilocode/gateway-core/browser-policy"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Tool } from "@opencode/schema/tool"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { Skill } from "@opencode/schema/skill"
 import { KiloBrowserRpc } from "@opencode/schema/kilocode/browser"
+import type { SessionID } from "@opencode/schema/session-id"
 import { Effect, Option, Result, Scope, Stream } from "effect"
 import type { JsonSchema } from "effect"
 import {
+  CancelledError,
   IncompatibleError,
   NeedsPermissionError,
+  TimeoutError,
   UNAVAILABLE_MESSAGE,
   UNSUPPORTED_MESSAGE,
+  StoppedError,
   UnavailableError,
   UnsupportedError,
   type BrowserBackend,
@@ -25,16 +30,15 @@ import GUIDE from "./browser-skill.txt"
 import type { Entry } from "./contract-shape"
 import type { ExtensionBackend } from "./extension"
 import { BrowserHub } from "./hub"
-import { modeFor, observe, snapshot, split, Tracker } from "./observation"
+import { modeFor, observe, reportsPage, snapshot, split } from "./observation"
 import { BrowserPermission } from "./permission"
+import { ask, exhausted, movedTo, need, pageUrl, placed, subject, tracker } from "./refusal"
 import { key, persistStep, playwright, readiness } from "./playwright"
 import { resolve, type Observation, type Settings } from "./settings"
 import { hashArguments, rememberHash, rememberStep } from "./steps"
 import { KiloGatewayAccounts } from "../gateway/accounts"
 
 type Item = BrowserPermission.Item
-
-const tracker = new Tracker()
 
 /** The policy cache key: one gateway answering for another's organization is not the same policy. */
 export function policyKey(server: string, organizationID: string) {
@@ -109,10 +113,35 @@ function failure(error: unknown) {
       metadata: { hint: error.hint, ...(error.effectsUncertain ? { effectsUncertain: true } : {}) },
     })
   }
+  if (error instanceof TimeoutError) {
+    return new Tool.Error({ message: error.message, metadata: { effectsUncertain: true } })
+  }
+  // A call cancelled in flight may have run in part, so the marker travels with it as it does for a timeout.
+  if (error instanceof CancelledError) {
+    return new Tool.Error({
+      message: error.message,
+      ...(error.effectsUncertain ? { metadata: { effectsUncertain: true } } : {}),
+    })
+  }
   if (error instanceof IncompatibleError) {
     return new Tool.Error({ message: error.message, metadata: { hint: error.hint } })
   }
   return new Tool.Error({ message: error instanceof Error ? error.message : String(error) })
+}
+
+/** The UI notice one failed call raises, or undefined when the model's own error text is all the user needs. */
+export function notice(sessionID: SessionID, error: unknown): KiloBrowserRpc.Notice | undefined {
+  if (error instanceof UnavailableError) return { kind: "unavailable", sessionID, hint: error.hint }
+  if (error instanceof IncompatibleError) return { kind: "outdated", sessionID, hint: error.hint }
+  if (error instanceof StoppedError) return { kind: "stopped", sessionID }
+  return undefined
+}
+
+/** A failed `/browser share` or `/browser adopt`: the setup step when no browser answers, else the reason in words. */
+export function refusal(error: unknown): { kind: "unavailable"; hint: string } | { kind: "refused"; message: string } {
+  if (error instanceof UnavailableError) return { kind: "unavailable", hint: error.hint }
+  if (error instanceof IncompatibleError) return { kind: "refused", message: `${error.message} ${error.hint}` }
+  return { kind: "refused", message: error instanceof Error ? error.message : String(error) }
 }
 
 /**
@@ -192,7 +221,9 @@ export function authorize(
         continue
       }
       const request = BrowserPermission.request(item, allowSensitive)
-      if (Option.isSome(permission)) yield* permission.value.assert({ ...request, ...Permission.invocation(context) })
+      if (Option.isSome(permission)) {
+        yield* ask(permission.value, { ...request, ...Permission.invocation(context) }, subject(item))
+      }
       // A sensitive step is approved per step through its token, never remembered here.
       if (item.class !== "sensitive") grants.add(pattern)
     }
@@ -218,6 +249,23 @@ export function withheldRefusal(origin: string): string {
 }
 
 /**
+ * Whether the rules already allow a request, never asking anyone: a deny, an ask, a service that does not implement the
+ * query and one that throws or fails all answer no, so an internal read can only skip itself.
+ */
+function allowsQuietly(permission: Permission.Interface, request: Record<string, unknown>) {
+  return Effect.try({ try: () => permission.allows(request as never), catch: (error) => error }).pipe(
+    Effect.flatten,
+    Effect.orElseSucceed(() => false),
+  )
+}
+
+/** The per-tool rule a user call obeys, for an internal read of that tool: allowed outright or skipped silently. */
+function toolAllowed(permission: Option.Option<Permission.Interface>, context: Tool.Context, action: string) {
+  if (Option.isNone(permission)) return Effect.succeed(true)
+  return allowsQuietly(permission.value, { action, resources: ["*"], ...Permission.invocation(context) })
+}
+
+/**
  * Console data for diff mode. The internal call is a real read and must never prompt: a backend that can plan is
  * checked first and the read runs only when every item the plan asks for is already granted for this session. A
  * backend that learns the real origin at action time (the extension) cannot plan; it filters by the grants it is
@@ -232,23 +280,7 @@ function consoleErrors(
 ) {
   return Effect.gen(function* () {
     // The per-tool rule is the same one a user call obeys: a deny or an ask skips the console section silently.
-    if (Option.isSome(permission)) {
-      // `Effect.try` covers a permission service that does not implement the query at all.
-      const queried = Effect.try({
-        try: () =>
-          permission.value.allows({
-            action: "browser_console_messages",
-            resources: ["*"],
-            ...Permission.invocation(context),
-          } as never),
-        catch: () => Effect.succeed(false),
-      })
-      const permitted = yield* queried.pipe(
-        Effect.flatten,
-        Effect.orElseSucceed(() => false),
-      )
-      if (!permitted) return []
-    }
+    if (!(yield* toolAllowed(permission, context, "browser_console_messages"))) return []
     const grants = grantsFor(session)
     const plan = active.plan?.bind(active)
     if (plan) {
@@ -280,12 +312,20 @@ export function effective(browser: Settings, organization: KiloBrowserPolicy.Pol
   return browser.backend
 }
 
+/** What a call reports once the user turned the browser off: their decision, which the model must not undo. */
+const OFF_MESSAGE =
+  "The user turned the browser tools off. Do not change browser settings to turn them back on; continue without the browser."
+
 type Deps = {
   config: Option.Option<Config.Interface>
   permission: Option.Option<Permission.Interface>
   directory: string
   /** The backend a call runs on, resolved per call so a config change applies without a restart. */
   backend: (choice: Settings) => Promise<BrowserBackend>
+  /** The conversation's generated title, or undefined while it has none. */
+  title: (session: Tool.Context["sessionID"]) => Effect.Effect<string | undefined>
+  /** Raises the UI notice for a failed call; the model reads only the tool error. */
+  notify: (sessionID: SessionID, error: unknown) => Effect.Effect<void>
 }
 
 /** A granted post-action need hands the model either the answer or the page it can read now. */
@@ -311,6 +351,8 @@ type PostAction = {
  */
 function postAction(input: PostAction) {
   return Effect.gen(function* () {
+    // The action ran, so the tab is on the page it reported, whatever the answer to the ask.
+    tracker.place(input.session, placed(input.entry.name, input.input, input.result))
     const asked = yield* Effect.result(
       authorize(
         input.needs,
@@ -375,13 +417,24 @@ function postAction(input: PostAction) {
     const reread = yield* Effect.result(
       Effect.tryPromise({
         try: (signal) =>
-          input.active.callTool("browser_snapshot", {}, { signal, session: input.session, authorized: [...input.grants] }),
+          input.active.callTool(
+            "browser_snapshot",
+            {},
+            { signal, session: input.session, authorized: [...input.grants] },
+          ),
         catch: (error) => error,
       }),
     )
     if (Result.isSuccess(reread) && !reread.success.isError) {
-      input.result.content = reread.success.content
-      input.result.meta = reread.success.meta
+      const page = yield* settle({
+        ...input,
+        name: "browser_snapshot",
+        args: {},
+        result: reread.success,
+        snapshot: true,
+      })
+      input.result.content = page.content
+      input.result.meta = page.meta
     }
     return { kind: "continue" as const, result: input.result }
   })
@@ -436,28 +489,117 @@ export function granted(input: PostAction) {
   }
 }
 
+/**
+ * Whether the session's own rules let it read an origin without asking a person: the organization allowlist, then the
+ * config, saved choices and built-in defaults through the permission service's evaluation. A yes records the grant,
+ * as an ask those rules answer does in `authorize`; a service that cannot evaluate is a no.
+ */
+function readable(input: Pick<PageRead, "session" | "context" | "permission" | "organization">) {
+  return (origin: string) => {
+    const item: Item = { class: "read", origin }
+    const pattern = BrowserPermission.pattern(item)
+    const grants = grantsFor(input.session)
+    const permission = input.permission
+    const allowed =
+      grants.has(pattern) || KiloBrowserPolicy.allows(input.organization, origin) || Option.isNone(permission)
+        ? Effect.succeed(true)
+        : allowsQuietly(permission.value, {
+            ...BrowserPermission.request(item, false),
+            ...Permission.invocation(input.context),
+          })
+    return Effect.runPromise(
+      allowed.pipe(
+        Effect.tap((yes) =>
+          Effect.sync(() => {
+            if (yes) grants.add(pattern)
+          }),
+        ),
+      ),
+    )
+  }
+}
+
+type PageRead = {
+  active: BrowserBackend
+  name: string
+  args: Record<string, unknown>
+  result: CallResult
+  session: string
+  snapshot: boolean
+  context: Tool.Context
+  permission: Option.Option<Permission.Interface>
+  organization: KiloBrowserPolicy.Policy | undefined
+}
+
+/**
+ * The page state the Playwright MCP reports after a step, for a backend whose answer lacks it (the extension): after a
+ * step the MCP reports the page for, and on an explicit snapshot, the URL and title and, unless `snapshot` is off, the
+ * snapshot. A result that already names its page is left alone, so the Playwright backend never reads twice. Each read
+ * obeys the per-tool rule of the tool it reads with (`browser_snapshot`, `browser_tabs`), as a user call would: a rule
+ * that denies or asks skips that read silently.
+ */
+function settle(input: PageRead) {
+  const read = input.active.pageState?.bind(input.active)
+  if (!read || snapshot(split(textOf(input.result))) !== undefined) return Effect.succeed(input.result)
+  if (input.name !== "browser_snapshot" && !reportsPage(input.name, input.args)) return Effect.succeed(input.result)
+  return Effect.gen(function* () {
+    // An explicit snapshot already passed its own rule; only the reads this step adds are checked.
+    const snapshotted =
+      input.snapshot &&
+      (input.name === "browser_snapshot" || (yield* toolAllowed(input.permission, input.context, "browser_snapshot")))
+    const tabs = yield* toolAllowed(input.permission, input.context, "browser_tabs")
+    return yield* Effect.tryPromise({
+      try: (signal) =>
+        read(input.name, input.result, {
+          signal,
+          session: input.session,
+          authorized: [...grantsFor(input.session)],
+          snapshot: snapshotted,
+          tabs,
+          readable: readable(input),
+        }),
+      catch: (error) => error,
+    })
+  }).pipe(Effect.orElseSucceed(() => input.result))
+}
+
 /** The model-facing answer for one call: the observation mode, the images, and the metadata the UI reads. */
 function shaped(input: {
   result: CallResult
   entry: Entry
+  args: Record<string, unknown>
   active: BrowserBackend
   session: string
   context: Tool.Context
   permission: Option.Option<Permission.Interface>
+  organization: KiloBrowserPolicy.Policy | undefined
   observation: Observation
   backend: Settings["backend"]
 }) {
   return Effect.gen(function* () {
-    const text = textOf(input.result)
-    const next = snapshot(split(text))
     const mode = modeFor(input.entry.name, input.observation)
-    const errors = mode === "diff" ? yield* consoleErrors(input.active, input.session, input.context, input.permission) : []
+    const result = yield* settle({
+      ...input,
+      name: input.entry.name,
+      snapshot: mode !== "none",
+    })
+    const text = textOf(result)
+    const next = snapshot(split(text))
+    const errors =
+      mode === "diff" ? yield* consoleErrors(input.active, input.session, input.context, input.permission) : []
     const previous = mode === "diff" ? tracker.previous(input.session, input.entry.name, next?.url) : undefined
     const viewed = observe({ mode, text, previous, consoleErrors: errors })
     if (viewed.snapshot) tracker.record(input.session, viewed.snapshot)
+    // A step that reports a page places the tab from it, so a click that navigated is not left on the page it left; one
+    // that names no move keeps its own answer, where a select that names no page stays unknown.
+    const named = pageUrl(result)
+    tracker.place(
+      input.session,
+      named === undefined ? placed(input.entry.name, input.args, input.result) : { kind: "page", url: named },
+    )
 
     const content: Tool.Content[] = [{ type: "text", text: viewed.text }]
-    for (const block of input.result.content) {
+    for (const block of result.content) {
       if (block.type !== "image") continue
       const ext = block.mimeType.split("/")[1] || "png"
       content.push({
@@ -476,35 +618,45 @@ function shaped(input: {
           observation: input.observation,
           ...(next?.url ? { url: next.url } : {}),
           ...(next?.title ? { title: next.title } : {}),
-          ...(input.result.meta?.withheldFrames ? { withheldFrames: input.result.meta.withheldFrames } : {}),
+          ...(result.meta?.withheldFrames ? { withheldFrames: result.meta.withheldFrames } : {}),
         },
       },
     } as Tool.Result
   })
 }
 
+/** Only the extension names its tab group after the conversation, so only it pays the session read. */
+export function titleFor(read: Deps["title"], backend: Settings["backend"], sessionID: Tool.Context["sessionID"]) {
+  return backend === "extension" ? read(sessionID) : Effect.succeed<string | undefined>(undefined)
+}
+
 function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
   return Effect.gen(function* () {
     const browser = yield* settings(deps.config)
-    // The tools are not registered while the backend is off; a config edit during the session still refuses.
-    if (browser.backend === "off") return yield* failure(new UnavailableError("Set browser.backend to playwright."))
+    // The tools leave the registry when the backend turns off; a call already planned against the old list still
+    // refuses, and the model is told the user decided it, so it does not try to turn the browser back on.
+    if (browser.backend === "off") return yield* new Tool.Error({ message: OFF_MESSAGE })
 
     const organization = yield* policy(deps.directory)
     if (organization?.control === "off")
-      return yield* failure(new UnavailableError("Your organization turned off browser control in Kilo."))
+      return yield* Effect.fail(new UnavailableError("Your organization turned off browser control in Kilo."))
     // One function decides the backend for a call and for the status RPC: the user's `off` wins, an organization that
     // allows Playwright only forces it, and otherwise the config decides, including the extension.
     const choice: Settings = { ...browser, backend: effective(browser, organization) }
 
     // The tool's own key first, so a config rule like `browser_click: deny` blocks it before anything runs.
     if (Option.isSome(deps.permission)) {
-      yield* deps.permission.value.assert({
-        action: entry.name,
-        resources: ["*"],
-        save: [],
-        metadata: { tool: entry.name },
-        ...Permission.invocation(context),
-      })
+      yield* ask(
+        deps.permission.value,
+        {
+          action: entry.name,
+          resources: ["*"],
+          save: [],
+          metadata: { tool: entry.name },
+          ...Permission.invocation(context),
+        },
+        entry.name,
+      )
     }
 
     // The effect's interruption signal reaches the browser call, so cancelling the turn aborts the browser action.
@@ -520,12 +672,17 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     const session = String(context.sessionID)
     const grants = grantsFor(session)
     const allowSensitive = browser.allowSensitive
+    const title = yield* titleFor(deps.title, choice.backend, context.sessionID)
 
     // Ask, then call. A backend that discovers the real origin at action time (redirects, frames, sensitive elements,
-    // downloads) reports it as needs_permission; the call is retried once with the new grants and the step token.
+    // downloads) reports it as needs_permission; the call is retried once per distinct need it reports, with the new
+    // grants and every step token approved so far, so an act grant, then a sensitive step, then a redirect target each
+    // get one ask and a later need never drops an approval the call already has.
+    const asked = new Set<string>()
+    let asks = 0
     let sensitive: string[] = []
-    let result: CallResult | undefined
-    for (let attempt = 0; attempt < 2; attempt++) {
+    let result: CallResult
+    for (;;) {
       if (active.plan) {
         const planned = yield* Effect.tryPromise({
           try: () =>
@@ -554,6 +711,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
               authorized: [...grants],
               sensitive: [...sensitive],
               allowSensitive,
+              title,
             }),
           catch: (error) => error,
         }),
@@ -563,12 +721,12 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
         break
       }
       const error = outcome.failure
-      if (!(error instanceof NeedsPermissionError)) return yield* failure(error)
-      if (attempt === 1 || !error.items.length) {
-        return yield* failure(
-          new Error("The browser page changed while permission was requested. Call the tool again."),
-        )
-      }
+      // A move already happened whether or not it asks for a grant: record it first, so a refusal never says the tab
+      // is still on the page it left.
+      tracker.place(session, movedTo(error))
+      if (!(error instanceof NeedsPermissionError)) return yield* Effect.fail(error)
+      const stop = exhausted(error.items, asked, asks)
+      if (stop) return yield* failure(new Error(stop))
       yield* authorize(
         error.items,
         context,
@@ -576,9 +734,10 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
         (origin) => KiloBrowserPolicy.allows(organization, origin),
         deps.permission,
       )
-      sensitive = error.stepToken ? [error.stepToken] : []
+      for (const item of error.items) asked.add(need(item))
+      asks += 1
+      if (error.stepToken) sensitive = [...sensitive, error.stepToken]
     }
-    if (!result) return yield* failure(new Error("the browser call did not settle"))
     if (result.isError) return yield* failure(new Error(textOf(result) || `${entry.name} failed`))
     // The action already ran; its result asked for a grant. Ask now, and never repeat the action for it.
     if (result.meta?.needs?.length) {
@@ -602,16 +761,21 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     }
 
     return yield* shaped({
+      args: input,
       result,
       entry,
       active,
       session,
       context,
       permission: deps.permission,
+      organization,
       observation: browser.observation,
       backend: choice.backend,
     })
-  }).pipe(Effect.mapError((error) => failure(error)))
+  }).pipe(
+    Effect.tapError((error) => deps.notify(context.sessionID, error)),
+    Effect.mapError((error) => failure(error)),
+  )
 }
 
 /**
@@ -628,6 +792,10 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
     // disposed, so a session that keeps switching profiles cannot grow this map.
     const extensions = new Map<string, Promise<ExtensionBackend>>()
     const EXTENSION_LIMIT = 4
+    // Each conversation's latest turn, numbered once per process: a Stop all halts the turns current at that moment, and
+    // the conversation's next turn gets a new number, so it starts free. A deleted conversation leaves the map.
+    const turns = new Map<string, number>()
+    let turn = 0
     const extension = (target: string | null) => {
       const name = target ?? ""
       const existing = extensions.get(name)
@@ -638,7 +806,7 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
         return existing
       }
       const created = import("./extension").then((module) =>
-        module.backend({ port: hub.port(target), directory: ctx.location.directory }),
+        module.backend({ port: hub.port(target), directory: ctx.location.directory, turns }),
       )
       extensions.set(name, created)
       trim(extensions, EXTENSION_LIMIT)
@@ -658,12 +826,18 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
       }),
     )
 
-    // A deleted session releases its remembered page at once. The stream never ends, so it is forked: awaiting it
-    // here would keep the plugin effect from ever registering its tools.
-    yield* ctx.event.subscribe({ types: ["session.deleted"] }).pipe(
+    // A deleted session releases its remembered page at once, and each execution start numbers the session's turn. The
+    // stream never ends, so it is forked: awaiting it here would keep the plugin effect from ever registering its tools.
+    yield* ctx.event.subscribe({ types: ["session.deleted", "session.execution.started"] }).pipe(
       Stream.runForEach((event) =>
         Effect.sync(() => {
+          if (event.type === "session.execution.started") {
+            turn += 1
+            turns.set(event.data.sessionID, turn)
+            return
+          }
           if (event.type !== "session.deleted") return
+          turns.delete(event.data.sessionID)
           tracker.forget(event.data.sessionID)
           playwright.forgetSession(event.data.sessionID)
           for (const pending of extensions.values()) {
@@ -694,21 +868,36 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
       }),
     )
 
-    const browser = yield* settings(config)
-    const organization = yield* policy(ctx.location.directory)
+    // The tool set follows the config: a `config.updated` re-reads the browser block and the organization policy and
+    // rebuilds the tools and the skill, so `off` hides them for the next turn and turning a backend on shows them,
+    // without a restart. Subscribed before the first read, so an update racing it still rebuilds.
+    const live: { browser: Settings; organization: KiloBrowserPolicy.Policy | undefined } = {
+      browser: resolve(undefined),
+      organization: undefined,
+    }
+    const read = Effect.gen(function* () {
+      live.browser = yield* settings(config)
+      live.organization = yield* policy(ctx.location.directory)
+    })
+    yield* ctx.event.subscribe({ types: ["config.updated"] }).pipe(
+      Stream.runForEach(() =>
+        read.pipe(
+          Effect.andThen(ctx.tool.reload()),
+          Effect.andThen(ctx.skill.reload()),
+          Effect.catchCause((cause) => Effect.logError("failed to reload the browser tools", { cause })),
+        ),
+      ),
+      Effect.forkScoped({ startImmediately: true }),
+    )
+    yield* read
 
     // What a settings editor shows before it offers a backend: whether the Playwright one has a browser to start, the
     // backend after the organization policy, and the policy itself. The Playwright answer is read through the same
-    // `locate` check the backend runs, so the dialog never calls it ready when a call would fail.
-    const backend = effective(browser, organization)
-    const organizationStatus = organization
-      ? { organization: { control: organization.control, origins: [...organization.origins] } }
-      : {}
-    // Both answers are what a call would find: the same `locate` check for Playwright, and the hub connection's own
-    // report for the extension, connected or not. Neither starts a browser or a hub.
+    // `locate` check the backend runs, so the dialog never calls it ready when a call would fail; the extension answer
+    // is the hub connection's own report, connected or not. Neither starts a browser or a hub.
     const extensionStatus = (): Promise<KiloBrowserRpc.Extension> =>
       hub
-        .port(browser.target)
+        .port(live.browser.target)
         .reported()
         .then(
           (info): KiloBrowserRpc.Extension =>
@@ -722,7 +911,26 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
                 },
           () => ({ ready: false }),
         )
-    yield* ctx.rpc
+    // A session that is not titled yet, or cannot be read, leaves the backend's own fallback in place.
+    const title = (sessionID: SessionID) =>
+      ctx.session.get({ sessionID }).pipe(
+        Effect.map((session) => (isFallbackTitle(session.title) ? undefined : session.title)),
+        Effect.orElseSucceed(() => undefined),
+      )
+    // An organization that turned browser control off is its own answer: no backend the user picks in `/browser` could
+    // share or adopt. The user's own `off` and a Playwright backend, chosen or pinned, need the extension chosen. The
+    // conversation's title names the browser session when the command is the first to open it.
+    const control = <A>(sessionID: SessionID, act: (active: ExtensionBackend, name?: string) => Promise<A>) =>
+      Effect.gen(function* () {
+        const current = yield* settings(config)
+        const organization = yield* policy(ctx.location.directory)
+        if (organization?.control === "off") return { kind: "organization_off" as const }
+        if (effective(current, organization) !== "extension") return { kind: "not_extension" as const }
+        const name = yield* title(sessionID)
+        const named = (active: ExtensionBackend) => act(active, name)
+        return yield* Effect.promise(() => extension(current.target).then(named).catch(refusal))
+      }).pipe(Effect.orDie)
+    const registration = yield* ctx.rpc
       .register(KiloBrowserRpc.Definition, {
         status: () =>
           Effect.promise(async () => ({
@@ -731,29 +939,45 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
               () => ({ ready: false as const }),
             ),
             extension: await extensionStatus(),
-            backend,
-            ...organizationStatus,
+            backend: effective(live.browser, live.organization),
+            ...(live.organization
+              ? { organization: { control: live.organization.control, origins: [...live.organization.origins] } }
+              : {}),
           })),
+        share: ({ sessionID }) =>
+          control(sessionID, (active, name) => active.share(sessionID, name).then(() => ({ kind: "shared" as const }))),
+        adopt: ({ sessionID }) =>
+          control(sessionID, (active, name) => active.adopt(sessionID, name).then((kind) => ({ kind }))),
       })
       .pipe(Effect.orDie)
+    const notify = (sessionID: SessionID, error: unknown) => {
+      const raised = notice(sessionID, error)
+      return raised === undefined ? Effect.void : registration.events.emit("notice", raised).pipe(Effect.ignore)
+    }
 
-    // `off` hides the tools: an agent never sees a browser tool it cannot use.
-    if (browser.backend === "off" || organization?.control === "off") return
-
-    yield* ctx.skill.transform((editor) =>
+    yield* ctx.skill.transform((editor) => {
+      // `off` hides the tools: an agent never sees a browser tool it cannot use.
+      const chosen = effective(live.browser, live.organization)
+      if (chosen === "off") return
       editor.add(
         Skill.Info.make({
           id: Skill.ID.make("browser-automation"),
           name: Skill.Name.make("browser-automation"),
-          description: "Use to inspect or interact with a web page using Playwright.",
+          // The one line a model reads before it loads the skill: which browser these tools drive.
+          description:
+            chosen === "extension"
+              ? "Use to inspect or interact with the user's own browser through the Kilo extension."
+              : "Use to inspect or interact with a web page using Playwright.",
           path: AbsolutePath.make("/builtin/browser-automation.md"),
           content: GUIDE,
         }),
-      ),
-    )
+      )
+    })
     yield* ctx.tool.transform((editor) => {
+      if (effective(live.browser, live.organization) === "off") return
       const backend = (choice: Settings): Promise<BrowserBackend> =>
         choice.backend === "extension" ? extension(choice.target) : playwright.get(key(choice))
+      const deps: Deps = { config, permission, directory: ctx.location.directory, backend, title, notify }
       for (const entry of BrowserContract.entries) {
         editor.add({
           // The registry flattens browser.click to browser_click, preserving permission and policy IDs.
@@ -761,8 +985,7 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
           options: { namespace: "browser", codemode: true },
           description: entry.description,
           input: entry.inputSchema as JsonSchema.JsonSchema,
-          execute: (args: unknown, context: Tool.Context) =>
-            run(entry, args, context, { config, permission, directory: ctx.location.directory, backend }),
+          execute: (args: unknown, context: Tool.Context) => run(entry, args, context, deps),
         })
       }
     })

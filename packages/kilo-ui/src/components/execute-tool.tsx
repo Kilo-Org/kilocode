@@ -25,6 +25,7 @@ import { Spinner } from "./spinner"
 import { TextShimmer } from "./text-shimmer"
 import { Tooltip } from "./tooltip"
 import { busy } from "./tool-utils"
+import { ToolImages } from "./tool-images"
 
 /** Calls shown before the list folds the rest behind a "more" row. */
 const VISIBLE = 6
@@ -119,6 +120,8 @@ export function ExecuteTool(props: ToolProps) {
           live={live}
         />
       </BasicTool>
+      {/* Images the script's calls returned (a browser screenshot) reach the model as files; show them too. */}
+      <ToolImages files={props.attachments} />
     </div>
   )
 }

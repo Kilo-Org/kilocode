@@ -192,13 +192,10 @@ describe("output directory", () => {
       "browser_evaluate",
       "browser_network_request",
       "browser_network_requests",
-      "browser_run_code_unsafe",
       "browser_snapshot",
       "browser_take_screenshot",
     ])
     for (const name of names) {
-      // Refused outright before a file could exist.
-      if (name === "browser_run_code_unsafe") continue
       if (name === "browser_take_screenshot") {
         expect(screenshotPath(name, { filename: "shots/a.png" }, directory)).toBe(
           path.resolve(directory, "shots", "a.png"),

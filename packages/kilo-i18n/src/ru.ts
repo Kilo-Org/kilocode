@@ -143,6 +143,7 @@ export const dict = {
   "ui.tool.chart.failed": "Не удалось отобразить диаграмму",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Настройки браузера",
+  "browser.command.starting": "Kilo ещё запускается. Повторите попытку через мгновение.",
   "browser.command.description": "Показать бэкенд браузера, его доступность и разрешения для источников",
   "browser.command.backend": "Бэкенд",
   "browser.command.observation": "Наблюдение",
@@ -168,6 +169,52 @@ export const dict = {
   "browser.state.unavailable": "недоступен",
   "browser.state.readyHint": "Профиль Chromium, принадлежащий Kilo, запускается при первом вызове браузера",
   "browser.state.extensionHint": "Подключите расширение браузера Kilo, чтобы управлять своим браузером",
+  "browser.command.usage":
+    "Используйте /browser для настроек, /browser share, чтобы передать этой сессии активную вкладку, или /browser adopt, чтобы повторно использовать последнюю завершённую группу вкладок.",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Читать страницы на {{origin}}",
+  "browser.permission.act.title": "Нажимать и вводить текст на {{origin}}",
+  "browser.permission.navigate.title": "Открывать страницы на {{origin}}",
+  "browser.permission.read.detail": "Одобрение позволяет этой сессии читать страницы на {{origin}} до её завершения.",
+  "browser.permission.act.detail":
+    "Одобрение позволяет этой сессии нажимать, вводить текст и запускать скрипты страницы на {{origin}} до её завершения.",
+  "browser.permission.navigate.detail":
+    "Одобрение позволяет этой сессии открывать страницы на {{origin}} до её завершения.",
+  "browser.permission.frame": "Этот источник — фрейм внутри страницы, а не сама страница.",
+  "browser.permission.sensitive.title": "Чувствительный шаг браузера на {{origin}}",
+  "browser.permission.sensitive.reason": "Причина: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Одобрить этот шаг может только человек. Одобрение распространяется только на этот один шаг.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Поделиться активной вкладкой браузера",
+  "browser.share.description": "Переместить активную вкладку браузера в группу вкладок этой сессии",
+  "browser.share.done": "Активная вкладка теперь в группе вкладок этой сессии.",
+  "browser.adopt.title": "Повторно использовать завершённую группу вкладок",
+  "browser.adopt.description": "Передать этой сессии последнюю завершённую группу вкладок Kilo",
+  "browser.adopt.done": "Эта сессия теперь использует последнюю завершённую группу вкладок.",
+  "browser.adopt.none": "Нет завершённой группы вкладок для повторного использования.",
+  "browser.adopt.kept": "У этой сессии уже есть свои вкладки, и они сохраняются.",
+  "browser.adopt.unconfirmed":
+    "Браузеру предложено повторно использовать последнюю завершённую группу вкладок. Обновите расширение браузера Kilo, чтобы узнать, сделал ли он это.",
+  "browser.control.notExtension":
+    "Для обмена вкладками и их повторного использования нужно расширение браузера Kilo. Выберите его в /browser.",
+  "browser.control.organizationOff": "Ваша организация отключила управление браузером в Kilo.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Браузер недоступен",
+  "browser.notice.outdatedTitle": "Расширение браузера устарело",
+  "browser.notice.stopped":
+    "Вы остановили браузер для этой сессии. Выполните /browser adopt, чтобы вернуть ей вкладки.",
+  "browser.notice.extension":
+    "Расширение браузера Kilo подключено в {{browser}}. Использовать свой браузер для инструментов браузера вместо встроенного?",
+  "browser.notice.switch": "Использовать мой браузер",
+  "settings.browser.status.extension.waiting": "Ожидание расширения браузера",
+  "settings.browser.origins.saved.title": "Разрешено в чатах",
+  "settings.browser.origins.saved.description":
+    "Сайты, которые вы разрешили в чате кнопкой «Разрешить всегда», для этой рабочей области. Они действуют поверх правил выше.",
+  "settings.browser.origins.saved.empty": "В чатах пока не разрешено ни одного сайта.",
+  "settings.browser.origins.saved.failed": "Сохранённые разрешения недоступны",
+  "settings.browser.origins.saved.revoke": "Отозвать",
+  "ui.permission.reason": "Причина: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Переключить автоодобрение",
