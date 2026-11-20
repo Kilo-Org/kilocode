@@ -347,7 +347,7 @@ export const locationLayer = Layer.effect(
             },
           )
           if (!flight.owner) return yield* restore(Deferred.await(flight.deferred))
-          const settle = (exit: Exit.Exit<Credential.Value, AuthorizationError>) =>
+          const finish = (exit: Exit.Exit<Credential.Value, AuthorizationError>) =>
             SynchronizedRef.modify(refreshing, (current) => {
               if (current.get(credential.id) !== flight.deferred) return [undefined, current] as const
               const next = new Map(current)
@@ -371,10 +371,8 @@ export const locationLayer = Layer.effect(
             ),
           )
           yield* outcome.pipe(
-            Effect.flatMap((exit) => settle(exit)),
-            Effect.onExit((exit) =>
-              Exit.isFailure(exit) ? settle(Exit.interrupt()) : Effect.void,
-            ),
+            Effect.flatMap((exit) => finish(exit)),
+            Effect.onExit((exit) => (Exit.isFailure(exit) ? finish(Exit.interrupt()) : Effect.void)),
             Effect.forkIn(scope, { startImmediately: true }),
           )
           return yield* restore(Deferred.await(flight.deferred))
