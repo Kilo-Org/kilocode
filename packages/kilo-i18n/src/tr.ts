@@ -232,4 +232,8 @@ export const dict = {
   "tui.autoApprove.description": "Bu süreç için izin isteklerini otomatik olarak onayla",
   "tui.autoApprove.enabled": "Otomatik onay etkinleştirildi. İzin istekleri otomatik olarak onaylanır.",
   "tui.autoApprove.disabled": "Otomatik onay devre dışı bırakıldı.",
+
+  // Session transcript export
+  "session.export.success": "Oturum dökümü Markdown olarak dışa aktarıldı.",
+  "session.export.error": "Oturum dökümü dışa aktarılamadı",
 }

@@ -228,4 +228,8 @@ export const dict = {
   "tui.autoApprove.description": "Godkend anmodninger om tilladelse automatisk for denne proces",
   "tui.autoApprove.enabled": "Auto-godkendelse aktiveret. Anmodninger om tilladelse godkendes automatisk.",
   "tui.autoApprove.disabled": "Auto-godkendelse deaktiveret.",
+
+  // Session transcript export
+  "session.export.success": "Sessionsudskriften blev eksporteret som Markdown.",
+  "session.export.error": "Eksport af sessionsudskrift mislykkedes",
 }

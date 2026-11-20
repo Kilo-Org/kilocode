@@ -235,4 +235,8 @@ export const dict = {
   "tui.autoApprove.description": "Automatski odobri zahtjeve za dozvolu za ovaj proces",
   "tui.autoApprove.enabled": "Automatsko odobravanje uključeno. Zahtjevi za dozvolu se odobravaju automatski.",
   "tui.autoApprove.disabled": "Automatsko odobravanje isključeno.",
+
+  // Session transcript export
+  "session.export.success": "Transkript sesije je izvezen kao Markdown.",
+  "session.export.error": "Izvoz transkripta sesije nije uspio",
 }

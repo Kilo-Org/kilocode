@@ -223,4 +223,8 @@ export const dict = {
   "tui.autoApprove.description": "이 프로세스의 권한 요청을 자동으로 승인합니다",
   "tui.autoApprove.enabled": "자동 승인이 활성화되었습니다. 권한 요청이 자동으로 승인됩니다.",
   "tui.autoApprove.disabled": "자동 승인이 비활성화되었습니다.",
+
+  // Session transcript export
+  "session.export.success": "세션 기록을 Markdown으로 내보냈습니다.",
+  "session.export.error": "세션 기록을 내보내지 못했습니다",
 }

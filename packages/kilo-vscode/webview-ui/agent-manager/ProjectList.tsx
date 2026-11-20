@@ -61,7 +61,7 @@ interface Props {
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
-  onDeleteRef?: (confirm: WorktreeDelete["confirm"]) => void
+  onDeleteRef?: (deletion: WorktreeDelete) => void
   onDelete?: (projectId: string, worktreeId: string) => void
   onShortcuts: () => void
   onHistory: (projectId: string) => void
@@ -109,7 +109,7 @@ export const ProjectList: Component<Props> = (props) => {
         vscode.postMessage({ type: "agentManager.toggleSectionCollapsed", projectId, sectionId: section })
     },
   })
-  props.onDeleteRef?.(deletion.confirm)
+  props.onDeleteRef?.(deletion)
   // Group the project sessions once per catalog change; the search rows below read the groups instead of filtering
   // every project list per worktree and per session.
   const catalogs = createMemo(() => {

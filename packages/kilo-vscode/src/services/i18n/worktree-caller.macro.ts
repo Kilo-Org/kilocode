@@ -17,10 +17,13 @@ const entries = await Promise.all(
         "session.workspaceScope.alternatives": app.dict["session.workspaceScope.alternatives"],
         "prompt.action.autoApprove.enabledNotification": app.dict["prompt.action.autoApprove.enabledNotification"],
         "prompt.action.autoApprove.disabledNotification": app.dict["prompt.action.autoApprove.disabledNotification"],
+        "session.export.save": app.dict["settings.aboutKiloCode.exportSettings"],
         ...(own.dict
           ? {
               "browser.notice.extension": own.dict["browser.notice.extension"],
               "browser.notice.switch": own.dict["browser.notice.switch"],
+              "session.export.success": own.dict["session.export.success"],
+              "session.export.error": own.dict["session.export.error"],
             }
           : {}),
       },

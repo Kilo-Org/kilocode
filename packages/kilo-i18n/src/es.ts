@@ -232,4 +232,8 @@ export const dict = {
   "tui.autoApprove.description": "Aprobar solicitudes de permiso automáticamente para este proceso",
   "tui.autoApprove.enabled": "Aprobación automática activada. Las solicitudes de permiso se aprueban automáticamente.",
   "tui.autoApprove.disabled": "Aprobación automática desactivada.",
+
+  // Session transcript export
+  "session.export.success": "Transcripción de la sesión exportada como Markdown.",
+  "session.export.error": "Error al exportar la transcripción de la sesión",
 }

@@ -1,5 +1,5 @@
 import { createContext, createMemo, For, useContext, type Accessor, type JSX } from "solid-js"
-import { identity, palette } from "./agent-avatar-identity"
+import { identity, palette, type AvatarIdentity } from "./agent-avatar-identity"
 
 export type AgentAvatarStatus = "running"
 
@@ -9,10 +9,10 @@ export function taskStatus(status: string | undefined): AgentAvatarStatus | unde
   return status === "pending" || status === "running" ? "running" : undefined
 }
 
-// Sibling-aware colors. Surfaces that know the child list of one parent session
-// provide it here, so the same agent gets the same color in every surface and
-// siblings avoid sharing a color until the palette runs out.
-const Palette = createContext<Accessor<Map<string, number>>>()
+// Sibling-aware identities. Surfaces that know the child list of one parent
+// session provide it here, so the same agent gets the same color and glyph in
+// every surface, and siblings never share both until the palette runs out.
+const Palette = createContext<Accessor<Map<string, AvatarIdentity>>>()
 
 export function AgentAvatarPalette(props: { ids: string[]; children: JSX.Element }) {
   const parent = useContext(Palette)
@@ -43,13 +43,12 @@ function sync(event: AnimationEvent) {
 // Same cell geometry as the loading spinner, drawn as round dots on a 1px gap grid.
 export function AgentAvatar(props: { id: string; status?: AgentAvatarStatus }) {
   const shared = useContext(Palette)
-  const avatar = createMemo(() => identity(props.id))
-  const color = createMemo(() => shared?.().get(props.id) ?? avatar().color)
+  const avatar = createMemo(() => shared?.().get(props.id) ?? identity(props.id))
   const lit = createMemo(() => new Set(avatar().cells))
   return (
     <svg
       data-component="agent-avatar"
-      data-color={color()}
+      data-color={avatar().color}
       data-status={props.status}
       width="18"
       height="18"

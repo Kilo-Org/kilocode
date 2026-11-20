@@ -225,4 +225,8 @@ export const dict = {
   "tui.autoApprove.description": "อนุมัติคำขออนุญาตโดยอัตโนมัติสำหรับโปรเซสนี้",
   "tui.autoApprove.enabled": "เปิดใช้การอนุมัติอัตโนมัติแล้ว คำขออนุญาตจะได้รับการอนุมัติโดยอัตโนมัติ",
   "tui.autoApprove.disabled": "ปิดใช้การอนุมัติอัตโนมัติแล้ว",
+
+  // Session transcript export
+  "session.export.success": "ส่งออกบันทึกเซสชันเป็น Markdown แล้ว",
+  "session.export.error": "ส่งออกบันทึกเซสชันไม่สำเร็จ",
 }

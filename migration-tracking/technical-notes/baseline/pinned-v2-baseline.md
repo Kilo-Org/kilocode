@@ -1,10 +1,42 @@
 # Pinned upstream v2 baseline
 
-Status: living. Refreshed 2026-11-02 on the `v2.2.5` sync branch `sync-v2-2-5`. This capture describes the proposed sync, not a merge into `origin/v2`. It includes `v2.2.0` to `v2.2.5`. The base moves with every upstream sync, so re-measure after each sync. The earlier captures remain below. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
+Status: living. Refreshed 2026-11-20 on the `v2.3.2` sync branch `sync-v2-3-2`. This capture covers `v2.3.2` on top of the merged `v2.3.1` (#16372); the `v2.3.1` sync has no separate capture. The base moves with every upstream sync, so re-measure after each sync. The earlier captures remain below. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
 
 This file records the upstream release `origin/v2` is synced to, the validation commands that this tree defines, and the result of running them. Compare any failing check against this file, and against `origin/v2` before your change, before you attribute it to a change.
 
-## Current capture: `v2.2.5` (2026-11-02)
+## Current capture: `v2.3.2` (2026-11-20)
+
+`v2.3.1` moved Kilo Flows onto upstream Automations and replaced the exact-match branding adapter with the rule engine plus its audit. `v2.3.2` is a small release on top of it: four commits, 42 files, mostly `packages/ai` Responses protocol code and recorded fixtures, plus a Code Mode extension `modules` option and a `webfetch` output change (no `url` or `format`).
+
+### Refs and method
+
+| Ref | SHA | Note |
+|---|---|---|
+| Pre-sync Kilo base | `252b4435af` | `origin/v2` when the sync started |
+| Previous upstream base | `bd115fdac83` | Parent of `v2.3.1` |
+| New upstream base | `de291ab7b1c` | Parent of `v2.3.2` |
+
+Local runs used Bun 1.4.4 (`packageManager`) on macOS arm64. The merge used `bun script/upstream/merge.ts --base-branch HEAD --version v2.3.2` in a scratch worktree. It merged cleanly: no conflicts, no new workflow, no shared file and no mirror touched. Tests ran through the package wrappers (`bun run test`), which set a temporary `HOME`, `OPENCODE_TEST_HOME`, `XDG_*`, `TMPDIR` and `OPENCODE_CONFIG_DIR` as CI does. A raw `bun test` with a hand-set `OPENCODE_TEST_HOME` fails `Core test environment > isolates global home and XDG roots`; that is a harness gap, not an effect of the sync.
+
+### Results
+
+| Check | Result | Detail |
+|---|---|---|
+| `bun install` | pass | One postinstall blocked by the Bun trust prompt (`bun pm untrusted`); the merge tool regenerated `bun.lock` with no drift |
+| `bun run check` | pass | 32/32 turbo typecheck tasks; oxlint emits warnings only, 0 errors |
+| `core` tests | **3 fail, host** | 7,858 pass, 39 skip. The three are the recorded macOS bash 3.2 cases: `ShellTool conditional process substitution` (`once`, `always`) and `real-shell compound syntax > bash`. Those test files are unchanged by the sync |
+| `ai` tests | pass | 2,266 pass, 29 upstream skips |
+| `codemode` tests | pass | 1,692 pass |
+| Changed-area focused tests | pass | ai provider and recorded tests 296, core `tool-webfetch` and `model-resolver` 139, codemode `extensions` 52 |
+| Kilo package tests | pass | `kilo-plugin` `flow` 35; `kilo-cli` branding (`branding`, `branding-epilogue`, `branding-logo`) 129 |
+| Sync tooling tests | pass | 119, after `bun install` in `script/upstream` because the codemods need `ts-morph` |
+| Branding audit | pass | `bun run branding:audit` in `packages/kilo-cli`: 1,267 files, 34 allowlisted, no finding |
+| Workflow allowlist, annotations, shared patches, mirrors | pass | Workflows 4; annotations 185 shared files against `de291ab7b1c`; shared patches 167 files, 3,020 marked and 560 unmarked lines; 9 mirrors |
+| CLI self-test | pass, local | `bun dev --help` prints "Kilo command line interface" and `kilo2`; `bun dev run --standalone` answered `ok`; a webfetch prompt ran the tool and returned the page text |
+| TUI self-test | pass, local | `vscode-self-test` `a273fb2`, `--mode dev --build false --surface terminal --headless true`, fresh profile and `--standalone`: branded home (`KILO v2`, `Code · Auto Free Kilo Gateway`), prompt answered `ok` in 2.0s, no `level=ERROR` in `opencode-local.log` |
+| Lag after | 0 releases | `list-versions.ts` reports no release newer than `v2.3.2` on `upstream/dev` |
+
+## Previous capture: `v2.2.5` (2026-11-02)
 
 ### Refs and method
 

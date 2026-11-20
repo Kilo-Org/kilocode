@@ -77,6 +77,7 @@ const manualRequests: Partial<PermissionRequest>[] = [
   { action: "browser_sensitive" },
   { metadata: { sandboxEscalation: true } },
   { metadata: { browserSensitive: true } },
+  { metadata: { interactive: true } },
 ]
 test.each(manualRequests)(
   "a request requiring a person (%j) is not delayed behind a subagent's auto-approval",
@@ -87,6 +88,16 @@ test.each(manualRequests)(
     expect(view.show()).toEqual(manual)
   },
 )
+
+test("an interactive request is shown as a prompt instead of being auto-approved", () => {
+  using view = permissions()
+  const interactive = { ...shell, id: "per_2", metadata: { interactive: true } }
+  view.setRequests([interactive])
+  expect(view.show()).toEqual(interactive)
+  view.setRequests([])
+  jest.runAllTimers()
+  expect(view.show()).toBeUndefined()
+})
 
 test("refreshing the same request does not restart its timer, but switching sessions does", () => {
   using view = permissions()

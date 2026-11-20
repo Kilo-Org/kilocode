@@ -53,6 +53,7 @@ import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { indexingHost } from "./indexing/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 import { chatFocus } from "./services/code-actions/target"
+import { exportTranscript } from "./kilo-provider/export-transcript"
 import { createMentionHost, isMentionRequest } from "./kilo-provider/mention-requests"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
@@ -459,6 +460,10 @@ export function wire(input: {
   }
   // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
   const handleLeafMessage = (message: ToHost): boolean => {
+    if (message.type === "exportSessionTranscript") {
+      void exportTranscript(input.server, message.sessionID)
+      return true
+    }
     if (message.type === "saveImage") {
       void Promise.resolve(input.saveImageDirectory?.(message.sessionID)).then((directory) =>
         saveImage(directory ?? input.directory, message),
