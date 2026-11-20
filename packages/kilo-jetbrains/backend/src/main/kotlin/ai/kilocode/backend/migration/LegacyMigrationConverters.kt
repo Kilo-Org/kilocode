@@ -382,15 +382,28 @@ object LegacyMigrationConverters {
     private val GROUP_TO_PERMISSION = mapOf(
         "read" to "read",
         "edit" to "edit",
-        "browser" to "bash",
+        "browser" to "browser_open",
         "command" to "bash",
-        "mcp" to "skill",
     )
-    private val ALL_MODE_PERMISSIONS = listOf("read", "edit", "bash", "skill")
+    private val ALL_MODE_PERMISSIONS = listOf("read", "edit", "bash", "browser_open", "skill")
 
-    fun convertCustomModePermissions(groups: List<Any>): JsonObject {
+    data class ModePermissions(
+        val permission: JsonObject,
+        val warnings: List<String>,
+    )
+
+    private val PERMISSION_KEY_UNSAFE = Regex("[^a-zA-Z0-9_-]")
+
+    private fun sanitizePermissionKey(name: String): String = name.replace(PERMISSION_KEY_UNSAFE, "_")
+
+    fun convertCustomModePermissions(
+        groups: List<Any>,
+        mcpServers: List<String> = emptyList(),
+    ): ModePermissions {
         val permission = mutableMapOf<String, JsonElement>()
         val allowed = mutableSetOf<String>()
+        val warnings = mutableListOf<String>()
+        var mcpGroupSeen = false
 
         for (group in groups) {
             val groupName: String
@@ -405,15 +418,43 @@ object LegacyMigrationConverters {
                 }
                 else -> continue
             }
+
+            if (groupName == "mcp") {
+                val mcpRegex = groupConfig?.get("fileRegex")
+                if (mcpRegex != null) {
+                    warnings.add("File restriction not migrated: $mcpRegex")
+                    continue
+                }
+                mcpGroupSeen = true
+                if (mcpServers.isEmpty()) {
+                    warnings.add("MCP access not migrated: no MCP servers were selected")
+                    continue
+                }
+                for (server in mcpServers) {
+                    val key = "${sanitizePermissionKey(server)}_*"
+                    allowed.add(key)
+                    permission[key] = JsonPrimitive("allow")
+                }
+                continue
+            }
+
             val permKey = GROUP_TO_PERMISSION[groupName] ?: groupName
-            allowed.add(permKey)
 
             val fileRegex = groupConfig?.get("fileRegex")
             val newValue: JsonElement = if (fileRegex != null) {
-                JsonObject(mapOf(fileRegex to JsonPrimitive("allow"), "*" to JsonPrimitive("deny")))
+                val globs = fileRegexToGlobs(fileRegex)
+                if (globs == null) {
+                    warnings.add("File restriction not migrated: $fileRegex")
+                    continue
+                }
+                buildJsonObject {
+                    put("*", "deny")
+                    globs.forEach { put(it, "allow") }
+                }
             } else {
                 JsonPrimitive("allow")
             }
+            allowed.add(permKey)
 
             val existing = permission[permKey]
             permission[permKey] = when {
@@ -428,10 +469,21 @@ object LegacyMigrationConverters {
             if (perm !in allowed) permission[perm] = JsonPrimitive("deny")
         }
 
-        return JsonObject(permission)
+        if (!mcpGroupSeen) {
+            for (server in mcpServers) {
+                val key = "${sanitizePermissionKey(server)}_*"
+                if (key !in allowed) permission[key] = JsonPrimitive("deny")
+            }
+        }
+        return ModePermissions(JsonObject(permission), warnings)
     }
 
-    fun convertCustomMode(mode: LegacyCustomMode): JsonObject {
+    data class ModeConversion(
+        val agent: JsonObject,
+        val warnings: List<String>,
+    )
+
+    fun convertCustomMode(mode: LegacyCustomMode, mcpServers: List<String> = emptyList()): ModeConversion {
         val parts = mutableListOf(mode.roleDefinition)
         val instructions = mode.customInstructions?.trim()
         if (!instructions.isNullOrEmpty()) {
@@ -447,14 +499,15 @@ object LegacyMigrationConverters {
         }
         val prompt = parts.filter { it.isNotBlank() }.joinToString("\n\n")
         val description = mode.description ?: mode.whenToUse ?: mode.roleDefinition.take(120)
-        val permission = convertCustomModePermissions(mode.groups)
+        val permissions = convertCustomModePermissions(mode.groups, mcpServers)
 
-        return buildJsonObject {
+        val agent = buildJsonObject {
             put("mode", "primary")
             put("description", description)
             put("prompt", prompt)
-            put("permission", permission)
+            put("permission", permissions.permission)
         }
+        return ModeConversion(agent, permissions.warnings)
     }
 
     // ---------------------------------------------------------------------------
@@ -471,13 +524,11 @@ object LegacyMigrationConverters {
         val fallback = if (settings.autoApprovalEnabled == true) "allow" else "ask"
         val results = mutableListOf<Pair<String, MigrationItemStatus>>()
         val permission = mutableMapOf<String, JsonElement>()
-        var globalAllowApplied = false
 
         if (sel.commandRules) {
             val hasCommandLists = (settings.allowedCommands?.isNotEmpty() == true) || (settings.deniedCommands?.isNotEmpty() == true)
             if (settings.autoApprovalEnabled == true && !hasCommandLists) {
-                // Scalar "allow" — caller should write this as top-level permission:"allow"
-                globalAllowApplied = true
+                permission["bash"] = JsonPrimitive("allow")
             } else if (hasCommandLists) {
                 val bashRules = mutableMapOf<String, JsonElement>()
                 for (cmd in settings.allowedCommands ?: emptyList()) {
@@ -554,7 +605,6 @@ object LegacyMigrationConverters {
         }
 
         val config = when {
-            globalAllowApplied -> buildJsonObject { put("permission", "allow") }
             permission.isNotEmpty() -> buildJsonObject { put("permission", JsonObject(permission)) }
             else -> null
         }
@@ -768,5 +818,140 @@ object LegacyMigrationConverters {
         }
         flush()
         return modes
+    }
+}
+
+private const val MAX_GLOB_ARMS = 32
+
+private val UNSUPPORTED_REGEX_CHARS = setOf('*', '+', '{', '}', '[', ']', '^', '$', '?')
+
+/**
+ * Translate a legacy `fileRegex` pattern into permission wildcard globs.
+ *
+ * Returns null when the pattern uses a construct that the glob syntax cannot
+ * express, so the caller can report it instead of writing an unmatched rule.
+ */
+internal fun fileRegexToGlobs(regex: String): List<String>? {
+    if (regex.isEmpty()) return null
+    var body = regex
+    val anchoredStart = body.startsWith("^")
+    if (anchoredStart) body = body.substring(1)
+    var anchoredEnd = false
+    if (body.isNotEmpty() && body.endsWith("$") && !isEscapedAt(body, body.length - 1)) {
+        anchoredEnd = true
+        body = body.substring(0, body.length - 1)
+    }
+    if (body.isEmpty()) return null
+
+    val parsed = parseGlobSequence(body, 0, inGroup = false)?.first ?: return null
+    val arms = parsed.map { arm ->
+        var result = arm
+        if (!anchoredStart && !result.startsWith("*")) result = "*$result"
+        if (!anchoredEnd && !result.endsWith("*")) result = "$result*"
+        result
+    }.distinct()
+
+    if (arms.isEmpty() || arms.any { it.isEmpty() }) return null
+    return arms
+}
+
+private fun isEscapedAt(text: String, index: Int): Boolean {
+    var backslashes = 0
+    var i = index - 1
+    while (i >= 0 && text[i] == '\\') {
+        backslashes++
+        i--
+    }
+    return backslashes % 2 == 1
+}
+
+private fun globProduct(left: List<String>, right: List<String>): List<String>? {
+    if (left.size.toLong() * right.size.toLong() > MAX_GLOB_ARMS) return null
+    val out = ArrayList<String>(left.size * right.size)
+    for (a in left) for (b in right) out.add(a + b)
+    return out
+}
+
+/**
+ * Parse a supported regex sequence starting at [start] into glob arms.
+ *
+ * Returns the arms and the index of the char that stopped the parse: `)` or `|`
+ * inside a group, or the end of the text at the top level.
+ */
+private fun parseGlobSequence(text: String, start: Int, inGroup: Boolean): Pair<List<String>, Int>? {
+    var arms = listOf("")
+    var i = start
+    while (i < text.length) {
+        val c = text[i]
+        if (inGroup && (c == ')' || c == '|')) return arms to i
+        if (!inGroup && (c == ')' || c == '|')) return null
+
+        val atom: List<String>
+        when (c) {
+            '\\' -> {
+                if (i + 1 >= text.length) return null
+                val escaped = text[i + 1]
+                if (escaped == '*' || escaped == '?') return null
+                atom = listOf(escaped.toString())
+                i += 2
+            }
+            '.' -> {
+                if (i + 1 < text.length && text[i + 1] == '*') {
+                    atom = listOf("*")
+                    i += 2
+                } else {
+                    atom = listOf("?")
+                    i += 1
+                }
+            }
+            '(' -> {
+                if (inGroup) return null
+                val group = parseGlobGroup(text, i) ?: return null
+                atom = group.first
+                i = group.second
+            }
+            else -> {
+                if (c in UNSUPPORTED_REGEX_CHARS) return null
+                atom = listOf(c.toString())
+                i += 1
+            }
+        }
+
+        val before: List<String> = arms
+        arms = globProduct(before, atom) ?: return null
+
+        if (i < text.length && text[i] == '?') {
+            val optional = (before + arms).distinct()
+            if (optional.size > MAX_GLOB_ARMS) return null
+            arms = optional
+            i += 1
+        }
+    }
+    return arms to i
+}
+
+private fun parseGlobGroup(text: String, start: Int): Pair<List<String>, Int>? {
+    var i = start + 1
+    var arms = mutableListOf<String>()
+    var current = listOf("")
+    while (true) {
+        val seq = parseGlobSequence(text, i, inGroup = true) ?: return null
+        current = globProduct(current, seq.first) ?: return null
+        val next = seq.second
+        if (next >= text.length) return null
+        when (text[next]) {
+            ')' -> {
+                arms.addAll(current)
+                if (arms.size > MAX_GLOB_ARMS) return null
+                return arms to next + 1
+            }
+            '|' -> {
+                arms.addAll(current)
+                if (arms.size > MAX_GLOB_ARMS) return null
+                current = listOf("")
+                i = next + 1
+            }
+            else -> return null
+        }
     }
 }

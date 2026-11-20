@@ -145,6 +145,7 @@ class LegacyMigrationEngine(
         }
 
         // MCP servers
+        val migratedServers = mutableListOf<String>()
         if (selections.mcpServers.isNotEmpty() && mcpServers != null) {
             val mcpConfig = mutableMapOf<String, JsonObject>()
             for (name in selections.mcpServers) {
@@ -157,6 +158,7 @@ class LegacyMigrationEngine(
                 val converted = convertMcpServer(name, server)
                 if (converted != null) {
                     mcpConfig[name] = converted
+                    migratedServers.add(name)
                     results.add(LegacyMigrationResultItem(name, MigrationItemCategory.mcpServer, MigrationItemStatus.success))
                     sink.item(LegacyMigrationItemProgress(name, MigrationItemProgressStatus.success))
                 } else {
@@ -187,11 +189,19 @@ class LegacyMigrationEngine(
                     )
                     if (merged != null) {
                         sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.migrating))
-                        val agent = convertCustomMode(merged).toMutableMap()
+                        val conversion = convertCustomMode(merged, migratedServers)
+                        val agent = conversion.agent.toMutableMap()
                         agent["name"] = JsonPrimitive(info.name)
                         agentConfig[slug] = JsonObject(agent)
-                        results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
-                        sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.success))
+                        if (conversion.warnings.isEmpty()) {
+                            results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
+                            sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.success))
+                        } else {
+                            for (msg in conversion.warnings) {
+                                results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
+                                sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.warning, msg))
+                            }
+                        }
                     } else {
                         results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.error, "Failed to build merged mode"))
                     }
@@ -202,9 +212,17 @@ class LegacyMigrationEngine(
                         continue
                     }
                     sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.migrating))
-                    agentConfig[slug] = convertCustomMode(mode)
-                    results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
-                    sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.success))
+                    val conversion = convertCustomMode(mode, migratedServers)
+                    agentConfig[slug] = conversion.agent
+                    if (conversion.warnings.isEmpty()) {
+                        results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
+                        sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.success))
+                    } else {
+                        for (msg in conversion.warnings) {
+                            results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
+                            sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.warning, msg))
+                        }
+                    }
                 }
             }
             if (agentConfig.isNotEmpty()) {
