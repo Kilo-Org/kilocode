@@ -41,4 +41,20 @@ describe("agent permission rule editing", () => {
       edit: "ask",
     })
   })
+
+  test("seeds a base action as the catch-all when the tool has no entry", () => {
+    const next = addRule({}, "bash", "git status", "deny", "allow")
+    expect(next).toEqual({ bash: { "*": "allow", "git status": "deny" } })
+    expect(JSON.stringify(next)).toBe('{"bash":{"*":"allow","git status":"deny"}}')
+  })
+
+  test("invents no catch-all without a base action", () => {
+    expect(addRule({}, "bash", "git status", "deny")).toEqual({ bash: { "git status": "deny" } })
+  })
+
+  test("prefers an explicit permission entry over the base action", () => {
+    expect(addRule({ bash: "deny" }, "bash", "git status", "allow", "allow")).toEqual({
+      bash: { "*": "deny", "git status": "allow" },
+    })
+  })
 })

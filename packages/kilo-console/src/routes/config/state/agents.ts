@@ -408,7 +408,10 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
       ctx.fail(`Enter a ${selectedPermission().noun} pattern before saving.`)
       return
     }
-    setPermission(addRule(permission(), permTool(), pattern, permAction()))
+    const tool = permTool()
+    const base: PermissionAction | undefined = tools().includes(tool) ? "allow" : undefined
+    setTools(tools().filter((item) => item !== tool))
+    setPermission(addRule(permission(), tool, pattern, permAction(), base))
     close()
   }
 

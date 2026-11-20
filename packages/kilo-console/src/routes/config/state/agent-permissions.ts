@@ -3,10 +3,16 @@ import type { PermissionAction } from "./permissions"
 
 export type Permission = NonNullable<AgentPayload["permission"]>
 
-export function addRule(permission: Permission, tool: string, pattern: string, action: PermissionAction): Permission {
-  const cur = permission[tool]
+export function addRule(
+  permission: Permission,
+  tool: string,
+  pattern: string,
+  action: PermissionAction,
+  base?: PermissionAction,
+): Permission {
+  const cur = permission[tool] ?? base
   const map: Record<string, unknown> = cur && typeof cur === "object" && !Array.isArray(cur) ? { ...cur } : {}
-  if (typeof cur === "string" && map["*"] === undefined) map["*"] = cur
+  if (typeof cur === "string") map["*"] = cur
   map[pattern] = action
   return { ...permission, [tool]: map }
 }
