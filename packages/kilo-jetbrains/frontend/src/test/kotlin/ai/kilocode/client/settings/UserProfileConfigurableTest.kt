@@ -9,6 +9,7 @@ import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.TEST_WAIT_MS
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
+import ai.kilocode.client.telemetry.KiloTelemetryService
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -23,6 +24,7 @@ import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.rpc.dto.ProfileSyncDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.testFramework.replaceService
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
 import kotlinx.coroutines.CompletableDeferred
@@ -766,6 +768,80 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
             assertTrue("the account must be shown", t.contains("alice@test.com"))
             assertFalse("a read that answers signed-in clears the notice", t.contains(notice))
         }
+    }
+
+    fun `test a retry that cannot read the account keeps the notice and the account`() {
+        val profile = ProfileDto(email = "alice@test.com", name = "Alice")
+        rpc.completeResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+        rpc.completeGate = CompletableDeferred()
+
+        edt { buttons(panel).first { it.text == "Login with Kilo Code" }.doClick() }
+        flushUntil { text(panel).contains("Sign in to Kilo Code") }
+        edt {
+            app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = profile)
+            panel.update(app._state.value)
+        }
+        edt { rpc.completeGate!!.complete(Unit) }
+        flushUntil { text(panel).contains(notice) }
+
+        edt {
+            rpc.refreshAccountResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 503))
+            buttons(panel).first { it.text == "Refresh" }.doClick()
+            assertTrue("the retry must start", text(panel).contains("Refreshing"))
+        }
+        flushUntil { !text(panel).contains("Refreshing") }
+
+        edt {
+            val t = text(panel)
+            assertTrue("account must stay visible", t.contains("Alice"))
+            assertTrue("the notice must stay when the read cannot complete", t.contains(notice))
+            assertTrue("Refresh must stay reachable", buttons(panel).any { it.text == "Refresh" })
+            assertFalse("logged-out card must not appear", t.contains("Not logged in"))
+        }
+    }
+
+    fun `test a retry that answers signed out leaves the notice and offers the sign-in again`() {
+        val profile = ProfileDto(email = "alice@test.com", name = "Alice")
+        rpc.completeResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+        rpc.completeGate = CompletableDeferred()
+
+        edt { buttons(panel).first { it.text == "Login with Kilo Code" }.doClick() }
+        flushUntil { text(panel).contains("Sign in to Kilo Code") }
+        edt {
+            app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = profile)
+            panel.update(app._state.value)
+        }
+        edt { rpc.completeGate!!.complete(Unit) }
+        flushUntil { text(panel).contains(notice) }
+
+        edt {
+            rpc.refreshAccountResult = ProfileSyncDto(profile = null)
+            buttons(panel).first { it.text == "Refresh" }.doClick()
+            assertTrue("the retry must start", text(panel).contains("Refreshing"))
+        }
+        flushUntil { text(panel).contains("Not logged in") }
+
+        edt {
+            val t = text(panel)
+            assertFalse("a signed-out answer clears the notice", t.contains(notice))
+            assertTrue("the sign-in must be offered again", buttons(panel).any { it.text == "Login with Kilo Code" })
+        }
+    }
+
+    fun `test a sign-in whose account read fails reports the failure event`() {
+        ApplicationManager.getApplication()
+            .replaceService(KiloTelemetryService::class.java, KiloTelemetryService(coroutines.scope, rpc), testRootDisposable)
+        rpc.completeResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 503))
+
+        edt { buttons(panel).first { it.text == "Login with Kilo Code" }.doClick() }
+        flush()
+        flushUntil { text(panel).contains(notice) }
+
+        val failure = rpc.telemetry.filter { it.event == "Account Connect Failed" }
+        assertFalse("the failed read must not be reported as a success", rpc.telemetry.any { it.event == "Account Connect Success" })
+        assertEquals("the failure must be reported once", 1, failure.size)
+        assertEquals("profile", failure.single().properties["stage"])
+        assertEquals("profileHttp503", failure.single().properties["errorClass"])
     }
 
     fun `test auth card retains qr label across sync`() {

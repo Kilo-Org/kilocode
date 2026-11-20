@@ -167,6 +167,24 @@ class KiloAppServiceTest : BasePlatformTestCase() {
         assertEquals("existing@test.com", app.state.value.profile?.email)
     }
 
+    // ------ refreshAccount ------
+
+    fun `test refreshAccount publishes the account on success`() = runBlocking(Dispatchers.Default) {
+        rpc.refreshAccountResult = ProfileSyncDto(profile = profile())
+        val result = app.refreshAccount()
+        assertEquals("alice@test.com", result.profile?.email)
+        assertEquals("alice@test.com", app.state.value.profile?.email)
+    }
+
+    fun `test refreshAccount leaves the published account on a failed read`() = runBlocking(Dispatchers.Default) {
+        val existing = profile(email = "existing@test.com")
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = existing)
+        rpc.refreshAccountResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 503))
+        val result = app.refreshAccount()
+        assertEquals(503, result.error?.status)
+        assertEquals("existing@test.com", app.state.value.profile?.email)
+    }
+
     // ------ completeLogin ------
 
     fun `test completeLogin updates app state profile on success`() = runBlocking(Dispatchers.Default) {
