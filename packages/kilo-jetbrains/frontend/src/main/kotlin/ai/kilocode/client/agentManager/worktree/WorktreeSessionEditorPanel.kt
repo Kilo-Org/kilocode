@@ -3,6 +3,7 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorPanel
+import ai.kilocode.client.agentManager.WorkspaceSessionHeader
 import ai.kilocode.client.agentManager.WorkspaceSessionRow
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.diff.KiloDiffComparison
@@ -84,7 +85,7 @@ internal class WorktreeSessionEditorPanel @RequiresEdt constructor(
     } else {
         null
     }
-    private val prHeader = WorktreePrHeaderView(
+    private val prHeader = WorkspaceSessionHeader(
         openWorktree = ::openInNewFrame,
         openEnabled = worktree.directory.isNotBlank(),
         openDiff = { openDiff(KiloDiffComparison.BASE) },

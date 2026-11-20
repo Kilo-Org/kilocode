@@ -8,6 +8,11 @@ import ai.kilocode.rpc.dto.HostedProviderDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesRefreshDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangeFileResultDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffFileResultDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
@@ -54,6 +59,34 @@ interface KiloHostedRpcApi : RemoteApi<Unit> {
         ref: HostedWorkspaceRefDto,
         organizationID: String?,
     ): HostedWorkspacePullRequestDto
+
+    /** Passive saved comparison; never attaches a session or wakes compute. */
+    suspend fun workspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceChangesDto
+
+    suspend fun refreshWorkspaceChanges(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspaceChangesRefreshDto
+
+    suspend fun workspaceChangeFile(
+        ref: HostedWorkspaceRefDto,
+        path: String,
+        scope: String?,
+        expectedRevision: Long,
+        organizationID: String?,
+    ): HostedWorkspaceChangeFileResultDto
+
+    suspend fun workspacePullRequestDiff(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDiffDto
+
+    suspend fun workspacePullRequestDiffFile(
+        ref: HostedWorkspaceRefDto,
+        path: String,
+        expectedHeadSha: String,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDiffFileResultDto
 
     /** Authorized, sanitized profile choices for workspace creation. */
     suspend fun workspaceProfiles(organizationID: String?): HostedWorkspaceProfileListDto

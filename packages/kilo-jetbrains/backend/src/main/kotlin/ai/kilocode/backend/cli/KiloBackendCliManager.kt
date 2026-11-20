@@ -1,7 +1,8 @@
 package ai.kilocode.backend.cli
 
-import ai.kilocode.KiloPlugin
 import ai.kilocode.backend.dev.KiloDevMode
+
+import ai.kilocode.KiloPlugin
 import ai.kilocode.log.KiloLog
 import com.intellij.execution.process.OSProcessUtil
 import com.intellij.openapi.application.ApplicationInfo
@@ -612,7 +613,7 @@ internal fun buildKiloCliEnv(
     put("KILO_ENABLE_QUESTION_TOOL", "true")
     put("KILO_PLATFORM", "jetbrains")
     put("KILO_APP_NAME", "kilo-code")
-    put("KILO_TELEMETRY_LEVEL", if (KiloDevMode.enabled()) "off" else "all")
+    if (KiloDevMode.enabled()) put("KILO_TELEMETRY_LEVEL", "off")
     if (!KiloClaudeCompatSettings.get()) put("KILO_DISABLE_CLAUDE_CODE", "true")
     put("KILOCODE_FEATURE", "jetbrains-plugin")
     ideEnv(log).forEach { entry -> put(entry.key, entry.value) }

@@ -5,12 +5,15 @@ import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.ui.components.UiComponent
 import com.intellij.driver.sdk.ui.components.common.ideFrame
+import com.intellij.driver.sdk.ui.components.settings.SettingsDialogUiComponent
 import com.intellij.driver.sdk.ui.remote.Component
 import com.intellij.driver.sdk.ui.remote.SwingHierarchyService
 import com.intellij.driver.sdk.ui.ui
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import javax.swing.JDialog
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Small page-object layer over the real IntelliJ component tree and public services.
@@ -453,5 +456,90 @@ class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchd
         const val ACTIVE_LIST = "ai.kilocode.client.ui.list.ActiveList"
         const val HOSTED_EDITOR = "ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorPanel"
         val settled = setOf("Idle", "Error", "TurnEnded", "LoginRequired")
+    }
+}
+
+/**
+ * Kilo Code > Advanced settings, reached through the public settings dialog. The telemetry switch
+ * is the first OnOffButton on the page: the Privacy section precedes Logging and Indexing.
+ */
+class TelemetrySettingsPage(private val ide: KiloIdePage, private val watchdog: Watchdog) {
+    fun open() {
+        ide.driver.ideFrame().openSettingsDialog()
+        val dialog = watchdog.value("settings dialog is showing") { dialog() }
+        val tree = dialog.settingsTree
+        tree.expandAll()
+        val parts = listOf(
+            listOf("Tools", "Kilo Code", "Advanced"),
+            listOf("Kilo Code", "Advanced"),
+        ).firstOrNull { tree.findExpandedPath(*it.toTypedArray(), fullMatch = true) != null }
+            ?: error("Advanced settings path not found; paths: ${tree.collectExpandedPathsAsStrings()}")
+        val row = tree.findExpandedPath(*parts.toTypedArray(), fullMatch = true)!!.row
+        // Robot clicks do not reach the off-screen Starter window; select through the tree model.
+        val remote = ide.driver.cast(tree.component, JTreeSelection::class)
+        ide.driver.withContext(OnDispatcher.EDT) {
+            remote.setSelectionPath(remote.getPathForRow(row))
+        }
+        watchdog.await("Advanced settings page visible", timeout = 30.seconds) { visible() }
+    }
+
+    fun visible(): Boolean = runCatching {
+        page()?.component?.isShowing() == true
+    }.getOrDefault(false)
+
+    fun hasTelemetryRow(): Boolean =
+        page()?.getAllTexts()?.any { it.text.contains(TELEMETRY_TITLE) } == true
+
+    fun isEnabled(): Boolean {
+        val toggle = watchdog.value("telemetry toggle visible") {
+            page()?.xx { byType(TOGGLE_CLASS) }?.list()?.firstOrNull()
+        }
+        val remote = ide.driver.cast(toggle.component, OnOffButton::class)
+        return ide.driver.withContext(OnDispatcher.EDT) { remote.isSelected() }
+    }
+
+    fun setEnabled(value: Boolean) {
+        if (isEnabled() == value) return
+        val toggle = page()?.xx { byType(TOGGLE_CLASS) }?.list()?.firstOrNull()
+            ?: error("telemetry toggle disappeared")
+        val remote = ide.driver.cast(toggle.component, OnOffButton::class)
+        // Robot clicks do not reach the off-screen Starter window; fire the same action listener.
+        ide.driver.withContext(OnDispatcher.EDT) { remote.doClick() }
+        watchdog.await("telemetry toggle is $value") { isEnabled() == value }
+    }
+
+    fun apply() {
+        press(dialog()?.okButton ?: error("settings dialog is not open"))
+        watchdog.await("settings dialog closed") { dialog() == null }
+    }
+
+    fun cancel() {
+        press(dialog()?.cancelButton ?: error("settings dialog is not open"))
+        watchdog.await("settings dialog closed") { dialog() == null }
+    }
+
+    private fun press(button: UiComponent) {
+        val remote = ide.driver.cast(button.component, JButtonRef::class)
+        ide.driver.withContext(OnDispatcher.EDT) { remote.doClick() }
+    }
+
+    private fun page(): UiComponent? = runCatching {
+        dialog()
+            ?.xx { byType(ADVANCED_PAGE) }
+            ?.list()
+            ?.firstOrNull { it.component.isShowing() }
+    }.getOrNull()
+
+    /** A disposed Settings dialog can linger in the tree; always drive the one that is showing. */
+    private fun dialog(): SettingsDialogUiComponent? = runCatching {
+        ide.driver.ui.xx(SettingsDialogUiComponent::class.java) {
+            and(byType(JDialog::class.java), byAccessibleName("Settings"))
+        }.list().firstOrNull { it.component.isShowing() }
+    }.getOrNull()
+
+    companion object {
+        const val ADVANCED_PAGE = "ai.kilocode.client.settings.AdvancedSettingsUi"
+        const val TOGGLE_CLASS = "com.intellij.ui.components.OnOffButton"
+        const val TELEMETRY_TITLE = "Send usage data"
     }
 }

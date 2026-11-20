@@ -1,5 +1,11 @@
 # kilo-code
 
+## 7.8.31
+
+### Minor Changes
+
+- [#16342](https://github.com/Kilo-Org/kilocode/pull/16342) [`182a5f9`](https://github.com/Kilo-Org/kilocode/commit/182a5f9f501d4d2bff2b5a4372d6f06065cf9904) - Change the Kilo telemetry preference from VS Code's About tab or the core telemetry API. Telemetry stays off if Kilo config, VS Code, or the environment disables it.
+
 ## 7.8.30
 
 ### Minor Changes
