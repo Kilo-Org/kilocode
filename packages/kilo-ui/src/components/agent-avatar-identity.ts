@@ -1,27 +1,44 @@
 export const COLORS = 8
 const HALF = 15
+const ALTERNATES = 64
+
+export type AvatarIdentity = { color: number | undefined; cells: number[] }
+type ColoredIdentity = AvatarIdentity & { color: number }
 
 /**
  * Assign colors to sibling agents in spawn order. Each agent keeps its hashed
  * color when it is still free; otherwise it takes the next free hue, so the
  * first eight siblings never share a color. After that, colors repeat and the
  * glyph shape is what tells agents apart.
+ *
+ * A repeated color is only a problem when the glyph repeats too. The first
+ * sibling to hit such a pair moves to another hue for the same glyph. Only
+ * a glyph that already uses every hue gets a different glyph.
  */
 export function palette(ids: string[]) {
   const used = new Set<number>()
-  const result = new Map<string, number>()
+  const result = new Map<string, AvatarIdentity>()
+  const pairs = new Map<string, Set<number>>()
   for (const id of ids) {
     if (result.has(id)) continue
-    const color = identity(id).color
+    const base = identity(id)
+    const color = base.color
     if (color == null) continue
     if (used.size >= COLORS) used.clear()
     const pick = Array.from({ length: COLORS }, (_, index) => (color + index) % COLORS).find((hue) => !used.has(hue))
     if (pick == null) continue
+    // Keep the usual hue sequence independent of pair repairs, so a repair doesn't recolor later siblings.
     used.add(pick)
-    result.set(id, pick)
+    const avatar = uniqueIdentity(id, { color: pick, cells: base.cells }, pairs, used)
+    const glyph = avatar.cells.join(",")
+    const hues = pairs.get(glyph) ?? new Set<number>()
+    hues.add(avatar.color)
+    pairs.set(glyph, hues)
+    result.set(id, avatar)
   }
   return result
 }
+
 const MIN = 6
 const MAX = 9
 
@@ -42,7 +59,7 @@ function expand(half: (index: number) => boolean) {
   })
 }
 
-export function identity(id: string) {
+export function identity(id: string): AvatarIdentity {
   const known = id.trim() !== "" && id !== "unknown"
   if (!known) {
     const neutral = new Set([4, 7, 10, 13])
@@ -74,4 +91,19 @@ export function identity(id: string) {
     lit.add(next)
   }
   return { color: (tone >>> 4) % COLORS, cells: expand((index) => lit.has(index)) }
+}
+
+function uniqueIdentity(id: string, base: ColoredIdentity, pairs: Map<string, Set<number>>, used: Set<number>) {
+  if (!pairs.get(base.cells.join(","))?.has(base.color)) return base
+
+  const hues = Array.from({ length: COLORS }, (_, index) => (base.color + index) % COLORS)
+  for (let attempt = 0; attempt <= ALTERNATES; attempt++) {
+    // Alternate seeds keep the normal connected glyph style, including when the base glyph is fully symmetric.
+    const cells = attempt === 0 ? base.cells : identity(`${id}:${attempt}`).cells
+    const taken = pairs.get(cells.join(","))
+    const free = hues.filter((hue) => !taken?.has(hue))
+    const color = free.find((hue) => !used.has(hue)) ?? free[0]
+    if (color !== undefined) return { color, cells }
+  }
+  return base
 }

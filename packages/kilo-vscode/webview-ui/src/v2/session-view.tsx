@@ -573,22 +573,22 @@ export function SessionView(props: {
 
   return (
     <TranscriptSearchProvider>
-      <div class="chat-view" data-session-id={session()}>
-        {props.tabStrip}
-        <Show when={session()} keyed>
-          {(id) => (
-            <TaskHeader
-              sessionID={id}
-              readonly={props.readOnly}
-              searchCommand={props.searchCommand}
-              onCompact={() => compact(id)}
-            />
-          )}
-        </Show>
-        <div class="chat-messages-wrapper">
-          <BoardSessionsProvider sessions={boardSessions}>
-            <ToolChildSessionProvider value={childSessions}>
-              <AgentAvatarPalette ids={siblings()}>
+      <AgentAvatarPalette ids={siblings()}>
+        <div class="chat-view" data-session-id={session()}>
+          {props.tabStrip}
+          <Show when={session()} keyed>
+            {(id) => (
+              <TaskHeader
+                sessionID={id}
+                readonly={props.readOnly}
+                searchCommand={props.searchCommand}
+                onCompact={() => compact(id)}
+              />
+            )}
+          </Show>
+          <div class="chat-messages-wrapper">
+            <BoardSessionsProvider sessions={boardSessions}>
+              <ToolChildSessionProvider value={childSessions}>
                 <div class="chat-messages">
                   <MessageList
                     session={session()}
@@ -610,86 +610,86 @@ export function SessionView(props: {
                     question={() => (props.readOnly ? undefined : forms()[0])}
                   />
                 </div>
-              </AgentAvatarPalette>
-            </ToolChildSessionProvider>
-          </BoardSessionsProvider>
-        </div>
-        <Show when={!props.readOnly}>
-          <div class="chat-input">
-            <Show when={v2.handshake() ?? v2.failure() ?? inbox.failure()}>
-              {(failure) => (
-                <ErrorBanner
-                  failure={failure()}
-                  onDismiss={v2.handshake() ? undefined : v2.failure() ? v2.clearError : inbox.dismiss}
-                />
-              )}
-            </Show>
-            <Show when={visiblePermission()} keyed>
-              {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
-            </Show>
-            <SessionDock
-              session={session()}
-              jobs={jobs}
-              onOpenSession={(id, title) =>
-                props.actions.openSubagent ? props.actions.openSubagent(id, title) : props.actions.openSession?.(id)
-              }
-              blocked={!!visiblePermission() || forms().length > 0}
-              actions={(todos, agents) => props.row?.(hasMessages(), todos, agents)}
-              hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
-              status={working.status()}
-              submitting={working.submitting()}
-              timing={working.timing()}
-              text={working.text()}
-              retry={working.retry()}
-              onCancel={stop}
-              onScrollToBottom={() => scrollToBottom?.()}
-              goal={goal}
-              connected={v2.connection.status() === "connected"}
-            />
-            <Show when={draftKey()} keyed>
-              {(key) => (
-                <PromptInput
-                  draftKey={key}
-                  session={session()}
-                  // An active goal keeps working between its runs, so the composer offers Stop as main did.
-                  running={running() || goal.active()}
-                  disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
-                  blocked={blocked()}
-                  questioning={questioning()}
-                  onSend={send}
-                  choice={selection.choice}
-                  onStop={stop}
-                  onAppendReady={(append) => {
-                    composer = append
-                    props.onAppendReady?.(append)
-                  }}
-                  onReviewAppendReady={props.onReviewAppendReady}
-                  onReplyReady={setReply}
-                  onReferenceReady={props.onReferenceReady}
-                  onComposerReady={(handle) => {
-                    composerHandle = handle
-                    props.onComposerReady?.(handle)
-                  }}
-                  slash={{ entries: slashEntries, run: runSlash }}
-                  tabs={props.tabs}
-                  manager={props.manager}
-                  focusOnDraftChange={props.focusOnDraftChange}
-                  onFocusChange={props.onFocusChange}
-                  selectors={<Selectors selection={selection} blocked={blocked()} />}
-                  autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
-                  sandbox={sandboxControl}
-                  worktrees={props.worktrees}
-                  git={props.git}
-                  gitTarget={props.gitTarget}
-                  terminalContext={props.terminalContext}
-                  resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
-                  onOpenFile={(path) => props.actions.openFile?.(path, undefined, undefined, session())}
-                />
-              )}
-            </Show>
+              </ToolChildSessionProvider>
+            </BoardSessionsProvider>
           </div>
-        </Show>
-      </div>
+          <Show when={!props.readOnly}>
+            <div class="chat-input">
+              <Show when={v2.handshake() ?? v2.failure() ?? inbox.failure()}>
+                {(failure) => (
+                  <ErrorBanner
+                    failure={failure()}
+                    onDismiss={v2.handshake() ? undefined : v2.failure() ? v2.clearError : inbox.dismiss}
+                  />
+                )}
+              </Show>
+              <Show when={visiblePermission()} keyed>
+                {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
+              </Show>
+              <SessionDock
+                session={session()}
+                jobs={jobs}
+                onOpenSession={(id, title) =>
+                  props.actions.openSubagent ? props.actions.openSubagent(id, title) : props.actions.openSession?.(id)
+                }
+                blocked={!!visiblePermission() || forms().length > 0}
+                actions={(todos, agents) => props.row?.(hasMessages(), todos, agents)}
+                hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
+                status={working.status()}
+                submitting={working.submitting()}
+                timing={working.timing()}
+                text={working.text()}
+                retry={working.retry()}
+                onCancel={stop}
+                onScrollToBottom={() => scrollToBottom?.()}
+                goal={goal}
+                connected={v2.connection.status() === "connected"}
+              />
+              <Show when={draftKey()} keyed>
+                {(key) => (
+                  <PromptInput
+                    draftKey={key}
+                    session={session()}
+                    // An active goal keeps working between its runs, so the composer offers Stop as main did.
+                    running={running() || goal.active()}
+                    disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
+                    blocked={blocked()}
+                    questioning={questioning()}
+                    onSend={send}
+                    choice={selection.choice}
+                    onStop={stop}
+                    onAppendReady={(append) => {
+                      composer = append
+                      props.onAppendReady?.(append)
+                    }}
+                    onReviewAppendReady={props.onReviewAppendReady}
+                    onReplyReady={setReply}
+                    onReferenceReady={props.onReferenceReady}
+                    onComposerReady={(handle) => {
+                      composerHandle = handle
+                      props.onComposerReady?.(handle)
+                    }}
+                    slash={{ entries: slashEntries, run: runSlash }}
+                    tabs={props.tabs}
+                    manager={props.manager}
+                    focusOnDraftChange={props.focusOnDraftChange}
+                    onFocusChange={props.onFocusChange}
+                    selectors={<Selectors selection={selection} blocked={blocked()} />}
+                    autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
+                    sandbox={sandboxControl}
+                    worktrees={props.worktrees}
+                    git={props.git}
+                    gitTarget={props.gitTarget}
+                    terminalContext={props.terminalContext}
+                    resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+                    onOpenFile={(path) => props.actions.openFile?.(path, undefined, undefined, session())}
+                  />
+                )}
+              </Show>
+            </div>
+          </Show>
+        </div>
+      </AgentAvatarPalette>
     </TranscriptSearchProvider>
   )
 }
