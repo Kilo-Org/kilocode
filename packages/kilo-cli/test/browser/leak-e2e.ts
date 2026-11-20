@@ -89,6 +89,8 @@ let takeSnapshot: (() => Promise<string>) | undefined
 const sse = (body: string) => new Response(body, { headers: { "content-type": "text/event-stream" } })
 const model = Bun.serve({
   hostname: "127.0.0.1",
+  // No idle timeout: a request waits while the worker's heap is sampled or snapshotted, which can outlast Bun's 10 s.
+  idleTimeout: 0,
   port: 0,
   async fetch(request) {
     if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
@@ -216,7 +218,7 @@ class SwProbe {
   private session: any
   private sessionId = ""
   private nextId = 1
-  private pending = new Map<number, (message: any) => void>()
+  private pending = new Map<number, { resolve: (message: any) => void; reject: (error: Error) => void }>()
   private chunks: string[] = []
   private collecting = false
 
@@ -249,26 +251,32 @@ class SwProbe {
       const waiter = this.pending.get(message.id)
       if (waiter) {
         this.pending.delete(message.id)
-        waiter(message)
+        if (message.error) waiter.reject(new Error(`CDP ${message.error.code}: ${message.error.message}`))
+        else waiter.resolve(message)
       }
     })
   }
 
-  private send(method: string, params: Record<string, unknown> = {}): Promise<any> {
+  /** One CDP call on the worker; rejects on a CDP error, a failed send or no answer within `timeoutMs`. */
+  private send(method: string, params: Record<string, unknown> = {}, timeoutMs = 120_000): Promise<any> {
     const id = this.nextId++
-    const { promise, resolve } = Promise.withResolvers<any>()
-    this.pending.set(id, resolve)
-    void this.session.send("Target.sendMessageToTarget", {
-      sessionId: this.sessionId,
-      message: JSON.stringify({ id, method, params }),
+    const { promise, resolve, reject } = Promise.withResolvers<any>()
+    const timer = setTimeout(() => reject(new Error(`CDP ${method}: no answer within ${timeoutMs} ms`)), timeoutMs)
+    this.pending.set(id, { reject, resolve })
+    this.session
+      .send("Target.sendMessageToTarget", { sessionId: this.sessionId, message: JSON.stringify({ id, method, params }) })
+      .catch(reject)
+    return promise.finally(() => {
+      clearTimeout(timer)
+      this.pending.delete(id)
     })
-    return promise
   }
 
   async heap(): Promise<{ used: number; total: number }> {
     await this.send("HeapProfiler.collectGarbage")
     const usage = await this.send("Runtime.getHeapUsage")
-    return { used: usage.result?.usedSize ?? 0, total: usage.result?.totalSize ?? 0 }
+    if (typeof usage.result?.usedSize !== "number") throw new Error(`Runtime.getHeapUsage returned no heap size: ${JSON.stringify(usage)}`)
+    return { used: usage.result.usedSize, total: usage.result.totalSize }
   }
 
   async snapshot(): Promise<string> {
@@ -372,6 +380,18 @@ async function hubRequest(socketPath: string, method: string): Promise<any> {
   return promise
 }
 
+/** Stops the hub and the browser and removes the scratch root; every way out after the launch goes through it. */
+async function teardown(exitCode: number): Promise<never> {
+  hub.kill("SIGTERM")
+  await Promise.race([hub.exited, Bun.sleep(5_000)])
+  if (hub.exitCode === null && hub.signalCode === null) hub.kill("SIGKILL")
+  await Promise.race([context.close().catch(() => undefined), Bun.sleep(10_000)])
+  fixture.stop(true)
+  model.stop(true)
+  await fs.rm(base, { force: true, recursive: true }).catch(() => undefined)
+  process.exit(exitCode)
+}
+
 const entry = await (async () => {
   for (let i = 0; i < 300; i += 1) {
     const found = await readEntry()
@@ -383,10 +403,14 @@ const entry = await (async () => {
 const pairing = await hubRequest(entry.socket, "pairing.url")
 const cdp = await context.newCDPSession(panel)
 await cdp.send("Target.createTarget", { newWindow: true, url: pairing.url })
-for (let i = 0; i < 600; i += 1) {
-  const current = await readEntry()
-  if (current?.paired === true) break
-  await Bun.sleep(50)
+let paired = false
+for (let i = 0; i < 600 && !paired; i += 1) {
+  paired = (await readEntry())?.paired === true
+  if (!paired) await Bun.sleep(50)
+}
+if (!paired) {
+  console.log(JSON.stringify({ error: "the extension did not pair with the hub within 30 s", hubLog: hubLog.text.slice(-800) }, null, 2))
+  await teardown(1)
 }
 
 const started = Date.now()
@@ -410,19 +434,21 @@ let comparison: { name: string; delta: number }[] | undefined
 if (snapshotA !== undefined && snapshotB !== undefined) {
   const parse = (text: string) => {
     const snapshot = JSON.parse(text) as {
-      snapshot: { meta: { node_fields: string[] } }
+      snapshot: { meta: { node_fields: string[]; node_types: [string[], ...unknown[]] } }
       nodes: number[]
       strings: string[]
     }
     const fields = snapshot.snapshot.meta.node_fields
+    const kinds = snapshot.snapshot.meta.node_types[0]
     const size = fields.length
     const typeOffset = fields.indexOf("type")
     const nameOffset = fields.indexOf("name")
     const counts = new Map<string, number>()
     for (let i = 0; i < snapshot.nodes.length; i += size) {
-      const type = snapshot.nodes[i + typeOffset]
-      const name = snapshot.strings[snapshot.nodes[i + nameOffset]] ?? "?"
-      if (type !== 0 && type !== 1 && type !== 2) continue // hidden/array/string
+      const kind = kinds[snapshot.nodes[i + typeOffset] ?? -1]
+      const name = snapshot.strings[snapshot.nodes[i + nameOffset] ?? -1] ?? "?"
+      // Objects by constructor name and closures by function name: what a leak keeps alive.
+      if (kind !== "object" && kind !== "closure") continue
       counts.set(name, (counts.get(name) ?? 0) + 1)
     }
     return counts
@@ -436,10 +462,6 @@ if (snapshotA !== undefined && snapshotB !== undefined) {
     .sort((a, b) => b.delta - a.delta)
     .slice(0, 15)
 }
-
-try {
-  hub.kill("SIGTERM")
-} catch {}
 
 console.log(
   JSON.stringify(
@@ -457,6 +479,4 @@ console.log(
     2,
   ),
 )
-fixture.stop(true)
-model.stop(true)
-process.exit(0)
+await teardown(code === 0 ? 0 : 1)

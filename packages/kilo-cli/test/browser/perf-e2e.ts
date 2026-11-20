@@ -9,6 +9,8 @@
 //   E2E_EXTENSION_DIR   the built unpacked Chrome MV3 extension (required for the extension backend)
 //   E2E_CHROMIUM        the Chromium executable for the extension backend (default: the Chromium that
 //                       `kilo2 browser install-chromium` installs for the Playwright backend, so both use one build)
+//   E2E_CHROMIUM_DATA   the XDG data home the Playwright backend's Chromium is installed into, reused across runs
+//                       (default: <tmpdir>/kilo-perf-e2e-chromium); the run's own scratch root is removed at the end
 //
 // Every latency is a CLI tool-execute event (`tool_use` part, time.start..time.end), so the model round trip is never
 // part of it. Areas alternate the backend order (extension first in odd areas, Playwright first in even ones), and
@@ -239,6 +241,11 @@ const percentile = (values: number[], p: number) => {
   return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1))] ?? 0
 }
 const median = (values: number[]) => percentile(values, 50)
+/** The median of the values a run produced; NaN (shown as "–", null in JSON) when none did. */
+const medianOf = (values: (number | undefined)[]) => {
+  const present = values.filter((value): value is number => value !== undefined)
+  return present.length ? median(present) : Number.NaN
+}
 const loadavg = () => readFileSync("/proc/loadavg", "utf8").trim()
 const nproc = os.availableParallelism()
 const kb = (text: string, key: string) => Number(new RegExp(`^${key}:\\s+(\\d+)`, "m").exec(text)?.[1] ?? 0)
@@ -323,18 +330,24 @@ type Stat = {
 const FAILURE =
   /\b(browser_unavailable|tab_busy|tab_taken|user_stopped|unsupported_in_browser|needs_permission|blocked|origin_changed|protocol_mismatch)\b|Error:|is not available|not connected|unavailable|field\(s\) failed|stale or unknown|is not open/i
 
+/**
+ * `n` counts every sample and `failures` the failed ones; the latencies and sizes are over the samples that succeeded,
+ * so a fast refusal or another run's page never pulls a median down. NaN when none succeeded.
+ */
 function stat(samples: Sample[]): Stat {
-  const values = samples.map((sample) => sample.ms)
   const failures = samples.filter((sample) => !sample.ok)
+  const good = samples.filter((sample) => sample.ok)
+  const values = good.map((sample) => sample.ms)
+  const none = good.length === 0
   return {
     n: samples.length,
     failures: failures.length,
-    median: median(values),
-    p95: percentile(values, 95),
-    min: Math.min(...values),
-    max: Math.max(...values),
-    bytesMedian: median(samples.map((sample) => sample.bytes)),
-    imageBytesMedian: median(samples.map((sample) => sample.imageBytes)),
+    median: none ? Number.NaN : median(values),
+    p95: none ? Number.NaN : percentile(values, 95),
+    min: none ? Number.NaN : Math.min(...values),
+    max: none ? Number.NaN : Math.max(...values),
+    bytesMedian: none ? Number.NaN : median(good.map((sample) => sample.bytes)),
+    imageBytesMedian: none ? Number.NaN : median(good.map((sample) => sample.imageBytes)),
     failureSamples: [
       ...new Set(failures.map((sample) => `${sample.status}: ${sample.text.replace(/\s+/g, " ").slice(0, 240)}`)),
     ].slice(0, 3),
@@ -388,12 +401,14 @@ async function spawnText(argv: string[], env: Record<string, string>, cwd: strin
   return { out, err, code }
 }
 
-// The Playwright backend's Chromium, installed once into `<XDG_DATA_HOME>/kilo2/browser/browsers`; every run links
-// that directory into its own data home. The extension runs in the same build unless E2E_CHROMIUM says otherwise.
-const browsersDir = path.join(base, "xdg-data", "kilo2", "browser", "browsers")
+// The Playwright backend's Chromium, installed once into `<E2E_CHROMIUM_DATA>/kilo2/browser/browsers` (an install that
+// is already there is kept); every run links that directory into its own data home. The extension runs in the same
+// build unless E2E_CHROMIUM says otherwise.
+const chromiumData = path.resolve(process.env.E2E_CHROMIUM_DATA ?? path.join(os.tmpdir(), "kilo-perf-e2e-chromium"))
+const browsersDir = path.join(chromiumData, "kilo2", "browser", "browsers")
 const install = await spawnText(
   [binary, "browser", "install-chromium"],
-  { ...baseEnv("playwright").env, XDG_DATA_HOME: path.join(base, "xdg-data") },
+  { ...baseEnv("playwright").env, XDG_DATA_HOME: chromiumData },
   base,
 )
 console.error(`install-chromium exit ${install.code}: ${(install.out + install.err).trim().slice(-200)}`)
@@ -556,13 +571,13 @@ async function readEntry(root: string): Promise<any> {
       } catch {}
   return undefined
 }
-async function hubRequest(socketPath: string, method: string): Promise<any> {
+/** One hub RPC over its socket; rejects on a socket error, an early close or no answer within `timeoutMs`. */
+async function hubRequest(socketPath: string, method: string, timeoutMs = 10_000): Promise<any> {
   const socket = net.createConnection(socketPath)
-  await new Promise<void>((resolve, reject) => {
-    socket.once("connect", resolve)
-    socket.once("error", reject)
-  })
-  const { promise, resolve } = Promise.withResolvers<any>()
+  const { promise, resolve, reject } = Promise.withResolvers<any>()
+  const timer = setTimeout(() => reject(new Error(`hub ${method}: no answer within ${timeoutMs} ms`)), timeoutMs)
+  socket.once("error", reject)
+  socket.once("close", () => reject(new Error(`hub ${method}: the socket closed before the answer`)))
   let buffer = Buffer.alloc(0)
   socket.on("data", (data: Buffer) => {
     buffer = Buffer.concat([buffer, data])
@@ -571,17 +586,19 @@ async function hubRequest(socketPath: string, method: string): Promise<any> {
       if (buffer.length < 4 + length) return
       const frame = JSON.parse(buffer.subarray(4, 4 + length).toString("utf8"))
       buffer = buffer.subarray(4 + length)
-      if (frame?.type === "rpc" && frame.message?.id === 1) {
-        socket.end()
-        resolve(frame.message.result)
-      }
+      if (frame?.type === "rpc" && frame.message?.id === 1) resolve(frame.message.result)
     }
   })
-  const body = Buffer.from(JSON.stringify({ type: "rpc", message: { id: 1, jsonrpc: "2.0", method, params: {} } }))
-  const header = Buffer.alloc(4)
-  header.writeUInt32LE(body.length, 0)
-  socket.write(Buffer.concat([header, body]))
-  return promise
+  socket.once("connect", () => {
+    const body = Buffer.from(JSON.stringify({ type: "rpc", message: { id: 1, jsonrpc: "2.0", method, params: {} } }))
+    const header = Buffer.alloc(4)
+    header.writeUInt32LE(body.length, 0)
+    socket.write(Buffer.concat([header, body]))
+  })
+  return promise.finally(() => {
+    clearTimeout(timer)
+    socket.destroy()
+  })
 }
 
 // --- the extension service worker over CDP -------------------------------------------------------------------
@@ -906,7 +923,8 @@ const runSummary = (outcome: RunOutcome) => ({
   calls: outcome.samples.length,
   failures: outcome.samples.filter((sample) => !sample.ok).length,
   wallMs: outcome.exitedAt - outcome.spawnedAt,
-  firstCallMs: outcome.samples[0]?.ms,
+  // A failed first call (or none) is no first-call time: the cold medians skip it.
+  firstCallMs: outcome.samples[0]?.ok ? outcome.samples[0].ms : undefined,
   spawnToFirstRequestMs: outcome.firstRequestAt === undefined ? undefined : outcome.firstRequestAt - outcome.spawnedAt,
   spawnToFirstToolStartMs: outcome.samples[0] === undefined ? undefined : outcome.samples[0].start - outcome.spawnedAt,
   stderrTail: outcome.code === 0 ? undefined : outcome.stderr.slice(-600),
@@ -1413,9 +1431,9 @@ for (const [index, area] of areas.entries()) {
           spawnToFirstRequestMs?: number
           spawnToFirstToolStartMs?: number
         }[]
-        entry[backend].firstCallMedianMs = median(list.map((run) => run.firstCallMs ?? 0))
-        entry[backend].spawnToFirstRequestMedianMs = median(list.map((run) => run.spawnToFirstRequestMs ?? 0))
-        entry[backend].spawnToFirstToolStartMedianMs = median(list.map((run) => run.spawnToFirstToolStartMs ?? 0))
+        entry[backend].firstCallMedianMs = medianOf(list.map((run) => run.firstCallMs))
+        entry[backend].spawnToFirstRequestMedianMs = medianOf(list.map((run) => run.spawnToFirstRequestMs))
+        entry[backend].spawnToFirstToolStartMedianMs = medianOf(list.map((run) => run.spawnToFirstToolStartMs))
       }
       entry.cliStartupDeltaMs =
         entry.extension.spawnToFirstRequestMedianMs - entry.playwright.spawnToFirstRequestMedianMs
@@ -1445,7 +1463,8 @@ report.meta.hubLogTail = ext.hubLog.split("\n").filter(Boolean).slice(-20)
 
 const fmt = (value: number | undefined) =>
   value === undefined || !Number.isFinite(value) ? "–" : String(Math.round(value))
-const ratio = (a?: number, b?: number) => (a === undefined || b === undefined || !b ? "–" : `${(a / b).toFixed(2)}×`)
+const ratio = (a?: number, b?: number) =>
+  a === undefined || b === undefined || !Number.isFinite(a) || !Number.isFinite(b) || !b ? "–" : `${(a / b).toFixed(2)}×`
 function compare(title: string, ext?: Record<string, Stat>, pw?: Record<string, Stat>): string[] {
   const labels = [...new Set([...Object.keys(ext ?? {}), ...Object.keys(pw ?? {})])]
   const lines = [
@@ -1714,5 +1733,7 @@ try {
 } catch {}
 for (const server of servers) server.stop(true)
 model.stop(true)
-// The browser teardown can wait on open targets; the report is written.
+// The browser teardown can wait on open targets: give it 10 s, then drop the scratch root (profile, homes, runs).
+await Promise.race([ext.context?.close().catch(() => undefined), Bun.sleep(10_000)])
+await fs.rm(base, { force: true, recursive: true }).catch(() => undefined)
 process.exit(0)
