@@ -347,7 +347,7 @@ class LegacyMigrationEngine(
         val anyAutoApproval = apSel.commandRules || apSel.readPermission || apSel.writePermission ||
                 apSel.executePermission || apSel.mcpPermission || apSel.taskPermission
         if (anyAutoApproval) {
-            val conv = convertAutoApproval(settings, apSel)
+            val conv = convertAutoApproval(settings, apSel, migratedServers)
             conv.config?.let { backend.updateGlobalConfig(it) }
             for ((label, status) in conv.results) {
                 sink.item(LegacyMigrationItemProgress(label, status.toProgressStatus()))

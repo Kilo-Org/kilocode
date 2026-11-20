@@ -399,4 +399,57 @@ class LegacyMigrationConversionTest {
         val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel)
         assertEquals("allow", conv.config!!["permission"]?.jsonObject?.get("edit")?.jsonPrimitive?.content)
     }
+
+    @Test
+    fun `convertAutoApproval - mcp switch writes per-server keys`() {
+        val settings = LegacySettings(
+            autoApprovalEnabled = null,
+            allowedCommands = null,
+            deniedCommands = null,
+            alwaysAllowReadOnly = null, alwaysAllowReadOnlyOutsideWorkspace = null,
+            alwaysAllowWrite = null, alwaysAllowExecute = null,
+            alwaysAllowMcp = true, alwaysAllowModeSwitch = null, alwaysAllowSubtasks = null,
+            language = null, autocomplete = null,
+        )
+        val sel = MigrationAutoApprovalSelections(commandRules = false, readPermission = false, writePermission = false, executePermission = false, mcpPermission = true, taskPermission = false)
+        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, listOf("github", "my server"))
+        val perm = conv.config!!["permission"]?.jsonObject
+        assertNotNull(perm)
+        assertEquals("allow", perm["github_*"]?.jsonPrimitive?.content)
+        assertEquals("allow", perm["my_server_*"]?.jsonPrimitive?.content)
+        assertFalse(perm.containsKey("skill"))
+    }
+
+    @Test
+    fun `convertAutoApproval - mcp switch without migrated servers warns`() {
+        val settings = LegacySettings(
+            autoApprovalEnabled = null,
+            allowedCommands = null,
+            deniedCommands = null,
+            alwaysAllowReadOnly = null, alwaysAllowReadOnlyOutsideWorkspace = null,
+            alwaysAllowWrite = null, alwaysAllowExecute = null,
+            alwaysAllowMcp = true, alwaysAllowModeSwitch = null, alwaysAllowSubtasks = null,
+            language = null, autocomplete = null,
+        )
+        val sel = MigrationAutoApprovalSelections(commandRules = false, readPermission = false, writePermission = false, executePermission = false, mcpPermission = true, taskPermission = false)
+        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
+        assertNull(conv.config)
+        assertTrue(conv.results.any { it.second == MigrationItemStatus.warning })
+    }
+
+    @Test
+    fun `convertAutoApproval - mcp switch off writes ask`() {
+        val settings = LegacySettings(
+            autoApprovalEnabled = null,
+            allowedCommands = null,
+            deniedCommands = null,
+            alwaysAllowReadOnly = null, alwaysAllowReadOnlyOutsideWorkspace = null,
+            alwaysAllowWrite = null, alwaysAllowExecute = null,
+            alwaysAllowMcp = false, alwaysAllowModeSwitch = null, alwaysAllowSubtasks = null,
+            language = null, autocomplete = null,
+        )
+        val sel = MigrationAutoApprovalSelections(commandRules = false, readPermission = false, writePermission = false, executePermission = false, mcpPermission = true, taskPermission = false)
+        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, listOf("github"))
+        assertEquals("ask", conv.config!!["permission"]?.jsonObject?.get("github_*")?.jsonPrimitive?.content)
+    }
 }

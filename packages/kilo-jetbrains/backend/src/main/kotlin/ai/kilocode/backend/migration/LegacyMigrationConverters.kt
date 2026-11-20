@@ -520,7 +520,11 @@ object LegacyMigrationConverters {
         val results: List<Pair<String, MigrationItemStatus>>,
     )
 
-    fun convertAutoApproval(settings: LegacySettings, sel: MigrationAutoApprovalSelections): PermissionConversion {
+    fun convertAutoApproval(
+        settings: LegacySettings,
+        sel: MigrationAutoApprovalSelections,
+        mcpServers: List<String> = emptyList(),
+    ): PermissionConversion {
         val fallback = if (settings.autoApprovalEnabled == true) "allow" else "ask"
         val results = mutableListOf<Pair<String, MigrationItemStatus>>()
         val permission = mutableMapOf<String, JsonElement>()
@@ -587,12 +591,21 @@ object LegacyMigrationConverters {
         }
 
         if (sel.mcpPermission) {
-            if (settings.alwaysAllowMcp == true) {
-                permission["skill"] = JsonPrimitive("allow")
-            } else if (settings.alwaysAllowMcp == false) {
-                permission["skill"] = JsonPrimitive("ask")
+            val mcpValue = when (settings.alwaysAllowMcp) {
+                true -> "allow"
+                false -> "ask"
+                null -> null
             }
-            results.add("MCP permission" to MigrationItemStatus.success)
+            if (mcpServers.isEmpty()) {
+                results.add("MCP permission" to MigrationItemStatus.warning)
+            } else {
+                for (server in mcpServers) {
+                    if (mcpValue != null) {
+                        permission["${sanitizePermissionKey(server)}_*"] = JsonPrimitive(mcpValue)
+                    }
+                }
+                results.add("MCP permission" to MigrationItemStatus.success)
+            }
         }
 
         if (sel.taskPermission) {
