@@ -355,6 +355,9 @@ class KiloAppService internal constructor(
         }
     }
 
+    /** Effective telemetry level reported by the connected CLI. */
+    fun telemetryConfig(): Boolean? = _state.value.config?.telemetry
+
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto? = try {
         LOG.info("config update: sending RPC ${summary(patch)}")
         val next = call { updateConfig(patch) }
@@ -364,6 +367,17 @@ class KiloAppService internal constructor(
     } catch (e: Exception) {
         LOG.warn("config update failed ${summary(patch)}", e)
         null
+    }
+
+    private suspend fun setTelemetryLevel(enabled: Boolean): Boolean = try {
+        val next = call { setTelemetryLevel(enabled) }
+        _state.value = next
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        LOG.warn("telemetry level update failed", e)
+        false
     }
 
     fun updateConfigAsync(
@@ -431,6 +445,14 @@ class KiloAppService internal constructor(
     } catch (e: Exception) {
         LOG.warn("index worktrees read failed", e)
         false
+    }
+
+    /** Persist telemetry consent through the CLI on the app scope, even if settings closes. */
+    fun setTelemetryLevelAsync(
+        enabled: Boolean,
+        done: (Boolean) -> Unit,
+    ): Job = cs.launch {
+        done(setTelemetryLevel(enabled))
     }
 
     /**

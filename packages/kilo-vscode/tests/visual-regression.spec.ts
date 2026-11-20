@@ -153,6 +153,13 @@ for (const story of stories) {
 
     const [component, variant] = story.id.split("--")
     const root = page.locator("#storybook-root")
+    if (story.id === "agentmanager--diff-panel-with-diffs") {
+      // Pierre renders plain text first, then highlights each file asynchronously.
+      const highlighted = page
+        .locator("diffs-container")
+        .filter({ has: page.locator('[data-line] span[style*="--syntax-"]') })
+      await expect(highlighted).toHaveCount(3)
+    }
     await expect(root).toHaveScreenshot(["visual-regression", component!, `${variant!}-chromium-linux.png`])
   })
 }
