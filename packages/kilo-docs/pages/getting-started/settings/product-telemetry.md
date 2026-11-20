@@ -7,18 +7,22 @@ description: "Choose whether to share product telemetry and crash reports, with 
 
 Product telemetry helps us understand how Kilo is used so we can improve it: which features to prioritize, which errors come up most often, and what is slow. It includes information about feature usage, performance, and errors. Kilo Desktop also sends crash reports to help diagnose crashes.
 
-Not everyone wants to share this data, so you can turn it off. Product telemetry is enabled by default in the standalone CLI and Kilo Desktop. In VS Code, Kilo follows the editor's telemetry preference. Use the instructions for your client below; these clients do not share one telemetry preference.
+Not everyone wants to share this data, so you can turn it off. Product telemetry is enabled by default. The standalone CLI, VS Code extension, and JetBrains plugin share the `experimental.openTelemetry` setting in your **global** Kilo config, so changing it in one of those clients affects the others. Kilo Desktop and the mobile app keep their own preferences. Use the instructions for your client below.
 
 This page covers product telemetry shared with Kilo. [OpenTelemetry export](#optional-opentelemetry-export) is a separate feature for monitoring Kilo in your own observability tools.
 
-| Client | Where to disable product telemetry | Precedence |
+| Client | Where to change product telemetry | Precedence |
 |---|---|---|
-| Standalone CLI | `KILO_TELEMETRY_LEVEL=off`, or `experimental.openTelemetry: false` in global Kilo config | The environment variable overrides global config. |
-| VS Code | VS Code's **Telemetry: Telemetry Level** setting: any level other than **all** | VS Code's preference overrides the CLI controls for its managed Kilo backend. |
+| Standalone CLI | `experimental.openTelemetry: false` in global Kilo config, or `KILO_TELEMETRY_LEVEL=off` | The config opt-out and the environment can each turn telemetry off; neither can turn it on when the other disables it. |
+| VS Code | **Settings > About Kilo Code > Telemetry**, or VS Code's **Telemetry: Telemetry Level** setting | The switch writes `experimental.openTelemetry` to global Kilo config. VS Code's telemetry level can also turn Kilo telemetry off, and cannot turn it back on. |
 | Kilo Desktop | **Settings > General > Privacy > Share usage analytics and crash reports** | Desktop's preference overrides the CLI controls for its embedded Kilo service. |
-| JetBrains | Not available; see [JetBrains](#jetbrains) | Product telemetry is currently always on in the plugin. |
+| JetBrains | **Settings > Tools > Kilo Code > Advanced > Privacy > Send usage data** | The switch writes `experimental.openTelemetry` to global Kilo config. |
 
 ## VS Code
+
+Kilo product telemetry follows the `experimental.openTelemetry` setting in your **global** Kilo config. Change it with the **Telemetry** switch under **Settings > About Kilo Code**. The switch writes the global config through the Kilo backend, so the standalone CLI and the JetBrains plugin see the same preference.
+
+VS Code's own **Telemetry: Telemetry Level** setting also applies, and it can only turn Kilo telemetry off. Kilo sends product telemetry only when the level is **all**. The **off**, **error**, and **crash** levels all turn Kilo's product telemetry off, so you can use one of them to keep sharing error or crash reports with VS Code itself.
 
 1. Open VS Code **Settings** and search for `telemetry.telemetryLevel`.
 2. Set **Telemetry: Telemetry Level** to **off**.
@@ -31,13 +35,9 @@ Alternatively, add this to your **VS Code user settings JSON**, not `kilo.jsonc`
 }
 ```
 
-You can also open this setting from Kilo's **Settings > About Kilo Code > Telemetry > Open Telemetry Settings**.
+Telemetry stays off if either VS Code or your global Kilo config disables it. The change applies to the running Kilo backend right away, and backends started later follow the setting too. You do not need to restart VS Code.
 
-Kilo sends product telemetry only when the level is **all**. The **error** and **crash** levels also turn Kilo's product telemetry off, so you can use one of them to keep sharing error or crash reports with VS Code itself.
-
-The change applies to the running Kilo backend right away, and backends started later follow the setting too. You do not need to restart VS Code.
-
-This is VS Code's editor-wide telemetry preference, not a Kilo-only switch. Kilo uses it for the extension and its managed backend, including the sidebar and Agent Manager. Setting only `experimental.openTelemetry: false` in Kilo config or inheriting `KILO_TELEMETRY_LEVEL=off` does not override an enabled VS Code telemetry preference. A standalone CLI started separately still uses its own controls below.
+This VS Code preference covers the extension and its managed backend, including the sidebar and Agent Manager.
 
 ## Standalone CLI
 
@@ -70,7 +70,7 @@ The default Windows location is `%USERPROFILE%\.config\kilo\kilo.jsonc`. If you 
 
 Despite its name, `experimental.openTelemetry` controls the CLI's **product telemetry** default. Telemetry initialization reads global config, so putting this setting only in a project config, a custom `KILO_CONFIG` file, or `KILO_CONFIG_CONTENT` is not sufficient.
 
-`KILO_TELEMETRY_LEVEL` takes precedence: `off` disables product telemetry and `all` enables it even when global config says `false`. Leave the variable unset if you want global config to decide. `DO_NOT_TRACK` is not a supported opt-out for this CLI.
+`KILO_TELEMETRY_LEVEL=off` disables product telemetry, but `all` cannot turn it on when your global config sets `experimental.openTelemetry` to `false`. Telemetry runs only when both the config setting and the environment allow it. Leave the variable unset if you want global config to decide. Unrecognized values (anything other than `all`, `on`, `true`, or `1`) also leave telemetry off. `DO_NOT_TRACK` is not a supported opt-out for this CLI.
 
 Restart existing CLI and server processes after changing the environment or config. If you attach to an already-running server, apply the setting to that server's environment or global config and restart it; changing only the attaching client's environment does not change the running server.
 
@@ -87,9 +87,10 @@ See [Desktop privacy settings](/docs/desktop/settings/general#privacy) for the s
 
 ## JetBrains
 
-{% callout type="note" %}
-Product telemetry is currently always on in the JetBrains plugin. The CLI settings above and the IDE's data-sharing preferences do not turn it off.
-{% /callout %}
+1. Open **Settings > Tools > Kilo Code > Advanced**.
+2. Under **Privacy**, turn **Send usage data** on or off.
+
+The switch writes `experimental.openTelemetry` to your **global** Kilo config through the Kilo core, so it stays in sync with the standalone CLI and the VS Code extension. Setting `experimental.openTelemetry: false` in `kilo.jsonc` also disables it.
 
 ## Mobile
 

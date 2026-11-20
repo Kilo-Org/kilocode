@@ -19,10 +19,11 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
+- **Advanced → Privacy → Send usage data** - turn product telemetry on or off. The switch writes `experimental.openTelemetry` to your global Kilo config through the Kilo core, the same setting the CLI and VS Code extension use. See [Product telemetry and crash reports](/docs/getting-started/settings/product-telemetry#jetbrains).
 
 ## Product telemetry
 
-Product telemetry is currently always on in the JetBrains plugin. See [Product telemetry and crash reports](/docs/getting-started/settings/product-telemetry#jetbrains).
+Turn product telemetry on or off with **Send usage data** under **Settings > Tools > Kilo Code > Advanced > Privacy**. See [Product telemetry and crash reports](/docs/getting-started/settings/product-telemetry#jetbrains).
 
 ## Chat and worktrees
 
@@ -87,6 +88,8 @@ When you are signed in to Kilo, the **Agents** tool window lists your repository
 Use the tool window's **Add** menu to create work. **Local Worktree Task** opens the local worktree dialog, and **Cloud Task** opens the New Cloud Workspace dialog, which uses this repository and lets you set an optional branch or ref, an optional Cloud profile, an initial prompt, and a **Section** to place the workspace in (defaulting to the current selection's section). Its prompt supports voice input. **New Section** creates a [section](#sections) to organize the list. An empty prompt creates an empty workspace that you add sessions to later. Creating a Cloud workspace requires signing in to Kilo.
 
 Open a Cloud workspace to see its sessions in an editor tab, then open a session to continue it with a live transcript, preparation progress, and the same permission and question prompts as a local session. Cloud sessions use Kilo models only. Use the workspace's **New Cloud Session** row to start another root session without repeating the repository or profile setup.
+
+Cloud workspaces reuse the same editor header as local worktrees. Its changes badges are passive saved-snapshot counters for committed changes against the base branch and for uncommitted changes, and the compute status badge links to the workspace's session instead of showing an hourly rate. Select a badge to open a read-only comparison in the native diff editor with the file tree and status colors. The header also has a published pull request control that shows the pull request's patch when the workspace's branch has a verified pull request. These comparisons read the saved snapshot and the published patch, so they work while compute is asleep and do not need a local checkout; they are read-only and do not save files, resolve conflicts, or run Git.
 
 - **Refresh Cloud** in the **Core** menu reloads Cloud workspaces and sessions without restarting Core. Refresh a single workspace from its row menu.
 - **Open in Browser** opens a workspace in your browser, in the workspace's organization.

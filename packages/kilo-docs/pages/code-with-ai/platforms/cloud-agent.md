@@ -208,6 +208,12 @@ When a background command or subagent finishes, its notice appears as a compact 
 
 If Kilo cannot read the background activity inventory, the strip reports that the status is unavailable and offers **Retry** instead of showing an empty list. The strip does not add controls to stop or cancel background work.
 
+## Agent board
+
+When a Cloud Agent session runs [Kilo Swarm](/docs/getting-started/settings#kilo-swarm) tasks, the primary agent and its task sub-agents exchange messages with `board_post`. A board button sits beside the background activity strip above the composer and appears only when the board has messages; a dot on the button marks unread messages. Select it to open the board in a right-side sheet, like the sub-agent drawer.
+
+Each row shows the sender's avatar and name, an arrow, and the recipient avatars and names, with the message body rendered as Markdown and clamped to four lines. A message addressed to `ALL` lists the participants that are on the board at that time, and selecting an agent name opens its transcript in the sub-agent sheet. The board refreshes as new messages arrive, and when the session's runtime is offline the sheet keeps the last board it read instead of clearing it. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for how the board works.
+
 ## Worktrees and chats
 
 A worktree is a checkout of your repository on its own branch. It can host multiple chats with separate conversations, but edits from one chat are visible to the others. Use separate worktrees for tasks that need separate checkouts.

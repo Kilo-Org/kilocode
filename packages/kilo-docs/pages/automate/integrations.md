@@ -31,6 +31,7 @@ Before connecting:
 - For GitLab: You need **Maintainer** role (or higher) on the projects you want to connect.
 - For DoltHub: You need a DoltHub account to authorize the OAuth connection.
 - For a Kilo organization, adding a GitHub integration requires the **Owner** or **Admin** role, in addition to permission to install the app on GitHub.
+- For a Kilo organization, managing the GitLab connection requires the **Owner**, **Admin**, or **Billing Manager** role. Members can view the connection and refresh its projects, but cannot connect, replace, or disconnect it.
 
 ---
 
@@ -181,6 +182,8 @@ From the **Integrations** page, click "Manage on GitHub" to:
 - Reauthorize the app if permissions change
 
 ### GitLab
+
+An organization's GitLab connection is shared by the whole organization, so only Owners, Admins, and Billing Managers can connect, replace, or disconnect it. Members see the connection details and can refresh its projects, but the management controls are hidden.
 
 From the **Integrations** page:
 

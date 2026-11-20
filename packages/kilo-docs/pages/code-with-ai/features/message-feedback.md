@@ -56,7 +56,7 @@ Feedback is part of telemetry, so turning telemetry off will cause the feedback 
 {% tabs %}
 {% tab label="VSCode" %}
 
-Open Settings (`Cmd+,` on Mac, `Ctrl+,` on Windows/Linux), search for **`telemetry.telemetryLevel`**, and set it to **Off**. The feedback buttons will no longer appear. Set it back to **All** to bring them back. (For more on what this setting controls, see [VS Code's telemetry docs](https://code.visualstudio.com/docs/configure/telemetry).)
+Turn off the **Telemetry** switch under **Settings > About Kilo Code**, or open VS Code Settings (`Cmd+,` on Mac, `Ctrl+,` on Windows/Linux), search for **`telemetry.telemetryLevel`**, and set it to **Off**. Either one turns the feedback buttons off; turn the Kilo switch back on and set VS Code's level to **All** to bring them back. (For more on what the VS Code setting controls, see [VS Code's telemetry docs](https://code.visualstudio.com/docs/configure/telemetry).)
 
 {% /tab %}
 

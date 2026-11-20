@@ -71,6 +71,8 @@ In the feedback field, describe what the agent should change before it retries. 
 
 Use the shield button in the prompt controls to toggle runtime auto-approve for permission prompts without opening Settings. When enabled, the shield is highlighted and pending permission prompts are approved automatically. The runtime state stays synced across the sidebar, open Kilo tabs, and Agent Manager session views.
 
+The same toggle also has a global keyboard shortcut: press `Ctrl+Alt+A` (`Cmd+Alt+A` on macOS) to switch runtime auto-approve from anywhere in VS Code, including while focus is in the editor. To change the keys, search for **Toggle Auto-Approve** in VS Code's **Keyboard Shortcuts** editor.
+
 Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file.
 
 For the `agent_manager` tool, runtime approvals use the requested capability as the pattern: `worktree`, `local`, `overview`, `prompt`, `stop`, `move`, or `answer`. Prompting, stopping, moving, or answering a managed session requires its own explicit capability approval the first time, even when a broad Agent Manager allow rule already exists.
