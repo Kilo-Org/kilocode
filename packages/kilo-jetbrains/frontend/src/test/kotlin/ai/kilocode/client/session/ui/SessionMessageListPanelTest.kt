@@ -63,6 +63,7 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.ActionLink
+import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
@@ -2228,6 +2229,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.setState(SessionState.AwaitingQuestion(question(tool = ToolCallRef("a1", "call1"))))
 
         assertTrue(mv.partIds().isEmpty())
+        assertFalse("a hidden-only message must not leave an empty row", mv.isVisible)
     }
 
     fun `test clearing active question restores hidden question tool`() {
@@ -2242,6 +2244,78 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.setState(SessionState.Idle)
 
         assertEquals(listOf("tp1"), mv.partIds())
+        assertTrue(mv.isVisible)
+    }
+
+    fun `test question arrival and reply retain transcript parts and release editors on clear`() {
+        UIUtil.dispatchAllInvocationEvents()
+        val factory = EditorFactory.getInstance()
+        val baseline = factory.allEditors.size
+        val empty = count(panel)
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "Earlier answer\n\n```kotlin\nval prior = 1\n```"))
+        val prior = panel.findMessage("a1")!!.part("p1") as TextView
+        val markdown = prior.md.component as JPanel
+        val pane = markdown.components.filterIsInstance<JBHtmlPane>().single()
+
+        model.upsertMessage(msg("u2", "user"))
+        model.upsertMessage(msg("a2", "assistant"))
+        model.upsertMessage(msg("a2", "assistant")) // Later parts are not on the view's original message.
+        model.updateContent("a2", part("before", "a2", "text", text = "Before the question"))
+        model.updateContent("a2", toolPart("tool", "a2", "question", "call1", state = "running"))
+        model.updateContent("a2", part("after", "a2", "text", text = "After the question"))
+        val view = panel.findMessage("a2")!!
+        val before = view.part("before")
+        val tool = view.part("tool")!!
+        val after = view.part("after")
+        val size = count(view)
+        val editors = factory.allEditors.size
+        assertTrue("the transcript must own an editor for this leak check", editors > baseline)
+
+        val awaiting = SessionState.AwaitingQuestion(question(tool = ToolCallRef("a2", "call1")))
+        val busy = SessionState.Busy("Continuing")
+        repeat(200) {
+            model.setState(awaiting)
+            assertSame(view, tool.parent)
+            assertEquals(listOf("before", "after"), view.partIds())
+            assertSame(prior, panel.findMessage("a1")!!.part("p1"))
+            assertSame(markdown, pane.parent)
+
+            model.setState(busy)
+            assertEquals(listOf("before", "tool", "after"), view.partIds())
+            assertSame(tool, view.part("tool"))
+            assertSame(before, view.part("before"))
+            assertSame(after, view.part("after"))
+            assertSame(prior, panel.findMessage("a1")!!.part("p1"))
+            assertSame(markdown, prior.md.component)
+            assertSame(markdown, pane.parent)
+        }
+        assertEquals(size, count(view))
+        assertEquals(editors, factory.allEditors.size)
+
+        model.clear()
+        UIUtil.dispatchAllInvocationEvents()
+        assertEquals(empty, count(panel))
+        assertEquals(baseline, factory.allEditors.size)
+    }
+
+    fun `test changing the active question restores only the previously linked tool`() {
+        val item = panelWithPrompts()
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("a2", "assistant"))
+        model.updateContent("a1", toolPart("tp1", "a1", "question", "call1", state = "running"))
+        model.updateContent("a2", toolPart("tp2", "a2", "question", "call1", state = "running"))
+        val first = item.findMessage("a1")!!
+        val second = item.findMessage("a2")!!
+        val tool = first.part("tp1")
+
+        model.setState(SessionState.AwaitingQuestion(question(tool = ToolCallRef("a1", "call1"))))
+        assertNull(first.part("tp1"))
+        assertNotNull(second.part("tp2"))
+
+        model.setState(SessionState.AwaitingQuestion(question("q2", ToolCallRef("a2", "call1"))))
+        assertSame(tool, first.part("tp1"))
+        assertNull(second.part("tp2"))
     }
 
     fun `test active question does not hide unrelated question tool`() {
@@ -2291,14 +2365,15 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(mv.part("write") is TodoWriteView)
     }
 
-    fun `test completed question update replaces generic tool view with question result view`() {
+    fun `test question arriving after its request stays hidden until the result replaces it`() {
         val item = panelWithPrompts()
         model.upsertMessage(msg("a1", "assistant"))
-        // Running question tool — no structured data yet, renders as ToolView
+        model.setState(SessionState.AwaitingQuestion(question(tool = ToolCallRef("a1", "call1"))))
         model.updateContent("a1", toolPart("tp1", "a1", "question", "call1", state = "running"))
 
         val mv = item.findMessage("a1")!!
-        assertTrue("Running question tool should be ToolView", mv.part("tp1") is ToolView)
+        assertNull(mv.part("tp1"))
+        assertFalse(mv.isVisible)
 
         // Complete with structured data — should replace ToolView with QuestionResultView
         model.updateContent(
@@ -2312,6 +2387,11 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         assertTrue("Completed question with data should be QuestionResultView", mv.part("tp1") is QuestionResultView)
         assertEquals(listOf("tp1"), mv.partIds())
+        assertTrue(mv.isVisible)
+
+        val result = mv.part("tp1")
+        model.setState(SessionState.Idle)
+        assertSame(result, mv.part("tp1"))
     }
 
     fun `test completed plan update replaces tool view and keeps open file action`() {

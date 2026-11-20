@@ -109,7 +109,7 @@ class MessageView(
     private val aliases = LinkedHashMap<String, String>()
     private val sources = LinkedHashMap<String, String>()
     private var attachments: PromptAttachmentView? = null
-    private var hidden: ToolCallRef? = null
+    private var hidden: String? = null
     private var prompt: PromptView? = null
     private var promptBox: JPanel? = null
     // Stacks the non-text content of a user prompt bubble: attachment chips and unreadable-attachment
@@ -132,7 +132,7 @@ class MessageView(
         // Populate content that already exists (e.g. after loadHistory)
         for ((_, content) in msg.parts) {
             if (content is StepFinish) continue
-            if (isHidden(content)) continue
+            if (isSuppressed(content)) continue
             addPart(content)
         }
         syncAccessibility()
@@ -185,13 +185,21 @@ class MessageView(
     }
 
     /**
-     * Suppress the running/pending question tool part that matches [ref] while
-     * the linked question request is active. Pass null to stop suppressing.
+     * Hide the matching running/pending question while its interactive card is active, without
+     * detaching any parts. Returns true when the message's layout may have changed.
      */
-    fun setHiddenQuestionTool(ref: ToolCallRef?) {
-        if (hidden == ref) return
-        hidden = ref
-        rebuildParts()
+    @RequiresEdt
+    fun setHiddenQuestionTool(ref: ToolCallRef?): Boolean {
+        val call = ref?.takeIf { it.messageId == msg.info.id }?.callId
+        if (hidden == call) return false
+        hidden = call
+        var changed = false
+        for ((id, view) in parts) {
+            val content = contents[id] ?: continue
+            changed = syncQuestion(content, view) || changed
+        }
+        if (changed) refresh()
+        return changed
     }
 
     @RequiresEdt
@@ -224,7 +232,7 @@ class MessageView(
     fun upsertPartChanged(content: Content): Boolean {
         if (content is StepFinish) return false
         contents[content.id] = content
-        if (isHidden(content)) {
+        if (isSuppressed(content)) {
             contents.remove(content.id)
             if (isPromptMention(content)) syncPromptMentions()
             // Remove any stale view for this content so it disappears when suppressed
@@ -275,6 +283,7 @@ class MessageView(
                 return false
             }
             existing.update(content)
+            syncQuestion(content, existing)
             if (content is Text && existing === prompt) wrap?.syncInjected()
             syncPromptToolbar()
             refresh()
@@ -310,6 +319,7 @@ class MessageView(
         view.resize = resize
         view.hover = hover
         view.applyStyle(style)
+        syncQuestion(content, view)
         parts[content.id] = view
         wrapPrompt(view)?.let { add(it, tail()) }
     }
@@ -377,6 +387,7 @@ class MessageView(
         view.resize = resize
         view.hover = hover
         view.applyStyle(style)
+        syncQuestion(content, view)
         parts[content.id] = view
         wrapPrompt(view)?.let { add(it, at) }
         syncBorder()
@@ -419,52 +430,28 @@ class MessageView(
         return true
     }
 
-    /**
-     * Returns true when [content] should be suppressed because it is the
-     * pending/running question tool part linked to the active question.
-     */
-    private fun isHidden(content: Content): Boolean {
+    private fun isSuppressed(content: Content): Boolean {
         if (isPromptMention(content)) return true
         if (content !is Tool) return false
         if (role == SessionUiStyle.View.Message.USER_ROLE && content.name == "read") return true
         if (content.name == "todoread") return true
-        if (content.name == "todowrite" && content.state != ToolExecState.COMPLETED) return true
-        val ref = hidden ?: return false
-        if (content.name != "question") return false
-        if (content.state != ToolExecState.PENDING && content.state != ToolExecState.RUNNING) return false
-        return msg.info.id == ref.messageId && content.callId == ref.callId
+        return content.name == "todowrite" && content.state != ToolExecState.COMPLETED
     }
 
-    /**
-     * Clear and rebuild all part views from [msg.parts].
-     * Called only when the hidden ref changes to avoid unnecessary rebuilds.
-     */
+    private fun isQuestionHidden(content: Content?): Boolean {
+        val call = hidden ?: return false
+        return content is Tool && content.name == "question" && content.callId == call &&
+            (content.state == ToolExecState.PENDING || content.state == ToolExecState.RUNNING)
+    }
+
     @RequiresEdt
-    private fun rebuildParts() {
-        parts.values.distinct().forEach {
-            removeView(it)
-            Disposer.dispose(it)
-        }
-        wrap?.let {
-            it.release()
-            remove(it)
-        }
-        parts.clear()
-        contents.clear()
-        aliases.clear()
-        sources.clear()
-        attachments = null
-        prompt = null
-        promptBox = null
-        promptSouth = null
-        wrap = null
-        for ((_, content) in msg.parts) {
-            if (content is StepFinish) continue
-            if (isHidden(content)) continue
-            addPart(content)
-        }
-        syncBorder()
-        refresh()
+    private fun syncQuestion(content: Content, view: PartView): Boolean {
+        if (content !is Tool || content.name != "question") return false
+        val visible = !isQuestionHidden(content)
+        if (view.isVisible == visible) return false
+        if (!visible) view.setHovered(false)
+        view.isVisible = visible
+        return true
     }
 
     @RequiresEdt
@@ -531,10 +518,15 @@ class MessageView(
     }
 
     /** Look up a renderer by part id. */
-    fun part(id: String): PartView? = parts[aliases[id] ?: id]
+    @RequiresEdt
+    fun part(id: String): PartView? {
+        val key = aliases[id] ?: id
+        return if (isQuestionHidden(contents[key])) null else parts[key]
+    }
 
     /** Ordered part ids — stable for test assertions. */
-    fun partIds(): List<String> = parts.keys.toList()
+    @RequiresEdt
+    fun partIds(): List<String> = parts.keys.filterNot { isQuestionHidden(contents[it]) }
 
     /**
      * Conversation prose bodies in display order. Only user/assistant [Text] parts qualify; tool,
@@ -561,7 +553,10 @@ class MessageView(
     }
 
     /** Compact dump for test assertions. */
-    fun dump(): String = parts.values.joinToString(", ") { it.dumpLabel() }
+    @RequiresEdt
+    fun dump(): String = parts.entries.asSequence()
+        .filterNot { isQuestionHidden(contents[it.key]) }
+        .joinToString(", ") { it.value.dumpLabel() }
 
     @RequiresEdt
     fun promptToolbarActive() = promptToolbar?.active() == true
@@ -667,6 +662,7 @@ class MessageView(
      */
     @RequiresEdt
     fun setReverted(value: Boolean) {
+        if (reverted == value) return
         reverted = value
         syncVisibility()
     }
@@ -679,7 +675,8 @@ class MessageView(
      */
     @RequiresEdt
     private fun syncVisibility() {
-        isVisible = componentCount > 0 && !reverted
+        isVisible = !reverted && componentCount > 0 &&
+            (hidden == null || components.any { it !is PartView || !isQuestionHidden(contents[it.contentId]) })
     }
 
     @RequiresEdt
@@ -731,7 +728,7 @@ class MessageView(
     }
 
     private fun fallback(): String? = contents.values.asSequence()
-        .filter { it.id in parts }
+        .filter { it.id in parts && !isQuestionHidden(it) }
         .mapNotNull {
             when (it) {
                 is Reasoning -> KiloBundle.message("session.part.reasoning")

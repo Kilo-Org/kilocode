@@ -804,11 +804,15 @@ class SessionMessageListPanel(
         banner?.setReverting(state)
     }
 
-    /** Fan out the hidden question tool ref to all registered [MessageView]s. */
+    @RequiresEdt
     private fun setHiddenQuestionTool(ref: ToolCallRef?) {
-        if (hiddenTool == ref) return
+        val prev = hiddenTool
+        if (prev == ref) return
         hiddenTool = ref
-        for (mv in msgToView.values) mv.setHiddenQuestionTool(ref)
+        if (prev != null && prev.messageId != ref?.messageId) {
+            if (msgToView[prev.messageId]?.setHiddenQuestionTool(null) == true) forgetTurn(prev.messageId)
+        }
+        if (ref != null && msgToView[ref.messageId]?.setHiddenQuestionTool(ref) == true) forgetTurn(ref.messageId)
     }
 
     @RequiresEdt
