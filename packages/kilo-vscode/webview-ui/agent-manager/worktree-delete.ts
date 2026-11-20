@@ -4,6 +4,8 @@ import type { ProjectStore } from "./project/store"
 import { LOCAL, nextSelectionAfterDelete } from "./navigate"
 import { buildSidebarOrder, buildTopLevelItems, sortWorktrees } from "./section-helpers"
 
+const CONFIRM_MS = 2500
+
 export function createWorktreeDelete(opts: {
   store: (projectId: string) => ProjectStore | undefined
   project: () => string | undefined
@@ -62,7 +64,7 @@ export function createWorktreeDelete(opts: {
     opts.select(next === LOCAL ? { projectId, kind: "local" } : { projectId, kind: "worktree", worktreeId: next })
   }
 
-  const confirm = (projectId: string, worktreeId: string) => {
+  const request = (projectId: string, worktreeId: string, intent: "arm" | "confirm") => {
     const store = opts.store(projectId)
     const run = store?.runStatuses()[worktreeId]?.state
     if (
@@ -75,6 +77,11 @@ export function createWorktreeDelete(opts: {
       return
     }
     if (pending()?.projectId === projectId && pending()?.worktreeId === worktreeId) {
+      if (intent === "arm") {
+        clearTimeout(timer)
+        timer = setTimeout(cancel, CONFIRM_MS)
+        return
+      }
       cancel()
       store.setBusy((prev) => new Map([...prev, [worktreeId, { reason: "deleting" as const }]]))
       opts.remove(projectId, worktreeId)
@@ -84,10 +91,16 @@ export function createWorktreeDelete(opts: {
     cancel()
     opts.reveal(projectId, worktreeId)
     setPending({ projectId, worktreeId })
-    timer = setTimeout(cancel, 2500)
+    timer = setTimeout(cancel, CONFIRM_MS)
   }
 
-  return { pending, cancel, confirm, select }
+  return {
+    pending,
+    cancel,
+    arm: (projectId: string, worktreeId: string) => request(projectId, worktreeId, "arm"),
+    confirm: (projectId: string, worktreeId: string) => request(projectId, worktreeId, "confirm"),
+    select,
+  }
 }
 
 export type WorktreeDelete = ReturnType<typeof createWorktreeDelete>
