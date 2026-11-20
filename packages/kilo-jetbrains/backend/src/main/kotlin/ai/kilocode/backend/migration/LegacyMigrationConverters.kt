@@ -445,7 +445,9 @@ object LegacyMigrationConverters {
             val newValue: JsonElement = if (fileRegex != null) {
                 val globs = fileRegexToGlobs(fileRegex)
                 if (globs == null) {
-                    warnings.add("File restriction not migrated; $permKey disabled: $fileRegex")
+                    warnings.add("File restriction not migrated; $permKey set to ask: $fileRegex")
+                    allowed.add(permKey)
+                    permission[permKey] = JsonPrimitive("ask")
                     continue
                 }
                 buildJsonObject {

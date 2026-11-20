@@ -295,10 +295,10 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
-    fun `convertCustomModePermissions - untranslatable fileRegex denies edit and warns`() {
+    fun `convertCustomModePermissions - untranslatable fileRegex asks before edit and warns`() {
         val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "[a-z]+\\.ts$")))
         val result = LegacyMigrationConverters.convertCustomModePermissions(groups)
-        assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
+        assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
         assertTrue(result.warnings.isNotEmpty())
     }
 
@@ -306,7 +306,7 @@ class LegacyMigrationConversionTest {
     fun `convertCustomModePermissions - fileRegex word boundary escape is not migrated`() {
         val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "\\.md\\b")))
         val result = LegacyMigrationConverters.convertCustomModePermissions(groups)
-        assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
+        assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
         assertTrue(result.warnings.isNotEmpty())
     }
 
@@ -314,7 +314,7 @@ class LegacyMigrationConversionTest {
     fun `convertCustomModePermissions - fileRegex arm ending with space star is not migrated`() {
         val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "^docs/a .*$")))
         val result = LegacyMigrationConverters.convertCustomModePermissions(groups)
-        assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
+        assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
         assertTrue(result.warnings.isNotEmpty())
     }
 
