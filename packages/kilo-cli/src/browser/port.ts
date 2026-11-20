@@ -7,7 +7,11 @@ import type { Client, Input, State } from "./client"
 
 /**
  * A tool call can wait inside the extension (a tab lease, a navigation, an explicit wait), so the transport's own
- * request timeout is too short for it.
+ * request timeout is too short for it. The bound matches the Playwright backend's for the same pinned contract: the
+ * extension ends its own overruns (a tab lease wait of 30 s, then a navigation bounded at 10 s and 15 s or
+ * `browser_wait_for` clamped to 15 s), so a step that runs by design stays under a minute and 180 s is a fence rather
+ * than a budget. That margin is not this repo's to keep, so the fence stays where both backends already agreed on it;
+ * a call still unanswered then is a wedged extension, reported as a timeout and never as a missing browser.
  */
 const CALL_TIMEOUT = 180_000
 
@@ -64,17 +68,51 @@ function landed(value: string | undefined) {
 
 type Payload = z.infer<typeof Payload>
 
+const Adopted = z.object({ kind: z.enum(["adopted", "none", "kept"]) }).loose()
+
+/** `session.adopt`'s answer. An extension that answers without a `kind` predates it and cannot say what it did. */
+export function adoption(value: unknown): BrowserHub.Adoption {
+  const parsed = Adopted.safeParse(value)
+  return parsed.success ? parsed.data.kind : "unconfirmed"
+}
+
 /** A hub error, read structurally: a malformed frame is not an error object and never becomes one. */
 function hubFailure(error: unknown) {
   if (typeof error !== "object" || error === null) return undefined
-  const value = error as { kind?: unknown; code?: unknown; message?: unknown; data?: unknown; uncertain?: unknown }
+  const value = error as {
+    kind?: unknown
+    code?: unknown
+    message?: unknown
+    data?: unknown
+    uncertain?: unknown
+    timedOut?: unknown
+    cancelled?: unknown
+  }
   if (typeof value.kind !== "string" || typeof value.code !== "number") return undefined
   return {
     kind: value.kind,
     message: typeof value.message === "string" ? value.message : "",
     data: Payload.safeParse(value.data).data,
     uncertain: value.uncertain === true,
+    timedOut: value.timedOut === true,
+    cancelled: value.cancelled === true,
   }
+}
+
+/**
+ * A tool call the transport itself ended: the socket was up when it was sent, so the extension is still there. The turn
+ * stopping before the answer is its own kind (it can be cancelled before anything is sent), and a call the timer ended
+ * may have run in part. Only a call carries a signal or a step, which is why `port.call` alone reads these: a late
+ * `session.open`, `tools.list` or upload is a silent extension, and the snapshot advice would name a step that never
+ * started.
+ */
+function callFailure(error: unknown) {
+  const value = hubFailure(error)
+  if (value?.kind !== "browser_unavailable") return undefined
+  if (value.cancelled)
+    return new BrowserHub.Failure({ kind: "cancelled", message: value.message, uncertain: value.uncertain })
+  if (!value.timedOut) return undefined
+  return new BrowserHub.Failure({ kind: "timeout", message: value.message, uncertain: true })
 }
 
 /** One transport failure as the backend reads it. A kind the CLI does not know stays `unknown` and is refused. */
@@ -118,7 +156,11 @@ export function failure(error: unknown): BrowserHub.Failure {
     case "origin_changed": {
       // A redirect landed on a new origin: ask to read it, so the retry is not the same navigation again.
       const to = landed(data?.to)
-      return new BrowserHub.Failure({ kind: "moved", ...base, ...(to ? { items: [{ class: "read", origin: to }] } : {}) })
+      return new BrowserHub.Failure({
+        kind: "moved",
+        ...base,
+        ...(to ? { items: [{ class: "read", origin: to }] } : {}),
+      })
     }
     case "needs_permission":
       return new BrowserHub.Failure({
@@ -274,16 +316,27 @@ export function hub(options: Options = {}): BrowserHub.Interface {
           }
         },
         async open(params) {
-          return (await connection()).session.open({ ...params, cliVersion: version ?? OPENCODE_VERSION }).catch(
-            (error: unknown) => {
+          return (await connection()).session
+            .open({ ...params, cliVersion: version ?? OPENCODE_VERSION })
+            .catch((error: unknown) => {
               throw failure(error)
-            },
-          )
+            })
         },
         async close(sessionHandle) {
           await (await connection()).session.close({ sessionHandle }).catch((error: unknown) => {
             throw failure(error)
           })
+        },
+        async share(sessionHandle) {
+          await (await connection()).session.shareActiveTab({ sessionHandle }).catch((error: unknown) => {
+            throw failure(error)
+          })
+        },
+        async adopt(sessionHandle) {
+          const answer = await (await connection()).session.adopt({ sessionHandle }).catch((error: unknown) => {
+            throw failure(error)
+          })
+          return adoption(answer)
         },
         async list() {
           const listed = await (await connection()).tools.list().catch((error: unknown) => {
@@ -321,7 +374,8 @@ export function hub(options: Options = {}): BrowserHub.Interface {
             )
             return reply(answer)
           } catch (error) {
-            throw explained(linked, profile, error)
+            // Only this method runs a step, so only this one reads the transport's timeout as one.
+            throw callFailure(error) ?? explained(linked, profile, error)
           }
         },
         async begin(params) {

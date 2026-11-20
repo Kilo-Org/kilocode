@@ -4,13 +4,13 @@ import { randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { HubError, create as createClient, type State } from "../../src/browser/client"
+import { HubError, create as createClient, type Client, type State } from "../../src/browser/client"
 import { create as createHub } from "../../src/browser/hub"
 import * as pair from "../../src/browser/pair"
 import * as proto from "../../src/browser/protocol"
 import { Registry } from "../../src/browser/registry"
 import { serve } from "../../src/browser/socket"
-import { absence, failure, hub as connection } from "../../src/browser/port"
+import { absence, adoption, failure, hub as connection } from "../../src/browser/port"
 import { extensionHello, until } from "./fixture"
 
 const cleanups: (() => Promise<void> | void)[] = []
@@ -24,6 +24,24 @@ const codes = Object.fromEntries(
 
 function hub(name: proto.ErrorName, data?: unknown) {
   return new HubError({ code: codes[name], message: `${name} happened`, ...(data === undefined ? {} : { data }) })
+}
+
+/** A client whose transport ends every RPC itself, as its timer or the turn's signal does: no extension ever answers. */
+function stoppedClient(data: Record<string, unknown>) {
+  const error = (method: string) =>
+    new HubError({
+      code: proto.ErrorCodes.browser_unavailable,
+      message: `The browser ended ${method} without an answer.`,
+      data,
+    })
+  const reject = (method: string) => () => Promise.reject(error(method))
+  return {
+    state: () => ({ kind: "ready", hub: {}, extension: {} }),
+    subscribe: () => () => {},
+    session: { open: reject("session.open"), close: reject("session.close") },
+    tools: { list: reject("tools.list"), call: reject("tools.call") },
+    upload: { begin: reject("upload.begin"), chunk: reject("upload.chunk"), end: reject("upload.end") },
+  } as unknown as Client
 }
 
 describe("hub failures as the extension backend reads them", () => {
@@ -67,7 +85,9 @@ describe("hub failures as the extension backend reads them", () => {
   })
 
   test("a redirect names the origin it landed on, so the retry asks for the right read", () => {
-    expect(failure(hub("origin_changed", { from: "https://a.example.com", to: "https://b.example.com/login" }))).toMatchObject({
+    expect(
+      failure(hub("origin_changed", { from: "https://a.example.com", to: "https://b.example.com/login" })),
+    ).toMatchObject({
       kind: "moved",
       items: [{ class: "read", origin: "https://b.example.com" }],
     })
@@ -117,11 +137,24 @@ describe("hub failures as the extension backend reads them", () => {
     expect(mapped.items).toEqual([])
   })
 
+  test("an adopt answer names what the browser did; an older extension's empty answer is unconfirmed", () => {
+    expect(adoption({ kind: "adopted", groupId: 3 })).toBe("adopted")
+    expect(adoption({ kind: "adopted" })).toBe("adopted")
+    expect(adoption({ kind: "none" })).toBe("none")
+    expect(adoption({ kind: "kept" })).toBe("kept")
+    expect(adoption({})).toBe("unconfirmed")
+    expect(adoption({ kind: "everything" })).toBe("unconfirmed")
+    expect(adoption(undefined)).toBe("unconfirmed")
+  })
+
   test("a transport failure from ready is the backend's own failure, not a raw error", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-port-"))
     try {
       const linked = connection({ dir, install: () => Promise.resolve(), start: () => {}, timeout: 300 })
-      const error = await linked.port(null).ready(300).catch((value: unknown) => value)
+      const error = await linked
+        .port(null)
+        .ready(300)
+        .catch((value: unknown) => value)
       expect(error).toBeInstanceOf(BrowserHub.Failure)
       expect((error as BrowserHub.Failure).kind).toBe("unavailable")
     } finally {
@@ -141,9 +174,50 @@ describe("hub failures as the extension backend reads them", () => {
           throw new Error("the transport cannot start")
         },
       })
-      const error = await linked.port(null).ready(300).catch((value: unknown) => value)
+      const error = await linked
+        .port(null)
+        .ready(300)
+        .catch((value: unknown) => value)
       expect(error).toBeInstanceOf(BrowserHub.Failure)
       expect((error as BrowserHub.Failure).kind).toBe("unknown")
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("only a tool call the transport ended is a step timeout or a cancellation", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-port-"))
+    const port = (data: Record<string, unknown>) =>
+      connection({ dir, install: () => Promise.resolve(), start: () => {}, create: () => stoppedClient(data) }).port(null)
+    const call = (at: BrowserHub.Port) =>
+      at
+        .call({ sessionHandle: "s", name: "browser_click", arguments: {}, authorized: [] })
+        .catch((value: unknown) => value)
+    try {
+      // A call may have reached the extension, so it is a slow step the model has to look at before repeating it.
+      expect(await call(port({ effectsUncertain: true, timedOut: true }))).toMatchObject({
+        kind: "timeout",
+        uncertain: true,
+      })
+      // The turn stopping is its own kind: in flight it may have run in part, and a call never sent cannot have.
+      expect(await call(port({ effectsUncertain: true, cancelled: true }))).toMatchObject({
+        kind: "cancelled",
+        uncertain: true,
+      })
+      expect(await call(port({ cancelled: true }))).toMatchObject({ kind: "cancelled", uncertain: false })
+      // No step ran for a listing, a session open or an upload, so they stay a silent browser rather than a slow step.
+      const ended = port({ effectsUncertain: true, timedOut: true })
+      expect(await ended.list().catch((value: unknown) => value)).toMatchObject({ kind: "unavailable" })
+      expect(
+        await ended
+          .begin({ uploadId: "u", name: "file.txt", size: 1, mimeType: "text/plain" })
+          .catch((value: unknown) => value),
+      ).toMatchObject({ kind: "unavailable" })
+      expect(
+        await ended
+          .open({ sessionId: "s", title: "a", cwd: dir })
+          .catch((value: unknown) => value),
+      ).toMatchObject({ kind: "unavailable" })
     } finally {
       await fs.rm(dir, { recursive: true, force: true })
     }
