@@ -219,7 +219,8 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Automatische Genehmigung umschalten",
-  "tui.autoApprove.description": "Berechtigungsanfragen für diesen Prozess automatisch genehmigen",
+  "tui.autoApprove.description": "Berechtigungsanfragen für jeden Client automatisch genehmigen und diese Einstellung merken",
   "tui.autoApprove.enabled": "Automatische Genehmigung aktiviert. Berechtigungsanfragen werden automatisch genehmigt.",
   "tui.autoApprove.disabled": "Automatische Genehmigung deaktiviert.",
+  "tui.autoApprove.saveFailed": "Die Einstellung für die automatische Genehmigung konnte nicht gespeichert werden.",
 }

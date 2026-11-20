@@ -33,6 +33,31 @@ test("session_sync is an optional boolean Kilo setting preserved by config parsi
   expect(diagnostics).toEqual([{ kind: "invalid", path: ["session_sync"], message: expect.stringContaining("expected a boolean") }])
 })
 
+test("auto_approve is an optional boolean Kilo setting preserved by config parsing", () => {
+  const decode = Schema.decodeUnknownOption(KiloConfigPolicy.Info)
+  for (const value of [true, false]) {
+    const input = { auto_approve: value, shell: "valid" }
+    expect(Option.isSome(decode(input))).toBe(true)
+    const normalized = ConfigNormalize.normalize(input)
+    if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+    expect(KiloConfigPolicy.parse(input, normalized.encoded)).toMatchObject(input)
+  }
+  expect(KiloConfigPolicy.parse({}, {})?.auto_approve).toBeUndefined()
+  expect(Option.isNone(decode({ auto_approve: "true" }))).toBe(true)
+})
+
+test("autoApprove reads the last document that sets the key", () => {
+  const document = (value?: boolean) =>
+    new Document({
+      type: "document",
+      info: new KiloConfigPolicy.Info(value === undefined ? {} : { auto_approve: value }),
+    })
+  expect(KiloConfigPolicy.autoApprove([])).toBe(false)
+  expect(KiloConfigPolicy.autoApprove([document(true)])).toBe(true)
+  expect(KiloConfigPolicy.autoApprove([document(true), document(false)])).toBe(false)
+  expect(KiloConfigPolicy.autoApprove([document(false), document()])).toBe(false)
+})
+
 test("remote_control is an optional boolean preserved beside canonical config", () => {
   const decode = Schema.decodeUnknownOption(KiloConfigPolicy.Info)
   for (const value of [true, false]) {

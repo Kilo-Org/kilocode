@@ -62,6 +62,9 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   session_sync: Schema.Boolean.pipe(optional).annotate({
     description: "Synchronize signed-in Kilo sessions and required assets (default: true; global config only)",
   }),
+  auto_approve: Schema.Boolean.pipe(optional).annotate({
+    description: "Approve permission requests automatically for every client unless a rule denies them",
+  }),
   hide_prompt_training_models: Schema.Boolean.pipe(optional).annotate({
     description: "Hide Kilo models that can use prompts for training and deny provider data collection",
   }),
@@ -158,6 +161,7 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 const settings = {
+  auto_approve: { schema: Schema.Boolean, expected: "a boolean" },
   remote_control: { schema: Schema.Boolean, expected: "a boolean" },
   auto_collapse_reasoning: { schema: Schema.Boolean, expected: "a boolean" },
   reasoning_display: { schema: ReasoningDisplay, expected: 'one of "expanded", "preview", "headline"' },
@@ -427,6 +431,17 @@ export function fromEntries(entries: readonly Config.Entry[]) {
       false,
     ),
   }
+}
+
+/** Auto-approve of the effective entries: the last document that sets it wins. */
+export function autoApprove(entries: readonly Config.Entry[]) {
+  return entries.reduce<boolean>(
+    (value, entry) =>
+      entry.type === "document" && entry.info instanceof Info && entry.info.auto_approve !== undefined
+        ? entry.info.auto_approve
+        : value,
+    false,
+  )
 }
 
 /**

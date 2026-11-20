@@ -197,7 +197,8 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "切换自动批准",
-  "tui.autoApprove.description": "为此进程自动批准权限请求",
+  "tui.autoApprove.description": "为所有客户端自动批准权限请求并记住此设置",
   "tui.autoApprove.enabled": "已启用自动批准。权限请求将自动获得批准。",
   "tui.autoApprove.disabled": "已停用自动批准。",
+  "tui.autoApprove.saveFailed": "无法保存自动批准设置。",
 }

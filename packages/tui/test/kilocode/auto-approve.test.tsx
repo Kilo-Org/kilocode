@@ -1,9 +1,43 @@
 import { beforeEach, describe, expect, it, test } from "bun:test"
-import { permissionModeOverride, setPermissionMode, togglePermissionMode } from "../../src/kilocode/permission-mode"
+import { nextPermissionMode, permissionModeOverride, setPermissionMode } from "../../src/kilocode/permission-mode"
 import { createAppFixture } from "../fixture/app"
 import { directory, json } from "../fixture/tui-client"
 
 const location = { directory, project: { id: "project", directory, canonical: directory } }
+
+type AutoApproveState = { enabled: boolean }
+
+/** The `kilocode.settings` RPC over the global auto-approve key, with the same in-memory store the TUI reads. */
+function settings(state: AutoApproveState) {
+  return async (url: URL, request: Request) => {
+    if (url.pathname === "/api/rpc/kilocode.settings/read")
+      return json({
+        output: {
+          scope: "global",
+          target: { scope: "global", path: `${directory}/kilo2.json`, revision: "rev", exists: true },
+          document: state.enabled ? { auto_approve: true } : {},
+        },
+      })
+    if (url.pathname === "/api/rpc/kilocode.settings/write") {
+      const body = (await request.clone().json()) as { input?: { set?: { auto_approve?: boolean | null } } }
+      state.enabled = body.input?.set?.auto_approve === true
+      return json({
+        output: {
+          scope: "global",
+          target: { scope: "global", path: `${directory}/kilo2.json`, revision: "next", exists: true },
+          changed: true,
+        },
+      })
+    }
+    return undefined
+  }
+}
+
+function withSession(sessionID: string, state: AutoApproveState) {
+  const remote = settings(state)
+  const session = sessionFetch(sessionID)
+  return async (url: URL, request: Request) => (await remote(url, request)) ?? session(url)
+}
 
 function sessionFetch(sessionID: string) {
   return async (url: URL) => {
@@ -55,20 +89,17 @@ describe("auto-approve mode", () => {
     expect(permissionModeOverride()).toBeUndefined()
   })
 
-  it("toggles from the effective mode and keeps the override", () => {
-    expect(togglePermissionMode("prompt")).toBe("autoaccept")
-    expect(permissionModeOverride()).toBe("autoaccept")
-    expect(togglePermissionMode("autoaccept")).toBe("prompt")
-    expect(permissionModeOverride()).toBe("prompt")
+  it("toggles from the effective mode", () => {
+    expect(nextPermissionMode("prompt")).toBe("autoaccept")
+    expect(nextPermissionMode("autoaccept")).toBe("prompt")
   })
 
   it("degrades an unrecognized mode to prompting", () => {
-    expect(togglePermissionMode("future-mode" as Parameters<typeof togglePermissionMode>[0])).toBe("prompt")
-    expect(permissionModeOverride()).toBe("prompt")
+    expect(nextPermissionMode("future-mode" as Parameters<typeof nextPermissionMode>[0])).toBe("prompt")
   })
 
   it("falls back to the configured mode when the override is cleared", () => {
-    togglePermissionMode("prompt")
+    setPermissionMode("autoaccept")
     setPermissionMode(undefined)
     expect(permissionModeOverride()).toBeUndefined()
   })
@@ -77,18 +108,86 @@ describe("auto-approve mode", () => {
 test(
   "/auto-approve and Ctrl+Alt+A toggle auto-approve",
   async () => {
-    await using app = await createAppFixture()
+    const state: AutoApproveState = { enabled: false }
+    await using app = await createAppFixture({ fetch: settings(state) })
     await app.ready
     await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
 
     await app.mockInput.typeText("/auto-approve")
     app.mockInput.pressEnter()
     await app.waitForFrame((frame) => frame.includes("Auto-approve enabled."))
+    // The choice is saved globally and in the TUI config, so a new client or a new TUI process starts enabled.
+    expect(state.enabled).toBe(true)
+    expect(app.config().session?.permissions).toBe("autoaccept")
 
     app.mockInput.pressKey("a", { ctrl: true, meta: true })
     await app.waitForFrame((frame) => frame.includes("Auto-approve disabled."))
+    expect(state.enabled).toBe(false)
+    expect(app.config().session?.permissions).toBe("prompt")
 
     expect(app.captureCharFrame()).not.toContain("Auto-approve enabled.")
+  },
+  30000,
+)
+
+test(
+  "keeps auto-approve after the TUI restarts",
+  async () => {
+    const sessionID = "ses_autoapprove_restart"
+    const state: AutoApproveState = { enabled: false }
+    await (async () => {
+      await using first = await createAppFixture({
+        width: 110,
+        height: 34,
+        args: { sessionID },
+        config: { animations: false, tabs: { mode: "off" } },
+        fetch: withSession(sessionID, state),
+      })
+      await first.ready
+      await until(first, "session", (frame) => frame.includes("Demo Model"))
+      await first.mockInput.typeText("/auto-approve")
+      first.mockInput.pressEnter()
+      await until(first, "enabled toast", (frame) => frame.includes("Auto-approve enabled."))
+    })()
+
+    // A fresh TUI config still restores auto-approve from the saved global rule.
+    await using restarted = await createAppFixture({
+      width: 110,
+      height: 34,
+      args: { sessionID },
+      config: { animations: false, tabs: { mode: "off" } },
+      fetch: withSession(sessionID, state),
+    })
+    await restarted.ready
+    await until(restarted, "session", (frame) => frame.includes("Demo Model"))
+    expect(state.enabled).toBe(true)
+    expect(restarted.captureCharFrame()).toContain(" auto ")
+  },
+  30000,
+)
+
+test(
+  "leaves a --auto launch without keeping auto-approve",
+  async () => {
+    const sessionID = "ses_autoapprove_flag"
+    const state: AutoApproveState = { enabled: false }
+    await using app = await createAppFixture({
+      width: 110,
+      height: 34,
+      args: { sessionID, auto: true },
+      config: { animations: false, tabs: { mode: "off" } },
+      fetch: withSession(sessionID, state),
+    })
+    await app.ready
+    await until(app, "session", (frame) => frame.includes("Demo Model"))
+    expect(app.captureCharFrame()).toContain(" auto ")
+
+    app.mockInput.pressKey("a", { ctrl: true, meta: true })
+    await until(app, "disabled toast", (frame) => frame.includes("Auto-approve disabled."))
+    // The flag still seeds later launches, so leaving it must last for this process even though the setting is saved.
+    expect(app.captureCharFrame()).not.toContain(" auto ")
+    expect(state.enabled).toBe(false)
+    expect(app.config().session?.permissions).toBe("prompt")
   },
   30000,
 )
@@ -102,6 +201,8 @@ test(
     // The permission list is the server's view; it keeps the request until the reply arrives, so a sync that races
     // the event cannot drop it.
     let pending = false
+    const state: AutoApproveState = { enabled: false }
+    const remote = settings(state)
     const pendingRequest = { id: requestID, sessionID, action: "shell", resources: ["git status"] }
     await using app = await createAppFixture({
       width: 110,
@@ -117,7 +218,7 @@ test(
           replied.resolve(body.decision)
           return new Response(null, { status: 204 })
         }
-        return sessionFetch(sessionID)(url)
+        return (await remote(url, request)) ?? sessionFetch(sessionID)(url)
       },
     })
     await app.ready
@@ -152,6 +253,7 @@ test(
   "a permissions settings write clears the runtime override",
   async () => {
     const sessionID = "ses_autoapprove_settings"
+    const state: AutoApproveState = { enabled: false }
     await using app = await createAppFixture({
       width: 110,
       height: 34,
@@ -161,18 +263,15 @@ test(
         tabs: { mode: "off" },
         session: { permissions: "autoaccept" },
       },
-      fetch: sessionFetch(sessionID),
+      fetch: withSession(sessionID, state),
     })
     await app.ready
     await until(app, "session", (frame) => frame.includes("Demo Model"))
     expect(app.captureCharFrame()).toContain(" auto ")
 
-    // Leave the override equal to the configured value, so only the settings write can change the effective mode.
-    app.mockInput.pressKey("a", { ctrl: true, meta: true })
-    await until(app, "disabled toast", (frame) => frame.includes("Auto-approve disabled."))
-    app.mockInput.pressKey("a", { ctrl: true, meta: true })
-    await until(app, "enabled toast", (frame) => frame.includes("Auto-approve enabled."))
-    expect(app.captureCharFrame()).toContain(" auto ")
+    // Leave the override equal to the configured value, with no saved global rule, so only the settings write can
+    // change the effective mode.
+    setPermissionMode("autoaccept")
 
     await app.mockInput.typeText("/settings")
     app.mockInput.pressEnter()

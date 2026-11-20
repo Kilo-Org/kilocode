@@ -210,7 +210,8 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "สลับการอนุมัติอัตโนมัติ",
-  "tui.autoApprove.description": "อนุมัติคำขออนุญาตโดยอัตโนมัติสำหรับโปรเซสนี้",
+  "tui.autoApprove.description": "อนุมัติคำขออนุญาตโดยอัตโนมัติสำหรับทุกไคลเอนต์และจดจำการตั้งค่านี้",
   "tui.autoApprove.enabled": "เปิดใช้การอนุมัติอัตโนมัติแล้ว คำขออนุญาตจะได้รับการอนุมัติโดยอัตโนมัติ",
   "tui.autoApprove.disabled": "ปิดใช้การอนุมัติอัตโนมัติแล้ว",
+  "tui.autoApprove.saveFailed": "ไม่สามารถบันทึกการตั้งค่าการอนุมัติอัตโนมัติได้",
 }

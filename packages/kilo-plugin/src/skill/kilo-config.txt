@@ -155,6 +155,7 @@ Kilo adds these top-level keys to `kilo2.json`:
 | `indexing` | Enables `semantic_search`: `enabled`, `provider` (`kilo`, `openai`, `ollama`, `openai-compatible`, `gemini`, `mistral`, `vercel-ai-gateway`, `bedrock`, `openrouter`, `voyage`), `model`, `vectorStore` (`lancedb`, or `qdrant` with `qdrant.url`; Intel Macs need `qdrant`), per-provider options and search tuning. `/indexing` shows status. |
 | `sandbox` | `{ enabled, network: "allow"\|"deny", writable_paths, allowed_hosts }` confines new sessions; network defaults to deny and `allowed_hosts` allows exact destinations. A project config can only enable or restrict, never widen. |
 | `session_sync` | Default on, global config only. Syncs signed-in sessions; `kilo2 sync status\|enable\|disable\|flush`. |
+| `auto_approve` | Saves global auto-approve for every client; `/auto-approve` or Ctrl+Alt+A toggles it. An explicit deny still wins, and interactive prompts stay for a person. |
 | `remote_control` | Lets Kilo Cloud drive sessions; also `/remote`, `KILO_REMOTE=1` or `kilo2 remote`. |
 | `privacy_mode` | Blurs account email, balance and team in the TUI. Any `true` in any config turns it on. |
 | `hide_prompt_training_models` | Hides Gateway models that may train on prompts and denies provider data collection. |

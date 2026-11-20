@@ -214,7 +214,8 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Veksle automatisk godkjenning",
-  "tui.autoApprove.description": "Godkjenn forespørsler om tillatelse automatisk for denne prosessen",
+  "tui.autoApprove.description": "Godkjenn forespørsler om tillatelse automatisk for hver klient, og husk denne innstillingen",
   "tui.autoApprove.enabled": "Automatisk godkjenning aktivert. Forespørsler om tillatelse godkjennes automatisk.",
   "tui.autoApprove.disabled": "Automatisk godkjenning deaktivert.",
+  "tui.autoApprove.saveFailed": "Kunne ikke lagre innstillingen for automatisk godkjenning.",
 }

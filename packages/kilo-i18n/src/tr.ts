@@ -216,7 +216,8 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Otomatik onayı değiştir",
-  "tui.autoApprove.description": "Bu süreç için izin isteklerini otomatik olarak onayla",
+  "tui.autoApprove.description": "Her istemci için izin isteklerini otomatik olarak onayla ve bu ayarı hatırla",
   "tui.autoApprove.enabled": "Otomatik onay etkinleştirildi. İzin istekleri otomatik olarak onaylanır.",
   "tui.autoApprove.disabled": "Otomatik onay devre dışı bırakıldı.",
+  "tui.autoApprove.saveFailed": "Otomatik onay ayarı kaydedilemedi.",
 }

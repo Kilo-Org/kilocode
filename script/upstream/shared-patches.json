@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 167,
-    "markedLines": 3020,
+    "markedLines": 3063,
     "unmarkedLines": 560,
     "deletedFiles": 0
   },
@@ -489,7 +489,7 @@
     },
     "packages/core/src/permission.ts": {
       "rung": 3,
-      "seam": "Passes the rules the effect was evaluated against (configured plus project saved rules) and the active unattended rules to the existing permission evaluate hook. The hook event carries only the computed effect, and the plugin API cannot read saved rules or the unattended state, so a hook cannot tell an exact saved approval from a wildcard one. Replacing Permission.node would mirror the whole service for two read-only fields. Upstream behavior does not change."
+      "seam": "Passes the rules the effect was evaluated against (configured plus project saved rules) and the active unattended rules to the existing permission evaluate hook. The hook event carries only the computed effect, and the plugin API cannot read saved rules or the unattended state, so a hook cannot tell an exact saved approval from a wildcard one. Replacing Permission.node would mirror the whole service for two read-only fields. Also reads the Kilo-only `auto_approve` config flag through `KiloConfigPolicy`, appends its wildcard allow to the saved rules for non-interactive requests, and drains pending requests on `config.updated` when it turns on, which is v1's saved auto-approve behavior; a request with `metadata.interactive` keeps its prompt for a person. The flag lives in Kilo's config policy, so upstream's schema, defaults and behavior are unchanged when it is absent. `Config` becomes a permission node dependency."
     },
     "packages/plugin/src/effect/permission.ts": {
       "rung": 3,

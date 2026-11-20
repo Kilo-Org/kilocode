@@ -239,7 +239,8 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Toggle auto-approve",
-  "tui.autoApprove.description": "Approve permission requests automatically for this process",
+  "tui.autoApprove.description": "Approve permission requests automatically for every client and remember this setting",
   "tui.autoApprove.enabled": "Auto-approve enabled. Permission requests are approved automatically.",
   "tui.autoApprove.disabled": "Auto-approve disabled.",
+  "tui.autoApprove.saveFailed": "Could not save the auto-approve setting.",
 }

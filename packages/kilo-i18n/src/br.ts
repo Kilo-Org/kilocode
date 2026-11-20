@@ -216,8 +216,9 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Alternar aprovação automática",
-  "tui.autoApprove.description": "Aprovar solicitações de permissão automaticamente para este processo",
+  "tui.autoApprove.description": "Aprovar solicitações de permissão automaticamente para todos os clientes e lembrar desta configuração",
   "tui.autoApprove.enabled":
     "Aprovação automática ativada. As solicitações de permissão são aprovadas automaticamente.",
   "tui.autoApprove.disabled": "Aprovação automática desativada.",
+  "tui.autoApprove.saveFailed": "Não foi possível salvar a configuração de aprovação automática.",
 }
