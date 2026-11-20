@@ -701,6 +701,16 @@ export function dispose<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, 
   )
 }
 
+/** Maps a resolved snapshot and the masked variables into a backend profile. Exported for the forwarding test. */
+export function profileFor(ctx: InstanceContext, state: Snapshot, maskedEnv: readonly string[]) {
+  return profile(ctx, state.mode, state.writablePaths, state.allowedHosts, {
+    readPaths: state.readPaths,
+    readExceptions: state.readExceptions,
+    credentials: state.credentials,
+    maskedEnv,
+  })
+}
+
 function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) {
   return Effect.gen(function* () {
     // Initialize before taking the execution gate so activation can safely hold the policy lock while
@@ -717,22 +727,16 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
           return yield* Effect.fail(new Error(support.reason ?? "The configured sandbox backend is unavailable"))
         }
         const runtime = yield* Runtime
-        // A credential the current config had to drop is not proxied and not in the snapshot, so mask its real
-        // variable explicitly instead of letting it reach the child.
-        const maskedEnv = SandboxConfig.resolve(yield* runtime.config).maskedEnv
+        // Any configured credential variable the active snapshot does not route must be denied, so a dropped
+        // entry (malformed, duplicate) or one narrowed away by subagent intersection cannot leak its real value
+        // to the child. Variables the snapshot still routes are masked by nono itself, so they are excluded.
+        const configured = SandboxConfig.resolve(yield* runtime.config)
+        const routed = new Set((active.state.credentials ?? []).map((route) => route.envVar))
+        const maskedEnv = [
+          ...new Set([...configured.credentials.map((route) => route.envVar), ...configured.maskedEnv]),
+        ].filter((envVar) => !routed.has(envVar))
         return yield* runSandbox(
-          profile(
-            { directory: runtime.directory, worktree: runtime.worktree },
-            active.state.mode,
-            active.state.writablePaths,
-            active.state.allowedHosts,
-            {
-              readPaths: active.state.readPaths,
-              readExceptions: active.state.readExceptions,
-              credentials: active.state.credentials,
-              maskedEnv,
-            },
-          ),
+          profileFor({ directory: runtime.directory, worktree: runtime.worktree }, active.state, maskedEnv),
           effect,
         )
       }),

@@ -335,4 +335,22 @@ describe.skipIf(process.platform === "win32")("nono profile read grants", () => 
       expect(result.filesystem.deny).toContain("/tmp/kilo-data/kilo2.db")
     },
   )
+
+  test("keeps a lifted exception denied when a write grant would make it writable", () => {
+    const base = profile()
+    const result = generate(
+      {
+        ...base,
+        filesystem: {
+          ...base.filesystem,
+          // A write grant covers the home directory, so lifting the ~/.aws read deny would also grant writes;
+          // nono has no write-only deny, so the entry must stay denied instead.
+          allowWrite: [...base.filesystem.allowWrite, { path: os.homedir(), kind: "subtree" }],
+          readExceptions: ["~/.aws"],
+        },
+      },
+      { paths },
+    )
+    expect(result.filesystem.deny).toContain("$HOME/.aws")
+  })
 })

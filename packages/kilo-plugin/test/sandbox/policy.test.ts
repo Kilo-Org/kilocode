@@ -206,6 +206,28 @@ describe("sandbox policy profile", () => {
     expect(Exit.isFailure(prefWrite)).toBe(true)
   })
 
+  test("forwards snapshot grants and masked variables into the profile", async () => {
+    const dirs = await layout()
+    const exception = path.join(os.homedir(), ".aws")
+    const state: SandboxStore.Snapshot = {
+      enabled: true,
+      mode: "deny",
+      allowedHosts: [],
+      writablePaths: [],
+      readPaths: [dirs.approved],
+      readExceptions: [exception],
+      credentials: [
+        { name: "github", source: "env://GITHUB_TOKEN", envVar: "GITHUB_TOKEN", upstream: "https://api.github.com" },
+      ],
+      version: 1,
+    }
+    const result = SandboxPolicy.profileFor(context(dirs.a, dirs.a), state, ["DROPPED_TOKEN"])
+    expect(result.filesystem.read?.map((rule) => rule.path)).toContain(dirs.approved)
+    expect(result.filesystem.readExceptions).toEqual([exception])
+    expect(result.credentials).toEqual(state.credentials)
+    expect(result.environment.deny).toContain("DROPPED_TOKEN")
+  })
+
   test("uses deny-by-default and configurable network profiles", async () => {
     const dirs = await layout()
     expect(SandboxPolicy.profile(context(dirs.a, dirs.a)).network).toEqual({ mode: "deny", allowedHosts: [] })

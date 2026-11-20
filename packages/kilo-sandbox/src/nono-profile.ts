@@ -154,6 +154,17 @@ function warnPorts(hosts: ReadonlyArray<string>) {
   )
 }
 
+const warnedExceptions = new Set<string>()
+
+/** A read exception inside a write grant cannot be lifted without also granting writes, so it stays denied. */
+function warnException(entry: string) {
+  if (warnedExceptions.has(entry)) return
+  warnedExceptions.add(entry)
+  process.stderr.write(
+    `kilo-sandbox: keeping ${entry} denied; a read exception inside a write grant would also grant writes\n`,
+  )
+}
+
 function network(profile: Profile, routes: ReadonlyArray<Credential>): NonoNetwork {
   if (profile.network.mode === "allow") return { block: false }
   if (profile.network.mode === "deny") return { block: true }
@@ -206,7 +217,13 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
   const denied = [
     ...credentialLocations.filter((entry) => {
       const location = expandPath(entry)
-      return location === undefined || !lifted.has(location)
+      if (location === undefined || !lifted.has(location)) return true
+      // A read exception is honored by dropping the built-in deny, but a nono deny also blocks writes, so
+      // dropping it inside a write grant would make the credential location writable. Keep the deny in that
+      // case: the location stays read-denied (nono has no write-only deny) rather than becoming writable.
+      const writable = allowWrite.some((rule) => matches(rule, location))
+      if (writable) warnException(entry)
+      return writable
     }),
     ...profile.filesystem.denyWrite.map((rule) => rule.path),
     ...(paths.config === undefined ? [] : [paths.config]),

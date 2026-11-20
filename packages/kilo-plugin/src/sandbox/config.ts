@@ -67,11 +67,6 @@ export namespace SandboxConfig {
     })
   }
 
-  /**
-   * Validates each entry on its own so one malformed credential cannot discard the rest, then applies the
-   * uniqueness rules over the survivors. `parseCredentials` checks those rules for a whole file and throws, so a
-   * duplicate would otherwise pass here while only the last definition reached the profile.
-   */
   /** The environment variable a raw entry would read, so a dropped entry can still have its real value masked. */
   function sourceEnv(value: unknown) {
     if (!value || typeof value !== "object" || Array.isArray(value)) return undefined
@@ -80,6 +75,13 @@ export namespace SandboxConfig {
     return /^env:\/\/([A-Za-z_][A-Za-z0-9_]*)$/.exec(source)?.[1]
   }
 
+  /**
+   * Validates each entry on its own so one malformed credential cannot discard the rest, then applies the
+   * uniqueness rules over the survivors. `parseCredentials` checks those rules for a whole file and throws, so a
+   * duplicate would otherwise pass here while only the last definition reached the profile. The returned
+   * `masked` names a dropped entry's variable so the caller can deny it, but never a surviving route's
+   * variable: nono already masks the active routes, and denying one would starve the kept credential.
+   */
   function routes(values: readonly unknown[]) {
     const masked = new Set<string>()
     const parsed = values.flatMap((value, index) => {
@@ -111,7 +113,8 @@ export namespace SandboxConfig {
       variables.add(credential.envVar)
       return true
     })
-    return { credentials, masked: [...masked] }
+    const kept = new Set(credentials.map((credential) => credential.envVar))
+    return { credentials, masked: [...masked].filter((envVar) => !kept.has(envVar)) }
   }
 
   export function resolve(config: { sandbox?: Info }) {

@@ -332,6 +332,7 @@ describe("sandbox read and credential grants", () => {
       },
     })
     expect(result.credentials.map((entry) => entry.name)).toEqual(["one"])
-    expect(result.maskedEnv).toEqual(["GITHUB_TOKEN"])
+    // GITHUB_TOKEN stays available: the kept route "one" still needs it, and nono masks the active route.
+    expect(result.maskedEnv).toEqual([])
   })
 })
