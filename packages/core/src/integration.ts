@@ -235,7 +235,9 @@ export const locationLayer = Layer.effect(
     const events = yield* EventV2.Service
     const scope = yield* Scope.Scope
     const attempts = SynchronizedRef.makeUnsafe(new Map<AttemptID, AttemptEntry>())
-    // kilocode_change start - single-flight per stored credential: one refresh at a time, waiters share the owner's exit
+    // kilocode_change start - single-flight per stored credential: one refresh at a time, waiters share the owner's exit.
+    // The flight is process-local by design: two processes sharing one credential store can still
+    // refresh the same credential concurrently, which is the behavior every caller had before.
     const refreshing = SynchronizedRef.makeUnsafe(
       new Map<Credential.ID, Deferred.Deferred<Credential.Value, AuthorizationError>>(),
     )
