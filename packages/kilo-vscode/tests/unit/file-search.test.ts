@@ -783,6 +783,33 @@ describe("handleFileSearch resilience and ranking basis", () => {
   })
 })
 
+describe("folder navigation search", () => {
+  it("offers subfolders in an added root when the query ends in a folder path", async () => {
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({ "/repo": [], "/other": ["src/auth/login.ts", "src/auth/admin/page.ts"] })
+    const posted: Array<Record<string, unknown>> = []
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "src/auth/", requestId: "navigation" },
+        dir: () => "/repo",
+        roots: () => roots,
+        open: async () => new Set(),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+      expect(posted.at(0)?.items).toContainEqual({
+        path: abs("/other", "src/auth/admin"),
+        type: "folder",
+        root: "other",
+        relative: "src/auth/admin",
+      })
+      expect(api.calls.every((call) => call.directory === "/repo")).toBe(true)
+    } finally {
+      index.restore()
+    }
+  })
+})
+
 describe("splitRoots", () => {
   it("separates the session's own folder from the rest", () => {
     expect(splitRoots(roots, "/repo")).toEqual({

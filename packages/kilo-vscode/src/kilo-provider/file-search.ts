@@ -258,8 +258,9 @@ async function gatherExternal(
       // The glob matches on the whole path, so a hit may be owed to a directory
       // name. Offer those directories too, as the backend does from its walk.
       const parts = rel.split("/")
-      parts.slice(0, -1).forEach((part, index) => {
-        if (part.toLowerCase().includes(lower)) folders.add(record(parts.slice(0, index + 1).join("/")))
+      parts.slice(0, -1).forEach((_, index) => {
+        const folder = parts.slice(0, index + 1).join("/")
+        if (`${folder}/`.toLowerCase().includes(lower)) folders.add(record(folder))
       })
     }
 
