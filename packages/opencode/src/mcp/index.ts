@@ -1184,8 +1184,20 @@ const layer = Layer.effect(
         () => flow.provider?.commit(() => epochOf(mcpName) === flow.epoch) ?? Promise.resolve(true),
       )
       if (!stored) {
-        yield* KiloAuthTelemetry.superseded()
         yield* releaseFlow(mcpName, flow)
+        // A server that is no longer configured cannot reconnect. Report the exchange result the
+        // flow reached, then fail with the missing server rather than a cancellation.
+        const missing = yield* requireMcpConfig(mcpName).pipe(
+          Effect.match({
+            onFailure: (error) => error,
+            onSuccess: () => undefined,
+          }),
+        )
+        if (missing) {
+          yield* KiloAuthTelemetry.persisted(flow.provider)
+          return yield* Effect.fail(missing)
+        }
+        yield* KiloAuthTelemetry.superseded()
         return {
           status: "failed",
           error: "Browser authorization was discarded: this sign-in was cancelled",
