@@ -321,8 +321,11 @@ function statusOf(): Status {
 const AUTO_REJECTED = "run ended with an auto-rejected permission"
 
 function expectRunCompleted(name: string, result: Run) {
+  // The harness runs with `--format json`, so the diagnostic arrives as an `error` event on stdout; a text run puts
+  // it on stderr. Either place counts, and any other non-zero exit still fails.
+  const rejected = result.stdout.includes(AUTO_REJECTED) || result.stderr.includes(AUTO_REJECTED)
   expect(
-    result.code === 0 || (result.code === 1 && result.stderr.includes(AUTO_REJECTED)),
+    result.code === 0 || (result.code === 1 && rejected),
     `${name}: the run exited ${result.code}: ${result.stderr.slice(-600)}`,
   )
 }
