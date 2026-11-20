@@ -650,7 +650,6 @@ class KiloBackendAppService private constructor(
                             val text = response.body?.string().orEmpty()
                             if (!response.isSuccessful) {
                                 val failure = "HTTP ${response.code} ${response.message} ${bodySummary(text)}"
-                                log.warn("Global config fetch failed: $failure")
                                 throw IllegalStateException(failure)
                             }
                             text

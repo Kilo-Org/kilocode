@@ -657,6 +657,8 @@ class KiloBackendAppServiceTest {
         )
         val stateText = (listOf(err.message) + err.errors.mapNotNull { it.detail }).joinToString(" ")
         assertFalse(stateText.contains("marker-7f3a9c"), stateText)
+        val lines = log.messages.count { it.contains("Global config fetch failed") }
+        assertEquals(mock.requestCount("/global/config"), lines, log.messages.toString())
     }
 
     @Test
