@@ -292,12 +292,23 @@ class SwProbe {
 }
 
 const probe = new SwProbe()
-await probe.attach()
+/** A side measurement that failed still reports the series and stops the hub and browser: no silent leak, no bare exit. */
+function fatal(error: unknown): Promise<never> {
+  console.log(
+    JSON.stringify(
+      { cycles, error: error instanceof Error ? (error.stack ?? error.message) : String(error), series },
+      null,
+      2,
+    ),
+  )
+  return teardown(1)
+}
+await probe.attach().catch(fatal)
 sampleHeap = async (cycle) => {
-  const heap = await probe.heap()
+  const heap = await probe.heap().catch(fatal)
   series.push({ cycle, used: Math.round(heap.used / 1024), total: Math.round(heap.total / 1024) })
 }
-takeSnapshot = () => probe.snapshot()
+takeSnapshot = () => probe.snapshot().catch(fatal)
 await sampleHeap(0)
 
 const env = {
@@ -380,12 +391,23 @@ async function hubRequest(socketPath: string, method: string): Promise<any> {
   return promise
 }
 
-/** Stops the hub and the browser and removes the scratch root; every way out after the launch goes through it. */
+/**
+ * Stops the hub and the browser and removes the scratch root; every way out goes through it, including a failure
+ * before the hub or the browser exists (a probe error right after the context starts).
+ */
 async function teardown(exitCode: number): Promise<never> {
-  hub.kill("SIGTERM")
-  await Promise.race([hub.exited, Bun.sleep(5_000)])
-  if (hub.exitCode === null && hub.signalCode === null) hub.kill("SIGKILL")
-  await Promise.race([context.close().catch(() => undefined), Bun.sleep(10_000)])
+  try {
+    hub.kill("SIGTERM")
+    await Promise.race([hub.exited, Bun.sleep(5_000)])
+    if (hub.exitCode === null && hub.signalCode === null) hub.kill("SIGKILL")
+  } catch {
+    // No hub yet.
+  }
+  try {
+    await Promise.race([context.close().catch(() => undefined), Bun.sleep(10_000)])
+  } catch {
+    // No browser yet.
+  }
   fixture.stop(true)
   model.stop(true)
   await fs.rm(base, { force: true, recursive: true }).catch(() => undefined)
@@ -431,36 +453,42 @@ await sampleHeap(cycles)
 
 // Snapshot comparison when the measured growth warrants it.
 let comparison: { name: string; delta: number }[] | undefined
+let snapshotError: string | undefined
 if (snapshotA !== undefined && snapshotB !== undefined) {
-  const parse = (text: string) => {
-    const snapshot = JSON.parse(text) as {
-      snapshot: { meta: { node_fields: string[]; node_types: [string[], ...unknown[]] } }
-      nodes: number[]
-      strings: string[]
+  try {
+    const parse = (text: string) => {
+      const snapshot = JSON.parse(text) as {
+        snapshot: { meta: { node_fields: string[]; node_types: [string[], ...unknown[]] } }
+        nodes: number[]
+        strings: string[]
+      }
+      const fields = snapshot.snapshot.meta.node_fields
+      const kinds = snapshot.snapshot.meta.node_types[0]
+      const size = fields.length
+      const typeOffset = fields.indexOf("type")
+      const nameOffset = fields.indexOf("name")
+      const counts = new Map<string, number>()
+      for (let i = 0; i < snapshot.nodes.length; i += size) {
+        const kind = kinds[snapshot.nodes[i + typeOffset] ?? -1]
+        const name = snapshot.strings[snapshot.nodes[i + nameOffset] ?? -1] ?? "?"
+        // Objects by constructor name and closures by function name: what a leak keeps alive.
+        if (kind !== "object" && kind !== "closure") continue
+        counts.set(name, (counts.get(name) ?? 0) + 1)
+      }
+      return counts
     }
-    const fields = snapshot.snapshot.meta.node_fields
-    const kinds = snapshot.snapshot.meta.node_types[0]
-    const size = fields.length
-    const typeOffset = fields.indexOf("type")
-    const nameOffset = fields.indexOf("name")
-    const counts = new Map<string, number>()
-    for (let i = 0; i < snapshot.nodes.length; i += size) {
-      const kind = kinds[snapshot.nodes[i + typeOffset] ?? -1]
-      const name = snapshot.strings[snapshot.nodes[i + nameOffset] ?? -1] ?? "?"
-      // Objects by constructor name and closures by function name: what a leak keeps alive.
-      if (kind !== "object" && kind !== "closure") continue
-      counts.set(name, (counts.get(name) ?? 0) + 1)
-    }
-    return counts
+    const before = parse(snapshotA)
+    const after = parse(snapshotB)
+    const names = new Set([...before.keys(), ...after.keys()])
+    comparison = [...names]
+      .map((name) => ({ name, delta: (after.get(name) ?? 0) - (before.get(name) ?? 0) }))
+      .filter((entry) => entry.delta > 0)
+      .sort((a, b) => b.delta - a.delta)
+      .slice(0, 15)
+  } catch (error) {
+    // The snapshots are side evidence: a parse failure is reported, not thrown past the teardown.
+    snapshotError = error instanceof Error ? (error.stack ?? error.message) : String(error)
   }
-  const before = parse(snapshotA)
-  const after = parse(snapshotB)
-  const names = new Set([...before.keys(), ...after.keys()])
-  comparison = [...names]
-    .map((name) => ({ name, delta: (after.get(name) ?? 0) - (before.get(name) ?? 0) }))
-    .filter((entry) => entry.delta > 0)
-    .sort((a, b) => b.delta - a.delta)
-    .slice(0, 15)
 }
 
 console.log(
@@ -472,6 +500,7 @@ console.log(
       hubLog: hubLog.text.slice(-800),
       series,
       snapshots: comparison,
+      ...(snapshotError === undefined ? {} : { snapshotError }),
       stderr: stderr.slice(-800),
       startedWithSnapshots: snapshotA !== undefined && snapshotB !== undefined,
     },
