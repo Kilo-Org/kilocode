@@ -349,6 +349,10 @@ export function settingsHost(input: {
         input.post({ type: "browserSettingsInstalled", requestId: message.requestId, ...result })
         return
       }
+      if (message.type === "browserSettingsStatus") {
+        input.post({ type: "browserSettingsLoaded", requestId: message.requestId, status: await browser.status() })
+        return
+      }
       const state = message.type === "browserSettingsWrite" ? await browser.write(message.patch) : await browser.read()
       input.post({
         type: "browserSettingsLoaded",
@@ -380,7 +384,8 @@ export function settingsHost(input: {
     if (
       message.type === "browserSettingsRead" ||
       message.type === "browserSettingsWrite" ||
-      message.type === "browserSettingsInstall"
+      message.type === "browserSettingsInstall" ||
+      message.type === "browserSettingsStatus"
     ) {
       void handleBrowserSettings(message)
       return true

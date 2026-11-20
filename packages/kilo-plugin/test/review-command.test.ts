@@ -303,7 +303,8 @@ describe("review prompt", () => {
     expect(text).toContain("If your recommendation is **APPROVE** with no issues found, you are done")
     expect(text).toContain('mode "code"')
     expect(text).toContain('mode "debug"')
-    expect(text).toContain('mode "orchestrator"')
+    expect(text).toContain('mode "plan"')
+    expect(text).not.toContain('mode "orchestrator"')
     const example = JSON.parse(text.slice(text.indexOf("Example question tool call")).replace(/^[^\n]*\n/, ""))
     expect(example.questions[0].options.map((option: { mode: string }) => option.mode)).toEqual(["code", "code"])
     // The question tool decodes its input like the tool runtime does: the `mode` hint does not fail the call.

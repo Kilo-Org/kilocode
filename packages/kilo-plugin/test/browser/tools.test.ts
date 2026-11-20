@@ -5,13 +5,23 @@ import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Document } from "@opencode/schema/config"
 import { Tool } from "@opencode/schema/tool"
 import { Skill } from "@opencode/schema/skill"
-import { Effect, Exit, Option, Scope, Stream } from "effect"
-import { UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
+import { Cause, Effect, Exit, Option, PubSub, Scope, Stream } from "effect"
+import { toSessionError } from "@opencode/core/session/to-session-error"
+import type { BrowserPermission } from "../../src/browser/permission"
+import { TIMEOUT_MESSAGE, UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
-import { EXTENSION_HINT } from "../../src/browser/extension"
+import { EXTENSION_HINT, STOPPED } from "../../src/browser/extension"
 import { BrowserHub } from "../../src/browser/hub"
 import { hashArguments, resetSteps } from "../../src/browser/steps"
-import { authorize, effective, granted, KiloBrowserToolsPlugin, resetGrants, trim } from "../../src/browser/tools"
+import {
+  authorize,
+  effective,
+  granted,
+  KiloBrowserToolsPlugin,
+  resetGrants,
+  titleFor,
+  trim,
+} from "../../src/browser/tools"
 import { KiloGatewayAccounts } from "../../src/gateway/accounts"
 
 // The status RPC asks the backend whether a browser exists. The test machine needs none: a fake execute path that is
@@ -29,11 +39,18 @@ afterEach(async () => {
 })
 
 /** A hub the tool layer can drive: it records the calls and answers with the scripted reply. */
-function fakeHub(options: { call?: (input: BrowserHub.CallInput) => Promise<BrowserHub.Reply> } = {}) {
+function fakeHub(
+  options: {
+    call?: (input: BrowserHub.CallInput) => Promise<BrowserHub.Reply>
+    adopt?: () => Promise<BrowserHub.Adoption>
+  } = {},
+) {
   const calls: BrowserHub.CallInput[] = []
   const opened: { sessionId: string; title: string; cwd: string }[] = []
   const began: BrowserHub.Upload[] = []
   let handles = 0
+  const shared: string[] = []
+  const revoked = new Set<(input: { sessionHandle: string; reason: string }) => void>()
   const port: BrowserHub.Port = {
     reported: () => Promise.resolve(undefined),
     ready: () =>
@@ -49,6 +66,11 @@ function fakeHub(options: { call?: (input: BrowserHub.CallInput) => Promise<Brow
       return Promise.resolve({ sessionHandle: `handle-${handles}` })
     },
     close: () => Promise.resolve(),
+    share: (handle) => {
+      shared.push(handle)
+      return Promise.resolve()
+    },
+    adopt: () => (options.adopt ? options.adopt() : Promise.resolve("adopted")),
     list: () => Promise.resolve(BrowserContract.entries.map((entry) => entry.name)),
     call: (input) => {
       calls.push(input)
@@ -63,9 +85,50 @@ function fakeHub(options: { call?: (input: BrowserHub.CallInput) => Promise<Brow
     },
     chunk: () => Promise.resolve(),
     end: () => Promise.resolve(),
-    onRevoked: () => () => {},
+    onRevoked: (listener) => {
+      revoked.add(listener)
+      return () => revoked.delete(listener)
+    },
   }
-  return { calls, opened, began, service: { port: () => port } satisfies BrowserHub.Interface }
+  return {
+    calls,
+    opened,
+    began,
+    shared,
+    service: { port: () => port } satisfies BrowserHub.Interface,
+    revoke: (input: { sessionHandle: string; reason: string }) => revoked.forEach((listener) => listener(input)),
+  }
+}
+
+/**
+ * Session events the test feeds one at a time. The plugin's subscription pulls the next event only after it handled the
+ * previous one, so each push resolves once the plugin has handled that event.
+ */
+function sessionEvents() {
+  const queue: { event: { type: string; data: { sessionID: string } }; handled: PromiseWithResolvers<void> }[] = []
+  let arrived = Promise.withResolvers<void>()
+  async function* pull() {
+    let last: PromiseWithResolvers<void> | undefined
+    for (;;) {
+      last?.resolve()
+      while (queue.length === 0) {
+        await arrived.promise
+        arrived = Promise.withResolvers<void>()
+      }
+      const next = queue.shift()!
+      last = next.handled
+      yield next.event
+    }
+  }
+  return {
+    stream: () => Stream.fromAsyncIterable(pull(), (error) => error),
+    push: (type: string, sessionID: string) => {
+      const handled = Promise.withResolvers<void>()
+      queue.push({ event: { type, data: { sessionID } }, handled })
+      arrived.resolve()
+      return handled.promise
+    },
+  }
 }
 
 /** No extension is reachable: the backend reports the model-facing unavailable error. */
@@ -73,19 +136,21 @@ function unreachable(): BrowserHub.Interface {
   return {
     port: () =>
       ({
-        ready: () => Promise.reject(new BrowserHub.Failure({ kind: "unavailable", message: "no extension is connected" })),
+        ready: () =>
+          Promise.reject(new BrowserHub.Failure({ kind: "unavailable", message: "no extension is connected" })),
         reported: () => Promise.resolve(undefined),
         onRevoked: () => () => {},
       }) as never,
   }
 }
 
-/** A stand-in permission service that records what it was asked. */
+/** A stand-in permission service that records what it was asked; its rules allow the page reads' own tools. */
 function recorder() {
   const asserts: { action: string; resources: readonly string[]; save?: readonly string[] }[] = []
   const service = {
     assert: (input: { action: string; resources: readonly string[]; save?: readonly string[] }) =>
       Effect.sync(() => void asserts.push(input)),
+    allows: (input: { action: string }) => Effect.succeed(["browser_snapshot", "browser_tabs"].includes(input.action)),
   } as unknown as Permission.Interface
   return { asserts, service: Option.some(service) }
 }
@@ -95,33 +160,75 @@ type Hook = (event: Record<string, unknown>) => Effect.Effect<void, unknown>
 
 async function boot(
   browser?: Browser | (() => Browser),
-  options: { hub?: BrowserHub.Interface; permission?: Option.Option<Permission.Interface> } = {},
+  options: {
+    hub?: BrowserHub.Interface
+    permission?: Option.Option<Permission.Interface>
+    /** The conversation's stored title; undefined is a session the title generator has not named yet. */
+    sessionTitle?: string
+    events?: ReturnType<typeof sessionEvents>
+  } = {},
 ) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const hooks: Hook[] = []
-  const skills: Skill.Info[] = []
+  const skillTransforms: ((editor: { add: (skill: Skill.Info) => void }) => void)[] = []
+  // The domain reloads the plugin asks for, and the event stream a test publishes `config.updated` on.
+  const reloads = { tool: 0, skill: 0 }
+  const wakers: (() => void)[] = []
+  const bump = (domain: keyof typeof reloads) =>
+    Effect.sync(() => {
+      reloads[domain] += 1
+      wakers.splice(0).forEach((wake) => wake())
+    })
+  const events = await Effect.runPromise(PubSub.unbounded<{ type: string; data: unknown }>())
   const registrations: string[] = []
   const statuses: (() => Effect.Effect<unknown>)[] = []
+  const controls: Record<"share" | "adopt", (input: { sessionID: string }) => Effect.Effect<unknown>>[] = []
+  const notices: unknown[] = []
+  // Every session-store read the tools make: only the extension backend's calls may need one.
+  const titles: string[] = []
   const ctx = {
     location: { directory: "/tmp/browser-tools-test" },
     skill: {
-      transform: (fn: (editor: { add: (skill: Skill.Info) => void }) => void) =>
-        Effect.sync(() => fn({ add: (skill) => skills.push(skill) })),
+      transform: (fn: (typeof skillTransforms)[number]) =>
+        Effect.sync(() => (skillTransforms.push(fn), { dispose: Effect.void })),
+      reload: () => bump("skill"),
     },
-    // The status RPC the settings dialog reads; `status` below calls the handler the plugin registers.
+    // The status RPC the settings dialog reads; `status` below calls the handler the plugin registers, `control` the
+    // share and adopt handlers, and every emitted notice lands in `notices`.
     rpc: {
-      register: (definition: { id: string }, handlers: { status: () => Effect.Effect<unknown> }) =>
+      register: (
+        definition: { id: string },
+        handlers: { status: () => Effect.Effect<unknown> } & (typeof controls)[number],
+      ) =>
         Effect.sync(() => {
           registrations.push(definition.id)
           statuses.push(handlers.status)
-          return { events: { emit: () => Effect.void }, dispose: Effect.void }
+          controls.push({ share: handlers.share, adopt: handlers.adopt })
+          return {
+            events: { emit: (_: string, data: unknown) => Effect.sync(() => void notices.push(data)) },
+            dispose: Effect.void,
+          }
         }),
     },
     tool: {
       transform: (fn: (typeof transforms)[number]) =>
         Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
+      reload: () => bump("tool"),
     },
-    event: { subscribe: () => Stream.empty },
+    event: {
+      // The session-event fixture is one shared queue, so only the subscriber for session events reads it; every other
+      // subscription (the config reload) reads the published events of its own types.
+      subscribe: (input?: { types?: readonly string[] }) =>
+        options.events && input?.types?.some((type) => type.startsWith("session."))
+          ? options.events.stream()
+          : Stream.fromPubSub(events).pipe(Stream.filter((event) => input?.types?.includes(event.type) ?? true)),
+    },
+    session: {
+      get: (input: { sessionID: string }) => {
+        titles.push(String(input.sessionID))
+        return Effect.succeed({ title: options.sessionTitle })
+      },
+    },
     permission: {
       hook: (_: string, callback: Hook) =>
         Effect.sync(() => {
@@ -153,9 +260,7 @@ async function boot(
   )
   const permission = options.permission ?? Option.none()
   await Effect.runPromise(
-    Option.isSome(permission)
-      ? provided.pipe(Effect.provideService(Permission.Service, permission.value))
-      : provided,
+    Option.isSome(permission) ? provided.pipe(Effect.provideService(Permission.Service, permission.value)) : provided,
   )
   const tools = () => {
     const added: Tool.Info[] = []
@@ -185,7 +290,39 @@ async function boot(
     if (!handler) throw new Error("the plugin registered no status RPC")
     return Effect.runPromise(handler())
   }
-  return { tools, skills, call, evaluate, registrations, status }
+  const control = (method: "share" | "adopt", sessionID = "ses_browser") => {
+    const handlers = controls[0]
+    if (!handlers) throw new Error("the plugin registered no browser RPC")
+    return Effect.runPromise(handlers[method]({ sessionID }))
+  }
+  const publish = (type: string) => Effect.runPromise(PubSub.publish(events, { type, data: {} }))
+  /** Resolves once both domains were reloaded `count` times: the plugin's subscriber runs a moment after a publish. */
+  const reloaded = async (count: number) => {
+    while (reloads.tool < count || reloads.skill < count) {
+      const woken = Promise.withResolvers<void>()
+      wakers.push(woken.resolve)
+      await woken.promise
+    }
+  }
+  return {
+    tools,
+    // The registry reruns every transform on a reload, so a read applies them afresh, as the next turn would.
+    get skills() {
+      const added: Skill.Info[] = []
+      skillTransforms.forEach((fn) => fn({ add: (skill) => added.push(skill) }))
+      return added
+    },
+    call,
+    evaluate,
+    registrations,
+    titles,
+    status,
+    control,
+    notices,
+    reloads,
+    publish,
+    reloaded,
+  }
 }
 
 describe("browser tools", () => {
@@ -225,11 +362,12 @@ describe("browser tools", () => {
     expect(names).toContain("snapshot")
   })
 
-  test("registers the whole pinned contract with the vendored schemas", async () => {
+  test("registers every pinned tool a backend can run, with the vendored schemas", async () => {
     const host = await boot()
     const tools = host.tools()
     expect(host.skills.map((skill) => skill.id)).toEqual([Skill.ID.make("browser-automation")])
-    expect(tools.length).toBe(26)
+    expect(tools.length).toBe(25)
+    expect(tools.map((tool) => tool.name)).not.toContain("run_code_unsafe")
     for (const [index, tool] of tools.entries()) {
       const entry = BrowserContract.entries[index]
       expect(tool.description).toBe(entry.description)
@@ -247,12 +385,55 @@ describe("browser tools", () => {
 
   test("an absent browser block keeps the tools on the default backend", async () => {
     const host = await boot()
-    expect(host.tools().length).toBe(26)
+    expect(host.tools().length).toBe(BrowserContract.entries.length)
   })
 
   test("registers the browser status RPC even when the backend is off", async () => {
     const host = await boot({ backend: "off" })
     expect(host.registrations).toEqual(["kilocode.browser"])
+  })
+
+  test("a config change hides the tools and the skill for the next turn and shows them again, without a restart", async () => {
+    let backend: Browser["backend"] = "extension"
+    const host = await boot(() => ({ backend }))
+    expect(host.tools().length).toBe(BrowserContract.entries.length)
+
+    backend = "off"
+    await host.publish("config.updated")
+    await host.reloaded(1)
+    expect(host.tools()).toEqual([])
+    expect(host.skills).toEqual([])
+    expect(((await host.status()) as { backend: string }).backend).toBe("off")
+
+    backend = "playwright"
+    await host.publish("config.updated")
+    await host.reloaded(2)
+    expect(host.tools().length).toBe(BrowserContract.entries.length)
+    expect(host.skills.map((skill) => skill.id)).toEqual([Skill.ID.make("browser-automation")])
+    expect(((await host.status()) as { backend: string }).backend).toBe("playwright")
+  })
+
+  test("a backend that is off at start shows its tools once the config turns it on", async () => {
+    let backend: Browser["backend"] = "off"
+    const host = await boot(() => ({ backend }))
+    expect(host.tools()).toEqual([])
+    backend = "extension"
+    await host.publish("config.updated")
+    await host.reloaded(1)
+    expect(host.tools().length).toBe(BrowserContract.entries.length)
+  })
+
+  test("a call made after the user turned the tools off says so and never asks the model to turn them on", async () => {
+    let backend: Browser["backend"] = "extension"
+    const host = await boot(() => ({ backend }))
+    // A call the model planned against the tool list it already had.
+    backend = "off"
+    const result = await host.call("browser_snapshot")
+    expect(result._tag).toBe("Failure")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    expect(error?.message).toContain("The user turned the browser tools off")
+    expect(error?.message).not.toContain("Set browser.backend")
+    expect(error?.metadata?.hint).toBeUndefined()
   })
 
   test("the extension backend answers every call with the actionable setup step the model can relay", async () => {
@@ -360,6 +541,35 @@ describe("browser status RPC", () => {
     expect(status.backend).toBe("extension")
     expect(status.organization).toBeUndefined()
   })
+
+  test("share and adopt under an organization that turned browser control off name the organization", async () => {
+    policies(() => ({ browserControl: "off" }))
+    const restore = account("org_control_off")
+    try {
+      // Choosing the extension in /browser cannot help here, so the answer is not `not_extension`.
+      const host = await boot({ backend: "extension" }, { hub: fakeHub().service })
+      expect(await host.control("share")).toEqual({ kind: "organization_off" })
+      expect(await host.control("adopt")).toEqual({ kind: "organization_off" })
+    } finally {
+      restore()
+    }
+  })
+
+  test("a Playwright pin and the user's own off still ask for the extension", async () => {
+    policies((org) => ({ browserControl: org === "org_control_pin" ? "playwright_only" : "allow" }))
+    const pinned = account("org_control_pin")
+    try {
+      expect(await (await boot({ backend: "extension" })).control("share")).toEqual({ kind: "not_extension" })
+    } finally {
+      pinned()
+    }
+    const allowed = account("org_control_allow")
+    try {
+      expect(await (await boot({ backend: "off" })).control("adopt")).toEqual({ kind: "not_extension" })
+    } finally {
+      allowed()
+    }
+  })
 })
 
 describe("browser permission flow", () => {
@@ -452,6 +662,66 @@ describe("browser permission flow", () => {
       authorize([{ class: "read", origin: "https://example.com" }], context, false, () => false, Option.none()),
     )
   })
+
+  describe("a refusal names the class, the origin and the next step", () => {
+    const refusing = (refusal: Effect.Effect<void, Permission.Error>) =>
+      Option.some({ assert: () => refusal } as unknown as Permission.Interface)
+    const act = [{ class: "act" as const, origin: "https://x.example" }]
+    const refuse = (refusal: Effect.Effect<void, Permission.Error>, items: BrowserPermission.Item[] = act) =>
+      Effect.runPromiseExit(authorize(items, context, false, () => false, refusing(refusal)))
+    const failed = (exit: Exit.Exit<void, unknown>) => {
+      if (!Exit.isFailure(exit)) throw new Error("the ask was not refused")
+      return Cause.squash(exit.cause)
+    }
+
+    test("a rule's deny", async () => {
+      const error = failed(
+        await refuse(
+          Effect.fail(
+            new Permission.BlockedError({ rules: [], permission: "browser", resources: ["act:https://x.example"] }),
+          ),
+        ),
+      )
+      expect(error).toBeInstanceOf(Permission.BlockedError)
+      expect(toSessionError(error).message).toBe(
+        "A permission rule denies act on https://x.example. This session has no browser tab yet. Do not retry; continue without it, or ask the user to change the rule.",
+      )
+    })
+
+    test("a refusal with feedback, as a non-interactive run sends it", async () => {
+      const feedback =
+        "This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action."
+      const error = failed(await refuse(Effect.fail(new Permission.CorrectedError({ feedback }))))
+      expect(error).toBeInstanceOf(Permission.CorrectedError)
+      expect(toSessionError(error).message).toBe(
+        "Permission for act on https://x.example was not granted. This session has no browser tab yet. This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action.",
+      )
+    })
+
+    test("a plain decline stays a decline and names what it refused", async () => {
+      const exit = await refuse(Effect.die(new Permission.DeclinedError()))
+      if (!Exit.isFailure(exit)) throw new Error("the ask was not refused")
+      const defect = exit.cause.reasons.find(Cause.isDieReason)?.defect
+      expect(defect).toBeInstanceOf(Permission.DeclinedError)
+      expect(toSessionError(defect).message).toBe(
+        "The user denied act on https://x.example. This session has no browser tab yet. Do not retry; ask the user or continue without it.",
+      )
+    })
+
+    test("a declined sensitive step", async () => {
+      const exit = await refuse(Effect.die(new Permission.DeclinedError()), [
+        { class: "sensitive", origin: "https://x.example", reason: "password field" },
+      ])
+      expect(toSessionError(failed(exit)).message).toBe(
+        "The user denied a sensitive step on https://x.example. This session has no browser tab yet. Do not retry; ask the user or continue without it.",
+      )
+    })
+
+    test("another defect passes through unchanged", async () => {
+      const boom = new Error("boom")
+      expect(failed(await refuse(Effect.die(boom)))).toBe(boom)
+    })
+  })
 })
 
 describe("browser permission hook", () => {
@@ -503,6 +773,71 @@ describe("browser permission hook", () => {
   })
 })
 
+describe("browser skill text", () => {
+  // The skill is the one place the model reads which browser the tools drive, so each backend must get its own text.
+  const SKILL = Skill.ID.make("browser-automation")
+
+  test("the extension backend says the tools drive the user's own browser", async () => {
+    const host = await boot({ backend: "extension" })
+    const [skill] = host.skills
+    expect(skill.id).toBe(SKILL)
+    expect(skill.description).toBe("Use to inspect or interact with the user's own browser through the Kilo extension.")
+    // The description is the whole backend difference: the instructions stay the same and never name Playwright.
+    expect(skill.content).not.toContain("Playwright")
+    expect(skill.content.startsWith("# Browser automation\n\nUse Code Mode")).toBe(true)
+  })
+
+  test("the Playwright backend keeps the Playwright wording", async () => {
+    const [skill] = (await boot({ backend: "playwright" })).skills
+    expect(skill.description).toBe("Use to inspect or interact with a web page using Playwright.")
+    expect(skill.content.startsWith("# Browser automation\n\nUse Code Mode")).toBe(true)
+    expect(skill.content).not.toContain("Kilo extension")
+  })
+
+  test("the instructions are the same on both backends", async () => {
+    const [extension] = (await boot({ backend: "extension" })).skills
+    const [playwright] = (await boot({ backend: "playwright" })).skills
+    expect(extension.content).toBe(playwright.content)
+  })
+
+  test("both backends say browser_type replaces the content and slowly types at the caret", async () => {
+    for (const backend of ["extension", "playwright"] as const) {
+      const [skill] = (await boot({ backend })).skills
+      expect(skill.content).toContain(
+        "browser_type replaces the field's content; `slowly: true` types at the caret instead",
+      )
+    }
+  })
+
+  test("both backends send an agent that must act on a page from browser_open to these tools", async () => {
+    for (const backend of ["extension", "playwright"] as const) {
+      const [skill] = (await boot({ backend })).skills
+      // The file wraps its lines, so the sentences are compared with the wrapping flattened.
+      const text = skill.content.replace(/\s+/g, " ")
+      expect(text).toContain("shows a page in the Integrated Browser for the user to look at")
+      expect(text).toContain("these browser tools are the ones that read and act on a page")
+    }
+  })
+
+  test("a backend change swaps the description for the next turn without a restart", async () => {
+    let backend: Browser["backend"] = "extension"
+    const host = await boot(() => ({ backend }))
+    expect(host.skills[0].description).toContain("Kilo extension")
+
+    backend = "playwright"
+    await host.publish("config.updated")
+    await host.reloaded(1)
+    expect(host.skills[0].description).toBe("Use to inspect or interact with a web page using Playwright.")
+
+    backend = "extension"
+    await host.publish("config.updated")
+    await host.reloaded(2)
+    expect(host.skills[0].description).toBe(
+      "Use to inspect or interact with the user's own browser through the Kilo extension.",
+    )
+  })
+})
+
 describe("browser tools over the extension backend", () => {
   const page = (url: string, title: string, lines: string[] = []) =>
     ["### Page", `- Page URL: ${url}`, `- Page Title: ${title}`, "", "### Snapshot", "```yaml", ...lines, "```"].join(
@@ -513,7 +848,7 @@ describe("browser tools over the extension backend", () => {
     const hub = fakeHub({
       call: () =>
         Promise.resolve({
-          content: [{ type: "text", text: page("http://localhost:3000", "Local", ["- button \"Send\""]) }],
+          content: [{ type: "text", text: page("http://localhost:3000", "Local", ['- button "Send"']) }],
           meta: { withheldFrames: ["https://ads.example.com"] },
         }),
     })
@@ -530,6 +865,27 @@ describe("browser tools over the extension backend", () => {
     })
     expect(hub.calls.map((call) => call.name)).toEqual(["browser_navigate", "browser_console_messages"])
     expect(hub.opened).toHaveLength(1)
+  })
+
+  test("the session's execution events decide which turns a Stop all halts", async () => {
+    const hub = fakeHub()
+    const events = sessionEvents()
+    const host = await boot({ backend: "extension" }, { hub: hub.service, events })
+    const stopped = (result: Awaited<ReturnType<typeof host.call>>) =>
+      result._tag === "Failure" && String((result.failure as Tool.Error).message) === STOPPED
+
+    await events.push("session.execution.started", "ses_open")
+    await events.push("session.execution.started", "ses_waiting")
+    expect((await host.call("browser_snapshot", {}, "ses_open"))._tag).toBe("Success")
+    // Stop all: the revoke names only ses_open, yet the turn ses_waiting is running is halted with it.
+    hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+    expect(stopped(await host.call("browser_snapshot", {}, "ses_waiting"))).toBe(true)
+    // A conversation idle at the stop is untouched.
+    expect((await host.call("browser_snapshot", {}, "ses_idle"))._tag).toBe("Success")
+    // The conversation's next user message starts a new turn, which works.
+    await events.push("session.execution.started", "ses_waiting")
+    expect((await host.call("browser_snapshot", {}, "ses_waiting"))._tag).toBe("Success")
+    expect(hub.opened.map((value) => value.sessionId)).toEqual(["ses_open", "ses_idle", "ses_waiting"])
   })
 
   test("a needs_permission answer asks and retries once with the grant it approved", async () => {
@@ -560,6 +916,473 @@ describe("browser tools over the extension backend", () => {
     expect(hub.calls).toHaveLength(2)
   })
 
+  test("a rule that denies the tool names it and the next step", async () => {
+    const permission = Option.some({
+      assert: (input: { action: string; resources: readonly string[] }) =>
+        Effect.fail(new Permission.BlockedError({ rules: [], permission: input.action, resources: input.resources })),
+    } as unknown as Permission.Interface)
+    const hub = fakeHub()
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission })
+    const result = await host.call("browser_click", { target: "e1" }, "ses_tool_denied")
+    expect(result._tag).toBe("Failure")
+    expect(result._tag === "Failure" ? (result.failure as Tool.Error).message : "").toBe(
+      "A permission rule denies browser_click. This session has no browser tab yet. Do not retry; continue without it, or ask the user to change the rule.",
+    )
+    expect(hub.calls).toEqual([])
+  })
+
+  test("a refusal after the session saw a page says the tab is still there", async () => {
+    const feedback =
+      "This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action."
+    const permission = Option.some({
+      assert: (input: { action: string }) =>
+        input.action === "browser" ? Effect.fail(new Permission.CorrectedError({ feedback })) : Effect.void,
+    } as unknown as Permission.Interface)
+    const hub = fakeHub({
+      call: (input) =>
+        input.name === "browser_navigate" && input.arguments.url === "https://x.example/"
+          ? Promise.reject(
+              new BrowserHub.Failure({
+                kind: "permission",
+                message: "needs permission",
+                items: [{ class: "navigate", origin: "https://x.example" }],
+              }),
+            )
+          : // The extension answers a navigation with the opened tab, not a page section.
+            Promise.resolve({
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    selected: true,
+                    tabId: 7,
+                    title: "Login",
+                    url: "http://localhost:3000/login",
+                  }),
+                },
+              ],
+            }),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission })
+    expect((await host.call("browser_navigate", { url: "http://localhost:3000/login" }))._tag).toBe("Success")
+    const refused = await host.call("browser_navigate", { url: "https://x.example/" })
+    // A session that never saw a page has no tab to report.
+    const fresh = await host.call("browser_navigate", { url: "https://x.example/" }, "ses_no_tab")
+    expect(fresh._tag === "Failure" ? (fresh.failure as Tool.Error).message : "").toContain(
+      "was not granted. This session has no browser tab yet.",
+    )
+    expect(refused._tag === "Failure" ? (refused.failure as Tool.Error).message : "").toBe(
+      "Permission for navigate on https://x.example was not granted. The tab is still on http://localhost:3000/login. This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action.",
+    )
+  })
+
+  describe("a refusal says where a tab change left the tab", () => {
+    const feedback = "Continue without this action."
+    const refusing = Option.some({
+      assert: (input: { action: string }) =>
+        input.action === "browser" ? Effect.fail(new Permission.CorrectedError({ feedback })) : Effect.void,
+    } as unknown as Permission.Interface)
+    const login = page("http://localhost:3000/login", "Login")
+    const refusal = (origin: string) =>
+      Promise.reject(
+        new BrowserHub.Failure({
+          kind: "permission",
+          message: "needs permission",
+          items: [{ class: "navigate", origin }],
+        }),
+      )
+    const answers: Record<string, string> = {
+      browser_close: "Closed the browser.",
+      browser_tabs: "Selected tab 1 (Other - https://z.example/).",
+    }
+    const hub = () =>
+      fakeHub({
+        call: (input) =>
+          input.name === "browser_navigate" && input.arguments.url === "https://x.example/"
+            ? refusal("https://x.example")
+            : Promise.resolve({ content: [{ type: "text", text: answers[input.name] ?? login }] }),
+      })
+    const refusedAfter = async (tool: string, args: Record<string, unknown>) => {
+      const host = await boot({ backend: "extension" }, { hub: hub().service, permission: refusing })
+      expect((await host.call("browser_navigate", { url: "http://localhost:3000/login" }))._tag).toBe("Success")
+      expect((await host.call(tool, args))._tag).toBe("Success")
+      const refused = await host.call("browser_navigate", { url: "https://x.example/" })
+      return refused._tag === "Failure" ? (refused.failure as Tool.Error).message : ""
+    }
+
+    test("after browser_close the tab is closed", async () => {
+      expect(await refusedAfter("browser_close", {})).toBe(
+        "Permission for navigate on https://x.example was not granted. The session's browser tab is closed. Continue without this action.",
+      )
+    })
+
+    test("after a tab switch that names no page, the model is told to look first", async () => {
+      expect(await refusedAfter("browser_tabs", { action: "select", index: 1 })).toBe(
+        "Permission for navigate on https://x.example was not granted. Take a snapshot to see which page the tab is on. Continue without this action.",
+      )
+    })
+
+    test("listing tabs leaves the tab where it was", async () => {
+      expect(await refusedAfter("browser_tabs", { action: "list" })).toBe(
+        "Permission for navigate on https://x.example was not granted. The tab is still on http://localhost:3000/login. Continue without this action.",
+      )
+    })
+
+    test("after a redirect the tab is on the origin it reached", async () => {
+      const moving = fakeHub({
+        call: (input) =>
+          input.name === "browser_navigate" && input.arguments.url === "http://localhost:3000/go"
+            ? Promise.reject(
+                new BrowserHub.Failure({
+                  kind: "moved",
+                  message: "the page moved",
+                  items: [{ class: "read", origin: "https://y.example" }],
+                }),
+              )
+            : Promise.resolve({ content: [{ type: "text", text: login }] }),
+      })
+      const host = await boot({ backend: "extension" }, { hub: moving.service, permission: refusing })
+      expect((await host.call("browser_navigate", { url: "http://localhost:3000/login" }))._tag).toBe("Success")
+      const refused = await host.call("browser_navigate", { url: "http://localhost:3000/go" })
+      expect(refused._tag === "Failure" ? (refused.failure as Tool.Error).message : "").toBe(
+        "Permission for read on https://y.example was not granted. The tab is now on a page at https://y.example. Continue without this action.",
+      )
+    })
+
+    test("after a move to a page the browser did not name, the model is told to look first", async () => {
+      const moving = fakeHub({
+        call: (input) =>
+          input.name === "browser_navigate" && input.arguments.url === "http://localhost:3000/go"
+            ? Promise.reject(new BrowserHub.Failure({ kind: "moved", message: "the page moved" }))
+            : input.name === "browser_navigate" && input.arguments.url === "https://x.example/"
+              ? refusal("https://x.example")
+              : Promise.resolve({ content: [{ type: "text", text: login }] }),
+      })
+      const host = await boot({ backend: "extension" }, { hub: moving.service, permission: refusing })
+      expect((await host.call("browser_navigate", { url: "http://localhost:3000/login" }))._tag).toBe("Success")
+      const moved = await host.call("browser_navigate", { url: "http://localhost:3000/go" })
+      expect(moved._tag === "Failure" ? (moved.failure as Tool.Error).message : "").toBe(
+        "The page changed before the step ran. Call the tool again.",
+      )
+      const refused = await host.call("browser_navigate", { url: "https://x.example/" })
+      expect(refused._tag === "Failure" ? (refused.failure as Tool.Error).message : "").toBe(
+        "Permission for navigate on https://x.example was not granted. Take a snapshot to see which page the tab is on. Continue without this action.",
+      )
+    })
+  })
+
+  test("a refused post-action read still records the page the action reached", async () => {
+    const feedback = "Continue without this action."
+    const permission = Option.some({
+      assert: (input: { action: string }) =>
+        input.action === "browser" ? Effect.fail(new Permission.CorrectedError({ feedback })) : Effect.void,
+    } as unknown as Permission.Interface)
+    const hub = fakeHub({
+      call: (input) =>
+        input.name === "browser_navigate"
+          ? Promise.resolve({
+              content: [{ type: "text", text: "Navigated." }],
+              meta: { url: "https://x.example/a", needs: [{ class: "read", origin: "https://x.example" }] },
+            })
+          : Promise.reject(
+              new BrowserHub.Failure({
+                kind: "permission",
+                message: "needs permission",
+                items: [{ class: "read", origin: "https://x.example" }],
+              }),
+            ),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission })
+    expect((await host.call("browser_navigate", { url: "https://x.example/a" }, "ses_post_action"))._tag).toBe(
+      "Success",
+    )
+    const refused = await host.call("browser_snapshot", {}, "ses_post_action")
+    expect(refused._tag === "Failure" ? (refused.failure as Tool.Error).message : "").toBe(
+      "Permission for read on https://x.example was not granted. The tab is still on https://x.example/a. Continue without this action.",
+    )
+  })
+
+  test("only an extension call reads the conversation's title", async () => {
+    // The decision itself, so a non-extension backend is observed rather than skipped: a Playwright call never gets
+    // this far with a browser, but the gate must hold on its own.
+    const reads: string[] = []
+    const read = (sessionID: string) =>
+      Effect.sync(() => {
+        reads.push(sessionID)
+        return "Fix the login form"
+      })
+    expect(await Effect.runPromise(titleFor(read, "extension", "ses_browser" as never))).toBe("Fix the login form")
+    expect(reads).toEqual(["ses_browser"])
+    expect(await Effect.runPromise(titleFor(read, "playwright", "ses_browser" as never))).toBeUndefined()
+    expect(reads).toEqual(["ses_browser"])
+    // And a whole extension call reads it once, so the seam is wired into the call path.
+    const extension = await boot(
+      { backend: "extension" },
+      { hub: fakeHub().service, sessionTitle: "Fix the login form" },
+    )
+    await extension.call("browser_snapshot")
+    expect(extension.titles).toEqual(["ses_browser"])
+  })
+
+  test("a click that navigates places the tab where the page state found it", async () => {
+    const feedback = "Continue without this action."
+    // The session's rules let the page state read a snapshot; only the action itself is refused.
+    const permission = Option.some({
+      assert: (input: { action: string }) =>
+        input.action === "browser" ? Effect.fail(new Permission.CorrectedError({ feedback })) : Effect.void,
+      allows: () => Effect.succeed(true),
+    } as unknown as Permission.Interface)
+    const login = page("http://localhost:3000/login", "Login")
+    const welcome = page("http://localhost:3000/welcome", "Welcome")
+    const hub = fakeHub({
+      call: (input) => {
+        if (input.name === "browser_click") return Promise.resolve({ content: [{ type: "text", text: "Clicked." }] })
+        if (input.name === "browser_navigate" && input.arguments.url === "https://x.example/")
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "needs permission",
+              items: [{ class: "navigate", origin: "https://x.example" }],
+            }),
+          )
+        if (input.name === "browser_tabs")
+          return Promise.resolve({
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  tabs: [{ selected: true, title: "Welcome", url: "http://localhost:3000/welcome" }],
+                }),
+              },
+            ],
+          })
+        return Promise.resolve({
+          content: [{ type: "text", text: input.name === "browser_snapshot" ? welcome : login }],
+        })
+      },
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission })
+    expect((await host.call("browser_navigate", { url: "http://localhost:3000/login" }))._tag).toBe("Success")
+    // The click's own answer names no page: where it left the tab is what its page state read found.
+    expect((await host.call("browser_click", { target: "e1" }))._tag).toBe("Success")
+    const refused = await host.call("browser_navigate", { url: "https://x.example/" })
+    expect(refused._tag === "Failure" ? (refused.failure as Tool.Error).message : "").toBe(
+      "Permission for navigate on https://x.example was not granted. The tab is still on http://localhost:3000/welcome. Continue without this action.",
+    )
+  })
+
+  test("the browser names the session after the conversation's title", async () => {
+    const hub = fakeHub()
+    const host = await boot({ backend: "extension" }, { hub: hub.service, sessionTitle: "Fix the login form" })
+    await host.call("browser_snapshot")
+    expect(hub.opened.map((entry) => entry.title)).toEqual(["Fix the login form"])
+  })
+
+  test("an untitled session is named after its folder and a short id", async () => {
+    const untitled = "New session - 2026-11-19T10:00:00.000Z"
+    const hub = fakeHub()
+    const host = await boot({ backend: "extension" }, { hub: hub.service, sessionTitle: untitled })
+    await host.call("browser_snapshot", {}, "ses_0abc12XyZ789")
+    expect(hub.opened.map((entry) => entry.title)).toEqual(["browser-tools-test (XyZ789)"])
+  })
+
+  test("a conversation whose first browser action is /browser share or adopt names the session after its title", async () => {
+    for (const method of ["share", "adopt"] as const) {
+      const titled = fakeHub()
+      const host = await boot({ backend: "extension" }, { hub: titled.service, sessionTitle: "Fix the login form" })
+      await host.control(method, "ses_0abc12XyZ789")
+      expect(titled.opened.map((entry) => entry.title)).toEqual(["Fix the login form"])
+      // An untitled conversation keeps the folder and short id, as a tool call's open does.
+      const untitled = fakeHub()
+      const sessionTitle = "New session - 2026-11-19T10:00:00.000Z"
+      const fallback = await boot({ backend: "extension" }, { hub: untitled.service, sessionTitle })
+      await fallback.control(method, "ses_0abc12XyZ789")
+      expect(untitled.opened.map((entry) => entry.title)).toEqual(["browser-tools-test (XyZ789)"])
+    }
+  })
+
+  /** A hub that refuses each call with the next scripted failure, then answers once every one has been reported. */
+  function scripted(failures: BrowserHub.Failure[]) {
+    const steps = [...failures]
+    return fakeHub({
+      call: (input) => {
+        if (input.name === "browser_console_messages") return Promise.resolve({ content: [] })
+        const next = steps.shift()
+        if (next) return Promise.reject(next)
+        return Promise.resolve({ content: [{ type: "text", text: page("https://example.com", "Example") }] })
+      },
+    })
+  }
+  const needs = (items: BrowserHub.Failure["items"], stepToken?: string) =>
+    new BrowserHub.Failure({ kind: "permission", message: "needs permission", items, stepToken })
+  const stepped = (calls: readonly BrowserHub.CallInput[], name: string) => calls.filter((call) => call.name === name)
+
+  test("a first password fill asks for the act grant, then the sensitive step, and runs on that call", async () => {
+    const { asserts, service } = recorder()
+    const hub = scripted([
+      needs([{ class: "act", origin: "https://example.com" }]),
+      needs([{ class: "sensitive", origin: "https://example.com", reason: "password field" }], "step-1"),
+    ])
+    const host = await boot({ backend: "extension", allow_sensitive: true }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_type", { target: "e1", text: "hunter2" })
+    expect(result._tag).toBe("Success")
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_type", "browser", "browser_sensitive"])
+    const typed = stepped(hub.calls, "browser_type")
+    expect(typed).toHaveLength(3)
+    expect(typed[2]).toMatchObject({
+      authorized: [{ class: "act", origin: "https://example.com" }],
+      sensitive: ["step-1"],
+    })
+  })
+
+  test("a navigate that redirects to a new origin asks for it and lands on the retry", async () => {
+    const { asserts, service } = recorder()
+    const hub = scripted([
+      needs([{ class: "navigate", origin: "https://start.example.com" }]),
+      new BrowserHub.Failure({
+        kind: "moved",
+        message: "moved",
+        items: [{ class: "read", origin: "https://landed.example.com" }],
+      }),
+    ])
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_navigate", { url: "https://start.example.com/go" })
+    expect(result._tag).toBe("Success")
+    expect(asserts.slice(1).map((entry) => entry.resources)).toEqual([
+      ["navigate:https://start.example.com"],
+      ["read:https://landed.example.com"],
+    ])
+    expect(stepped(hub.calls, "browser_navigate").at(-1)?.authorized).toEqual([
+      { class: "navigate", origin: "https://start.example.com" },
+      { class: "read", origin: "https://landed.example.com" },
+    ])
+  })
+
+  test("a need that comes back after its approval stops the call and says so", async () => {
+    const { asserts, service } = recorder()
+    const redirect = () =>
+      new BrowserHub.Failure({
+        kind: "moved",
+        message: "moved",
+        items: [{ class: "read", origin: "https://landed.example.com" }],
+      })
+    const hub = scripted([redirect(), redirect(), redirect()])
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_navigate", { url: "https://start.example.com/go" })
+    expect(result._tag === "Failure" ? (result.failure as Tool.Error).message : "").toBe(
+      "The browser asked again for permission to read https://landed.example.com after it was approved. Do not repeat this step; continue without it or ask the user for help.",
+    )
+    expect(stepped(hub.calls, "browser_navigate")).toHaveLength(2)
+    expect(asserts.filter((entry) => entry.action === "browser")).toHaveLength(1)
+  })
+
+  test("a call asks at most three times and then tells the model to call again for the rest", async () => {
+    const { asserts, service } = recorder()
+    const hub = scripted(
+      ["https://a.example.com", "https://b.example.com", "https://c.example.com", "https://d.example.com"].map(
+        (origin) => needs([{ class: "read", origin, frame: true }]),
+      ),
+    )
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_snapshot")
+    expect(result._tag === "Failure" ? (result.failure as Tool.Error).message : "").toBe(
+      "This step needs more approvals than one call asks for. Call the tool again to ask for the rest.",
+    )
+    expect(stepped(hub.calls, "browser_snapshot")).toHaveLength(4)
+    expect(asserts.filter((entry) => entry.action === "browser")).toHaveLength(3)
+  })
+
+  test("a later need keeps the sensitive approval the call already has", async () => {
+    const { asserts, service } = recorder()
+    const hub = scripted([
+      needs([{ class: "act", origin: "https://example.com" }]),
+      needs([{ class: "sensitive", origin: "https://example.com", reason: "password field" }], "step-1"),
+      needs([{ class: "read", origin: "https://frame.example.com", frame: true }]),
+    ])
+    const host = await boot({ backend: "extension", allow_sensitive: true }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_type", { target: "e1", text: "hunter2" })
+    expect(result._tag).toBe("Success")
+    expect(asserts.filter((entry) => entry.action === "browser_sensitive")).toHaveLength(1)
+    // The browser checks the frame grant before the sensitive step, so the approved token is still unspent.
+    expect(stepped(hub.calls, "browser_type").map((call) => call.sensitive)).toEqual([
+      undefined,
+      undefined,
+      ["step-1"],
+      ["step-1"],
+    ])
+  })
+
+  test("a refusal that names no permission stops the call and says so", async () => {
+    const { asserts, service } = recorder()
+    const hub = scripted([needs([])])
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag === "Failure" ? (result.failure as Tool.Error).message : "").toBe(
+      "The browser refused this step without naming the permission it needs. Continue without this action.",
+    )
+    expect(stepped(hub.calls, "browser_click")).toHaveLength(1)
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_click"])
+  })
+
+  test("a tab with no web origin is answered with the next step and asks the user nothing", async () => {
+    const { asserts, service } = recorder()
+    const hub = fakeHub({
+      call: () =>
+        Promise.reject(
+          new BrowserHub.Failure({
+            kind: "permission",
+            message: "needs permission",
+            items: [{ class: "read", origin: "://" }],
+          }),
+        ),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_snapshot")
+    expect(result._tag).toBe("Failure")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    expect(error?.message).toContain("no web page open")
+    // Only the tool's own key was asked: no grant for an empty origin ever reached the user.
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_snapshot"])
+    expect(hub.calls).toHaveLength(1)
+  })
+
+  test("a need without a web origin is dropped without an ask and the call still converges", async () => {
+    const { asserts, service } = recorder()
+    const hub = scripted([
+      needs([
+        { class: "act", origin: "https://example.com" },
+        { class: "read", origin: "opaque:null", frame: true },
+      ]),
+      needs([{ class: "sensitive", origin: "https://example.com", reason: "password field" }], "step-1"),
+      needs([{ class: "read", origin: "https://frame.example.com", frame: true }]),
+    ])
+    const host = await boot({ backend: "extension", allow_sensitive: true }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_type", { target: "e1", text: "hunter2" })
+    expect(result._tag).toBe("Success")
+    // Three asks, the dropped need among none of them: the limit is left for the needs a person can approve.
+    expect(asserts.slice(1).map((entry) => entry.resources)).toEqual([
+      ["act:https://example.com"],
+      ["https://example.com"],
+      ["read:https://frame.example.com"],
+    ])
+    expect(stepped(hub.calls, "browser_type")).toHaveLength(4)
+  })
+
+  test("a retry left with only needs without a web origin stops with their refusal instead of asking again", async () => {
+    const { asserts, service } = recorder()
+    const hub = scripted([
+      needs([{ class: "read", origin: "https://frame.example.com", frame: true }]),
+      needs([{ class: "read", origin: "opaque:null", frame: true }]),
+    ])
+    const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
+    const result = await host.call("browser_snapshot")
+    expect(result._tag === "Failure" ? (result.failure as Tool.Error).message : "").toContain(
+      "A frame on this page has no web origin",
+    )
+    expect(stepped(hub.calls, "browser_snapshot")).toHaveLength(2)
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_snapshot", "browser"])
+  })
+
   test("a post-action need asks, reads the page again and never repeats the action", async () => {
     const { asserts, service } = recorder()
     const hub = fakeHub({
@@ -574,7 +1397,9 @@ describe("browser tools over the extension backend", () => {
             }),
           )
         }
-        return Promise.resolve({ content: [{ type: "text", text: page("https://example.com", "Example", ["- link \"Hi\""]) }] })
+        return Promise.resolve({
+          content: [{ type: "text", text: page("https://example.com", "Example", ['- link "Hi"']) }],
+        })
       },
     })
     const host = await boot({ backend: "extension" }, { hub: hub.service, permission: service })
@@ -606,12 +1431,77 @@ describe("browser tools over the extension backend", () => {
     expect(error?.metadata).toMatchObject({ hint: EXTENSION_HINT, effectsUncertain: true })
   })
 
+  test("a call the browser did not finish in time says so, and does not call the browser missing", async () => {
+    const hub = fakeHub({
+      call: () =>
+        Promise.reject(
+          new BrowserHub.Failure({
+            kind: "timeout",
+            message: "The browser did not answer tools.call within 120000ms.",
+            uncertain: true,
+          }),
+        ),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service })
+    const result = await host.call("browser_click", { target: "e1" })
+    expect(result._tag).toBe("Failure")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    expect(error?.message).toBe(TIMEOUT_MESSAGE)
+    expect(error?.metadata).toEqual({ effectsUncertain: true })
+  })
+
+  test("a cancelled call that may have run in part carries the uncertainty marker; one never sent does not", async () => {
+    const run = async (uncertain: boolean) => {
+      const hub = fakeHub({
+        call: () => Promise.reject(new BrowserHub.Failure({ kind: "cancelled", message: "cancelled", uncertain })),
+      })
+      const host = await boot({ backend: "extension" }, { hub: hub.service })
+      const result = await host.call("browser_click", { target: "e1" })
+      expect(result._tag).toBe("Failure")
+      return result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    }
+    // In flight: the call reached the extension, so the host must be told the page may have changed.
+    const running = await run(true)
+    expect(running?.message).toContain("cancelled before it finished")
+    expect(running?.metadata).toEqual({ effectsUncertain: true })
+    // Never sent: nothing ran, and the failure is definite.
+    const early = await run(false)
+    expect(early?.message).toContain("cancelled before it was sent")
+    expect(early?.metadata).toBeUndefined()
+  })
+
+  test("an extension that went away is told to turn its switch back on, in the message and the UI hint", async () => {
+    const gone: BrowserHub.Interface = {
+      port: () =>
+        ({
+          ready: () =>
+            Promise.reject(
+              new BrowserHub.Failure({
+                kind: "unavailable",
+                message: "not connected",
+                absence: { kind: "disconnected" },
+              }),
+            ),
+          reported: () => Promise.resolve(undefined),
+          onRevoked: () => () => {},
+        }) as never,
+    }
+    const host = await boot({ backend: "extension" }, { hub: gone })
+    const result = await host.call("browser_snapshot")
+    const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    const hint = String(error?.metadata?.hint)
+    expect(hint).toContain('turn on "Allow local agents"')
+    expect(hint).not.toContain("Install")
+    // Both surfaces carry the same step: a `run --format json` caller sees only the message.
+    expect(error?.message).toBe(`${UNAVAILABLE_MESSAGE} ${hint}`)
+  })
+
   test("browser_snapshot diff mode compares the extension's snapshots", async () => {
     let index = 0
     const hub = fakeHub({
       call: () => {
         index += 1
-        const lines = index === 1 ? ["- button \"Send\""] : ["- button \"Pay\"", "- text \"Thanks\""]
+        const lines = index === 1 ? ['- button "Send"'] : ['- button "Pay"', '- text "Thanks"']
         return Promise.resolve({ content: [{ type: "text", text: page("http://localhost:3000", "Local", lines) }] })
       },
     })
@@ -983,7 +1873,13 @@ describe("browser tools over the extension backend", () => {
   })
 
   test("one effective backend serves the calls and the status: off wins, a Playwright pin forces it", () => {
-    const extension = { backend: "extension" as const, observation: "diff" as const, allowSensitive: false, target: null, headless: true }
+    const extension = {
+      backend: "extension" as const,
+      observation: "diff" as const,
+      allowSensitive: false,
+      target: null,
+      headless: true,
+    }
     const allowed = { control: "allow" as const, origins: [] }
     const pinned = { control: "playwright_only" as const, origins: [] }
     const off = { control: "off" as const, origins: [] }
@@ -1005,5 +1901,337 @@ describe("browser tools over the extension backend", () => {
     const error = result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
     expect(error?.message).toBe(`${UNAVAILABLE_MESSAGE} ${EXTENSION_HINT}`)
     expect(error?.metadata).toMatchObject({ hint: EXTENSION_HINT })
+  })
+
+  test("a call with no reachable browser raises the setup notice for the UI", async () => {
+    const host = await boot({ backend: "extension" })
+    await host.call("browser_snapshot", {}, "ses_unavailable")
+    expect(host.notices).toEqual([{ kind: "unavailable", sessionID: "ses_unavailable", hint: EXTENSION_HINT }])
+  })
+
+  test("a call in a stopped session raises the stopped notice and keeps the model text", async () => {
+    const hub = fakeHub({ call: () => Promise.reject(new BrowserHub.Failure({ kind: "stopped", message: "stop" })) })
+    const host = await boot({ backend: "extension" }, { hub: hub.service })
+    const result = await host.call("browser_snapshot", {}, "ses_stopped")
+    expect(result._tag === "Failure" ? (result.failure as Tool.Error).message : undefined).toBe(STOPPED)
+    expect(host.notices).toEqual([{ kind: "stopped", sessionID: "ses_stopped" }])
+  })
+
+  test("a successful call or an ordinary refusal raises no notice", async () => {
+    const hub = fakeHub({
+      call: (input) =>
+        input.name === "browser_click"
+          ? Promise.reject(new BrowserHub.Failure({ kind: "blocked", message: "The browser refused this page." }))
+          : Promise.resolve({ content: [{ type: "text", text: "- Page URL: http://localhost:3000" }] }),
+    })
+    const host = await boot({ backend: "extension" }, { hub: hub.service })
+    await host.call("browser_snapshot")
+    await host.call("browser_click", { element: "a", target: "e1" })
+    expect(host.notices).toEqual([])
+  })
+
+  test("/browser share moves the active tab into the session's own browser session", async () => {
+    const hub = fakeHub()
+    const host = await boot({ backend: "extension" }, { hub: hub.service })
+    expect(await host.control("share", "ses_share")).toEqual({ kind: "shared" })
+    expect(hub.opened.map((entry) => entry.sessionId)).toEqual(["ses_share"])
+    expect(hub.shared).toEqual(["handle-1"])
+    // The next tool call of that session runs on the same browser session, and so does the page read after it.
+    await host.call("browser_snapshot", {}, "ses_share")
+    expect(hub.calls.map((call) => [call.name, call.sessionHandle])).toEqual([
+      ["browser_snapshot", "handle-1"],
+      ["browser_tabs", "handle-1"],
+    ])
+    expect(hub.opened).toHaveLength(1)
+  })
+
+  test("/browser adopt answers what the browser did", async () => {
+    for (const kind of ["adopted", "none", "kept", "unconfirmed"] as const) {
+      const host = await boot(
+        { backend: "extension" },
+        { hub: fakeHub({ adopt: () => Promise.resolve(kind) }).service },
+      )
+      expect(await host.control("adopt")).toEqual({ kind })
+    }
+  })
+
+  test("share and adopt report the setup step, the browser's refusal, or the backend to choose", async () => {
+    expect(await (await boot({ backend: "extension" })).control("share")).toEqual({
+      kind: "unavailable",
+      hint: EXTENSION_HINT,
+    })
+    const refusing = fakeHub({
+      adopt: () =>
+        Promise.reject(new BrowserHub.Failure({ kind: "blocked", message: "The browser has no active tab to share." })),
+    })
+    expect(await (await boot({ backend: "extension" }, { hub: refusing.service })).control("adopt")).toEqual({
+      kind: "refused",
+      message: "The browser has no active tab to share.",
+    })
+    expect(await (await boot({ backend: "playwright" })).control("share")).toEqual({ kind: "not_extension" })
+  })
+})
+
+// The extension answers a step with its own outcome only: navigate with the page's identity, a click with what it did,
+// a snapshot with the bare tree, the tab list as JSON. The tool layer reads the page state the Playwright MCP reports
+// after the same steps, so every observation mode reads the same on both backends.
+describe("observation over the extension backend", () => {
+  const URL = "http://localhost:3000/list"
+  const tree = (open: string) =>
+    ['- RootWebArea "Checklist"', '  - checkbox "Notes" [ref=e2]', `  - text: Open items: ${open}`].join("\n")
+
+  function extension(options: { snapshot?: (input: BrowserHub.CallInput) => Promise<BrowserHub.Reply> } = {}) {
+    const page = { open: "3" }
+    const text = (value: string) => Promise.resolve({ content: [{ type: "text" as const, text: value }] })
+    return fakeHub({
+      call: (input) => {
+        if (input.name === "browser_navigate") return text(JSON.stringify({ title: "Checklist", url: URL }))
+        if (input.name === "browser_click") {
+          page.open = "2"
+          return text('Clicked "Notes checkbox" with the left button.')
+        }
+        if (input.name === "browser_snapshot") return options.snapshot ? options.snapshot(input) : text(tree(page.open))
+        if (input.name === "browser_tabs") {
+          return text(
+            JSON.stringify({
+              tabs: [
+                { index: 0, selected: false, title: "Mail", url: "[origin withheld]" },
+                { index: 1, selected: true, title: "Checklist", url: URL },
+              ],
+            }),
+          )
+        }
+        if (input.name === "browser_evaluate") return text('{"done":true}')
+        return text("")
+      },
+    })
+  }
+
+  /** One tool call's outcome, as `boot().call` settles it. */
+  type Outcome = { _tag: "Success"; success: unknown } | { _tag: "Failure"; failure: unknown }
+
+  const textIn = (result: Outcome) => {
+    if (result._tag !== "Success") throw new Error(`the call failed: ${String(result.failure)}`)
+    const content = (result.success as Tool.Result).content
+    if (typeof content === "string") return content
+    const block = content?.find((item) => item.type === "text")
+    return block?.type === "text" ? block.text : ""
+  }
+
+  test("full mode reports the URL, the title and the snapshot after navigate and after a click", async () => {
+    const hub = extension()
+    const host = await boot({ backend: "extension", observation: "full" }, { hub: hub.service })
+    const navigated = textIn(await host.call("browser_navigate", { url: URL }))
+    expect(navigated).toContain(`- Page URL: ${URL}`)
+    expect(navigated).toContain("- Page Title: Checklist")
+    expect(navigated).toContain("### Snapshot\n```yaml\n" + tree("3") + "\n```")
+    // The navigate answer's own identity JSON is the Page section now, not repeated as a result.
+    expect(navigated).not.toContain('"title"')
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toContain(`- Page URL: ${URL}`)
+    expect(clicked).toContain("- Page Title: Checklist")
+    expect(clicked).toContain("Open items: 2")
+    expect(clicked).toContain('Clicked "Notes checkbox" with the left button.')
+    expect(hub.calls.map((call) => call.name)).toEqual([
+      "browser_navigate",
+      "browser_snapshot",
+      "browser_click",
+      "browser_snapshot",
+      "browser_tabs",
+    ])
+  })
+
+  test("diff mode reports only the changed snapshot lines after a click", async () => {
+    const hub = extension()
+    const host = await boot({ backend: "extension", observation: "diff" }, { hub: hub.service })
+    const navigated = textIn(await host.call("browser_navigate", { url: URL }))
+    expect(navigated).toContain(tree("3"))
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toContain(`- Page URL: ${URL}`)
+    expect(clicked).toContain("### Page changes\n- changed 1")
+    expect(clicked).toContain("~   - text: Open items: 3\n  - text: Open items: 2")
+    expect(clicked).not.toContain("### Snapshot")
+    expect(clicked).not.toContain('checkbox "Notes"')
+  })
+
+  test("an explicit snapshot is the diff baseline for the next step", async () => {
+    const hub = extension()
+    const host = await boot({ backend: "extension", observation: "diff" }, { hub: hub.service })
+    const read = textIn(await host.call("browser_snapshot"))
+    expect(read).toContain(`- Page URL: ${URL}`)
+    expect(read).toContain(tree("3"))
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toContain("### Page changes\n- changed 1")
+  })
+
+  test("none mode reports status, URL and title without reading the page", async () => {
+    const hub = extension()
+    const host = await boot({ backend: "extension", observation: "none" }, { hub: hub.service })
+    const navigated = textIn(await host.call("browser_navigate", { url: URL }))
+    expect(navigated).toBe(`### Status\n- ok\n- Page URL: ${URL}\n- Page Title: Checklist`)
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toBe(
+      `### Status\n- ok\n- Page URL: ${URL}\n- Page Title: Checklist\n### Result\nClicked "Notes checkbox" with the left button.`,
+    )
+    // A result that is not page state survives none mode too.
+    expect(textIn(await host.call("browser_evaluate", { function: "() => true" }))).toContain('{"done":true}')
+    expect(hub.calls.map((call) => call.name)).toEqual([
+      "browser_navigate",
+      "browser_click",
+      "browser_tabs",
+      "browser_evaluate",
+    ])
+  })
+
+  test("the page read carries the session's grants and no step token, and never prompts", async () => {
+    const { asserts, service } = recorder()
+    const hub = extension({
+      snapshot: () =>
+        Promise.reject(
+          new BrowserHub.Failure({
+            kind: "permission",
+            message: "needs permission",
+            items: [{ class: "read", origin: "https://shop.example.com" }],
+          }),
+        ),
+    })
+    // The click first asks for an act grant with a step token, then runs with both.
+    const port = hub.service.port()
+    const original = port.call
+    let asked = false
+    port.call = (input) => {
+      if (input.name !== "browser_click" || asked) return original(input)
+      asked = true
+      return Promise.reject(
+        new BrowserHub.Failure({
+          kind: "permission",
+          message: "needs permission",
+          items: [{ class: "act", origin: "https://shop.example.com" }],
+          stepToken: "tok",
+        }),
+      )
+    }
+    const host = await boot({ backend: "extension", observation: "diff" }, { hub: hub.service, permission: service })
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toContain(`- Page URL: ${URL}`)
+    expect(clicked).toContain("- Page Title: Checklist")
+    expect(clicked).toContain("reading https://shop.example.com needs the user's permission")
+    expect(clicked).toContain("browser_snapshot")
+    expect(clicked).not.toContain("Open items")
+    // The act grant was asked for the click; the refused follow-up read is never asked for.
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser"])
+    const click = hub.calls.find((call) => call.name === "browser_click")
+    expect(click?.sensitive).toEqual(["tok"])
+    const read = hub.calls.find((call) => call.name === "browser_snapshot")
+    expect(read?.authorized).toEqual([{ class: "act", origin: "https://shop.example.com" }])
+    expect(read?.sensitive).toBeUndefined()
+  })
+
+  test("a read the session's own rules allow is granted for the page read without asking anyone", async () => {
+    const asserts: { action: string }[] = []
+    const service = {
+      assert: (input: { action: string }) => Effect.sync(() => void asserts.push(input)),
+      allows: (input: { action: string; resources: readonly string[] }) =>
+        Effect.succeed(input.action !== "browser" || input.resources[0] === "read:http://localhost:3000"),
+    } as unknown as Permission.Interface
+    const hub = extension({
+      snapshot: (input) =>
+        input.authorized.some((pair) => pair.class === "read" && pair.origin === "http://localhost:3000")
+          ? Promise.resolve({ content: [{ type: "text", text: tree("2") }] })
+          : Promise.reject(
+              new BrowserHub.Failure({
+                kind: "permission",
+                message: "needs permission",
+                items: [{ class: "read", origin: "http://localhost:3000" }],
+              }),
+            ),
+    })
+    const host = await boot(
+      { backend: "extension", observation: "full" },
+      { hub: hub.service, permission: Option.some(service) },
+    )
+    expect(textIn(await host.call("browser_click", { target: "e2" }))).toContain(tree("2"))
+    expect(textIn(await host.call("browser_click", { target: "e2" }))).toContain(tree("2"))
+    // No prompt beyond the tools' own keys; the first read is refused and repeated once, the second runs granted.
+    expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser_click"])
+    expect(hub.calls.filter((call) => call.name === "browser_snapshot")).toHaveLength(3)
+  })
+
+  test("the page read obeys the per-tool rules: an ask or a deny for browser_snapshot or browser_tabs skips that read", async () => {
+    for (const refused of ["browser_snapshot", "browser_tabs"]) {
+      const service = {
+        assert: () => Effect.void,
+        allows: (input: { action: string }) => Effect.succeed(input.action !== refused),
+      } as unknown as Permission.Interface
+      const hub = extension()
+      const host = await boot(
+        { backend: "extension", observation: "full" },
+        { hub: hub.service, permission: Option.some(service) },
+      )
+      const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+      const names = hub.calls.map((call) => call.name)
+      expect(names).not.toContain(refused)
+      expect(names).toContain(refused === "browser_snapshot" ? "browser_tabs" : "browser_snapshot")
+      if (refused === "browser_tabs") expect(clicked).not.toContain("- Page URL:")
+      else expect(clicked).not.toContain("### Snapshot")
+    }
+  })
+
+  test("a permission service that throws reads nothing it would have to ask for", async () => {
+    const service = {
+      assert: () => Effect.void,
+      allows: () => {
+        throw new Error("no rules")
+      },
+    } as unknown as Permission.Interface
+    const hub = extension()
+    const host = await boot(
+      { backend: "extension", observation: "full" },
+      { hub: hub.service, permission: Option.some(service) },
+    )
+    expect(textIn(await host.call("browser_click", { target: "e2" }))).toContain("Clicked")
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_click"])
+  })
+
+  test("a granted post-action read reads the page once and reports it with its URL", async () => {
+    const { service } = recorder()
+    const hub = extension()
+    const port = hub.service.port()
+    const original = port.call
+    port.call = (input) =>
+      input.name === "browser_click"
+        ? Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "The page moved to http://localhost:3000; its content is withheld until read is granted.",
+              items: [{ class: "read", origin: "http://localhost:3000" }],
+              afterAction: true,
+            }),
+          )
+        : original(input)
+    const host = await boot({ backend: "extension", observation: "full" }, { hub: hub.service, permission: service })
+    const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+    expect(clicked).toContain(`- Page URL: ${URL}`)
+    expect(clicked).toContain(tree("3"))
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_snapshot", "browser_tabs"])
+  })
+
+  test("frames the page read withholds stay withheld and reach the metadata", async () => {
+    const hub = extension({
+      snapshot: () =>
+        Promise.resolve({
+          content: [{ type: "text", text: `${tree("2")}\n  - iframe [origin withheld: https://pay.example.com]` }],
+          meta: { withheldFrames: ["https://pay.example.com"] },
+        }),
+    })
+    const host = await boot({ backend: "extension", observation: "full" }, { hub: hub.service })
+    const result = await host.call("browser_click", { target: "e2" })
+    expect(textIn(result)).toContain("- iframe [origin withheld: https://pay.example.com]")
+    const answer = result._tag === "Success" ? (result.success as Tool.Result) : undefined
+    expect(answer?.metadata?.browser).toMatchObject({
+      url: URL,
+      title: "Checklist",
+      withheldFrames: ["https://pay.example.com"],
+    })
   })
 })

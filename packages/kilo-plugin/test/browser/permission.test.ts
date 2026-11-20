@@ -152,9 +152,8 @@ describe("browser permission patterns", () => {
     expect(BrowserPermission.site("")).toBeUndefined()
   })
 
-  test("classes follow the tool: evaluate and unsafe code need act (D11)", () => {
+  test("classes follow the tool: evaluate needs act (D11)", () => {
     expect(BrowserPermission.classOf("browser_evaluate")).toBe("act")
-    expect(BrowserPermission.classOf("browser_run_code_unsafe")).toBe("act")
     expect(BrowserPermission.classOf("browser_click")).toBe("act")
     expect(BrowserPermission.classOf("browser_snapshot")).toBe("read")
     expect(BrowserPermission.classOf("browser_navigate")).toBe("navigate")

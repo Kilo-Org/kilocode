@@ -69,7 +69,7 @@
 [data-tool-live]
   :is(
     [data-component="tool-loaded-file"],
-    [data-slot="tool-read-images"],
+    [data-slot="tool-images"],
     [data-component="diagnostics"],
     [data-component="tool-hint"],
     [data-component="card"][data-variant="error"]

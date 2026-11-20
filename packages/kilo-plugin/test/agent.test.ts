@@ -116,7 +116,7 @@ describe("KiloAgentPlugin", () => {
       const { agents } = yield* setup()
       const list = yield* agents.list()
       expect(list.filter((agent) => agent.mode !== "subagent" && !agent.hidden).map((agent) => agent.id)).toEqual(
-        ["code", "ask", "debug", "orchestrator", "plan"].map((id) => Agent.ID.make(id)),
+        ["code", "ask", "debug", "plan"].map((id) => Agent.ID.make(id)),
       )
       // `build` stays as a hidden copy of Code for callers that still name it.
       expect(yield* agents.get(Agent.ID.make("build"))).toMatchObject({ name: "Code", hidden: true })
@@ -128,7 +128,9 @@ describe("KiloAgentPlugin", () => {
       })
       expect((yield* agents.get(Agent.ID.make("ask")))?.system).toContain("You are in Ask mode")
       expect((yield* agents.get(Agent.ID.make("debug")))?.system).toContain("expert software debugger")
-      expect((yield* agents.get(Agent.ID.make("orchestrator")))?.system).toContain("use the subagent tool")
+      // `orchestrator` stays as a hidden read-only copy so stored sessions that still name it resolve.
+      expect(yield* agents.get(Agent.ID.make("orchestrator"))).toMatchObject({ name: "Orchestrator", hidden: true })
+      expect(list.filter((agent) => agent.hidden).map((agent) => agent.id)).toContain(Agent.ID.make("orchestrator"))
     }),
   )
 
@@ -176,7 +178,7 @@ describe("KiloAgentPlugin", () => {
     }),
   )
 
-  it.effect("lets Orchestrator delegate but not run shell commands or edit", () =>
+  it.effect("lets the hidden Orchestrator alias delegate but not run shell commands or edit", () =>
     Effect.gen(function* () {
       yield* setup()
       const rules = yield* permissions("orchestrator")

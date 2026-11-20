@@ -3,7 +3,8 @@ import { expect, test } from "bun:test"
 import { createAppFixture } from "../fixture/app"
 
 // `/reload` is gone: a config save hot-reloads every location, so the Kilo command host shadows upstream's
-// `location.reload` with a command that has no slash entry, palette entry or binding.
+// `location.reload` with a command that has no slash entry, palette entry or binding. Starting the app fixture alone
+// can take longer than bun's default 5 seconds, so the test gets the 30 seconds the other app-fixture tests get.
 test("the reload slash command and its palette entry are removed", async () => {
   await using app = await createAppFixture()
   await app.ready
@@ -27,4 +28,4 @@ test("the reload slash command and its palette entry are removed", async () => {
   app.mockInput.typeText("Reload configuration")
   await app.waitForFrame((frame) => frame.includes("No results found"))
   app.mockInput.pressEscape()
-})
+}, 30000)

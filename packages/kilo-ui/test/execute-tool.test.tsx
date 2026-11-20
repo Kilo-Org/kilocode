@@ -93,6 +93,23 @@ test("a finished card summarizes the calls and keeps the script behind one click
   expect(card.host.querySelector('[data-slot="execute-details"]')).not.toBeNull()
 })
 
+test("images the script's calls returned show under the closed card, and other files do not", () => {
+  const card = mountTool("execute", {
+    input: { code: "return await tools.browser.take_screenshot({})" },
+    metadata: { toolCalls: [{ tool: "browser.take_screenshot", status: "completed", input: {} }] },
+    output: "Screenshot captured (png, viewport).",
+    attachments: [
+      { type: "file", uri: "data:image/png;base64,iVBORw0KGgo=", mime: "image/png", name: "browser-take_screenshot.png" },
+      { type: "file", uri: "data:text/plain;base64,aGk=", mime: "text/plain", name: "notes.txt" },
+    ],
+  })
+  mounted.push(card)
+  const images = [...card.host.querySelectorAll<HTMLImageElement>('[data-slot="tool-image-img"]')]
+  expect(images.map((image) => image.getAttribute("src"))).toEqual(["data:image/png;base64,iVBORw0KGgo="])
+  expect(images[0]?.getAttribute("alt")).toBe("browser-take_screenshot.png")
+  expect(card.host.querySelector('[data-slot="execute-details"]')).toBeNull()
+})
+
 test("a failed script shows its own error once, apart from the calls", async () => {
   const card = mountTool("execute", {
     input: { code: "throw new Error('boom')" },
