@@ -978,6 +978,7 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
           Effect.map((session) => (isFallbackTitle(session.title) ? undefined : session.title)),
           Effect.orElseSucceed(() => undefined),
         )
+      const deps: Deps = { config, permission, directory: ctx.location.directory, backend, title, notify }
       for (const entry of BrowserContract.entries) {
         editor.add({
           // The registry flattens browser.click to browser_click, preserving permission and policy IDs.
@@ -985,15 +986,7 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
           options: { namespace: "browser", codemode: true },
           description: entry.description,
           input: entry.inputSchema as JsonSchema.JsonSchema,
-          execute: (args: unknown, context: Tool.Context) =>
-            run(entry, args, context, {
-              config,
-              permission,
-              directory: ctx.location.directory,
-              backend,
-              title,
-              notify,
-            }),
+          execute: (args: unknown, context: Tool.Context) => run(entry, args, context, deps),
         })
       }
     })
