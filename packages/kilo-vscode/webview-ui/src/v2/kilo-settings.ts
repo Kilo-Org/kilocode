@@ -49,6 +49,11 @@ export function shiftTabCyclesVariant(): boolean {
   return kiloSettings()["chat.shiftTabCyclesVariant"] !== false
 }
 
+/** `kilo-code.v2.chat.limitContentWidth`, on by default. */
+export function limitChatContentWidth(): boolean {
+  return kiloSettings()["chat.limitContentWidth"] !== false
+}
+
 /** `kilo-code.v2.chat.sendWhileRunning`: what Enter does while the agent runs, steer by default. */
 export function runningDelivery(): Delivery {
   return kiloSettings()["chat.sendWhileRunning"] === "queue" ? "queue" : "steer"

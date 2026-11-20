@@ -34,6 +34,7 @@ export type KiloSettingKey =
   | "fontSize"
   | "language"
   | "chat.shiftTabCyclesVariant"
+  | "chat.limitContentWidth"
   | "chat.sendWhileRunning"
   | "showShortcutHints"
   | "showTokenThroughput"

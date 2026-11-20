@@ -62,6 +62,13 @@ describe("settings search targets", () => {
     expect(result).toMatchObject({ tab: "experimental", tabOnly: false })
   })
 
+  test("finds the chat content width limit row in Display settings", () => {
+    const result = searchSettings("content width", translate).find(
+      (item) => item.titleKey === "settings.display.limitContentWidth.title",
+    )
+    expect(result).toMatchObject({ tab: "display", tabOnly: false })
+  })
+
   test("finds the image generation row", () => {
     const result = searchSettings("image generation", translate).find(
       (item) => item.titleKey === "settings.experimental.imageGeneration.title",

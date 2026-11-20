@@ -25,6 +25,22 @@ describe("KILO_SETTING_KEYS", () => {
     expect(KILO_SETTING_KEYS as readonly string[]).toContain("diff.renderMarkdown")
   })
 
+  it("contains the chat content width limit key and defaults it to true", () => {
+    expect(KILO_SETTING_KEYS as readonly string[]).toContain("chat.limitContentWidth")
+    expect(properties["kilo-code.v2.chat.limitContentWidth"]?.default).toBe(true)
+  })
+
+  it("wires limitChatContentWidth to the chat-view data attribute and CSS readable width", () => {
+    const settings = readFileSync(join(__dirname, "../webview-ui/src/v2/kilo-settings.ts"), "utf8")
+    const session = readFileSync(join(__dirname, "../webview-ui/src/v2/session-view.tsx"), "utf8")
+    const layout = readFileSync(join(__dirname, "../webview-ui/src/styles/chat-layout.css"), "utf8")
+
+    expect(settings).toContain('kiloSettings()["chat.limitContentWidth"] !== false')
+    expect(session).toContain('data-limit-content-width={limitChatContentWidth() ? "true" : "false"}')
+    expect(layout).toContain('.chat-view[data-limit-content-width="false"]')
+    expect(layout).toContain("--chat-readable-width: 100%;")
+  })
+
   it("declares every key in package.json contributes.configuration.properties", () => {
     for (const key of KILO_SETTING_KEYS) {
       expect(properties[`kilo-code.v2.${key}`]).toBeDefined()

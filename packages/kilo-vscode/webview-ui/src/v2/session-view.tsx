@@ -19,7 +19,7 @@ import { useModelPreferences } from "../context/model-preferences"
 import { useWorkStyleOptional } from "../context/work-style"
 import { getVSCodeAPI } from "../context/vscode"
 import { movePromptHistory } from "../hooks/usePromptHistory"
-import { kiloSettings } from "./kilo-settings"
+import { kiloSettings, limitChatContentWidth } from "./kilo-settings"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
 import type { AppendHandler, ReferenceHandler, ReplyHandler, ReviewAppendHandler } from "./append-ready"
@@ -573,7 +573,11 @@ export function SessionView(props: {
 
   return (
     <TranscriptSearchProvider>
-      <div class="chat-view" data-session-id={session()}>
+      <div
+        class="chat-view"
+        data-session-id={session()}
+        data-limit-content-width={limitChatContentWidth() ? "true" : "false"}
+      >
         {props.tabStrip}
         <Show when={session()} keyed>
           {(id) => (

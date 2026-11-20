@@ -34,6 +34,7 @@ export const KILO_SETTING_KEYS = [
   "fontSize",
   "language",
   "chat.shiftTabCyclesVariant",
+  "chat.limitContentWidth",
   "chat.sendWhileRunning",
   "showTokenThroughput",
   "diff.renderMarkdown",
