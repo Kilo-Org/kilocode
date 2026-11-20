@@ -1,4 +1,5 @@
 export type { Profile } from "./profile"
+export { parseCredentials, type Credential } from "./nono-credentials"
 export { assertWrite, enabled, run, unrestricted } from "./context"
 export { decorateFileSystem, ensureDirectory } from "./filesystem"
 export { assertNetwork, assertSandbox, decorateHttpClient, httpLayer as networkHttpLayer } from "./network"

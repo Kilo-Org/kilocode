@@ -212,10 +212,7 @@ describe("sandbox policy profile", () => {
           SandboxPolicy.profile(linked),
           assertWrite(path.join(dirs.a, "nested", ".git", "config")).pipe(Effect.exit),
         ),
-        runSandbox(
-          SandboxPolicy.profile(local),
-          assertWrite(path.join(dirs.main, ".git", "config")).pipe(Effect.exit),
-        ),
+        runSandbox(SandboxPolicy.profile(local), assertWrite(path.join(dirs.main, ".git", "config")).pipe(Effect.exit)),
       ]),
     )
 
@@ -277,6 +274,9 @@ describe("sandbox policy state", () => {
       mode: "deny",
       allowedHosts: [],
       writablePaths: [],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
       version: 0,
     })
   })
@@ -304,6 +304,9 @@ describe("sandbox policy state", () => {
       mode: "proxy",
       allowedHosts: ["api.github.com:443"],
       writablePaths: [path.join(os.homedir(), "sandbox-output")],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
       version: 0,
     })
   })
@@ -427,6 +430,9 @@ describe("sandbox policy state", () => {
       mode: "deny",
       allowedHosts: [],
       writablePaths: [path.join(os.homedir(), "sandbox-refresh")],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
       version: 1,
     })
     // The published state is effective: without a backend for the denied network it reports the sandbox off.
@@ -468,6 +474,9 @@ describe("sandbox policy state", () => {
       mode: "allow",
       allowedHosts: [],
       writablePaths: ["/sandbox-enable-refresh"],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
       version: 1,
     })
   })

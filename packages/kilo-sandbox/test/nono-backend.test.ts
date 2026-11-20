@@ -16,12 +16,12 @@ import os from "node:os"
 import path from "node:path"
 import { Effect } from "effect"
 import type { Profile } from "../src/profile"
+import { parseCredentials, type Credential } from "../src/nono-credentials"
 import { root, target } from "../src/nono-binary"
 
 const state = mkdtempSync(path.join(os.tmpdir(), "kilo-nono-backend-"))
 const fake = path.join(state, "fake-nono")
 const manifest = path.join(state, "manifest.json")
-const credentials = path.join(state, "credentials.json")
 const profiles = path.join(state, "profiles")
 
 const backend = await import("../src/backend")
@@ -63,7 +63,10 @@ afterAll(() => {
   rmSync(state, { recursive: true, force: true })
 })
 
-function profile(network: Profile["network"] = { mode: "deny", allowedHosts: [] }): Profile {
+function profile(
+  network: Profile["network"] = { mode: "deny", allowedHosts: [] },
+  credentials?: ReadonlyArray<Credential>,
+): Profile {
   return {
     filesystem: {
       allowWrite: [{ path: "/workspace", kind: "subtree" }],
@@ -73,6 +76,7 @@ function profile(network: Profile["network"] = { mode: "deny", allowedHosts: [] 
     },
     network,
     environment: { deny: ["KILO_CONFIG"], set: { TMPDIR: "/tmp/kilo-tmp" } },
+    ...(credentials === undefined ? {} : { credentials }),
   }
 }
 
@@ -97,14 +101,19 @@ function generated(result: Awaited<ReturnType<typeof prepare>>) {
 function effect(
   network: Profile["network"] = { mode: "deny", allowedHosts: [] },
   environment: Record<string, string> = launch.environment,
+  credentials?: ReadonlyArray<Credential>,
 ) {
-  return Effect.scoped(context.run(profile(network), backend.prepare({ ...launch, environment }))).pipe(
+  return Effect.scoped(context.run(profile(network, credentials), backend.prepare({ ...launch, environment }))).pipe(
     Effect.provideService(proxy.CurrentProxyFactory, async () => runtime),
   )
 }
 
-function prepare(network?: Profile["network"], environment?: Record<string, string>) {
-  return Effect.runPromise(effect(network, environment))
+function prepare(
+  network?: Profile["network"],
+  environment?: Record<string, string>,
+  credentials?: ReadonlyArray<Credential>,
+) {
+  return Effect.runPromise(effect(network, environment, credentials))
 }
 
 /** Writes a manifest whose binary digest is `value` for the running target. */
@@ -185,40 +194,29 @@ test.skipIf(!mac)("keeps Kilo's proxy out of a sandboxed child", async () => {
   expect(generated(result).network).toEqual({ allow_domain: ["example.com"] })
 })
 
+const route = (name: string, variable: string, upstream = "https://example.com") =>
+  parseCredentials({ credentials: [{ name, source: `env://${variable}`, upstream }] })
+
 test.skipIf(!mac)("masks a credential the profile cannot route", async () => {
-  writeFileSync(
-    credentials,
-    JSON.stringify({
-      credentials: [{ name: "demo", source: "env://DEMO_TOKEN", upstream: "https://example.com" }],
-    }),
+  const result = await prepare(
+    undefined,
+    { ...launch.environment, DEMO_TOKEN: "real-secret" },
+    route("demo", "DEMO_TOKEN"),
   )
-  process.env.KILO_NONO_CREDENTIALS = credentials
-  try {
-    const result = await prepare(undefined, { ...launch.environment, DEMO_TOKEN: "real-secret" })
-    const profile = generated(result)
-    expect(profile.environment.deny_vars).toContain("DEMO_TOKEN")
-    expect(profile.network).toEqual({ block: true })
-  } finally {
-    delete process.env.KILO_NONO_CREDENTIALS
-  }
+  const profile = generated(result)
+  expect(profile.environment.deny_vars).toContain("DEMO_TOKEN")
+  expect(profile.network).toEqual({ block: true })
 })
 
 test.skipIf(!mac)("keeps a masked credential name out of the child environment", async () => {
-  writeFileSync(
-    credentials,
-    JSON.stringify({
-      credentials: [{ name: "options", source: "env://NODE_OPTIONS", upstream: "https://example.com" }],
-    }),
+  const result = await prepare(
+    undefined,
+    { ...launch.environment, NODE_OPTIONS: "--max-old-space-size=4096" },
+    route("options", "NODE_OPTIONS"),
   )
-  process.env.KILO_NONO_CREDENTIALS = credentials
-  try {
-    const result = await prepare(undefined, { ...launch.environment, NODE_OPTIONS: "--max-old-space-size=4096" })
-    const profile = generated(result)
-    expect(profile.environment.deny_vars).toContain("NODE_OPTIONS")
-    expect(profile.environment.set_vars.NODE_OPTIONS).toBeUndefined()
-  } finally {
-    delete process.env.KILO_NONO_CREDENTIALS
-  }
+  const profile = generated(result)
+  expect(profile.environment.deny_vars).toContain("NODE_OPTIONS")
+  expect(profile.environment.set_vars.NODE_OPTIONS).toBeUndefined()
 })
 
 test.skipIf(!mac)("restores the user's XDG roots to the child", async () => {
@@ -227,20 +225,11 @@ test.skipIf(!mac)("restores the user's XDG roots to the child", async () => {
 })
 
 test.skipIf(!mac)("refuses to launch when a routed credential has no value", async () => {
-  writeFileSync(
-    credentials,
-    JSON.stringify({
-      credentials: [{ name: "demo", source: "env://MISSING_TOKEN", upstream: "https://example.com" }],
-    }),
-  )
-  process.env.KILO_NONO_CREDENTIALS = credentials
-  try {
-    const before = existsSync(profiles) ? readdirSync(profiles).length : 0
-    await expect(prepare({ mode: "proxy", allowedHosts: ["example.com:443"] })).rejects.toBeDefined()
-    expect(existsSync(profiles) ? readdirSync(profiles).length : 0).toBe(before)
-  } finally {
-    delete process.env.KILO_NONO_CREDENTIALS
-  }
+  const before = existsSync(profiles) ? readdirSync(profiles).length : 0
+  await expect(
+    prepare({ mode: "proxy", allowedHosts: ["example.com:443"] }, undefined, route("demo", "MISSING_TOKEN")),
+  ).rejects.toBeDefined()
+  expect(existsSync(profiles) ? readdirSync(profiles).length : 0).toBe(before)
 })
 
 test.skipIf(!mac)("accepts a staged binary that matches the recorded digest", () => {
@@ -317,76 +306,48 @@ test.skipIf(!mac)("reports an unusable state directory instead of throwing", () 
 })
 
 test.skipIf(!mac)("masks known aliases and equal-valued variables for a routed credential", async () => {
-  writeFileSync(
-    credentials,
-    JSON.stringify({
-      credentials: [{ name: "github", source: "env://GITHUB_TOKEN", upstream: "https://example.com" }],
-    }),
+  const result = await prepare(
+    { mode: "proxy", allowedHosts: ["example.com:443"] },
+    { ...launch.environment, GITHUB_TOKEN: "s3cret", GH_TOKEN: "s3cret", OTHER: "s3cret" },
+    route("github", "GITHUB_TOKEN"),
   )
-  process.env.KILO_NONO_CREDENTIALS = credentials
-  try {
-    const result = await prepare(
-      { mode: "proxy", allowedHosts: ["example.com:443"] },
-      { ...launch.environment, GITHUB_TOKEN: "s3cret", GH_TOKEN: "s3cret", OTHER: "s3cret" },
-    )
-    const profile = generated(result)
-    expect(profile.environment.deny_vars).toEqual(expect.arrayContaining(["GH_TOKEN", "GITHUB_OAUTH_TOKEN", "OTHER"]))
-    expect(profile.environment.deny_vars).not.toContain("GITHUB_TOKEN")
-    expect(profile.network.credentials).toEqual(["github"])
-  } finally {
-    delete process.env.KILO_NONO_CREDENTIALS
-  }
+  const profile = generated(result)
+  expect(profile.environment.deny_vars).toEqual(expect.arrayContaining(["GH_TOKEN", "GITHUB_OAUTH_TOKEN", "OTHER"]))
+  expect(profile.environment.deny_vars).not.toContain("GITHUB_TOKEN")
+  expect(profile.network.credentials).toEqual(["github"])
 })
 
 test.skipIf(!mac)("keeps every active credential variable when routes share a value", async () => {
-  writeFileSync(
-    credentials,
-    JSON.stringify({
-      credentials: [
-        { name: "one", source: "env://DEMO_A", upstream: "https://example.com" },
-        { name: "two", source: "env://DEMO_B", upstream: "https://example.com" },
-      ],
-    }),
+  const routes = parseCredentials({
+    credentials: [
+      { name: "one", source: "env://DEMO_A", upstream: "https://example.com" },
+      { name: "two", source: "env://DEMO_B", upstream: "https://example.com" },
+    ],
+  })
+  const result = await prepare(
+    { mode: "proxy", allowedHosts: ["example.com:443"] },
+    { ...launch.environment, DEMO_A: "shared", DEMO_B: "shared", OTHER: "shared" },
+    routes,
   )
-  process.env.KILO_NONO_CREDENTIALS = credentials
-  try {
-    const result = await prepare(
-      { mode: "proxy", allowedHosts: ["example.com:443"] },
-      { ...launch.environment, DEMO_A: "shared", DEMO_B: "shared", OTHER: "shared" },
-    )
-    const profile = generated(result)
-    expect(profile.environment.deny_vars).not.toContain("DEMO_A")
-    expect(profile.environment.deny_vars).not.toContain("DEMO_B")
-    expect(profile.environment.deny_vars).toContain("OTHER")
-  } finally {
-    delete process.env.KILO_NONO_CREDENTIALS
-  }
+  const profile = generated(result)
+  expect(profile.environment.deny_vars).not.toContain("DEMO_A")
+  expect(profile.environment.deny_vars).not.toContain("DEMO_B")
+  expect(profile.environment.deny_vars).toContain("OTHER")
 })
 
 test.skipIf(!mac)("masks a credential when proxy mode emits no route", async () => {
-  writeFileSync(
-    credentials,
-    JSON.stringify({
-      credentials: [{ name: "github", source: "env://GITHUB_TOKEN", upstream: "https://example.com" }],
-    }),
+  const network = { mode: "proxy", allowedHosts: [] } satisfies Profile["network"]
+  const result = await Effect.runPromise(
+    Effect.scoped(
+      context.run(
+        profile(network, route("github", "GITHUB_TOKEN")),
+        backend.prepare({ ...launch, environment: { ...launch.environment, GITHUB_TOKEN: "s3cret" } }),
+      ),
+    ).pipe(Effect.provideService(proxy.CurrentProxyFactory, async () => ({ ...runtime, allowedHosts: [] }))),
   )
-  process.env.KILO_NONO_CREDENTIALS = credentials
-  try {
-    const network = { mode: "proxy", allowedHosts: [] } satisfies Profile["network"]
-    const result = await Effect.runPromise(
-      Effect.scoped(
-        context.run(
-          profile(network),
-          backend.prepare({ ...launch, environment: { ...launch.environment, GITHUB_TOKEN: "s3cret" } }),
-        ),
-      ).pipe(Effect.provideService(proxy.CurrentProxyFactory, async () => ({ ...runtime, allowedHosts: [] }))),
-    )
-    const generated = JSON.parse(readFileSync(result.args[result.args.indexOf("--profile") + 1], "utf8"))
-    expect(generated.network).toEqual({ block: true })
-    expect(generated.environment.deny_vars).toContain("GITHUB_TOKEN")
-  } finally {
-    delete process.env.KILO_NONO_CREDENTIALS
-  }
+  const generated = JSON.parse(readFileSync(result.args[result.args.indexOf("--profile") + 1], "utf8"))
+  expect(generated.network).toEqual({ block: true })
+  expect(generated.environment.deny_vars).toContain("GITHUB_TOKEN")
 })
 
 test.skipIf(!mac)("keeps the sandbox state absolute when the XDG root is relative", () => {
@@ -488,27 +449,31 @@ test.skipIf(mac)("reports that nono is macOS only off macOS", () => {
   expect(support.available ? "" : support.reason).toContain("macOS only")
 })
 
-test.skipIf(!mac)("does not re-probe a binary that hangs", () => {
-  const marker = path.join(state, "hung-runs")
-  const hung = path.join(state, "hung-nono")
-  writeFileSync(
-    hung,
-    `#!/bin/sh\necho run >> "${marker}"\nif [ "$1" = "--version" ]; then exec sleep 30; fi\nexit 0\n`,
-  )
-  chmodSync(hung, 0o755)
-  const previous = process.env.KILO_NONO_PATH
-  process.env.KILO_NONO_PATH = hung
-  try {
-    const first = backend.backendSupport({ mode: "deny", allowedHosts: [] })
-    expect(first.available).toBe(false)
-    const runs = readFileSync(marker, "utf8").trim().split("\n").length
-    const second = backend.backendSupport({ mode: "deny", allowedHosts: [] })
-    expect(second.available ? "" : second.reason).toBe(first.available ? "" : first.reason)
-    expect(readFileSync(marker, "utf8").trim().split("\n").length).toBe(runs)
-  } finally {
-    if (previous === undefined) delete process.env.KILO_NONO_PATH
-    else process.env.KILO_NONO_PATH = previous
-    rmSync(hung, { force: true })
-    rmSync(marker, { force: true })
-  }
-}, 20000)
+test.skipIf(!mac)(
+  "does not re-probe a binary that hangs",
+  () => {
+    const marker = path.join(state, "hung-runs")
+    const hung = path.join(state, "hung-nono")
+    writeFileSync(
+      hung,
+      `#!/bin/sh\necho run >> "${marker}"\nif [ "$1" = "--version" ]; then exec sleep 30; fi\nexit 0\n`,
+    )
+    chmodSync(hung, 0o755)
+    const previous = process.env.KILO_NONO_PATH
+    process.env.KILO_NONO_PATH = hung
+    try {
+      const first = backend.backendSupport({ mode: "deny", allowedHosts: [] })
+      expect(first.available).toBe(false)
+      const runs = readFileSync(marker, "utf8").trim().split("\n").length
+      const second = backend.backendSupport({ mode: "deny", allowedHosts: [] })
+      expect(second.available ? "" : second.reason).toBe(first.available ? "" : first.reason)
+      expect(readFileSync(marker, "utf8").trim().split("\n").length).toBe(runs)
+    } finally {
+      if (previous === undefined) delete process.env.KILO_NONO_PATH
+      else process.env.KILO_NONO_PATH = previous
+      rmSync(hung, { force: true })
+      rmSync(marker, { force: true })
+    }
+  },
+  20000,
+)

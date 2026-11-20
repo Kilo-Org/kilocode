@@ -22,6 +22,9 @@ describe("sandbox configuration defaults", () => {
       mode: "deny",
       allowedHosts: [],
       writablePaths: [],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
     })
   })
 
@@ -40,6 +43,9 @@ describe("sandbox configuration defaults", () => {
       mode: "allow",
       allowedHosts: [],
       writablePaths: ["/tmp/output"],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
     })
 
     expect(
@@ -51,6 +57,9 @@ describe("sandbox configuration defaults", () => {
       mode: "proxy",
       allowedHosts: ["api.github.com:443"],
       writablePaths: [],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
     })
   })
 
@@ -200,5 +209,55 @@ describe("sandbox configuration entries", () => {
     const result = SandboxConfig.fromEntries(entries, global)
     expect(result).toEqual({ sandbox: { network: "deny", allowed_hosts: [] } })
     expect(SandboxConfig.resolve(result).mode).toBe("deny")
+  })
+})
+
+describe("sandbox read and credential grants", () => {
+  test("keeps read grants, read exceptions and valid credentials", () => {
+    const result = SandboxConfig.resolve({
+      sandbox: {
+        read_paths: ["/data/shared"],
+        read_exceptions: ["/home/user/.aws"],
+        credentials: [
+          { name: "github", source: "env://GITHUB_TOKEN", upstream: "https://api.github.com" },
+          { name: "bad name", source: "env://BAD", upstream: "https://example.com" },
+        ],
+      },
+    })
+    expect(result.readPaths).toEqual(["/data/shared"])
+    expect(result.readExceptions).toEqual(["/home/user/.aws"])
+    expect(result.credentials).toEqual([
+      {
+        name: "github",
+        source: "env://GITHUB_TOKEN",
+        envVar: "GITHUB_TOKEN",
+        upstream: "https://api.github.com",
+      },
+    ])
+  })
+
+  test("a project document cannot add reads, exceptions or credentials", () => {
+    expect(
+      scoped(
+        {
+          sandbox: {
+            read_paths: ["/secret"],
+            read_exceptions: ["/home/user/.ssh"],
+            credentials: [{ name: "x", source: "env://X", upstream: "https://example.com" }],
+          },
+        },
+        "local",
+      ),
+    ).toEqual({})
+  })
+
+  test("replaces only the granted arrays a later global document sets", () => {
+    const entries = [
+      document(`${global}/one.json`, { read_paths: ["/one"], read_exceptions: ["/one/.aws"] }),
+      document(`${global}/two.json`, { read_paths: ["/two"] }),
+    ]
+    expect(SandboxConfig.fromEntries(entries, global)).toEqual({
+      sandbox: { read_paths: ["/two"], read_exceptions: ["/one/.aws"] },
+    })
   })
 })

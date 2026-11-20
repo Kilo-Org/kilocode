@@ -3,7 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import { Effect, Semaphore } from "effect"
 import { Global } from "@opencode/util/global"
-import { backendSupport, run as runSandbox, unrestricted, type Profile } from "@kilocode/sandbox"
+import { backendSupport, run as runSandbox, unrestricted, type Credential, type Profile } from "@kilocode/sandbox"
 import type { SessionID } from "@opencode/schema/session-id"
 import * as Network from "./network"
 import { root as protectedRoot } from "./root"
@@ -34,13 +34,18 @@ function key(directory: string, sessionID: SessionID) {
   return directory + "\0" + sessionID
 }
 
+function expand(value: string) {
+  return value.startsWith("~") ? path.join(os.homedir(), value.slice(1)) : value
+}
+
 function limits(fallback: ReturnType<typeof SandboxConfig.resolve>) {
   return {
     mode: fallback.mode,
     allowedHosts: fallback.allowedHosts,
-    writablePaths: fallback.writablePaths.map((value) =>
-      value.startsWith("~") ? path.join(os.homedir(), value.slice(1)) : value,
-    ),
+    writablePaths: fallback.writablePaths.map(expand),
+    readPaths: fallback.readPaths.map(expand),
+    readExceptions: fallback.readExceptions.map(expand),
+    credentials: fallback.credentials.map((entry) => ({ ...entry })),
   }
 }
 
@@ -52,7 +57,10 @@ function matches(current: Snapshot, next: Snapshot) {
   return (
     current.mode === next.mode &&
     current.allowedHosts.join("\0") === next.allowedHosts.join("\0") &&
-    current.writablePaths.join("\0") === next.writablePaths.join("\0")
+    current.writablePaths.join("\0") === next.writablePaths.join("\0") &&
+    current.readPaths?.join("\0") === next.readPaths?.join("\0") &&
+    current.readExceptions?.join("\0") === next.readExceptions?.join("\0") &&
+    JSON.stringify(current.credentials ?? []) === JSON.stringify(next.credentials ?? [])
   )
 }
 
@@ -223,6 +231,11 @@ export function profile(
   mode: Profile["network"]["mode"] = "deny",
   extraWritable?: readonly string[],
   allowedHosts: readonly string[] = [],
+  grants: {
+    readPaths?: readonly string[]
+    readExceptions?: readonly string[]
+    credentials?: readonly Credential[]
+  } = {},
 ): Profile {
   const project = isolated(ctx)
     ? [ctx.directory]
@@ -241,12 +254,17 @@ export function profile(
     Global.Path.repos,
     ...filterWritable(ctx, extraWritable ?? []),
   ].map(root)
+  const read = grants.readPaths === undefined ? undefined : [...writable, ...grants.readPaths.map(root)]
   return {
     filesystem: {
       allowWrite: writable,
       denyWrite: [root(protectedRoot), root(Global.Path.config)],
       denyNames: [".git"],
       temporaryDirectory: Global.Path.tmp,
+      ...(read === undefined ? {} : { read }),
+      ...(grants.readExceptions === undefined || grants.readExceptions.length === 0
+        ? {}
+        : { readExceptions: grants.readExceptions }),
     },
     network: {
       mode,
@@ -277,6 +295,7 @@ export function profile(
         TEMP: Global.Path.tmp,
       },
     },
+    ...(grants.credentials === undefined || grants.credentials.length === 0 ? {} : { credentials: grants.credentials }),
   }
 }
 
@@ -288,6 +307,28 @@ const read = Effect.fn("SandboxPolicy.read")(function* (directory: string, sessi
   if (stored) snapshots.set(id, stored)
   return stored
 })
+
+/**
+ * A child keeps only the reads, exceptions and credentials its own policy also grants, so inheritance can never
+ * widen authority.
+ */
+function grant(
+  parent: Snapshot,
+  child: {
+    readonly readPaths?: readonly string[]
+    readonly readExceptions?: readonly string[]
+    readonly credentials?: readonly Credential[]
+  },
+) {
+  return {
+    readPaths: (parent.readPaths ?? []).filter((value) => (child.readPaths ?? []).includes(value)),
+    readExceptions: (parent.readExceptions ?? []).filter((value) => (child.readExceptions ?? []).includes(value)),
+    credentials: (parent.credentials ?? []).filter((entry) => {
+      const match = (child.credentials ?? []).find((candidate) => candidate.name === entry.name)
+      return match !== undefined && match.source === entry.source && match.upstream === entry.upstream
+    }),
+  }
+}
 
 // A subagent session without its own state starts with its nearest ancestor's confinement. It walks up the parent
 // chain and takes no lock: enabling a parent holds the parent lock while it waits for its children's locks. A parent
@@ -303,7 +344,8 @@ const inherited = Effect.fn("SandboxPolicy.inherited")(function* (
   const parentDirectory = (yield* runtime.session(session.parentID))?.location.directory ?? directory
   const parent = yield* lineage(parentDirectory, session.parentID, directory, depth)
   if (!parent) return
-  return { ...parent, version: 0 } satisfies Snapshot
+  const own = limits(SandboxConfig.resolve(yield* runtime.config))
+  return { ...parent, ...grant(parent, own), version: 0 } satisfies Snapshot
 })
 
 const lineage = (
@@ -338,34 +380,31 @@ export const move = Effect.fn("SandboxPolicy.move")(function* (sessionID: Sessio
   )
 })
 
-const snapshot: (
-  sessionID: SessionID,
-) => Effect.Effect<{ directory: string; state: Snapshot }, never, Runtime> = Effect.fn("SandboxPolicy.snapshot")(function* (
-  sessionID: SessionID,
-) {
-  const directory = (yield* Runtime).directory
-  const current = yield* read(directory, sessionID)
-  if (current) return { directory, state: current }
+const snapshot: (sessionID: SessionID) => Effect.Effect<{ directory: string; state: Snapshot }, never, Runtime> =
+  Effect.fn("SandboxPolicy.snapshot")(function* (sessionID: SessionID) {
+    const directory = (yield* Runtime).directory
+    const current = yield* read(directory, sessionID)
+    if (current) return { directory, state: current }
 
-  return yield* locked(
-    sessionID,
-    Effect.gen(function* () {
-      const existing = yield* read(directory, sessionID)
-      if (existing) return { directory, state: existing }
-      // A session's create-time kilocode.sandbox toggle takes precedence over the config default, so a
-      // session moved or created with an explicit choice keeps that choice instead of resetting. The
-      // persisted per-directory preference (last toggled state) is the next precedence, so new sessions
-      // inherit the last /sandbox choice. The config default applies when neither is present.
-      const version = revision
-      const next = (yield* inherited(directory, sessionID)) ?? (yield* resolveInitial(directory, sessionID))
-      yield* Effect.promise(() => SandboxStore.write(directory, sessionID, next))
-      const id = key(directory, sessionID)
-      snapshots.set(id, next)
-      synced.set(id, version)
-      return { directory, state: next }
-    }),
-  )
-})
+    return yield* locked(
+      sessionID,
+      Effect.gen(function* () {
+        const existing = yield* read(directory, sessionID)
+        if (existing) return { directory, state: existing }
+        // A session's create-time kilocode.sandbox toggle takes precedence over the config default, so a
+        // session moved or created with an explicit choice keeps that choice instead of resetting. The
+        // persisted per-directory preference (last toggled state) is the next precedence, so new sessions
+        // inherit the last /sandbox choice. The config default applies when neither is present.
+        const version = revision
+        const next = (yield* inherited(directory, sessionID)) ?? (yield* resolveInitial(directory, sessionID))
+        yield* Effect.promise(() => SandboxStore.write(directory, sessionID, next))
+        const id = key(directory, sessionID)
+        snapshots.set(id, next)
+        synced.set(id, version)
+        return { directory, state: next }
+      }),
+    )
+  })
 
 function current(
   sessionID: SessionID,
@@ -527,11 +566,12 @@ export const toggle = Effect.fn("SandboxPolicy.toggle")((sessionID: SessionID) =
 
 function intersect(parent: Snapshot, child: Snapshot) {
   const paths = child.writablePaths.filter((value) => parent.writablePaths.includes(value))
+  const shared = grant(parent, child)
   if (parent.mode === "deny" || child.mode === "deny") {
-    return { mode: "deny" as const, allowedHosts: [], writablePaths: paths }
+    return { ...shared, mode: "deny" as const, allowedHosts: [], writablePaths: paths }
   }
   if (parent.mode === "allow" && child.mode === "allow") {
-    return { mode: "allow" as const, allowedHosts: [], writablePaths: paths }
+    return { ...shared, mode: "allow" as const, allowedHosts: [], writablePaths: paths }
   }
   const hosts =
     parent.mode === "proxy" && child.mode === "proxy"
@@ -540,6 +580,7 @@ function intersect(parent: Snapshot, child: Snapshot) {
         ? parent.allowedHosts
         : child.allowedHosts
   return {
+    ...shared,
     mode: hosts.length > 0 ? ("proxy" as const) : ("deny" as const),
     allowedHosts: hosts,
     writablePaths: paths,
@@ -565,7 +606,10 @@ const inheritSnapshot = Effect.fn("SandboxPolicy.inheritSnapshot")(function* (
     child.enabled === next.enabled &&
     child.mode === next.mode &&
     child.allowedHosts.join("\0") === next.allowedHosts.join("\0") &&
-    child.writablePaths.join("\0") === next.writablePaths.join("\0")
+    child.writablePaths.join("\0") === next.writablePaths.join("\0") &&
+    child.readPaths?.join("\0") === next.readPaths?.join("\0") &&
+    child.readExceptions?.join("\0") === next.readExceptions?.join("\0") &&
+    JSON.stringify(child.credentials ?? []) === JSON.stringify(next.credentials ?? [])
   )
     return
   yield* Effect.promise(() => SandboxStore.write(directory, sessionID, next))
@@ -655,6 +699,11 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
             active.state.mode,
             active.state.writablePaths,
             active.state.allowedHosts,
+            {
+              readPaths: active.state.readPaths,
+              readExceptions: active.state.readExceptions,
+              credentials: active.state.credentials,
+            },
           ),
           effect,
         )

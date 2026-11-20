@@ -125,6 +125,13 @@ function files(list: ReadonlyArray<PathRule>) {
   return list.filter((rule) => rule.kind === "literal").map((rule) => rule.path)
 }
 
+/** Expands a configured grant so it can be compared with the built-in deny entries. */
+function expand(entry: string) {
+  const home = os.homedir()
+  const value = entry.startsWith("~") ? path.join(home, entry.slice(1)) : entry.replace(/^\$HOME(?=\/|$)/, home)
+  return path.resolve(value)
+}
+
 function access(profile: Profile, reads: ReadonlyArray<PathRule>, cwd: string | undefined): Access {
   if (!cwd) return "none"
   if (profile.filesystem.denyWrite.some((rule) => matches(rule, cwd))) return "none"
@@ -185,7 +192,8 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
   const allowWrite = profile.filesystem.allowWrite.filter((rule) => !covered(rule, profile.filesystem.denyWrite))
   // denyNames is deliberately not translated: a nono deny also blocks reads, and commands must still read
   // .git for git status and git log. The gate decision record tracks the upstream primitive that closes it.
-  const reads = inputs.reads ?? allowWrite
+  const reads = inputs.reads ?? profile.filesystem.read ?? allowWrite
+  const lifted = new Set((profile.filesystem.readExceptions ?? []).map(expand))
   const temporary = profile.filesystem.temporaryDirectory
   const stores =
     paths.data === undefined
@@ -197,7 +205,7 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
           ),
         ]
   const denied = [
-    ...credentialPaths,
+    ...credentialPaths.filter((entry) => !lifted.has(expand(entry))),
     ...profile.filesystem.denyWrite.map((rule) => rule.path),
     ...(paths.config === undefined ? [] : [paths.config]),
     ...(paths.data === undefined
@@ -219,9 +227,7 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
   // The XDG roots stay: the child gets the user's values back, and the deny list only hides nono's own roots from it.
   const masked = new Set([...(inputs.secret ?? []), ...provided.flatMap((route) => aliases(route.envVar))])
   const set = Object.fromEntries(
-    Object.entries({ ...(inputs.restore ?? {}), ...profile.environment.set }).filter(
-      ([key]) => !masked.has(key),
-    ),
+    Object.entries({ ...(inputs.restore ?? {}), ...profile.environment.set }).filter(([key]) => !masked.has(key)),
   )
   return {
     extends: "default",

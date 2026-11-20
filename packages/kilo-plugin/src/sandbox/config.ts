@@ -1,16 +1,28 @@
 import path from "node:path"
-import { normalizeDestinations, parseDestination } from "@kilocode/sandbox"
+import { normalizeDestinations, parseCredentials, parseDestination } from "@kilocode/sandbox"
 import type { Config } from "@opencode/schema/config"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 
 export namespace SandboxConfig {
   export type Network = "allow" | "deny"
 
+  export type Credential = {
+    name: string
+    source: string
+    upstream: string
+    header?: string
+    format?: string
+    phantom?: string
+  }
+
   export type Info = {
     enabled?: boolean
     network?: Network
     writable_paths?: string[]
     allowed_hosts?: string[]
+    read_paths?: string[]
+    read_exceptions?: string[]
+    credentials?: Credential[]
   }
 
   function destination(value: string) {
@@ -22,6 +34,16 @@ export namespace SandboxConfig {
     }
   }
 
+  function routes(values: readonly Credential[]) {
+    return values.flatMap((value) => {
+      try {
+        return parseCredentials({ credentials: [value] })
+      } catch {
+        return []
+      }
+    })
+  }
+
   export function resolve(config: { sandbox?: Info }) {
     const hosts = normalizeDestinations((config.sandbox?.allowed_hosts ?? []).filter(destination))
     const restricted = config.sandbox?.network !== "allow"
@@ -30,6 +52,9 @@ export namespace SandboxConfig {
       mode: restricted ? (hosts.length > 0 ? ("proxy" as const) : ("deny" as const)) : ("allow" as const),
       allowedHosts: restricted ? hosts : [],
       writablePaths: [...(config.sandbox?.writable_paths ?? [])],
+      readPaths: [...(config.sandbox?.read_paths ?? [])],
+      readExceptions: [...(config.sandbox?.read_exceptions ?? [])],
+      credentials: routes(config.sandbox?.credentials ?? []),
     }
   }
 
@@ -68,6 +93,9 @@ export namespace SandboxConfig {
       ...(value.network !== undefined ? { network: value.network } : {}),
       ...(value.writable_paths !== undefined ? { writable_paths: [...value.writable_paths] } : {}),
       ...(value.allowed_hosts !== undefined ? { allowed_hosts: [...value.allowed_hosts] } : {}),
+      ...(value.read_paths !== undefined ? { read_paths: [...value.read_paths] } : {}),
+      ...(value.read_exceptions !== undefined ? { read_exceptions: [...value.read_exceptions] } : {}),
+      ...(value.credentials !== undefined ? { credentials: value.credentials.map((entry) => ({ ...entry })) } : {}),
     }
   }
 

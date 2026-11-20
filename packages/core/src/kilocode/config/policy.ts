@@ -23,6 +23,24 @@ const Sandbox = Schema.Struct({
   allowed_hosts: Schema.Array(Schema.String).pipe(optional).annotate({
     description: "Exact network destinations sandboxed tools may access while network restriction is enabled",
   }),
+  read_paths: Schema.Array(Schema.String).pipe(optional).annotate({
+    description: "Additional filesystem paths sandboxed tools may read; global config only",
+  }),
+  read_exceptions: Schema.Array(Schema.String).pipe(optional).annotate({
+    description: "Credential locations sandboxed tools may read; global config only",
+  }),
+  credentials: Schema.Array(
+    Schema.Struct({
+      name: Schema.String,
+      source: Schema.String,
+      upstream: Schema.String,
+      header: Schema.optional(Schema.String),
+      format: Schema.optional(Schema.String),
+      phantom: Schema.optional(Schema.String),
+    }),
+  )
+    .pipe(optional)
+    .annotate({ description: "Credentials the sandbox proxy injects into eligible requests; global config only" }),
 })
 
 const Retention = Schema.Struct({
