@@ -90,10 +90,10 @@ abstract class WriteCliChecksumsTask : DefaultTask() {
 
     private fun connect(url: String): HttpURLConnection {
         val conn = URI(url).toURL().openConnection() as HttpURLConnection
-        conn.connectTimeout = 30_000
-        conn.readTimeout = 120_000
+        conn.connectTimeout = GitHubHttp.CONNECT_TIMEOUT_MS
+        conn.readTimeout = GitHubHttp.READ_TIMEOUT_MS
         conn.instanceFollowRedirects = true
-        conn.setRequestProperty("Accept", "application/vnd.github+json")
+        conn.setRequestProperty("Accept", GitHubHttp.METADATA_ACCEPT)
         token.getOrNull()
             ?.trim()
             ?.takeIf { it.isNotEmpty() }

@@ -28,6 +28,7 @@ abstract class StageBundledCliTask : DefaultTask() {
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
         private const val API = "https://api.github.com/repos/Kilo-Org/kilocode/releases/tags"
+        internal const val ASSET_BASE = "https://github.com/Kilo-Org/kilocode/releases/download"
         private val PLATFORMS = listOf(
             "darwin-arm64",
             "darwin-x64",
@@ -37,18 +38,12 @@ abstract class StageBundledCliTask : DefaultTask() {
             "windows-x64",
         )
 
-        internal const val CONNECT_TIMEOUT_MS = 30_000
-        internal const val READ_TIMEOUT_MS = 120_000
-        internal const val USER_AGENT = "Kilo-JetBrains-Gradle"
-        internal const val METADATA_ACCEPT = "application/vnd.github+json"
-        internal const val ASSET_ACCEPT = "application/octet-stream"
-
         /**
          * Connector for the release metadata API. Kept authenticated so api.github.com rate limits apply to the token.
          */
         internal fun metadataConnector(token: String?, url: String): HttpURLConnection {
             val conn = open(url)
-            conn.setRequestProperty("Accept", METADATA_ACCEPT)
+            conn.setRequestProperty("Accept", GitHubHttp.METADATA_ACCEPT)
             token
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
@@ -62,20 +57,97 @@ abstract class StageBundledCliTask : DefaultTask() {
          */
         internal fun assetConnector(url: String): HttpURLConnection {
             val conn = open(url)
-            conn.setRequestProperty("Accept", ASSET_ACCEPT)
-            conn.setRequestProperty("User-Agent", USER_AGENT)
+            conn.setRequestProperty("Accept", GitHubHttp.ASSET_ACCEPT)
+            conn.setRequestProperty("User-Agent", GitHubHttp.USER_AGENT)
             return conn
         }
 
-        private fun open(url: String): HttpURLConnection {
-            val conn = URI(url).toURL().openConnection() as HttpURLConnection
-            conn.connectTimeout = CONNECT_TIMEOUT_MS
-            conn.readTimeout = READ_TIMEOUT_MS
-            // Redirect following stays on for both connectors. The release downloads and the API both answer with a
-            // redirect, so the task needs it; no connector adds a cross-host hop of its own.
-            conn.instanceFollowRedirects = true
-            return conn
+        private fun open(url: String): HttpURLConnection = GitHubHttp.open(url)
+
+        /**
+         * The one download path the task uses: reuses [file] when its digest already matches, otherwise fetches it
+         * and verifies it. A test drives this function so it exercises the task's own call site rather than a copy.
+         */
+        internal fun fetchAsset(
+            build: (String) -> HttpURLConnection,
+            url: String,
+            msg: String,
+            digest: String,
+            file: File,
+            warn: (String) -> Unit = {},
+        ) {
+            if (file.isFile && sum(file) == digest) return
+            download(build, url, msg, file)
+            verify(file, digest, warn)
         }
+
+        /**
+         * Streams [url] into [file] through the connector [build] returns, and turns a non-2xx response into the same
+         * failure the task reports. It takes the connector builder as a parameter so a test can drive this exact
+         * download path with the same connector the task uses.
+         */
+        internal fun download(
+            build: (String) -> HttpURLConnection,
+            url: String,
+            msg: String,
+            file: File,
+        ) {
+            val conn = build(url)
+            try {
+                val code = conn.responseCode
+                if (code !in 200..299) fail(conn, code, msg)
+                conn.inputStream.use { input ->
+                    file.outputStream().use { output -> input.copyTo(output) }
+                }
+            } finally {
+                conn.disconnect()
+            }
+        }
+
+        internal fun verify(file: File, digest: String, warn: (String) -> Unit = {}) {
+            val actual = sum(file)
+            if (actual == digest) return
+            if (file.exists() && !file.delete()) warn("Failed to delete invalid pinned Kilo CLI archive ${file.absolutePath}")
+            throw GradleException("Pinned Kilo CLI archive digest mismatch for ${file.name}: expected $digest, got $actual")
+        }
+
+        internal fun sum(file: File) = "sha256:${sha256(file)}"
+
+        internal fun sha256(file: File): String {
+            val md = MessageDigest.getInstance("SHA-256")
+            file.inputStream().buffered().use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val n = input.read(buffer)
+                    if (n < 0) break
+                    md.update(buffer, 0, n)
+                }
+            }
+            return md.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        }
+
+        private fun fail(conn: HttpURLConnection, code: Int, msg: String): Nothing {
+            val info = rate(conn)
+            val body = runCatching { conn.errorStream?.bufferedReader()?.use { it.readText() } }
+                .getOrNull()
+                ?.take(500)
+            val detail = if (body.isNullOrBlank()) "" else ": $body"
+            if (limited(conn, code)) {
+                throw GradleException("GitHub API rate limit exceeded while staging bundled Kilo CLI ($info)$detail")
+            }
+            throw GradleException("$msg: HTTP $code from ${conn.url} ($info)$detail")
+        }
+
+        private fun rate(conn: HttpURLConnection): String {
+            val reset = conn.getHeaderField("X-RateLimit-Reset")
+                ?.toLongOrNull()
+                ?.let { Instant.ofEpochSecond(it).toString() }
+            return "limit=${conn.getHeaderField("X-RateLimit-Limit")} remaining=${conn.getHeaderField("X-RateLimit-Remaining")} " +
+                "used=${conn.getHeaderField("X-RateLimit-Used")} reset=$reset retryAfter=${conn.getHeaderField("Retry-After")}"
+        }
+
+        private fun limited(conn: HttpURLConnection, code: Int) =
+            code == 429 || (code == 403 && conn.getHeaderField("X-RateLimit-Remaining") == "0")
     }
 
     @get:Input
@@ -147,21 +219,12 @@ abstract class StageBundledCliTask : DefaultTask() {
     }
 
     private fun fetch(ver: String, platform: String, name: String, digest: String, file: File) {
-        if (file.isFile && sum(file) == digest) return
         file.parentFile.mkdirs()
-        val url = "https://github.com/Kilo-Org/kilocode/releases/download/v$ver/$name"
+        val url = "$ASSET_BASE/v$ver/$name"
         logger.lifecycle("Downloading pinned Kilo CLI $platform from $url")
-        val conn = assetConnector(url)
-        try {
-            val code = conn.responseCode
-            if (code !in 200..299) fail(conn, code, "Failed to download pinned Kilo CLI $platform")
-            conn.inputStream.use { input ->
-                file.outputStream().use { output -> input.copyTo(output) }
-            }
-        } finally {
-            conn.disconnect()
+        fetchAsset(::assetConnector, url, "Failed to download pinned Kilo CLI $platform", digest, file) { msg ->
+            logger.warn(msg)
         }
-        verify(file, digest)
     }
 
     private fun zip(platform: String, file: File, out: ZipOutputStream) {
@@ -202,51 +265,6 @@ abstract class StageBundledCliTask : DefaultTask() {
         val path = if (parts.first() == "bin") parts else listOf("bin") + parts
         return "$platform/${path.joinToString("/")}"
     }
-
-    private fun verify(file: File, digest: String) {
-        val actual = sum(file)
-        if (actual == digest) return
-        if (file.exists() && !file.delete()) logger.warn("Failed to delete invalid pinned Kilo CLI archive ${file.absolutePath}")
-        throw GradleException("Pinned Kilo CLI archive digest mismatch for ${file.name}: expected $digest, got $actual")
-    }
-
-    private fun sum(file: File) = "sha256:${sha256(file)}"
-
-    private fun sha256(file: File): String {
-        val md = MessageDigest.getInstance("SHA-256")
-        file.inputStream().buffered().use { input ->
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-            while (true) {
-                val n = input.read(buffer)
-                if (n < 0) break
-                md.update(buffer, 0, n)
-            }
-        }
-        return md.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
-    }
-
-    private fun fail(conn: HttpURLConnection, code: Int, msg: String): Nothing {
-        val info = rate(conn)
-        val body = runCatching { conn.errorStream?.bufferedReader()?.use { it.readText() } }
-            .getOrNull()
-            ?.take(500)
-        val detail = if (body.isNullOrBlank()) "" else ": $body"
-        if (limited(conn, code)) {
-            throw GradleException("GitHub API rate limit exceeded while staging bundled Kilo CLI ($info)$detail")
-        }
-        throw GradleException("$msg: HTTP $code from ${conn.url} ($info)$detail")
-    }
-
-    private fun rate(conn: HttpURLConnection): String {
-        val reset = conn.getHeaderField("X-RateLimit-Reset")
-            ?.toLongOrNull()
-            ?.let { Instant.ofEpochSecond(it).toString() }
-        return "limit=${conn.getHeaderField("X-RateLimit-Limit")} remaining=${conn.getHeaderField("X-RateLimit-Remaining")} " +
-            "used=${conn.getHeaderField("X-RateLimit-Used")} reset=$reset retryAfter=${conn.getHeaderField("Retry-After")}"
-    }
-
-    private fun limited(conn: HttpURLConnection, code: Int) =
-        code == 429 || (code == 403 && conn.getHeaderField("X-RateLimit-Remaining") == "0")
 
     private fun ext(platform: String) = if (platform.startsWith("linux-")) "tar.gz" else "zip"
 }

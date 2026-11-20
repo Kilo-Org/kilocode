@@ -1,4 +1,6 @@
 import com.sun.net.httpserver.HttpServer
+import java.io.File
+import org.gradle.api.GradleException
 import java.net.HttpURLConnection
 import java.net.InetSocketAddress
 import kotlin.test.Test
@@ -14,8 +16,8 @@ class StageBundledCliConnectorTest {
             assertConnectorDefaults(conn)
             send(conn, received)
             assertNull(received.authorization, "release asset download must not send Authorization")
-            assertEquals(listOf(StageBundledCliTask.ASSET_ACCEPT), received.values("Accept"))
-            assertEquals(listOf(StageBundledCliTask.USER_AGENT), received.values("User-Agent"))
+            assertEquals(listOf(GitHubHttp.ASSET_ACCEPT), received.values("Accept"))
+            assertEquals(listOf(GitHubHttp.USER_AGENT), received.values("User-Agent"))
         }
     }
 
@@ -40,7 +42,7 @@ class StageBundledCliConnectorTest {
             assertConnectorDefaults(conn)
             send(conn, received)
             assertEquals("Bearer ghp_metadata_token", received.authorization)
-            assertEquals(listOf(StageBundledCliTask.METADATA_ACCEPT), received.values("Accept"))
+            assertEquals(listOf(GitHubHttp.METADATA_ACCEPT), received.values("Accept"))
         }
     }
 
@@ -51,15 +53,74 @@ class StageBundledCliConnectorTest {
             for ((label, token) in cases) {
                 send(StageBundledCliTask.metadataConnector(token, "$url/metadata"), received)
                 assertNull(received.authorization, "metadata connector sent Authorization for $label")
-                assertEquals(listOf(StageBundledCliTask.METADATA_ACCEPT), received.values("Accept"), "Accept for $label")
+                assertEquals(listOf(GitHubHttp.METADATA_ACCEPT), received.values("Accept"), "Accept for $label")
+            }
+        }
+    }
+
+    @Test
+    fun fetchReusesAMatchingFileWithoutRequesting() {
+        withServer { url, received ->
+            val file = File.createTempFile("kilo-fetch", ".bin")
+            try {
+                file.writeText("ok")
+                val digest = StageBundledCliTask.sum(file)
+                StageBundledCliTask.fetchAsset(StageBundledCliTask::assetConnector, "$url/asset", "download failed", digest, file)
+                assertEquals(0, received.calls, "a matching file is reused without a request")
+            } finally {
+                file.delete()
+            }
+        }
+    }
+
+    @Test
+    fun fetchAssetDownloadsThroughTheAssetConnectorAndVerifiesTheDigest() {
+        // Drives the same function fetch() calls, digest check included, so dropping verification or skipping the
+        // download fails here. Which connector fetch() binds is covered by the task's captured E2E run.
+        withServer { url, received ->
+            val file = File.createTempFile("kilo-fetch", ".bin")
+            try {
+                file.delete()
+                val source = File.createTempFile("kilo-src", ".bin")
+                val digest = try {
+                    source.writeText("ok")
+                    StageBundledCliTask.sum(source)
+                } finally {
+                    source.delete()
+                }
+                StageBundledCliTask.fetchAsset(StageBundledCliTask::assetConnector, "$url/asset", "download failed", digest, file)
+                assertNull(received.authorization, "the download must not send Authorization")
+                assertEquals(listOf(GitHubHttp.ASSET_ACCEPT), received.values("Accept"))
+                assertEquals("ok", file.readText())
+                assertEquals(digest, StageBundledCliTask.sum(file))
+            } finally {
+                file.delete()
+            }
+        }
+    }
+
+    @Test
+    fun fetchAssetRejectsAFileThatDoesNotMatchItsDigest() {
+        withServer { url, _ ->
+            val file = File.createTempFile("kilo-fetch", ".bin")
+            try {
+                file.delete()
+                val wrong = "sha256:" + "0".repeat(64)
+                val failure = runCatching {
+                    StageBundledCliTask.fetchAsset(StageBundledCliTask::assetConnector, "$url/asset", "download failed", wrong, file)
+                }.exceptionOrNull()
+                assertTrue(failure is GradleException, "a digest mismatch must fail the task")
+                assertTrue(failure.message.orEmpty().contains("digest mismatch"), failure.message.orEmpty())
+            } finally {
+                file.delete()
             }
         }
     }
 
     private fun assertConnectorDefaults(conn: HttpURLConnection) {
         assertTrue(conn.instanceFollowRedirects, "release downloads follow redirects")
-        assertEquals(StageBundledCliTask.CONNECT_TIMEOUT_MS, conn.connectTimeout)
-        assertEquals(StageBundledCliTask.READ_TIMEOUT_MS, conn.readTimeout)
+        assertEquals(GitHubHttp.CONNECT_TIMEOUT_MS, conn.connectTimeout)
+        assertEquals(GitHubHttp.READ_TIMEOUT_MS, conn.readTimeout)
     }
 
     /**
@@ -73,7 +134,7 @@ class StageBundledCliConnectorTest {
         fun values(name: String): List<String>? =
             headers.entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value
 
-        val authorization: String? get() = values("Authorization")?.singleOrNull()
+        val authorization: String? get() = values("Authorization")?.single()
     }
 
     /**

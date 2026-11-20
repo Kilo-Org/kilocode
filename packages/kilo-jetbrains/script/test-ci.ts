@@ -3,9 +3,11 @@
 /**
  * CI test runner for the JetBrains plugin.
  *
- * Runs ./gradlew clean test --continue --stacktrace --console=plain
- * so all modules run even when some fail,
- * then collects per-module JUnit XML results into .artifacts/unit/junit.xml
+ * Runs ./gradlew clean test :build-tasks:test --continue --stacktrace --console=plain
+ * so all modules run even when some fail. The build-tasks composite build is named
+ * explicitly: `includeBuild` contributes its plugin classpath to this build, but `test`
+ * on the root project does not reach the included build's own test task.
+ * Then collects per-module JUnit XML results into .artifacts/unit/junit.xml
  * so mikepenz/action-junit-report can find them at the standard path.
  * The generated OpenAPI client can otherwise restore stale compile outputs
  * when the spec changes without a clean build directory.
@@ -21,7 +23,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from 
 
 const root = join(import.meta.dir, "..")
 const gradlew = process.platform === "win32" ? "gradlew.bat" : "./gradlew"
-const args = ["clean", "test", "--continue", "--stacktrace", "--console=plain"]
+const args = ["clean", "test", ":build-tasks:test", "--continue", "--stacktrace", "--console=plain"]
 const cmd = process.platform === "win32" ? ["cmd.exe", "/c", gradlew, ...args] : [gradlew, ...args]
 const fallback = 45 * 60 * 1000
 const parsed = Number(process.env.KILO_JETBRAINS_TEST_TIMEOUT_MS ?? fallback)
@@ -39,7 +41,7 @@ const timer = setTimeout(() => {
 const code = await proc.exited
 clearTimeout(timer)
 
-const modules = [".", "shared", "frontend", "backend"]
+const modules = [".", "shared", "frontend", "backend", "build-tasks"]
 const suites: string[] = []
 
 for (const mod of modules) {
