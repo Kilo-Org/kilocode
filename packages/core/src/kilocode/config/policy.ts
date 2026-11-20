@@ -1,5 +1,6 @@
 export * as KiloConfigPolicy from "./policy.js"
 
+import path from "node:path"
 import { Config } from "@opencode/schema/config"
 import { ConfigCommand } from "@opencode/schema/config/command"
 import { ConfigModel } from "@opencode/schema/config/model"
@@ -433,15 +434,23 @@ export function fromEntries(entries: readonly Config.Entry[]) {
   }
 }
 
-/** Auto-approve of the effective entries: the last document that sets it wins. */
-export function autoApprove(entries: readonly Config.Entry[]) {
-  return entries.reduce<boolean>(
-    (value, entry) =>
-      entry.type === "document" && entry.info instanceof Info && entry.info.auto_approve !== undefined
-        ? entry.info.auto_approve
-        : value,
-    false,
-  )
+/**
+ * Auto-approve of the effective entries. Only the global document can turn it on, so a checked-in project config
+ * cannot grant the bypass; any nearer document can still turn it off.
+ */
+export function autoApprove(entries: readonly Config.Entry[], globalDirectory: string) {
+  return entries.reduce<boolean>((value, entry) => {
+    if (entry.type !== "document" || !(entry.info instanceof Info) || entry.info.auto_approve === undefined)
+      return value
+    if (entry.info.auto_approve && !within(globalDirectory, entry.path)) return value
+    return entry.info.auto_approve
+  }, false)
+}
+
+function within(directory: string, file: string | undefined) {
+  if (!file) return false
+  const relative = path.relative(directory, file)
+  return relative === "" || (relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative))
 }
 
 /**

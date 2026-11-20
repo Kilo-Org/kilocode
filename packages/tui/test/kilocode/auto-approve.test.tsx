@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, test } from "bun:test"
+import { savedAutoApprove } from "../../src/kilocode/auto-approve"
 import { nextPermissionMode, permissionModeOverride, setPermissionMode } from "../../src/kilocode/permission-mode"
 import { createAppFixture } from "../fixture/app"
 import { directory, json } from "../fixture/tui-client"
@@ -103,6 +104,14 @@ describe("auto-approve mode", () => {
     setPermissionMode(undefined)
     expect(permissionModeOverride()).toBeUndefined()
   })
+
+  it("only lets the global config enable the saved rule, while a project can narrow it", () => {
+    expect(savedAutoApprove({ auto_approve: true }, undefined)).toBe(true)
+    expect(savedAutoApprove({ auto_approve: true }, { auto_approve: true })).toBe(true)
+    expect(savedAutoApprove({}, { auto_approve: true })).toBe(false)
+    expect(savedAutoApprove({ auto_approve: true }, { auto_approve: false })).toBe(false)
+    expect(savedAutoApprove(undefined, undefined)).toBe(false)
+  })
 })
 
 test(
@@ -116,14 +125,12 @@ test(
     await app.mockInput.typeText("/auto-approve")
     app.mockInput.pressEnter()
     await app.waitForFrame((frame) => frame.includes("Auto-approve enabled."))
-    // The choice is saved globally and in the TUI config, so a new client or a new TUI process starts enabled.
+    // The choice is saved globally, so a new client or a new TUI process starts enabled.
     expect(state.enabled).toBe(true)
-    expect(app.config().session?.permissions).toBe("autoaccept")
 
     app.mockInput.pressKey("a", { ctrl: true, meta: true })
     await app.waitForFrame((frame) => frame.includes("Auto-approve disabled."))
     expect(state.enabled).toBe(false)
-    expect(app.config().session?.permissions).toBe("prompt")
 
     expect(app.captureCharFrame()).not.toContain("Auto-approve enabled.")
   },
@@ -167,6 +174,51 @@ test(
 )
 
 test(
+  "a global disable from another client returns this TUI to prompting",
+  async () => {
+    const sessionID = "ses_autoapprove_remote_off"
+    const state: AutoApproveState = { enabled: true }
+    await using app = await createAppFixture({
+      width: 110,
+      height: 34,
+      args: { sessionID },
+      config: { animations: false, tabs: { mode: "off" }, session: { permissions: "autoaccept" } },
+      fetch: withSession(sessionID, state),
+    })
+    await app.ready
+    await until(app, "session", (frame) => frame.includes("Demo Model"))
+    expect(app.captureCharFrame()).toContain(" auto ")
+
+    state.enabled = false
+    app.events.emit({ id: "evt_config_updated", created: 1, type: "config.updated", data: {} })
+    await until(app, "auto marker gone", (frame) => !frame.includes(" auto "))
+  },
+  30000,
+)
+
+test(
+  "a failed global save leaves the TUI mode and config unchanged",
+  async () => {
+    const state: AutoApproveState = { enabled: false }
+    await using app = await createAppFixture({
+      fetch: async (url, request) => {
+        if (url.pathname === "/api/rpc/kilocode.settings/write")
+          return json({ _tag: "RpcError", type: "failed", message: "conflict" }, { status: 400 })
+        return settings(state)(url, request)
+      },
+    })
+    await app.ready
+    await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
+
+    app.mockInput.pressKey("a", { ctrl: true, meta: true })
+    await app.waitForFrame((frame) => frame.includes("Could not save the auto-approve setting."))
+    expect(state.enabled).toBe(false)
+    expect(app.config().session?.permissions).toBeUndefined()
+  },
+  30000,
+)
+
+test(
   "leaves a --auto launch without keeping auto-approve",
   async () => {
     const sessionID = "ses_autoapprove_flag"
@@ -187,7 +239,6 @@ test(
     // The flag still seeds later launches, so leaving it must last for this process even though the setting is saved.
     expect(app.captureCharFrame()).not.toContain(" auto ")
     expect(state.enabled).toBe(false)
-    expect(app.config().session?.permissions).toBe("prompt")
   },
   30000,
 )

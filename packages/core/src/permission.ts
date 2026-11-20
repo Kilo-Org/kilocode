@@ -1,6 +1,7 @@
 export * as Permission from "./permission.js"
 
 import { makeLocationNode } from "@opencode/util/effect/app-node"
+import { Global } from "@opencode/util/global" // kilocode_change(autoapprove)
 import { Context, Deferred, Effect, Layer, Schema, Scope, Stream } from "effect" // kilocode_change(autoapprove) - Stream drains when config changes
 import { Permission } from "@opencode/schema/permission"
 import { KiloPermission } from "@opencode/schema/kilocode/permission" // kilocode_change(autoapprove) - the shared human-only rule
@@ -145,6 +146,7 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const bus = yield* Bus.Service
     const config = yield* Config.Service // kilocode_change(autoapprove)
+    const global = yield* Global.Service // kilocode_change(autoapprove)
     const location = yield* Location.Service
     const agents = yield* Agent.Service
     const sessions = yield* SessionStore.Service
@@ -171,7 +173,7 @@ const layer = Layer.effect(
 
     // kilocode_change start - autoapprove: a saved allow settles an ask but never overrides an explicit deny
     const autoApprove = Effect.fnUntraced(function* () {
-      return KiloConfigPolicy.autoApprove(yield* config.entries())
+      return KiloConfigPolicy.autoApprove(yield* config.entries(), global.config)
     })
     // kilocode_change end
 
@@ -446,5 +448,5 @@ const layer = Layer.effect(
 export const node = makeLocationNode({
   service: Service,
   layer,
-  deps: [Bus.node, Config.node, Location.node, Agent.node, SessionStore.node, PermissionSaved.node, PluginHooks.node], // kilocode_change(autoapprove) - read the saved global rule
+  deps: [Bus.node, Config.node, Global.node, Location.node, Agent.node, SessionStore.node, PermissionSaved.node, PluginHooks.node], // kilocode_change(autoapprove) - read the saved global rule
 })

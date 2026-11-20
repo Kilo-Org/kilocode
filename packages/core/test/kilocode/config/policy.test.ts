@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import { Config } from "@opencode/core/config"
 import { ConfigNormalize } from "@opencode/core/config/normalize"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
+import { AbsolutePath } from "@opencode/core/schema"
 import { Document, Info } from "@opencode/schema/config"
 import { Effect, Option, Schema } from "effect"
 import { it } from "../../lib/effect"
@@ -46,16 +47,19 @@ test("auto_approve is an optional boolean Kilo setting preserved by config parsi
   expect(Option.isNone(decode({ auto_approve: "true" }))).toBe(true)
 })
 
-test("autoApprove reads the last document that sets the key", () => {
-  const document = (value?: boolean) =>
+test("autoApprove only lets the global document enable it, while a project can narrow it", () => {
+  const document = (value?: boolean, path = "/global/kilo2.json") =>
     new Document({
       type: "document",
+      path: AbsolutePath.make(path),
       info: new KiloConfigPolicy.Info(value === undefined ? {} : { auto_approve: value }),
     })
-  expect(KiloConfigPolicy.autoApprove([])).toBe(false)
-  expect(KiloConfigPolicy.autoApprove([document(true)])).toBe(true)
-  expect(KiloConfigPolicy.autoApprove([document(true), document(false)])).toBe(false)
-  expect(KiloConfigPolicy.autoApprove([document(false), document()])).toBe(false)
+  expect(KiloConfigPolicy.autoApprove([], "/global")).toBe(false)
+  expect(KiloConfigPolicy.autoApprove([document(true)], "/global")).toBe(true)
+  expect(KiloConfigPolicy.autoApprove([document(true, "/project/kilo2.json")], "/global")).toBe(false)
+  expect(KiloConfigPolicy.autoApprove([document(true), document(false, "/project/kilo2.json")], "/global")).toBe(false)
+  expect(KiloConfigPolicy.autoApprove([document(false), document(true, "/project/kilo2.json")], "/global")).toBe(false)
+  expect(KiloConfigPolicy.autoApprove([document(false), document()], "/global")).toBe(false)
 })
 
 test("remote_control is an optional boolean preserved beside canonical config", () => {
