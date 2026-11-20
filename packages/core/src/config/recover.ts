@@ -56,14 +56,14 @@ export function recover<S extends Schema.Decoder<unknown>>(
   }
 }
 
-/** Removes every value an issue names. Two issues that resolve to the same entry report it once. */
+/** Removes every value an issue names. Two issues that resolve to the same value report it once. */
 function prune(input: unknown, issues: readonly Issue[], diagnostics: Diagnostic[]) {
   if (!rooted(input)) return undefined
   const targets = new Map<string, { path: Segment[]; message: string }>()
   for (const issue of issues) {
     const path = normalize(issue.path)
     if (!path.length) continue
-    const target = locate(input, boundary(path))
+    const target = locate(input, atomic(path))
     if (target === undefined) continue
     const key = target.map(String).join("\u0000")
     if (targets.has(key)) continue
@@ -71,17 +71,29 @@ function prune(input: unknown, issues: readonly Issue[], diagnostics: Diagnostic
   }
   if (!targets.size) return undefined
   const next: unknown = structuredClone(input)
-  // Highest index first, so removing one array item does not shift the index of another removal.
+  // Highest index first, so removing one list entry does not shift the index of another removal.
   const ordered = [...targets.values()].toSorted((left, right) => compare(right.path, left.path))
   for (const target of ordered) {
     if (!drop(next, target.path)) continue
     diagnostics.push({ path: render(target.path), message: target.message })
-    // A named entry that kept no field holds nothing, so it is removed with the value it held.
-    const entry = target.path.slice(0, -1)
-    const value = valueAt(next, entry)
-    if (entry.length > 1 && rooted(value) && !Object.keys(value).length) drop(next, entry)
+    // Rewalk the removed branch upward: a container that kept no member holds nothing, so it goes too.
+    for (let length = target.path.length - 1; length >= 1; length -= 1) {
+      const branch = target.path.slice(0, length)
+      const value = valueAt(next, branch)
+      if (!container(value) || Object.keys(value).length) break
+      drop(next, branch)
+    }
   }
   return next
+}
+
+/**
+ * A list entry is one value in the document, so a failing field inside it is reported and removed as that
+ * entry. Every other member keeps its own boundary, so a nested setting is what gets removed.
+ */
+function atomic(path: readonly Segment[]) {
+  const index = path.findIndex((segment) => typeof segment === "number")
+  return index === -1 ? path : path.slice(0, index + 1)
 }
 
 function valueAt(root: unknown, path: readonly Segment[]): unknown {
@@ -94,20 +106,9 @@ function valueAt(root: unknown, path: readonly Segment[]): unknown {
 }
 
 /**
- * The value to remove for one failing path. A list entry is atomic, so a failing field inside it removes the
- * entry. A named entry keeps the fields that validate, and one that ends up empty is removed. Anything deeper
- * reports the named entry, which is the smallest unit a document author can act on.
- */
-function boundary(path: readonly Segment[]): Segment[] {
-  const index = path.findIndex((segment) => typeof segment === "number")
-  if (index !== -1) return path.slice(0, index + 1)
-  return path.slice(0, 3)
-}
-
-/**
- * Returns the path whose removal changes the document. A failing value is removed directly; when the failing
- * field is absent, the entry that should have held it is removed instead, because an absent key holds nothing
- * to drop.
+ * Returns the path whose removal changes the document. The failing value goes first, so a nested field such as
+ * a model option is what gets removed. When the failing field is absent, the member that should have held it is
+ * removed instead, because an absent key holds nothing to drop.
  */
 function locate(root: unknown, path: readonly Segment[]): Segment[] | undefined {
   for (let length = path.length; length > 0; length -= 1) {

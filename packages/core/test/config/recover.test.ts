@@ -75,19 +75,34 @@ describe("ConfigRecover", () => {
     }),
   )
 
-  it.effect("reports one diagnostic per skipped entry across nested fields", () =>
+  it.effect("removes a container that kept no member and reports each skipped value", () =>
     Effect.sync(() => {
       const result = ConfigRecover.recover(Config.Info, {
         agents: { a: { steps: "twelve" }, b: { steps: "thirteen" } },
         skills: ["./skills", 7],
       })
       if (result.type !== "recovered") throw new Error("expected the document to survive")
-      expect(result.value.agents).toEqual({})
+      expect(result.value.agents).toBeUndefined()
       expect(result.value.skills).toEqual(["./skills"])
       expect(result.diagnostics.map((diagnostic) => diagnostic.path).toSorted()).toEqual([
         "$.agents.a.steps",
         "$.agents.b.steps",
         "$.skills[1]",
+      ])
+    }),
+  )
+
+  it.effect("removes only the failing nested setting and keeps its siblings", () =>
+    Effect.sync(() => {
+      const result = ConfigRecover.recover(Config.Info, {
+        agents: { reviewer: { request: { headers: { good: "one", bad: 5 }, body: { effort: "high" } }, mode: "subagent" } },
+      })
+      if (result.type !== "recovered") throw new Error("expected the agent to survive")
+      expect(result.value.agents?.reviewer?.request?.headers).toEqual({ good: "one" })
+      expect(result.value.agents?.reviewer?.request?.body).toEqual({ effort: "high" })
+      expect(result.value.agents?.reviewer?.mode).toBe("subagent")
+      expect(result.diagnostics.map((diagnostic) => diagnostic.path)).toEqual([
+        "$.agents.reviewer.request.headers.bad",
       ])
     }),
   )

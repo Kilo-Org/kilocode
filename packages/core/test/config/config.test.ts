@@ -888,6 +888,49 @@ describe("Config", () => {
   )
   // kilocode_change end
 
+  // kilocode_change start - a legacy document is decoded value by value at both migration stages
+  it.live("keeps the valid settings of a legacy document when one value is invalid", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const file = path.join(tmp.path, "opencode.json")
+          yield* Effect.promise(() =>
+            fs.writeFile(
+              file,
+              JSON.stringify({
+                model: "anthropic/claude",
+                snapshot: "nope",
+                permission: {
+                  bash: { "git push*": "deny" },
+                  edit: { "*": "nonsense" },
+                },
+              }),
+            ),
+          )
+          const { logs, layer } = capture(tmp.path)
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
+
+            expect(documents).toHaveLength(1)
+            const info = documents[0]?.info
+            if (!info) throw new Error("expected the legacy document to load")
+            expect(info.model).toBe("anthropic/claude")
+            expect(info.snapshots).toBeUndefined()
+            expect(info.permissions).toEqual([{ action: "bash", resource: "git push*", effect: "deny" }])
+            const skipped = reported(logs, "skipping invalid configuration value")
+            expect(skipped.length).toBeGreaterThan(0)
+            for (const [, context] of skipped) expect(context.source).toBe(file)
+          }).pipe(Effect.provide(layer))
+        }),
+      ),
+    ),
+  )
+  // kilocode_change end
+
   it.live("loads policy statements in reverse config order", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
