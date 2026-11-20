@@ -1535,6 +1535,9 @@ async function perf() {
   const visibility = await inContext<[number, string][]>(user.context, () => (window as unknown as { __vis: [number, string][] }).__vis)
   const state = await tabState()
   expect(result.code === 0, `perf run exited ${result.code}: ${result.stderr.slice(-800)}`)
+  // Timings of refused calls are not browser latency: with the gate reading every page as opaque:null the clicks,
+  // snapshots and screenshots are all auto-rejected, and the run read as a pass.
+  expectNoRefusals("perf", result)
   return {
     coldStartMs: times[0] === undefined ? undefined : Math.round(times[0].end - times[0].start),
     firstToolAfterSpawnMs: times[0] === undefined ? undefined : Math.round(times[0].start - spawned),
