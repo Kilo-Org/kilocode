@@ -29,8 +29,8 @@ export function togglePermissionMode(current: PermissionMode) {
 /**
  * True for a request that only a person may answer: auto-approve never replies to it and the permission prompt stays
  * up, as in prompt mode. Kilo plugins set `metadata.interactive` on such requests (a sandbox escalation, a sensitive
- * browser step); `run --auto` rejects them for the same reason. The rule is shared with the VS Code client, so the
- * two cannot drift.
+ * browser step); `run --auto` rejects them for the same reason. The rule is shared with the VS Code client; `run
+ * --auto` still repeats the comparison (`packages/cli/src/run/noninteractive.ts`) and moves here when next touched.
  */
 export function requiresPerson(request: PermissionRequest | undefined) {
   return KiloPermission.requiresPerson(request?.metadata)
