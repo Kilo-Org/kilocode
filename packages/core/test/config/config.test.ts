@@ -780,7 +780,8 @@ describe("Config", () => {
             const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
 
             expect(documents).toHaveLength(1)
-            const info = documents[0]!.info
+            const info = documents[0]?.info
+            if (!info) throw new Error("expected the document to load")
             expect(info.share).toBeUndefined()
             expect(info.autoupdate).toBeUndefined()
             expect(info.model).toBe("anthropic/claude")
@@ -814,7 +815,7 @@ describe("Config", () => {
             const config = yield* Config.Service
             yield* config.entries()
             const dropped = reported(logs, "skipping invalid configuration value")
-            expect(dropped.map(([, context]) => context.path).toSorted()).toEqual([
+            expect(dropped.map(([, context]) => context.path).toSorted((a, b) => String(a).localeCompare(String(b)))).toEqual([
               "$.agents.reviewer.steps",
               "$.autoupdate",
               "$.share",
@@ -845,9 +846,10 @@ describe("Config", () => {
             expect(documents).toHaveLength(0)
             const syntax = reported(logs, "skipping unparsable configuration file")
             expect(syntax.length).toBeGreaterThan(0)
-            expect(syntax[0]![1].source).toBe(file)
-            expect(syntax[0]![1].path).toBe("$")
-            expect(String(syntax[0]![1].message)).toContain("CommaExpected at line 3, column 3")
+            const first = syntax[0]?.[1]
+            expect(first?.source).toBe(file)
+            expect(first?.path).toBe("$")
+            expect(String(first?.message)).toContain("CommaExpected at line 3, column 3")
           }).pipe(Effect.provide(layer))
         }),
       ),

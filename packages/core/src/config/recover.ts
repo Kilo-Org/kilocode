@@ -37,7 +37,7 @@ export function syntax(text: string, errors: readonly ParseError[]): Diagnostic[
  * input and the document is decoded again, so every setting that validates keeps applying while only the
  * offending values are reported. A document whose root is not an object is rejected as a whole.
  */
-export function recover<S extends Schema.Codec<unknown, unknown, never, never>>(
+export function recover<S extends Schema.Decoder<unknown>>(
   schema: S,
   input: unknown,
 ): Result<S["Type"]> {
@@ -104,16 +104,6 @@ function boundary(path: readonly Segment[]): Segment[] {
   return path.slice(0, 3)
 }
 
-/** Removes a map entry that kept no field, so a typo cannot create an empty named entry. */
-function dropEmptyEntries(input: Record<string, unknown>) {
-  for (const value of Object.values(input)) {
-    if (!rooted(value)) continue
-    for (const [key, entry] of Object.entries(value)) {
-      if (rooted(entry) && !Object.keys(entry).length) delete value[key]
-    }
-  }
-}
-
 /**
  * Returns the path whose removal changes the document. A failing value is removed directly; when the failing
  * field is absent, the entry that should have held it is removed instead, because an absent key holds nothing
@@ -122,22 +112,13 @@ function dropEmptyEntries(input: Record<string, unknown>) {
 function locate(root: unknown, path: readonly Segment[]): Segment[] | undefined {
   for (let length = path.length; length > 0; length -= 1) {
     const candidate = path.slice(0, length)
-    if (present(root, candidate)) return candidate
+    if (valueAt(root, candidate) !== undefined) return candidate
   }
   return undefined
 }
 
-function present(root: unknown, path: readonly Segment[]): boolean {
-  let current: unknown = root
-  for (const segment of path) {
-    if (!container(current) || !holds(current, segment)) return false
-    current = lookup(current, segment)
-  }
-  return true
-}
-
 function drop(root: unknown, path: readonly Segment[]): boolean {
-  const parent = path.slice(0, -1).reduce<unknown>((current, segment) => {
+  const parent = path.slice(0, -1).reduce((current, segment) => {
     return container(current) && holds(current, segment) ? lookup(current, segment) : undefined
   }, root)
   const last = path.at(-1)
@@ -178,8 +159,8 @@ function normalize(path: readonly (PropertyKey | { readonly key: PropertyKey })[
 function compare(left: readonly Segment[], right: readonly Segment[]) {
   const length = Math.min(left.length, right.length)
   for (let index = 0; index < length; index += 1) {
-    const a = left[index]!
-    const b = right[index]!
+    const a = left[index]
+    const b = right[index]
     if (a === b) continue
     if (typeof a === "number" && typeof b === "number") return a - b
     return String(a).localeCompare(String(b))
@@ -204,8 +185,8 @@ function summarize(issues: readonly Issue[]) {
     .join("; ")
 }
 
-function render(path: readonly Segment[]) {
-  return path.reduce<string>((text, segment) => {
-    return typeof segment === "number" ? `${text}[${segment}]` : `${text}.${segment}`
-  }, "$")
+function render(path: readonly Segment[]): string {
+  let text = "$"
+  for (const segment of path) text = typeof segment === "number" ? `${text}[${segment}]` : `${text}.${segment}`
+  return text
 }
