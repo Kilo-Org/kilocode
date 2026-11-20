@@ -140,6 +140,7 @@ export const dict = {
   "ui.tool.chart.failed": "Impossibile eseguire il rendering del grafico",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Impostazioni del browser",
+  "browser.command.starting": "Kilo si sta ancora avviando. Riprova tra un momento.",
   "browser.command.description": "Mostra il backend del browser, se può essere eseguito e le autorizzazioni di origine",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Osservazione",
@@ -165,6 +166,8 @@ export const dict = {
   "browser.state.unavailable": "non disponibile",
   "browser.state.readyHint": "Un profilo Chromium gestito da Kilo, avviato alla prima chiamata del browser",
   "browser.state.extensionHint": "Collega l'estensione browser Kilo per usare il tuo browser",
+  "browser.command.usage":
+    "Usa /browser per le impostazioni, /browser share per dare a questa sessione la scheda attiva, o /browser adopt per riutilizzare l'ultimo gruppo di schede terminato.",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Leggi le pagine su {{origin}}",
   "browser.permission.act.title": "Fai clic e digita su {{origin}}",
@@ -180,6 +183,25 @@ export const dict = {
   "browser.permission.sensitive.reason": "Motivo: {{reason}}",
   "browser.permission.sensitive.once":
     "Solo una persona può approvare questo passaggio. L'approvazione copre solo questo passaggio.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Condividi la scheda attiva del browser",
+  "browser.share.description": "Sposta la scheda attiva del tuo browser nel gruppo di schede di questa sessione",
+  "browser.share.done": "La tua scheda attiva ora è nel gruppo di schede di questa sessione.",
+  "browser.adopt.title": "Riutilizza il gruppo di schede terminato",
+  "browser.adopt.description": "Assegna a questa sessione il gruppo di schede Kilo terminato più recente",
+  "browser.adopt.done": "Questa sessione ora usa l'ultimo gruppo di schede terminato.",
+  "browser.adopt.none": "Non c'è alcun gruppo di schede terminato da riutilizzare.",
+  "browser.adopt.kept": "Questa sessione ha già le proprie schede e le mantiene.",
+  "browser.adopt.unconfirmed":
+    "È stato chiesto al browser di riutilizzare l'ultimo gruppo di schede terminato. Aggiorna l'estensione browser Kilo per vedere se lo ha fatto.",
+  "browser.control.notExtension":
+    "Condividere e riutilizzare le schede richiede l'estensione browser Kilo. Sceglila in /browser.",
+  "browser.control.organizationOff": "La tua organizzazione ha disattivato il controllo del browser in Kilo.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Browser non disponibile",
+  "browser.notice.outdatedTitle": "Estensione browser obsoleta",
+  "browser.notice.stopped":
+    "Hai fermato il browser per questa sessione. Esegui /browser adopt per restituirle le sue schede.",
   "browser.notice.extension":
     "L'estensione browser Kilo è connessa in {{browser}}. Usare il tuo browser per gli strumenti browser invece di quello incluso?",
   "browser.notice.switch": "Usa il mio browser",

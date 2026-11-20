@@ -139,6 +139,7 @@ export const dict = {
   "ui.tool.chart.failed": "แสดงแผนภูมิไม่สำเร็จ",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "การตั้งค่าเบราว์เซอร์",
+  "browser.command.starting": "Kilo ยังเริ่มทำงานไม่เสร็จ โปรดลองอีกครั้งในอีกสักครู่",
   "browser.command.description": "แสดงแบ็กเอนด์ของเบราว์เซอร์ สถานะการใช้งาน และสิทธิ์ของต้นทาง",
   "browser.command.backend": "แบ็กเอนด์",
   "browser.command.observation": "การสังเกต",
@@ -163,6 +164,8 @@ export const dict = {
   "browser.state.unavailable": "ไม่พร้อมใช้งาน",
   "browser.state.readyHint": "โปรไฟล์ Chromium ของ Kilo จะเริ่มเมื่อเรียกใช้เบราว์เซอร์ครั้งแรก",
   "browser.state.extensionHint": "เชื่อมต่อส่วนขยายเบราว์เซอร์ Kilo เพื่อใช้เบราว์เซอร์ของคุณเอง",
+  "browser.command.usage":
+    "ใช้ /browser สำหรับการตั้งค่า ใช้ /browser share เพื่อให้เซสชันนี้ใช้แท็บที่ใช้งานอยู่ของคุณ หรือใช้ /browser adopt เพื่อนำกลุ่มแท็บที่สิ้นสุดล่าสุดกลับมาใช้",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "อ่านหน้าเว็บบน {{origin}}",
   "browser.permission.act.title": "คลิกและพิมพ์บน {{origin}}",
@@ -176,6 +179,23 @@ export const dict = {
   "browser.permission.sensitive.reason": "เหตุผล: {{reason}}",
   "browser.permission.sensitive.once":
     "มีเพียงบุคคลเท่านั้นที่อนุมัติขั้นตอนนี้ได้ การอนุมัติครอบคลุมเพียงขั้นตอนนี้เท่านั้น",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "แชร์แท็บเบราว์เซอร์ที่ใช้งานอยู่",
+  "browser.share.description": "ย้ายแท็บที่ใช้งานอยู่ของเบราว์เซอร์ไปยังกลุ่มแท็บของเซสชันนี้",
+  "browser.share.done": "แท็บที่ใช้งานอยู่ของคุณอยู่ในกลุ่มแท็บของเซสชันนี้แล้ว",
+  "browser.adopt.title": "นำกลุ่มแท็บเบราว์เซอร์ที่สิ้นสุดแล้วกลับมาใช้",
+  "browser.adopt.description": "มอบกลุ่มแท็บ Kilo ที่สิ้นสุดล่าสุดให้เซสชันนี้",
+  "browser.adopt.done": "เซสชันนี้ใช้กลุ่มแท็บที่สิ้นสุดล่าสุดแล้ว",
+  "browser.adopt.none": "ไม่มีกลุ่มแท็บที่สิ้นสุดแล้วให้กลับมาใช้",
+  "browser.adopt.kept": "เซสชันนี้มีแท็บของตัวเองอยู่แล้วและจะเก็บไว้",
+  "browser.adopt.unconfirmed":
+    "ขอให้เบราว์เซอร์นำกลุ่มแท็บที่สิ้นสุดล่าสุดกลับมาใช้แล้ว อัปเดตส่วนขยายเบราว์เซอร์ Kilo เพื่อดูว่าทำสำเร็จหรือไม่",
+  "browser.control.notExtension": "การแชร์และนำแท็บกลับมาใช้ต้องใช้ส่วนขยายเบราว์เซอร์ Kilo เลือกได้ใน /browser",
+  "browser.control.organizationOff": "องค์กรของคุณปิดการควบคุมเบราว์เซอร์ใน Kilo แล้ว",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "เบราว์เซอร์ไม่พร้อมใช้งาน",
+  "browser.notice.outdatedTitle": "ส่วนขยายเบราว์เซอร์ล้าสมัย",
+  "browser.notice.stopped": "คุณหยุดเบราว์เซอร์สำหรับเซสชันนี้แล้ว เรียกใช้ /browser adopt เพื่อคืนแท็บให้กับเซสชันนี้",
   "browser.notice.extension":
     "ส่วนขยายเบราว์เซอร์ Kilo เชื่อมต่ออยู่ใน {{browser}} ต้องการใช้เบราว์เซอร์ของคุณเองกับเครื่องมือเบราว์เซอร์แทนเบราว์เซอร์ที่มาพร้อมหรือไม่",
   "browser.notice.switch": "ใช้เบราว์เซอร์ของฉัน",

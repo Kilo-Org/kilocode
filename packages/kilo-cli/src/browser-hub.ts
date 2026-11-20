@@ -27,6 +27,8 @@ export function make(options: Options = {}): Port.Interface {
         ready: async (timeoutMs) => (await connection()).ready(timeoutMs),
         open: async (input) => (await connection()).open(input),
         close: async (handle) => (await connection()).close(handle),
+        share: async (handle) => (await connection()).share(handle),
+        adopt: async (handle) => (await connection()).adopt(handle),
         list: async () => (await connection()).list(),
         reported: async () => {
           // A transport that was never loaded cannot be connected, and asking must not start one.
@@ -68,6 +70,9 @@ export function make(options: Options = {}): Port.Interface {
 
 export const node = makeGlobalNode({
   service: Port.Service,
-  layer: Layer.effect(Port.Service, Effect.sync(() => make())),
+  layer: Layer.effect(
+    Port.Service,
+    Effect.sync(() => make()),
+  ),
   deps: [],
 })

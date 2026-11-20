@@ -142,6 +142,7 @@ export const dict = {
   "ui.tool.chart.failed": "No se pudo representar el gráfico",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Ajustes del navegador",
+  "browser.command.starting": "Kilo todavía se está iniciando. Vuelve a intentarlo en un momento.",
   "browser.command.description": "Mostrar el backend del navegador, si puede ejecutarse y los permisos de origen",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Observación",
@@ -167,6 +168,8 @@ export const dict = {
   "browser.state.unavailable": "no disponible",
   "browser.state.readyHint": "Un perfil de Chromium propio de Kilo, iniciado en la primera llamada al navegador",
   "browser.state.extensionHint": "Conecta la extensión de navegador de Kilo para usar tu propio navegador",
+  "browser.command.usage":
+    "Usa /browser para los ajustes, /browser share para dar a esta sesión tu pestaña activa, o /browser adopt para reutilizar el último grupo de pestañas finalizado.",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Leer páginas en {{origin}}",
   "browser.permission.act.title": "Hacer clic y escribir en {{origin}}",
@@ -180,6 +183,25 @@ export const dict = {
   "browser.permission.sensitive.reason": "Motivo: {{reason}}",
   "browser.permission.sensitive.once":
     "Solo una persona puede aprobar este paso. La aprobación cubre únicamente este paso.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Compartir la pestaña activa del navegador",
+  "browser.share.description": "Mover la pestaña activa de tu navegador al grupo de pestañas de esta sesión",
+  "browser.share.done": "Tu pestaña activa ya está en el grupo de pestañas de esta sesión.",
+  "browser.adopt.title": "Reutilizar el grupo de pestañas finalizado",
+  "browser.adopt.description": "Dar a esta sesión el grupo de pestañas de Kilo finalizado más reciente",
+  "browser.adopt.done": "Esta sesión ahora usa el último grupo de pestañas finalizado.",
+  "browser.adopt.none": "No hay ningún grupo de pestañas finalizado que reutilizar.",
+  "browser.adopt.kept": "Esta sesión ya tiene sus propias pestañas y las conserva.",
+  "browser.adopt.unconfirmed":
+    "Se pidió al navegador que reutilizara el último grupo de pestañas finalizado. Actualiza la extensión de navegador de Kilo para ver si lo hizo.",
+  "browser.control.notExtension":
+    "Compartir y reutilizar pestañas requiere la extensión de navegador de Kilo. Elígela en /browser.",
+  "browser.control.organizationOff": "Tu organización desactivó el control del navegador en Kilo.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Navegador no disponible",
+  "browser.notice.outdatedTitle": "Extensión de navegador desactualizada",
+  "browser.notice.stopped":
+    "Detuviste el navegador para esta sesión. Ejecuta /browser adopt para devolver sus pestañas a la sesión.",
   "browser.notice.extension":
     "La extensión de navegador de Kilo está conectada en {{browser}}. ¿Usar tu propio navegador para las herramientas de navegador en lugar del navegador incluido?",
   "browser.notice.switch": "Usar mi navegador",

@@ -142,6 +142,7 @@ export const dict = {
   "ui.tool.chart.failed": "Не вдалося відобразити діаграму",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Налаштування браузера",
+  "browser.command.starting": "Kilo ще запускається. Спробуйте ще раз за мить.",
   "browser.command.description": "Показати бекенд браузера, його доступність і дозволи для джерел",
   "browser.command.backend": "Бекенд",
   "browser.command.observation": "Спостереження",
@@ -167,6 +168,8 @@ export const dict = {
   "browser.state.unavailable": "недоступний",
   "browser.state.readyHint": "Профіль Chromium, що належить Kilo, запускається під час першого виклику браузера",
   "browser.state.extensionHint": "Підключіть розширення браузера Kilo, щоб керувати власним браузером",
+  "browser.command.usage":
+    "Використовуйте /browser для налаштувань, /browser share, щоб передати цій сесії активну вкладку, або /browser adopt, щоб повторно використати останню завершену групу вкладок.",
   // Browser permission prompt: one class on one origin, or one sensitive step.
   "browser.permission.read.title": "Читати сторінки на {{origin}}",
   "browser.permission.act.title": "Клацати й вводити текст на {{origin}}",
@@ -181,6 +184,24 @@ export const dict = {
   "browser.permission.sensitive.reason": "Причина: {{reason}}",
   "browser.permission.sensitive.once":
     "Схвалити цей крок може лише людина. Схвалення стосується лише цього одного кроку.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Поділитися активною вкладкою браузера",
+  "browser.share.description": "Перемістити активну вкладку браузера до групи вкладок цієї сесії",
+  "browser.share.done": "Активна вкладка тепер у групі вкладок цієї сесії.",
+  "browser.adopt.title": "Повторно використати завершену групу вкладок",
+  "browser.adopt.description": "Передати цій сесії останню завершену групу вкладок Kilo",
+  "browser.adopt.done": "Ця сесія тепер використовує останню завершену групу вкладок.",
+  "browser.adopt.none": "Немає завершеної групи вкладок для повторного використання.",
+  "browser.adopt.kept": "Ця сесія вже має власні вкладки й зберігає їх.",
+  "browser.adopt.unconfirmed":
+    "Браузер попросили повторно використати останню завершену групу вкладок. Оновіть розширення браузера Kilo, щоб дізнатися, чи він це зробив.",
+  "browser.control.notExtension":
+    "Для обміну вкладками та їх повторного використання потрібне розширення браузера Kilo. Виберіть його в /browser.",
+  "browser.control.organizationOff": "Ваша організація вимкнула керування браузером у Kilo.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Браузер недоступний",
+  "browser.notice.outdatedTitle": "Розширення браузера застаріло",
+  "browser.notice.stopped": "Ви зупинили браузер для цієї сесії. Виконайте /browser adopt, щоб повернути їй вкладки.",
   "browser.notice.extension":
     "Розширення браузера Kilo підключено в {{browser}}. Використовувати власний браузер для інструментів браузера замість вбудованого?",
   "browser.notice.switch": "Використовувати мій браузер",
