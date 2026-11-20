@@ -165,6 +165,7 @@ const bootstrapTables = new Set([
   "account_state",
   "account",
   "control_account",
+  "automation",
   "credential",
   "event_sequence",
   "event",
@@ -173,7 +174,6 @@ const bootstrapTables = new Set([
   "permission",
   "project_directory",
   "project",
-  "schedule",
   "blob_ref",
   "blob",
   "instruction_blob",
@@ -209,7 +209,7 @@ function tableDefinition(entry: Entry) {
       part = []
       if (token === ")")
         return JSON.stringify([
-          ["event", "project", "schedule", "session_v2"].includes(entry.name) ? columns.sort() : columns,
+          ["automation", "event", "project", "session_v2"].includes(entry.name) ? columns.sort() : columns,
           constraints,
           tokens.slice(i + 1),
         ])
