@@ -100,6 +100,13 @@ check("docs-write denies git", () => {
   assert.equal(bash["git *"], "deny", "git must be denied for the agent")
 })
 
+check("docs-write allows no command with a file-writing form it cannot bound", () => {
+  const bash = policy().modes["docs-write"].permission.bash
+  for (const cmd of ["sed", "uniq", "diff"]) {
+    assert.ok(!(`${cmd} *` in bash), `${cmd} must not be allowed: it can write a file or run a command`)
+  }
+})
+
 check("docs-write denies the operator blocklist after the allows", () => {
   const bash = policy().modes["docs-write"].permission.bash
   const keys = Object.keys(bash)
