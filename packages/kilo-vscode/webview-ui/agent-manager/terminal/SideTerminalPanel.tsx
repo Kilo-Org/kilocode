@@ -6,13 +6,11 @@
  * the shared inspector strip used by subagents as well.
  *
  * Hidden slots are translated off-screen while keeping their layout
- * box, never unmounted: xterm keeps its buffer, socket, and parser
- * alive, while xterm's own render observer (IntersectionObserver on the
- * screen element) pauses the render loop for hidden slots and replays a
- * full refresh when a slot becomes visible again. Keeping the box means
- * FitAddon can measure the panel (correct wrapping) even while hidden.
- * `TerminalTab` still does an explicit fit + refresh on activation as
- * insurance (see `render.tsx`).
+ * box, never unmounted: libghostty keeps its WASM screen buffer,
+ * socket, and parser alive while `TerminalTab` pauses the render loop
+ * for hidden slots and paints a full frame on reveal. Keeping the box
+ * means FitAddon can measure the panel (correct wrapping) even while
+ * hidden.
  */
 
 import type { Accessor, Component } from "solid-js"
@@ -71,6 +69,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
       class={`am-side-terminal ${props.visible() ? "am-side-terminal-visible" : ""}`}
       aria-label={t("agentManager.tab.terminal")}
       aria-hidden={!props.visible()}
+      inert={!props.visible()}
     >
       <InspectorTabStrip
         ids={ids}

@@ -5829,20 +5829,15 @@ body.vscode-high-contrast-light {
 }
 
 /*
- * Stacking layout for xterm terminal tabs.
+ * Stacking layout for libghostty terminal tabs.
  *
  * Terminals are never unmounted once mounted; inactive slots hide one
- * viewport to the left while keeping their layout box. xterm 6's render
- * service observes the screen element and pauses hidden terminals'
- * render loops (rAF and model updates), then replays a full
- * refresh when a slot becomes visible again — the activation fit +
- * refresh in the TerminalTab component is insurance on top of that. The
- * historical `display: none` avoidance was for the "press Enter to see
- * content" bug, caused by older xterm versions not resuming after a
- * paint-tree detach; it also stops FitAddon from measuring, so hidden
- * content wraps wrong. Keeping the box fixes wrap and still lets the
- * render observer pause, saving the full-rate render cost for output no
- * one sees (such as background setup scripts).
+ * viewport to the left while keeping their layout box and pausing their
+ * render loops (`pauseTerminalRender` in `ghostty.ts`). Keeping the box
+ * (unlike `display: none`) lets FitAddon measure the real panel size
+ * while hidden so background-created terminals such as setup scripts
+ * wrap output at the panel's width from the start, while pausing the
+ * rAF loop eliminates idle render cost for off-screen slots.
  *
  * Stack:  position:relative container hosting the main pane, review,
  *         and side panel. Sits below the tab bar inside `.am-detail`.
@@ -5881,7 +5876,7 @@ body.vscode-high-contrast-light {
   background: var(--vscode-terminal-background, #1e1e1e);
   z-index: 30;
   /* Force a dedicated compositor layer so opacity flips do not re-lay-out
-     the xterm canvases underneath. */
+     the terminal canvases underneath. */
   will-change: opacity;
 }
 
@@ -5892,9 +5887,7 @@ body.vscode-high-contrast-light {
 
 .am-terminal-slot {
   /* Hidden slots stay in layout but are translated one viewport to the
-     left, so xterm's render observer sees no intersection and pauses the
-     render loop (rAF loop and model updates), then replays a
-     full refresh when the slot slides back in. Keeping the layout box
+     left while their render loops stay paused. Keeping the layout box
      (unlike display:none) lets FitAddon measure the real panel size
      while hidden — background-created terminals such as setup scripts
      wrap their output at the panel's width from the start instead of
@@ -5935,7 +5928,7 @@ body.vscode-high-contrast-light {
   z-index: 1;
   background: var(--vscode-terminal-background, #1e1e1e);
   /* Force a dedicated compositor layer so opacity flips do not
-     re-lay-out the xterm canvases underneath. */
+     re-lay-out the terminal canvases underneath. */
   will-change: opacity;
 }
 
@@ -6272,10 +6265,18 @@ body.vscode-high-contrast-light {
   flex: 1;
 }
 
+/* FitAddon subtracts padding from the terminal host element itself, so the
+   host owns the 8px inset and hides overflow around the physical-pixel canvas. */
 .am-terminal-host {
+  position: relative;
   flex: 1;
   min-height: 0;
   min-width: 0;
+  padding: 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+  outline: none;
+  caret-color: transparent;
   background: var(--vscode-terminal-background, #1e1e1e);
 }
 
@@ -6283,14 +6284,10 @@ body.vscode-high-contrast-light {
   box-shadow: inset 0 0 0 1px var(--border-focus, var(--vscode-focusBorder));
 }
 
-/* Third-party xterm classes — addressed by attribute selector so the
-   agent-manager "am-* prefix" architecture test does not flag them.
-   FitAddon subtracts padding from xterm itself, not its parent host. */
-.am-terminal-host [class~="xterm"] {
-  height: 100%;
-  padding: 8px;
-}
-
-.am-terminal-host [class~="xterm-viewport"] {
-  background: transparent !important;
+.am-terminal-cursor {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  pointer-events: none;
+  z-index: 2;
 }

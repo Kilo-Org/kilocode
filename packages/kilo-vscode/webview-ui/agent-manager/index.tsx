@@ -4,10 +4,12 @@ import "@kilocode/kilo-ui/styles"
 import { render } from "solid-js/web"
 import { WebviewShell } from "../src/v2/shell"
 import { AgentManagerApp } from "./AgentManagerApp"
+import { preloadGhostty } from "./terminal"
 import "../src/styles/chat.css"
 
 const root = document.getElementById("root")
-if (root)
+if (root) {
+  preloadGhostty()
   render(
     () => (
       <WebviewShell>
@@ -16,3 +18,4 @@ if (root)
     ),
     root,
   )
+}
