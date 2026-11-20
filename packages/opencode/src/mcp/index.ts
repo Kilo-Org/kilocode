@@ -1006,8 +1006,9 @@ const layer = Layer.effect(
         try: () => {
           const client = createClient(directory)
           return client.connect(transport).then(async () => {
-            // kilocode_change - a connect that needs no browser still stores nothing once its epoch moved
+            // kilocode_change start - a connect that needs no browser still stores nothing once its epoch moved
             await authProvider.commit(() => epochOf(mcpName) === epoch)
+            // kilocode_change end
             return { authorizationUrl: "", oauthState, client, epoch } satisfies AuthResult // kilocode_change
           })
         },
