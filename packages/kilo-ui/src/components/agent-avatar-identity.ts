@@ -105,5 +105,7 @@ function uniqueIdentity(id: string, base: ColoredIdentity, pairs: Map<string, Se
     const color = free.find((hue) => !used.has(hue)) ?? free[0]
     if (color !== undefined) return { color, cells }
   }
+  // Capacity: every bounded alternate already uses all eight hues, so the base
+  // pair repeats rather than searching without a limit.
   return base
 }
