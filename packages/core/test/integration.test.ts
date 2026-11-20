@@ -713,8 +713,9 @@ describe("refresh", () => {
 
   it.live("still serves every caller when the flight outlives the layer", () =>
     Effect.gen(function* () {
-      // The shared test layer stays open for the whole file, so it can never exercise teardown.
-      // This case builds its own layer and closes it while a refresh is in flight.
+      // testEffect releases its layer only after the test body returns, so its teardown can never
+      // race a refresh that is still in flight. This case builds its own layer so the scope that
+      // owns it closes while the refresh is running.
       const own = AppNodeBuilder.build(LayerNode.group([Integration.node, Credential.node, EventV2.node]), [
         [Global.node, Global.layerWith({ data: fs.mkdtempSync(path.join(os.tmpdir(), "kilo-flight-")) })],
       ])
