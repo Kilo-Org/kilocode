@@ -35,6 +35,8 @@ export namespace McpMigrator {
 
   export interface MigrationResult {
     mcp: Record<string, ConfigMCP.Info>
+    /** Whether the legacy store declared at least one MCP server, converted or not. */
+    available: boolean
     warnings: string[]
     skipped: Array<{ name: string; reason: string }>
   }
@@ -143,17 +145,18 @@ export namespace McpMigrator {
       }
     }
 
-    return { mcp, warnings, skipped }
+    return { mcp, available: serversByName.size > 0, warnings, skipped }
   }
 
   /**
-   * Load Kilocode MCP servers and return them as an opencode config partial.
-   * This function handles all logging internally, so callers just need to merge the result.
+   * Load Kilocode MCP servers and report whether the legacy store declared any.
+   * `available` is true when the legacy store had at least one MCP server, even if
+   * none of them could be converted. This function handles all logging internally.
    */
   export async function loadMcpConfig(
     projectDir: string,
     skipGlobalPaths?: boolean,
-  ): Promise<Record<string, ConfigMCP.Info>> {
+  ): Promise<{ mcp: Record<string, ConfigMCP.Info>; available: boolean }> {
     try {
       const result = await migrate({ projectDir, skipGlobalPaths })
 
@@ -172,10 +175,10 @@ export namespace McpMigrator {
         log.warn("kilocode MCP migration warning", { warning })
       }
 
-      return result.mcp
+      return { mcp: result.mcp, available: result.available }
     } catch (err) {
       log.warn("failed to load kilocode MCP servers", { error: err })
-      return {}
+      return { mcp: {}, available: false }
     }
   }
 }

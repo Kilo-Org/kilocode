@@ -334,6 +334,57 @@ describe("KilocodeConfigInjector", () => {
         else process.env.APPDATA = appdata
       }
     })
+
+    test("does not warn about MCP access when the project has no MCP server", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: mcpmode
+    name: MCP mode
+    roleDefinition: You are an MCP helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+
+      const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
+
+      expect(result.warnings.some((warning) => warning.includes("MCP access not migrated"))).toBe(false)
+      const config = JSON.parse(result.configJson)
+      expect(Object.keys(config.agent.mcpmode.permission).some((key) => key.endsWith("_*"))).toBe(false)
+    })
+
+    test("warns about MCP access when the project's MCP server cannot be converted", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: mcpmode
+    name: MCP mode
+    roleDefinition: You are an MCP helper
+    groups:
+      - read
+      - mcp`,
+          )
+          await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilocode", "mcp.json"),
+            JSON.stringify({ mcpServers: { broken: { args: ["--no-command"] } } }),
+          )
+        },
+      })
+
+      const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
+
+      expect(
+        result.warnings.filter((warning) => warning.includes("MCP access not migrated: no MCP server was migrated")),
+      ).toEqual(["Mode 'mcpmode': MCP access not migrated: no MCP server was migrated"])
+    })
   })
 
   describe("getEnvVars", () => {

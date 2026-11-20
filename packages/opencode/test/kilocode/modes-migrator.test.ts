@@ -416,6 +416,58 @@ describe("ModesMigrator", () => {
       expect(result.warnings).toHaveLength(0)
     })
 
+    test("stays silent for an mcp group when the legacy store had no MCP server", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: helper
+    name: Helper
+    roleDefinition: Helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+
+      const result = await ModesMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+        mcpAvailable: false,
+      })
+
+      expect(result.warnings).toHaveLength(0)
+      expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
+    })
+
+    test("warns once for an mcp group when the legacy store had an unconvertible MCP server", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: helper
+    name: Helper
+    roleDefinition: Helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+
+      const result = await ModesMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+        mcpAvailable: true,
+      })
+
+      expect(result.warnings).toEqual(["Mode 'helper': MCP access not migrated: no MCP server was migrated"])
+      expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
+    })
+
     test("reports a mode warning for a fileRegex that cannot be translated", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {

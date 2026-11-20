@@ -173,6 +173,7 @@ describe("McpMigrator", () => {
       })
 
       expect(Object.keys(result.mcp)).toHaveLength(0)
+      expect(result.available).toBe(false)
       expect(result.warnings).toHaveLength(0)
       expect(result.skipped).toHaveLength(0)
     })
@@ -201,6 +202,7 @@ describe("McpMigrator", () => {
       })
 
       expect(result.mcp).toHaveProperty("filesystem")
+      expect(result.available).toBe(true)
       expect(result.mcp.filesystem).toEqual({
         type: "local",
         command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/home"],
@@ -425,6 +427,31 @@ describe("McpMigrator", () => {
       })
 
       expect(Object.keys(result.mcp)).toHaveLength(0)
+      expect(result.available).toBe(false)
+    })
+
+    test("reports availability when a declared server cannot be converted", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const settingsDir = path.join(dir, ".kilo")
+          await Bun.write(
+            path.join(settingsDir, "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                broken: { args: ["--no-command"] },
+              },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(Object.keys(result.mcp)).toHaveLength(0)
+      expect(result.available).toBe(true)
     })
 
     // Regression: project-level MCP settings use mcp.json, not mcp_settings.json

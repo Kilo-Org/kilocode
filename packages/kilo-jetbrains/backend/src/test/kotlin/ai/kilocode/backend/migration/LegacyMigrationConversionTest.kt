@@ -197,7 +197,7 @@ class LegacyMigrationConversionTest {
             description = "Short desc",
             groups = listOf("read", "edit"),
         )
-        val result = LegacyMigrationConverters.convertCustomMode(mode)
+        val result = LegacyMigrationConverters.convertCustomMode(mode, emptyList(), false)
         assertEquals("Short desc", result.agent["description"]?.jsonPrimitive?.content)
         assertEquals("primary", result.agent["mode"]?.jsonPrimitive?.content)
         assertTrue(result.agent["prompt"]?.jsonPrimitive?.content?.contains("You are helpful.") == true)
@@ -206,7 +206,7 @@ class LegacyMigrationConversionTest {
     @Test
     fun `convertCustomMode - description falls back to whenToUse`() {
         val mode = LegacyCustomMode("s", "N", "Role", null, "When to use", null, listOf())
-        val result = LegacyMigrationConverters.convertCustomMode(mode)
+        val result = LegacyMigrationConverters.convertCustomMode(mode, emptyList(), false)
         assertEquals("When to use", result.agent["description"]?.jsonPrimitive?.content)
     }
 
@@ -214,14 +214,14 @@ class LegacyMigrationConversionTest {
     fun `convertCustomMode - description falls back to roleDefinition truncated`() {
         val role = "X".repeat(200)
         val mode = LegacyCustomMode("s", "N", role, null, null, null, listOf())
-        val result = LegacyMigrationConverters.convertCustomMode(mode)
+        val result = LegacyMigrationConverters.convertCustomMode(mode, emptyList(), false)
         assertEquals(120, result.agent["description"]?.jsonPrimitive?.content?.length)
     }
 
     @Test
     fun `convertCustomMode - customInstructions appended to prompt`() {
         val mode = LegacyCustomMode("s", "N", "Role.", "Custom extra.", null, null, listOf())
-        val prompt = LegacyMigrationConverters.convertCustomMode(mode).agent["prompt"]?.jsonPrimitive?.content!!
+        val prompt = LegacyMigrationConverters.convertCustomMode(mode, emptyList(), false).agent["prompt"]?.jsonPrimitive?.content!!
         assertTrue(prompt.contains("Role."))
         assertTrue(prompt.contains("Custom extra."))
         assertTrue(prompt.contains("USER'S CUSTOM INSTRUCTIONS"))
@@ -230,7 +230,7 @@ class LegacyMigrationConversionTest {
     @Test
     fun `convertCustomModePermissions - read edit groups`() {
         val groups: List<Any> = listOf("read", "edit")
-        val perm = LegacyMigrationConverters.convertCustomModePermissions(groups).permission
+        val perm = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), false).permission
         assertEquals("allow", perm["read"]?.jsonPrimitive?.content)
         assertEquals("allow", perm["edit"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["bash"]?.jsonPrimitive?.content)
@@ -240,7 +240,7 @@ class LegacyMigrationConversionTest {
 
     @Test
     fun `convertCustomModePermissions - browser maps to browser_open`() {
-        val result = LegacyMigrationConverters.convertCustomModePermissions(listOf("browser"))
+        val result = LegacyMigrationConverters.convertCustomModePermissions(listOf("browser"), emptyList(), false)
         assertEquals("allow", result.permission["browser_open"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["bash"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
@@ -250,7 +250,7 @@ class LegacyMigrationConversionTest {
     @Test
     fun `convertCustomMode - browser group writes browser_open`() {
         val mode = LegacyCustomMode("b", "B", "Role.", null, null, null, listOf("browser"))
-        val perm = LegacyMigrationConverters.convertCustomMode(mode).agent["permission"]?.jsonObject
+        val perm = LegacyMigrationConverters.convertCustomMode(mode, emptyList(), false).agent["permission"]?.jsonObject
         assertNotNull(perm)
         assertEquals("allow", perm["browser_open"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["bash"]?.jsonPrimitive?.content)
@@ -258,7 +258,7 @@ class LegacyMigrationConversionTest {
 
     @Test
     fun `convertCustomModePermissions - command maps to bash`() {
-        val result = LegacyMigrationConverters.convertCustomModePermissions(listOf("command"))
+        val result = LegacyMigrationConverters.convertCustomModePermissions(listOf("command"), emptyList(), false)
         assertEquals("allow", result.permission["bash"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["browser_open"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
@@ -270,6 +270,7 @@ class LegacyMigrationConversionTest {
         val result = LegacyMigrationConverters.convertCustomModePermissions(
             listOf("mcp"),
             mcpServers = listOf("github", "my server"),
+            mcpAvailable = true,
         )
         assertEquals("allow", result.permission["github_*"]?.jsonPrimitive?.content)
         assertEquals("allow", result.permission["my_server_*"]?.jsonPrimitive?.content)
@@ -284,6 +285,7 @@ class LegacyMigrationConversionTest {
         val result = LegacyMigrationConverters.convertCustomModePermissions(
             groups,
             mcpServers = listOf("github", "my server"),
+            mcpAvailable = true,
         )
         assertEquals("ask", result.permission["github_*"]?.jsonPrimitive?.content)
         assertEquals("ask", result.permission["my_server_*"]?.jsonPrimitive?.content)
@@ -309,6 +311,7 @@ class LegacyMigrationConversionTest {
         val result = LegacyMigrationConverters.convertCustomModePermissions(
             listOf("read"),
             mcpServers = listOf("github", "my server"),
+            mcpAvailable = true,
         )
         assertEquals("deny", result.permission["github_*"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["my_server_*"]?.jsonPrimitive?.content)
@@ -319,7 +322,7 @@ class LegacyMigrationConversionTest {
     @Test
     fun `convertCustomModePermissions - fileRegex suffix becomes glob allow after deny`() {
         val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "\\.md$")))
-        val result = LegacyMigrationConverters.convertCustomModePermissions(groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), false)
         val editPerm = result.permission["edit"]?.jsonObject
         assertNotNull(editPerm)
         assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
@@ -331,7 +334,7 @@ class LegacyMigrationConversionTest {
     @Test
     fun `convertCustomModePermissions - fileRegex alternation becomes multiple globs`() {
         val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "\\.(md|txt)$")))
-        val editPerm = LegacyMigrationConverters.convertCustomModePermissions(groups).permission["edit"]?.jsonObject
+        val editPerm = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), false).permission["edit"]?.jsonObject
         assertNotNull(editPerm)
         assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
         assertEquals("allow", editPerm["*.md"]?.jsonPrimitive?.content)
@@ -341,7 +344,7 @@ class LegacyMigrationConversionTest {
     @Test
     fun `convertCustomModePermissions - untranslatable fileRegex asks before edit and warns`() {
         val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "[a-z]+\\.ts$")))
-        val result = LegacyMigrationConverters.convertCustomModePermissions(groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), false)
         assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
         assertTrue(result.warnings.isNotEmpty())
     }
@@ -349,7 +352,7 @@ class LegacyMigrationConversionTest {
     @Test
     fun `convertCustomModePermissions - fileRegex word boundary escape is not migrated`() {
         val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "\\.md\\b")))
-        val result = LegacyMigrationConverters.convertCustomModePermissions(groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), false)
         assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
         assertTrue(result.warnings.isNotEmpty())
     }
@@ -357,7 +360,7 @@ class LegacyMigrationConversionTest {
     @Test
     fun `convertCustomModePermissions - fileRegex arm ending with space star is not migrated`() {
         val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "^docs/a .*$")))
-        val result = LegacyMigrationConverters.convertCustomModePermissions(groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), false)
         assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
         assertTrue(result.warnings.isNotEmpty())
     }
@@ -374,8 +377,20 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
+    fun `convertCustomModePermissions - mcp group without migrated servers warns only when the store had one`() {
+        val groups: List<Any> = listOf("mcp")
+        val available = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), mcpAvailable = true)
+        assertEquals(listOf("MCP access not migrated: no MCP server was migrated"), available.warnings)
+        assertTrue(available.permission.keys.none { it.endsWith("_*") })
+
+        val absent = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), mcpAvailable = false)
+        assertTrue(absent.warnings.isEmpty())
+        assertTrue(absent.permission.keys.none { it.endsWith("_*") })
+    }
+
+    @Test
     fun `convertCustomModePermissions - unknown group writes no permission key and warns`() {
-        val result = LegacyMigrationConverters.convertCustomModePermissions(listOf("read", "- edit"))
+        val result = LegacyMigrationConverters.convertCustomModePermissions(listOf("read", "- edit"), emptyList(), false)
         val perm = result.permission
         assertEquals(setOf("read", "edit", "bash", "browser_open", "skill"), perm.keys)
         assertEquals("allow", perm["read"]?.jsonPrimitive?.content)
@@ -432,7 +447,7 @@ class LegacyMigrationConversionTest {
                   - mcp
         """.trimIndent()
         val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
-        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
         val editPerm = result.permission["edit"]?.jsonObject
         assertNotNull(editPerm)
         assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
@@ -466,7 +481,7 @@ class LegacyMigrationConversionTest {
         assertEquals(2, modes.size)
         for (mode in modes) {
             assertEquals(listOf<Any>(Pair("edit", mapOf("__unparsed" to "true"))), mode.groups)
-            val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+            val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
             assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
             assertEquals(listOf("Group options not migrated; edit set to ask"), result.warnings)
         }
@@ -486,7 +501,7 @@ class LegacyMigrationConversionTest {
         """.trimIndent()
         val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
         assertEquals(listOf<Any>("read", Pair("mcp", mapOf("__unparsed" to "true"))), mode.groups)
-        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, mcpServers = listOf("github"))
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, mcpServers = listOf("github"), mcpAvailable = true)
         assertEquals("ask", result.permission["github_*"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["bash"]?.jsonPrimitive?.content)
@@ -497,7 +512,7 @@ class LegacyMigrationConversionTest {
     fun `parseCustomModes - unknown json group option narrows the group to ask`() {
         val raw = """{"customModes":[{"slug":"json","name":"Json","roleDefinition":"You edit files.","groups":["read",["edit",{"regex":"\\.md$"}]]}]}"""
         val mode = LegacyMigrationConverters.parseCustomModes(raw).orEmpty().single()
-        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
         assertEquals("allow", result.permission["read"]?.jsonPrimitive?.content)
         assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
         assertEquals(listOf("Group options not migrated; edit set to ask"), result.warnings)
@@ -507,7 +522,7 @@ class LegacyMigrationConversionTest {
     fun `parseCustomModes - known json group options keep the fileRegex translation`() {
         val raw = """{"customModes":[{"slug":"known","name":"Known","roleDefinition":"You edit files.","groups":["read",["edit",{"fileRegex":"\\.md$","description":"Markdown"}]]}]}"""
         val mode = LegacyMigrationConverters.parseCustomModes(raw).orEmpty().single()
-        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
         val editPerm = result.permission["edit"]?.jsonObject
         assertNotNull(editPerm)
         assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
@@ -561,7 +576,7 @@ class LegacyMigrationConversionTest {
             listOf("read", Pair("edit", mapOf("fileRegex" to "\\.md$")), "browser"),
             mode.groups,
         )
-        val editPerm = LegacyMigrationConverters.convertCustomModePermissions(mode.groups).permission["edit"]?.jsonObject
+        val editPerm = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false).permission["edit"]?.jsonObject
         assertEquals(
             buildJsonObject {
                 put("*", "deny")
@@ -613,7 +628,7 @@ class LegacyMigrationConversionTest {
         """.trimIndent()
         val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
         assertEquals(listOf<Any>("read", "tools: edit", "browser"), mode.groups)
-        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
         assertEquals(1, result.warnings.size)
         assertFalse(result.permission.keys.any { it == "tools: edit" })
         assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
@@ -633,7 +648,7 @@ class LegacyMigrationConversionTest {
         """.trimIndent()
         val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
         assertEquals(listOf<Any>("read", "browser"), mode.groups)
-        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
         assertEquals("allow", result.permission["read"]?.jsonPrimitive?.content)
         assertEquals("allow", result.permission["browser_open"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
@@ -704,7 +719,7 @@ class LegacyMigrationConversionTest {
     @Test
     fun `convertCustomModePermissions - built-in ask mode groups migrate without bash allow`() {
         val mode = LegacyMigrationConverters.buildMergedNativeMode(null, null, "ask")!!
-        val conversion = LegacyMigrationConverters.convertCustomMode(mode, listOf("github"))
+        val conversion = LegacyMigrationConverters.convertCustomMode(mode, listOf("github"), true)
         val perm = conversion.agent["permission"]?.jsonObject
         assertNotNull(perm)
         assertEquals("allow", perm["read"]?.jsonPrimitive?.content)

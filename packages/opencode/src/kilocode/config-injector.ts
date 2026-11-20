@@ -30,7 +30,7 @@ export namespace KilocodeConfigInjector {
     // Load the project's MCP servers first so an `mcp` mode group can grant their tools.
     // `true` keeps the lookup to project scope, which every consumer's legacy load reads
     // from the same project directory (config.ts:357-362).
-    const mcp = await McpMigrator.loadMcpConfig(options.projectDir, true)
+    const { mcp, available } = await McpMigrator.loadMcpConfig(options.projectDir, true)
 
     // Migrate custom modes
     const modesMigration = await ModesMigrator.migrate({
@@ -38,6 +38,7 @@ export namespace KilocodeConfigInjector {
       globalSettingsDir: options.globalSettingsDir,
       skipGlobalPaths: options.skipGlobalPaths,
       mcpServers: Object.keys(mcp),
+      mcpAvailable: available,
     })
 
     // Log skipped default modes and mode migration warnings (for debugging)

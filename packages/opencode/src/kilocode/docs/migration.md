@@ -65,7 +65,7 @@ Kilocode uses "groups" to define what tools a mode can access. These are convert
 | `browser` | `browser_open: "allow"` | Integrated Browser navigation |
 | `mcp` | `<server>_*: "allow"` per migrated server | One key per MCP server the same migration writes |
 
-There is no `mcp` permission key: an `mcp` group grants the tools of each migrated server through a `<server name>_*` key, with characters outside `[a-zA-Z0-9_-]` replaced by `_`. A mode without an `mcp` group denies those keys.
+There is no `mcp` permission key: an `mcp` group grants the tools of each migrated server through a `<server name>_*` key, with characters outside `[a-zA-Z0-9_-]` replaced by `_`. That replacement follows the CLI's own MCP tool-id naming ([`catalog.ts`](../../mcp/catalog.ts) `sanitize`), so two legacy server names that differ only outside that class, such as `a.b` and `a_b`, produce the same `<server>_*` key and therefore share one rule. A mode without an `mcp` group denies those keys.
 
 **Important:** Permissions that are NOT in the groups list are explicitly set to `"deny"` (`read`, `edit`, `bash`, `browser_open`, `skill`, and the per-server keys). This ensures that a mode with only `read` and `edit` groups cannot run shell commands or access MCP servers.
 
@@ -100,7 +100,7 @@ This converts to:
 }
 ```
 
-The `fileRegex` is translated into permission wildcard globs, with the catch-all `"*": "deny"` written first because the CLI resolves the last matching rule. The supported subset is the same one the JetBrains plugin migrator uses ([`permission-glob.ts`](../permission-glob.ts)): anchors, literal characters, `\`-escaped punctuation, `.` and `.*`, `(...)` alternation, and an optional trailing `?`. A pattern outside that subset (a character class, `+`, a `\d`-style escape, nested groups) sets that permission to `"ask"` and reports a migration warning, so the mode asks instead of silently losing the restriction.
+The `fileRegex` is translated into permission wildcard globs, with the catch-all `"*": "deny"` written first because the CLI resolves the last matching rule. The supported subset is the same one the JetBrains plugin migrator uses ([`permission-glob.ts`](../permission-glob.ts)): anchors, literal characters, `\`-escaped punctuation, `.` and `.*`, `(...)` alternation, and an optional `?` after any of the supported atoms. A pattern outside that subset (a character class, `+`, a `\d`-style escape, nested groups) sets that permission to `"ask"` and reports a migration warning, so the mode asks instead of silently losing the restriction.
 
 `bash`, `browser_open` and `skill` are explicitly denied because they weren't in the original groups list.
 

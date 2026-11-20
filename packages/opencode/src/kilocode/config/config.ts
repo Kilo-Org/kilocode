@@ -356,7 +356,7 @@ export namespace KilocodeConfig {
 
     // Load Kilocode MCP servers (skip global VSCode extension paths unless running in an editor or Console daemon)
     const skipGlobal = process.env["KILO_PLATFORM"] !== "vscode" && process.env["KILOCODE_FEATURE"] !== "daemon"
-    const mcp = await McpMigrator.loadMcpConfig(input.projectDir, skipGlobal)
+    const { mcp, available } = await McpMigrator.loadMcpConfig(input.projectDir, skipGlobal)
     if (Object.keys(mcp).length > 0) {
       result = input.merge(result, { mcp })
     }
@@ -366,6 +366,7 @@ export namespace KilocodeConfig {
       const migration = await ModesMigrator.migrate({
         projectDir: input.projectDir,
         mcpServers: Object.keys(mcp),
+        mcpAvailable: available,
       })
       if (Object.keys(migration.agents).length > 0) {
         result = input.merge(result, { agent: migration.agents })

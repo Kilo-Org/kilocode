@@ -409,10 +409,19 @@ object LegacyMigrationConverters {
     private fun hasUnreadableOptions(options: Map<String, String>?): Boolean =
         options != null && options.keys.any { it !in KNOWN_GROUP_OPTIONS }
 
+    /**
+     * Convert legacy mode groups into backend permissions.
+     *
+     * @param mcpServers names of the MCP servers that were migrated; empty means none reached the
+     *   backend config, so no per-server `_*` keys are written.
+     * @param mcpAvailable whether the legacy store held at least one MCP server, whether or not it
+     *   was selected for migration. An `mcp` group with no migrated server only needs the
+     *   "no MCP server was migrated" warning when the store had one to lose.
+     */
     fun convertCustomModePermissions(
         groups: List<Any>,
-        mcpServers: List<String> = emptyList(),
-        mcpAvailable: Boolean = mcpServers.isNotEmpty(),
+        mcpServers: List<String>,
+        mcpAvailable: Boolean,
     ): ModePermissions {
         val permission = mutableMapOf<String, JsonElement>()
         val allowed = mutableSetOf<String>()
@@ -517,10 +526,17 @@ object LegacyMigrationConverters {
         val warnings: List<String>,
     )
 
+    /**
+     * Convert a legacy custom mode into a backend agent.
+     *
+     * @param mcpServers names of the MCP servers that were migrated into the backend config.
+     * @param mcpAvailable whether the legacy store held at least one MCP server, whether or not it
+     *   was selected for migration; see [convertCustomModePermissions].
+     */
     fun convertCustomMode(
         mode: LegacyCustomMode,
-        mcpServers: List<String> = emptyList(),
-        mcpAvailable: Boolean = mcpServers.isNotEmpty(),
+        mcpServers: List<String>,
+        mcpAvailable: Boolean,
     ): ModeConversion {
         val parts = mutableListOf(mode.roleDefinition)
         val instructions = mode.customInstructions?.trim()

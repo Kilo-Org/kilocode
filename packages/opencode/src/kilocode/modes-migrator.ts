@@ -60,14 +60,20 @@ export namespace ModesMigrator {
    *
    * `mcpServers` names the MCP servers the same migration wrote to `mcp`, so an `mcp`
    * group can grant their tools; there is no `mcp` permission key in the CLI.
+   * `mcpAvailable` reports whether the legacy store declared any MCP server at all.
    */
-  export function convertPermissions(groups: KilocodeMode["groups"], mcpServers: string[] = []): ConfigPermission.Info {
-    return convert(groups, mcpServers).permission
+  export function convertPermissions(
+    groups: KilocodeMode["groups"],
+    mcpServers: string[] = [],
+    mcpAvailable = mcpServers.length > 0,
+  ): ConfigPermission.Info {
+    return convert(groups, mcpServers, mcpAvailable).permission
   }
 
   function convert(
     groups: KilocodeMode["groups"],
     mcpServers: string[],
+    mcpAvailable: boolean,
   ): { permission: ConfigPermission.Info; warnings: string[] } {
     const permission: Record<string, ConfigPermission.Rule> = {}
     const allowed = new Set<string>()
@@ -83,7 +89,7 @@ export namespace ModesMigrator {
       if (name === "mcp") {
         seen = true
         if (mcpServers.length === 0) {
-          warnings.push("MCP access not migrated: no MCP server was migrated")
+          if (mcpAvailable) warnings.push("MCP access not migrated: no MCP server was migrated")
           continue
         }
         let action: ConfigPermission.Action = "allow"
@@ -161,12 +167,20 @@ export namespace ModesMigrator {
     return { permission, warnings }
   }
 
-  export function convertMode(mode: KilocodeMode, mcpServers: string[] = []): ConfigAgentV1.Info {
-    return build(mode, mcpServers).agent
+  export function convertMode(
+    mode: KilocodeMode,
+    mcpServers: string[] = [],
+    mcpAvailable = mcpServers.length > 0,
+  ): ConfigAgentV1.Info {
+    return build(mode, mcpServers, mcpAvailable).agent
   }
 
-  function build(mode: KilocodeMode, mcpServers: string[]): { agent: ConfigAgentV1.Info; warnings: string[] } {
-    const converted = convert(mode.groups, mcpServers)
+  function build(
+    mode: KilocodeMode,
+    mcpServers: string[],
+    mcpAvailable: boolean,
+  ): { agent: ConfigAgentV1.Info; warnings: string[] } {
+    const converted = convert(mode.groups, mcpServers, mcpAvailable)
 
     return {
       agent: {
@@ -243,6 +257,11 @@ export namespace ModesMigrator {
     skipGlobalPaths?: boolean
     /** Names of the MCP servers the same migration writes, so an `mcp` group can grant their tools. */
     mcpServers?: string[]
+    /**
+     * Whether the legacy store had at least one MCP server, converted or not.
+     * Defaults to `mcpServers` being non-empty.
+     */
+    mcpAvailable?: boolean
   }): Promise<MigrationResult> {
     const result: MigrationResult = {
       agents: {},
@@ -285,6 +304,9 @@ export namespace ModesMigrator {
       modesBySlug.set(mode.slug, mode)
     }
 
+    const mcpServers = options.mcpServers ?? []
+    const mcpAvailable = options.mcpAvailable ?? mcpServers.length > 0
+
     // Process each mode
     for (const [slug, mode] of modesBySlug) {
       // Skip default modes - let Opencode's native agents handle these
@@ -297,7 +319,7 @@ export namespace ModesMigrator {
       }
 
       // Migrate custom mode
-      const converted = build(mode, options.mcpServers ?? [])
+      const converted = build(mode, mcpServers, mcpAvailable)
       result.agents[slug] = converted.agent
       result.warnings.push(...converted.warnings.map((warning) => `Mode '${slug}': ${warning}`))
     }
