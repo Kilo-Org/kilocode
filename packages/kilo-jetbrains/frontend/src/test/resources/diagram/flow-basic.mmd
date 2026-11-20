@@ -1,0 +1,6 @@
+flowchart TD
+    A[Start] --> B{Is valid?}
+    B -->|Yes| C[Process]
+    B -->|No| D[Reject]
+    C --> E[Done]
+    D --> E

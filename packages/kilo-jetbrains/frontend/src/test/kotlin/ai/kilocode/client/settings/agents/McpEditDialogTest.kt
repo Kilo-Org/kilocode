@@ -1,0 +1,326 @@
+package ai.kilocode.client.settings.agents
+
+import ai.kilocode.client.util.edtWait
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.base.SettingsRow
+import ai.kilocode.client.settings.base.SettingsStackedRow
+import ai.kilocode.client.testing.fire
+import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpOAuthDto
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.util.Disposer
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBPasswordField
+import com.intellij.ui.components.JBTextArea
+import com.intellij.ui.components.JBTextField
+import java.awt.Component
+import java.awt.Container
+import java.awt.Dimension
+import java.awt.Point
+import java.awt.event.InputEvent
+import java.awt.event.MouseEvent
+import javax.swing.JButton
+import javax.swing.JLabel
+
+class McpEditDialogTest : BasePlatformTestCase() {
+    private var dialog: McpEditDialog? = null
+
+    override fun tearDown() {
+        try {
+            dialog?.let { item -> edt { Disposer.dispose(item.disposable); true } }
+            dialog = null
+        } finally {
+            super.tearDown()
+        }
+    }
+
+    fun `test loads local server into form`() {
+        val d = open(local())
+
+        edt {
+            val root = d.centerComponent()
+            assertEquals("node", field<JBTextField>(root, title("command")).text)
+            assertEquals("server.js\n--flag", field<JBTextArea>(root, title("args")).text)
+            assertTrue(hasRow(root, "TOKEN=x"))
+            assertTrue(hasRow(root, "EMPTY="))
+            assertTrue(hasRow(root, title("command")))
+            assertFalse(hasRow(root, title("url")))
+            true
+        }
+    }
+
+    fun `test loads remote server into form`() {
+        val d = open(remote())
+
+        edt {
+            val root = d.centerComponent()
+            assertEquals("https://mcp.example.test", field<JBTextField>(root, title("url")).text)
+            assertTrue(hasRow(root, title("url")))
+            assertFalse(hasRow(root, title("command")))
+            assertFalse(hasRow(root, title("args")))
+            true
+        }
+    }
+
+    fun `test reads local edits back and preserves untouched fields`() {
+        val d = open(local())
+
+        val result = edt {
+            val root = d.centerComponent()
+            field<JBTextField>(root, title("command")).text = "bun"
+            field<JBTextArea>(root, title("args")).text = "mcp.ts\n\n--watch"
+            d.result()
+        }
+
+        assertEquals(listOf("bun", "mcp.ts", "--watch"), result.command)
+        assertEquals(mapOf("TOKEN" to "x", "EMPTY" to ""), result.environment)
+        assertEquals(mapOf("Authorization" to "Bearer test"), result.headers)
+        assertEquals(false, result.enabled)
+        assertEquals(12000L, result.timeout)
+    }
+
+    fun `test reads remote edits back and preserves untouched fields`() {
+        val d = open(remote())
+
+        val result = edt {
+            val root = d.centerComponent()
+            field<JBTextField>(root, title("url")).text = "https://new.example.test/mcp"
+            d.result()
+        }
+
+        assertEquals("https://new.example.test/mcp", result.url)
+        assertEquals(mapOf("X-Test" to "1"), result.headers)
+        assertEquals(true, result.enabled)
+        assertEquals(5000L, result.timeout)
+    }
+
+    fun `test environment can add and remove rows`() {
+        val d = open(local())
+
+        val result = edt {
+            val root = d.centerComponent()
+            val fields = descendants(root).filterIsInstance<JBTextField>()
+            fields[1].text = "NEXT"
+            fields[2].text = "value"
+            descendants(root).filterIsInstance<JButton>().single { it.text == KiloBundle.message("settings.agentBehavior.mcp.edit.env.add") }.doClick()
+            assertTrue(hasRow(root, "NEXT=value"))
+            removeEnv(root, "TOKEN=x")
+            assertFalse(hasRow(root, "TOKEN=x"))
+            d.result()
+        }
+
+        assertEquals(mapOf("EMPTY" to "", "NEXT" to "value"), result.environment)
+    }
+
+    fun `test local result uses canonical local type`() {
+        val d = open(local().copy(type = "stdio"))
+
+        val result = edt { d.result() }
+
+        assertEquals("local", result.type)
+        assertEquals(mapOf("TOKEN" to "x", "EMPTY" to ""), result.environment)
+    }
+
+    fun `test oauth section only shown for remote servers`() {
+        val local = open(local())
+        edt {
+            assertFalse(hasLabel(local.centerComponent(), title("oauth")))
+            true
+        }
+        val remote = open(remote())
+        edt {
+            assertTrue(hasLabel(remote.centerComponent(), title("oauth")))
+            true
+        }
+    }
+
+    fun `test oauth defaults to automatic when config has no oauth block`() {
+        val d = open(remote())
+
+        val result = edt { d.result() }
+
+        assertNull(result.oauth)
+    }
+
+    fun `test oauth mode disabled writes enabled false`() {
+        val d = open(remote())
+
+        val result = edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.disabled")
+            d.result()
+        }
+
+        assertEquals(McpOAuthDto(enabled = false), result.oauth)
+    }
+
+    fun `test oauth mode custom writes client fields`() {
+        val d = open(remote())
+
+        val result = edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.custom")
+            field<JBTextField>(root, title("oauth.clientId")).text = "abc"
+            descendants(root).filterIsInstance<JBPasswordField>().single().text = "shh"
+            field<JBTextField>(root, title("oauth.scope")).text = "read"
+            field<JBTextField>(root, title("oauth.callbackPort")).text = "19999"
+            d.result()
+        }
+
+        assertEquals(
+            McpOAuthDto(enabled = true, clientId = "abc", clientSecret = "shh", scope = "read", callbackPort = 19999),
+            result.oauth,
+        )
+    }
+
+    /**
+     * `URI.isAbsolute` alone accepts `javascript:x` and `file:///x`. The redirect target is a
+     * loopback HTTP listener, so only http(s) with a host may validate.
+     */
+    fun `test non-web redirect uri fails validation`() {
+        val d = open(remote())
+
+        edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.custom")
+            for (value in listOf("javascript:alert(1)", "file:///etc/passwd", "smb://host/share", "http:///nohost")) {
+                field<JBTextField>(root, title("oauth.redirectUri")).text = value
+                assertNotNull("$value must not validate", d.validateForTest())
+            }
+            true
+        }
+    }
+
+    fun `test loopback redirect uri passes validation`() {
+        val d = open(remote())
+
+        edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.custom")
+            field<JBTextField>(root, title("oauth.redirectUri")).text = "http://127.0.0.1:19876/mcp/oauth/callback"
+            assertNull(d.validateForTest())
+            true
+        }
+    }
+
+    fun `test switching back to automatic after custom clears the oauth block when one existed`() {
+        val cfg = remote().copy(oauth = McpOAuthDto(enabled = true, clientId = "abc"))
+        val d = open(cfg)
+
+        val result = edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.automatic")
+            d.result()
+        }
+
+        assertEquals(McpOAuthDto(clear = true), result.oauth)
+    }
+
+    /**
+     * Regression guard for the silent-drop bug: `Config.mergeDeep` clears `headers`/`oauth` whenever
+     * a remote server's `type` or `url` changes unless the patch explicitly carries them forward.
+     * Editing only the URL must not lose a previously configured OAuth client.
+     */
+    fun `test editing only the url preserves an existing custom oauth client`() {
+        val cfg = remote().copy(oauth = McpOAuthDto(enabled = true, clientId = "abc", scope = "read"))
+        val d = open(cfg)
+
+        val result = edt {
+            val root = d.centerComponent()
+            field<JBTextField>(root, title("url")).text = "https://retargeted.example.test/mcp"
+            d.result()
+        }
+
+        assertEquals("https://retargeted.example.test/mcp", result.url)
+        assertEquals(McpOAuthDto(enabled = true, clientId = "abc", scope = "read"), result.oauth)
+    }
+
+    private fun oauthModeBox(root: Component): ComboBox<String> =
+        descendants(root).filterIsInstance<ComboBox<String>>().single()
+
+    private fun local() = McpConfigDto(
+        type = "local",
+        command = listOf("node", "server.js", "--flag"),
+        environment = linkedMapOf("TOKEN" to "x", "EMPTY" to ""),
+        headers = mapOf("Authorization" to "Bearer test"),
+        enabled = false,
+        timeout = 12000L,
+    )
+
+    private fun remote() = McpConfigDto(
+        type = "remote",
+        url = "https://mcp.example.test",
+        headers = mapOf("X-Test" to "1"),
+        enabled = true,
+        timeout = 5000L,
+    )
+
+    private fun open(cfg: McpConfigDto): McpEditDialog {
+        val item = edt { McpEditDialog("server", cfg) }
+        dialog = item
+        return item
+    }
+
+    private fun title(field: String) = KiloBundle.message("settings.agentBehavior.mcp.edit.$field")
+
+    private inline fun <reified T : Component> field(root: Component, title: String): T =
+        descendants(rowByTitle(root, title)).filterIsInstance<T>().first()
+
+    private fun rowByTitle(root: Component, title: String): Container =
+        descendants(root).filterIsInstance<Container>().first { item ->
+            (item is SettingsRow || item is SettingsStackedRow) &&
+                descendants(item).any { it is JLabel && it.text == title }
+        }
+
+    private fun hasRow(root: Component, title: String): Boolean =
+        envLabels(root).contains(title) || descendants(root).filterIsInstance<Container>().any { item ->
+            (item is SettingsRow || item is SettingsStackedRow) &&
+                descendants(item).any { it is JLabel && it.text == title }
+        }
+
+    /** Broader than [hasRow]: matches any descendant label text, including section titles. */
+    private fun hasLabel(root: Component, text: String): Boolean =
+        descendants(root).filterIsInstance<JLabel>().any { it.text == text }
+
+    private fun envLabels(root: Component): List<String> {
+        val list = descendants(root).filterIsInstance<JBList<*>>().singleOrNull() ?: return emptyList()
+        return (0 until list.model.size).map { list.model.getElementAt(it).toString() }
+    }
+
+    private fun removeEnv(root: Component, label: String) {
+        val list = descendants(root).filterIsInstance<JBList<*>>().single()
+        list.size = Dimension(320, 120)
+        list.doLayout()
+        val idx = envLabels(root).indexOf(label)
+        val bounds = list.getCellBounds(idx, idx)
+        val point = Point(bounds.x + bounds.width - 4, bounds.y + bounds.height / 2)
+        fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
+        fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
+    }
+
+    private fun mouse(list: JBList<*>, id: Int, point: Point) = MouseEvent(
+        list,
+        id,
+        System.currentTimeMillis(),
+        if (id == MouseEvent.MOUSE_PRESSED) InputEvent.BUTTON1_DOWN_MASK else 0,
+        point.x,
+        point.y,
+        1,
+        false,
+        MouseEvent.BUTTON1,
+    )
+
+    private fun descendants(root: Component): List<Component> {
+        val out = mutableListOf<Component>()
+        fun visit(item: Component) {
+            out += item
+            if (item is Container) item.components.forEach(::visit)
+        }
+        visit(root)
+        return out
+    }
+
+    private fun <T> edt(block: () -> T): T = edtWait(block)
+}

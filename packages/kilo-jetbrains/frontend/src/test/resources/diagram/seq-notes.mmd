@@ -1,0 +1,8 @@
+sequenceDiagram
+    participant A
+    participant B
+    Note left of A: starts here
+    A->>B: ping
+    Note over A,B: handshake done
+    B-)A: async pong
+    Note right of B: fire and forget
