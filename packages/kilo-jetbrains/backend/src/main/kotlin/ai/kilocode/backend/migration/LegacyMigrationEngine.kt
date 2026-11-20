@@ -146,6 +146,7 @@ class LegacyMigrationEngine(
 
         // MCP servers
         val migratedServers = mutableListOf<String>()
+        val mcpAvailable = mcpServers?.isNotEmpty() == true
         if (selections.mcpServers.isNotEmpty() && mcpServers != null) {
             val mcpConfig = mutableMapOf<String, JsonObject>()
             for (name in selections.mcpServers) {
@@ -189,7 +190,7 @@ class LegacyMigrationEngine(
                     )
                     if (merged != null) {
                         sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.migrating))
-                        val conversion = convertCustomMode(merged, migratedServers)
+                        val conversion = convertCustomMode(merged, migratedServers, mcpAvailable)
                         val agent = conversion.agent.toMutableMap()
                         agent["name"] = JsonPrimitive(info.name)
                         agentConfig[slug] = JsonObject(agent)
@@ -212,7 +213,7 @@ class LegacyMigrationEngine(
                         continue
                     }
                     sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.migrating))
-                    val conversion = convertCustomMode(mode, migratedServers)
+                    val conversion = convertCustomMode(mode, migratedServers, mcpAvailable)
                     agentConfig[slug] = conversion.agent
                     if (conversion.warnings.isEmpty()) {
                         results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.success))

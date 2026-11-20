@@ -385,7 +385,7 @@ object LegacyMigrationConverters {
         "browser" to "browser_open",
         "command" to "bash",
     )
-    private val ALL_MODE_PERMISSIONS = listOf("read", "edit", "bash", "browser_open", "skill")
+    private val ALL_MODE_PERMISSIONS = listOf("read", "edit", "bash", "browser_open")
 
     data class ModePermissions(
         val permission: JsonObject,
@@ -399,6 +399,7 @@ object LegacyMigrationConverters {
     fun convertCustomModePermissions(
         groups: List<Any>,
         mcpServers: List<String> = emptyList(),
+        mcpAvailable: Boolean = mcpServers.isNotEmpty(),
     ): ModePermissions {
         val permission = mutableMapOf<String, JsonElement>()
         val allowed = mutableSetOf<String>()
@@ -422,12 +423,12 @@ object LegacyMigrationConverters {
             if (groupName == "mcp") {
                 val mcpRegex = groupConfig?.get("fileRegex")
                 if (mcpRegex != null) {
-                    warnings.add("File restriction not migrated: $mcpRegex")
+                    warnings.add("File restriction not migrated; mcp disabled: $mcpRegex")
                     continue
                 }
                 mcpGroupSeen = true
                 if (mcpServers.isEmpty()) {
-                    warnings.add("MCP access not migrated: no MCP servers were selected")
+                    if (mcpAvailable) warnings.add("MCP access not migrated: no MCP servers were selected")
                     continue
                 }
                 for (server in mcpServers) {
@@ -444,7 +445,7 @@ object LegacyMigrationConverters {
             val newValue: JsonElement = if (fileRegex != null) {
                 val globs = fileRegexToGlobs(fileRegex)
                 if (globs == null) {
-                    warnings.add("File restriction not migrated: $fileRegex")
+                    warnings.add("File restriction not migrated; $permKey disabled: $fileRegex")
                     continue
                 }
                 buildJsonObject {
@@ -483,7 +484,11 @@ object LegacyMigrationConverters {
         val warnings: List<String>,
     )
 
-    fun convertCustomMode(mode: LegacyCustomMode, mcpServers: List<String> = emptyList()): ModeConversion {
+    fun convertCustomMode(
+        mode: LegacyCustomMode,
+        mcpServers: List<String> = emptyList(),
+        mcpAvailable: Boolean = mcpServers.isNotEmpty(),
+    ): ModeConversion {
         val parts = mutableListOf(mode.roleDefinition)
         val instructions = mode.customInstructions?.trim()
         if (!instructions.isNullOrEmpty()) {
@@ -499,7 +504,7 @@ object LegacyMigrationConverters {
         }
         val prompt = parts.filter { it.isNotBlank() }.joinToString("\n\n")
         val description = mode.description ?: mode.whenToUse ?: mode.roleDefinition.take(120)
-        val permissions = convertCustomModePermissions(mode.groups, mcpServers)
+        val permissions = convertCustomModePermissions(mode.groups, mcpServers, mcpAvailable)
 
         val agent = buildJsonObject {
             put("mode", "primary")
@@ -865,6 +870,7 @@ internal fun fileRegexToGlobs(regex: String): List<String>? {
     }.distinct()
 
     if (arms.isEmpty() || arms.any { it.isEmpty() }) return null
+    if (arms.any { it.endsWith(" *") }) return null
     return arms
 }
 
@@ -904,6 +910,7 @@ private fun parseGlobSequence(text: String, start: Int, inGroup: Boolean): Pair<
             '\\' -> {
                 if (i + 1 >= text.length) return null
                 val escaped = text[i + 1]
+                if (escaped.isLetterOrDigit() || escaped.isWhitespace() || escaped == '\\') return null
                 if (escaped == '*' || escaped == '?') return null
                 atom = listOf(escaped.toString())
                 i += 2

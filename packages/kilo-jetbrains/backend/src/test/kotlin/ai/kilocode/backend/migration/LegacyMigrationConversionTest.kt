@@ -233,8 +233,8 @@ class LegacyMigrationConversionTest {
         assertEquals("allow", perm["read"]?.jsonPrimitive?.content)
         assertEquals("allow", perm["edit"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["bash"]?.jsonPrimitive?.content)
-        assertEquals("deny", perm["skill"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["browser_open"]?.jsonPrimitive?.content)
+        assertFalse(perm.containsKey("skill"))
     }
 
     @Test
@@ -259,7 +259,7 @@ class LegacyMigrationConversionTest {
         )
         assertEquals("allow", result.permission["github_*"]?.jsonPrimitive?.content)
         assertEquals("allow", result.permission["my_server_*"]?.jsonPrimitive?.content)
-        assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
+        assertFalse(result.permission.containsKey("skill"))
         assertTrue(result.warnings.isEmpty())
     }
 
@@ -300,6 +300,33 @@ class LegacyMigrationConversionTest {
         val result = LegacyMigrationConverters.convertCustomModePermissions(groups)
         assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
         assertTrue(result.warnings.isNotEmpty())
+    }
+
+    @Test
+    fun `convertCustomModePermissions - fileRegex word boundary escape is not migrated`() {
+        val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "\\.md\\b")))
+        val result = LegacyMigrationConverters.convertCustomModePermissions(groups)
+        assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
+        assertTrue(result.warnings.isNotEmpty())
+    }
+
+    @Test
+    fun `convertCustomModePermissions - fileRegex arm ending with space star is not migrated`() {
+        val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "^docs/a .*$")))
+        val result = LegacyMigrationConverters.convertCustomModePermissions(groups)
+        assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
+        assertTrue(result.warnings.isNotEmpty())
+    }
+
+    @Test
+    fun `convertCustomModePermissions - mcp group without migrated servers does not warn when the store has none`() {
+        val result = LegacyMigrationConverters.convertCustomModePermissions(
+            listOf("mcp"),
+            emptyList(),
+            mcpAvailable = false,
+        )
+        assertTrue(result.warnings.isEmpty())
+        assertTrue(result.permission.keys.none { it.endsWith("_*") })
     }
 
     // -----------------------------------------------------------------------
@@ -358,6 +385,7 @@ class LegacyMigrationConversionTest {
         assertEquals("allow", perm["browser_open"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["bash"]?.jsonPrimitive?.content)
         assertEquals("allow", perm["github_*"]?.jsonPrimitive?.content)
+        assertFalse(perm.containsKey("skill"))
         assertTrue(perm.entries.none { it.key == "bash" && it.value.jsonPrimitive.content == "allow" })
     }
 
