@@ -439,18 +439,31 @@ describe("libghostty WASM engine and lifecycle helpers", () => {
   it("never erases rightmost text columns with opaque scrollbar fills and defaults direct renders to opacity 0", () => {
     const clearCalls: number[][] = []
     const fillCalls: Array<{ style: string; rect: number[] }> = []
+    const setTransformCalls: number[][] = []
     const fallbackCalls: Array<{ viewportY: number; scrollback: number; rows: number; opacity?: number }> = []
     const renderCalls: Array<{ forceAll: boolean; opacity: number | undefined }> = []
+    // Simulate ghostty-web leaving the shared canvas context scaled by DPR=2.
+    let transform: [number, number, number, number, number, number] = [2, 0, 0, 2, 0, 0]
+    const stack: Array<[number, number, number, number, number, number]> = []
     const ctx = {
       fillStyle: "",
-      save() {},
-      restore() {},
-      setTransform() {},
+      save() {
+        stack.push([...transform] as [number, number, number, number, number, number])
+      },
+      restore() {
+        const prev = stack.pop()
+        if (prev) transform = prev
+      },
+      setTransform(a: number, b: number, c: number, d: number, e: number, f: number) {
+        transform = [a, b, c, d, e, f]
+        setTransformCalls.push([a, b, c, d, e, f])
+      },
       clearRect(...args: number[]) {
         clearCalls.push(args)
       },
-      fillRect(...args: number[]) {
-        fillCalls.push({ style: this.fillStyle, rect: args })
+      fillRect(x: number, y: number, w: number, h: number) {
+        const [sx, , , sy, tx, ty] = transform
+        fillCalls.push({ style: this.fillStyle, rect: [x * sx + tx, y * sy + ty, w * sx, h * sy] })
       },
     }
     let currentCanvas: unknown = {
@@ -509,6 +522,8 @@ describe("libghostty WASM engine and lifecycle helpers", () => {
     term.renderer!.render(buffer, false, 0, term, 0)
     expect(clearCalls).toEqual([])
     expect(fallbackCalls).toEqual([])
+    expect(setTransformCalls).toEqual([[1, 0, 0, 1, 0, 0]])
+    expect(transform).toEqual([2, 0, 0, 2, 0, 0])
     expect(fillCalls).toHaveLength(1)
     expect(fillCalls[0]!.style).toBe("rgba(128, 128, 128, 0.28)")
     expect(fillCalls[0]!.rect[0]).toBe(698)
