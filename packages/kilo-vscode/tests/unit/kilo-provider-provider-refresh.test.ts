@@ -100,7 +100,7 @@ function remote(requests: string[]) {
     provider: {
       list: async (input: { directory: string }) => {
         requests.push(input.directory)
-        return { data: { all: [], connected: [], default: {} } }
+        return { data: { all: [], connected: [], default: { [input.directory]: true } } }
       },
     },
   }
@@ -309,5 +309,28 @@ describe("KiloProvider providers on reconnect", () => {
 
     expect(requests).toEqual(["/project-a", "/project-b"])
     expect(loaded(messages.slice(before))).toHaveLength(1)
+  })
+
+  it("loads the provider view for the project a settings panel selected", async () => {
+    const requests: string[] = []
+    const messages: unknown[] = []
+    const internal = new KiloProvider({} as never, connection(true, remote(requests)) as never, undefined, {
+      rootDirectory: () => "/repo",
+      projectDirectory: "/repo/packages/app",
+    }) as unknown as Internals
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    await internal.fetchAndSendProviders()
+    expect(requests).toEqual(["/repo/packages/app"])
+
+    const before = messages.length
+    internal.setProjectDirectory("/repo/packages/other")
+    if (internal.providersRefresh) await internal.providersRefresh
+
+    expect(requests).toEqual(["/repo/packages/app", "/repo/packages/other"])
+    const after = loaded(messages.slice(before))
+    expect(after).toHaveLength(1)
+    expect(after[0]).toMatchObject({ defaults: { "/repo/packages/other": true } })
   })
 })

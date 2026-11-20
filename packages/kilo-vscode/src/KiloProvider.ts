@@ -2906,8 +2906,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           return
         }
         try {
+          // Read the provider view for the same directory that keys the retained payload, so a
+          // panel with an explicit project reads that project.
+          const dir = this.settingsDirectory()
           const { response, authMethods, authStates, storedKeys, organizationId, ready, unavailable } =
-            await fetchProviderData(client, this.getWorkspaceDirectory())
+            await fetchProviderData(client, dir)
           if (generation !== this.providersGeneration || client !== this.client) {
             if (!this.providersQueued) return
             generation = this.providersGeneration
@@ -2933,7 +2936,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             failures: response.failures,
           }
           this.cachedProvidersMessage = message
-          this.cachedProvidersDirectory = this.settingsDirectory()
+          this.cachedProvidersDirectory = dir
           this.providersRetry = false
           this.postMessage(message)
           this.catalogRetry.update(unavailable)
