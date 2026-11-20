@@ -13,6 +13,7 @@ export const registry = {
   automations:
     "Run a prompt or Code Mode action on a timer, or on a connected MCP server's push event when mcp_events is enabled.",
   artifacts: "Enable experimental artifacts backed by pluggable providers.",
+  permission_setup: "Offer project-specific development permission defaults before the first approval prompt.", // kilocode_change(permission-setup) - gate the unreleased project permission offer
   video_generate: "Enable the experimental video generation API.",
   console_watches:
     "Watch Slack threads, GitHub pull requests, issues, commits and Actions runs, and the workspace's MCP servers' events through OpenCode Console, and wake sessions when they change.",
