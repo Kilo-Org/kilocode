@@ -66,6 +66,26 @@ describe("worktree delete confirmation", () => {
     test.dispose()
   })
 
+  it("refreshes the confirmation window without confirming a repeated arm", () => {
+    jest.useFakeTimers()
+    const test = setupDelete()
+    try {
+      test.deletion.arm("p", "wt-a")
+      jest.advanceTimersByTime(2400)
+      test.deletion.arm("p", "wt-a")
+      jest.advanceTimersByTime(2499)
+
+      expect(test.deletion.pending()).toEqual({ projectId: "p", worktreeId: "wt-a" })
+      expect(test.calls).toEqual(["reveal:p:wt-a"])
+
+      jest.advanceTimersByTime(1)
+      expect(test.deletion.pending()).toBeUndefined()
+    } finally {
+      test.dispose()
+      jest.useRealTimers()
+    }
+  })
+
   it("deletes when a confirmation follows an arm", () => {
     const test = setupDelete()
 
