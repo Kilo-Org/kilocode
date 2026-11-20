@@ -105,6 +105,25 @@ export class TimeoutError extends Error {
   }
 }
 
+export const CANCELLED_MESSAGE =
+  "The browser call was cancelled before it finished. It may have run in part: take a snapshot (browser_snapshot) before you repeat it."
+
+export const CANCELLED_UNSENT_MESSAGE = "The browser call was cancelled before it was sent."
+
+/**
+ * Raised when the turn stopped before the browser answered. A call cancelled in flight reached the extension, so its
+ * uncertainty travels with the error and the tool metadata marks it; one cancelled before it was sent cannot have run.
+ */
+export class CancelledError extends Error {
+  readonly effectsUncertain: boolean
+
+  constructor(uncertain: boolean) {
+    super(uncertain ? CANCELLED_MESSAGE : CANCELLED_UNSENT_MESSAGE)
+    this.name = "BrowserCancelledError"
+    this.effectsUncertain = uncertain
+  }
+}
+
 /**
  * Raised when the browser side speaks a protocol this CLI cannot drive. The message is model-facing; `hint` is the
  * update notice the UI shows.

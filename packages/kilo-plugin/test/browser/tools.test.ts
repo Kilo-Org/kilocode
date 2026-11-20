@@ -798,6 +798,26 @@ describe("browser tools over the extension backend", () => {
     expect(error?.metadata).toEqual({ effectsUncertain: true })
   })
 
+  test("a cancelled call that may have run in part carries the uncertainty marker; one never sent does not", async () => {
+    const run = async (uncertain: boolean) => {
+      const hub = fakeHub({
+        call: () => Promise.reject(new BrowserHub.Failure({ kind: "cancelled", message: "cancelled", uncertain })),
+      })
+      const host = await boot({ backend: "extension" }, { hub: hub.service })
+      const result = await host.call("browser_click", { target: "e1" })
+      expect(result._tag).toBe("Failure")
+      return result._tag === "Failure" ? (result.failure as Tool.Error) : undefined
+    }
+    // In flight: the call reached the extension, so the host must be told the page may have changed.
+    const running = await run(true)
+    expect(running?.message).toContain("cancelled before it finished")
+    expect(running?.metadata).toEqual({ effectsUncertain: true })
+    // Never sent: nothing ran, and the failure is definite.
+    const early = await run(false)
+    expect(early?.message).toContain("cancelled before it was sent")
+    expect(early?.metadata).toBeUndefined()
+  })
+
   test("an extension that went away is told to turn its switch back on, in the message and the UI hint", async () => {
     const gone: BrowserHub.Interface = {
       port: () =>

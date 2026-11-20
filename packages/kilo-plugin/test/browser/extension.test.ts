@@ -3,6 +3,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import {
+  CancelledError,
   IncompatibleError,
   NeedsPermissionError,
   TIMEOUT_MESSAGE,
@@ -563,16 +564,20 @@ describe("extension backend", () => {
       {
         failure: { kind: "cancelled", message: "cancelled running", uncertain: true },
         check: (error) => {
+          expect(error).toBeInstanceOf(CancelledError)
           expect((error as Error).message).toContain("cancelled before it finished")
           expect((error as Error).message).toContain("browser_snapshot")
+          expect((error as CancelledError).effectsUncertain).toBe(true)
         },
       },
       {
         // A call cancelled before it was sent cannot have run, so nothing is said about looking at the page first.
         failure: { kind: "cancelled", message: "cancelled before the send" },
         check: (error) => {
+          expect(error).toBeInstanceOf(CancelledError)
           expect((error as Error).message).toContain("cancelled before it was sent")
           expect((error as Error).message).not.toContain("snapshot")
+          expect((error as CancelledError).effectsUncertain).toBe(false)
         },
       },
       {

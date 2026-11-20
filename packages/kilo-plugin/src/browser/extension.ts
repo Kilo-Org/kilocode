@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import path from "node:path"
 import {
+  CancelledError,
   IncompatibleError,
   NeedsPermissionError,
   TimeoutError,
@@ -214,13 +215,8 @@ const MAPPED: Record<string, (error: BrowserHub.Failure) => Error> = {
   unavailable: (error) =>
     new UnavailableError(extensionHint(error.absence), UNAVAILABLE_MESSAGE, { effectsUncertain: error.uncertain }),
   timeout: () => new TimeoutError(),
-  // The turn stopped before the answer: a call that was sent may have run in part, so it is looked at before a repeat.
-  cancelled: (error) =>
-    new Error(
-      error.uncertain
-        ? "The browser call was cancelled before it finished. It may have run in part: take a snapshot (browser_snapshot) before you repeat it."
-        : "The browser call was cancelled before it was sent.",
-    ),
+  // The turn stopped before the answer: a call that was sent may have run in part, and the error carries that marker.
+  cancelled: (error) => new CancelledError(error.uncertain),
   permission: permissionError,
   moved: permissionError,
   busy: () => new Error("The tab is busy with another browser action. Try again in a moment."),
