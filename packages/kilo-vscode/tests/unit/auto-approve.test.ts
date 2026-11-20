@@ -17,17 +17,19 @@ function defer<T>() {
   return { promise, resolve: state.resolve, reject: state.reject }
 }
 
-function config(initial: boolean, info: Record<string, unknown> = {}) {
+type Layers = { globalValue?: boolean; workspaceValue?: boolean; workspaceFolderValue?: boolean }
+
+function config(layers: Layers = {}) {
   const handlers: Array<(event: ConfigEvent) => void> = []
   const updates: Array<{ key: string; value: unknown; target: unknown }> = []
   const messages: string[] = []
   const commands = new Map<string, (...args: unknown[]) => unknown>()
-  const state = { active: initial }
+  const state: Layers = { ...layers }
   const api = vscode as unknown as {
     workspace: {
       getConfiguration: (section?: string) => {
-        get: <T>(key: string, fallback?: T) => T | boolean
-        inspect: <T>(key: string) => Record<string, unknown> | undefined
+        get: (key: string, fallback?: unknown) => unknown
+        inspect: (key: string) => Record<string, unknown> | undefined
         update: (key: string, value: unknown, target: unknown) => Promise<void>
       }
       onDidChangeConfiguration: (listener: (event: ConfigEvent) => void) => { dispose(): void }
@@ -36,12 +38,24 @@ function config(initial: boolean, info: Record<string, unknown> = {}) {
     commands: { registerCommand: (command: string, callback: (...args: unknown[]) => unknown) => { dispose(): void } }
   }
 
+  const slot = (target: unknown) => {
+    if (target === vscode.ConfigurationTarget.Workspace) return "workspaceValue"
+    if (target === vscode.ConfigurationTarget.WorkspaceFolder) return "workspaceFolderValue"
+    return "globalValue"
+  }
+
   api.workspace.getConfiguration = () => ({
-    get: (_key, fallback) => state.active ?? fallback,
-    inspect: () => info,
+    get: (_key, fallback) => state.workspaceFolderValue ?? state.workspaceValue ?? state.globalValue ?? fallback,
+    inspect: () => {
+      const info: Record<string, unknown> = {}
+      if (state.globalValue !== undefined) info.globalValue = state.globalValue
+      if (state.workspaceValue !== undefined) info.workspaceValue = state.workspaceValue
+      if (state.workspaceFolderValue !== undefined) info.workspaceFolderValue = state.workspaceFolderValue
+      return info
+    },
     update: async (key, value, target) => {
       updates.push({ key, value, target })
-      state.active = Boolean(value)
+      state[slot(target)] = Boolean(value)
     },
   })
   api.workspace.onDidChangeConfiguration = (listener) => {
@@ -63,12 +77,10 @@ function config(initial: boolean, info: Record<string, unknown> = {}) {
   }
 
   return {
+    layers: state,
     updates,
     messages,
     commands,
-    set active(value: boolean) {
-      state.active = value
-    },
     emit(key = "kilo-code.new.autoApprove.enabled") {
       for (const handler of handlers) handler({ affectsConfiguration: (name) => name === key })
     },
@@ -114,8 +126,8 @@ function asked(id: string, sessionID = "ses_1") {
 }
 
 describe("registerToggleAutoApprove", () => {
-  it("restores persisted state, follows config changes, and persists toggles to the closest configured scope", async () => {
-    const env = config(true, { workspaceValue: false })
+  it("restores the user setting, follows config changes, and writes toggles to the user setting", async () => {
+    const env = config({ globalValue: true, workspaceValue: false })
     const replies: unknown[] = []
     const conn = connection(client({ reply: async (args) => replies.push(args) }))
     const ctrl = registerToggleAutoApprove(
@@ -131,7 +143,7 @@ describe("registerToggleAutoApprove", () => {
     expect(await ctrl.approve(asked("perm_1"))).toBe(true)
     expect(replies).toEqual([{ requestID: "perm_1", directory: "/repo/ses_1", reply: "once" }])
 
-    env.active = false
+    env.layers.globalValue = false
     env.emit()
     expect(ctrl.active()).toBe(false)
     expect(changes).toEqual([false])
@@ -142,12 +154,92 @@ describe("registerToggleAutoApprove", () => {
     await ctrl.toggle()
     expect(ctrl.active()).toBe(true)
     expect(changes).toEqual([false, true])
-    expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Workspace }])
+    expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Global }])
     expect(env.messages).toContain("Auto-approve enabled. Sandbox escalation prompts are excluded.")
   })
 
+  it("stays off when only the workspace setting enables it", async () => {
+    config({ workspaceValue: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(ctrl.active()).toBe(false)
+    expect(await ctrl.approve(asked("perm_1"))).toBe(false)
+    expect(replies).toEqual([])
+  })
+
+  it("stays off when only the workspace folder setting enables it", async () => {
+    config({ workspaceFolderValue: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(ctrl.active()).toBe(false)
+    expect(await ctrl.approve(asked("perm_1"))).toBe(false)
+    expect(replies).toEqual([])
+  })
+
+  it("replies once when the user setting enables it", async () => {
+    config({ globalValue: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(ctrl.active()).toBe(true)
+    expect(await ctrl.approve(asked("perm_1"))).toBe(true)
+    expect(replies).toEqual([{ requestID: "perm_1", directory: "/workspace", reply: "once" }])
+  })
+
+  it("turns on through the user setting when a workspace value is also set", async () => {
+    const env = config({ workspaceValue: true, globalValue: false })
+    const conn = connection(client({}))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(ctrl.active()).toBe(false)
+    await ctrl.toggle()
+    expect(ctrl.active()).toBe(true)
+    expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Global }])
+  })
+
+  it("stays off when a configuration change only adds the workspace setting", async () => {
+    const env = config({ globalValue: false })
+    const conn = connection(client({}))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(ctrl.active()).toBe(false)
+    env.layers.workspaceValue = true
+    env.emit()
+    expect(ctrl.active()).toBe(false)
+  })
+
   it("uses the SSE directory for worktree permissions before session mappings are available", async () => {
-    config(true)
+    config({ globalValue: true })
     const replies: unknown[] = []
     const conn = connection(client({ reply: async (args) => replies.push(args) }))
     const ctrl = registerToggleAutoApprove(
@@ -167,7 +259,7 @@ describe("registerToggleAutoApprove", () => {
   })
 
   it("uses the shared permission directory before falling back to session mappings", async () => {
-    config(true)
+    config({ globalValue: true })
     const replies: unknown[] = []
     const conn = connection(
       client({ reply: async (args) => replies.push(args) }),
@@ -188,7 +280,7 @@ describe("registerToggleAutoApprove", () => {
   })
 
   it("returns unhandled when an automatic reply fails", async () => {
-    config(true)
+    config({ globalValue: true })
     const conn = connection(
       client({
         reply: async (_args, options) => {
@@ -208,7 +300,7 @@ describe("registerToggleAutoApprove", () => {
   })
 
   it("cancels pending permission drains when disabled during an enable generation", async () => {
-    config(false)
+    config({ globalValue: false })
     const gate = defer<{ data: Permission[] }>()
     const started = defer<void>()
     const dirs: string[] = []
