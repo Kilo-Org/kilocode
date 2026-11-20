@@ -5,7 +5,7 @@
 // by a scripted OpenAI-compatible model. Not a `bun test` file: it needs a display (run it under xvfb), a built CLI
 // binary, the built Firefox extension and a Firefox with the remote agent.
 //
-//   xvfb-run -a bun test/browser/firefox-e2e.ts <kilo2> <scenario>
+//   xvfb-run -a bun test/browser/firefox-e2e.ts <kilo2> <scenario> [--strict]
 //
 //   E2E_EXTENSION_DIR   the built unpacked Firefox extension (default: ../../../cloud/apps/extension/.output/firefox-mv3)
 //   E2E_FIREFOX         the Firefox executable (default: /opt/firefox/firefox)
@@ -22,6 +22,12 @@
 //
 // Scenarios: setup, navigate-snapshot, permission, frames, sensitive, group, stop, unpaired, parity, dialog, focus,
 // perf, native, download.
+//
+// Known failures: KNOWN_FAILURES lists the scenarios that fail today for a reason owned elsewhere, with the exact
+// failure messages expected. A run whose only failures are those reports `status: "known-fail"` and exits 0
+// (`--strict`: 1); any other failure, a harness error included, is `FAIL` and exits 1; a known scenario that passes
+// reports `UNEXPECTED PASS`. parity, dialog and focus fail when the CLI refuses a call for permission, because such a
+// run measured nothing.
 //
 // The product path, in order: Firefox starts with the remote agent on a fresh profile; `webExtension.install` installs
 // the unpacked build as a temporary add-on (the same thing about:debugging "Load Temporary Add-on" does); the side
@@ -281,6 +287,43 @@ const failures: string[] = []
 const notes: string[] = []
 function expect(condition: boolean, message: string) {
   if (!condition) failures.push(message)
+}
+
+const FIREFOX_GATE_FIX = "cloud Firefox stack #11923/#11950/#11985 not merged"
+/** The CLI's auto-rejected asks are all on Firefox's opaque origin: `<class>:opaque:null`, sorted, comma-separated. */
+const OPAQUE_REFUSALS = String.raw`calls were refused for permission; the CLI auto-rejected browser \w+:opaque:null(?:, \w+:opaque:null)*$`
+
+/**
+ * What fails today for a reason owned elsewhere: whole scenarios with the exact failure messages they are expected to
+ * produce. A failure that matches none of them (a harness error, another regression) stays `FAIL`; a known scenario
+ * that passes reports `UNEXPECTED PASS`, so its entry can go.
+ */
+const KNOWN_FAILURES: Record<string, { reason: string; failures: RegExp[] }> = {
+  dialog: { reason: FIREFOX_GATE_FIX, failures: [new RegExp(String.raw`^dialog: \d+ of 6 ${OPAQUE_REFUSALS}`)] },
+  focus: { reason: FIREFOX_GATE_FIX, failures: [new RegExp(String.raw`^focus: \d+ of 7 ${OPAQUE_REFUSALS}`)] },
+  parity: { reason: FIREFOX_GATE_FIX, failures: [new RegExp(String.raw`^parity: \d+ of 30 ${OPAQUE_REFUSALS}`)] },
+}
+
+type Status = "pass" | "FAIL" | "known-fail" | "UNEXPECTED PASS"
+
+function statusOf(): Status {
+  const known = KNOWN_FAILURES[scenario]
+  if (failures.some((failure) => !(known?.failures ?? []).some((pattern) => pattern.test(failure)))) return "FAIL"
+  if (failures.length > 0) return "known-fail"
+  return known === undefined ? "pass" : "UNEXPECTED PASS"
+}
+
+/**
+ * A run whose calls the CLI refused for permission measured nothing: in a non-interactive run every ask is
+ * auto-rejected, so the message names the browser permissions the CLI asked for (`<class>:<origin>`).
+ */
+function expectNoRefusals(name: string, result: Run) {
+  const refused = result.last.results.filter((text) => text.includes("cannot ask the user for permission")).length
+  const asked = [...new Set([...result.stderr.matchAll(/permission requested: browser \(([^)]+)\); auto-rejecting/g)].map((match) => match[1]))]
+  expect(
+    refused === 0,
+    `${name}: ${refused} of ${result.last.results.length} calls were refused for permission; the CLI auto-rejected browser ${asked.sort().join(", ")}`,
+  )
 }
 
 const usedPorts = new Set<number>()
@@ -903,6 +946,8 @@ function report(results: Record<string, unknown>) {
     notes,
     pairingMs: lastPairingMs,
     scenario,
+    status: statusOf(),
+    ...(KNOWN_FAILURES[scenario] === undefined ? {} : { knownFailure: KNOWN_FAILURES[scenario].reason }),
     ...results,
   }
 }
@@ -1337,6 +1382,7 @@ async function parity() {
   const shot = await evidence("after-parity")
   // Parity reports which tools Firefox lacks; it fails only when the run broke or a tool gave no answer at all.
   expect(result.code === 0, `parity: the run exited ${result.code}: ${result.stderr.slice(-600)}`)
+  expectNoRefusals("parity", result)
   const silent = rows.filter((row) => row.text === "(no result)").map((row) => `${row.index} ${row.tool}`)
   expect(silent.length === 0, `parity: ${silent.length} of ${order.length} tools gave no result: ${silent.join(", ")}`)
   return { code: result.code, png: result.pngs.length, rows, shot, stderr: result.stderr.slice(-1_000), tabs: await tabState() }
@@ -1363,6 +1409,7 @@ async function dialog() {
   clearTimeout(watcher)
   const times = toolTimes(result.stdout)
   expect(result.code === 0, `dialog: the run exited ${result.code}: ${result.stderr.slice(-600)}`)
+  expectNoRefusals("dialog", result)
   expect(result.last.results.length === 6, `dialog: ${result.last.results.length} of 6 tool calls answered`)
   return {
     code: result.code,
@@ -1418,6 +1465,8 @@ async function focus() {
     if (entry?.[1] === "hidden" && back?.[1] === "visible") hidden.push(back[0] - entry[0])
   }
   const agentActivations = activations.filter(([, tabId]) => tabId !== user.tabId).length
+  // With every screenshot refused, the D9 checks below would pass on no screenshot at all.
+  expectNoRefusals("focus", result)
   await savePng("agent-screenshot", result.pngs[0] ?? result.last.images[0])
   const image = decodePng(result.pngs[0] ?? result.last.images[0])
   expect(agentActivations === 0, `agent screenshots activated a non-user tab ${agentActivations} times (D9): ${JSON.stringify(activations)}`)
@@ -1820,7 +1869,8 @@ try {
     const results = selected ? await selected() : {}
     console.log(JSON.stringify(report({ enabled: enableResult, manifestEdits, ...results }), null, 2))
   }
-  if (failures.length) process.exitCode = 1
+  const status = statusOf()
+  if (status === "FAIL" || (status === "known-fail" && process.argv.includes("--strict"))) process.exitCode = 1
 } catch (error) {
   failures.push(`harness: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`)
   console.log(JSON.stringify(report({ enabled: enableResult, manifestEdits }), null, 2))
