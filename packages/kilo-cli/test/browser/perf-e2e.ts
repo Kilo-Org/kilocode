@@ -7,8 +7,10 @@
 //                                        [--memory-calls 1000] [--cold-runs 5] [--out <dir>] [--evidence <dir>]
 //
 //   E2E_EXTENSION_DIR   the built unpacked Chrome MV3 extension (required for the extension backend)
-//   E2E_CHROMIUM        the Chromium executable for the extension backend (default: the Chromium that
-//                       `kilo2 browser install-chromium` installs for the Playwright backend, so both use one build)
+//   E2E_CHROMIUM        the Chromium executable for the extension backend (default: the revision the bundled
+//                       playwright-core drives, chromium-1244 for 1.64-alpha, found by the harness resolver; the
+//                       Playwright backend installs that same revision through `kilo2 browser install-chromium`, so
+//                       both backends run one build)
 //   E2E_CHROMIUM_DATA   the XDG data home the Playwright backend's Chromium is installed into, reused across runs
 //                       (default: <tmpdir>/kilo-perf-e2e-chromium); the run's own scratch root is removed at the end
 //
@@ -20,6 +22,9 @@ import fs from "node:fs/promises"
 import net from "node:net"
 import os from "node:os"
 import path from "node:path"
+// The harness's resolver only, for the pinned Chromium revision: it reads playwright-core's browsers.json and loads no
+// browser code, so it does not pull Playwright into this runner.
+import { chromiumExecutable } from "./extension-harness"
 
 const binaryInput = process.argv[2]
 if (!binaryInput || binaryInput.startsWith("--"))
@@ -412,12 +417,7 @@ const install = await spawnText(
   base,
 )
 console.error(`install-chromium exit ${install.code}: ${(install.out + install.err).trim().slice(-200)}`)
-const installedChrome = (() => {
-  for (const file of new Bun.Glob("*/chrome-linux*/chrome").scanSync({ cwd: browsersDir, onlyFiles: true }))
-    return path.join(browsersDir, file)
-  return undefined
-})()
-const chromium = process.env.E2E_CHROMIUM ?? installedChrome ?? playwright.chromium.executablePath()
+const chromium = await chromiumExecutable()
 
 const cliVersion = (await spawnText([binary, "--version"], baseEnv("playwright").env, base)).out.trim()
 const chromiumVersion = (await spawnText([chromium, "--version"], baseEnv("playwright").env, base)).out.trim()
@@ -1638,7 +1638,7 @@ if (areaEntry("profile")) {
   const p = entry.extension
   md.push("## 5b. Extension CPU profile: 5 snapshots + 5 finds on the 10k page", "", loadLine(entry), "")
   md.push(
-    `Calls: ${JSON.stringify(Object.fromEntries(Object.entries(p?.stats ?? {}).map(([label, s]: [string, any]) => [label, `${s.median}/${s.p95} ms`])))}; sum of call times after navigate ${p?.callsWallMs} ms. SW profile busy ${p?.sw?.busyMs}/${p?.sw?.totalMs} ms; page profile busy ${p?.page?.busyMs}/${p?.page?.totalMs} ms.`,
+    `Calls: ${JSON.stringify(Object.fromEntries(Object.entries(p?.stats ?? {}).map(([label, s]: [string, any]) => [label, `${fmt(s.median)}/${fmt(s.p95)} ms`])))}; sum of call times after navigate ${p?.callsWallMs} ms. SW profile busy ${p?.sw?.busyMs}/${p?.sw?.totalMs} ms; page profile busy ${p?.page?.busyMs}/${p?.page?.totalMs} ms.`,
     "",
   )
   md.push(
