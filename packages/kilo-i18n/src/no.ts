@@ -217,5 +217,6 @@ export const dict = {
   "tui.autoApprove.description": "Godkjenn forespørsler om tillatelse automatisk for hver klient, og husk denne innstillingen",
   "tui.autoApprove.enabled": "Automatisk godkjenning aktivert. Forespørsler om tillatelse godkjennes automatisk.",
   "tui.autoApprove.disabled": "Automatisk godkjenning deaktivert.",
+  "tui.autoApprove.projectDisabled": "Automatisk godkjenning er deaktivert i dette prosjektets konfigurasjon.",
   "tui.autoApprove.saveFailed": "Kunne ikke lagre innstillingen for automatisk godkjenning.",
 }

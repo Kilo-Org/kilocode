@@ -210,5 +210,6 @@ export const dict = {
   "tui.autoApprove.description": "모든 클라이언트의 권한 요청을 자동으로 승인하고 이 설정을 기억합니다",
   "tui.autoApprove.enabled": "자동 승인이 활성화되었습니다. 권한 요청이 자동으로 승인됩니다.",
   "tui.autoApprove.disabled": "자동 승인이 비활성화되었습니다.",
+  "tui.autoApprove.projectDisabled": "이 프로젝트의 설정에서 자동 승인이 비활성화되어 있습니다.",
   "tui.autoApprove.saveFailed": "자동 승인 설정을 저장하지 못했습니다.",
 }

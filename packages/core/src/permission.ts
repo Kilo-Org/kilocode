@@ -1,16 +1,10 @@
 export * as Permission from "./permission.js"
 
 import { makeLocationNode } from "@opencode/util/effect/app-node"
-import { Context, Deferred, Effect, Layer, Schema, Scope, Stream } from "effect" // kilocode_change(autoapprove) - Stream drains when config changes
+import { Context, Deferred, Effect, Layer, Schema, Scope } from "effect"
 import { Permission } from "@opencode/schema/permission"
-import { KiloPermission } from "@opencode/schema/kilocode/permission" // kilocode_change(autoapprove) - the shared human-only rule
-// kilocode_change start - autoapprove: the config-updated event shares a name with this module's permission Event
-import { Event as ConfigEvent } from "@opencode/schema/config"
-// kilocode_change end
 import type { Tool } from "@opencode/schema/tool"
 import { Bus } from "./bus.js"
-import { Config } from "./config.js" // kilocode_change(autoapprove)
-import { KiloConfigPolicy } from "./kilocode/config/policy.js" // kilocode_change(autoapprove)
 import { Location } from "./location.js"
 import { Agent } from "./agent.js"
 import { SessionErrors } from "./session/error.js"
@@ -144,7 +138,6 @@ const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const bus = yield* Bus.Service
-    const config = yield* Config.Service // kilocode_change(autoapprove)
     const location = yield* Location.Service
     const agents = yield* Agent.Service
     const sessions = yield* SessionStore.Service
@@ -169,23 +162,14 @@ const layer = Layer.effect(
     }).pipe(Effect.uninterruptible)
     yield* Effect.addFinalizer(() => close)
 
-    // kilocode_change start - autoapprove: a saved allow settles an ask but never overrides an explicit deny
-    const autoApprove = Effect.fnUntraced(function* () {
-      return KiloConfigPolicy.autoApprove(yield* config.entries(), config.global?.() ?? "")
-    })
-    // kilocode_change end
-
-    const savedRules = Effect.fnUntraced(function* (interactive = false) { // kilocode_change(autoapprove) - interactive requests skip the global rule
-      const rules = (yield* saved.list({ projectID: location.project.id })).map( // kilocode_change(autoapprove) - the global rule is appended below
+    const savedRules = Effect.fnUntraced(function* () {
+      return (yield* saved.list({ projectID: location.project.id })).map(
         (item): Permission.Rule => ({
           action: item.action,
           resource: item.resource,
           effect: "allow",
         }),
       )
-      // kilocode_change(autoapprove) - a human-only request never receives the global rule
-      if (!interactive && (yield* autoApprove())) rules.push({ action: "*", resource: "*", effect: "allow" }) // kilocode_change(autoapprove)
-      return rules // kilocode_change(autoapprove)
     })
 
     const configured = Effect.fnUntraced(function* (sessionID: SessionSchema.ID, agentID?: Agent.ID) {
@@ -217,7 +201,7 @@ const layer = Layer.effect(
     const evaluateInput = Effect.fnUntraced(function* (input: AssertInput) {
       const rules = yield* configured(input.sessionID, input.agent)
       if (denied(input, rules)) return { effect: "deny" as const, rules }
-      const all = [...rules, ...(yield* savedRules(KiloPermission.requiresPerson(input.metadata)))] // kilocode_change(autoapprove)
+      const all = [...rules, ...(yield* savedRules())]
       const effects = input.resources.map((resource) => evaluate(input.action, resource, all).effect)
       const effect: Permission.Effect = effects.includes("ask") ? "ask" : "allow"
       const event = yield* hooks.trigger("permission", "evaluate", {
@@ -243,25 +227,6 @@ const layer = Layer.effect(
         rules: all,
       }
     })
-
-    // kilocode_change start - autoapprove: enabling the saved rule settles requests that are already waiting
-    const drainAutoApproved = Effect.fnUntraced(function* () {
-      if (!(yield* autoApprove())) return
-      for (const [id, item] of pending) {
-        const result = yield* evaluateInput({ ...item.request, agent: item.agent }).pipe(
-          Effect.catchTag("Session.NotFoundError", () => Effect.undefined),
-        )
-        if (result?.effect !== "allow") continue
-        yield* bus.publish(Permission.Event.Replied, {
-          sessionID: item.request.sessionID,
-          requestID: item.request.id,
-          reply: "once",
-        })
-        yield* Deferred.succeed(item.deferred, undefined)
-        pending.delete(id)
-      }
-    })
-    // kilocode_change end
 
     function request(input: AssertInput, message?: string): Request {
       return {
@@ -432,13 +397,6 @@ const layer = Layer.effect(
       return Array.from(pending.values(), (item) => item.request).filter((request) => request.sessionID === sessionID)
     })
 
-    // kilocode_change start - autoapprove: drain when a config write turns the saved rule on
-    yield* bus.subscribe(ConfigEvent.Updated).pipe(
-      Stream.runForEach(() => drainAutoApproved()),
-      Effect.forkScoped,
-    )
-    // kilocode_change end
-
     return Service.of({ ask, assert, assertNotDenied, allows, reply, get, forSession, list, nested, close })
   }),
 )
@@ -446,5 +404,5 @@ const layer = Layer.effect(
 export const node = makeLocationNode({
   service: Service,
   layer,
-  deps: [Bus.node, Config.node, Location.node, Agent.node, SessionStore.node, PermissionSaved.node, PluginHooks.node], // kilocode_change(autoapprove) - read the saved global rule
+  deps: [Bus.node, Location.node, Agent.node, SessionStore.node, PermissionSaved.node, PluginHooks.node],
 })

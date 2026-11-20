@@ -221,5 +221,6 @@ export const dict = {
   "tui.autoApprove.description": "Automatycznie zatwierdzaj prośby o uprawnienia dla każdego klienta i zapamiętaj to ustawienie",
   "tui.autoApprove.enabled": "Automatyczne zatwierdzanie włączone. Prośby o uprawnienia są zatwierdzane automatycznie.",
   "tui.autoApprove.disabled": "Automatyczne zatwierdzanie wyłączone.",
+  "tui.autoApprove.projectDisabled": "Automatyczne zatwierdzanie jest wyłączone w konfiguracji tego projektu.",
   "tui.autoApprove.saveFailed": "Nie udało się zapisać ustawienia automatycznego zatwierdzania.",
 }

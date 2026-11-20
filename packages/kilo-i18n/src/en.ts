@@ -242,5 +242,6 @@ export const dict = {
   "tui.autoApprove.description": "Approve permission requests automatically for every client and remember this setting",
   "tui.autoApprove.enabled": "Auto-approve enabled. Permission requests are approved automatically.",
   "tui.autoApprove.disabled": "Auto-approve disabled.",
+  "tui.autoApprove.projectDisabled": "Auto-approve is disabled by this project's config.",
   "tui.autoApprove.saveFailed": "Could not save the auto-approve setting.",
 }

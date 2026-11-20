@@ -219,5 +219,6 @@ export const dict = {
   "tui.autoApprove.description": "Aprobar solicitudes de permiso automáticamente para todos los clientes y recordar esta configuración",
   "tui.autoApprove.enabled": "Aprobación automática activada. Las solicitudes de permiso se aprueban automáticamente.",
   "tui.autoApprove.disabled": "Aprobación automática desactivada.",
+  "tui.autoApprove.projectDisabled": "La aprobación automática está desactivada en la configuración de este proyecto.",
   "tui.autoApprove.saveFailed": "No se pudo guardar la configuración de aprobación automática.",
 }

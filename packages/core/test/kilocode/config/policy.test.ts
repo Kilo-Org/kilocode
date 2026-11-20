@@ -2,7 +2,6 @@ import { expect, test } from "bun:test"
 import { Config } from "@opencode/core/config"
 import { ConfigNormalize } from "@opencode/core/config/normalize"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
-import { AbsolutePath } from "@opencode/core/schema"
 import { Document, Info } from "@opencode/schema/config"
 import { Effect, Option, Schema } from "effect"
 import { it } from "../../lib/effect"
@@ -32,34 +31,6 @@ test("session_sync is an optional boolean Kilo setting preserved by config parsi
   expect(parsed?.shell).toBe("valid")
   expect(parsed?.session_sync).toBeUndefined()
   expect(diagnostics).toEqual([{ kind: "invalid", path: ["session_sync"], message: expect.stringContaining("expected a boolean") }])
-})
-
-test("auto_approve is an optional boolean Kilo setting preserved by config parsing", () => {
-  const decode = Schema.decodeUnknownOption(KiloConfigPolicy.Info)
-  for (const value of [true, false]) {
-    const input = { auto_approve: value, shell: "valid" }
-    expect(Option.isSome(decode(input))).toBe(true)
-    const normalized = ConfigNormalize.normalize(input)
-    if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
-    expect(KiloConfigPolicy.parse(input, normalized.encoded)).toMatchObject(input)
-  }
-  expect(KiloConfigPolicy.parse({}, {})?.auto_approve).toBeUndefined()
-  expect(Option.isNone(decode({ auto_approve: "true" }))).toBe(true)
-})
-
-test("autoApprove only lets the global document enable it, while a project can narrow it", () => {
-  const document = (value?: boolean, path = "/global/kilo2.json") =>
-    new Document({
-      type: "document",
-      path: AbsolutePath.make(path),
-      info: new KiloConfigPolicy.Info(value === undefined ? {} : { auto_approve: value }),
-    })
-  expect(KiloConfigPolicy.autoApprove([], "/global")).toBe(false)
-  expect(KiloConfigPolicy.autoApprove([document(true)], "/global")).toBe(true)
-  expect(KiloConfigPolicy.autoApprove([document(true, "/project/kilo2.json")], "/global")).toBe(false)
-  expect(KiloConfigPolicy.autoApprove([document(true), document(false, "/project/kilo2.json")], "/global")).toBe(false)
-  expect(KiloConfigPolicy.autoApprove([document(false), document(true, "/project/kilo2.json")], "/global")).toBe(false)
-  expect(KiloConfigPolicy.autoApprove([document(false), document()], "/global")).toBe(false)
 })
 
 test("remote_control is an optional boolean preserved beside canonical config", () => {
@@ -271,4 +242,17 @@ test("an invalid compaction threshold is ignored with a diagnostic and keeps the
     },
   ])
   expect(KiloConfigPolicy.parse({ compaction: { threshold_percent: null } }, {})?.compaction?.buffer).toBeUndefined()
+})
+
+test("auto_approve is an optional boolean Kilo setting preserved by config parsing", () => {
+  const decode = Schema.decodeUnknownOption(KiloConfigPolicy.Info)
+  for (const value of [true, false]) {
+    const input = { auto_approve: value, shell: "valid" }
+    expect(Option.isSome(decode(input))).toBe(true)
+    const normalized = ConfigNormalize.normalize(input)
+    if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+    expect(KiloConfigPolicy.parse(input, normalized.encoded)).toMatchObject(input)
+  }
+  expect(KiloConfigPolicy.parse({}, {})?.auto_approve).toBeUndefined()
+  expect(Option.isNone(decode({ auto_approve: "true" }))).toBe(true)
 })

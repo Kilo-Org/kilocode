@@ -200,5 +200,6 @@ export const dict = {
   "tui.autoApprove.description": "为所有客户端自动批准权限请求并记住此设置",
   "tui.autoApprove.enabled": "已启用自动批准。权限请求将自动获得批准。",
   "tui.autoApprove.disabled": "已停用自动批准。",
+  "tui.autoApprove.projectDisabled": "此项目的配置已停用自动批准。",
   "tui.autoApprove.saveFailed": "无法保存自动批准设置。",
 }

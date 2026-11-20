@@ -222,5 +222,6 @@ export const dict = {
   "tui.autoApprove.description": "Berechtigungsanfragen für jeden Client automatisch genehmigen und diese Einstellung merken",
   "tui.autoApprove.enabled": "Automatische Genehmigung aktiviert. Berechtigungsanfragen werden automatisch genehmigt.",
   "tui.autoApprove.disabled": "Automatische Genehmigung deaktiviert.",
+  "tui.autoApprove.projectDisabled": "Die automatische Genehmigung ist in der Konfiguration dieses Projekts deaktiviert.",
   "tui.autoApprove.saveFailed": "Die Einstellung für die automatische Genehmigung konnte nicht gespeichert werden.",
 }

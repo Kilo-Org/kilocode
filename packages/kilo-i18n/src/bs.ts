@@ -222,5 +222,6 @@ export const dict = {
   "tui.autoApprove.description": "Automatski odobri zahtjeve za dozvolu za svaki klijent i zapamti ovo podešavanje",
   "tui.autoApprove.enabled": "Automatsko odobravanje uključeno. Zahtjevi za dozvolu se odobravaju automatski.",
   "tui.autoApprove.disabled": "Automatsko odobravanje isključeno.",
+  "tui.autoApprove.projectDisabled": "Automatsko odobravanje je isključeno u konfiguraciji ovog projekta.",
   "tui.autoApprove.saveFailed": "Nije moguće sačuvati postavku automatskog odobravanja.",
 }

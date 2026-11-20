@@ -9,21 +9,24 @@ import { createEffect, createSignal, on, onCleanup } from "solid-js"
 import { useConfig } from "../config"
 import { useArgs } from "../context/args"
 import { usePermission } from "../context/permission"
-import { nextPermissionMode, setPermissionMode } from "./permission-mode"
+import { isRecord } from "../util/record"
+import { nextPermissionMode, permissionModeOverride, setPermissionMode } from "./permission-mode"
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
+export type ServerAutoApproveState = "enabled" | "narrowed" | "disabled"
 
 /** The location the settings RPC answers for: the TUI's own project, the same one every other Kilo command reads. */
 const located = (context: Plugin.Context) => ({
   location: context.location ?? context.data.location.default(),
 })
 
-/** The saved auto-approve state: only global can enable it, a project `false` can narrow it. */
-export function savedAutoApprove(global: unknown, project: unknown) {
-  const projectValue = isRecord(project) ? project.auto_approve : undefined
-  if (projectValue === false) return false
-  return isRecord(global) && global.auto_approve === true
+/**
+ * The saved auto-approve state: only the global config can enable it; a project `false` reports `"narrowed"` so the
+ * toggle surfaces the project override instead of writing a global rule that cannot take effect here.
+ */
+export function savedAutoApproveState(global: unknown, project: unknown): ServerAutoApproveState {
+  if (isRecord(project) && project.auto_approve === false) return "narrowed"
+  if (isRecord(global) && global.auto_approve === true) return "enabled"
+  return "disabled"
 }
 
 async function readAutoApprove(context: Plugin.Context) {
@@ -33,11 +36,10 @@ async function readAutoApprove(context: Plugin.Context) {
     settings.read({ scope: "global" }, location),
     settings.read({ scope: "project" }, location).catch(() => undefined),
   ])
-  return savedAutoApprove(global.document, project?.document)
+  return savedAutoApproveState(global.document, project?.document)
 }
 
-/** Writes the global rule, removing the key on disable so the config never keeps a stale `false`. */
-async function writeAutoApprove(context: Plugin.Context, enabled: boolean) {
+async function writeOnce(context: Plugin.Context, enabled: boolean) {
   const settings = context.client.rpc(KiloSettingsRpc.Definition)
   const location = located(context)
   const current = await settings.read({ scope: "global" }, location)
@@ -53,6 +55,16 @@ async function writeAutoApprove(context: Plugin.Context, enabled: boolean) {
   )
 }
 
+/** Writes the global rule, removing the key on disable and retrying once on a concurrent revision conflict. */
+async function writeAutoApprove(context: Plugin.Context, enabled: boolean) {
+  try {
+    await writeOnce(context, enabled)
+  } catch (error) {
+    if (!isRecord(error) || error.type !== "conflict") throw error
+    await writeOnce(context, enabled)
+  }
+}
+
 export default Plugin.define({
   id: "kilocode.autoapprove",
   setup(context) {
@@ -63,64 +75,80 @@ export default Plugin.define({
         const config = useConfig()
         const args = useArgs()
         const [saving, setSaving] = createSignal(false)
-        let server: boolean | undefined
+        let server: ServerAutoApproveState = "disabled"
+        // A server read started before a toggle must not overwrite the toggle's newer state.
+        let generation = 0
 
         // A settings write means "use this mode", unless the saved global rule is what keeps auto-approve on.
         createEffect(
           on(
             () => config.data.session.permissions,
             () => {
-              if (server !== true) setPermissionMode(undefined)
+              if (server !== "enabled") setPermissionMode(undefined)
             },
             { defer: true },
           ),
         )
 
-        const applyServer = (enabled: boolean) => {
-          if (enabled) {
-            server = true
+        const applyServer = (next: ServerAutoApproveState) => {
+          const previous = server
+          server = next
+          if (next === "enabled") {
             setPermissionMode("autoaccept")
             return
           }
-          if (server !== true) {
-            server = false
+          if (previous !== "enabled") return
+          // The saved rule that was keeping this TUI on is gone. Keep `--auto` unless the user already left it.
+          if (args.auto) {
+            if (permissionModeOverride() !== "prompt") setPermissionMode(undefined)
             return
           }
-          server = false
-          // The rule that was keeping this TUI on is gone. Leave only `--auto` in control.
-          setPermissionMode(args.auto ? "autoaccept" : "prompt")
+          setPermissionMode("prompt")
         }
-        const readServer = () => readAutoApprove(context).then(applyServer).catch(() => undefined)
+
+        const readServer = async () => {
+          const current = ++generation
+          const next = await readAutoApprove(context).catch(() => undefined)
+          if (next === undefined || current !== generation) return
+          applyServer(next)
+        }
+
+        const toast = (variant: "info" | "warning" | "error", key: keyof typeof dict) =>
+          context.ui.toast.show({ variant, message: dict[key] })
 
         // The first read decides the current mode, so a toggle pressed before it settles waits for it.
         const startup = readServer()
-        onCleanup(context.data.on("config.updated", readServer))
+        onCleanup(context.data.on("config.updated", () => void readServer()))
 
         const toggle = async () => {
           await startup
           if (saving()) return
+          const next = nextPermissionMode(permission.mode)
+          // When `--auto` is the only reason auto-approve is active (or was just left), toggle only this process.
+          if (args.auto && server !== "enabled") {
+            setPermissionMode(next)
+            toast("info", next === "autoaccept" ? "tui.autoApprove.enabled" : "tui.autoApprove.disabled")
+            return
+          }
+          if (next === "autoaccept" && server === "narrowed") {
+            toast("warning", "tui.autoApprove.projectDisabled")
+            return
+          }
+          if (next === "prompt" && server !== "enabled") {
+            setPermissionMode("prompt")
+            toast("info", "tui.autoApprove.disabled")
+            return
+          }
           setSaving(true)
-          // With `--auto`, the command also leaves the launch flag; otherwise it toggles the saved rule itself.
-          const next = args.auto
-            ? nextPermissionMode(permission.mode)
-            : server === true
-              ? "prompt"
-              : "autoaccept"
+          const current = ++generation
           await writeAutoApprove(context, next === "autoaccept")
             .then(() => {
+              if (current !== generation) return
+              server = next === "autoaccept" ? "enabled" : "disabled"
               setPermissionMode(next)
-              readServer()
-              context.ui.toast.show({
-                variant: "info",
-                message: dict[next === "autoaccept" ? "tui.autoApprove.enabled" : "tui.autoApprove.disabled"],
-              })
+              toast("info", next === "autoaccept" ? "tui.autoApprove.enabled" : "tui.autoApprove.disabled")
             })
-            .catch(() =>
-              context.ui.toast.show({
-                variant: "error",
-                message: dict["tui.autoApprove.saveFailed"],
-              }),
-            )
+            .catch(() => toast("error", "tui.autoApprove.saveFailed"))
             .finally(() => setSaving(false))
         }
 

@@ -1,31 +1,36 @@
 import { beforeEach, describe, expect, it, test } from "bun:test"
-import { savedAutoApprove } from "../../src/kilocode/auto-approve"
+import { savedAutoApproveState } from "../../src/kilocode/auto-approve"
 import { nextPermissionMode, permissionModeOverride, setPermissionMode } from "../../src/kilocode/permission-mode"
 import { createAppFixture } from "../fixture/app"
 import { directory, json } from "../fixture/tui-client"
 
 const location = { directory, project: { id: "project", directory, canonical: directory } }
 
-type AutoApproveState = { enabled: boolean }
+type AutoApproveState = { enabled: boolean; project?: boolean; writes?: number }
 
-/** The `kilocode.settings` RPC over the global auto-approve key, with the same in-memory store the TUI reads. */
+/** The `kilocode.settings` RPC over the global and project auto-approve keys. */
 function settings(state: AutoApproveState) {
   return async (url: URL, request: Request) => {
-    if (url.pathname === "/api/rpc/kilocode.settings/read")
+    if (url.pathname === "/api/rpc/kilocode.settings/read") {
+      const body = (await request.clone().json()) as { input?: { scope?: "global" | "project" } }
+      const scope = body.input?.scope ?? "global"
+      const value = scope === "project" ? state.project : state.enabled ? true : undefined
       return json({
         output: {
-          scope: "global",
-          target: { scope: "global", path: `${directory}/kilo2.json`, revision: "rev", exists: true },
-          document: state.enabled ? { auto_approve: true } : {},
+          scope,
+          target: { scope, path: `${directory}/${scope}-kilo2.json`, revision: "rev", exists: true },
+          document: value === undefined ? {} : { auto_approve: value },
         },
       })
+    }
     if (url.pathname === "/api/rpc/kilocode.settings/write") {
       const body = (await request.clone().json()) as { input?: { set?: { auto_approve?: boolean | null } } }
+      state.writes = (state.writes ?? 0) + 1
       state.enabled = body.input?.set?.auto_approve === true
       return json({
         output: {
           scope: "global",
-          target: { scope: "global", path: `${directory}/kilo2.json`, revision: "next", exists: true },
+          target: { scope: "global", path: `${directory}/global-kilo2.json`, revision: "next", exists: true },
           changed: true,
         },
       })
@@ -106,11 +111,12 @@ describe("auto-approve mode", () => {
   })
 
   it("only lets the global config enable the saved rule, while a project can narrow it", () => {
-    expect(savedAutoApprove({ auto_approve: true }, undefined)).toBe(true)
-    expect(savedAutoApprove({ auto_approve: true }, { auto_approve: true })).toBe(true)
-    expect(savedAutoApprove({}, { auto_approve: true })).toBe(false)
-    expect(savedAutoApprove({ auto_approve: true }, { auto_approve: false })).toBe(false)
-    expect(savedAutoApprove(undefined, undefined)).toBe(false)
+    expect(savedAutoApproveState({ auto_approve: true }, undefined)).toBe("enabled")
+    expect(savedAutoApproveState({ auto_approve: true }, { auto_approve: true })).toBe("enabled")
+    expect(savedAutoApproveState({}, { auto_approve: true })).toBe("disabled")
+    expect(savedAutoApproveState({ auto_approve: true }, { auto_approve: false })).toBe("narrowed")
+    expect(savedAutoApproveState({}, { auto_approve: false })).toBe("narrowed")
+    expect(savedAutoApproveState(undefined, undefined)).toBe("disabled")
   })
 })
 
@@ -219,7 +225,56 @@ test(
 )
 
 test(
-  "leaves a --auto launch without keeping auto-approve",
+  "retries once on a revision conflict when saving",
+  async () => {
+    const state: AutoApproveState = { enabled: false }
+    let attempts = 0
+    await using app = await createAppFixture({
+      fetch: async (url, request) => {
+        if (url.pathname === "/api/rpc/kilocode.settings/write" && attempts++ === 0)
+          return json({ _tag: "RpcError", type: "conflict", message: "revision changed" }, { status: 400 })
+        return settings(state)(url, request)
+      },
+    })
+    await app.ready
+    await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
+
+    app.mockInput.pressKey("a", { ctrl: true, meta: true })
+    await app.waitForFrame((frame) => frame.includes("Auto-approve enabled."))
+    expect(attempts).toBe(2)
+    expect(state.enabled).toBe(true)
+  },
+  30000,
+)
+
+test(
+  "surfaces project narrowing instead of reporting auto-approve enabled",
+  async () => {
+    const sessionID = "ses_autoapprove_narrowed"
+    const state: AutoApproveState = { enabled: true, project: false }
+    await using app = await createAppFixture({
+      width: 110,
+      height: 34,
+      args: { sessionID },
+      config: { animations: false, tabs: { mode: "off" } },
+      fetch: withSession(sessionID, state),
+    })
+    await app.ready
+    await until(app, "session", (frame) => frame.includes("Demo Model"))
+    expect(app.captureCharFrame()).not.toContain(" auto ")
+
+    app.mockInput.pressKey("a", { ctrl: true, meta: true })
+    await until(app, "project disabled toast", (frame) =>
+      frame.includes("Auto-approve is disabled by this project's config."),
+    )
+    expect(app.captureCharFrame()).not.toContain(" auto ")
+    expect(state.writes ?? 0).toBe(0)
+  },
+  30000,
+)
+
+test(
+  "leaves a --auto launch for this run without writing global config",
   async () => {
     const sessionID = "ses_autoapprove_flag"
     const state: AutoApproveState = { enabled: false }
@@ -236,9 +291,36 @@ test(
 
     app.mockInput.pressKey("a", { ctrl: true, meta: true })
     await until(app, "disabled toast", (frame) => frame.includes("Auto-approve disabled."))
-    // The flag still seeds later launches, so leaving it must last for this process even though the setting is saved.
     expect(app.captureCharFrame()).not.toContain(" auto ")
     expect(state.enabled).toBe(false)
+    expect(state.writes ?? 0).toBe(0)
+  },
+  30000,
+)
+
+test(
+  "disables auto-approve cleanly when both --auto and the saved global rule are active",
+  async () => {
+    const sessionID = "ses_autoapprove_flag_and_saved"
+    const state: AutoApproveState = { enabled: true }
+    await using app = await createAppFixture({
+      width: 110,
+      height: 34,
+      args: { sessionID, auto: true },
+      config: { animations: false, tabs: { mode: "off" } },
+      fetch: withSession(sessionID, state),
+    })
+    await app.ready
+    await until(app, "session", (frame) => frame.includes("Demo Model"))
+    expect(app.captureCharFrame()).toContain(" auto ")
+
+    app.mockInput.pressKey("a", { ctrl: true, meta: true })
+    await until(app, "disabled toast", (frame) => frame.includes("Auto-approve disabled."))
+    // Emitting config.updated after the local write must not bounce the `--auto` process back on.
+    app.events.emit({ id: "evt_config_updated", created: 1, type: "config.updated", data: {} })
+    await Bun.sleep(150)
+    expect(state.enabled).toBe(false)
+    expect(app.captureCharFrame()).not.toContain(" auto ")
   },
   30000,
 )

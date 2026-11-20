@@ -1,6 +1,5 @@
 export * as KiloConfigPolicy from "./policy.js"
 
-import path from "node:path"
 import { Config } from "@opencode/schema/config"
 import { ConfigCommand } from "@opencode/schema/config/command"
 import { ConfigModel } from "@opencode/schema/config/model"
@@ -162,7 +161,6 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 const settings = {
-  auto_approve: { schema: Schema.Boolean, expected: "a boolean" },
   remote_control: { schema: Schema.Boolean, expected: "a boolean" },
   auto_collapse_reasoning: { schema: Schema.Boolean, expected: "a boolean" },
   reasoning_display: { schema: ReasoningDisplay, expected: 'one of "expanded", "preview", "headline"' },
@@ -181,6 +179,7 @@ const settings = {
   memory_model: { schema: Schema.NullOr(Schema.String), expected: "a model string or null" },
   web_search: { schema: Schema.Boolean, expected: "a boolean" },
   retention: { schema: Retention, expected: "an object with optional enabled and maxAgeDays" },
+  auto_approve: { schema: Schema.Boolean, expected: "a boolean" },
 } as const
 
 /** Decode each Kilo-only setting on its own, so one invalid field does not drop the others. */
@@ -432,25 +431,6 @@ export function fromEntries(entries: readonly Config.Entry[]) {
       false,
     ),
   }
-}
-
-/**
- * Auto-approve of the effective entries. Only the global document can turn it on, so a checked-in project config
- * cannot grant the bypass; any nearer document can still turn it off.
- */
-export function autoApprove(entries: readonly Config.Entry[], globalDirectory: string) {
-  return entries.reduce<boolean>((value, entry) => {
-    if (entry.type !== "document" || !(entry.info instanceof Info) || entry.info.auto_approve === undefined)
-      return value
-    if (entry.info.auto_approve && !within(globalDirectory, entry.path)) return value
-    return entry.info.auto_approve
-  }, false)
-}
-
-function within(directory: string, file: string | undefined) {
-  if (!file) return false
-  const relative = path.relative(directory, file)
-  return relative === "" || (relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative))
 }
 
 /**

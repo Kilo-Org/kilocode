@@ -215,5 +215,6 @@ export const dict = {
   "tui.autoApprove.description": "すべてのクライアントで許可リクエストを自動的に承認し、この設定を記憶します",
   "tui.autoApprove.enabled": "自動承認を有効にしました。許可リクエストは自動的に承認されます。",
   "tui.autoApprove.disabled": "自動承認を無効にしました。",
+  "tui.autoApprove.projectDisabled": "自動承認はこのプロジェクトの設定で無効になっています。",
   "tui.autoApprove.saveFailed": "自動承認の設定を保存できませんでした。",
 }

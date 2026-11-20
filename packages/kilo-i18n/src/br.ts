@@ -220,5 +220,6 @@ export const dict = {
   "tui.autoApprove.enabled":
     "Aprovação automática ativada. As solicitações de permissão são aprovadas automaticamente.",
   "tui.autoApprove.disabled": "Aprovação automática desativada.",
+  "tui.autoApprove.projectDisabled": "A aprovação automática está desativada na configuração deste projeto.",
   "tui.autoApprove.saveFailed": "Não foi possível salvar a configuração de aprovação automática.",
 }

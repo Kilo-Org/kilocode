@@ -222,5 +222,6 @@ export const dict = {
   "tui.autoApprove.enabled":
     "Automatisch goedkeuren ingeschakeld. Verzoeken om toestemming worden automatisch goedgekeurd.",
   "tui.autoApprove.disabled": "Automatisch goedkeuren uitgeschakeld.",
+  "tui.autoApprove.projectDisabled": "Automatisch goedkeuren is uitgeschakeld door de configuratie van dit project.",
   "tui.autoApprove.saveFailed": "Kan de instelling voor automatisch goedkeuren niet opslaan.",
 }
