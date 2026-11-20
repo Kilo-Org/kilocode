@@ -1,5 +1,6 @@
 ---
+"@kilocode/cli": patch
 "@kilocode/kilo-jetbrains": patch
 ---
 
-Legacy migration of custom modes and auto-approval settings now writes the permission keys the Kilo CLI reads, so a migrated agent keeps the tool access its legacy mode granted.
+Legacy custom modes now migrate to the same permission keys the CLI reads: a browser group grants browser use, an MCP group grants the tools of each migrated server, and a file restriction becomes a wildcard glob that keeps the files it allowed.
