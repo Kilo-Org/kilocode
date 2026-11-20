@@ -9,7 +9,7 @@ platform: new
 Kilo Code's CLI supports **custom subagents** — specialized AI assistants that can be invoked by primary agents or manually via `@` mentions. Subagents run in their own isolated sessions with tailored prompts, models, tool access, and permissions, enabling you to build purpose-built workflows for tasks like code review, documentation, security audits, and more.
 
 {% callout type="info" %}
-Custom subagents are currently configured through the config file (`kilo.jsonc`) or via markdown agent files. UI-based configuration is not yet available.
+Custom subagents can be configured through the config file (`kilo.jsonc`), markdown agent files, the interactive CLI, or the VS Code extension's **Agent Behaviour** settings.
 {% /callout %}
 
 ## What Are Subagents?
@@ -46,7 +46,7 @@ Every agent has a **mode** that determines how it can be used:
 
 ## Configuring Custom Subagents
 
-There are two ways to define custom subagents: through JSON configuration or markdown files.
+You can define custom subagents through JSON configuration, markdown files, the interactive CLI, or the VS Code settings.
 
 ### Method 1: JSON Configuration
 
@@ -160,6 +160,19 @@ kilo agent create \
   --mode subagent \
   --tools "read,grep,glob"
 ```
+
+### Method 4: VS Code Settings
+
+In the VS Code extension, open **Settings → Agent Behaviour → Agents**:
+
+- When you create an agent, choose its **Mode**: **Primary**, **Subagent**, or **Primary and subagent**.
+- To change an existing custom agent, open it and pick a new **Mode** in the edit view.
+
+The mode is saved as `agent.<name>.mode` in your global `kilo.jsonc`. Built-in agents such as `explore` and `general` keep their mode. Give each subagent a clear **Description**: primary agents read it to decide when to delegate to that subagent. A subagent cannot be the default agent, so to make the default agent a subagent, choose another default agent first. If the default agent is set in the project's `kilo.jsonc`, change `default_agent` there.
+
+{% callout type="note" %}
+An agent defined in a markdown file whose frontmatter sets `mode: subagent` or `mode: all` keeps that mode. Edit the file to change it.
+{% /callout %}
 
 ## Configuration Options
 
