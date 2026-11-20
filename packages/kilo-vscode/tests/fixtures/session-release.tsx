@@ -1,0 +1,320 @@
+import assert from "node:assert/strict"
+import { Window } from "happy-dom"
+import type { SessionContextValue } from "../../webview-ui/src/context/session-types"
+import type { ExtensionMessage, Message, SessionInfo, WebviewMessage } from "../../webview-ui/src/types/messages"
+
+const window = new Window({ url: "http://localhost" })
+Object.defineProperty(window, "origin", { value: window.location.origin })
+const sent: WebviewMessage[] = []
+const api = {
+  postMessage: (message: WebviewMessage) => {
+    sent.push(message)
+  },
+  getState: () => undefined,
+  setState: () => {},
+}
+
+Object.assign(globalThis, {
+  window,
+  document: window.document,
+  navigator: window.navigator,
+  localStorage: window.localStorage,
+  Node: window.Node,
+  Element: window.Element,
+  HTMLElement: window.HTMLElement,
+  HTMLHeadElement: window.HTMLHeadElement,
+  HTMLInputElement: window.HTMLInputElement,
+  HTMLTextAreaElement: window.HTMLTextAreaElement,
+  SVGElement: window.SVGElement,
+  MutationObserver: window.MutationObserver,
+  IntersectionObserver: window.IntersectionObserver,
+  ResizeObserver: window.ResizeObserver,
+  CustomEvent: window.CustomEvent,
+  Event: window.Event,
+  MessageEvent: window.MessageEvent,
+  requestAnimationFrame: window.requestAnimationFrame.bind(window),
+  cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
+  getComputedStyle: window.getComputedStyle.bind(window),
+  acquireVsCodeApi: () => api,
+})
+
+// Static imports would run before the happy-dom globals above exist, so the
+// webview modules (which read `window` at import time) must load after them.
+const { render } = await import("solid-js/web")
+const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
+const { ServerProvider } = await import("../../webview-ui/src/context/server")
+const { ConfigContext } = await import("../../webview-ui/src/context/config")
+const { LanguageContext } = await import("../../webview-ui/src/context/language")
+const { NotificationsProvider } = await import("../../webview-ui/src/context/notifications")
+const { ProviderProvider } = await import("../../webview-ui/src/context/provider")
+const { SessionProvider, useSession } = await import("../../webview-ui/src/context/session")
+const { post } = await import("../../webview-ui/src/utils/webview-message")
+const { drafts, savePromptDraft } = await import("../../webview-ui/src/utils/draft-store")
+const { sessionDraftKey, scopeDraftKey } = await import("../../webview-ui/src/utils/prompt-drafts")
+
+const config = {
+  config: () => ({}),
+  globalConfig: () => ({}),
+  globalDraft: () => ({}),
+  projectConfig: () => ({}),
+  collections: () => ({}),
+  settings: () => ({}),
+  shortcuts: () => ({ bindings: {}, selection: false }),
+  features: () => ({ indexing: false, sandboxControls: false, backgroundSubagents: false }),
+  loading: () => false,
+  isDirty: () => false,
+  saving: () => false,
+  saveError: () => null,
+  updateConfig: () => {},
+  updateGlobalConfig: () => {},
+  updateProjectConfig: () => {},
+  updateSetting: () => {},
+  applySetting: () => {},
+  saveConfig: () => {},
+  discardConfig: () => {},
+}
+const language = {
+  locale: () => "en",
+  setLocale: () => {},
+  userOverride: () => "",
+  t: (key: string) => key,
+}
+
+const view = { value: undefined as SessionContextValue | undefined }
+const Probe = () => {
+  view.value = useSession()
+  return null
+}
+
+const host = document.createElement("div")
+document.body.append(host)
+const dispose = render(
+  () => (
+    <VSCodeProvider>
+      <ServerProvider>
+        <ProviderProvider>
+          <ConfigContext.Provider value={config as never}>
+            <LanguageContext.Provider value={language as never}>
+              <NotificationsProvider>
+                <SessionProvider>
+                  <Probe />
+                </SessionProvider>
+              </NotificationsProvider>
+            </LanguageContext.Provider>
+          </ConfigContext.Provider>
+        </ProviderProvider>
+      </ServerProvider>
+    </VSCodeProvider>
+  ),
+  host,
+)
+
+const settle = async () => {
+  await Promise.resolve()
+  await window.happyDOM.waitUntilComplete()
+}
+const emit = async (message: ExtensionMessage) => {
+  post(message)
+  await settle()
+}
+const info = (id: string): SessionInfo => ({
+  id,
+  title: id,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+})
+const message = (id: string, sessionID: string): Message => ({
+  id,
+  sessionID,
+  role: "user",
+  createdAt: "2026-01-01T00:00:00.000Z",
+})
+
+const failures: string[] = []
+const check = async (id: string, fn: () => void | Promise<void>) => {
+  try {
+    await fn()
+    console.log(`pass: ${id}`)
+  } catch (error) {
+    failures.push(`${id}: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+const session = () => {
+  const value = view.value
+  assert(value, "Probe did not run")
+  return value
+}
+const lastOf = <T extends WebviewMessage["type"]>(type: T) => {
+  const matches = sent.filter((item) => item.type === type)
+  return matches.at(-1) as Extract<WebviewMessage, { type: T }> | undefined
+}
+
+try {
+  await settle()
+  await emit({ type: "ready", serverInfo: { port: 1 } })
+  await emit({ type: "sessionsLoaded", sessions: [info("child"), info("other")] })
+  await emit({ type: "messagesLoaded", sessionID: "child", messages: [message("child-1", "child")] })
+  const draftKey = sessionDraftKey("child")!
+  const boxKey = scopeDraftKey("chat", draftKey)
+  savePromptDraft(draftKey, "draft text", [], [])
+  savePromptDraft(boxKey, "draft text", [], [])
+  const statusBefore = session().status()
+
+  session().releaseSession("child")
+  await settle()
+
+  await check("release-drops-transcript", () => {
+    assert.deepEqual(session().allMessages()["child"] ?? [], [], "cached transcript should be dropped")
+  })
+  await check("release-keeps-draft", () => {
+    assert.equal(drafts.get(draftKey), "draft text", "session draft should survive release")
+    assert.equal(drafts.get(boxKey), "draft text", "box-scoped session draft should survive release")
+  })
+  await check("release-keeps-session", () => {
+    assert(
+      session()
+        .sessions()
+        .some((item) => item.id === "child"),
+      "released session should stay listed",
+    )
+  })
+  await check("release-keeps-status", () => {
+    assert.equal(session().isSubmitting("child"), false, "release should not start a submission")
+    assert.equal(session().status(), statusBefore, "release should not change the current status")
+  })
+
+  await emit({ type: "sessionStatus", sessionID: "child", status: "busy" })
+  await check("release-keeps-events-status", () => {
+    assert.equal(session().activityFor("child"), "busy", "released session should still receive status events")
+  })
+  await emit({
+    type: "permissionRequest",
+    permission: { id: "perm-later", sessionID: "child", toolName: "bash", patterns: [], always: [], args: {} },
+  })
+  await check("release-keeps-events-permission", () => {
+    assert(
+      session()
+        .permissions()
+        .some((item) => item.id === "perm-later"),
+      "released session should still receive permission requests",
+    )
+  })
+  await emit({
+    type: "questionRequest",
+    question: { id: "q-later", sessionID: "child", questions: [] },
+  })
+  await check("release-keeps-events-question", () => {
+    assert(
+      session()
+        .questions()
+        .some((item) => item.id === "q-later"),
+      "released session should still receive question requests",
+    )
+  })
+  await emit({
+    type: "suggestionRequest",
+    suggestion: { id: "s-later", sessionID: "child", text: "next", actions: [] },
+  })
+  await check("release-keeps-events-suggestion", () => {
+    assert(
+      session()
+        .suggestions()
+        .some((item) => item.id === "s-later"),
+      "released session should still receive suggestions",
+    )
+  })
+
+  await emit({ type: "sessionDeleted", sessionID: "child" })
+  await emit({ type: "sessionsLoaded", sessions: [info("child"), info("other")] })
+  await emit({
+    type: "permissionRequest",
+    permission: { id: "perm-relist", sessionID: "child", toolName: "bash", patterns: [], always: [], args: {} },
+  })
+  await check("relist-visible", () => {
+    assert(
+      session()
+        .permissions()
+        .some((item) => item.id === "perm-relist"),
+      "a re-listed session should receive its permission requests",
+    )
+  })
+  await check("relist-listed", () => {
+    assert(
+      session()
+        .sessions()
+        .some((item) => item.id === "child"),
+      "a re-listed session should appear again",
+    )
+  })
+
+  await emit({ type: "questionRequest", question: { id: "q-live", sessionID: "child", questions: [] } })
+  await emit({
+    type: "suggestionRequest",
+    suggestion: { id: "s-live", sessionID: "child", text: "next", actions: [] },
+  })
+  session().selectSession("other")
+  await settle()
+
+  await check("reply-attribution", () => {
+    session().replyToQuestion("q-live", [["a"]])
+    const reply = lastOf("questionReply")
+    assert.equal(reply?.requestID, "q-live", "reply should be posted for the live question")
+    assert.equal(reply?.sessionID, "child", "reply should carry the request's own session")
+  })
+  await check("reject-attribution", () => {
+    session().rejectQuestion("q-live")
+    const reject = lastOf("questionReject")
+    assert.equal(reject?.requestID, "q-live", "reject should be posted for the live question")
+    assert.equal(reject?.sessionID, "child", "reject should carry the request's own session")
+  })
+  await check("accept-attribution", () => {
+    session().acceptSuggestion("s-live", 1)
+    const accept = lastOf("suggestionAccept")
+    assert.equal(accept?.requestID, "s-live", "accept should be posted for the live suggestion")
+    assert.equal(accept?.sessionID, "child", "accept should carry the request's own session")
+    assert.equal(accept?.index, 1, "accept should keep the chosen index")
+  })
+  await check("dismiss-attribution", () => {
+    session().dismissSuggestion("s-live")
+    const dismiss = lastOf("suggestionDismiss")
+    assert.equal(dismiss?.requestID, "s-live", "dismiss should be posted for the live suggestion")
+    assert.equal(dismiss?.sessionID, "child", "dismiss should carry the request's own session")
+  })
+
+  await emit({ type: "questionResolved", requestID: "q-live" })
+  await check("stale-question-posts-nothing", () => {
+    const before = sent.length
+    session().replyToQuestion("q-live", [["a"]])
+    session().rejectQuestion("q-live")
+    assert.equal(sent.length, before, "a resolved question must not post a reply or reject")
+  })
+  await emit({ type: "suggestionResolved", requestID: "s-live" })
+  await check("stale-suggestion-posts-nothing", () => {
+    const before = sent.length
+    session().acceptSuggestion("s-live", 0)
+    session().dismissSuggestion("s-live")
+    assert.equal(sent.length, before, "a resolved suggestion must not post accept or dismiss")
+  })
+  await check("stale-suggestion-no-responding", () => {
+    assert.equal(
+      session().respondingSuggestions().has("s-live"),
+      false,
+      "a resolved suggestion must not latch a responding flag",
+    )
+  })
+
+  await check("unknown-permission-returns-false", () => {
+    assert.equal(session().respondToPermission("missing", "once", [], []), false, "unknown permission should fail")
+  })
+  await check("unknown-permission-posts-nothing", () => {
+    const before = sent.length
+    session().respondToPermission("missing-again", "once", [], [])
+    assert.equal(sent.length, before, "an unknown permission must not post a response")
+  })
+} finally {
+  dispose()
+  await window.happyDOM.cancelAsync()
+  await window.happyDOM.close()
+}
+
+assert.deepEqual(failures, [], failures.join("\n"))

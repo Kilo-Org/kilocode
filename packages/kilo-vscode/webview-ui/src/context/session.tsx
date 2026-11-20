@@ -1888,33 +1888,51 @@ export const SessionProvider: ParentComponent = (props) => {
       setSessions: (updater) => setStore("sessions", produce(updater)),
     })
     batch(() => {
+      for (const info of loaded) removedSessions.delete(info.id)
       for (const info of loaded) if (store.sessions[info.id]) recoverInfo(info)
     })
     paging.finish(hasMore ?? false)
     setSessionsProject(hasMore ? undefined : projectId)
   }
 
+  // Drops the cached transcript of a session and its bookkeeping. The session
+  // row, drafts and event suppression belong to the delete path, not here.
+  function dropTranscript(sessionID: string) {
+    const ids = (store.messages[sessionID] ?? []).map((m) => m.id)
+    for (const id of ids) optimisticParts.delete(id)
+    for (const id of ids) stash.remove(id)
+    clearHiddenErrors(ids)
+    setStore(
+      produce((s) => {
+        delete s.messages[sessionID]
+        for (const id of ids) delete s.parts[id]
+        delete s.toolParts[sessionID]
+        delete s.todos[sessionID]
+      }),
+    )
+    // prettier-ignore
+    setPages(produce((map) => { delete map[sessionID] }))
+    // prettier-ignore
+    setLoaded((prev) => { if (!prev.has(sessionID)) return prev; const next = new Set(prev); next.delete(sessionID); return next })
+    pendingOptimistic.delete(sessionID)
+  }
+
+  // Release keeps the session: it only drops the cached transcript, so drafts
+  // survive and a listed session still receives its events.
+  function releaseSession(sessionID: string) {
+    dropTranscript(sessionID)
+  }
+
   function handleSessionDeleted(sessionID: string) {
     removedSessions.add(sessionID)
-    pendingOptimistic.delete(sessionID)
     freshSessions.delete(sessionID)
     aborts.clear(sessionID)
     confirmSubmissions(sessionID)
     batch(() => {
-      // Collect message IDs so we can clean up their parts (store + stash)
-      const msgs = store.messages[sessionID] ?? []
-      const msgIds = msgs.map((m) => m.id)
-      for (const id of msgIds) optimisticParts.delete(id)
-      for (const id of msgIds) stash.remove(id)
-      clearHiddenErrors(msgIds)
-
+      dropTranscript(sessionID)
       setStore(
         produce((s) => {
           delete s.sessions[sessionID]
-          delete s.messages[sessionID]
-          for (const id of msgIds) delete s.parts[id]
-          delete s.toolParts[sessionID]
-          delete s.todos[sessionID]
           for (const [id, state] of Object.entries(s.modelUsage)) {
             if (id === sessionID || state.data?.sessionIDs.includes(sessionID)) delete s.modelUsage[id]
           }
@@ -1923,8 +1941,6 @@ export const SessionProvider: ParentComponent = (props) => {
           for (const key of sessionVariantKeys(s.variantSelections, sessionID)) delete s.variantSelections[key]
         }),
       )
-      // prettier-ignore
-      setPages(produce((map) => { delete map[sessionID] }))
       // Clean up pending questions/errors for the deleted session
       const deleted = questions()
         .filter((q) => q.sessionID === sessionID)
@@ -1960,8 +1976,6 @@ export const SessionProvider: ParentComponent = (props) => {
       for (const id of terminalPermissions.keys()) {
         if (id.endsWith(suffix)) terminalPermissions.delete(id)
       }
-      // prettier-ignore
-      setLoaded((prev) => { if (!prev.has(sessionID)) return prev; const next = new Set(prev); next.delete(sessionID); return next })
       // prettier-ignore
       setStatusMap(produce((map) => { delete map[sessionID] }))
       clearClose(sessionID)
@@ -2488,17 +2502,14 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  // A request must still exist in this provider, and its owning session is the
+  // only attribution: never fall back to the currently selected session.
   function replyToQuestion(requestID: string, answers: string[][]) {
     clearQuestionError(requestID)
-    const question = questions().find((item) => item.id === requestID)
-    const sessionID = question?.sessionID ?? currentSessionID() ?? ""
     if (cah.reply(requestID, "continue")) return
-    vscode.postMessage({
-      type: "questionReply",
-      requestID,
-      sessionID,
-      answers,
-    })
+    const question = questions().find((item) => item.id === requestID)
+    if (!question) return
+    vscode.postMessage({ type: "questionReply", requestID, sessionID: question.sessionID, answers })
   }
 
   function dismissQuestion(requestID: string) {
@@ -2512,37 +2523,27 @@ export const SessionProvider: ParentComponent = (props) => {
   }
   function rejectQuestion(requestID: string) {
     clearQuestionError(requestID)
-    const question = questions().find((item) => item.id === requestID)
-    const sessionID = question?.sessionID ?? currentSessionID() ?? ""
     if (cah.reply(requestID, "stop")) return
-    vscode.postMessage({
-      type: "questionReject",
-      requestID,
-      sessionID,
-    })
+    const question = questions().find((item) => item.id === requestID)
+    if (!question) return
+    vscode.postMessage({ type: "questionReject", requestID, sessionID: question.sessionID })
   }
 
+  // Same rule as the replies above: look the record up, and use only its session.
   function acceptSuggestion(requestID: string, index: number) {
     clearSuggestionError(requestID)
+    const suggestion = suggestions().find((s) => s.id === requestID)
+    if (!suggestion) return
     setRespondingSuggestions((prev) => new Set(prev).add(requestID))
-    const sid = suggestions().find((s) => s.id === requestID)?.sessionID ?? currentSessionID() ?? ""
-    vscode.postMessage({
-      type: "suggestionAccept",
-      requestID,
-      sessionID: sid,
-      index,
-    })
+    vscode.postMessage({ type: "suggestionAccept", requestID, sessionID: suggestion.sessionID, index })
   }
 
   function dismissSuggestion(requestID: string) {
     clearSuggestionError(requestID)
+    const suggestion = suggestions().find((s) => s.id === requestID)
+    if (!suggestion) return
     setRespondingSuggestions((prev) => new Set(prev).add(requestID))
-    const sid = suggestions().find((s) => s.id === requestID)?.sessionID ?? currentSessionID() ?? ""
-    vscode.postMessage({
-      type: "suggestionDismiss",
-      requestID,
-      sessionID: sid,
-    })
+    vscode.postMessage({ type: "suggestionDismiss", requestID, sessionID: suggestion.sessionID })
   }
 
   function createSession() {
@@ -3063,7 +3064,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selectSession,
     scrollBottomID,
     consumeScrollBottom,
-    releaseSession: handleSessionDeleted,
+    releaseSession,
     deleteSession,
     renameSession,
     exportSessionTranscript,

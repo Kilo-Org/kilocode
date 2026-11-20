@@ -235,7 +235,14 @@ export interface SessionContextValue {
   selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void
   scrollBottomID: Accessor<string | undefined>
   consumeScrollBottom: (id: string) => boolean
+  /**
+   * Drops the cached transcript of a session (messages, their parts, tool parts,
+   * todos, paging entry and loaded marker) while keeping the session row, its
+   * drafts and its status. Unlike `deleteSession` it is not permanent: reopening
+   * refetches the transcript, and later events for the session are not suppressed.
+   */
   releaseSession: (id: string) => void
+  /** Permanently forgets the session here: drops its data, drafts and later events. */
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
   exportSessionTranscript: (id: string) => void
