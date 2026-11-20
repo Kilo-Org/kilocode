@@ -180,6 +180,16 @@ export const dict = {
   "browser.permission.sensitive.reason": "Motivo: {{reason}}",
   "browser.permission.sensitive.once":
     "Só uma pessoa pode aprovar esta etapa. A aprovação vale apenas para esta etapa.",
+  "browser.notice.extension":
+    "A extensão de navegador do Kilo está conectada no {{browser}}. Usar seu próprio navegador nas ferramentas de navegador em vez do navegador incluído?",
+  "browser.notice.switch": "Usar meu navegador",
+  "settings.browser.status.extension.waiting": "Aguardando a extensão de navegador",
+  "settings.browser.origins.saved.title": "Permitidos em chats",
+  "settings.browser.origins.saved.description":
+    "Sites que você permitiu em um chat com Permitir sempre, neste workspace. Eles valem além das regras acima.",
+  "settings.browser.origins.saved.empty": "Nenhum site permitido em um chat ainda.",
+  "settings.browser.origins.saved.failed": "Permissões salvas indisponíveis",
+  "settings.browser.origins.saved.revoke": "Revogar",
   "ui.permission.reason": "Motivo: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

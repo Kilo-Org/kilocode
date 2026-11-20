@@ -182,6 +182,16 @@ export const dict = {
   "browser.permission.sensitive.reason": "Reden: {{reason}}",
   "browser.permission.sensitive.once":
     "Alleen een persoon kan deze stap goedkeuren. De goedkeuring geldt alleen voor deze stap.",
+  "browser.notice.extension":
+    "De Kilo-browserextensie is verbonden in {{browser}}. Je eigen browser gebruiken voor de browsertools in plaats van de meegeleverde?",
+  "browser.notice.switch": "Mijn browser gebruiken",
+  "settings.browser.status.extension.waiting": "Wachten op de browserextensie",
+  "settings.browser.origins.saved.title": "Toegestaan in chats",
+  "settings.browser.origins.saved.description":
+    "Sites die je vanuit een chat hebt toegestaan met Altijd toestaan, voor deze werkruimte. Ze gelden bovenop de regels hierboven.",
+  "settings.browser.origins.saved.empty": "Nog geen site toegestaan vanuit een chat.",
+  "settings.browser.origins.saved.failed": "Opgeslagen toestemmingen niet beschikbaar",
+  "settings.browser.origins.saved.revoke": "Intrekken",
   "ui.permission.reason": "Reden: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

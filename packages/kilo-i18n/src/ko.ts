@@ -173,6 +173,16 @@ export const dict = {
   "browser.permission.sensitive.title": "{{origin}}의 민감한 브라우저 단계",
   "browser.permission.sensitive.reason": "이유: {{reason}}",
   "browser.permission.sensitive.once": "이 단계는 사람만 승인할 수 있습니다. 승인은 이 단계 하나에만 적용됩니다.",
+  "browser.notice.extension":
+    "Kilo 브라우저 확장이 {{browser}}에 연결되었습니다. 브라우저 도구에 내장 브라우저 대신 내 브라우저를 사용할까요?",
+  "browser.notice.switch": "내 브라우저 사용",
+  "settings.browser.status.extension.waiting": "브라우저 확장을 기다리는 중",
+  "settings.browser.origins.saved.title": "채팅에서 허용됨",
+  "settings.browser.origins.saved.description":
+    "이 작업 영역에서 채팅의 항상 허용으로 허용한 사이트입니다. 위 규칙에 더해 적용됩니다.",
+  "settings.browser.origins.saved.empty": "아직 채팅에서 허용한 사이트가 없습니다.",
+  "settings.browser.origins.saved.failed": "저장된 권한을 사용할 수 없음",
+  "settings.browser.origins.saved.revoke": "철회",
   "ui.permission.reason": "이유: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

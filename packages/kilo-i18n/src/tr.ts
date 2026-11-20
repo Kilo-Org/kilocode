@@ -180,6 +180,16 @@ export const dict = {
   "browser.permission.sensitive.title": "{{origin}} üzerinde hassas tarayıcı adımı",
   "browser.permission.sensitive.reason": "Neden: {{reason}}",
   "browser.permission.sensitive.once": "Bu adımı yalnızca bir kişi onaylayabilir. Onay yalnızca bu tek adımı kapsar.",
+  "browser.notice.extension":
+    "Kilo tarayıcı uzantısı {{browser}} içinde bağlı. Tarayıcı araçları için yerleşik tarayıcı yerine kendi tarayıcınız kullanılsın mı?",
+  "browser.notice.switch": "Tarayıcımı kullan",
+  "settings.browser.status.extension.waiting": "Tarayıcı uzantısı bekleniyor",
+  "settings.browser.origins.saved.title": "Sohbetlerde izin verilenler",
+  "settings.browser.origins.saved.description":
+    "Bu çalışma alanı için bir sohbetten Her zaman izin ver ile izin verdiğiniz siteler. Yukarıdaki kurallara ek olarak uygulanır.",
+  "settings.browser.origins.saved.empty": "Henüz bir sohbetten izin verilen site yok.",
+  "settings.browser.origins.saved.failed": "Kayıtlı izinler kullanılamıyor",
+  "settings.browser.origins.saved.revoke": "İptal et",
   "ui.permission.reason": "Neden: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

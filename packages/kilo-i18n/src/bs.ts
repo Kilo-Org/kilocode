@@ -184,6 +184,16 @@ export const dict = {
   "browser.permission.sensitive.title": "Osjetljiv korak preglednika na {{origin}}",
   "browser.permission.sensitive.reason": "Razlog: {{reason}}",
   "browser.permission.sensitive.once": "Samo osoba može odobriti ovaj korak. Odobrenje pokriva samo ovaj korak.",
+  "browser.notice.extension":
+    "Kilo proširenje preglednika je povezano u pregledniku {{browser}}. Koristiti vlastiti preglednik za alate preglednika umjesto ugrađenog?",
+  "browser.notice.switch": "Koristi moj preglednik",
+  "settings.browser.status.extension.waiting": "Čeka se proširenje preglednika",
+  "settings.browser.origins.saved.title": "Dozvoljeno u razgovorima",
+  "settings.browser.origins.saved.description":
+    "Sajtovi koje ste dozvolili iz razgovora opcijom Uvijek dozvoli, za ovaj radni prostor. Važe uz pravila iznad.",
+  "settings.browser.origins.saved.empty": "Još nijedan sajt nije dozvoljen iz razgovora.",
+  "settings.browser.origins.saved.failed": "Sačuvane dozvole nisu dostupne",
+  "settings.browser.origins.saved.revoke": "Opozovi",
   "ui.permission.reason": "Razlog: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

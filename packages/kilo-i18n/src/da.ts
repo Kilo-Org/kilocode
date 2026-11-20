@@ -177,6 +177,16 @@ export const dict = {
   "browser.permission.sensitive.title": "Følsomt browsertrin på {{origin}}",
   "browser.permission.sensitive.reason": "Årsag: {{reason}}",
   "browser.permission.sensitive.once": "Kun en person kan godkende dette trin. Godkendelsen dækker kun dette ene trin.",
+  "browser.notice.extension":
+    "Kilo-browserudvidelsen er forbundet i {{browser}}. Vil du bruge din egen browser til browserværktøjerne i stedet for den medfølgende?",
+  "browser.notice.switch": "Brug min browser",
+  "settings.browser.status.extension.waiting": "Venter på browserudvidelsen",
+  "settings.browser.origins.saved.title": "Tilladt i chats",
+  "settings.browser.origins.saved.description":
+    "Websteder, du har tilladt fra en chat med Tillad altid, for dette arbejdsområde. De gælder oven i reglerne ovenfor.",
+  "settings.browser.origins.saved.empty": "Intet websted er tilladt fra en chat endnu.",
+  "settings.browser.origins.saved.failed": "Gemte tilladelser er ikke tilgængelige",
+  "settings.browser.origins.saved.revoke": "Tilbagekald",
   "ui.permission.reason": "Årsag: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

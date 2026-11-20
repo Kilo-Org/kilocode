@@ -2,7 +2,7 @@
 // Integrated Browser is a `kilo-code.v2.*` editor setting, so its rows write that. The browser tools' backend,
 // observation, sensitive steps and site permissions are the `browser` config keys the CLI reads; the host owns those
 // writes, and the status line reports what this machine can start.
-import { Component, For, Show, createEffect, createSignal, onMount } from "solid-js"
+import { Component, For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "./Switch"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -13,7 +13,8 @@ import { TextField } from "@kilocode/kilo-ui/text-field"
 import { useLanguage } from "../../context/language"
 import { useSettingsConfig, type KiloSettingKey } from "../../v2/settings-config"
 import { createBrowserSettings } from "../../v2/browser-settings"
-import { GRANTS, origin, sites } from "./browser-settings"
+import { useV2 } from "../../v2/client"
+import { GRANTS, extensionRow, origin, savedGrants, sites, type ExtensionRow, type SavedGrant } from "./browser-settings"
 import SettingsRow from "./SettingsRow"
 import { ActionSelect } from "./PermissionToolRow"
 import { webSearchEnabled, webSearchSelection } from "./settings-values"
@@ -185,6 +186,9 @@ const TARGETS: Record<"chrome" | "msedge" | "chromium", string> = {
   chromium: "Chromium",
 }
 
+/** How often the status rows read the machine again while the tab is visible: a hub starting, an extension connecting. */
+const STATUS_POLL = 2_000
+
 const Subtitle: Component<{ text: string }> = (props) => (
   <div
     style={{
@@ -215,6 +219,98 @@ const StatusPlaceholder: Component<{ error?: string }> = (props) => {
   )
 }
 
+/** The extension status row: off, not connected, waiting for the extension, or the connected browser and profile. */
+const ExtensionStatus: Component<{ row: ExtensionRow; backend: string }> = (props) => {
+  const language = useLanguage()
+  // Only a backend that needs the extension makes a missing one a problem.
+  const color = () =>
+    props.backend === "extension" && props.row.kind !== "connected"
+      ? "var(--vscode-errorForeground)"
+      : "var(--vscode-descriptionForeground)"
+  const text = () => {
+    const row = props.row
+    if (row.kind === "connected") return `${language.t("settings.browser.status.extension.connected")} · ${row.label}`
+    if (row.kind === "waiting") return language.t("settings.browser.status.extension.waiting")
+    if (row.kind === "off") return language.t("settings.browser.backend.off")
+    return language.t("settings.browser.status.extension.disconnected")
+  }
+  return (
+    <span data-slot="browser-extension-status" data-state={props.row.kind} style={{ color: color() }}>
+      {text()}
+    </span>
+  )
+}
+
+/** The project's saved browser grants: loading, unavailable with a retry, none yet, or one row each with a revoke. */
+type Saved = { kind: "loading" } | { kind: "failed" } | { kind: "ready"; grants: SavedGrant[] }
+
+const SavedGrants: Component<{ saved: Saved; onRetry: () => void; onRevoke: (id: string) => void }> = (props) => {
+  const language = useLanguage()
+  const grants = () => (props.saved.kind === "ready" ? props.saved.grants : [])
+  return (
+    <div data-slot="browser-saved-grants" style={{ padding: "12px 0 4px", "border-top": "1px solid var(--border-weak-base)" }}>
+      <div style={{ "font-weight": 500, "margin-bottom": "2px" }}>
+        {language.t("settings.browser.origins.saved.title")}
+      </div>
+      <Subtitle text={language.t("settings.browser.origins.saved.description")} />
+      <Show when={props.saved.kind === "loading"}>
+        <Subtitle text={language.t("common.loading")} />
+      </Show>
+      <Show when={props.saved.kind === "failed"}>
+        <div style={{ display: "flex", gap: "8px", "align-items": "center", padding: "8px 0 0" }}>
+          <span style={{ color: "var(--vscode-errorForeground)" }}>
+            {language.t("settings.browser.origins.saved.failed")}
+          </span>
+          <Button variant="secondary" size="small" onClick={() => props.onRetry()}>
+            {language.t("common.retry")}
+          </Button>
+        </div>
+      </Show>
+      <Show when={props.saved.kind === "ready" && grants().length === 0}>
+        <Subtitle text={language.t("settings.browser.origins.saved.empty")} />
+      </Show>
+      <Show when={grants().length > 0}>
+        <div
+          style={{
+            display: "grid",
+            "grid-template-columns": "minmax(0, 1fr) auto 32px",
+            gap: "8px",
+            "align-items": "center",
+            padding: "8px 0 0",
+          }}
+        >
+          <For each={grants()}>
+            {(grant) => (
+              <>
+                <span
+                  data-slot="browser-saved-grant"
+                  style={{ overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" }}
+                  title={grant.origin}
+                >
+                  {grant.origin}
+                </span>
+                <span data-slot="settings-row-label-subtitle">
+                  {grant.tool === "browser"
+                    ? language.t(`settings.browser.origins.${grant.grant}`)
+                    : language.t("ui.permission.toolLabel.browserOpen")}
+                </span>
+                <IconButton
+                  variant="ghost"
+                  size="small"
+                  icon="close"
+                  aria-label={language.t("settings.browser.origins.saved.revoke")}
+                  title={language.t("settings.browser.origins.saved.revoke")}
+                  onClick={() => props.onRevoke(grant.id)}
+                />
+              </>
+            )}
+          </For>
+        </div>
+      </Show>
+    </div>
+  )
+}
+
 /**
  * The browser tools' settings and the site permission table. The state comes from the host, which owns the config
  * file, so a row always shows what the CLI reads.
@@ -227,7 +323,47 @@ const BrowserTools: Component = () => {
   // The radio the user just clicked shows at once; a reply (success or failure) clears it, so a refused write falls
   // back to the value the file still holds instead of leaving the unsaved one checked.
   const [chosen, setChosen] = createSignal<(typeof BACKENDS)[number]>()
-  onMount(() => browser.load())
+  const v2 = useV2()
+  const [saved, setSaved] = createSignal<Saved>({ kind: "loading" })
+  // Saved grants belong to the workspace's project: the project of this panel's directory. Each read is numbered and
+  // only the newest one may publish, so a slow read that started before a revoke cannot bring the revoked row back.
+  let reads = 0
+  const loadSaved = () => {
+    const read = ++reads
+    const publish = (value: Saved) => {
+      if (read === reads) setSaved(value)
+    }
+    return v2.api.location
+      .get({ location: { directory: v2.directory } })
+      .then((location) => v2.api.permission.saved.list({ projectID: location.project.id }))
+      .then(
+        (rows) => publish({ kind: "ready", grants: savedGrants(rows) }),
+        () => publish({ kind: "failed" }),
+      )
+  }
+  const revoke = (id: string) =>
+    void v2.api.permission.saved
+      .remove({ id })
+      .catch(v2.report)
+      .finally(() => void loadSaved())
+  onMount(() => {
+    browser.load()
+    void loadSaved()
+    // The status follows the machine while the tab is visible; coming back to the tab reads both again at once.
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") browser.refresh()
+    }, STATUS_POLL)
+    const shown = () => {
+      if (document.visibilityState !== "visible") return
+      browser.refresh()
+      void loadSaved()
+    }
+    document.addEventListener("visibilitychange", shown)
+    onCleanup(() => {
+      clearInterval(timer)
+      document.removeEventListener("visibilitychange", shown)
+    })
+  })
   createEffect(() => {
     if (!browser.busy()) setChosen(undefined)
   })
@@ -235,7 +371,10 @@ const BrowserTools: Component = () => {
   const state = () => browser.state()
   const backend = () => chosen() ?? state()?.backend
   const rows = () => sites(state()?.rules ?? [])
-  const disconnected = () => state()?.backend === "extension" && browser.status()?.extension.connected === false
+  const disconnected = () => {
+    const extension = browser.status()?.extension
+    return state()?.backend === "extension" && extension !== undefined && extension.state !== "connected"
+  }
 
   const addOrigin = () => {
     const parsed = origin(
@@ -257,9 +396,6 @@ const BrowserTools: Component = () => {
         <Header title={language.t("settings.browser.backend.title")} />
         <Card>
           <div style={{ padding: "12px 0 4px" }}>
-            <div style={{ "font-weight": 500, "margin-bottom": "2px" }}>
-              {language.t("settings.browser.backend.title")}
-            </div>
             <Subtitle text={language.t("settings.browser.backend.description")} />
             <For each={BACKENDS}>
               {(value) => (
@@ -383,21 +519,12 @@ const BrowserTools: Component = () => {
           >
             <Show when={browser.status()} fallback={<StatusPlaceholder error={browser.error()} />}>
               {(status) => (
-                <span
-                  style={{
-                    color: status().extension.connected
-                      ? "var(--vscode-descriptionForeground)"
-                      : "var(--vscode-errorForeground)",
-                  }}
-                >
-                  {status().extension.connected
-                    ? language.t("settings.browser.status.extension.connected")
-                    : language.t("settings.browser.status.extension.disconnected")}
-                </span>
+                <ExtensionStatus row={extensionRow(state()?.backend, status().extension)} backend={state()?.backend ?? ""} />
               )}
             </Show>
           </SettingsRow>
-          <Show when={!browser.status() && browser.error()}>
+          {/* The config read is what failed: a status refresh that succeeds afterwards must not take the retry away. */}
+          <Show when={!browser.state() && browser.error()}>
             <div style={{ display: "flex", gap: "8px", "align-items": "center", padding: "8px 0 4px" }}>
               <Button variant="secondary" size="small" disabled={browser.busy()} onClick={() => browser.load()}>
                 {language.t("common.retry")}
@@ -518,6 +645,7 @@ const BrowserTools: Component = () => {
               )}
             </Show>
           </div>
+          <SavedGrants saved={saved()} onRetry={() => void loadSaved()} onRevoke={revoke} />
         </Card>
       </div>
     </>
