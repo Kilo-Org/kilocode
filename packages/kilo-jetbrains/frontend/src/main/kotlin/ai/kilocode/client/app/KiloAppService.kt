@@ -481,6 +481,16 @@ class KiloAppService internal constructor(
         null
     }
 
+    /**
+     * Re-read the account and report the outcome, for an action whose result must tell a failed
+     * read apart from a signed-out answer. A failed read leaves the published account alone.
+     */
+    suspend fun refreshAccount(): ProfileSyncDto {
+        val result = call { refreshAccount() }
+        publish(result)
+        return result
+    }
+
     /** Refresh profile in fire-and-forget fashion from non-suspend context. */
     fun refreshProfileAsync() {
         cs.launch { refreshProfile() }

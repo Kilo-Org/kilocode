@@ -6,10 +6,12 @@ import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
@@ -51,6 +53,10 @@ internal class ProfileUi(
     private val timers: UiTimerSource = UiTimers,
 ) : JPanel(BorderLayout()) {
 
+    private companion object {
+        private val LOG = KiloLog.create(ProfileUi::class.java)
+    }
+
     private val cards = JPanel(CardLayout())
     private val cardLayout = cards.layout as CardLayout
 
@@ -84,6 +90,9 @@ internal class ProfileUi(
     private var status = status
     private var login: LoginState = LoginState.Idle
     private var attempt = 0
+
+    /** Whether an account step reported that its follow-up account read did not complete. */
+    private var unavailable = false
     private var shown: Card? = null
 
     init {
@@ -214,15 +223,21 @@ internal class ProfileUi(
                     browse(next.verificationUrl)
                 }
                 val result = app.completeLogin()
-                telemetry("Account Connect Success", mapOf("surface" to "settings", "hasOrganizations" to ((result.profile?.organizations?.isNotEmpty()) == true).toString()))
+                val error = result.error
+                if (error == null) {
+                    telemetry("Account Connect Success", mapOf("surface" to "settings", "hasOrganizations" to ((result.profile?.organizations?.isNotEmpty()) == true).toString()))
+                } else {
+                    telemetry("Account Connect Failed", mapOf("stage" to "profile", "errorClass" to accountErrorToken(error)))
+                    LOG.warn("account profile read failed resource=${error.resource} status=${error.status}")
+                }
                 val state = app.state.value
                 withContext(edt) {
                     if (id != attempt) return@withContext
                     login = LoginState.Idle
-                    if (result.error != null) showUnavailable(state.profile, state.status)
+                    if (error != null) showUnavailable(state.profile, state.status)
                     else {
+                        clearUnavailable()
                         update(result.profile ?: state.profile, state.status)
-                        account.setNotice(null)
                     }
                 }
             } catch (e: CancellationException) {
@@ -255,6 +270,7 @@ internal class ProfileUi(
                 withContext(edt) {
                     login = LoginState.Idle
                     applyState()
+                    clearUnavailable()
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -275,16 +291,15 @@ internal class ProfileUi(
                     withContext(edt) {
                         // The switch itself finished, so the previous account stays: re-applying it
                         // reverts the combo, and the notice keeps Refresh within reach.
-                        update(state.profile, state.status)
-                        account.setNotice(accountUnavailable())
+                        showUnavailable(state.profile, state.status)
                     }
                     return@launch
                 }
                 telemetry("Organization Switched", mapOf("target" to if (org == null) "personal" else "organization"))
                 val state = app.state.value
                 withContext(edt) {
+                    clearUnavailable()
                     update(result.profile ?: state.profile, state.status)
-                    account.setNotice(null)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -304,6 +319,7 @@ internal class ProfileUi(
      */
     @RequiresEdt
     private fun showUnavailable(fallback: ProfileDto?, appStatus: KiloAppStatusDto) {
+        unavailable = true
         val known = prof ?: fallback
         if (known == null) {
             login = LoginState.Error(accountUnavailable(), LoginState.Retry.PROFILE)
@@ -314,18 +330,36 @@ internal class ProfileUi(
         account.setNotice(accountUnavailable())
     }
 
+    /**
+     * Clear the notice an account step left behind, now that a read completed. Only a completed
+     * read clears it: an unrelated state emission keeps the notice in place.
+     */
+    @RequiresEdt
+    private fun clearUnavailable() {
+        unavailable = false
+        val current = login
+        if (current is LoginState.Error && current.retry == LoginState.Retry.PROFILE) login = LoginState.Idle
+        account.setNotice(null)
+    }
+
     private fun accountUnavailable(): String = KiloBundle.message("profile.notice.accountUnavailable")
 
+    /**
+     * Re-read the profile from the notice's Refresh action.
+     *
+     * The notice's retry reports its outcome, so a read that cannot complete keeps the account and
+     * the notice, while a plain refresh keeps its tolerant behaviour.
+     */
     private fun refreshProfile() {
         cs.launch {
             try {
-                val profile = app.refreshProfile()
-                val state = app.state.value
+                val result = if (unavailable) app.refreshAccount() else ProfileSyncDto(app.refreshProfile())
                 withContext(edt) {
-                    // A completed read answers the notice: an account clears it, and so does a signed-out answer.
-                    if (profile != null || state.profile == null) login = LoginState.Idle
-                    update(profile ?: state.profile, state.status)
-                    if (profile != null) account.setNotice(null)
+                    if (result.error != null) applyState()
+                    else {
+                        clearUnavailable()
+                        applyState()
+                    }
                     account.setRefreshing(false)
                 }
             } catch (e: CancellationException) {

@@ -32,6 +32,7 @@ import ai.kilocode.client.session.model.TurnOutcome
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.settings.profile.accountErrorToken
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
@@ -3175,13 +3176,6 @@ class SessionController(
             }
         }
     }
-
-    /**
-     * Telemetry token for an account step that reported a load error instead of throwing: the
-     * resource it failed on, plus the HTTP status when the backend reports one.
-     */
-    private fun accountErrorToken(error: LoadErrorDto): String =
-        error.status?.let { "${error.resource}Http$it" } ?: error.resource
 
     fun openProfile() {
         assertEdt()
