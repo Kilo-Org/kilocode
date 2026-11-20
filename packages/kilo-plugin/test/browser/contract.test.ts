@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { BrowserContract } from "../../src/browser/contract"
+import { ENTRIES } from "../../src/browser/contract.generated"
 import { entries } from "../../src/browser/contract-shape"
 
 // The extension vendors the same pin; its header records this SHA-256.
@@ -43,8 +44,22 @@ describe("generated browser contract", () => {
     expect(BrowserContract.sha256).toBe(EXTENSION_SHA256)
   })
 
-  test("lists the whole contract, unprefixed and in the pinned order", () => {
-    expect(BrowserContract.entries.map((entry) => entry.name)).toEqual(NAMES)
+  test("pins the whole contract, unprefixed and in the pinned order", () => {
+    expect(ENTRIES.map((entry) => entry.name)).toEqual(NAMES)
+  })
+
+  test("offers every pinned tool except Playwright code, which no backend can run", () => {
+    expect(BrowserContract.entries.map((entry) => entry.name)).toEqual(
+      NAMES.filter((name) => name !== "browser_run_code_unsafe"),
+    )
+  })
+
+  test("marks the pinned tool no backend runs, so a backend handed it directly can refuse it", () => {
+    expect(BrowserContract.unserved("browser_run_code_unsafe")).toBe(true)
+    expect(BrowserContract.entries.filter((entry) => BrowserContract.unserved(entry.name))).toEqual([])
+    for (const name of ["browser_navigate", "browser_evaluate", "browser_constructor", ""]) {
+      expect(BrowserContract.unserved(name)).toBe(false)
+    }
   })
 
   test("every tool carries an object input schema and a description", () => {
@@ -56,7 +71,7 @@ describe("generated browser contract", () => {
 
   test("normalizes a raw tools/list result back to the same contract and hash", () => {
     const raw = {
-      tools: BrowserContract.entries.map((entry) => ({
+      tools: ENTRIES.map((entry) => ({
         name: entry.name,
         description: entry.description,
         inputSchema: entry.inputSchema,
@@ -64,7 +79,7 @@ describe("generated browser contract", () => {
       })),
     }
     expect(entries(raw).map((entry) => entry.name)).toEqual(NAMES)
-    expect(entries(raw)).toEqual([...BrowserContract.entries])
+    expect(entries(raw)).toEqual([...ENTRIES])
   })
 
   test("rejects a tool list that is not an object schema", () => {

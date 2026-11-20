@@ -92,22 +92,19 @@ export namespace BrowserSettings {
   }
 
   /**
-   * The `set` payload that applies `patch`. Every rule keeps its document position: an edited rule is replaced where
-   * it stands, a removed rule is dropped, and a new rule is appended. Resolution is last-match-wins, so a new
-   * catch-all goes before the first origin rule (the origin rules still win) and a new origin rule goes last.
+   * The `set` payload that applies `patch`, and nothing else: the RPC writes each leaf of `set` (`kilocode.settings`),
+   * so a `browser` key the patch does not name is never written, and the rule list is written only when the patch
+   * changes rules. Every rule keeps its document position: an edited rule is replaced where it stands, a removed rule is
+   * dropped, and a new rule is appended. Resolution is last-match-wins, so a new catch-all goes before the first origin
+   * rule (the origin rules still win) and a new origin rule goes last.
    */
   export function apply(
     state: State,
     document: unknown,
     patch: { browser?: Input; rules?: Rule[]; allowAll?: boolean },
-  ) {
-    const headless = patch.browser?.headless ?? state.headless
-    const next = {
-      backend: patch.browser?.backend ?? state.backend,
-      observation: patch.browser?.observation ?? state.observation,
-      allow_sensitive: patch.browser?.allow_sensitive ?? state.allow_sensitive,
-      ...(headless === undefined ? {} : { headless }),
-    }
+  ): { browser?: Input; permissions?: Rule[] } {
+    const browser = patch.browser && Object.keys(patch.browser).length > 0 ? { browser: patch.browser } : {}
+    if (patch.rules === undefined && patch.allowAll === undefined) return browser
     // The editor owns `browser` rules only; provider and tool rules are carried over untouched, at their position.
     const rules = (patch.rules ?? state.rules).filter((rule) => rule.action === "browser")
     const desired =
@@ -116,7 +113,19 @@ export namespace BrowserSettings {
         : patch.allowAll
           ? withAllowAll(rules)
           : rules.filter((rule) => !(rule.resource === "*" && rule.effect === "allow"))
-    return { browser: next, permissions: merge(permissionRules(document), desired) }
+    return { ...browser, permissions: merge(permissionRules(document), desired) }
+  }
+
+  /** The document after the RPC applied `set`: `browser` keys merge with the file's, a rule list replaces the file's. */
+  export function applied(document: unknown, set: { browser?: Input; permissions?: Rule[] }): unknown {
+    const file: { browser?: unknown; permissions?: unknown } =
+      typeof document === "object" && document !== null ? document : {}
+    const current = typeof file.browser === "object" && file.browser !== null ? file.browser : {}
+    return {
+      ...file,
+      ...(set.browser ? { browser: { ...current, ...set.browser } } : {}),
+      ...(set.permissions ? { permissions: set.permissions } : {}),
+    }
   }
 
   /**
@@ -257,12 +266,13 @@ export function documentStore(access: () => Promise<Access>): Store {
     const patch = build({ state, document: snapshot.document })
     if (!patch) return state
     const set = BrowserSettings.apply(state, snapshot.document, patch)
+    if (set.browser === undefined && set.permissions === undefined) return state
     await file.write(
       // The RPC's values are JSON; these keys carry booleans, strings and rule objects only.
       set as never,
       snapshot.revision ? { path: snapshot.path, revision: snapshot.revision } : undefined,
     )
-    return BrowserSettings.read(set)
+    return BrowserSettings.read(BrowserSettings.applied(snapshot.document, set))
   }
   return {
     async read() {

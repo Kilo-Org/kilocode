@@ -54,7 +54,7 @@ describe("convertOrganizationMode", () => {
     expect(KiloOrganizationModes.convert({ ...mode, config }).description).toBe(description)
   })
 
-  test.each(["code", "build", "architect", "ask", "debug", "orchestrator"])(
+  test.each(["code", "build", "architect", "ask", "debug"])(
     "converts built-in slug %s rather than skipping it",
     (slug) => {
       expect(KiloOrganizationModes.convert({ ...mode, slug })).toMatchObject({

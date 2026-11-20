@@ -29,6 +29,7 @@ import { formatPath } from "../util/path-format"
 import { isRecord } from "../util/record"
 import { parseTodos, todoMarker } from "../util/todo"
 import type { RunEntryBody, StreamCommit, ToolSnapshot } from "./types"
+import { browserDisplayInput, browserDisplayMetadata, ROW_INPUT_OMIT } from "../kilocode/browser-display" // kilocode_change(browser) - mini rows never show typed text
 
 export { canonicalToolName } from "../util/tool-display"
 
@@ -192,11 +193,13 @@ function normalizeInput(name: string, value: unknown) {
   const input = dict(value)
   const path = typeof input.path === "string" ? input.path : text(input.filePath)
   const agent = typeof input.agent === "string" ? input.agent : text(input.subagent_type)
-  return {
+  // kilocode_change start - browser: every mini row reads input from here, so typed text is masked once
+  return browserDisplayInput(name, {
     ...input,
     ...(["read", "write", "edit", "lsp"].includes(name) && path ? { path } : {}),
     ...(name === "subagent" && agent ? { agent } : {}),
-  }
+  })
+  // kilocode_change end
 }
 
 function normalizeFile(value: unknown): PatchFile | undefined {
@@ -234,11 +237,13 @@ function normalizeMetadata(name: string, value: unknown) {
     return file ? [file] : []
   })
   const sessionID = text(metadata.sessionID) || text(metadata.sessionId)
-  return {
+  // kilocode_change start - browser: Code Mode's nested browser calls are masked too
+  return browserDisplayMetadata({
     ...metadata,
     ...(["edit", "patch"].includes(name) && Array.isArray(metadata.files) ? { files } : {}),
     ...(name === "subagent" && sessionID ? { sessionID } : {}),
-  }
+  })
+  // kilocode_change end
 }
 
 export function normalizeTool(tool: SessionMessageAssistantTool): SessionMessageAssistantTool {
@@ -296,7 +301,7 @@ function toolError(ctx: ToolFrame): string {
 }
 
 function fallbackStart(ctx: ToolFrame): string {
-  const extra = primitiveInputSummary(ctx.input)
+  const extra = primitiveInputSummary(ctx.input, ROW_INPUT_OMIT) // kilocode_change(browser) - Code Mode's program can type text
   if (!extra) {
     return `⚙ ${ctx.name}`
   }
@@ -334,7 +339,10 @@ function displayPath(p: ToolProps, input?: string, opts: { home?: boolean } = {}
 }
 
 function fallbackInline(ctx: ToolFrame): ToolInline {
-  const title = Object.keys(ctx.input).length > 0 ? JSON.stringify(ctx.input) : "Unknown"
+  // kilocode_change start - browser: Code Mode's program can type text
+  const input = Object.fromEntries(Object.entries(ctx.input).filter(([key]) => !ROW_INPUT_OMIT.includes(key)))
+  const title = Object.keys(input).length > 0 ? JSON.stringify(input) : "Unknown"
+  // kilocode_change end
 
   return {
     icon: "⚙",

@@ -378,10 +378,13 @@ export type BrowserSettingsState = {
   allowAll: boolean
 }
 
-/** Whether the browser tools can run: a Playwright executable, and a hub the extension connected to. */
+/**
+ * Whether the browser tools can run: a Playwright executable, and the browser extension as the hub registry reports
+ * it (no hub, a hub waiting for an extension, or the connected browser and profile).
+ */
 export type BrowserSettingsStatus = {
   playwright: { ready: boolean; target?: "chrome" | "msedge" | "chromium" }
-  extension: { connected: boolean }
+  extension: { state: "none" } | { state: "waiting" } | { state: "connected"; browser: string; profile?: string }
 }
 
 export type BrowserSettingsPatch = {
@@ -404,6 +407,8 @@ export type BrowserSettingsMessage =
   | { type: "browserSettingsRead"; requestId: string }
   | { type: "browserSettingsWrite"; requestId: string; patch: BrowserSettingsPatch }
   | { type: "browserSettingsInstall"; requestId: string }
+  /** The machine status only, for the live status rows: a file read, never a config read. */
+  | { type: "browserSettingsStatus"; requestId: string }
 
 /** Either the new state or the reason the host could not read or write it. */
 export type BrowserSettingsLoaded = {

@@ -22,6 +22,7 @@ export function DialogModel(props: { providerID?: string }) {
   const connected = useConnected()
 
   function select(providerID: string, modelID: string) {
+    local.model.rememberPick({ providerID, modelID }) // kilocode_change(tui)
     local.model.set({ providerID, modelID }, { recent: true })
     const list = local.model.variant.list()
     const cur = local.model.variant.current()

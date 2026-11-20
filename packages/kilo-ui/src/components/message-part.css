@@ -462,7 +462,7 @@ body.vscode-high-contrast-light [data-component="user-message"] [data-slot="user
   margin-bottom: 0px;
 }
 
-[data-slot="tool-read-images"] {
+[data-slot="tool-images"] {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -470,7 +470,7 @@ body.vscode-high-contrast-light [data-component="user-message"] [data-slot="user
   max-width: min(100%, 64ch);
 }
 
-[data-slot="tool-read-image"] {
+[data-slot="tool-image"] {
   max-width: 200px;
   max-height: 200px;
   border-radius: var(--radius-sm, 6px);
@@ -484,7 +484,7 @@ body.vscode-high-contrast-light [data-component="user-message"] [data-slot="user
   }
 }
 
-[data-slot="tool-read-image-img"] {
+[data-slot="tool-image-img"] {
   display: block;
   max-width: 100%;
   max-height: 200px;

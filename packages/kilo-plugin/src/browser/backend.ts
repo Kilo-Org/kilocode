@@ -36,6 +36,22 @@ export type CallContext = {
   sensitive?: readonly string[]
   /** `browser.allow_sensitive`: a download this call starts is kept, with no prompt. */
   allowSensitive?: boolean
+  /** The conversation's own title, when it has one: the browser names the session's tab group after it. */
+  title?: string
+}
+
+/**
+ * What a page read after a step runs with: the call's grants, whether to read the snapshot itself, and whether to read
+ * the tab list for the page's URL and title. Each flag follows the per-tool rule of the read it stands for.
+ */
+export type PageContext = CallContext & {
+  snapshot: boolean
+  tabs: boolean
+  /**
+   * Whether the session's own rules (config, saved choices, organization) allow reading an origin without asking a
+   * person. True records the grant for the session, the way an ask those rules answer does.
+   */
+  readable?: (origin: string) => Promise<boolean>
 }
 
 /**
@@ -53,6 +69,13 @@ export type BrowserBackend = {
    */
   plan?(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<Item[]>
   callTool(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<CallResult>
+  /**
+   * The page state after a step whose result lacks it, for a backend that answers a step with its outcome only (the
+   * extension): the result with the page's URL and title and, when `snapshot` is set, its snapshot, in the Playwright
+   * MCP's sections. The read runs with the call's grants and never prompts. A backend whose results already carry the
+   * page omits this.
+   */
+  pageState?(name: string, result: CallResult, ctx: PageContext): Promise<CallResult>
   /** Release per-session state when the session ends; a backend without any ignores it. */
   forget?(session: string): void
   dispose(): Promise<void>
@@ -60,17 +83,29 @@ export type BrowserBackend = {
 
 /**
  * Raised when the real origin of a step is not covered by `authorized`. The tool layer asks for the items, then
- * retries the call once with the new pairs and any step token, so the backend never prompts and never retries itself.
+ * retries the call once per distinct need with the new pairs and any step token, so the backend never prompts and
+ * never retries itself.
  */
 export class NeedsPermissionError extends Error {
   readonly items: readonly Item[]
   readonly stepToken?: string
+  /** The origin the browser moved the tab to (a redirect) before it asked; undefined when the tab did not move. */
+  readonly moved?: string
 
-  constructor(items: readonly Item[], stepToken?: string) {
+  constructor(items: readonly Item[], stepToken?: string, moved?: string) {
     super("The browser step needs permission.")
     this.name = "BrowserNeedsPermissionError"
     this.items = items
     this.stepToken = stepToken
+    this.moved = moved
+  }
+}
+
+/** The browser moved the tab to a page it did not name before the step ran; the step did not run. */
+export class PageMovedError extends Error {
+  constructor() {
+    super("The page changed before the step ran. Call the tool again.")
+    this.name = "BrowserPageMovedError"
   }
 }
 
@@ -91,6 +126,39 @@ export class UnavailableError extends Error {
   }
 }
 
+export const TIMEOUT_MESSAGE =
+  "The browser did not finish this step in time. It may have run in part: take a snapshot (browser_snapshot) to see the page before you repeat it."
+
+/**
+ * Raised when a connected browser did not answer a call within the CLI's bound. The browser is not missing, so the
+ * setup hint does not apply; the step may have run in part, which the metadata marks as uncertain.
+ */
+export class TimeoutError extends Error {
+  constructor() {
+    super(TIMEOUT_MESSAGE)
+    this.name = "BrowserTimeoutError"
+  }
+}
+
+export const CANCELLED_MESSAGE =
+  "The browser call was cancelled before it finished. It may have run in part: take a snapshot (browser_snapshot) before you repeat it."
+
+export const CANCELLED_UNSENT_MESSAGE = "The browser call was cancelled before it was sent."
+
+/**
+ * Raised when the turn stopped before the browser answered. A call cancelled in flight reached the extension, so its
+ * uncertainty travels with the error and the tool metadata marks it; one cancelled before it was sent cannot have run.
+ */
+export class CancelledError extends Error {
+  readonly effectsUncertain: boolean
+
+  constructor(uncertain: boolean) {
+    super(uncertain ? CANCELLED_MESSAGE : CANCELLED_UNSENT_MESSAGE)
+    this.name = "BrowserCancelledError"
+    this.effectsUncertain = uncertain
+  }
+}
+
 /**
  * Raised when the browser side speaks a protocol this CLI cannot drive. The message is model-facing; `hint` is the
  * update notice the UI shows.
@@ -102,6 +170,17 @@ export class IncompatibleError extends Error {
     super(message)
     this.name = "BrowserIncompatibleError"
     this.hint = hint
+  }
+}
+
+/**
+ * Raised for a call in a conversation whose browser session the user stopped. The message is model-facing; the UI
+ * tells the user how to give the session its tabs back.
+ */
+export class StoppedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "BrowserStoppedError"
   }
 }
 

@@ -1,4 +1,5 @@
 import { flowPermissionPresentation } from "../kilocode/flow-permission" // kilocode_change(flow) - present Flow approval resources without changing the upstream fallback
+import { browserPermissionPresentation } from "../kilocode/browser-permission" // kilocode_change(browser) - name the class, origin and sensitive reason of a browser request
 import { Locale } from "./locale"
 import { canonicalToolName, finiteNumber, webSearchProviderLabel } from "./tool-display"
 
@@ -139,6 +140,8 @@ export function permissionPresentation(
 
   const flow = flowPermissionPresentation(source) // kilocode_change(flow) - delegate the Kilo-specific presentation
   if (flow) return flow // kilocode_change(flow) - preserve the upstream fallback for every other custom action
+  const browser = browserPermissionPresentation(source) // kilocode_change(browser) - delegate the Kilo browser presentation
+  if (browser) return browser // kilocode_change(browser) - preserve the upstream fallback for every other custom action
   return {
     icon: "⚙",
     title: `Call tool ${source.action}`,

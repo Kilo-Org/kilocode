@@ -3,11 +3,15 @@
 import { BrowserHub } from "@kilocode/kilo-plugin/browser/hub"
 import { OPENCODE_VERSION } from "@opencode/cli/version"
 import z from "zod"
-import type { Client, Input } from "./client"
+import type { Client, Input, State } from "./client"
 
 /**
  * A tool call can wait inside the extension (a tab lease, a navigation, an explicit wait), so the transport's own
- * request timeout is too short for it.
+ * request timeout is too short for it. The bound matches the Playwright backend's for the same pinned contract: the
+ * extension ends its own overruns (a tab lease wait of 30 s, then a navigation bounded at 10 s and 15 s or
+ * `browser_wait_for` clamped to 15 s), so a step that runs by design stays under a minute and 180 s is a fence rather
+ * than a budget. That margin is not this repo's to keep, so the fence stays where both backends already agreed on it;
+ * a call still unanswered then is a wedged extension, reported as a timeout and never as a missing browser.
  */
 const CALL_TIMEOUT = 180_000
 
@@ -64,17 +68,62 @@ function landed(value: string | undefined) {
 
 type Payload = z.infer<typeof Payload>
 
+const Adopted = z.object({ kind: z.enum(["adopted", "none", "kept"]) }).loose()
+
+/** `session.adopt`'s answer. An extension that answers without a `kind` predates it and cannot say what it did. */
+export function adoption(value: unknown): BrowserHub.Adoption {
+  const parsed = Adopted.safeParse(value)
+  return parsed.success ? parsed.data.kind : "unconfirmed"
+}
+
 /** A hub error, read structurally: a malformed frame is not an error object and never becomes one. */
 function hubFailure(error: unknown) {
   if (typeof error !== "object" || error === null) return undefined
-  const value = error as { kind?: unknown; code?: unknown; message?: unknown; data?: unknown; uncertain?: unknown }
+  const value = error as {
+    kind?: unknown
+    code?: unknown
+    message?: unknown
+    data?: unknown
+    uncertain?: unknown
+    timedOut?: unknown
+    cancelled?: unknown
+  }
   if (typeof value.kind !== "string" || typeof value.code !== "number") return undefined
   return {
     kind: value.kind,
     message: typeof value.message === "string" ? value.message : "",
     data: Payload.safeParse(value.data).data,
     uncertain: value.uncertain === true,
+    timedOut: value.timedOut === true,
+    cancelled: value.cancelled === true,
   }
+}
+
+/** The protocol errors that carry nothing but their message, by the kind the backend reads. */
+const PLAIN: Record<string, BrowserHub.Kind> = {
+  tab_busy: "busy",
+  tab_taken: "taken",
+  user_stopped: "stopped",
+  session_lost: "lost",
+  unsupported_in_browser: "unsupported",
+  blocked: "blocked",
+  protocol_mismatch: "mismatch",
+}
+
+/**
+ * A tool call the transport itself ended: the socket was up when it was sent, so the extension is still there. The turn
+ * stopping before the answer is its own kind (it can be cancelled before anything is sent), and a call the timer ended
+ * may have run in part. Only a call carries a signal or a step, which is why `port.call` alone reads these: a late
+ * `session.open`, `tools.list` or upload is a silent extension, and the snapshot advice would name a step that never
+ * started.
+ */
+function callFailure(error: unknown) {
+  const value = hubFailure(error)
+  if (value?.kind !== "browser_unavailable") return undefined
+  if (value.cancelled)
+    return new BrowserHub.Failure({ kind: "cancelled", message: value.message, uncertain: value.uncertain })
+  if (!value.timedOut) return undefined
+  return new BrowserHub.Failure({ kind: "timeout", message: value.message, uncertain: true })
 }
 
 /** One transport failure as the backend reads it. A kind the CLI does not know stays `unknown` and is refused. */
@@ -100,25 +149,19 @@ export function failure(error: unknown): BrowserHub.Failure {
     ...(payload.withheldFrames === undefined ? {} : { withheldFrames: payload.withheldFrames }),
     ...(payload.needs === undefined ? {} : { needs: payload.needs }),
   })
+  const plain = Object.hasOwn(PLAIN, value.kind) ? PLAIN[value.kind] : undefined
+  if (plain !== undefined) return new BrowserHub.Failure({ kind: plain, message: value.message })
   switch (value.kind) {
     case "browser_unavailable":
       return new BrowserHub.Failure({ kind: "unavailable", message: value.message, uncertain: value.uncertain })
-    case "tab_busy":
-      return new BrowserHub.Failure({ kind: "busy", message: value.message })
-    case "tab_taken":
-      return new BrowserHub.Failure({ kind: "taken", message: value.message })
-    case "user_stopped":
-      return new BrowserHub.Failure({ kind: "stopped", message: value.message })
-    case "unsupported_in_browser":
-      return new BrowserHub.Failure({ kind: "unsupported", message: value.message })
-    case "blocked":
-      return new BrowserHub.Failure({ kind: "blocked", message: value.message })
-    case "protocol_mismatch":
-      return new BrowserHub.Failure({ kind: "mismatch", message: value.message })
     case "origin_changed": {
       // A redirect landed on a new origin: ask to read it, so the retry is not the same navigation again.
       const to = landed(data?.to)
-      return new BrowserHub.Failure({ kind: "moved", ...base, ...(to ? { items: [{ class: "read", origin: to }] } : {}) })
+      return new BrowserHub.Failure({
+        kind: "moved",
+        ...base,
+        ...(to ? { items: [{ class: "read", origin: to }] } : {}),
+      })
     }
     case "needs_permission":
       return new BrowserHub.Failure({
@@ -161,10 +204,74 @@ function reply(value: { content: readonly unknown[]; isError?: boolean; _meta?: 
   }
 }
 
+/**
+ * When the connection last changed in a way that can bring an extension (the client started, a hub turned up and, if
+ * it was never paired, showed its pairing page, an extension went away and may come straight back after a reload, a
+ * pairing page was opened again), and whether an extension was ever connected through it.
+ */
+type Presence = { since: number; seen: boolean }
+
+/** Follow one client's states, so a call can tell how long the extension has been away and whether it was there. */
+function follow(linked: Client): Presence {
+  const presence: Presence = { since: Date.now(), seen: linked.state().kind === "ready" }
+  let previous = linked.state().kind
+  linked.subscribe((next) => {
+    if (next.kind === "ready") presence.seen = true
+    else if (previous === "ready" || (next.kind === "waiting" && previous !== "waiting")) presence.since = Date.now()
+    previous = next.kind
+  })
+  return presence
+}
+
+/**
+ * How long after the extension that served this connection went away it counts as coming back: Chrome stops an idle
+ * extension service worker and starts it again on the extension's next event, its 30 s watchdog alarm at the latest,
+ * and the worker dials the hub as it starts.
+ */
+const RESTART_WINDOW = 35_000
+
+/**
+ * Why no extension answers, from what the client sees now and saw before: a connected extension that did not answer
+ * (a timeout, a cancelled turn, its own `browser_unavailable` on a live socket) is not absent; an extension that was
+ * connected went away a moment ago (it may be restarting) or has stayed away; a hub that waits was either paired once
+ * (the extension left) or never; without a hub, a selected profile is the missing piece, otherwise the hub itself.
+ */
+export function absence(
+  state: State,
+  presence: { seen: boolean; since: number },
+  profile: string | undefined,
+): BrowserHub.Absence {
+  if (state.kind === "ready") return { kind: "connected" }
+  if (presence.seen)
+    return Date.now() - presence.since < RESTART_WINDOW ? { kind: "dropped" } : { kind: "disconnected" }
+  if (state.kind === "waiting") return state.hub.paired ? { kind: "disconnected" } : { kind: "unpaired" }
+  if (profile !== undefined) return { kind: "no_profile", profile }
+  return { kind: "no_hub" }
+}
+
 /** The hub interface the host provides: one client per profile target, created on the first use of that target. */
 export function hub(options: Options = {}): BrowserHub.Interface {
   const { install, create: factory, version, ...input } = options
   const clients = new Map<string, Promise<Client>>()
+  const presences = new WeakMap<Client, Presence>()
+  const presenceOf = (linked: Client) => {
+    const known = presences.get(linked)
+    if (known) return known
+    const followed = follow(linked)
+    presences.set(linked, followed)
+    return followed
+  }
+  /** A failure as `failure` maps it, and an unavailable one explained by the client it came from. */
+  const explained = (linked: Client, profile: string | undefined, error: unknown) => {
+    const mapped = failure(error)
+    if (mapped.kind !== "unavailable") return mapped
+    return new BrowserHub.Failure({
+      kind: "unavailable",
+      message: mapped.message,
+      uncertain: mapped.uncertain,
+      absence: absence(linked.state(), presenceOf(linked), profile),
+    })
+  }
   const client = (target: string | null) => {
     const key = target ?? ""
     const existing = clients.get(key)
@@ -178,7 +285,9 @@ export function hub(options: Options = {}): BrowserHub.Interface {
       // native messaging host it does not need.
       const installer = install ?? (async () => (await import("./install")).install())
       await installer().catch(() => undefined)
-      return (factory ?? create)({ ...input, ...(key ? { profile: key } : {}) })
+      const linked = (factory ?? create)({ ...input, ...(key ? { profile: key } : {}) })
+      presenceOf(linked)
+      return linked
     })()
     clients.set(key, created)
     // A transport that could not be created is not a fact: the next call tries again.
@@ -189,15 +298,33 @@ export function hub(options: Options = {}): BrowserHub.Interface {
   }
   return {
     port(target) {
+      const profile = target || undefined
       // Loading the transport can fail too, and a raw loader error must not escape the backend's error contract.
       const connection = () => client(target ?? null).catch((error: unknown) => Promise.reject(failure(error)))
       return {
-        async ready(timeoutMs) {
-          const info = await (await connection())
-            .ready(timeoutMs)
-            .catch((error: unknown) => {
-              throw failure(error)
-            })
+        async ready(timeoutMs = 10_000) {
+          const linked = await connection()
+          const presence = presenceOf(linked)
+          // A hub whose pairing page went stale shows a fresh one, and this call waits for the extension to redeem it;
+          // only a page that really opened resets the wait. Opening it shares the call's own budget: a hub that does
+          // not answer or an opener that never exits cannot hold the call past `timeoutMs`.
+          const started = Date.now()
+          if (absence(linked.state(), presence, profile).kind === "unpaired") {
+            const expired = Promise.withResolvers<boolean>()
+            const timer = setTimeout(() => expired.resolve(false), timeoutMs)
+            const opened = await Promise.race([linked.pair(), expired.promise]).finally(() => clearTimeout(timer))
+            if (opened) presence.since = started
+          }
+          // An extension connects only shortly after the connection changed, so the wait ends `timeoutMs` after that
+          // moment, not after this call: one that has stayed away longer fails the call at once. One that dropped a
+          // moment ago is usually a worker the browser is restarting, so every call gives it the whole budget.
+          const wait =
+            absence(linked.state(), presence, profile).kind === "dropped"
+              ? timeoutMs
+              : Math.max(0, presence.since + timeoutMs - Date.now())
+          const info = await linked.ready(wait).catch((error: unknown) => {
+            throw explained(linked, profile, error)
+          })
           return {
             protocol: info.protocol,
             contractSha: info.contractSha,
@@ -206,16 +333,27 @@ export function hub(options: Options = {}): BrowserHub.Interface {
           }
         },
         async open(params) {
-          return (await connection()).session.open({ ...params, cliVersion: version ?? OPENCODE_VERSION }).catch(
-            (error: unknown) => {
+          return (await connection()).session
+            .open({ ...params, cliVersion: version ?? OPENCODE_VERSION })
+            .catch((error: unknown) => {
               throw failure(error)
-            },
-          )
+            })
         },
         async close(sessionHandle) {
           await (await connection()).session.close({ sessionHandle }).catch((error: unknown) => {
             throw failure(error)
           })
+        },
+        async share(sessionHandle) {
+          await (await connection()).session.shareActiveTab({ sessionHandle }).catch((error: unknown) => {
+            throw failure(error)
+          })
+        },
+        async adopt(sessionHandle) {
+          const answer = await (await connection()).session.adopt({ sessionHandle }).catch((error: unknown) => {
+            throw failure(error)
+          })
+          return adoption(answer)
         },
         async list() {
           const listed = await (await connection()).tools.list().catch((error: unknown) => {
@@ -239,8 +377,9 @@ export function hub(options: Options = {}): BrowserHub.Interface {
           }
         },
         async call(params) {
+          const linked = await connection()
           try {
-            const answer = await (await connection()).tools.call(
+            const answer = await linked.tools.call(
               {
                 sessionHandle: params.sessionHandle,
                 name: params.name,
@@ -252,7 +391,8 @@ export function hub(options: Options = {}): BrowserHub.Interface {
             )
             return reply(answer)
           } catch (error) {
-            throw failure(error)
+            // Only this method runs a step, so only this one reads the transport's timeout as one.
+            throw callFailure(error) ?? explained(linked, profile, error)
           }
         },
         async begin(params) {

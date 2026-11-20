@@ -16,6 +16,10 @@ const Backoff = { base: 250, max: 30_000 }
 const RequestTimeout = 60_000
 const DialTimeout = 5_000
 const StartTimeout = 8_000
+// The pairing page `pair()` reopens at most this often: long enough that a browser
+// without the extension does not collect a tab per call, short enough that a user who
+// just turned "Allow local agents" on is paired by the next call.
+const PairAgain = 15_000
 
 /**
  * Whether an extension may serve a client that selected `profile`. No selection accepts any profile; a selection
@@ -50,6 +54,18 @@ export class HubError extends Error {
     const data = this.data
     return typeof data === "object" && data !== null && "effectsUncertain" in data && data.effectsUncertain === true
   }
+
+  // The CLI stopped waiting: the browser is still there and may still be running the call.
+  get timedOut() {
+    const data = this.data
+    return typeof data === "object" && data !== null && "timedOut" in data && data.timedOut === true
+  }
+
+  // The turn stopped before the browser answered: nothing ran if it was never sent, and it may have run in part otherwise.
+  get cancelled() {
+    const data = this.data
+    return typeof data === "object" && data !== null && "cancelled" in data && data.cancelled === true
+  }
 }
 
 export type State =
@@ -71,6 +87,13 @@ export type Client = {
   ): Promise<proto.Result<M>>
   notify(method: proto.Method, params?: unknown): void
   on<M extends proto.NotificationMethod>(method: M, listener: (params: proto.NotificationParams<M>) => void): () => void
+  /**
+   * Open the pairing page again for the unpaired loopback hub this client waits on, when the last one is older than
+   * `PairAgain`: a page the extension ignored (its switch was off, or it was installed later) cannot pair the hub
+   * any more. Resolves true once a page was opened; false when none was due, one is still being opened, or opening it
+   * failed (no opener on the host), so a caller never waits for a page that does not exist.
+   */
+  pair(): Promise<boolean>
   session: {
     open(params: proto.Params<"session.open">): Promise<proto.Result<"session.open">>
     close(params: proto.Params<"session.close">): Promise<proto.Result<"session.close">>
@@ -110,6 +133,9 @@ export type Input = {
   command?: string[]
   // Replaces the system opener for the pairing page (VS Code passes openExternal).
   opener?: pair.Opener
+  // How long a pairing page stays current before `pair()` opens another
+  // (default `PairAgain`); tests shorten it.
+  pairAgain?: number
 }
 
 type Waiter = {
@@ -151,9 +177,11 @@ export function create(input: Input = {}): Client {
     // The child this attempt spawned, cleared when the attempt (or the child) ends.
     child: undefined as ChildProcess | undefined,
   }
-  // Hubs whose pairing page this client has already opened, so a hub that keeps
-  // reporting hub.waiting is surfaced once per start.
-  const pairing = new Set<string>()
+  // Hubs whose pairing page this client has already opened, and when, so a hub that
+  // keeps reporting hub.waiting is surfaced once per start; `pair()` reopens a stale one.
+  const pairing = new Map<string, number>()
+  // Hubs whose pairing page is being asked for or opened right now, so two callers never open two tabs.
+  const opening = new Set<string>()
 
   let state: State = { kind: "idle" }
   let link: Link | undefined
@@ -335,18 +363,23 @@ export function create(input: Input = {}): Client {
   // A loopback hub that has never completed a handshake cannot be paired on its own:
   // the CLI asks the hub for a pairing URL over this socket, and the URL carries a
   // single-use token instead of the durable key, because the opener's argv is visible
-  // to every local process. Open that page at most once per hub process.
-  async function maybePair(entry: Registry.Entry, active: Link) {
-    if (entry.mode !== "loopback" || entry.paired) return
-    if (pairing.has(entry.hubId)) return
-    pairing.add(entry.hubId)
+  // to every local process. Open that page once per hub process, and again only when `pair()` asks.
+  async function maybePair(entry: Registry.Entry, active: Link): Promise<boolean> {
+    if (entry.mode !== "loopback" || entry.paired) return false
+    if (pairing.has(entry.hubId) || opening.has(entry.hubId)) return false
+    pairing.set(entry.hubId, Date.now())
+    opening.add(entry.hubId)
     try {
       const answer = proto.HubRequests["pairing.url"].result.parse(await rpc(active, "pairing.url", {}))
       const port = entry.port ?? input.port ?? proto.DefaultPort
       await pair.open(answer.url, { opener: input.opener })
       log.info("opened the browser pairing page", { hubId: entry.hubId, port })
+      return true
     } catch (error) {
       log.warn("cannot open the browser pairing page", { error, hubId: entry.hubId })
+      return false
+    } finally {
+      opening.delete(entry.hubId)
     }
   }
 
@@ -495,6 +528,7 @@ export function create(input: Input = {}): Client {
         new HubError({
           code: proto.ErrorCodes.browser_unavailable,
           message: `The browser call was cancelled before it was sent.`,
+          data: { cancelled: true },
         }),
       )
     }
@@ -509,7 +543,7 @@ export function create(input: Input = {}): Client {
         new HubError({
           code: proto.ErrorCodes.browser_unavailable,
           message: `The browser call was cancelled while it was running.`,
-          data: { effectsUncertain: true },
+          data: { effectsUncertain: true, cancelled: true },
         }),
       )
     }
@@ -529,7 +563,7 @@ export function create(input: Input = {}): Client {
         new HubError({
           code: proto.ErrorCodes.browser_unavailable,
           message: `The browser did not answer ${method} within ${timeout}ms.`,
-          data: { effectsUncertain: true },
+          data: { effectsUncertain: true, timedOut: true },
         }),
       )
     }, timeout)
@@ -579,6 +613,16 @@ export function create(input: Input = {}): Client {
       registered.add(entry)
       handlers.set(method, registered)
       return () => registered.delete(entry)
+    },
+    async pair() {
+      const active = link
+      if (state.kind !== "waiting" || !active) return false
+      const entry = active.hub
+      if (entry.mode !== "loopback" || entry.paired || opening.has(entry.hubId)) return false
+      const opened = pairing.get(entry.hubId)
+      if (opened !== undefined && Date.now() - opened < (input.pairAgain ?? PairAgain)) return false
+      pairing.delete(entry.hubId)
+      return maybePair(entry, active)
     },
     session: {
       open: (params) => client.call("session.open", params),

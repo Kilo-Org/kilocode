@@ -7,7 +7,9 @@ import { Context } from "effect"
  */
 export namespace BrowserHub {
   /** One content block of a tool result. Audio and resource blocks are not part of the tool contract. */
-  export type Block = { readonly type: "text"; readonly text: string } | { readonly type: "image"; readonly data: string; readonly mimeType: string }
+  export type Block =
+    | { readonly type: "text"; readonly text: string }
+    | { readonly type: "image"; readonly data: string; readonly mimeType: string }
 
   /** The step a token was issued for: a late report names the call that caused it, not the one carrying the news. */
   export type Step = { tool: string; argumentsHash: string }
@@ -38,19 +40,42 @@ export namespace BrowserHub {
 
   /**
    * Why a hub call failed. The transport maps the protocol's numeric codes to these kinds; a kind the CLI does not
-   * know is `unknown`, which the backend refuses instead of guessing.
+   * know is `unknown`, which the backend refuses instead of guessing. `lost` is a session the extension no longer holds
+   * and the user did not end: the call did not run.
    */
   export type Kind =
     | "unavailable"
+    /** The browser is connected but did not finish the call in time; it may have run in part. */
+    | "timeout"
+    /** The turn stopped before the browser answered: nothing ran if the call was never sent, and it may have run in part otherwise. */
+    | "cancelled"
     | "busy"
     | "taken"
     | "stopped"
+    | "lost"
     | "unsupported"
     | "permission"
     | "blocked"
     | "moved"
     | "mismatch"
     | "unknown"
+
+  /**
+   * Why no extension answered an `unavailable` call, as far as the hub connection knows: no hub is reachable
+   * (`no_hub`), or none whose extension has the selected browser profile (`no_profile`); a hub runs but no extension
+   * ever connected to it (`unpaired`: not installed, "Allow local agents" off, or the pairing page ignored); the
+   * extension this connection used went away a moment ago and the browser usually brings it back (`dropped`: Chrome
+   * stopped its service worker, or the browser is closing); an extension was connected and has stayed away
+   * (`disconnected`: the switch turned off, the browser closed); or one is connected and still does not serve the call
+   * (`connected`: its own `browser_unavailable` on a live socket).
+   */
+  export type Absence =
+    | { kind: "no_hub" }
+    | { kind: "no_profile"; profile: string }
+    | { kind: "unpaired" }
+    | { kind: "dropped" }
+    | { kind: "disconnected" }
+    | { kind: "connected" }
 
   export class Failure extends Error {
     readonly kind: Kind
@@ -63,6 +88,8 @@ export namespace BrowserHub {
     /** The call may have reached the browser before the connection dropped. */
     readonly uncertain: boolean
     readonly meta: Meta | undefined
+    /** Why no extension answered, for an `unavailable` failure the hub connection can explain. */
+    readonly absence: Absence | undefined
 
     constructor(input: {
       kind: Kind
@@ -73,16 +100,18 @@ export namespace BrowserHub {
       afterAction?: boolean
       uncertain?: boolean
       meta?: Meta
+      absence?: Absence
     }) {
       super(input.message)
       this.name = "BrowserHubFailure"
       this.kind = input.kind
       this.items = input.items ?? []
       this.stepToken = input.stepToken
-    this.step = input.step
+      this.step = input.step
       this.afterAction = input.afterAction === true
       this.uncertain = input.uncertain === true
       this.meta = input.meta
+      this.absence = input.absence
     }
   }
 
@@ -99,11 +128,18 @@ export namespace BrowserHub {
 
   export type Upload = { uploadId: string; name: string; size: number; mimeType: string }
 
+  /** What `session.adopt` did: see `Port.adopt`. */
+  export type Adoption = "adopted" | "none" | "kept" | "unconfirmed"
+
   export type Port = {
     /** The connected extension; rejects with `unavailable` while none is reachable. */
     ready(timeoutMs?: number): Promise<Info>
     open(input: { sessionId: string; title: string; cwd: string }): Promise<{ sessionHandle: string; groupId?: string }>
     close(sessionHandle: string): Promise<void>
+    /** Moves the browser's active tab into the session's group; rejects with `blocked` when no tab can be shared. */
+    share(sessionHandle: string): Promise<void>
+    /** Re-keys the most recent ended group to the session; `unconfirmed` is an extension too old to report it. */
+    adopt(sessionHandle: string): Promise<Adoption>
     /** The tool names the extension serves for its own contract. */
     list(): Promise<readonly string[]>
     call(input: CallInput): Promise<Reply>

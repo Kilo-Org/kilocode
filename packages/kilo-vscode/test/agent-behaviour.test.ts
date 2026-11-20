@@ -186,7 +186,7 @@ describe("parseMaxSteps", () => {
 
 describe("isAgentNameTaken", () => {
   test("reserves built-in ids even when they are not listed", () => {
-    for (const id of ["build", "compaction", "title", "summary"]) {
+    for (const id of ["build", "orchestrator", "compaction", "title", "summary"]) {
       expect(isAgentNameTaken(id, [])).toBe(true)
     }
     expect(isAgentNameTaken("reviewer", ["reviewer"])).toBe(true)
@@ -264,7 +264,7 @@ describe("parseImport", () => {
   })
 
   test("rejects hidden and visible built-in ids even when they are not listed", () => {
-    for (const name of ["build", "compaction", "title", "summary", " title "]) {
+    for (const name of ["build", "orchestrator", "compaction", "title", "summary", " title "]) {
       expect(parseImport(JSON.stringify({ name }), [])).toEqual({ ok: false, error: "nameTaken" })
     }
   })
