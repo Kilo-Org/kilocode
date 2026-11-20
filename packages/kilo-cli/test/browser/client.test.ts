@@ -9,6 +9,7 @@ import { HubError, create as createClient, type Client, type State } from "../..
 import { create as createHub, type Hub } from "../../src/browser/hub"
 import * as pair from "../../src/browser/pair"
 import * as proto from "../../src/browser/protocol"
+import { failure as mapped } from "../../src/browser/port"
 import { Registry } from "../../src/browser/registry"
 import { serve } from "../../src/browser/socket"
 import { until as eventually } from "./fixture"
@@ -214,7 +215,86 @@ describe("browser client", () => {
     // The call may have reached the browser before the transport went away, so the
     // caller must look at the page rather than retry blind.
     expect(failure.uncertain).toBe(true)
+    expect(mapped(failure).kind).toBe("unavailable")
     expect(target.state().kind).toBe("waiting")
+  })
+
+  test("a cancelled call carries the cancel marker instead of looking like a missing browser", async () => {
+    const at = await tmp()
+    const { hub } = await host({ ...at, paired: true })
+    const target = client({ dir: at.dir, start: () => {} })
+    await until(target, "waiting")
+    const routed: proto.HubToExtension[] = []
+    const extension = hub.attach(
+      (frame) => {
+        routed.push(frame)
+        return true
+      },
+      () => undefined,
+    )!
+    extension.hello(info)
+    await until(target, "ready")
+
+    // The turn stops while the call is running: it may have reached the browser, so its effects stay uncertain.
+    const running = new AbortController()
+    const pending = target.tools
+      .call({ sessionHandle: "s", name: "browser_click", arguments: {}, authorized: [] }, { signal: running.signal })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      )
+    await eventually(() => (routed.some((frame) => frame.type === "rpc") ? true : undefined))
+    running.abort()
+    const cancelled = await pending
+    expect(cancelled).toBeInstanceOf(HubError)
+    if (!(cancelled instanceof HubError)) throw new Error("expected a HubError")
+    expect(cancelled.cancelled).toBe(true)
+    expect(cancelled.uncertain).toBe(true)
+    expect(target.state().kind).toBe("ready")
+
+    // A turn already stopped before the call was made cannot have run it at all.
+    const stopped = new AbortController()
+    stopped.abort()
+    const early = await target.tools
+      .call({ sessionHandle: "s", name: "browser_click", arguments: {}, authorized: [] }, { signal: stopped.signal })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      )
+    expect(early).toBeInstanceOf(HubError)
+    if (!(early instanceof HubError)) throw new Error("expected a HubError")
+    expect(early.cancelled).toBe(true)
+    expect(early.uncertain).toBe(false)
+  })
+
+  test("a call the connected extension does not answer in time carries the transport's timeout", async () => {
+    const at = await tmp()
+    const { hub } = await host({ ...at, paired: true })
+    const target = client({ dir: at.dir, start: () => {} })
+    await until(target, "waiting")
+    const extension = hub.attach(
+      () => true,
+      () => undefined,
+    )!
+    extension.hello(info)
+    await until(target, "ready")
+
+    // The hub routes the call to a live extension that never answers it.
+    const timedOut = await target.tools
+      .call({ sessionHandle: "s", name: "browser_click", arguments: {}, authorized: [] }, { timeout: 50 })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      )
+
+    expect(timedOut).toBeInstanceOf(HubError)
+    if (!(timedOut instanceof HubError)) throw new Error("expected a HubError")
+    // The transport's own timer ended the call, not the browser: silence is not proof that the step did not run.
+    expect(timedOut.timedOut).toBe(true)
+    expect(timedOut.uncertain).toBe(true)
+    // Only a tool call is read as a step timeout; the generic mapping leaves every other method a silent browser.
+    expect(mapped(timedOut).kind).toBe("unavailable")
+    expect(target.state().kind).toBe("ready")
   })
 
   test("does not open the pairing page for a hub that already paired", async () => {

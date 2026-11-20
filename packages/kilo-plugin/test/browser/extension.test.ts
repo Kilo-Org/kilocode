@@ -3,8 +3,11 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import {
+  CancelledError,
   IncompatibleError,
   NeedsPermissionError,
+  TIMEOUT_MESSAGE,
+  TimeoutError,
   UNAVAILABLE_MESSAGE,
   UnavailableError,
   UnsupportedError,
@@ -549,6 +552,32 @@ describe("extension backend", () => {
           expect(error).toBeInstanceOf(UnavailableError)
           expect((error as UnavailableError).message).toBe(UNAVAILABLE_MESSAGE)
           expect((error as UnavailableError).effectsUncertain).toBe(true)
+        },
+      },
+      {
+        failure: { kind: "timeout", message: "The browser did not answer tools.call in time.", uncertain: true },
+        check: (error) => {
+          expect(error).toBeInstanceOf(TimeoutError)
+          expect((error as Error).message).toBe(TIMEOUT_MESSAGE)
+        },
+      },
+      {
+        failure: { kind: "cancelled", message: "cancelled running", uncertain: true },
+        check: (error) => {
+          expect(error).toBeInstanceOf(CancelledError)
+          expect((error as Error).message).toContain("cancelled before it finished")
+          expect((error as Error).message).toContain("browser_snapshot")
+          expect((error as CancelledError).effectsUncertain).toBe(true)
+        },
+      },
+      {
+        // A call cancelled before it was sent cannot have run, so nothing is said about looking at the page first.
+        failure: { kind: "cancelled", message: "cancelled before the send" },
+        check: (error) => {
+          expect(error).toBeInstanceOf(CancelledError)
+          expect((error as Error).message).toContain("cancelled before it was sent")
+          expect((error as Error).message).not.toContain("snapshot")
+          expect((error as CancelledError).effectsUncertain).toBe(false)
         },
       },
       {
