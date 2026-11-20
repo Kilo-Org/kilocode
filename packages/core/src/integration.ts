@@ -347,14 +347,23 @@ export const locationLayer = Layer.effect(
             },
           )
           if (!flight.owner) return yield* restore(Deferred.await(flight.deferred))
+          // kilocode_change - release the flight, then publish the result once the ref guard is free.
+          // Deferred completion resumes waiters on this stack, so it runs outside the modify callback:
+          // a waiter that re-enters this map then sees the entry already removed, and the state
+          // transition stays pure.
           const finish = (exit: Exit.Exit<Credential.Value, AuthorizationError>) =>
-            SynchronizedRef.modify(refreshing, (current) => {
-              if (current.get(credential.id) !== flight.deferred) return [undefined, current] as const
-              const next = new Map(current)
-              next.delete(credential.id)
-              Deferred.doneUnsafe(flight.deferred, exit)
-              return [undefined, next] as const
-            })
+            Effect.flatMap(
+              SynchronizedRef.modify(refreshing, (current) => {
+                if (current.get(credential.id) !== flight.deferred) return [false, current] as const
+                const next = new Map(current)
+                next.delete(credential.id)
+                return [true, next] as const
+              }),
+              (mine) =>
+                Effect.sync(() => {
+                  if (mine) Deferred.doneUnsafe(flight.deferred, exit)
+                }),
+            )
           const outcome = Effect.exit(
             Effect.gen(function* () {
               const stored = yield* credentials.get(credential.id)
