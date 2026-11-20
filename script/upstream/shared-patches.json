@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 164,
-    "markedLines": 2971,
+    "markedLines": 2983,
     "unmarkedLines": 468,
     "deletedFiles": 0
   },
@@ -322,7 +322,7 @@
     },
     "packages/tui/src/component/dialog-model.tsx": {
       "rung": 4,
-      "seam": "Model picker (U-E9-07, #15242): the connected picker returns the Kilo option list (Kilo Gateway order from `recommendedIndex`, Recommended and Kilo Gateway sections, `Free` from Gateway `isFree`, `BYOK` and `May train` labels, v1 search over provider and model IDs) from the first line of its options memo, keeps section headers while searching (`flat={false}`), follows the highlight with `onMove`, and wraps the list with the model info panel. Seven call-out lines; the logic is in tui/src/kilocode/dialog-model.tsx and tui/src/kilocode/model-picker.ts. The upstream option code below the early return, `sortModelOptions` and `prioritizeFavorites` stay unchanged, so upstream syncs merge cleanly and upstream's model-options tests pass. Rungs 1 and 2 cannot reach it: the TUI plugin API has no model picker hook, and the host runs in the server process. A generic seam (an option-list and side-panel hook) would need the same lines here plus a new plugin API surface for one consumer."
+      "seam": "Model picker (U-E9-07, #15242): the connected picker returns the Kilo option list (Kilo Gateway order from `recommendedIndex`, Recommended and Kilo Gateway sections, `Free` from Gateway `isFree`, `BYOK` and `May train` labels, v1 search over provider and model IDs) from the first line of its options memo, keeps section headers while searching (`flat={false}`), follows the highlight with `onMove`, and wraps the list with the model info panel. Seven call-out lines; the logic is in tui/src/kilocode/dialog-model.tsx and tui/src/kilocode/model-picker.ts. The upstream option code below the early return, `sortModelOptions` and `prioritizeFavorites` stay unchanged, so upstream syncs merge cleanly and upstream's model-options tests pass. Rungs 1 and 2 cannot reach it: the TUI plugin API has no model picker hook, and the host runs in the server process. A generic seam (an option-list and side-panel hook) would need the same lines here plus a new plugin API surface for one consumer. One Kilo line in the picker's `select` records the chosen model as the active agent's pick for the next launch; remembering itself lives in tui/src/kilocode/agent-models.ts."
     },
     "packages/tui/src/context/client-mcp.tsx": {
       "rung": 4,
@@ -338,7 +338,7 @@
     },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
-      "seam": "Full TUI default selection (Gateway): call the Kilo-owned default-model loader, then use SDK model.default after CLI/config and recent models, within the existing user/agent selection precedence. Keep the first catalog model when the server supplies no valid default. Without a higher-priority selection, catalog readiness waits for the default request so --prompt cannot submit the catalog's first model before the recommendation arrives. Rungs 1 and 2 cannot reach LocalProvider's private fallback memo or readiness flag; the TUI plugin API has no model-default resolver, and the host runs in the server process. A generic seam would add a resolver registration API for this single SDK read instead of these small call-outs. Loading, refresh and location isolation stay in tui/src/kilocode/default-model.ts."
+      "seam": "Full TUI default selection (Gateway): call the Kilo-owned default-model loader, then use SDK model.default after CLI/config and recent models, within the existing user/agent selection precedence. Keep the first catalog model when the server supplies no valid default. Without a higher-priority selection, catalog readiness waits for the default request so --prompt cannot submit the catalog's first model before the recommendation arrives. Rungs 1 and 2 cannot reach LocalProvider's private fallback memo or readiness flag; the TUI plugin API has no model-default resolver, and the host runs in the server process. A generic seam would add a resolver registration API for this single SDK read instead of these small call-outs. Loading, refresh and location isolation stay in tui/src/kilocode/default-model.ts. The hosted TUI also exposes `rememberPick`, called by the model picker and by the cycle actions through the same helper, which records the active agent's pick and consults it before the global config. `set` stays upstream's, so a launch `--model` applies to that run without becoming the saved pick; persistence lives in tui/src/kilocode/agent-models.ts."
     },
     "packages/plugin/src/tui/context.ts": {
       "rung": 3,

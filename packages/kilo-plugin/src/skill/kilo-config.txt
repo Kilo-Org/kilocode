@@ -123,6 +123,8 @@ The Kilo Gateway is the `kilo` provider. Sign in with `kilo2 auth login` and pic
 
 ## Terminal settings
 
+In the full TUI, `/models` remembers your pick for the active agent across launches. A fresh chat uses that pick ahead of the top-level `model` if it is still available. If the agent has its own configured `model`, that model wins on restart; you can still switch temporarily. Resuming a chat restores the chat's saved model.
+
 CLI and TUI preferences are not in `kilo2.json`. They live only in the global `~/.config/kilo2/cli.json` (JSONC; it moves with `KILO2_CONFIG_DIR`); there is no project-level CLI config. `OPENCODE_CLI_CONFIG_CONTENT` merges inline JSON over it. Keys include `theme` (`name`, `mode`), `keybinds`, `leader`, `attention` (notifications and sounds, off by default), `diffs`, `session` (`thinking`, `sidebar`, `scrollbar` and more), `tabs`, `prompt`, `terminal`, `mini`, `animations`, `mouse`, `cursor` and terminal `plugins`. Most can be changed with `Ctrl+P` → **Open settings**; keybindings only in the file.
 
 Keybindings go under `keybinds`. The leader defaults to `ctrl+x` (`keybinds.leader`, timeout `leader.timeout`, 2000 ms). A binding is a string, an array or an object with event options; `"none"` or `false` disables it. Never guess a command ID or default: fetch the keybind reference first.
