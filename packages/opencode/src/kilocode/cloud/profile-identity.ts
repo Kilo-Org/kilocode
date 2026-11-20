@@ -1,4 +1,3 @@
-import { Auth } from "@/auth"
 import { CloudAuth } from "@/kilocode/cloud/auth"
 import { createBearerHttpClient } from "@/kilocode/cloud/http"
 import { resolveKiloApiOrigin } from "@/kilocode/cloud/origin"
@@ -44,6 +43,14 @@ export namespace ProfileIdentity {
           ),
         ),
       ))
+    return yield* readWithBearer(env, token)
+  })
+
+  export const readWithBearer = Effect.fn("ProfileIdentity.readWithBearer")(function* (
+    env: CloudAuth.Environment,
+    token: Redacted.Redacted,
+    timeoutMs?: number,
+  ) {
     const origin = yield* Effect.try({
       try: () => resolveKiloApiOrigin(env),
       catch: () => fail("invalid", "Kilo API base URL is invalid"),
@@ -54,6 +61,7 @@ export namespace ProfileIdentity {
           method: "GET",
           path: "/api/profile",
           headers: { accept: "application/json" },
+          timeoutMs,
         }),
       catch: () => fail("unavailable", "Kilo profile is unreachable"),
     })

@@ -15,47 +15,26 @@ export namespace AllowEverythingPermission {
       const cfg = yield* Config.Service
       const rules: Permission.Ruleset = [{ permission: "*", pattern: "*", action: "allow" }]
 
-      if (!input.enable) {
-        if (input.sessionID) {
-          const id = SessionID.make(input.sessionID)
-          const session = yield* sessions.get(id).pipe(Effect.orDie)
-          yield* sessions.setPermission({
-            sessionID: id,
-            permission: (session.permission ?? []).filter(
-              (rule) => !(rule.permission === "*" && rule.pattern === "*" && rule.action === "allow"),
-            ),
-          })
-          yield* svc.allowEverything({ enable: false, sessionID: id })
-          return true
+      const id = input.sessionID ? SessionID.make(input.sessionID) : undefined
+      const persist = Effect.gen(function* () {
+        if (!id) {
+          yield* cfg.updateGlobal(
+            { permission: input.enable ? Permission.toConfig(rules) : { "*": { "*": null } } },
+            { dispose: false },
+          )
+          return
         }
-
-        // updateGlobal({ dispose: false }) already emits ConfigUpdated on GlobalBus
-        yield* cfg.updateGlobal({ permission: { "*": { "*": null } } }, { dispose: false })
-        yield* svc.allowEverything({ enable: false })
-        return true
-      }
-
-      if (input.sessionID) {
-        const id = SessionID.make(input.sessionID)
         const session = yield* sessions.get(id).pipe(Effect.orDie)
         yield* sessions.setPermission({
           sessionID: id,
-          permission: [...(session.permission ?? []), ...rules],
+          permission: input.enable
+            ? [...(session.permission ?? []), ...rules]
+            : (session.permission ?? []).filter(
+                (rule) => !(rule.permission === "*" && rule.pattern === "*" && rule.action === "allow"),
+              ),
         })
-      }
-
-      if (!input.sessionID) {
-        // updateGlobal({ dispose: false }) already emits ConfigUpdated on GlobalBus
-        yield* cfg.updateGlobal({ permission: Permission.toConfig(rules) }, { dispose: false })
-      }
-
-      yield* svc.allowEverything({
-        enable: true,
-        requestID: input.requestID,
-        sessionID: input.sessionID ? SessionID.make(input.sessionID) : undefined,
       })
-
-      return true
+      return yield* svc.allowEverything({ ...input, sessionID: id }, persist)
     })
   }
 }

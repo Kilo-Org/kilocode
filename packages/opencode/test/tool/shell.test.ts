@@ -963,8 +963,7 @@ describe("tool.shell permissions", () => {
             },
             capture(requests),
           )
-          const bashReq = requests.find((r) => r.permission === "bash")
-          expect(bashReq).toBeUndefined()
+          expect(requests.find((r) => r.permission === "bash")).toMatchObject({ managedOnly: true }) // kilocode_change
         }),
       )
     }),

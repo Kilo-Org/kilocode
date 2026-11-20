@@ -120,6 +120,11 @@ export namespace BackgroundProcess {
     .pipe(withStatics((s) => ({ zod: zod(s) })))
   export type StartInput = Types.DeepMutable<Schema.Schema.Type<typeof StartInput>>
 
+  type Launch = {
+    shell: string
+    recheck?: () => Promise<void>
+  }
+
   export const Logs = Schema.Struct({
     id: ID,
     sessionID: SessionID,
@@ -950,8 +955,8 @@ export namespace BackgroundProcess {
     return false
   }
 
-  async function launch(state: State, input: StartInput, id = ID.ascending()) {
-    const sh = Shell.acceptable()
+  async function launch(state: State, input: StartInput, id = ID.ascending(), opts?: Launch) {
+    const sh = opts?.shell ?? Shell.acceptable()
     const cwd = path.resolve(state.dir, input.cwd ?? state.dir)
     const readyPattern = pattern(input.ready?.pattern)
     if (input.ready?.port && (await connected(input.ready.port))) {
@@ -974,15 +979,16 @@ export namespace BackgroundProcess {
         ? BackgroundProcessRunner.command({ token, shell: sh, args, cwd, log: logpath, control })
         : [sh, ...args]
     const proc = await Promise.resolve()
-      .then(() =>
-        spawn(cmd[0], cmd.slice(1), {
+      .then(async () => {
+        if (opts?.recheck) await opts.recheck()
+        return spawn(cmd[0], cmd.slice(1), {
           cwd,
           env: env(id, token),
           stdio: ["ignore", "pipe", "pipe"],
           detached: lifetime === "persistent" || process.platform !== "win32",
           windowsHide: true,
-        }),
-      )
+        })
+      })
       .catch(async (err) => {
         if (logpath) await rm(logpath, { force: true })
         if (control) await rm(control, { force: true })
@@ -1246,8 +1252,8 @@ export namespace BackgroundProcess {
     return runtime.dispose()
   }
 
-  export async function start(input: StartInput) {
-    return launch(await state(), input)
+  export async function start(input: StartInput, opts?: Launch) {
+    return launch(await state(), input, undefined, opts)
   }
 
   export async function list(input?: { sessionID?: SessionID }) {
@@ -1283,14 +1289,33 @@ export namespace BackgroundProcess {
     return clone(active.info)
   }
 
-  export async function restart(id: ID) {
+  export async function restart(
+    id: ID,
+    opts?: Launch & { expected: Pick<Info, "command" | "cwd" | "sessionID" | "lifetime"> },
+  ) {
     const current = await state()
     if (!find(current, id)) await adopt(current)
     const active = find(current, id)
     if (!active) return
     const input = active.start
+    if (opts) {
+      if (
+        input.command !== opts.expected.command ||
+        input.cwd !== opts.expected.cwd ||
+        input.sessionID !== opts.expected.sessionID ||
+        active.info.lifetime !== opts.expected.lifetime
+      )
+        return
+      await opts.recheck?.()
+      if (
+        find(current, id) !== active ||
+        input.sessionID !== opts.expected.sessionID ||
+        active.info.lifetime !== opts.expected.lifetime
+      )
+        return
+    }
     await terminate(current, active, { remove: true })
-    return launch(current, input, id)
+    return launch(current, input, id, opts)
   }
 
   export async function stopSession(sessionID: SessionID) {

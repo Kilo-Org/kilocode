@@ -139,17 +139,16 @@ export const TaskTool = Tool.define(
         )
       }
 
-      if (!ctx.extra?.bypassAgentCheck) {
-        yield* ctx.ask({
-          permission: id,
-          patterns: [params.subagent_type],
-          always: ["*"],
-          metadata: {
-            description: params.description,
-            subagent_type: params.subagent_type,
-          },
-        })
+      // kilocode_change start - an explicit agent selection bypasses local confirmation, not managed policy
+      const request = {
+        permission: id,
+        patterns: [params.subagent_type],
+        always: ["*"],
+        metadata: { description: params.description, subagent_type: params.subagent_type },
       }
+      if (!ctx.extra?.bypassAgentCheck) yield* ctx.ask(request)
+      if (ctx.extra?.bypassAgentCheck && ctx.checkManaged) yield* ctx.checkManaged(request)
+      // kilocode_change end
 
       const next = yield* agent.get(params.subagent_type)
       if (!next) {
@@ -209,6 +208,7 @@ export const TaskTool = Tool.define(
       )
       // kilocode_change end
       // kilocode_change start - refresh current parent restrictions when resuming an existing task session
+      if (ctx.recheck) yield* ctx.recheck()
       const fallback = SandboxPolicy.fallback(cfg)
       if (session) {
         yield* SandboxPolicy.inherit(ctx.sessionID, session.id, fallback)

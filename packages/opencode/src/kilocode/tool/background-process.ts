@@ -1,6 +1,8 @@
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { Tool } from "@/tool/tool"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { Shell } from "@opencode-ai/core/shell"
+import { classifyShell } from "@/tool/shell"
 import { containsPath } from "@/project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
 import { KiloSession } from "@/kilocode/session"
@@ -9,6 +11,7 @@ import { PositiveInt } from "@opencode-ai/core/schema"
 import { Effect, Schema } from "effect"
 import { enabled as sandboxed } from "@kilocode/sandbox"
 import DESCRIPTION from "./background-process.txt"
+import { stat } from "node:fs/promises"
 import path from "path"
 
 const Action = Schema.Literals(["start", "monitor", "list", "status", "logs", "stop", "restart"])
@@ -221,6 +224,67 @@ function monitor(params: Params, ctx: Tool.Context<Meta>, info: BackgroundProces
   })
 }
 
+const authorize = Effect.fn("BackgroundProcessTool.authorize")(function* (
+  ctx: Tool.Context,
+  input: { command: string; cwd: string; description?: string },
+  restart = false,
+) {
+  const inst = yield* InstanceState.context
+  const shell = Shell.acceptable()
+  const scan = yield* classifyShell(input.command, shell)
+  const glob = (dir: string) => {
+    const pattern = path.join(dir, "*")
+    return process.platform === "win32" ? FSUtil.normalizePathPattern(pattern) : pattern
+  }
+  const cwd = containsPath(input.cwd, inst) ? undefined : glob(input.cwd)
+  if (cwd) {
+    yield* ctx.ask({
+      permission: "external_directory",
+      patterns: [cwd],
+      always: restart ? [] : [cwd],
+      metadata: { command: input.command, access: "unknown" },
+      ...(restart ? { managedOnly: true } : {}),
+    })
+  }
+  const dirs = new Set<string>()
+  for (const file of scan.paths) {
+    const resolved = path.resolve(input.cwd, FSUtil.windowsPath(file))
+    if (containsPath(resolved, inst)) continue
+    const dir = (yield* Effect.promise(() => stat(resolved).catch(() => undefined)))?.isDirectory()
+      ? resolved
+      : path.dirname(resolved)
+    const pattern = glob(dir)
+    if (pattern !== cwd) dirs.add(pattern)
+  }
+  if (dirs.size > 0) {
+    yield* ctx.ask({
+      permission: "external_directory",
+      patterns: [...dirs],
+      always: [],
+      metadata: { command: input.command, access: "unknown" },
+      managedOnly: true,
+    })
+  }
+  yield* ctx.ask({
+    permission: "bash",
+    patterns: [input.command],
+    always: restart ? [] : [input.command.split(/\s+/, 1)[0] + " *"],
+    metadata: {
+      command: input.command,
+      description: input.description,
+      action: restart ? "restart" : "start",
+      backgroundProcess: true,
+    },
+    ...(restart ? { managedOnly: true } : {}),
+    // The background launcher can apply login initialization and does not use
+    // the foreground path analyzer. Keep identified denials, but require fallback.
+    managedShell: { ...scan.managedShell, uncertain: true },
+  })
+  const context = yield* Effect.context()
+  const recheck = ctx.recheck ? Effect.suspend(() => ctx.recheck?.() ?? Effect.void) : undefined
+  return { shell, recheck: recheck && (() => Effect.runPromiseWith(context)(recheck, { signal: ctx.abort })) }
+})
+
 export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "background_process">(
   "background_process",
   Effect.succeed({
@@ -260,12 +324,12 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
               metadata: { processID: found.id, status: found.status },
             }
           }
-          const info =
-            params.action === "stop"
+          const opts = params.action === "restart" ? yield* authorize(ctx, found, true) : undefined
+          const info = opts
+            ? yield* Effect.promise(() => BackgroundProcess.restart(id, { ...opts, expected: found }))
+            : params.action === "stop"
               ? yield* Effect.promise(() => BackgroundProcess.stop(id))
-              : params.action === "restart"
-                ? yield* Effect.promise(() => BackgroundProcess.restart(id))
-                : found
+              : found
           if (!info) return missing(id)
           return {
             title: `${params.action}: ${title(info)}`,
@@ -283,33 +347,21 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
         if (err) return invalid(params.action, err)
         const inst = yield* InstanceState.context
         const cwd = path.resolve(inst.directory, params.workdir ?? inst.directory)
-        if (!containsPath(cwd, inst)) {
-          const pattern =
-            process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(cwd, "*")) : path.join(cwd, "*")
-          yield* ctx.ask({
-            permission: "external_directory",
-            patterns: [pattern],
-            always: [pattern],
-            metadata: { command, access: "unknown" },
-          })
-        }
-        yield* ctx.ask({
-          permission: "bash",
-          patterns: [command],
-          always: [command.split(/\s+/, 1)[0] + " *"],
-          metadata: { command, description: params.description, action: "start", backgroundProcess: true },
-        })
+        const opts = yield* authorize(ctx, { command, cwd, description: params.description })
 
         const info = yield* Effect.promise(() =>
-          BackgroundProcess.start({
-            sessionID: ctx.sessionID,
-            command,
-            cwd,
-            description: params.description,
-            ready: params.ready,
-            lifetime: params.persistent ? "persistent" : params.inherit ? "parent" : "session",
-            parentID,
-          }),
+          BackgroundProcess.start(
+            {
+              sessionID: ctx.sessionID,
+              command,
+              cwd,
+              description: params.description,
+              ready: params.ready,
+              lifetime: params.persistent ? "persistent" : params.inherit ? "parent" : "session",
+              parentID,
+            },
+            opts,
+          ),
         )
         if (params.action === "monitor") return yield* monitor(params, ctx, info)
         return {

@@ -16,7 +16,7 @@ import { SkillShellPrompt } from "@/kilocode/acp/permission" // kilocode_change
 
 type PermissionEvent = Extract<Event, { type: "permission.asked" }>
 type Reply = "once" | "always" | "reject"
-type Connection = Partial<Pick<AgentSideConnection, "requestPermission" | "writeTextFile">>
+type Connection = Partial<Pick<AgentSideConnection, "requestPermission">> // kilocode_change - Core owns edits
 
 const permissionOptions: PermissionOption[] = [
   { optionId: "once", kind: "allow_once", name: "Allow once" },
@@ -75,7 +75,13 @@ export class Handler {
           input: permission.metadata,
           title, // kilocode_change
         }),
-        options: temporary ? SkillShellPrompt.options : permissionOptions, // kilocode_change
+        // kilocode_change start
+        options: permission.managed
+          ? permissionOptions.filter((option) => option.optionId !== "always")
+          : temporary
+            ? SkillShellPrompt.options
+            : permissionOptions,
+        // kilocode_change end
       })
       .catch(async () => {
         await this.reply(permission.id, "reject", session.cwd)
@@ -85,15 +91,13 @@ export class Handler {
     if (!result) return
 
     const reply = selectedReply(result)
-    if (reply !== "once" && reply !== "always") {
+    if (reply === "reject" || (permission.managed && reply === "always")) {
+      // kilocode_change
       await this.reply(permission.id, "reject", session.cwd)
       return
     }
 
-    if (permission.permission === "edit") {
-      await this.writeProposedEdit(session.id, permission.metadata).catch(() => {})
-    }
-
+    // kilocode_change - Core applies edits after authorizing them; policy can change while a prompt is open.
     await this.reply(permission.id, reply, session.cwd, true) // kilocode_change - human selected via requestPermission
   }
 
@@ -104,24 +108,6 @@ export class Handler {
       reply,
       directory,
       interactive, // kilocode_change
-    })
-  }
-
-  private async writeProposedEdit(sessionId: string, metadata: ToolInput) {
-    const filepath = stringValue(metadata.filepath)
-    const diff = stringValue(metadata.diff)
-    if (!filepath || !diff || !this.input.connection.writeTextFile) return
-
-    const content = (await exists(filepath)) ? await readText(filepath) : ""
-    const next = applyPatch(content, diff)
-    if (next === false) {
-      return
-    }
-
-    void this.input.connection.writeTextFile({
-      sessionId,
-      path: filepath,
-      content: next,
     })
   }
 }

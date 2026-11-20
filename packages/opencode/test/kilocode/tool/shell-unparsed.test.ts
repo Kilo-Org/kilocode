@@ -15,7 +15,7 @@ import { Cause, Effect, Exit, Layer } from "effect"
 import path from "path"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { FSUtil } from "@opencode-ai/core/fs-util"
-import type { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import type { Tool } from "@/tool/tool"
 import { Permission } from "../../../src/permission"
 import { ShellPermission } from "../../../src/tool/shell"
 import { ShellTool } from "../../../src/tool/shell"
@@ -35,7 +35,7 @@ const layer = Layer.mergeAll(
   testInstanceStoreLayer,
 )
 
-type ScanRequest = Omit<PermissionV1.Request, "id" | "sessionID" | "tool">
+type ScanRequest = Parameters<Tool.Context["ask"]>[0]
 
 async function scan(dir: string, command: string, shell: string, sandbox = false) {
   const requests: ScanRequest[] = []
@@ -64,7 +64,7 @@ async function scan(dir: string, command: string, shell: string, sandbox = false
 }
 
 function patterns(requests: ScanRequest[]) {
-  return requests.filter((req) => req.permission === "bash").flatMap((req) => req.patterns)
+  return requests.filter((req) => req.permission === "bash" && !req.managedOnly).flatMap((req) => req.patterns)
 }
 
 const deny = Permission.fromConfig({

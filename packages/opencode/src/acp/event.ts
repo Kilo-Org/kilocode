@@ -22,8 +22,7 @@ import {
   completedToolUpdate,
 } from "./tool"
 
-type Connection = Pick<AgentSideConnection, "sessionUpdate"> &
-  Partial<Pick<AgentSideConnection, "requestPermission" | "writeTextFile">>
+type Connection = Pick<AgentSideConnection, "sessionUpdate"> & Partial<Pick<AgentSideConnection, "requestPermission">> // kilocode_change - Core owns edits
 type GlobalEventEnvelope = {
   payload?: Event
 }

@@ -30,6 +30,8 @@ import { ModelV2 } from "@opencode-ai/core/model"
 // kilocode_change start
 import { Config } from "@/config/config"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
+import * as Managed from "@/kilocode/permission/managed"
+import * as ToolNetwork from "@/kilocode/sandbox/network"
 import { McpApps } from "@/kilocode/mcp/apps"
 import { BoardEnabled } from "@/kilocode/board/enabled"
 import { KiloCodeMode } from "@/kilocode/tool/code-mode" // kilocode_change
@@ -80,6 +82,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const config = yield* Config.Service
   const flags = yield* RuntimeFlags.Service
   const cfg = yield* config.get()
+  const scope = yield* permission.authorizationScope()
   const permissionOrigins = cfg.permission_origins
   const notify = BoardEnabled.on(cfg, flags) ? input.notify : undefined
   type Output = Parameters<SessionProcessor.Handle["completeToolCall"]>[1]
@@ -107,6 +110,76 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       sandboxed, // kilocode_change
       sandboxEscalation: false,
     }
+    // kilocode_change start
+    const grants: NonNullable<Permission.AskOutcome["recheck"]>[] = []
+    const refused = (err: Managed.Refused) =>
+      input.processor.metadata(options.toolCallId, { metadata: Managed.metadata(err.reason) })
+    const recheck = () => Effect.forEach(grants, (check) => check(), { discard: true })
+    const ask = (req: Parameters<Tool.Context["ask"]>[0], managedOnly?: boolean) => {
+      let record = !req.managedFallback
+      let grant: Permission.AskOutcome["recheck"]
+      return KiloSessionPrompt.askPermission({
+        permission,
+        agents,
+        sessions,
+        origins: permissionOrigins,
+        agent: input.agent,
+        session: input.session,
+        authorized: (outcome) => {
+          grant = outcome.recheck
+          record ||= outcome.enforced === true
+        },
+        request: {
+          ...req,
+          managedOnly: managedOnly ?? req.managedOnly,
+          scope,
+          sessionID: input.session.id,
+          tool: { messageID: input.processor.message.id, callID: options.toolCallId },
+        },
+      }).pipe(
+        // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
+        Effect.tap((approval) =>
+          Effect.gen(function* () {
+            yield* recheck()
+            if (grant) grants.push(grant)
+            if (!record) return
+            if (req.metadata?.["sandboxEscalation"] === true && approval.source === "manual") {
+              extra.sandboxEscalation = true
+            }
+            yield* input.processor.metadata(options.toolCallId, {
+              metadata: {
+                approval: PermissionProvenance.tagOutsideWorkspace(
+                  approval,
+                  req.permission,
+                  PermissionProvenance.filepathOf(req.metadata),
+                ),
+              },
+            })
+          }),
+        ),
+        // record why the call was denied too, so JSON exports and clients can explain the denial
+        Effect.tapErrorTag("PermissionDeniedError", (err) =>
+          input.processor.metadata(options.toolCallId, {
+            metadata: {
+              approval: PermissionProvenance.tagOutsideWorkspace(
+                PermissionProvenance.classifyDenial({
+                  ruleset: err.ruleset,
+                  permission: req.permission,
+                  patterns: req.patterns,
+                  agent: input.agent.name,
+                  origins: permissionOrigins,
+                }),
+                req.permission,
+                PermissionProvenance.filepathOf(req.metadata),
+              ),
+            },
+          }),
+        ),
+        Effect.tapErrorTag("ManagedPermissionError", refused),
+        Effect.asVoid,
+        Effect.orDie,
+      )
+    }
     return {
       sessionID: input.session.id,
       abort: options.abortSignal!,
@@ -115,60 +188,10 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       extra,
       agent: input.agent.name,
       messages: input.messages,
-      // kilocode_change start
       metadata: (val) => input.processor.metadata(options.toolCallId, val),
-      ask: (req) =>
-        KiloSessionPrompt.askPermission({
-          permission,
-          agents,
-          sessions,
-          origins: permissionOrigins,
-          agent: input.agent,
-          session: input.session,
-          request: {
-            ...req,
-            sessionID: input.session.id,
-            tool: { messageID: input.processor.message.id, callID: options.toolCallId },
-          },
-        }).pipe(
-          // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
-          Effect.tap((approval) =>
-            Effect.gen(function* () {
-              if (req.metadata?.["sandboxEscalation"] === true && approval.source === "manual") {
-                extra.sandboxEscalation = true
-              }
-              yield* input.processor.metadata(options.toolCallId, {
-                metadata: {
-                  approval: PermissionProvenance.tagOutsideWorkspace(
-                    approval,
-                    req.permission,
-                    PermissionProvenance.filepathOf(req.metadata),
-                  ),
-                },
-              })
-            }),
-          ),
-          // record why the call was denied too, so JSON exports and clients can explain the denial
-          Effect.tapErrorTag("PermissionDeniedError", (err) =>
-            input.processor.metadata(options.toolCallId, {
-              metadata: {
-                approval: PermissionProvenance.tagOutsideWorkspace(
-                  PermissionProvenance.classifyDenial({
-                    ruleset: err.ruleset,
-                    permission: req.permission,
-                    patterns: req.patterns,
-                    agent: input.agent.name,
-                    origins: permissionOrigins,
-                  }),
-                  req.permission,
-                  PermissionProvenance.filepathOf(req.metadata),
-                ),
-              },
-            }),
-          ),
-          Effect.asVoid,
-          Effect.orDie,
-        ),
+      ask,
+      checkManaged: (request) => ask(request, true),
+      recheck: () => recheck().pipe(Effect.tapError(refused), Effect.orDie),
     }
   }
   // kilocode_change end
@@ -193,6 +216,16 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             // kilocode_change start - stable schemas preserve the cache; goal restrictions apply at execution
             if (!GoalPolicy.available(ctx.sessionID, item.id))
               throw new Error(`Tool '${item.id}' is unavailable in the current Goal state.`)
+            const fallback = Managed.fallback(item.id, ToolNetwork.isBuiltin(item))
+            if (fallback) {
+              yield* ctx.ask({
+                permission: fallback,
+                patterns: ["*"],
+                always: ["*"],
+                metadata: {},
+                managedFallback: true,
+              })
+            }
             // kilocode_change end
             yield* plugin.trigger(
               "tool.execute.before",
@@ -200,6 +233,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { args },
             )
             // kilocode_change start
+            if (ctx.recheck) yield* ctx.recheck()
             const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
             // kilocode_change end
             const output = {
@@ -275,6 +309,14 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               patterns: permissionPatterns,
               always: permissionPatterns,
             })
+            yield* ctx.ask({
+              permission: MCP_RESOURCE_TOOLS.list,
+              metadata: {},
+              patterns: permissionPatterns,
+              always: [],
+              managedFallback: true,
+            }) // kilocode_change
+            if (ctx.recheck) yield* ctx.recheck() // kilocode_change
 
             const resources = Object.values(yield* mcp.resources(parsed.server))
             const filtered = resources
@@ -355,6 +397,14 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               patterns: permissionPatterns,
               always: permissionPatterns,
             })
+            yield* ctx.ask({
+              permission: MCP_RESOURCE_TOOLS.listTemplates,
+              metadata: {},
+              patterns: permissionPatterns,
+              always: [],
+              managedFallback: true,
+            }) // kilocode_change
+            if (ctx.recheck) yield* ctx.recheck() // kilocode_change
 
             const templates = Object.values(yield* mcp.resourceTemplates(parsed.server))
             const filtered = templates
@@ -432,6 +482,14 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               patterns: [`mcp:${parsed.server}:${parsed.uri}`],
               always: [`mcp:${parsed.server}:*`],
             })
+            yield* ctx.ask({
+              permission: MCP_RESOURCE_TOOLS.read,
+              metadata: {},
+              patterns: [`mcp:${parsed.server}:${parsed.uri}`],
+              always: [],
+              managedFallback: true,
+            }) // kilocode_change
+            if (ctx.recheck) yield* ctx.recheck() // kilocode_change
 
             const content = yield* mcp.readResource(parsed.server, parsed.uri)
             if (!content) throw new Error(`Failed to read MCP resource: ${parsed.server}/${parsed.uri}`)
@@ -500,6 +558,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             entry, // kilocode_change - retain the native entry's local/remote network authority marker
             Effect.gen(function* () {
               yield* ctx.ask({ permission: key, metadata: { mcpInput: args }, patterns: ["*"], always: ["*"] })
+              if (ctx.recheck) yield* ctx.recheck()
               return yield* Effect.promise(() => execute(args, opts))
             }),
           ).pipe(

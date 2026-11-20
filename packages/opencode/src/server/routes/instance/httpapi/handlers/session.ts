@@ -12,6 +12,7 @@ import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Command } from "@/command"
 import { Permission } from "@/permission"
+import { enablesUnrestricted } from "@/kilocode/permission/managed" // kilocode_change
 import { SessionShare } from "@/share/session"
 import { Session } from "@/session/session"
 import { SessionCompaction } from "@/session/compaction"
@@ -179,6 +180,11 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     })
 
     const create = Effect.fn("SessionHttpApi.create")(function* (ctx: { payload?: Session.CreateInput }) {
+      // kilocode_change start
+      if (enablesUnrestricted(ctx.payload?.permission) && !(yield* permissionSvc.canEnableUnrestricted())) {
+        return yield* new HttpApiError.BadRequest({})
+      }
+      // kilocode_change end
       return yield* shareSvc.create(ctx.payload)
     })
 
@@ -211,6 +217,11 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof UpdatePayload.Type
     }) {
       const current = yield* requireSession(ctx.params.sessionID)
+      // kilocode_change start
+      if (enablesUnrestricted(ctx.payload.permission) && !(yield* permissionSvc.canEnableUnrestricted())) {
+        return yield* new HttpApiError.BadRequest({})
+      }
+      // kilocode_change end
       if (ctx.payload.title !== undefined) {
         yield* session.setTitle({ sessionID: ctx.params.sessionID, title: ctx.payload.title })
       }

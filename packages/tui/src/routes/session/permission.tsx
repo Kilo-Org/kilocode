@@ -149,6 +149,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
       requestID: props.request.id,
       directory: props.directory,
       workspace: project.workspace.current(),
+      interactive: true,
     })
   }
   // kilocode_change end
@@ -221,6 +222,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               directory: props.directory,
               message: message || undefined,
               workspace: project.workspace.current(),
+              interactive: true, // kilocode_change - human answered this prompt
             })
           }}
           onCancel={() => {
@@ -507,12 +509,12 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             </box>
           )
 
-          // kilocode_change start - skill shell batches are never persisted: only Allow / Reject
+          // kilocode_change start - protected requests are never persisted
           const options: Record<string, string> =
-            props.request.metadata?.["skillShell"] || props.request.metadata?.["sandboxEscalation"]
-              ? { once: "Allow", reject: "Reject" }
-              : props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
-                ? { once: "Allow once", reject: "Reject" }
+            props.request.managed || props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
+              ? { once: "Allow once", reject: "Reject" }
+              : props.request.metadata?.["skillShell"] || props.request.metadata?.["sandboxEscalation"]
+                ? { once: "Allow", reject: "Reject" }
                 : { once: "Allow once", always: "Allow always", reject: "Reject" }
           // kilocode_change end
 

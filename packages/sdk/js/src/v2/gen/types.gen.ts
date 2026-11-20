@@ -1933,6 +1933,12 @@ export type GlobalEvent = {
             messageID: string
             callID: string
           }
+          /**
+           * Requires an interactive, one-time approval under the organization policy.
+           */
+          managed?: {
+            revision: number
+          }
         }
       }
     | {
@@ -3262,6 +3268,12 @@ export type PermissionRequest = {
     messageID: string
     callID: string
   }
+  /**
+   * Requires an interactive, one-time approval under the organization policy.
+   */
+  managed?: {
+    revision: number
+  }
 }
 
 export type PermissionNotFoundError = {
@@ -3269,6 +3281,22 @@ export type PermissionNotFoundError = {
   requestID: string
   message: string
 }
+
+export type PermissionManagedState =
+  | {
+      status: "personal"
+    }
+  | {
+      status: "disabled" | "active"
+      organization: string
+      revision: number
+      unrestricted: boolean
+    }
+  | {
+      status: "unavailable"
+      organization: string
+      reason: "unavailable" | "unauthorized" | "invalid" | "update-required" | "client-denied"
+    }
 
 export type ProviderFailure = {
   providerID: string
@@ -6987,6 +7015,12 @@ export type EventPermissionAsked = {
       messageID: string
       callID: string
     }
+    /**
+     * Requires an interactive, one-time approval under the organization policy.
+     */
+    managed?: {
+      revision: number
+    }
   }
 }
 
@@ -9813,6 +9847,12 @@ export type PermissionAsked = {
       messageID: string
       callID: string
     }
+    /**
+     * Requires an interactive, one-time approval under the organization policy.
+     */
+    managed?: {
+      revision: number
+    }
   }
 }
 
@@ -11093,6 +11133,12 @@ export type EventPermissionAsked1 = {
     tool?: {
       messageID: string
       callID: string
+    }
+    /**
+     * Requires an interactive, one-time approval under the organization policy.
+     */
+    managed?: {
+      revision: number
     }
   }
 }
@@ -14022,6 +14068,34 @@ export type PermissionReplyResponses = {
 }
 
 export type PermissionReplyResponse = PermissionReplyResponses[keyof PermissionReplyResponses]
+
+export type PermissionPolicyData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/permission/policy"
+}
+
+export type PermissionPolicyErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type PermissionPolicyError = PermissionPolicyErrors[keyof PermissionPolicyErrors]
+
+export type PermissionPolicyResponses = {
+  /**
+   * Managed permission policy state
+   */
+  200: PermissionManagedState
+}
+
+export type PermissionPolicyResponse = PermissionPolicyResponses[keyof PermissionPolicyResponses]
 
 export type PermissionSaveAlwaysRulesData = {
   body?: {

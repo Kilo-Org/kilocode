@@ -191,10 +191,9 @@ export const {
     }
 
     // pending asks are one-shot events; refetch them so an evicted or missed ask cannot strand a session
-    // skill shell batches and sandbox escalations need an interactive human decision:
-    // the server refuses machine replies for them, mirroring temporaryPermission in cli/cmd/run/permission.shared
+    // The server refuses automated approvals for protected asks, so keep them visible in auto mode.
     const temporaryPermission = (request: PermissionRequest) =>
-      request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
+      !!request.managed || request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
     function mergePending<T extends PermissionRequest | QuestionRequest>(
       list: T[],
       current: Record<string, T[]>,
@@ -245,9 +244,6 @@ export const {
       ])
       if (permission.mode === "auto") {
         for (const request of permissions) {
-          // skill shell batches and sandbox escalations cannot be settled by a
-          // machine reply: the server refuses non-interactive approvals, so they stay pending for a
-          // human decision and must remain visible instead of being cleared
           if (temporaryPermission(request)) continue
           if (terminal.has(request.id)) continue // kilocode_change - already answered, ignore straggler events
           void sdk.client.permission.reply({ requestID: request.id, reply: "once", workspace })
@@ -344,8 +340,7 @@ export const {
         case "permission.asked": {
           const request = event.properties
           if (terminal.has(request.id)) break // kilocode_change - already answered, ignore straggler events
-          // kilocode_change start - the server refuses non-interactive approvals for skill shell
-          // batches and sandbox escalations, so auto mode cannot settle them: store for a human decision
+          // kilocode_change start - keep asks that require a human decision visible
           if (permission.mode === "auto" && !temporaryPermission(request)) {
             void sdk.client.permission.reply({
               requestID: request.id,
