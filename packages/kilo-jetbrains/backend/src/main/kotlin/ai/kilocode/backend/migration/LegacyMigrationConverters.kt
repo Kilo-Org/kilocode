@@ -736,6 +736,45 @@ object LegacyMigrationConverters {
     // YAML parser for custom_modes.yaml
     // ---------------------------------------------------------------------------
 
+    /**
+     * Remove a trailing YAML comment from [line].
+     *
+     * A `#` starts a comment only when it is the first character of the line or is preceded by a
+     * space or tab, and only outside a single-quoted or double-quoted scalar. Inside double quotes a
+     * backslash escapes the next character. The result keeps the text before that `#` with trailing
+     * whitespace removed; a line without a comment is returned unchanged.
+     */
+    private fun stripYamlComment(line: String): String {
+        var inSingleQuotes = false
+        var inDoubleQuotes = false
+        var i = 0
+        while (i < line.length) {
+            val c = line[i]
+            if (inDoubleQuotes) {
+                when (c) {
+                    '\\' -> i++ // the backslash escapes the next character
+                    '"' -> inDoubleQuotes = false
+                }
+                i++
+                continue
+            }
+            if (inSingleQuotes) {
+                if (c == '\'') inSingleQuotes = false
+                i++
+                continue
+            }
+            when (c) {
+                '\'' -> inSingleQuotes = true
+                '"' -> inDoubleQuotes = true
+                '#' -> if (i == 0 || line[i - 1] == ' ' || line[i - 1] == '\t') {
+                    return line.substring(0, i).trimEnd()
+                }
+            }
+            i++
+        }
+        return line
+    }
+
     fun parseCustomModesYaml(text: String): List<LegacyCustomMode> {
         val modes = mutableListOf<LegacyCustomMode>()
         val lines = text.split("\n")
@@ -820,11 +859,17 @@ object LegacyMigrationConverters {
             groups = mutableListOf()
         }
 
-        for (raw in lines) {
+        for (rawLine in lines) {
             if (!inModes) {
-                if (raw.trim() == "customModes:") inModes = true
+                if (stripYamlComment(rawLine).trim() == "customModes:") inModes = true
                 continue
             }
+            // Lines of an open block scalar are literal content: keep every character, '#' included.
+            if (blockField != null && rawLine.startsWith("      ")) {
+                blockLines.add(rawLine.removePrefix("      "))
+                continue
+            }
+            val raw = stripYamlComment(rawLine)
             if (raw.matches(Regex("  - slug: .*"))) {
                 flush()
                 current["slug"] = stripYamlQuotes(raw.removePrefix("  - slug: ").trim())
@@ -866,10 +911,6 @@ object LegacyMigrationConverters {
             }
 
             if (blockField != null) {
-                if (raw.startsWith("      ")) {
-                    blockLines.add(raw.removePrefix("      "))
-                    continue
-                }
                 current[blockField!!] = blockLines.joinToString("\n").trim()
                 blockField = null
                 blockLines = mutableListOf()

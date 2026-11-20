@@ -413,6 +413,76 @@ class LegacyMigrationConversionTest {
         assertEquals(listOf<Any>("read", "edit"), modes[0].groups)
     }
 
+    @Test
+    fun `parseCustomModesYaml - trailing comment after flow style groups is dropped`() {
+        val yaml = """
+            customModes:
+              - slug: commented
+                name: Commented
+                roleDefinition: You are commented.
+                groups: [read, edit] # tools
+        """.trimIndent()
+        val modes = LegacyMigrationConverters.parseCustomModesYaml(yaml)
+        assertEquals(1, modes.size)
+        assertEquals(listOf<Any>("read", "edit"), modes[0].groups)
+    }
+
+    @Test
+    fun `parseCustomModesYaml - trailing comment after nested group option is dropped`() {
+        val yaml = """
+            customModes:
+              - slug: docwriter
+                name: Doc Writer
+                roleDefinition: You write documentation.
+                groups:
+                  - read
+                  - - edit
+                    - fileRegex: \.md${'$'} # docs
+                  - browser
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals(
+            listOf("read", Pair("edit", mapOf("fileRegex" to "\\.md$")), "browser"),
+            mode.groups,
+        )
+        val editPerm = LegacyMigrationConverters.convertCustomModePermissions(mode.groups).permission["edit"]?.jsonObject
+        assertEquals(
+            buildJsonObject {
+                put("*", "deny")
+                put("*.md", "allow")
+            },
+            editPerm,
+        )
+    }
+
+    @Test
+    fun `parseCustomModesYaml - hash inside a quoted scalar is kept`() {
+        val yaml = """
+            customModes:
+              - slug: quoted
+                name: Quoted
+                roleDefinition: You are quoted.
+                description: "a # b"
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals("a # b", mode.description)
+    }
+
+    @Test
+    fun `parseCustomModesYaml - hash inside a block scalar is kept`() {
+        val yaml = """
+            customModes:
+              - slug: blockhash
+                name: Block Hash
+                roleDefinition: You are a block scalar.
+                customInstructions: |
+                  Keep the # heading
+                  # trailing note
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals("Keep the # heading\n# trailing note", mode.customInstructions)
+    }
+
     // -----------------------------------------------------------------------
     // Auto-approval
     // -----------------------------------------------------------------------
