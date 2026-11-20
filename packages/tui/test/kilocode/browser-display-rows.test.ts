@@ -85,7 +85,12 @@ describe("browser typed text outside the transcript", () => {
   })
 
   test("the turn-token table leaves out a Code Mode program, which can type text", () => {
-    const done = canonicalToolPart("execute", { status: "completed", input: { code }, metadata: {} })
+    const done = canonicalToolPart("execute", {
+      status: "completed",
+      input: { code },
+      metadata: {},
+      content: [{ type: "text", text: "" }],
+    })
     expect(turnTokenToolSummary(done)).not.toContain(password)
     // Streaming, the program is raw JSON text: no fragment of it may reach the row either.
     const streaming = canonicalToolPart("execute", {
