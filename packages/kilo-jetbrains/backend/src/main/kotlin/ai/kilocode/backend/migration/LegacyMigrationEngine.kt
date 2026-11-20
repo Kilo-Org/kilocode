@@ -135,9 +135,17 @@ class LegacyMigrationEngine(
                 results.add(LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, MigrationItemStatus.error, "Profile not found"))
                 continue
             }
+            val legacyProvider = providerSettings["apiProvider"]?.jsonPrimitive?.content
+            val mapping = resolveProvider(legacyProvider)
+            if (mapping == null) {
+                val skipped = unresolvedProvider(legacyProvider)
+                results.add(LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, skipped.status, skipped.message))
+                sink.item(LegacyMigrationItemProgress(profileName, skipped.status.toProgressStatus(), skipped.message))
+                continue
+            }
             sink.item(LegacyMigrationItemProgress(profileName, MigrationItemProgressStatus.migrating))
             val conv = convertProvider(profileName, providerSettings) { store.oauthRaw(it) }
-            conv.auth?.let { backend.setAuth(PROVIDER_MAP[providerSettings["apiProvider"]?.jsonPrimitive?.content]?.id ?: "unknown", it) }
+            conv.auth?.let { backend.setAuth(mapping.id, it) }
             conv.config?.let { backend.updateGlobalConfig(it) }
             val item = LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, conv.status, conv.message)
             results.add(item)
@@ -373,8 +381,7 @@ class LegacyMigrationEngine(
         if (profiles?.apiConfigs == null) return emptyList()
         return profiles.apiConfigs.entries.map { (profileName, settings) ->
             val provider: String = settings["apiProvider"]?.jsonPrimitive?.content ?: "unknown"
-            val mapping = PROVIDER_MAP[provider]
-            val unsupported = provider in UNSUPPORTED_PROVIDERS
+            val mapping = resolveProvider(provider)
             val modelField: String = mapping?.modelField ?: "apiModelId"
             val model: String? = settings[modelField]?.jsonPrimitive?.content
             val hasApiKey: Boolean = when {
@@ -391,7 +398,7 @@ class LegacyMigrationEngine(
                 provider = provider,
                 model = model,
                 hasApiKey = hasApiKey,
-                supported = mapping != null && !unsupported,
+                supported = mapping != null,
                 newProviderName = mapping?.name,
             )
         }
@@ -432,7 +439,7 @@ class LegacyMigrationEngine(
         profiles ?: return null
         val active = profiles.apiConfigs[profiles.currentApiConfigName] ?: return null
         val provider = active["apiProvider"]?.jsonPrimitive?.content ?: return null
-        val mapping = PROVIDER_MAP[provider] ?: return null
+        val mapping = resolveProvider(provider) ?: return null
         if (mapping.oauthSecretKey != null && provider !in oauthProviders) return null
         val modelField = mapping.modelField ?: "apiModelId"
         val model = active[modelField]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: return null
