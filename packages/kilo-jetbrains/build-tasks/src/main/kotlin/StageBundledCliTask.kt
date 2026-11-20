@@ -36,6 +36,44 @@ abstract class StageBundledCliTask : DefaultTask() {
             "windows-arm64",
             "windows-x64",
         )
+
+        internal const val CONNECT_TIMEOUT_MS = 30_000
+        internal const val READ_TIMEOUT_MS = 120_000
+        internal const val USER_AGENT = "Kilo-JetBrains-Gradle"
+        internal const val METADATA_ACCEPT = "application/vnd.github+json"
+        internal const val ASSET_ACCEPT = "application/octet-stream"
+
+        /**
+         * Connector for the release metadata API. Kept authenticated so api.github.com rate limits apply to the token.
+         */
+        internal fun metadataConnector(token: String?, url: String): HttpURLConnection {
+            val conn = open(url)
+            conn.setRequestProperty("Accept", METADATA_ACCEPT)
+            token
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
+            return conn
+        }
+
+        /**
+         * Connector for release asset downloads. Takes no token: the archive is public, so the download runs
+         * unauthenticated and no repository credential is presented to the host that serves the archive.
+         */
+        internal fun assetConnector(url: String): HttpURLConnection {
+            val conn = open(url)
+            conn.setRequestProperty("Accept", ASSET_ACCEPT)
+            conn.setRequestProperty("User-Agent", USER_AGENT)
+            return conn
+        }
+
+        private fun open(url: String): HttpURLConnection {
+            val conn = URI(url).toURL().openConnection() as HttpURLConnection
+            conn.connectTimeout = CONNECT_TIMEOUT_MS
+            conn.readTimeout = READ_TIMEOUT_MS
+            conn.instanceFollowRedirects = true
+            return conn
+        }
     }
 
     @get:Input
@@ -79,7 +117,7 @@ abstract class StageBundledCliTask : DefaultTask() {
     private fun assets(ver: String): Map<String, String> {
         val url = "$API/v$ver"
         logger.lifecycle("Fetching pinned Kilo CLI release metadata from $url")
-        val conn = connect(url)
+        val conn = metadataConnector(token.getOrNull(), url)
         try {
             val code = conn.responseCode
             if (code !in 200..299) fail(conn, code, "Failed to fetch pinned Kilo CLI release metadata")
@@ -111,7 +149,7 @@ abstract class StageBundledCliTask : DefaultTask() {
         file.parentFile.mkdirs()
         val url = "https://github.com/Kilo-Org/kilocode/releases/download/v$ver/$name"
         logger.lifecycle("Downloading pinned Kilo CLI $platform from $url")
-        val conn = connect(url)
+        val conn = assetConnector(url)
         try {
             val code = conn.responseCode
             if (code !in 200..299) fail(conn, code, "Failed to download pinned Kilo CLI $platform")
@@ -183,19 +221,6 @@ abstract class StageBundledCliTask : DefaultTask() {
             }
         }
         return md.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
-    }
-
-    private fun connect(url: String): HttpURLConnection {
-        val conn = URI(url).toURL().openConnection() as HttpURLConnection
-        conn.connectTimeout = 30_000
-        conn.readTimeout = 120_000
-        conn.instanceFollowRedirects = true
-        conn.setRequestProperty("Accept", "application/vnd.github+json")
-        token.getOrNull()
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
-        return conn
     }
 
     private fun fail(conn: HttpURLConnection, code: Int, msg: String): Nothing {
