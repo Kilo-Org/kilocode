@@ -1383,6 +1383,83 @@ class KiloBackendAppServiceTest {
         assertNull(appStateDto(svc.appState.value).profile)
     }
 
+    // ------ Reload after an account step ------
+
+    /**
+     * An account step is followed by a CLI instance disposal, and the reload it triggers re-reads
+     * the profile. A read that does not complete keeps the account the service already holds.
+     */
+    @Test
+    fun `reload after an account step keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertEquals("alice@test.com", svc.profile?.profile?.email, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        mock.profileStatus = 503
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `reload after an account step keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertEquals("alice@test.com", svc.profile?.profile?.email, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        mock.profileStatus = 400
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    /**
+     * A definitive 401 is a signed-out answer: the reload publishes no account.
+     */
+    @Test
+    fun `reload clears the account when the profile read answers signed out`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertNotNull(svc.profile, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        mock.profileStatus = 401
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    /**
+     * Wait for the reload a disposed event triggers. The completion log lands after Ready is
+     * published, so it also settles the state before a test reads it.
+     */
+    private suspend fun awaitReload() {
+        assertTrue(
+            log.awaitMessage(20_000, count = 2) { it == "INFO: Application started — config, profile, notifications loaded" },
+            "a disposed event must reload the app; logs=${log.messages}",
+        )
+    }
+
     // ------ Refresh account tests ------
 
     @Test

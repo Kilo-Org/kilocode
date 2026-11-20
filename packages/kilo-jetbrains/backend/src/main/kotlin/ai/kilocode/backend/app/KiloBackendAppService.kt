@@ -422,6 +422,7 @@ class KiloBackendAppService private constructor(
                         coroutineScope {
                         launch {
                             val result = fetchProfile()
+                            val held = profile
                             val status = when {
                                 result.error != null -> {
                                     errors.add(result.error)
@@ -429,6 +430,14 @@ class KiloBackendAppService private constructor(
                                 }
                                 result.value != null -> {
                                     prof = result.value
+                                    ProfileResult.LOADED
+                                }
+                                // A definitive signed-out answer publishes no account. A read that
+                                // could not complete keeps the account this service holds, so a reload
+                                // leaves the published account in place; only a load with nothing held
+                                // yet publishes no account.
+                                held != null && !result.signedOut -> {
+                                    prof = held
                                     ProfileResult.LOADED
                                 }
                                 else -> ProfileResult.NOT_LOGGED_IN
@@ -606,6 +615,10 @@ class KiloBackendAppService private constructor(
      * follows a completed account step passes [strict]: there a 401 is the only signed-out answer,
      * and any other status, including a 400, is a failure, so the caller keeps the account it
      * already published.
+     *
+     * A caller can tell a signed-out answer ([FetchResult.signedOut]) from a read that could not
+     * complete ([FetchResult.error]). [load] keeps an account it already holds when a reload's read
+     * does not answer signed out.
      */
     private suspend fun fetchProfile(strict: Boolean = false): FetchResult<KiloProfile200Response?> {
         val client = connection.appLoadApi
@@ -615,10 +628,16 @@ class KiloBackendAppService private constructor(
             log.info("Profile: ${response.profile.email}")
             FetchResult.ok(response)
         } catch (e: ClientException) {
-            // The CLI answers 400 for any upstream profile failure and 401 only when it holds no
-            // credential, so under [strict] a 401 is the only status that means nobody is signed in.
-            // The startup load and the background refresh also accept a 400 as signed out.
-            if (e.statusCode == 401 || (e.statusCode == 400 && !strict)) {
+            // The CLI answers 400 for an upstream profile failure and 401 only when it holds no
+            // credential, so 401 is the only definitive signed-out answer, in both modes. The
+            // startup load and the background refresh also tolerate a 400, which is a read that
+            // could not complete and publishes no value for that load.
+            if (e.statusCode == 401) {
+                log.info("Profile: unavailable (${e.statusCode})")
+                logResponseBody("profile", e)
+                return FetchResult.signedOut()
+            }
+            if (e.statusCode == 400 && !strict) {
                 log.info("Profile: unavailable (${e.statusCode})")
                 logResponseBody("profile", e)
                 return FetchResult.ok(null)
@@ -629,6 +648,8 @@ class KiloBackendAppService private constructor(
         } catch (e: ServerException) {
             // The startup load and the background refresh treat a 5xx as signed out on purpose:
             // the local CLI cannot tell a revoked token from a gateway failure at this point.
+            // It is still a read that could not complete, not a definitive sign-out, so a reload
+            // keeps an account it already holds.
             log.warn("Profile fetch: server error (${e.statusCode}) — treating as unavailable", e)
             logResponseBody("profile", e)
             if (strict) FetchResult.fail("profile", e) else FetchResult.ok(null)
@@ -1075,11 +1096,21 @@ private fun summary(patch: ConfigPatchDto): String {
 }
 
 /**
- * Result of a data fetch — either a value or an error with details.
+ * Result of a data fetch — either a value, an error with details, or a definitive signed-out answer.
+ *
+ * [signedOut] separates a definitive "nobody is signed in" answer from a read that could not
+ * complete: both carry no value and no error, but only the former may clear an account a caller
+ * already holds. A tolerant 400 or 5xx is a read that could not complete, not a sign-out.
  */
-private data class FetchResult<T>(val value: T?, val error: LoadError?) {
+private data class FetchResult<T>(
+    val value: T?,
+    val error: LoadError?,
+    val signedOut: Boolean = false,
+) {
     companion object {
         fun <T> ok(value: T) = FetchResult<T>(value, null)
+
+        fun <T> signedOut() = FetchResult<T>(value = null, error = null, signedOut = true)
 
         fun <T> fail(resource: String, exception: Exception) = FetchResult<T>(
             value = null,
