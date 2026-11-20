@@ -33,7 +33,7 @@ Local runs used Bun 1.4.4 (`packageManager`) on macOS arm64. The merge used `bun
 | Branding audit | pass | `bun run branding:audit` in `packages/kilo-cli`: 1,267 files, 34 allowlisted, no finding |
 | Workflow allowlist, annotations, shared patches, mirrors | pass | Workflows 4; annotations 185 shared files against `de291ab7b1c`; shared patches 167 files, 3,020 marked and 560 unmarked lines; 9 mirrors |
 | CLI self-test | pass, local | `bun dev --help` prints "Kilo command line interface" and `kilo2`; `bun dev run --standalone` answered `ok`; a webfetch prompt ran the tool and returned the page text |
-| TUI self-test | blocked, local | The `vscode-self-test` harness (`~/.config/kilo/scripts/vscode-self-test/cli.mjs`) and the VS Code binary are absent on this host. Source and compiled branding rendering is covered by the 129 branding tests |
+| TUI self-test | pass, local | `vscode-self-test` `a273fb2`, `--mode dev --build false --surface terminal --headless true`, fresh profile and `--standalone`: branded home (`KILO v2`, `Code · Auto Free Kilo Gateway`), prompt answered `ok` in 2.0s, no `level=ERROR` in `opencode-local.log` |
 | Lag after | 0 releases | `list-versions.ts` reports no release newer than `v2.3.2` on `upstream/dev` |
 
 ## Previous capture: `v2.2.5` (2026-11-02)
