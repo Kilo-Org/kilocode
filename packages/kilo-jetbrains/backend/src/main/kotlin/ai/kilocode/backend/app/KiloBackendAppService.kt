@@ -2,6 +2,7 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.cli.KiloBackendCliManager
+import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService
 import ai.kilocode.backend.migration.LegacyMigrationDetection
@@ -101,6 +102,8 @@ class KiloBackendAppService private constructor(
         private const val RETRY_DELAY_MS = 1000L
         private const val APP_LOAD_TIMEOUT_MS = 30_000L
         private const val READY_TIMEOUT_MS = 120_000L
+        /** Sign-out must not wait on a stalled CLI; matches the provider-settings call bound. */
+        private const val DISPOSE_TIMEOUT_SECONDS = 15L
 
         /** Test factory — no IntelliJ deps needed. */
         internal fun create(
@@ -1013,7 +1016,11 @@ class KiloBackendAppService private constructor(
         return result
     }
 
-    /** Best-effort `POST /global/dispose` so the CLI rebuilds global state; a failure never blocks sign-out. */
+    /**
+     * Best-effort `POST /global/dispose` so the CLI rebuilds global state; a failure never blocks
+     * sign-out. The client is bounded, because the shared API client has no call timeout and a
+     * stalled CLI would otherwise hold sign-out open.
+     */
     private suspend fun disposeGlobal(http: OkHttpClient?, port: Int) {
         if (http == null || port == 0) return
         val request = Request.Builder()
@@ -1022,7 +1029,12 @@ class KiloBackendAppService private constructor(
             .post("{}".toRequestBody("application/json".toMediaType()))
             .build()
         runCatching {
-            withContext(Dispatchers.IO) { http.newCall(request).execute().use { it.body?.string() } }
+            withContext(Dispatchers.IO) {
+                KiloBackendHttpClients.bounded(http, DISPOSE_TIMEOUT_SECONDS)
+                    .newCall(request)
+                    .execute()
+                    .use { it.body?.string() }
+            }
         }.onFailure { log.debug { "Global dispose skipped after logout: ${it.message}" } }
     }
 

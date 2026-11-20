@@ -272,6 +272,9 @@ class MockCliServer : AutoCloseable {
     /** Optional gate for REST responses; SSE stays unblocked so the app can enter Loading. */
     @Volatile var responseGate: CountDownLatch? = null
 
+    /** Optional gate for `POST /global/dispose`, so a stalled CLI can be modelled. */
+    @Volatile var disposeGate: CountDownLatch? = null
+
     /** Optional gate for config warnings only. */
     @Volatile var warningsGate: CountDownLatch? = null
 
@@ -535,7 +538,10 @@ class MockCliServer : AutoCloseable {
                     config = mergeConfig(config, """{"experimental":{"openTelemetry":$enabled}}""")
                     respond(output, 200, """{"enabled":${telemetryAllowed && enabled == JsonPrimitive(true)}}""")
                 }
-                bare == "/global/dispose" && method == "POST" -> respond(output, disposeStatus, "true")
+                bare == "/global/dispose" && method == "POST" -> {
+                    disposeGate?.await()
+                    respond(output, disposeStatus, "true")
+                }
                 path.startsWith("/config/warnings") -> respond(output, warningsStatus, warnings)
                 bare == "/config/overlay" && method == "PATCH" -> {
                     if (body.contains("\"scope\":\"global\"")) {

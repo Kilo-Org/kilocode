@@ -1281,6 +1281,31 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `logout completes while the CLI stalls the global dispose`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        // A stalled CLI must not hold sign-out open: the dispose call runs on a bounded client, so
+        // logout returns and the hosted state is dropped regardless.
+        val gate = CountDownLatch(1)
+        mock.disposeGate = gate
+        try {
+            assertTrue(
+                withTimeout(20_000) { svc.logout() },
+                "logout did not return while the CLI stalled the dispose",
+            )
+            assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+            assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+            assertNull(svc.profile)
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
     fun `set organization failure leaves profile unchanged`() = runBlocking {
         mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
         val svc = create()
