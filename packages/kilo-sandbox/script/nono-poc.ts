@@ -135,6 +135,20 @@ async function child(profile: Profile, script: string) {
   }
 }
 
+type Child = Awaited<ReturnType<typeof child>>
+
+/**
+ * A denial is nono's EPERM on an existing fixture, not any non-zero exit. A missing binary, a bad path or a
+ * failed exec must fail the probe instead of passing it as enforcement.
+ */
+function refused(result: Child) {
+  return result.code !== 0 && result.err.includes("Operation not permitted")
+}
+
+function refusal(result: Child) {
+  return refused(result) ? "denied" : `exit ${result.code}: ${result.err.trim() || result.out.trim() || "no output"}`
+}
+
 type Row = { probe: string; expected: string; result: string; ok: boolean | "recorded" }
 
 const rows: Row[] = []
@@ -150,13 +164,8 @@ try {
     process.exit(2)
   }
 
-  const denied = await child(local, 'cat "$HOME/.ssh/id_ed25519"')
-  check(
-    "P1 read ~/.ssh",
-    "denied",
-    denied.code !== 0 && !denied.out.includes(canary),
-    denied.code !== 0 ? "denied" : "read",
-  )
+  const ssh = await child(local, 'cat "$HOME/.ssh/id_ed25519"')
+  check("P1 read ~/.ssh", "denied", refused(ssh) && !ssh.out.includes(canary), refusal(ssh))
 
   const readable = await child(local, "cat readme.txt")
   check(
@@ -175,12 +184,7 @@ try {
   )
 
   const escape = await child(local, 'printf nope > "$HOME/escape.txt"')
-  check(
-    "P4 write $HOME",
-    "denied",
-    escape.code !== 0 && !existsSync(path.join(home, "escape.txt")),
-    escape.code !== 0 ? "denied" : "written",
-  )
+  check("P4 write $HOME", "denied", refused(escape) && !existsSync(path.join(home, "escape.txt")), refusal(escape))
 
   const git = await child(local, "printf nope > .git/config")
   check("P5 write .git", "recorded", "recorded", git.code === 0 ? "written (known gap)" : "denied")
@@ -227,15 +231,10 @@ try {
   )
 
   const store = await child(local, `cat "${path.join(data, "kilo2.db")}"`)
-  check(
-    "P11 read Kilo store",
-    "denied",
-    store.code !== 0 && !store.out.includes(canary),
-    store.code !== 0 ? "denied" : "read",
-  )
+  check("P11 read Kilo store", "denied", refused(store) && !store.out.includes(canary), refusal(store))
 
   const self = await child(local, `cat "${readable.profileFile}"`)
-  check("P12 read own profile", "denied", self.code !== 0, self.code !== 0 ? "denied" : "read")
+  check("P12 read own profile", "denied", refused(self), refusal(self))
 
   check(
     "P13 secret in profile",

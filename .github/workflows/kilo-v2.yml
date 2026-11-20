@@ -161,9 +161,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      KILO_NONO_STATE: ${{ runner.temp }}/kilo-nono/state
-      KILO_NONO_HOME: ${{ runner.temp }}/kilo-nono/home
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -171,12 +168,22 @@ jobs:
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
 
+      # `runner` is not an allowed job-level env context, so the paths come from `$RUNNER_TEMP` here and the
+      # later steps read them from the environment file.
+      - name: Point the sandbox state at the runner temp
+        run: |
+          echo "KILO_NONO_STATE=$RUNNER_TEMP/kilo-nono/state" >> "$GITHUB_ENV"
+          echo "KILO_NONO_HOME=$RUNNER_TEMP/kilo-nono/home" >> "$GITHUB_ENV"
+
       - name: Stage the pinned nono
         working-directory: packages/kilo-sandbox
         run: bun run nono:pin --stage
 
       - name: Run the probe matrix
         working-directory: packages/kilo-sandbox
+        env:
+          # macOS runners have egress, so the allowlisted-host probe (P16) executes instead of being recorded.
+          KILO_NONO_POC_NETWORK: "1"
         run: bun run poc
 
       - name: Run the sandbox suites with nono selected

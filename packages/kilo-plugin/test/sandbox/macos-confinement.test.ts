@@ -14,8 +14,9 @@ afterAll(cleanup)
 const id = (value: string) => Session.ID.make(value)
 const filesystem = backendSupport({ mode: "deny", allowedHosts: [] }).available ? test : test.skip
 // The nono backend mediates egress itself, so this test's Kilo proxy stub cannot resolve its fake host. The
-// probe matrix in packages/kilo-sandbox/script/nono-poc.ts covers the same paths (P7, P8, P16).
-const external = process.env.KILO_SANDBOX_BACKEND === "nono"
+// probe matrix in packages/kilo-sandbox/script/nono-poc.ts covers the same paths (P7, P8, P16). Match the
+// backend selection exactly: the variable alone also appears in runs where seatbelt is the real backend.
+const external = process.env.KILO_V2_DEV === "1" && process.env.KILO_SANDBOX_BACKEND === "nono"
 const proxy =
   !external &&
   process.platform === "darwin" &&
