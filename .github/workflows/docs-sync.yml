@@ -236,11 +236,9 @@ jobs:
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
         run: |
           set -o pipefail
-          # The agent scope comes from the committed policy
-          # (.github/docs-sync/agent-permissions.json), exported for this one
-          # command: writes inside packages/kilo-docs only, bash limited to
-          # inspection and the docs build/tests, everything else denied. The
-          # prompt states the same intent, but the CLI enforces it.
+          # The run's tool and path scope comes from agent-permissions.json
+          # (mode docs-write), passed as KILO_CONFIG_CONTENT: markdown docs and
+          # navigation files, read-only inspection, and the docs build and tests.
           KILO_CONFIG_CONTENT="$(node .github/docs-sync/agent-policy.mjs docs-write)" \
             kilo run "The docs build or tests failed. Read the attached docs-sync-out/verify.log and fix the packages/kilo-docs changes so they pass. Do not revert doc edits; fix them. Do not modify anything outside packages/kilo-docs." \
             -m "$EDIT_MODEL" --variant "$DOCS_SYNC_VARIANT" --dir "$GITHUB_WORKSPACE" -f docs-sync-out/verify.log \
