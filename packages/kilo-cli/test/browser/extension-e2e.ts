@@ -45,7 +45,6 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import {
-  armDownloadProbe,
   downloadItems,
   type Bridge,
   type Call,
@@ -70,7 +69,6 @@ import {
   pixel,
   type Plan,
   type RunOptions,
-  readDownloadProbe,
   record,
   refOf,
   type Rule,
@@ -340,40 +338,40 @@ function emit(results: Record<string, unknown>) {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * The launch itself: a plain user download (no agent, switch off) must go through Chrome's own download manager, so
- * `chrome.downloads.onDeterminingFilename` fires in the extension's service worker and the file lands under its real
- * name in the profile's `download.default_directory`. Under a DevTools download override neither happens.
+ * The launch itself: a plain user download (no agent) must go through Chrome's own download manager, with the
+ * extension's download guard in it. Chrome's download list then holds one complete item for the URL, saved under its
+ * real name in the profile's `download.default_directory`, and that file has the body. Under a DevTools download
+ * override the file gets a GUID name in the override directory instead. The check reads only the product's own state
+ * (no listener of the harness's: a build whose guard registers its own `onDeterminingFilename` listener accepts no
+ * second one), so it holds for a guard that cancels after the start and for one that holds the file before it is
+ * written: the user's own download is never held.
  */
 async function downloadPath() {
   const { browser, worker } = browserOf()
-  await armDownloadProbe(worker)
   await clearDownloads()
   const url = `${localOrigin}/download`
+  const expected = path.resolve(downloadsPath ?? "", "report.txt")
   const cdp = await browser.newBrowserCDPSession()
   await cdp.send("Target.createTarget", { newWindow: false, url })
-  const files = await until(
-    async () => ((await downloadFiles()).includes("report.txt") ? await downloadFiles() : undefined),
-    15_000,
-    "report.txt lands in the download directory",
-  ).catch(async () => downloadFiles())
-  const events = await until(
+  const items = await until(
     async () => {
-      const seen = await readDownloadProbe(worker)
-      return seen.some((event) => event.event === "determining") ? seen : undefined
+      const listed = await downloadItems(worker)
+      return listed.some((item) => item["url"] === url && item["state"] === "complete") ? listed : undefined
     },
-    5_000,
-    "onDeterminingFilename fires",
-  ).catch(async () => readDownloadProbe(worker))
-  const determining = events.filter((event) => event.event === "determining")
+    15_000,
+    `Chrome's download list completes ${url}`,
+  ).catch(async () => downloadItems(worker))
+  const files = await downloadFiles()
   const bodies = await downloadBodies()
-  expect(determining.length === 1, `onDeterminingFilename fired ${determining.length} times: ${JSON.stringify(events)}`)
+  const mine = items.filter((item) => item["url"] === url)
+  expect(mine.length === 1, `Chrome's download list holds ${mine.length} items for ${url}: ${JSON.stringify(items)}`)
   expect(
-    determining.some((event) => event.filename === "report.txt" && event.url === url),
-    `onDeterminingFilename did not see report.txt from ${url}: ${JSON.stringify(events)}`,
+    mine[0]?.["state"] === "complete" && mine[0]["filename"] === expected && mine[0]["exists"] === true,
+    `the user download did not complete as ${expected}: ${JSON.stringify(mine[0])}`,
   )
   expect(JSON.stringify(files) === JSON.stringify(["report.txt"]), `the download directory holds ${JSON.stringify(files)}`)
   expect(bodies.includes("report-body"), `the saved file has no body: ${JSON.stringify(bodies)}`)
-  return { downloads: downloadsPath, events, files }
+  return { downloads: downloadsPath, files, items: mine }
 }
 
 async function navigateSnapshot() {

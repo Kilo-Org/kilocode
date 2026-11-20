@@ -43,9 +43,46 @@ async function playwright(): Promise<Playwright> {
   return playwrightModule
 }
 
-/** The Chromium the harness launches: E2E_CHROMIUM, or playwright-core's own build. */
+/**
+ * The Chromium the harness launches: the revision the resolved playwright-core drives (its `browsers.json`;
+ * chromium-1244 for 1.64-alpha), found in PLAYWRIGHT_BROWSERS_PATH, ~/.cache/ms-playwright or /opt/ms-playwright.
+ * Another revision connects but times out every `worker.evaluate`, so E2E_CHROMIUM naming another `chromium-<n>` and
+ * a missing build both stop the run with what to install.
+ */
 export async function chromiumExecutable(): Promise<string> {
-  return process.env.E2E_CHROMIUM ?? (await playwright()).chromium.executablePath()
+  const packageFile = Bun.resolveSync("playwright-core/package.json", pluginDirectory)
+  const version = String((await Bun.file(packageFile).json()).version)
+  const browsers = (await Bun.file(path.join(path.dirname(packageFile), "browsers.json")).json()) as {
+    browsers: { browserVersion?: string; name: string; revision: string }[]
+  }
+  const chromium = browsers.browsers.find((browser) => browser.name === "chromium")
+  if (chromium === undefined) throw new Error(`playwright-core ${version} lists no chromium build in browsers.json`)
+  const wanted = `chromium-${chromium.revision}`
+  const needs = `playwright-core ${version} drives ${wanted} (Chrome for Testing ${chromium.browserVersion ?? "?"})`
+  const override = process.env.E2E_CHROMIUM
+  if (override !== undefined) {
+    const named = /chromium-\d+/.exec(override)?.[0]
+    if (named !== undefined && named !== wanted) {
+      throw new Error(`E2E_CHROMIUM is ${named}, but ${needs}: with another revision every worker.evaluate times out`)
+    }
+    return override
+  }
+  const roots = [
+    process.env.PLAYWRIGHT_BROWSERS_PATH,
+    path.join(os.homedir(), ".cache", "ms-playwright"),
+    "/opt/ms-playwright",
+  ].filter((root): root is string => root !== undefined && root !== "")
+  const candidates = roots.flatMap((root) =>
+    ["chrome-linux64", "chrome-linux"].map((dir) => path.join(root, wanted, dir, "chrome")),
+  )
+  const found = candidates.find((candidate) => existsSync(candidate))
+  if (found === undefined) {
+    throw new Error(
+      `no ${wanted} in ${roots.join(", ")}: ${needs}. Install it (\`bunx playwright-core install chromium\` in ` +
+        "packages/kilo-plugin) or set E2E_CHROMIUM to it",
+    )
+  }
+  return found
 }
 
 export const defaultExtensionDirectory =
@@ -56,13 +93,7 @@ export const defaultExtensionDirectory =
  * this is the narrow global the evaluated callbacks use; each result is validated before the harness reads it.
  */
 declare const chrome: {
-  downloads: {
-    onCreated: { addListener(listener: (item: Record<string, unknown>) => void): void }
-    search(query: Record<string, unknown>): Promise<unknown>
-    onDeterminingFilename: {
-      addListener(listener: (item: Record<string, unknown>, suggest: () => void) => void): void
-    }
-  }
+  downloads: { search(query: Record<string, unknown>): Promise<unknown> }
   storage: { local: { get(key: string): Promise<unknown> } }
   tabGroups: {
     get(groupId: number): Promise<unknown>
@@ -1064,39 +1095,6 @@ export async function openUserTab(launched: Launched, url: string): Promise<numb
   const cdp = await launched.browser.newBrowserCDPSession()
   await cdp.send("Target.createTarget", { newWindow: false, url })
   return until(async () => (await tabsOf(launched.worker)).find((tab) => tab.url === url)?.id, 10_000, "the user tab appears")
-}
-
-export type DownloadEvent = { event: "created" | "determining"; filename?: string; id?: number; url?: string }
-
-/**
- * Listens to `chrome.downloads.onCreated` and `onDeterminingFilename` inside the extension's service worker.
- * `onDeterminingFilename` only fires when Chrome's own download manager owns the download, never under a DevTools
- * `Browser.setDownloadBehavior` override, so its events prove the production download path. The listener suggests
- * nothing, which keeps Chrome's own filename.
- */
-export async function armDownloadProbe(worker: Worker) {
-  await worker.evaluate(() => {
-    const global = globalThis as { __e2eDownloads?: DownloadEvent[] }
-    if (global.__e2eDownloads) return
-    const events: DownloadEvent[] = []
-    global.__e2eDownloads = events
-    const entry = (event: DownloadEvent["event"], item: Record<string, unknown>): DownloadEvent => ({
-      event,
-      ...(typeof item["filename"] === "string" ? { filename: item["filename"] } : {}),
-      ...(typeof item["id"] === "number" ? { id: item["id"] } : {}),
-      ...(typeof item["url"] === "string" ? { url: item["url"] } : {}),
-    })
-    chrome.downloads.onCreated.addListener((item) => events.push(entry("created", item)))
-    chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
-      events.push(entry("determining", item))
-      suggest()
-    })
-  })
-}
-
-export async function readDownloadProbe(worker: Worker): Promise<DownloadEvent[]> {
-  const events = await worker.evaluate(() => (globalThis as { __e2eDownloads?: unknown }).__e2eDownloads)
-  return Array.isArray(events) ? (events as DownloadEvent[]) : []
 }
 
 /** Chrome's own download list (`chrome.downloads.search`): state, error and final filename of every item. */
