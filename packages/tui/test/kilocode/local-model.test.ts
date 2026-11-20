@@ -14,7 +14,7 @@ afterEach(() => {
   else process.env.OPENCODE_APP_DIR_NAME = previous
 })
 
-function launch(state: string, options: { pin?: string; models?: string[]; resume?: boolean } = {}) {
+function launch(state: string, options: { pin?: string; models?: string[]; resume?: boolean; model?: string } = {}) {
   const saved = session("ses_saved", { providerID: "provider", id: "durable" })
   const location = { directory }
   return createAppFixture({
@@ -28,7 +28,7 @@ function launch(state: string, options: { pin?: string; models?: string[]; resum
         "model.cycle_favorite": "f10",
       },
     },
-    args: options.resume ? { sessionID: saved.id } : {},
+    args: options.resume ? { sessionID: saved.id } : options.model ? { model: options.model } : {},
     fetch: (url) => {
       if (url.pathname === "/api/config") return json([{ type: "document", info: { model: "provider/global" } }])
       if (url.pathname === "/api/agent")
@@ -89,6 +89,21 @@ test("fresh TUI restores each agent's explicit pick ahead of the top-level model
   await expectModel(restarted, "Build", "alpha")
   restarted.mockInput.pressKey("F6")
   await expectModel(restarted, "Plan", "beta")
+})
+
+test("an explicit --model launch stays per-invocation and does not rewrite the agent's pick", async () => {
+  await using state = await tmpdir()
+  {
+    await using app = await launch(state.path)
+    await expectModel(app, "Build", "global")
+    await pick(app, "Build", "alpha")
+  }
+  {
+    await using flagged = await launch(state.path, { model: "provider/beta" })
+    await expectModel(flagged, "Build", "beta")
+  }
+  await using plain = await launch(state.path)
+  await expectModel(plain, "Build", "alpha")
 })
 
 test("unhosted TUI neither restores nor overwrites Kilo's per-agent selection", async () => {

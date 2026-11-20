@@ -471,12 +471,16 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             if (!isModelValid(model)) return
             if (!selectModel(model)) return
             if (options?.recent) {
-              agentModels?.save(agent.current(), model) // kilocode_change(tui)
               setPreferences("recent", recentModels(model, preferences.recent))
               void repository.addRecent(model).catch(() => undefined)
             }
           })
         },
+        // kilocode_change start - tui: a picker choice becomes the agent's pick; an invocation-scoped --model does not
+        rememberPick(model: ModelPreferenceModel) {
+          agentModels?.save(agent.current(), model)
+        },
+        // kilocode_change end
         toggleFavorite(model: { providerID: string; modelID: string }) {
           batch(() => {
             if (!isModelValid(model)) return
