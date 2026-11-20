@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 167,
-    "markedLines": 2985,
+    "files": 168,
+    "markedLines": 3030,
     "unmarkedLines": 560,
     "deletedFiles": 0
   },
@@ -355,8 +355,8 @@
       "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Also declare `app.header` for plugin status above the main view; existing slots are below the view or inside the session composer/sidebar, so none can supply a process-wide header indicator. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. Two generic lines with no Kilo value."
     },
     "packages/tui/src/app.tsx": {
-      "rung": 3,
-      "seam": "Render the optional `app.header` slot above the main view and session tabs. Existing slots cannot place a process-wide status indicator at the top of both home and session screens, and server host composition cannot alter the TUI layout. One generic line; without a claim it renders nothing and preserves upstream defaults."
+      "rung": 4,
+      "seam": "The optional `app.header` slot above the main view and session tabs remains a generic rung-3 seam. Existing slots cannot place a process-wide status indicator there; without a claim it renders nothing. The Kilo launch-prompt provider is rung 4: only App holds the original --prompt object above the keyed session views. A server plugin, host override or TUI slot cannot bind that draft to its session across route remounts."
     },
     "packages/tui/src/mini/runtime.lifecycle.ts": {
       "rung": 4,
@@ -425,7 +425,7 @@
     },
     "packages/tui/src/routes/session/index.tsx": {
       "rung": 4,
-      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows. Browser tool rows (feature `browser`) mask typed text: the tool props, the Code Mode call rows, the subagent live child line and the expanded turn-token table (`turnTokenToolSummary`, exported for its test) pass the input through the Kilo-owned `browserDisplayInput`/`browserDisplayCalls`/`browserDisplayText` (packages/tui/src/kilocode/browser-display.ts), the live child line also leaves out the keys in `ROW_INPUT_OMIT` (Code Mode's `code`, whose program can type text inline), and the turn-token table shows no input at all for Code Mode's own tool (`ROW_PROGRAM_TOOL`, whose whole input is that program, streaming or not), because no renderer hook sees a row's input before it is drawn. Auto-accept mode (feature `sandbox`) replies `once` to every pending permission request in this route and hides the prompt; a request whose metadata sets `interactive: true` (a Kilo sandbox escalation, a sensitive browser step) must still be answered by a person, as `run --auto` already enforces. The auto-approve effect, the prompted list and the tool-row highlight call the Kilo-owned `requiresPerson` predicate (packages/tui/src/kilocode/permission-mode.ts) so the three cannot drift. The TUI plugin API has no hook into this route's permission replies or prompt selection (rung 1), the host cannot reach the TUI process (rung 2), and an inline generic check would repeat the same condition three times (rung 3)."
+      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows. Browser tool rows (feature `browser`) mask typed text: the tool props, the Code Mode call rows, the subagent live child line and the expanded turn-token table (`turnTokenToolSummary`, exported for its test) pass the input through the Kilo-owned `browserDisplayInput`/`browserDisplayCalls`/`browserDisplayText` (packages/tui/src/kilocode/browser-display.ts), the live child line also leaves out the keys in `ROW_INPUT_OMIT` (Code Mode's `code`, whose program can type text inline), and the turn-token table shows no input at all for Code Mode's own tool (`ROW_PROGRAM_TOOL`, whose whole input is that program, streaming or not), because no renderer hook sees a row's input before it is drawn. Auto-accept mode (feature `sandbox`) replies `once` to every pending permission request in this route and hides the prompt; a request whose metadata sets `interactive: true` (a Kilo sandbox escalation, a sensitive browser step) must still be answered by a person, as `run --auto` already enforces. The auto-approve effect, the prompted list and the tool-row highlight call the Kilo-owned `requiresPerson` predicate (packages/tui/src/kilocode/permission-mode.ts) so the three cannot drift. The TUI plugin API has no hook into this route's permission replies or prompt selection (rung 1), the host cannot reach the TUI process (rung 2), and an inline generic check would repeat the same condition three times (rung 3). Only this route knows when it seeds a resumed --prompt; neither the host nor a plugin can defer that one-shot submission until the saved model appears."
     },
     "packages/tui/src/routes/session/group-view.tsx": {
       "rung": 4,
@@ -668,7 +668,7 @@
     },
     "packages/tui/src/component/prompt/index.tsx": {
       "rung": 3,
-      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. On first Home render, reveal the confirmed agent label while the model catalog is pending."
+      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. Its programmatic submit reports a reversible preflight refusal synchronously so a waiting caller can retry without replaying a dispatched request. Only the editor sees which stashed draft it restored, when history or user input replaced it, and pending native edits at unmount. An optional callback exposes those distinctions without changing manual submission. On first Home render, reveal the confirmed agent label while the model catalog is pending."
     },
     "packages/tui/src/component/startup-loading.tsx": {
       "rung": 3,
