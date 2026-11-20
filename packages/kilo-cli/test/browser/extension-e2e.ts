@@ -1284,6 +1284,9 @@ async function runAll(): Promise<number> {
   const table = lines.join("\n")
   await fs.writeFile(path.join(out, "summary.md"), `${table}\n`)
   console.log(table)
+  // A root this run made that holds nothing now (every home removed, reports in --out elsewhere) goes too; rmdir
+  // refuses a directory that still holds a failed scenario's home or the reports.
+  if (process.env.E2E_HOME === undefined) await fs.rmdir(root).catch(() => undefined)
   return outcomes.some(counted) ? 1 : 0
 }
 

@@ -30,6 +30,7 @@ import * as Png from "@kilocode/kilo-plugin/browser/png"
 import fs from "node:fs/promises"
 import { existsSync } from "node:fs"
 import net from "node:net"
+import os from "node:os"
 import path from "node:path"
 
 // playwright-core belongs to the plugin workspace, not this package, so the specifier is resolved from there at
@@ -827,7 +828,16 @@ export async function launchChromium(options: LaunchOptions): Promise<Launched> 
   ]
   const chromiumLog = { text: "" }
   let exited = false
-  const child = Bun.spawn([executable, ...args], { stderr: "pipe", stdin: "ignore", stdout: "pipe" })
+  // Chromium's own scratch directories (org.chromium.Chromium.*) go into a directory of this launch, which `close`
+  // removes: a killed browser never removes them itself. It stays short, because Chromium's singleton socket lives in
+  // it and a Unix socket path is limited to 108 bytes.
+  const scratch = await fs.mkdtemp(path.join(os.tmpdir(), "e2e-chromium-"))
+  const child = Bun.spawn([executable, ...args], {
+    env: { ...process.env, TMPDIR: scratch },
+    stderr: "pipe",
+    stdin: "ignore",
+    stdout: "pipe",
+  })
   // Tracked from the spawn on, so an interrupt during the launch itself (up to 30 s) stops this Chromium too.
   track(child)
   void child.exited.then(() => {
@@ -835,7 +845,10 @@ export async function launchChromium(options: LaunchOptions): Promise<Launched> 
   })
   tap(child.stdout as ReadableStream<Uint8Array>, chromiumLog, 40_000)
   tap(child.stderr as ReadableStream<Uint8Array>, chromiumLog, 40_000)
-  const kill = () => terminate(child)
+  const kill = async () => {
+    await terminate(child)
+    await fs.rm(scratch, { force: true, recursive: true })
+  }
 
   let proxy: ReturnType<typeof cdpProxy> | undefined
   try {
