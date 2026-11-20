@@ -50,3 +50,7 @@
 
 /* VS Code variable bridge */
 @import "./vscode-bridge.css";
+
+/* Motion control for the whole surface. Last, so it wins the ties against
+   the component rules above. */
+@import "./motion.css";
