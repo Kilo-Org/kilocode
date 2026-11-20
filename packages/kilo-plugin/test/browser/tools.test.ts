@@ -13,7 +13,15 @@ import { BrowserContract } from "../../src/browser/contract"
 import { EXTENSION_HINT, STOPPED } from "../../src/browser/extension"
 import { BrowserHub } from "../../src/browser/hub"
 import { hashArguments, resetSteps } from "../../src/browser/steps"
-import { authorize, effective, granted, KiloBrowserToolsPlugin, resetGrants, trim } from "../../src/browser/tools"
+import {
+  authorize,
+  effective,
+  granted,
+  KiloBrowserToolsPlugin,
+  resetGrants,
+  titleFor,
+  trim,
+} from "../../src/browser/tools"
 import { KiloGatewayAccounts } from "../../src/gateway/accounts"
 
 // The status RPC asks the backend whether a browser exists. The test machine needs none: a fake execute path that is
@@ -1030,16 +1038,25 @@ describe("browser tools over the extension backend", () => {
   })
 
   test("only an extension call reads the conversation's title", async () => {
-    // The extension names its tab group after the conversation; another backend has nothing to name.
+    // The decision itself, so a non-extension backend is observed rather than skipped: a Playwright call never gets
+    // this far with a browser, but the gate must hold on its own.
+    const reads: string[] = []
+    const read = (sessionID: string) =>
+      Effect.sync(() => {
+        reads.push(sessionID)
+        return "Fix the login form"
+      })
+    expect(await Effect.runPromise(titleFor(read, "extension", "ses_browser" as never))).toBe("Fix the login form")
+    expect(reads).toEqual(["ses_browser"])
+    expect(await Effect.runPromise(titleFor(read, "playwright", "ses_browser" as never))).toBeUndefined()
+    expect(reads).toEqual(["ses_browser"])
+    // And a whole extension call reads it once, so the seam is wired into the call path.
     const extension = await boot(
       { backend: "extension" },
       { hub: fakeHub().service, sessionTitle: "Fix the login form" },
     )
     await extension.call("browser_snapshot")
     expect(extension.titles).toEqual(["ses_browser"])
-    const playwright = await boot({ backend: "playwright" }, { sessionTitle: "Fix the login form" })
-    await playwright.call("browser_snapshot").catch(() => undefined)
-    expect(playwright.titles).toEqual([])
   })
 
   test("a click that navigates places the tab where the page state found it", async () => {

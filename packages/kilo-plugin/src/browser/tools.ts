@@ -626,8 +626,8 @@ function shaped(input: {
 }
 
 /** Only the extension names its tab group after the conversation, so only it pays the session read. */
-function titleFor(deps: Deps, backend: Settings["backend"], context: Tool.Context) {
-  return backend === "extension" ? deps.title(context.sessionID) : Effect.succeed<string | undefined>(undefined)
+export function titleFor(read: Deps["title"], backend: Settings["backend"], sessionID: Tool.Context["sessionID"]) {
+  return backend === "extension" ? read(sessionID) : Effect.succeed<string | undefined>(undefined)
 }
 
 function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
@@ -672,7 +672,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     const session = String(context.sessionID)
     const grants = grantsFor(session)
     const allowSensitive = browser.allowSensitive
-    const title = yield* titleFor(deps, choice.backend, context)
+    const title = yield* titleFor(deps.title, choice.backend, context.sessionID)
 
     // Ask, then call. A backend that discovers the real origin at action time (redirects, frames, sensitive elements,
     // downloads) reports it as needs_permission; the call is retried once per distinct need it reports, with the new
