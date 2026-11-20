@@ -2,39 +2,6 @@ import { describe, expect, test } from "bun:test"
 import { createMarkdownStream, renderBlocksToHtml } from "../src/index"
 
 // kilocode_change start
-// These bounds compare one shape at two sizes instead of timing a fixed input: quadratic parsing needs about 16x the
-// work for a 4x input, linear parsing about 4x, and how loaded the host is does not change how much CPU the parser
-// burns. Each side is the fastest of several samples taken from a fresh heap: a busy host inflates the middle of the
-// distribution, so the minimum is the sample that still reflects the work, and a quadratic pass cannot hide behind it.
-const ratioLimit = 8
-
-/**
- * Fastest CPU time at the `to` size divided by the fastest CPU time at the `from` size.
- *
- * CPU time, not wall time: a loaded runner has this process off the CPU for most of a sample, which would make a
- * longer sample look worse than it is.
- *
- * Compare tables of the same shape so the input size grows without changing the nesting depth.
- */
-function growth(work: (scale: number) => void, from = 1, to = 4, samples = 5) {
-  const clock = () => {
-    const usage = process.cpuUsage()
-    return (usage.user + usage.system) / 1_000 // microseconds to milliseconds
-  }
-  const fastest = (scale: number) =>
-    Math.min(
-      ...Array.from({ length: samples }, () => {
-        Bun.gc(true) // without it a collection from the previous sample lands inside this one
-        const started = clock()
-        work(scale)
-        return clock() - started
-      }),
-    )
-  work(from) // warm the JIT and the module caches for both sizes before measuring
-  work(to)
-  return fastest(to) / Math.max(fastest(from), 1)
-}
-
 /**
  * Characters a full parse reads through `charCodeAt`, which is how the block and inline parsers peek at the source.
  *
@@ -159,23 +126,24 @@ describe("slow-input linear-time bounds", () => {
     expect(scanned / 1_000).toBeLessThan(36 * 6)
   })
 
-  test("huge GFM table stays linear", () => {
-    // 250 and 1,000 rows: 4x the table, while both fit under the heap size at which garbage collection starts to
-    // dominate the measurement (2,000 rows already cost 5-7x for 4x the input, which is the collector, not the parser).
-    const tableParse = (rows: number) => {
+  test("huge GFM table bounds full-parse source scans", () => {
+    const reads = (rows: number) => {
       const body = Array.from(
         { length: rows },
         (_, i) => `| cell ${i} | **bold ${i}** | \`code ${i}\` | [link](https://example.com/${i}) |\n`,
       ).join("")
-      const done = createMarkdownStream({ renderHtml: false }).update(
-        "| Col A | Col B | Col C | Col D |\n|---|---|---|---|\n" + body,
-        { streaming: false },
-      )
-      expect(done.blocks).toHaveLength(1)
-      expect(done.blocks[0]!.kind.type).toBe("table")
-      if (done.blocks[0]!.kind.type === "table") expect(done.blocks[0]!.kind.rows).toHaveLength(rows)
+      return charsRead(() => {
+        const done = createMarkdownStream({ renderHtml: false }).update(
+          "| Col A | Col B | Col C | Col D |\n|---|---|---|---|\n" + body,
+          { streaming: false },
+        )
+        expect(done.blocks).toHaveLength(1)
+        expect(done.blocks[0]!.kind.type).toBe("table")
+        if (done.blocks[0]!.kind.type === "table") expect(done.blocks[0]!.kind.rows).toHaveLength(rows)
+      })
     }
-    expect(growth(tableParse, 250, 1_000)).toBeLessThan(ratioLimit)
+    // At 4x the input size, rescanning earlier rows would cost about 16x the character reads.
+    expect(reads(1_000)).toBeLessThan(8 * reads(250))
   })
 
   test("a streamed table row scans only the active row", () => {
