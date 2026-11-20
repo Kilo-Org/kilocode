@@ -58,22 +58,19 @@ check("tools-denied denies every tool except the attachment read", () => {
   assert.deepEqual(policy().modes["tools-denied"].permission, { "*": "deny", read: "allow" })
 })
 
-check("docs-write confines edits to the docs content and the agent summary file", () => {
+check("docs-write confines edits to markdown docs, nav files and the agent summary file", () => {
   const edit = policy().modes["docs-write"].permission.edit
   const keys = Object.keys(edit)
   assert.equal(keys[0], "*", "the catch-all must come first: permission evaluation takes the last matching rule")
   assert.equal(edit["*"], "deny")
   const allowed = keys.filter((k) => edit[k] === "allow")
+  // The exact list, so a new allow fails here. The page entry names `.md`
+  // because pages/ also holds the Next.js app modules and API routes.
   assert.deepEqual(
     allowed,
     ["packages/kilo-docs/pages/*.md", "packages/kilo-docs/lib/nav/*", "docs-sync-out/edit-summary-*.json", "edit-summary-*.json"],
-    "only docs pages, navigation files and the agent's own summary file may be written",
+    "only markdown docs, navigation files and the agent's own summary file may be written",
   )
-  assert.ok(
-    !allowed.some((k) => /pages\/\*(?:$|[^.]|\.(?!md$))/.test(k)),
-    "pages/ also holds Next.js app modules and API routes, so a page allow must name the .md extension",
-  )
-  assert.ok(!allowed.includes("packages/kilo-docs/*"), "the package root must stay out: it holds the build and test definitions")
 })
 
 check("docs-write denies every tool it does not name", () => {
