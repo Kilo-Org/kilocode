@@ -105,6 +105,9 @@ class KiloBackendAppService private constructor(
         /** Sign-out must not wait on a stalled CLI; matches the provider-settings call bound. */
         private const val DISPOSE_TIMEOUT_SECONDS = 15L
 
+        /** Sign-out waits at most this long for the lifecycle mutex before dropping state alone. */
+        private const val CLOSE_TIMEOUT_MS = 5_000L
+
         /** Test factory — no IntelliJ deps needed. */
         internal fun create(
           cs: CoroutineScope,
@@ -999,14 +1002,27 @@ class KiloBackendAppService private constructor(
         // Close before start: close() forgets retained owners, while start() on a started manager
         // only rebinds transports and would restore the previous credential's continuity.
         // Under the lifecycle mutex, so a concurrent CLI restart cannot swap the transport between
-        // the read below and the bind, which would leave the manager on a replaced client.
-        mutex.withLock {
+        // the read below and the bind, which would leave the manager on a replaced client. That
+        // mutex is also held across a CLI download, so the wait is bounded: dropping the
+        // credential-derived state matters, binding to the replacement transport does not, and a
+        // later load() starts the manager on it.
+        var rebound = false
+        val bound = withTimeoutOrNull(CLOSE_TIMEOUT_MS) {
+            mutex.withLock {
+                hosted.close()
+                val api = connection.api
+                val http = connection.apiClient
+                val port = connection.port
+                // The CLI may already be gone; the manager just stays closed instead of throwing.
+                if (api != null && http != null && port != 0) hosted.start(api, http, port, chat)
+                rebound = true
+            }
+        }
+        if (bound == null && !rebound) {
+            // The wait expired before the block ran; dropping the credential-derived state is the
+            // part that matters, and the next load() starts the manager on its transport.
+            log.info("Sign-out: lifecycle busy, dropping hosted state without rebinding")
             hosted.close()
-            val api = connection.api
-            val http = connection.apiClient
-            val port = connection.port
-            // The CLI may already be gone; the manager just stays closed instead of throwing.
-            if (api != null && http != null && port != 0) hosted.start(api, http, port, chat)
         }
         // Clear the snapshot first: the CLI rebuild is best-effort, while the credential
         // removal above is already final.
