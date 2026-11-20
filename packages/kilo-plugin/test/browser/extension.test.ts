@@ -814,6 +814,31 @@ describe("extension backend", () => {
     expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1", "handle-2"])
   })
 
+  test("/browser adopt lifts a stop only when the conversation got a group: none and unconfirmed keep it", async () => {
+    for (const answer of ["none", "unconfirmed"] as const) {
+      const hub = fake({ adopt: () => Promise.resolve(answer) })
+      const turns = new Map([["ses_extension", 1]])
+      const active = backend({ port: hub.port, directory: "/tmp/project", turns })
+      await active.callTool("browser_snapshot", {}, ctx())
+      hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+      expect(await active.adopt("ses_extension")).toBe(answer)
+      // Nothing became the conversation's, so the model's next call is still refused instead of opening a new session.
+      const error = await active.callTool("browser_snapshot", {}, ctx()).catch((value: unknown) => value)
+      expect((error as Error).message).toBe(STOPPED)
+      expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1"])
+    }
+  })
+
+  test("/browser adopt that keeps the conversation's own tabs lifts its stop", async () => {
+    const hub = fake({ adopt: () => Promise.resolve("kept") })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
+    hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+    expect(await active.adopt("ses_extension")).toBe("kept")
+    expect((await active.callTool("browser_snapshot", {}, ctx())).isError).toBe(false)
+    expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1", "handle-2"])
+  })
+
   test("/browser share moves the active tab into the conversation's session and lifts a stop", async () => {
     const hub = fake()
     const active = backend({ port: hub.port, directory: "/tmp/project" })

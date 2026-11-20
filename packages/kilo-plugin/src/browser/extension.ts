@@ -511,13 +511,17 @@ export class ExtensionBackend implements BrowserBackend {
     this.resume(session, stop)
   }
 
-  /** `/browser adopt`: the most recent ended group becomes this conversation's. The user's own command lifts a stop. */
+  /**
+   * `/browser adopt`: the most recent ended group becomes this conversation's. The user's own command lifts a stop once
+   * the conversation has tabs again (`adopted`, or `kept` its own); `none` and `unconfirmed` leave it stopped, so the
+   * model's next call is refused instead of opening a fresh browser session.
+   */
   async adopt(session: string): Promise<BrowserHub.Adoption> {
     const port = this.available()
     const stop = this.stopped.get(session)
     try {
       const adopted = await port.adopt(await this.handle(port, session, { kind: "user" }))
-      this.resume(session, stop)
+      if (adopted === "adopted" || adopted === "kept") this.resume(session, stop)
       return adopted
     } catch (error) {
       throw map(error)
