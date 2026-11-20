@@ -170,7 +170,11 @@ class KiloBackendRealCliLogoutTest {
                 // ------------------------------------------------ (3) next sign in ----
                 seedAuth(data, KEY_TWO)
                 note("seeded kilo/auth.json with account two key")
-                awaitReady(svc, APP_READY_TIMEOUT_MS, log)
+                // Sign-out's CLI rebuild emits `global.disposed`, which reloads the app, so it is not
+                // Ready at this point (`Loading(...)` was observed). Wait for the reload to settle
+                // before the next hosted call.
+                val reloaded = awaitReady(svc, APP_READY_TIMEOUT_MS, log)
+                note("app ready again: profile=${reloaded.data.profile?.profile?.email ?: "none"}")
                 svc.hosted.retain(session, null)
                 val secondMessages = svc.hosted.messages(session, null)
                 assertEquals(1, secondMessages.size, "the re-attached stand-in transcript should hold one message")
@@ -210,17 +214,20 @@ class KiloBackendRealCliLogoutTest {
             scope.cancel()
             leftover = cli.stop()
             standIn.stop()
-            val alive = leftover.filter { handle -> ProcessHandle.of(handle).map { it.isAlive }.orElse(false) }
             println("[e2e] === evidence ===")
             println("[e2e] cli port: ${cli.port}")
-            println("[e2e] cli processes started: ${leftover.size}; still alive after teardown: $alive")
+            println("[e2e] cli processes started: ${leftover.size}")
             standIn.snapshot().filter { it.startsWith("REQ ") || it.startsWith("SSE ") || it.startsWith("RES #") }
                 .forEach { println("[e2e] stand-in: $it") }
             println("[e2e] === end evidence ===")
-            assertTrue(alive.isEmpty(), "the spawned CLI tree outlived the test: $alive")
-            assertFalsePort(cli.port)
             data.deleteRecursively()
         }
+
+        // Asserted after cleanup, so a real failure is not masked by a teardown assertion and the
+        // temporary directory is removed whether or not the run passed.
+        val alive = leftover.filter { handle -> ProcessHandle.of(handle).map { it.isAlive }.orElse(false) }
+        assertTrue(alive.isEmpty(), "the spawned CLI tree outlived the test: $alive")
+        assertFalsePort(cli.port)
     }
 
     // ------------------------------------------------------------------ helpers ----
@@ -428,18 +435,19 @@ class KiloBackendRealCliLogoutTest {
             .filter { it.startsWith("REQ ") && it.contains("POST $TOKEN_PATH ") }
             .map { it.substringAfter("auth=").substringBefore(" body=") }
 
-        fun hasRequest(method: String, path: String): Boolean = indexOf(request(method, path)) >= 0
+        fun hasRequest(method: String, path: String): Boolean =
+            snapshot().any { request(method, path).containsMatchIn(it.substringBefore(" auth=")) }
 
         /** Control tokens the stand-in issued, in issue order. */
         fun mintedTokens(): List<String> = synchronized(issued) { issued.toList() }
 
-        fun hasRequestWithAuth(method: String, path: String, token: String): Boolean =
-            snapshot().any { line ->
-                request(method, path).containsMatchIn(line.substringBefore(" auth=")) &&
+        fun hasRequestWithAuth(method: String, path: String, token: String): Boolean {
+            val matcher = request(method, path)
+            return snapshot().any { line ->
+                matcher.containsMatchIn(line.substringBefore(" auth=")) &&
                     line.substringAfter(" auth=").startsWith("Bearer $token ")
             }
-
-        fun indexOf(pattern: Regex): Int = snapshot().indexOfFirst { pattern.containsMatchIn(it) }
+        }
 
         private fun request(method: String, path: String) =
             """REQ #\d+ ${Regex.escape(method)} ${Regex.escape(path)}(?:[? ]|$)""".toRegex()
