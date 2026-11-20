@@ -559,9 +559,9 @@ export function screenshotPath(
 }
 
 /**
- * Every tool whose result the MCP can write to a file, with the link title it uses. `browser_run_code_unsafe` takes
- * one too, but this backend refuses that tool before any file exists; `browser_take_screenshot` is written from the
- * masked image by `screenshotPath`. A contract bump that adds another file-writing tool must extend this map.
+ * Every tool whose result the MCP can write to a file, with the link title it uses. `browser_take_screenshot` is
+ * written from the masked image by `screenshotPath`. A contract bump that adds another file-writing tool must extend
+ * this map.
  */
 export const FILE_TITLES: Record<string, string> = {
   browser_snapshot: "Snapshot",
@@ -907,7 +907,7 @@ class PlaywrightBackend implements BrowserBackend {
       }
     }
     // A script and a key press can reach what the element-level check inspects, so they are classified on the page.
-    if (name === "browser_evaluate" || name === "browser_run_code_unsafe") {
+    if (name === "browser_evaluate") {
       if (await sensitiveFields(page)) reasons.push("a page script can reach a sensitive field")
     }
     if (name === "browser_press_key") {
@@ -986,8 +986,8 @@ class PlaywrightBackend implements BrowserBackend {
   }
 
   async callTool(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<CallResult> {
-    // Running code in the CLI process is not a browser action we can bound, so this backend refuses it.
-    if (name === "browser_run_code_unsafe") throw new UnsupportedError()
+    // The pinned MCP still serves this tool, so the registry is not the only way in: a direct caller is refused here.
+    if (BrowserContract.unserved(name)) throw new UnsupportedError()
     const authorized = ctx.authorized ?? []
     const session = ctx.session ?? ""
     const pagesBefore = this.conn.context.pages()
