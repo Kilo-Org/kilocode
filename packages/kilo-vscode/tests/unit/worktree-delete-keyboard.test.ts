@@ -9,12 +9,12 @@ import { createDeleteKey, createWorktreeDelete } from "../../webview-ui/agent-ma
 function setup() {
   return createRoot((dispose) => {
     const window = new Window()
-    const view = window as unknown as typeof globalThis.window
     const doc = window.document
     const state = { selection: "wt" as string | undefined }
     const store = createProjectStore("project")
     store.setWorktrees([{ id: "wt", branch: "wt", path: "/repo/wt", parentBranch: "main", createdAt: "2026-10-09" }])
     const removed: string[][] = []
+    const revealed: string[][] = []
     const deletion = createWorktreeDelete({
       store: () => store,
       project: () => "project",
@@ -25,8 +25,7 @@ function setup() {
         state.selection = target.kind === "worktree" ? target.worktreeId : LOCAL
       },
       remove: (project, id) => removed.push([project, id]),
-      reveal: () => {},
-      view,
+      reveal: (project, id) => revealed.push([project, id]),
     })
     const focus = createDiffPanelFocus({
       isOpen: () => false,
@@ -50,18 +49,13 @@ function setup() {
       target.dispatchEvent(event)
       return event
     }
-    // VS Code shortcuts reach the webview as a keydown, then as a host action message.
-    const shortcut = (key: string, repeat = false) => {
-      press(key, repeat)
-      deletion.confirm("project", "wt")
-    }
-    return { dispose, state, store, deletion, removed, doc, press, shortcut }
+    return { dispose, state, store, deletion, removed, revealed, doc, press }
   })
 }
 
 describe("worktree delete keyboard confirmation", () => {
   for (const key of ["Backspace", "Delete"]) {
-    it(`does not confirm deletion while holding ${key}`, async () => {
+    it(`does not confirm deletion while holding ${key}`, () => {
       const fixture = setup()
       try {
         expect(fixture.press(key).defaultPrevented).toBe(true)
@@ -70,7 +64,6 @@ describe("worktree delete keyboard confirmation", () => {
         expect(fixture.removed).toEqual([])
         expect(fixture.store.busy().has("wt")).toBe(false)
         expect(fixture.deletion.pending()).toEqual({ projectId: "project", worktreeId: "wt" })
-        await Bun.sleep(350)
         fixture.press(key)
         expect(fixture.removed).toEqual([["project", "wt"]])
         expect(fixture.store.busy().get("wt")?.reason).toBe("deleting")
@@ -117,31 +110,31 @@ describe("worktree delete keyboard confirmation", () => {
     })
   }
 
-  it("does not confirm deletion while holding a close shortcut", async () => {
+  it("requires explicit confirmation after repeated VS Code close commands without key events", () => {
     const fixture = setup()
     try {
-      fixture.shortcut("w")
+      fixture.deletion.arm("project", "wt")
       expect(fixture.deletion.pending()).toEqual({ projectId: "project", worktreeId: "wt" })
-      for (let i = 0; i < 3; i++) fixture.shortcut("w", true)
+      for (let i = 0; i < 3; i++) fixture.deletion.arm("project", "wt")
       expect(fixture.removed).toEqual([])
+      expect(fixture.store.busy().has("wt")).toBe(false)
       expect(fixture.deletion.pending()).toEqual({ projectId: "project", worktreeId: "wt" })
-      await Bun.sleep(350)
-      fixture.shortcut("w")
+      expect(fixture.revealed).toEqual([["project", "wt"]])
+      fixture.deletion.confirm("project", "wt")
       expect(fixture.removed).toEqual([["project", "wt"]])
     } finally {
       fixture.dispose()
     }
   })
 
-  it("does not block a close shortcut while modifiers repeat", () => {
+  it("does not let a close command confirm deletion armed by Backspace", () => {
     const fixture = setup()
     try {
-      fixture.press("Shift", true)
-      fixture.press("Control", true)
-      fixture.shortcut("w")
+      fixture.press("Backspace")
+      fixture.deletion.arm("project", "wt")
       expect(fixture.deletion.pending()).toEqual({ projectId: "project", worktreeId: "wt" })
-      fixture.press("Shift", true)
-      fixture.shortcut("w")
+      expect(fixture.removed).toEqual([])
+      fixture.press("Backspace")
       expect(fixture.removed).toEqual([["project", "wt"]])
     } finally {
       fixture.dispose()

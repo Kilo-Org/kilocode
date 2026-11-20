@@ -234,7 +234,7 @@ const AgentManagerContent: Component = () => {
     )
   const mode = createModeRouter()
   let sidebarSearchMenu: SidebarSearchMenuRef | undefined
-  let confirmDelete: WorktreeDelete["confirm"] | undefined
+  let worktreeDelete: WorktreeDelete | undefined
   const [kb, setKb] = createSignal<Record<string, string>>(defaultBindings)
   const [setup, setSetup] = createSignal<SetupState>({ active: false, message: "" })
   const worktrees = () => registry.active().worktrees()
@@ -1179,7 +1179,7 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "openPR") openSelectedPR()
       else if (msg.action === "runScript") runSelected()
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
-      else if (msg.action === "closeWorktree") closeSelectedWorktree()
+      else if (msg.action === "closeWorktree") closeSelectedWorktree("arm")
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
       else if (msg.action === "focusInput") focusCtl.focus()
       else if (msg.action === "focusSearch")
@@ -1241,7 +1241,7 @@ const AgentManagerContent: Component = () => {
     const deleteKeyHandler = createDeleteKey({
       guard: (target) => diffPanels.isFocusTarget(target),
       selection,
-      close: () => closeSelectedWorktree(),
+      close: () => closeSelectedWorktree("confirm"),
     })
     window.addEventListener("keydown", deleteKeyHandler)
     onCleanup(diffPanels.listen())
@@ -2024,7 +2024,7 @@ const AgentManagerContent: Component = () => {
     }
     const tabs = activeTabs()
     if (tabs.length === 0) {
-      closeSelectedWorktree()
+      closeSelectedWorktree("arm")
       return
     }
     const target = activeTaskId()
@@ -2032,13 +2032,13 @@ const AgentManagerContent: Component = () => {
     handleCloseTab(target)
   }
 
-  // Close the currently selected worktree through the shared sidebar confirmation.
-  const closeSelectedWorktree = () => {
+  // VS Code commands have no key event, so they can only arm confirmation.
+  const closeSelectedWorktree = (intent: "arm" | "confirm") => {
     const sel = selection()
     const project = activeProjectId()
     if (!project || project !== currentProjectId() || !sel || sel === LOCAL) return
     expandSidebar()
-    confirmDelete?.(project, sel)
+    worktreeDelete?.[intent](project, sel)
   }
 
   const renderTabById = (id: string) =>
@@ -2134,7 +2134,7 @@ const AgentManagerContent: Component = () => {
           bindings={kb()}
           t={t}
           onSearchRef={(ref) => (sidebarSearchMenu = ref)}
-          onDeleteRef={(confirm) => (confirmDelete = confirm)}
+          onDeleteRef={(deletion) => (worktreeDelete = deletion)}
           onDelete={(projectId, worktreeId) => forgetContextFocus(`${projectId}:${worktreeId}`)}
           onShortcuts={handleShowKeyboardShortcuts}
           onHistory={openHistory}

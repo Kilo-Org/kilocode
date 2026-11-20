@@ -4,8 +4,6 @@ import type { ProjectStore } from "./project/store"
 import { LOCAL, nextSelectionAfterDelete } from "./navigate"
 import { buildSidebarOrder, buildTopLevelItems, sortWorktrees } from "./section-helpers"
 
-const MODIFIERS = new Set(["Alt", "AltGraph", "Control", "Meta", "Shift"])
-
 /**
  * Delete/Backspace on a selected worktree triggers inline delete confirmation.
  * Two separate key presses (within the 2500ms window) confirm the delete.
@@ -37,7 +35,6 @@ export function createWorktreeDelete(opts: {
   select: (target: AgentManagerSidebarTarget) => void
   remove: (projectId: string, worktreeId: string) => void
   reveal: (projectId: string, worktreeId: string) => void
-  view?: Window
 }) {
   const [pending, setPending] = createSignal<{ projectId: string; worktreeId: string }>()
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -45,16 +42,6 @@ export function createWorktreeDelete(opts: {
     clearTimeout(timer)
     setPending(undefined)
   }
-  // VS Code also runs keybinding commands for auto-repeat keydowns, and host actions
-  // cannot see `repeat`. Each repeat opens a short window that covers the host round
-  // trip. Held modifiers do not count, so a held Ctrl+Shift before W still works.
-  const view = opts.view ?? window
-  let held = 0
-  const hold = (e: KeyboardEvent) => {
-    if (e.repeat && !MODIFIERS.has(e.key)) held = performance.now() + 300
-  }
-  view.addEventListener("keydown", hold, true)
-  onCleanup(() => view.removeEventListener("keydown", hold, true))
   // Catalog refreshes can recompute accessors without changing the selected target.
   createEffect(
     on(
@@ -97,8 +84,7 @@ export function createWorktreeDelete(opts: {
     opts.select(next === LOCAL ? { projectId, kind: "local" } : { projectId, kind: "worktree", worktreeId: next })
   }
 
-  const confirm = (projectId: string, worktreeId: string) => {
-    if (performance.now() < held) return
+  const request = (projectId: string, worktreeId: string, intent: "arm" | "confirm") => {
     const store = opts.store(projectId)
     const run = store?.runStatuses()[worktreeId]?.state
     if (
@@ -111,6 +97,7 @@ export function createWorktreeDelete(opts: {
       return
     }
     if (pending()?.projectId === projectId && pending()?.worktreeId === worktreeId) {
+      if (intent === "arm") return
       cancel()
       store.setBusy((prev) => new Map([...prev, [worktreeId, { reason: "deleting" as const }]]))
       opts.remove(projectId, worktreeId)
@@ -123,7 +110,13 @@ export function createWorktreeDelete(opts: {
     timer = setTimeout(cancel, 2500)
   }
 
-  return { pending, cancel, confirm, select }
+  return {
+    pending,
+    cancel,
+    arm: (projectId: string, worktreeId: string) => request(projectId, worktreeId, "arm"),
+    confirm: (projectId: string, worktreeId: string) => request(projectId, worktreeId, "confirm"),
+    select,
+  }
 }
 
 export type WorktreeDelete = ReturnType<typeof createWorktreeDelete>
