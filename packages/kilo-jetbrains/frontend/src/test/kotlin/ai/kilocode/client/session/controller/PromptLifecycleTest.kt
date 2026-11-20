@@ -678,6 +678,38 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertTrue(opened.isEmpty())
     }
 
+    fun `test follow-up handoff uses the CLI clock when the backend runs behind the client`() {
+        val opened = mutableListOf<SessionRef>()
+        val m = controller(open = { opened.add(it) })
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        // A backend on another host may run well behind this client. Every session timestamp comes from
+        // the CLI, so the creation check uses those and never the local clock.
+        val cli = System.currentTimeMillis().toDouble() - 3_600_000
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(time = SessionTimeDto(created = cli, updated = cli))))
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+        flush()
+
+        emit(
+            ChatEventDto.SessionCreated(
+                "ses_new",
+                session("ses_new", dir = "/test", created = cli + 1_000),
+            ),
+        )
+
+        assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
+    }
+
     fun `test follow-up arming adopts one session only`() {
         val opened = mutableListOf<SessionRef>()
         armedFollowup { opened.add(it) }
