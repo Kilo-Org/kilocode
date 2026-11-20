@@ -483,6 +483,60 @@ class LegacyMigrationConversionTest {
         assertEquals("Keep the # heading\n# trailing note", mode.customInstructions)
     }
 
+    @Test
+    fun `parseCustomModesYaml - unconsumed group block line becomes a reported group`() {
+        val yaml = """
+            customModes:
+              - slug: partial
+                name: Partial
+                roleDefinition: You are partial.
+                groups:
+                  - read
+                  tools: edit
+                  - browser
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals(listOf<Any>("read", "tools: edit", "browser"), mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+        assertEquals(1, result.warnings.size)
+        assertFalse(result.permission.keys.any { it == "tools: edit" })
+        assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun `parseCustomModesYaml - comment line inside groups block keeps the block open`() {
+        val yaml = """
+            customModes:
+              - slug: annotated
+                name: Annotated
+                roleDefinition: You are annotated.
+                groups:
+                  - read
+                  # tools this mode may use
+                  - browser
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals(listOf<Any>("read", "browser"), mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+        assertEquals("allow", result.permission["read"]?.jsonPrimitive?.content)
+        assertEquals("allow", result.permission["browser_open"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun `parseCustomModesYaml - apostrophe in prose text does not hide a trailing comment`() {
+        val yaml = """
+            customModes:
+              - slug: prose
+                name: Prose
+                roleDefinition: You're a writer. # role
+                description: It's fine # note
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals("You're a writer.", mode.roleDefinition)
+        assertEquals("It's fine", mode.description)
+    }
+
     // -----------------------------------------------------------------------
     // Auto-approval
     // -----------------------------------------------------------------------

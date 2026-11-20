@@ -764,8 +764,8 @@ object LegacyMigrationConverters {
                 continue
             }
             when (c) {
-                '\'' -> inSingleQuotes = true
-                '"' -> inDoubleQuotes = true
+                '\'' -> if (opensScalar(line, i)) inSingleQuotes = true
+                '"' -> if (opensScalar(line, i)) inDoubleQuotes = true
                 '#' -> if (i == 0 || line[i - 1] == ' ' || line[i - 1] == '\t') {
                     return line.substring(0, i).trimEnd()
                 }
@@ -773,6 +773,14 @@ object LegacyMigrationConverters {
             i++
         }
         return line
+    }
+
+    /** True when the quote at [index] starts a scalar, not an apostrophe inside plain text. */
+    private fun opensScalar(line: String, index: Int): Boolean {
+        var i = index - 1
+        while (i >= 0 && (line[i] == ' ' || line[i] == '\t')) i--
+        if (i < 0) return true
+        return line[i] in ":-,{["
     }
 
     fun parseCustomModesYaml(text: String): List<LegacyCustomMode> {
@@ -870,6 +878,8 @@ object LegacyMigrationConverters {
                 continue
             }
             val raw = stripYamlComment(rawLine)
+            // A blank line or a comment-only line does not end an open groups block.
+            if (inGroups && raw.isBlank()) continue
             if (raw.matches(Regex("  - slug: .*"))) {
                 flush()
                 current["slug"] = stripYamlQuotes(raw.removePrefix("  - slug: ").trim())
@@ -953,6 +963,12 @@ object LegacyMigrationConverters {
             }
             if (inGroups && !raw.startsWith("      ")) {
                 closeGroups()
+            }
+            // A line the rules above did not consume is still reported as a group entry, so the
+            // converter can warn about it instead of the entry vanishing.
+            if (inGroups && raw.isNotBlank()) {
+                closeGroupOptions()
+                groups.add(stripYamlQuotes(raw.trim()))
             }
         }
         flush()
