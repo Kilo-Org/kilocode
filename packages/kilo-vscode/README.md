@@ -18,6 +18,18 @@ The preview requires VS Code 1.95 or later.
 
 The preview uses the separate extension id `kilocode.kilo-code-v2` and keeps its server data in a separate `kilo2` directory. You can install it next to Kilo Code v1 and switch between both.
 
+## Updates
+
+When extension auto-update is enabled, VS Code updates gallery-installed extensions automatically. After an update, reload the window or restart the extension host when VS Code asks. Install the pre-release version with `--pre-release` or **Install Pre-Release Version**, and VS Code keeps updating it on the pre-release channel. To install or update it from a terminal:
+
+```sh
+code --install-extension kilocode.kilo-code-v2 --pre-release --force
+```
+
+The extension includes the matching `kilo2` server binary for its platform. It starts that private binary and does not use a `kilo2` from `PATH`, npm, or a separately downloaded installer, so updating the extension also updates its server. The npm CLI and the alpha installer are separate installations.
+
+A VSIX installed with **Install from VSIX** or `code --install-extension <file>.vsix` is not updated automatically by default. Install a newer VSIX or the gallery version to update it.
+
 ## Webview accessibility checks
 
 From `packages/kilo-vscode`, run `bun run playwright-core install --no-shell chromium` once, then `bun run test:accessibility`. The CI gate runs the Agent Manager sidebar search in Chromium with the production webview component and styles. It fails on axe WCAG violations or broken keyboard selection and dismissal. It does not require VS Code, a server, or an account.

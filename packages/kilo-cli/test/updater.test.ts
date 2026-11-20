@@ -1,102 +1,277 @@
-import { describe, expect, test } from "bun:test"
+import { NodeFileSystem } from "@effect/platform-node"
 import { Updater } from "@opencode/cli/services/updater"
-import { OPENCODE_VERSION } from "@opencode/cli/version"
-import { Effect, Option } from "effect"
+import { EffectFlock } from "@opencode/util/effect-flock"
+import { LayerNode } from "@opencode/util/effect/layer-node"
+import { Global } from "@opencode/util/global"
+import { Hash } from "@opencode/util/hash"
+import { AppProcess } from "@opencode/util/process"
+import { expect, test } from "bun:test"
+import { Effect, Layer } from "effect"
+import { mkdtemp, rm } from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
 import { KiloUpdater } from "../src/updater"
-import upgrade from "../src/upgrade"
+import { newer } from "../src/update-version"
+import { packageName } from "../src/updater-install"
 
-describe("KiloUpdater", () => {
-  test("background checks return no banner and do not start an install", async () => {
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const updater = yield* Updater.Service
-        const installed: string[] = []
-        expect(yield* updater.run()).toBeUndefined()
-        expect(yield* updater.run((version) => installed.push(version))).toBeUndefined()
-        expect(installed).toEqual([])
-      }).pipe(Effect.provide(KiloUpdater.layer)),
-    )
-  })
+const current = "0.0.0-v2-99"
+const next = "0.0.0-v2-100"
+const platform = process.platform === "win32" ? "windows" : process.platform
+const native = `${packageName}-${platform}-${process.arch}`
 
-  test("manual checks return the Kilo manual update instructions", async () => {
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const updater = yield* Updater.Service
-        expect(KiloUpdater.message).toBe(
-          "Kilo updates are disabled. Update Kilo manually using the method used to install this build.",
-        )
-        expect(yield* updater.check()).toEqual({ type: "unavailable", message: KiloUpdater.message })
-      }).pipe(Effect.provide(KiloUpdater.layer)),
-    )
-  })
-
-  test("installation methods and removal commands stay unavailable", async () => {
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const updater = yield* Updater.Service
-        expect(yield* updater.method()).toBeUndefined()
-        Updater.methods.forEach((method) => expect(updater.removal(method)).toBeUndefined())
-      }).pipe(Effect.provide(KiloUpdater.layer)),
-    )
-  })
-
-  test.each([OPENCODE_VERSION, `v${OPENCODE_VERSION}`, "2.0.0", "invalid", ""])(
-    "apply rejects version %s with a typed error",
-    async (version) => {
-      await Effect.runPromise(
-        Effect.gen(function* () {
-          const updater = yield* Updater.Service
-          const error = yield* updater.apply(version).pipe(Effect.flip)
-          expect(error).toBeInstanceOf(Error)
-          expect(error.message).toBe(KiloUpdater.message)
-        }).pipe(Effect.provide(KiloUpdater.layer)),
-      )
-    },
-  )
-
-  test.each([undefined, ...Updater.methods])("latest rejects method %s with a typed error", async (method) => {
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const updater = yield* Updater.Service
-        const error = yield* updater.latest(method).pipe(Effect.flip)
-        expect(error).toBeInstanceOf(Error)
-        expect(error.message).toBe(KiloUpdater.message)
-      }).pipe(Effect.provide(KiloUpdater.layer)),
-    )
-  })
-
-  test.each([...Updater.methods])("upgrade rejects method %s with a typed error", async (method) => {
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const updater = yield* Updater.Service
-        yield* Effect.forEach([OPENCODE_VERSION, `v${OPENCODE_VERSION}`, "2.0.0", "invalid", ""], (version) =>
-          Effect.gen(function* () {
-            const error = yield* updater.upgrade(method, version).pipe(Effect.flip)
-            expect(error).toBeInstanceOf(Error)
-            expect(error.message).toBe(KiloUpdater.message)
-          }),
-        )
-      }).pipe(Effect.provide(KiloUpdater.layer)),
-    )
-  })
+test("only newer preview builds are actionable, including reruns and digit changes", () => {
+  expect(newer(next, current)).toBe(true)
+  expect(newer(`${next}.2`, next)).toBe(true)
+  expect(newer(next, `${next}.2`)).toBe(false)
+  expect(newer(current, next)).toBe(false)
+  expect(newer("7.8.27", next)).toBe(false)
+  expect(newer("0.0.0-rc-101", next)).toBe(false)
 })
 
-describe("Kilo upgrade handler", () => {
-  test.each([undefined, ...Updater.methods])(
-    "rejects every target with method %s without updater services",
-    async (method) => {
-      await Effect.runPromise(
-        Effect.forEach([undefined, OPENCODE_VERSION, `v${OPENCODE_VERSION}`, "2.0.0", "invalid", ""], (target) =>
-          Effect.gen(function* () {
-            const error = yield* upgrade({
-              method: method === undefined ? Option.none() : Option.some(method),
-              target: target === undefined ? Option.none() : Option.some(target),
-            }).pipe(Effect.flip)
-            expect(error).toBeInstanceOf(Error)
-            expect(error.message).toBe(KiloUpdater.message)
-          }),
+test.each([
+  ["@opencode/cli", next],
+  [packageName, "7.8.27"],
+])("rejects release metadata for %s at %s", async (name, version) => {
+  await expect(
+    KiloUpdater.resolveRelease(async (url, init) => {
+      expect(url).toBe("https://registry.npmjs.org/%40kilocode%2Fcli/kilo-v2")
+      expect(init.redirect).toBe("error")
+      return Response.json({ name, version, optionalDependencies: { [native]: version } })
+    }),
+  ).rejects.toThrow("did not return a Kilo v2 release")
+})
+
+async function profile(
+  options: {
+    policy?: string
+    status?: number
+    channel?: string
+    binaryVersion?: string
+    ignoreScripts?: boolean
+    reported?: string
+    emptyTarball?: boolean
+  } = {},
+) {
+  const root = await mkdtemp(path.join(os.tmpdir(), "kilo-updater-"))
+  const manifest = path.join(root, "package.json")
+  const lockDirectory = path.join(root, "install-prefix")
+  const lock = path.join(lockDirectory, Hash.fast("kilo-cli-upgrade") + ".lock", "meta.json")
+  const lockProof = path.join(root, "held-lock")
+  await Bun.write(manifest, JSON.stringify({ name: packageName, version: options.binaryVersion ?? current }))
+  if (options.policy) await Bun.write(path.join(root, "kilo2.jsonc"), JSON.stringify({ update: options.policy }))
+  const requests: string[] = []
+  const installs: string[] = []
+  const ownership = { active: true }
+  const layers = LayerNode.compile(LayerNode.group([Global.node, AppProcess.node, EffectFlock.node]), {
+    replacements: [
+      Global.node.replace(
+        Global.layerWith({
+          home: root,
+          config: root,
+          state: root,
+          data: root,
+          cache: root,
+          log: root,
+          repos: root,
+          tmp: root,
+          bin: root,
+        }),
+      ),
+    ],
+  })
+  const layer = Layer.effect(
+    Updater.Service,
+    KiloUpdater.make(
+      {
+        channel: options.channel ?? "v2",
+        version: current,
+        executable: path.join(root, "kilo2.exe"),
+        request: async (url) => {
+          requests.push(url)
+          if (url.endsWith(".tgz"))
+            return new Response(options.emptyTarball ? "" : "x", { status: options.status ?? 206 })
+          return Response.json({ name: packageName, version: next, optionalDependencies: { [native]: next } })
+        },
+      },
+      () =>
+        Effect.sync(() =>
+          ownership.active
+            ? {
+                method: "npm",
+                manifest,
+                lockDirectory,
+                scriptsSetting: options.ignoreScripts ? [process.execPath, "-e", "console.log('true')"] : undefined,
+                command: (version) => {
+                  installs.push(version)
+                  return [
+                    process.execPath,
+                    "-e",
+                    `await Bun.write(process.argv[1], JSON.stringify({name:'@kilocode/cli',version:process.argv[2]}));
+                     await Bun.write(process.argv[3], String(await Bun.file(process.argv[4]).exists()))`,
+                    manifest,
+                    version,
+                    lockProof,
+                    lock,
+                  ]
+                },
+              }
+            : undefined,
         ),
+      () => [process.execPath, "-e", "console.log(process.argv[1])", options.reported ?? `kilo2 v${next}`],
+    ),
+  )
+  return {
+    requests,
+    installs,
+    ownership,
+    heldInstallLock: () => Bun.file(lockProof).text(),
+    run: <A, E>(effect: Effect.Effect<A, E, Updater.Service>) =>
+      Effect.runPromise(
+        effect.pipe(Effect.provide(layer), Effect.provide(layers), Effect.provide(NodeFileSystem.layer)),
+      ),
+    installed: async () => (await Bun.file(manifest).json()).version as string,
+    [Symbol.asyncDispose]: () => rm(root, { recursive: true, force: true }),
+  }
+}
+
+test("default background check notifies; explicit apply installs the pinned build once", async () => {
+  await using temp = await profile()
+  await temp.run(
+    Effect.gen(function* () {
+      const updater = yield* Updater.Service
+      expect(yield* updater.run()).toEqual({ type: "available", version: next })
+      expect(temp.installs).toEqual([])
+      yield* updater.apply(next)
+      expect(yield* updater.check()).toEqual({ type: "installed", version: next })
+      yield* updater.apply(next)
+    }),
+  )
+  expect(temp.installs).toEqual([next])
+  expect(await temp.installed()).toBe(next)
+  expect(await temp.heldInstallLock()).toBe("true")
+  expect(temp.requests).toContain(`https://registry.npmjs.org/${native}/-/${native.split("/")[1]}-${next}.tgz`)
+})
+
+test("opted-in auto mode updates without restarting a server", async () => {
+  await using temp = await profile({ policy: "auto" })
+  await temp.run(
+    Effect.gen(function* () {
+      const updater = yield* Updater.Service
+      const announced: string[] = []
+      expect(yield* updater.run((version) => announced.push(version))).toEqual({ type: "installed", version: next })
+      expect(announced).toEqual([next])
+    }),
+  )
+  expect(await temp.installed()).toBe(next)
+})
+
+test("a missing platform download or incorrect install method leaves the existing version alone", async () => {
+  await using temp = await profile({ status: 404 })
+  await temp.run(
+    Effect.gen(function* () {
+      const updater = yield* Updater.Service
+      expect((yield* updater.upgrade("curl", next).pipe(Effect.flip)).message).toContain("managed by npm")
+      expect((yield* updater.apply("0.0.0-v2-101").pipe(Effect.flip)).message).toBe(
+        `Kilo only installs the current kilo-v2 release (${next}), not 0.0.0-v2-101.`,
       )
-    },
+      expect((yield* updater.apply(next).pipe(Effect.flip)).message).toContain("HTTP 404")
+    }),
+  )
+  expect(temp.installs).toEqual([])
+  expect(await temp.installed()).toBe(current)
+})
+
+test("the upgrade command reports the eligible version before starting an explicit install", async () => {
+  const child = Bun.spawn(
+    [
+      process.execPath,
+      "-e",
+      `import { Updater } from "@opencode/cli/services/updater"
+     import { Effect, Option } from "effect"
+     import upgrade from "./src/upgrade"
+     const updater = Updater.Service.of({
+       check: () => Effect.succeed({ type: "available", version: process.argv[1] }),
+       apply: () => Effect.die(new Error("Unexpected install")),
+     })
+     await Effect.runPromise(upgrade({ target: Option.some(process.argv[2]), method: Option.none() })
+       .pipe(Effect.provideService(Updater.Service, updater)))`,
+      next,
+      "0.0.0-v2-101",
+    ],
+    { cwd: path.join(import.meta.dir, ".."), stdout: "pipe", stderr: "pipe" },
+  )
+  const [stdout, stderr, status] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ])
+  const output = Bun.stripANSI(stdout + stderr)
+  expect(status).toBe(1)
+  expect(output).toContain(`Kilo only installs the current kilo-v2 release (${next}), not 0.0.0-v2-101.`)
+  expect(output).not.toContain("Upgrading...")
+})
+
+test("does not replace a working launcher when the package manager disables postinstall", async () => {
+  await using temp = await profile({ ignoreScripts: true })
+  await temp.run(
+    Effect.gen(function* () {
+      const updater = yield* Updater.Service
+      expect((yield* updater.apply(next).pipe(Effect.flip)).message).toContain("must allow Kilo's postinstall")
+    }),
+  )
+  expect(temp.installs).toEqual([])
+  expect(await temp.installed()).toBe(current)
+})
+
+test("rechecks ownership before applying an earlier notification", async () => {
+  await using temp = await profile()
+  await temp.run(
+    Effect.gen(function* () {
+      const updater = yield* Updater.Service
+      expect(yield* updater.check()).toEqual({ type: "available", version: next })
+      temp.ownership.active = false
+      expect((yield* updater.apply(next).pipe(Effect.flip)).message).toContain("install changed")
+    }),
+  )
+  expect(temp.installs).toEqual([])
+  expect(await temp.installed()).toBe(current)
+})
+
+test("an updated manifest cannot disguise a stale executable", async () => {
+  await using temp = await profile({ reported: `kilo2 v${current}` })
+  await temp.run(
+    Effect.gen(function* () {
+      const updater = yield* Updater.Service
+      expect((yield* updater.apply(next).pipe(Effect.flip)).message).toContain("did not report version")
+      expect((yield* updater.check().pipe(Effect.flip)).message).toContain("did not report version")
+    }),
   )
 })
+
+test("a successful HTTP response with an empty platform tarball does not start an install", async () => {
+  await using temp = await profile({ emptyTarball: true })
+  await temp.run(
+    Effect.gen(function* () {
+      const updater = yield* Updater.Service
+      expect((yield* updater.apply(next).pipe(Effect.flip)).message).toContain("empty tarball")
+    }),
+  )
+  expect(temp.installs).toEqual([])
+})
+
+test.each([{ channel: "local" }, { binaryVersion: "7.8.27" }, { policy: "disable" }])(
+  "skips automatic updates without querying npm for %j",
+  async (options) => {
+    await using temp = await profile(options)
+    await temp.run(
+      Effect.gen(function* () {
+        const updater = yield* Updater.Service
+        expect(yield* updater.run()).toBeUndefined()
+        expect(yield* updater.method()).toBeUndefined()
+        expect(updater.removal("npm")).toBeUndefined()
+      }),
+    )
+    expect(temp.requests).toEqual([])
+    expect(temp.installs).toEqual([])
+  },
+)
