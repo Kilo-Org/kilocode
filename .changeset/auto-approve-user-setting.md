@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Require the user setting to enable auto-approve, so a project workspace cannot turn automatic permission approval on.
+Make auto-approve a user-level setting: it reads and writes your user settings only.

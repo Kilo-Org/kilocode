@@ -158,7 +158,7 @@ describe("registerToggleAutoApprove", () => {
     expect(env.messages).toContain("Auto-approve enabled. Sandbox escalation prompts are excluded.")
   })
 
-  it("stays off when only the workspace setting enables it", async () => {
+  it("reads the user layer only, with no user value", async () => {
     config({ workspaceValue: true })
     const replies: unknown[] = []
     const conn = connection(client({ reply: async (args) => replies.push(args) }))
@@ -174,7 +174,7 @@ describe("registerToggleAutoApprove", () => {
     expect(replies).toEqual([])
   })
 
-  it("stays off when only the workspace folder setting enables it", async () => {
+  it("reads the user layer only, with a folder value present", async () => {
     config({ workspaceFolderValue: true })
     const replies: unknown[] = []
     const conn = connection(client({ reply: async (args) => replies.push(args) }))
@@ -206,7 +206,7 @@ describe("registerToggleAutoApprove", () => {
     expect(replies).toEqual([{ requestID: "perm_1", directory: "/workspace", reply: "once" }])
   })
 
-  it("turns on through the user setting when a workspace value is also set", async () => {
+  it("turns on through the user setting while another layer holds a value", async () => {
     const env = config({ workspaceValue: true, globalValue: false })
     const conn = connection(client({}))
     const ctrl = registerToggleAutoApprove(
@@ -222,7 +222,7 @@ describe("registerToggleAutoApprove", () => {
     expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Global }])
   })
 
-  it("stays off when a configuration change only adds the workspace setting", async () => {
+  it("keeps following the user layer after a configuration change", async () => {
     const env = config({ globalValue: false })
     const conn = connection(client({}))
     const ctrl = registerToggleAutoApprove(

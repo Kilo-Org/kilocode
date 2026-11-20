@@ -34,8 +34,8 @@ const KEY = "enabled"
  * `permission.asked` events here and auto-replies "once". This avoids config-layer
  * issues (merged vs global, sparse defaults) and works even when the sidebar is closed.
  *
- * The setting is user scoped: only the user value can turn the toggle on, a project
- * configuration file cannot enable it, and the toggle is always written to the user setting.
+ * The setting is user scoped: the controller follows the user value, and the toggle is
+ * written to the user setting.
  */
 export function registerToggleAutoApprove(
   context: vscode.ExtensionContext,
