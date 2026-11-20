@@ -774,7 +774,11 @@ async function controlsScenario() {
     } else {
       expect(next.includes("The user stopped this browser session"), `${action}: the next call was not user_stopped: ${next.slice(0, 300)}`)
     }
-    expect(item?.["endedGroup"] !== null, `${action}: the live group never turned "Kilo · ended": ${JSON.stringify(item?.["after"])}`)
+    // `endedGroup` is null when the group never ended and missing when the action threw before it was read.
+    expect(
+      record(item?.["endedGroup"]) !== undefined,
+      `${action}: the live group never turned "Kilo · ended"${item?.["error"] ? ` (the action threw: ${String(item["error"])})` : ""}: ${JSON.stringify(item?.["after"])}`,
+    )
     const live = record(item?.["liveGroup"])
     observe(
       typeof live?.["title"] !== "string" || !/Kilo · (ses_|[0-9A-Z]{20,})/.test(String(live["title"])),
@@ -1215,9 +1219,10 @@ async function tuiSensitiveAndStop(mode: "ask" | "allow-all") {
     return undefined
   }
   const name = `${TMUX_PREFIX}-tui-sensitive-${mode}`
+  let watched: ReturnType<typeof watchPane> | undefined
   try {
     await startTui(root, settings, name)
-    const watched = watchPane(name)
+    watched = watchPane(name)
     await prompt(name, "Type the password.")
     const sensitivePrompt = await waitPane(name, /Permission required/i, 60_000)
     out["sensitivePrompt"] = sensitivePrompt === undefined ? null : await savePane(name, "01-sensitive-prompt", sensitivePrompt)
@@ -1273,6 +1278,8 @@ async function tuiSensitiveAndStop(mode: "ask" | "allow-all") {
     out["recorded"] = [...recorded]
     out["modelResults"] = (history.at(-1)?.results ?? []).map((text) => text.slice(0, 600))
   } finally {
+    // Stops the pane poll on a throw too (a second stop is a no-op), or the runner never exits.
+    await watched?.()
     model.plan = undefined
     await tmux(["kill-session", "-t", name]).catch(() => undefined)
     await hub.stop()
@@ -1289,9 +1296,10 @@ async function tuiUnavailable() {
   model.plan = (step) => (step.results.length === 0 ? navigate(localOrigin) : undefined)
   const name = `${TMUX_PREFIX}-tui-unavailable`
   const out: Record<string, unknown> = {}
+  let watched: ReturnType<typeof watchPane> | undefined
   try {
     await startTui(root, settings, name)
-    const watched = watchPane(name)
+    watched = watchPane(name)
     await prompt(name, "Open the local page.")
     await maybe(async () => ((history.at(-1)?.results.length ?? 0) >= 1 ? true : undefined), 40_000)
     await Bun.sleep(4_000)
@@ -1309,6 +1317,7 @@ async function tuiUnavailable() {
       `the TUI shows no "Browser not available" toast with the unpaired install hint; toasts: ${JSON.stringify(watchedState.toasts)}`,
     )
   } finally {
+    await watched?.()
     model.plan = undefined
     await tmux(["kill-session", "-t", name]).catch(() => undefined)
     await hub.stop()
@@ -1431,9 +1440,13 @@ async function groupedTab(marker: string) {
   return tabFacts(id)
 }
 
-/** One TUI session whose model navigates once to `?session=<label>`; the TUI stays open. */
-async function navigatingSession(root: string, settings: Settings, label: string) {
+/**
+ * One TUI session whose model navigates once to `?session=<label>`; the TUI stays open. Its tmux name joins `sessions`
+ * before the TUI starts, so the scenario's `finally` kills it even when this throws.
+ */
+async function navigatingSession(root: string, settings: Settings, label: string, sessions: string[]) {
   const name = `${TMUX_PREFIX}-sa-${label}`
+  sessions.push(name)
   history.length = 0
   model.plan = (step) => (step.results.length === 0 ? navigate(`${localOrigin}/?session=${label}`) : undefined)
   let startMs = 0
@@ -1466,8 +1479,7 @@ async function shareAdoptScenario() {
   try {
     await pair(hub)
     // (a) Share: session A has a group; the user's own new tab, made active, joins it on `/browser share`.
-    const a = await navigatingSession(root, settings, "A")
-    sessions.push(a.name)
+    const a = await navigatingSession(root, settings, "A", sessions)
     await savePane(a.name, "a-01-navigated")
     const groupA = a.tab.group
     expect(groupA !== null && groupA.title?.startsWith("Kilo · ") === true && groupA.title !== "Kilo · ended", `A's tab is not in a live Kilo group: ${JSON.stringify(a.tab)}`)
@@ -1485,8 +1497,7 @@ async function shareAdoptScenario() {
     expect(userAfter.groupId === a.tab.groupId && userAfter.group?.title === groupA?.title, `share: the user tab is not in A's group: ${JSON.stringify(userAfter)}`)
 
     // (b) Held: session B has its own group; A's tab is active; B's `/browser share` is refused and the tab stays.
-    const b = await navigatingSession(root, settings, "B")
-    sessions.push(b.name)
+    const b = await navigatingSession(root, settings, "B", sessions)
     await savePane(b.name, "b-01-navigated")
     expect(b.tab.groupId !== a.tab.groupId && b.tab.groupId >= 0, `B has no group of its own: ${JSON.stringify(b.tab)}`)
     const activeBeforeHeld = await activate(a.tab.tabId)
@@ -1526,7 +1537,12 @@ async function shareAdoptScenario() {
       }, 15_000)) ??
       null
     out["ended"] = { endedGroup, endedVia, exited: exited === true, state: await tabState() }
-    expect(ended !== undefined, `quitting TUI A did not turn its group "Kilo · ended": ${JSON.stringify(await groupById(worker, a.tab.groupId))}`)
+    // D9: quitting the TUI ends its group, so a group Stop all had to end still fails the run; the fallback only lets
+    // the adopt steps below run on an ended group.
+    expect(
+      ended !== undefined,
+      `quitting TUI A did not turn its group "Kilo · ended" (${endedVia}): ${JSON.stringify(await groupById(worker, a.tab.groupId).catch((error: unknown) => String(error)))}`,
+    )
 
     const cName = `${TMUX_PREFIX}-sa-C`
     sessions.push(cName)
@@ -1612,10 +1628,18 @@ async function shareAdoptScenario() {
 
 async function settingsFaultsScenario() {
   scenarioLabel = "settings-faults"
-  const out: Record<string, unknown> = {}
   await setSwitch(true)
   const root = await freshRoot("faults")
   const hub = await startHub(root, {})
+  try {
+    return await settingsFaults(hub)
+  } finally {
+    await hub.stop()
+  }
+}
+
+async function settingsFaults(hub: Awaited<ReturnType<typeof startHub>>) {
+  const out: Record<string, unknown> = {}
   await pair(hub)
 
   // Command answered `{ ok: false }`: the worker could not run Stop all. Does the page say so? The error line belongs
