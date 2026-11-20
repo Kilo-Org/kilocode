@@ -105,7 +105,7 @@ check("docs-write denies git", () => {
 
 check("docs-write allows no command with a file-writing form it cannot bound", () => {
   const bash = policy().modes["docs-write"].permission.bash
-  for (const cmd of ["sed", "uniq", "diff"]) {
+  for (const cmd of ["sed", "uniq", "diff", "sort"]) {
     assert.ok(!(`${cmd} *` in bash), `${cmd} must not be allowed: it can write a file or run a command`)
   }
 })
