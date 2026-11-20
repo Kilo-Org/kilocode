@@ -110,8 +110,8 @@ export async function runNonInteractivePrompt(input: Input) {
         decision: input.auto && request.metadata?.["interactive"] !== true ? "once" : "reject", // kilocode_change(sandbox) seam - --auto never approves a request that requires a person
         ...(input.auto ? {} : { message: PERMISSION_REJECTED_FEEDBACK }),
       })
+      .then(() => (autoRejected = autoRejected || !input.auto)) // kilocode_change(autoreject) - only a reply that succeeded rejected the ask
       .catch(() => {})
-    if (!input.auto) autoRejected = true // kilocode_change(autoreject) - the plain run rejected this ask
   }
 
   // A cancelled question lets the model continue; any other input request fails the run.
