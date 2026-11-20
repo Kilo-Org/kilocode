@@ -28,27 +28,51 @@ describe("ModesMigrator", () => {
       expect(permissions.read).toBe("allow")
       expect(permissions.edit).toBe("allow")
       expect(permissions.bash).toBe("allow")
-      expect(permissions.mcp).toBe("deny") // Not in groups, should be denied
+      expect(permissions.browser_open).toBe("deny")
+      expect(permissions.skill).toBe("deny")
+      expect("mcp" in permissions).toBe(false)
     })
 
-    test("maps browser group to bash permission", () => {
+    test("maps browser group to browser_open permission", () => {
       const groups = ["browser"]
       const permissions = ModesMigrator.convertPermissions(groups)
 
-      expect(permissions.bash).toBe("allow")
+      expect(permissions.browser_open).toBe("allow")
+      expect(permissions.bash).toBe("deny")
       expect(permissions.read).toBe("deny")
       expect(permissions.edit).toBe("deny")
-      expect(permissions.mcp).toBe("deny")
+      expect(permissions.skill).toBe("deny")
     })
 
-    test("maps mcp group to mcp permission", () => {
+    test("grants the tools of every migrated MCP server for an mcp group", () => {
       const groups = ["mcp"]
-      const permissions = ModesMigrator.convertPermissions(groups)
+      const permissions = ModesMigrator.convertPermissions(groups, ["github", "my server"])
 
-      expect(permissions.mcp).toBe("allow")
+      expect(permissions["github_*"]).toBe("allow")
+      expect(permissions["my_server_*"]).toBe("allow")
       expect(permissions.read).toBe("deny")
       expect(permissions.edit).toBe("deny")
       expect(permissions.bash).toBe("deny")
+      expect(permissions.browser_open).toBe("deny")
+      expect(permissions.skill).toBe("deny")
+      expect("mcp" in permissions).toBe(false)
+    })
+
+    test("denies the tools of every migrated MCP server when the mode has no mcp group", () => {
+      const permissions = ModesMigrator.convertPermissions(["read"], ["github", "my server"])
+
+      expect(permissions["github_*"]).toBe("deny")
+      expect(permissions["my_server_*"]).toBe("deny")
+      expect(permissions.skill).toBe("deny")
+      expect(permissions.read).toBe("allow")
+      expect("mcp" in permissions).toBe(false)
+    })
+
+    test("writes no server keys for an mcp group when no server was migrated", () => {
+      const permissions = ModesMigrator.convertPermissions(["mcp"])
+
+      expect(Object.keys(permissions).some((key) => key.endsWith("_*"))).toBe(false)
+      expect(permissions.skill).toBe("deny")
     })
 
     test("converts fileRegex groups to restricted permissions", () => {
@@ -59,12 +83,35 @@ describe("ModesMigrator", () => {
       const permissions = ModesMigrator.convertPermissions(groups)
 
       expect(permissions.read).toBe("allow")
-      expect(permissions.edit).toEqual({
-        "\\.md$": "allow",
-        "*": "deny",
-      })
+      expect(permissions.edit).toEqual({ "*": "deny", "*.md": "allow" })
+      expect(Object.keys(permissions.edit as Record<string, string>)[0]).toBe("*")
       expect(permissions.bash).toBe("deny")
-      expect(permissions.mcp).toBe("deny")
+      expect(permissions.skill).toBe("deny")
+    })
+
+    test("asks for a permission whose fileRegex cannot be translated", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = [["edit", { fileRegex: "[0-9]+\\.md$" }]]
+      const permissions = ModesMigrator.convertPermissions(groups)
+
+      expect(permissions.edit).toBe("ask")
+      expect(permissions.read).toBe("deny")
+    })
+
+    test("asks for a permission whose group options cannot be read", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = [["edit", { regex: "\\.md$" }]]
+      const permissions = ModesMigrator.convertPermissions(groups)
+
+      expect(permissions.edit).toBe("ask")
+      expect(permissions.read).toBe("deny")
+    })
+
+    test("asks for every server key when an mcp group carries a fileRegex", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = [["mcp", { fileRegex: "\\.md$" }]]
+      const permissions = ModesMigrator.convertPermissions(groups, ["github", "my server"])
+
+      expect(permissions["github_*"]).toBe("ask")
+      expect(permissions["my_server_*"]).toBe("ask")
+      expect(permissions.skill).toBe("deny")
     })
 
     test("handles tuple without fileRegex", () => {
@@ -74,28 +121,32 @@ describe("ModesMigrator", () => {
       expect(permissions.edit).toBe("allow")
       expect(permissions.read).toBe("deny")
       expect(permissions.bash).toBe("deny")
-      expect(permissions.mcp).toBe("deny")
+      expect(permissions.skill).toBe("deny")
+      expect("mcp" in permissions).toBe(false)
     })
 
-    test("passes through unknown groups but still denies standard permissions", () => {
+    test("ignores unknown groups but still denies standard permissions", () => {
       const groups = ["custom-group"]
       const permissions = ModesMigrator.convertPermissions(groups)
 
-      expect(permissions["custom-group"]).toBe("allow")
+      expect(permissions["custom-group"]).toBeUndefined()
       expect(permissions.read).toBe("deny")
       expect(permissions.edit).toBe("deny")
       expect(permissions.bash).toBe("deny")
-      expect(permissions.mcp).toBe("deny")
+      expect(permissions.browser_open).toBe("deny")
+      expect(permissions.skill).toBe("deny")
     })
 
-    test("denies bash and mcp when only read and edit are allowed", () => {
+    test("denies bash, browser and skill when only read and edit are allowed", () => {
       const groups = ["read", "edit"]
       const permissions = ModesMigrator.convertPermissions(groups)
 
       expect(permissions.read).toBe("allow")
       expect(permissions.edit).toBe("allow")
       expect(permissions.bash).toBe("deny")
-      expect(permissions.mcp).toBe("deny")
+      expect(permissions.browser_open).toBe("deny")
+      expect(permissions.skill).toBe("deny")
+      expect("mcp" in permissions).toBe(false)
     })
   })
 
@@ -114,10 +165,7 @@ describe("ModesMigrator", () => {
       expect(agent.mode).toBe("primary")
       expect(agent.prompt).toBe("You are a translator...\n\nTranslate accurately.")
       expect(agent.permission?.read).toBe("allow")
-      expect(agent.permission?.edit).toEqual({
-        "\\.json$": "allow",
-        "*": "deny",
-      })
+      expect(agent.permission?.edit).toEqual({ "*": "deny", "*.json": "allow" })
     })
 
     test("uses description when available", () => {
@@ -339,6 +387,57 @@ describe("ModesMigrator", () => {
       expect(Object.keys(result.agents)).toHaveLength(2)
       expect(result.agents).toHaveProperty("translate")
       expect(result.agents).toHaveProperty("reviewer")
+    })
+
+    test("grants an mcp group the tools of the migrated servers it was given", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: helper
+    name: Helper
+    roleDefinition: Helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+
+      const result = await ModesMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+        mcpServers: ["github"],
+      })
+
+      expect(result.agents.helper.permission?.["github_*"]).toBe("allow")
+      expect("mcp" in (result.agents.helper.permission ?? {})).toBe(false)
+      expect(result.warnings).toHaveLength(0)
+    })
+
+    test("reports a mode warning for a fileRegex that cannot be translated", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: docs
+    name: Docs
+    roleDefinition: Docs
+    groups:
+      - - edit
+        - fileRegex: "[0-9]+\\\\.md$"`,
+          )
+        },
+      })
+
+      const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true })
+
+      expect(result.agents.docs.permission?.edit).toBe("ask")
+      expect(result.warnings).toHaveLength(1)
+      expect(result.warnings[0]).toContain("docs")
+      expect(result.warnings[0]).toContain("ask")
     })
   })
 })

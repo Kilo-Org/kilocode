@@ -354,9 +354,19 @@ export namespace KilocodeConfig {
     const warnings: Config.Warning[] = []
     let result: Config.Info = {}
 
-    // Load Kilocode custom modes
+    // Load Kilocode MCP servers (skip global VSCode extension paths unless running in an editor or Console daemon)
+    const skipGlobal = process.env["KILO_PLATFORM"] !== "vscode" && process.env["KILOCODE_FEATURE"] !== "daemon"
+    const mcp = await McpMigrator.loadMcpConfig(input.projectDir, skipGlobal)
+    if (Object.keys(mcp).length > 0) {
+      result = input.merge(result, { mcp })
+    }
+
+    // Load Kilocode custom modes, granting an `mcp` group the tools of the servers loaded above
     try {
-      const migration = await ModesMigrator.migrate({ projectDir: input.projectDir })
+      const migration = await ModesMigrator.migrate({
+        projectDir: input.projectDir,
+        mcpServers: Object.keys(mcp),
+      })
       if (Object.keys(migration.agents).length > 0) {
         result = input.merge(result, { agent: migration.agents })
         log.debug("loaded kilocode custom modes", {
@@ -366,6 +376,9 @@ export namespace KilocodeConfig {
       }
       for (const skipped of migration.skipped) {
         log.debug("skipped kilocode mode", { slug: skipped.slug, reason: skipped.reason })
+      }
+      for (const warning of migration.warnings) {
+        log.debug("kilocode mode warning", { warning })
       }
     } catch (err) {
       log.warn("failed to load kilocode modes", { error: err })
@@ -400,13 +413,6 @@ export namespace KilocodeConfig {
       }
     } catch (err) {
       log.warn("failed to load kilocode rules", { error: err })
-    }
-
-    // Load Kilocode MCP servers (skip global VSCode extension paths unless running in an editor or Console daemon)
-    const skipGlobal = process.env["KILO_PLATFORM"] !== "vscode" && process.env["KILOCODE_FEATURE"] !== "daemon"
-    const mcp = await McpMigrator.loadMcpConfig(input.projectDir, skipGlobal)
-    if (Object.keys(mcp).length > 0) {
-      result = input.merge(result, { mcp })
     }
 
     // Load .kilocodeignore patterns

@@ -1,6 +1,7 @@
 import { Config } from "../config/config"
 import { ConfigPermissionV1 as ConfigPermission } from "@opencode-ai/core/v1/config/permission"
 import { ModesMigrator } from "./modes-migrator"
+import { McpMigrator } from "./mcp-migrator"
 import { RulesMigrator } from "./rules-migrator"
 import { WorkflowsMigrator } from "./workflows-migrator"
 import { IgnoreMigrator } from "./ignore-migrator"
@@ -26,13 +27,22 @@ export namespace KilocodeConfigInjector {
     // Build config object
     const config: Partial<Config.Info> = {}
 
-    // Migrate custom modes
-    const modesMigration = await ModesMigrator.migrate(options)
+    // Load MCP servers first so an `mcp` mode group can grant their tools
+    const mcp = await McpMigrator.loadMcpConfig(options.projectDir, options.skipGlobalPaths)
 
-    // Log skipped default modes (for debugging)
+    // Migrate custom modes
+    const modesMigration = await ModesMigrator.migrate({
+      projectDir: options.projectDir,
+      globalSettingsDir: options.globalSettingsDir,
+      skipGlobalPaths: options.skipGlobalPaths,
+      mcpServers: Object.keys(mcp),
+    })
+
+    // Log skipped default modes and mode migration warnings (for debugging)
     for (const skipped of modesMigration.skipped) {
       warnings.push(`Mode '${skipped.slug}' skipped: ${skipped.reason}`)
     }
+    warnings.push(...modesMigration.warnings)
 
     if (Object.keys(modesMigration.agents).length > 0) {
       config.agent = modesMigration.agents

@@ -62,10 +62,14 @@ Kilocode uses "groups" to define what tools a mode can access. These are convert
 | `read` | `read: "allow"` | File reading |
 | `edit` | `edit: "allow"` | File editing |
 | `command` | `bash: "allow"` | Shell commands |
-| `browser` | `bash: "allow"` | Browser actions (via bash) |
-| `mcp` | `mcp: "allow"` | MCP server access |
+| `browser` | `browser_open: "allow"` | Integrated Browser navigation |
+| `mcp` | `<server>_*: "allow"` per migrated server | One key per MCP server the same migration writes |
 
-**Important:** Permissions that are NOT in the groups list are explicitly set to `"deny"`. This ensures that a mode with only `read` and `edit` groups cannot run shell commands or access MCP servers.
+There is no `mcp` permission key: an `mcp` group grants the tools of each migrated server through a `<server name>_*` key, with characters outside `[a-zA-Z0-9_-]` replaced by `_`. A mode without an `mcp` group denies those keys.
+
+**Important:** Permissions that are NOT in the groups list are explicitly set to `"deny"` (`read`, `edit`, `bash`, `browser_open`, `skill`, and the per-server keys). This ensures that a mode with only `read` and `edit` groups cannot run shell commands or access MCP servers.
+
+A group option outside `fileRegex` and `description` means the group was not read fully, so its permission is set to `"ask"` rather than granted.
 
 ### File Restrictions
 
@@ -86,16 +90,19 @@ This converts to:
   "permission": {
     "read": "allow",
     "edit": {
-      "\\.md$": "allow",
-      "*": "deny"
+      "*": "deny",
+      "*.md": "allow"
     },
     "bash": "deny",
-    "mcp": "deny"
+    "browser_open": "deny",
+    "skill": "deny"
   }
 }
 ```
 
-Note: `bash` and `mcp` are explicitly denied because they weren't in the original groups list.
+The `fileRegex` is translated into permission wildcard globs, with the catch-all `"*": "deny"` written first because the CLI resolves the last matching rule. The supported subset is the same one the JetBrains plugin migrator uses ([`permission-glob.ts`](../permission-glob.ts)): anchors, literal characters, `\`-escaped punctuation, `.` and `.*`, `(...)` alternation, and an optional trailing `?`. A pattern outside that subset (a character class, `+`, a `\d`-style escape, nested groups) sets that permission to `"ask"` and reports a migration warning, so the mode asks instead of silently losing the restriction.
+
+`bash`, `browser_open` and `skill` are explicitly denied because they weren't in the original groups list.
 
 ## Default Modes
 
@@ -142,9 +149,12 @@ customModes:
       "permission": {
         "read": "allow",
         "edit": {
-          "src/i18n/.*\\.json$": "allow",
-          "*": "deny"
-        }
+          "*": "deny",
+          "*src/i18n/*.json": "allow"
+        },
+        "bash": "deny",
+        "browser_open": "deny",
+        "skill": "deny"
       }
     }
   }
