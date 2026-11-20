@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 163,
-    "markedLines": 2932,
+    "files": 164,
+    "markedLines": 2971,
     "unmarkedLines": 468,
     "deletedFiles": 0
   },
@@ -334,7 +334,7 @@
     },
     "packages/tui/src/util/permission.ts": {
       "rung": 4,
-      "seam": "Call the Kilo-owned Flow permission presenter before the unchanged custom-action fallback. The public TUI plugin API cannot replace the built-in permission prompt or its presentation function; only the Flow action opts into resource-list presentation, so ordinary upstream custom permissions keep their default output."
+      "seam": "Call the Kilo-owned Flow and browser permission presenters before the unchanged custom-action fallback. The public TUI plugin API cannot replace the built-in permission prompt or its presentation function; only the Flow action (resource-list presentation) and the Kilo `browser` and `browser_sensitive` actions (class, origin and sensitive reason, packages/tui/src/kilocode/browser-permission.ts) opt in, so ordinary upstream custom permissions keep their default output."
     },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
@@ -351,6 +351,10 @@
     "packages/tui/src/mini/runtime.lifecycle.ts": {
       "rung": 4,
       "seam": "Call the Kilo-owned `registerMiniParsers` before the mini renderer starts, so fenced code in mini highlights the languages the full TUI supports instead of only OpenTUI's bundled JavaScript, TypeScript, Markdown and Zig. The full TUI registers the same upstream parser config at module load in `tui/src/routes/session/index.tsx`; mini has no equivalent call, so a Kotlin fence renders as plain text. This is a defect fix in upstream's mini lifecycle. Rung 1 has no hook for the CLI frontend's parser registry, rung 2 cannot reach it from `packages/kilo-cli` because the parser config is a package-local module rather than an exported surface, and rung 3 would add a host knob on `MiniHost` for one call. The marked lines only import and call `tui/src/kilocode/mini-parsers.ts`; no Kilo value changes."
+    },
+    "packages/tui/src/mini/tool.ts": {
+      "rung": 4,
+      "seam": "Browser tool rows in `kilo mini` (feature `browser`) mask typed text, as the main transcript does: `normalizeInput` and `normalizeMetadata`, which every mini row, inline summary and structured fallback reads through `normalizeTool`/`frame`, pass the input and Code Mode's `toolCalls` metadata through the Kilo-owned `browserDisplayInput`/`browserDisplayMetadata` (packages/tui/src/kilocode/browser-display.ts), and the one-line start and inline rows leave out the input keys in `ROW_INPUT_OMIT` (Code Mode's `code`, whose program can type text inline), as the transcript's subagent child line does. Upstream has no mini renderer hook for tool input, so rung 1 and 2 cannot reach these rows, and the mask is a Kilo browser rule rather than a generic seam."
     },
     "packages/tui/src/context/permission.tsx": {
       "rung": 4,
@@ -411,7 +415,7 @@
     },
     "packages/tui/src/routes/session/index.tsx": {
       "rung": 4,
-      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows. Auto-accept mode (feature `sandbox`) replies `once` to every pending permission request in this route and hides the prompt; a request whose metadata sets `interactive: true` (a Kilo sandbox escalation, a sensitive browser step) must still be answered by a person, as `run --auto` already enforces. The auto-approve effect, the prompted list and the tool-row highlight call the Kilo-owned `requiresPerson` predicate (packages/tui/src/kilocode/permission-mode.ts) so the three cannot drift. The TUI plugin API has no hook into this route's permission replies or prompt selection (rung 1), the host cannot reach the TUI process (rung 2), and an inline generic check would repeat the same condition three times (rung 3)."
+      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows. Browser tool rows (feature `browser`) mask typed text: the tool props, the Code Mode call rows, the subagent live child line and the expanded turn-token table (`turnTokenToolSummary`, exported for its test) pass the input through the Kilo-owned `browserDisplayInput`/`browserDisplayCalls`/`browserDisplayText` (packages/tui/src/kilocode/browser-display.ts), the live child line also leaves out the keys in `ROW_INPUT_OMIT` (Code Mode's `code`, whose program can type text inline), and the turn-token table shows no input at all for Code Mode's own tool (`ROW_PROGRAM_TOOL`, whose whole input is that program, streaming or not), because no renderer hook sees a row's input before it is drawn. Auto-accept mode (feature `sandbox`) replies `once` to every pending permission request in this route and hides the prompt; a request whose metadata sets `interactive: true` (a Kilo sandbox escalation, a sensitive browser step) must still be answered by a person, as `run --auto` already enforces. The auto-approve effect, the prompted list and the tool-row highlight call the Kilo-owned `requiresPerson` predicate (packages/tui/src/kilocode/permission-mode.ts) so the three cannot drift. The TUI plugin API has no hook into this route's permission replies or prompt selection (rung 1), the host cannot reach the TUI process (rung 2), and an inline generic check would repeat the same condition three times (rung 3)."
     },
     "packages/tui/src/routes/session/group-view.tsx": {
       "rung": 4,

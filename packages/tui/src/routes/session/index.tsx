@@ -137,6 +137,15 @@ import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
 import { RoutedModelBadge, RoutedStep, routedModelLabel } from "../../kilocode/routed-model" // kilocode_change(gateway)
 import { BoardTool, boardTools } from "../../kilocode/board-tool" // kilocode_change(board)
 import { requiresPerson } from "../../kilocode/permission-mode" // kilocode_change(sandbox) - auto-approve leaves human-only requests to the prompt
+// kilocode_change start - browser: browser rows never show typed text
+import {
+  browserDisplayCalls,
+  browserDisplayInput,
+  browserDisplayText,
+  ROW_INPUT_OMIT,
+  ROW_PROGRAM_TOOL,
+} from "../../kilocode/browser-display"
+// kilocode_change end
 export { InlineToolRow } from "./message-parts"
 export { toolDisplay } from "./message-parts"
 
@@ -1896,9 +1905,13 @@ function TurnTokenToolCalls(props: { tools: SessionMessageAssistantTool[] }) {
   )
 }
 
-function turnTokenToolSummary(tool: SessionMessageAssistantTool) {
-  const data = tool.state.input
-  if (typeof data === "string") return data
+// kilocode_change start - browser: exported for its mask test, and typed text is masked
+export function turnTokenToolSummary(tool: SessionMessageAssistantTool) {
+  // Code Mode's whole input is the program, which can type text inline: the row shows its name only, streaming or not.
+  if (canonicalToolName(tool.name) === ROW_PROGRAM_TOOL) return ""
+  if (typeof tool.state.input === "string") return browserDisplayText(tool.name, tool.state.input)
+  const data = browserDisplayInput(tool.name, tool.state.input)
+  // kilocode_change end
   const primaryKey = ["command", "id", "pattern", "url", "query", "path", "description", "code"].find(
     (key) => key in data,
   )
@@ -2600,7 +2613,10 @@ function ToolPart(props: { part: SessionMessageAssistantTool; images?: boolean }
       return toolDisplayMetadata(props.part.state)
     },
     get input() {
-      return typeof props.part.state.input === "string" ? {} : props.part.state.input
+      // kilocode_change start - browser: mask typed text
+      const input = typeof props.part.state.input === "string" ? {} : props.part.state.input
+      return browserDisplayInput(props.part.name, input)
+      // kilocode_change end
     },
     get output() {
       if (props.part.state.status === "streaming") return undefined
@@ -3428,11 +3444,12 @@ export function subagentDetail(messages: readonly SessionMessageInfo[]) {
   return { tools, retry, current, duration }
 }
 
-const SUBAGENT_TOOL_OMIT = ["content", "patchText", "newString", "oldString"]
+const SUBAGENT_TOOL_OMIT = ["content", "patchText", "newString", "oldString", ...ROW_INPUT_OMIT]
 
 export function subagentToolLabel(part: SessionMessageAssistantTool) {
   if (part.state.status === "streaming") return Locale.titlecase(canonicalToolName(part.name))
-  const args = primitiveInputSummary(part.state.input, SUBAGENT_TOOL_OMIT).replace(/\s+/g, " ")
+  const input = browserDisplayInput(part.name, part.state.input)
+  const args = primitiveInputSummary(input, SUBAGENT_TOOL_OMIT).replace(/\s+/g, " ")
   const label = `${Locale.titlecase(canonicalToolName(part.name))}${args ? ` ${args}` : ""}`
   return Locale.truncate(label, 120)
 }
@@ -3524,7 +3541,7 @@ function Execute(props: ToolProps) {
   const theme = useTheme()
   const dialog = useDialog()
   const isLoading = createMemo(() => props.part.state.status === "streaming" || props.part.state.status === "running")
-  const calls = createMemo(() => executeCalls(props.metadata.toolCalls))
+  const calls = createMemo(() => browserDisplayCalls(executeCalls(props.metadata.toolCalls))) // kilocode_change(browser) - mask typed text
   const output = createMemo(() => stripAnsi(props.output?.trim() ?? ""))
   const hasRuntimeError = createMemo(() => props.metadata.error === true || props.part.state.status === "error")
   const outputPreview = createMemo(() => collapseToolOutput(output(), 4, 4 * Math.max(20, ctx.width - 6)).output)

@@ -142,6 +142,7 @@ export const dict = {
   "ui.tool.chart.failed": "Grafik oluşturulamadı",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Tarayıcı ayarları",
+  "browser.command.starting": "Kilo hâlâ başlatılıyor. Birazdan tekrar deneyin.",
   "browser.command.description": "Tarayıcı arka ucunu, çalışıp çalışamayacağını ve kaynak izinlerini göster",
   "browser.command.backend": "Arka uç",
   "browser.command.observation": "Gözlem",
@@ -167,6 +168,40 @@ export const dict = {
   "browser.state.unavailable": "kullanılamıyor",
   "browser.state.readyHint": "Kilo'ya ait bir Chromium profili; ilk tarayıcı çağrısında başlar",
   "browser.state.extensionHint": "Kendi tarayıcınızı kullanmak için Kilo tarayıcı uzantısını bağlayın",
+  "browser.command.usage":
+    "Ayarlar için /browser, bu oturuma etkin sekmenizi vermek için /browser share veya en son sona eren sekme grubunu yeniden kullanmak için /browser adopt kullanın.",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "{{origin}} üzerindeki sayfaları oku",
+  "browser.permission.act.title": "{{origin}} üzerinde tıkla ve yaz",
+  "browser.permission.navigate.title": "{{origin}} üzerinde sayfa aç",
+  "browser.permission.read.detail":
+    "Onaylarsanız bu oturum, sona erene kadar {{origin}} üzerindeki sayfaları okuyabilir.",
+  "browser.permission.act.detail":
+    "Onaylarsanız bu oturum, sona erene kadar {{origin}} üzerinde tıklayabilir, yazı yazabilir ve sayfa betikleri çalıştırabilir.",
+  "browser.permission.navigate.detail": "Onaylarsanız bu oturum, sona erene kadar {{origin}} üzerinde sayfa açabilir.",
+  "browser.permission.frame": "Bu kaynak sayfanın içindeki bir çerçevedir, sayfanın kendisi değildir.",
+  "browser.permission.sensitive.title": "{{origin}} üzerinde hassas tarayıcı adımı",
+  "browser.permission.sensitive.reason": "Neden: {{reason}}",
+  "browser.permission.sensitive.once": "Bu adımı yalnızca bir kişi onaylayabilir. Onay yalnızca bu tek adımı kapsar.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Etkin tarayıcı sekmesini paylaş",
+  "browser.share.description": "Tarayıcınızın etkin sekmesini bu oturumun sekme grubuna taşı",
+  "browser.share.done": "Etkin sekmeniz artık bu oturumun sekme grubunda.",
+  "browser.adopt.title": "Sona eren tarayıcı sekme grubunu yeniden kullan",
+  "browser.adopt.description": "Bu oturuma en son sona eren Kilo sekme grubunu ver",
+  "browser.adopt.done": "Bu oturum artık en son sona eren sekme grubunu kullanıyor.",
+  "browser.adopt.none": "Yeniden kullanılacak sona ermiş sekme grubu yok.",
+  "browser.adopt.kept": "Bu oturumun zaten kendi sekmeleri var ve bunları koruyor.",
+  "browser.adopt.unconfirmed":
+    "Tarayıcıdan en son sona eren sekme grubunu yeniden kullanması istendi. Yapıp yapmadığını görmek için Kilo tarayıcı uzantısını güncelleyin.",
+  "browser.control.notExtension":
+    "Sekme paylaşma ve yeniden kullanma için Kilo tarayıcı uzantısı gerekir. /browser içinde seçin.",
+  "browser.control.organizationOff": "Kuruluşunuz Kilo'da tarayıcı denetimini kapattı.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Tarayıcı kullanılamıyor",
+  "browser.notice.outdatedTitle": "Tarayıcı uzantısı güncel değil",
+  "browser.notice.stopped":
+    "Bu oturum için tarayıcıyı durdurdunuz. Sekmeleri bu oturuma geri vermek için /browser adopt çalıştırın.",
   "browser.notice.extension":
     "Kilo tarayıcı uzantısı {{browser}} içinde bağlı. Tarayıcı araçları için yerleşik tarayıcı yerine kendi tarayıcınız kullanılsın mı?",
   "browser.notice.switch": "Tarayıcımı kullan",

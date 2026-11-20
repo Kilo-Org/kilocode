@@ -137,6 +137,7 @@ export const dict = {
   "ui.tool.chart.failed": "차트를 렌더링하지 못했습니다",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "브라우저 설정",
+  "browser.command.starting": "Kilo가 아직 시작 중입니다. 잠시 후 다시 시도하세요.",
   "browser.command.description": "브라우저 백엔드, 실행 가능 여부, 출처 권한을 표시",
   "browser.command.backend": "백엔드",
   "browser.command.observation": "관찰",
@@ -161,6 +162,37 @@ export const dict = {
   "browser.state.unavailable": "사용할 수 없음",
   "browser.state.readyHint": "Kilo가 소유한 Chromium 프로필이며 첫 브라우저 호출에서 시작됩니다",
   "browser.state.extensionHint": "Kilo 브라우저 확장을 연결해 자신의 브라우저를 사용하세요",
+  "browser.command.usage":
+    "설정에는 /browser, 이 세션에 활성 탭을 넘기려면 /browser share, 마지막으로 종료된 탭 그룹을 다시 사용하려면 /browser adopt를 사용하세요.",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "{{origin}}의 페이지 읽기",
+  "browser.permission.act.title": "{{origin}}에서 클릭 및 입력",
+  "browser.permission.navigate.title": "{{origin}}의 페이지 열기",
+  "browser.permission.read.detail": "승인하면 이 세션이 끝날 때까지 {{origin}}의 페이지를 읽을 수 있습니다.",
+  "browser.permission.act.detail":
+    "승인하면 이 세션이 끝날 때까지 {{origin}}에서 클릭, 입력, 페이지 스크립트 실행을 할 수 있습니다.",
+  "browser.permission.navigate.detail": "승인하면 이 세션이 끝날 때까지 {{origin}}의 페이지를 열 수 있습니다.",
+  "browser.permission.frame": "이 출처는 페이지 내부의 프레임이며 페이지 자체가 아닙니다.",
+  "browser.permission.sensitive.title": "{{origin}}의 민감한 브라우저 단계",
+  "browser.permission.sensitive.reason": "이유: {{reason}}",
+  "browser.permission.sensitive.once": "이 단계는 사람만 승인할 수 있습니다. 승인은 이 단계 하나에만 적용됩니다.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "활성 브라우저 탭 공유",
+  "browser.share.description": "브라우저의 활성 탭을 이 세션의 탭 그룹으로 옮깁니다",
+  "browser.share.done": "활성 탭이 이 세션의 탭 그룹으로 옮겨졌습니다.",
+  "browser.adopt.title": "종료된 브라우저 탭 그룹 다시 사용",
+  "browser.adopt.description": "이 세션에 가장 최근에 종료된 Kilo 탭 그룹을 줍니다",
+  "browser.adopt.done": "이 세션은 이제 마지막으로 종료된 탭 그룹을 사용합니다.",
+  "browser.adopt.none": "다시 사용할 종료된 탭 그룹이 없습니다.",
+  "browser.adopt.kept": "이 세션에는 이미 자체 탭이 있으며 그대로 유지됩니다.",
+  "browser.adopt.unconfirmed":
+    "마지막으로 종료된 탭 그룹을 다시 사용하도록 브라우저에 요청했습니다. 실행되었는지 확인하려면 Kilo 브라우저 확장을 업데이트하세요.",
+  "browser.control.notExtension": "탭 공유와 다시 사용에는 Kilo 브라우저 확장이 필요합니다. /browser에서 선택하세요.",
+  "browser.control.organizationOff": "조직에서 Kilo의 브라우저 제어를 껐습니다.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "브라우저를 사용할 수 없음",
+  "browser.notice.outdatedTitle": "브라우저 확장이 오래됨",
+  "browser.notice.stopped": "이 세션의 브라우저를 중지했습니다. 탭을 돌려주려면 /browser adopt를 실행하세요.",
   "browser.notice.extension":
     "Kilo 브라우저 확장이 {{browser}}에 연결되었습니다. 브라우저 도구에 내장 브라우저 대신 내 브라우저를 사용할까요?",
   "browser.notice.switch": "내 브라우저 사용",

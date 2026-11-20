@@ -59,7 +59,8 @@ export const dict = {
   "marketplace.install.failed": "インストールに失敗しました",
   "marketplace.install.done": "完了",
   "marketplace.install.close": "閉じる",
-  "marketplace.install.mcp.signIn.message": "{{name}} はインストールされていますが、ツールを使用する前にサインインが必要です。",
+  "marketplace.install.mcp.signIn.message":
+    "{{name}} はインストールされていますが、ツールを使用する前にサインインが必要です。",
   "marketplace.install.mcp.signIn.button": "サインイン",
   "marketplace.install.mcp.signIn.waiting": "ブラウザでのサインインを待っています…",
   "marketplace.install.mcp.signIn.cancel": "キャンセル",
@@ -138,6 +139,7 @@ export const dict = {
   "ui.tool.chart.failed": "グラフを描画できませんでした",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "ブラウザ設定",
+  "browser.command.starting": "Kilo はまだ起動中です。しばらくしてからもう一度お試しください。",
   "browser.command.description": "ブラウザのバックエンド、実行可否、オリジンの許可を表示",
   "browser.command.backend": "バックエンド",
   "browser.command.observation": "観測",
@@ -162,6 +164,40 @@ export const dict = {
   "browser.state.unavailable": "利用不可",
   "browser.state.readyHint": "Kilo が所有する Chromium プロファイル。最初のブラウザ呼び出しで起動します",
   "browser.state.extensionHint": "Kilo ブラウザ拡張機能を接続して自分のブラウザを操作します",
+  "browser.command.usage":
+    "設定には /browser、このセッションにアクティブなタブを渡すには /browser share、最後に終了したタブグループを再利用するには /browser adopt を使います。",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "{{origin}} のページを読み取る",
+  "browser.permission.act.title": "{{origin}} でクリックと入力を行う",
+  "browser.permission.navigate.title": "{{origin}} のページを開く",
+  "browser.permission.read.detail": "承認すると、このセッションが終わるまで {{origin}} のページを読み取れます。",
+  "browser.permission.act.detail":
+    "承認すると、このセッションが終わるまで {{origin}} でクリック、入力、ページスクリプトの実行ができます。",
+  "browser.permission.navigate.detail": "承認すると、このセッションが終わるまで {{origin}} のページを開けます。",
+  "browser.permission.frame": "このオリジンはページ内のフレームであり、ページそのものではありません。",
+  "browser.permission.sensitive.title": "{{origin}} の機密ブラウザステップ",
+  "browser.permission.sensitive.reason": "理由: {{reason}}",
+  "browser.permission.sensitive.once":
+    "このステップを承認できるのは人のみです。承認はこの 1 ステップだけに適用されます。",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "アクティブなブラウザタブを共有",
+  "browser.share.description": "ブラウザのアクティブなタブをこのセッションのタブグループに移動します",
+  "browser.share.done": "アクティブなタブがこのセッションのタブグループに移動しました。",
+  "browser.adopt.title": "終了したブラウザタブグループを再利用",
+  "browser.adopt.description": "このセッションに直近に終了した Kilo タブグループを渡します",
+  "browser.adopt.done": "このセッションは最後に終了したタブグループを使用します。",
+  "browser.adopt.none": "再利用できる終了済みのタブグループはありません。",
+  "browser.adopt.kept": "このセッションには既に独自のタブがあり、そのまま保持します。",
+  "browser.adopt.unconfirmed":
+    "最後に終了したタブグループを再利用するようブラウザに要求しました。実行されたかどうかは Kilo ブラウザ拡張機能を更新して確認してください。",
+  "browser.control.notExtension":
+    "タブの共有と再利用には Kilo ブラウザ拡張機能が必要です。/browser で選択してください。",
+  "browser.control.organizationOff": "組織が Kilo でのブラウザ操作をオフにしました。",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "ブラウザを利用できません",
+  "browser.notice.outdatedTitle": "ブラウザ拡張機能が古くなっています",
+  "browser.notice.stopped":
+    "このセッションのブラウザを停止しました。タブを戻すには /browser adopt を実行してください。",
   "browser.notice.extension":
     "Kilo ブラウザ拡張機能が {{browser}} で接続されています。ブラウザツールで同梱ブラウザの代わりに自分のブラウザを使いますか？",
   "browser.notice.switch": "自分のブラウザを使う",

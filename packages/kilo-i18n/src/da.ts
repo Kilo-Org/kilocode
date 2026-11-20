@@ -140,6 +140,7 @@ export const dict = {
   "ui.tool.chart.failed": "Diagrammet kunne ikke vises",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Browserindstillinger",
+  "browser.command.starting": "Kilo starter stadig. Prøv igen om et øjeblik.",
   "browser.command.description": "Vis browserens backend, om den kan køre, og oprindelsestilladelserne",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Observation",
@@ -165,6 +166,38 @@ export const dict = {
   "browser.state.unavailable": "utilgængelig",
   "browser.state.readyHint": "En Chromium-profil ejet af Kilo, startet ved det første browserkald",
   "browser.state.extensionHint": "Forbind Kilo-browserudvidelsen for at bruge din egen browser",
+  "browser.command.usage":
+    "Brug /browser til indstillinger, /browser share til at give denne session din aktive fane, eller /browser adopt til at genbruge den senest afsluttede fanegruppe.",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Læs sider på {{origin}}",
+  "browser.permission.act.title": "Klik og skriv på {{origin}}",
+  "browser.permission.navigate.title": "Åbn sider på {{origin}}",
+  "browser.permission.read.detail": "Godkendelse lader denne session læse sider på {{origin}}, indtil den slutter.",
+  "browser.permission.act.detail":
+    "Godkendelse lader denne session klikke, skrive og køre sideskripter på {{origin}}, indtil den slutter.",
+  "browser.permission.navigate.detail": "Godkendelse lader denne session åbne sider på {{origin}}, indtil den slutter.",
+  "browser.permission.frame": "Denne oprindelse er en ramme inde i siden, ikke selve siden.",
+  "browser.permission.sensitive.title": "Følsomt browsertrin på {{origin}}",
+  "browser.permission.sensitive.reason": "Årsag: {{reason}}",
+  "browser.permission.sensitive.once": "Kun en person kan godkende dette trin. Godkendelsen dækker kun dette ene trin.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Del den aktive browserfane",
+  "browser.share.description": "Flyt din browsers aktive fane til denne sessions fanegruppe",
+  "browser.share.done": "Din aktive fane er nu i denne sessions fanegruppe.",
+  "browser.adopt.title": "Genbrug den afsluttede browserfanegruppe",
+  "browser.adopt.description": "Giv denne session den senest afsluttede Kilo-fanegruppe",
+  "browser.adopt.done": "Denne session bruger nu den senest afsluttede fanegruppe.",
+  "browser.adopt.none": "Der er ingen afsluttet fanegruppe at genbruge.",
+  "browser.adopt.kept": "Denne session har allerede sine egne faner og beholder dem.",
+  "browser.adopt.unconfirmed":
+    "Bad browseren om at genbruge den senest afsluttede fanegruppe. Opdater Kilo-browserudvidelsen for at se, om den gjorde det.",
+  "browser.control.notExtension": "Deling og genbrug af faner kræver Kilo-browserudvidelsen. Vælg den i /browser.",
+  "browser.control.organizationOff": "Din organisation har slået browserstyring fra i Kilo.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Browser ikke tilgængelig",
+  "browser.notice.outdatedTitle": "Browserudvidelsen er forældet",
+  "browser.notice.stopped":
+    "Du stoppede browseren for denne session. Kør /browser adopt for at give sessionen dens faner tilbage.",
   "browser.notice.extension":
     "Kilo-browserudvidelsen er forbundet i {{browser}}. Vil du bruge din egen browser til browserværktøjerne i stedet for den medfølgende?",
   "browser.notice.switch": "Brug min browser",
