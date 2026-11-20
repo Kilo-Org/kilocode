@@ -692,6 +692,71 @@ describe("browser permission hook", () => {
   })
 })
 
+describe("browser skill text", () => {
+  // The skill is the one place the model reads which browser the tools drive, so each backend must get its own text.
+  const SKILL = Skill.ID.make("browser-automation")
+
+  test("the extension backend says the tools drive the user's own browser", async () => {
+    const host = await boot({ backend: "extension" })
+    const [skill] = host.skills
+    expect(skill.id).toBe(SKILL)
+    expect(skill.description).toBe("Use to inspect or interact with the user's own browser through the Kilo extension.")
+    // The description is the whole backend difference: the instructions stay the same and never name Playwright.
+    expect(skill.content).not.toContain("Playwright")
+    expect(skill.content.startsWith("# Browser automation\n\nUse Code Mode")).toBe(true)
+  })
+
+  test("the Playwright backend keeps the Playwright wording", async () => {
+    const [skill] = (await boot({ backend: "playwright" })).skills
+    expect(skill.description).toBe("Use to inspect or interact with a web page using Playwright.")
+    expect(skill.content.startsWith("# Browser automation\n\nUse Code Mode")).toBe(true)
+    expect(skill.content).not.toContain("Kilo extension")
+  })
+
+  test("the instructions are the same on both backends", async () => {
+    const [extension] = (await boot({ backend: "extension" })).skills
+    const [playwright] = (await boot({ backend: "playwright" })).skills
+    expect(extension.content).toBe(playwright.content)
+  })
+
+  test("both backends say browser_type replaces the content and slowly types at the caret", async () => {
+    for (const backend of ["extension", "playwright"] as const) {
+      const [skill] = (await boot({ backend })).skills
+      expect(skill.content).toContain(
+        "browser_type replaces the field's content; `slowly: true` types at the caret instead",
+      )
+    }
+  })
+
+  test("both backends send an agent that must act on a page from browser_open to these tools", async () => {
+    for (const backend of ["extension", "playwright"] as const) {
+      const [skill] = (await boot({ backend })).skills
+      // The file wraps its lines, so the sentences are compared with the wrapping flattened.
+      const text = skill.content.replace(/\s+/g, " ")
+      expect(text).toContain("shows a page in the Integrated Browser for the user to look at")
+      expect(text).toContain("these browser tools are the ones that read and act on a page")
+    }
+  })
+
+  test("a backend change swaps the description for the next turn without a restart", async () => {
+    let backend: Browser["backend"] = "extension"
+    const host = await boot(() => ({ backend }))
+    expect(host.skills[0].description).toContain("Kilo extension")
+
+    backend = "playwright"
+    await host.publish("config.updated")
+    await host.reloaded(1)
+    expect(host.skills[0].description).toBe("Use to inspect or interact with a web page using Playwright.")
+
+    backend = "extension"
+    await host.publish("config.updated")
+    await host.reloaded(2)
+    expect(host.skills[0].description).toBe(
+      "Use to inspect or interact with the user's own browser through the Kilo extension.",
+    )
+  })
+})
+
 describe("browser tools over the extension backend", () => {
   const page = (url: string, title: string, lines: string[] = []) =>
     ["### Page", `- Page URL: ${url}`, `- Page Title: ${title}`, "", "### Snapshot", "```yaml", ...lines, "```"].join(

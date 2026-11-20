@@ -953,12 +953,17 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
 
     yield* ctx.skill.transform((editor) => {
       // `off` hides the tools: an agent never sees a browser tool it cannot use.
-      if (effective(live.browser, live.organization) === "off") return
+      const chosen = effective(live.browser, live.organization)
+      if (chosen === "off") return
       editor.add(
         Skill.Info.make({
           id: Skill.ID.make("browser-automation"),
           name: Skill.Name.make("browser-automation"),
-          description: "Use to inspect or interact with a web page using Playwright.",
+          // The one line a model reads before it loads the skill: which browser these tools drive.
+          description:
+            chosen === "extension"
+              ? "Use to inspect or interact with the user's own browser through the Kilo extension."
+              : "Use to inspect or interact with a web page using Playwright.",
           path: AbsolutePath.make("/builtin/browser-automation.md"),
           content: GUIDE,
         }),
