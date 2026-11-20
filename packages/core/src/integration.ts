@@ -350,19 +350,22 @@ export const locationLayer = Layer.effect(
           // kilocode_change - release the flight, then publish the result once the ref guard is free.
           // Deferred completion resumes waiters on this stack, so it runs outside the modify callback:
           // a waiter that re-enters this map then sees the entry already removed, and the state
-          // transition stays pure.
+          // transition stays pure. The pair is uninterruptible so that the release and the publish
+          // cannot be split by an interrupt, which would leave waiters without a completion.
           const finish = (exit: Exit.Exit<Credential.Value, AuthorizationError>) =>
-            Effect.flatMap(
-              SynchronizedRef.modify(refreshing, (current) => {
-                if (current.get(credential.id) !== flight.deferred) return [false, current] as const
-                const next = new Map(current)
-                next.delete(credential.id)
-                return [true, next] as const
-              }),
-              (mine) =>
-                Effect.sync(() => {
-                  if (mine) Deferred.doneUnsafe(flight.deferred, exit)
+            Effect.uninterruptible(
+              Effect.flatMap(
+                SynchronizedRef.modify(refreshing, (current) => {
+                  if (current.get(credential.id) !== flight.deferred) return [false, current] as const
+                  const next = new Map(current)
+                  next.delete(credential.id)
+                  return [true, next] as const
                 }),
+                (mine) =>
+                  Effect.sync(() => {
+                    if (mine) Deferred.doneUnsafe(flight.deferred, exit)
+                  }),
+              ),
             )
           const outcome = Effect.exit(
             Effect.gen(function* () {
