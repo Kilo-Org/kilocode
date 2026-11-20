@@ -1145,7 +1145,7 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth": "Redefinir login",
   "settings.agentBehaviour.mcpResetAuth.title": "Redefinir login do MCP",
   "settings.agentBehaviour.mcpResetAuth.confirm":
-    "Limpar o login armazenado de \"{{name}}\"? Você precisará fazer login novamente.",
+    'Limpar o login armazenado de "{{name}}"? Você precisará fazer login novamente.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.jsonc ou peça ao agente para adicioná-los.",
