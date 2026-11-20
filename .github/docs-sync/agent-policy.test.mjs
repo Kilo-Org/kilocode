@@ -251,7 +251,10 @@ check("validateMode rejects an invalid action value", () => {
 // fail at that tool call instead of before the model starts. The validator is
 // where that guarantee is kept, for a whole rule and for one pattern.
 check("validateMode rejects an ask, at a rule and at a pattern", () => {
-  assert.throws(() => validateMode("x", { permission: { "*": "deny", bash: "ask" } }), /rule "bash" must be allow, deny, null/)
+  assert.throws(
+    () => validateMode("x", { permission: { "*": "deny", bash: "ask" } }),
+    /rule "bash" must be allow, deny, null/,
+  )
   assert.throws(
     () => validateMode("x", { permission: { "*": "deny", bash: { "*": "deny", "ls *": "ask" } } }),
     /rule "bash" pattern "ls \*" must be allow, deny or null/,
