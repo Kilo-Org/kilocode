@@ -10,14 +10,16 @@
 //
 //   E2E_EXTENSION_DIR   the built unpacked extension (default: ../../../cloud/apps/extension/.output/chrome-mv3)
 //   E2E_CHROMIUM        the Chromium executable (default: playwright-core's own build)
-//   E2E_HOME            the run's scratch root (default: a fresh mkdtemp); the harness creates run-<n> under it
+//   E2E_HOME            the run's scratch root (default: a fresh mkdtemp, removed again after a run without failures);
+//                       the harness creates run-<n> under it
 //   E2E_HUB_PORTS       hub ports as `<first>-<last>` (default: a free port per hub)
 //   E2E_PREFERENCES     extra profile Preferences as JSON, merged at the top level before launch
 //
 // Scenarios: download-path, navigate-snapshot, parallel, permission, frames, sensitive, group, stop, unpaired,
 // download, download-navigate, download-ungranted, download-late, download-tabs-new, download-tabs-new-notoken,
 // download-approved-one, download-approved-one-multi. `all` runs every scenario in its own child process (fresh
-// E2E_HOME each, one after another) and prints one summary table.
+// E2E_HOME each, one after another), removes each scenario's home unless it reported `FAIL`, and prints one summary
+// table; its reports stay in `--out` (default `<E2E_HOME>/reports`).
 //
 // Known failures: KNOWN_FAILURES lists what fails today for a reason owned elsewhere: whole scenarios, with the exact
 // failure messages that are expected, and single checks (`<scenario>:<check>`). A run whose only failures are those
@@ -1252,6 +1254,8 @@ async function runAll(): Promise<number> {
       }
       const outcome: Outcome = { failure: failure.split("\n")[0]?.slice(0, 160) ?? "", repeat: round, scenario: name, seconds, status }
       outcomes.push(outcome)
+      // Profiles, extension copies and CLI homes add up over `--repeat`; a failed scenario keeps its home for a look.
+      if (outcome.status !== "FAIL") await fs.rm(home, { force: true, recursive: true })
       console.error(`${outcome.status} ${name} #${round} ${seconds.toFixed(1)}s ${outcome.failure}`)
     }
   }
@@ -1359,4 +1363,6 @@ try {
   await launched?.close().catch(() => undefined)
   stopFixtures()
   model.stop()
+  // A scratch root this run made goes with it; a failed run keeps it (profile, CLI homes, screen-final.png).
+  if (process.env.E2E_HOME === undefined && failures.length === 0) await fs.rm(base, { force: true, recursive: true })
 }

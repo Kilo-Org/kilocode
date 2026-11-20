@@ -221,7 +221,7 @@ async function grantDownloads(source: string, target: string) {
   return target
 }
 
-export async function launchExtensionBrowser(input: {
+type LaunchInput = {
   binary: string
   root: string
   extension: string
@@ -229,7 +229,20 @@ export async function launchExtensionBrowser(input: {
   ports?: [number, number]
   /** Load the shipped manifest, where the optional Downloads permission stays ungranted. */
   ungranted?: boolean
-}): Promise<ExtensionBrowser> {
+}
+
+/** The signed-in, paired extension browser; a failed step stops what it already started (hub, Chromium). */
+export async function launchExtensionBrowser(input: LaunchInput): Promise<ExtensionBrowser> {
+  const cleanup: (() => Promise<unknown>)[] = []
+  try {
+    return await launch(input, cleanup)
+  } catch (error) {
+    for (const step of cleanup.reverse()) await step().catch(() => undefined)
+    throw error
+  }
+}
+
+async function launch(input: LaunchInput, cleanup: (() => Promise<unknown>)[]): Promise<ExtensionBrowser> {
   // playwright-core belongs to the plugin workspace, not this package, so it is resolved from there at runtime: a
   // static import would depend on hoisting the workspace does not promise.
   const pluginDirectory = path.resolve(import.meta.dirname, "../../../kilo-plugin")
@@ -256,6 +269,7 @@ export async function launchExtensionBrowser(input: {
     ignoreDefaultArgs: ["--enable-automation"],
     viewport: { height: 900, width: 1280 },
   })) as unknown as Context
+  cleanup.push(() => context.close())
   context.setDefaultTimeout(20_000)
   const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"))
   const extensionId = new URL(worker.url()).host
@@ -377,6 +391,7 @@ export async function launchExtensionBrowser(input: {
     await Promise.race([hub.exited, Bun.sleep(5_000)])
   }
 
+  cleanup.push(stopHub)
   await startHub()
   await pair()
 
