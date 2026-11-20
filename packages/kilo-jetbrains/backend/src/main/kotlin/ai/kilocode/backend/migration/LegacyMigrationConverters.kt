@@ -439,7 +439,11 @@ object LegacyMigrationConverters {
                 continue
             }
 
-            val permKey = GROUP_TO_PERMISSION[groupName] ?: groupName
+            val permKey = GROUP_TO_PERMISSION[groupName]
+            if (permKey == null) {
+                warnings.add("Group not migrated; \"$groupName\" ignored")
+                continue
+            }
 
             val fileRegex = groupConfig?.get("fileRegex")
             val newValue: JsonElement = if (fileRegex != null) {
@@ -741,8 +745,55 @@ object LegacyMigrationConverters {
         var blockLines = mutableListOf<String>()
         var inGroups = false
         var groups = mutableListOf<Any>()
+        var pendingGroupName: String? = null
+        var pendingGroupOptions = mutableMapOf<String, String>()
 
-        fun stripYamlQuotes(value: String) = value.replace(Regex("^(['\"])(.*?)\\1$"), "$2")
+        fun stripYamlQuotes(value: String): String {
+            if (value.length < 2) return value
+            val quote = value.first()
+            if (value.last() != quote || (quote != '"' && quote != '\'')) return value
+            val body = value.substring(1, value.length - 1)
+            if (quote == '\'') return body
+            val out = StringBuilder(body.length)
+            var i = 0
+            while (i < body.length) {
+                val c = body[i]
+                if (c == '\\' && i + 1 < body.length) {
+                    when (body[i + 1]) {
+                        '\\' -> { out.append('\\'); i += 2; continue }
+                        '"' -> { out.append('"'); i += 2; continue }
+                    }
+                }
+                out.append(c)
+                i++
+            }
+            return out.toString()
+        }
+
+        /** Close an open `- - <name>` options block into a Pair group. */
+        fun closeGroupOptions() {
+            val name = pendingGroupName ?: return
+            groups.add(Pair(name, pendingGroupOptions.toMap()))
+            pendingGroupName = null
+            pendingGroupOptions = mutableMapOf()
+        }
+
+        /** Parse a `key: value` option line of an open group options block. */
+        fun addGroupOption(line: String) {
+            val sep = line.indexOf(": ")
+            val (key, value) = if (sep >= 0) {
+                line.substring(0, sep).trim() to stripYamlQuotes(line.substring(sep + 2).trim())
+            } else {
+                line.removeSuffix(":").trim() to ""
+            }
+            if (key.isEmpty()) return
+            pendingGroupOptions[key] = value
+        }
+
+        fun closeGroups() {
+            closeGroupOptions()
+            inGroups = false
+        }
 
         fun flush() {
             val slug = current["slug"] as? String ?: return
@@ -750,6 +801,7 @@ object LegacyMigrationConverters {
             if (blockField != null && blockLines.isNotEmpty()) {
                 current[blockField!!] = blockLines.joinToString("\n").trim()
             }
+            closeGroupOptions()
             modes.add(
                 LegacyCustomMode(
                     slug = slug,
@@ -791,7 +843,7 @@ object LegacyMigrationConverters {
                     current[blockField!!] = blockLines.joinToString("\n").trim()
                 }
                 blockField = blockMatch.groupValues[1]
-                inGroups = false
+                closeGroups()
                 blockLines = mutableListOf()
                 continue
             }
@@ -824,16 +876,42 @@ object LegacyMigrationConverters {
             }
 
             if (raw.matches(Regex("    groups:.*"))) {
+                closeGroups()
                 inGroups = true
                 groups = mutableListOf()
+                val inline = raw.removePrefix("    groups:").trim()
+                if (inline.startsWith("[") && inline.endsWith("]")) {
+                    val body = inline.substring(1, inline.length - 1)
+                    body.split(",")
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .forEach { groups.add(stripYamlQuotes(it)) }
+                    closeGroups()
+                }
+                continue
+            }
+            if (inGroups && raw.startsWith("      - - ")) {
+                closeGroupOptions()
+                pendingGroupName = stripYamlQuotes(raw.removePrefix("      - - ").trim())
+                continue
+            }
+            if (inGroups && pendingGroupName != null && raw.startsWith("        - ")) {
+                addGroupOption(raw.removePrefix("        - ").trim())
+                continue
+            }
+            if (inGroups && pendingGroupName != null && raw.startsWith("          ") &&
+                !raw.startsWith("          - ")
+            ) {
+                addGroupOption(raw.trim())
                 continue
             }
             if (inGroups && raw.matches(Regex("      - .*"))) {
+                closeGroupOptions()
                 groups.add(stripYamlQuotes(raw.removePrefix("      - ").trim()))
                 continue
             }
             if (inGroups && !raw.startsWith("      ")) {
-                inGroups = false
+                closeGroups()
             }
         }
         flush()

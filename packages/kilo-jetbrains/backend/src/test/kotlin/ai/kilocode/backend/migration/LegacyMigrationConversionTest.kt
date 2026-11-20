@@ -329,6 +329,90 @@ class LegacyMigrationConversionTest {
         assertTrue(result.permission.keys.none { it.endsWith("_*") })
     }
 
+    @Test
+    fun `convertCustomModePermissions - unknown group writes no permission key and warns`() {
+        val result = LegacyMigrationConverters.convertCustomModePermissions(listOf("read", "- edit"))
+        val perm = result.permission
+        assertEquals(setOf("read", "edit", "bash", "browser_open"), perm.keys)
+        assertEquals("allow", perm["read"]?.jsonPrimitive?.content)
+        assertEquals("deny", perm["edit"]?.jsonPrimitive?.content)
+        assertFalse(perm.keys.any { it.contains("- edit") })
+        assertEquals(1, result.warnings.size)
+    }
+
+    // -----------------------------------------------------------------------
+    // custom_modes.yaml parser
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun `parseCustomModesYaml - nested group with fileRegex and description`() {
+        val yaml = """
+            customModes:
+              - slug: docwriter
+                name: Doc Writer
+                roleDefinition: You write documentation.
+                groups:
+                  - read
+                  - - edit
+                    - fileRegex: "\\.md${'$'}"
+                      description: "Markdown files only"
+                  - browser
+                  - mcp
+        """.trimIndent()
+        val modes = LegacyMigrationConverters.parseCustomModesYaml(yaml)
+        assertEquals(1, modes.size)
+        assertEquals(
+            listOf(
+                "read",
+                Pair("edit", mapOf("fileRegex" to "\\.md$", "description" to "Markdown files only")),
+                "browser",
+                "mcp",
+            ),
+            modes[0].groups,
+        )
+    }
+
+    @Test
+    fun `parseCustomModesYaml - nested group permissions restrict edit to markdown`() {
+        val yaml = """
+            customModes:
+              - slug: docwriter
+                name: Doc Writer
+                roleDefinition: You write documentation.
+                groups:
+                  - read
+                  - - edit
+                    - fileRegex: "\\.md${'$'}"
+                      description: "Markdown files only"
+                  - browser
+                  - mcp
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+        val editPerm = result.permission["edit"]?.jsonObject
+        assertNotNull(editPerm)
+        assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
+        assertEquals("allow", editPerm["*.md"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["bash"]?.jsonPrimitive?.content)
+        assertFalse(result.permission.keys.any { it.contains("- edit") })
+        assertFalse(result.permission.keys.any { it == "fileRegex" || it == "description" })
+        assertTrue(result.warnings.isEmpty())
+    }
+
+    @Test
+    fun `parseCustomModesYaml - flow style groups list`() {
+        val yaml = """
+            customModes:
+              - slug: flow
+                name: Flow
+                roleDefinition: You are flow.
+                groups: [read, edit]
+        """.trimIndent()
+        val modes = LegacyMigrationConverters.parseCustomModesYaml(yaml)
+        assertEquals(1, modes.size)
+        assertEquals(listOf<Any>("read", "edit"), modes[0].groups)
+    }
+
     // -----------------------------------------------------------------------
     // Auto-approval
     // -----------------------------------------------------------------------
