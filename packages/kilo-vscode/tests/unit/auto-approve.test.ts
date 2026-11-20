@@ -1,9 +1,16 @@
 import { describe, expect, it } from "bun:test"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import * as vscode from "vscode"
 import { registerToggleAutoApprove, type AutoApproveController } from "../../src/commands/toggle-auto-approve"
 import { createAutoApproveBridge } from "../../src/kilo-provider/auto-approve"
 import type { Event, KiloClient } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
+
+const ROOT = join(import.meta.dir, "..", "..")
+const PACKAGE = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+  contributes: { configuration: { properties: Record<string, { type: string; default?: unknown; scope?: string }> } }
+}
 
 type ConfigEvent = { affectsConfiguration(key: string): boolean }
 type Permission = { id: string }
@@ -334,6 +341,17 @@ describe("registerToggleAutoApprove", () => {
     expect(ctrl.active()).toBe(false)
     expect(dirs).toEqual(["/one"])
     expect(replies).toEqual([])
+  })
+})
+
+describe("auto-approve setting contribution", () => {
+  it("declares a user-scoped boolean that starts disabled", () => {
+    expect(PACKAGE.contributes.configuration.properties["kilo-code.new.autoApprove.enabled"]).toEqual({
+      type: "boolean",
+      default: false,
+      scope: "application",
+      description: expect.any(String),
+    })
   })
 })
 
