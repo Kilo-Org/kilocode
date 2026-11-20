@@ -169,7 +169,6 @@ The following Kilocode features are not yet migrated:
 |---|---|---|
 | Rules (`.kilocode/rules/`) | Phase 2 | Will map to `instructions` array |
 | Workflows (`.kilocode/workflows/`) | Phase 2 | Will map to custom commands |
-| MCP Servers (`mcp_settings.json`) | Phase 2 | Will map to `mcp` config |
 | Provider Settings | Phase 2 | Will map to `provider` config |
 | Mode-specific API configs | Phase 2 | Different models per mode |
 | Organization modes | Not planned | `source: organization` not preserved |
