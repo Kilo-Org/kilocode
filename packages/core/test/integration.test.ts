@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect } from "bun:test"
 import { Duration, Effect, Exit, Fiber, Scope, Stream } from "effect"
+import { Cause, Clock, Deferred } from "effect" // kilocode_change - single-flight refresh tests
 import * as TestClock from "effect/testing/TestClock"
 import { Credential } from "@opencode-ai/core/credential"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
@@ -372,3 +373,195 @@ describe("Integration", () => {
     )
   })
 })
+
+// kilocode_change start - single-flight refresh per stored credential
+describe("refresh", () => {
+  it.effect("two concurrent resolvers refresh one expiring credential once", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const credentials = yield* Credential.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("chatgpt")
+      const gate = yield* Deferred.make<void>()
+      let count = 0
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "auto" as const,
+              url: "https://example.com/authorize",
+              instructions: "Sign in",
+              callback: Effect.never,
+            }),
+          refresh: () =>
+            Effect.sync(() => count++).pipe(
+              Effect.andThen(Deferred.await(gate)),
+              Effect.andThen(
+                Effect.gen(function* () {
+                  const now = yield* Clock.currentTimeMillis
+                  return Credential.OAuth.make({
+                    type: "oauth",
+                    methodID,
+                    access: "next",
+                    refresh: "next",
+                    expires: now + Duration.toMillis(Duration.hours(1)),
+                  })
+                }),
+              ),
+            ),
+        }),
+      )
+      const now = yield* Clock.currentTimeMillis
+      const stored = yield* credentials.create({
+        integrationID,
+        label: "Work",
+        value: Credential.OAuth.make({
+          type: "oauth",
+          methodID,
+          access: "stale",
+          refresh: "stale",
+          expires: now + 1,
+        }),
+      })
+
+      const resolves = Effect.forEach(
+        [1, 2],
+        () => integrations.connection.resolve({ type: "credential", id: stored.id, label: "Work" }),
+        { concurrency: "unbounded" },
+      )
+      const fiber = yield* Effect.forkChild(resolves)
+      yield* Effect.yieldNow
+      yield* Effect.yieldNow
+      expect(count).toBe(1)
+      yield* Deferred.succeed(gate, undefined)
+      const values = yield* Fiber.join(fiber)
+      const refreshed = (yield* credentials.get(stored.id))?.value
+
+      expect(count).toBe(1)
+      expect(values[0]).toEqual(refreshed)
+      expect(values[1]).toEqual(refreshed)
+      expect(refreshed).toMatchObject({ access: "next", refresh: "next" })
+      expect(refreshed?.type === "oauth" && refreshed.expires > (yield* Clock.currentTimeMillis)).toBe(true)
+    }),
+  )
+
+  it.effect("shares one refresh failure with every waiter and releases the guard", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const credentials = yield* Credential.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("chatgpt")
+      const gate = yield* Deferred.make<void>()
+      let count = 0
+      let fail = true
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "auto" as const,
+              url: "https://example.com/authorize",
+              instructions: "Sign in",
+              callback: Effect.never,
+            }),
+          refresh: () =>
+            Effect.sync(() => count++).pipe(
+              Effect.andThen(Deferred.await(gate)),
+              Effect.andThen(
+                fail
+                  ? Effect.fail(new Error("nope"))
+                  : Effect.gen(function* () {
+                      const now = yield* Clock.currentTimeMillis
+                      return Credential.OAuth.make({
+                        type: "oauth",
+                        methodID,
+                        access: "next",
+                        refresh: "next",
+                        expires: now + Duration.toMillis(Duration.hours(1)),
+                      })
+                    }),
+              ),
+            ),
+        }),
+      )
+      const now = yield* Clock.currentTimeMillis
+      const stored = yield* credentials.create({
+        integrationID,
+        label: "Work",
+        value: Credential.OAuth.make({
+          type: "oauth",
+          methodID,
+          access: "stale",
+          refresh: "stale",
+          expires: now + 1,
+        }),
+      })
+
+      const resolves = Effect.forEach(
+        [1, 2],
+        () => integrations.connection.resolve({ type: "credential", id: stored.id, label: "Work" }).pipe(Effect.exit),
+        { concurrency: "unbounded" },
+      )
+      const fiber = yield* Effect.forkChild(resolves)
+      yield* Effect.yieldNow
+      yield* Effect.yieldNow
+      expect(count).toBe(1)
+      yield* Deferred.succeed(gate, undefined)
+      const exits = yield* Fiber.join(fiber)
+
+      expect(count).toBe(1)
+      for (const exit of exits) {
+        expect(Exit.isFailure(exit)).toBe(true)
+        if (Exit.isFailure(exit)) expect(Cause.squash(exit.cause)).toBeInstanceOf(Integration.AuthorizationError)
+      }
+
+      fail = false
+      const third = yield* integrations.connection.resolve({ type: "credential", id: stored.id, label: "Work" })
+      expect(count).toBe(2)
+      expect(third).toMatchObject({ access: "next", refresh: "next" })
+    }),
+  )
+
+  it.effect("does not refresh a credential that is not expiring", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const credentials = yield* Credential.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("chatgpt")
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
+          refresh: () => Effect.die("must not refresh"),
+          authorize: () =>
+            Effect.succeed({
+              mode: "auto" as const,
+              url: "https://example.com/authorize",
+              instructions: "Sign in",
+              callback: Effect.never,
+            }),
+        }),
+      )
+      const now = yield* Clock.currentTimeMillis
+      const stored = yield* credentials.create({
+        integrationID,
+        label: "Work",
+        value: Credential.OAuth.make({
+          type: "oauth",
+          methodID,
+          access: "fresh",
+          refresh: "fresh",
+          expires: now + Duration.toMillis(Duration.hours(1)),
+        }),
+      })
+
+      expect(yield* integrations.connection.resolve({ type: "credential", id: stored.id, label: "Work" })).toEqual(
+        stored.value,
+      )
+    }),
+  )
+})
+// kilocode_change end

@@ -5,6 +5,7 @@ import {
   Cause,
   Clock,
   Context,
+  Deferred, // kilocode_change
   Duration,
   Effect,
   Exit,
@@ -199,6 +200,10 @@ const attemptLifetime = Duration.toMillis(Duration.minutes(10))
 const terminalRetention = Duration.toMillis(Duration.minutes(1))
 const scrubInterval = Duration.seconds(30)
 const settlementTimeout = Duration.seconds(30) // kilocode_change - bound retained OAuth attempt secrets
+// kilocode_change start - bound a detached credential refresh and share one expiry window
+const refreshTimeout = Duration.seconds(30)
+const refreshWindow = Duration.toMillis(Duration.minutes(5))
+// kilocode_change end
 
 type AttemptTime = { created: number; expires: number }
 type PendingAttempt = {
@@ -219,6 +224,9 @@ type TerminalAttempt = {
   time: AttemptTime
 }
 type AttemptEntry = PendingAttempt | TerminalAttempt
+// kilocode_change start - single-flight refresh per stored credential
+type Refresh = { owner: boolean; deferred: Deferred.Deferred<Credential.Value, AuthorizationError> }
+// kilocode_change end
 
 export const locationLayer = Layer.effect(
   Service,
@@ -227,6 +235,11 @@ export const locationLayer = Layer.effect(
     const events = yield* EventV2.Service
     const scope = yield* Scope.Scope
     const attempts = SynchronizedRef.makeUnsafe(new Map<AttemptID, AttemptEntry>())
+    // kilocode_change start - single-flight per stored credential: one refresh at a time, waiters share the owner's exit
+    const refreshing = SynchronizedRef.makeUnsafe(
+      new Map<Credential.ID, Deferred.Deferred<Credential.Value, AuthorizationError>>(),
+    )
+    // kilocode_change end
     const state = State.create<Data, Draft>({
       initial: () => ({ integrations: new Map<ID, Entry>() }),
       draft: (draft) => ({
@@ -315,6 +328,58 @@ export const locationLayer = Layer.effect(
 
     const close = (attemptScope: Scope.Closeable) =>
       Scope.close(attemptScope, Exit.void).pipe(Effect.forkIn(scope, { startImmediately: true }), Effect.asVoid)
+    // kilocode_change start - one refresh per stored credential; callers share the owner's exit
+    const refresh = Effect.fnUntraced(function* (
+      credential: Credential.Info,
+      run: () => Effect.Effect<Credential.OAuth, AuthorizationError>,
+    ) {
+      return yield* Effect.uninterruptibleMask((restore) =>
+        Effect.gen(function* () {
+          const flight = yield* SynchronizedRef.modify(
+            refreshing,
+            (current): [Refresh, Map<Credential.ID, Deferred.Deferred<Credential.Value, AuthorizationError>>] => {
+              const existing = current.get(credential.id)
+              if (existing) return [{ owner: false, deferred: existing }, current]
+              const deferred = Deferred.makeUnsafe<Credential.Value, AuthorizationError>()
+              return [{ owner: true, deferred }, new Map(current).set(credential.id, deferred)]
+            },
+          )
+          if (!flight.owner) return yield* restore(Deferred.await(flight.deferred))
+          const settle = (exit: Exit.Exit<Credential.Value, AuthorizationError>) =>
+            SynchronizedRef.modify(refreshing, (current) => {
+              if (current.get(credential.id) !== flight.deferred) return [undefined, current] as const
+              const next = new Map(current)
+              next.delete(credential.id)
+              Deferred.doneUnsafe(flight.deferred, exit)
+              return [undefined, next] as const
+            })
+          const outcome = Effect.exit(
+            Effect.gen(function* () {
+              const stored = yield* credentials.get(credential.id)
+              const now = yield* Clock.currentTimeMillis
+              if (stored?.value.type === "oauth" && stored.value.expires > now + refreshWindow) return stored.value
+              const value = yield* run()
+              yield* credentials.update(credential.id, { value })
+              return value
+            }).pipe(
+              Effect.timeout(refreshTimeout),
+              Effect.mapError((cause) =>
+                Cause.isTimeoutError(cause) ? new AuthorizationError({ cause }) : cause,
+              ),
+            ),
+          )
+          yield* outcome.pipe(
+            Effect.flatMap((exit) => settle(exit)),
+            Effect.onExit((exit) =>
+              Exit.isFailure(exit) ? settle(Exit.interrupt()) : Effect.void,
+            ),
+            Effect.forkIn(scope, { startImmediately: true }),
+          )
+          return yield* restore(Deferred.await(flight.deferred))
+        })
+      )
+    })
+    // kilocode_change end
 
     const message = (cause: Cause.Cause<unknown>) => {
       const error = Cause.squash(cause)
@@ -427,16 +492,18 @@ export const locationLayer = Layer.effect(
           const credential = yield* credentials.get(connection.id)
           if (!credential) return undefined
           if (credential.value.type === "key") return credential.value
+          // kilocode_change start - single-flight refresh per stored credential
+          const oauth = credential.value
           const implementation = state
             .get()
             .integrations.get(credential.integrationID)
-            ?.implementations.get(credential.value.methodID)
-          if (!implementation?.refresh) return credential.value
+            ?.implementations.get(oauth.methodID)
+          const update = implementation?.refresh
+          if (!update) return oauth
           const now = yield* Clock.currentTimeMillis
-          if (credential.value.expires > now + Duration.toMillis(Duration.minutes(5))) return credential.value
-          const value = yield* authorize(implementation.refresh(credential.value))
-          yield* credentials.update(credential.id, { value })
-          return value
+          if (oauth.expires > now + refreshWindow) return oauth
+          return yield* refresh(credential, () => authorize(update(oauth)))
+          // kilocode_change end
         }),
         key: Effect.fn("Integration.connection.key")(function* (input) {
           const method = state
