@@ -96,6 +96,7 @@ const readOnlyShell: Table = {
   "git log *": "allow",
   "git show *": "allow",
   "git diff *": "allow",
+  "git merge-base *": "allow",
   "git status *": "allow",
   "git blame *": "allow",
   "git rev-parse *": "allow",

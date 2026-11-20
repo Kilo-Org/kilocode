@@ -20,6 +20,7 @@ import { Global } from "@opencode/util/global"
 import { agentHost, host } from "../../core/test/plugin/host"
 import { testEffect } from "../../core/test/lib/effect"
 import { KiloAgentPlugin } from "../src/agent"
+import { KiloReview } from "../src/review"
 
 const it = testEffect(AppNodeBuilder.build(LayerNode.group([Agent.node, Bus.node, FSUtil.node, Global.node])))
 
@@ -226,11 +227,12 @@ describe("KiloAgentPlugin", () => {
         "jq . a",
       ])
         expect(effect("shell", command)).toBe("allow")
-      // The 20 read-only git subcommands.
+      // The 21 read-only git subcommands.
       for (const command of [
         "git log -5",
         "git show HEAD",
         "git diff",
+        "git merge-base HEAD main",
         "git status",
         "git blame a",
         "git rev-parse HEAD",
@@ -264,6 +266,29 @@ describe("KiloAgentPlugin", () => {
       expect(effect("read", ".env")).toBe("ask")
       expect(effect("subagent", "general")).toBe("deny")
       expect(effect("edit", "src/index.ts")).toBe("deny")
+    }),
+  )
+
+  it.effect("allows the branch and worktree diff commands delegated by /review", () =>
+    Effect.gen(function* () {
+      yield* configure({})
+      const rules = yield* permissions("explore")
+      const commands = [...KiloReview.template("").matchAll(/`(git [^`]*<merge-base>[^`]*)`/g)].map(
+        ([, command]) => command,
+      )
+      // Every documented command must work under the review subagent's policy, and the scope
+      // bullets must keep the merge base: a bare `git diff` would pass the allowlist while
+      // silently dropping the review scope.
+      expect(commands.length).toBeGreaterThanOrEqual(2)
+      expect([...KiloReview.template("").matchAll(/For (?:branch|worktree) review, use `([^`]+)`/g)].map(([, c]) => c)).toEqual([
+        "git diff <merge-base>",
+        "git diff <merge-base>",
+      ])
+      for (const command of commands)
+        expect(
+          Permission.evaluate("shell", command.replaceAll("<merge-base>", "abc1234").replaceAll("<file>", "a.ts"), rules)
+            .effect,
+        ).toBe("allow")
     }),
   )
 
