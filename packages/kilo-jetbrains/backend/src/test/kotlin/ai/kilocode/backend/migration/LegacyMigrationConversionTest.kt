@@ -458,6 +458,28 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
+    fun `parseCustomModes - unknown json group option narrows the group to ask`() {
+        val raw = """{"customModes":[{"slug":"json","name":"Json","roleDefinition":"You edit files.","groups":["read",["edit",{"regex":"\\.md$"}]]}]}"""
+        val mode = LegacyMigrationConverters.parseCustomModes(raw).orEmpty().single()
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+        assertEquals("allow", result.permission["read"]?.jsonPrimitive?.content)
+        assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
+        assertEquals(listOf("Group options not migrated; edit set to ask"), result.warnings)
+    }
+
+    @Test
+    fun `parseCustomModes - known json group options keep the fileRegex translation`() {
+        val raw = """{"customModes":[{"slug":"known","name":"Known","roleDefinition":"You edit files.","groups":["read",["edit",{"fileRegex":"\\.md$","description":"Markdown"}]]}]}"""
+        val mode = LegacyMigrationConverters.parseCustomModes(raw).orEmpty().single()
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+        val editPerm = result.permission["edit"]?.jsonObject
+        assertNotNull(editPerm)
+        assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
+        assertEquals("allow", editPerm["*.md"]?.jsonPrimitive?.content)
+        assertTrue(result.warnings.isEmpty())
+    }
+
+    @Test
     fun `parseCustomModesYaml - flow style groups list`() {
         val yaml = """
             customModes:

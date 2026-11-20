@@ -381,7 +381,8 @@ object LegacyMigrationConverters {
 
     /**
      * Option key the YAML parser adds when a line inside a `- - <group>` options block was not
-     * readable, so the converter narrows that group instead of granting it in full.
+     * readable. The key sits outside the legacy option set, so the converter narrows that group
+     * instead of granting it in full.
      */
     private const val UNPARSED_GROUP_OPTION = "__unparsed"
 
@@ -393,6 +394,9 @@ object LegacyMigrationConverters {
     )
     private val ALL_MODE_PERMISSIONS = listOf("read", "edit", "bash", "browser_open", "skill")
 
+    /** Option keys a legacy group can carry. Any other key means the group was not read fully. */
+    private val KNOWN_GROUP_OPTIONS = setOf("fileRegex", "description")
+
     data class ModePermissions(
         val permission: JsonObject,
         val warnings: List<String>,
@@ -401,6 +405,9 @@ object LegacyMigrationConverters {
     private val PERMISSION_KEY_UNSAFE = Regex("[^a-zA-Z0-9_-]")
 
     private fun sanitizePermissionKey(name: String): String = name.replace(PERMISSION_KEY_UNSAFE, "_")
+
+    private fun hasUnreadableOptions(options: Map<String, String>?): Boolean =
+        options != null && options.keys.any { it !in KNOWN_GROUP_OPTIONS }
 
     fun convertCustomModePermissions(
         groups: List<Any>,
@@ -427,7 +434,7 @@ object LegacyMigrationConverters {
             }
 
             if (groupName == "mcp") {
-                if (groupConfig?.containsKey(UNPARSED_GROUP_OPTION) == true) {
+                if (hasUnreadableOptions(groupConfig)) {
                     warnings.add("Group options not migrated; mcp set to ask")
                     mcpGroupSeen = true
                     for (server in mcpServers) {
@@ -461,7 +468,7 @@ object LegacyMigrationConverters {
                 continue
             }
 
-            if (groupConfig?.containsKey(UNPARSED_GROUP_OPTION) == true) {
+            if (hasUnreadableOptions(groupConfig)) {
                 warnings.add("Group options not migrated; $permKey set to ask")
                 allowed.add(permKey)
                 permission[permKey] = JsonPrimitive("ask")
