@@ -120,7 +120,11 @@ check("docs-write denies the operator blocklist after the allows", () => {
 
 check("docs-write keeps the docs build and test commands", () => {
   const bash = policy().modes["docs-write"].permission.bash
-  for (const cmd of ["bun run --filter @kilocode/kilo-docs build", "bun run --filter @kilocode/kilo-docs test"]) {
+  for (const cmd of [
+    "bun run --filter @kilocode/kilo-docs build",
+    "bun run --filter @kilocode/kilo-docs test",
+    "bun run --filter @kilocode/kilo-docs typecheck",
+  ]) {
     assert.equal(bash[cmd], "allow", `${cmd} must be allowed`)
   }
 })
