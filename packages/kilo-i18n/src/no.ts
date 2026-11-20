@@ -217,4 +217,8 @@ export const dict = {
   "tui.autoApprove.description": "Godkjenn forespørsler om tillatelse automatisk for denne prosessen",
   "tui.autoApprove.enabled": "Automatisk godkjenning aktivert. Forespørsler om tillatelse godkjennes automatisk.",
   "tui.autoApprove.disabled": "Automatisk godkjenning deaktivert.",
+
+  // Session transcript export
+  "session.export.success": "Sesjonsutskriften ble eksportert som Markdown.",
+  "session.export.error": "Eksport av sesjonsutskrift mislyktes",
 }

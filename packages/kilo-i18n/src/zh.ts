@@ -200,4 +200,8 @@ export const dict = {
   "tui.autoApprove.description": "为此进程自动批准权限请求",
   "tui.autoApprove.enabled": "已启用自动批准。权限请求将自动获得批准。",
   "tui.autoApprove.disabled": "已停用自动批准。",
+
+  // Session transcript export
+  "session.export.success": "会话记录已导出为 Markdown。",
+  "session.export.error": "导出会话记录失败",
 }

@@ -492,6 +492,11 @@ export function SessionView(props: {
       agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
       variant: selection.variants().length > 0 ? picker("openVariantPicker") : undefined,
       compact: id ? () => compact(id) : undefined,
+      // Keep export a local action even in a draft, so submitting it cannot start a session.
+      export: () => {
+        if (!id || v2.connection.status() !== "connected") return
+        getVSCodeAPI().postMessage({ type: "exportSessionTranscript", sessionID: id })
+      },
       "update-from-base": worktreeAction(props.worktree, props.onUpdateBase),
       caffeinate: () =>
         getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),

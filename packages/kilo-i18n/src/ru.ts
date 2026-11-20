@@ -221,4 +221,8 @@ export const dict = {
   "tui.autoApprove.description": "Автоматически одобрять запросы разрешений для этого процесса",
   "tui.autoApprove.enabled": "Автоодобрение включено. Запросы разрешений одобряются автоматически.",
   "tui.autoApprove.disabled": "Автоодобрение отключено.",
+
+  // Session transcript export
+  "session.export.success": "Запись сеанса экспортирована в формате Markdown.",
+  "session.export.error": "Не удалось экспортировать запись сеанса",
 }

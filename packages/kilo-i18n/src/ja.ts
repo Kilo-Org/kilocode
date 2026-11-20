@@ -215,4 +215,8 @@ export const dict = {
   "tui.autoApprove.description": "このプロセスの許可リクエストを自動的に承認します",
   "tui.autoApprove.enabled": "自動承認を有効にしました。許可リクエストは自動的に承認されます。",
   "tui.autoApprove.disabled": "自動承認を無効にしました。",
+
+  // Session transcript export
+  "session.export.success": "セッション記録を Markdown としてエクスポートしました。",
+  "session.export.error": "セッション記録をエクスポートできませんでした",
 }

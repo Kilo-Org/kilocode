@@ -222,4 +222,8 @@ export const dict = {
   "tui.autoApprove.description": "Berechtigungsanfragen für diesen Prozess automatisch genehmigen",
   "tui.autoApprove.enabled": "Automatische Genehmigung aktiviert. Berechtigungsanfragen werden automatisch genehmigt.",
   "tui.autoApprove.disabled": "Automatische Genehmigung deaktiviert.",
+
+  // Session transcript export
+  "session.export.success": "Sitzungsprotokoll als Markdown exportiert.",
+  "session.export.error": "Fehler beim Exportieren des Sitzungsprotokolls",
 }

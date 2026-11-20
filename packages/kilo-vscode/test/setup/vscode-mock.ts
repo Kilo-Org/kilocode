@@ -113,6 +113,7 @@ const mockVscode = {
     tabGroups: { all: [] },
     showTextDocument: async () => {},
     showInformationMessage: async () => undefined,
+    showSaveDialog: async () => undefined,
     showQuickPick: async () => undefined,
     showErrorMessage: async () => undefined,
     showWarningMessage: async () => undefined,
