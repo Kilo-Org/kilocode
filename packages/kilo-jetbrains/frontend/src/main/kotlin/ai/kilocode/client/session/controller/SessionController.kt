@@ -1259,11 +1259,12 @@ class SessionController(
         drainJob = cs.launch {
             try {
                 val permissions = sessions.pendingPermissions(directory).filter { it.sessionID in ids && it.id !in skip }
-                val count = replyAll(permissions)
+                val batch = replyAll(permissions)
                 // Sensitive requests are skipped by replyAll; queue all of them so they aren't
                 // stranded (never machine-approved, never shown) or overwritten by later cards.
-                val cards = permissions.filter { manual(it.metadata) }.map(::toPermission)
-                if (count == 0 && cards.isEmpty()) return@launch
+                // A refused reply is not approved, so it gets an ERROR card like approve() does.
+                val cards = leftovers(batch, permissions)
+                if (batch.approved == 0 && cards.isEmpty()) return@launch
                 runEdt {
                     if (disposed) return@runEdt
                     if (cards.isNotEmpty()) {
@@ -1293,25 +1294,52 @@ class SessionController(
         }
     }
 
-    private suspend fun replyAll(permissions: List<PermissionRequestDto>): Int {
-        var count = 0
+    /** Outcome of an auto-approval batch: accepted replies, and refused requests with their message. */
+    private data class Batch(val approved: Int, val refused: List<Pair<PermissionRequestDto, String>>)
+
+    /**
+     * Replies "once" to every ordinary request in the batch under auto-approve.
+     *
+     * Sensitive requests need a human, so they are skipped and left to the caller's card. A refused
+     * reply does not stop the batch: it is collected in the result so the caller can surface an
+     * ERROR card for it, and it is never counted as approved.
+     */
+    private suspend fun replyAll(permissions: List<PermissionRequestDto>): Batch {
+        var approved = 0
+        val refused = mutableListOf<Pair<PermissionRequestDto, String>>()
         for (request in permissions) {
-            if (!autoApprove) return count
+            if (!autoApprove) break
             // Sensitive permissions need a human; skip them here (callers surface the card).
             if (manual(request.metadata)) continue
-            // One refused reply must not strand the rest of the batch: log it and keep draining. The
-            // refused permission is not counted as approved; if the request is shown to the user
-            // later, its own reply path reports the failure on the card.
             try {
                 sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(request.sessionID)} kind=permission-auto rid=${request.id} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                refused.add(request to (e.message ?: KiloBundle.message("session.permission.error")))
                 continue
             }
             capture("Permission Auto Approved", sessionProps(request.sessionID) + mapOf("tool" to request.permission, "source" to "drain"))
-            count++
+            approved++
         }
-        return count
+        return Batch(approved, refused)
+    }
+
+    /** ERROR card for a refused reply, mirroring the card approve() shows on failure. */
+    private fun errorCard(request: PermissionRequestDto, message: String): Permission =
+        toPermission(request).copy(state = PermissionRequestState.ERROR, message = message)
+
+    /**
+     * Cards the batch still owes a human, in request order.
+     *
+     * A skipped sensitive request keeps its plain card. A refused reply becomes an ERROR card that
+     * reports the failure, so it is never silently dropped.
+     */
+    private fun leftovers(batch: Batch, permissions: List<PermissionRequestDto>): List<Permission> {
+        val failure = batch.refused.associate { (request, message) -> request.id to message }
+        return permissions.mapNotNull { request ->
+            failure[request.id]?.let { message -> errorCard(request, message) }
+                ?: if (manual(request.metadata)) toPermission(request) else null
+        }
     }
 
     // Sensitive requests are never machine-approved; after draining, callers must surface one as a
@@ -1975,20 +2003,15 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == child }
             if (permissions.isEmpty()) return
             LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child permissions=${permissions.size}" }
-            // Under auto-approve, replyAll approves ordinary permissions and skips sensitive ones;
-            // queue only the latter. Otherwise queue every pending permission.
-            val queue = if (autoApprove) {
-                replyAll(permissions)
-                permissions.filter { manual(it.metadata) }
-            } else {
-                permissions
-            }
-            if (queue.isEmpty()) return
-            val items = queue.map(::toPermission)
+            // Under auto-approve, replyAll approves ordinary permissions and skips sensitive ones.
+            // Queue the skipped sensitive cards and an ERROR card for every refused reply, so a
+            // refusal stays visible instead of being stranded. Otherwise queue every pending one.
+            val cards = if (autoApprove) leftovers(replyAll(permissions), permissions) else permissions.map(::toPermission)
+            if (cards.isEmpty()) return
             runEdt {
                 if (disposed) return@runEdt
                 if (child !in childIds) return@runEdt
-                items.forEach(::enqueue)
+                cards.forEach(::enqueue)
                 if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
                     updateModel { promote() }
                 }
@@ -2106,22 +2129,23 @@ class SessionController(
                 !disposed && sid == id && promptRevision == revision && epoch == generation
             }
             if (!current) return
-            if (permissions.isNotEmpty() && autoApprove) {
-                val count = replyAll(permissions)
-                if (count > 0 && prompt == null) {
-                    runEdt {
-                        if (disposed) return@runEdt
-                        if (sid != id) return@runEdt
-                        if (promptRevision != revision) return@runEdt
-                        if (epoch != generation) return@runEdt
-                        model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
-                    }
-                    return
+            val batch = if (permissions.isNotEmpty() && autoApprove) replyAll(permissions) else null
+            // A refused reply is not approved: it still needs a card, so never go Busy and swallow
+            // it. Only a batch with no refused request and no sensitive card may skip the queue.
+            if (batch != null && batch.approved > 0 && batch.refused.isEmpty() && prompt == null) {
+                runEdt {
+                    if (disposed) return@runEdt
+                    if (sid != id) return@runEdt
+                    if (promptRevision != revision) return@runEdt
+                    if (epoch != generation) return@runEdt
+                    model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
                 }
+                return
             }
-            // After auto-approve only sensitive permissions still need a human card; queue those.
-            // Otherwise queue the whole pending set so each request is resolved in turn.
-            val queue = if (autoApprove) permissions.filter { manual(it.metadata) } else permissions
+            // After auto-approve only skipped sensitive permissions and refused replies still need a
+            // human card; queue those. Otherwise queue the whole pending set so each request is
+            // resolved in turn.
+            val queue = if (batch != null) leftovers(batch, permissions) else permissions.map(::toPermission)
             // An "idle" status is still a status. It means no live work, not "nothing to recover", so it
             // must not shadow the transcript: a session reopened after a failed turn is idle on the
             // server and would otherwise recover as if it had never failed.
@@ -2153,7 +2177,7 @@ class SessionController(
                         model.setState(SessionState.Idle)
                     }
                     if (queue.isNotEmpty()) {
-                        queue.map(::toPermission).forEach(::enqueue)
+                        queue.forEach(::enqueue)
                         promote()
                     } else if (questions.isNotEmpty()) {
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))

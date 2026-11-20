@@ -5,6 +5,11 @@ import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.QuestionRequestState
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
@@ -137,6 +142,83 @@ class ReplyFailureTest : SessionControllerTestBase() {
 
         assertEquals(listOf("perm1", "perm2"), rpc.permissionReplyAttempts)
         assertEquals(listOf("perm2"), rpc.permissionReplies.map { it.first })
+    }
+
+    fun `test refused drain reply leaves an error card for that request only`() {
+        val (m, _, _) = prompted()
+        rpc.pendingPermissionList.add(permission("perm1"))
+        rpc.pendingPermissionList.add(permission("perm2"))
+        rpc.replyPermissionThrows = RuntimeException("refused")
+        rpc.replyPermissionThrowsFor = setOf("perm1")
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        // The refused request still reports its failure on a card, while the approved one has none.
+        val state = m.model.state as? SessionState.AwaitingPermission ?: error("Expected an error card")
+        assertEquals("perm1", state.permission.id)
+        assertEquals(PermissionRequestState.ERROR, state.permission.state)
+        assertEquals("refused", state.permission.message)
+
+        // Resolving the error card leaves perm2 already approved, so nothing else is queued.
+        emit(ChatEventDto.PermissionReplied("ses_test", "perm1"))
+        assertTrue(m.model.state is SessionState.Busy)
+    }
+
+    fun `test refused auto approval during recovery leaves an error card`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        rpc.pendingPermissionList.add(permission("perm1"))
+        rpc.pendingPermissionList.add(permission("perm2"))
+        rpc.replyPermissionThrows = RuntimeException("refused")
+        rpc.replyPermissionThrowsFor = setOf("perm1")
+        edt { KiloPluginSettings.setAutoApprove(true) }
+
+        val m = controller("ses_test")
+        flush()
+
+        assertEquals(listOf("perm1", "perm2"), rpc.permissionReplyAttempts)
+        assertEquals(listOf("perm2"), rpc.permissionReplies.map { it.first })
+        val state = m.model.state as? SessionState.AwaitingPermission ?: error("Expected an error card")
+        assertEquals("perm1", state.permission.id)
+        assertEquals(PermissionRequestState.ERROR, state.permission.state)
+        assertEquals("refused", state.permission.message)
+    }
+
+    fun `test refused child auto approval during recovery leaves an error card`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        rpc.history.add(
+            MessageWithPartsDto(
+                info = msg("msg1", "ses_test", "assistant"),
+                parts = listOf(
+                    PartDto(
+                        id = "part_task",
+                        sessionID = "ses_test",
+                        messageID = "msg1",
+                        type = "tool",
+                        tool = "task",
+                        metadata = mapOf("sessionId" to "ses_child"),
+                    ),
+                ),
+            )
+        )
+        rpc.pendingPermissionList.add(permission("child_perm1").copy(sessionID = "ses_child"))
+        rpc.pendingPermissionList.add(permission("child_perm2").copy(sessionID = "ses_child"))
+        rpc.replyPermissionThrows = RuntimeException("refused")
+        rpc.replyPermissionThrowsFor = setOf("child_perm1")
+        edt { KiloPluginSettings.setAutoApprove(true) }
+
+        val m = controller("ses_test")
+        flush()
+
+        assertEquals(listOf("child_perm1", "child_perm2"), rpc.permissionReplyAttempts)
+        assertEquals(listOf("child_perm2"), rpc.permissionReplies.map { it.first })
+        val state = m.model.state as? SessionState.AwaitingPermission ?: error("Expected an error card")
+        assertEquals("child_perm1", state.permission.id)
+        assertEquals("ses_child", state.permission.sessionId)
+        assertEquals(PermissionRequestState.ERROR, state.permission.state)
+        assertEquals("refused", state.permission.message)
     }
 
     private fun permission(id: String) = PermissionRequestDto(
