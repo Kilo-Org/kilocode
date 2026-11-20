@@ -381,8 +381,9 @@ describe("refresh", () => {
       const credentials = yield* Credential.Service
       const integrationID = Integration.ID.make("openai")
       const methodID = Integration.MethodID.make("chatgpt")
-      const gate = yield* Deferred.make<void>()
       let count = 0
+      const entered = yield* Deferred.make<void>()
+      const gate = yield* Deferred.make<void>()
       yield* integrations.transform((editor) =>
         editor.method.update({
           integrationID,
@@ -395,21 +396,22 @@ describe("refresh", () => {
               callback: Effect.never,
             }),
           refresh: () =>
-            Effect.sync(() => count++).pipe(
-              Effect.andThen(Deferred.await(gate)),
-              Effect.andThen(
-                Effect.gen(function* () {
-                  const now = yield* Clock.currentTimeMillis
-                  return Credential.OAuth.make({
-                    type: "oauth",
-                    methodID,
-                    access: "next",
-                    refresh: "next",
-                    expires: now + Duration.toMillis(Duration.hours(1)),
-                  })
-                }),
-              ),
-            ),
+            Effect.gen(function* () {
+              count++
+              const mine = count
+              yield* Deferred.succeed(entered, undefined)
+              yield* Deferred.await(gate)
+              const now = yield* Clock.currentTimeMillis
+              // Expires inside the five minute reuse window on purpose: a resolver that misses the
+              // flight finds this value stale and refreshes again, so count === 1 proves sharing.
+              return Credential.OAuth.make({
+                type: "oauth",
+                methodID,
+                access: `next-${mine}`,
+                refresh: `next-${mine}`,
+                expires: now + Duration.toMillis(Duration.seconds(30)),
+              })
+            }),
         }),
       )
       const now = yield* Clock.currentTimeMillis
@@ -424,25 +426,84 @@ describe("refresh", () => {
           expires: now + 1,
         }),
       })
+      const input = { type: "credential", id: stored.id, label: "Work" } as const
 
-      const resolves = Effect.forEach(
-        [1, 2],
-        () => integrations.connection.resolve({ type: "credential", id: stored.id, label: "Work" }),
-        { concurrency: "unbounded" },
-      )
-      const fiber = yield* Effect.forkChild(resolves)
-      yield* Effect.yieldNow
-      yield* Effect.yieldNow
+      // Awaiting `entered` proves the owner took the flight and sits inside the gate.
+      const owner = yield* Effect.forkChild(integrations.connection.resolve(input))
+      yield* Deferred.await(entered)
+      const waiter = yield* Effect.forkChild(integrations.connection.resolve(input))
+      // Let the waiter reach the flight and park on it before the gate opens.
+      yield* Effect.forEach(Array.from({ length: 20 }), () => Effect.yieldNow, { discard: true })
       expect(count).toBe(1)
+
       yield* Deferred.succeed(gate, undefined)
-      const values = yield* Fiber.join(fiber)
-      const refreshed = (yield* credentials.get(stored.id))?.value
+      const values = [yield* Fiber.join(owner), yield* Fiber.join(waiter)]
+      const storedValue = (yield* credentials.get(stored.id))?.value
 
       expect(count).toBe(1)
-      expect(values[0]).toEqual(refreshed)
-      expect(values[1]).toEqual(refreshed)
-      expect(refreshed).toMatchObject({ access: "next", refresh: "next" })
-      expect(refreshed?.type === "oauth" && refreshed.expires > (yield* Clock.currentTimeMillis)).toBe(true)
+      expect(values[0]).toMatchObject({ access: "next-1", refresh: "next-1" })
+      expect(values[1]).toEqual(values[0])
+      expect(storedValue).toEqual(values[0])
+      // The fail-closed discriminator: the stored expiry is inside the reuse window, so a caller
+      // that missed the flight would have refreshed a second time and count would be 2.
+      const expires = storedValue?.type === "oauth" ? storedValue.expires : Number.POSITIVE_INFINITY
+      expect(expires - now).toBeLessThanOrEqual(Duration.toMillis(Duration.minutes(5)))
+    }),
+  )
+
+  it.effect("a later resolver refreshes again once the flight ends", () =>
+    Effect.gen(function* () {
+      // The control for the case above: a missed join is loud, not silent. The stored value a
+      // refresh writes is already inside the reuse window, so a sequential caller refreshes again
+      // and count reaches 2. That is why count === 1 in the concurrent case proves sharing.
+      const integrations = yield* Integration.Service
+      const credentials = yield* Credential.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("chatgpt")
+      let count = 0
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "auto" as const,
+              url: "https://example.com/authorize",
+              instructions: "Sign in",
+              callback: Effect.never,
+            }),
+          refresh: () =>
+            Effect.gen(function* () {
+              count++
+              const mine = count
+              const now = yield* Clock.currentTimeMillis
+              return Credential.OAuth.make({
+                type: "oauth",
+                methodID,
+                access: `next-${mine}`,
+                refresh: `next-${mine}`,
+                expires: now + Duration.toMillis(Duration.seconds(30)),
+              })
+            }),
+        }),
+      )
+      const now = yield* Clock.currentTimeMillis
+      const stored = yield* credentials.create({
+        integrationID,
+        label: "Work",
+        value: Credential.OAuth.make({
+          type: "oauth",
+          methodID,
+          access: "stale",
+          refresh: "stale",
+          expires: now + 1,
+        }),
+      })
+      const input = { type: "credential", id: stored.id, label: "Work" } as const
+
+      expect(yield* integrations.connection.resolve(input)).toMatchObject({ access: "next-1", refresh: "next-1" })
+      expect(yield* integrations.connection.resolve(input)).toMatchObject({ access: "next-2", refresh: "next-2" })
+      expect(count).toBe(2)
     }),
   )
 
@@ -452,9 +513,10 @@ describe("refresh", () => {
       const credentials = yield* Credential.Service
       const integrationID = Integration.ID.make("openai")
       const methodID = Integration.MethodID.make("chatgpt")
-      const gate = yield* Deferred.make<void>()
       let count = 0
       let fail = true
+      const entered = yield* Deferred.make<void>()
+      const gate = yield* Deferred.make<void>()
       yield* integrations.transform((editor) =>
         editor.method.update({
           integrationID,
@@ -467,23 +529,21 @@ describe("refresh", () => {
               callback: Effect.never,
             }),
           refresh: () =>
-            Effect.sync(() => count++).pipe(
-              Effect.andThen(Deferred.await(gate)),
-              Effect.andThen(
-                fail
-                  ? Effect.fail(new Error("nope"))
-                  : Effect.gen(function* () {
-                      const now = yield* Clock.currentTimeMillis
-                      return Credential.OAuth.make({
-                        type: "oauth",
-                        methodID,
-                        access: "next",
-                        refresh: "next",
-                        expires: now + Duration.toMillis(Duration.hours(1)),
-                      })
-                    }),
-              ),
-            ),
+            Effect.gen(function* () {
+              count++
+              const mine = count
+              yield* Deferred.succeed(entered, undefined)
+              yield* Deferred.await(gate)
+              if (fail) return yield* Effect.fail(new Error("nope"))
+              const now = yield* Clock.currentTimeMillis
+              return Credential.OAuth.make({
+                type: "oauth",
+                methodID,
+                access: `next-${mine}`,
+                refresh: `next-${mine}`,
+                expires: now + Duration.toMillis(Duration.seconds(30)),
+              })
+            }),
         }),
       )
       const now = yield* Clock.currentTimeMillis
@@ -498,18 +558,16 @@ describe("refresh", () => {
           expires: now + 1,
         }),
       })
+      const input = { type: "credential", id: stored.id, label: "Work" } as const
 
-      const resolves = Effect.forEach(
-        [1, 2],
-        () => integrations.connection.resolve({ type: "credential", id: stored.id, label: "Work" }).pipe(Effect.exit),
-        { concurrency: "unbounded" },
-      )
-      const fiber = yield* Effect.forkChild(resolves)
-      yield* Effect.yieldNow
-      yield* Effect.yieldNow
+      const owner = yield* Effect.forkChild(integrations.connection.resolve(input).pipe(Effect.exit))
+      yield* Deferred.await(entered)
+      const waiter = yield* Effect.forkChild(integrations.connection.resolve(input).pipe(Effect.exit))
+      yield* Effect.forEach(Array.from({ length: 20 }), () => Effect.yieldNow, { discard: true })
       expect(count).toBe(1)
+
       yield* Deferred.succeed(gate, undefined)
-      const exits = yield* Fiber.join(fiber)
+      const exits = [yield* Fiber.join(owner), yield* Fiber.join(waiter)]
 
       expect(count).toBe(1)
       for (const exit of exits) {
@@ -517,10 +575,11 @@ describe("refresh", () => {
         if (Exit.isFailure(exit)) expect(Cause.squash(exit.cause)).toBeInstanceOf(Integration.AuthorizationError)
       }
 
+      // next-2 differs from next-1, so the value proves a fresh refresh ran after the guard released.
       fail = false
-      const third = yield* integrations.connection.resolve({ type: "credential", id: stored.id, label: "Work" })
+      const third = yield* integrations.connection.resolve(input)
       expect(count).toBe(2)
-      expect(third).toMatchObject({ access: "next", refresh: "next" })
+      expect(third).toMatchObject({ access: "next-2", refresh: "next-2" })
     }),
   )
 
@@ -571,6 +630,7 @@ describe("refresh", () => {
       const methodID = Integration.MethodID.make("chatgpt")
       let count = 0
       let fail = true
+      const entered = yield* Deferred.make<void>()
       yield* integrations.transform((editor) =>
         editor.method.update({
           integrationID,
@@ -583,22 +643,20 @@ describe("refresh", () => {
               callback: Effect.never,
             }),
           refresh: () =>
-            Effect.sync(() => count++).pipe(
-              Effect.andThen(
-                fail
-                  ? Effect.never
-                  : Effect.gen(function* () {
-                      const now = yield* Clock.currentTimeMillis
-                      return Credential.OAuth.make({
-                        type: "oauth",
-                        methodID,
-                        access: "next",
-                        refresh: "next",
-                        expires: now + Duration.toMillis(Duration.hours(1)),
-                      })
-                    }),
-              ),
-            ),
+            Effect.gen(function* () {
+              count++
+              const mine = count
+              yield* Deferred.succeed(entered, undefined)
+              if (fail) return yield* Effect.never
+              const now = yield* Clock.currentTimeMillis
+              return Credential.OAuth.make({
+                type: "oauth",
+                methodID,
+                access: `next-${mine}`,
+                refresh: `next-${mine}`,
+                expires: now + Duration.toMillis(Duration.seconds(30)),
+              })
+            }),
         }),
       )
       const now = yield* Clock.currentTimeMillis
@@ -613,18 +671,16 @@ describe("refresh", () => {
           expires: now + 1,
         }),
       })
+      const input = { type: "credential", id: stored.id, label: "Work" } as const
 
-      const resolves = Effect.forEach(
-        [1, 2],
-        () => integrations.connection.resolve({ type: "credential", id: stored.id, label: "Work" }).pipe(Effect.exit),
-        { concurrency: "unbounded" },
-      )
-      const fiber = yield* Effect.forkChild(resolves)
-      yield* Effect.yieldNow
-      yield* Effect.yieldNow
+      const owner = yield* Effect.forkChild(integrations.connection.resolve(input).pipe(Effect.exit))
+      yield* Deferred.await(entered)
+      const waiter = yield* Effect.forkChild(integrations.connection.resolve(input).pipe(Effect.exit))
+      yield* Effect.forEach(Array.from({ length: 20 }), () => Effect.yieldNow, { discard: true })
       expect(count).toBe(1)
+
       yield* TestClock.adjust(Duration.seconds(31))
-      const exits = yield* Fiber.join(fiber)
+      const exits = [yield* Fiber.join(owner), yield* Fiber.join(waiter)]
 
       expect(count).toBe(1)
       for (const exit of exits) {
@@ -632,10 +688,11 @@ describe("refresh", () => {
         if (Exit.isFailure(exit)) expect(Cause.squash(exit.cause)).toBeInstanceOf(Integration.AuthorizationError)
       }
 
+      // next-2 differs from next-1, so the value proves a fresh refresh ran after the guard released.
       fail = false
-      const third = yield* integrations.connection.resolve({ type: "credential", id: stored.id, label: "Work" })
+      const third = yield* integrations.connection.resolve(input)
       expect(count).toBe(2)
-      expect(third).toMatchObject({ access: "next", refresh: "next" })
+      expect(third).toMatchObject({ access: "next-2", refresh: "next-2" })
     }),
   )
 
@@ -645,8 +702,9 @@ describe("refresh", () => {
       const credentials = yield* Credential.Service
       const integrationID = Integration.ID.make("openai")
       const methodID = Integration.MethodID.make("chatgpt")
-      const gate = yield* Deferred.make<void>()
       let count = 0
+      const entered = yield* Deferred.make<void>()
+      const gate = yield* Deferred.make<void>()
       yield* integrations.transform((editor) =>
         editor.method.update({
           integrationID,
@@ -659,21 +717,20 @@ describe("refresh", () => {
               callback: Effect.never,
             }),
           refresh: () =>
-            Effect.sync(() => count++).pipe(
-              Effect.andThen(Deferred.await(gate)),
-              Effect.andThen(
-                Effect.gen(function* () {
-                  const now = yield* Clock.currentTimeMillis
-                  return Credential.OAuth.make({
-                    type: "oauth",
-                    methodID,
-                    access: "next",
-                    refresh: "next",
-                    expires: now + Duration.toMillis(Duration.hours(1)),
-                  })
-                }),
-              ),
-            ),
+            Effect.gen(function* () {
+              count++
+              const mine = count
+              yield* Deferred.succeed(entered, undefined)
+              yield* Deferred.await(gate)
+              const now = yield* Clock.currentTimeMillis
+              return Credential.OAuth.make({
+                type: "oauth",
+                methodID,
+                access: `next-${mine}`,
+                refresh: `next-${mine}`,
+                expires: now + Duration.toMillis(Duration.seconds(30)),
+              })
+            }),
         }),
       )
       const now = yield* Clock.currentTimeMillis
@@ -688,26 +745,22 @@ describe("refresh", () => {
           expires: now + 1,
         }),
       })
+      const input = { type: "credential", id: stored.id, label: "Work" } as const
 
-      const owner = yield* Effect.forkChild(
-        integrations.connection.resolve({ type: "credential", id: stored.id, label: "Work" }),
-      )
-      yield* Effect.yieldNow
-      yield* Effect.yieldNow
-
-      const waiter = yield* Effect.forkChild(
-        integrations.connection.resolve({ type: "credential", id: stored.id, label: "Work" }),
-      )
-      yield* Effect.yieldNow
-      yield* Effect.yieldNow
+      const owner = yield* Effect.forkChild(integrations.connection.resolve(input))
+      yield* Deferred.await(entered)
+      const waiter = yield* Effect.forkChild(integrations.connection.resolve(input))
+      yield* Effect.forEach(Array.from({ length: 20 }), () => Effect.yieldNow, { discard: true })
       expect(count).toBe(1)
 
+      // The owner only waits on the deferred restore point, so interrupting it leaves the detached
+      // publish running: the waiter is served by that job instead of waiting forever.
       yield* Fiber.interrupt(owner)
       yield* Deferred.succeed(gate, undefined)
       const value = yield* Fiber.join(waiter)
 
       expect(count).toBe(1)
-      expect(value).toMatchObject({ access: "next", refresh: "next" })
+      expect(value).toMatchObject({ access: "next-1", refresh: "next-1" })
     }),
   )
 
@@ -720,13 +773,14 @@ describe("refresh", () => {
         [Global.node, Global.layerWith({ data: fs.mkdtempSync(path.join(os.tmpdir(), "kilo-flight-")) })],
       ])
       const report = yield* Deferred.make<readonly Credential.OAuth[]>()
+      // Declared outside the scope so the assertions after teardown still see the refresh count.
+      let count = 0
       yield* Effect.scoped(
         Effect.gen(function* () {
           const integrations = yield* Integration.Service
           const credentials = yield* Credential.Service
           const integrationID = Integration.ID.make("openai")
           const methodID = Integration.MethodID.make("chatgpt")
-          let count = 0
           yield* integrations.transform((editor) =>
             editor.method.update({
               integrationID,
@@ -739,21 +793,20 @@ describe("refresh", () => {
                   callback: Effect.never,
                 }),
               refresh: () =>
-                Effect.sync(() => count++).pipe(
-                  Effect.andThen(Effect.sleep("300 millis")),
-                  Effect.andThen(
-                    Effect.gen(function* () {
-                      const now = yield* Clock.currentTimeMillis
-                      return Credential.OAuth.make({
-                        type: "oauth",
-                        methodID,
-                        access: "next",
-                        refresh: "next",
-                        expires: now + Duration.toMillis(Duration.hours(1)),
-                      })
-                    }),
-                  ),
-                ),
+                Effect.gen(function* () {
+                  count++
+                  const mine = count
+                  yield* Effect.sleep("300 millis")
+                  const now = yield* Clock.currentTimeMillis
+                  // Inside the five minute reuse window, so a caller that misses this flight refreshes again.
+                  return Credential.OAuth.make({
+                    type: "oauth",
+                    methodID,
+                    access: `next-${mine}`,
+                    refresh: `next-${mine}`,
+                    expires: now + Duration.toMillis(Duration.seconds(30)),
+                  })
+                }),
             }),
           )
           const now = yield* Clock.currentTimeMillis
@@ -791,9 +844,10 @@ describe("refresh", () => {
       )
 
       const values = yield* Deferred.await(report).pipe(Effect.timeout("20 seconds"))
+      expect(count).toBe(1)
       expect(values.length).toBe(2)
-      expect(values[0]).toMatchObject({ access: "next", refresh: "next" })
-      expect(values[1]).toMatchObject({ access: "next", refresh: "next" })
+      expect(values[0]).toMatchObject({ access: "next-1", refresh: "next-1" })
+      expect(values[1]).toMatchObject({ access: "next-1", refresh: "next-1" })
     }),
   )
 })
