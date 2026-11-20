@@ -246,8 +246,11 @@ export function profile(
     Global.Path.bin,
     Global.Path.log,
     Global.Path.repos,
-    ...filterWritable(ctx, extraWritable ?? []),
-  ].map(root)
+  ]
+    .map(root)
+    // Explicit writable_paths may hold plain `.git` marker files (uv writes one into its cache).
+    // `.git` directories stay read-only there, and fully protected in the workspace and Kilo roots.
+    .concat(filterWritable(ctx, extraWritable ?? []).map((value) => ({ ...root(value), markers: true })))
   return {
     filesystem: {
       allowWrite: writable,
