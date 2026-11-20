@@ -348,7 +348,11 @@ class KiloBackendProviderSettingsManagerTest {
         )
         assertTrue(state.disabled.contains("global-only"), "the merged disabled list must still contain the provider")
         assertEquals(1, mock.requestCount("/config/overlay"), "the per-scope maps must come from the overlay")
-        assertEquals(0, mock.requestCount("/config"), "the resolved config is only a fallback and must not be read")
+        assertEquals(
+            1,
+            mock.requestCount("/config"),
+            "the resolved config supplies the provider settings and the merged lists even when the overlay answers",
+        )
     }
 
     @Test
@@ -392,7 +396,7 @@ class KiloBackendProviderSettingsManagerTest {
 
     @Test
     fun `state falls back to the resolved workspace config when the overlay is unavailable`() = runBlocking {
-        // The fallback body carries inherited global values, so the shared id must stay global-only
+        // The resolved body carries inherited global values, so the shared id must stay global-only
         // there: the workspace file's own content is unknown when the overlay fails.
         mock.config = """{"disabled_providers":["anthropic"]}"""
         mock.workspaceConfig = """{"disabled_providers":["anthropic","workspace-only"]}"""
@@ -410,9 +414,72 @@ class KiloBackendProviderSettingsManagerTest {
         assertEquals(listOf("workspace"), state.disabledScopes["workspace-only"])
         assertTrue(state.disabled.contains("anthropic"), "the state must still load the merged disabled list")
         assertEquals(1, mock.requestCount("/config/overlay"))
-        assertEquals(1, mock.requestCount("/config"), "the resolved config must be read as the overlay fallback")
+        assertEquals(
+            1,
+            mock.requestCount("/config"),
+            "the resolved config supplies the provider settings and the merged lists, and is also the overlay fallback",
+        )
         val error = state.errors.single { it.resource == "config_overlay" }
         assertContains(error.detail.orEmpty(), "503")
+    }
+
+    @Test
+    fun `state keeps the resolved provider entry when the project file only overrides part of it`() = runBlocking {
+        // A project file usually overrides one field of a provider it inherits; the raw project
+        // entry alone lacks npm/options, which the settings UI and disconnect read.
+        mock.config = "{}"
+        mock.workspaceConfig = """{
+            "provider":{
+                "my-openai":{
+                    "name":"My OpenAI",
+                    "npm":"@ai-sdk/openai-compatible",
+                    "options":{"baseURL":"http://localhost:11434"},
+                    "models":{"m0":{"id":"m0","name":"m0"}}
+                }
+            }
+        }""".trimIndent()
+        mock.configOverlayProject = """{"provider":{"my-openai":{"models":{"m1":{"id":"m1","name":"m1"}}}}}"""
+        val manager = manager()
+
+        mock.resetCounts()
+        val state = manager.state("/test")
+
+        assertEquals(
+            "@ai-sdk/openai-compatible",
+            state.config["my-openai"]?.npm,
+            "the resolved entry must supply npm, not the raw partial project entry",
+        )
+        assertEquals(
+            "http://localhost:11434",
+            state.config["my-openai"]?.options?.get("baseURL"),
+            "the resolved entry must supply the provider options",
+        )
+        assertEquals(1, mock.requestCount("/config"), "the resolved config must be read once")
+        assertEquals(1, mock.requestCount("/config/overlay"), "the overlay must be read once")
+    }
+
+    @Test
+    fun `enable reports a provider that stays disabled in another config source`() = runBlocking {
+        // Every scope the manager can edit is cleared, but the resolved config still lists the id
+        // (here because the overlay is unavailable and the resolved body carries it), so claiming
+        // success would leave the provider hidden with no explanation.
+        mock.config = """{"disabled_providers":["anthropic"]}"""
+        mock.workspaceConfig = """{"disabled_providers":["anthropic","workspace-only"]}"""
+        mock.configOverlayStatus = 503
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.enable(ProviderEnableDto("/test", "anthropic"))
+
+        assertEquals(
+            "Provider is still disabled in another configuration source.",
+            result.error,
+            "a provider the manager cannot re-enable must be reported instead of a false success",
+        )
+        assertTrue(
+            result.state.disabled.contains("anthropic"),
+            "the returned state must still report the provider as disabled",
+        )
     }
 
     @Test

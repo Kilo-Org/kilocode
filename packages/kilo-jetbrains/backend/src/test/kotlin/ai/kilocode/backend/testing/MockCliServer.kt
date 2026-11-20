@@ -56,6 +56,10 @@ class MockCliServer : AutoCloseable {
     @Volatile var configStatus = 200
     @Volatile var workspaceConfigStatus = 200
     @Volatile var configOverlayStatus = 200
+
+    // When set, the overlay's `project` member returns this body instead of [workspaceConfig], so a
+    // test can make the raw project file differ from the resolved `/config` body.
+    @Volatile var configOverlayProject: String? = null
     @Volatile var warningsStatus = 200
     @Volatile var notificationsStatus = 200
 
@@ -519,7 +523,8 @@ class MockCliServer : AutoCloseable {
                     // Reports each config file's raw content so a caller can tell a project-scope
                     // setting from one inherited from the global file. A non-200 answer has no body.
                     if (configOverlayStatus == 200) {
-                        respond(output, configOverlayStatus, """{"scope":"project","global":$config,"project":$workspaceConfig}""")
+                        val project = configOverlayProject ?: workspaceConfig
+                        respond(output, configOverlayStatus, """{"scope":"project","global":$config,"project":$project}""")
                     } else {
                         respond(output, configOverlayStatus, "")
                     }

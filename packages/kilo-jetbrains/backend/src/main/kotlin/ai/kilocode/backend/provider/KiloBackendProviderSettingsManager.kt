@@ -55,21 +55,23 @@ internal class KiloBackendProviderSettingsManager(
         val global = load("global_config", errors) {
             parsed(get("/global/config"))
         } ?: empty
-        // The resolved `/config` body repeats every global setting the project file does not
-        // override, so it cannot distinguish a workspace-scoped list entry from an inherited one.
-        // The overlay reports each file's raw content instead; the resolved config is only the
-        // fallback when the overlay endpoint is unavailable.
+        // The resolved `/config` body carries every global value the project file does not override
+        // and includes other config sources, so it is the only body that describes the effective
+        // provider settings (npm, baseURL, env) the UI and `disconnect` rely on.
+        val resolved = load("workspace_config", errors) {
+            parsed(get("/config?directory=${enc(directory)}"))
+        } ?: empty
+        // The resolved body also repeats every global list entry, so it cannot tell a workspace-scope
+        // entry from an inherited one. The overlay reports each file's raw content; it is used only
+        // for the scope maps, never for the config or the merged id lists.
         val project = load("config_overlay", errors) {
             KiloCliDataParser.parseConfigOverlayProject(get("/config/overlay?directory=${enc(directory)}&scope=project"))?.let { parsed(it) }
         }
-        val local = project ?: load("workspace_config", errors) {
-            parsed(get("/config?directory=${enc(directory)}"))
-        } ?: empty
-        val cfg = scopedConfig(global.config, local.config)
-        val disabled = (global.disabled + local.disabled).distinct().sorted()
-        val enabled = (global.enabled + local.enabled).distinct().sorted()
-        val disabledScopes = scopedIds(global.disabled, local.disabled, merged = project == null)
-        val enabledScopes = scopedIds(global.enabled, local.enabled, merged = project == null)
+        val cfg = scopedConfig(global.config, resolved.config)
+        val disabled = (global.disabled + resolved.disabled).distinct().sorted()
+        val enabled = (global.enabled + resolved.enabled).distinct().sorted()
+        val disabledScopes = scopedIds(global.disabled, project?.disabled ?: resolved.disabled, merged = project == null)
+        val enabledScopes = scopedIds(global.enabled, project?.enabled ?: resolved.enabled, merged = project == null)
         val result = ProviderSettingsDto(
             providers = providers?.first ?: emptyList(),
             connected = providers?.second ?: emptyList(),
@@ -155,7 +157,13 @@ internal class KiloBackendProviderSettingsManager(
             patch(input.directory, scope, KiloCliDataParser.buildDisabledProviderPatch(disabledFor(current, scope).filter { it != input.providerId }))
         }
         dispose()
-        return ProviderActionResultDto(state(input.directory))
+        // Clearing every scope the manager knows about can still leave the id disabled in a source
+        // it cannot edit (managed or org config), so report that instead of claiming success.
+        val next = state(input.directory)
+        if (input.providerId in next.disabled) {
+            return ProviderActionResultDto(next, error = "Provider is still disabled in another configuration source.")
+        }
+        return ProviderActionResultDto(next)
     }
 
     suspend fun saveCustom(input: CustomProviderSaveDto): ProviderActionResultDto {
