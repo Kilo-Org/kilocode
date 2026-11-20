@@ -101,7 +101,7 @@ Settings apply across extension surfaces, including the sidebar and Agent Manage
 
 ## Product telemetry
 
-Product telemetry helps us understand feature usage and improve reliability. To disable it, set **Telemetry: Telemetry Level** to **off** in VS Code's user settings. The change applies right away. This editor-wide preference controls the extension and its managed Kilo backend, including the sidebar and Agent Manager. It takes precedence over standalone CLI telemetry settings in `kilo.jsonc` or the environment.
+Product telemetry helps us understand feature usage and improve reliability. Turn it on or off with the **Telemetry** switch under **Settings > About Kilo Code**; the switch writes `experimental.openTelemetry` to global Kilo config through the managed backend. VS Code's editor-wide **Telemetry: Telemetry Level** setting can also turn it off — Kilo sends telemetry only when that level is **all**. The change applies right away and covers the extension and its managed Kilo backend, including the sidebar and Agent Manager.
 
 See [VS Code product telemetry settings](/docs/getting-started/settings/product-telemetry#vs-code) for the JSON setting and full instructions.
 
