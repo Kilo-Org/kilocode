@@ -121,12 +121,13 @@ function unreachable(): BrowserHub.Interface {
   }
 }
 
-/** A stand-in permission service that records what it was asked. */
+/** A stand-in permission service that records what it was asked; its rules allow the page reads' own tools. */
 function recorder() {
   const asserts: { action: string; resources: readonly string[]; save?: readonly string[] }[] = []
   const service = {
     assert: (input: { action: string; resources: readonly string[]; save?: readonly string[] }) =>
       Effect.sync(() => void asserts.push(input)),
+    allows: (input: { action: string }) => Effect.succeed(["browser_snapshot", "browser_tabs"].includes(input.action)),
   } as unknown as Permission.Interface
   return { asserts, service: Option.some(service) }
 }
@@ -1367,7 +1368,7 @@ describe("observation over the extension backend", () => {
     const service = {
       assert: (input: { action: string }) => Effect.sync(() => void asserts.push(input)),
       allows: (input: { action: string; resources: readonly string[] }) =>
-        Effect.succeed(input.action === "browser" && input.resources[0] === "read:http://localhost:3000"),
+        Effect.succeed(input.action !== "browser" || input.resources[0] === "read:http://localhost:3000"),
     } as unknown as Permission.Interface
     const hub = extension({
       snapshot: (input) =>
@@ -1390,6 +1391,42 @@ describe("observation over the extension backend", () => {
     // No prompt beyond the tools' own keys; the first read is refused and repeated once, the second runs granted.
     expect(asserts.map((entry) => entry.action)).toEqual(["browser_click", "browser_click"])
     expect(hub.calls.filter((call) => call.name === "browser_snapshot")).toHaveLength(3)
+  })
+
+  test("the page read obeys the per-tool rules: an ask or a deny for browser_snapshot or browser_tabs skips that read", async () => {
+    for (const refused of ["browser_snapshot", "browser_tabs"]) {
+      const service = {
+        assert: () => Effect.void,
+        allows: (input: { action: string }) => Effect.succeed(input.action !== refused),
+      } as unknown as Permission.Interface
+      const hub = extension()
+      const host = await boot(
+        { backend: "extension", observation: "full" },
+        { hub: hub.service, permission: Option.some(service) },
+      )
+      const clicked = textIn(await host.call("browser_click", { target: "e2" }))
+      const names = hub.calls.map((call) => call.name)
+      expect(names).not.toContain(refused)
+      expect(names).toContain(refused === "browser_snapshot" ? "browser_tabs" : "browser_snapshot")
+      if (refused === "browser_tabs") expect(clicked).not.toContain("- Page URL:")
+      else expect(clicked).not.toContain("### Snapshot")
+    }
+  })
+
+  test("a permission service that throws reads nothing it would have to ask for", async () => {
+    const service = {
+      assert: () => Effect.void,
+      allows: () => {
+        throw new Error("no rules")
+      },
+    } as unknown as Permission.Interface
+    const hub = extension()
+    const host = await boot(
+      { backend: "extension", observation: "full" },
+      { hub: hub.service, permission: Option.some(service) },
+    )
+    expect(textIn(await host.call("browser_click", { target: "e2" }))).toContain("Clicked")
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_click"])
   })
 
   test("a granted post-action read reads the page once and reports it with its URL", async () => {

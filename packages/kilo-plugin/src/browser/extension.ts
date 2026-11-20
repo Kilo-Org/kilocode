@@ -243,7 +243,7 @@ export function map(error: unknown): Error {
   return new Error(error.message || "The browser call failed.")
 }
 
-/** How long the page read after a step may take before the step's own result is returned without it. */
+/** How long the page reads after a step may take, together, before the step's own result is returned without them. */
 const PAGE_STATE_TIMEOUT = 10_000
 
 /** The URL the extension's tab list shows for a tab the session may not read. */
@@ -251,8 +251,11 @@ const WITHHELD_URL = "[origin withheld]"
 
 type Identity = { url?: string; title?: string }
 
-/** The snapshot a page read got, the frames it withheld, or the note that says why the page was not read. */
-type SnapshotPart = { snapshot?: string; note?: string; frames?: readonly string[] }
+/**
+ * The snapshot a page read got, the frames it withheld, or the note that says why the page was not read; `authorized`
+ * is the grant list the read ran with, which a read granted on the spot extends.
+ */
+type SnapshotPart = { snapshot?: string; note?: string; frames?: readonly string[]; authorized?: readonly string[] }
 
 function texts(content: readonly { type: string; text?: string }[]) {
   return content
@@ -588,20 +591,25 @@ export class ExtensionBackend implements BrowserBackend {
   /**
    * The page state the Playwright MCP reports after a step, which the extension's own answer lacks. The reads run with
    * the call's grants and never a step token, so an unreadable page stays unread (the note says so) and withheld
-   * frames stay withheld. A failed or slow read leaves the step's answer with whatever page it could name.
+   * frames stay withheld. A failed or slow read leaves the step's answer with whatever page it could name; all reads
+   * share one deadline.
    */
   async pageState(name: string, result: CallResult, ctx: PageContext): Promise<CallResult> {
     const port = this.input.port
     const session = this.session(ctx)
     if (!port || result.isError || this.halts(session, this.input.turns?.get(session)) || this.disposed) return result
+    const deadline = AbortSignal.timeout(PAGE_STATE_TIMEOUT)
+    const scoped = { ...ctx, signal: ctx.signal ? AbortSignal.any([ctx.signal, deadline]) : deadline }
     const text = texts(result.content)
     const explicit = name === "browser_snapshot"
     const own = explicit ? undefined : answered(text)
     const frames = result.meta?.withheldFrames
     const read: SnapshotPart = explicit
       ? { snapshot: text, frames }
-      : await this.snapshotPart(port, session, ctx, frames)
-    const page = own?.page ?? (await this.selectedPage(port, session, ctx))
+      : await this.snapshotPart(port, session, scoped, frames)
+    // The tab list runs with the grant the snapshot read was given, so the page it just read keeps its URL.
+    const listed = ctx.tabs ? { ...scoped, authorized: read.authorized ?? scoped.authorized } : undefined
+    const page = own?.page ?? (listed ? await this.selectedPage(port, session, listed) : undefined)
     const body = sections({
       page,
       note: read.note,
@@ -629,6 +637,7 @@ export class ExtensionBackend implements BrowserBackend {
     return {
       snapshot: texts(read.value.content),
       frames: [...new Set([...(frames ?? []), ...(read.value.meta?.withheldFrames ?? [])])],
+      authorized: read.authorized,
     }
   }
 
@@ -648,7 +657,7 @@ export class ExtensionBackend implements BrowserBackend {
   private async snapshotAfter(port: BrowserHub.Port, session: string, ctx: PageContext) {
     const attempt = (authorized: readonly string[]) =>
       this.read(port, session, "browser_snapshot", {}, { ...ctx, authorized }).then(
-        (value) => ({ value }),
+        (value) => ({ value, authorized }),
         (error: unknown) => ({ error }),
       )
     const first = await attempt(ctx.authorized ?? [])
@@ -657,7 +666,10 @@ export class ExtensionBackend implements BrowserBackend {
     return attempt([...(ctx.authorized ?? []), `read:${origin}`])
   }
 
-  /** One read for the page state: the call's grants, no step token, and its own short deadline. */
+  /**
+   * One read for the page state: the call's grants, no step token, and the page state's deadline. It reuses the handle
+   * the step ran on; a session forgotten since (a deleted conversation) has no page to read and opens no new one.
+   */
   private async read(
     port: BrowserHub.Port,
     session: string,
@@ -665,13 +677,14 @@ export class ExtensionBackend implements BrowserBackend {
     args: Record<string, unknown>,
     ctx: CallContext,
   ) {
-    const deadline = AbortSignal.timeout(PAGE_STATE_TIMEOUT)
+    const handle = this.handles.get(session)
+    if (!handle) throw new Error("The browser session ended before its page was read.")
     return port.call({
-      sessionHandle: await this.handle(port, session),
+      sessionHandle: await handle,
       name,
       arguments: args,
       authorized: grants(ctx.authorized ?? []),
-      signal: ctx.signal ? AbortSignal.any([ctx.signal, deadline]) : deadline,
+      signal: ctx.signal,
     })
   }
 

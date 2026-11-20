@@ -38,9 +38,13 @@ export type CallContext = {
   allowSensitive?: boolean
 }
 
-/** What a page read after a step runs with: the call's grants and whether to read the snapshot itself. */
+/**
+ * What a page read after a step runs with: the call's grants, whether to read the snapshot itself, and whether to read
+ * the tab list for the page's URL and title. Each flag follows the per-tool rule of the read it stands for.
+ */
 export type PageContext = CallContext & {
   snapshot: boolean
+  tabs: boolean
   /**
    * Whether the session's own rules (config, saved choices, organization) allow reading an origin without asking a
    * person. True records the grant for the session, the way an ask those rules answer does.

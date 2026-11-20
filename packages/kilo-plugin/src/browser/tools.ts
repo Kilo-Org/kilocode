@@ -218,6 +218,23 @@ export function withheldRefusal(origin: string): string {
 }
 
 /**
+ * Whether the rules already allow a request, never asking anyone: a deny, an ask, a service that does not implement the
+ * query and one that throws or fails all answer no, so an internal read can only skip itself.
+ */
+function allowsQuietly(permission: Permission.Interface, request: Record<string, unknown>) {
+  return Effect.try({ try: () => permission.allows(request as never), catch: (error) => error }).pipe(
+    Effect.flatten,
+    Effect.orElseSucceed(() => false),
+  )
+}
+
+/** The per-tool rule a user call obeys, for an internal read of that tool: allowed outright or skipped silently. */
+function toolAllowed(permission: Option.Option<Permission.Interface>, context: Tool.Context, action: string) {
+  if (Option.isNone(permission)) return Effect.succeed(true)
+  return allowsQuietly(permission.value, { action, resources: ["*"], ...Permission.invocation(context) })
+}
+
+/**
  * Console data for diff mode. The internal call is a real read and must never prompt: a backend that can plan is
  * checked first and the read runs only when every item the plan asks for is already granted for this session. A
  * backend that learns the real origin at action time (the extension) cannot plan; it filters by the grants it is
@@ -232,23 +249,7 @@ function consoleErrors(
 ) {
   return Effect.gen(function* () {
     // The per-tool rule is the same one a user call obeys: a deny or an ask skips the console section silently.
-    if (Option.isSome(permission)) {
-      // `Effect.try` covers a permission service that does not implement the query at all.
-      const queried = Effect.try({
-        try: () =>
-          permission.value.allows({
-            action: "browser_console_messages",
-            resources: ["*"],
-            ...Permission.invocation(context),
-          } as never),
-        catch: () => Effect.succeed(false),
-      })
-      const permitted = yield* queried.pipe(
-        Effect.flatten,
-        Effect.orElseSucceed(() => false),
-      )
-      if (!permitted) return []
-    }
+    if (!(yield* toolAllowed(permission, context, "browser_console_messages"))) return []
     const grants = grantsFor(session)
     const plan = active.plan?.bind(active)
     if (plan) {
@@ -461,12 +462,10 @@ function readable(input: Pick<PageRead, "session" | "context" | "permission" | "
     const allowed =
       grants.has(pattern) || KiloBrowserPolicy.allows(input.organization, origin) || Option.isNone(permission)
         ? Effect.succeed(true)
-        : Effect.suspend(() =>
-            permission.value.allows({
-              ...BrowserPermission.request(item, false),
-              ...Permission.invocation(input.context),
-            } as never),
-          ).pipe(Effect.orElseSucceed(() => false))
+        : allowsQuietly(permission.value, {
+            ...BrowserPermission.request(item, false),
+            ...Permission.invocation(input.context),
+          })
     return Effect.runPromise(
       allowed.pipe(
         Effect.tap((yes) =>
@@ -494,22 +493,32 @@ type PageRead = {
 /**
  * The page state the Playwright MCP reports after a step, for a backend whose answer lacks it (the extension): after a
  * step the MCP reports the page for, and on an explicit snapshot, the URL and title and, unless `snapshot` is off, the
- * snapshot. A result that already names its page is left alone, so the Playwright backend never reads twice.
+ * snapshot. A result that already names its page is left alone, so the Playwright backend never reads twice. Each read
+ * obeys the per-tool rule of the tool it reads with (`browser_snapshot`, `browser_tabs`), as a user call would: a rule
+ * that denies or asks skips that read silently.
  */
 function settle(input: PageRead) {
   const read = input.active.pageState?.bind(input.active)
   if (!read || snapshot(split(textOf(input.result))) !== undefined) return Effect.succeed(input.result)
   if (input.name !== "browser_snapshot" && !reportsPage(input.name, input.args)) return Effect.succeed(input.result)
-  return Effect.tryPromise({
-    try: (signal) =>
-      read(input.name, input.result, {
-        signal,
-        session: input.session,
-        authorized: [...grantsFor(input.session)],
-        snapshot: input.snapshot,
-        readable: readable(input),
-      }),
-    catch: (error) => error,
+  return Effect.gen(function* () {
+    // An explicit snapshot already passed its own rule; only the reads this step adds are checked.
+    const snapshotted =
+      input.snapshot &&
+      (input.name === "browser_snapshot" || (yield* toolAllowed(input.permission, input.context, "browser_snapshot")))
+    const tabs = yield* toolAllowed(input.permission, input.context, "browser_tabs")
+    return yield* Effect.tryPromise({
+      try: (signal) =>
+        read(input.name, input.result, {
+          signal,
+          session: input.session,
+          authorized: [...grantsFor(input.session)],
+          snapshot: snapshotted,
+          tabs,
+          readable: readable(input),
+        }),
+      catch: (error) => error,
+    })
   }).pipe(Effect.orElseSucceed(() => input.result))
 }
 

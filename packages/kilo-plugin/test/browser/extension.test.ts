@@ -706,6 +706,7 @@ describe("extension backend", () => {
     const page = await active.pageState("browser_click", clicked, {
       ...ctx({ session: "ses_waiting" }),
       snapshot: true,
+      tabs: true,
     })
     expect(page).toBe(clicked)
     expect(hub.calls.map((call) => call.name)).toEqual(["browser_snapshot"])
@@ -1016,8 +1017,9 @@ describe("extension backend", () => {
         }),
     })
     const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_click", {}, ctx())
     const clicked = { content: [{ type: "text" as const, text: "Clicked." }], isError: false }
-    const page = await active.pageState("browser_click", clicked, { ...ctx(), snapshot: false })
+    const page = await active.pageState("browser_click", clicked, { ...ctx(), snapshot: false, tabs: true })
     expect(page.content).toEqual([
       {
         type: "text",
@@ -1025,7 +1027,7 @@ describe("extension backend", () => {
       },
     ])
     // No snapshot was asked for, so only the tab list was read.
-    expect(hub.calls.map((call) => call.name)).toEqual(["browser_tabs"])
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_click", "browser_tabs"])
   })
 
   test("the page state of a tab the session may not read names no URL", async () => {
@@ -1041,8 +1043,9 @@ describe("extension backend", () => {
         }),
     })
     const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_click", {}, ctx())
     const clicked = { content: [{ type: "text" as const, text: "Clicked." }], isError: false }
-    const page = await active.pageState("browser_click", clicked, { ...ctx(), snapshot: false })
+    const page = await active.pageState("browser_click", clicked, { ...ctx(), snapshot: false, tabs: true })
     expect(page.content).toEqual([{ type: "text", text: "### Result\nClicked." }])
   })
 
@@ -1061,10 +1064,12 @@ describe("extension backend", () => {
           : Promise.resolve({ content: [{ type: "text", text: "{}" }] }),
     })
     const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_click", {}, ctx())
     const clicked = { content: [{ type: "text" as const, text: "Clicked." }], isError: false }
     const page = await active.pageState("browser_click", clicked, {
       ...ctx(),
       snapshot: true,
+      tabs: true,
       readable: (origin) => {
         asked.push(origin)
         return Promise.resolve(true)
@@ -1078,6 +1083,90 @@ describe("extension backend", () => {
         text: "### Page\n- Page content: not read after this step. Call browser_snapshot to read it.\n### Result\nClicked.",
       },
     ])
+  })
+
+  test("the tab read after a granted page read carries that grant, so the page keeps its URL", async () => {
+    const origin = "http://localhost:3000"
+    const granted = (input: Call) => input.authorized.some((pair) => pair.class === "read" && pair.origin === origin)
+    const hub = fake({
+      call: (input) => {
+        if (input.name === "browser_click") return Promise.resolve({ content: [{ type: "text", text: "Clicked." }] })
+        if (input.name === "browser_tabs")
+          return Promise.resolve({
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  tabs: [
+                    {
+                      index: 0,
+                      selected: true,
+                      title: "Local",
+                      url: granted(input) ? `${origin}/` : "[origin withheld]",
+                    },
+                  ],
+                }),
+              },
+            ],
+          })
+        if (granted(input)) return Promise.resolve({ content: [{ type: "text", text: "- RootWebArea" }] })
+        return Promise.reject(
+          new BrowserHub.Failure({
+            kind: "permission",
+            message: "needs permission",
+            items: [{ class: "read", origin }],
+          }),
+        )
+      },
+    })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_click", {}, ctx())
+    const clicked = { content: [{ type: "text" as const, text: "Clicked." }], isError: false }
+    const page = await active.pageState("browser_click", clicked, {
+      ...ctx(),
+      snapshot: true,
+      tabs: true,
+      readable: () => Promise.resolve(true),
+    })
+    const text = page.content.map((block) => (block.type === "text" ? block.text : "")).join("\n")
+    expect(text).toContain(`- Page URL: ${origin}/`)
+    expect(text).toContain("- RootWebArea")
+  })
+
+  test("a deleted conversation's page read opens no browser session", async () => {
+    const hub = fake()
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_click", {}, ctx({ session: "ses_gone" }))
+    active.forget("ses_gone")
+    const clicked = { content: [{ type: "text" as const, text: "Clicked." }], isError: false }
+    await active.pageState("browser_click", clicked, { ...ctx({ session: "ses_gone" }), snapshot: true, tabs: true })
+    expect(hub.opened).toHaveLength(1)
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_click"])
+  })
+
+  test("every read of one page state shares one deadline", async () => {
+    const hub = fake({
+      call: (input) =>
+        Promise.resolve({
+          content: [{ type: "text", text: input.name === "browser_tabs" ? "{}" : "- RootWebArea" }],
+        }),
+    })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_click", {}, ctx())
+    const clicked = { content: [{ type: "text" as const, text: "Clicked." }], isError: false }
+    await active.pageState("browser_click", clicked, { ...ctx(), snapshot: true, tabs: true })
+    const reads = hub.calls.slice(1)
+    expect(reads.map((call) => call.name)).toEqual(["browser_snapshot", "browser_tabs"])
+    expect(new Set(reads.map((call) => call.signal)).size).toBe(1)
+  })
+
+  test("a page state without the tab read names no page from the tab list", async () => {
+    const hub = fake({ call: () => Promise.resolve({ content: [{ type: "text", text: "- RootWebArea" }] }) })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_click", {}, ctx())
+    const clicked = { content: [{ type: "text" as const, text: "Clicked." }], isError: false }
+    await active.pageState("browser_click", clicked, { ...ctx(), snapshot: true, tabs: false })
+    expect(hub.calls.map((call) => call.name)).toEqual(["browser_click", "browser_snapshot"])
   })
 })
 
