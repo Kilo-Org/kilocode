@@ -201,4 +201,8 @@ export const dict = {
   "tui.autoApprove.disabled": "已停用自動核准。",
   "tui.autoApprove.projectDisabled": "此專案的設定已停用自動核准。",
   "tui.autoApprove.saveFailed": "無法儲存自動核准設定。",
+
+  // Session transcript export
+  "session.export.success": "工作階段記錄已匯出為 Markdown。",
+  "session.export.error": "無法匯出工作階段記錄",
 }

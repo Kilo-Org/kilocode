@@ -215,4 +215,8 @@ export const dict = {
   "tui.autoApprove.disabled": "ปิดใช้การอนุมัติอัตโนมัติแล้ว",
   "tui.autoApprove.projectDisabled": "การอนุมัติอัตโนมัติถูกปิดใช้งานในการตั้งค่าของโปรเจกต์นี้",
   "tui.autoApprove.saveFailed": "ไม่สามารถบันทึกการตั้งค่าการอนุมัติอัตโนมัติได้",
+
+  // Session transcript export
+  "session.export.success": "ส่งออกบันทึกเซสชันเป็น Markdown แล้ว",
+  "session.export.error": "ส่งออกบันทึกเซสชันไม่สำเร็จ",
 }

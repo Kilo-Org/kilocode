@@ -223,4 +223,8 @@ export const dict = {
   "tui.autoApprove.disabled": "Automatyczne zatwierdzanie wyłączone.",
   "tui.autoApprove.projectDisabled": "Automatyczne zatwierdzanie jest wyłączone w konfiguracji tego projektu.",
   "tui.autoApprove.saveFailed": "Nie udało się zapisać ustawienia automatycznego zatwierdzania.",
+
+  // Session transcript export
+  "session.export.success": "Transkrypcja sesji została wyeksportowana jako Markdown.",
+  "session.export.error": "Nie udało się wyeksportować transkrypcji sesji",
 }

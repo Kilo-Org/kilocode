@@ -221,4 +221,8 @@ export const dict = {
   "tui.autoApprove.disabled": "Автосхвалення вимкнено.",
   "tui.autoApprove.projectDisabled": "Автосхвалення вимкнено в конфігурації цього проєкту.",
   "tui.autoApprove.saveFailed": "Не вдалося зберегти налаштування автосхвалення.",
+
+  // Session transcript export
+  "session.export.success": "Запис сеансу експортовано у форматі Markdown.",
+  "session.export.error": "Не вдалося експортувати запис сеансу",
 }

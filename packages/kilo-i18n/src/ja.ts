@@ -217,4 +217,8 @@ export const dict = {
   "tui.autoApprove.disabled": "自動承認を無効にしました。",
   "tui.autoApprove.projectDisabled": "自動承認はこのプロジェクトの設定で無効になっています。",
   "tui.autoApprove.saveFailed": "自動承認の設定を保存できませんでした。",
+
+  // Session transcript export
+  "session.export.success": "セッション記録を Markdown としてエクスポートしました。",
+  "session.export.error": "セッション記録をエクスポートできませんでした",
 }

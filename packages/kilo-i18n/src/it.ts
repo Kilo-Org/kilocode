@@ -222,4 +222,8 @@ export const dict = {
   "tui.autoApprove.disabled": "Approvazione automatica disattivata.",
   "tui.autoApprove.projectDisabled": "L'approvazione automatica è disattivata nella configurazione di questo progetto.",
   "tui.autoApprove.saveFailed": "Impossibile salvare l'impostazione di approvazione automatica.",
+
+  // Session transcript export
+  "session.export.success": "Trascrizione della sessione esportata in formato Markdown.",
+  "session.export.error": "Impossibile esportare la trascrizione della sessione",
 }

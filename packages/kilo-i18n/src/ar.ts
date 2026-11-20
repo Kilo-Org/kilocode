@@ -212,4 +212,8 @@ export const dict = {
   "tui.autoApprove.disabled": "تم تعطيل الموافقة التلقائية.",
   "tui.autoApprove.projectDisabled": "الموافقة التلقائية معطّلة في إعدادات هذا المشروع.",
   "tui.autoApprove.saveFailed": "تعذّر حفظ إعداد الموافقة التلقائية.",
+
+  // Session transcript export
+  "session.export.success": "تم تصدير سجل الجلسة بتنسيق Markdown.",
+  "session.export.error": "فشل تصدير سجل الجلسة",
 }

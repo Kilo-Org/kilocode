@@ -224,4 +224,8 @@ export const dict = {
   "tui.autoApprove.disabled": "Automatische Genehmigung deaktiviert.",
   "tui.autoApprove.projectDisabled": "Die automatische Genehmigung ist in der Konfiguration dieses Projekts deaktiviert.",
   "tui.autoApprove.saveFailed": "Die Einstellung für die automatische Genehmigung konnte nicht gespeichert werden.",
+
+  // Session transcript export
+  "session.export.success": "Sitzungsprotokoll als Markdown exportiert.",
+  "session.export.error": "Fehler beim Exportieren des Sitzungsprotokolls",
 }

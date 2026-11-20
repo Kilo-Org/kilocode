@@ -224,4 +224,8 @@ export const dict = {
   "tui.autoApprove.disabled": "Automatsko odobravanje isključeno.",
   "tui.autoApprove.projectDisabled": "Automatsko odobravanje je isključeno u konfiguraciji ovog projekta.",
   "tui.autoApprove.saveFailed": "Nije moguće sačuvati postavku automatskog odobravanja.",
+
+  // Session transcript export
+  "session.export.success": "Transkript sesije je izvezen kao Markdown.",
+  "session.export.error": "Izvoz transkripta sesije nije uspio",
 }

@@ -244,4 +244,8 @@ export const dict = {
   "tui.autoApprove.disabled": "Auto-approve disabled.",
   "tui.autoApprove.projectDisabled": "Auto-approve is disabled by this project's config.",
   "tui.autoApprove.saveFailed": "Could not save the auto-approve setting.",
+
+  // Session transcript export
+  "session.export.success": "Session transcript exported as Markdown.",
+  "session.export.error": "Failed to export session transcript",
 }

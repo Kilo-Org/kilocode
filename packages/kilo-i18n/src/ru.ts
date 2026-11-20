@@ -223,4 +223,8 @@ export const dict = {
   "tui.autoApprove.disabled": "Автоодобрение отключено.",
   "tui.autoApprove.projectDisabled": "Автоодобрение отключено в конфигурации этого проекта.",
   "tui.autoApprove.saveFailed": "Не удалось сохранить настройку автоодобрения.",
+
+  // Session transcript export
+  "session.export.success": "Запись сеанса экспортирована в формате Markdown.",
+  "session.export.error": "Не удалось экспортировать запись сеанса",
 }

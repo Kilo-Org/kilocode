@@ -221,4 +221,8 @@ export const dict = {
   "tui.autoApprove.disabled": "Otomatik onay devre dışı bırakıldı.",
   "tui.autoApprove.projectDisabled": "Otomatik onay bu projenin yapılandırmasında devre dışı bırakılmış.",
   "tui.autoApprove.saveFailed": "Otomatik onay ayarı kaydedilemedi.",
+
+  // Session transcript export
+  "session.export.success": "Oturum dökümü Markdown olarak dışa aktarıldı.",
+  "session.export.error": "Oturum dökümü dışa aktarılamadı",
 }

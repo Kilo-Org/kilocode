@@ -304,6 +304,7 @@ export type Ui =
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
   | { type: "saveImage"; dataUrl: string; filename: string; sessionID?: string }
+  | { type: "exportSessionTranscript"; sessionID: string }
   | { type: "previewImage"; dataUrl: string; filename: string }
   | { type: "openProfile" }
   | { type: "openMarketplace" }

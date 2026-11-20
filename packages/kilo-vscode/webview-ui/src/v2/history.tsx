@@ -9,6 +9,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createMemo, createSignal, Show, type JSX } from "solid-js"
 import { SessionRenameEditor } from "../components/shared/SessionRenameEditor"
 import { useLanguage } from "../context/language"
+import { getVSCodeAPI } from "../context/vscode"
 import { formatRelativeDate } from "../utils/date"
 import { useV2Optional, type V2 } from "./client"
 
@@ -173,6 +174,12 @@ export function SessionList(props: {
         >
           <ContextMenu.Item onSelect={() => setPending(item.id)}>
             <ContextMenu.ItemLabel>{language.t("common.rename")}</ContextMenu.ItemLabel>
+          </ContextMenu.Item>
+          <ContextMenu.Item
+            disabled={store(item.id)?.connection.status() !== "connected"}
+            onSelect={() => getVSCodeAPI().postMessage({ type: "exportSessionTranscript", sessionID: item.id })}
+          >
+            <ContextMenu.ItemLabel>{language.t("command.session.export")}</ContextMenu.ItemLabel>
           </ContextMenu.Item>
           <ContextMenu.Separator />
           <ContextMenu.Item onSelect={() => remove(item)}>

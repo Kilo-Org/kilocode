@@ -224,4 +224,8 @@ export const dict = {
   "tui.autoApprove.disabled": "Automatisch goedkeuren uitgeschakeld.",
   "tui.autoApprove.projectDisabled": "Automatisch goedkeuren is uitgeschakeld door de configuratie van dit project.",
   "tui.autoApprove.saveFailed": "Kan de instelling voor automatisch goedkeuren niet opslaan.",
+
+  // Session transcript export
+  "session.export.success": "Het sessietranscript is geëxporteerd als Markdown.",
+  "session.export.error": "Exporteren van sessietranscript mislukt",
 }

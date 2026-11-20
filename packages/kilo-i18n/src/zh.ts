@@ -202,4 +202,8 @@ export const dict = {
   "tui.autoApprove.disabled": "已停用自动批准。",
   "tui.autoApprove.projectDisabled": "此项目的配置已停用自动批准。",
   "tui.autoApprove.saveFailed": "无法保存自动批准设置。",
+
+  // Session transcript export
+  "session.export.success": "会话记录已导出为 Markdown。",
+  "session.export.error": "导出会话记录失败",
 }

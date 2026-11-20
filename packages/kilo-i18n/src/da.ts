@@ -217,4 +217,8 @@ export const dict = {
   "tui.autoApprove.disabled": "Auto-godkendelse deaktiveret.",
   "tui.autoApprove.projectDisabled": "Auto-godkendelse er deaktiveret i dette projekts konfiguration.",
   "tui.autoApprove.saveFailed": "Kunne ikke gemme indstillingen for automatisk godkendelse.",
+
+  // Session transcript export
+  "session.export.success": "Sessionsudskriften blev eksporteret som Markdown.",
+  "session.export.error": "Eksport af sessionsudskrift mislykkedes",
 }

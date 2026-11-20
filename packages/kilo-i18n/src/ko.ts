@@ -212,4 +212,8 @@ export const dict = {
   "tui.autoApprove.disabled": "자동 승인이 비활성화되었습니다.",
   "tui.autoApprove.projectDisabled": "이 프로젝트의 설정에서 자동 승인이 비활성화되어 있습니다.",
   "tui.autoApprove.saveFailed": "자동 승인 설정을 저장하지 못했습니다.",
+
+  // Session transcript export
+  "session.export.success": "세션 기록을 Markdown으로 내보냈습니다.",
+  "session.export.error": "세션 기록을 내보내지 못했습니다",
 }
