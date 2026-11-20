@@ -10,6 +10,14 @@ name: docs-sync
 # this workflow and .github/docs-sync/**) execute branch code only in a
 # read-only, secretless `selftest` job that never pushes, comments, or calls an
 # LLM. `pull_request` (not `pull_request_target`) keeps fork tokens read-only.
+#
+# Every headless Kilo CLI pass runs under the committed policy in
+# .github/docs-sync/agent-permissions.json (exported as KILO_CONFIG_CONTENT), so
+# the CLI itself bounds the agent's tools and write paths. Each pass carries only
+# the gateway credentials it calls, the checkout persists no git credential, and
+# the steps that need git authentication get the token from their own
+# environment through the credential helper installed below.
+#
 # State is derived from the bot's own PRs (watermark marker in the PR body), so
 # missed or failed runs self-heal on the next run.
 
@@ -83,16 +91,24 @@ jobs:
     # 31 unedited purely on budget, with no attempt made. See the throughput note
     # in the PR description for the arithmetic.
     timeout-minutes: 250
-    env:
-      # Both are required: without KILO_ORG_ID the gateway bills the key
-      # owner's personal balance (402 "Add credits") instead of the org.
-      KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
-      KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0 # prepare-branch merges main into the rolling branch
+          persist-credentials: false # git steps authenticate per step, see Install git credential helper
+
+      - name: Install git credential helper
+        # Written outside the worktree, so prepare-branch's branch switches cannot
+        # replace it mid-step. The helper reads the token from the calling step's
+        # own environment, so no credential is written to .git/config.
+        run: |
+          cat > "$RUNNER_TEMP/docs-sync-credential.sh" <<'HELPER'
+          test "$1" = get || exit 0
+          test -n "$GH_TOKEN" || exit 0
+          printf 'username=x-access-token\npassword=%s\n' "$GH_TOKEN"
+          HELPER
+          chmod +x "$RUNNER_TEMP/docs-sync-credential.sh"
 
       - name: Configure git identity
         run: |
@@ -125,6 +141,12 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
+          # The CLI reads these natively; only the steps that call it carry them.
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: credential.helper
+          GIT_CONFIG_VALUE_0: ${{ runner.temp }}/docs-sync-credential.sh
           LEARNINGS_BUDGET_MINUTES: "10"
           DRY_RUN: ${{ inputs.dry_run }}
         run: node .github/docs-sync/learn.mjs
@@ -139,9 +161,11 @@ jobs:
         id: triage
         if: steps.collect.outputs.count != '0'
         env:
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
           SINCE_OVERRIDE: ${{ steps.wm.outputs.since_override }}
           # Default 35 fit only 8 of 11 chunks on a 254-PR window. Headroom for
-          # --auto making chunks slower now that the agent really runs commands.
+          # a chunk that has to re-read a large digest.
           TRIAGE_BUDGET_MINUTES: "90"
         run: node .github/docs-sync/triage.mjs
 
@@ -166,6 +190,9 @@ jobs:
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         env:
           GH_TOKEN: ${{ github.token }}
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: credential.helper
+          GIT_CONFIG_VALUE_0: ${{ runner.temp }}/docs-sync-credential.sh
         run: node .github/docs-sync/prepare-branch.mjs
 
       # After prepare-branch checks out the rolling branch and merges main, the
@@ -181,7 +208,9 @@ jobs:
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         continue-on-error: true
         env:
-          # Default 50 fit only 4 of 11 batches. A healthy --auto batch is ~8 min,
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+          # Default 50 fit only 4 of 11 batches. A healthy batch is ~8 min,
           # and edit.mjs will not start a batch without EDIT_BATCH_TIMEOUT_MINUTES
           # (15) left, so 120 covers 14 batches = 70 PRs against ~5 worthy/day.
           EDIT_BUDGET_MINUTES: "120"
@@ -203,22 +232,34 @@ jobs:
         continue-on-error: true
         timeout-minutes: 10
         env:
-          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
         run: |
           set -o pipefail
-          # Headless kilo run auto-rejects every permission ask; the runner has no
-          # user config granting bash, so without --auto the agent cannot run ordinary
-          # shell commands against the repository.
-          kilo run --auto "The docs build or tests failed. Read the attached docs-sync-out/verify.log and fix the packages/kilo-docs changes so they pass. Do not revert doc edits; fix them. Do not modify anything outside packages/kilo-docs." \
+          # The agent scope comes from the committed policy
+          # (.github/docs-sync/agent-permissions.json), exported for this one
+          # command: writes inside packages/kilo-docs only, bash limited to
+          # inspection and the docs build/tests, everything else denied. The
+          # prompt states the same intent, but the CLI enforces it.
+          KILO_CONFIG_CONTENT="$(node .github/docs-sync/agent-policy.mjs docs-write)" \
+            kilo run "The docs build or tests failed. Read the attached docs-sync-out/verify.log and fix the packages/kilo-docs changes so they pass. Do not revert doc edits; fix them. Do not modify anything outside packages/kilo-docs." \
             -m "$EDIT_MODEL" --variant "$DOCS_SYNC_VARIANT" --dir "$GITHUB_WORKSPACE" -f docs-sync-out/verify.log \
             | node .github/docs-sync/redact-stream.mjs \
             | tee -a docs-sync-out/edit-log.txt \
             || echo "::warning::kilo fix pass exited nonzero; re-verifying anyway"
-          # The rebuild below decides this step's outcome, not the agent's exit code.
-          # Without the guard above, `set -o pipefail` + the default `bash -e` would
-          # abort here once the CLI half of this PR ships: a mid-stream session error
-          # (or an auto-rejected ask) exits 1, verify2.log is never written, and
-          # `Re-verify status` reports VERIFIED=false even when the docs build fine.
+
+      - name: Re-verify docs after the fix pass
+        id: verify2
+        if: steps.verify.outcome == 'failure'
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
+        run: |
+          set -o pipefail
+          # The rebuild decides the outcome, not the agent's exit code: under
+          # `set -o pipefail` + the default `bash -e` a mid-stream session error
+          # would otherwise abort before verify2.log is written and the status
+          # step would report VERIFIED=false even when the docs build fine.
           { bun run --filter @kilocode/kilo-docs build && bun run --filter @kilocode/kilo-docs test; } 2>&1 | tee docs-sync-out/verify2.log
 
       - name: Re-verify status
@@ -226,9 +267,9 @@ jobs:
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         env:
           VERIFY_OUTCOME: ${{ steps.verify.outcome }}
-          FIX_OUTCOME: ${{ steps.fix.outcome }}
+          VERIFY2_OUTCOME: ${{ steps.verify2.outcome }}
         run: |
-          if [ "$VERIFY_OUTCOME" = "success" ] || [ "$FIX_OUTCOME" = "success" ]; then
+          if [ "$VERIFY_OUTCOME" = "success" ] || [ "$VERIFY2_OUTCOME" = "success" ]; then
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             echo "ok=false" >> "$GITHUB_OUTPUT"
@@ -242,6 +283,9 @@ jobs:
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         env:
           GH_TOKEN: ${{ github.token }}
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: credential.helper
+          GIT_CONFIG_VALUE_0: ${{ runner.temp }}/docs-sync-credential.sh
           # Read-only token for the Kilo-Org/cloud history; a cloud surface
           # falls back to the fixed `other` reviewers when it is unset.
           CLOUD_REPO_TOKEN: ${{ secrets.CROSS_REPO_ACCESS_TOKEN }}

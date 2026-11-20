@@ -1,0 +1,88 @@
+{
+  "//": "Tool and path scope for the headless Kilo CLI passes of the docs-sync bot. agent-policy.mjs turns one mode into KILO_CONFIG_CONTENT, which the CLI enforces. Rule order matters: permission evaluation takes the LAST matching rule, so every map starts with the catch-all deny and lists exceptions after it. `bash` patterns are matched against the tree-sitter text of each parsed sub-command, with operators masked only where the parser proves them inert.",
+  "modes": {
+    "tools-denied": {
+      "//": "Batch classification and learnings extraction answer from the attached files, so they need no tool.",
+      "permission": {
+        "*": "deny"
+      }
+    },
+    "docs-write": {
+      "//": "Docs editing and the verify-repair pass read the tree, write inside packages/kilo-docs, and run the docs build and tests.",
+      "permission": {
+        "read": "allow",
+        "grep": "allow",
+        "glob": "allow",
+        "webfetch": "deny",
+        "websearch": "deny",
+        "task": "deny",
+        "lsp": "deny",
+        "skill": "deny",
+        "recall": "deny",
+        "kilo_memory_recall": "deny",
+        "kilo_memory_save": "deny",
+        "external_directory": "deny",
+        "edit": {
+          "*": "deny",
+          "packages/kilo-docs/*": "allow",
+          "docs-sync-out/edit-summary-*.json": "allow",
+          "edit-summary-*.json": "allow"
+        },
+        "bash": {
+          "*": "deny",
+          "ls *": "allow",
+          "cat *": "allow",
+          "head *": "allow",
+          "tail *": "allow",
+          "wc *": "allow",
+          "grep *": "allow",
+          "rg *": "allow",
+          "find *": "allow",
+          "echo *": "allow",
+          "printf *": "allow",
+          "sed *": "allow",
+          "sort *": "allow",
+          "uniq *": "allow",
+          "cut *": "allow",
+          "tr *": "allow",
+          "jq *": "allow",
+          "nl *": "allow",
+          "diff *": "allow",
+          "stat *": "allow",
+          "file *": "allow",
+          "pwd *": "allow",
+          "basename *": "allow",
+          "dirname *": "allow",
+          "realpath *": "allow",
+          "bun run --filter @kilocode/kilo-docs build": "allow",
+          "bun run --filter @kilocode/kilo-docs test": "allow",
+          "bun run --filter @kilocode/kilo-docs typecheck": "allow",
+          "git *": "deny",
+          "find *-delete*": "deny",
+          "find *-exec*": "deny",
+          "find *-execdir*": "deny",
+          "find *-fprint*": "deny",
+          "find *-fprintf*": "deny",
+          "find *-fls*": "deny",
+          "sed *-i*": "deny",
+          "sed *--in-place*": "deny",
+          "rg *--pre *": "deny",
+          "rg *--pre=*": "deny",
+          "rg *--hostname-bin*": "deny",
+          "sort *-o *": "deny",
+          "sort * -o *": "deny",
+          "sort *--output*": "deny",
+          "sort *--compress-program*": "deny",
+          "sort *--files0-from*": "deny",
+          "tail *--pid*": "deny",
+          "wc *--files0-from*": "deny",
+          "*\n*": "deny",
+          "*<(*": "deny",
+          "*$(*": "deny",
+          "*`*": "deny",
+          "*>*": "deny"
+        }
+      }
+    }
+  }
+}

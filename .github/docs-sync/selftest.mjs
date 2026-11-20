@@ -91,7 +91,7 @@ const mode = ${JSON.stringify(mode)};
 const callLog = ${JSON.stringify(callLog ?? "")};
 const stderrText = ${JSON.stringify(stderrText)};
 if (callLog) {
-  fs.appendFileSync(callLog, JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd() }) + "\\n");
+  fs.appendFileSync(callLog, JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd(), policy: process.env.KILO_CONFIG_CONTENT ?? null }) + "\\n");
 }
 if (mode === "stderr-exit0") {
   process.stderr.write(stderrText + "\\n");
@@ -475,16 +475,19 @@ function kiloStderrLogName(label) {
 }
 
 function case2b_autoFlag() {
-  console.log("case 2b: AC4a (--auto on every docs-sync kilo run)")
+  console.log("case 2b: AC4a (agent scope from the committed policy, never --auto)")
 
   // (i) region-scoped static check on triage.mjs / edit.mjs argv arrays
   for (const name of ["triage.mjs", "edit.mjs"]) {
     const src = fs.readFileSync(path.join(HERE, name), "utf8")
     const slice = extractArgsArraySlice(src)
-    assert.ok(slice.includes('"--auto"'), `${name} args array must contain "--auto"; got:\n${slice}`)
+    assert.ok(!slice.includes('"--auto"'), `${name} args array must not contain "--auto"; got:\n${slice}`)
+    assert.match(src, /mode: MODE\.(docsWrite|toolsDenied)/, `${name} must pass a policy mode to runKilo`)
   }
 
-  // (ii) Fix verify failures step: join the run: | block and require --auto on kilo run
+  // (ii) Fix verify failures step: no --auto, and the policy comes from the
+  // committed file. The rebuild lives in its own step now, so the guard check
+  // covers only the agent's pipeline.
   {
     const yml = fs.readFileSync(path.join(HERE, "..", "workflows", "docs-sync.yml"), "utf8")
     const stepIdx = yml.indexOf("Fix verify failures")
@@ -513,29 +516,24 @@ function case2b_autoFlag() {
       .replace(/\s+/g, " ")
     assert.match(joined, /kilo run\b/, `expected kilo run in Fix verify block:\n${joined}`)
     const kiloCmd = joined.match(/kilo run\b[^|]*/)?.[0] ?? ""
-    assert.ok(
-      /\s--auto\b/.test(kiloCmd) || /kilo run\s+--auto\b/.test(kiloCmd),
-      `Fix verify kilo run must contain --auto; got: ${kiloCmd}`,
-    )
+    assert.ok(!/\s--auto\b/.test(kiloCmd), `Fix verify kilo run must not contain --auto; got: ${kiloCmd}`)
+    assert.match(joined, /agent-policy\.mjs docs-write/, "Fix verify must export the docs-write policy")
 
     // The step runs under `set -o pipefail` + the default `bash -e`, so an
-    // unguarded kilo pipeline aborts the block before verify2.log is written
-    // once the CLI exits nonzero on a mid-stream error. The rebuild must decide
-    // this step's outcome, not the agent's exit code.
-    // Window is the end of the kilo pipeline → the rebuild, so a comment
-    // elsewhere in the block cannot satisfy the guard assertion.
+    // unguarded kilo pipeline aborts the block once the CLI exits nonzero on a
+    // mid-stream error. The agent's exit code must not decide the job.
     const teeIdx = joined.indexOf("tee -a docs-sync-out/edit-log.txt")
     assert.ok(teeIdx >= 0, `expected the kilo pipeline to tee edit-log.txt:\n${joined}`)
-    const kiloPipeline = joined.slice(teeIdx, joined.indexOf("bun run", teeIdx))
+    const kiloPipeline = joined.slice(teeIdx)
     assert.match(
       kiloPipeline,
       /\|\|\s*(echo|true)\b/,
-      `Fix verify kilo pipeline must be guarded (|| echo/true) so bash -e cannot skip the rebuild; got: ${kiloPipeline}`,
+      `Fix verify kilo pipeline must be guarded (|| echo/true) so bash -e cannot abort; got: ${kiloPipeline}`,
     )
-    assert.match(joined, /verify2\.log/, "Fix verify block must still write verify2.log")
   }
 
-  // (iii) authoritative: real stub invocations with callLog — every argv has --auto
+  // (iii) authoritative: real stub invocations with callLog — every argv is
+  // --auto-free and carries the docs-write policy the CLI enforces.
   {
     const prs = [1, 2, 3, 4, 5].map((n) => samplePr(n))
     const worthy = prs
@@ -568,11 +566,16 @@ function case2b_autoFlag() {
     const lines = fs.readFileSync(callLog, "utf8").trim().split("\n").filter(Boolean)
     assert.ok(lines.length > 0, "callCount > 0 required (vacuous empty log forbidden)")
     for (const line of lines) {
-      const { argv } = JSON.parse(line)
+      const { argv, policy } = JSON.parse(line)
       assert.ok(
-        Array.isArray(argv) && argv.includes("--auto"),
-        `every kilo argv must include --auto; got ${JSON.stringify(argv)}`,
+        Array.isArray(argv) && !argv.includes("--auto"),
+        `every kilo argv must omit --auto; got ${JSON.stringify(argv)}`,
       )
+      assert.ok(typeof policy === "string" && policy.length > 0, "every kilo invocation must carry KILO_CONFIG_CONTENT")
+      const permission = JSON.parse(policy).permission
+      assert.equal(permission.edit["*"], "deny", "the edit policy must deny writes by default")
+      assert.equal(permission.edit["packages/kilo-docs/*"], "allow", "the edit policy must allow the docs package")
+      assert.equal(permission.bash["git *"], "deny", "the edit policy must deny git")
     }
   }
 }

@@ -434,6 +434,7 @@ async function extract() {
     runKilo,
     sleepSync,
   } = await import("./lib.mjs")
+  const { MODE } = await import("./agent-policy.mjs")
 
   // Step 1: resolve every open auto-docs surface PR. With one PR per surface,
   // maintainer corrections live on any of them, so learn from all of them
@@ -783,10 +784,9 @@ async function extract() {
   log(`wrote ${inputFile} with ${candidates.length} candidates`)
 
   // Step 10: call the model.
-  // Deliberately no --auto. Every input is in the attached file and the output goes to
-  // stdout, so the agent needs no tool. Omitting --auto makes "the extraction step never
-  // writes outside LEARNINGS.md" structurally true instead of prompt-deep. triage.mjs:76
-  // and edit.mjs:86 carry the opposite comment; do not copy them without updating the reason.
+  // Every input is in the attached file and the output goes to stdout, so the
+  // extraction needs no tool. The tools-denied mode (agent-permissions.json)
+  // makes that a CLI-enforced property of the run.
   const prompt = fs.readFileSync(path.join(HERE, "learnings-prompt.md"), "utf8")
   const model = process.env.TRIAGE_MODEL
   if (!model) throw new Error("TRIAGE_MODEL is required")
@@ -804,6 +804,7 @@ async function extract() {
     }
 
     const result = runKilo({
+      mode: MODE.toolsDenied,
       args: ["run", prompt, "-m", model, "--variant", REASONING_VARIANT, "--dir", process.cwd(), "-f", inputFile],
       timeoutMs: Math.min(EXTRACTION_TIMEOUT_MS, left),
       streamStdout: false,

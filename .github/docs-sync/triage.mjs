@@ -21,6 +21,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseTriageEntries } from "./extract-json.mjs"
+import { MODE } from "./agent-policy.mjs"
 import {
   appendSummary,
   backoffMsForAttempt,
@@ -81,15 +82,13 @@ function triageChunk(chunk, index, budgetDeadline) {
       break
     }
 
-    // Headless `kilo run` auto-rejects every permission ask; without --auto the
-    // agent cannot run shell commands. SECURITY: --auto grants unrestricted bash
-    // to an agent steered by external PR content. Hardening deferred: a scoped
-    // permission.bash map via KILO_CONFIG_CONTENT should replace --auto once the
-    // required shell patterns are stable (see PR #12605 review thread).
+    // Classification reads the attached digest only, so the policy denies every
+    // tool (mode tools-denied). No tool means no ask, and an ask would end a
+    // headless run.
     const result = runKilo({
+      mode: MODE.toolsDenied,
       args: [
         "run",
-        "--auto",
         prompt,
         "-m",
         model,
