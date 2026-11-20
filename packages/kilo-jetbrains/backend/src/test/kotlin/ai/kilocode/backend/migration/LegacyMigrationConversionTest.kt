@@ -269,6 +269,33 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
+    fun `convertCustomModePermissions - mcp fileRegex asks for every migrated server and warns`() {
+        val pattern = "\\.md${'$'}"
+        val groups: List<Any> = listOf(Pair("mcp", mapOf("fileRegex" to pattern)))
+        val result = LegacyMigrationConverters.convertCustomModePermissions(
+            groups,
+            mcpServers = listOf("github", "my server"),
+        )
+        assertEquals("ask", result.permission["github_*"]?.jsonPrimitive?.content)
+        assertEquals("ask", result.permission["my_server_*"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
+        assertEquals(listOf("File restriction not migrated; mcp set to ask: $pattern"), result.warnings)
+    }
+
+    @Test
+    fun `convertCustomModePermissions - unreadable mcp options without migrated servers warn only about missing servers`() {
+        val groups: List<Any> = listOf(Pair("mcp", mapOf("__unparsed" to "true")))
+        val result = LegacyMigrationConverters.convertCustomModePermissions(
+            groups,
+            emptyList(),
+            mcpAvailable = true,
+        )
+        assertTrue(result.permission.keys.none { it.endsWith("_*") })
+        assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
+        assertEquals(listOf("MCP access not migrated: no MCP servers were selected"), result.warnings)
+    }
+
+    @Test
     fun `convertCustomModePermissions - mode without mcp group denies skill and server tools`() {
         val result = LegacyMigrationConverters.convertCustomModePermissions(
             listOf("read"),

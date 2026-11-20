@@ -434,30 +434,27 @@ object LegacyMigrationConverters {
             }
 
             if (groupName == "mcp") {
-                if (hasUnreadableOptions(groupConfig)) {
-                    warnings.add("Group options not migrated; mcp set to ask")
-                    mcpGroupSeen = true
-                    for (server in mcpServers) {
-                        val key = "${sanitizePermissionKey(server)}_*"
-                        allowed.add(key)
-                        permission[key] = JsonPrimitive("ask")
-                    }
-                    continue
-                }
-                val mcpRegex = groupConfig?.get("fileRegex")
-                if (mcpRegex != null) {
-                    warnings.add("File restriction not migrated; mcp disabled: $mcpRegex")
-                    continue
-                }
                 mcpGroupSeen = true
                 if (mcpServers.isEmpty()) {
                     if (mcpAvailable) warnings.add("MCP access not migrated: no MCP servers were selected")
                     continue
                 }
+                val mcpRegex = groupConfig?.get("fileRegex")
+                val mcpValue = when {
+                    hasUnreadableOptions(groupConfig) -> {
+                        warnings.add("Group options not migrated; mcp set to ask")
+                        "ask"
+                    }
+                    mcpRegex != null -> {
+                        warnings.add("File restriction not migrated; mcp set to ask: $mcpRegex")
+                        "ask"
+                    }
+                    else -> "allow"
+                }
                 for (server in mcpServers) {
                     val key = "${sanitizePermissionKey(server)}_*"
                     allowed.add(key)
-                    permission[key] = JsonPrimitive("allow")
+                    permission[key] = JsonPrimitive(mcpValue)
                 }
                 continue
             }
