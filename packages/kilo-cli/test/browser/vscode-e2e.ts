@@ -216,12 +216,16 @@ const PAGES: Record<string, string> = {
 <button type="submit">Sign in</button></form><p id="out"></p>`,
 }
 
+/** Every fixture request as `<host><path>`, in order: a browser navigate shows up here. */
+const fixtureHits: string[] = []
+
 function fixture(hostname: string) {
   return Bun.serve({
     hostname,
     port: fixturePort,
     fetch(request) {
       const url = new URL(request.url)
+      fixtureHits.push(`${url.host}${url.pathname}`)
       const page = PAGES[url.pathname]
       if (!page) return new Response("not found", { status: 404 })
       return new Response(page, { headers: { "content-type": "text/html; charset=utf-8" } })
@@ -826,10 +830,14 @@ async function run() {
     await frame.getByRole("radio").nth(2).check()
     await until(async () => ((await fs.readFile(configFile, "utf8")).includes('"off"') ? true : undefined), 15_000, "write")
     await sidebarAction("New Session")
+    const hitsBefore = fixtureHits.length
     const result = await turn("backend-off", `Call browser.navigate with url ${ctx.fixture.local}/about and report the result or the exact error verbatim. Do not use browser_open or curl.`, browserPolicy, 120)
-    return { ...result, toolsStillOffered: result.reply.includes("browser.navigate") }
+    // The reply starts at the echoed prompt, which names browser.navigate, so only the fixture tells whether a
+    // navigate still ran with the backend off.
+    const navigated = fixtureHits.slice(hitsBefore).includes(`127.0.0.1:${fixturePort}/about`)
+    return { ...result, toolsStillOffered: navigated }
   })
-  report.spendAfter = await spend()
+  report.spendAfter = await spend().catch((error: unknown) => `spend lookup failed: ${String(error)}`)
   report.shots = shots
   await fs.writeFile(path.join(evidence, "report.json"), JSON.stringify(report, null, 2))
   console.log(`report: ${path.join(evidence, "report.json")}`)

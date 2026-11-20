@@ -554,6 +554,8 @@ async function startKiloApi(): Promise<number> {
   net
     .createServer((client) => {
       client.once("data", (head: Buffer) => {
+        // Hold what arrives before the upstream connects; pipe() resumes the stream once both ends exist.
+        client.pause()
         const line = head.toString("latin1").split("\r\n")[0] ?? ""
         const tunnel = line.startsWith("CONNECT ")
         const upstream = net.createConnection(tunnel ? Number(secure.port) : Number(plain.port), "127.0.0.1", () => {
@@ -870,7 +872,8 @@ async function run(plan: Plan, settings: Settings, options: RunOptions = {}): Pr
     await fs.writeFile(path.join(root, "run.stdout.jsonl"), result.stdout)
     await fs.writeFile(path.join(root, "run.stderr.log"), result.stderr)
     if (hub) await fs.writeFile(path.join(root, "hub.log"), hub.log.text)
-    const { code, last, pngs, stderr, steps, stdout } = result
+    const { code, last, planErrors, pngs, stderr, steps, stdout } = result
+    expect(planErrors.length === 0, `the scenario's plan threw, so the run ended early: ${planErrors.join("; ")}`)
     return { code, last, pngs, root, stderr, steps, stdout, ...(hub ? { hub } : {}) }
   } finally {
     await hub?.stop()
@@ -1332,6 +1335,10 @@ async function parity() {
     }
   })
   const shot = await evidence("after-parity")
+  // Parity reports which tools Firefox lacks; it fails only when the run broke or a tool gave no answer at all.
+  expect(result.code === 0, `parity: the run exited ${result.code}: ${result.stderr.slice(-600)}`)
+  const silent = rows.filter((row) => row.text === "(no result)").map((row) => `${row.index} ${row.tool}`)
+  expect(silent.length === 0, `parity: ${silent.length} of ${order.length} tools gave no result: ${silent.join(", ")}`)
   return { code: result.code, png: result.pngs.length, rows, shot, stderr: result.stderr.slice(-1_000), tabs: await tabState() }
 }
 
@@ -1355,6 +1362,8 @@ async function dialog() {
   const result = await run(plan, { allowSensitive: true })
   clearTimeout(watcher)
   const times = toolTimes(result.stdout)
+  expect(result.code === 0, `dialog: the run exited ${result.code}: ${result.stderr.slice(-600)}`)
+  expect(result.last.results.length === 6, `dialog: ${result.last.results.length} of 6 tool calls answered`)
   return {
     code: result.code,
     ms: times.map((time) => Math.round(time.end - time.start)),
@@ -1383,9 +1392,17 @@ async function focus() {
     return true
   })
   const shots = 5
-  const result = await run((step) => {
+  // The baseline starts at the agent's first call: pairing opens its own window first, which is no agent activation.
+  const reset = async () => {
+    await inContext(user.context, () => ((window as unknown as { __vis: [number, string][] }).__vis = []).length)
+    await ext(() => ((window as unknown as { __act: [number, number][] }).__act = []).length)
+  }
+  const result = await run(async (step) => {
     const index = step.results.length
-    if (index === 0) return { args: { url: localOrigin }, name: "browser_navigate" }
+    if (index === 0) {
+      await reset()
+      return { args: { url: localOrigin }, name: "browser_navigate" }
+    }
     if (index === 1) return { args: {}, name: "browser_snapshot" }
     if (index < 2 + shots) return { args: { scale: "css", type: "png" }, name: "browser_take_screenshot" }
     return undefined
