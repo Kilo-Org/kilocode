@@ -20,11 +20,16 @@ interface GhosttyRuntimeTerminal {
   cancelRenderLoop?: () => void
   startRenderLoop?: () => void
   handleMouseUp?: (event: MouseEvent) => void
+  scrollbarOpacity?: number
   currentHoveredLink?: { text?: unknown }
   linkDetector?: { getLinkAt: (col: number, row: number) => Promise<{ text: string } | undefined> }
 }
 
 interface GhosttyRuntimeRenderer {
+  ctx?: CanvasRenderingContext2D
+  canvasWidth?: number
+  canvasHeight?: number
+  renderScrollbar?: (viewportY: number, scrollbackLength: number, visibleRows: number, opacity?: number) => void
   cursorBlink?: boolean
   cursorVisible?: boolean
   hoveredHyperlinkId?: number
@@ -316,7 +321,7 @@ function wrapRenderBuffer(
 }
 
 /**
- * Wrap `term.renderer.render` to eliminate three ghostty-web CanvasRenderer flaws:
+ * Wrap `term.renderer.render` to eliminate four ghostty-web CanvasRenderer flaws:
  * 1. When `viewportY > 0` (user scrolled up), ghostty-web redraws every row at
  *    60fps even while idle (~21% CPU), and compares `y < viewportY` against
  *    fractional smooth-scroll values, duplicating one row at the boundary.
@@ -324,9 +329,12 @@ function wrapRenderBuffer(
  *    instead of only when cursor visibility toggles (~2Hz).
  * 3. When `viewportY > 0`, grapheme clusters (ZWJ emoji, flags, Devanagari,
  *    combining marks) read from screen row `y` instead of the scrollback row.
+ * 4. `renderScrollbar` clears and fills an opaque 14px background strip inside
+ *    the canvas right edge, erasing the last two columns of text whenever
+ *    `scrollbarOpacity > 0` (including the default `1` on direct render calls).
  *
  * When `onCursorFrame` is supplied, CanvasRenderer's raw rectangle cursor is
- * suppressed and delegated to our GPU-composited animated cursor overlay.
+ * suppressed and delegated to our dedicated animated cursor overlay.
  */
 export function optimizeTerminalRenderer(
   term: Terminal,
@@ -338,11 +346,36 @@ export function optimizeTerminalRenderer(
   const internals = renderer as unknown as GhosttyRuntimeRenderer
   let last: RenderSnapshot | undefined
 
-  renderer.render = (buffer, forceAll = false, viewportY = 0, scrollbackProvider, scrollbarOpacity = 1) => {
+  // Draw only a translucent overlay scrollbar thumb without clearing/erasing
+  // the rightmost two text columns with an opaque background fill.
+  internals.renderScrollbar = (viewportY, scrollbackLength, visibleRows, opacity = 0) => {
+    const ctx = internals.ctx
+    const width = internals.canvasWidth ?? 0
+    const height = internals.canvasHeight ?? 0
+    if (!ctx || opacity <= 0 || scrollbackLength <= 0 || width <= 0 || height <= 0) return
+    const barW = 6
+    const pad = 3
+    const trackH = height - pad * 2
+    if (trackH <= 0) return
+    const totalRows = scrollbackLength + visibleRows
+    const thumbH = Math.max(20, (visibleRows / totalRows) * trackH)
+    const ratio = Math.min(1, Math.max(0, viewportY / scrollbackLength))
+    const thumbY = pad + (trackH - thumbH) * (1 - ratio)
+    const alpha = (viewportY > 0 ? 0.45 : 0.28) * opacity
+    ctx.save()
+    ctx.fillStyle = `rgba(128, 128, 128, ${alpha})`
+    ctx.fillRect(width - barW - 2, thumbY, barW, thumbH)
+    ctx.restore()
+  }
+
+  renderer.render = (buffer, forceAll = false, viewportY = 0, scrollbackProvider, scrollbarOpacity = 0) => {
     const intViewportY = Math.max(0, Math.floor(viewportY))
     const trackable = buffer as DirtyTrackableRenderable
     const dirty = trackable.update ? trackable.update() : DirtyState.FULL
     const scrollback = scrollbackProvider ? scrollbackProvider.getScrollbackLength() : 0
+    // Collapse fade-in/fade-out opacity ramps into a clean binary visible state
+    // so scrollbar timers do not force 18-30 full-canvas redraws while idle.
+    const effectiveOpacity = scrollback > 0 && scrollbarOpacity > 0.05 ? 1 : 0
     const dirtySelection = (internals.selectionManager?.getDirtySelectionRows().size ?? 0) > 0
     const canvas = renderer.getCanvas()
     const next = captureSnapshot({
@@ -351,17 +384,18 @@ export function optimizeTerminalRenderer(
       canvas,
       viewportY: intViewportY,
       scrollback,
-      scrollbarOpacity,
+      scrollbarOpacity: effectiveOpacity,
     })
 
     const unchanged =
       !forceAll && dirty === DirtyState.NONE && !dirtySelection && !buffer.needsFullRedraw?.() && sameSnapshot(last, next)
     if (unchanged) return
 
+    const scrollbarChanged = last !== undefined && last.scrollbarOpacity !== next.scrollbarOpacity
     const cursor = buffer.getCursor()
     last = next
     const target = wrapRenderBuffer(trackable, intViewportY, scrollback, Boolean(onCursorFrame))
-    original(target, forceAll, intViewportY, scrollbackProvider, scrollbarOpacity)
+    original(target, forceAll || scrollbarChanged, intViewportY, scrollbackProvider, effectiveOpacity)
     onCursorFrame?.(cursor, intViewportY)
   }
 }
@@ -369,13 +403,25 @@ export function optimizeTerminalRenderer(
 /** Paint dirty rows immediately without waiting for the next animation frame. */
 export function renderTerminalDirty(term: Terminal): void {
   if (!term.renderer || !term.wasmTerm) return
-  term.renderer.render(term.wasmTerm, false, Math.max(0, Math.floor(term.viewportY)), term)
+  term.renderer.render(
+    term.wasmTerm,
+    false,
+    Math.max(0, Math.floor(term.viewportY)),
+    term,
+    runtime(term).scrollbarOpacity ?? 0,
+  )
 }
 
 /** Force a full Canvas redraw from the current libghostty WASM screen state. */
 export function redrawTerminal(term: Terminal): void {
   if (!term.renderer || !term.wasmTerm) return
-  term.renderer.render(term.wasmTerm, true, Math.max(0, Math.floor(term.viewportY)), term)
+  term.renderer.render(
+    term.wasmTerm,
+    true,
+    Math.max(0, Math.floor(term.viewportY)),
+    term,
+    runtime(term).scrollbarOpacity ?? 0,
+  )
 }
 
 /**

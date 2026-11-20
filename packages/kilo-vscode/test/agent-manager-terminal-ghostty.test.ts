@@ -15,6 +15,8 @@ import {
   optimizeTerminalRenderer,
   pauseTerminalRender,
   readWasmBuffer,
+  redrawTerminal,
+  renderTerminalDirty,
   resumeTerminalRender,
 } from "../webview-ui/agent-manager/terminal/ghostty"
 import {
@@ -432,6 +434,79 @@ describe("libghostty WASM engine and lifecycle helpers", () => {
       { forceAll: false, viewportY: 0 },
       { forceAll: true, viewportY: 0 },
     ])
+  })
+
+  it("never erases rightmost text columns with opaque scrollbar fills and defaults direct renders to opacity 0", () => {
+    const clearCalls: number[][] = []
+    const fillCalls: Array<{ style: string; rect: number[] }> = []
+    const renderCalls: Array<{ forceAll: boolean; opacity: number | undefined }> = []
+    const ctx = {
+      fillStyle: "",
+      save() {},
+      restore() {},
+      clearRect(...args: number[]) {
+        clearCalls.push(args)
+      },
+      fillRect(...args: number[]) {
+        fillCalls.push({ style: this.fillStyle, rect: args })
+      },
+    }
+    const renderer = {
+      ctx,
+      canvasWidth: 357,
+      canvasHeight: 500,
+      cursorBlink: false,
+      cursorVisible: true,
+      getCanvas: () => undefined,
+      renderScrollbar: (_viewportY: number, _scrollback: number, _rows: number, _opacity?: number) => {
+        throw new Error("default opaque renderScrollbar should be replaced")
+      },
+      render(_buffer: IRenderable, forceAll = false, _viewportY = 0, _provider?: unknown, opacity?: number) {
+        renderCalls.push({ forceAll, opacity })
+        renderer.renderScrollbar(0, 100, 24, opacity ?? 0)
+      },
+    }
+    const buffer = {
+      update: () => DirtyState.NONE,
+      getLine: () => null,
+      getCursor: () => ({ x: 0, y: 0, visible: true }),
+      getDimensions: () => ({ cols: 51, rows: 24 }),
+      isRowDirty: () => false,
+      clearDirty: () => {},
+    }
+    const term = {
+      renderer,
+      wasmTerm: buffer,
+      viewportY: 0,
+      scrollbarOpacity: 0,
+      getScrollbackLength: () => 100,
+    } as unknown as Terminal
+
+    optimizeTerminalRenderer(term)
+
+    // Direct render calls forward scrollbarOpacity=0 instead of defaulting to 1.
+    renderTerminalDirty(term)
+    redrawTerminal(term)
+    expect(renderCalls).toEqual([
+      { forceAll: false, opacity: 0 },
+      { forceAll: true, opacity: 0 },
+    ])
+    expect(clearCalls).toEqual([])
+    expect(fillCalls).toEqual([])
+
+    // Showing, holding/fading through intermediate opacity frames, and hiding the
+    // scrollbar draws a translucent thumb without clearRect, skips intermediate
+    // fade frames (0 redundant full redraws), and elevates forceAll on show/hide.
+    term.renderer!.render(buffer, false, 0, term, 0.8)
+    term.renderer!.render(buffer, false, 0, term, 0.5)
+    term.renderer!.render(buffer, false, 0, term, 0.2)
+    term.renderer!.render(buffer, false, 0, term, 0)
+    expect(clearCalls).toEqual([])
+    expect(fillCalls).toHaveLength(1)
+    expect(fillCalls[0]!.style).toContain("rgba(128, 128, 128,")
+    expect(renderCalls).toHaveLength(4)
+    expect(renderCalls[2]).toEqual({ forceAll: true, opacity: 1 })
+    expect(renderCalls[3]).toEqual({ forceAll: true, opacity: 0 })
   })
 })
 
