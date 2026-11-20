@@ -84,7 +84,7 @@ jobs:
   sync:
     if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    # Budget: 4 setup/collect + 10 learn + 90 triage + 120 edit + 2 verify + 10 fix + 2 upsert = 238 min, 12-minute reserve.
+    # Budget: 4 setup/collect + 10 learn + 90 triage + 120 edit + 2 verify + 10 fix + 10 re-verify + 2 upsert = 248 min, 2-minute reserve.
     # These are ceilings, not costs: a caught-up run triages ~2 chunks and edits
     # ~1 batch and finishes in ~25 min. The old 35/50 pair was the binding
     # constraint on backlog drain — run 30306629290 deferred 54 PRs untriaged and
@@ -214,7 +214,11 @@ jobs:
           # and edit.mjs will not start a batch without EDIT_BATCH_TIMEOUT_MINUTES
           # (15) left, so 120 covers 14 batches = 70 PRs against ~5 worthy/day.
           EDIT_BUDGET_MINUTES: "120"
-        run: node .github/docs-sync/edit.mjs
+        # This pass streams the CLI's own output, so the same line filter that
+        # guards the fix step must guard this stream before it reaches the job log.
+        run: |
+          set -o pipefail
+          node .github/docs-sync/edit.mjs | node .github/docs-sync/redact-stream.mjs
 
       - name: Verify docs build and tests
         id: verify
@@ -257,6 +261,7 @@ jobs:
         id: verify2
         if: steps.verify.outcome == 'failure'
         continue-on-error: true
+        timeout-minutes: 10
         env:
           NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: |

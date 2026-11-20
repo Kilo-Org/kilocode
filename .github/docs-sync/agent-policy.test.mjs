@@ -18,7 +18,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, "..", "..")
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8")
 
-const { MODE, configContent, policy, validateMode } = await import("./agent-policy.mjs")
+const { MODE, configContent, env, policy, validateMode } = await import("./agent-policy.mjs")
 
 const workflow = read(".github/workflows/docs-sync.yml")
 
@@ -131,9 +131,43 @@ check("docs-write keeps the docs build and test commands", () => {
 
 // 2. The exported config is what the CLI reads, and it preserves a caller's
 //    provider settings instead of replacing them.
+// The second argument must be an explicit empty string: the default parameter
+// would read the ambient KILO_CONFIG_CONTENT, and this check must not depend on
+// the environment it runs in.
 check("configContent returns the mode's permission map as JSON", () => {
-  const cfg = JSON.parse(configContent(MODE.docsWrite, undefined))
+  const cfg = JSON.parse(configContent(MODE.docsWrite, ""))
   assert.deepEqual(cfg.permission, policy().modes["docs-write"].permission)
+})
+
+check("env withholds the repository token and the git credential helper", () => {
+  const base = {
+    GH_TOKEN: "gh-token-value",
+    GITHUB_TOKEN: "github-token-value",
+    CROSS_REPO_ACCESS_TOKEN: "cross-value",
+    CLOUD_REPO_TOKEN: "cloud-value",
+    GIT_CONFIG_COUNT: "1",
+    GIT_CONFIG_KEY_0: "credential.helper",
+    GIT_CONFIG_VALUE_0: "/tmp/helper.sh",
+    KILO_API_KEY: "kilo-key-value",
+    KILO_ORG_ID: "org-value",
+    UNRELATED: "keep-me",
+  }
+  const child = env(MODE.toolsDenied, base)
+  const withheld = [
+    "GH_TOKEN",
+    "GITHUB_TOKEN",
+    "CROSS_REPO_ACCESS_TOKEN",
+    "CLOUD_REPO_TOKEN",
+    "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_KEY_0",
+    "GIT_CONFIG_VALUE_0",
+  ]
+  for (const name of withheld) assert.equal(child[name], undefined, `${name} must not reach the child`)
+  assert.equal(child.KILO_API_KEY, "kilo-key-value", "the CLI authenticates with the gateway key")
+  assert.equal(child.KILO_ORG_ID, "org-value")
+  assert.equal(child.UNRELATED, "keep-me")
+  assert.ok(child.KILO_CONFIG_CONTENT, "the child needs the mode's config")
+  assert.deepEqual(JSON.parse(child.KILO_CONFIG_CONTENT).permission, policy().modes["tools-denied"].permission)
 })
 
 check("configContent merges over an existing KILO_CONFIG_CONTENT", () => {
@@ -256,6 +290,22 @@ check("the fix step requires a built policy before it runs", () => {
     block,
     /tee -a docs-sync-out\/edit-log\.txt[\s\S]*\|\| echo "::warning::/,
     "the redaction + tee pipeline keeps its || echo warning guard",
+  )
+})
+
+check("the re-verify step is bounded", () => {
+  assert.match(
+    step("Re-verify docs after the fix pass"),
+    /^        timeout-minutes: 10$/m,
+    "the rebuild must not run to the job timeout",
+  )
+})
+
+check("the edit pass pipes the CLI stream through the redaction filter", () => {
+  assert.match(
+    step("Update docs"),
+    /node \.github\/docs-sync\/edit\.mjs \| node \.github\/docs-sync\/redact-stream\.mjs/,
+    "the streamed CLI output must pass the same filter the fix step uses",
   )
 })
 
