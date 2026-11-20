@@ -11,6 +11,7 @@ import { KiloRead } from "@kilocode/kilo-plugin/read"
 import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
+import { pilotEnabled } from "./migration/pilot"
 import { ConfigPluginSource } from "@opencode/core/config/plugin/source"
 import { Flag } from "@opencode/core/flag"
 import { ModelResolver } from "@opencode/core/model-resolver"
@@ -144,6 +145,24 @@ export function schedulingOverrides(overrides: string | undefined) {
   return [overrides, "schedules"].filter(Boolean).join(",")
 }
 
+// A long-lived server can open another project after the launching client's preflight.
+function guardedLayout(): ConfigDiscovery.Layout {
+  const layout = KiloConfigDiscovery.layout
+  if (!pilotEnabled() || process.env.OPENCODE_APP_DIR_NAME !== "kilo") return layout
+  return {
+    ...layout,
+    walk: (input) =>
+      layout.walk(input).pipe(
+        Effect.tap((dirs) =>
+          Effect.promise(async () => {
+            const { assertProjectDirectories } = await import("./migration/project-config")
+            assertProjectDirectories(dirs, Global.Path.home)
+          }),
+        ),
+      ),
+  }
+}
+
 /**
  * Service replacements that the Kilo host gives the server it starts. `createRoutes` applies them after its
  * standard set, so they win: the Kilo plugins, Kilo's app identity and Kilo's config discovery (`kilo2.json`,
@@ -244,7 +263,7 @@ export const overrides: LayerNode.Replacements = [
   SessionRunnerModel.node.replace(KiloGatewayModel.node),
   Session.node.replace(KiloSessionRevert.node),
   // kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
-  ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
+  ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, guardedLayout())),
   // A sandboxed tool call spawns, writes and sends HTTP requests inside its sandbox profile.
   // kilo_port(sandbox:b09868b61af4)
   Environment.node.replace(Environment.node.mapLayer(KiloSandbox.environment)),

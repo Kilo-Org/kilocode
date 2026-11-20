@@ -4,7 +4,15 @@ import fs from "node:fs"
 import path from "node:path"
 import { legacyRoots } from "./resource-roots"
 
-type Roots = { home: string; stateBase: string; configBase: string; legacyConfig: string; previewConfig: string }
+type Roots = {
+  home: string
+  legacyState: string
+  v1State: string
+  previewState: string
+  configBase: string
+  legacyConfig: string
+  previewConfig: string
+}
 type Kind = "model" | "workflow" | "skill"
 type Item = { kind: Kind; source: string; target: string; digest: string }
 type Inventory = { conflicts: Set<string>; items: Map<string, Item> }
@@ -45,8 +53,9 @@ function inventory(roots: Roots) {
     plan.conflicts.add("Supply absolute home, state and configuration roots before migrating")
     return plan
   }
-  const stable = path.join(roots.stateBase, "kilo", "model.json")
-  for (const file of [stable, path.join(roots.stateBase, "kilo2", "model.json")]) {
+  const stable = path.join(roots.legacyState, "model.json")
+  for (const dir of new Set([roots.legacyState, roots.v1State, roots.previewState])) {
+    const file = path.join(dir, "model.json")
     inspect(plan, () => {
       if (entry(file)) record(plan, "model", file, stable)
     })

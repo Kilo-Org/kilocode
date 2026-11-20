@@ -5,11 +5,18 @@ import { pathToFileURL } from "node:url"
 
 /** Read directory metadata only. Project files can be tracked or shared with teammates;
  * never rewrite them as a side effect of a machine-wide migration. */
-export function assertProjectConfig(locations: Iterable<string>) {
-  const issues = [...projectDirectories(locations)].flatMap(projectIssues).sort()
+export function assertProjectConfig(locations: Iterable<string>, home: string) {
+  assertProjectDirectories(projectDirectories(locations), home)
+}
+
+export function assertProjectDirectories(directories: Iterable<string>, home: string) {
+  const homeDir = statSync(home, { throwIfNoEntry: false })?.isDirectory() ? realpathSync.native(home) : home
+  const issues = [...directories].flatMap((dir) => projectIssues(dir, homeDir))
+  const globalIgnore = path.join(home, ".kilocode", ".kilocodeignore")
+  if (lstatSync(globalIgnore, { throwIfNoEntry: false })) issues.push(globalIgnore)
   if (issues.length)
     throw new Error(
-      `Reconcile these project resources before switching to kilo names (move workflows to commands):\n${issues.join("\n")}`,
+      `Reconcile these project resources before switching to kilo names. Preserve ignore rules as read/edit restrictions and move workflows to commands:\n${issues.sort().join("\n")}`,
     )
 }
 
@@ -51,8 +58,8 @@ function primaryCheckout(dir: string) {
   return first.slice("worktree ".length)
 }
 
-function projectIssues(dir: string) {
-  const result = ["kilo2.json", "kilo2.jsonc"]
+function projectIssues(dir: string, home: string) {
+  const result = ["kilo2.json", "kilo2.jsonc", ".kilocodeignore"]
     .map((name) => path.join(dir, name))
     .filter((file) => lstatSync(file, { throwIfNoEntry: false }))
   const preview = path.join(dir, ".kilo2")
@@ -67,9 +74,13 @@ function projectIssues(dir: string) {
   const manager = path.join(dir, ".kilo", "agent-manager.json")
   if (lstatSync(manager, { throwIfNoEntry: false }))
     result.push(`Agent Manager worktree associations require reconciliation: ${manager}`)
-  const workflows = path.join(dir, ".kilo", "workflows")
-  const legacy = lstatSync(workflows, { throwIfNoEntry: false })
-  if (legacy && (!legacy.isDirectory() || readdirSync(workflows).length)) result.push(workflows)
+  // The global resource planner already migrates these directories under HOME.
+  if (dir === home) return result
+  for (const name of [".kilo/workflows", ".kilocode/workflows", ".kilocode/skills", ".kilocode/skill"]) {
+    const file = path.join(dir, name)
+    const legacy = lstatSync(file, { throwIfNoEntry: false })
+    if (legacy && (!legacy.isDirectory() || readdirSync(file).length)) result.push(file)
+  }
   return result
 }
 

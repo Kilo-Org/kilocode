@@ -49,11 +49,24 @@ test("internal cutover through the host: explicit consent, one switch, recoverab
   mkdirSync(path.dirname(skill), { recursive: true })
   writeFileSync(skill, "---\ndescription: Fixture skill\n---\nPreserve this text.")
   writeFileSync(rootConfig, '{"model":"kilo/fixture"}')
+  const ignore = path.join(worktree, ".kilocodeignore")
+  const globalIgnore = path.join(profile.path, "home/.kilocode/.kilocodeignore")
+  const workflow = path.join(worktree, ".kilocode/workflows/review.md")
+  const oldSkill = path.join(worktree, ".kilocode/skills/synthetic/SKILL.md")
+  for (const file of [ignore, globalIgnore, workflow, oldSkill]) {
+    mkdirSync(path.dirname(file), { recursive: true })
+    writeFileSync(file, "synthetic-private/**\n!synthetic-private/public.md\n")
+  }
   const oldBytes = readFileSync(source)
   const blocked = await run("migrate", "apply", "--accept-jetbrains-breakage")
   expect(blocked.code).not.toBe(0)
   expect(blocked.stderr).toContain(rootConfig)
   expect(blocked.stderr).toContain(skills)
+  for (const file of [ignore, globalIgnore, path.dirname(workflow), path.dirname(path.dirname(oldSkill))])
+    expect(blocked.stderr).toContain(file)
+  for (const file of [ignore, globalIgnore, workflow, oldSkill]) unlinkSync(file)
+  // An empty skill bundle is still a legacy resource until it is moved out of discovery.
+  renameSync(path.join(worktree, ".kilocode"), path.join(worktree, "archived-legacy-resources"))
   expect(readFileSync(source)).toEqual(oldBytes)
   expect(statSync(source, { bigint: true }).mtimeNs).toBe(before)
   expect(existsSync(`${source}.pre-v2`)).toBe(false)
@@ -77,7 +90,7 @@ test("internal cutover through the host: explicit consent, one switch, recoverab
   const original = readFileSync(source)
   const failed = await run("migrate", "apply", "--accept-jetbrains-breakage")
   // Unsupported filesystems must decline before changing a profile; exercise successful publication on supported hosts.
-  if (process.platform === "win32" && failed.code !== 0) {
+  if (failed.code !== 0 && failed.stderr.includes("Safe database replacement requires local")) {
     expect(failed.stderr).toMatch(/windows|filesystem|requires local/i)
     expect(existsSync(`${source}.pre-v2`)).toBe(false)
     return
@@ -126,8 +139,46 @@ test("internal cutover through the host: explicit consent, one switch, recoverab
     expect(existsSync(target)).toBe(false)
     expect(existsSync(`${source}.pre-v2`)).toBe(false)
   }
+  const journal = path.join(profile.path, "data/kilo2/migration", path.basename(source), "stage.json")
+  const foreign = path.join(data, ".kilo-cutover-ZZZZZZ")
+  mkdirSync(foreign)
+  writeFileSync(path.join(foreign, "keep"), "not owned by this run")
+  // Kill the actual converter at two real filesystem boundaries. Neither finally block runs.
+  for (const name of ["converted.db", path.basename(source) + ".pre-v2"]) {
+    writeFileSync(
+      path.join(profile.path, "crash.ts"),
+      `import fs from 'node:fs';import path from 'node:path';const link=fs.linkSync;fs.linkSync=(src,dest)=>{link(src,dest);if(path.basename(String(dest))===${JSON.stringify(name)}) process.kill(process.pid,'SIGKILL')}`,
+    )
+    const previous = existsSync(journal) ? JSON.parse(readFileSync(journal, "utf8")).name : undefined
+    const crash = await runHost(profile.path, ["migrate", "recover", "--accept-jetbrains-breakage"], {
+      BUN_OPTIONS: "--preload ./crash.ts",
+    })
+    expect(existsSync(journal), crash.stderr).toBe(true)
+    const owned = JSON.parse(readFileSync(journal, "utf8"))
+    expect(existsSync(path.join(data, owned.name, "converted.db"))).toBe(true)
+    if (previous) expect(existsSync(path.join(data, previous))).toBe(false)
+    if (owned.linking) expect(statSync(source).ino).toBe(statSync(`${source}.pre-v2`).ino)
+    expect(owned.linking).toBe(name.endsWith(".pre-v2"))
+    expect(existsSync(target)).toBe(false)
+    if (!owned.linking) {
+      const dir = path.join(data, owned.name)
+      renameSync(dir, dir + ".saved")
+      mkdirSync(dir, { mode: 0o700 })
+      writeFileSync(path.join(dir, "keep"), "different inode")
+      expect((await run("migrate", "recover", "--accept-jetbrains-breakage")).stderr).toContain(
+        "Staging directory was replaced",
+      )
+      expect(readFileSync(path.join(dir, "keep"), "utf8")).toBe("different inode")
+      renameSync(dir, dir + ".unrelated")
+      renameSync(dir + ".saved", dir)
+    }
+  }
+  const last = JSON.parse(readFileSync(journal, "utf8")).name
   const applied = await run("migrate", "recover", "--accept-jetbrains-breakage")
   expect(applied.code, applied.stderr).toBe(0)
+  expect(existsSync(path.join(data, last))).toBe(false)
+  expect(existsSync(journal)).toBe(false)
+  expect(readFileSync(path.join(foreign, "keep"), "utf8")).toBe("not owned by this run")
   expect(
     applied.stdout
       .trim()
@@ -146,6 +197,16 @@ test("internal cutover through the host: explicit consent, one switch, recoverab
   const alternate = path.join(profile.path, "client-b")
   mkdirSync(alternate)
   writeFileSync(path.join(alternate, "kilo2.json"), '{"permission":{"bash":"deny"}}')
+  for (const args of [
+    ["migrate", "preflight"],
+    ["migrate", "observe"],
+    ["debug", "paths"],
+  ]) {
+    const other = await runHost(profile.path, args, { INIT_CWD: alternate })
+    expect(other.code).not.toBe(0)
+    expect(other.stderr).toContain(path.join(alternate, "kilo2.json"))
+    expect(other.stdout).not.toContain('"status":"completed"')
+  }
   writeFileSync(path.join(profile.path, "second.ts"), `process.env.KILO2_CONFIG_DIR=${JSON.stringify(alternate)}`)
   for (const args of [
     ["migrate", "preflight"],
@@ -289,6 +350,49 @@ test("a session in a linked worktree blocks cutover when its primary checkout st
   expect(readFileSync(legacy, "utf8")).toBe(manager)
   expect(readFileSync(preview, "utf8")).toBe(existing)
   expect(existsSync(path.join(tree, ".git"))).toBe(true)
+}, 30_000)
+
+test("fallback state survives cutover and inherited release paths select the same receipt", async () => {
+  await using p = await tmpdir()
+  const root = p.path
+  for (const dir of [".git", "data/kilo/state", "data/kilo/kilo", "data/kilo2/kilo2"])
+    mkdirSync(path.join(root, dir), { recursive: true })
+  {
+    using db = new Database(path.join(root, "data/kilo/kilo.db"))
+    db.exec(readFileSync(path.join(import.meta.dir, "fixture/kilo-v1-schema.sql"), "utf8"))
+  }
+  const config = path.join(root, "data/kilo/state/model.json")
+  const prefs = JSON.stringify({
+    model: { code: { providerID: "demo", modelID: "preserved" } },
+    variant: { "demo/preserved": "high" },
+  })
+  writeFileSync(config, prefs)
+  writeFileSync(
+    path.join(root, "state-env.ts"),
+    `if(!process.env.KILO_INTERNAL_CUTOVER_IMPLICIT_STATE)delete process.env.XDG_STATE_HOME`,
+  )
+  const env = { BUN_OPTIONS: "--preload ./state-env.ts" }
+  const probe = JSON.parse((await runHost(root, ["migrate", "preflight"], env)).stdout)
+  expect(probe).toMatchObject({
+    v1State: path.dirname(config),
+    previewState: path.join(root, "data/kilo2/kilo2"),
+    legacyState: path.join(root, "data/kilo/kilo"),
+  })
+  const preview = path.join(probe.previewState, "model.json")
+  writeFileSync(preview, '{"model":{}}')
+  const blocked = await runHost(root, ["migrate", "apply", "--accept-jetbrains-breakage"], env)
+  expect(blocked.stderr).toContain(config)
+  expect(blocked.stderr).toContain(preview)
+  writeFileSync(preview, prefs)
+  const migrated = await runHost(root, ["migrate", "recover", "--accept-jetbrains-breakage"], env)
+  if (migrated.code && migrated.stderr.includes("Safe database replacement requires local")) return
+  expect(migrated.code, migrated.stderr).toBe(0)
+  const boot = await runHost(root, ["debug", "paths"], env)
+  expect(boot.code, boot.stderr).toBe(0)
+  const state = /^state\s+(.+)$/m.exec(boot.stdout)?.[1]?.trim()
+  expect(state).toBe(probe.legacyState)
+  expect(readFileSync(path.join(state!, "model.json"), "utf8")).toBe(prefs)
+  expect(readFileSync(config, "utf8")).toBe(prefs)
 }, 30_000)
 
 async function runHost(root: string, args: string[], extra: NodeJS.ProcessEnv = {}) {

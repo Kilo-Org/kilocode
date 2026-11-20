@@ -2,6 +2,7 @@ import { Database, SQLiteError } from "bun:sqlite"
 import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { z } from "zod"
+import { syncDir } from "./stage-record"
 
 const progress = z.object({ phase: z.string(), done: z.number().optional(), total: z.number().optional() })
 const failure = progress.extend({ status: z.enum(["failed", "interrupted"]), message: z.string() })
@@ -33,7 +34,11 @@ export class MigrationRunError extends Error {
  * including failures: an interrupted conversion may already have published changes that need recovery. */
 export async function withOwner(source: string, work: Work, observe?: Observe): Promise<void> {
   const dir = sidecar(source)
-  mkdirSync(dir, { recursive: true, mode: 0o700 })
+  const created = mkdirSync(dir, { recursive: true, mode: 0o700 })
+  // Persist the owner-directory chain before the separate source volume can publish a backup.
+  if (created)
+    for (let entry = dir; entry === created || entry.startsWith(created + path.sep); entry = path.dirname(entry))
+      syncDir(path.dirname(entry))
   using lock = new Database(path.join(dir, "owner.sqlite"))
   const notify = observer(observe)
   lock.run("PRAGMA busy_timeout = 0")
@@ -98,6 +103,7 @@ function publisher(dir: string, notify: Observe): Observe {
     // Only the lock holder writes. A process crash leaves readers the whole old or the whole new snapshot.
     writeFileSync(`${file}.new`, JSON.stringify(state), { mode: 0o600, flush: true })
     renameSync(`${file}.new`, file)
+    if (state.phase === "starting" || state.status !== "running") syncDir(dir)
     notify(state)
   }
 }
@@ -151,6 +157,10 @@ function sidecar(source: string) {
   return path.basename(dir) === "kilo"
     ? path.join(dir, "..", "kilo2", "migration", path.basename(file))
     : `${file}.kilo2-migration`
+}
+
+export function stageJournal(source: string) {
+  return path.join(sidecar(source), "stage.json")
 }
 
 function existingSidecar(source: string) {

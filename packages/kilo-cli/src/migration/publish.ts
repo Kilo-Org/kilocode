@@ -2,6 +2,7 @@ import { Database, SQLiteError } from "bun:sqlite"
 import fs from "node:fs"
 import path from "node:path"
 import { snapshot } from "./snapshot"
+import { beginStage, identity, recordedStage, syncDir } from "./stage-record"
 
 const family = ["", "-wal", "-journal", "-shm"]
 
@@ -12,6 +13,7 @@ export async function stageAndPublish(
   backup: string,
   build: (stage: string) => Promise<void>,
   progress: (phase: string) => void,
+  options: { checkInputs?: () => void; journal?: string } = {},
 ): Promise<void> {
   const dir = fs.realpathSync.native(path.dirname(source))
   const file = path.join(dir, path.basename(source)) // Resolve parent aliases, never follow a database symlink.
@@ -24,7 +26,10 @@ export async function stageAndPublish(
   const before = state(file)
   const scratch = fs.mkdtempSync(path.join(dir, ".kilo-cutover-"))
   const stage = path.join(scratch, "converted.db")
+  let registered = false
   try {
+    const beforeLink = options.journal ? beginStage(options.journal, file, scratch) : undefined
+    registered = !!beforeLink
     await snapshot(file, stage, progress)
     unchanged(file, before)
     await build(stage)
@@ -34,10 +39,55 @@ export async function stageAndPublish(
     unused(dest)
     unchanged(file, before)
     const standalone = checkpointSource(file, before)
-    publish(file, standalone, stage, dest)
+    publish(file, standalone, stage, dest, () => {
+      options.checkInputs?.()
+      beforeLink?.()
+    })
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true })
+    // If publication was interrupted, explicit recovery consumes its journal.
+    // Successful publication keeps the journal until the recovery inode is verified.
+    if (registered && options.journal && !fs.existsSync(dest)) recordedStage(options.journal, file)?.remove()
   }
+}
+
+export function linkedOriginal(source: string, backup: string) {
+  return fs.existsSync(backup) && identity(source) === identity(backup)
+}
+
+/** Only under the owner lock after renewed consent. Both names must still identify
+ * the exact private original for which this run recorded its intent to link. */
+export function retryPublication(source: string, backup: string, journal: string) {
+  const stage = recordedStage(journal, source)
+  if (fs.lstatSync(backup, { throwIfNoEntry: false })) {
+    const st = fs.lstatSync(source)
+    if (
+      !stage?.linking ||
+      !linkedOriginal(source, backup) ||
+      !st.isFile() ||
+      st.nlink !== 2 ||
+      st.uid !== process.geteuid?.() ||
+      st.mode & 0o077
+    )
+      throw new Error(`Unverified recovery link; keep both files and inspect ${backup}`)
+    if (
+      family
+        .slice(1)
+        .some(
+          (s) =>
+            fs.lstatSync(backup + s, { throwIfNoEntry: false }) || fs.lstatSync(source + s, { throwIfNoEntry: false }),
+        )
+    )
+      throw new Error(`Close clients and inspect recovery sidecars at ${backup}`)
+    using guard = exclusive(source)
+    if (guard.query<{ journal_mode: string }, []>("PRAGMA journal_mode").get()?.journal_mode !== "delete")
+      throw new Error(`Recovery link is not standalone: ${backup}`)
+    if (!linkedOriginal(source, backup) || fs.lstatSync(source).nlink !== 2)
+      throw new Error(`Recovery link changed: ${backup}`)
+    fs.unlinkSync(backup)
+    syncDir(path.dirname(backup))
+  }
+  stage?.remove()
 }
 
 function checkVolume(dir: string, file: string) {
@@ -161,7 +211,7 @@ function checkpointSource(file: string, before: string) {
   return `${stamp(fs.lstatSync(file, { bigint: true }))}|`
 }
 
-function publish(file: string, expected: string, stage: string, dest: string) {
+function publish(file: string, expected: string, stage: string, dest: string, checkInputs: () => void) {
   const dir = path.dirname(file)
   // Open no non-SQLite fds on the original inside the fence: closing one releases POSIX process locks.
   sync(file)
@@ -184,6 +234,7 @@ function publish(file: string, expected: string, stage: string, dest: string) {
   unused(dest)
   // Tighten the existing inode before a second name can expose it. Do not
   // open and close another fd on it while SQLite holds its POSIX lock.
+  checkInputs()
   protectRecovery(file)
   fs.linkSync(file, dest) // Atomic no-replace. Never remove an existing recovery path, even on error.
   sync(dir)

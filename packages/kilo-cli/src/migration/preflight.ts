@@ -4,6 +4,7 @@ import path from "node:path"
 import { KiloGlobalResilience } from "../global-resilience"
 import { pilotEnabled } from "./pilot"
 import { checkResourceOnly } from "./resource-only"
+import { statePaths } from "./state-paths"
 
 /** Filesystem inventory only. Opening even a read-only SQLite connection to a live WAL
  * can change the shared-memory file. Schema validation belongs after consent. */
@@ -14,7 +15,6 @@ export function preflight(environment: NodeJS.ProcessEnv, cwd = process.cwd()) {
   const base = path.resolve(env.XDG_DATA_HOME || path.join(home, ".local", "share"))
   const preview = path.join(base, "kilo2")
   const configBase = path.resolve(env.XDG_CONFIG_HOME || path.join(home, ".config"))
-  const stateBase = path.resolve(env.XDG_STATE_HOME || path.join(home, ".local", "state"))
   const previewFile = env.KILO2_CONFIG ?? env.OPENCODE_CONFIG
   if (env.KILO_DB === ":memory:") throw new Error("Cannot migrate an in-memory session store")
   const source = legacySource(path.join(base, "kilo"), env.KILO_DB)
@@ -24,9 +24,8 @@ export function preflight(environment: NodeJS.ProcessEnv, cwd = process.cwd()) {
     status: sourceBytes === undefined ? ("absent" as const) : ("required" as const),
     source,
     home: path.resolve(env.OPENCODE_TEST_HOME || env.KILO_TEST_HOME || home),
-    stateBase,
+    ...statePaths(env, base, home),
     configBase,
-    legacyState: path.join(stateBase, "kilo"),
     legacyData: path.join(base, "kilo"),
     authFiles: [path.join(base, "kilo", "auth.json"), path.join(preview, "auth.json")],
     legacyConfig: path.resolve(env.KILO_CONFIG_DIR || path.join(configBase, "kilo")),
@@ -57,6 +56,14 @@ function previewInventory(dir: string, selected: string | undefined, source: str
       .filter((file) => file !== source && fileSize(file) !== undefined)
       .sort(),
   }
+}
+
+export function currentPreviewStores(plan: ReturnType<typeof preflight>) {
+  return previewInventory(
+    path.join(path.dirname(plan.legacyData), "kilo2"),
+    plan.previewDatabase ?? undefined,
+    plan.source,
+  ).previewStores
 }
 
 /** A channel may have both its current filename and its older fallback, with different histories.

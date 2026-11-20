@@ -32,7 +32,7 @@ export function checkResourceOnly(
     configBase: string
     legacyConfig: string
     legacyConfigFile?: string
-    legacyState: string
+    v1State: string
     legacyData: string
     source: string
   },
@@ -59,11 +59,12 @@ export function checkResourceOnly(
   }
   if (plan.legacyConfigFile) add(plan.legacyConfigFile)
   add(path.join(plan.legacyData, "auth.json"))
-  add(path.join(plan.legacyState, "model.json"))
+  add(path.join(plan.home, ".kilocode", ".kilocodeignore"))
+  add(path.join(plan.v1State, "model.json"))
   for (const file of modes) add(file)
   const dirs = new Set(dot)
   for (const dir of projectDirectories([cwd])) {
-    for (const name of ["kilo.json", "kilo.jsonc"]) add(path.join(dir, name))
+    for (const name of ["kilo.json", "kilo.jsonc", ".kilocodeignore"]) add(path.join(dir, name))
     for (const name of [".kilo", ".kilocode"]) dirs.add(path.join(dir, name))
   }
   for (const dir of dirs) for (const name of resources) add(path.join(dir, name))

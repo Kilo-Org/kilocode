@@ -1,8 +1,19 @@
 import { Database } from "bun:sqlite"
 import { existsSync, statSync } from "node:fs"
+import path from "node:path"
 import { inputs, receipt } from "./receipt"
-import { explicitConfig, preflight } from "./preflight"
-import { observeOwner, readOwner, retryOwner, withOwner, type MigrationProgress, type OwnerState } from "./owner"
+import { currentPreviewStores, explicitConfig, preflight } from "./preflight"
+import { previewRevisions } from "./preview"
+import {
+  observeOwner,
+  readOwner,
+  retryOwner,
+  stageJournal,
+  withOwner,
+  type MigrationProgress,
+  type OwnerState,
+} from "./owner"
+import { recordedStage } from "./stage-record"
 import { releaseProfile } from "../env"
 import { assertProjectConfig, projectLocations } from "./project-config"
 
@@ -14,7 +25,7 @@ export function migrationStatus(plan: Plan) {
   const owner = plan.status === "required" ? readOwner(plan.source) : undefined
   // The marker was checkpointed before publication. An immutable probe checks the canonical file
   // without creating SHM or adopting a restored store on the strength of an old owner journal.
-  if (owner?.status === "completed") receipt(plan)
+  if (owner?.status === "completed") ready(plan)
   return { ...plan, ...owner, canObserve: owner?.status === "running" }
 }
 
@@ -24,28 +35,34 @@ export async function applyCutover(plan: Plan, report: Report) {
   // Catch conflicts on a closed source without even creating the pilot owner journal.
   // A WAL-backed source gets its authoritative inspection on the consistent private stage below.
   if (!readOwner(plan.source) && !existsSync(`${plan.source}-wal`) && !existsSync(`${plan.source}-journal`))
-    assertProjectConfig(projectLocations(plan.source))
+    assertProjectConfig(projectLocations(plan.source), plan.home)
   await withOwner(plan.source, (update) => convert(plan, update), verified(plan, report))
+  ready(plan)
+}
+
+function ready(plan: Plan) {
   receipt(plan)
+  assertProjectConfig([process.cwd()], plan.home)
 }
 
 function verified(plan: Plan, report: Report) {
   return (state: OwnerState) => {
-    if (state.status === "completed") receipt(plan)
+    if (state.status === "completed") ready(plan)
     report(state)
   }
 }
 
 export async function observeCutover(plan: Plan, report: Report) {
   await observeOwner(plan.source, verified(plan, report))
-  receipt(plan)
+  ready(plan)
 }
 
 /** Recovery is a separate consent, never an implicit response to a stale lock. */
 export async function recoverCutover(plan: Plan, report: Report) {
   explicitConfig(plan)
   const { requireV1Store } = await import("../v1-store")
-  if (existsSync(plan.backup)) {
+  const { linkedOriginal, retryPublication } = await import("./publish")
+  if (existsSync(plan.backup) && !linkedOriginal(plan.source, plan.backup)) {
     const { verifyPublished } = await import("./verify-published")
     const { finishRecovered } = await import("./owner")
     return finishRecovered(
@@ -53,6 +70,7 @@ export async function recoverCutover(plan: Plan, report: Report) {
       async () => {
         verifyPublished(plan.source, plan.backup)
         await finishResources(plan)
+        recordedStage(stageJournal(plan.source), plan.backup)?.remove()
       },
       report,
     )
@@ -60,8 +78,8 @@ export async function recoverCutover(plan: Plan, report: Report) {
   return retryOwner(
     plan.source,
     () => {
-      if (existsSync(plan.backup)) throw new Error(`Recovery copy appeared: ${plan.backup}`)
       requireV1Store(plan.source)
+      retryPublication(plan.source, plan.backup, stageJournal(plan.source))
     },
     (update) => convert(plan, update),
     report,
@@ -75,7 +93,11 @@ async function convert(plan: Plan, update: Report) {
   const intent = resources(plan)
   if (existsSync(plan.backup))
     throw new Error(`A recovery copy already exists: ${plan.backup}. Inspect it before retrying.`)
-  const previewState = previewStamp(plan)
+  const previews = previewRevisions(plan.previewStores)
+  const checkPreviews = () => {
+    if (JSON.stringify(previewRevisions(currentPreviewStores(plan))) !== JSON.stringify(previews))
+      throw new Error("A preview store changed during migration. Close all preview clients and retry.")
+  }
   const { planAuth } = await import("./auth")
   const auth = planAuth(plan.authFiles)
   const { stageAndPublish } = await import("./publish")
@@ -84,7 +106,8 @@ async function convert(plan: Plan, update: Report) {
     plan.backup,
     async (stage) => {
       const projects = projectLocations(stage)
-      assertProjectConfig(projects)
+      const originalIDs = plan.previewStores.length ? credentialIDs(stage) : undefined
+      assertProjectConfig(projects, plan.home)
       await import("../preload")
       const { convertProfile } = await import("../v1-store")
       const { reconcilePreview } = await import("./preview")
@@ -95,36 +118,49 @@ async function convert(plan: Plan, update: Report) {
         progress: (done, total) => update({ phase: "Converting sessions", done, total }),
       })
       update({ phase: "Checking preview profiles" })
-      await reconcilePreview(stage, plan.previewStores)
+      reconcilePreview(stage, plan.previewStores, originalIDs)
       // Use each original profile's known locations; project rows synthesized by the
       // converter are not evidence that the user had local preview resources there.
       for (const file of plan.previewStores) for (const location of projectLocations(file)) projects.add(location)
-      assertProjectConfig(projects)
+      assertProjectConfig(projects, plan.home)
       update({ phase: "Verifying converted sessions" })
       using db = new Database(stage, { readwrite: true })
       auth.verify(db)
       if (db.query("SELECT id FROM session EXCEPT SELECT id FROM session_v2 LIMIT 1").get())
         throw new Error("Session verification failed; the source profile was not switched.")
-      if (previewStamp(preflight(process.env)) !== previewState)
-        throw new Error("A preview store changed during migration. Close all preview clients and retry.")
+      checkPreviews()
       if (resources(plan).digest !== intent.digest) throw new Error("Profile resources changed during staging")
       db.run(
         "CREATE TABLE _kilo_profile_cutover (version INTEGER PRIMARY KEY, original_file TEXT NOT NULL, inputs TEXT NOT NULL, resources TEXT NOT NULL)",
       )
       const original = statSync(plan.source, { bigint: true })
-      db.run("INSERT INTO _kilo_profile_cutover VALUES (2, ?, ?, ?)", [
+      db.run("INSERT INTO _kilo_profile_cutover VALUES (3, ?, ?, ?)", [
         `${original.dev}:${original.ino}`,
-        JSON.stringify(inputs(plan)),
+        JSON.stringify({ ...inputs(plan), previews }),
         intent.digest,
       ])
       db.run("PRAGMA wal_checkpoint(TRUNCATE)")
     },
     (phase) => update({ phase }),
+    { checkInputs: checkPreviews, journal: stageJournal(plan.source) },
   )
   update({ phase: "Reconciling configuration" })
   await finishResources(plan)
+  recordedStage(stageJournal(plan.source), plan.backup)?.remove()
   for (const item of intent.skipped) update({ phase: `Skipped: ${item}` })
   update({ phase: "Profile ready" })
+}
+
+function credentialIDs(stage: string) {
+  using db = new Database(stage, { readonly: true })
+  return new Set(
+    db.query("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='credential'").get()
+      ? db
+          .query<{ id: string }, []>("SELECT id FROM credential")
+          .all()
+          .map((row) => row.id)
+      : [],
+  )
 }
 
 async function finishResources(plan: Plan) {
@@ -134,17 +170,6 @@ async function finishResources(plan: Plan) {
   if (files.digest !== expected)
     throw new Error("Profile resources differ from the accepted plan. Restore the planned inputs before recovery.")
   files.apply()
-}
-
-function previewStamp(plan: Plan) {
-  return JSON.stringify(
-    plan.previewStores
-      .flatMap((file) => [file, `${file}-wal`, `${file}-journal`])
-      .map((file) => {
-        const stat = statSync(file, { bigint: true, throwIfNoEntry: false })
-        return [file, stat && `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}`]
-      }),
-  )
 }
 
 export async function beforeBoot() {
@@ -175,6 +200,8 @@ export async function beforeBoot() {
   // Child launchers need the same preview selectors after releaseProfile sets runtime paths.
   process.env.KILO2_CONFIG_DIR = plan.previewConfig
   if (plan.previewDatabase) process.env.KILO2_DB = plan.previewDatabase
+  process.env.XDG_STATE_HOME = path.dirname(plan.legacyState)
+  if (plan.implicitState) process.env.KILO_INTERNAL_CUTOVER_IMPLICIT_STATE = process.env.XDG_STATE_HOME
   releaseProfile(plan.source, plan.legacyConfig, explicitConfig(plan))
   return true
 }

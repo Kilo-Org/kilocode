@@ -21,7 +21,7 @@ export function verifyPublished(source: string, backup: string) {
   const expected = lstatSync(backup, { bigint: true })
   if (
     !db
-      .query("SELECT 1 FROM main._kilo_profile_cutover WHERE version=2 AND original_file=?")
+      .query("SELECT 1 FROM main._kilo_profile_cutover WHERE version IN (2,3) AND original_file=?")
       .get(`${expected.dev}:${expected.ino}`)
   )
     throw new Error("Recovery copy does not match this cutover")

@@ -24,9 +24,9 @@
           "reason": "One-time copy of an earlier build's database file before the server starts. It counts sessions in the candidate files read-only to pick the copy source; Database.Service does not exist yet and would run migrations on the old file. The copy itself opens the source through packages/kilo-cli/src/sqlite-readonly.ts. Remove with the legacy copy."
         },
         "packages/kilo-cli/src/migration/cutover.ts": {
-          "count": 1,
+          "count": 2,
           "owner": "kilo-cli",
-          "reason": "After the upstream converter closes, verify the private candidate, write its cutover receipt and checkpoint it before publication. The server's managed connection must not outlive staging."
+          "reason": "On the private stage, read durable credential IDs before conversion and verify and checkpoint the completed candidate. The server's managed connection must not outlive staging."
         },
         "packages/kilo-cli/src/migration/owner.ts": {
           "count": 3,
@@ -34,9 +34,9 @@
           "reason": "The migration lock is a separate SQLite file, not a session store. Consent may create it, recovery must open an existing file, and an observer uses a read-only connection to test the owner's exclusive lock."
         },
         "packages/kilo-cli/src/migration/preview.ts": {
-          "count": 1,
+          "count": 2,
           "owner": "kilo-cli",
-          "reason": "Compare closed preview stores with the private candidate using immutable reads. Opening a preview through Database.Service could migrate the very input being checked for conflicts."
+          "reason": "Compare closed previews using immutable reads, then install verified equivalent credential IDs only on the chosen private copy. Opening a preview through Database.Service could migrate the input."
         },
         "packages/kilo-cli/src/migration/project-config.ts": {
           "count": 1,

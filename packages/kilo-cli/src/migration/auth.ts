@@ -103,7 +103,7 @@ function matches(entry: Entry, value: string) {
       stored.refresh === entry.refresh &&
       stored.expires === entry.expires &&
       stored.metadata?.accountID === entry.accountId &&
-      stored.metadata?.enterpriseURL === entry.enterpriseUrl
+      stored.metadata?.enterpriseUrl === entry.enterpriseUrl
     )
   } catch {
     return false

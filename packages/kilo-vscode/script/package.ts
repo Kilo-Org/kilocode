@@ -60,7 +60,7 @@ export async function prepare(target: Target): Promise<void> {
   const manifest = await Bun.file(path.join(cli, config.dist, "package.json")).json()
   if (manifest.name !== `@kilocode/${config.dist}` || pilot !== (manifest.private === true))
     throw new Error(`Wrong CLI package for this extension: ${source}`)
-  if (pilot && manifest.kiloProfileCutover?.version !== 2)
+  if (pilot && manifest.kiloProfileCutover?.version !== 3)
     throw new Error(`CLI lacks verified cutover capability: ${source}`)
   if (pilot) {
     await rm(stage, { recursive: true, force: true })

@@ -24,7 +24,8 @@ as unavailable, not as an empty profile. The current contract is version 1:
 | --- | --- |
 | `status` | `required` means the selected source file exists; `absent` means it does not. This probe does not validate the SQLite schema. |
 | `source`, `sourceBytes`, `walBytes` | Selected v1 database and its observed file sizes, including uncheckpointed WAL bytes separately. |
-| `previewStores` | Existing preview database paths that must be considered before switching profiles. |
+| `previewStores` | Existing preview database paths that must be considered before switching profiles. The private receipt records each accepted file's identity, size and modification time. A new file, a write to an existing store, or outstanding WAL/journal data requires reconciliation. A previously accepted store may be archived offline without disabling the migrated profile. |
+| `v1State`, `previewState`, `legacyState` | Effective v1 and preview state inputs and the stable v2 output. With no explicit XDG state override, discovery includes the data-nested fallback used by each respective client. The host pins the accepted output for its children. |
 | `authFiles` | Stable and preview data-directory `auth.json` paths. Preflight does not read their contents. After consent, supported API keys, OAuth sign-ins and well-known credentials are imported into the private candidate and verified there before publication. Different values for the same provider block the switch and identify the files without printing credentials. |
 | `backup`, `availableBytes` | Proposed recovery file and available bytes on the source volume. No space is reserved. Neither field guarantees enough room for conversion. |
 | `legacyData`, `legacyConfig`, `legacyDefaultConfig`, `previewConfig` | The converter inventories both the `KILO_CONFIG_DIR` override and v1's default `$XDG_CONFIG_HOME/kilo` (once if identical), plus the preview config root selected by `KILO2_CONFIG_DIR`, `OPENCODE_CONFIG_DIR`, or the XDG default. Compatible files are added to `legacyConfig`; conflicting inputs stop publication and name the files to reconcile. |
@@ -56,7 +57,7 @@ multiple paths, the pilot stops and lists them all before selecting a history.
 | `absent` | No candidate database or recognized v1 resources. Keep the existing preview profile. |
 | `required` | Confirm explicitly, or stop. Only after acceptance: run `migrate apply --accept-jetbrains-breakage`. |
 | `running` with `canObserve` | Run `migrate observe`. It never claims ownership or starts a run. |
-| `completed` | Start the sidecar. Preflight and boot require the caller's source, preview databases and config/state roots to match the accepted receipt in the canonical database. Different selections are reported, not adopted. Old pilot markers without a receipt require manual review. |
+| `completed` | Start the sidecar only after verifying its current workspace policy and the accepted profile receipt. A different explicit selector, newly discovered preview history or changed preview database blocks startup. Older receipts without a preview revision cannot prove an existing preview was unchanged. |
 | `failed`, `interrupted`, unknown, malformed or incompatible version | Keep the sidecar stopped. Show the last phase, recovery path and error. Do not silently create a fresh store. |
 
 `apply` and `observe` emit newline-separated JSON objects on stdout with `phase`,
@@ -96,13 +97,14 @@ and client consent flows must be verified before enabling the internal build.
   repositories. Before switching, the pilot inspects the current project, directories
   referenced by sessions and worktrees, their applicable ancestors, and linked
   checkouts' primary-config fallback. Remaining `kilo2.json[c]`, `.kilo2` resources
-  or legacy `.kilo/workflows` stop the switch with their paths. Move or reconcile
+  or legacy `.kilo/workflows`, `.kilocode/workflows` or `.kilocode/skills` stop the switch with their paths. Project `.kilocodeignore` and global `~/.kilocode/.kilocodeignore` also block: preserve their effective read and edit restrictions (including negations) before archiving a legacy policy. Move or reconcile
   them into the release layout and retry. Agent Manager's preview state stays under
   `.kilo2`. A legacy `.kilo/agent-manager.json` in a known project blocks cutover
   even if a preview state file exists: the database converter cannot verify the
   worktree assignments or merge the two editor state files. Keep both files and
   the worktrees intact until the associations are reconciled. Unopened projects with no stored sessions
-  or worktree references are outside this inventory.
+  or worktree references are outside the initial inventory; each new launcher and each subsequently opened server location checks its applicable project resources.
+- Independently bootstrapped previews may have different schema journal timestamps and newly generated credential IDs. Compare known migrations by ID and singleton provider sign-ins by value, label and effective selection; retain existing credential IDs. Different secrets, ambiguous account matches, incompatible schema and divergent transcripts still block publication.
 - If the session converter reports a skipped transcript row (invalid message, invalid
   part, or orphan part), the pilot discards the staged conversion and leaves the v1
   database active. Its failure status identifies the affected session and sample
@@ -120,8 +122,7 @@ and client consent flows must be verified before enabling the internal build.
 - On failure, keep the reported source and recovery file. After resolving the cause,
   `migrate recover --accept-jetbrains-breakage` retries an unpublished conversion,
   or verifies a completed replacement and repairs the status without converting
-  again. Recovery refuses unrelated backups, partial publication or unverifiable
-  state. Do not delete the journal or open the only recovery copy for writing.
+  again. A killed owner can leave a large scratch directory or two names for the original database if the final rename did not happen. Recovery under the owner lock uses the private staging journal and device/inode checks to reclaim only that run's stage and redundant backup link. Unrelated backups, replaced directories and unverifiable older partial publications still require manual inspection. Do not delete the journal or open the only recovery copy for writing.
 - To return to v1, stop the clients and preserve the current v2 database (including
   any WAL) and config first. Restore the verified pre-v2 SQLite copy into an offline
   v1 profile. A restore cannot include edits made in v2 after the cutover. Additive

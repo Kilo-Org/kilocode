@@ -382,7 +382,7 @@ export default packagedRenderer(${bytes.byteLength}, ${JSON.stringify(createHash
           ? {
               private: true,
               kiloProfileCutover: {
-                version: 2,
+                version: 3,
                 sha256: await executableDigest(path.join(bin, item.os === "win32" ? `${binary}.exe` : binary)),
               },
             }

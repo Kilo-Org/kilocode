@@ -7,8 +7,8 @@ import { explicitConfig, type preflight } from "./preflight"
  * see both a newly created target and its original input following partial installation. */
 export function resources(plan: ReturnType<typeof preflight>) {
   const config = planConfig(plan.legacyConfig, plan.previewConfig, explicitConfig(plan), plan.legacyDefaultConfig)
-  const { home, stateBase, configBase, legacyConfig, previewConfig } = plan
-  const extra = planExtra({ home, stateBase, configBase, legacyConfig, previewConfig })
+  const { home, legacyState, v1State, previewState, configBase, legacyConfig, previewConfig } = plan
+  const extra = planExtra({ home, legacyState, v1State, previewState, configBase, legacyConfig, previewConfig })
   const conflicts = [...config.conflicts, ...extra.conflicts]
   if (conflicts.length) throw new Error(`Resolve configuration conflicts before migration: ${conflicts.join("; ")}`)
   const outputs = new Map<string, string>()

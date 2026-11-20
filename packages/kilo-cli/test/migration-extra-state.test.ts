@@ -6,11 +6,15 @@ import { tmpdir } from "../../core/test/fixture/tmpdir"
 import { createModelPreferenceRepository } from "../../tui/src/model-preference"
 import { applyConfig, planConfig } from "../src/migration/config"
 import { planExtra } from "../src/migration/extra-state"
+import { assertProjectConfig } from "../src/migration/project-config"
 
 function roots(root: string) {
   return {
     home: path.join(root, "home"),
     stateBase: path.join(root, "xdg-state"),
+    legacyState: path.join(root, "xdg-state/kilo"),
+    v1State: path.join(root, "xdg-state/kilo"),
+    previewState: path.join(root, "xdg-state/kilo2"),
     configBase: path.join(root, "xdg-config"),
     legacyConfig: path.join(root, "custom-stable-config"),
     previewConfig: path.join(root, "custom-preview-config"),
@@ -48,6 +52,16 @@ const prefs =
     null,
     2,
   ) + "\n"
+
+test("opening HOME does not block a global workflow handled by the resource planner", async () => {
+  await using tmp = await tmpdir()
+  const opts = roots(tmp.path)
+  fs.mkdirSync(path.join(opts.home, ".git"), { recursive: true })
+  put(opts.home, ".kilocode/workflows/review.md", workflow)
+  assertProjectConfig([opts.home], opts.home)
+  planExtra(opts).apply()
+  expect(fs.readFileSync(path.join(opts.legacyConfig, "command/review.md"), "utf8")).toContain("Inspect this diff")
+})
 
 test("preview model preferences are published privately and load through the TUI reader; repeated apply changes nothing", async () => {
   await using tmp = await tmpdir()

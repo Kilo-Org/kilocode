@@ -87,6 +87,19 @@ test("a dominating preview becomes a detached private copy including credentials
   expect(snapshot(previews)).toEqual(originals)
 })
 
+test("native transcript identity survives a different rowid; unknown duplicate rows still require containment", async () => {
+  await using dir = await tmpdir()
+  const { target, preview } = fixture(dir.path)
+  run(
+    preview,
+    "UPDATE session_v2 SET rowid=99; UPDATE session_message SET rowid=432; UPDATE migration SET time_completed=2",
+  )
+  reconcilePreview(target, [preview])
+  run(preview, "INSERT INTO _tools(rowid,value) VALUES(1,'same'),(2,'same')")
+  run(target, "INSERT INTO _tools(rowid,value) VALUES(1,'same'),(3,'same')")
+  expect(() => reconcilePreview(target, [preview])).toThrow('rows in "_tools"')
+})
+
 test.each([
   ["session_message", "UPDATE session_message SET body = 'LOWERCASE'"],
   ["event_sequence", "INSERT INTO event_sequence VALUES ('shared', 2, 'sync')"],
@@ -155,4 +168,45 @@ test("refuses an alias of the candidate", async () => {
   const before = snapshot(dir.path)
   expect(() => reconcilePreview(target, [alias])).toThrow("aliases candidate")
   expect(snapshot(dir.path)).toEqual(before)
+})
+
+test("rejects incompatible schema before scanning candidate rows", async () => {
+  await using dir = await tmpdir()
+  const { target, preview } = fixture(dir.path)
+  run(
+    target,
+    "PRAGMA foreign_keys=OFF; INSERT INTO session_message VALUES('orphan','missing','should never be scanned')",
+  )
+  run(preview, "CREATE TABLE incompatible(id TEXT)")
+  expect(() => reconcilePreview(target, [preview])).toThrow('schema for table "incompatible"')
+})
+
+test("independent credential IDs stay addressable but different values or selections never merge", async () => {
+  await using dir = await tmpdir()
+  const { target, preview } = fixture(dir.path)
+  for (const [file, id] of [
+    [target, "crd_stable"],
+    [preview, "crd_preview"],
+  ] as const) {
+    run(
+      file,
+      `DROP TABLE credential; CREATE TABLE credential(id TEXT PRIMARY KEY,integration_id TEXT,label TEXT,value TEXT,connector_id TEXT,method_id TEXT,active INTEGER,time_created INTEGER,time_updated INTEGER); INSERT INTO credential VALUES('${id}','demo','key','{"type":"key","key":"synthetic"}',NULL,NULL,1,2,3)`,
+    )
+  }
+  run(preview, "UPDATE migration SET time_completed=1000; UPDATE credential SET value='{}'")
+  expect(() => reconcilePreview(target, [preview])).toThrow('rows in "credential"')
+  run(preview, `UPDATE credential SET value='{"key":"synthetic","type":"key"}'`)
+  reconcilePreview(target, [preview], new Set(["crd_stable"]))
+  {
+    using db = new Database(target, { readonly: true })
+    expect(db.query("SELECT id,active FROM credential ORDER BY active DESC").all()).toEqual([
+      { id: "crd_stable", active: 1 },
+      { id: "crd_preview", active: 0 },
+    ])
+  }
+  run(
+    preview,
+    `INSERT INTO credential SELECT 'crd_other',integration_id,label,'{}',NULL,NULL,1,2000,2000 FROM credential LIMIT 1`,
+  )
+  expect(() => reconcilePreview(target, [preview])).toThrow('rows in "credential"')
 })
