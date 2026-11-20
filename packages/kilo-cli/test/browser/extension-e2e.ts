@@ -140,6 +140,20 @@ const downloadPage = `<!doctype html>
   <a id="file" href="/download">Get the report</a>
 </body></html>`
 
+/** The parallel scenario's page: no password field, so its page script is not a sensitive step and really runs. */
+const parallelPage = `<!doctype html>
+<html><head><meta charset="utf-8"><title>Parallel E2E</title></head>
+<body>
+  <h1>Parallel E2E</h1>
+  <button id="go">Click me</button>
+  <p id="status">idle</p>
+  <script>
+    document.getElementById("go").addEventListener("click", () => {
+      document.getElementById("status").textContent = "clicked"
+    })
+  </script>
+</body></html>`
+
 let localOrigin = ""
 let publicOrigin = ""
 
@@ -188,6 +202,7 @@ function startFixtures() {
         </body></html>`)
       }
       if (url.pathname === "/user") return html(userPage)
+      if (url.pathname === "/parallel") return html(parallelPage)
       if (url.pathname === "/download-page") return html(downloadPage)
       if (url.pathname === "/framed") return html(framed(publicOrigin))
       return html(simple)
@@ -1092,30 +1107,44 @@ async function downloadUngranted() {
 
 /**
  * Parallel calls from one session on one tab (one Code Mode `execute` with `Promise.allSettled`, or several direct
- * tool calls in one turn): none may end another with tab_taken or an opaque internal error.
+ * tool calls in one turn): none may end another with tab_taken or an opaque internal error, and each batch's page
+ * script really runs. The page has no password field, so the script is not a sensitive step a run would refuse.
  */
 async function parallel() {
   const snap: Call = { args: {}, name: "browser_snapshot" }
+  // An uppercase title no snapshot shows: a result holding it is the page script's own answer.
+  const script: Call = { args: { function: "() => document.title.toUpperCase()" }, name: "browser_evaluate" }
   const plan: Plan = (step) => {
     const n = step.results.length
-    if (n === 0) return { args: { url: localOrigin }, name: "browser_navigate" }
+    if (n === 0) return { args: { url: `${localOrigin}/parallel` }, name: "browser_navigate" }
     if (n === 1) return snap
     if (n === 2) {
       const ref = refOf(step.results[1] ?? "", /button "Click me" \[ref=([^\]]+)\]/)
       return ref ? [{ args: { element: "the Click me button", target: ref }, name: "browser_click" }, snap, snap] : undefined
     }
-    if (step.calls.length < 10) return [snap, snap, { args: { function: "() => document.title" }, name: "browser_evaluate" }]
-    return undefined
+    return step.calls.length < 10 ? [snap, snap, script] : undefined
   }
   const result = await run(plan, {})
   const texts = result.last.results
   const bad = texts.filter((text) => /took over the tab|tab_taken|Local agent request failed/i.test(text))
+  // Every batch the conversation holds has one script, and one result holds its answer: Code Mode's `execute` returns
+  // the batch together, direct calls answer one each.
+  const batches = result.last.calls.filter(
+    (call) => call.name === script.name || JSON.stringify(call.args).includes("tools.browser.evaluate"),
+  ).length
+  const evaluated = texts.filter((text) => text.includes("PARALLEL E2E")).length
   expect(bad.length === 0, `parallel calls ended each other:\n${bad.map((text) => text.slice(0, 300)).join("\n---\n")}`)
   expect(texts.length >= 6, `the run ended early after ${texts.length} results`)
+  expect(
+    batches > 0 && evaluated === batches,
+    `${batches - evaluated} of ${batches} page scripts did not answer:\n${(texts.at(-1) ?? "").slice(0, 600)}`,
+  )
   expect(result.code === 0, `run exited ${result.code}\n${result.stderr.slice(-1_500)}`)
   return {
     bad: bad.map((text) => text.slice(0, 300)),
+    batches,
     calls: result.last.calls.length,
+    evaluated,
     mode: result.last.tools.includes("execute") ? "code" : "tools",
     results: texts.length,
   }
