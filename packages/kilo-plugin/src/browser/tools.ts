@@ -921,15 +921,24 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
                 },
           () => ({ ready: false }),
         )
+    // A session that is not titled yet, or cannot be read, leaves the backend's own fallback in place.
+    const title = (sessionID: SessionID) =>
+      ctx.session.get({ sessionID }).pipe(
+        Effect.map((session) => (isFallbackTitle(session.title) ? undefined : session.title)),
+        Effect.orElseSucceed(() => undefined),
+      )
     // An organization that turned browser control off is its own answer: no backend the user picks in `/browser` could
-    // share or adopt. The user's own `off` and a Playwright backend, chosen or pinned, need the extension chosen.
-    const control = <A>(act: (active: ExtensionBackend) => Promise<A>) =>
+    // share or adopt. The user's own `off` and a Playwright backend, chosen or pinned, need the extension chosen. The
+    // conversation's title names the browser session when the command is the first to open it.
+    const control = <A>(sessionID: SessionID, act: (active: ExtensionBackend, name?: string) => Promise<A>) =>
       Effect.gen(function* () {
         const current = yield* settings(config)
         const organization = yield* policy(ctx.location.directory)
         if (organization?.control === "off") return { kind: "organization_off" as const }
         if (effective(current, organization) !== "extension") return { kind: "not_extension" as const }
-        return yield* Effect.promise(() => extension(current.target).then(act).catch(refusal))
+        const name = yield* title(sessionID)
+        const named = (active: ExtensionBackend) => act(active, name)
+        return yield* Effect.promise(() => extension(current.target).then(named).catch(refusal))
       }).pipe(Effect.orDie)
     const registration = yield* ctx.rpc
       .register(KiloBrowserRpc.Definition, {
@@ -946,8 +955,9 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
               : {}),
           })),
         share: ({ sessionID }) =>
-          control((active) => active.share(sessionID).then(() => ({ kind: "shared" as const }))),
-        adopt: ({ sessionID }) => control((active) => active.adopt(sessionID).then((kind) => ({ kind }))),
+          control(sessionID, (active, name) => active.share(sessionID, name).then(() => ({ kind: "shared" as const }))),
+        adopt: ({ sessionID }) =>
+          control(sessionID, (active, name) => active.adopt(sessionID, name).then((kind) => ({ kind }))),
       })
       .pipe(Effect.orDie)
     const notify = (sessionID: SessionID, error: unknown) => {
@@ -972,12 +982,6 @@ export const KiloBrowserToolsPlugin = define<BrowserHub.Service | Scope.Scope>({
       if (effective(live.browser, live.organization) === "off") return
       const backend = (choice: Settings): Promise<BrowserBackend> =>
         choice.backend === "extension" ? extension(choice.target) : playwright.get(key(choice))
-      // A session that is not titled yet, or cannot be read, leaves the backend's own fallback in place.
-      const title = (sessionID: Tool.Context["sessionID"]) =>
-        ctx.session.get({ sessionID }).pipe(
-          Effect.map((session) => (isFallbackTitle(session.title) ? undefined : session.title)),
-          Effect.orElseSucceed(() => undefined),
-        )
       const deps: Deps = { config, permission, directory: ctx.location.directory, backend, title, notify }
       for (const entry of BrowserContract.entries) {
         editor.add({

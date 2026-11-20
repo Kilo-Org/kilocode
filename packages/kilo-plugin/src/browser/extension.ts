@@ -522,12 +522,15 @@ export class ExtensionBackend implements BrowserBackend {
     }
   }
 
-  /** `/browser share`: the browser's active tab joins this conversation's group. The user's own command lifts a stop. */
-  async share(session: string): Promise<void> {
+  /**
+   * `/browser share`: the browser's active tab joins this conversation's group. The user's own command lifts a stop.
+   * `title` names the session when this command opens it, as a tool call's open does.
+   */
+  async share(session: string, title?: string): Promise<void> {
     const port = this.available()
     const stop = this.stopped.get(session)
     try {
-      await port.share(await this.handle(port, session, { kind: "user" }))
+      await port.share(await this.handle(port, session, { kind: "user" }, title))
     } catch (error) {
       throw map(error)
     }
@@ -537,13 +540,14 @@ export class ExtensionBackend implements BrowserBackend {
   /**
    * `/browser adopt`: the most recent ended group becomes this conversation's. The user's own command lifts a stop once
    * the conversation has tabs again (`adopted`, or `kept` its own); `none` and `unconfirmed` leave it stopped, so the
-   * model's next call is refused instead of opening a fresh browser session.
+   * model's next call is refused instead of opening a fresh browser session. `title` names the session when this
+   * command opens it.
    */
-  async adopt(session: string): Promise<BrowserHub.Adoption> {
+  async adopt(session: string, title?: string): Promise<BrowserHub.Adoption> {
     const port = this.available()
     const stop = this.stopped.get(session)
     try {
-      const adopted = await port.adopt(await this.handle(port, session, { kind: "user" }))
+      const adopted = await port.adopt(await this.handle(port, session, { kind: "user" }, title))
       if (adopted === "adopted" || adopted === "kept") this.resume(session, stop)
       return adopted
     } catch (error) {

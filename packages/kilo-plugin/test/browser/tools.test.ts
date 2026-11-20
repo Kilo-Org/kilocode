@@ -1036,6 +1036,21 @@ describe("browser tools over the extension backend", () => {
     expect(hub.opened.map((entry) => entry.title)).toEqual(["browser-tools-test (XyZ789)"])
   })
 
+  test("a conversation whose first browser action is /browser share or adopt names the session after its title", async () => {
+    for (const method of ["share", "adopt"] as const) {
+      const titled = fakeHub()
+      const host = await boot({ backend: "extension" }, { hub: titled.service, sessionTitle: "Fix the login form" })
+      await host.control(method, "ses_0abc12XyZ789")
+      expect(titled.opened.map((entry) => entry.title)).toEqual(["Fix the login form"])
+      // An untitled conversation keeps the folder and short id, as a tool call's open does.
+      const untitled = fakeHub()
+      const sessionTitle = "New session - 2026-11-19T10:00:00.000Z"
+      const fallback = await boot({ backend: "extension" }, { hub: untitled.service, sessionTitle })
+      await fallback.control(method, "ses_0abc12XyZ789")
+      expect(untitled.opened.map((entry) => entry.title)).toEqual(["browser-tools-test (XyZ789)"])
+    }
+  })
+
   test("a tab with no web origin is answered with the next step and asks the user nothing", async () => {
     const { asserts, service } = recorder()
     const hub = fakeHub({
