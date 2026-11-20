@@ -270,6 +270,8 @@ export function startFrameServer() {
 
 /** Every Chromium, hub and CLI run the harness spawned that has not exited yet, so an interrupted runner can stop them. */
 const liveChildren = new Set<Subprocess>()
+/** The scratch directory (Chromium's own TMPDIR) of every launch not closed yet, so an interrupt can remove it too. */
+const scratchDirectories = new Set<string>()
 
 function track(child: Subprocess) {
   liveChildren.add(child)
@@ -286,9 +288,11 @@ export async function terminate(child: Subprocess) {
   await Promise.race([child.exited, Bun.sleep(2_000)])
 }
 
-/** Stops every Chromium, hub and CLI run still alive: the cleanup of a runner that is interrupted mid-scenario. */
+/** Stops every Chromium, hub and CLI run still alive, and removes their Chromium scratch directories. */
 export async function stopChildren() {
   await Promise.all([...liveChildren].map((child) => terminate(child)))
+  await Promise.all([...scratchDirectories].map((directory) => fs.rm(directory, { force: true, recursive: true })))
+  scratchDirectories.clear()
 }
 
 export function tap(stream: ReadableStream<Uint8Array>, into: { text: string }, limit = 200_000) {
@@ -861,14 +865,23 @@ export async function launchChromium(options: LaunchOptions): Promise<Launched> 
   let exited = false
   // Chromium's own scratch directories (org.chromium.Chromium.*) go into a directory of this launch, which `close`
   // removes: a killed browser never removes them itself. It stays short, because Chromium's singleton socket lives in
-  // it and a Unix socket path is limited to 108 bytes.
+  // it and a Unix socket path is limited to 108 bytes. It is registered before the spawn, so an interrupt during the
+  // launch removes it through `stopChildren` too.
   const scratch = await fs.mkdtemp(path.join(os.tmpdir(), "e2e-chromium-"))
-  const child = Bun.spawn([executable, ...args], {
-    env: { ...process.env, TMPDIR: scratch },
-    stderr: "pipe",
-    stdin: "ignore",
-    stdout: "pipe",
-  })
+  scratchDirectories.add(scratch)
+  let child: Subprocess
+  try {
+    child = Bun.spawn([executable, ...args], {
+      env: { ...process.env, TMPDIR: scratch },
+      stderr: "pipe",
+      stdin: "ignore",
+      stdout: "pipe",
+    })
+  } catch (error) {
+    await fs.rm(scratch, { force: true, recursive: true })
+    scratchDirectories.delete(scratch)
+    throw error
+  }
   // Tracked from the spawn on, so an interrupt during the launch itself (up to 30 s) stops this Chromium too.
   track(child)
   void child.exited.then(() => {
@@ -879,6 +892,7 @@ export async function launchChromium(options: LaunchOptions): Promise<Launched> 
   const kill = async () => {
     await terminate(child)
     await fs.rm(scratch, { force: true, recursive: true })
+    scratchDirectories.delete(scratch)
   }
 
   let proxy: ReturnType<typeof cdpProxy> | undefined
