@@ -1088,49 +1088,56 @@ describe("extension backend", () => {
   test("the tab read after a granted page read carries that grant, so the page keeps its URL", async () => {
     const origin = "http://localhost:3000"
     const granted = (input: Call) => input.authorized.some((pair) => pair.class === "read" && pair.origin === origin)
-    const hub = fake({
-      call: (input) => {
-        if (input.name === "browser_click") return Promise.resolve({ content: [{ type: "text", text: "Clicked." }] })
-        if (input.name === "browser_tabs")
-          return Promise.resolve({
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({
-                  tabs: [
-                    {
-                      index: 0,
-                      selected: true,
-                      title: "Local",
-                      url: granted(input) ? `${origin}/` : "[origin withheld]",
-                    },
-                  ],
-                }),
-              },
-            ],
-          })
-        if (granted(input)) return Promise.resolve({ content: [{ type: "text", text: "- RootWebArea" }] })
-        return Promise.reject(
-          new BrowserHub.Failure({
-            kind: "permission",
-            message: "needs permission",
-            items: [{ class: "read", origin }],
-          }),
-        )
-      },
-    })
-    const active = backend({ port: hub.port, directory: "/tmp/project" })
-    await active.callTool("browser_click", {}, ctx())
-    const clicked = { content: [{ type: "text" as const, text: "Clicked." }], isError: false }
-    const page = await active.pageState("browser_click", clicked, {
-      ...ctx(),
-      snapshot: true,
-      tabs: true,
-      readable: () => Promise.resolve(true),
-    })
-    const text = page.content.map((block) => (block.type === "text" ? block.text : "")).join("\n")
-    expect(text).toContain(`- Page URL: ${origin}/`)
-    expect(text).toContain("- RootWebArea")
+    // The granted read may answer with the tree or with an error result; either way it ran with the grant.
+    for (const answer of [
+      { content: [{ type: "text" as const, text: "- RootWebArea" }] },
+      { content: [{ type: "text" as const, text: "The page could not be read." }], isError: true },
+    ]) {
+      const hub = fake({
+        call: (input) => {
+          if (input.name === "browser_click") return Promise.resolve({ content: [{ type: "text", text: "Clicked." }] })
+          if (input.name === "browser_tabs")
+            return Promise.resolve({
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    tabs: [
+                      {
+                        index: 0,
+                        selected: true,
+                        title: "Local",
+                        url: granted(input) ? `${origin}/` : "[origin withheld]",
+                      },
+                    ],
+                  }),
+                },
+              ],
+            })
+          if (granted(input)) return Promise.resolve(answer)
+          return Promise.reject(
+            new BrowserHub.Failure({
+              kind: "permission",
+              message: "needs permission",
+              items: [{ class: "read", origin }],
+            }),
+          )
+        },
+      })
+      const active = backend({ port: hub.port, directory: "/tmp/project" })
+      await active.callTool("browser_click", {}, ctx())
+      const clicked = { content: [{ type: "text" as const, text: "Clicked." }], isError: false }
+      const page = await active.pageState("browser_click", clicked, {
+        ...ctx(),
+        snapshot: true,
+        tabs: true,
+        readable: () => Promise.resolve(true),
+      })
+      const text = page.content.map((block) => (block.type === "text" ? block.text : "")).join("\n")
+      expect(text).toContain(`- Page URL: ${origin}/`)
+      if (answer.isError) expect(text).not.toContain("- RootWebArea")
+      else expect(text).toContain("- RootWebArea")
+    }
   })
 
   test("a deleted conversation's page read opens no browser session", async () => {
@@ -1154,10 +1161,21 @@ describe("extension backend", () => {
     const active = backend({ port: hub.port, directory: "/tmp/project" })
     await active.callTool("browser_click", {}, ctx())
     const clicked = { content: [{ type: "text" as const, text: "Clicked." }], isError: false }
+    // Without a turn signal, the only signal the reads can carry is the page state's own deadline.
     await active.pageState("browser_click", clicked, { ...ctx(), snapshot: true, tabs: true })
     const reads = hub.calls.slice(1)
     expect(reads.map((call) => call.name)).toEqual(["browser_snapshot", "browser_tabs"])
-    expect(new Set(reads.map((call) => call.signal)).size).toBe(1)
+    expect(reads[0]?.signal).toBeInstanceOf(AbortSignal)
+    expect(reads[1]?.signal).toBe(reads[0]?.signal)
+    // With a turn signal, the deadline is combined with it: a new signal that still follows the turn.
+    const turn = new AbortController()
+    await active.pageState("browser_click", clicked, { ...ctx(), signal: turn.signal, snapshot: true, tabs: true })
+    const turnReads = hub.calls.slice(3)
+    expect(turnReads[0]?.signal).toBeInstanceOf(AbortSignal)
+    expect(turnReads[0]?.signal).not.toBe(turn.signal)
+    expect(turnReads[1]?.signal).toBe(turnReads[0]?.signal)
+    turn.abort()
+    expect(turnReads[0]?.signal?.aborted).toBe(true)
   })
 
   test("a page state without the tab read names no page from the tab list", async () => {

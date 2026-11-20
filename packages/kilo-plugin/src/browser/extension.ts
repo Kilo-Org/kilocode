@@ -633,7 +633,8 @@ export class ExtensionBackend implements BrowserBackend {
     if (!ctx.snapshot) return { frames }
     const read = await this.snapshotAfter(port, session, ctx)
     if ("error" in read) return { note: unread(read.error), frames }
-    if (read.value.isError === true) return { note: unread(undefined), frames }
+    // An error result still ran with the grant it was given, and the tab read keeps it.
+    if (read.value.isError === true) return { note: unread(undefined), frames, authorized: read.authorized }
     return {
       snapshot: texts(read.value.content),
       frames: [...new Set([...(frames ?? []), ...(read.value.meta?.withheldFrames ?? [])])],
