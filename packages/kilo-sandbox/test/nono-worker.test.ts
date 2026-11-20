@@ -46,6 +46,8 @@ function profile(): Profile {
         { path: temporary, kind: "subtree" },
         // The worker entry imports its protocol module from the package, so the command must read it.
         { path: path.resolve(import.meta.dir, ".."), kind: "subtree" },
+        // nono confines reads, so the Bun runtime itself must be readable to exec the worker.
+        { path: path.dirname(process.execPath), kind: "subtree" },
       ],
       denyWrite: [{ path: state, kind: "subtree" }],
       denyNames: [],

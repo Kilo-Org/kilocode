@@ -17,6 +17,10 @@ const filesystem = backendSupport({ mode: "deny", allowedHosts: [] }).available 
 // probe matrix in packages/kilo-sandbox/script/nono-poc.ts covers the same paths (P7, P8, P16). Match the
 // backend selection exactly: the variable alone also appears in runs where seatbelt is the real backend.
 const external = process.env.KILO_V2_DEV === "1" && process.env.KILO_SANDBOX_BACKEND === "nono"
+// nono confines reads, so this test's Bun child is refused before it can connect and a non-zero exit would pass
+// without proving network denial. P6 and P8 in the nono probe matrix cover that path instead.
+const network =
+  !external && backendSupport({ mode: "deny", allowedHosts: [] }).available ? test : test.skip
 const proxy =
   !external &&
   process.platform === "darwin" &&
@@ -108,7 +112,7 @@ filesystem("confines shell writes inside the workspace and denies outside and .g
   expect((await write(escaped)).code).toBe(0)
 })
 
-filesystem("denies a direct connection while the network is denied", async () => {
+network("denies a direct connection while the network is denied", async () => {
   let accepted = 0
   const target = Bun.listen({
     hostname: "127.0.0.1",

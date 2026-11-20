@@ -30,10 +30,23 @@ const proxy = await import("../src/proxy")
 
 const mac = process.platform === "darwin"
 const digest = (file: string) => createHash("sha256").update(readFileSync(file)).digest("hex")
+const environmentKeys = [
+  "KILO_V2_DEV",
+  "KILO_SANDBOX_BACKEND",
+  "KILO_NONO_PATH",
+  "KILO_NONO_STATE",
+  "KILO_NONO_HOME",
+  "KILO_NONO_MANIFEST",
+  "KILO_NONO_CREDENTIALS",
+]
+// Restore, rather than delete: a sibling test file resolves the staged binary at module scope, and deleting the
+// job's KILO_NONO_* values here would point it at the default install instead.
+const previous = new Map<string, string | undefined>()
 
 beforeAll(() => {
   writeFileSync(fake, '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "nono 0.82.0"; fi\nexit 0\n')
   chmodSync(fake, 0o755)
+  for (const key of environmentKeys) previous.set(key, process.env[key])
   process.env.KILO_V2_DEV = "1"
   process.env.KILO_SANDBOX_BACKEND = "nono"
   process.env.KILO_NONO_PATH = fake
@@ -42,16 +55,10 @@ beforeAll(() => {
 })
 
 afterAll(() => {
-  for (const key of [
-    "KILO_V2_DEV",
-    "KILO_SANDBOX_BACKEND",
-    "KILO_NONO_PATH",
-    "KILO_NONO_STATE",
-    "KILO_NONO_HOME",
-    "KILO_NONO_MANIFEST",
-    "KILO_NONO_CREDENTIALS",
-  ]) {
-    delete process.env[key]
+  for (const key of environmentKeys) {
+    const value = previous.get(key)
+    if (value === undefined) delete process.env[key]
+    else process.env[key] = value
   }
   rmSync(state, { recursive: true, force: true })
 })
