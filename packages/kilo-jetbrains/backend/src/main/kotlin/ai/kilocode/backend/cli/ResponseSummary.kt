@@ -3,7 +3,6 @@ package ai.kilocode.backend.cli
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
 
 /**
  * Size-only summary for a failure line: the response length and, for a JSON error object,
@@ -11,7 +10,8 @@ import kotlinx.serialization.json.contentOrNull
  */
 internal fun bodySummary(body: String): String {
     val name = runCatching {
-        ((Json.parseToJsonElement(body) as? JsonObject)?.get("name") as? JsonPrimitive)?.contentOrNull
+        val member = (Json.parseToJsonElement(body) as? JsonObject)?.get("name") as? JsonPrimitive
+        member?.takeIf { it.isString }?.content
     }.getOrNull()?.takeIf(::identifier)
     return if (name != null) "$name chars=${body.length}" else "chars=${body.length}"
 }

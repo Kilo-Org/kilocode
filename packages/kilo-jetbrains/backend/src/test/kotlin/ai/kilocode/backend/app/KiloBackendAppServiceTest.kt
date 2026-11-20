@@ -692,10 +692,35 @@ class KiloBackendAppServiceTest {
         assertTrue(log.throwables.none { it.contains("marker-7f3a9c") }, log.throwables.toString())
         assertTrue(
             log.messages.any {
-                it.contains("notifications response failed: status=500") && it.contains("chars=")
+                it.contains("Notifications fetch failed: HTTP 500:") && it.contains("chars=")
             },
             log.messages.toString(),
         )
+    }
+
+    @Test
+    fun `profile decode failure logs no payload`() = runBlocking {
+        mock.profile = """{"profile":"marker-7f3a9c"}"""
+        val svc = create()
+        svc.connect()
+
+        // The profile body cannot be decoded, so the load reports a profile load error.
+        assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+
+        assertTrue(log.messages.none { it.contains("marker-7f3a9c") }, log.messages.toString())
+        assertTrue(log.throwables.none { it.contains("marker-7f3a9c") }, log.throwables.toString())
+        assertTrue(
+            log.messages.any { it.contains("Profile fetch failed: Response parse error") },
+            log.messages.toString(),
+        )
+        val err = assertIs<KiloAppState.Error>(svc.appState.value)
+        val detail = assertNotNull(err.errors.single { it.resource == "profile" }.detail)
+        assertTrue(detail.startsWith("Response parse error"), detail)
     }
 
     @Test

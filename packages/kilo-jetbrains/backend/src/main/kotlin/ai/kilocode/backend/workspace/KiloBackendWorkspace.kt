@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.nio.file.Files
@@ -298,7 +299,6 @@ class KiloBackendWorkspace(
             throw e
         } catch (e: Exception) {
             logFailure("Agents fetch failed: ${detail(e)}", e)
-            logResponseBody("agents", e)
             FetchResult.fail("agents", e)
         }
     }
@@ -328,7 +328,6 @@ class KiloBackendWorkspace(
             throw e
         } catch (e: Exception) {
             logFailure("Skills fetch failed: ${detail(e)}", e)
-            logResponseBody("skills", e)
             FetchResult.fail("skills", e)
         }
     }
@@ -379,17 +378,12 @@ class KiloBackendWorkspace(
         _state.value = KiloWorkspaceState.Error(message, errors)
     }
 
-    private fun logResponseBody(resource: String, e: Exception) {
-        val body = body(e) ?: return
-        log.warn("$resource response failed: status=${status(e)} chars=${body.length}")
-    }
-
     /**
-     * Log a failed CLI call. A call that produced a response body is logged as its message only,
-     * because the formatter writes a throwable with its stack trace.
+     * Log a failed CLI call as its message only when the call carried a response body or the body
+     * failed to decode; the formatter otherwise writes the throwable with its stack trace.
      */
     private fun logFailure(message: String, e: Exception) {
-        if (body(e) != null) log.warn(message) else log.warn(message, e)
+        if (body(e) != null || e is SerializationException) log.warn(message) else log.warn(message, e)
     }
 
     private fun error(err: LoadError): String {
@@ -431,5 +425,6 @@ private fun detail(e: Exception): String? {
     val status = status(e)
     if (status != null && !body.isNullOrBlank()) return "HTTP $status: ${bodySummary(body)}"
     if (status != null) return "HTTP $status: ${e.message}"
+    if (e is SerializationException) return "Response parse error: ${e.javaClass.simpleName}"
     return e.message
 }

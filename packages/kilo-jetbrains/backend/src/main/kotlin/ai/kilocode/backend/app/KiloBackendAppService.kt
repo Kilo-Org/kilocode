@@ -50,6 +50,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -627,7 +628,6 @@ class KiloBackendAppService private constructor(
             FetchResult.ok(null)
         } catch (e: Exception) {
             logFailure("Profile fetch failed: ${failureDetail(e)}", e)
-            logResponseBody("profile", e)
             FetchResult.fail("profile", e)
         }
     }
@@ -677,7 +677,6 @@ class KiloBackendAppService private constructor(
             FetchResult.ok(client.kiloNotifications())
         } catch (e: Exception) {
             logFailure("Notifications fetch failed: ${failureDetail(e)}", e)
-            logResponseBody("notifications", e)
             FetchResult.fail("notifications", e)
         }
     }
@@ -808,11 +807,11 @@ class KiloBackendAppService private constructor(
     }
 
     /**
-     * Log a failed CLI call. A call that produced a response body is logged as its message only,
-     * because the formatter writes a throwable with its stack trace.
+     * Log a failed CLI call as its message only when the call carried a response body or the body
+     * failed to decode; the formatter otherwise writes the throwable with its stack trace.
      */
     private fun logFailure(message: String, e: Exception) {
-        if (failureBody(e) != null) log.warn(message) else log.warn(message, e)
+        if (failureBody(e) != null || e is SerializationException) log.warn(message) else log.warn(message, e)
     }
 
     private suspend fun <T> fetchWithRetry(
@@ -1096,6 +1095,7 @@ private fun failureDetail(e: Exception): String? {
         status != null -> "HTTP $status"
         e is ConnectException -> "Connection refused: ${e.message}"
         e is SocketTimeoutException -> "Timeout: ${e.message}"
+        e is SerializationException -> "Response parse error: ${e.javaClass.simpleName}"
         else -> e.message
     }
 }

@@ -36,6 +36,15 @@ class ResponseSummaryTest {
     }
 
     @Test
+    fun `json boolean name is dropped`() {
+        val trueName = """{"name":true}"""
+        val falseName = """{"name":false}"""
+
+        assertEquals("chars=${trueName.length}", bodySummary(trueName))
+        assertEquals("chars=${falseName.length}", bodySummary(falseName))
+    }
+
+    @Test
     fun `non json body has no name`() {
         val body = "not json at all"
 

@@ -344,8 +344,9 @@ class KiloBackendWorkspaceTest {
         assertFalse(detail.contains("invalid agent config"), detail)
         assertTrue(
             log.messages.any {
-                it.contains("agents response failed:") && it.contains("status=500") && it.contains("chars=")
+                it.contains("Agents fetch failed: HTTP 500:") && it.contains("chars=")
             },
+            log.messages.toString(),
         )
         assertTrue(log.messages.none { it.contains("invalid agent config") })
         assertTrue(log.throwables.none { it.contains("invalid agent config") }, log.throwables.toString())
