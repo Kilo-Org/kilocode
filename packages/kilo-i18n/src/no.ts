@@ -166,6 +166,16 @@ export const dict = {
   "browser.state.unavailable": "utilgjengelig",
   "browser.state.readyHint": "En Chromium-profil eid av Kilo, startet ved det første nettleserkallet",
   "browser.state.extensionHint": "Koble til Kilo-nettleserutvidelsen for å bruke din egen nettleser",
+  "browser.notice.extension":
+    "Kilo-nettleserutvidelsen er tilkoblet i {{browser}}. Vil du bruke din egen nettleser til nettleserverktøyene i stedet for den innebygde?",
+  "browser.notice.switch": "Bruk min nettleser",
+  "settings.browser.status.extension.waiting": "Venter på nettleserutvidelsen",
+  "settings.browser.origins.saved.title": "Tillatt i chatter",
+  "settings.browser.origins.saved.description":
+    "Nettsteder du har tillatt fra en chat med Tillat alltid, for dette arbeidsområdet. De gjelder i tillegg til reglene over.",
+  "settings.browser.origins.saved.empty": "Ingen nettsteder er tillatt fra en chat ennå.",
+  "settings.browser.origins.saved.failed": "Lagrede tillatelser er utilgjengelige",
+  "settings.browser.origins.saved.revoke": "Tilbakekall",
   "ui.permission.reason": "Årsak: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).

@@ -168,6 +168,16 @@ export const dict = {
   "browser.state.unavailable": "indisponible",
   "browser.state.readyHint": "Un profil Chromium géré par Kilo, lancé au premier appel du navigateur",
   "browser.state.extensionHint": "Connectez l'extension de navigateur Kilo pour piloter votre navigateur",
+  "browser.notice.extension":
+    "L'extension de navigateur Kilo est connectée dans {{browser}}. Utiliser votre propre navigateur pour les outils de navigateur au lieu du navigateur intégré ?",
+  "browser.notice.switch": "Utiliser mon navigateur",
+  "settings.browser.status.extension.waiting": "En attente de l'extension de navigateur",
+  "settings.browser.origins.saved.title": "Autorisés dans les chats",
+  "settings.browser.origins.saved.description":
+    "Sites que vous avez autorisés depuis un chat avec Toujours autoriser, pour cet espace de travail. Ils s'appliquent en plus des règles ci-dessus.",
+  "settings.browser.origins.saved.empty": "Aucun site autorisé depuis un chat pour l'instant.",
+  "settings.browser.origins.saved.failed": "Autorisations enregistrées indisponibles",
+  "settings.browser.origins.saved.revoke": "Révoquer",
   "ui.permission.reason": "Raison : {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
