@@ -3,6 +3,7 @@ export * as Permission from "./permission.js"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { Context, Deferred, Effect, Layer, Schema, Scope, Stream } from "effect" // kilocode_change(autoapprove) - Stream drains when config changes
 import { Permission } from "@opencode/schema/permission"
+import { KiloPermission } from "@opencode/schema/kilocode/permission" // kilocode_change(autoapprove) - the shared human-only rule
 // kilocode_change start - autoapprove: the config-updated event shares a name with this module's permission Event
 import { Event as ConfigEvent } from "@opencode/schema/config"
 // kilocode_change end
@@ -216,7 +217,7 @@ const layer = Layer.effect(
     const evaluateInput = Effect.fnUntraced(function* (input: AssertInput) {
       const rules = yield* configured(input.sessionID, input.agent)
       if (denied(input, rules)) return { effect: "deny" as const, rules }
-      const all = [...rules, ...(yield* savedRules(input.metadata?.["interactive"] === true))] // kilocode_change(autoapprove)
+      const all = [...rules, ...(yield* savedRules(KiloPermission.requiresPerson(input.metadata)))] // kilocode_change(autoapprove)
       const effects = input.resources.map((resource) => evaluate(input.action, resource, all).effect)
       const effect: Permission.Effect = effects.includes("ask") ? "ask" : "allow"
       const event = yield* hooks.trigger("permission", "evaluate", {
