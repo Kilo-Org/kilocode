@@ -224,7 +224,7 @@ const AgentManagerContent: Component = () => {
   const updateBase = useBaseUpdate()
   const mode = createModeRouter()
   let sidebarSearchMenu: SidebarSearchMenuRef | undefined
-  let confirmDelete: WorktreeDelete["confirm"] | undefined
+  let worktreeDelete: WorktreeDelete | undefined
   const [kb, setKb] = createSignal<Record<string, string>>(defaultBindings)
   const [setup, setSetup] = createSignal<SetupState>({ active: false, message: "" })
   const worktrees = () => registry.active().worktrees()
@@ -1606,18 +1606,18 @@ const AgentManagerContent: Component = () => {
     }
     const list = activeTabs()
     if (list.length === 0) {
-      closeSelectedWorktree()
+      closeSelectedWorktree("arm")
       return
     }
     const target = activeTaskId()
     if (target) handleCloseTab(target)
   }
-  const closeSelectedWorktree = () => {
+  const closeSelectedWorktree = (intent: "arm" | "confirm") => {
     const sel = selection()
     const project = activeProjectId()
     if (!project || project !== currentProjectId() || !sel || sel === LOCAL) return
     expandSidebar()
-    confirmDelete?.(project, sel)
+    worktreeDelete?.[intent](project, sel)
   }
   const renderTabById = (id: string) =>
     renderTab(id, {
@@ -1992,7 +1992,7 @@ const AgentManagerContent: Component = () => {
         openPR: openSelectedPR,
         runScript: runSelected,
         advancedWorktree: showNewWorktreeDialog,
-        closeWorktree: closeSelectedWorktree,
+        closeWorktree: () => closeSelectedWorktree("arm"),
         showShortcuts: handleShowKeyboardShortcuts,
         focusInput: focusCtl.focus,
         focusSearch: () =>
@@ -2015,7 +2015,7 @@ const AgentManagerContent: Component = () => {
       press: (event) => sideCtl.press(event),
       isDiffFocusTarget: (target) => diffPanels.isFocusTarget(target),
       selection,
-      closeWorktree: closeSelectedWorktree,
+      confirmWorktree: () => closeSelectedWorktree("confirm"),
       setHeld,
       focusReport: focusCtl.report,
       restoreFocus,
@@ -2339,7 +2339,7 @@ const AgentManagerContent: Component = () => {
         bindings={kb()}
         t={t}
         onSearchRef={(ref) => (sidebarSearchMenu = ref)}
-        onDeleteRef={(confirm) => (confirmDelete = confirm)}
+        onDeleteRef={(deletion) => (worktreeDelete = deletion)}
         onDelete={(projectId, worktreeId) => forgetContextFocus(`${projectId}:${worktreeId}`)}
         onNewWorktree={showNewWorktreeDialog}
         onShortcuts={handleShowKeyboardShortcuts}

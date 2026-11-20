@@ -62,7 +62,7 @@ export function createWorktreeDelete(opts: {
     opts.select(next === LOCAL ? { projectId, kind: "local" } : { projectId, kind: "worktree", worktreeId: next })
   }
 
-  const confirm = (projectId: string, worktreeId: string) => {
+  const request = (projectId: string, worktreeId: string, intent: "arm" | "confirm") => {
     const store = opts.store(projectId)
     const run = store?.runStatuses()[worktreeId]?.state
     if (
@@ -75,6 +75,7 @@ export function createWorktreeDelete(opts: {
       return
     }
     if (pending()?.projectId === projectId && pending()?.worktreeId === worktreeId) {
+      if (intent === "arm") return
       cancel()
       store.setBusy((prev) => new Map([...prev, [worktreeId, { reason: "deleting" as const }]]))
       opts.remove(projectId, worktreeId)
@@ -87,7 +88,13 @@ export function createWorktreeDelete(opts: {
     timer = setTimeout(cancel, 2500)
   }
 
-  return { pending, cancel, confirm, select }
+  return {
+    pending,
+    cancel,
+    arm: (projectId: string, worktreeId: string) => request(projectId, worktreeId, "arm"),
+    confirm: (projectId: string, worktreeId: string) => request(projectId, worktreeId, "confirm"),
+    select,
+  }
 }
 
 export type WorktreeDelete = ReturnType<typeof createWorktreeDelete>
