@@ -143,6 +143,23 @@ describe("host auto-approve sweep", () => {
     expect(replied).toEqual(["per_once"])
   })
 
+  test("leaves a request marked interactive for a person, in an event and in the pending sweep", async () => {
+    setHostAutoApprove({ enabled: () => true, directory: "/ws" })
+    const pending = new Map<string, unknown[]>([["/ws", [request("per_sweep", { interactive: true })]]])
+    const replied: string[] = []
+    const auto = createHostAutoApprove({
+      client: async () => fakeClient(pending, replied) as never,
+      directories: () => ["/ws"],
+      log: () => undefined,
+    })
+
+    auto.event(asked("per_event", "/ws", { interactive: true }))
+    auto.sweep()
+    await tick()
+
+    expect(replied).toEqual([])
+  })
+
   test("never approves a request whose action is sandbox_escalation", () => {
     const escalation = { id: "per_action", sessionID: "ses_1", action: "sandbox_escalation", resources: [] } as never
     const normal = { id: "per_bash", sessionID: "ses_1", action: "bash", resources: ["ls"] } as never
