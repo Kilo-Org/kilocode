@@ -31,10 +31,20 @@ test("question dock has no composer-lane rule", () => {
   expect(ruleBody('.chat-view .chat-input > [data-component="question-dock"]')).toBeUndefined()
 })
 
+// The composer block, found by the indent of its own closing tag so the test does not depend on surrounding wrappers.
+const composerBlock = () => {
+  const lines = sessionView.split("\n")
+  const start = lines.findIndex((line) => line.trim() === '<div class="chat-input">')
+  if (start < 0) return undefined
+  const indent = lines[start].match(/^\s*/)?.[0] ?? ""
+  const end = lines.findIndex((line, index) => index > start && line === `${indent}</div>`)
+  return end < 0 ? undefined : lines.slice(start + 1, end).join("\n")
+}
+
 // The transcript owns the dock, so it must not also be rendered above the
 // prompt input, where it could not scroll with the conversation.
 test("the question dock renders in the transcript only", () => {
-  const composer = sessionView.match(/<div class="chat-input">([\s\S]*?)\n          <\/div>/)?.[1]
+  const composer = composerBlock()
 
   expect(composer).toBeDefined()
   expect(composer).not.toContain("QuestionDock")
