@@ -1,5 +1,6 @@
 /**
- * PromptSelectors - agent, model, and reasoning as one split control.
+ * PromptSelectors - agent, model, provider routing, and reasoning as one split
+ * control.
  *
  * A layout shell shared by the chat prompt and the Agent Manager New Worktree
  * dialog. Callers pass their existing selectors as slots, so each popover,
@@ -7,9 +8,12 @@
  * - Menu bar behavior: while one popover is open, moving the pointer onto
  *   another segment opens that segment instead.
  * - Left and Right arrows move focus between segments.
- * - Reasoning collapses before the agent or model name truncates
+ * - Reasoning collapses before the agent, model, or routing label truncates
  *   (`data-tight`), and a changed reasoning value peeks out for a moment
  *   (`data-peek`).
+ *
+ * Routing sits before reasoning: the reasoning label collapses into the
+ * trailing arrow, so reasoning must stay the last part.
  */
 
 import { type Component, type JSX, onCleanup, onMount } from "solid-js"
@@ -18,6 +22,7 @@ import { reserve } from "./prompt-fold"
 interface Props {
   agent?: JSX.Element
   model?: JSX.Element
+  routing?: JSX.Element
   variant?: JSX.Element
 }
 
@@ -75,7 +80,9 @@ function tight(root: HTMLElement) {
   const folded = !!hint.querySelector(".prompt-input-hint-actions > .prompt-action:first-child:not([data-folded])")
   const room = folded ? Math.min(width + free, reserve(hint)) : width + free
   const labels =
-    cut(root.querySelector(".mode-switcher-trigger-label")) + cut(root.querySelector(".model-selector-trigger-label"))
+    cut(root.querySelector(".mode-switcher-trigger-label")) +
+    cut(root.querySelector(".model-selector-trigger-label")) +
+    cut(root.querySelector(".routing-selector-trigger-label"))
   const need = width - used + labels + level.scrollWidth + gap
   return need > room + 1
 }
@@ -171,6 +178,9 @@ export const PromptSelectors: Component<Props> = (props) => {
       </div>
       <div class="prompt-selector" data-part="model">
         {props.model}
+      </div>
+      <div class="prompt-selector" data-part="routing">
+        {props.routing}
       </div>
       <div class="prompt-selector" data-part="variant">
         {props.variant}
