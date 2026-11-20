@@ -727,8 +727,10 @@ describe("browser skill text", () => {
   test("both backends send an agent that must act on a page from browser_open to these tools", async () => {
     for (const backend of ["extension", "playwright"] as const) {
       const [skill] = (await boot({ backend })).skills
-      expect(skill.content).toContain("shows a page in the Integrated Browser for the user to look at")
-      expect(skill.content).toContain("these browser tools are the ones that read and act on a page")
+      // The file wraps its lines, so the sentences are compared with the wrapping flattened.
+      const text = skill.content.replace(/\s+/g, " ")
+      expect(text).toContain("shows a page in the Integrated Browser for the user to look at")
+      expect(text).toContain("these browser tools are the ones that read and act on a page")
     }
   })
 
