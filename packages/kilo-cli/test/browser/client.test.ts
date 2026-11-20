@@ -219,6 +219,54 @@ describe("browser client", () => {
     expect(target.state().kind).toBe("waiting")
   })
 
+  test("a cancelled call carries the cancel marker instead of looking like a missing browser", async () => {
+    const at = await tmp()
+    const { hub } = await host({ ...at, paired: true })
+    const target = client({ dir: at.dir, start: () => {} })
+    await until(target, "waiting")
+    const routed: proto.HubToExtension[] = []
+    const extension = hub.attach(
+      (frame) => {
+        routed.push(frame)
+        return true
+      },
+      () => undefined,
+    )!
+    extension.hello(info)
+    await until(target, "ready")
+
+    // The turn stops while the call is running: it may have reached the browser, so its effects stay uncertain.
+    const running = new AbortController()
+    const pending = target.tools
+      .call({ sessionHandle: "s", name: "browser_click", arguments: {}, authorized: [] }, { signal: running.signal })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      )
+    await eventually(() => (routed.some((frame) => frame.type === "rpc") ? true : undefined))
+    running.abort()
+    const cancelled = await pending
+    expect(cancelled).toBeInstanceOf(HubError)
+    if (!(cancelled instanceof HubError)) throw new Error("expected a HubError")
+    expect(cancelled.cancelled).toBe(true)
+    expect(cancelled.uncertain).toBe(true)
+    expect(target.state().kind).toBe("ready")
+
+    // A turn already stopped before the call was made cannot have run it at all.
+    const stopped = new AbortController()
+    stopped.abort()
+    const early = await target.tools
+      .call({ sessionHandle: "s", name: "browser_click", arguments: {}, authorized: [] }, { signal: stopped.signal })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      )
+    expect(early).toBeInstanceOf(HubError)
+    if (!(early instanceof HubError)) throw new Error("expected a HubError")
+    expect(early.cancelled).toBe(true)
+    expect(early.uncertain).toBe(false)
+  })
+
   test("a call the connected extension does not answer in time carries the transport's timeout", async () => {
     const at = await tmp()
     const { hub } = await host({ ...at, paired: true })

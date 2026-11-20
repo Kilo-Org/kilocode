@@ -6,16 +6,14 @@ import z from "zod"
 import type { Client, Input, State } from "./client"
 
 /**
- * A tool call can wait inside the extension, so the transport's own request timeout is too short for it. The longest
- * step the extension runs by design is a wait for the tab's lease (30 s, `AGENT_TAB_WAIT_MS`) followed by the action:
- * a navigation's commit and load bounds (10 s and 15 s) or `browser_wait_for` at its cap (15 s,
- * `MAX_BROWSER_TOOL_WAIT_MS`) keep that under a minute. Those bounds are the extension's, not the contract's, so 120 s
- * is twice the designed worst case rather than a limit read off the tools; it is also deliberately half of the
- * Playwright backend's 180 s, because the extension ends a step it cannot finish and reports that itself, so a call
- * that outlasts twice its designed length is a wedged extension and the user should not wait three minutes to be told
- * so. A call still unanswered then is reported as a timeout, never as a missing browser.
+ * A tool call can wait inside the extension (a tab lease, a navigation, an explicit wait), so the transport's own
+ * request timeout is too short for it. The bound matches the Playwright backend's for the same pinned contract: the
+ * extension ends its own overruns (a tab lease wait of 30 s, then a navigation bounded at 10 s and 15 s or
+ * `browser_wait_for` clamped to 15 s), so a step that runs by design stays under a minute and 180 s is a fence rather
+ * than a budget. That margin is not this repo's to keep, so the fence stays where both backends already agreed on it;
+ * a call still unanswered then is a wedged extension, reported as a timeout and never as a missing browser.
  */
-const CALL_TIMEOUT = 120_000
+const CALL_TIMEOUT = 180_000
 
 export type Options = Input & {
   /** The CLI version the extension records with the session. */
@@ -80,6 +78,7 @@ function hubFailure(error: unknown) {
     data?: unknown
     uncertain?: unknown
     timedOut?: unknown
+    cancelled?: unknown
   }
   if (typeof value.kind !== "string" || typeof value.code !== "number") return undefined
   return {
@@ -88,18 +87,23 @@ function hubFailure(error: unknown) {
     data: Payload.safeParse(value.data).data,
     uncertain: value.uncertain === true,
     timedOut: value.timedOut === true,
+    cancelled: value.cancelled === true,
   }
 }
 
 /**
- * A tool call the transport stopped waiting for: the socket was up when it was sent, so the extension is still there
- * and may be running the step. Only a call runs a step, which is why `port.call` alone reads this flag: a late
+ * A tool call the transport itself ended: the socket was up when it was sent, so the extension is still there. The turn
+ * stopping before the answer is its own kind (it can be cancelled before anything is sent), and a call the timer ended
+ * may have run in part. Only a call carries a signal or a step, which is why `port.call` alone reads these: a late
  * `session.open`, `tools.list` or upload is a silent extension, and the snapshot advice would name a step that never
  * started.
  */
 function callFailure(error: unknown) {
   const value = hubFailure(error)
-  if (value?.kind !== "browser_unavailable" || !value.timedOut) return undefined
+  if (value?.kind !== "browser_unavailable") return undefined
+  if (value.cancelled)
+    return new BrowserHub.Failure({ kind: "cancelled", message: value.message, uncertain: value.uncertain })
+  if (!value.timedOut) return undefined
   return new BrowserHub.Failure({ kind: "timeout", message: value.message, uncertain: true })
 }
 

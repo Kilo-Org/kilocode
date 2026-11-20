@@ -26,6 +26,24 @@ function hub(name: proto.ErrorName, data?: unknown) {
   return new HubError({ code: codes[name], message: `${name} happened`, ...(data === undefined ? {} : { data }) })
 }
 
+/** A client whose transport ends every RPC itself, as its timer or the turn's signal does: no extension ever answers. */
+function stoppedClient(data: Record<string, unknown>) {
+  const error = (method: string) =>
+    new HubError({
+      code: proto.ErrorCodes.browser_unavailable,
+      message: `The browser ended ${method} without an answer.`,
+      data,
+    })
+  const reject = (method: string) => () => Promise.reject(error(method))
+  return {
+    state: () => ({ kind: "ready", hub: {}, extension: {} }),
+    subscribe: () => () => {},
+    session: { open: reject("session.open"), close: reject("session.close") },
+    tools: { list: reject("tools.list"), call: reject("tools.call") },
+    upload: { begin: reject("upload.begin"), chunk: reject("upload.chunk"), end: reject("upload.end") },
+  } as unknown as Client
+}
+
 describe("hub failures as the extension backend reads them", () => {
   test("every protocol error becomes its own kind", () => {
     expect(failure(hub("browser_unavailable")).kind).toBe("unavailable")
@@ -149,44 +167,36 @@ describe("hub failures as the extension backend reads them", () => {
     }
   })
 
-  test("only a tool call the transport stopped waiting for is a step timeout", async () => {
+  test("only a tool call the transport ended is a step timeout or a cancellation", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-port-"))
-    // The transport's own timer, for every method alike: the extension is connected and never answered.
-    const stopped = (method: string) =>
-      new HubError({
-        code: proto.ErrorCodes.browser_unavailable,
-        message: `The browser did not answer ${method} within 120000ms.`,
-        data: { effectsUncertain: true, timedOut: true },
-      })
-    const reject = (method: string) => () => Promise.reject(stopped(method))
-    const linked = {
-      state: () => ({ kind: "ready", hub: {}, extension: {} }),
-      subscribe: () => () => {},
-      session: { open: reject("session.open"), close: reject("session.close") },
-      tools: { list: reject("tools.list"), call: reject("tools.call") },
-      upload: { begin: reject("upload.begin"), chunk: reject("upload.chunk"), end: reject("upload.end") },
-    } as unknown as Client
-    try {
-      const port = connection({
-        dir,
-        install: () => Promise.resolve(),
-        start: () => {},
-        create: () => linked,
-      }).port(null)
-      // A call may have reached the extension, so it is a slow step the model has to look at before repeating it.
-      const called = await port
+    const port = (data: Record<string, unknown>) =>
+      connection({ dir, install: () => Promise.resolve(), start: () => {}, create: () => stoppedClient(data) }).port(null)
+    const call = (at: BrowserHub.Port) =>
+      at
         .call({ sessionHandle: "s", name: "browser_click", arguments: {}, authorized: [] })
         .catch((value: unknown) => value)
-      expect(called).toMatchObject({ kind: "timeout", uncertain: true })
+    try {
+      // A call may have reached the extension, so it is a slow step the model has to look at before repeating it.
+      expect(await call(port({ effectsUncertain: true, timedOut: true }))).toMatchObject({
+        kind: "timeout",
+        uncertain: true,
+      })
+      // The turn stopping is its own kind: in flight it may have run in part, and a call never sent cannot have.
+      expect(await call(port({ effectsUncertain: true, cancelled: true }))).toMatchObject({
+        kind: "cancelled",
+        uncertain: true,
+      })
+      expect(await call(port({ cancelled: true }))).toMatchObject({ kind: "cancelled", uncertain: false })
       // No step ran for a listing, a session open or an upload, so they stay a silent browser rather than a slow step.
-      expect(await port.list().catch((value: unknown) => value)).toMatchObject({ kind: "unavailable" })
+      const ended = port({ effectsUncertain: true, timedOut: true })
+      expect(await ended.list().catch((value: unknown) => value)).toMatchObject({ kind: "unavailable" })
       expect(
-        await port
+        await ended
           .begin({ uploadId: "u", name: "file.txt", size: 1, mimeType: "text/plain" })
           .catch((value: unknown) => value),
       ).toMatchObject({ kind: "unavailable" })
       expect(
-        await port
+        await ended
           .open({ sessionId: "s", title: "a", cwd: dir })
           .catch((value: unknown) => value),
       ).toMatchObject({ kind: "unavailable" })
