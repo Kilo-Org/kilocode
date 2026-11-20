@@ -297,13 +297,13 @@ describe("repaintMayFocus", () => {
   const window = new Window({ url: "http://localhost" })
   const doc = window.document as unknown as Document
   doc.body.innerHTML =
-    '<div class="main"><textarea class="xterm"></textarea></div><div class="side"><textarea></textarea></div>' +
+    '<div class="main"><textarea class="terminal-input"></textarea></div><div class="side"><textarea></textarea></div>' +
     '<div role="tab"></div>'
   const host = doc.querySelector(".main")!
 
   it("retries focus from the page body, the terminal itself or its tab", () => {
     expect(repaintMayFocus(doc.body, host)).toBe(true)
-    expect(repaintMayFocus(doc.querySelector(".xterm"), host)).toBe(true)
+    expect(repaintMayFocus(doc.querySelector(".terminal-input"), host)).toBe(true)
     expect(repaintMayFocus(doc.querySelector('[role="tab"]'), host)).toBe(true)
   })
 

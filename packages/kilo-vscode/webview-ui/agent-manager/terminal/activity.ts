@@ -1,14 +1,13 @@
-import type { IParser } from "@xterm/xterm"
 import { isActivity, type Activity } from "../v2/activity"
 
-export function registerActivity(parser: Pick<IParser, "registerOscHandler">, report: (state: Activity) => void) {
+export function createActivityTracker(report: (state: Activity) => void) {
   let timer: ReturnType<typeof setTimeout> | undefined
   const clear = () => {
     clearTimeout(timer)
     timer = undefined
     report("idle")
   }
-  const handler = parser.registerOscHandler(777, (data) => {
+  const handle = (data: string) => {
     if (!data.startsWith("kilo;activity;")) return false
     const [, , version, state, stamp, extra] = data.split(";")
     const time = Number(stamp)
@@ -19,12 +18,10 @@ export function registerActivity(parser: Pick<IParser, "registerOscHandler">, re
     report(state)
     timer = setTimeout(clear, Math.min(15_000, 15_000 - age))
     return true
-  })
+  }
   return {
+    handle,
     clear,
-    dispose: () => {
-      handler.dispose()
-      clear()
-    },
+    dispose: clear,
   }
 }

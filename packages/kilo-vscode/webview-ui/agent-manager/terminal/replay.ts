@@ -1,5 +1,5 @@
 interface ReplayGateDeps {
-  /** Write one output chunk to xterm, optionally observing parser completion. */
+  /** Write one output chunk to libghostty, optionally observing completion. */
   write(data: string | Uint8Array, callback?: () => void): void
   /** Release input buffered before the initial PTY attachment. */
   flush(): void
@@ -52,19 +52,16 @@ export function createInputBuffer(limit = 256 * 1024) {
 }
 
 /**
- * Coalesce per-message PTY chunks into one xterm write per animation
- * frame. xterm parses every `write()` call with its own scope and
- * schedules a render cycle per dirty buffer; at sustained streaming
- * rates (one WebSocket message per line of output) that multiplies
- * parse runs and render schedules. One write per frame keeps the parser
- * busy once instead of once per message; output latency stays under one
- * frame. Callbacks attached to individual chunks fire after the batch
- * that contained them finishes parsing, preserving replay-gate ordering.
+ * Coalesce per-message PTY chunks into one terminal write per animation
+ * frame. Merging sustained per-line WebSocket bursts into a single batch
+ * reduces WASM boundary crossings and dirty-row passes while keeping output
+ * latency under one frame. Callbacks attached to individual chunks fire after
+ * the batch that contained them finishes parsing, preserving replay-gate
+ * ordering.
  *
  * Two safety valves keep the batch bounded: a watchdog flushes via a
  * timer when animation frames stop (background or minimized windows
- * throttle rAF), and a byte cap flushes immediately so a burst never
- * accumulates anywhere near xterm's discard watermark.
+ * throttle rAF), and a byte cap flushes immediately so bursts stay bounded.
  */
 export function createWriteBatcher(
   write: (data: string | Uint8Array, callback?: () => void) => void,
@@ -152,14 +149,14 @@ export function createWriteBatcher(
     pendingBytes = 0
   }
 
-  return { write: writeChunk, cancel }
+  return { write: writeChunk, flush: drain, cancel }
 }
 
 /**
  * Gate initial user input on the PTY replay boundary. The backend sends a
- * binary 0x00 metadata frame after retained output; waiting for xterm to parse
- * everything queued before that frame keeps shell capability replies ahead of
- * the command the user typed while the PTY was starting.
+ * binary 0x00 metadata frame after retained output; waiting for libghostty to
+ * parse everything queued before that frame keeps shell capability replies
+ * ahead of the command the user typed while the PTY was starting.
  *
  * Reconnects keep their existing output-settle timer instead. Their buffered
  * input belongs to an exited shell recovery flow, not the initial attachment.
@@ -172,8 +169,8 @@ export function createReplayGate(deps: ReplayGateDeps) {
   let pending: Array<{ data: string | Uint8Array; callback?: () => void }> = []
   let bytes = 0
   // The server retains at most 2 Mi UTF-16 code units. Eight MiB covers
-  // their maximum UTF-8 expansion while still staying far below xterm's
-  // 50 MiB discard watermark if a boundary frame never arrives.
+  // their maximum UTF-8 expansion while keeping replay buffering bounded
+  // if a boundary frame never arrives.
   const limit = 8 * 1024 * 1024
 
   const attach = (reconnecting: boolean) => {
@@ -207,7 +204,7 @@ export function createReplayGate(deps: ReplayGateDeps) {
     if (blocked && !boundary) {
       boundary = true
       // Match OpenCode's transport ordering: once the server says replay is
-      // complete, xterm-generated replies from parsing those queued chunks
+      // complete, terminal-generated replies from parsing those queued chunks
       // must precede the command typed while the PTY was starting. Keep user
       // input blocked until the parser-drain callback below; TerminalTab puts
       // parser-generated replies in its separate priority buffer meanwhile.

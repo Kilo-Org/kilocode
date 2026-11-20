@@ -219,6 +219,13 @@ function keybind(deps: NewTabButtonDeps, name: string): string {
  * visible anyway).
  */
 export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
+  // Selecting an item opens a session or terminal that claims focus itself;
+  // stop Kobalte's close-autofocus from pulling focus back to the trigger arrow.
+  let selectedItem = false
+  const run = (action: () => void) => () => {
+    selectedItem = true
+    action()
+  }
   return (
     <Show when={deps.contextSelected()}>
       <div class="am-split-button am-tab-add-split">
@@ -237,7 +244,7 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
             onClick={deps.onNewSession}
           />
         </TooltipKeybind>
-        <DropdownMenu gutter={4} placement="bottom-end">
+        <DropdownMenu gutter={4} placement="bottom-end" modal={false}>
           <DropdownMenu.Trigger
             as={IconButton}
             icon="chevron-down"
@@ -247,8 +254,25 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
             aria-label={deps.moreOptionsLabel}
           />
           <DropdownMenu.Portal>
-            <DropdownMenu.Content class="am-split-menu">
-              <DropdownMenu.Item onSelect={deps.onNewSession}>
+            <DropdownMenu.Content
+              class="am-split-menu"
+              onCloseAutoFocus={(event: Event) => {
+                if (!selectedItem) return
+                selectedItem = false
+                event.preventDefault()
+                // Kobalte unmounts the menu after its close transition, which can
+                // drop focus onto <body> after a newly created main terminal mounted.
+                queueMicrotask(() => {
+                  if (document.activeElement !== document.body) return
+                  document
+                    .querySelector<HTMLTextAreaElement>(
+                      ".am-terminal-layer-active .am-terminal-slot-visible .am-terminal-host textarea",
+                    )
+                    ?.focus()
+                })
+              }}
+            >
+              <DropdownMenu.Item onSelect={run(deps.onNewSession)}>
                 <Icon name="plus" size="small" />
                 <DropdownMenu.ItemLabel>{deps.newSessionMenuLabel}</DropdownMenu.ItemLabel>
                 <span class="am-menu-shortcut">
@@ -257,7 +281,7 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
                   ))}
                 </span>
               </DropdownMenu.Item>
-              <DropdownMenu.Item onSelect={deps.onNewTerminal}>
+              <DropdownMenu.Item onSelect={run(deps.onNewTerminal)}>
                 <Icon name="console" size="small" />
                 <DropdownMenu.ItemLabel>{deps.newTerminalLabel}</DropdownMenu.ItemLabel>
                 <span class="am-menu-shortcut">

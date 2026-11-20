@@ -31,7 +31,7 @@ describe("showTerminalStack", () => {
   it("shows the detail stack for an unassigned session", () => {
     // selection === null with a live session: contextEmpty is false, and
     // the stack hosts the read-only banner / chat. The old gate rendered
-    // here; dropping this case blanks the pane and unmounts live xterms.
+    // here; dropping this case blanks the pane and unmounts live terminals.
     expect(showTerminalStack(false, null, false)).toBe(true)
   })
 

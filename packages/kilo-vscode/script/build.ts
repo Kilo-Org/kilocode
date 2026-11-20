@@ -118,6 +118,22 @@ const shiki: Plugin = {
   },
 }
 
+// ghostty-web's Vite dist embeds a 1.3 MB base64 copy of ghostty-vt.wasm for zero-config bundlers.
+// VS Code webviews block `fetch("data:...")` via CSP anyway and load dist/ghostty-vt.wasm via KILO_GHOSTTY_WASM_URI,
+// so strip the unused inline payload from the agent-manager bundle.
+const ghostty: Plugin = {
+  name: "ghostty-strip-inline-wasm",
+  setup(build) {
+    build.onLoad({ filter: /ghostty-web[/\\]dist[/\\]ghostty-web\.js$/ }, async (args) => {
+      const source = await Bun.file(args.path).text()
+      return {
+        contents: source.replace(/"data:application\/wasm;base64,[A-Za-z0-9+/=]+"/, '""'),
+        loader: "js",
+      }
+    })
+  },
+}
+
 const common = {
   bundle: true,
   minify: production,
@@ -168,7 +184,7 @@ const results = await Promise.all([
     format: "iife",
     platform: "browser",
     loader: { ".woff": "file", ".woff2": "file", ".ttf": "file" },
-    plugins: [dedupe, pierre, markdown, sprite, css, solid],
+    plugins: [dedupe, pierre, markdown, sprite, css, ghostty, solid],
   }),
   // The Settings and Profile panels split their lazy tabs and the message-part stack into chunks, so their first
   // paint does not download the Markdown, code and diff graph. The chat bundle stays one IIFE file.
@@ -197,10 +213,14 @@ const results = await Promise.all([
     format: "esm",
     platform: "browser",
   }),
-  // The animated Kilo logo loads its WASM renderer from next to the bundle; the CSP blocks the CDN default.
+  // The animated Kilo logo and libghostty terminal load their WASM binaries next to the bundle; the CSP blocks external URLs.
   copyFile(
     path.join(path.dirname(Bun.resolveSync("@lottiefiles/dotlottie-web/package.json", root)), "dist", "dotlottie-player.wasm"),
     path.join(dist, "dotlottie-player.wasm"),
+  ),
+  copyFile(
+    path.join(path.dirname(Bun.resolveSync("ghostty-web/package.json", root)), "ghostty-vt.wasm"),
+    path.join(dist, "ghostty-vt.wasm"),
   ),
 ])
 if (meta)

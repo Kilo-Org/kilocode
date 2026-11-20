@@ -21,7 +21,8 @@ import path from "node:path"
 
 // A Kilo TUI running in one of these terminals reports its session activity as
 // OSC 777 packets, which the terminal tab reads for its activity indicator.
-const env = { KILO_UNICODE_LOGO: "0", KILO_TERMINAL_ACTIVITY: "1" }
+// libghostty natively rasterizes Unicode sextant glyphs via its sprite engine.
+const env = { KILO_UNICODE_LOGO: "1", KILO_TERMINAL_ACTIVITY: "1" }
 
 function key(directory: string) {
   const value = path.resolve(directory)
@@ -53,7 +54,7 @@ export async function ptySocketUrl(
   // The ticket is bound to the directory it was minted for, so the socket must name the same one.
   url.searchParams.set("location[directory]", directory)
   // A new terminal has one initial attachment. Replay its retained startup
-  // bytes so xterm can answer shell capability queries emitted before the
+  // bytes so libghostty can answer shell capability queries emitted before the
   // WebSocket connected; tailing from -1 can make shells wait for a timeout.
   url.searchParams.set("cursor", "0")
   url.searchParams.set("ticket", data.ticket)
@@ -200,8 +201,6 @@ export class TerminalManager {
         title: params.title,
         // Spawn at the webview's size so the shell's first bytes are not wrapped for 80 columns.
         ...(initial ? { size: initial } : {}),
-        // xterm's DOM renderer cannot draw the Unicode sextant glyphs used by
-        // Kilo's modern wordmark, so use the compatible logo in embedded tabs.
         env,
       })
       .catch((error: unknown) => {
