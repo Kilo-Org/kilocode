@@ -136,20 +136,24 @@ class LegacyMigrationEngine(
                 continue
             }
             val legacyProvider = providerSettings["apiProvider"]?.jsonPrimitive?.content
-            val mapping = resolveProvider(legacyProvider)
-            if (mapping == null) {
-                val skipped = unresolvedProvider(legacyProvider)
-                results.add(LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, skipped.status, skipped.message))
-                sink.item(LegacyMigrationItemProgress(profileName, skipped.status.toProgressStatus(), skipped.message))
-                continue
+            when (val resolution = resolveProvider(legacyProvider)) {
+                is ProviderResolution.Unresolved -> {
+                    results.add(LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, resolution.status, resolution.message))
+                    sink.item(LegacyMigrationItemProgress(profileName, resolution.status.toProgressStatus(), resolution.message))
+                    continue
+                }
+
+                is ProviderResolution.Resolved -> {
+                    val mapping = resolution.mapping
+                    sink.item(LegacyMigrationItemProgress(profileName, MigrationItemProgressStatus.migrating))
+                    val conv = convertProvider(profileName, providerSettings) { store.oauthRaw(it) }
+                    conv.auth?.let { backend.setAuth(mapping.id, it) }
+                    conv.config?.let { backend.updateGlobalConfig(it) }
+                    val item = LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, conv.status, conv.message)
+                    results.add(item)
+                    sink.item(LegacyMigrationItemProgress(profileName, conv.status.toProgressStatus(), conv.message))
+                }
             }
-            sink.item(LegacyMigrationItemProgress(profileName, MigrationItemProgressStatus.migrating))
-            val conv = convertProvider(profileName, providerSettings) { store.oauthRaw(it) }
-            conv.auth?.let { backend.setAuth(mapping.id, it) }
-            conv.config?.let { backend.updateGlobalConfig(it) }
-            val item = LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, conv.status, conv.message)
-            results.add(item)
-            sink.item(LegacyMigrationItemProgress(profileName, conv.status.toProgressStatus(), conv.message))
         }
 
         // MCP servers
@@ -381,7 +385,10 @@ class LegacyMigrationEngine(
         if (profiles?.apiConfigs == null) return emptyList()
         return profiles.apiConfigs.entries.map { (profileName, settings) ->
             val provider: String = settings["apiProvider"]?.jsonPrimitive?.content ?: "unknown"
-            val mapping = resolveProvider(provider)
+            val mapping = when (val resolution = resolveProvider(provider)) {
+                is ProviderResolution.Resolved -> resolution.mapping
+                is ProviderResolution.Unresolved -> null
+            }
             val modelField: String = mapping?.modelField ?: "apiModelId"
             val model: String? = settings[modelField]?.jsonPrimitive?.content
             val hasApiKey: Boolean = when {
@@ -439,7 +446,10 @@ class LegacyMigrationEngine(
         profiles ?: return null
         val active = profiles.apiConfigs[profiles.currentApiConfigName] ?: return null
         val provider = active["apiProvider"]?.jsonPrimitive?.content ?: return null
-        val mapping = resolveProvider(provider) ?: return null
+        val mapping = when (val resolution = resolveProvider(provider)) {
+            is ProviderResolution.Resolved -> resolution.mapping
+            is ProviderResolution.Unresolved -> return null
+        }
         if (mapping.oauthSecretKey != null && provider !in oauthProviders) return null
         val modelField = mapping.modelField ?: "apiModelId"
         val model = active[modelField]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: return null

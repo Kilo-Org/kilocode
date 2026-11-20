@@ -192,8 +192,11 @@ object LegacyMigrationConverters {
         oauthRaw: (String) -> String?,
     ): ProviderConversionResult {
         val provider = settings["apiProvider"]?.jsonPrimitive?.content
-        val mapping = resolveProvider(provider)
-            ?: return unresolvedProvider(provider).let { ProviderConversionResult(null, null, it.status, it.message) }
+        val mapping = when (val resolution = resolveProvider(provider)) {
+            is ProviderResolution.Resolved -> resolution.mapping
+            is ProviderResolution.Unresolved ->
+                return ProviderConversionResult(null, null, resolution.status, resolution.message)
+        }
 
         // OAuth providers (e.g. openai-codex) stored separately
         if (mapping.oauthSecretKey != null) {

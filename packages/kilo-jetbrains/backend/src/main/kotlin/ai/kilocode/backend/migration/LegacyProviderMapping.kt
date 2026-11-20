@@ -98,30 +98,24 @@ val UNSUPPORTED_PROVIDERS: Set<String> = setOf(
 )
 
 /**
- * Resolves a legacy `apiProvider` value to the provider it migrates to.
+ * Outcome of resolving a legacy `apiProvider` value.
  *
- * Detection and migration both call this, so the support verdict shown before a migration and the
- * identity a credential is written under cannot disagree. Returns null when the value is absent,
- * unsupported in the new version, or has no mapping.
+ * One function decides both the verdict and the wording, so detection, conversion and migration
+ * cannot disagree about which providers migrate or why one does not.
  */
-fun resolveProvider(provider: String?): ProviderMapping? {
-    if (provider == null || provider in UNSUPPORTED_PROVIDERS) return null
-    return PROVIDER_MAP[provider]
+sealed interface ProviderResolution {
+    data class Resolved(val mapping: ProviderMapping) : ProviderResolution
+    data class Unresolved(val status: MigrationItemStatus, val message: String) : ProviderResolution
 }
 
-/** Report for a legacy `apiProvider` value that [resolveProvider] cannot resolve. */
-data class UnresolvedProvider(val status: MigrationItemStatus, val message: String)
-
-/**
- * Status and message for a legacy `apiProvider` value that [resolveProvider] cannot resolve.
- *
- * Shared by conversion and migration so a skipped profile is reported the same way in both paths.
- */
-fun unresolvedProvider(provider: String?): UnresolvedProvider = when {
-    provider == null -> UnresolvedProvider(MigrationItemStatus.error, "No provider type found")
+/** Resolves a legacy `apiProvider` value to the provider it migrates to, or to why it does not migrate. */
+fun resolveProvider(provider: String?): ProviderResolution = when {
+    provider == null -> ProviderResolution.Unresolved(MigrationItemStatus.error, "No provider type found")
     provider in UNSUPPORTED_PROVIDERS ->
-        UnresolvedProvider(MigrationItemStatus.warning, "Provider \"$provider\" is not supported in the new version")
-    else -> UnresolvedProvider(MigrationItemStatus.warning, "Unknown provider \"$provider\"")
+        ProviderResolution.Unresolved(MigrationItemStatus.warning, "Provider \"$provider\" is not supported in the new version")
+    else -> PROVIDER_MAP[provider]
+        ?.let { ProviderResolution.Resolved(it) }
+        ?: ProviderResolution.Unresolved(MigrationItemStatus.warning, "Unknown provider \"$provider\"")
 }
 
 val DEFAULT_MODE_SLUGS: Set<String> = setOf(
