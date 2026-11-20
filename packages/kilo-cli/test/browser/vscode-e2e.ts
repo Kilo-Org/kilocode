@@ -11,7 +11,8 @@
 //   VSC_E2E_VSIX       the packaged VSIX (`packages/kilo-vscode/out/kilo-vscode-linux-x64.vsix`)
 //   E2E_EXTENSION_DIR  the built unpacked browser extension (`apps/extension/.output/chrome-mv3`)
 //   E2E_CHROMIUM       the Chromium executable (default: playwright-core's own build)
-//   VSC_E2E_ROOT       the run root, wiped at start (default: /tmp/vscode-e2e-<pid>)
+//   VSC_E2E_ROOT       the run root, wiped at start when it is empty or an earlier run made it (default:
+//                      /tmp/vscode-e2e-<pid>); any other existing directory is refused, never removed
 //   VSC_E2E_EVIDENCE   where screenshots and the JSON report go (default: <root>/evidence)
 //   VSC_E2E_PORT       base port: hub = base, fixture = base + 1, control server = base + 49 (default 48250)
 //   VSC_E2E_MODEL_ENV  a file with OPENROUTER_API_KEY=...; the key reaches VS Code's environment only, through the
@@ -132,9 +133,19 @@ function config(browser: Record<string, unknown> = {}) {
   }
 }
 
+/** Marks a root this harness made, so `prepare` never wipes a directory it does not own. */
+const ROOT_MARKER = ".vscode-e2e-root"
+
 async function prepare() {
+  const existing = await fs.readdir(root).catch((error: NodeJS.ErrnoException): string[] => {
+    if (error.code === "ENOENT") return []
+    throw error
+  })
+  if (existing.length > 0 && !existing.includes(ROOT_MARKER))
+    throw new Error(`VSC_E2E_ROOT ${root} is not empty and has no ${ROOT_MARKER}: refusing to wipe a directory this harness did not make`)
   await fs.rm(root, { recursive: true, force: true })
   for (const dir of [...Object.values(dirs), ...Object.values(xdg), evidence]) await fs.mkdir(dir, { recursive: true })
+  await fs.writeFile(path.join(root, ROOT_MARKER), "")
   await fs.chmod(dirs.run, 0o700)
   await fs.mkdir(path.dirname(configFile), { recursive: true })
   await fs.writeFile(configFile, JSON.stringify(config(), null, 2))
@@ -142,7 +153,7 @@ async function prepare() {
   // The system opener the CLI calls for the pairing page: record it; the harness opens it in the extension's Chromium.
   await fs.writeFile(
     path.join(dirs.bin, "xdg-open"),
-    `#!/bin/sh\nprintf '%s\\n' "$1" >> '${openerLog}'\nexit 0\n`,
+    `#!/bin/sh\nprintf '%s\\n' "$1" >> '${openerLog.replaceAll("'", `'\\''`)}'\nexit 0\n`,
     { mode: 0o755 },
   )
   await fs.mkdir(path.join(dirs.user, "User"), { recursive: true })
