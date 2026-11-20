@@ -5,13 +5,13 @@ export const SCHEMA_VERSION = 1
 export const Lane = z.enum(["local", "cloud"])
 export type Lane = z.infer<typeof Lane>
 
-export const ScenarioID = z.enum(["session.open", "prompt.stream", "permission.continue"])
+export const ScenarioID = z.enum(["session.open", "prompt.stream", "permission.continue", "settings.telemetry"])
 export type ScenarioID = z.infer<typeof ScenarioID>
 
 export const Capability = z.enum(["transcript.read", "stream.observe", "permission.answer"])
 export type Capability = z.infer<typeof Capability>
 
-export const PromptDirective = z.enum(["open", "stream", "permission"])
+export const PromptDirective = z.enum(["open", "stream", "permission", "settings"])
 export type PromptDirective = z.infer<typeof PromptDirective>
 
 export const Scalar = z.union([z.string(), z.number(), z.boolean(), z.null()])

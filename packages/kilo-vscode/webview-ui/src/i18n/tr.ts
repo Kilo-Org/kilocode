@@ -856,8 +856,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetri",
   "settings.aboutKiloCode.telemetry.description":
-    "Telemetri, VS Code'un yerleşik telemetri ayarı tarafından kontrol edilir. Devre dışı bırakmak için Ayarlar > Telemetri > Telemetri Düzeyi'ne gidin ve \"off\" olarak ayarlayın. Değişikliği uygulamak için VS Code'u yeniden başlatın.",
-  "settings.aboutKiloCode.telemetry.openSettings": "Telemetri Ayarlarını Aç",
+    "Kilo'nun telemetri ayarını değiştirmek için bu anahtarı kullanın. VS Code veya çalışma ortamı telemetriyi devre dışı bırakırsa telemetri kapalı kalır.",
+  "settings.aboutKiloCode.telemetry.toggle": "Telemetriyi etkinleştir",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Telemetri ayarı güncellenemedi",
 
   "settings.agentBehaviour.subtab.agents": "Ajanlar",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Sunucuları",
