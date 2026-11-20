@@ -790,7 +790,7 @@ const layer = Layer.effect(
       delete s.instructions[name]
       delete s.status[name]
       delete s.config[name]
-      authEpoch.delete(name) // kilocode_change - the name is gone, so its epoch guards nothing
+      authEpoch.set(name, epochOf(name) + 1) // kilocode_change - a removal advances the generation, so it never repeats
     })
     // kilocode_change end
 

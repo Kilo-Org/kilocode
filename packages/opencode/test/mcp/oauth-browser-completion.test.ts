@@ -416,6 +416,38 @@ mcpTest.instance("an exchange that completes after the credential is removed sto
   }),
 )
 
+mcpTest.instance("store a credential only for the server entry that requested it", () =>
+  Effect.gen(function* () {
+    yield* withCallbackStop
+    const started = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const server = yield* serveOAuthMcp({
+      beforeToken: () => {
+        started.resolve()
+        return release.promise
+      },
+    })
+    const auth = yield* McpAuth.Service
+    const name = "test-oauth-removed-then-re-added"
+    const mcp = yield* addServer(name, server.url)
+
+    const run = yield* Effect.forkScoped(mcp.authenticate(name))
+    yield* Effect.promise(() => started.promise)
+
+    yield* mcp.remove(name)
+    yield* mcp.add(name, { type: "remote", url: server.url })
+    release.resolve()
+
+    const status = yield* awaitWithTimeout(Fiber.join(run), "Timed out discarding the cancelled exchange", "10 seconds")
+
+    expect(status).toEqual({
+      status: "failed",
+      error: "Browser authorization was discarded: this sign-in was cancelled",
+    })
+    expect((yield* auth.get(name))?.tokens).toBeUndefined()
+  }),
+)
+
 mcpTest.instance("a cancelled sign-in that finishes its exchange stores nothing", () =>
   Effect.gen(function* () {
     yield* withCallbackStop
