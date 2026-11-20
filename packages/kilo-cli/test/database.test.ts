@@ -28,9 +28,11 @@ test("every distribution channel selects the stable kilo.db", async () => {
 
 test("KILO_DB and the file of a parent process win, and the choice reaches OPENCODE_DB", async () => {
   const dir = await data()
-  const env: Record<string, string | undefined> = { KILO_DB: "/custom/sessions.db" }
+  const selected = path.join(dir, "custom", "sessions.db")
+  const env = { KILO_DB: selected, OPENCODE_DB: path.join(dir, "inherited.db") }
   translate(env)
-  expect(await KiloDatabase.select(env, { data: dir, channel: "v2" })).toBe("/custom/sessions.db")
+  expect(await KiloDatabase.select(env, { data: dir, channel: "v2" })).toBe(selected)
+  expect(env.OPENCODE_DB).toBe(selected)
 
   const parent: Record<string, string | undefined> = {}
   await KiloDatabase.select(parent, { data: dir, channel: "v2" })

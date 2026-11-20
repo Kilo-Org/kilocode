@@ -109,7 +109,7 @@ export interface StateLoadResult extends MigrationResult {
   status: StateLoadStatus
 }
 
-import { STATE_DIR, migrateAgentManagerData, type MigrationResult } from "./constants"
+import { KILO_DIR, migrateAgentManagerData, type MigrationResult } from "./constants"
 
 const STATE_FILE = "agent-manager.json"
 const STATE_VERSION = 1
@@ -146,7 +146,7 @@ export class WorktreeStateManager {
 
   constructor(root: string, log: (msg: string) => void) {
     this.root = root
-    this.file = path.join(root, STATE_DIR, STATE_FILE)
+    this.file = path.join(root, KILO_DIR, STATE_FILE)
     this.log = log
   }
 

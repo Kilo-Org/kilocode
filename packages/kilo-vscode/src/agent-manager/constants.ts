@@ -12,8 +12,6 @@ export const MAX_MULTI_VERSIONS = 4
 
 /** Kilo config directory name (project-level and inside worktrees). */
 export const KILO_DIR = ".kilo"
-/** Share the stable state file, including existing session-to-worktree associations. */
-export const STATE_DIR = KILO_DIR
 
 /** Legacy config directory name for backward compatibility reads. */
 export const LEGACY_DIR = ".kilocode"

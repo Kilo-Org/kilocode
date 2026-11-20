@@ -65,6 +65,8 @@ const child = Bun.spawn([...entry, ...args], {
     XDG_CACHE_HOME: dirs[3],
     OPENCODE_TEST_HOME: dirs[4],
     TMPDIR: dirs[5],
+    // Windows uses TEMP or TMP instead of TMPDIR.
+    ...(process.platform === "win32" ? { TEMP: dirs[5], TMP: dirs[5] } : {}),
     OPENCODE_DISABLE_AUTOUPDATE: "1",
   },
   stdin: "inherit",

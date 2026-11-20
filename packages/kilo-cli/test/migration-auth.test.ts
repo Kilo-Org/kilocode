@@ -69,15 +69,18 @@ test("conflicting DB and file sign-ins block publication; explicit recovery pres
   const consent = "--accept-jetbrains-breakage"
   const blocked = await run("apply", consent)
   expect(blocked.code).not.toBe(0)
-  expect(blocked.stderr).toContain(stable)
-  if (blocked.stderr.includes("Safe database replacement requires local")) return
-  expect(JSON.parse((await run("preflight")).stdout).status).toBe("failed")
   expect(readFileSync(source)).toEqual(before)
   expect(existsSync(`${source}.pre-v2`)).toBe(false)
   expect(readFileSync(stable, "utf8")).toBe(JSON.stringify({ provider: legacyKey }))
+  const unsupported = "Safe database replacement requires local"
+  if (process.platform === "win32" || blocked.stderr.includes(unsupported)) {
+    expect(blocked.stderr).toContain(unsupported)
+    return
+  }
+  expect(blocked.stderr).toContain(`Stored sign-in differs from ${stable}`)
+  expect(JSON.parse((await run("preflight")).stdout).status).toBe("failed")
   writeFileSync(stable, JSON.stringify({ other: legacyKey, ...JSON.parse(previewText) }))
   const migrated = await run("recover", consent)
-  if (migrated.code && migrated.stderr.includes("Safe database replacement requires local")) return
   expect(migrated.code, migrated.stderr).toBe(0)
   using db = new Database(source, { readonly: true })
   const value = (id: string) =>

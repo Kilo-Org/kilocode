@@ -7,8 +7,8 @@ import { KiloLoginService } from "../src/service/login"
 import { fakeSupervisor, prependPath } from "./fixtures/login-supervisor"
 
 // `kilo uninstall` is the upstream handler behind the Kilo host, whose updater reports no install method
-// (src/updater.ts). Each test boots the real host entry in a scratch home that holds a kilo installation next to a
-// Kilo v1 installation, an OpenCode installation and shell rc files with their PATH lines. The handler stops the
+// (src/updater.ts). Each test boots the real host entry in a scratch home that holds a shared Kilo profile,
+// an OpenCode installation and shell rc files with their PATH lines. The handler stops the
 // kilo background services and removes the kilo cache directory; data, config and state stay, and nothing outside
 // the kilo directories changes.
 
@@ -134,8 +134,7 @@ test("a forced run stops the kilo service and removes the kilo cache, and nothin
   expect(visible).not.toMatch(/Package|Shell PATH|Binary|Running |Run manually|To finish removing/)
   expect(visible).not.toMatch(/opencode/i)
 
-  // The registered kilo service is stopped and its registration is gone. The services that the Kilo v1 and
-  // OpenCode state directories register keep running.
+  // Only the service registered in Kilo's active state directory is stopped.
   await Promise.race([install.service.exited, Bun.sleep(10_000)])
   expect(install.running()).toEqual({ service: false, decoy: true })
 
@@ -143,7 +142,7 @@ test("a forced run stops the kilo service and removes the kilo cache, and nothin
   const removed = (file: string) =>
     file === ".cache/kilo" || file.startsWith(".cache/kilo/") || file === ".local/state/kilo/service-local.json"
   expect(Object.keys(after).filter(removed)).toEqual([])
-  // Session data, configuration and state stay, as does every Kilo v1, OpenCode and shell rc file.
+  // Session data, configuration and state stay, along with the installed binaries and shell rc files.
   expect(after).toMatchObject(Object.fromEntries(Object.entries(before).filter(([file]) => !removed(file))))
   expect(added(before, after).filter((file) => !boot.artifacts.includes(file))).toEqual([])
 }, 60_000)
@@ -210,7 +209,7 @@ test.skipIf(unit === undefined)(
   60_000,
 )
 
-// A scratch home with a kilo, a Kilo v1 and an OpenCode installation, each with a registered background service.
+// A scratch home with registered background services under Kilo and other state directories.
 // The services are idle processes of this test behind a stub that answers no health request, so stopping one only
 // signals a process the test owns.
 async function seed() {
@@ -261,9 +260,9 @@ async function seed() {
     ".local/state/kilo/service-local.json": registered(service.pid),
     ".cache/kilo/marker.txt": "kilo cache",
     ".cache/kilo/bin/marker.txt": "kilo cached binary",
-    ".config/kilo/kilo.json": "kilo v1 config",
+    ".config/kilo/kilo.json": JSON.stringify({ username: "fixture" }),
     ".local/share/kilo/history-backup": "saved sessions",
-    ".local/share/kilo/auth.json": "kilo v1 credentials",
+    ".local/share/kilo/auth.json": JSON.stringify({ provider: { type: "api", key: "synthetic-uninstall-key" } }),
     ".local/state/other/service.json": registered(decoy.pid),
     ".kilo/bin/kilo": "kilo v1 binary",
     ".kilocode/marker.txt": "kilo v1 legacy config",

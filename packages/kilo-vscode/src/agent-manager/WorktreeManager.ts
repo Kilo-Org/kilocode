@@ -122,7 +122,7 @@ function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
   return { branch: ref }
 }
 
-import { KILO_DIR, LEGACY_DIR, STATE_DIR, migrateAgentManagerData, resolveGitDir } from "./constants"
+import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData, resolveGitDir } from "./constants"
 
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
@@ -1086,7 +1086,7 @@ export class WorktreeManager {
     const target = await this.excludeTarget()
     const items = [
       [".kilo/worktrees/", "Kilo Code agent worktrees"],
-      [`${STATE_DIR}/agent-manager.json`, "Kilo Agent Manager state"],
+      [`${KILO_DIR}/agent-manager.json`, "Kilo Agent Manager state"],
       [".kilo/agent-manager.json", "Kilo Agent Manager legacy state"],
       [".kilo/setup-script", "Kilo Code worktree setup script"],
       [".kilo/setup-script.sh", "Kilo Code worktree setup script"],

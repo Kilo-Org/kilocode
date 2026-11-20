@@ -132,8 +132,6 @@ jobs:
           prefix="$(mktemp -d)"
           npm install --prefix "$prefix" --no-audit --no-fund packages/kilo-cli/dist/cli-linux-x64/*.tgz packages/kilo-cli/dist/cli/*.tgz
           test "$("$prefix/node_modules/.bin/kilo" --version)" = "kilo v$KILO_VERSION"
-          # v2 must not install a `kilo` command, which would start v2 for v1 users.
-          test ! -e "$prefix/node_modules/.bin/kilo"
           test ! -e "$prefix/node_modules/.bin/opencode"
           test -f "$prefix/node_modules/@kilocode/cli/bin/tree-sitter/tree-sitter.wasm"
         env:
