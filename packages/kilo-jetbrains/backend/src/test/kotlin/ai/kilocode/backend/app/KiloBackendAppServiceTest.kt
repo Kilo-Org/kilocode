@@ -21,6 +21,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
@@ -1354,6 +1355,61 @@ class KiloBackendAppServiceTest {
         job.join()
         assertFalse(reached.isCompleted, "sign-out swallowed the cancellation")
         assertTrue(job.isCancelled, "sign-out swallowed the cancellation")
+    }
+
+    @Test
+    fun `logout clears hosted session state while a restart holds the lifecycle mutex`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        // A live status makes the "cleared" assertion below about state that really existed.
+        mock.pushFeed(
+            hostedNativeFeed,
+            """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""",
+        )
+        withTimeout(10_000) { svc.hosted.statuses.first { it[hostedSession]?.type == "busy" } }
+
+        val profiles = mock.requestCount("/kilo/profile")
+        val gate = CountDownLatch(1)
+        var restarter: Job? = null
+        try {
+            // Park an app reload behind the gate. A reload already blocked in a CLI call cannot be
+            // cancelled, so the restart's cancelAndJoin keeps the lifecycle mutex held.
+            mock.responseGate = gate
+            mock.pushEvent("global.disposed", "{}")
+            assertTrue(mock.awaitRequestCount("/kilo/profile", profiles + 1), "the reload never reached the CLI")
+
+            restarter = scope.launch { svc.restart() }
+            val held = withTimeoutOrNull(10_000) {
+                while (log.messages.none { it.contains("restart: acquired lifecycle mutex") }) delay(10)
+                true
+            }
+            assertNotNull(held, "the restart never took the lifecycle mutex; logs=${log.messages}")
+
+            // Release the field only: the parked request keeps its latch, so the mutex stays held
+            // while sign-out's own calls are free to complete.
+            mock.responseGate = null
+            assertTrue(svc.logout(), "sign-out reported failure while the lifecycle was busy")
+            assertTrue(restarter.isActive, "the restart had already finished, so the mutex was not held")
+            assertTrue(
+                log.messages.any { it.contains("Sign-out: lifecycle busy") },
+                "sign-out waited for the mutex instead of dropping the hosted state",
+            )
+            assertNull(appStateDto(svc.appState.value).profile, "the signed-out snapshot kept the profile")
+            assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+            assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+            assertTrue(mock.awaitFeedClosed(hostedSystemFeed), "system stream stayed open")
+            assertTrue(
+                mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1),
+                "attachment was not detached",
+            )
+        } finally {
+            mock.responseGate = null
+            gate.countDown()
+            restarter?.let { withTimeoutOrNull(20_000) { it.join() } }
+        }
     }
 
     @Test
