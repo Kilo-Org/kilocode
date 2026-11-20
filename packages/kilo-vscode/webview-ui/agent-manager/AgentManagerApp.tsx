@@ -57,9 +57,10 @@ import {
 import { useBridge } from "./v2/vscode"
 import { MissingWorktreeBanner } from "./MissingWorktreeBanner"
 import { V2Scope } from "../src/v2/client"
-import { SessionView } from "../src/v2/session-view"
+import { blurOnHide, freezeValue, skipInactiveFocus } from "../src/v2/view-active"
+import { ChatViewCache } from "./ChatViewCache"
+import { createSessionActionsRenderer } from "./session-actions"
 import { openSubagent } from "../src/v2/open-subagent"
-import { SessionActionsRow } from "../src/v2/session-actions-row"
 import { createWorktreeTransfer } from "../src/v2/worktree-transfer"
 import { createComposerQueue } from "../src/v2/composer"
 import { createPlanOpener } from "../src/v2/open-plan"
@@ -99,7 +100,7 @@ import { createProjectRegistry, type PersistedProjectTabs } from "./project/regi
 import { createProjectLive } from "./project/live"
 import { createProjectSessionsLive } from "./project/sessions-live"
 import { worktreeSessionTabs } from "./project/session-filter"
-import { applyProjectSelection, createTargetRememberer } from "./project/selection"
+import { canOptimisticTarget, createSelectionController, createTargetRememberer } from "./project/selection"
 import { createLocalSessions } from "./project/local-tabs"
 import { persistLocalTabs, projectLocalIds, projectLocalSessions } from "./project/local-tabs"
 import { createProjectHydration } from "./project/hydration"
@@ -331,11 +332,22 @@ const AgentManagerContent: Component = () => {
   const to = (msg: unknown) => vscode.postMessage(msg as never)
   const onHostMessage = (callback: (message: ExtensionMessage) => void) =>
     vscode.onMessage((message) => callback(message as unknown as ExtensionMessage))
-  const activateSelection = (target: AgentManagerSidebarTarget, restore?: boolean) => {
-    saveTabMemory()
-    comments.cancel()
-    to({ type: "agentManager.activateSelection", target, restore })
-  }
+  const selectionCtl = createSelectionController({
+    beforeActivate: () => {
+      saveTabMemory()
+      comments.cancel()
+    },
+    post: to,
+    active: (projectId) => activeProjectId() === projectId,
+    applied: (projectId) => currentProjectId() === projectId,
+    managed: (projectId) => projectStates()[projectId]?.sessions ?? projectLive.sessions()[projectId] ?? [],
+    canOptimistic: (target) => canOptimisticTarget(target, worktrees(), managedSessions()),
+    local: () => selectLocal(),
+    worktree: (_projectId, worktreeId) => selectWorktree(worktreeId),
+    focusLocal: (id) => focusLocalSession(id),
+    managedSession: (worktreeId, id) => focusManagedSession(worktreeId, id),
+  })
+  const activateSelection = selectionCtl.activate
   const creation = usePendingCreate(activeProjectId, (projectId, worktreeId) =>
     activateSelection({ projectId, kind: "worktree", worktreeId }),
   )
@@ -1406,7 +1418,9 @@ const AgentManagerContent: Component = () => {
     if (!sel || sel === LOCAL) return to(message)
     to({ ...message, worktreeId: sel })
   }
+  let evictChatSlot: ((sessionOrDraftId: string) => void) | undefined
   const handleCloseTab = (sessionId: string, notify = true) => {
+    evictChatSlot?.(sessionId)
     freezeTabs()
     closeSessionTab({
       sessionId,
@@ -1787,6 +1801,10 @@ const AgentManagerContent: Component = () => {
     if (!key) return
     setReviewCommentsByContext((prev) => setReviewComments(prev, currentProjectId() ?? "single", key, value))
   }
+  const frozenDiffControls = (active: () => boolean) => {
+    const controls = freezeValue(active, review.controls)
+    return <DiffScopeControls {...controls()} compact />
+  }
   const diffScopeControls = (compact: boolean) => <DiffScopeControls {...review.controls()} compact={compact} />
   const remote = createPRReview({
     context: diffCtx,
@@ -1914,27 +1932,24 @@ const AgentManagerContent: Component = () => {
     setReviewActive(false)
     panels.open(SidePanel.Diff)
   }
-  const sessionActions = (hasMessages: boolean, todos: JSX.Element, agents: JSX.Element) => {
-    const id = sessions.currentSessionID()
-    const movable = selection() === LOCAL && !readOnly() && !!id && localSessionIDs().includes(id) && !isPending(id)
-    const stats = selection() === LOCAL ? localStats() : worktreeStats()[selection() ?? ""]
-    return (
-      <SessionActionsRow
-        hasMessages={hasMessages}
-        branch={isGitRepo() ? transfer.branch() : undefined}
-        onNewWorktree={handleCreateWorktree}
-        onNewWorktreeFromBranch={(branch) => createWorktreeNow(branch)}
-        onConfigureWorktree={() => showNewWorktreeDialog()}
-        onMoveToWorktree={movable && id ? () => transfer.move(id) : undefined}
-        moving={transfer.transferring()}
-        moveDetail={transfer.detail()}
-        stats={stats}
-        onShowChanges={showChanges}
-        todos={todos}
-        agents={agents}
-      />
-    )
-  }
+  const sessionActions = createSessionActionsRenderer({
+    sessionId: () => sessions.currentSessionID(),
+    selection,
+    readOnly,
+    localSessionIDs,
+    isPending,
+    localStats,
+    worktreeStats,
+    isGitRepo,
+    branch: transfer.branch,
+    transferring: transfer.transferring,
+    detail: transfer.detail,
+    onNewWorktree: handleCreateWorktree,
+    onNewWorktreeFromBranch: (b) => createWorktreeNow(b),
+    onConfigureWorktree: () => showNewWorktreeDialog(),
+    onMoveToWorktree: (id) => transfer.move(id),
+    onShowChanges: showChanges,
+  })
   // The workspace branch changes with a checkout or a project switch, and the row's worktree actions follow it.
   createEffect(
     on(
@@ -2200,15 +2215,7 @@ const AgentManagerContent: Component = () => {
         }) === "stale"
       )
         return
-      applyProjectSelection(message, {
-        active: (projectId) => activeProjectId() === projectId,
-        applied: (projectId) => currentProjectId() === projectId,
-        managed: (projectId) => projectStates()[projectId]?.sessions ?? projectLive.sessions()[projectId] ?? [],
-        local: () => selectLocal(),
-        worktree: (projectId, worktreeId) => selectWorktree(worktreeId),
-        focusLocal: focusLocalSession,
-        managedSession: focusManagedSession,
-      })
+      selectionCtl.receive(message)
       if (
         (String(message.type) === "error" || message.type === "agentManager.prError") &&
         reportFailure(message as unknown as Parameters<typeof reportFailure>[0], {
@@ -2413,69 +2420,59 @@ const AgentManagerContent: Component = () => {
           </Show>
         </div>
       </Show>
-      <div class="am-chat-wrapper" classList={{ "am-chat-wrapper-hidden": contextEmpty() }}>
-        <Show
-          when={chatStore()}
-          keyed
-          fallback={
-            <div class="am-intro-fallback">
+      <div class="am-chat-region" classList={{ "am-chat-region-hidden": contextEmpty() }}>
+        <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
+          <ChatViewCache
+            store={chatStore}
+            retained={directories.retained}
+            alive={(dir, store) => panel.find(dir) === store}
+            session={shownSession}
+            draftKey={() => shownSession() ?? draftTab()}
+            hidden={contextEmpty}
+            origin={sessionOrigin}
+            fallback={() => (
               <Show when={appSession.rootStore()} keyed fallback={intro.render()}>
                 {(store) => <V2Scope value={store}>{intro.render()}</V2Scope>}
               </Show>
-            </div>
-          }
-        >
-          {(store) => {
-            const origin = untrack(() => sessionOrigin(store.directory))
-            return (
-              <V2Scope value={store}>
-                <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
-                  <SpeechToTextStatusProvider>
-                    <SessionView
-                      session={shownSession()}
-                      draftKey={shownSession() ?? draftTab()}
-                      readOnly={readOnly()}
-                      onSession={(id, key) => handleSessionCreated(id, origin, { key })}
-                      actions={toolActions}
-                      onShowHistory={() => openHistory()}
-                      row={sessionActions}
-                      rowWhenEmpty={!!transfer.branch() || (!!selection() && selection() !== LOCAL)}
-                      onNewSession={handleNewTabForCurrentSelection}
-                      worktree={!!selection() && selection() !== LOCAL}
-                      onUpdateBase={update}
-                      manager={hints.manager}
-                      focusOnDraftChange={focusOnDraftChange}
-                      onFocusChange={focusCtl.prompt}
-                      empty={intro.render}
-                      onAppendReady={(append) => (promptAppend = append)}
-                      onReviewAppendReady={(append) => (promptReviewAppend = append)}
-                      onComposerReady={composerQueue.ready}
-                      onReferenceReady={(add) => (promptReference = add)}
-                      onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
-                      onViewTurnChanges={openTurnChanges}
-                      onForkMessage={handleForkSession}
-                      onMissing={(id) => handleCloseTab(id)}
-                      worktrees={references}
-                      git={isGitRepo}
-                      gitTarget={gitTarget}
-                      terminalContext={() => selection() ?? undefined}
-                      resolveEmbeddedTerminal={resolveTerminal}
-                      onPrompted={(sessionId, text, model) =>
-                        to({
-                          type: "agentManager.promptSent",
-                          sessionId,
-                          text,
-                          providerID: model?.providerID,
-                          modelID: model?.id,
-                        })
-                      }
-                    />
-                  </SpeechToTextStatusProvider>
-                </ReviewCommentActionsContext.Provider>
-              </V2Scope>
-            )
-          }}
-        </Show>
+            )}
+            readOnly={readOnly}
+            onSession={(id, origin, key) => handleSessionCreated(id, origin, { key })}
+            actions={toolActions}
+            onShowHistory={() => openHistory()}
+            row={sessionActions}
+            rowWhenEmpty={() => !!transfer.branch() || (!!selection() && selection() !== LOCAL)}
+            onNewSession={handleNewTabForCurrentSelection}
+            worktree={() => !!selection() && selection() !== LOCAL}
+            onUpdateBase={update}
+            manager={hints.manager}
+            focusOnDraftChange={focusOnDraftChange}
+            onFocusChange={focusCtl.prompt}
+            empty={intro.render}
+            onAppendReady={(append) => (promptAppend = append)}
+            onReviewAppendReady={(append) => (promptReviewAppend = append)}
+            onComposerReady={composerQueue.ready}
+            onReferenceReady={(add) => (promptReference = add)}
+            onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+            onViewTurnChanges={openTurnChanges}
+            onForkMessage={handleForkSession}
+            onMissing={(id) => handleCloseTab(id)}
+            onRegisterEvict={(fn) => (evictChatSlot = fn)}
+            worktrees={references}
+            git={isGitRepo}
+            gitTarget={gitTarget}
+            terminalContext={() => selection() ?? undefined}
+            resolveEmbeddedTerminal={resolveTerminal}
+            onPrompted={(sessionId, text, model) =>
+              to({
+                type: "agentManager.promptSent",
+                sessionId,
+                text,
+                providerID: model?.providerID,
+                modelID: model?.id,
+              })
+            }
+          />
+        </ReviewCommentActionsContext.Provider>
         <Show when={readOnly()}>
           <div class="am-readonly-banner">
             <Icon name="branch" size="small" />
@@ -2511,23 +2508,26 @@ const AgentManagerContent: Component = () => {
     </div>
   )
 
+  let sideHostEl: HTMLDivElement | undefined
+  blurOnHide(() => sidePanel() !== null, () => sideHostEl)
   const renderSideHost = () => (
     <Show when={sideHostVisible()}>
       <div
+        ref={sideHostEl}
         class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
         style={{ width: `${panelWidth()}px` }}
-        inert={sidePanel() === null}
+        onFocusIn={(event) => {
+          if (sidePanel() === null && sideHostEl) skipInactiveFocus(event, sideHostEl)
+        }}
       >
-        <Show when={sidePanel() !== null}>
-          <ResizeHandle
-            direction="horizontal"
-            edge="start"
-            size={panelWidth()}
-            min={minPanelWidth(window.innerWidth)}
-            max={maxPanelWidth(window.innerWidth)}
-            onResize={resizeSide}
-          />
-        </Show>
+        <ResizeHandle
+          direction="horizontal"
+          edge="start"
+          size={panelWidth()}
+          min={minPanelWidth(window.innerWidth)}
+          max={maxPanelWidth(window.innerWidth)}
+          onResize={resizeSide}
+        />
         <div class="am-diff-panel-wrapper">
           {browser.render()}
           <DiffPanelCache
@@ -2551,7 +2551,7 @@ const AgentManagerContent: Component = () => {
             prError={prDiffComments.error}
             focusedComment={remote.focus}
             composer={composers.get}
-            lead={() => diffScopeControls(true)}
+            lead={frozenDiffControls}
             canRevert={scopeCapabilities(review.scope()).revert}
             diffStyle={diffStyle()}
             onDiffStyleChange={setSharedDiffStyle}

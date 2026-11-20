@@ -37,12 +37,12 @@ import {
 import {
   getMeasurement,
   getScroll,
-  layoutFingerprint,
   resolveAnchor,
   rowFingerprint,
   setMeasurement,
   setScroll,
 } from "./transcript-cache"
+import { createTranscriptLayout } from "./transcript-layout"
 import { createRowHandoff } from "./transcript-row-handoff"
 import { TranscriptRowView } from "./transcript-row"
 import { useTranscriptSearch } from "./transcript-search"
@@ -56,6 +56,7 @@ import type { ReplyHandler } from "./append-ready"
 import { partFeedback } from "../../../src/shared/browser-feedback"
 import { isChatReference } from "../../../src/shared/review-comments"
 import { capacity, historyAction, promptItems, railEntries, type PromptRailItem } from "./prompt-rail-data"
+import { useViewActive } from "./view-active"
 
 /**
  * Container for Virtua rows. Virtua sizes it from cached row heights and places
@@ -75,6 +76,8 @@ const VirtualBox: Component<{
     {box.children}
   </div>
 )
+
+let searchHighlightOwner: symbol | undefined
 
 function sameKeys(left: readonly string[], right: readonly string[]) {
   if (left.length !== right.length) return false
@@ -114,17 +117,22 @@ export function MessageList(props: {
   question?: () => FormInfo | undefined
 }) {
   const v2 = useV2()
+  const viewActive = useViewActive()
   const vscode = useVSCode()
   const language = useLanguage()
   const notifications = useNotificationsOptional()
   const [highlight, setHighlight] = createSignal<TimelineHighlight>()
-  onCleanup(onTimelineHighlight(setHighlight))
+  onCleanup(
+    onTimelineHighlight((next) => {
+      if (viewActive()) setHighlight(next)
+    }),
+  )
 
   const [scrollEl, setScrollEl] = createSignal<HTMLDivElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
-  const [layout, setLayout] = createSignal("")
-  // Transcript height, kept reactive so the prompt rail re-caps on resize.
-  const [height, setHeight] = createSignal(0)
+  const transcriptLayout = createTranscriptLayout({ scrollEl, viewActive })
+  const layout = transcriptLayout.layout
+  const height = transcriptLayout.height
   const [pendingJump, setPendingJump] = createSignal<{ session: string; key: string }>()
   const [pendingRestore, setPendingRestore] = createSignal<string>()
 
@@ -506,12 +514,18 @@ export function MessageList(props: {
   let highlightFrame: number | undefined
   let highlightFrameInner: number | undefined
   let pendingCenter = false
+  const highlightToken = Symbol("search-highlight")
   const paintHighlights = () => {
+    if (!viewActive()) return
     const el = scrollEl()
     if (!el || !search.active()) {
-      clearTranscriptHighlights()
+      if (searchHighlightOwner === highlightToken || searchHighlightOwner !== undefined) {
+        searchHighlightOwner = undefined
+        clearTranscriptHighlights()
+      }
       return
     }
+    searchHighlightOwner = highlightToken
     const active = activeMatch()
     const range = applyTranscriptHighlights(
       el,
@@ -522,29 +536,18 @@ export function MessageList(props: {
     if (!pendingCenter) return
     pendingCenter = false
     if (!range) return
-    // Only nudge the scroll position when the match is not already comfortably
-    // placed. Re-centering on every step (even when the match is already
-    // visible) reads as constant, distracting jumping when several occurrences
-    // share one message.
     const rect = range.getClientRects()[0]
     if (!rect) return
     const box = el.getBoundingClientRect()
     const fullyVisible = rect.top >= box.top && rect.bottom <= box.bottom
-    // The comfort band covers the middle 70% of the viewport, wide enough that
-    // most steps between nearby matches do not scroll at all, while still
-    // recentering before a match gets uncomfortably close to the edge.
     const comfortMargin = box.height * 0.35
     const centered = Math.abs(rect.top + rect.height / 2 - (box.top + box.height / 2)) <= comfortMargin
     if (fullyVisible && centered) return
     el.scrollBy({ top: rect.top + rect.height / 2 - box.top - el.clientTop - el.clientHeight / 2 })
   }
 
-  // Two frames of margin so the virtualizer has settled the DOM for the new
-  // scroll position before it is scanned for the precise occurrence to
-  // center. Both frame ids are tracked so cleanup can cancel whichever leg of
-  // the chain has not fired yet.
   const scheduleHighlight = () => {
-    if (highlightFrame !== undefined) return
+    if (!viewActive() || highlightFrame !== undefined) return
     highlightFrame = requestAnimationFrame(() => {
       highlightFrameInner = requestAnimationFrame(() => {
         highlightFrame = undefined
@@ -556,7 +559,7 @@ export function MessageList(props: {
 
   createEffect(
     on(
-      () => [search.query(), search.matchCase(), search.wholeWord(), search.regex(), search.active(), activeMatch()],
+      () => [search.query(), search.matchCase(), search.wholeWord(), search.regex(), search.active(), activeMatch(), viewActive()],
       scheduleHighlight,
     ),
   )
@@ -587,10 +590,14 @@ export function MessageList(props: {
   onCleanup(() => {
     if (highlightFrame !== undefined) cancelAnimationFrame(highlightFrame)
     if (highlightFrameInner !== undefined) cancelAnimationFrame(highlightFrameInner)
-    clearTranscriptHighlights()
+    if (searchHighlightOwner === highlightToken) {
+      searchHighlightOwner = undefined
+      clearTranscriptHighlights()
+    }
   })
 
   const onScrollToMessage = (event: Event) => {
+    if (!viewActive()) return
     const detail = (event as CustomEvent<{ id: string; partId?: string }>).detail
     if (!detail?.id) return
     const matches = rows().flatMap((row) => (row.type === "assistant" && row.message.id === detail.id ? [row] : []))
@@ -765,38 +772,11 @@ export function MessageList(props: {
     if (search.active()) scheduleHighlight()
   }
 
-  let resize: ResizeObserver | undefined
-  const refreshLayout = () => {
-    const el = scrollEl()
-    if (!el) return
-    const style = getComputedStyle(el)
-    setHeight(el.clientHeight)
-    setLayout(
-      layoutFingerprint({
-        width: Math.round(el.clientWidth),
-        ratio: window.devicePixelRatio,
-        font: style.fontFamily,
-        size: style.fontSize,
-        line: style.lineHeight,
-      }),
-    )
-  }
   const setScrollRef = (el: HTMLDivElement | undefined) => {
-    resize?.disconnect()
     setScrollEl(el)
     autoScroll.scrollRef(el)
-    if (!el) return
-    refreshLayout()
-    resize = new ResizeObserver(refreshLayout)
-    resize.observe(el)
+    transcriptLayout.observe(el)
   }
-  window.addEventListener("resize", refreshLayout)
-  document.fonts?.addEventListener("loadingdone", refreshLayout)
-  onCleanup(() => {
-    resize?.disconnect()
-    window.removeEventListener("resize", refreshLayout)
-    document.fonts?.removeEventListener("loadingdone", refreshLayout)
-  })
 
   const handoff = createRowHandoff()
   const Row: Component<{ id: string }> = (entry) => {

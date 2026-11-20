@@ -2285,6 +2285,9 @@ body.am-wt-dragging-active * {
   align-items: center;
   justify-content: center;
   gap: 16px;
+  position: relative;
+  z-index: 2;
+  background: var(--surface-base);
 }
 
 .am-restricted-state {
@@ -2311,6 +2314,33 @@ body.am-wt-dragging-active * {
 
 /* Read-only session wrapper + banner */
 
+.am-chat-region {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+}
+
+.am-chat-region-hidden {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  z-index: 0;
+}
+
+.am-chat-host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  contain: layout style;
+}
+
 .am-chat-wrapper {
   display: flex;
   flex-direction: column;
@@ -2321,6 +2351,12 @@ body.am-wt-dragging-active * {
 
 /* The intro shows here only until the chat store exists. Center it like the empty message list it replaces, so the
    preview does not jump from the top to the center when the store arrives. */
+.am-chat-fallback {
+  position: relative;
+  z-index: 2;
+  background: var(--surface-base);
+}
+
 .am-intro-fallback {
   display: flex;
   flex: 1;
@@ -2332,6 +2368,31 @@ body.am-wt-dragging-active * {
 
 .am-chat-wrapper.am-chat-wrapper-hidden {
   display: none;
+}
+
+/* Keep-alive chat slots stack in place so switching worktrees or tabs never tears
+   down SessionView/Virtua, resets scroll position, or triggers inherited style/AX
+   tree reserialization. The opaque active slot at z-index:2 covers inactive slots.
+   Overrides .am-chat-wrapper-hidden's display:none while preserving the active-composer
+   selector contract. */
+.am-chat-wrapper.am-chat-slot,
+.am-chat-wrapper.am-chat-slot.am-chat-wrapper-hidden {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  contain: strict;
+  opacity: 0;
+  z-index: 0;
+  background: var(--surface-base);
+  will-change: opacity;
+}
+
+.am-chat-wrapper.am-chat-slot.am-chat-slot-active {
+  opacity: 1;
+  z-index: 2;
 }
 
 .am-readonly-banner {
@@ -2409,8 +2470,11 @@ body.am-wt-dragging-active * {
   min-width: 0;
   position: relative;
   isolation: isolate;
+  z-index: 2;
+  background: var(--surface-base);
 }
 
+.am-main-pane-terminal-active .am-chat-region,
 .am-main-pane-terminal-active .am-chat-wrapper {
   opacity: 0;
   pointer-events: none;
@@ -2425,6 +2489,7 @@ body.am-wt-dragging-active * {
   display: flex;
   flex-shrink: 0;
   min-width: 0;
+  z-index: 2;
 }
 
 .am-diff-resize > [data-component="resize-handle"]::after {
@@ -2441,6 +2506,11 @@ body.am-wt-dragging-active * {
   overflow: hidden;
 }
 
+/* Stack hot cached diff panels in place (non-inherited opacity + z-index only):
+   avoiding transform/inert/aria-hidden/content-visibility toggles prevents Pierre
+   VirtualizedFileDiff IntersectionObserver churn and multi-megabyte AX tree
+   reserialization during switches. Containment lives on .am-diff-viewport rather
+   than here so portal={false} header dropdowns are never clipped. */
 .am-diff-panel-cache {
   position: absolute;
   inset: 0;
@@ -2448,16 +2518,19 @@ body.am-wt-dragging-active * {
   min-width: 0;
   min-height: 0;
   opacity: 0;
-  content-visibility: hidden;
-  pointer-events: none;
   z-index: 0;
   background: var(--surface-base);
+  will-change: opacity;
+}
+
+.am-diff-panel-cache-cold {
+  content-visibility: hidden;
+  will-change: auto;
 }
 
 .am-diff-panel-cache-active {
   opacity: 1;
   content-visibility: visible;
-  pointer-events: auto;
   z-index: 2;
 }
 
@@ -5290,6 +5363,7 @@ body.am-wt-dragging-active * {
   flex: 1;
   min-width: 0;
   min-height: 0;
+  contain: strict;
 }
 
 /* Keep the frame above all scroll contents without reserving layout space. */
@@ -5860,6 +5934,7 @@ body.vscode-high-contrast-light {
   position: relative;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .am-detail-stack-hidden {
@@ -5942,6 +6017,7 @@ body.vscode-high-contrast-light {
 .am-side-terminal-visible {
   opacity: 1;
   pointer-events: auto;
+  z-index: 2;
 }
 
 .am-side-terminal-layer {
@@ -6022,17 +6098,22 @@ body.vscode-high-contrast-light {
   padding: 0 2px;
 }
 
-/* Hidden-but-alive side panel host: taken out of the flow so the chat
-   reclaims the width, but kept painted so hidden side terminals keep
-   streaming. Anchored to .am-detail-stack (position: relative). */
+/* Hidden-but-alive side panel host: taken out of flex flow so the chat reclaims
+   the full width, while staying in place behind the opaque .am-main-pane (z-index:2).
+   Keeping it inside the viewport without transform/inert/aria-hidden avoids Pierre
+   IntersectionObserver unmount/remount storms and AX tree reserialization when
+   switching between diff-open and diff-closed worktrees. */
 .am-side-host-hidden {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
   opacity: 0;
-  pointer-events: none;
-  transform: translate(-100vw, 0);
+  z-index: 0;
+}
+
+.am-side-host-hidden > [data-component="resize-handle"] {
+  display: none;
 }
 
 /* Subagent inspector panel. It remains mounted while another inspector mode
@@ -6054,6 +6135,7 @@ body.vscode-high-contrast-light {
 .am-subagent-panel-visible {
   opacity: 1;
   pointer-events: auto;
+  z-index: 2;
 }
 
 .am-edit-preview-panel {
@@ -6073,6 +6155,7 @@ body.vscode-high-contrast-light {
 .am-edit-preview-panel-visible {
   opacity: 1;
   pointer-events: auto;
+  z-index: 2;
 }
 
 .am-edit-preview-header {
@@ -6158,6 +6241,7 @@ body.vscode-high-contrast-light {
 .am-document-panel-visible {
   opacity: 1;
   pointer-events: auto;
+  z-index: 2;
 }
 
 .am-document-header {

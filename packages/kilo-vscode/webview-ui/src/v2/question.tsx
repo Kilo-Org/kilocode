@@ -7,9 +7,11 @@ import { isTextControl } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { useV2 } from "./client"
 import { type Draft, formAnswer } from "./form"
+import { useViewActive } from "./view-active"
 
 export function QuestionDock(props: { form: FormInfo }) {
   const v2 = useV2()
+  const viewActive = useViewActive()
   const language = useLanguage()
   const [values, setValues] = createSignal<Draft>({})
   const [custom, setCustom] = createSignal<Record<string, string>>({})
@@ -180,9 +182,10 @@ export function QuestionDock(props: { form: FormInfo }) {
 
   createEffect(() => {
     tab()
-    if (collapsed() || editing() || confirm()) return
+    if (!viewActive() || collapsed() || editing() || confirm()) return
     requestAnimationFrame(() => {
-      if (!document.hasFocus() || isTextControl(document.activeElement) || !refs.root?.isConnected) return
+      if (!viewActive() || !document.hasFocus() || isTextControl(document.activeElement) || !refs.root?.isConnected)
+        return
       const selector = "button[data-slot='question-option']:not(:disabled)"
       const button =
         refs.root.querySelector<HTMLButtonElement>(`${selector}[data-picked='true']`) ??

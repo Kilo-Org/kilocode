@@ -21,7 +21,11 @@ import type { InitialFile } from "./multi-version"
 import type { TerminalFont } from "./terminal-font"
 import type { ProjectSnapshot } from "./project/contexts"
 import type { ProjectSessionView } from "./project/session-view"
-import type { SidebarTarget } from "./project/route"
+import type {
+  ActivateSelectionIn,
+  SelectionActivatedMessage,
+  SidebarTarget,
+} from "./project/route"
 
 type ScriptTerminalKind = "run" | "setup"
 type ScriptTerminalState = "running" | "stopping" | "exited" | "failed"
@@ -203,11 +207,6 @@ interface StateMessage {
 interface ProjectsMessage {
   type: "agentManager.projects"
   projects: ProjectSnapshot[]
-}
-
-interface SelectionActivatedMessage {
-  type: "agentManager.selectionActivated"
-  target: SidebarTarget
 }
 
 /** Default (or picked) parent folder for the new-project dialog. */
@@ -711,13 +710,6 @@ interface RemoveProjectIn {
 interface SelectProjectIn {
   type: "agentManager.selectProject"
   projectId: string
-}
-
-interface ActivateSelectionIn {
-  type: "agentManager.activateSelection"
-  target: SidebarTarget
-  /** Resolve the project's persisted target instead of using `target` verbatim. */
-  restore?: boolean
 }
 
 /** Persist the webview's current selection for seamless restore after switching back. */

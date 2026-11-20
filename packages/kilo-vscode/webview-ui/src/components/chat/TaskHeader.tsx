@@ -19,6 +19,7 @@ import { visibleMessages } from "../../v2/revert"
 import { sessionMissing } from "../../v2/scope"
 import { setTaskTimelineVisible, taskTimelineVisible } from "../../v2/kilo-settings"
 import { useTranscriptSearch } from "../../v2/transcript-search"
+import { useViewActive } from "../../v2/view-active"
 import { TranscriptSearchBar } from "../../v2/transcript-search-bar"
 import { focusPrompt } from "../../utils/tab-navigation"
 import {
@@ -152,9 +153,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   // not exist anymore to react to a request to close it. A nested session
   // view, such as the Agent Manager's sub-agent inspector, opts out so one
   // toggle cannot open search in two views at once.
+  const viewActive = useViewActive()
   const search = useTranscriptSearch()
   const toggleSearch = () => {
-    if (!hasMessages()) return
+    if (!viewActive() || !hasMessages()) return
     if (search.active()) search.closeSearch()
     else search.setActive(true)
   }
@@ -256,10 +258,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
 
   createEffect(
     on(
-      () => [expanded(), props.sessionID, revision()] as const,
-      ([open]) => {
+      () => [expanded(), props.sessionID, revision(), viewActive()] as const,
+      ([open, , , active]) => {
         cancel()
-        if (!open) return
+        if (!open || !active) return
         const version = ++run
         const next = new AbortController()
         controller = next
