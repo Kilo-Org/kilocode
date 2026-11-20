@@ -219,4 +219,8 @@ export const dict = {
   "tui.autoApprove.description": "Автоматично схвалювати запити дозволів для цього процесу",
   "tui.autoApprove.enabled": "Автосхвалення увімкнено. Запити дозволів схвалюються автоматично.",
   "tui.autoApprove.disabled": "Автосхвалення вимкнено.",
+
+  // Session transcript export
+  "session.export.success": "Запис сеансу експортовано у форматі Markdown.",
+  "session.export.error": "Не вдалося експортувати запис сеансу",
 }

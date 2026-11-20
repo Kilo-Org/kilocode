@@ -93,6 +93,15 @@ describe("slash actions", () => {
     expect(calls).toEqual([1])
   })
 
+  test("offers export as a local action with its Markdown and transcript aliases", () => {
+    const list = slashActions({ export: () => {} }, (key) => `t:${key}`)
+    expect(list).toMatchObject([{ kind: "action", name: "export", description: "t:command.session.export" }])
+    for (const name of ["export", "markdown", "transcript"]) {
+      expect(parseSlash(list, `/${name}`)?.entry).toBe(list[0])
+    }
+    expect(slashActions({}, (key) => key)).toEqual([])
+  })
+
   test("lists update-from-base only for a worktree that supplies the handler", () => {
     const run = () => {}
     expect(worktreeAction(true, run)).toBe(run)

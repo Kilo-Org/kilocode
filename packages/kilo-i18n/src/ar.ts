@@ -210,4 +210,8 @@ export const dict = {
   "tui.autoApprove.description": "الموافقة على طلبات الأذونات تلقائياً لهذه العملية",
   "tui.autoApprove.enabled": "تم تفعيل الموافقة التلقائية. ستتم الموافقة على طلبات الأذونات تلقائياً.",
   "tui.autoApprove.disabled": "تم تعطيل الموافقة التلقائية.",
+
+  // Session transcript export
+  "session.export.success": "تم تصدير سجل الجلسة بتنسيق Markdown.",
+  "session.export.error": "فشل تصدير سجل الجلسة",
 }

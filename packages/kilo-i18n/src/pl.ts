@@ -221,4 +221,8 @@ export const dict = {
   "tui.autoApprove.description": "Automatycznie zatwierdzaj prośby o uprawnienia dla tego procesu",
   "tui.autoApprove.enabled": "Automatyczne zatwierdzanie włączone. Prośby o uprawnienia są zatwierdzane automatycznie.",
   "tui.autoApprove.disabled": "Automatyczne zatwierdzanie wyłączone.",
+
+  // Session transcript export
+  "session.export.success": "Transkrypcja sesji została wyeksportowana jako Markdown.",
+  "session.export.error": "Nie udało się wyeksportować transkrypcji sesji",
 }

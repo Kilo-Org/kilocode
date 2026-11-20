@@ -199,4 +199,8 @@ export const dict = {
   "tui.autoApprove.description": "為此程序自動核准權限請求",
   "tui.autoApprove.enabled": "已啟用自動核准。權限請求將自動獲得核准。",
   "tui.autoApprove.disabled": "已停用自動核准。",
+
+  // Session transcript export
+  "session.export.success": "工作階段記錄已匯出為 Markdown。",
+  "session.export.error": "無法匯出工作階段記錄",
 }
