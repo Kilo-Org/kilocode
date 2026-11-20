@@ -589,7 +589,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
                 listOf(listOf("Start new session")),
             )
         }
-        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test")))
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test", created = System.currentTimeMillis().toDouble())))
         flush()
 
         assertEquals("ses_new", (opened.last() as SessionRef.Local).id)
@@ -638,6 +638,53 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/other")))
 
         assertTrue(opened.none { it is SessionRef.Local && it.id == "ses_new" })
+    }
+
+    fun `test sub-agent child created in the follow-up window is not adopted`() {
+        val opened = mutableListOf<SessionRef>()
+        armedFollowup { opened.add(it) }
+
+        emit(
+            ChatEventDto.SessionCreated(
+                "ses_child",
+                session("ses_child", dir = "/test", created = System.currentTimeMillis().toDouble())
+                    .copy(parentID = "ses_test"),
+            ),
+        )
+
+        assertTrue(opened.isEmpty())
+
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test", created = System.currentTimeMillis().toDouble())))
+
+        assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
+    }
+
+    fun `test session created before the follow-up answer is not adopted`() {
+        val opened = mutableListOf<SessionRef>()
+        armedFollowup { opened.add(it) }
+
+        emit(ChatEventDto.SessionCreated("ses_old", session("ses_old", dir = "/test")))
+
+        assertTrue(opened.isEmpty())
+    }
+
+    fun `test created event for the asking session itself is not adopted`() {
+        val opened = mutableListOf<SessionRef>()
+        armedFollowup { opened.add(it) }
+
+        emit(ChatEventDto.SessionCreated("ses_test", session("ses_test", created = System.currentTimeMillis().toDouble())))
+
+        assertTrue(opened.isEmpty())
+    }
+
+    fun `test follow-up arming adopts one session only`() {
+        val opened = mutableListOf<SessionRef>()
+        armedFollowup { opened.add(it) }
+
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test", created = System.currentTimeMillis().toDouble())))
+        emit(ChatEventDto.SessionCreated("ses_next", session("ses_next", dir = "/test", created = System.currentTimeMillis().toDouble())))
+
+        assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
     }
 
     fun `test rejectQuestion calls RPC`() {
@@ -978,6 +1025,29 @@ class PromptLifecycleTest : SessionControllerTestBase() {
             ),
         ),
     )
+
+    /**
+     * A prompted controller whose plan follow-up question was answered with "Start new session", so the
+     * created session that answers it may be adopted.
+     */
+    private fun armedFollowup(open: (SessionRef) -> Unit): SessionController {
+        val m = controller(open = open)
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+        flush()
+        return m
+    }
 
     private fun planWorkspace() = workspaceReady(
         agents = listOf(

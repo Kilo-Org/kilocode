@@ -130,7 +130,8 @@ class SessionController(
 ) : Disposable {
 
     private data class OrganizationTarget(val org: String?)
-    private data class Followup(val dir: String, val time: Long)
+    /** An answer that asked the CLI for a new session: [session] asked, [question] is the answered request. */
+    private data class Followup(val dir: String, val time: Long, val session: String?, val question: String)
     /** [submitted] is the message the create call itself delivered; every other dispatch still sends. */
     private data class Created(val id: String, val submitted: String? = null)
     private data class Pref(val agent: String?, val model: String?, val variants: List<String>, val variant: String?, val reset: Boolean)
@@ -1336,11 +1337,12 @@ class SessionController(
         promptRevision++
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size}" }
         val current = model.state
+        val asking = sid
         followup = if (current is SessionState.AwaitingQuestion
             && current.question.id == requestId
             && options.any { labels -> labels.any { it.trim() == FOLLOWUP_NEW_SESSION } }
         ) {
-            Followup(directory, System.currentTimeMillis())
+            Followup(directory, System.currentTimeMillis(), asking, requestId)
         } else null
         val follow = followup != null
         cs.launch {
@@ -3036,7 +3038,16 @@ class SessionController(
             return
         }
         if (pathKey(item.dir) != pathKey(session.directory)) return
+        // The created-session payload carries no creator, so identity is inferred instead: the gate refuses
+        // the session whose question was answered, accepts only a root session (no parent, not a tracked
+        // sub-agent child), and requires a session created after the answer was sent. A rejected candidate
+        // leaves the arming in place for the real follow-up session.
+        if (session.id == item.session) return
+        if (session.parentID != null) return
+        if (session.id in childIds) return
+        if (session.time.created < item.time.toDouble()) return
         followup = null
+        LOG.debug { "${ChatLogSummary.sid(session.id)} kind=followup adopt=true rid=${item.question}" }
         open(SessionRef.Local(session))
     }
 
