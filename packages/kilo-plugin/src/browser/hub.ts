@@ -44,6 +44,10 @@ export namespace BrowserHub {
    */
   export type Kind =
     | "unavailable"
+    /** The browser is connected but did not finish the call in time; it may have run in part. */
+    | "timeout"
+    /** The turn stopped before the browser answered: nothing ran if the call was never sent, and it may have run in part otherwise. */
+    | "cancelled"
     | "busy"
     | "taken"
     | "stopped"
@@ -59,7 +63,7 @@ export namespace BrowserHub {
    * (`no_hub`), or none whose extension has the selected browser profile (`no_profile`); a hub runs but no extension
    * ever connected to it (`unpaired`: not installed, "Allow local agents" off, or the pairing page ignored); an
    * extension was connected and went away (`disconnected`: the switch turned off, the browser closed); or one is
-   * connected but did not answer the call (`connected`: a timeout, a cancelled turn).
+   * connected and still does not serve the call (`connected`: its own `browser_unavailable` on a live socket).
    */
   export type Absence =
     | { kind: "no_hub" }

@@ -12,8 +12,10 @@ import type { SessionID } from "@opencode/schema/session-id"
 import { Effect, Option, Result, Scope, Stream } from "effect"
 import type { JsonSchema } from "effect"
 import {
+  CancelledError,
   IncompatibleError,
   NeedsPermissionError,
+  TimeoutError,
   UNAVAILABLE_MESSAGE,
   UNSUPPORTED_MESSAGE,
   StoppedError,
@@ -109,6 +111,16 @@ function failure(error: unknown) {
     return new Tool.Error({
       message: error.hint ? `${UNAVAILABLE_MESSAGE} ${error.hint}` : UNAVAILABLE_MESSAGE,
       metadata: { hint: error.hint, ...(error.effectsUncertain ? { effectsUncertain: true } : {}) },
+    })
+  }
+  if (error instanceof TimeoutError) {
+    return new Tool.Error({ message: error.message, metadata: { effectsUncertain: true } })
+  }
+  // A call cancelled in flight may have run in part, so the marker travels with it as it does for a timeout.
+  if (error instanceof CancelledError) {
+    return new Tool.Error({
+      message: error.message,
+      ...(error.effectsUncertain ? { metadata: { effectsUncertain: true } } : {}),
     })
   }
   if (error instanceof IncompatibleError) {
