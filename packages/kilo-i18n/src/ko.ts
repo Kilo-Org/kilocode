@@ -161,6 +161,18 @@ export const dict = {
   "browser.state.unavailable": "사용할 수 없음",
   "browser.state.readyHint": "Kilo가 소유한 Chromium 프로필이며 첫 브라우저 호출에서 시작됩니다",
   "browser.state.extensionHint": "Kilo 브라우저 확장을 연결해 자신의 브라우저를 사용하세요",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "{{origin}}의 페이지 읽기",
+  "browser.permission.act.title": "{{origin}}에서 클릭 및 입력",
+  "browser.permission.navigate.title": "{{origin}}의 페이지 열기",
+  "browser.permission.read.detail": "승인하면 이 세션이 끝날 때까지 {{origin}}의 페이지를 읽을 수 있습니다.",
+  "browser.permission.act.detail":
+    "승인하면 이 세션이 끝날 때까지 {{origin}}에서 클릭, 입력, 페이지 스크립트 실행을 할 수 있습니다.",
+  "browser.permission.navigate.detail": "승인하면 이 세션이 끝날 때까지 {{origin}}의 페이지를 열 수 있습니다.",
+  "browser.permission.frame": "이 출처는 페이지 내부의 프레임이며 페이지 자체가 아닙니다.",
+  "browser.permission.sensitive.title": "{{origin}}의 민감한 브라우저 단계",
+  "browser.permission.sensitive.reason": "이유: {{reason}}",
+  "browser.permission.sensitive.once": "이 단계는 사람만 승인할 수 있습니다. 승인은 이 단계 하나에만 적용됩니다.",
   "browser.notice.extension":
     "Kilo 브라우저 확장이 {{browser}}에 연결되었습니다. 브라우저 도구에 내장 브라우저 대신 내 브라우저를 사용할까요?",
   "browser.notice.switch": "내 브라우저 사용",

@@ -167,6 +167,19 @@ export const dict = {
   "browser.state.unavailable": "indisponível",
   "browser.state.readyHint": "Um perfil Chromium do Kilo, iniciado na primeira chamada do navegador",
   "browser.state.extensionHint": "Conecte a extensão de navegador do Kilo para usar seu próprio navegador",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Ler páginas em {{origin}}",
+  "browser.permission.act.title": "Clicar e digitar em {{origin}}",
+  "browser.permission.navigate.title": "Abrir páginas em {{origin}}",
+  "browser.permission.read.detail": "Aprovar permite que esta sessão leia páginas em {{origin}} até ela terminar.",
+  "browser.permission.act.detail":
+    "Aprovar permite que esta sessão clique, digite e execute scripts da página em {{origin}} até ela terminar.",
+  "browser.permission.navigate.detail": "Aprovar permite que esta sessão abra páginas em {{origin}} até ela terminar.",
+  "browser.permission.frame": "Esta origem é um quadro dentro da página, não a página em si.",
+  "browser.permission.sensitive.title": "Etapa sensível do navegador em {{origin}}",
+  "browser.permission.sensitive.reason": "Motivo: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Só uma pessoa pode aprovar esta etapa. A aprovação vale apenas para esta etapa.",
   "browser.notice.extension":
     "A extensão de navegador do Kilo está conectada no {{browser}}. Usar seu próprio navegador nas ferramentas de navegador em vez do navegador incluído?",
   "browser.notice.switch": "Usar meu navegador",
@@ -182,6 +195,7 @@ export const dict = {
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Alternar aprovação automática",
   "tui.autoApprove.description": "Aprovar solicitações de permissão automaticamente para este processo",
-  "tui.autoApprove.enabled": "Aprovação automática ativada. As solicitações de permissão são aprovadas automaticamente.",
+  "tui.autoApprove.enabled":
+    "Aprovação automática ativada. As solicitações de permissão são aprovadas automaticamente.",
   "tui.autoApprove.disabled": "Aprovação automática desativada.",
 }

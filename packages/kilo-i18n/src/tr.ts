@@ -167,6 +167,19 @@ export const dict = {
   "browser.state.unavailable": "kullanılamıyor",
   "browser.state.readyHint": "Kilo'ya ait bir Chromium profili; ilk tarayıcı çağrısında başlar",
   "browser.state.extensionHint": "Kendi tarayıcınızı kullanmak için Kilo tarayıcı uzantısını bağlayın",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "{{origin}} üzerindeki sayfaları oku",
+  "browser.permission.act.title": "{{origin}} üzerinde tıkla ve yaz",
+  "browser.permission.navigate.title": "{{origin}} üzerinde sayfa aç",
+  "browser.permission.read.detail":
+    "Onaylarsanız bu oturum, sona erene kadar {{origin}} üzerindeki sayfaları okuyabilir.",
+  "browser.permission.act.detail":
+    "Onaylarsanız bu oturum, sona erene kadar {{origin}} üzerinde tıklayabilir, yazı yazabilir ve sayfa betikleri çalıştırabilir.",
+  "browser.permission.navigate.detail": "Onaylarsanız bu oturum, sona erene kadar {{origin}} üzerinde sayfa açabilir.",
+  "browser.permission.frame": "Bu kaynak sayfanın içindeki bir çerçevedir, sayfanın kendisi değildir.",
+  "browser.permission.sensitive.title": "{{origin}} üzerinde hassas tarayıcı adımı",
+  "browser.permission.sensitive.reason": "Neden: {{reason}}",
+  "browser.permission.sensitive.once": "Bu adımı yalnızca bir kişi onaylayabilir. Onay yalnızca bu tek adımı kapsar.",
   "browser.notice.extension":
     "Kilo tarayıcı uzantısı {{browser}} içinde bağlı. Tarayıcı araçları için yerleşik tarayıcı yerine kendi tarayıcınız kullanılsın mı?",
   "browser.notice.switch": "Tarayıcımı kullan",

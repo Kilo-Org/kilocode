@@ -56,7 +56,8 @@ export const dict = {
   "marketplace.install.failed": "فشل التثبيت",
   "marketplace.install.done": "تم",
   "marketplace.install.close": "إغلاق",
-  "marketplace.install.mcp.signIn.message": "تم تثبيت {{name}} ولكنه يحتاج إلى تسجيل الدخول قبل أن يمكن استخدام أدواته.",
+  "marketplace.install.mcp.signIn.message":
+    "تم تثبيت {{name}} ولكنه يحتاج إلى تسجيل الدخول قبل أن يمكن استخدام أدواته.",
   "marketplace.install.mcp.signIn.button": "تسجيل الدخول",
   "marketplace.install.mcp.signIn.waiting": "في انتظار تسجيل الدخول عبر المتصفح…",
   "marketplace.install.mcp.signIn.cancel": "إلغاء",
@@ -160,6 +161,18 @@ export const dict = {
   "browser.state.unavailable": "غير متاح",
   "browser.state.readyHint": "ملف تعريف Chromium مملوك لـ Kilo يبدأ عند أول استدعاء للمتصفح",
   "browser.state.extensionHint": "اربط إضافة متصفح Kilo لاستخدام متصفحك الخاص",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "قراءة الصفحات على {{origin}}",
+  "browser.permission.act.title": "النقر والكتابة على {{origin}}",
+  "browser.permission.navigate.title": "فتح الصفحات على {{origin}}",
+  "browser.permission.read.detail": "تتيح الموافقة لهذه الجلسة قراءة الصفحات على {{origin}} حتى تنتهي.",
+  "browser.permission.act.detail":
+    "تتيح الموافقة لهذه الجلسة النقر والكتابة وتشغيل نصوص الصفحة على {{origin}} حتى تنتهي.",
+  "browser.permission.navigate.detail": "تتيح الموافقة لهذه الجلسة فتح الصفحات على {{origin}} حتى تنتهي.",
+  "browser.permission.frame": "هذا المصدر إطار داخل الصفحة، وليس الصفحة نفسها.",
+  "browser.permission.sensitive.title": "خطوة متصفح حساسة على {{origin}}",
+  "browser.permission.sensitive.reason": "السبب: {{reason}}",
+  "browser.permission.sensitive.once": "لا يمكن إلا لشخص الموافقة على هذه الخطوة. تغطي الموافقة هذه الخطوة فقط.",
   "browser.notice.extension":
     "إضافة متصفح Kilo متصلة في {{browser}}. هل تريد استخدام متصفحك الخاص لأدوات المتصفح بدلًا من المتصفح المرفق؟",
   "browser.notice.switch": "استخدام متصفحي",

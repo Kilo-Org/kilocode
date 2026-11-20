@@ -193,6 +193,18 @@ export const dict = {
   "browser.state.unavailable": "unavailable",
   "browser.state.readyHint": "A Kilo-owned Chromium profile, started by the first browser call",
   "browser.state.extensionHint": "Connect the Kilo browser extension to drive your own browser",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Read pages on {{origin}}",
+  "browser.permission.act.title": "Click and type on {{origin}}",
+  "browser.permission.navigate.title": "Open pages on {{origin}}",
+  "browser.permission.read.detail": "Approving lets this conversation read pages on {{origin}} until it ends.",
+  "browser.permission.act.detail":
+    "Approving lets this conversation click, type and run page scripts on {{origin}} until it ends.",
+  "browser.permission.navigate.detail": "Approving lets this conversation open pages on {{origin}} until it ends.",
+  "browser.permission.frame": "This origin is a frame inside the page, not the page itself.",
+  "browser.permission.sensitive.title": "Sensitive browser step on {{origin}}",
+  "browser.permission.sensitive.reason": "Reason: {{reason}}",
+  "browser.permission.sensitive.once": "Only a person can approve this step. The approval covers this one step.",
   "browser.notice.extension":
     "The Kilo browser extension is connected in {{browser}}. Use your own browser for the browser tools instead of the bundled one?",
   "browser.notice.switch": "Use my browser",

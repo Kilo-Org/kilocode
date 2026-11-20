@@ -165,6 +165,18 @@ export const dict = {
   "browser.state.unavailable": "utilgængelig",
   "browser.state.readyHint": "En Chromium-profil ejet af Kilo, startet ved det første browserkald",
   "browser.state.extensionHint": "Forbind Kilo-browserudvidelsen for at bruge din egen browser",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Læs sider på {{origin}}",
+  "browser.permission.act.title": "Klik og skriv på {{origin}}",
+  "browser.permission.navigate.title": "Åbn sider på {{origin}}",
+  "browser.permission.read.detail": "Godkendelse lader denne session læse sider på {{origin}}, indtil den slutter.",
+  "browser.permission.act.detail":
+    "Godkendelse lader denne session klikke, skrive og køre sideskripter på {{origin}}, indtil den slutter.",
+  "browser.permission.navigate.detail": "Godkendelse lader denne session åbne sider på {{origin}}, indtil den slutter.",
+  "browser.permission.frame": "Denne oprindelse er en ramme inde i siden, ikke selve siden.",
+  "browser.permission.sensitive.title": "Følsomt browsertrin på {{origin}}",
+  "browser.permission.sensitive.reason": "Årsag: {{reason}}",
+  "browser.permission.sensitive.once": "Kun en person kan godkende dette trin. Godkendelsen dækker kun dette ene trin.",
   "browser.notice.extension":
     "Kilo-browserudvidelsen er forbundet i {{browser}}. Vil du bruge din egen browser til browserværktøjerne i stedet for den medfølgende?",
   "browser.notice.switch": "Brug min browser",

@@ -169,6 +169,19 @@ export const dict = {
   "browser.state.unavailable": "niet beschikbaar",
   "browser.state.readyHint": "Een Chromium-profiel van Kilo, gestart bij de eerste browseroproep",
   "browser.state.extensionHint": "Verbind de Kilo-browserextensie om je eigen browser te gebruiken",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Pagina's lezen op {{origin}}",
+  "browser.permission.act.title": "Klikken en typen op {{origin}}",
+  "browser.permission.navigate.title": "Pagina's openen op {{origin}}",
+  "browser.permission.read.detail": "Na goedkeuring kan deze sessie tot het einde pagina's op {{origin}} lezen.",
+  "browser.permission.act.detail":
+    "Na goedkeuring kan deze sessie tot het einde op {{origin}} klikken, typen en paginascripts uitvoeren.",
+  "browser.permission.navigate.detail": "Na goedkeuring kan deze sessie tot het einde pagina's op {{origin}} openen.",
+  "browser.permission.frame": "Deze oorsprong is een frame binnen de pagina, niet de pagina zelf.",
+  "browser.permission.sensitive.title": "Gevoelige browserstap op {{origin}}",
+  "browser.permission.sensitive.reason": "Reden: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Alleen een persoon kan deze stap goedkeuren. De goedkeuring geldt alleen voor deze stap.",
   "browser.notice.extension":
     "De Kilo-browserextensie is verbonden in {{browser}}. Je eigen browser gebruiken voor de browsertools in plaats van de meegeleverde?",
   "browser.notice.switch": "Mijn browser gebruiken",
@@ -184,6 +197,7 @@ export const dict = {
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Automatisch goedkeuren wisselen",
   "tui.autoApprove.description": "Keur verzoeken om toestemming automatisch goed voor dit proces",
-  "tui.autoApprove.enabled": "Automatisch goedkeuren ingeschakeld. Verzoeken om toestemming worden automatisch goedgekeurd.",
+  "tui.autoApprove.enabled":
+    "Automatisch goedkeuren ingeschakeld. Verzoeken om toestemming worden automatisch goedgekeurd.",
   "tui.autoApprove.disabled": "Automatisch goedkeuren uitgeschakeld.",
 }

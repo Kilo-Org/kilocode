@@ -168,6 +168,21 @@ export const dict = {
   "browser.state.unavailable": "nicht verfügbar",
   "browser.state.readyHint": "Ein Chromium-Profil von Kilo, gestartet beim ersten Browser-Aufruf",
   "browser.state.extensionHint": "Kilo-Browser-Erweiterung verbinden, um den eigenen Browser zu steuern",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Seiten auf {{origin}} lesen",
+  "browser.permission.act.title": "Auf {{origin}} klicken und Text eingeben",
+  "browser.permission.navigate.title": "Seiten auf {{origin}} öffnen",
+  "browser.permission.read.detail":
+    "Die Genehmigung erlaubt dieser Sitzung, bis zu ihrem Ende Seiten auf {{origin}} zu lesen.",
+  "browser.permission.act.detail":
+    "Die Genehmigung erlaubt dieser Sitzung, bis zu ihrem Ende auf {{origin}} zu klicken, Text einzugeben und Seitenskripte auszuführen.",
+  "browser.permission.navigate.detail":
+    "Die Genehmigung erlaubt dieser Sitzung, bis zu ihrem Ende Seiten auf {{origin}} zu öffnen.",
+  "browser.permission.frame": "Diese Origin ist ein Frame innerhalb der Seite, nicht die Seite selbst.",
+  "browser.permission.sensitive.title": "Sensibler Browser-Schritt auf {{origin}}",
+  "browser.permission.sensitive.reason": "Grund: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Nur eine Person kann diesen Schritt genehmigen. Die Genehmigung gilt nur für diesen einen Schritt.",
   "browser.notice.extension":
     "Die Kilo-Browser-Erweiterung ist in {{browser}} verbunden. Für die Browser-Tools den eigenen Browser statt des mitgelieferten verwenden?",
   "browser.notice.switch": "Meinen Browser verwenden",

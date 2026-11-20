@@ -168,6 +168,21 @@ export const dict = {
   "browser.state.unavailable": "indisponible",
   "browser.state.readyHint": "Un profil Chromium géré par Kilo, lancé au premier appel du navigateur",
   "browser.state.extensionHint": "Connectez l'extension de navigateur Kilo pour piloter votre navigateur",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Lire les pages sur {{origin}}",
+  "browser.permission.act.title": "Cliquer et saisir du texte sur {{origin}}",
+  "browser.permission.navigate.title": "Ouvrir des pages sur {{origin}}",
+  "browser.permission.read.detail":
+    "L'approbation permet à cette session de lire des pages sur {{origin}} jusqu'à sa fin.",
+  "browser.permission.act.detail":
+    "L'approbation permet à cette session de cliquer, de saisir du texte et d'exécuter des scripts de page sur {{origin}} jusqu'à sa fin.",
+  "browser.permission.navigate.detail":
+    "L'approbation permet à cette session d'ouvrir des pages sur {{origin}} jusqu'à sa fin.",
+  "browser.permission.frame": "Cette origine est un cadre à l'intérieur de la page, pas la page elle-même.",
+  "browser.permission.sensitive.title": "Étape sensible du navigateur sur {{origin}}",
+  "browser.permission.sensitive.reason": "Motif : {{reason}}",
+  "browser.permission.sensitive.once":
+    "Seule une personne peut approuver cette étape. L'approbation ne couvre que cette étape.",
   "browser.notice.extension":
     "L'extension de navigateur Kilo est connectée dans {{browser}}. Utiliser votre propre navigateur pour les outils de navigateur au lieu du navigateur intégré ?",
   "browser.notice.switch": "Utiliser mon navigateur",
@@ -183,6 +198,7 @@ export const dict = {
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Basculer l'approbation automatique",
   "tui.autoApprove.description": "Approuver automatiquement les demandes d'autorisation pour ce processus",
-  "tui.autoApprove.enabled": "Approbation automatique activée. Les demandes d'autorisation sont approuvées automatiquement.",
+  "tui.autoApprove.enabled":
+    "Approbation automatique activée. Les demandes d'autorisation sont approuvées automatiquement.",
   "tui.autoApprove.disabled": "Approbation automatique désactivée.",
 }

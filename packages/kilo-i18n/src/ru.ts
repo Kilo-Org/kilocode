@@ -168,6 +168,20 @@ export const dict = {
   "browser.state.unavailable": "недоступен",
   "browser.state.readyHint": "Профиль Chromium, принадлежащий Kilo, запускается при первом вызове браузера",
   "browser.state.extensionHint": "Подключите расширение браузера Kilo, чтобы управлять своим браузером",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Читать страницы на {{origin}}",
+  "browser.permission.act.title": "Нажимать и вводить текст на {{origin}}",
+  "browser.permission.navigate.title": "Открывать страницы на {{origin}}",
+  "browser.permission.read.detail": "Одобрение позволяет этой сессии читать страницы на {{origin}} до её завершения.",
+  "browser.permission.act.detail":
+    "Одобрение позволяет этой сессии нажимать, вводить текст и запускать скрипты страницы на {{origin}} до её завершения.",
+  "browser.permission.navigate.detail":
+    "Одобрение позволяет этой сессии открывать страницы на {{origin}} до её завершения.",
+  "browser.permission.frame": "Этот источник — фрейм внутри страницы, а не сама страница.",
+  "browser.permission.sensitive.title": "Чувствительный шаг браузера на {{origin}}",
+  "browser.permission.sensitive.reason": "Причина: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Одобрить этот шаг может только человек. Одобрение распространяется только на этот один шаг.",
   "browser.notice.extension":
     "Расширение браузера Kilo подключено в {{browser}}. Использовать свой браузер для инструментов браузера вместо встроенного?",
   "browser.notice.switch": "Использовать мой браузер",

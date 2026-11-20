@@ -167,6 +167,21 @@ export const dict = {
   "browser.state.unavailable": "niedostępna",
   "browser.state.readyHint": "Profil Chromium należący do Kilo, uruchamiany przy pierwszym wywołaniu przeglądarki",
   "browser.state.extensionHint": "Podłącz rozszerzenie przeglądarki Kilo, aby używać własnej przeglądarki",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Odczytuj strony w {{origin}}",
+  "browser.permission.act.title": "Klikaj i wpisuj tekst w {{origin}}",
+  "browser.permission.navigate.title": "Otwieraj strony w {{origin}}",
+  "browser.permission.read.detail":
+    "Zatwierdzenie pozwala tej sesji odczytywać strony w {{origin}} do jej zakończenia.",
+  "browser.permission.act.detail":
+    "Zatwierdzenie pozwala tej sesji klikać, wpisywać tekst i uruchamiać skrypty strony w {{origin}} do jej zakończenia.",
+  "browser.permission.navigate.detail":
+    "Zatwierdzenie pozwala tej sesji otwierać strony w {{origin}} do jej zakończenia.",
+  "browser.permission.frame": "To źródło jest ramką wewnątrz strony, a nie samą stroną.",
+  "browser.permission.sensitive.title": "Krok wrażliwy przeglądarki w {{origin}}",
+  "browser.permission.sensitive.reason": "Powód: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Ten krok może zatwierdzić tylko osoba. Zatwierdzenie obejmuje wyłącznie ten jeden krok.",
   "browser.notice.extension":
     "Rozszerzenie przeglądarki Kilo jest połączone w przeglądarce {{browser}}. Używać własnej przeglądarki w narzędziach przeglądarki zamiast dołączonej?",
   "browser.notice.switch": "Użyj mojej przeglądarki",

@@ -171,6 +171,19 @@ export const dict = {
   "browser.state.unavailable": "nedostupno",
   "browser.state.readyHint": "Kilo-ov Chromium profil, pokreće se pri prvom pozivu preglednika",
   "browser.state.extensionHint": "Povežite Kilo proširenje preglednika da koristite svoj preglednik",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Čitaj stranice na {{origin}}",
+  "browser.permission.act.title": "Klikaj i unosi tekst na {{origin}}",
+  "browser.permission.navigate.title": "Otvori stranice na {{origin}}",
+  "browser.permission.read.detail": "Odobravanjem ova sesija može čitati stranice na {{origin}} dok se ne završi.",
+  "browser.permission.act.detail":
+    "Odobravanjem ova sesija može klikati, unositi tekst i pokretati skripte stranice na {{origin}} dok se ne završi.",
+  "browser.permission.navigate.detail":
+    "Odobravanjem ova sesija može otvarati stranice na {{origin}} dok se ne završi.",
+  "browser.permission.frame": "Ovaj izvor je okvir unutar stranice, a ne sama stranica.",
+  "browser.permission.sensitive.title": "Osjetljiv korak preglednika na {{origin}}",
+  "browser.permission.sensitive.reason": "Razlog: {{reason}}",
+  "browser.permission.sensitive.once": "Samo osoba može odobriti ovaj korak. Odobrenje pokriva samo ovaj korak.",
   "browser.notice.extension":
     "Kilo proširenje preglednika je povezano u pregledniku {{browser}}. Koristiti vlastiti preglednik za alate preglednika umjesto ugrađenog?",
   "browser.notice.switch": "Koristi moj preglednik",

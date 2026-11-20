@@ -163,6 +163,19 @@ export const dict = {
   "browser.state.unavailable": "ไม่พร้อมใช้งาน",
   "browser.state.readyHint": "โปรไฟล์ Chromium ของ Kilo จะเริ่มเมื่อเรียกใช้เบราว์เซอร์ครั้งแรก",
   "browser.state.extensionHint": "เชื่อมต่อส่วนขยายเบราว์เซอร์ Kilo เพื่อใช้เบราว์เซอร์ของคุณเอง",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "อ่านหน้าเว็บบน {{origin}}",
+  "browser.permission.act.title": "คลิกและพิมพ์บน {{origin}}",
+  "browser.permission.navigate.title": "เปิดหน้าเว็บบน {{origin}}",
+  "browser.permission.read.detail": "การอนุมัติจะให้เซสชันนี้อ่านหน้าเว็บบน {{origin}} ได้จนกว่าเซสชันจะสิ้นสุด",
+  "browser.permission.act.detail":
+    "การอนุมัติจะให้เซสชันนี้คลิก พิมพ์ และเรียกใช้สคริปต์ของหน้าบน {{origin}} ได้จนกว่าเซสชันจะสิ้นสุด",
+  "browser.permission.navigate.detail": "การอนุมัติจะให้เซสชันนี้เปิดหน้าเว็บบน {{origin}} ได้จนกว่าเซสชันจะสิ้นสุด",
+  "browser.permission.frame": "ต้นทางนี้เป็นเฟรมภายในหน้า ไม่ใช่ตัวหน้าเอง",
+  "browser.permission.sensitive.title": "ขั้นตอนเบราว์เซอร์ที่ละเอียดอ่อนบน {{origin}}",
+  "browser.permission.sensitive.reason": "เหตุผล: {{reason}}",
+  "browser.permission.sensitive.once":
+    "มีเพียงบุคคลเท่านั้นที่อนุมัติขั้นตอนนี้ได้ การอนุมัติครอบคลุมเพียงขั้นตอนนี้เท่านั้น",
   "browser.notice.extension":
     "ส่วนขยายเบราว์เซอร์ Kilo เชื่อมต่ออยู่ใน {{browser}} ต้องการใช้เบราว์เซอร์ของคุณเองกับเครื่องมือเบราว์เซอร์แทนเบราว์เซอร์ที่มาพร้อมหรือไม่",
   "browser.notice.switch": "ใช้เบราว์เซอร์ของฉัน",
