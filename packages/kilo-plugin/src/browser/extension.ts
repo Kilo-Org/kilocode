@@ -616,9 +616,7 @@ export class ExtensionBackend implements BrowserBackend {
     const read: SnapshotPart = explicit
       ? { snapshot: text, frames }
       : await this.snapshotPart(port, session, scoped, frames)
-    // The tab list runs with the grant the snapshot read was given, so the page it just read keeps its URL.
-    const listed = ctx.tabs ? { ...scoped, authorized: read.authorized ?? scoped.authorized } : undefined
-    const page = own?.page ?? (listed ? await this.selectedPage(port, session, listed) : undefined)
+    const page = own?.page ?? (await this.selectedPage(port, session, scoped, read.authorized))
     // A stop that landed while the page was read ends the page state too: the stopped turn reads nothing more.
     if (this.halts(session, turn)) return result
     const body = sections({
@@ -653,9 +651,19 @@ export class ExtensionBackend implements BrowserBackend {
     }
   }
 
-  /** The session's own tab as the tab list names it; a list that cannot say names no page. */
-  private selectedPage(port: BrowserHub.Port, session: string, ctx: CallContext) {
-    return this.read(port, session, "browser_tabs", { action: "list" }, ctx).then(
+  /**
+   * The session's own tab as the tab list names it; a list that cannot say names no page, and none is read when the
+   * rules skip it. The list runs with the grant the snapshot read was given, so the page it just read keeps its URL.
+   */
+  private async selectedPage(
+    port: BrowserHub.Port,
+    session: string,
+    ctx: PageContext,
+    authorized: readonly string[] | undefined,
+  ) {
+    if (!ctx.tabs) return undefined
+    const listed = { ...ctx, authorized: authorized ?? ctx.authorized }
+    return this.read(port, session, "browser_tabs", { action: "list" }, listed).then(
       (value) => (value.isError === true ? undefined : selected(texts(value.content))),
       () => undefined,
     )
