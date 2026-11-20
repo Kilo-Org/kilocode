@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 167,
-    "markedLines": 3020,
+    "markedLines": 3024,
     "unmarkedLines": 560,
     "deletedFiles": 0
   },
@@ -17,8 +17,8 @@
       "unmarked": "Test-only scripted server and spawn options for the Kilo catalog wait; the seam above explains why the harness lines are not marked."
     },
     "packages/cli/src/run/noninteractive.ts": {
-      "rung": 3,
-      "seam": "`run --auto` replies `once` to every permission request. A request whose metadata sets `interactive: true` is rejected instead, so a headless run cannot approve it. The Kilo sandbox asks `sandbox_escalation` with that flag before a Git command runs outside the sandbox. No plugin hook reaches the CLI's permission replies (the permission domain has only `evaluate`), and the host does not own the non-interactive run loop. Upstream never sets the flag, so its behavior does not change."
+      "rung": 4,
+      "seam": "`run --auto` replies `once` to every permission request. A request whose metadata sets `interactive: true` is rejected instead, so a headless run cannot approve it; the Kilo sandbox asks `sandbox_escalation` with that flag before a Git command runs outside the sandbox. A plain run's rejected ask now also marks the prompt, and the final error carries the diagnostic from `packages/cli/src/kilocode/run-permission.ts`; `--auto` runs never set the mark, so a rejected escalation stays an expected autonomous outcome. No plugin hook reaches the CLI's permission replies (the permission domain has only `evaluate`), the host does not own the non-interactive run loop, and that loop owns the exit code, so the Kilo value is a module called from one marked line. Upstream never sets the flag and never marks a run, so its behavior does not change."
     },
     "packages/core/src/tool-output.ts": {
       "rung": 3,
