@@ -1333,6 +1333,8 @@ class KiloBackendAppServiceTest {
 
         ready(svc)
 
+        assertNotNull(svc.profile, "the account must be published before the step")
+        assertNotNull(appStateDto(svc.appState.value).profile, "the account must be published before the step")
         mock.profileStatus = 401
         assertNull(svc.completeLogin(null))
         assertNull(svc.profile)
@@ -1347,6 +1349,8 @@ class KiloBackendAppServiceTest {
 
         ready(svc)
 
+        assertNotNull(svc.profile, "the account must be published before the step")
+        assertNotNull(appStateDto(svc.appState.value).profile, "the account must be published before the step")
         mock.profileStatus = 401
         assertNull(svc.setOrganization("org_1"))
         assertNull(svc.profile)

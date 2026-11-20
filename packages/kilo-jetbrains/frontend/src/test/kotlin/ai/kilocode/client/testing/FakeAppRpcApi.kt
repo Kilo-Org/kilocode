@@ -448,7 +448,10 @@ class FakeAppRpcApi : KiloAppRpcApi {
         completeDirectories.add(directory)
         completeGate?.await()
         completeError?.let { throw it }
-        completeResult?.let { return it }
+        completeResult?.let { result ->
+            result.profile?.let { p -> fakeProfile = p }
+            return result
+        }
         return ProfileSyncDto(profile = fakeProfile)
     }
 

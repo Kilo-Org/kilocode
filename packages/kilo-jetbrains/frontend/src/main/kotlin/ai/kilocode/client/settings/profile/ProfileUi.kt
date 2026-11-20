@@ -322,6 +322,8 @@ internal class ProfileUi(
                 val profile = app.refreshProfile()
                 val state = app.state.value
                 withContext(edt) {
+                    // A completed read answers the notice: an account clears it, and so does a signed-out answer.
+                    if (profile != null || state.profile == null) login = LoginState.Idle
                     update(profile ?: state.profile, state.status)
                     if (profile != null) account.setNotice(null)
                     account.setRefreshing(false)

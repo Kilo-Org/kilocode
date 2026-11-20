@@ -656,7 +656,7 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test failed profile read after an organization switch keeps the account and the previous organization`() {
+    fun `test failed profile read after an organization switch keeps the account and the previous selection`() {
         val orgs = listOf(ProfileOrganizationDto(id = "org_1", name = "Acme", role = "ADMIN"))
         val personal = ProfileDto(
             email = "alice@test.com",
@@ -675,7 +675,7 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
             val t = text(panel)
             assertTrue("account must stay visible", t.contains("Alice"))
             assertTrue("notice must be shown", t.contains(notice))
-            assertEquals("combo must show the previous organization", 0, combos(panel).single().selectedIndex)
+            assertEquals("combo must show the previous selection", 0, combos(panel).single().selectedIndex)
             assertTrue("Refresh must stay reachable", buttons(panel).any { it.text == "Refresh" })
         }
         assertEquals(listOf<String?>("org_1"), rpc.orgSelections)
@@ -752,6 +752,19 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
             assertFalse("signed-out copy must not appear", t.contains("Not logged in"))
             assertTrue("Refresh must be offered", buttons(panel).any { it.text == "Refresh" })
             assertFalse("the sign-in must not be restarted", buttons(panel).any { it.text == "Try Again" })
+        }
+
+        edt {
+            rpc.completeResult = null
+            rpc.fakeProfile = ProfileDto(email = "alice@test.com", name = "Alice", balance = ProfileBalanceDto(10.0))
+            buttons(panel).first { it.text == "Refresh" }.doClick()
+        }
+        flush()
+
+        edt {
+            val t = text(panel)
+            assertTrue("the account must be shown", t.contains("alice@test.com"))
+            assertFalse("a read that answers signed-in clears the notice", t.contains(notice))
         }
     }
 
