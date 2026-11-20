@@ -1,6 +1,0 @@
-These tools drive the user's own browser through the Kilo extension, not a separate automated
-browser: the tabs they open sit in a Kilo tab group in the user's window, so the user watches
-the page you act on. The extension asks the user for permission per site before you read, act
-on or navigate a page, and a sensitive step (a password field, an OAuth sign-in page, a file
-upload) is asked separately. The user can take a tab back at any time; a call on a taken tab
-fails, so ask before retrying it.

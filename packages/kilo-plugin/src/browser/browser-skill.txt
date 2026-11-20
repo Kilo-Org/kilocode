@@ -1,3 +1,5 @@
+# Browser automation
+
 Use Code Mode (`execute`) to search for the browser action you need. For example,
 `return search({ namespace: "browser", query: "navigate" })` returns its signature.
 Call the exact path shown, await it, and return the result.

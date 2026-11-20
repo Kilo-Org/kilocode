@@ -701,20 +701,22 @@ describe("browser skill text", () => {
     const [skill] = host.skills
     expect(skill.id).toBe(SKILL)
     expect(skill.description).toBe("Use to inspect or interact with the user's own browser through the Kilo extension.")
-    expect(skill.content).toContain("drive the user's own browser through the Kilo extension")
-    expect(skill.content).toContain("Kilo tab group")
-    expect(skill.content).toContain("permission per site")
-    expect(skill.content).toContain("sensitive step")
-    expect(skill.content).toContain("take a tab back")
+    // The description is the whole backend difference: the instructions stay the same and never name Playwright.
     expect(skill.content).not.toContain("Playwright")
+    expect(skill.content.startsWith("# Browser automation\n\nUse Code Mode")).toBe(true)
   })
 
-  test("the Playwright backend keeps the Playwright wording and the extension paragraph out", async () => {
+  test("the Playwright backend keeps the Playwright wording", async () => {
     const [skill] = (await boot({ backend: "playwright" })).skills
     expect(skill.description).toBe("Use to inspect or interact with a web page using Playwright.")
     expect(skill.content.startsWith("# Browser automation\n\nUse Code Mode")).toBe(true)
     expect(skill.content).not.toContain("Kilo extension")
-    expect(skill.content).not.toContain("Kilo tab group")
+  })
+
+  test("the instructions are the same on both backends", async () => {
+    const [extension] = (await boot({ backend: "extension" })).skills
+    const [playwright] = (await boot({ backend: "playwright" })).skills
+    expect(extension.content).toBe(playwright.content)
   })
 
   test("both backends say browser_type replaces the content and slowly types at the caret", async () => {
@@ -736,7 +738,7 @@ describe("browser skill text", () => {
     }
   })
 
-  test("a backend change swaps the text for the next turn without a restart", async () => {
+  test("a backend change swaps the description for the next turn without a restart", async () => {
     let backend: Browser["backend"] = "extension"
     const host = await boot(() => ({ backend }))
     expect(host.skills[0].description).toContain("Kilo extension")
@@ -745,12 +747,13 @@ describe("browser skill text", () => {
     await host.publish("config.updated")
     await host.reloaded(1)
     expect(host.skills[0].description).toBe("Use to inspect or interact with a web page using Playwright.")
-    expect(host.skills[0].content).not.toContain("Kilo tab group")
 
     backend = "extension"
     await host.publish("config.updated")
     await host.reloaded(2)
-    expect(host.skills[0].content).toContain("Kilo tab group")
+    expect(host.skills[0].description).toBe(
+      "Use to inspect or interact with the user's own browser through the Kilo extension.",
+    )
   })
 })
 
