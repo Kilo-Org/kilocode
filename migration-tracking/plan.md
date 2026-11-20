@@ -74,7 +74,6 @@ The technical rules (direction, placement, clients, identity, behavioral referen
 
 Not carried, or post-cutover and non-gating unless explicitly made a gate:
 
-- voice and speech-to-text;
 - image generation;
 - team and incremental sharing;
 - legacy TUI extras;
