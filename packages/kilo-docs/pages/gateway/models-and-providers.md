@@ -121,3 +121,13 @@ curl -X POST "https://ai-gateway.kilo.ai/api/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{"model": "kilo-auto/efficient", "messages": [{"role": "user", "content": "Design a database schema"}]}'
 ```
+
+### Resolved model response header
+
+An Auto model picks its underlying model per request, so the concrete model that answers can differ from the tier you requested. When the requested model is a `kilo-auto/*` tier, the response includes a `x-kilo-resolved-model` header naming that model:
+
+```
+x-kilo-resolved-model: anthropic/claude-sonnet-4.6
+```
+
+The header is set on both streaming and non-streaming responses, so clients that read only headers -- or that drop the body's `model` field -- can still see which model served the request. Requests for a direct (non-Auto) model get no such header.
