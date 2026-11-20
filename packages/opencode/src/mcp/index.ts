@@ -146,11 +146,18 @@ export type Status = Schema.Schema.Type<typeof Status>
 
 // Store transports for OAuth servers to allow finishing auth
 type TransportWithAuth = StreamableHTTPClientTransport | SSEClientTransport
-const pendingOAuthTransports = new Map<string, { transport: TransportWithAuth; provider?: McpOAuthPendingProvider }>()
+const pendingOAuthTransports = new Map<string, PendingFlow>() // kilocode_change - entries carry the flow's epoch
 
 // kilocode_change start - a pending flow is pinned by identity so the token exchange never
 // re-resolves it by name after a yield, and every failing exit releases it
-type PendingFlow = { transport: TransportWithAuth; provider?: McpOAuthPendingProvider }
+type PendingFlow = { transport: TransportWithAuth; provider?: McpOAuthPendingProvider; epoch: number }
+
+// Each flow belongs to the epoch its server had when the flow started. A credential removal or a
+// cancelled sign-in starts a new epoch, so a flow can compare its own even when another entry for
+// the same server exists.
+const authEpoch = new Map<string, number>()
+
+const epochOf = (mcpName: string) => authEpoch.get(mcpName) ?? 0
 
 // Release a pending flow: drop its entry while it is still the owner, and close its transport,
 // so a failed or replaced flow leaves neither the map entry nor the connection open.
@@ -189,6 +196,7 @@ interface AuthResult {
   // kilocode_change start - identifies the flow that opened the browser
   provider?: McpOAuthPendingProvider
   transport?: TransportWithAuth
+  epoch?: number
   // kilocode_change end
 }
 
@@ -415,7 +423,7 @@ const layer = Layer.effect(
                   })
                   .pipe(Effect.ignore, Effect.as(undefined))
               } else {
-                pendingOAuthTransports.set(key, { transport })
+                pendingOAuthTransports.set(key, { transport, epoch: epochOf(key) }) // kilocode_change - entry carries its epoch
                 lastStatus = { status: "needs_auth" as const, error: lastError.message } // kilocode_change
                 return events
                   .publish(TuiEvent.ToastShow, {
@@ -1001,12 +1009,14 @@ const layer = Layer.effect(
       }).pipe(
         Effect.catch((error) => {
           if (error instanceof UnauthorizedError && capturedUrl) {
-            pendingOAuthTransports.set(mcpName, { transport, provider: authProvider })
+            const epoch = epochOf(mcpName) // kilocode_change - the flow records the epoch it started in
+            pendingOAuthTransports.set(mcpName, { transport, provider: authProvider, epoch }) // kilocode_change
             return Effect.succeed({
               authorizationUrl: capturedUrl.toString(),
               oauthState,
               provider: authProvider,
               transport,
+              epoch, // kilocode_change
             } satisfies AuthResult)
           }
           return Effect.die(error)
@@ -1100,7 +1110,11 @@ const layer = Layer.effect(
       // kilocode_change start
       const callback = yield* Effect.promise(() => callbackSettled)
       yield* KiloAuthTelemetry.callback(callback)
-      const flow: PendingFlow = { transport: result.transport!, provider: result.provider }
+      const flow: PendingFlow = {
+        transport: result.transport!,
+        provider: result.provider,
+        epoch: result.epoch ?? epochOf(mcpName),
+      }
       if (!callback.ok) {
         // A newer attempt for the same server can take this flow's callback listener over
         // (another `kilo mcp auth` process); the replaced flow is named, not a browser failure.
@@ -1156,6 +1170,20 @@ const layer = Layer.effect(
       }
 
       yield* KiloAuthTelemetry.phase("credential_store")
+      // kilocode_change start - credentials are stored for the flow that obtained them. A removal or
+      // a cancelled sign-in advances the server's epoch, so a flow that started earlier finishes
+      // without storing. The pending entry is keyed by server and cannot tell two attempts apart;
+      // the epoch can. The exchange itself cannot be aborted - the SDK sends it without the
+      // transport's abort signal - so this check is where the flow's result is accepted.
+      if (epochOf(mcpName) !== flow.epoch) {
+        yield* KiloAuthTelemetry.superseded()
+        yield* releaseFlow(mcpName, flow)
+        return {
+          status: "failed",
+          error: "Browser authorization was discarded: this sign-in was cancelled",
+        } satisfies Status
+      }
+      // kilocode_change end
       yield* Effect.promise(() => flow.provider?.commit() ?? Promise.resolve())
       yield* KiloAuthTelemetry.persisted(flow.provider)
       pendingOAuthTransports.delete(mcpName)
@@ -1175,6 +1203,7 @@ const layer = Layer.effect(
     // kilocode_change end
 
     const removeAuth = Effect.fn("MCP.removeAuth")(function* (mcpName: string) {
+      authEpoch.set(mcpName, epochOf(mcpName) + 1) // kilocode_change - flows that started earlier finish without storing
       yield* auth.remove(mcpName)
       McpOAuthCallback.cancelPending(mcpName)
       pendingOAuthTransports.delete(mcpName)
@@ -1182,6 +1211,7 @@ const layer = Layer.effect(
 
     // kilocode_change start - cancel an in-flight flow without deleting stored credentials
     const cancelAuth = Effect.fn("MCP.cancelAuth")(function* (mcpName: string) {
+      authEpoch.set(mcpName, epochOf(mcpName) + 1) // a cancelled flow finishes without storing
       const pending = pendingOAuthTransports.get(mcpName)
       McpOAuthCallback.cancelPending(mcpName)
       if (pending) yield* releaseFlow(mcpName, pending)

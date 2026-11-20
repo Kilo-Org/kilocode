@@ -5,7 +5,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { Cause, Deferred, Effect, Exit, Layer } from "effect"
+import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import { Config } from "../../src/config/config"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import * as KiloOAuthCallback from "../../src/kilocode/mcp-oauth-callback"
@@ -63,7 +63,7 @@ const mcpTest = testEffect(
   ]),
 )
 
-function serveOAuthMcp() {
+function serveOAuthMcp(hooks?: { beforeToken?: () => Promise<void> }) {
   return Effect.acquireRelease(
     Effect.promise(async () => {
       const challenges = new Map<string, string>()
@@ -159,6 +159,8 @@ function serveOAuthMcp() {
                 { status: 400 },
               )
             }
+            // Lets a test act while the code is being exchanged, which is when a reset lands.
+            if (hooks?.beforeToken) await hooks.beforeToken()
             return Response.json({ access_token: "test-access-token", token_type: "Bearer", scope: "mcp" })
           }
 
@@ -371,5 +373,43 @@ mcpTest.instance("a callback listener taken over by another Kilo process is repo
       status: "failed",
       error: "Browser authorization was rejected: this request was replaced by another authorization attempt",
     })
+  }),
+)
+
+mcpTest.instance("an exchange that completes after the credential is removed stores nothing", () =>
+  Effect.gen(function* () {
+    yield* withCallbackStop
+    const started = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const server = yield* serveOAuthMcp({
+      beforeToken: () => {
+        started.resolve()
+        return release.promise
+      },
+    })
+    const auth = yield* McpAuth.Service
+    const name = "test-oauth-removed-mid-exchange"
+    const mcp = yield* addServer(name, server.url)
+
+    const run = yield* Effect.forkScoped(mcp.authenticate(name))
+    // The browser step has handed back its code and the exchange is under way.
+    yield* Effect.promise(() => started.promise)
+
+    // The removal decides the stored credential: the exchange cannot be aborted, so its result is
+    // accepted or dropped here.
+    yield* mcp.removeAuth(name)
+    // A reset reconnects right after the removal, which registers its own entry for the same
+    // server. That entry must not change the outcome.
+    yield* mcp.connect(name).pipe(Effect.ignore)
+    release.resolve()
+
+    const status = yield* awaitWithTimeout(Fiber.join(run), "Timed out discarding the cancelled exchange", "10 seconds")
+
+    expect(status).toEqual({
+      status: "failed",
+      error: "Browser authorization was discarded: this sign-in was cancelled",
+    })
+    expect((yield* auth.get(name))?.tokens).toBeUndefined()
+    expect(server.attempts()).toHaveLength(1)
   }),
 )
