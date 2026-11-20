@@ -21,3 +21,6 @@ bin/
 **/cli-cache/
 kilo-*.zip
 kilo-*.tar.gz
+
+# Generated JUnit report from script/test-ci.ts
+.artifacts/
