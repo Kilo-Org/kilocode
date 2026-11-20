@@ -66,9 +66,16 @@ export function noticeToast(notice: KiloBrowserRpc.Notice): Toast {
   return { ...base, variant: "warning", title: browserCopy(title), message: notice.hint }
 }
 
-// How long a command typed while Kilo starts waits for the location's plugins, and how often it asks.
+// How long a command typed while Kilo starts waits for the location's plugins, and how often it asks: at once, then
+// after a gap that doubles from 100 ms up to 1 s, so a slow start is not asked ten times a second.
 const STARTUP_WAIT = 10_000
 const STARTUP_POLL = 100
+const STARTUP_POLL_MAX = 1_000
+
+/** The time source the wait reads; the default is the real clock. */
+type Clock = { now(): number; sleep(ms: number): Promise<unknown> }
+
+const realClock: Clock = { now: () => Date.now(), sleep: (ms) => Bun.sleep(ms) }
 
 /**
  * One `/browser share` or `/browser adopt` call. A location answers `rpc.unavailable` until its plugins are
@@ -80,16 +87,19 @@ const STARTUP_POLL = 100
 export async function whenStarted(
   call: () => Promise<Toast>,
   plugins: () => Promise<{ data: readonly unknown[] }>,
+  clock: Clock = realClock,
 ): Promise<Toast> {
-  const deadline = Date.now() + STARTUP_WAIT
-  while (Date.now() < deadline) {
+  const deadline = clock.now() + STARTUP_WAIT
+  let gap = STARTUP_POLL
+  while (clock.now() < deadline) {
     // A server without the plugin inventory fails the read, which ends the wait at once.
     const listed = await plugins().then(
       (result) => result.data.length > 0,
       () => true,
     )
     if (listed) break
-    await Bun.sleep(STARTUP_POLL)
+    await clock.sleep(Math.min(gap, deadline - clock.now()))
+    gap = Math.min(gap * 2, STARTUP_POLL_MAX)
   }
   try {
     return await call()

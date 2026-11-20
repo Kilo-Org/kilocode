@@ -115,6 +115,29 @@ describe("/browser share and adopt typed while Kilo starts", () => {
     await expect(whenStarted(share, location(0, log))).rejects.toBe(failure)
     expect(log).toEqual(["plugins", "share"])
   })
+
+  test("the wait asks less often as it goes, 100 ms doubling to at most 1 s, and still ends after 10 s", async () => {
+    const log: string[] = []
+    const waits: number[] = []
+    let now = 0
+    const clock = {
+      now: () => now,
+      sleep: async (ms: number) => {
+        waits.push(ms)
+        now += ms
+      },
+    }
+    const share = async () => {
+      log.push("share")
+      return shareToast({ kind: "shared" })
+    }
+    // The location never lists its plugins: the command still calls once when the wait ends.
+    await whenStarted(share, location(Infinity, log), clock)
+    expect(waits).toEqual([100, 200, 400, 800, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 500])
+    expect(now).toBe(10_000)
+    expect(log.filter((entry) => entry === "plugins")).toHaveLength(waits.length)
+    expect(log.at(-1)).toBe("share")
+  })
 })
 
 describe("browser notices", () => {
