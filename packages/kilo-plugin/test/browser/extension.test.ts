@@ -3,11 +3,15 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import {
+  CancelledError,
   IncompatibleError,
   NeedsPermissionError,
+  TIMEOUT_MESSAGE,
+  TimeoutError,
   UNAVAILABLE_MESSAGE,
   UnavailableError,
   UnsupportedError,
+  StoppedError,
 } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { backend, EXTENSION_HINT, grants, map, needs, STOPPED, UPDATE_HINT } from "../../src/browser/extension"
@@ -40,6 +44,8 @@ function fake(
     ready?: () => Promise<BrowserHub.Info>
     /** The browser answers every `upload.*` with `unsupported_in_browser`, like one that uploads from the page. */
     refuseUpload?: boolean
+    adopt?: (handle: string) => Promise<BrowserHub.Adoption>
+    share?: (handle: string) => Promise<void>
   } = {},
 ) {
   const calls: Call[] = []
@@ -48,6 +54,8 @@ function fake(
   const began: Upload[] = []
   const chunks: { uploadId: string; index: number; data: string }[] = []
   const ended: string[] = []
+  const shared: string[] = []
+  const adopted: string[] = []
   const listeners = new Set<(input: { sessionHandle: string; reason: string }) => void>()
   let handles = 0
   const info: BrowserHub.Info = {
@@ -67,6 +75,14 @@ function fake(
     close: (handle) => {
       closed.push(handle)
       return Promise.resolve()
+    },
+    share: (handle) => {
+      shared.push(handle)
+      return options.share ? options.share(handle) : Promise.resolve()
+    },
+    adopt: (handle) => {
+      adopted.push(handle)
+      return options.adopt ? options.adopt(handle) : Promise.resolve("adopted")
     },
     list: () => Promise.resolve(options.tools ?? BrowserContract.entries.map((entry) => entry.name)),
     call: (input) => {
@@ -110,6 +126,8 @@ function fake(
     began,
     chunks,
     ended,
+    shared,
+    adopted,
     revoke: (input: { sessionHandle: string; reason: string }) => listeners.forEach((listener) => listener(input)),
   }
 }
@@ -165,7 +183,10 @@ describe("extension backend", () => {
     await active.callTool(
       "browser_type",
       { target: "e1", text: "a" },
-      ctx({ authorized: ["read:http://localhost:3000", "act:http://localhost:3000", "not-a-grant"], sensitive: ["tok"] }),
+      ctx({
+        authorized: ["read:http://localhost:3000", "act:http://localhost:3000", "not-a-grant"],
+        sensitive: ["tok"],
+      }),
     )
     expect(hub.calls[0]?.authorized).toEqual([
       { class: "read", origin: "http://localhost:3000" },
@@ -179,7 +200,11 @@ describe("extension backend", () => {
       call: () =>
         Promise.resolve({
           content: [{ type: "text", text: "- Page URL: https://example.com\n- Page Title: Example" }],
-          meta: { url: "https://example.com", origin: "https://example.com", withheldFrames: ["https://ads.example.com"] },
+          meta: {
+            url: "https://example.com",
+            origin: "https://example.com",
+            withheldFrames: ["https://ads.example.com"],
+          },
         }),
     })
     const active = backend({ port: hub.port, directory: "/tmp/project" })
@@ -360,7 +385,9 @@ describe("extension backend", () => {
         ),
     })
     const active = backend({ port: hub.port, directory: "/tmp/project" })
-    const error = await active.callTool("browser_type", { target: "e1", text: "x" }, ctx()).catch((value: unknown) => value)
+    const error = await active
+      .callTool("browser_type", { target: "e1", text: "x" }, ctx())
+      .catch((value: unknown) => value)
     expect(error).toBeInstanceOf(NeedsPermissionError)
     expect((error as NeedsPermissionError).items).toEqual([
       { class: "sensitive", origin: "https://example.com", reason: "password field" },
@@ -415,7 +442,11 @@ describe("extension backend", () => {
     const hub = fake({
       call: () =>
         Promise.reject(
-          new BrowserHub.Failure({ kind: "permission", message: "x", items: [{ class: "sudo", origin: "https://a.b" }] }),
+          new BrowserHub.Failure({
+            kind: "permission",
+            message: "x",
+            items: [{ class: "sudo", origin: "https://a.b" }],
+          }),
         ),
     })
     const active = backend({ port: hub.port, directory: "/tmp/project" })
@@ -557,6 +588,32 @@ describe("extension backend", () => {
         },
       },
       {
+        failure: { kind: "timeout", message: "The browser did not answer tools.call in time.", uncertain: true },
+        check: (error) => {
+          expect(error).toBeInstanceOf(TimeoutError)
+          expect((error as Error).message).toBe(TIMEOUT_MESSAGE)
+        },
+      },
+      {
+        failure: { kind: "cancelled", message: "cancelled running", uncertain: true },
+        check: (error) => {
+          expect(error).toBeInstanceOf(CancelledError)
+          expect((error as Error).message).toContain("cancelled before it finished")
+          expect((error as Error).message).toContain("browser_snapshot")
+          expect((error as CancelledError).effectsUncertain).toBe(true)
+        },
+      },
+      {
+        // A call cancelled before it was sent cannot have run, so nothing is said about looking at the page first.
+        failure: { kind: "cancelled", message: "cancelled before the send" },
+        check: (error) => {
+          expect(error).toBeInstanceOf(CancelledError)
+          expect((error as Error).message).toContain("cancelled before it was sent")
+          expect((error as Error).message).not.toContain("snapshot")
+          expect((error as CancelledError).effectsUncertain).toBe(false)
+        },
+      },
+      {
         failure: { kind: "busy", message: "busy" },
         check: (error) => {
           expect((error as Error).message).toContain("tab is busy")
@@ -610,9 +667,7 @@ describe("extension backend", () => {
     for (const entry of cases) {
       const hub = fake({ call: () => Promise.reject(new BrowserHub.Failure(entry.failure)) })
       const active = backend({ port: hub.port, directory: "/tmp/project" })
-      const error = await active
-        .callTool("browser_click", { target: "e1" }, ctx())
-        .catch((value: unknown) => value)
+      const error = await active.callTool("browser_click", { target: "e1" }, ctx()).catch((value: unknown) => value)
       entry.check(error)
     }
   })
@@ -620,9 +675,7 @@ describe("extension backend", () => {
   test("a dropped connection reports the unavailable message and the uncertainty marker", async () => {
     const hub = fake({
       call: () =>
-        Promise.reject(
-          new BrowserHub.Failure({ kind: "unavailable", message: "the socket closed", uncertain: true }),
-        ),
+        Promise.reject(new BrowserHub.Failure({ kind: "unavailable", message: "the socket closed", uncertain: true })),
     })
     const active = backend({ port: hub.port, directory: "/tmp/project" })
     const error = await active.callTool("browser_click", { target: "e1" }, ctx()).catch((value: unknown) => value)
@@ -785,6 +838,113 @@ describe("extension backend", () => {
     expect((await active.callTool("browser_snapshot", {}, ctx({ session: "ses_other" }))).isError).toBe(false)
     expect((await active.callTool("browser_snapshot", {}, ctx({ session: "ses_fresh" }))).isError).toBe(false)
     expect(hub.opened.map((value) => value.sessionId)).toEqual(["ses_stopped", "ses_other", "ses_fresh"])
+  })
+
+  test("/browser adopt lifts a stop: the conversation gets a new handle and the ended group", async () => {
+    const hub = fake()
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
+    hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+    expect(await active.adopt("ses_extension")).toBe("adopted")
+    expect(hub.adopted).toEqual(["handle-2"])
+    // The user's own command resumed the conversation: its next call runs on the adopting handle.
+    expect((await active.callTool("browser_snapshot", {}, ctx())).isError).toBe(false)
+    expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1", "handle-2"])
+  })
+
+  test("/browser adopt lifts a stop only when the conversation got a group: none and unconfirmed keep it", async () => {
+    for (const answer of ["none", "unconfirmed"] as const) {
+      const hub = fake({ adopt: () => Promise.resolve(answer) })
+      const turns = new Map([["ses_extension", 1]])
+      const active = backend({ port: hub.port, directory: "/tmp/project", turns })
+      await active.callTool("browser_snapshot", {}, ctx())
+      hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+      expect(await active.adopt("ses_extension")).toBe(answer)
+      // Nothing became the conversation's, so the model's next call is still refused instead of opening a new session.
+      const error = await active.callTool("browser_snapshot", {}, ctx()).catch((value: unknown) => value)
+      expect((error as Error).message).toBe(STOPPED)
+      expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1"])
+    }
+  })
+
+  test("/browser adopt that keeps the conversation's own tabs lifts its stop", async () => {
+    const hub = fake({ adopt: () => Promise.resolve("kept") })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
+    hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+    expect(await active.adopt("ses_extension")).toBe("kept")
+    expect((await active.callTool("browser_snapshot", {}, ctx())).isError).toBe(false)
+    expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1", "handle-2"])
+  })
+
+  test("/browser share moves the active tab into the conversation's session and lifts a stop", async () => {
+    const hub = fake()
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
+    hub.revoke({ sessionHandle: "handle-1", reason: "switch_off" })
+    await active.share("ses_extension")
+    expect(hub.shared).toEqual(["handle-2"])
+    expect((await active.callTool("browser_snapshot", {}, ctx())).isError).toBe(false)
+  })
+
+  test("/browser share in a turn running at Stop all lifts that turn's halt too", async () => {
+    const hub = fake()
+    const turns = new Map([["ses_extension", 1]])
+    const active = backend({ port: hub.port, directory: "/tmp/project", turns })
+    await active.callTool("browser_snapshot", {}, ctx())
+    hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+    await active.share("ses_extension")
+    // The same turn goes on: the user's own command gave it the browser back.
+    expect((await active.callTool("browser_snapshot", {}, ctx())).isError).toBe(false)
+    expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1", "handle-2"])
+  })
+
+  test("a refused share or adopt keeps the stop and reports the browser's reason", async () => {
+    const hub = fake({
+      share: () => Promise.reject(new BrowserHub.Failure({ kind: "blocked", message: "No tab to share." })),
+      adopt: () => Promise.reject(new BrowserHub.Failure({ kind: "stopped", message: "stopped" })),
+    })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
+    hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+    expect(((await active.share("ses_extension").catch((value: unknown) => value)) as Error).message).toBe(
+      "No tab to share.",
+    )
+    expect(await active.adopt("ses_extension").catch((value: unknown) => value)).toBeInstanceOf(StoppedError)
+    const error = await active.callTool("browser_snapshot", {}, ctx()).catch((value: unknown) => value)
+    expect((error as Error).message).toBe(STOPPED)
+  })
+
+  test("a stop the user makes while a share or adopt runs is kept and reported", async () => {
+    for (const method of ["share", "adopt"] as const) {
+      const started = Promise.withResolvers<void>()
+      const finish = Promise.withResolvers<void>()
+      const answer = () => {
+        started.resolve()
+        return finish.promise
+      }
+      const hub = fake({ share: answer, adopt: () => answer().then(() => "adopted" as const) })
+      const active = backend({ port: hub.port, directory: "/tmp/project" })
+      await active.callTool("browser_snapshot", {}, ctx())
+      const pending = (method === "share" ? active.share("ses_extension") : active.adopt("ses_extension")).catch(
+        (value: unknown) => value,
+      )
+      await started.promise
+      // The user stops the session after the command reached the browser and before its answer came back.
+      hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+      finish.resolve()
+      expect(await pending).toBeInstanceOf(StoppedError)
+      const error = await active.callTool("browser_snapshot", {}, ctx()).catch((value: unknown) => value)
+      expect((error as Error).message).toBe(STOPPED)
+      expect(hub.opened).toHaveLength(1)
+    }
+  })
+
+  test("share and adopt without a hub report the setup step", async () => {
+    const active = backend({ directory: "/tmp/project" })
+    const error = await active.adopt("ses_extension").catch((value: unknown) => value)
+    expect(error).toBeInstanceOf(UnavailableError)
+    expect((error as UnavailableError).hint).toBe(EXTENSION_HINT)
   })
 
   test("a deleted session closes its handle and forgets it", async () => {

@@ -166,7 +166,8 @@ function changes(change: Change): string[] {
  * Rewrites one upstream tool result for the configured observation mode.
  *
  * full: unchanged. diff: the post-action snapshot becomes a line diff against the previous snapshot, plus new console
- * errors supplied by the caller. none: status, URL and title only.
+ * errors supplied by the caller. none: status, URL, title, the result and the modal state only. The modal state is kept
+ * in every mode: a dialog the model cannot see blocks the next step.
  */
 export function observe(input: { mode: Observation; text: string; previous?: Snapshot; consoleErrors?: string[] }): {
   text: string
@@ -179,7 +180,7 @@ export function observe(input: { mode: Observation; text: string; previous?: Sna
   if (input.mode === "none") {
     const page = sections.find((section) => section.title === "Page")
     const kept = sections
-      .filter((section) => section.title === "Error" || section.title === "Result")
+      .filter((section) => section.title === "Error" || section.title === "Result" || section.title === "Modal state")
       .filter((section) => trim(section.lines).length > 0)
     return {
       text: render([
