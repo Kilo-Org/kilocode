@@ -24,7 +24,7 @@ import path from "node:path"
 import { Script } from "@opencode/script"
 import { isPreview } from "../src/update-version"
 import { launcherPostinstall } from "./postinstall"
-import { refuseStale, waitForRegistry } from "./registry-readiness"
+import { refuseStale, refuseWithdrawn, waitForRegistry } from "./registry-readiness"
 
 const dir = path.resolve(import.meta.dirname, "..")
 const root = path.join(dir, "dist")
@@ -123,11 +123,13 @@ await Bun.write(
 // The launcher goes last: its postinstall script needs the platform packages on the registry.
 const platformPackages = Object.entries(binaries)
 // A rerun of an older workflow run must fail before it can move the launcher or platform `kilo-v2` tags back to its
-// version. The tag reads are public and stay out of the dry run, which must not touch the network.
+// version. A manual rollback moves only the tag, so the launcher's published version history independently rejects a
+// rerun of an already promoted run, including a later attempt of that run. Both checks are public reads and stay out of
+// the dry run, which must not touch the network.
 if (!dryRun) {
   if (!isPreview(version)) throw new Error(`Refusing to publish ${name}@${version}: ${tag} needs a Kilo v2 preview.`)
   const packages: Array<[string, string]> = [...platformPackages, [name, version]]
-  await Promise.all(packages.map(([pkg, build]) => refuseStale(pkg, build, tag)))
+  await Promise.all([refuseWithdrawn(name, version), ...packages.map(([pkg, build]) => refuseStale(pkg, build, tag))])
 }
 await Promise.all(
   platformPackages.map(([pkg, version]) => publish(path.join(root, pkg.slice("@kilocode/".length)), pkg, version)),

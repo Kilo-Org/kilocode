@@ -22,6 +22,11 @@ export interface Install {
   /** pnpm can move its one-package group to a new hash when the install command pins the registry. */
   readonly installedManifest?: Effect.Effect<string | undefined>
   readonly scriptsSetting?: string[]
+  /**
+   * Canonical manager root that survives the install. The package directories inside it are replaced, so a lock in
+   * this directory serializes updates to the same manager installation.
+   */
+  readonly lockDirectory: string
   readonly command: (version: string) => string[]
 }
 
@@ -50,6 +55,25 @@ const samePath = (left: string, right: string) => {
   return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b
 }
 
+// A manager root only identifies one installation if links are resolved. A missing root fails closed instead of
+// locking or mutating somewhere that the manager does not own.
+const canonical = (fs: FileSystem.FileSystem, directory: string) =>
+  fs.realPath(directory).pipe(Effect.orElseSucceed(() => undefined))
+
+// A launcher slot is owned when it is the same file as the verified executable, whether it is a direct path, a
+// symlink, or a hard link. A copy is a different file and does not count.
+const sameFile = (fs: FileSystem.FileSystem, left: string, right: string) =>
+  Effect.gen(function* () {
+    const a = yield* fs.stat(left)
+    const b = yield* fs.stat(right)
+    if (a.type !== "File" || b.type !== "File") return false
+    const realLeft = yield* fs.realPath(left)
+    const realRight = yield* fs.realPath(right)
+    if (samePath(realLeft, realRight)) return true
+    const ino = Option.getOrUndefined(a.ino)
+    return ino !== undefined && ino !== 0n && ino === Option.getOrUndefined(b.ino) && a.dev === b.dev
+  }).pipe(Effect.orElseSucceed(() => false))
+
 /**
  * Reads a package manifest and confirms that its `bin.kilo2` is the running executable. A manifest that exists next
  * to a similarly named package is not enough: the exact bin target has to resolve to this process.
@@ -69,6 +93,86 @@ const owns = (fs: FileSystem.FileSystem, manifest: string, executable: string) =
     const info = yield* fs.stat(real)
     return info.type === "File" ? pkg : undefined
   }).pipe(Effect.orElseSucceed(() => undefined))
+
+const SHIM_MARKER = "# cmd-shim-target="
+const SHIM_LIMIT = 64n * 1024n
+const SHIM_TARGETS = [
+  /^(?:exec\s+)?"\$basedir\/([^"]+)"\s+"\$@"$/,
+  /^(?:exec\s+)?"\$basedir_(?:abs|win)"\/'([^']+)'\s+"\$@"$/,
+  /^(?:\$input\s*\|\s*)?&\s+"\$basedir\/([^"]+)"\s+\$args$/,
+  /^@?"%(?:~)?dp0%?\\([^"]+)"\s+%\*$/i,
+]
+
+// Only the known invocation forms count. Comments, NODE_PATH, and setup lines can mention a path without running it.
+const isShimInvocation = (line: string) => {
+  const trimmed = line.trim()
+  if (trimmed.length === 0 || trimmed.startsWith("#") || /^(rem\b|::)/i.test(trimmed)) return false
+  if (trimmed.endsWith('"$@"')) return trimmed.startsWith('"$basedir') || trimmed.startsWith("exec ")
+  if (trimmed.endsWith("$args")) return trimmed.startsWith("& ") || trimmed.includes("| & ")
+  return trimmed.endsWith("%*") && (trimmed.startsWith('"') || trimmed.startsWith('@"'))
+}
+
+// pnpm 11 writes the exact target as a comment. Older pnpm and npm use `$basedir` in the sh and PowerShell shims;
+// their cmd shims use `%~dp0` (pnpm) or `%dp0%` (npm). A comment alone is not proof: the command that runs must
+// resolve to the executable too.
+const shimTargets = (text: string, directory: string) => {
+  const lines = text.split(/\r?\n/)
+  const invocations = lines.filter(isShimInvocation)
+  if (invocations.length === 0) return []
+  const parsed = invocations.map((line) =>
+    SHIM_TARGETS.map((pattern) => pattern.exec(line.trim())?.[1]).find((target) => target !== undefined),
+  )
+  const paths = parsed.filter((target) => target !== undefined)
+  if (paths.length !== invocations.length) return []
+  const targets = paths.map((target) => path.resolve(directory, target.replaceAll("\\", "/")))
+  const marked = lines.find((line) => line.startsWith(SHIM_MARKER))
+  if (marked) targets.push(path.resolve(directory, marked.slice(SHIM_MARKER.length).trim()))
+  return targets
+}
+
+const slotOwned = (fs: FileSystem.FileSystem, file: string, executable: string, parseShim: boolean) =>
+  Effect.gen(function* () {
+    if (yield* sameFile(fs, file, executable)) return true
+    if (!parseShim) return false
+    const info = yield* fs.lstat(file)
+    if (info.type !== "File" || info.size > SHIM_LIMIT) return false
+    const targets = shimTargets(yield* fs.readFileString(file), path.dirname(file))
+    if (targets.length === 0) return false
+    const owned = yield* Effect.forEach(targets, (target) => sameFile(fs, target, executable))
+    return owned.every(Boolean)
+  }).pipe(Effect.orElseSucceed(() => false))
+
+/**
+ * Verifies the launcher slots that the next global install will replace. Absent slots are fine. An occupied slot has
+ * to be the running executable or a shim that references it, so a launcher from another installer is never
+ * overwritten. On Windows pnpm removes a non-node executable slot when it links its shims, so a link to the running
+ * file is accepted there while a copy is not proof of ownership and fails closed.
+ */
+export const ownsGlobalBin = (
+  fs: FileSystem.FileSystem,
+  directory: string,
+  executable: string,
+  platform: string = process.platform,
+): Effect.Effect<boolean> =>
+  Effect.gen(function* () {
+    const slots = platform === "win32" ? ["kilo2", "kilo2.cmd", "kilo2.ps1", "kilo2.exe"] : ["kilo2"]
+    const checked = yield* Effect.forEach(slots, (slot) => {
+      const file = path.join(directory, slot)
+      const present = fs.lstat(file).pipe(
+        Effect.as(true),
+        Effect.catchIf(
+          (error) => error.reason._tag === "NotFound",
+          () => Effect.succeed(false),
+        ),
+      )
+      return present.pipe(
+        Effect.flatMap((exists) =>
+          exists ? slotOwned(fs, file, executable, slot !== "kilo2.exe") : Effect.succeed(true),
+        ),
+      )
+    })
+    return checked.every(Boolean)
+  }).pipe(Effect.orElseSucceed(() => false))
 
 const output = (exec: Exec, command: string[]) =>
   exec(command).pipe(
@@ -159,7 +263,12 @@ const fromNpm = (fs: FileSystem.FileSystem, exec: Exec, executable: string) =>
     const prefix =
       process.platform === "win32" ? parent : path.basename(parent) === "lib" ? path.dirname(parent) : undefined
     if (!prefix || foreign(executable)) return undefined
-    if (process.platform !== "win32" && !samePath(yield* resolved(fs, path.join(prefix, "bin", "kilo2")), executable))
+    const lockDirectory = yield* canonical(fs, prefix)
+    if (!lockDirectory) return undefined
+    if (
+      process.platform !== "win32" &&
+      !samePath(yield* resolved(fs, path.join(lockDirectory, "bin", "kilo2")), executable)
+    )
       return undefined
     // Verify the exact global root rather than trusting the shape alone. A project node_modules or a pnpm/Bun/Yarn
     // global directory can have the same tail. Windows has no lib component, so only npm's configured global root
@@ -167,15 +276,16 @@ const fromNpm = (fs: FileSystem.FileSystem, exec: Exec, executable: string) =>
     const root =
       process.platform === "win32"
         ? yield* directory(exec, ["npm", "root", "-g"])
-        : yield* directory(exec, ["npm", "root", "-g", "--prefix", prefix])
+        : yield* directory(exec, ["npm", "root", "-g", "--prefix", lockDirectory])
     if (!root || !samePath(root, modules)) return undefined
     return install(
       {
         method: "npm",
         manifest: path.join(packageDirectory, "package.json"),
-        scriptsSetting: ["npm", "config", "get", "ignore-scripts", "--global", "--prefix", prefix],
+        scriptsSetting: ["npm", "config", "get", "ignore-scripts", "--global", "--prefix", lockDirectory],
+        lockDirectory,
       },
-      npmCommand(prefix),
+      npmCommand(lockDirectory),
     )
   })
 
@@ -234,12 +344,22 @@ const fromPnpm = (fs: FileSystem.FileSystem, exec: Exec, executable: string) =>
     const installedManifest = pnpmManifest(fs, root, major)
     const manifest = yield* installedManifest
     if (!manifest || !(yield* owns(fs, manifest, executable))) return undefined
+    // pnpm replaces the launcher slot from its configured global bin directory. Only update when that slot is absent
+    // or belongs to this install; a launcher from npm or the native installer must not be replaced.
+    const bin = yield* directory(exec, ["pnpm", "bin", "-g"])
+    if (!bin || !(yield* ownsGlobalBin(fs, bin, executable))) return undefined
+    // pnpm 10 manages the node_modules root it prints; pnpm 11+ can prune directories inside its global group root.
+    // Use the canonical parent so applying an update cannot clear another process's lock.
+    const packageRoot = yield* canonical(fs, root)
+    if (!packageRoot) return undefined
+    const lockDirectory = path.dirname(packageRoot)
     return install(
       {
         method: "pnpm",
         manifest,
         installedManifest,
         scriptsSetting: ["pnpm", "config", "get", "ignore-scripts", "--global"],
+        lockDirectory,
       },
       pnpmCommand,
     )
@@ -251,7 +371,9 @@ const fromYarn = (fs: FileSystem.FileSystem, exec: Exec, executable: string) =>
     if (!manager.startsWith("1.")) return undefined
     const root = yield* directory(exec, ["yarn", "--no-default-rc", "global", "dir"])
     if (!root) return undefined
-    const manifest = path.join(root, "node_modules", packageName, "package.json")
+    const lockDirectory = yield* canonical(fs, root)
+    if (!lockDirectory) return undefined
+    const manifest = path.join(lockDirectory, "node_modules", packageName, "package.json")
     if (!(yield* owns(fs, manifest, executable))) return undefined
     // A Yarn global directory can be paired with a separate bin prefix. Verify the link too, so Yarn cannot
     // overwrite a kilo2 link installed by npm or by the native installer when it refreshes its global commands.
@@ -262,7 +384,14 @@ const fromYarn = (fs: FileSystem.FileSystem, exec: Exec, executable: string) =>
     const scoped = yield* output(exec, ["yarn", "--no-default-rc", "config", "get", "@kilocode:registry"])
     if (scoped !== "undefined" && scoped !== registry && scoped !== `${registry}/`) return undefined
     return install(
-      { method: "yarn", manifest, scriptsSetting: ["yarn", "--no-default-rc", "config", "get", "ignore-scripts"] },
+      {
+        method: "yarn",
+        manifest,
+        // Keep the install rc-free for registry pinning, but read the user's effective script policy with rc enabled.
+        // Yarn would otherwise run the postinstall despite the user's ignore-scripts setting.
+        scriptsSetting: ["yarn", "config", "get", "ignore-scripts"],
+        lockDirectory,
+      },
       yarnCommand(path.dirname(bin)),
     )
   })

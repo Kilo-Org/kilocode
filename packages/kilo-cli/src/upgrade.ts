@@ -5,6 +5,7 @@ import { Updater } from "@opencode/cli/services/updater"
 import { OPENCODE_VERSION } from "@opencode/cli/version"
 import { handlePromptErrors } from "@opencode/cli/ui/prompt"
 import { Effect, Option } from "effect"
+import { KiloUpdater } from "./updater"
 
 // Mirrors upstream's upgrade handler, so an expected failure prints one readable line instead of a stack trace.
 export default Runtime.handler(
@@ -23,6 +24,11 @@ export default Runtime.handler(
         return
       }
       if (!available && target === undefined) return outro("Kilo is up to date")
+      if (target !== undefined) {
+        const eligible = available?.type === "available" ? available.version : yield* updater.latest()
+        yield* KiloUpdater.requireCurrentTarget(target, eligible)
+        if (!available && target === OPENCODE_VERSION) return outro("Kilo is up to date")
+      }
 
       const version = target ?? available?.version
       if (!version) return yield* Effect.fail(new Error("No Kilo v2 release selected."))

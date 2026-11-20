@@ -16,6 +16,11 @@ import { isPreview, newer } from "./update-version"
 
 export const tag = "kilo-v2"
 
+export const requireCurrentTarget = (requested: string, published: string) =>
+  requested === published
+    ? Effect.void
+    : Effect.fail(new Error(`Kilo only installs the current ${tag} release (${published}), not ${requested}.`))
+
 const decodeRelease = Schema.decodeUnknownOption(
   Schema.Struct({
     name: Schema.Literal(packageName),
@@ -138,6 +143,16 @@ export const make = (
 
     const detectInstall = enabled ? detectOwner(fs, exec, input.executable) : Effect.succeed(undefined)
     const owner = yield* Effect.cached(detectInstall)
+    const verifyOwner = (expected: Install) =>
+      detectInstall.pipe(
+        Effect.flatMap((active) =>
+          active?.method === expected.method &&
+          active.manifest === expected.manifest &&
+          active.lockDirectory === expected.lockDirectory
+            ? Effect.succeed(active)
+            : Effect.fail(new Error("The Kilo install changed since the update check. Relaunch Kilo and try again.")),
+        ),
+      )
     const release = () =>
       Effect.tryPromise({
         try: (signal) => resolveRelease(input.request, signal),
@@ -182,8 +197,7 @@ export const make = (
 
     const prepareRelease = Effect.fnUntraced(function* (install: Install, version: string) {
       const candidate = yield* release()
-      if (candidate.version !== version)
-        return yield* Effect.fail(new Error(`The ${tag} tag changed. Check for updates again before installing.`))
+      yield* requireCurrentTarget(version, candidate.version)
       if (install.scriptsSetting) {
         const setting = yield* exec(install.scriptsSetting)
         if (setting.code !== 0 || /^(true|1)$/i.test(setting.stdout.trim()))
@@ -208,7 +222,13 @@ export const make = (
         if (!newer(version, input.version))
           return yield* Effect.fail(new Error("Select a newer Kilo v2 preview version."))
 
-        yield* flock.acquire("kilo-cli-upgrade", undefined, { timeoutMs: 6 * 60_000 })
+        yield* flock
+          .acquire("kilo-cli-upgrade", install.lockDirectory, { timeoutMs: 6 * 60_000 })
+          .pipe(
+            Effect.catchDefect((cause) =>
+              Effect.fail(new Error("Could not lock this Kilo installation for an update.", { cause })),
+            ),
+          )
         const current = yield* onDisk(install)
         if (!current?.version || !isPreview(current.version))
           return yield* Effect.fail(new Error("This package no longer contains Kilo v2."))
@@ -222,11 +242,7 @@ export const make = (
           )
 
         // A terminal can stay open across installs. Refresh the manager, prefix and bin ownership under the lock.
-        const active = yield* detectInstall
-        if (!active || active.method !== install.method || active.manifest !== install.manifest)
-          return yield* Effect.fail(
-            new Error("The Kilo install changed since the update check. Relaunch Kilo and try again."),
-          )
+        const active = yield* verifyOwner(install)
         const result = yield* exec(active.command(version), true)
         if (result.code !== 0) {
           const detail = stripVTControlCharacters(result.stderr || result.stdout)
