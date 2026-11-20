@@ -26,9 +26,6 @@ interface GhosttyRuntimeTerminal {
 }
 
 interface GhosttyRuntimeRenderer {
-  ctx?: CanvasRenderingContext2D
-  canvasWidth?: number
-  canvasHeight?: number
   renderScrollbar?: (viewportY: number, scrollbackLength: number, visibleRows: number, opacity?: number) => void
   cursorBlink?: boolean
   cursorVisible?: boolean
@@ -320,6 +317,34 @@ function wrapRenderBuffer(
   }
 }
 
+function drawOverlayScrollbar(
+  canvas: HTMLCanvasElement,
+  viewportY: number,
+  scrollbackLength: number,
+  visibleRows: number,
+  opacity: number,
+): boolean {
+  const ctx = canvas.getContext("2d")
+  if (!ctx || canvas.width <= 0 || canvas.height <= 0) return false
+  const cssW = Number.parseFloat(canvas.style.width) || canvas.width
+  const dpr = Math.max(1, canvas.width / cssW)
+  const barW = Math.max(1, Math.round(6 * dpr))
+  const pad = Math.max(1, Math.round(3 * dpr))
+  const trackH = canvas.height - pad * 2
+  if (trackH <= 0) return true
+  const totalRows = scrollbackLength + visibleRows
+  const thumbH = Math.max(Math.round(20 * dpr), Math.round((visibleRows / totalRows) * trackH))
+  const ratio = Math.min(1, Math.max(0, viewportY / scrollbackLength))
+  const thumbY = pad + Math.round((trackH - thumbH) * (1 - ratio))
+  const alpha = (viewportY > 0 ? 0.45 : 0.28) * opacity
+  ctx.save()
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.fillStyle = `rgba(128, 128, 128, ${alpha})`
+  ctx.fillRect(canvas.width - barW - Math.round(2 * dpr), thumbY, barW, thumbH)
+  ctx.restore()
+  return true
+}
+
 /**
  * Wrap `term.renderer.render` to eliminate four ghostty-web CanvasRenderer flaws:
  * 1. When `viewportY > 0` (user scrolled up), ghostty-web redraws every row at
@@ -344,28 +369,17 @@ export function optimizeTerminalRenderer(
   if (!renderer) return
   const original = renderer.render.bind(renderer)
   const internals = renderer as unknown as GhosttyRuntimeRenderer
+  const originalRenderScrollbar = internals.renderScrollbar?.bind(renderer)
   let last: RenderSnapshot | undefined
 
-  // Draw only a translucent overlay scrollbar thumb without clearing/erasing
-  // the rightmost two text columns with an opaque background fill.
+  // Draw only a translucent overlay scrollbar thumb via the public canvas API
+  // without clearing/erasing the rightmost two text columns with an opaque fill.
   internals.renderScrollbar = (viewportY, scrollbackLength, visibleRows, opacity = 0) => {
-    const ctx = internals.ctx
-    const width = internals.canvasWidth ?? 0
-    const height = internals.canvasHeight ?? 0
-    if (!ctx || opacity <= 0 || scrollbackLength <= 0 || width <= 0 || height <= 0) return
-    const barW = 6
-    const pad = 3
-    const trackH = height - pad * 2
-    if (trackH <= 0) return
-    const totalRows = scrollbackLength + visibleRows
-    const thumbH = Math.max(20, (visibleRows / totalRows) * trackH)
-    const ratio = Math.min(1, Math.max(0, viewportY / scrollbackLength))
-    const thumbY = pad + (trackH - thumbH) * (1 - ratio)
-    const alpha = (viewportY > 0 ? 0.45 : 0.28) * opacity
-    ctx.save()
-    ctx.fillStyle = `rgba(128, 128, 128, ${alpha})`
-    ctx.fillRect(width - barW - 2, thumbY, barW, thumbH)
-    ctx.restore()
+    if (opacity <= 0 || scrollbackLength <= 0) return
+    const canvas = renderer.getCanvas()
+    if (!canvas || !drawOverlayScrollbar(canvas, viewportY, scrollbackLength, visibleRows, opacity)) {
+      originalRenderScrollbar?.(viewportY, scrollbackLength, visibleRows, opacity)
+    }
   }
 
   renderer.render = (buffer, forceAll = false, viewportY = 0, scrollbackProvider, scrollbarOpacity = 0) => {

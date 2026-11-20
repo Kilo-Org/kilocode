@@ -439,11 +439,13 @@ describe("libghostty WASM engine and lifecycle helpers", () => {
   it("never erases rightmost text columns with opaque scrollbar fills and defaults direct renders to opacity 0", () => {
     const clearCalls: number[][] = []
     const fillCalls: Array<{ style: string; rect: number[] }> = []
+    const fallbackCalls: Array<{ viewportY: number; scrollback: number; rows: number; opacity?: number }> = []
     const renderCalls: Array<{ forceAll: boolean; opacity: number | undefined }> = []
     const ctx = {
       fillStyle: "",
       save() {},
       restore() {},
+      setTransform() {},
       clearRect(...args: number[]) {
         clearCalls.push(args)
       },
@@ -451,19 +453,22 @@ describe("libghostty WASM engine and lifecycle helpers", () => {
         fillCalls.push({ style: this.fillStyle, rect: args })
       },
     }
+    let currentCanvas: unknown = {
+      width: 714,
+      height: 1000,
+      style: { width: "357px" },
+      getContext: (kind: string) => (kind === "2d" ? ctx : null),
+    }
     const renderer = {
-      ctx,
-      canvasWidth: 357,
-      canvasHeight: 500,
       cursorBlink: false,
       cursorVisible: true,
-      getCanvas: () => undefined,
-      renderScrollbar: (_viewportY: number, _scrollback: number, _rows: number, _opacity?: number) => {
-        throw new Error("default opaque renderScrollbar should be replaced")
+      getCanvas: () => currentCanvas,
+      renderScrollbar: (viewportY: number, scrollback: number, rows: number, opacity?: number) => {
+        fallbackCalls.push({ viewportY, scrollback, rows, opacity })
       },
-      render(_buffer: IRenderable, forceAll = false, _viewportY = 0, _provider?: unknown, opacity?: number) {
+      render(_buffer: IRenderable, forceAll = false, viewportY = 0, _provider?: unknown, opacity?: number) {
         renderCalls.push({ forceAll, opacity })
-        renderer.renderScrollbar(0, 100, 24, opacity ?? 0)
+        renderer.renderScrollbar(viewportY, 100, 24, opacity ?? 0)
       },
     }
     const buffer = {
@@ -493,20 +498,35 @@ describe("libghostty WASM engine and lifecycle helpers", () => {
     ])
     expect(clearCalls).toEqual([])
     expect(fillCalls).toEqual([])
+    expect(fallbackCalls).toEqual([])
 
     // Showing, holding/fading through intermediate opacity frames, and hiding the
-    // scrollbar draws a translucent thumb without clearRect, skips intermediate
-    // fade frames (0 redundant full redraws), and elevates forceAll on show/hide.
+    // scrollbar draws a translucent thumb via public getCanvas() without clearRect,
+    // skips intermediate fade frames (0 redundant full redraws), and elevates forceAll on show/hide.
     term.renderer!.render(buffer, false, 0, term, 0.8)
     term.renderer!.render(buffer, false, 0, term, 0.5)
     term.renderer!.render(buffer, false, 0, term, 0.2)
     term.renderer!.render(buffer, false, 0, term, 0)
     expect(clearCalls).toEqual([])
+    expect(fallbackCalls).toEqual([])
     expect(fillCalls).toHaveLength(1)
-    expect(fillCalls[0]!.style).toContain("rgba(128, 128, 128,")
+    expect(fillCalls[0]!.style).toBe("rgba(128, 128, 128, 0.28)")
+    expect(fillCalls[0]!.rect[0]).toBe(698)
+    expect(fillCalls[0]!.rect[2]).toBe(12)
     expect(renderCalls).toHaveLength(4)
     expect(renderCalls[2]).toEqual({ forceAll: true, opacity: 1 })
     expect(renderCalls[3]).toEqual({ forceAll: true, opacity: 0 })
+
+    // Scrolled-up view uses the higher translucent alpha (never opaque 1.0).
+    term.renderer!.render(buffer, false, 20, term, 1)
+    expect(clearCalls).toEqual([])
+    expect(fillCalls).toHaveLength(2)
+    expect(fillCalls[1]!.style).toBe("rgba(128, 128, 128, 0.45)")
+
+    // Falls back to original renderScrollbar if getCanvas() is unavailable while visible.
+    currentCanvas = undefined
+    term.renderer!.render(buffer, false, 25, term, 1)
+    expect(fallbackCalls).toEqual([{ viewportY: 25, scrollback: 100, rows: 24, opacity: 1 }])
   })
 })
 
