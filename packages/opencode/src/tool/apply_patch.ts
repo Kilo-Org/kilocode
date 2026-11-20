@@ -18,6 +18,7 @@ import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import { Format } from "../format"
 import * as Bom from "@/util/bom"
 import { assertMutablePath } from "../kilocode/agent-manager/protection" // kilocode_change
+import { FilePermission } from "../kilocode/permission/file-pattern" // kilocode_change
 
 export const Parameters = Schema.Struct({
   patchText: Schema.String.annotate({ description: "The full patch text that describes all changes to be made" }),
@@ -228,7 +229,11 @@ export const ApplyPatchTool = Tool.define(
       }))
 
       // Check permissions if needed
-      const relativePaths = fileChanges.map((c) => path.relative(instance.worktree, c.filePath).replaceAll("\\", "/"))
+      // kilocode_change start
+      const relativePaths = fileChanges.map((c) =>
+        path.relative(FilePermission.root(instance), c.filePath).replaceAll("\\", "/"),
+      )
+      // kilocode_change end
       yield* ctx.ask({
         permission: "edit",
         patterns: relativePaths,
