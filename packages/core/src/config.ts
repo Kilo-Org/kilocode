@@ -33,6 +33,9 @@ export function latest<K extends keyof Info>(entries: readonly Entry[], key: K):
 export interface Interface {
   /** Returns location config documents and discovery sources from lowest to highest priority. */
   readonly entries: () => Effect.Effect<Entry[]>
+  // kilocode_change start - autoapprove: the global config directory, for settings that must not be enabled from project config
+  readonly global?: () => string
+  // kilocode_change end
   /** Compatibility roots consumed by internal compatibility plugins. */
   readonly compatibility?: () => Effect.Effect<{
     readonly claude: readonly AbsolutePath[]
@@ -91,6 +94,7 @@ export const testLayer = (
     claude: [],
     agents: [],
   },
+  global = "/global", // kilocode_change(autoapprove) - global-only settings in tests
 ) =>
   Layer.effectContext(
     Effect.gen(function* () {
@@ -104,6 +108,7 @@ export const testLayer = (
           ),
         compatibility: () => Effect.succeed(compatibility),
         changes: () => Stream.fromPubSub(updates),
+        global: () => global, // kilocode_change(autoapprove)
         setEntries: (next) => Ref.set(entries, next),
         emitChange: (update) => PubSub.publish(updates, update).pipe(Effect.asVoid),
         integration: (integrationID, document) =>
@@ -504,6 +509,7 @@ export const layer = (options?: Options) =>
         entries: Effect.fnUntraced(function* () {
           return configs
         }),
+        global: () => initial.global ?? AbsolutePath.make(globalService.config), // kilocode_change(autoapprove) seam
         compatibility: () =>
           Effect.all({
             claude: Effect.filter(sources.claude, fs.isDir),

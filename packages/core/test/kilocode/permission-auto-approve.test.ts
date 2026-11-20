@@ -17,7 +17,6 @@ import { SessionStore } from "@opencode/core/session/store"
 import { SessionTable } from "@opencode/core/session/sql"
 import { Document, Event as ConfigEvent, type Entry } from "@opencode/schema/config"
 import { LayerNode } from "@opencode/util/effect/layer-node"
-import { Global } from "@opencode/util/global"
 import { location } from "../fixture/location"
 import { testEffect } from "../lib/effect"
 
@@ -25,7 +24,6 @@ const current = Layer.succeed(
   Location.Service,
   Location.Service.of(location({ directory: AbsolutePath.make("/project") })),
 )
-const global = Layer.succeed(Global.Service, Global.Service.of(Global.make({ config: "/global" })))
 // `Config.testLayer` keeps this array by reference, so a test can change the effective config in place.
 const configEntries: Entry[] = []
 const it = testEffect(
@@ -37,10 +35,9 @@ const it = testEffect(
       PermissionSaved.node,
       Agent.node,
       Config.node,
-      Global.node,
       Permission.node,
     ]),
-    [Location.node.replace(current), Global.node.replace(global), Config.node.replace(Config.testLayer(configEntries))],
+    [Location.node.replace(current), Config.node.replace(Config.testLayer(configEntries))],
   ),
 )
 
