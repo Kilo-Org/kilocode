@@ -2503,13 +2503,15 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   // A request must still exist in this provider, and its owning session is the
-  // only attribution: never fall back to the currently selected session.
-  function replyToQuestion(requestID: string, answers: string[][]) {
+  // only attribution: never fall back to the currently selected session. The
+  // boolean lets a still-mounted dock drop its sending state on a no-op.
+  function replyToQuestion(requestID: string, answers: string[][]): boolean {
     clearQuestionError(requestID)
-    if (cah.reply(requestID, "continue")) return
+    if (cah.reply(requestID, "continue")) return true
     const question = questions().find((item) => item.id === requestID)
-    if (!question) return
+    if (!question) return false
     vscode.postMessage({ type: "questionReply", requestID, sessionID: question.sessionID, answers })
+    return true
   }
 
   function dismissQuestion(requestID: string) {
@@ -2521,12 +2523,13 @@ export const SessionProvider: ParentComponent = (props) => {
   function closeQuestion(id: string) {
     cah.close(id, dismissQuestion)
   }
-  function rejectQuestion(requestID: string) {
+  function rejectQuestion(requestID: string): boolean {
     clearQuestionError(requestID)
-    if (cah.reply(requestID, "stop")) return
+    if (cah.reply(requestID, "stop")) return true
     const question = questions().find((item) => item.id === requestID)
-    if (!question) return
+    if (!question) return false
     vscode.postMessage({ type: "questionReject", requestID, sessionID: question.sessionID })
+    return true
   }
 
   // Same rule as the replies above: look the record up, and use only its session.

@@ -158,7 +158,10 @@ try {
   const boxKey = scopeDraftKey("chat", draftKey)
   savePromptDraft(draftKey, "draft text", [], [])
   savePromptDraft(boxKey, "draft text", [], [])
-  const statusBefore = session().status()
+  // Select the session and give it a non-idle status first, so the assertion
+  // below fails if release clears the released session's status.
+  session().selectSession("child")
+  await emit({ type: "sessionStatus", sessionID: "child", status: "busy" })
 
   session().releaseSession("child")
   await settle()
@@ -180,7 +183,8 @@ try {
   })
   await check("release-keeps-status", () => {
     assert.equal(session().isSubmitting("child"), false, "release should not start a submission")
-    assert.equal(session().status(), statusBefore, "release should not change the current status")
+    assert.equal(session().currentSessionID(), "child", "release should not change the current session")
+    assert.equal(session().status(), "busy", "release should keep the released session's status")
   })
 
   await emit({ type: "sessionStatus", sessionID: "child", status: "busy" })

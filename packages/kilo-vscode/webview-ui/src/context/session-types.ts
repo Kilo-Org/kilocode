@@ -218,8 +218,8 @@ export interface SessionContextValue {
     deniedAlways: string[],
     feedback?: string,
   ) => boolean
-  replyToQuestion: (requestID: string, answers: string[][]) => void
-  rejectQuestion: (requestID: string) => void
+  replyToQuestion: (requestID: string, answers: string[][]) => boolean
+  rejectQuestion: (requestID: string) => boolean
   closeQuestion: (requestID: string) => void
   acceptSuggestion: (requestID: string, index: number) => void
   dismissSuggestion: (requestID: string) => void
