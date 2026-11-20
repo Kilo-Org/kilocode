@@ -283,7 +283,7 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
-    fun `convertCustomModePermissions - unreadable mcp options without migrated servers warn only about missing servers`() {
+    fun `convertCustomModePermissions - unreadable mcp options without migrated servers warn only that no server was migrated`() {
         val groups: List<Any> = listOf(Pair("mcp", mapOf("__unparsed" to "true")))
         val result = LegacyMigrationConverters.convertCustomModePermissions(
             groups,
@@ -292,7 +292,7 @@ class LegacyMigrationConversionTest {
         )
         assertTrue(result.permission.keys.none { it.endsWith("_*") })
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
-        assertEquals(listOf("MCP access not migrated: no MCP servers were selected"), result.warnings)
+        assertEquals(listOf("MCP access not migrated: no MCP server was migrated"), result.warnings)
     }
 
     @Test

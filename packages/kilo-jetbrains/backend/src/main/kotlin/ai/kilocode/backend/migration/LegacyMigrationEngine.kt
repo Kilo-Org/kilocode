@@ -198,10 +198,9 @@ class LegacyMigrationEngine(
                             results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
                             sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.success))
                         } else {
-                            for (msg in conversion.warnings) {
-                                results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
-                                sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.warning, msg))
-                            }
+                            val msg = conversion.warnings.joinToString("; ")
+                            results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
+                            sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.warning, msg))
                         }
                     } else {
                         results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.error, "Failed to build merged mode"))
@@ -219,10 +218,9 @@ class LegacyMigrationEngine(
                         results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
                         sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.success))
                     } else {
-                        for (msg in conversion.warnings) {
-                            results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
-                            sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.warning, msg))
-                        }
+                        val msg = conversion.warnings.joinToString("; ")
+                        results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
+                        sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.warning, msg))
                     }
                 }
             }

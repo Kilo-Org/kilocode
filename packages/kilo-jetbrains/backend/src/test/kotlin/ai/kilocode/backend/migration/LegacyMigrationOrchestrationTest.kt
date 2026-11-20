@@ -115,6 +115,38 @@ class LegacyMigrationOrchestrationTest {
         assertTrue(patch!!["agent"]?.jsonObject?.containsKey("my-agent") == true)
     }
 
+    @Test
+    fun `migrate - custom mode with two warnings reports one result item and one progress item`() {
+        val (eng, _, _) = setup {
+            mcpSettings = """{"mcpServers":{"tool1":{"command":"node","args":["tool.js"]}}}"""
+            customModes = """
+                {
+                  "customModes": [
+                    {
+                      "slug": "warned-mode",
+                      "name": "Warned Mode",
+                      "roleDefinition": "You are my warned agent.",
+                      "groups": ["mcp", "unknown-group"]
+                    }
+                  ]
+                }
+            """.trimIndent()
+        }
+        val sel = noSelections().copy(customModes = listOf("warned-mode"))
+        val items = mutableListOf<LegacyMigrationItemProgress>()
+        val report = eng.migrate(sel, itemSink(items))
+        val results = report.items.filter { it.category == MigrationItemCategory.customMode && it.item == "Warned Mode" }
+        assertEquals(1, results.size)
+        assertEquals(MigrationItemStatus.warning, results[0].status)
+        assertEquals(
+            "MCP access not migrated: no MCP server was migrated; Group not migrated; \"unknown-group\" ignored",
+            results[0].message,
+        )
+        val progress = items.filter { it.item == "Warned Mode" }
+        assertEquals(listOf(MigrationItemProgressStatus.migrating, MigrationItemProgressStatus.warning), progress.map { it.status })
+        assertEquals(results[0].message, progress[1].message)
+    }
+
     // -----------------------------------------------------------------------
     // Session migration
     // -----------------------------------------------------------------------

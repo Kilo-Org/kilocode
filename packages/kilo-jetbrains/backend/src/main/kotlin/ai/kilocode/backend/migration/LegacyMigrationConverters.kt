@@ -436,7 +436,7 @@ object LegacyMigrationConverters {
             if (groupName == "mcp") {
                 mcpGroupSeen = true
                 if (mcpServers.isEmpty()) {
-                    if (mcpAvailable) warnings.add("MCP access not migrated: no MCP servers were selected")
+                    if (mcpAvailable) warnings.add("MCP access not migrated: no MCP server was migrated")
                     continue
                 }
                 val mcpRegex = groupConfig?.get("fileRegex")
