@@ -713,6 +713,98 @@ describe("extension backend", () => {
     expect(hub.calls).toHaveLength(2)
   })
 
+  test("a session lost on the resend after a drop is opened anew, and the call is sent on it", async () => {
+    const hub = fake({
+      call: (input) => {
+        // The extension drops while the click is sent, and comes back without the session.
+        if (hub.calls.length === 2)
+          return Promise.reject(new BrowserHub.Failure({ kind: "unavailable", message: "not connected" }))
+        if (hub.calls.length === 3) return Promise.reject(new BrowserHub.Failure({ kind: "lost", message: "lost" }))
+        return Promise.resolve({ content: [{ type: "text", text: `ok on ${input.sessionHandle}` }] })
+      },
+    })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
+    const result = await active.callTool("browser_click", { target: "e1" }, ctx())
+    expect(result).toEqual({ content: [{ type: "text", text: "ok on handle-2" }], isError: false })
+    expect(hub.calls.map((call) => call.sessionHandle)).toEqual(["handle-1", "handle-1", "handle-1", "handle-2"])
+    expect(hub.opened).toHaveLength(2)
+  })
+
+  test("a call refused twice because no extension is attached is sent once more, not again", async () => {
+    const hub = fake({
+      call: () => Promise.reject(new BrowserHub.Failure({ kind: "unavailable", message: "not connected" })),
+    })
+    const active = backend({ port: hub.port, directory: "/tmp/project" })
+    const error = await active.callTool("browser_snapshot", {}, ctx()).catch((value: unknown) => value)
+    expect(error).toBeInstanceOf(UnavailableError)
+    expect(hub.calls).toHaveLength(2)
+    expect(hub.opened).toHaveLength(1)
+  })
+
+  test("a call that never reaches the browser keeps the remembered step token for its repeat", async () => {
+    resetSteps()
+    // The extension is not back in time: the call fails while it waits, before anything is sent.
+    let away = false
+    const hub = fake()
+    const port: BrowserHub.Port = {
+      ...hub.port,
+      ready: (timeout) =>
+        away
+          ? Promise.reject(new BrowserHub.Failure({ kind: "unavailable", message: "not back" }))
+          : hub.port.ready(timeout),
+    }
+    const active = backend({ port, directory: "/tmp/project" })
+    await active.callTool("browser_snapshot", {}, ctx())
+    rememberStep("ses_extension", "browser_click", { target: "e1" }, "tok")
+    away = true
+    const error = await active.callTool("browser_click", { target: "e1" }, ctx()).catch((value: unknown) => value)
+    expect(error).toBeInstanceOf(UnavailableError)
+    away = false
+    await active.callTool("browser_click", { target: "e1" }, ctx())
+    expect(hub.calls.map((call) => [call.name, call.sensitive])).toEqual([
+      ["browser_snapshot", undefined],
+      ["browser_click", ["tok"]],
+    ])
+  })
+
+  test("a call whose open is refused after a stop keeps the remembered step token for the next turn", async () => {
+    resetSteps()
+    const gate = Promise.withResolvers<void>()
+    const entering = Promise.withResolvers<void>()
+    const hub = fake()
+    let gated = false
+    const port: BrowserHub.Port = {
+      ...hub.port,
+      open: async (input) => {
+        if (input.sessionId !== "ses_opening" || gated) return hub.port.open(input)
+        gated = true
+        entering.resolve()
+        await gate.promise
+        return { sessionHandle: "late" }
+      },
+    }
+    const turns = new Map([
+      ["ses_open", 1],
+      ["ses_opening", 2],
+    ])
+    const active = backend({ port, directory: "/tmp/project", turns })
+    await active.callTool("browser_snapshot", {}, ctx({ session: "ses_open" }))
+    rememberStep("ses_opening", "browser_click", { target: "e1" }, "tok")
+    const call = active.callTool("browser_click", { target: "e1" }, ctx({ session: "ses_opening" }))
+    await entering.promise
+    hub.revoke({ sessionHandle: "handle-1", reason: "user_stop" })
+    gate.resolve()
+    expect(((await call.catch((value: unknown) => value)) as Error).message).toBe(STOPPED)
+    // The user's next message starts a new turn: the repeat of the step still carries its token.
+    turns.set("ses_opening", 3)
+    await active.callTool("browser_click", { target: "e1" }, ctx({ session: "ses_opening" }))
+    expect(hub.calls.map((call) => [call.sessionHandle, call.sensitive])).toEqual([
+      ["handle-1", undefined],
+      ["handle-2", ["tok"]],
+    ])
+  })
+
   /** A hub whose extension leaves after the first call: `ready` then waits until the test brings it back. */
   function leaving(failure: () => BrowserHub.Failure) {
     const back = Promise.withResolvers<void>()

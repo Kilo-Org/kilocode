@@ -295,8 +295,8 @@ type Call = {
   /** The arguments the extension is sent. */
   args: Record<string, unknown>
   ctx: CallContext
-  /** The step tokens this call carries, taken once: a call sent again carries the same ones. */
-  sensitive: string[] | undefined
+  /** The model's own arguments: a remembered step token is taken against those, whatever the extension is sent. */
+  key: Record<string, unknown>
   /** The turn that made the call: a stop of that turn ends it, even when the turn ended while the call waited. */
   turn: number | undefined
 }
@@ -411,7 +411,7 @@ export class ExtensionBackend implements BrowserBackend {
   }
 
   /** The call itself, with the arguments the extension needs and the grants this session approved. */
-  private async send(port: BrowserHub.Port, input: Call & { handle: string }) {
+  private async send(port: BrowserHub.Port, input: Call & { handle: string; sensitive: string[] | undefined }) {
     const file = screenshotFile(input.name, input.args, this.input.directory)
     const answer = await port.call({
       sessionHandle: input.handle,
@@ -426,25 +426,33 @@ export class ExtensionBackend implements BrowserBackend {
 
   /**
    * The call on the session's handle, once an extension that dropped a moment ago is back (a short wait). A call the
-   * browser refused before it ran is sent once more: after another wait when the extension dropped between the wait
-   * and the call, and on a new session when the extension no longer holds this one (it restarted without it). A call
-   * that may have run is never sent again.
+   * browser refused before it ran is sent again, once per cause: after another wait when the extension dropped between
+   * the wait and the call, and on a new session when the extension no longer holds this one (it restarted without it),
+   * so a drop followed by a lost session still reaches the browser. A call that may have run, timed out or was
+   * cancelled is never sent again.
    */
   private async run(port: BrowserHub.Port, call: Call) {
     await this.ready(port)
     const opener: Opener = { kind: "turn", turn: call.turn }
-    const handle = await this.handle(port, call.session, opener)
-    try {
-      return await this.send(port, { ...call, handle })
-    } catch (error) {
-      if (!unsent(error, call.ctx.signal)) throw error
-      await this.ready(port)
-      // A stop that arrived meanwhile ends the call: a stopped conversation never gets a new session.
-      if (this.halts(call.session, call.turn)) throw new StoppedError(STOPPED)
-      this.live()
-      if (error.kind === "lost") this.drop(call.session, handle)
+    let handle = await this.handle(port, call.session, opener)
+    // Taken once the call is about to reach the browser: a call that fails before (the extension not back in time, an
+    // open refused after a stop) leaves a remembered token for its repeat, and a call sent again carries the same one.
+    const sensitive = this.sensitive(call.ctx, call.session, call.name, call.key)
+    const recovered = new Set<BrowserHub.Kind>()
+    for (;;) {
+      try {
+        return await this.send(port, { ...call, handle, sensitive })
+      } catch (error) {
+        if (!unsent(error, call.ctx.signal) || recovered.has(error.kind)) throw error
+        recovered.add(error.kind)
+        await this.ready(port)
+        // A stop that arrived meanwhile ends the call: a stopped conversation never gets a new session.
+        if (this.halts(call.session, call.turn)) throw new StoppedError(STOPPED)
+        this.live()
+        if (error.kind === "lost") this.drop(call.session, handle)
+        handle = await this.handle(port, call.session, opener)
+      }
     }
-    return this.send(port, { ...call, handle: await this.handle(port, call.session, opener) })
   }
 
   /** Forget a handle the extension no longer holds, unless a newer one already replaced it. */
@@ -536,9 +544,7 @@ export class ExtensionBackend implements BrowserBackend {
     try {
       await this.accepts(name)
       const input = name === "browser_file_upload" ? await this.upload(port, args) : args
-      // Taken before the first send: a remembered token is consumed once, and a call sent again carries it too.
-      const sensitive = this.sensitive(ctx, session, name, args)
-      return reply(await this.run(port, { session, name, args: input, ctx, sensitive, turn }))
+      return reply(await this.run(port, { session, name, args: input, key: args, ctx, turn }))
     } catch (error) {
       if (error instanceof BrowserHub.Failure) {
         const withheld = this.withheld(error)
