@@ -223,11 +223,10 @@ export const dict = {
   "tui.permissions.apply": "Uygula",
   "tui.permissions.skip": "Atla",
   "tui.permissions.cancel": "İptal",
-  "tui.permissions.none": "(Hiçbiri)",
-  "tui.permissions.noneDescription": "Uygulanan izin kümelerini kaldır",
+  "tui.permissions.toggle": "İşaretle",
   "tui.permissions.applied": "Uygulandı",
   "tui.permissions.sidebar": "İzin kümeleri",
-  "tui.permissions.choose": "Yukarı/aşağı: bir izin kümesi seçin. PageUp/PageDown: komutlar arasında kaydırın.",
+  "tui.permissions.choose": "Yukarı/aşağı: hareket et. Boşluk: bir izin kümesini işaretleyin veya işareti kaldırın. PageUp/PageDown: komutlar arasında kaydırın.",
   "tui.permissions.rules": "Bu kümenin izin verdiği kabuk komutları",
   "tui.permissions.trust":
     "Proje betikleri depo kodunu çalıştırabilir. Mevcut reddetme kuralları uygulanmaya devam eder.",

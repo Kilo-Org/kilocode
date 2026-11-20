@@ -141,6 +141,20 @@ export const installPermissionSets = Effect.fn("KiloPermissionsPlugin")(function
           yield* drain
           return {}
         }),
+      remove: (input, context) =>
+        Effect.gen(function* () {
+          if (!enabled) return yield* Effect.fail(context.error("unavailable", "Permission setup is disabled"))
+          const sets = yield* applied()
+          if (!sets.some((set) => set.id === input.presetID)) return {}
+          yield* ctx.storage.set(
+            appliedKey,
+            sets
+              .filter((set) => set.id !== input.presetID)
+              .map((set) => ({ id: set.id, resources: [...set.resources] })),
+          )
+          yield* publish
+          return {}
+        }),
       skip: (_input, context) =>
         Effect.gen(function* () {
           if (!enabled) return yield* Effect.fail(context.error("unavailable", "Permission setup is disabled"))

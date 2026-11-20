@@ -141,6 +141,21 @@ describe("KiloPermissionsPlugin", () => {
     }),
   )
 
+  it.effect("removes one applied set and keeps the others and the decision", () =>
+    Effect.gen(function* () {
+      const { call } = yield* setup()
+      const permission = yield* Permission.Service
+      yield* call("apply", { presetID: "typescript-checks" })
+      yield* call("apply", { presetID: "dependency-install" })
+      yield* call("remove", { presetID: "typescript-checks" })
+      expect(yield* call("list")).toMatchObject({ decision: "accepted", applied: [{ id: "dependency-install" }] })
+      expect(yield* permission.ask(shell(["bun run test"]))).toMatchObject({ effect: "ask" })
+      expect(yield* permission.ask(shell(["bun install"]))).toMatchObject({ effect: "allow" })
+      yield* call("remove", { presetID: "typescript-checks" })
+      expect(yield* call("list")).toMatchObject({ applied: [{ id: "dependency-install" }] })
+    }),
+  )
+
   it.effect("drops stored sets that no longer exist", () =>
     Effect.gen(function* () {
       const store = new Map<string, Schema.Json>([

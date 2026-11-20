@@ -53,6 +53,7 @@ type State = {
   readonly applied: string[]
   skipped: number
   cleared: number
+  readonly removed: string[]
   readonly listLocations: string[]
   replyCalls: number
 }
@@ -64,6 +65,7 @@ function state(overrides: Partial<State> = {}): State {
     applied: [],
     skipped: 0,
     cleared: 0,
+    removed: [],
     listLocations: [],
     replyCalls: 0,
     ...overrides,
@@ -138,6 +140,13 @@ function fixtureFetch(
         current.decision = "accepted"
         return json({ output: {} })
       }
+      if (url.pathname.endsWith("/remove")) {
+        const body = (await requestInput.json()) as { input?: { presetID?: string } }
+        const presetID = body.input?.presetID ?? ""
+        current.removed.push(presetID)
+        current.applied.splice(0, current.applied.length, ...current.applied.filter((id) => id !== presetID))
+        return json({ output: {} })
+      }
       if (url.pathname.endsWith("/skip")) {
         if (current.delaySkip) await current.delaySkip
         current.skipped += 1
@@ -182,6 +191,13 @@ async function pageUntil(
   throw new Error(`timed out paging to ${label}:\n${app.captureCharFrame()}`)
 }
 
+// Apply in the automatic offer opens the same review as `/permissions`; confirm it.
+async function confirmOfferReview(app: Awaited<ReturnType<typeof createAppFixture>>) {
+  app.mockInput.pressEnter()
+  await until(app, "offer review", (frame) => frame.includes("Cancel"))
+  app.mockInput.pressEnter()
+}
+
 const pageUp = "\u001b[5~"
 const pageDown = "\u001b[6~"
 
@@ -194,7 +210,7 @@ function emitReplied(app: { events: { emit(event: OpenCodeEvent): void } }, id =
   })
 }
 
-test("offers every preset, pages the bounded preview, and applies the final install resource at 100 columns", async () => {
+test("offers every preset as a checkbox, pages the bounded preview, and applies every checked set at 100 columns", async () => {
   const current = state({ clearOnApply: true })
   await using app = await createAppFixture({
     width: 100,
@@ -205,13 +221,16 @@ test("offers every preset, pages the bounded preview, and applies the final inst
   })
   await app.ready
   const first = await until(app, "permission offer", (frame) => frame.includes("Set up project permissions"))
-  for (const label of ["Kilo / Bun checks", "TypeScript checks", "Dependency installs"]) {
-    expect(first).toContain(label)
-  }
+  // The project's default set starts checked.
+  expect(first).toContain("› [✓] Kilo / Bun checks")
+  expect(first).toContain("  [ ] TypeScript checks")
+  expect(first).toContain("  [ ] Dependency installs")
 
   app.mockInput.pressKey("j")
   app.mockInput.pressKey("j")
-  await until(app, "install preset", (frame) => frame.includes("● Dependency installs"))
+  await until(app, "install preset", (frame) => frame.includes("› [ ] Dependency installs"))
+  app.mockInput.pressKey(" ")
+  await until(app, "install checked", (frame) => frame.includes("› [✓] Dependency installs"))
   const final = await pageUntil(app, "bun add *", pageDown)
   expect(final).toContain("bun add *")
   const trust = await pageUntil(
@@ -231,8 +250,48 @@ test("offers every preset, pages the bounded preview, and applies the final inst
   expect(finalAgain).toContain("bun add *")
 
   app.mockInput.pressEnter()
+  // One review covers every newly checked set.
+  const review = await until(app, "offer review", (frame) => frame.includes("Cancel"))
+  expect(review).toContain("Apply Kilo / Bun checks, Dependency installs")
+  app.mockInput.pressEnter()
+  await until(app, "apply requests", () => current.applied.length > 1)
   await until(app, "offer completion", (frame) => !frame.includes("Set up project permissions"))
-  expect(current.applied).toEqual(["dependency-install"])
+  expect(current.applied).toEqual(["kilo-bun-checks", "dependency-install"])
+  expect(current.replyCalls).toBe(0)
+})
+
+test("Apply in the automatic offer asks for confirmation, and cancelling returns to the offer", async () => {
+  const current = state({ clearOnApply: true })
+  await using app = await createAppFixture({
+    width: 100,
+    height: 34,
+    args: { sessionID },
+    config: { animations: false, tabs: { mode: "off" } },
+    fetch: fixtureFetch(current),
+  })
+  await app.ready
+  await until(app, "permission offer", (frame) => frame.includes("Set up project permissions"))
+  app.mockInput.pressEnter()
+  const review = await until(app, "offer review", (frame) => frame.includes("Cancel"))
+  expect(review).toContain("Apply Kilo / Bun checks")
+  app.mockInput.pressEscape()
+  await until(app, "review closed", (frame) => !frame.includes("Cancel"))
+  expect(app.captureCharFrame()).toContain("Set up project permissions")
+  expect(current.applied).toEqual([])
+  expect(current.skipped).toBe(0)
+
+  // The offer's navigation still works after a cancelled review: check TypeScript, uncheck the default.
+  app.mockInput.pressKey("j")
+  await until(app, "next preset", (frame) => frame.includes("› [ ] TypeScript checks"))
+  app.mockInput.pressKey(" ")
+  app.mockInput.pressKey("k")
+  app.mockInput.pressKey(" ")
+  await until(app, "default unchecked", (frame) => frame.includes("› [ ] Kilo / Bun checks"))
+  expect(app.captureCharFrame()).toContain("[✓] TypeScript checks")
+  await confirmOfferReview(app)
+  await until(app, "apply request", () => current.applied.length > 0)
+  await until(app, "offer completion", (frame) => !frame.includes("Set up project permissions"))
+  expect(current.applied).toEqual(["typescript-checks"])
   expect(current.replyCalls).toBe(0)
 })
 
@@ -290,9 +349,9 @@ test("accepted projects bypass the automatic offer, while /permissions reopens t
   )
   await Bun.sleep(0)
   manualApp.mockInput.pressEnter()
-  await until(manualApp, "manual permission chooser", (frame) => frame.includes("Apply Kilo / Bun checks"))
+  await until(manualApp, "manual permission chooser", (frame) => frame.includes("[ ] Kilo / Bun checks"))
   manualApp.mockInput.pressEscape()
-  await until(manualApp, "manual chooser close", (frame) => !frame.includes("Apply Kilo / Bun checks"))
+  await until(manualApp, "manual chooser close", (frame) => !frame.includes("[ ] Kilo / Bun checks"))
   // Dismissing the chooser records nothing.
   expect(manual.skipped).toBe(0)
   expect(manual.decision).toBe("accepted")
@@ -305,7 +364,7 @@ test("accepted projects bypass the automatic offer, while /permissions reopens t
   await Bun.sleep(0)
   manualApp.mockInput.pressEnter()
   const reopened = await until(manualApp, "manual permission chooser again", (frame) =>
-    frame.includes("Apply Kilo / Bun checks"),
+    frame.includes("[ ] Kilo / Bun checks"),
   )
   expect(reopened).toContain("Install and add package dependencies")
 })
@@ -321,7 +380,7 @@ test("an uncovered apply keeps the authoritative normal prompt and reports RPC f
   })
   await app.ready
   await until(app, "permission offer", (frame) => frame.includes("Set up project permissions"))
-  app.mockInput.pressEnter()
+  await confirmOfferReview(app)
   await until(app, "normal prompt after uncovered apply", (frame) => frame.includes("Permission required"))
   expect(current.replyCalls).toBe(0)
 
@@ -336,7 +395,7 @@ test("an uncovered apply keeps the authoritative normal prompt and reports RPC f
   })
   await failureApp.ready
   await until(failureApp, "failure offer", (frame) => frame.includes("Set up project permissions"))
-  failureApp.mockInput.pressEnter()
+  await confirmOfferReview(failureApp)
   await until(failureApp, "failed applying status", (frame) => frame.includes("Applying project permissions…"))
   failed.pending = false
   emitReplied(failureApp, requestID, "ses_permissions_failure")
@@ -376,7 +435,7 @@ test("does not start a second decision when the original request disappears duri
   })
   await app.ready
   await until(app, "permission offer", (frame) => frame.includes("Set up project permissions"))
-  app.mockInput.pressEnter()
+  await confirmOfferReview(app)
   await until(app, "applying status", (frame) => frame.includes("Applying project permissions…"))
   current.pending = false
   emitReplied(app)
@@ -386,7 +445,7 @@ test("does not start a second decision when the original request disappears duri
   expect(current.replyCalls).toBe(0)
 })
 
-test("the sidebar lists the applied sets, and /permissions (None) removes them", async () => {
+test("the sidebar lists the applied sets, and unchecking every set in /permissions removes them", async () => {
   const current = state({ pending: false, decision: "accepted", applied: ["typescript-checks"] })
   await using app = await createAppFixture({
     width: 160,
@@ -400,16 +459,12 @@ test("the sidebar lists the applied sets, and /permissions (None) removes them",
   expect(frame).toContain("TypeScript checks")
 
   await until(app, "composer", (value) => value.includes("ctrl+p commands"))
-  await app.mockInput.typeText("/permissions")
-  await until(app, "permission command", (value) =>
-    value.includes("Choose development permissions to add to this project"),
-  )
-  await Bun.sleep(0)
-  app.mockInput.pressEnter()
-  const chooser = await until(app, "manual chooser", (value) => value.includes("(None)"))
+  const chooser = await openManualChooser(app, "[✓] TypeScript checks")
   expect(chooser).toContain("Applied")
-  await app.mockInput.typeText("None")
-  await until(app, "filtered chooser", (value) => !value.includes("Apply Kilo / Bun checks"))
+  expect(chooser).toContain("[ ] Kilo / Bun checks")
+  app.mockInput.pressKey("j")
+  app.mockInput.pressKey(" ")
+  await until(app, "unchecked", (value) => value.includes("› [ ] TypeScript checks"))
   app.mockInput.pressEnter()
   // The chooser covers part of the sidebar, so wait for the clear itself before checking the sidebar.
   await until(app, "clear request", () => current.cleared > 0)
@@ -417,6 +472,30 @@ test("the sidebar lists the applied sets, and /permissions (None) removes them",
   expect(current.cleared).toBe(1)
   expect(current.skipped).toBe(0)
   expect(current.applied).toEqual([])
+})
+
+test("unchecking one set in /permissions removes only that set, without a review", async () => {
+  const current = state({ pending: false, decision: "accepted", applied: ["typescript-checks", "dependency-install"] })
+  await using app = await createAppFixture({
+    width: 100,
+    height: 34,
+    args: { sessionID },
+    config: { animations: false, tabs: { mode: "off" } },
+    fetch: fixtureFetch(current),
+  })
+  await app.ready
+  await until(app, "composer", (value) => value.includes("ctrl+p commands"))
+  await openManualChooser(app, "[✓] Dependency installs")
+  app.mockInput.pressKey("j")
+  app.mockInput.pressKey("j")
+  app.mockInput.pressKey(" ")
+  await until(app, "unchecked", (value) => value.includes("› [ ] Dependency installs"))
+  app.mockInput.pressEnter()
+  await until(app, "remove request", () => current.removed.length > 0)
+  expect(current.removed).toEqual(["dependency-install"])
+  expect(current.applied).toEqual(["typescript-checks"])
+  expect(current.cleared).toBe(0)
+  expect(current.decision).toBe("accepted")
 })
 
 test("auto-approve alone shows no permission sets in the sidebar", async () => {
@@ -438,26 +517,31 @@ test("auto-approve alone shows no permission sets in the sidebar", async () => {
   expect(app.captureCharFrame()).not.toContain("Permission sets")
 })
 
-test("/permissions offers (None) only while a set is applied", async () => {
-  const current = state({ pending: false, decision: "skipped" })
+test("/permissions applies several checked sets after one review of the new ones", async () => {
+  const current = state({ pending: false, decision: "accepted", applied: ["typescript-checks"] })
   await using app = await createAppFixture({
     width: 100,
-    height: 34,
+    height: 60,
     args: { sessionID },
     config: { animations: false, tabs: { mode: "off" } },
     fetch: fixtureFetch(current),
   })
   await app.ready
   await until(app, "composer", (value) => value.includes("ctrl+p commands"))
-  await app.mockInput.typeText("/permissions")
-  await until(app, "permission command", (value) =>
-    value.includes("Choose development permissions to add to this project"),
-  )
-  await Bun.sleep(0)
+  await openManualChooser(app, "[✓] TypeScript checks")
+  app.mockInput.pressKey(" ")
+  app.mockInput.pressKey("j")
+  app.mockInput.pressKey("j")
+  app.mockInput.pressKey(" ")
+  await until(app, "install checked", (value) => value.includes("› [✓] Dependency installs"))
   app.mockInput.pressEnter()
-  const chooser = await until(app, "manual chooser", (value) => value.includes("Apply Kilo / Bun checks"))
-  expect(chooser).not.toContain("(None)")
-  expect(chooser).not.toContain("Permission sets")
+  const review = await until(app, "set review", (value) => value.includes("Cancel") && value.includes("Apply Kilo"))
+  expect(review).toContain("Apply Kilo / Bun checks, Dependency installs")
+  expect(review).not.toContain("TypeScript checks")
+  app.mockInput.pressEnter()
+  await until(app, "apply requests", () => current.applied.length === 3)
+  expect(current.applied).toEqual(["typescript-checks", "kilo-bun-checks", "dependency-install"])
+  expect(current.removed).toEqual([])
 })
 
 async function openManualChooser(app: Awaited<ReturnType<typeof createAppFixture>>, label: string) {
@@ -481,11 +565,20 @@ test("/permissions shows a set's shell patterns and warnings before applying, an
   })
   await app.ready
   await until(app, "composer", (value) => value.includes("ctrl+p commands"))
-  await openManualChooser(app, "Apply Kilo / Bun checks")
+  await openManualChooser(app, "[ ] Kilo / Bun checks")
+  // Nothing checked is no change: the chooser closes without a request.
+  app.mockInput.pressEnter()
+  await until(app, "chooser closed", (value) => !value.includes("[ ] Kilo / Bun checks"))
+  expect(current.applied).toEqual([])
+  expect(current.cleared).toBe(0)
+
+  await openManualChooser(app, "[ ] Kilo / Bun checks")
+  app.mockInput.pressKey(" ")
   app.mockInput.pressEnter()
   const review = await until(app, "set review", (value) =>
     value.includes("Project scripts can execute repository code"),
   )
+  expect(review).toContain("Apply Kilo / Bun checks")
   expect(review).toContain("bun run check:architecture *")
   expect(review).toContain("tail, head and grep only filter command output")
   expect(review).toContain("Cancel")
@@ -493,7 +586,8 @@ test("/permissions shows a set's shell patterns and warnings before applying, an
   await until(app, "review closed", (value) => !value.includes("Project scripts can execute repository code"))
   expect(current.applied).toEqual([])
 
-  await openManualChooser(app, "Apply Kilo / Bun checks")
+  await openManualChooser(app, "[ ] Kilo / Bun checks")
+  app.mockInput.pressKey(" ")
   app.mockInput.pressEnter()
   await until(app, "set review again", (value) => value.includes("Project scripts can execute repository code"))
   app.mockInput.pressEnter()
@@ -512,10 +606,11 @@ test("/permissions still removes an applied set after the project stops matching
   })
   await app.ready
   await until(app, "composer", (value) => value.includes("ctrl+p commands"))
-  const chooser = await openManualChooser(app, "(None)")
-  expect(chooser).not.toContain("Apply Kilo / Bun checks")
+  const chooser = await openManualChooser(app, "[✓] TypeScript checks")
+  expect(chooser).not.toContain("Kilo / Bun checks")
   expect(chooser).not.toContain("No permission defaults match this project.")
-  await app.mockInput.typeText("None")
+  app.mockInput.pressKey(" ")
+  await until(app, "unchecked", (value) => value.includes("› [ ] TypeScript checks"))
   app.mockInput.pressEnter()
   await until(app, "clear request", () => current.cleared > 0)
   expect(current.applied).toEqual([])

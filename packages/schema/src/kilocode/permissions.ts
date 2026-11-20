@@ -71,6 +71,12 @@ export const Definition = Rpc.define({
       output: portable(Empty),
       errors: { ...unavailable, ...notApplicable },
     },
+    /** Removes one applied set; the other applied sets and the offer decision stay. */
+    remove: {
+      input: portable(Schema.Struct({ presetID: PresetID })),
+      output: portable(Empty),
+      errors: unavailable,
+    },
     skip: {
       input: portable(Empty),
       output: portable(Empty),

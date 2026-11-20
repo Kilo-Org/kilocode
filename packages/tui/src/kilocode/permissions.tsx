@@ -36,7 +36,10 @@ type ControllerState =
     }
   | { readonly status: "normal"; readonly projectID?: string }
 
-type Decision = "apply" | "skip" | "clear"
+type Decision = "update" | "skip" | "clear"
+
+// The sets to add and remove so the applied sets match the checked ones.
+type Change = { readonly apply: readonly Preset[]; readonly remove: readonly PresetID[] }
 
 type Offer = Extract<ControllerState, { status: "offer" }>
 
@@ -46,7 +49,7 @@ type Controller = {
   readonly state: () => ControllerState
   readonly ensure: (request: PermissionRequest) => void
   readonly manual: (location: LocationRef, sessionID?: string) => Promise<LoadResult>
-  readonly decide: (decision: Decision, presetID?: PresetID) => void
+  readonly decide: (decision: Decision, change?: Change) => void
   readonly dismiss: () => void
 }
 // Sets applied to each project, keyed by project ID; the sidebar shows them while any are applied.
@@ -57,6 +60,7 @@ type Applied = {
 }
 type Navigation = {
   readonly move: (delta: number) => void
+  readonly toggle: () => void
   readonly scroll: (delta: number) => void
 }
 
@@ -115,6 +119,7 @@ function definePlugin(): Plugin.Definition {
               request={input.request}
               directory={input.directory}
               registerNavigation={setNavigation}
+              review={(presets) => reviewPresets(context, presets)}
             />
           )
         },
@@ -139,6 +144,12 @@ function definePlugin(): Plugin.Definition {
                 bind: "down,j",
                 title: "Next permission set",
                 run: () => navigation()?.move(1),
+              },
+              {
+                id: "kilo.permissions.toggle",
+                bind: "space",
+                title: "Check or uncheck permission set",
+                run: () => navigation()?.toggle(),
               },
               {
                 id: "kilo.permissions.pageup",
@@ -256,13 +267,14 @@ function createController(context: Plugin.Context, byProject: Map<string, Contro
     }
   }
 
-  const run = async (decision: Decision, presetID: PresetID | undefined, offer: Offer) => {
+  const run = async (decision: Decision, change: Change | undefined, offer: Offer) => {
     setState({ ...offer, status: "submitting", action: decision })
     try {
       const rpc = context.client.rpc(KiloPermissionsRpc.Definition)
-      if (decision === "apply") {
-        if (!presetID) return
-        await rpc.apply({ presetID }, { location: offer.location })
+      if (decision === "update") {
+        // Removals first: an apply settles the waiting requests the sets cover, so it runs with the final sets.
+        for (const presetID of change?.remove ?? []) await rpc.remove({ presetID }, { location: offer.location })
+        for (const preset of change?.apply ?? []) await rpc.apply({ presetID: preset.id }, { location: offer.location })
       } else if (decision === "clear") {
         await rpc.clear({}, { location: offer.location })
       } else {
@@ -339,10 +351,11 @@ function createController(context: Plugin.Context, byProject: Map<string, Contro
       const result = state()
       return loaded ?? (result.status === "offer" ? result : undefined)
     },
-    decide(decision, presetID) {
+    decide(decision, change) {
       const current = state()
-      if (current.status !== "offer" || (decision === "apply" && !presetID) || operation) return
-      operation = run(decision, presetID, current).finally(() => {
+      if (current.status !== "offer" || operation) return
+      if (decision === "update" && !change?.apply.length && !change?.remove.length) return
+      operation = run(decision, change, current).finally(() => {
         operation = undefined
       })
     },
@@ -392,48 +405,155 @@ async function openManual(context: Plugin.Context, getController: (directory: st
     })
     return
   }
-  const applied = new Set(result.applied.map((preset) => preset.id))
-  const selection = context.ui.dialog.select<PresetID | "skip" | "clear">({
-    title: t("tui.permissions.title"),
-    options: [
-      ...result.presets.map((preset) => ({
-        title: `${t("tui.permissions.apply")} ${presetLabel(preset.id)}`,
-        value: preset.id,
-        description: presetDescription(preset.id),
-        footer: applied.has(preset.id) ? t("tui.permissions.applied") : undefined,
-      })),
-      ...(applied.size > 0
-        ? [
-            {
-              title: t("tui.permissions.none"),
-              value: "clear" as const,
-              description: t("tui.permissions.noneDescription"),
-            },
-          ]
-        : []),
-      { title: t("tui.permissions.skip"), value: "skip" },
-    ],
-    current: result.presets.find((preset) => applied.has(preset.id))?.id ?? result.presets[0]?.id,
-  })
-  // `select` shows the dialog synchronously at the default width; widen it so the descriptions fit.
-  context.ui.dialog.set({ size: "large" })
-  const choice = await selection
+  // A set applied before the project stopped matching is listed too, so unchecking it can remove it.
+  const options = [
+    ...result.presets,
+    ...result.applied.filter((set) => !result.presets.some((preset) => preset.id === set.id)),
+  ]
+  const checked = await choosePresets(context, options, result.applied)
   // Dismissing the chooser changes nothing.
-  if (choice === undefined) {
+  if (checked === undefined) {
     selectedController.dismiss()
     return
   }
-  if (choice === "skip" || choice === "clear") {
-    selectedController.decide(choice)
-    return
-  }
-  // The chooser names a set; its shell patterns and warnings are reviewed before anything is applied.
-  const preset = result.presets.find((item) => item.id === choice)
-  if (!preset || !(await reviewPreset(context, preset))) {
+  const change = planChange(options, result.applied, checked)
+  if (change.apply.length === 0 && change.remove.length === 0) {
     selectedController.dismiss()
     return
   }
-  selectedController.decide("apply", choice)
+  // Unchecking every set is the old "(None)": it removes them and records that no set is wanted.
+  if (checked.size === 0) {
+    selectedController.decide("clear")
+    return
+  }
+  // Newly checked sets have their shell patterns and warnings reviewed before anything changes.
+  if (change.apply.length > 0 && !(await reviewPresets(context, change.apply))) {
+    selectedController.dismiss()
+    return
+  }
+  selectedController.decide("update", change)
+}
+
+function planChange(options: readonly Preset[], applied: readonly Preset[], checked: ReadonlySet<PresetID>): Change {
+  return {
+    apply: options.filter((preset) => checked.has(preset.id) && !applied.some((set) => set.id === preset.id)),
+    remove: applied.filter((set) => !checked.has(set.id)).map((set) => set.id),
+  }
+}
+
+function choosePresets(context: Plugin.Context, options: readonly Preset[], applied: readonly Preset[]) {
+  return new Promise<ReadonlySet<PresetID> | undefined>((resolve) => {
+    context.ui.dialog.show(
+      () => (
+        <PresetChooser
+          options={options}
+          applied={applied}
+          onDone={(checked) => {
+            resolve(checked)
+            context.ui.dialog.clear()
+          }}
+        />
+      ),
+      () => resolve(undefined),
+    )
+    context.ui.dialog.set({ size: "large" })
+  })
+}
+
+/** `/permissions`: every set as a checkbox, checked while applied. */
+function PresetChooser(props: {
+  readonly options: readonly Preset[]
+  readonly applied: readonly Preset[]
+  readonly onDone: (checked: ReadonlySet<PresetID> | undefined) => void
+}) {
+  const theme = useTheme()
+  const [cursor, setCursor] = createSignal(0)
+  const [checked, setChecked] = createSignal<ReadonlySet<PresetID>>(new Set(props.applied.map((set) => set.id)))
+  const toggle = (id: PresetID) =>
+    setChecked((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  const move = (delta: number) => setCursor((index) => Math.max(0, Math.min(props.options.length - 1, index + delta)))
+  const toggleCursor = () => {
+    const preset = props.options[cursor()]
+    if (preset) toggle(preset.id)
+  }
+  Keymap.createLayer(() => ({
+    mode: "modal",
+    commands: [
+      { bind: "up,k", run: () => move(-1) },
+      { bind: "down,j", run: () => move(1) },
+      { bind: "space", run: toggleCursor },
+      { bind: "return", run: () => props.onDone(checked()) },
+      { bind: "escape", run: () => props.onDone(undefined) },
+    ],
+  }))
+  return (
+    <DialogLayout
+      header={<DialogHeader title={t("tui.permissions.title")} />}
+      footer={{
+        actions: {
+          primary: [
+            { title: t("tui.permissions.cancel"), key: "esc", onTrigger: () => props.onDone(undefined) },
+            { title: t("tui.permissions.toggle"), key: "space", onTrigger: toggleCursor },
+            { title: t("tui.permissions.apply"), key: "enter", onTrigger: () => props.onDone(checked()) },
+          ],
+        },
+      }}
+    >
+      <box flexDirection="column" gap={1}>
+        <For each={props.options}>
+          {(preset, index) => (
+            <box
+              flexDirection="column"
+              onMouseUp={() => {
+                setCursor(index())
+                toggle(preset.id)
+              }}
+            >
+              <box flexDirection="row" gap={1}>
+                <PresetCheckbox
+                  id={preset.id}
+                  active={index() === cursor()}
+                  checked={checked().has(preset.id)}
+                />
+                <Show when={props.applied.some((set) => set.id === preset.id)}>
+                  <text fg={theme.text.muted}>{t("tui.permissions.applied")}</text>
+                </Show>
+              </box>
+              <box paddingLeft={6}>
+                <text fg={theme.text.muted}>{presetDescription(preset.id)}</text>
+              </box>
+            </box>
+          )}
+        </For>
+      </box>
+    </DialogLayout>
+  )
+}
+
+/** One set's row: the cursor, its checkbox and its label. */
+function PresetCheckbox(props: { readonly id: PresetID; readonly active: boolean; readonly checked: boolean }) {
+  const theme = useTheme()
+  return (
+    <text fg={props.active ? theme.text.formfield.focused : theme.text.formfield.base}>
+      <span
+        style={{
+          fg: props.active
+            ? theme.text.formfield.focused
+            : props.checked
+              ? theme.text.formfield.selected
+              : theme.text.muted,
+        }}
+      >
+        {`${props.active ? "›" : " "} [${props.checked ? "✓" : " "}] `}
+      </span>
+      {presetLabel(props.id)}
+    </text>
+  )
 }
 
 const manualMessages = {
@@ -443,12 +563,12 @@ const manualMessages = {
   no_matches: "tui.permissions.noMatches",
 } as const satisfies Record<Exclude<LoadResult, Offer | "active" | undefined>, CopyKey>
 
-function reviewPreset(context: Plugin.Context, preset: Preset) {
+function reviewPresets(context: Plugin.Context, presets: readonly Preset[]) {
   return new Promise<boolean>((resolve) => {
     context.ui.dialog.show(
       () => (
         <PresetReview
-          preset={preset}
+          presets={presets}
           onChoose={(confirmed) => {
             resolve(confirmed)
             context.ui.dialog.clear()
@@ -461,8 +581,8 @@ function reviewPreset(context: Plugin.Context, preset: Preset) {
   })
 }
 
-/** The set's description, every shell pattern and the warnings, scrollable on short terminals. */
-function PresetReview(props: { readonly preset: Preset; readonly onChoose: (confirmed: boolean) => void }) {
+/** Each set's description and shell patterns, then the warnings, scrollable on short terminals. */
+function PresetReview(props: { readonly presets: readonly Preset[]; readonly onChoose: (confirmed: boolean) => void }) {
   const dimensions = useTerminalDimensions()
   let preview: ScrollBoxRenderable | undefined
   const scroll = (pages: number) => preview?.scrollBy(pages * Math.max(1, preview.viewport.height))
@@ -477,7 +597,11 @@ function PresetReview(props: { readonly preset: Preset; readonly onChoose: (conf
   }))
   return (
     <DialogLayout
-      header={<DialogHeader title={`${t("tui.permissions.apply")} ${presetLabel(props.preset.id)}`} />}
+      header={
+        <DialogHeader
+          title={`${t("tui.permissions.apply")} ${props.presets.map((preset) => presetLabel(preset.id)).join(", ")}`}
+        />
+      }
       footer={{
         actions: {
           primary: [
@@ -496,26 +620,40 @@ function PresetReview(props: { readonly preset: Preset; readonly onChoose: (conf
         contentOptions={{ minHeight: 0 }}
       >
         <box flexDirection="column" gap={1}>
-          <PresetDetails preset={props.preset} />
+          <PresetDetails presets={props.presets} />
         </box>
       </scrollbox>
     </DialogLayout>
   )
 }
 
-/** What applying a set allows: the same content in the automatic offer and in the `/permissions` review. */
-function PresetDetails(props: { readonly preset: Preset }) {
+/**
+ * What applying sets allows: the same content in the automatic offer and in the review. Several sets are each
+ * headed by their label.
+ */
+function PresetDetails(props: { readonly presets: readonly Preset[] }) {
   const theme = useTheme()
   return (
     <>
-      <text fg={theme.text.muted}>{presetDescription(props.preset.id)}</text>
-      <text fg={theme.text.muted}>{t("tui.permissions.rules")}</text>
-      <box>
-        <For each={props.preset.resources}>{(resource) => <text fg={theme.text.base}>{resource}</text>}</For>
-      </box>
+      <For each={props.presets}>
+        {(preset) => (
+          <>
+            <Show when={props.presets.length > 1}>
+              <text fg={theme.text.base}>
+                <b>{presetLabel(preset.id)}</b>
+              </text>
+            </Show>
+            <text fg={theme.text.muted}>{presetDescription(preset.id)}</text>
+            <text fg={theme.text.muted}>{t("tui.permissions.rules")}</text>
+            <box>
+              <For each={preset.resources}>{(resource) => <text fg={theme.text.base}>{resource}</text>}</For>
+            </box>
+          </>
+        )}
+      </For>
       <text fg={theme.text.muted}>{t("tui.permissions.helpers")}</text>
       <text fg={theme.text.feedback.warning.base}>{t("tui.permissions.trust")}</text>
-      <Show when={props.preset.id.endsWith("-install")}>
+      <Show when={props.presets.some((preset) => preset.id.endsWith("-install"))}>
         <text fg={theme.text.feedback.warning.base}>{t("tui.permissions.installWarning")}</text>
       </Show>
     </>
@@ -527,6 +665,7 @@ function PermissionGate(props: {
   readonly request: PermissionRequest
   readonly directory: string | undefined
   readonly registerNavigation: (value: Navigation | undefined) => void
+  readonly review: (presets: readonly Preset[]) => Promise<boolean>
 }) {
   // Start the project check when a request is shown; `on` keeps the controller's own state out of the tracking.
   createEffect(
@@ -551,6 +690,7 @@ function PermissionGate(props: {
             request={props.request}
             offer={state() as Offer}
             registerNavigation={props.registerNavigation}
+            review={props.review}
           />
         </Show>
       </Match>
@@ -575,9 +715,18 @@ function PermissionOffer(props: {
   readonly request: PermissionRequest
   readonly offer: Offer
   readonly registerNavigation: (value: Navigation | undefined) => void
+  readonly review: (presets: readonly Preset[]) => Promise<boolean>
 }) {
   const theme = useTheme()
   const [selected, setSelected] = createSignal(0)
+  // Sets already applied start checked; otherwise the first (the project's default) does.
+  const [checked, setChecked] = createSignal<ReadonlySet<PresetID>>(
+    new Set(
+      props.offer.applied.length > 0
+        ? props.offer.applied.map((set) => set.id)
+        : props.offer.presets.slice(0, 1).map((preset) => preset.id),
+    ),
+  )
   let preview: ScrollBoxRenderable | undefined
   const preset = createMemo(() => props.offer.presets[selected()] ?? props.offer.presets[0])
   const move = (delta: number) => {
@@ -588,13 +737,53 @@ function PermissionOffer(props: {
 
   const navigation: Navigation = {
     move,
+    toggle: () => {
+      const current = preset()
+      if (!current) return
+      setChecked((value) => {
+        const next = new Set(value)
+        if (next.has(current.id)) next.delete(current.id)
+        else next.add(current.id)
+        return next
+      })
+    },
     scroll: (pages) => {
       if (!preview) return
       preview.scrollBy(pages * Math.max(1, preview.viewport.height))
     },
   }
+  let disposed = false
   props.registerNavigation(navigation)
-  onCleanup(() => props.registerNavigation(undefined))
+  onCleanup(() => {
+    disposed = true
+    props.registerNavigation(undefined)
+  })
+
+  // Same confirmation as `/permissions`. The offer's navigation keys are global, so they are released while the
+  // review is open; cancelling returns to the offer.
+  // Apply with nothing to change, including nothing checked, is a skip.
+  const apply = async () => {
+    const change = planChange(props.offer.presets, props.offer.applied, checked())
+    if (checked().size === 0 && change.remove.length > 0) {
+      props.controller.decide("clear")
+      return
+    }
+    if (change.apply.length === 0 && change.remove.length === 0) {
+      props.controller.decide("skip")
+      return
+    }
+    if (change.apply.length === 0) {
+      props.controller.decide("update", change)
+      return
+    }
+    props.registerNavigation(undefined)
+    const confirmed = await props.review(change.apply)
+    if (confirmed) {
+      props.controller.decide("update", change)
+      return
+    }
+    if (!disposed) props.registerNavigation(navigation)
+  }
 
   return (
     <SessionQuestion
@@ -606,7 +795,7 @@ function PermissionOffer(props: {
       escapeKey="skip"
       fullscreen
       onSelect={(choice) => {
-        if (choice === "apply") props.controller.decide("apply", preset()?.id)
+        if (choice === "apply") void apply()
         else props.controller.decide("skip")
       }}
       body={
@@ -621,20 +810,25 @@ function PermissionOffer(props: {
         >
           <box flexDirection="column" gap={1} paddingLeft={1} paddingRight={1} paddingBottom={1}>
             <text fg={theme.text.muted}>{t("tui.permissions.choose")}</text>
-            <For each={props.offer.presets}>
-              {(option, index) => {
-                const active = createMemo(() => index() === selected())
-                return (
-                  <text fg={active() ? theme.text.formfield.focused : theme.text.muted}>
-                    <span style={{ fg: active() ? theme.text.formfield.selected : theme.text.formfield.base }}>
-                      {active() ? "● " : "○ "}
-                    </span>
-                    {presetLabel(option.id)}
-                  </text>
-                )
-              }}
-            </For>
-            <Show when={preset()}>{(current) => <PresetDetails preset={current()} />}</Show>
+            <box>
+              <For each={props.offer.presets}>
+                {(option, index) => (
+                  <box
+                    onMouseUp={() => {
+                      setSelected(index())
+                      navigation.toggle()
+                    }}
+                  >
+                    <PresetCheckbox
+                      id={option.id}
+                      active={index() === selected()}
+                      checked={checked().has(option.id)}
+                    />
+                  </box>
+                )}
+              </For>
+            </box>
+            <Show when={preset()}>{(current) => <PresetDetails presets={[current()]} />}</Show>
           </box>
         </scrollbox>
       }

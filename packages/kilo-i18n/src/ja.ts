@@ -219,11 +219,10 @@ export const dict = {
   "tui.permissions.apply": "適用",
   "tui.permissions.skip": "スキップ",
   "tui.permissions.cancel": "キャンセル",
-  "tui.permissions.none": "(なし)",
-  "tui.permissions.noneDescription": "適用済みの権限セットを削除",
+  "tui.permissions.toggle": "選択",
   "tui.permissions.applied": "適用済み",
   "tui.permissions.sidebar": "権限セット",
-  "tui.permissions.choose": "上下: 権限セットを選択。PageUp/PageDown: コマンドをスクロール。",
+  "tui.permissions.choose": "上下: 移動。Space: 権限セットの選択を切り替え。PageUp/PageDown: コマンドをスクロール。",
   "tui.permissions.rules": "このセットで許可されるシェルコマンド",
   "tui.permissions.trust":
     "プロジェクトのスクリプトはリポジトリのコードを実行できます。既存の拒否ルールは引き続き適用されます。",
