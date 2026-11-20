@@ -1945,7 +1945,7 @@ const AgentManagerContent: Component = () => {
     transferring: transfer.transferring,
     detail: transfer.detail,
     onNewWorktree: handleCreateWorktree,
-    onNewWorktreeFromBranch: (b) => createWorktreeNow(b),
+    onNewWorktreeFromBranch: (branch) => createWorktreeNow(branch),
     onConfigureWorktree: () => showNewWorktreeDialog(),
     onMoveToWorktree: (id) => transfer.move(id),
     onShowChanges: showChanges,

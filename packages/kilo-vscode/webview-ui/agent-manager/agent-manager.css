@@ -6116,6 +6116,12 @@ body.vscode-high-contrast-light {
   display: none;
 }
 
+/* Keep closed side terminals outside xterm's intersection area so xterm pauses its
+   render loop while cached diff panels remain in-place inside the viewport. */
+.am-side-host-hidden .am-side-terminal {
+  transform: translate(-100vw, 0);
+}
+
 /* Subagent inspector panel. It remains mounted while another inspector mode
    is active so switching back keeps the child transcript and scroll position. */
 .am-subagent-panel {

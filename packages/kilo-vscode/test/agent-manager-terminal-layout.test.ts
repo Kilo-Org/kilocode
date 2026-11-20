@@ -86,8 +86,8 @@ test("keeps terminal sockets mounted while history is open", () => {
   expect(css).toMatch(/\.am-detail-stack-hidden[^}]*transform: translate\(-100vw, 0\)/s)
 })
 
-test("moves a closed side panel outside xterm's intersection area", () => {
-  expect(css).toMatch(/\.am-side-host-hidden[^}]*transform: translate\(-100vw, 0\)/s)
+test("moves a closed side panel terminal outside xterm's intersection area", () => {
+  expect(css).toMatch(/\.am-side-host-hidden \.am-side-terminal[^}]*transform: translate\(-100vw, 0\)/s)
 })
 
 test("re-sends dimensions when an optimistic terminal receives its PTY", () => {
