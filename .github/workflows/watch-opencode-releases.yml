@@ -1,3 +1,18 @@
+# Tracks the newest upstream release and, once per tag, announces it in Slack and asks the sync
+# endpoint to pull it in.
+#
+# Two independent per-tag cache markers keep the two halves of the handling separate, so each half
+# runs again on a later scheduled run until it is done and is not repeated after it succeeded:
+#   `last-seen-<tag>`  the tag's sync request completed, or the sync is not configured
+#   `notified-<tag>`   the tag was already announced in Slack
+# A marker is written only when its own step completed, so a run that did not finish one half
+# leaves that half open for the next run.
+#
+# Setup: repo secrets `OPENCODE_WATCH_SYNC_URL` and `OPENCODE_WATCH_SYNC_SECRET` (both enable the
+# sync; when either is unset no request is made and the tag is still recorded),
+# `OPENCODE_WATCH_VERCEL_SECRET` (optional Vercel protection bypass for the sync URL), and
+# `OPENCODE_WATCH_SLACK_WEBHOOK` (a Slack incoming webhook URL).
+
 on:
   schedule:
     - cron: "7,37 * * * *" # every 30 min at :07 and :37
@@ -28,27 +43,51 @@ jobs:
           echo "url=$(echo "$data" | jq -r '.url')" >> "$GITHUB_OUTPUT"
 
       - if: steps.fetch.outputs.tag != ''
-        id: cache
+        id: sync-cache
         uses: actions/cache/restore@v4
         with:
           path: .cache/last-seen
           key: last-seen-${{ steps.fetch.outputs.tag }}
           restore-keys: last-seen-
 
-      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+      - if: steps.fetch.outputs.tag != ''
+        id: notify-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/notified
+          key: notified-${{ steps.fetch.outputs.tag }}
+
+      - if: steps.fetch.outputs.tag != '' && steps.sync-cache.outputs.cache-hit != 'true'
+        id: sync
         name: Trigger opencode sync
         env:
           URL: ${{ secrets.OPENCODE_WATCH_SYNC_URL }}
           SECRET: ${{ secrets.OPENCODE_WATCH_SYNC_SECRET }}
           VERCEL: ${{ secrets.OPENCODE_WATCH_VERCEL_SECRET }}
         run: |
-          if [ -n "$URL" ] && [ -n "$SECRET" ]; then
-            headers=(-H "x-sync-secret: $SECRET" -H "Content-Type: application/json")
-            [ -n "$VERCEL" ] && headers+=(-H "x-vercel-protection-bypass: $VERCEL")
-            curl -sf -X POST "$URL" "${headers[@]}" -d '{}' || true
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "::warning::The OpenCode sync is not configured, so no request was made for ${{ steps.fetch.outputs.tag }}"
+            echo "handled=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          headers=(-H "x-sync-secret: $SECRET" -H "Content-Type: application/json")
+          if [ -n "$VERCEL" ]; then headers+=(-H "x-vercel-protection-bypass: $VERCEL"); fi
+          curl -sfS -X POST "$URL" "${headers[@]}" -d '{}'
+          echo "handled=true" >> "$GITHUB_OUTPUT"
 
-      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+      - if: steps.sync.outputs.handled == 'true'
+        name: Mark release as synced
+        run: mkdir -p .cache/last-seen && echo "${{ steps.fetch.outputs.tag }}" > .cache/last-seen/tag.txt
+
+      - if: steps.sync.outputs.handled == 'true'
+        name: Save synced-tag cache
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/last-seen
+          key: last-seen-${{ steps.fetch.outputs.tag }}
+
+      - if: ${{ !cancelled() && steps.fetch.outputs.tag != '' && steps.notify-cache.outputs.cache-hit != 'true' }}
+        id: notify
         name: Notify Slack
         uses: slackapi/slack-github-action@v2.0.0
         with:
@@ -59,13 +98,13 @@ jobs:
             tag: "${{ steps.fetch.outputs.tag }}"
             url: "${{ steps.fetch.outputs.url }}"
 
-      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
-        name: Mark tag as seen
-        run: mkdir -p .cache/last-seen && echo "${{ steps.fetch.outputs.tag }}" > .cache/last-seen/tag.txt
+      - if: ${{ !cancelled() && steps.notify.outcome == 'success' }}
+        name: Mark release as notified
+        run: mkdir -p .cache/notified && echo "${{ steps.fetch.outputs.tag }}" > .cache/notified/tag.txt
 
-      - if: success() && steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
-        name: Save seen-tag cache
+      - if: ${{ !cancelled() && steps.notify.outcome == 'success' }}
+        name: Save notified-tag cache
         uses: actions/cache/save@v4
         with:
-          path: .cache/last-seen
-          key: last-seen-${{ steps.fetch.outputs.tag }}
+          path: .cache/notified
+          key: notified-${{ steps.fetch.outputs.tag }}
