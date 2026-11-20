@@ -32,6 +32,7 @@ import ai.kilocode.client.session.model.TurnOutcome
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.settings.profile.accountErrorToken
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
@@ -3149,8 +3150,21 @@ class SessionController(
         refreshAccountOverlay()
         cs.launch {
             try {
-                app.setOrganization(org)
+                val result = app.setOrganization(org)
+                val error = result.error
+                if (error != null) {
+                    capture("Account Connect Failed", mapOf("stage" to "organization", "errorClass" to accountErrorToken(error)))
+                    LOG.warn("account switch failed org=$org resource=${error.resource} status=${error.status}")
+                    edt {
+                        if (disposed) return@edt
+                        target = null
+                        refreshAccountOverlay()
+                    }
+                    return@launch
+                }
                 capture("Organization Switched", mapOf("target" to if (org == null) "personal" else "organization"))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 capture("Account Connect Failed", mapOf("stage" to "organization", "errorClass" to e::class.java.name))
                 LOG.warn("account switch failed org=$org message=${e.message}", e)
