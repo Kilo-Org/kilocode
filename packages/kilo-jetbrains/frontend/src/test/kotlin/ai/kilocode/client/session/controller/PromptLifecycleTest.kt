@@ -640,7 +640,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertTrue(opened.none { it is SessionRef.Local && it.id == "ses_new" })
     }
 
-    fun `test sub-agent child created in the follow-up window is not adopted`() {
+    fun `test follow-up handoff binds to a root session in the answered directory`() {
         val opened = mutableListOf<SessionRef>()
         armedFollowup { opened.add(it) }
 
@@ -659,7 +659,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
     }
 
-    fun `test session created before the follow-up answer is not adopted`() {
+    fun `test follow-up handoff binds to a session created after the answer`() {
         val opened = mutableListOf<SessionRef>()
         armedFollowup { opened.add(it) }
 
@@ -668,7 +668,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertTrue(opened.isEmpty())
     }
 
-    fun `test created event for the asking session itself is not adopted`() {
+    fun `test follow-up handoff binds to a session other than the asking one`() {
         val opened = mutableListOf<SessionRef>()
         armedFollowup { opened.add(it) }
 

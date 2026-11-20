@@ -3038,10 +3038,10 @@ class SessionController(
             return
         }
         if (pathKey(item.dir) != pathKey(session.directory)) return
-        // The created-session payload carries no creator, so identity is inferred instead: the gate refuses
-        // the session whose question was answered, accepts only a root session (no parent, not a tracked
-        // sub-agent child), and requires a session created after the answer was sent. A rejected candidate
-        // leaves the arming in place for the real follow-up session.
+        // The created-session payload carries no creator, so the handoff binds to what it does carry: the
+        // session this answer produced is a root session of the answered question's directory, created
+        // after the answer. A candidate that does not qualify leaves the arming in place, so the intended
+        // session still opens when it arrives.
         if (session.id == item.session) return
         if (session.parentID != null) return
         if (session.id in childIds) return
