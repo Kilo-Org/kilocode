@@ -255,12 +255,12 @@ function parseRun(stdout: string, pricing: Pricing | undefined): Metrics {
         const name = String(call?.["tool"]).replace(".", "_")
         metrics.browser += 1
         metrics.browserTools[name] = (metrics.browserTools[name] ?? 0) + 1
-        // A failed inner call usually fails the whole `execute`, which is recorded once below. Code Mode keeps no
-        // error text on the inner call; with one browser call in the `execute`, its result is that call's error.
+        // A failed inner call fails the whole `execute`, which is recorded once below; Code Mode keeps no error text on
+        // the inner call, but the `execute`'s output is the model-visible failure message (execution stops at the first
+        // failed call), so a failed call reports it and `errorName()` classifies the real error.
         if (call?.["status"] === "error" && state?.["status"] !== "error") {
-          const text = String(
-            call["error"] ?? (innerBrowser.length === 1 ? (state?.["output"] ?? "") : "inner call failed"),
-          )
+          const own = typeof call["error"] === "string" && call["error"].trim() !== "" ? call["error"] : undefined
+          const text = String(own ?? state?.["output"] ?? "")
           metrics.toolErrors.push({ tool: name, name: errorName(text), text: text.slice(0, 200) })
         }
       }
