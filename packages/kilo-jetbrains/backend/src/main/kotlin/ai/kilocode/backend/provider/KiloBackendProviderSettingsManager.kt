@@ -37,6 +37,7 @@ internal class KiloBackendProviderSettingsManager(
         private val FETCH by lazy { KiloBackendHttpClients.modelFetch() }
         private const val CALL_TIMEOUT_SECONDS = 15L
         private const val OAUTH_CALL_TIMEOUT_SECONDS = 60L
+        private const val GATEWAY_PROVIDER_ID = "kilo"
     }
 
     suspend fun state(directory: String): ProviderSettingsDto {
@@ -85,6 +86,9 @@ internal class KiloBackendProviderSettingsManager(
     }
 
     suspend fun connect(input: ProviderConnectDto): ProviderActionResultDto {
+        if (input.providerId == GATEWAY_PROVIDER_ID) {
+            return ProviderActionResultDto(state(input.directory), error = "Kilo Gateway cannot be connected from provider settings.")
+        }
         val body = KiloCliDataParser.buildProviderAuthJson(input.key, input.metadata)
         put("/auth/${enc(input.providerId)}", body)
         dispose()
@@ -109,7 +113,7 @@ internal class KiloBackendProviderSettingsManager(
         val current = state(input.directory)
         val provider = current.providers.firstOrNull { it.id == input.providerId }
         val cfg = current.config[input.providerId]
-        if (input.providerId == "kilo") {
+        if (input.providerId == GATEWAY_PROVIDER_ID) {
             return ProviderActionResultDto(current, error = "Kilo Gateway cannot be disconnected from provider settings.")
         }
         if (provider?.source == "env" && cfg == null) {
@@ -279,10 +283,11 @@ internal class KiloBackendProviderSettingsManager(
 
     private fun scopedIds(global: List<String>, local: List<String>): Map<String, List<String>> {
         val globals = global.toSet()
+        val locals = local.toSet()
         return (global + local).distinct().associateWith { id ->
             buildList {
                 if (id in globals) add("global")
-                if (id in local && id !in globals) add("workspace")
+                if (id in locals) add("workspace")
             }
         }
     }
@@ -327,6 +332,7 @@ internal class KiloBackendProviderSettingsManager(
     private fun enc(value: String) = URLEncoder.encode(value, StandardCharsets.UTF_8)
 
     private fun validate(input: CustomProviderSaveDto): String? {
+        if (input.id.trim() == GATEWAY_PROVIDER_ID) return "Kilo Gateway cannot be saved as a custom provider."
         val env = input.envVar
         if (!Regex("^[a-zA-Z0-9_-]+$").matches(input.id.trim())) return "Provider ID can only contain letters, numbers, underscores, and hyphens."
         if (!input.baseUrl.startsWith("http://") && !input.baseUrl.startsWith("https://")) return "Base URL must start with http:// or https://."

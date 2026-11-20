@@ -91,6 +91,57 @@ class KiloBackendProviderSettingsManagerTest {
     }
 
     @Test
+    fun `connecting kilo gateway returns error without auth write or dispose`() = runBlocking {
+        mock.providers = """{
+            "all":[{"id":"kilo","name":"Kilo Gateway","source":"custom","models":{}}],
+            "default":{},
+            "connected":[],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.connect(ProviderConnectDto("/test", "kilo", "sk-test"))
+
+        assertEquals(
+            "Kilo Gateway cannot be connected from provider settings.",
+            result.error,
+            "connecting the gateway from provider settings must be refused with the dedicated message",
+        )
+        assertNull(mock.lastAuthPutBody, "no provider credential may be written for the reserved gateway id")
+        assertEquals(0, mock.requestCount("/auth/kilo"), "no auth request may be sent for the reserved gateway id")
+        assertEquals(0, mock.requestCount("/global/dispose"), "a refused connect must not dispose the CLI runtime")
+    }
+
+    @Test
+    fun `saving kilo gateway as custom provider is refused without config or auth writes`() = runBlocking {
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.saveCustom(
+            CustomProviderSaveDto(
+                "/test",
+                "kilo",
+                "Kilo Gateway",
+                "https://api.example.com/v1",
+                apiKey = "sk-test",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            ),
+        )
+
+        assertEquals(
+            "Kilo Gateway cannot be saved as a custom provider.",
+            result.error,
+            "saving the reserved gateway id as a custom provider must be refused with the dedicated message",
+        )
+        assertNull(mock.lastConfigPatchBody, "the global config must not be patched for the reserved gateway id")
+        assertNull(mock.lastWorkspaceConfigPatchBody, "the workspace config must not be patched for the reserved gateway id")
+        assertNull(mock.lastAuthPutBody, "no provider credential may be written for the reserved gateway id")
+        assertNull(mock.lastAuthDeletePath, "no stored credential may be deleted for the reserved gateway id")
+        assertEquals(0, mock.requestCount("/global/dispose"), "a refused save must not dispose the CLI runtime")
+    }
+
+    @Test
     fun `disconnecting openai compatible custom provider deletes config and auth`() = runBlocking {
         mock.config = """{
             "model":"test/model",
@@ -123,8 +174,8 @@ class KiloBackendProviderSettingsManagerTest {
                 "global-openai":{"name":"Global OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://global.test"}},
                 "overridden-openai":{"name":"Global Override","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://global.test"}}
             },
-            "disabled_providers":["global-disabled"],
-            "enabled_providers":["global-enabled"]
+            "disabled_providers":["global-disabled","shared-disabled"],
+            "enabled_providers":["global-enabled","shared-enabled"]
         }""".trimIndent()
         mock.workspaceConfig = """{
             "provider":{
@@ -132,8 +183,8 @@ class KiloBackendProviderSettingsManagerTest {
                 "overridden-openai":{"name":"Workspace Override","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://workspace.test"}},
                 "workspace-openai":{"name":"Workspace OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://workspace.test"}}
             },
-            "disabled_providers":["global-disabled","workspace-disabled"],
-            "enabled_providers":["global-enabled","workspace-enabled"]
+            "disabled_providers":["workspace-disabled","shared-disabled"],
+            "enabled_providers":["workspace-enabled","shared-enabled"]
         }""".trimIndent()
         val manager = manager()
 
@@ -144,8 +195,18 @@ class KiloBackendProviderSettingsManagerTest {
         assertEquals("workspace", state.config["workspace-openai"]?.scope)
         assertEquals(listOf("global"), state.disabledScopes["global-disabled"])
         assertEquals(listOf("workspace"), state.disabledScopes["workspace-disabled"])
+        assertEquals(
+            listOf("global", "workspace"),
+            state.disabledScopes["shared-disabled"],
+            "a provider disabled in both config files must report both scopes, or the UI only shows one and enable misses the other",
+        )
         assertEquals(listOf("global"), state.enabledScopes["global-enabled"])
         assertEquals(listOf("workspace"), state.enabledScopes["workspace-enabled"])
+        assertEquals(
+            listOf("global", "workspace"),
+            state.enabledScopes["shared-enabled"],
+            "a provider enabled in both config files must report both scopes, matching the disabled map",
+        )
     }
 
     @Test
@@ -196,7 +257,14 @@ class KiloBackendProviderSettingsManagerTest {
         assertNull(mock.lastConfigPatchBody)
         assertContains(mock.lastWorkspaceConfigPatchBody.orEmpty(), "\"anthropic\"")
         assertContains(mock.lastWorkspaceConfigPatchBody.orEmpty(), "\"workspace-disabled\"")
-        assertFalse(mock.lastWorkspaceConfigPatchBody.orEmpty().contains("global-disabled"))
+        // The patch replaces the whole array, so it must carry every id the workspace file lists,
+        // including one that is also disabled globally: dropping it here would rewrite the
+        // user's workspace config for an unrelated provider.
+        assertContains(
+            mock.lastWorkspaceConfigPatchBody.orEmpty(),
+            "\"global-disabled\"",
+            message = "the workspace patch must keep the other disabled ids the workspace file lists",
+        )
         assertEquals(1, mock.requestCount("/global/dispose"))
     }
 
@@ -218,9 +286,47 @@ class KiloBackendProviderSettingsManagerTest {
         assertNull(result.error)
         assertNull(mock.lastConfigPatchBody)
         assertContains(mock.lastWorkspaceConfigPatchBody.orEmpty(), "\"workspace-disabled\"")
-        assertFalse(mock.lastWorkspaceConfigPatchBody.orEmpty().contains("anthropic"))
-        assertFalse(mock.lastWorkspaceConfigPatchBody.orEmpty().contains("global-disabled"))
+        assertFalse(mock.lastWorkspaceConfigPatchBody.orEmpty().contains("\"anthropic\""))
+        assertContains(
+            mock.lastWorkspaceConfigPatchBody.orEmpty(),
+            "\"global-disabled\"",
+            message = "enabling one provider must not drop the other disabled ids the workspace file lists",
+        )
         assertEquals(1, mock.requestCount("/global/dispose"))
+    }
+
+    @Test
+    fun `enabling provider disabled in both scopes clears it from both config files`() = runBlocking {
+        mock.config = """{"disabled_providers":["anthropic","global-disabled"]}"""
+        mock.workspaceConfig = """{"disabled_providers":["anthropic","workspace-disabled"]}"""
+        mock.providers = """{
+            "all":[{"id":"anthropic","name":"Anthropic","source":"config","models":{}}],
+            "default":{},
+            "connected":[],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.enable(ProviderEnableDto("/test", "anthropic"))
+
+        assertNull(result.error)
+        assertContains(mock.lastConfigPatchBody.orEmpty(), "\"global-disabled\"")
+        assertFalse(
+            mock.lastConfigPatchBody.orEmpty().contains("\"anthropic\""),
+            "the global config patch must drop the enabled provider, not keep it disabled there",
+        )
+        assertContains(mock.lastWorkspaceConfigPatchBody.orEmpty(), "\"workspace-disabled\"")
+        assertFalse(
+            mock.lastWorkspaceConfigPatchBody.orEmpty().contains("\"anthropic\""),
+            "the workspace config patch must drop the enabled provider, not keep it disabled there",
+        )
+        assertEquals(1, mock.requestCount("/global/dispose"))
+        val state = manager.state("/test")
+        assertFalse(
+            state.disabled.contains("anthropic"),
+            "merged disabled list still contains anthropic after enable, so the provider stays hidden",
+        )
     }
 
     @Test
