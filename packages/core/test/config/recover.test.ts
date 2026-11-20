@@ -24,7 +24,7 @@ describe("ConfigRecover", () => {
     }),
   )
 
-  it.effect("drops only the invalid agent field and keeps its permissions", () =>
+  it.effect("skips only the invalid agent field and keeps its permissions", () =>
     Effect.sync(() => {
       const result = ConfigRecover.recover(Config.Info, {
         agents: {
@@ -75,7 +75,7 @@ describe("ConfigRecover", () => {
     }),
   )
 
-  it.effect("reports one diagnostic per dropped entry across nested fields", () =>
+  it.effect("reports one diagnostic per skipped entry across nested fields", () =>
     Effect.sync(() => {
       const result = ConfigRecover.recover(Config.Info, {
         agents: { a: { steps: "twelve" }, b: { steps: "thirteen" } },
@@ -100,7 +100,7 @@ describe("ConfigRecover", () => {
     }),
   )
 
-  it.effect("loads a document with every setting dropped as an empty configuration", () =>
+  it.effect("loads a document with every setting skipped as an empty configuration", () =>
     Effect.sync(() => {
       const result = ConfigRecover.recover(Config.Info, { share: "sometimes" })
       if (result.type !== "recovered") throw new Error("expected an empty configuration")

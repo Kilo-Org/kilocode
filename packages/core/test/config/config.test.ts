@@ -730,7 +730,7 @@ describe("Config", () => {
     ),
   )
 
-  // kilocode_change start - one invalid value keeps the rest of a config document
+  // kilocode_change start - each configuration document is decoded value by value
   const capture = (directory: string) => {
     const logs: unknown[] = []
     const layer = testLayer(directory).pipe(
@@ -801,7 +801,7 @@ describe("Config", () => {
     ),
   )
 
-  it.live("reports the file and the field of every dropped value", () =>
+  it.live("reports the file and the field of every skipped value", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
@@ -814,13 +814,13 @@ describe("Config", () => {
           return yield* Effect.gen(function* () {
             const config = yield* Config.Service
             yield* config.entries()
-            const dropped = reported(logs, "skipping invalid configuration value")
-            expect(dropped.map(([, context]) => context.path).toSorted((a, b) => String(a).localeCompare(String(b)))).toEqual([
+            const skipped = reported(logs, "skipping invalid configuration value")
+            expect(skipped.map(([, context]) => context.path).toSorted((a, b) => String(a).localeCompare(String(b)))).toEqual([
               "$.agents.reviewer.steps",
               "$.autoupdate",
               "$.share",
             ])
-            for (const [, context] of dropped) {
+            for (const [, context] of skipped) {
               expect(context.source).toBe(file)
               expect(typeof context.message).toBe("string")
             }

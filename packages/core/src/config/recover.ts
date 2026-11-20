@@ -1,4 +1,4 @@
-// kilocode_change - new file: recovers valid settings from an invalid configuration document
+// kilocode_change - new file: decodes a configuration document value by value with diagnostics
 export * as ConfigRecover from "./recover"
 
 import { Schema, SchemaIssue } from "effect"
@@ -31,11 +31,11 @@ export function syntax(text: string, errors: readonly ParseError[]): Diagnostic[
 }
 
 /**
- * Decodes a configuration document so that one invalid value cannot discard the rest of it.
+ * Decodes a configuration document value by value and returns what it skipped.
  *
  * Each decode failure names the values that failed validation. Those values are removed from a copy of the
- * input and the document is decoded again, so every setting that validates keeps applying while only the
- * offending values are reported. A document whose root is not an object is rejected as a whole.
+ * input, and the document is decoded again, so every setting that validates keeps applying while each skipped
+ * value is reported with its path. A document whose root is not an object is rejected as a whole.
  */
 export function recover<S extends Schema.Decoder<unknown>>(
   schema: S,
@@ -76,7 +76,7 @@ function prune(input: unknown, issues: readonly Issue[], diagnostics: Diagnostic
   for (const target of ordered) {
     if (!drop(next, target.path)) continue
     diagnostics.push({ path: render(target.path), message: target.message })
-    // A map entry that kept no field holds nothing, so a typo does not leave an empty named entry behind.
+    // A named entry that kept no field holds nothing, so it is removed with the value it held.
     const entry = target.path.slice(0, -1)
     const value = valueAt(next, entry)
     if (entry.length > 1 && rooted(value) && !Object.keys(value).length) drop(next, entry)
@@ -94,9 +94,9 @@ function valueAt(root: unknown, path: readonly Segment[]): unknown {
 }
 
 /**
- * The value to remove for one failing path. A list item is atomic, so an invalid field drops the item that
- * holds it; a map entry keeps its valid fields and reports the single field that failed. Anything deeper
- * reports the map entry, which is the smallest unit a document author can act on.
+ * The value to remove for one failing path. A list entry is atomic, so a failing field inside it removes the
+ * entry. A named entry keeps the fields that validate, and one that ends up empty is removed. Anything deeper
+ * reports the named entry, which is the smallest unit a document author can act on.
  */
 function boundary(path: readonly Segment[]): Segment[] {
   const index = path.findIndex((segment) => typeof segment === "number")

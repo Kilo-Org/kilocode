@@ -143,8 +143,7 @@ const layer = Layer.effect(
     const policy = yield* Policy.Service
     const names = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"] // kilocode_change
 
-    // kilocode_change start - a document that fails validation is reported and keeps every setting that
-    // validates, so one bad value cannot remove the rest of the file.
+    // kilocode_change start - decode a document value by value and report every value it skips.
     const migrate = (input: unknown): ConfigRecover.Result<Info> => {
       const legacy = ConfigRecover.recover(ConfigV1.Info, input)
       if (legacy.type === "rejected") return legacy
