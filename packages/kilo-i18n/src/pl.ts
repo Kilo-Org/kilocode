@@ -142,6 +142,7 @@ export const dict = {
   "ui.tool.chart.failed": "Nie udało się wyrenderować wykresu",
   // Browser tools: backend, observation, sensitive steps and origin grants.
   "browser.command.title": "Ustawienia przeglądarki",
+  "browser.command.starting": "Kilo nadal się uruchamia. Spróbuj ponownie za chwilę.",
   "browser.command.description": "Pokaż backend przeglądarki, jego dostępność i uprawnienia dla źródeł",
   "browser.command.backend": "Backend",
   "browser.command.observation": "Obserwacja",
@@ -167,6 +168,53 @@ export const dict = {
   "browser.state.unavailable": "niedostępna",
   "browser.state.readyHint": "Profil Chromium należący do Kilo, uruchamiany przy pierwszym wywołaniu przeglądarki",
   "browser.state.extensionHint": "Podłącz rozszerzenie przeglądarki Kilo, aby używać własnej przeglądarki",
+  "browser.command.usage":
+    "Użyj /browser, aby otworzyć ustawienia, /browser share, aby udostępnić tej sesji aktywną kartę, lub /browser adopt, aby ponownie użyć ostatniej zakończonej grupy kart.",
+  // Browser permission prompt: one class on one origin, or one sensitive step.
+  "browser.permission.read.title": "Odczytuj strony w {{origin}}",
+  "browser.permission.act.title": "Klikaj i wpisuj tekst w {{origin}}",
+  "browser.permission.navigate.title": "Otwieraj strony w {{origin}}",
+  "browser.permission.read.detail":
+    "Zatwierdzenie pozwala tej sesji odczytywać strony w {{origin}} do jej zakończenia.",
+  "browser.permission.act.detail":
+    "Zatwierdzenie pozwala tej sesji klikać, wpisywać tekst i uruchamiać skrypty strony w {{origin}} do jej zakończenia.",
+  "browser.permission.navigate.detail":
+    "Zatwierdzenie pozwala tej sesji otwierać strony w {{origin}} do jej zakończenia.",
+  "browser.permission.frame": "To źródło jest ramką wewnątrz strony, a nie samą stroną.",
+  "browser.permission.sensitive.title": "Krok wrażliwy przeglądarki w {{origin}}",
+  "browser.permission.sensitive.reason": "Powód: {{reason}}",
+  "browser.permission.sensitive.once":
+    "Ten krok może zatwierdzić tylko osoba. Zatwierdzenie obejmuje wyłącznie ten jeden krok.",
+  // `/browser share` and `/browser adopt`.
+  "browser.share.title": "Udostępnij aktywną kartę przeglądarki",
+  "browser.share.description": "Przenieś aktywną kartę przeglądarki do grupy kart tej sesji",
+  "browser.share.done": "Twoja aktywna karta jest teraz w grupie kart tej sesji.",
+  "browser.adopt.title": "Użyj ponownie zakończonej grupy kart",
+  "browser.adopt.description": "Przypisz tej sesji najnowszą zakończoną grupę kart Kilo",
+  "browser.adopt.done": "Ta sesja używa teraz ostatniej zakończonej grupy kart.",
+  "browser.adopt.none": "Brak zakończonej grupy kart do ponownego użycia.",
+  "browser.adopt.kept": "Ta sesja ma już własne karty i zachowuje je.",
+  "browser.adopt.unconfirmed":
+    "Poproszono przeglądarkę o ponowne użycie ostatniej zakończonej grupy kart. Zaktualizuj rozszerzenie przeglądarki Kilo, aby sprawdzić, czy to zrobiła.",
+  "browser.control.notExtension":
+    "Udostępnianie i ponowne używanie kart wymaga rozszerzenia przeglądarki Kilo. Wybierz je w /browser.",
+  "browser.control.organizationOff": "Twoja organizacja wyłączyła sterowanie przeglądarką w Kilo.",
+  // Notices for a browser call the user has to act on.
+  "browser.notice.unavailableTitle": "Przeglądarka niedostępna",
+  "browser.notice.outdatedTitle": "Rozszerzenie przeglądarki jest nieaktualne",
+  "browser.notice.stopped":
+    "Zatrzymano przeglądarkę dla tej sesji. Uruchom /browser adopt, aby zwrócić tej sesji jej karty.",
+  "browser.notice.extension":
+    "Rozszerzenie przeglądarki Kilo jest połączone w przeglądarce {{browser}}. Używać własnej przeglądarki w narzędziach przeglądarki zamiast dołączonej?",
+  "browser.notice.switch": "Użyj mojej przeglądarki",
+  "settings.browser.status.extension.waiting": "Oczekiwanie na rozszerzenie przeglądarki",
+  "settings.browser.origins.saved.title": "Dozwolone w czatach",
+  "settings.browser.origins.saved.description":
+    "Witryny dozwolone z czatu przyciskiem Zezwalaj zawsze, dla tego obszaru roboczego. Obowiązują dodatkowo do reguł powyżej.",
+  "settings.browser.origins.saved.empty": "Żadna witryna nie została jeszcze dozwolona z czatu.",
+  "settings.browser.origins.saved.failed": "Zapisane uprawnienia są niedostępne",
+  "settings.browser.origins.saved.revoke": "Odwołaj",
+  "ui.permission.reason": "Powód: {{reason}}",
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Przełącz automatyczne zatwierdzanie",

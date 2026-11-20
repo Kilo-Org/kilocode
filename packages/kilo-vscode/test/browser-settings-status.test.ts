@@ -1,12 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import path from "node:path"
-import {
-  extensionConnected,
-  hubsDirectory,
-  installedChromium,
-  status,
-  systemBrowser,
-} from "../src/browser-settings/status"
+import { extensionStatus, hubsDirectory, installedChromium, status, systemBrowser } from "../src/browser-settings/status"
 
 const noFiles = { exists: () => false, entries: () => [], text: () => "", alive: () => false }
 
@@ -97,7 +91,7 @@ describe("playwright target", () => {
   })
 })
 
-describe("extension connection", () => {
+describe("extension status", () => {
   // The CLI's `Paths.run()` is `<state dir>/browser/run`, and its registry lists `<run dir>/hubs/*.json`.
   const hubs = path.join(state, "browser", "run", "hubs")
 
@@ -113,32 +107,52 @@ describe("extension connection", () => {
     )
   })
 
-  test("a registered hub with a live process is a connected extension", () => {
-    expect(
-      extensionConnected({
-        data,
-        state,
-        reader: {
-          ...noFiles,
-          entries: () => ["hub.json"],
-          text: () => JSON.stringify({ pid: 4242 }),
-          alive: (pid) => pid === 4242,
-        },
-      }),
-    ).toBe(true)
+  /** A registry with these hub entries, keyed by file name; `live` lists the pids whose process still runs. */
+  const registry = (files: Record<string, unknown>, live: number[]) => ({
+    ...noFiles,
+    entries: () => Object.keys(files),
+    text: (file: string) => JSON.stringify(files[path.basename(file)]),
+    alive: (pid: number) => live.includes(pid),
   })
 
-  test("a hub whose process exited is not connected", () => {
-    expect(
-      extensionConnected({
-        data,
-        state,
-        reader: { ...noFiles, entries: () => ["hub.json"], text: () => JSON.stringify({ pid: 4242 }) },
-      }),
-    ).toBe(false)
+  test("a live hub with no extension connected is waiting, not connected", () => {
+    // An unpaired hub, or one whose extension turned "Allow local agents" off: the hub clears `browser` on disconnect.
+    const reader = registry({ "hub.json": { pid: 4242, browser: null, profileLabel: null } }, [4242])
+    expect(extensionStatus({ data, state, reader })).toEqual({ state: "waiting" })
   })
 
-  test("without a hub registry directory nothing is connected", () => {
-    expect(extensionConnected({ data, state, reader: noFiles })).toBe(false)
+  test("a live hub with a connected extension names its browser and profile", () => {
+    const reader = registry(
+      { "hub.json": { pid: 4242, browser: { name: "Chrome", version: "142.0" }, profileLabel: "Work" } },
+      [4242],
+    )
+    expect(extensionStatus({ data, state, reader })).toEqual({ state: "connected", browser: "Chrome", profile: "Work" })
+  })
+
+  test("the connected hub wins over a waiting one, and an empty profile is left out", () => {
+    const reader = registry(
+      {
+        "a.json": { pid: 1, browser: null, profileLabel: null },
+        "b.json": { pid: 2, browser: { name: "Edge", version: "141" }, profileLabel: "" },
+      },
+      [1, 2],
+    )
+    expect(extensionStatus({ data, state, reader })).toEqual({ state: "connected", browser: "Edge" })
+  })
+
+  test("a hub whose process exited counts as no hub, even with a browser recorded", () => {
+    const reader = registry({ "hub.json": { pid: 4242, browser: { name: "Chrome", version: "1" } } }, [])
+    expect(extensionStatus({ data, state, reader })).toEqual({ state: "none" })
+  })
+
+  test("without a hub registry directory, or with only unreadable entries, there is no hub", () => {
+    expect(extensionStatus({ data, state, reader: noFiles })).toEqual({ state: "none" })
+    const broken = { ...noFiles, entries: () => ["hub.json", "notes.txt"], text: () => "{", alive: () => true }
+    expect(extensionStatus({ data, state, reader: broken })).toEqual({ state: "none" })
+  })
+
+  test("status carries the extension state", () => {
+    const reader = registry({ "hub.json": { pid: 7, browser: null } }, [7])
+    expect(status({ data, state, platform: "linux", reader }).extension).toEqual({ state: "waiting" })
   })
 })
