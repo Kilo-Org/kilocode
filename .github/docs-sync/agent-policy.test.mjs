@@ -139,17 +139,24 @@ check("configContent returns the mode's permission map as JSON", () => {
   assert.deepEqual(cfg.permission, policy().modes["docs-write"].permission)
 })
 
-check("env withholds the repository token and the git credential helper", () => {
+check("env withholds credentials and the git credential helper", () => {
+  // The filter is by name shape, so this pins both the fixed key of a step's own
+  // git call and a credential-shaped key from a step that does not exist yet.
   const base = {
     GH_TOKEN: "gh-token-value",
     GITHUB_TOKEN: "github-token-value",
     CROSS_REPO_ACCESS_TOKEN: "cross-value",
     CLOUD_REPO_TOKEN: "cloud-value",
+    SOME_BUILD_TOKEN: "build-token-value",
+    AWS_SECRET_ACCESS_KEY: "aws-value",
+    NPM_TOKEN: "npm-value",
+    DEPLOY_PASSWORD: "deploy-value",
     GIT_CONFIG_COUNT: "1",
     GIT_CONFIG_KEY_0: "credential.helper",
     GIT_CONFIG_VALUE_0: "/tmp/helper.sh",
     KILO_API_KEY: "kilo-key-value",
     KILO_ORG_ID: "org-value",
+    PATH: "/usr/bin:/bin",
     UNRELATED: "keep-me",
   }
   const child = env(MODE.toolsDenied, base)
@@ -158,6 +165,10 @@ check("env withholds the repository token and the git credential helper", () => 
     "GITHUB_TOKEN",
     "CROSS_REPO_ACCESS_TOKEN",
     "CLOUD_REPO_TOKEN",
+    "SOME_BUILD_TOKEN",
+    "AWS_SECRET_ACCESS_KEY",
+    "NPM_TOKEN",
+    "DEPLOY_PASSWORD",
     "GIT_CONFIG_COUNT",
     "GIT_CONFIG_KEY_0",
     "GIT_CONFIG_VALUE_0",
@@ -165,6 +176,7 @@ check("env withholds the repository token and the git credential helper", () => 
   for (const name of withheld) assert.equal(child[name], undefined, `${name} must not reach the child`)
   assert.equal(child.KILO_API_KEY, "kilo-key-value", "the CLI authenticates with the gateway key")
   assert.equal(child.KILO_ORG_ID, "org-value")
+  assert.equal(child.PATH, "/usr/bin:/bin", "a non-credential name must survive the filter")
   assert.equal(child.UNRELATED, "keep-me")
   assert.ok(child.KILO_CONFIG_CONTENT, "the child needs the mode's config")
   assert.deepEqual(JSON.parse(child.KILO_CONFIG_CONTENT).permission, policy().modes["tools-denied"].permission)

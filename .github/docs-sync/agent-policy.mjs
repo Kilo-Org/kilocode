@@ -88,23 +88,38 @@ export function configContent(mode, base = process.env.KILO_CONFIG_CONTENT) {
 }
 
 /**
- * Keys a step sets for its own `gh` and git calls. The model never needs them,
- * so `env` withholds them instead of handing a repository token to the CLI.
+ * The git credential-helper definition a step sets for its own git calls. The
+ * model never needs it, so `env` withholds it instead of handing a repository
+ * token to the CLI.
  */
-const STEP_ONLY =
-  /^(?:GH_TOKEN|GITHUB_TOKEN|CROSS_REPO_ACCESS_TOKEN|CLOUD_REPO_TOKEN|GIT_CONFIG_COUNT|GIT_CONFIG_KEY_[0-9]+|GIT_CONFIG_VALUE_[0-9]+)$/
+const STEP_ONLY = /^GIT_CONFIG_(?:COUNT|KEY_[0-9]+|VALUE_[0-9]+)$/
+
+/**
+ * Credential-shaped names. The environment is filtered by name rather than
+ * rebuilt from a keep-list, so a pass keeps the caller's provider and model
+ * settings while a credential added to a step later never reaches a run.
+ */
+const SECRET_NAME = /(?:KEY|TOKEN|SECRET|CREDENTIAL|PASSWORD|ORG_ID|_PAT)$/i
+
+/**
+ * The credentials the CLI authenticates with, and the only names the shape
+ * rule must not remove.
+ */
+const GATEWAY = new Set(["KILO_API_KEY", "KILO_ORG_ID"])
 
 /**
  * Child environment for a `kilo run` under `mode`.
  *
- * The child receives no repository token and no git credential-helper
- * definition, because those belong to the calling step and are not needed by
- * the model. The gateway credentials stay, because the CLI authenticates with
- * them.
+ * The child receives no credential and no git credential-helper definition,
+ * because those belong to the calling step and are not needed by the model. The
+ * gateway credentials stay, because the CLI authenticates with them.
  */
 export function env(mode, base = process.env) {
   const child = { ...base }
-  for (const name of Object.keys(child)) if (STEP_ONLY.test(name)) delete child[name]
+  for (const name of Object.keys(child)) {
+    if (GATEWAY.has(name)) continue
+    if (STEP_ONLY.test(name) || SECRET_NAME.test(name)) delete child[name]
+  }
   // `?? ""` keeps an explicit base authoritative: a base without the key means
   // "no caller config", never a re-read of the ambient value.
   child.KILO_CONFIG_CONTENT = configContent(mode, child.KILO_CONFIG_CONTENT ?? "")
