@@ -621,13 +621,11 @@ class KiloBackendAppService private constructor(
                 return FetchResult.ok(null)
             }
             logFailure("Profile fetch failed", e)
-            logResponseBody("profile", e)
             FetchResult.fail("profile", e)
         } catch (e: ServerException) {
             // 5xx from the CLI — profile endpoint is unreachable (no auth,
             // gateway down, etc.). Treat the same as not-logged-in.
             logFailure("Profile fetch: server error — treating as unavailable", e)
-            logResponseBody("profile", e)
             FetchResult.ok(null)
         } catch (e: Exception) {
             logFailure("Profile fetch failed", e)
@@ -664,7 +662,8 @@ class KiloBackendAppService private constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Global config fetch failed: ${failureLogDetail(e)}", e)
+            val line = "Global config fetch failed: ${failureLogDetail(e)}"
+            if (e is ResponseFailure) log.warn(line) else log.warn(line, e)
             FetchResult.fail("config", e)
         }
     }

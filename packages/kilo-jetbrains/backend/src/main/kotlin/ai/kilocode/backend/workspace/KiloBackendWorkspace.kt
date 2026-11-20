@@ -283,7 +283,7 @@ class KiloBackendWorkspace(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Providers fetch failed: ${e.message}", e)
+            logFailure("Providers fetch failed", e)
             FetchResult.fail("providers", e)
         }
     }
@@ -312,7 +312,7 @@ class KiloBackendWorkspace(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Commands fetch failed: ${e.message}", e)
+            logFailure("Commands fetch failed", e)
             FetchResult.fail("commands", e)
         }
     }

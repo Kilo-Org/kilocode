@@ -305,6 +305,16 @@ class KiloBackendWorkspaceTest {
         val err = ws.state.value as KiloWorkspaceState.Error
         assertTrue(err.message.contains("providers"))
         assertTrue(err.errors.any { it.resource == "providers" })
+        val item = err.errors.single { it.resource == "providers" }
+        val detail = assertNotNull(item.detail)
+        assertEquals("HTTP 500", detail)
+        assertFalse(detail.contains("chars="), detail)
+        assertTrue(
+            log.messages.any {
+                it.contains("Providers fetch failed: HTTP") && it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
         assertTrue(log.messages.any { it.contains("Workspace error [${project}]: Failed to load:") && it.contains("providers") })
     }
 

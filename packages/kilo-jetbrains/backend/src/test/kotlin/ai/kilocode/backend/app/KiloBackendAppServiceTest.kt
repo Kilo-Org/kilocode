@@ -663,6 +663,7 @@ class KiloBackendAppServiceTest {
         assertFalse(detail.contains("chars="), detail)
         val lines = log.messages.count { it.contains("Global config fetch failed") }
         assertEquals(mock.requestCount("/global/config"), lines, log.messages.toString())
+        assertTrue(log.messages.none { it.contains("response failed") }, log.messages.toString())
     }
 
     @Test
@@ -869,6 +870,39 @@ class KiloBackendAppServiceTest {
 
         assertNull(svc.profile)
         assertIs<KiloAppState.Ready>(svc.appState.value)
+        assertTrue(
+            log.messages.any {
+                it.contains("Profile fetch: server error — treating as unavailable: HTTP 500:") &&
+                    it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
+        assertTrue(log.messages.none { it.contains("response failed") }, log.messages.toString())
+    }
+
+    @Test
+    fun `profile client failure logs one line without a second response line`() = runBlocking {
+        mock.profileStatus = 403
+        mock.profile = """{"name":"ForbiddenError"}"""
+        val svc = create()
+        svc.connect()
+
+        assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+
+        val lines = log.messages.count { it.contains("Profile fetch failed") }
+        assertEquals(mock.requestCount("/kilo/profile"), lines, log.messages.toString())
+        assertTrue(
+            log.messages.any {
+                it.contains("Profile fetch failed: HTTP 403:") && it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
+        assertTrue(log.messages.none { it.contains("response failed") }, log.messages.toString())
     }
 
     @Test
