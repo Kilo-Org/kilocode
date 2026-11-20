@@ -16,7 +16,6 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 import java.net.HttpURLConnection
-import java.net.URI
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.zip.ZipEntry
@@ -74,9 +73,11 @@ abstract class StageBundledCliTask : DefaultTask() {
             msg: String,
             digest: String,
             file: File,
+            log: () -> Unit = {},
             warn: (String) -> Unit = {},
         ) {
             if (file.isFile && sum(file) == digest) return
+            log()
             download(build, url, msg, file)
             verify(file, digest, warn)
         }
@@ -221,10 +222,15 @@ abstract class StageBundledCliTask : DefaultTask() {
     private fun fetch(ver: String, platform: String, name: String, digest: String, file: File) {
         file.parentFile.mkdirs()
         val url = "$ASSET_BASE/v$ver/$name"
-        logger.lifecycle("Downloading pinned Kilo CLI $platform from $url")
-        fetchAsset(::assetConnector, url, "Failed to download pinned Kilo CLI $platform", digest, file) { msg ->
-            logger.warn(msg)
-        }
+        fetchAsset(
+            ::assetConnector,
+            url,
+            "Failed to download pinned Kilo CLI $platform",
+            digest,
+            file,
+            log = { logger.lifecycle("Downloading pinned Kilo CLI $platform from $url") },
+            warn = { msg -> logger.warn(msg) },
+        )
     }
 
     private fun zip(platform: String, file: File, out: ZipOutputStream) {

@@ -75,8 +75,9 @@ class StageBundledCliConnectorTest {
 
     @Test
     fun fetchAssetDownloadsThroughTheAssetConnectorAndVerifiesTheDigest() {
-        // Drives the same function fetch() calls, digest check included, so dropping verification or skipping the
-        // download fails here. Which connector fetch() binds is covered by the task's captured E2E run.
+        // Drives the same function fetch() calls, so skipping the download or sending it through a connector that
+        // adds a request header fails here. Digest verification is covered by the mismatch test below, and which
+        // connector fetch() binds is covered by the task's captured run in the PR body.
         withServer { url, received ->
             val file = File.createTempFile("kilo-fetch", ".bin")
             try {
