@@ -28,6 +28,7 @@ import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.ToolRefDto
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CompletableDeferred
@@ -1037,6 +1038,9 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         flush()
         edt { m.prompt("go") }
         flush()
+        // The CLI stamps the asking session as it runs, and the handoff compares creation times on that clock.
+        val now = System.currentTimeMillis().toDouble()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(time = SessionTimeDto(created = now, updated = now))))
         emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
         edt {
             m.replyQuestion(

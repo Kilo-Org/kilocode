@@ -321,9 +321,9 @@ class JetBrainsDriverTest {
                     sessions.transcriptText().take(600),
             )
         } else {
+            // The wait above already requires a session other than the asking one, so only record the id.
             evidence.pass("followup.adopted", adopted)
             evidence.state("followup.adopted.session", adopted)
-            evidence.state("followup.session.differs", adopted != asking)
             val line = sessions.transcriptText().lineSequence().firstOrNull { it.contains(marker) }?.trim().orEmpty()
             evidence.state("followup.plan.marker", line.take(400))
             if (line.isNotEmpty()) evidence.pass("followup.plan.marker", line)

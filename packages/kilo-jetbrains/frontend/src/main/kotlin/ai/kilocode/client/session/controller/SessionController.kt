@@ -130,8 +130,13 @@ class SessionController(
 ) : Disposable {
 
     private data class OrganizationTarget(val org: String?)
-    /** An answer that asked the CLI for a new session: [session] asked, [question] is the answered request. */
-    private data class Followup(val dir: String, val time: Long, val session: String?, val question: String)
+    /**
+     * An answer that asked the CLI for a new session: [session] asked, [question] is the answered request,
+     * and [since] is the newest CLI-side timestamp this controller held for the asking session. [time] is
+     * the local clock, used only for the handoff window; [since] keeps the creation check on the CLI's own
+     * clock so a client and a backend on different hosts are never compared.
+     */
+    private data class Followup(val dir: String, val time: Long, val session: String?, val question: String, val since: Double)
     /** [submitted] is the message the create call itself delivered; every other dispatch still sends. */
     private data class Created(val id: String, val submitted: String? = null)
     private data class Pref(val agent: String?, val model: String?, val variants: List<String>, val variant: String?, val reset: Boolean)
@@ -1342,7 +1347,12 @@ class SessionController(
             && current.question.id == requestId
             && options.any { labels -> labels.any { it.trim() == FOLLOWUP_NEW_SESSION } }
         ) {
-            Followup(directory, System.currentTimeMillis(), asking, requestId)
+            // The asking session's newest CLI timestamp anchors the creation check on the CLI's clock. With no
+            // session loaded yet, the local answer time is the only reference available.
+            val known = model.session
+            val time = System.currentTimeMillis()
+            val since = known?.time?.updated ?: known?.time?.created ?: time.toDouble()
+            Followup(directory, time, asking, requestId, since)
         } else null
         val follow = followup != null
         cs.launch {
@@ -3045,7 +3055,7 @@ class SessionController(
         if (session.id == item.session) return
         if (session.parentID != null) return
         if (session.id in childIds) return
-        if (session.time.created < item.time.toDouble()) return
+        if (session.time.created < item.since) return
         followup = null
         LOG.debug { "${ChatLogSummary.sid(session.id)} kind=followup adopt=true rid=${item.question}" }
         open(SessionRef.Local(session))
