@@ -350,9 +350,9 @@ class LegacyMigrationEngine(
         if (anyAutoApproval) {
             val conv = convertAutoApproval(settings, apSel, migratedServers)
             conv.config?.let { backend.updateGlobalConfig(it) }
-            for ((label, status) in conv.results) {
-                sink.item(LegacyMigrationItemProgress(label, status.toProgressStatus()))
-                results.add(LegacyMigrationResultItem(label, MigrationItemCategory.settings, status))
+            for (entry in conv.results) {
+                sink.item(LegacyMigrationItemProgress(entry.label, entry.status.toProgressStatus(), entry.message))
+                results.add(LegacyMigrationResultItem(entry.label, MigrationItemCategory.settings, entry.status, entry.message))
             }
         }
 

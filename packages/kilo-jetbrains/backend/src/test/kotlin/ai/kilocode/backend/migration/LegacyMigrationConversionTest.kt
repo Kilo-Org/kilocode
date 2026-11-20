@@ -1,5 +1,6 @@
 package ai.kilocode.backend.migration
 
+import ai.kilocode.backend.migration.LegacyMigrationConverters.PermissionEntry
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -234,21 +235,25 @@ class LegacyMigrationConversionTest {
         assertEquals("allow", perm["edit"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["bash"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["browser_open"]?.jsonPrimitive?.content)
-        assertFalse(perm.containsKey("skill"))
+        assertEquals("deny", perm["skill"]?.jsonPrimitive?.content)
     }
 
     @Test
     fun `convertCustomModePermissions - browser maps to browser_open`() {
-        val perm = LegacyMigrationConverters.convertCustomModePermissions(listOf("browser")).permission
-        assertEquals("allow", perm["browser_open"]?.jsonPrimitive?.content)
-        assertEquals("deny", perm["bash"]?.jsonPrimitive?.content)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(listOf("browser"))
+        assertEquals("allow", result.permission["browser_open"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["bash"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
+        assertTrue(result.warnings.isEmpty())
     }
 
     @Test
     fun `convertCustomModePermissions - command maps to bash`() {
-        val perm = LegacyMigrationConverters.convertCustomModePermissions(listOf("command")).permission
-        assertEquals("allow", perm["bash"]?.jsonPrimitive?.content)
-        assertEquals("deny", perm["browser_open"]?.jsonPrimitive?.content)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(listOf("command"))
+        assertEquals("allow", result.permission["bash"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["browser_open"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
+        assertTrue(result.warnings.isEmpty())
     }
 
     @Test
@@ -259,17 +264,20 @@ class LegacyMigrationConversionTest {
         )
         assertEquals("allow", result.permission["github_*"]?.jsonPrimitive?.content)
         assertEquals("allow", result.permission["my_server_*"]?.jsonPrimitive?.content)
-        assertFalse(result.permission.containsKey("skill"))
+        assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
         assertTrue(result.warnings.isEmpty())
     }
 
     @Test
-    fun `convertCustomModePermissions - mcp absent denies migrated server tools`() {
+    fun `convertCustomModePermissions - mode without mcp group denies skill and server tools`() {
         val result = LegacyMigrationConverters.convertCustomModePermissions(
             listOf("read"),
-            mcpServers = listOf("github"),
+            mcpServers = listOf("github", "my server"),
         )
         assertEquals("deny", result.permission["github_*"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["my_server_*"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
+        assertTrue(result.warnings.isEmpty())
     }
 
     @Test
@@ -333,7 +341,7 @@ class LegacyMigrationConversionTest {
     fun `convertCustomModePermissions - unknown group writes no permission key and warns`() {
         val result = LegacyMigrationConverters.convertCustomModePermissions(listOf("read", "- edit"))
         val perm = result.permission
-        assertEquals(setOf("read", "edit", "bash", "browser_open"), perm.keys)
+        assertEquals(setOf("read", "edit", "bash", "browser_open", "skill"), perm.keys)
         assertEquals("allow", perm["read"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["edit"]?.jsonPrimitive?.content)
         assertFalse(perm.keys.any { it.contains("- edit") })
@@ -396,7 +404,57 @@ class LegacyMigrationConversionTest {
         assertEquals("deny", result.permission["bash"]?.jsonPrimitive?.content)
         assertFalse(result.permission.keys.any { it.contains("- edit") })
         assertFalse(result.permission.keys.any { it == "fileRegex" || it == "description" })
+        assertEquals("allow", result.permission["browser_open"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
         assertTrue(result.warnings.isEmpty())
+    }
+
+    @Test
+    fun `parseCustomModesYaml - unreadable group option lines migrate the group to ask`() {
+        val yaml = """
+            customModes:
+              - slug: nested
+                name: Nested
+                roleDefinition: You edit nested files.
+                groups:
+                  - - edit
+                      - fileRegex: \.md${'$'}
+              - slug: flat
+                name: Flat
+                roleDefinition: You edit flat files.
+                groups:
+                  - - edit
+                    fileRegex: \.ts${'$'}
+        """.trimIndent()
+        val modes = LegacyMigrationConverters.parseCustomModesYaml(yaml)
+        assertEquals(2, modes.size)
+        for (mode in modes) {
+            assertEquals(listOf<Any>(Pair("edit", mapOf("__unparsed" to "true"))), mode.groups)
+            val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups)
+            assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
+            assertEquals(listOf("Group options not migrated; edit set to ask"), result.warnings)
+        }
+    }
+
+    @Test
+    fun `parseCustomModesYaml - unreadable mcp option line sets server tools to ask`() {
+        val yaml = """
+            customModes:
+              - slug: restricted
+                name: Restricted
+                roleDefinition: You read files.
+                groups:
+                  - read
+                  - - mcp
+                      - fileRegex: \.md${'$'}
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals(listOf<Any>("read", Pair("mcp", mapOf("__unparsed" to "true"))), mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, mcpServers = listOf("github"))
+        assertEquals("ask", result.permission["github_*"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["bash"]?.jsonPrimitive?.content)
+        assertEquals(listOf("Group options not migrated; mcp set to ask"), result.warnings)
     }
 
     @Test
@@ -521,6 +579,8 @@ class LegacyMigrationConversionTest {
         assertEquals("allow", result.permission["read"]?.jsonPrimitive?.content)
         assertEquals("allow", result.permission["browser_open"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
+        assertTrue(result.warnings.isEmpty())
     }
 
     @Test
@@ -591,9 +651,10 @@ class LegacyMigrationConversionTest {
         assertNotNull(perm)
         assertEquals("allow", perm["read"]?.jsonPrimitive?.content)
         assertEquals("allow", perm["browser_open"]?.jsonPrimitive?.content)
-        assertEquals("deny", perm["bash"]?.jsonPrimitive?.content)
         assertEquals("allow", perm["github_*"]?.jsonPrimitive?.content)
-        assertFalse(perm.containsKey("skill"))
+        assertEquals("deny", perm["bash"]?.jsonPrimitive?.content)
+        assertEquals("deny", perm["skill"]?.jsonPrimitive?.content)
+        assertTrue(conversion.warnings.isEmpty())
         assertTrue(perm.entries.none { it.key == "bash" && it.value.jsonPrimitive.content == "allow" })
     }
 
@@ -636,56 +697,107 @@ class LegacyMigrationConversionTest {
         assertEquals("allow", conv.config!!["permission"]?.jsonObject?.get("edit")?.jsonPrimitive?.content)
     }
 
+    private fun mcpOnlySettings(alwaysAllowMcp: Boolean?): LegacySettings = LegacySettings(
+        autoApprovalEnabled = null,
+        allowedCommands = null,
+        deniedCommands = null,
+        alwaysAllowReadOnly = null,
+        alwaysAllowReadOnlyOutsideWorkspace = null,
+        alwaysAllowWrite = null,
+        alwaysAllowExecute = null,
+        alwaysAllowMcp = alwaysAllowMcp,
+        alwaysAllowModeSwitch = null,
+        alwaysAllowSubtasks = null,
+        language = null,
+        autocomplete = null,
+    )
+
+    private val MCP_ONLY_SELECTION = MigrationAutoApprovalSelections(
+        commandRules = false,
+        readPermission = false,
+        writePermission = false,
+        executePermission = false,
+        mcpPermission = true,
+        taskPermission = false,
+    )
+
     @Test
     fun `convertAutoApproval - mcp switch writes per-server keys`() {
-        val settings = LegacySettings(
-            autoApprovalEnabled = null,
-            allowedCommands = null,
-            deniedCommands = null,
-            alwaysAllowReadOnly = null, alwaysAllowReadOnlyOutsideWorkspace = null,
-            alwaysAllowWrite = null, alwaysAllowExecute = null,
-            alwaysAllowMcp = true, alwaysAllowModeSwitch = null, alwaysAllowSubtasks = null,
-            language = null, autocomplete = null,
+        val conv = LegacyMigrationConverters.convertAutoApproval(
+            mcpOnlySettings(true),
+            MCP_ONLY_SELECTION,
+            listOf("github", "my server"),
         )
-        val sel = MigrationAutoApprovalSelections(commandRules = false, readPermission = false, writePermission = false, executePermission = false, mcpPermission = true, taskPermission = false)
-        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, listOf("github", "my server"))
         val perm = conv.config!!["permission"]?.jsonObject
         assertNotNull(perm)
         assertEquals("allow", perm["github_*"]?.jsonPrimitive?.content)
         assertEquals("allow", perm["my_server_*"]?.jsonPrimitive?.content)
         assertFalse(perm.containsKey("skill"))
-    }
-
-    @Test
-    fun `convertAutoApproval - mcp switch without migrated servers warns`() {
-        val settings = LegacySettings(
-            autoApprovalEnabled = null,
-            allowedCommands = null,
-            deniedCommands = null,
-            alwaysAllowReadOnly = null, alwaysAllowReadOnlyOutsideWorkspace = null,
-            alwaysAllowWrite = null, alwaysAllowExecute = null,
-            alwaysAllowMcp = true, alwaysAllowModeSwitch = null, alwaysAllowSubtasks = null,
-            language = null, autocomplete = null,
+        assertEquals(
+            listOf(PermissionEntry("MCP permission", MigrationItemStatus.success)),
+            conv.results,
         )
-        val sel = MigrationAutoApprovalSelections(commandRules = false, readPermission = false, writePermission = false, executePermission = false, mcpPermission = true, taskPermission = false)
-        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
-        assertNull(conv.config)
-        assertTrue(conv.results.any { it.second == MigrationItemStatus.warning })
     }
 
     @Test
     fun `convertAutoApproval - mcp switch off writes ask`() {
-        val settings = LegacySettings(
-            autoApprovalEnabled = null,
-            allowedCommands = null,
-            deniedCommands = null,
-            alwaysAllowReadOnly = null, alwaysAllowReadOnlyOutsideWorkspace = null,
-            alwaysAllowWrite = null, alwaysAllowExecute = null,
-            alwaysAllowMcp = false, alwaysAllowModeSwitch = null, alwaysAllowSubtasks = null,
-            language = null, autocomplete = null,
+        val conv = LegacyMigrationConverters.convertAutoApproval(
+            mcpOnlySettings(false),
+            MCP_ONLY_SELECTION,
+            listOf("github"),
         )
-        val sel = MigrationAutoApprovalSelections(commandRules = false, readPermission = false, writePermission = false, executePermission = false, mcpPermission = true, taskPermission = false)
-        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, listOf("github"))
         assertEquals("ask", conv.config!!["permission"]?.jsonObject?.get("github_*")?.jsonPrimitive?.content)
+        assertEquals(
+            listOf(PermissionEntry("MCP permission", MigrationItemStatus.success)),
+            conv.results,
+        )
+    }
+
+    @Test
+    fun `convertAutoApproval - mcp switch unset with servers writes no key and reports success`() {
+        val conv = LegacyMigrationConverters.convertAutoApproval(
+            mcpOnlySettings(null),
+            MCP_ONLY_SELECTION,
+            listOf("github", "my server"),
+        )
+        assertNull(conv.config)
+        assertEquals(
+            listOf(PermissionEntry("MCP permission", MigrationItemStatus.success)),
+            conv.results,
+        )
+    }
+
+    @Test
+    fun `convertAutoApproval - mcp switch without migrated servers warns with the reason`() {
+        val conv = LegacyMigrationConverters.convertAutoApproval(
+            mcpOnlySettings(true),
+            MCP_ONLY_SELECTION,
+            emptyList(),
+        )
+        assertNull(conv.config)
+        assertEquals(
+            listOf(
+                PermissionEntry(
+                    "MCP permission",
+                    MigrationItemStatus.warning,
+                    "MCP auto-approval was not applied: no MCP server was migrated",
+                ),
+            ),
+            conv.results,
+        )
+    }
+
+    @Test
+    fun `convertAutoApproval - mcp switch unset without migrated servers reports success`() {
+        val conv = LegacyMigrationConverters.convertAutoApproval(
+            mcpOnlySettings(null),
+            MCP_ONLY_SELECTION,
+            emptyList(),
+        )
+        assertNull(conv.config)
+        assertEquals(
+            listOf(PermissionEntry("MCP permission", MigrationItemStatus.success)),
+            conv.results,
+        )
     }
 }

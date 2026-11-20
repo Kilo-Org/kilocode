@@ -379,13 +379,19 @@ object LegacyMigrationConverters {
     // Custom mode / agent conversion
     // ---------------------------------------------------------------------------
 
+    /**
+     * Option key the YAML parser adds when a line inside a `- - <group>` options block was not
+     * readable, so the converter narrows that group instead of granting it in full.
+     */
+    private const val UNPARSED_GROUP_OPTION = "__unparsed"
+
     private val GROUP_TO_PERMISSION = mapOf(
         "read" to "read",
         "edit" to "edit",
         "browser" to "browser_open",
         "command" to "bash",
     )
-    private val ALL_MODE_PERMISSIONS = listOf("read", "edit", "bash", "browser_open")
+    private val ALL_MODE_PERMISSIONS = listOf("read", "edit", "bash", "browser_open", "skill")
 
     data class ModePermissions(
         val permission: JsonObject,
@@ -421,6 +427,16 @@ object LegacyMigrationConverters {
             }
 
             if (groupName == "mcp") {
+                if (groupConfig?.containsKey(UNPARSED_GROUP_OPTION) == true) {
+                    warnings.add("Group options not migrated; mcp set to ask")
+                    mcpGroupSeen = true
+                    for (server in mcpServers) {
+                        val key = "${sanitizePermissionKey(server)}_*"
+                        allowed.add(key)
+                        permission[key] = JsonPrimitive("ask")
+                    }
+                    continue
+                }
                 val mcpRegex = groupConfig?.get("fileRegex")
                 if (mcpRegex != null) {
                     warnings.add("File restriction not migrated; mcp disabled: $mcpRegex")
@@ -442,6 +458,13 @@ object LegacyMigrationConverters {
             val permKey = GROUP_TO_PERMISSION[groupName]
             if (permKey == null) {
                 warnings.add("Group not migrated; \"$groupName\" ignored")
+                continue
+            }
+
+            if (groupConfig?.containsKey(UNPARSED_GROUP_OPTION) == true) {
+                warnings.add("Group options not migrated; $permKey set to ask")
+                allowed.add(permKey)
+                permission[permKey] = JsonPrimitive("ask")
                 continue
             }
 
@@ -525,10 +548,16 @@ object LegacyMigrationConverters {
     // Auto-approval / permissions conversion
     // ---------------------------------------------------------------------------
 
+    data class PermissionEntry(
+        val label: String,
+        val status: MigrationItemStatus,
+        val message: String? = null,
+    )
+
     data class PermissionConversion(
         /** config patch to write, null if nothing to write */
         val config: JsonObject?,
-        val results: List<Pair<String, MigrationItemStatus>>,
+        val results: List<PermissionEntry>,
     )
 
     fun convertAutoApproval(
@@ -537,7 +566,7 @@ object LegacyMigrationConverters {
         mcpServers: List<String> = emptyList(),
     ): PermissionConversion {
         val fallback = if (settings.autoApprovalEnabled == true) "allow" else "ask"
-        val results = mutableListOf<Pair<String, MigrationItemStatus>>()
+        val results = mutableListOf<PermissionEntry>()
         val permission = mutableMapOf<String, JsonElement>()
 
         if (sel.commandRules) {
@@ -561,7 +590,7 @@ object LegacyMigrationConverters {
                 )
                 permission["bash"] = JsonObject(bashRules)
             }
-            results.add("Command rules" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Command rules", MigrationItemStatus.success))
         }
 
         if (sel.readPermission) {
@@ -578,7 +607,7 @@ object LegacyMigrationConverters {
             } else if (settings.alwaysAllowReadOnlyOutsideWorkspace == false) {
                 permission["external_directory"] = JsonPrimitive("ask")
             }
-            results.add("Read permission" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Read permission", MigrationItemStatus.success))
         }
 
         if (sel.writePermission) {
@@ -587,7 +616,7 @@ object LegacyMigrationConverters {
             } else if (settings.alwaysAllowWrite == false) {
                 permission["edit"] = JsonPrimitive("ask")
             }
-            results.add("Write permission" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Write permission", MigrationItemStatus.success))
         }
 
         if (sel.executePermission && !sel.commandRules) {
@@ -596,26 +625,30 @@ object LegacyMigrationConverters {
             } else if (settings.alwaysAllowExecute == false) {
                 permission["bash"] = JsonPrimitive("ask")
             }
-            results.add("Execute permission" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Execute permission", MigrationItemStatus.success))
         } else if (sel.executePermission) {
-            results.add("Execute permission" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Execute permission", MigrationItemStatus.success))
         }
 
         if (sel.mcpPermission) {
-            val mcpValue = when (settings.alwaysAllowMcp) {
-                true -> "allow"
-                false -> "ask"
-                null -> null
-            }
-            if (mcpServers.isEmpty()) {
-                results.add("MCP permission" to MigrationItemStatus.warning)
-            } else {
-                for (server in mcpServers) {
-                    if (mcpValue != null) {
+            val mcpValue = settings.alwaysAllowMcp?.let { if (it) "allow" else "ask" }
+            when {
+                mcpValue == null -> results.add(PermissionEntry("MCP permission", MigrationItemStatus.success))
+                mcpServers.isEmpty() -> {
+                    results.add(
+                        PermissionEntry(
+                            "MCP permission",
+                            MigrationItemStatus.warning,
+                            "MCP auto-approval was not applied: no MCP server was migrated",
+                        )
+                    )
+                }
+                else -> {
+                    for (server in mcpServers) {
                         permission["${sanitizePermissionKey(server)}_*"] = JsonPrimitive(mcpValue)
                     }
+                    results.add(PermissionEntry("MCP permission", MigrationItemStatus.success))
                 }
-                results.add("MCP permission" to MigrationItemStatus.success)
             }
         }
 
@@ -625,7 +658,7 @@ object LegacyMigrationConverters {
             } else if (settings.alwaysAllowModeSwitch == false && settings.alwaysAllowSubtasks == false) {
                 permission["task"] = JsonPrimitive("ask")
             }
-            results.add("Task permission" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Task permission", MigrationItemStatus.success))
         }
 
         val config = when {
@@ -794,6 +827,7 @@ object LegacyMigrationConverters {
         var groups = mutableListOf<Any>()
         var pendingGroupName: String? = null
         var pendingGroupOptions = mutableMapOf<String, String>()
+        var pendingGroupUnparsed = false
 
         fun stripYamlQuotes(value: String): String {
             if (value.length < 2) return value
@@ -819,10 +853,15 @@ object LegacyMigrationConverters {
 
         /** Close an open `- - <name>` options block into a Pair group. */
         fun closeGroupOptions() {
-            val name = pendingGroupName ?: return
-            groups.add(Pair(name, pendingGroupOptions.toMap()))
+            val name = pendingGroupName
+            if (name != null) {
+                val options = pendingGroupOptions.toMutableMap()
+                if (pendingGroupUnparsed) options[UNPARSED_GROUP_OPTION] = "true"
+                groups.add(Pair(name, options))
+            }
             pendingGroupName = null
             pendingGroupOptions = mutableMapOf()
+            pendingGroupUnparsed = false
         }
 
         /** Parse a `key: value` option line of an open group options block. */
@@ -963,6 +1002,12 @@ object LegacyMigrationConverters {
             }
             if (inGroups && !raw.startsWith("      ")) {
                 closeGroups()
+            }
+            // An option line the shapes above do not read belongs to the open group, so the
+            // converter narrows that group instead of receiving a junk entry.
+            if (inGroups && pendingGroupName != null) {
+                pendingGroupUnparsed = true
+                continue
             }
             // A line the rules above did not consume is still reported as a group entry, so the
             // converter can warn about it instead of the entry vanishing.
