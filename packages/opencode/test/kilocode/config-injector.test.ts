@@ -1,6 +1,8 @@
-import { test, expect, describe } from "bun:test"
+import { test, expect, describe, spyOn } from "bun:test"
 import { KilocodeConfigInjector } from "../../src/kilocode/config-injector"
+import { KilocodePaths } from "../../src/kilocode/paths"
 import { tmpdir } from "../fixture/fixture"
+import os from "os"
 import path from "path"
 import fs from "fs/promises"
 
@@ -279,6 +281,53 @@ describe("KilocodeConfigInjector", () => {
 
       expect(config.permission.read["*.env"]).toBe("deny")
       expect(config.permission.read[".env.example"]).toBe("allow")
+    })
+
+    test("grants the tools of the project's MCP servers", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: mcpmode
+    name: MCP mode
+    roleDefinition: You are an MCP helper
+    groups:
+      - read
+      - mcp`,
+          )
+          await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilocode", "mcp.json"),
+            JSON.stringify({ mcpServers: { projectserver: { command: "npx" } } }),
+          )
+        },
+      })
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { otherserver: { command: "npx" } } }))
+
+        // The caller omits skipGlobalPaths, as the default injection path does.
+        const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path })
+        const config = JSON.parse(result.configJson)
+        const permission = config.agent.mcpmode.permission
+
+        expect(permission["projectserver_*"]).toBe("allow")
+        expect(Object.keys(permission).sort()).toEqual([
+          "bash",
+          "browser_open",
+          "edit",
+          "projectserver_*",
+          "read",
+          "skill",
+        ])
+      } finally {
+        homedir.mockRestore()
+      }
     })
   })
 
