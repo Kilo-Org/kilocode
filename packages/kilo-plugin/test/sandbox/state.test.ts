@@ -95,6 +95,9 @@ describe("sandbox policy store", () => {
       mode: "proxy" as const,
       allowedHosts: ["api.github.com:443"],
       writablePaths: ["/tmp/output"],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
       version: 2,
     }
 
@@ -134,7 +137,16 @@ describe("sandbox policy store", () => {
     const first = await tempdir()
     const second = await tempdir()
     const sessionID = id("ses_store_remove")
-    const snapshot = { enabled: true, mode: "deny" as const, allowedHosts: [], writablePaths: [], version: 1 }
+    const snapshot = {
+      enabled: true,
+      mode: "deny" as const,
+      allowedHosts: [],
+      writablePaths: [],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
+      version: 1,
+    }
     await SandboxStore.write(first, sessionID, snapshot)
     await SandboxStore.write(second, sessionID, snapshot)
 

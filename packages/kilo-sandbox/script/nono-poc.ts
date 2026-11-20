@@ -4,7 +4,7 @@ import path from "node:path"
 import type { Profile } from "../src/profile"
 import { wrap } from "../src/nono"
 import { binary, environment, support } from "../src/nono-binary"
-import { parse, type Credential } from "../src/nono-credentials"
+import { parseCredentials, type Credential } from "../src/nono-credentials"
 import { generate } from "../src/nono-profile"
 
 // The matrix is only evidence for the pinned binary, so the support check runs before the fixture moves the
@@ -65,7 +65,7 @@ const route: Credential = {
   header: "Authorization",
   format: "Bearer {}",
 }
-const routes = parse({ credentials: [route] })
+const routes = parseCredentials({ credentials: [route] })
 
 const local: Profile = {
   filesystem: {

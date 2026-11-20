@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs"
-
 /** A credential a sandboxed command may use only through nono's proxy. */
 export interface Credential {
   readonly name: string
@@ -103,7 +101,7 @@ function entry(input: unknown, index: number): Credential {
   }
 }
 
-export function parse(input: unknown): Array<Credential> {
+export function parseCredentials(input: unknown): Array<Credential> {
   if (typeof input !== "object" || input === null || Array.isArray(input)) throw invalid("file must hold an object")
   const values = (input as Record<string, unknown>).credentials
   if (values === undefined) return []
@@ -118,15 +116,4 @@ export function parse(input: unknown): Array<Credential> {
     variables.add(credential.envVar)
   }
   return parsed
-}
-
-/** Reads the POC credential file. A missing file means no credential routes. */
-export function load(file: string | undefined) {
-  if (!file) return []
-  try {
-    return parse(JSON.parse(readFileSync(file, "utf8")))
-  } catch (cause) {
-    if (typeof cause === "object" && cause !== null && "code" in cause && cause.code === "ENOENT") return []
-    throw cause
-  }
 }

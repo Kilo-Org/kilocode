@@ -1,4 +1,5 @@
 import { lstatSync, readlinkSync, realpathSync } from "node:fs"
+import os from "node:os"
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
 import type { PathRule, Profile } from "./profile"
@@ -6,6 +7,17 @@ import type { PathRule, Profile } from "./profile"
 function code(cause: unknown) {
   if (typeof cause !== "object" || cause === null || !("code" in cause)) return undefined
   return typeof cause.code === "string" ? cause.code : undefined
+}
+
+/**
+ * Expands a user-written path through the home directory and returns an absolute path. A relative entry stays
+ * relative, so the caller can reject it instead of resolving it against whichever process cwd happens to run.
+ */
+export function expandPath(input: string) {
+  const home = os.homedir()
+  const value =
+    input === "~" || input.startsWith("~/") ? path.join(home, input.slice(1)) : input.replace(/^\$HOME(?=\/|$)/, home)
+  return path.isAbsolute(value) ? path.resolve(value) : undefined
 }
 
 export function resolvePath(input: string, seen = new Set<string>()) {
@@ -68,6 +80,11 @@ export function normalize(profile: Profile): Effect.Effect<Profile, PlatformErro
   return Effect.gen(function* () {
     const allowWrite = yield* Effect.forEach(profile.filesystem.allowWrite, normalizeRule)
     const denyWrite = yield* Effect.forEach(profile.filesystem.denyWrite, normalizeRule)
+    const read =
+      profile.filesystem.read === undefined ? undefined : yield* Effect.forEach(profile.filesystem.read, normalizeRule)
+    // Keep exceptions as the config boundary expanded them. nono lifts a built-in deny by exact match against the
+    // expanded spelling, so canonicalizing here would compare a realpath with the original symlinked location.
+    const readExceptions = profile.filesystem.readExceptions
     const temporaryDirectory = profile.filesystem.temporaryDirectory
       ? yield* canonicalize(profile.filesystem.temporaryDirectory)
       : undefined
@@ -78,6 +95,8 @@ export function normalize(profile: Profile): Effect.Effect<Profile, PlatformErro
         allowWrite,
         denyWrite,
         denyNames: profile.filesystem.denyNames,
+        ...(read === undefined ? {} : { read }),
+        ...(readExceptions === undefined ? {} : { readExceptions }),
         ...(temporaryDirectory === undefined ? {} : { temporaryDirectory }),
       },
     }

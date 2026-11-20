@@ -4,7 +4,7 @@ import path from "node:path"
 import { Effect, PlatformError } from "effect"
 import type { Backend, Launch, Support } from "./backend"
 import { binary, environment, root, support, version } from "./nono-binary"
-import { aliases, load, type Credential } from "./nono-credentials"
+import { aliases, type Credential } from "./nono-credentials"
 import { generate, restoreEnvironment, type NonoProfile } from "./nono-profile"
 import { canonicalize } from "./path"
 import { shellCommand } from "./shell"
@@ -90,18 +90,6 @@ function database() {
   return [resolved, `${resolved}-wal`, `${resolved}-shm`]
 }
 
-let loaded: { readonly key: string; readonly value: ReadonlyArray<Credential> } | undefined
-
-/** The credential file changes rarely, so re-read it only when its path, size or mtime changes. */
-function routes() {
-  const file = process.env.KILO_NONO_CREDENTIALS
-  if (!file) return []
-  const info = existsSync(file) ? statSync(file) : undefined
-  const key = `${file}|${info?.mtimeMs ?? 0}|${info?.size ?? 0}`
-  if (loaded?.key !== key) loaded = { key, value: load(file) }
-  return loaded.value
-}
-
 const backend: Backend = {
   support: (): Support => support(),
   mediatesNetwork: true,
@@ -115,7 +103,7 @@ const backend: Backend = {
           if (!file) throw new Error(`nono ${version} is not staged and KILO_NONO_PATH is not set`)
           const status = support()
           if (!status.available) throw new Error(status.reason)
-          const configured = routes()
+          const configured = profile.credentials ?? []
           // Mirrors the generator's emission rule: proxy mode with an empty allowlist emits no route.
           const routed = profile.network.mode === "proxy" && profile.network.allowedHosts.length > 0
           const active = routed ? configured : []
@@ -126,13 +114,7 @@ const backend: Backend = {
             }
           }
           // A route that is not emitted cannot mint a placeholder, so its real value must not reach the child.
-          const masked = new Set(
-            secrets(
-              launch,
-              configured,
-              new Set(active.map((route) => route.envVar)),
-            ),
-          )
+          const masked = new Set(secrets(launch, configured, new Set(active.map((route) => route.envVar))))
           for (const route of configured) if (!active.includes(route)) masked.add(route.envVar)
           const generated = generate(profile, {
             credentials: active,

@@ -2,7 +2,7 @@ import os from "node:os"
 import path from "node:path"
 import { parseDestination } from "./destination"
 import { aliases, type Credential } from "./nono-credentials"
-import { matches } from "./path"
+import { expandPath, matches } from "./path"
 import type { PathRule, Profile } from "./profile"
 
 interface CustomCredential {
@@ -79,7 +79,7 @@ const broaderWriteGroups = ["system_write_macos", "system_write_linux"]
 /** Commands expect these even with writes otherwise restricted; Kilo's Seatbelt policy grants them too. */
 const deviceFiles = ["/dev/null", "/dev/zero", "/dev/random", "/dev/urandom", "/dev/tty"]
 
-const credentialPaths = [
+export const credentialLocations = [
   "$HOME/.ssh",
   "$HOME/.gnupg",
   "$HOME/.aws",
@@ -123,6 +123,12 @@ function allow(list: ReadonlyArray<PathRule>) {
 
 function files(list: ReadonlyArray<PathRule>) {
   return list.filter((rule) => rule.kind === "literal").map((rule) => rule.path)
+}
+
+/** Expands a configured grant so it can be compared with the built-in deny entries. */
+function lifts(entry: string) {
+  const value = expandPath(entry)
+  return value === undefined ? [] : [value]
 }
 
 function access(profile: Profile, reads: ReadonlyArray<PathRule>, cwd: string | undefined): Access {
@@ -185,7 +191,8 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
   const allowWrite = profile.filesystem.allowWrite.filter((rule) => !covered(rule, profile.filesystem.denyWrite))
   // denyNames is deliberately not translated: a nono deny also blocks reads, and commands must still read
   // .git for git status and git log. The gate decision record tracks the upstream primitive that closes it.
-  const reads = inputs.reads ?? allowWrite
+  const reads = inputs.reads ?? profile.filesystem.read ?? allowWrite
+  const lifted = new Set((profile.filesystem.readExceptions ?? []).flatMap(lifts))
   const temporary = profile.filesystem.temporaryDirectory
   const stores =
     paths.data === undefined
@@ -197,7 +204,10 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
           ),
         ]
   const denied = [
-    ...credentialPaths,
+    ...credentialLocations.filter((entry) => {
+      const location = expandPath(entry)
+      return location === undefined || !lifted.has(location)
+    }),
     ...profile.filesystem.denyWrite.map((rule) => rule.path),
     ...(paths.config === undefined ? [] : [paths.config]),
     ...(paths.data === undefined
@@ -219,9 +229,7 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
   // The XDG roots stay: the child gets the user's values back, and the deny list only hides nono's own roots from it.
   const masked = new Set([...(inputs.secret ?? []), ...provided.flatMap((route) => aliases(route.envVar))])
   const set = Object.fromEntries(
-    Object.entries({ ...(inputs.restore ?? {}), ...profile.environment.set }).filter(
-      ([key]) => !masked.has(key),
-    ),
+    Object.entries({ ...(inputs.restore ?? {}), ...profile.environment.set }).filter(([key]) => !masked.has(key)),
   )
   return {
     extends: "default",

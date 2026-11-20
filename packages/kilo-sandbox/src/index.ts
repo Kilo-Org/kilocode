@@ -1,4 +1,5 @@
 export type { Profile } from "./profile"
+export { parseCredentials, type Credential } from "./nono-credentials"
 export { assertWrite, enabled, run, unrestricted } from "./context"
 export { decorateFileSystem, ensureDirectory } from "./filesystem"
 export { assertNetwork, assertSandbox, decorateHttpClient, httpLayer as networkHttpLayer } from "./network"
@@ -6,4 +7,6 @@ export { batchMutations, mutate, withRunner, type Runner as MutationRunner } fro
 export type { Request as MutationRequest } from "./mutation-protocol"
 export { backendSupport, prepareCommand } from "./backend"
 export { isPublicAddress, normalizeDestinations, parseDestination } from "./destination"
+export { expandPath } from "./path"
+export { credentialLocations } from "./nono-profile"
 export { CurrentProxyFactory, startProxy, type ProxyFactory, type ProxyResolver } from "./proxy"

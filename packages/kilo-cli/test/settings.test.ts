@@ -349,7 +349,7 @@ test(
       settingsWrite(client, directory, { scope: "global", set: { privacy_mode: true, sandbox: { network: "maybe" } } }),
     )
     expect(kilo?.type).toBe("invalid")
-    expect(kilo?.data.message).toContain("$.sandbox: ignored invalid sandbox")
+    expect(kilo?.data.message).toContain('$.sandbox.network: ignored invalid sandbox.network; expected one of "allow" or "deny"')
     // The valid key in the same request is not written either.
     expect(await Bun.file(file).text()).toBe(before)
   }),
