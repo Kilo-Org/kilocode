@@ -7,8 +7,7 @@ import { Model } from "../model.js"
 import { Permission } from "../permission.js"
 import { Project } from "../project.js"
 import { Rpc } from "../rpc.js"
-import { Schedule } from "../schedule.js"
-import { AbsolutePath, optional, statics } from "../schema.js"
+import { AbsolutePath, optional, PositiveInt, statics } from "../schema.js"
 import { SessionID } from "../session-id.js"
 
 const portable = Schema.toStandardSchemaV1
@@ -36,18 +35,86 @@ export type RunID = typeof RunID.Type
 export const Authority = Schema.Struct({ type: Schema.tag("local") }).annotate({ identifier: "KiloFlow.Authority" })
 export type Authority = typeof Authority.Type
 
+// kilocode_change start - flows seam: the schedule vocabulary Kilo keeps on the Flow wire
+// Backing rows now live in automation, so an id is any string. The trigger, condition and limit shapes stay stable for
+// stored Flow records and clients.
+export const ScheduleID = Schema.String
+export type ScheduleID = typeof ScheduleID.Type
+
+const zone = { tz: Schema.String.pipe(optional) }
+
+export const When = Schema.Union([
+  Schema.Struct({ type: Schema.tag("in"), in: Schema.String, ...zone }),
+  Schema.Struct({ type: Schema.tag("at"), at: Schema.String, ...zone }),
+  Schema.Struct({ type: Schema.tag("every"), every: Schema.String, ...zone }),
+  Schema.Struct({ type: Schema.tag("cron"), cron: Schema.String, ...zone }),
+]).pipe(Schema.toTaggedUnion("type"), Schema.annotate({ identifier: "KiloFlow.When" }))
+export type When = typeof When.Type
+
+/** Declares a variant field absent, so `{ in, every }` fails instead of silently dropping one. */
+const absent = Schema.optionalKey(Schema.Never)
+
+/** The `when` callers write: exactly one of `in`, `at`, `every` or `cron`, with an optional `tz`. */
+export const WhenInput = Schema.Union([
+  Schema.Struct({ in: Schema.String, at: absent, every: absent, cron: absent, ...zone }),
+  Schema.Struct({ at: Schema.String, in: absent, every: absent, cron: absent, ...zone }),
+  Schema.Struct({ every: Schema.String, in: absent, at: absent, cron: absent, ...zone }),
+  Schema.Struct({ cron: Schema.String, in: absent, at: absent, every: absent, ...zone }),
+]).annotate({ identifier: "KiloFlow.WhenInput" })
+export type WhenInput = typeof WhenInput.Type
+
+/** Stops a repeating Flow at whichever limit comes first. */
+export const Ends = Schema.Struct({
+  after: Schema.String.pipe(optional),
+  at: Schema.String.pipe(optional),
+  times: PositiveInt.pipe(optional),
+}).annotate({ identifier: "KiloFlow.Ends" })
+export type Ends = typeof Ends.Type
+
+export const CheckMode = Schema.Literals(["if", "until"]).annotate({ identifier: "KiloFlow.CheckMode" })
+export type CheckMode = typeof CheckMode.Type
+
+export const ShellCondition = Schema.Struct({
+  type: Schema.tag("shell"),
+  run: Schema.String,
+  is: Schema.String.pipe(optional),
+  matches: Schema.String.pipe(optional),
+  changes: Schema.Boolean.pipe(optional),
+}).annotate({ identifier: "KiloFlow.Condition.Shell" })
+
+export const CodeCondition = Schema.Struct({ type: Schema.tag("code"), code: Schema.String }).annotate({
+  identifier: "KiloFlow.Condition.Code",
+})
+
+export const Condition = Schema.Union([ShellCondition, CodeCondition]).pipe(
+  Schema.toTaggedUnion("type"),
+  Schema.annotate({ identifier: "KiloFlow.Condition" }),
+)
+export type Condition = typeof Condition.Type
+
+export const ScheduleOutcome = Schema.Literals([
+  "fired",
+  "late",
+  "checked",
+  "expired",
+  "skipped",
+  "disabled",
+  "failed",
+]).annotate({ identifier: "KiloFlow.NativeOutcome" })
+// kilocode_change end
+
 export const TimeTrigger = Schema.Struct({
   type: Schema.tag("time"),
-  when: Schedule.When,
+  when: When,
   timezone: Schema.String,
 }).annotate({ identifier: "KiloFlow.Trigger.Time" })
 
 export const PollTrigger = Schema.Struct({
   type: Schema.tag("poll"),
-  when: Schedule.When,
+  when: When,
   timezone: Schema.String,
-  mode: Schedule.CheckMode,
-  condition: Schedule.Condition,
+  mode: CheckMode,
+  condition: Condition,
 }).annotate({ identifier: "KiloFlow.Trigger.Poll" })
 
 export const Trigger = Schema.Union([TimeTrigger, PollTrigger]).pipe(
@@ -105,14 +172,14 @@ const CreatePermissionGrant = Schema.Struct({
 export const ManagedReference = Schema.Struct({
   type: Schema.tag("managed"),
   flowID: ID,
-  scheduleID: Schedule.ID.pipe(optional),
+  scheduleID: ScheduleID.pipe(optional),
 }).annotate({ identifier: "KiloFlow.Reference.Managed" })
 
 export const NativeScheduleReference = Schema.Struct({
   type: Schema.tag("native-schedule"),
-  scheduleID: Schedule.ID,
+  scheduleID: ScheduleID,
   /** `hook` rows belong to another schedule owner, such as an agent's wakeup or cron task; they are read-only here. */
-  action: Schema.Literals(["prompt", "hook"]).pipe(optional),
+  action: Schema.Literals(["prompt", "hook", "code"]).pipe(optional),
 }).annotate({ identifier: "KiloFlow.Reference.NativeSchedule" })
 
 export const Reference = Schema.Union([ManagedReference, NativeScheduleReference]).pipe(
@@ -148,7 +215,7 @@ export const RunStatus = Schema.Literals([
 export type RunStatus = typeof RunStatus.Type
 
 export const ScheduledOccurrence = Schema.Struct({
-  scheduleID: Schedule.ID,
+  scheduleID: ScheduleID,
   dueAt: Schema.Finite,
 }).annotate({ identifier: "KiloFlow.ScheduledOccurrence" })
 export type ScheduledOccurrence = typeof ScheduledOccurrence.Type
@@ -185,7 +252,7 @@ export type RunOutcome = typeof RunOutcome.Type
  * A run outcome for a managed Flow that has run. A native schedule, or a managed Flow before its first run, reports
  * its backing schedule's outcome instead.
  */
-export const Outcome = Schema.Union([RunOutcome, Schedule.Outcome]).annotate({
+export const Outcome = Schema.Union([RunOutcome, ScheduleOutcome]).annotate({
   identifier: "KiloFlow.Outcome",
   description:
     "Managed Flows report a run outcome (succeeded, failed, interrupted, skipped) once they have run. Native schedules, and managed Flows before their first run, report the backing schedule's outcome.",
@@ -201,7 +268,7 @@ export const Info = Schema.Struct({
   context: Context,
   prompt: Schema.String,
   permissions: Schema.Array(PermissionGrant).pipe(optional),
-  ends: Schedule.Ends.pipe(optional),
+  ends: Ends.pipe(optional),
   endsAt: Schema.Finite.pipe(optional),
   remainingRuns: Schema.Finite.pipe(optional),
   status: Status,
@@ -225,8 +292,8 @@ export const Record = Schema.Struct({
   context: Context,
   prompt: Schema.String,
   permissions: Schema.Array(PermissionGrant).pipe(optional),
-  ends: Schedule.Ends.pipe(optional),
-  scheduleID: Schedule.ID.pipe(optional),
+  ends: Ends.pipe(optional),
+  scheduleID: ScheduleID.pipe(optional),
   time: Schema.Struct({ created: Schema.Finite, updated: Schema.Finite }),
 }).annotate({ identifier: "KiloFlow.Record.V1" })
 export type Record = typeof Record.Type
@@ -239,8 +306,8 @@ const endsDescription =
 
 const CreateFields = {
   name: Schema.String.check(Schema.isMinLength(1)).annotate({ description: "Short name shown in Flow inventories." }),
-  when: Schedule.WhenInput.annotate({ description: "Time trigger for the Flow." }),
-  ends: Schedule.Ends.pipe(optional).annotate({ description: endsDescription }),
+  when: WhenInput.annotate({ description: "Time trigger for the Flow." }),
+  ends: Ends.pipe(optional).annotate({ description: endsDescription }),
   prompt: Schema.String.check(Schema.isMinLength(1)).annotate({
     description: "Prompt each fresh local Session will run.",
   }),
@@ -261,8 +328,8 @@ const CreateFields = {
 const UpdateFields = {
   flowID: ID,
   name: CreateFields.name.pipe(optional),
-  when: Schedule.WhenInput.pipe(optional).annotate({ description: "New time trigger. Omit to keep the current one." }),
-  ends: Schema.NullOr(Schedule.Ends)
+  when: WhenInput.pipe(optional).annotate({ description: "New time trigger. Omit to keep the current one." }),
+  ends: Schema.NullOr(Ends)
     .pipe(optional)
     .annotate({ description: `${endsDescription} null removes the limit; omit to keep the current one.` }),
   prompt: CreateFields.prompt.pipe(optional),

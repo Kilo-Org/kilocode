@@ -180,6 +180,8 @@ describe("review prompt", () => {
     expect(text).toContain("`/review branch [base] [guidance]`")
     expect(text).toContain("Branch or base ref")
     expect(text).toContain("git merge-base HEAD <base>")
+    expect(text).toContain("git diff <merge-base>..HEAD")
+    expect(text).not.toContain("$(git merge-base")
     expect(text).toMatch(/no common history|not found/i)
   })
 
@@ -253,7 +255,9 @@ describe("review prompt", () => {
 
   test("documents the complete worktree diff scope", () => {
     expect(text).toContain("current Agent Manager git worktree against its recorded parent branch")
-    expect(text).toContain("git -c core.quotepath=false diff <merge-base>")
+    expect(text).toContain("For worktree review, use `git diff <merge-base>`")
+    expect(text).toContain("For branch review, use `git diff <merge-base>`")
+    expect(text).not.toContain("git -c ")
     expect(text).toContain("git ls-files --others --exclude-standard")
     expect(text).toContain("commits already present on the worktree branch")
   })

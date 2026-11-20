@@ -29,7 +29,8 @@ const boot =
     env: Record<string, string>,
     body: (rpc: ReturnType<typeof gateway>, backend: ReturnType<typeof fixture>) => Promise<void>,
     // `data` is the server's global data directory, where a new store looks for an `auth.json` to import.
-    options: { syncBackground?: boolean; awaitActivation?: boolean; data?: string } = {},
+    // `database` opens a file store; an in-memory store never imports a legacy login.
+    options: { syncBackground?: boolean; awaitActivation?: boolean; data?: string; database?: string } = {},
   ) =>
   async () => {
   using backend = fixture()
@@ -65,7 +66,7 @@ const boot =
             createRoutes(
               {
                 password: "secret",
-                database: { path: ":memory:" },
+                database: { path: options.database ?? ":memory:" },
                 models: { fetch: false },
                 fs: { filewatcher: false },
                 config: { directory, project: false },
@@ -250,7 +251,7 @@ for (const hasPersonalAccount of [true, false])
             server: gateway.server,
           })
         },
-        { data, awaitActivation: false },
+        { data, database: path.join(data, "kilo2-v2.db"), awaitActivation: false },
       )()
       expect(await Bun.file(path.join(data, "auth.json")).text()).toBe(auth)
     } finally {

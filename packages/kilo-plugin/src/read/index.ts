@@ -6,7 +6,6 @@ import type { AbsolutePath } from "@opencode/core/schema"
 import { ReadToolFileSystem } from "@opencode/core/tool/read-filesystem"
 import { define } from "@opencode/plugin/effect/plugin"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
-import { FSUtil } from "@opencode/util/fs-util"
 import { Effect, Layer } from "effect"
 import { extname } from "path"
 import { createInterface } from "readline"
@@ -45,12 +44,7 @@ export const KiloReadPlugin = define({
 // Extraction replaces the bytes the native reader sees, so it returns a page with the same limits
 // and continuation as upstream. The read tool, its bounding and its instruction loading stay as
 // upstream: the host only swaps the reader behind the tool.
-async function page(
-  stream: Readable,
-  input: AbsolutePath,
-  value: ReadToolFileSystem.PageInput,
-  signal?: AbortSignal,
-) {
+async function page(stream: Readable, value: ReadToolFileSystem.PageInput, signal?: AbortSignal) {
   const reader = createInterface({ input: stream, crlfDelay: Infinity })
   const offset = value.offset || 1
   const limit = Math.min(value.limit || ReadToolFileSystem.MAX_READ_LINES, ReadToolFileSystem.MAX_READ_LINES)
@@ -89,15 +83,13 @@ async function page(
     stream.destroy()
   }
   const kept = recent.slice(-keep)
-  const result = (start: number) =>
-    new ReadToolFileSystem.TextPage({
-      type: "text-page",
-      content: lines.join("\n"),
-      mime: FSUtil.mimeType(input),
-      offset: start,
-      truncated: next !== undefined,
-      ...(next === undefined ? {} : { next }),
-    })
+  const result = (start: number): ReadToolFileSystem.TextContent => ({
+    type: "text",
+    content: lines.join("\n"),
+    offset: Math.max(1, start),
+    lineCount: lines.length,
+    ...(next === undefined ? {} : { next }),
+  })
   if (offset < 0) {
     const start = count - kept.length + 1
     kept.every((line, index) => add(line, start + index))
@@ -153,7 +145,7 @@ export const read = (files: Files, input: AbsolutePath, resource: string, value:
       try: async (signal) => {
         const stream = await Extract.open(input, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength))
         if (!stream) throw new Error(`Cannot extract ${resource}`)
-        return page(stream, input, value, signal)
+        return page(stream, value, signal)
       },
       catch: (error) => new ReadToolFileSystem.ReaderError({ resource, detail: message(error) }),
     })

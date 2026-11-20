@@ -5,7 +5,7 @@ import { Flag } from "@opencode/core/flag"
 import { Location } from "@opencode/core/location"
 import { LocationServiceMap } from "@opencode/core/location-service-map"
 import { Plugin } from "@opencode/core/plugin"
-import { Schedule } from "@opencode/core/schedule"
+import { Automation } from "@opencode/core/automation"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Skill } from "@opencode/core/skill"
 import { Tool } from "@opencode/core/tool"
@@ -21,7 +21,13 @@ import { KiloHost } from "../src/host"
 
 const wakeupTools = ["schedule_wakeup", "cancel_wakeup", "cron_create", "cron_list", "cron_delete"] as const
 const flowTools = ["flow_create", "flow_list", "flow_update", "flow_delete", "flow_run"] as const
-const nativeScheduleTools = ["schedule_create", "schedule_list", "schedule_pause", "schedule_resume", "schedule_delete"] as const
+const nativeAutomationTools = [
+  "automation_create",
+  "automation_list",
+  "automation_pause",
+  "automation_resume",
+  "automation_delete",
+] as const
 
 async function eventually<A>(read: () => Promise<A>, ready: (value: A) => boolean) {
   const deadline = performance.now() + 10_000
@@ -64,7 +70,7 @@ test(
             yield* Context.get(location, Plugin.Service).awaitActivation
             const names = (yield* Context.get(location, Tool.Service).list()).map((tool) => tool.name).toSorted()
             for (const name of [...wakeupTools, ...flowTools]) expect(names).toContain(name)
-            for (const name of nativeScheduleTools) expect(names).not.toContain(name)
+            for (const name of nativeAutomationTools) expect(names).not.toContain(name)
 
             const skills = yield* Context.get(location, Skill.Service).list()
             // The policy is not a model-loadable skill.
@@ -132,12 +138,12 @@ test(
             yield* Context.get(location, Plugin.Service).awaitActivation
             const names = (yield* Context.get(location, Tool.Service).list()).map((tool) => tool.name).toSorted()
             for (const name of [...wakeupTools, ...flowTools]) expect(names).toContain(name)
-            for (const name of nativeScheduleTools) expect(names).not.toContain(name)
+            for (const name of nativeAutomationTools) expect(names).not.toContain(name)
 
             const handler = Context.get(context, HttpRouter.HttpRouter)
               .asHttpEffect()
               .pipe(HttpEffect.toWebHandlerWith(context))
-            const schedules = Context.get(context, Schedule.Service)
+            const schedules = Context.get(context, Automation.Service)
             const client = OpenCode.make({
               baseUrl: "http://kilo.local",
               headers: { authorization: `Basic ${btoa("opencode:secret")}` },

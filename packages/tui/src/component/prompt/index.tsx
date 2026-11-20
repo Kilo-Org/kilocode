@@ -80,6 +80,7 @@ export type PromptProps = {
   muted?: boolean
   onSubmit?: () => void
   onEmptySubmit?: () => boolean | Promise<boolean>
+  onDraftSet?: (ref: PromptRef, source?: PromptInfo) => void // kilocode_change(startup) seam - distinguish restored and replaced drafts
   ref?: (ref: PromptRef | undefined) => void
   placeholders?: {
     normal?: string[]
@@ -96,7 +97,7 @@ export type PromptRef = {
   reset(): void
   blur(): void
   focus(): void
-  submit(): void
+  submit(): boolean // kilocode_change(startup) seam - whether the composer started handling this submission
 }
 
 const DRAFT_RETENTION_MIN_CHARS = 20
@@ -580,6 +581,7 @@ export function Prompt(props: PromptProps) {
           })
           restoreExtmarksFromPrompt(store.prompt)
           input.cursorOffset = measure(normalized)
+          props.onDraftSet?.(ref) // kilocode_change(startup) seam - external editor replacement
         },
       },
       {
@@ -698,12 +700,13 @@ export function Prompt(props: PromptProps) {
       setStore("prompt", prompt)
       restoreExtmarksFromPrompt(prompt)
       input.gotoBufferEnd()
+      props.onDraftSet?.(ref, prompt) // kilocode_change(startup) seam
     },
     reset() {
       resetComposer()
     },
     submit() {
-      void submit()
+      return submit() !== false // kilocode_change(startup) seam - only synchronous preflight refusals are retryable
     },
   }
 
@@ -714,6 +717,13 @@ export function Prompt(props: PromptProps) {
     setStore("extmarkToPart", new Map())
     input.clear()
   }
+
+  // kilocode_change start - startup seam: setting initial or stashed text resets native undo history; input and undo do not.
+  function notifyDraftEdit() {
+    if (!props.onDraftSet || input.isDestroyed) return
+    if (input.editBuffer.canUndo() || input.editBuffer.canRedo()) props.onDraftSet(ref)
+  }
+  // kilocode_change end
 
   // Captured once: the session route is keyed by sessionID, so this Prompt
   // instance belongs to exactly one tab. Reading props.sessionID lazily would
@@ -729,11 +739,13 @@ export function Prompt(props: PromptProps) {
       setStore("prompt", saved.prompt)
       restoreExtmarksFromPrompt(saved.prompt)
       input.cursorOffset = Math.min(saved.cursor, measure(saved.prompt.text))
+      props.onDraftSet?.(ref, saved.prompt) // kilocode_change(startup) seam
     }
   })
 
   onCleanup(() => {
     disposed = true
+    notifyDraftEdit() // kilocode_change(startup) seam - native edit notifications can still be pending at unmount
     if (store.prompt.text) {
       saveDraft(stashSessionID, { prompt: unwrap(store.prompt), cursor: input.cursorOffset })
     }
@@ -1045,6 +1057,7 @@ export function Prompt(props: PromptProps) {
             setStore("mode", item.mode ?? "normal")
             restoreExtmarksFromPrompt(item)
             input.cursorOffset = 0
+            props.onDraftSet?.(ref, item) // kilocode_change(startup) seam
           },
         },
       ],
@@ -1085,14 +1098,17 @@ export function Prompt(props: PromptProps) {
             setStore("mode", item.mode ?? "normal")
             restoreExtmarksFromPrompt(item)
             input.cursorOffset = measure(item.text)
+            props.onDraftSet?.(ref, item) // kilocode_change(startup) seam
           },
         },
       ],
     }
   })
 
-  let submitting = false
-  async function submit(delivery: SessionInbox.Delivery = "steer") {
+  // kilocode_change start - startup seam: expose temporary refusals before starting asynchronous dispatch.
+  const [submitting, setSubmitting] = createSignal(false)
+  function submit(delivery: SessionInbox.Delivery = "steer") {
+    // kilocode_change end
     if (disabled()) return false
     // Prevent overlapping invocations (e.g. a double-pressed Enter, or the
     // input's native onSubmit racing another dispatch). Without this guard,
@@ -1100,16 +1116,7 @@ export function Prompt(props: PromptProps) {
     // clears `store.prompt.text`, then awaits its own `session.create` and
     // ultimately reads the now-empty store — sending a phantom empty prompt
     // to a freshly created session.
-    if (submitting) return false
-    submitting = true
-    try {
-      return await submitInner(delivery)
-    } finally {
-      submitting = false
-    }
-  }
-
-  async function submitInner(delivery: SessionInbox.Delivery) {
+    if (submitting()) return false // kilocode_change(startup) seam
     // IME: double-defer may fire before onContentChange flushes the last
     // composed character (e.g. Korean hangul) to the store, so read
     // plainText directly and sync before any downstream reads.
@@ -1119,6 +1126,13 @@ export function Prompt(props: PromptProps) {
     }
     if (move.creating()) return false
     if (auto()?.visible) return false
+    // kilocode_change start - startup seam: an accepted dispatch owns the draft even if later network preparation fails.
+    setSubmitting(true)
+    return submitInner(delivery).finally(() => setSubmitting(false))
+  }
+
+  async function submitInner(delivery: SessionInbox.Delivery) {
+    // kilocode_change end
     const trimmed = store.prompt.text.trim()
     if (!trimmed && (!props.sessionID || store.mode === "shell" || delivery === "queue"))
       return delivery === "steer" ? (await props.onEmptySubmit?.()) === true : false
@@ -1787,6 +1801,7 @@ export function Prompt(props: PromptProps) {
               maxHeight={maxHeight()}
               cursorStyle={cursorStyle()}
               onContentChange={() => {
+                notifyDraftEdit() // kilocode_change(startup) seam
                 const value = input.plainText
                 setStore("prompt", "text", value)
                 auto()?.onInput(value)

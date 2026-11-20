@@ -34,6 +34,11 @@ const generate = makeLocationNode({
       },
       image: () => Effect.fail(new Generate.UnavailableError({ message: "unused" })),
       decisions: () => Effect.fail(new Generate.UnavailableError({ message: "unused" })),
+      video: {
+        start: () => Effect.fail(new Generate.UnavailableError({ message: "unused" })),
+        status: () => Effect.fail(new Generate.UnavailableError({ message: "unused" })),
+        result: () => Effect.fail(new Generate.UnavailableError({ message: "unused" })),
+      },
     }),
   ),
   deps: [],

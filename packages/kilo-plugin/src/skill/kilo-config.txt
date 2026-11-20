@@ -47,7 +47,7 @@ Each project directory on the walk is a config directory. It loads its root file
 | Plugins | `{plugin,plugins}/*.{ts,js}` or a plugin package directory |
 | Instructions | `AGENTS.md` in the global directory and in each directory from the workspace up to the project root, plus `instructions` |
 
-Only `AGENTS.md` is read as an instruction file. `CLAUDE.md` and `CONTEXT.md` are not loaded; add them to `instructions` if needed. `KILO_DISABLE_CLAUDE_CODE=1` or `KILO_DISABLE_CLAUDE_CODE_SKILLS=1` stops loading the `.claude` and `.agents` skills.
+`AGENTS.md` is read as an instruction file in the global directory and in each directory from the workspace up to the project root. `CLAUDE.md` is read too: `./CLAUDE.md` in each directory up to the project root and `~/.claude/CLAUDE.md`; `KILO_DISABLE_CLAUDE_CODE=1` or `KILO_DISABLE_CLAUDE_CODE_PROMPT=1` stops those files. `.claude` skills stop with `KILO_DISABLE_CLAUDE_CODE=1` or `KILO_DISABLE_CLAUDE_CODE_SKILLS=1`; `.agents` skills are always loaded. Add any other file to `instructions`.
 
 To find where `/name` or an agent comes from, list the loaded set first (`kilo2 api get /api/command`, `kilo2 api get /api/agent`), then search the patterns above in `~/.config/kilo2/`, `$KILO2_CONFIG_DIR`, each `.kilo2/` from the workspace up to the worktree root, and the `commands` or `agents` keys of the config files. Never search `.kilo/`, `.kilocode/` or `~/.kilo*`: v2 does not read them. MCP prompts also appear as `/<server>:<prompt>` commands.
 
@@ -101,7 +101,7 @@ Kilo's primary agents are `code` (the default), `ask`, `debug` and `plan`; `gene
 
 `plugins` holds package names or `{ package, options }`; a local plugin is a directory (`./`, `../` or `file://`), and `"-name"` removes an inherited entry. Prefer `kilo2 plugin add <package>`, `plugin remove`, `plugin list [--builtin]`, `plugin check` and `plugin update`. Packages install into the global cache, not the project.
 
-Other upstream keys: `share` (`manual`, `auto`, `disabled`), `update` (`disable`, `notify`, `auto`; was `autoupdate`), `snapshots` (was `snapshot`), `compaction` (`auto`, `keep.tokens`, `buffer`; `prune` is gone), `websearch`, `references` (named local folders or git repositories as context), `formatter`, `lsp`, `watcher.ignore`, `tool_output`, `media.image`, `username`, `shell`, `experimental`.
+Other upstream keys: `share` (`manual`, `auto`, `disabled`), `update` (`disable`, `notify`, `auto`; was `autoupdate`), `snapshots` (was `snapshot`), `compaction` (`auto`, `keep.tokens`, `buffer`, `background`; background compaction is on by default, and v1's `experimental.background_compaction` is gone — set `compaction.background: false` instead; `prune` is gone), `websearch`, `references` (named local folders or git repositories as context), `formatter`, `lsp`, `watcher.ignore`, `tool_output`, `media.image`, `username`, `shell`, `experimental`.
 
 ## Permissions
 
@@ -122,6 +122,8 @@ Configure providers under `providers.<id>` (not v1 `provider`). `settings` holds
 The Kilo Gateway is the `kilo` provider. Sign in with `kilo2 auth login` and pick **Kilo Gateway (Device Authorization)**, or `/connect` in the TUI; free models work signed out. `kilo2 auth list`, `logout` and `switch` manage connected integrations, and `KILO_API_KEY` and `KILO_ORG_ID` supply a Gateway token and team. `kilo2 models` lists available models.
 
 ## Terminal settings
+
+In the full TUI, `/models` remembers your pick for the active agent across launches. A fresh chat uses that pick ahead of the top-level `model` if it is still available. If the agent has its own configured `model`, that model wins on restart; you can still switch temporarily. Resuming a chat restores the chat's saved model.
 
 CLI and TUI preferences are not in `kilo2.json`. They live only in the global `~/.config/kilo2/cli.json` (JSONC; it moves with `KILO2_CONFIG_DIR`); there is no project-level CLI config. `OPENCODE_CLI_CONFIG_CONTENT` merges inline JSON over it. Keys include `theme` (`name`, `mode`), `keybinds`, `leader`, `attention` (notifications and sounds, off by default), `diffs`, `session` (`thinking`, `sidebar`, `scrollbar` and more), `tabs`, `prompt`, `terminal`, `mini`, `animations`, `mouse`, `cursor` and terminal `plugins`. Most can be changed with `Ctrl+P` → **Open settings**; keybindings only in the file.
 
@@ -212,7 +214,7 @@ Full guides: <https://kilo.ai/docs/automate/agent-manager> and <https://kilo.ai/
 
 ## Scheduled Flows and wakeups
 
-Scheduling is always on in Kilo (no `experimental.schedules` flag is needed) and offers two separate local surfaces:
+Scheduling is always on in Kilo (no `experimental.automations` flag is needed) and offers two separate local surfaces:
 
 | Surface | TUI and tools | Execution |
 |---|---|---|
