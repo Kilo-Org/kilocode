@@ -50,12 +50,7 @@ export namespace IngestQueue {
       }
     | {
         type: "session_status"
-        data: {
-          status: "idle" | "busy" | "question" | "permission" | "retry" | "scheduled"
-          // scheduled wakeups: the ISO-8601 due time, present only with status
-          // "scheduled".
-          scheduledAt?: string
-        }
+        data: SessionStatus & (SessionStatusSnapshot | SessionStatusTransition)
       }
     | {
         type: "session_pr_link"
@@ -65,6 +60,24 @@ export namespace IngestQueue {
         type: "agent_notification"
         data: { id: string; message: string }
       }
+
+  type StatusName = "idle" | "busy" | "question" | "permission" | "retry" | "scheduled"
+
+  type SessionStatus = {
+    status: StatusName
+    // scheduled wakeups: the ISO-8601 due time, present only with status
+    // "scheduled".
+    scheduledAt?: string
+  }
+
+  // Historical snapshots omit onset; known transitions replay this whole tuple unchanged.
+  type SessionStatusSnapshot = { occurredAt?: never; previousStatus?: never; transitionId?: never }
+
+  type SessionStatusTransition = {
+    occurredAt: string
+    previousStatus: StatusName | null
+    transitionId: string
+  }
 
   type Share = {
     ingestPath: string
@@ -106,7 +119,11 @@ export namespace IngestQueue {
 
     // In-flight flush promises. flush() deletes the queue entry before I/O, so an empty queue is not
     // quiescence — drain must join these too.
-    const inflight = new Set<Promise<void>>()
+    const inflight = new Map<Promise<void>, string>()
+
+    // Retain only unsuccessful outcomes. Successful sessions need no entry;
+    // settle also joins their in-flight work and checks their pending queue.
+    const outcome = new Map<string, "failed" | "retry">()
 
     // Last successfully resolved client and per-session share. Drain falls back to these when
     // getClient/getShare fail during teardown (e.g. authValid HTTP check).
@@ -153,7 +170,9 @@ export namespace IngestQueue {
       if (item.type === "session_diff") return "session_diff"
       if (item.type === "session_open") return "session_open"
       if (item.type === "session_close") return "session_close"
-      if (item.type === "session_status") return "session_status"
+      if (item.type === "session_status") {
+        return item.data.transitionId ? `session_status:${item.data.transitionId}` : "session_status"
+      }
       if (item.type === "session_pr_link") return "session_pr_link"
 
       if (item.type === "message") {
@@ -233,7 +252,7 @@ export namespace IngestQueue {
 
       const items = Array.from(queued.data.values())
       const done = run(sessionId, items)
-      inflight.add(done)
+      inflight.set(done, sessionId)
       try {
         await done
       } finally {
@@ -262,6 +281,7 @@ export namespace IngestQueue {
       try {
         const share = await resolveShare(sessionId)
         if (!share) {
+          outcome.set(sessionId, "failed")
           if (shutting) {
             options.log.error("ingest drain skipped", { sessionId, reason: "no share" })
           }
@@ -270,6 +290,7 @@ export namespace IngestQueue {
 
         const client = await resolveClient()
         if (!client) {
+          outcome.set(sessionId, "failed")
           if (shutting) {
             options.log.error("ingest drain skipped", { sessionId, reason: "no client" })
           }
@@ -307,11 +328,13 @@ export namespace IngestQueue {
           if (count > 6) {
             options.log.error("share sync failed", { sessionId, error: "retry budget exceeded" })
             retry.delete(sessionId)
+            outcome.set(sessionId, "failed")
             return
           }
 
           const delay = backoff(count)
           retry.set(sessionId, { count, until: now() + delay })
+          outcome.set(sessionId, "retry")
           options.log.error("share sync failed", { sessionId, error: "network", attempt: count, retryInMs: delay })
           requeue(sessionId, items, delay)
           return
@@ -320,6 +343,7 @@ export namespace IngestQueue {
         if (response.ok) {
           options.log.info?.("ingest flush ok", { sessionId, items: items.length })
           retry.delete(sessionId)
+          outcome.delete(sessionId)
           return
         }
 
@@ -332,6 +356,7 @@ export namespace IngestQueue {
             statusText: response.statusText,
           })
           retry.delete(sessionId)
+          outcome.set(sessionId, "failed")
           return
         }
 
@@ -343,6 +368,7 @@ export namespace IngestQueue {
             statusText: response.statusText,
           })
           retry.delete(sessionId)
+          outcome.set(sessionId, "failed")
           return
         }
 
@@ -361,11 +387,13 @@ export namespace IngestQueue {
         if (count > 6) {
           options.log.error("share sync failed", { sessionId, error: "retry budget exceeded" })
           retry.delete(sessionId)
+          outcome.set(sessionId, "failed")
           return
         }
 
         const delay = backoff(count)
         retry.set(sessionId, { count, until: now() + delay })
+        outcome.set(sessionId, "retry")
         options.log.error("share sync failed", {
           sessionId,
           status: response.status,
@@ -375,6 +403,7 @@ export namespace IngestQueue {
         })
         requeue(sessionId, items, delay)
       } catch (error) {
+        outcome.set(sessionId, "failed")
         options.log.error("share sync failed", { sessionId, error })
       }
     }
@@ -389,7 +418,10 @@ export namespace IngestQueue {
       // Returns true when the item was queued, false when skipped (no client) so
       // callers can defer dedupe bookkeeping until the item is actually accepted.
       const client = await options.getClient()
-      if (!client) return false
+      if (!client) {
+        outcome.set(sessionId, "failed")
+        return false
+      }
 
       if (options.log.info) {
         const types = data.map((d) => d.type).join(",")
@@ -405,8 +437,81 @@ export namespace IngestQueue {
       return true
     }
 
+    /**
+     * Acknowledged settlement for Continue-in-Cloud. Flush every requested
+     * session's pending queue once it is due, join started/in-flight flushes
+     * before judging an outcome, and succeed only when each session's queue is
+     * empty and its last flush resolved. A backed-off retry is waited on (never
+     * flushed early, so backoff is not burned in milliseconds) until the
+     * timeout; a permanent failure fails at once. Unlike `drain`, this never
+     * switches the queue into shutdown mode.
+     */
+    async function settle(sessionIds: string[], timeoutMs = 15_000) {
+      const ids = [...new Set(sessionIds)]
+      const deadline = now() + timeoutMs
+      const sleep = (ms: number) =>
+        new Promise<void>((resolve) => {
+          set(() => resolve(), ms)
+        })
+      // Race in-flight work against a bounded wait, and always clear the timer
+      // so a settled race does not leak a pending fake/real timer.
+      const waitWork = async (ms: number, work: Promise<unknown>) => {
+        let timer: Timer | undefined
+        const timeout = new Promise<void>((resolve) => {
+          timer = set(() => resolve(), ms)
+        })
+        await Promise.race([work, timeout])
+        if (timer !== undefined) clear(timer)
+      }
+      const due = (id: string) => retry.get(id)?.until ?? 0
+      // Only flush a session whose backoff window has elapsed. Flushing a
+      // backed-off session resets its timer and would spend the whole retry
+      // budget within the settle timeout.
+      const kick = () => {
+        for (const id of ids) {
+          if (!queue.has(id)) continue
+          if (now() < due(id)) continue
+          void flush(id)
+        }
+      }
+
+      kick()
+
+      while (true) {
+        // Join the selected sessions' flushes before reading an outcome, so a stale
+        // `failed`/`retry` value from a prior attempt is never judged.
+        const pending = Array.from(inflight)
+          .filter(([, id]) => ids.includes(id))
+          .map(([work]) => work)
+        if (pending.length > 0) {
+          const left = deadline - now()
+          if (left <= 0) return { ok: false as const, reason: "timeout" as const }
+          await waitWork(left, Promise.allSettled(pending))
+          kick()
+          continue
+        }
+
+        if (ids.some((id) => outcome.get(id) === "failed")) return { ok: false as const, reason: "failed" as const }
+        if (ids.every((id) => !queue.has(id) && (outcome.get(id) ?? "ok") === "ok")) return { ok: true as const }
+
+        const left = deadline - now()
+        if (left <= 0) return { ok: false as const, reason: "timeout" as const }
+
+        // Wait until the earliest backoff window elapses, or a scheduled flush
+        // timer fires, then re-kick.
+        const next = ids.reduce<number | undefined>((min, id) => {
+          if (!queue.has(id)) return min
+          const until = due(id)
+          return min === undefined || until < min ? until : min
+        }, undefined)
+        if (next === undefined) return { ok: false as const, reason: "failed" as const }
+
+        await sleep(Math.max(0, Math.min(next, deadline) - now()))
+        kick()
+      }
+    }
+
     async function drain(bound = 3_000) {
-      // Shutdown drain: one bounded attempt per pending session, join in-flight flushes, no re-enqueue.
       shutting = true
       const deadline = now() + bound
 
@@ -430,7 +535,7 @@ export namespace IngestQueue {
 
         if (inflight.size === 0) continue
 
-        const pending = Array.from(inflight)
+        const pending = Array.from(inflight.keys())
         const left = Math.max(0, deadline - now())
         let timer: Timer | undefined
         const timeout = new Promise<void>((resolve) => {
@@ -444,6 +549,7 @@ export namespace IngestQueue {
     return {
       sync,
       flush,
+      settle,
       drain,
     } as const
   }

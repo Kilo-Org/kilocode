@@ -146,7 +146,7 @@ function handleRequest(req: import("http").IncomingMessage, res: import("http").
       clearTimeout(pending.timeout)
       pendingAuths.delete(state)
       cleanupStateIndex(state)
-      pending.reject(new Error(errorMsg))
+      pending.reject(KiloOAuthCallback.denied(errorMsg, error)) // kilocode_change - keep the OAuth error code
     }
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
     res.end(HTML_ERROR(errorMsg))
@@ -194,7 +194,7 @@ export async function ensureRunning(redirectUri?: string): Promise<void> {
       currentPath = next.path
     },
     create: () => createServer(handleRequest),
-    stop,
+    stop: () => stop(KiloOAuthCallback.displaced()), // reconfiguring for a newer flow supersedes waiting ones
     info: (msg, data) => log.info(msg, data),
     error: (msg, data) => log.error(msg, data),
   })
@@ -212,7 +212,7 @@ export function waitForCallback(oauthState: string, mcpName?: string): Promise<s
       if (pendingAuths.has(oauthState)) {
         pendingAuths.delete(oauthState)
         if (mcpName) mcpNameToState.delete(mcpName)
-        reject(new Error("OAuth callback timeout - authorization took too long"))
+        reject(KiloOAuthCallback.expired()) // kilocode_change
         stopIfIdle()
       }
     }, CALLBACK_TIMEOUT_MS)
@@ -230,7 +230,7 @@ export function cancelPending(mcpName: string): void {
     clearTimeout(pending.timeout)
     pendingAuths.delete(key)
     mcpNameToState.delete(mcpName)
-    pending.reject(new Error("Authorization cancelled"))
+    pending.reject(KiloOAuthCallback.cancelled()) // kilocode_change
     stopIfIdle()
   }
 }
@@ -248,7 +248,7 @@ export async function isPortInUse(port: number = OAUTH_CALLBACK_PORT): Promise<b
   })
 }
 
-export async function stop(): Promise<void> {
+export async function stop(reason?: Error): Promise<void> { // kilocode_change - reason for waiting flows
   if (server) {
     await new Promise<void>((resolve) => server!.close(() => resolve()))
     server = undefined
@@ -256,7 +256,7 @@ export async function stop(): Promise<void> {
 
   for (const [_name, pending] of pendingAuths) {
     clearTimeout(pending.timeout)
-    pending.reject(new Error("OAuth callback server stopped"))
+    pending.reject(reason ?? KiloOAuthCallback.stopped()) // kilocode_change
   }
   pendingAuths.clear()
   mcpNameToState.clear()

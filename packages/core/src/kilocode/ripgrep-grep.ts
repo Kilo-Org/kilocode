@@ -1,4 +1,29 @@
+import { Schema, SchemaGetter } from "effect"
 import type { Match } from "@opencode-ai/schema/filesystem"
+
+// ripgrep emits base64 `bytes` instead of `text` when the data is not valid UTF-8.
+// Decode with lossy UTF-8 so valid multi-byte sequences survive intact and only
+// truly undecodable bytes become U+FFFD. This avoids guessing the source encoding
+// (which could misrepresent content to the LLM) and keeps valid portions readable.
+//
+// Caveat: submatch start/end are ripgrep byte offsets. On mixed-encoding lines
+// (valid UTF-8 multi-byte sequences alongside invalid bytes), the decoded text has
+// fewer characters than raw bytes, so the offsets no longer index into the decoded
+// string. Nothing in-repo consumes these offsets for slicing today; if that changes,
+// recompute them after decoding or drop them for bytes-decoded records.
+
+/** ripgrep `arbitrary data` (`{text}` or `{bytes}`) normalized to `{text}`. */
+export const Data = Schema.Union([
+  Schema.Struct({ text: Schema.String }),
+  Schema.Struct({ bytes: Schema.String }),
+]).pipe(
+  Schema.decodeTo(Schema.Struct({ text: Schema.String }), {
+    decode: SchemaGetter.transform((data) =>
+      "text" in data ? { text: data.text } : { text: Buffer.from(data.bytes, "base64").toString("utf8") },
+    ),
+    encode: SchemaGetter.passthrough({ strict: false }),
+  }),
+)
 
 export interface Options {
   readonly context?: number

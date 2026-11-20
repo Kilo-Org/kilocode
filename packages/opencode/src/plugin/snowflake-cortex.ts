@@ -3,7 +3,7 @@ import { OAUTH_DUMMY_KEY } from "../auth"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { KiloOauthCallbackPage as OauthCallbackPage } from "@opencode-ai/core/kilocode/oauth/page" // kilocode_change - Kilo-branded callback page
 import { createServer } from "http"
-import open from "open"
+import { openUrl } from "@opencode-ai/core/open" // kilocode_change - backport upstream browser URL validation
 
 const OAUTH_CLIENT_ID = "LOCAL_APPLICATION"
 const OAUTH_CALLBACK_HOST = "127.0.0.1"
@@ -470,7 +470,7 @@ export async function SnowflakeCortexAuthPlugin(_input: PluginInput): Promise<Ho
             const role = (inputs.role || "").trim() || undefined
             const url = buildAuthorizeUrl(account, role, state, pkce)
             const callbackPromise = waitForOAuthCallback(account, pkce, state)
-            await open(url).catch(() => undefined)
+            await openUrl(url).catch(() => undefined) // kilocode_change
 
             return {
               url,

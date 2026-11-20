@@ -1,7 +1,7 @@
 import path from "path"
 import fs from "fs/promises"
 import { Cause, Effect, Exit, Fiber, Scope } from "effect"
-import { SessionID, PartID } from "@/session/schema"
+import { SessionID, PartID, type MessageID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
 import { Agent } from "@/agent/agent"
@@ -16,6 +16,7 @@ import type { EventV2 } from "@opencode-ai/core/event"
 import { Interrupted } from "@opencode-ai/schema/kilocode/session-drain"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { KiloSessionTurn } from "@/kilocode/session/turn"
 import { Permission } from "@/permission"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { Question } from "@/question"
@@ -219,6 +220,9 @@ export namespace KiloSessionPrompt {
     const prev = msgs.at(-2)
     if (!prev || prev.info.role !== "user") return
     if (tail.info.parentID !== prev.info.id) return
+
+    // Status is per process: another Kilo process on the same data directory can still be waiting on this reply.
+    if (yield* KiloSessionTurn.foreign(input.sessionID)) return
 
     yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
   })
@@ -614,6 +618,32 @@ export namespace KiloSessionPrompt {
       input.message.finish ??= "error"
     }
     return { exhausted: true as const, error }
+  }
+
+  /**
+   * Marks summaries of an interrupted compaction as aborted. An unfinished summary
+   * keeps the compaction task pending, so the next prompt would run it again.
+   */
+  export function settleCompaction(input: {
+    sessions: Pick<Session.Interface, "messages" | "updateMessage">
+    sessionID: SessionID
+    parentID: MessageID
+  }) {
+    return Effect.gen(function* () {
+      const msgs = yield* input.sessions.messages({ sessionID: input.sessionID })
+      for (const msg of msgs) {
+        const info = msg.info
+        if (info.role !== "assistant" || info.summary !== true || info.parentID !== input.parentID) continue
+        if (info.finish) continue
+        info.error ??= MessageV2.fromError(new DOMException("Aborted", "AbortError"), {
+          providerID: info.providerID,
+          aborted: true,
+        })
+        info.finish = "error"
+        info.time.completed ??= Date.now()
+        yield* input.sessions.updateMessage(info)
+      }
+    }).pipe(Effect.ignore)
   }
 
   /**

@@ -159,8 +159,8 @@ Gateway exposes endpoint families for chat API kinds, autocomplete, transcriptio
 
 | Family | Static-source surfaces |
 |---|---|
-| Chat APIs | `/api/gateway` and `/api/openrouter` aliases for chat completions, responses, and messages |
-| FIM and edit | `/api/fim/completions`, `/api/edit/completions` |
+| Chat APIs | `/api/v1` on `ai-gateway.kilo.ai` (`apps/ai-gateway/`) for chat completions, responses, and messages |
+| FIM and edit | `/api/v1/fim/completions`, `/api/v1/edit/completions` |
 | Transcription | Audio transcription routes |
 | Embeddings | Embedding proxy routes |
 | Catalogs | Models, transcription models, embedding models, providers, models-by-provider, and validation routes |

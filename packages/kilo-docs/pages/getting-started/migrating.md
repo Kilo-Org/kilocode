@@ -451,7 +451,7 @@ mkdir -p .kilo/rules-docs
 
 **Windsurf users:**
 
-- [Official Rules Directory](https://windsurf.com/editor/directory)
+- [Official Rules Documentation](https://docs.devin.ai/desktop/devin-local/customizations)
 - [windsurfrules](https://github.com/kinopeee/windsurfrules)
 
 **Cross-tool:**

@@ -17,6 +17,7 @@ describe("provider error classification", () => {
       "The request is 280913 tokens long and exceeds this model's context length of 262144 tokens.",
       "[Nex AGI] The request is 282364 tokens long and exceeds this model's context length of 262144 tokens.",
       "The request is 265,246 tokens long and exceeds this model's context length of 262,144 tokens.",
+      "Input exceeds the context limit (1048568 tokens). Please shorten the input.",
       // kilocode_change end
     ]
 

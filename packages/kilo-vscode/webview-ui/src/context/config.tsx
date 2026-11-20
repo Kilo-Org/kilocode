@@ -81,6 +81,7 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
   if (message.type === "chatSettingsLoaded") {
     return {
       "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
+      agentManagerSplash: message.settings.agentManagerSplash,
       browserAutomation: message.settings.browserAutomation,
       agentManagerBrowserOpenLinksIn: message.settings.agentManagerBrowserOpenLinksIn,
       workspaceTrusted: message.settings.workspaceTrusted,
@@ -94,12 +95,15 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
 
 export const ConfigProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
+  const initial = {
+    agentManagerSplash: (window as { KILO_AGENT_MANAGER_SPLASH?: boolean }).KILO_AGENT_MANAGER_SPLASH === true,
+  }
 
   const [config, setConfig] = createSignal<Config>({})
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
   const [collections, setCollections] = createSignal<ConfigCollections>({})
-  const [settings, setSettings] = createSignal<Record<string, unknown>>({})
+  const [settings, setSettings] = createSignal<Record<string, unknown>>(initial)
   const [shortcuts, setShortcuts] = createSignal({ bindings: {} as Record<string, string>, selection: false })
   const [features, setFeatures] = createSignal<FeatureFlags>({
     indexing: false,
@@ -125,7 +129,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [saved, setSaved] = createSignal<Config>({})
   const [savedGlobal, setSavedGlobal] = createSignal<Config>({})
   const [savedProject, setSavedProject] = createSignal<Config>({})
-  const [savedSettings, setSavedSettings] = createSignal<Record<string, unknown>>({})
+  const [savedSettings, setSavedSettings] = createSignal<Record<string, unknown>>(initial)
   // True while a saveConfig() write is in-flight — used to clear draft on success
   // and to guard against stale configLoaded messages overwriting optimistic state.
   const [saving, setSaving] = createSignal(false)

@@ -8,6 +8,8 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Caches the compiled [KiloIgnore] per workspace-root directory so editor-context
@@ -32,9 +34,12 @@ internal class KiloIgnoreCache : Disposable {
     }
 
     /** Returns the cached matcher for [root], compiling and caching it on first use. */
-    fun matcher(root: VirtualFile?): KiloIgnore {
+    suspend fun matcher(root: VirtualFile?): KiloIgnore {
         if (root == null) return KiloIgnore.EMPTY
-        return cache.getOrPut(root.url) { KiloIgnore.load(root) }
+        cache[root.url]?.let { return it }
+        return withContext(Dispatchers.IO) {
+            cache.getOrPut(root.url) { KiloIgnore.load(root) }
+        }
     }
 
     override fun dispose() = cache.clear()

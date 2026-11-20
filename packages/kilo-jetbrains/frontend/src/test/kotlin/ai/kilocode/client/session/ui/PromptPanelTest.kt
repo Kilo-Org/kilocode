@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.actions.SpeechInputAction
 import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -20,8 +21,10 @@ import ai.kilocode.client.session.ui.prompt.SessionIssueAction
 import ai.kilocode.client.session.ui.prompt.PromptTextPasteProvider
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.speech.SpeechCapture
 import ai.kilocode.client.test.CopyProviderSink
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.ui.LiveBadgeIcon
 import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -35,6 +38,7 @@ import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.codeInsight.lookup.LookupPositionStrategy
 import com.intellij.codeInsight.lookup.impl.LookupImpl
 import com.intellij.notification.Notification
+import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
@@ -47,12 +51,15 @@ import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
+import com.intellij.openapi.actionSystem.Shortcut
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
@@ -68,6 +75,8 @@ import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.fileTypes.PlainTextLanguage
+import com.intellij.openapi.keymap.Keymap
+import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -100,6 +109,8 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
 import java.awt.event.FocusEvent
+import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -112,6 +123,7 @@ import javax.swing.JPanel
 import javax.swing.ImageIcon
 import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
+import javax.swing.KeyStroke
 
 private const val FLOATING = "com.intellij.openapi.editor.toolbar.floating.EditorFloatingToolbar"
 
@@ -516,6 +528,83 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(spans.contains("@unknown" to CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES))
     }
 
+    fun `test prompt edits after editor recreation dispose the original highlights`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+        realize(panel, 260, 400)
+        panel.setText("/new ${MentionAction.GIT_CHANGES.token} ")
+        val before = field.getEditor(false)!!
+        val highlights = before.markupModel.allHighlighters.toList()
+        assertEquals(2, highlights.size)
+
+        field.setDocument(field.document)
+        val editor = field.getEditor(false)!!
+        assertNotSame(before, editor)
+        assertSame(before.document, editor.document)
+        WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.insertString(editor.document.textLength, "pasted text")
+        }
+
+        assertTrue(highlights.none { it.isValid })
+        assertEquals(2, editor.markupModel.allHighlighters.size)
+        assertTrue(spans(field).contains("/new" to DefaultLanguageHighlighterColors.KEYWORD))
+        assertTrue(spans(field).contains(MentionAction.GIT_CHANGES.token to DefaultLanguageHighlighterColors.METADATA))
+    }
+
+    fun `test prompt highlights exist before the first edit`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+        panel.setText("/new ${MentionAction.GIT_CHANGES.token} ")
+
+        realize(panel, 260, 400)
+
+        assertEquals(2, field.getEditor(false)!!.markupModel.allHighlighters.size)
+        assertTrue(spans(field).contains("/new" to DefaultLanguageHighlighterColors.KEYWORD))
+        assertTrue(spans(field).contains(MentionAction.GIT_CHANGES.token to DefaultLanguageHighlighterColors.METADATA))
+    }
+
+    fun `test prompt highlighters and editors stay bounded across recreation`() {
+        val baseline = EditorFactory.getInstance().allEditors.size
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+        panel.setText("/new ${MentionAction.GIT_CHANGES.token} ")
+        val root = realize(panel, 260, 400)
+        UIUtil.dispatchAllInvocationEvents()
+        val count = components(panel).size
+
+        repeat(100) { index ->
+            val before = field.getEditor(false)!!
+            val highlights = before.markupModel.allHighlighters.toList()
+            if (index % 2 == 0) field.setDocument(field.document)
+            if (index % 2 != 0) field.isEnabled = !field.isEnabled
+            UIUtil.dispatchAllInvocationEvents()
+            val editor = field.getEditor(false)!!
+            assertNotSame(before, editor)
+            assertSame(before.document, editor.document)
+            assertTrue(before.isDisposed)
+            assertTrue(highlights.none { it.isValid })
+            assertEquals(2, editor.markupModel.allHighlighters.size)
+            repeat(2) {
+                WriteCommandAction.runWriteCommandAction(project) {
+                    editor.document.insertString(editor.document.textLength, "x")
+                }
+                panel.refreshHighlights()
+                assertSame(editor, field.getEditor(false))
+                assertEquals(2, editor.markupModel.allHighlighters.size)
+            }
+            assertSame(field, panel.defaultFocusedComponent)
+            assertEquals(count, components(panel).size)
+            assertEquals(baseline + 1, EditorFactory.getInstance().allEditors.size)
+        }
+
+        val highlights = field.getEditor(false)!!.markupModel.allHighlighters.toList()
+        root.removeNotify()
+        roots.remove(root)
+        UIUtil.dispatchAllInvocationEvents()
+        assertTrue(highlights.none { it.isValid })
+        assertEquals(baseline, EditorFactory.getInstance().allEditors.size)
+    }
+
     fun `test prompt editor does not expose file editor for platform undo`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
         val field = panel.defaultFocusedComponent as EditorTextField
@@ -876,6 +965,22 @@ class PromptPanelTest : BasePlatformTestCase() {
         menu.doClick()
     }
 
+    fun `test dialog prompt with hidden submit still offers speech input`() {
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = SpeechCaptureStub(),
+            onTranscribe = { "dictated prompt" },
+            showSubmit = false,
+        )
+        panel.setReady(true)
+
+        assertTrue(buttons(panel).contains(speechButton(panel)))
+        assertFalse(buttons(panel).contains(panel.buttonForTest()))
+    }
+
     fun `test hidden submit button still exposes send context from editor`() {
         var sent: String? = null
         val panel = PromptPanel(
@@ -1189,6 +1294,43 @@ class PromptPanelTest : BasePlatformTestCase() {
         )
 
         assertTrue(clicked)
+    }
+
+    /**
+     * Mirrors `SessionUi.mcpAuthIssue(name, busy = true)`: while a sign-in is in flight the
+     * composer must offer a way out instead of only a disabled "Signing in..." entry.
+     */
+    fun `test a busy session issue offers a disabled sign in entry alongside an enabled cancel`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        var cancelled = false
+        val issue = SessionIssue(
+            "mcp-auth:anaconda",
+            "Anaconda MCP",
+            listOf(
+                SessionIssueAction("Signing in\u2026", enabled = false) {},
+                SessionIssueAction("Cancel") { cancelled = true },
+                SessionIssueAction("Open in Settings") {},
+            ),
+        )
+        panel.setIssues(listOf(issue))
+        val provider = panel.issueActions().single() as DefaultActionGroup
+        val actions = provider.getChildren(null)
+        assertEquals(listOf("Signing in\u2026", "Cancel", "Open in Settings"), actions.map { it.templatePresentation.text })
+
+        fun eventFor(action: AnAction) =
+            AnActionEvent.createEvent(action, DataContext.EMPTY_CONTEXT, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
+        val signIn = actions[0]
+        val cancel = actions[1]
+        val signInEvent = eventFor(signIn)
+        val cancelEvent = eventFor(cancel)
+        signIn.update(signInEvent)
+        cancel.update(cancelEvent)
+        assertFalse("Signing in... must stay disabled while busy", signInEvent.presentation.isEnabled)
+        assertTrue("Cancel must be clickable while busy", cancelEvent.presentation.isEnabled)
+
+        cancel.actionPerformed(cancelEvent)
+
+        assertTrue(cancelled)
     }
 
     fun `test prompt editor exposes send context`() {
@@ -1588,6 +1730,30 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(1, panel.attachmentCountForTest())
     }
 
+    fun `test text-only prompt rejects restored file drafts and image paste but sends text`() {
+        val calls = mutableListOf<Pair<String, List<PromptPartDto>>>()
+        val panel = PromptPanel(project, { text, parts -> calls += text to parts }, {}, files = false)
+        panel.setReady(true)
+        panel.setDraft("plain text", listOf(
+            PromptAttachment(id = "notes", name = "notes.txt", mime = "text/plain", url = "file:///tmp/notes.txt", reference = true),
+        ))
+        assertTrue(panel.attachments().isEmpty())
+        PlatformTestUtil.waitForFuture(panel.processPasteForTest(
+            ImageTransferable(BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB)),
+        ))
+        UIUtil.dispatchAllInvocationEvents()
+        assertTrue(panel.attachments().isEmpty())
+        val editor = realizedEditor(panel)
+        val paste = PromptAttachmentPasteProvider()
+        paste.performPaste(pasteContext(editor, ImageTransferable(BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB))))
+        panel.setText("plain text")
+        panel.send()
+        waitForSend { calls.size == 1 }
+        assertEquals("plain text", calls.single().first)
+        assertTrue(calls.single().second.isEmpty())
+        assertTrue(panel.attachments().isEmpty())
+    }
+
     fun `test prompt button switches between send and stop state`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
 
@@ -1626,21 +1792,32 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(resource("/icons/send_dark.svg").contains("fill=\"#0A7BD8\""))
     }
 
-    fun `test busy allows sending draft`() {
+    // A running session keeps Stop on the button even with a draft (typed, or restored after a send
+    // whose turn kept running). The draft can still be queued through the Send shortcut.
+    fun `test busy keeps stop on the button while a draft is still sendable`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         panel.setReady(true)
         ApplicationManager.getApplication().invokeAndWait { panel.setText("hello") }
         UIUtil.dispatchAllInvocationEvents()
         assertTrue(panel.isSendEnabled)
+        assertNotSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
 
         panel.setBusy(true)
 
         assertTrue(panel.isSendEnabled)
         assertTrue(panel.isStopEnabled)
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+        val tip = panel.buttonForTest().toolTipText
+        assertTrue(tip.contains(KiloBundle.message("prompt.button.stop")))
+        val send = KeymapUtil.getFirstKeyboardShortcutText("Kilo.SendPrompt")
+        if (send.isNotEmpty()) assertTrue(tip.contains(KiloBundle.message("prompt.button.stop.tooltip.send", send)))
+
+        panel.setBusy(false)
+
         assertNotSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
     }
 
-    fun `test busy attachment changes sync send and stop button state`() {
+    fun `test busy keeps stop on the button as attachments come and go`() {
         val item = PromptAttachment("a", "a.png", "image/png", "file:///tmp/a.png")
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         panel.setReady(true)
@@ -1652,7 +1829,7 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         assertTrue(panel.isSendEnabled)
         assertTrue(panel.isStopEnabled)
-        assertNotSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
 
         attachmentRemoveButton(panel, item).doClick()
 
@@ -1660,14 +1837,13 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
 
         panel.addAttachmentForTest(item)
-        assertNotSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
-
         panel.clear()
 
         assertFalse(panel.isSendEnabled)
         assertTrue(panel.isStopEnabled)
         assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
     }
+
 
     fun `test auto approve button toggles and updates tooltip`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
@@ -1715,6 +1891,318 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(4, items.indexOf(send) - items.indexOf(enhance))
         assertEquals(JBUI.scale(1), sep.preferredSize.width)
         assertNotNull(sep.border)
+    }
+
+    fun `test speech button records and replaces the current selection`() {
+        val capture = SpeechCaptureStub()
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = capture,
+            onTranscribe = { "dictated prompt" },
+        )
+        val editor = realizedEditor(panel)
+        panel.setReady(true)
+        WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.setText("keep replace keep")
+        }
+        editor.selectionModel.setSelection(5, 12)
+        val speech = speechButton(panel)
+        val items = speech.parent.components.toList()
+        val idleIcon = speech.icon
+
+        assertEquals(2, items.indexOf(panel.buttonForTest()) - items.indexOf(speech))
+
+        speech.doClick()
+        waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
+        val recording = speech.icon
+        assertTrue(recording is LiveBadgeIcon)
+        assertSame(AllIcons.CodeWithMe.CwmMicOn, (recording as LiveBadgeIcon).icon)
+        speech.doClick()
+        waitForSend { panel.text() == "keep dictated prompt keep" }
+        assertSame(idleIcon, speech.icon)
+
+        assertEquals(1, capture.starts)
+        assertEquals(1, capture.stops)
+        assertEquals("keep dictated prompt keep", editor.document.text)
+    }
+
+    fun `test speech error uses friendly tooltip and notifies only on transition`() {
+        val notes = mutableListOf<Notification>()
+        val listener = object : Notifications {
+            override fun notify(notification: Notification) {
+                notes.add(notification)
+            }
+        }
+        ApplicationManager.getApplication().messageBus.connect(testRootDisposable).subscribe(Notifications.TOPIC, listener)
+        project.messageBus.connect(testRootDisposable).subscribe(Notifications.TOPIC, listener)
+        val detail = "Kilo Core request failed (500): technical detail"
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = SpeechCaptureStub(),
+            onTranscribe = { error(detail) },
+        )
+        panel.setReady(true)
+        val speech = speechButton(panel)
+
+        speech.doClick()
+        waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
+        speech.doClick()
+        waitForSend { speech.toolTipText == KiloBundle.message("prompt.speech.error") && notes.isNotEmpty() }
+
+        assertEquals(KiloBundle.message("prompt.speech.error"), speech.toolTipText)
+        assertFalse(speech.toolTipText.contains(detail))
+        assertSame(AllIcons.CodeWithMe.CwmMicOff, speech.icon)
+        assertEquals(KiloBundle.message("prompt.speech.error.title"), notes.single().title)
+        assertFalse(notes.single().content.contains(detail))
+
+        panel.setReady(false)
+        panel.setReady(true)
+        panel.setReady(false)
+
+        assertEquals(1, notes.size)
+        assertTrue(panel.isSpeechEnabled)
+        panel.toggleSpeech()
+        assertFalse(panel.isSpeechEnabled)
+    }
+
+    fun `test speech limit automatically transcribes and shows one localized warning`() {
+        val notes = mutableListOf<Notification>()
+        val listener = object : Notifications {
+            override fun notify(notification: Notification) {
+                notes.add(notification)
+            }
+        }
+        ApplicationManager.getApplication().messageBus.connect(testRootDisposable).subscribe(Notifications.TOPIC, listener)
+        project.messageBus.connect(testRootDisposable).subscribe(Notifications.TOPIC, listener)
+        val capture = SpeechCaptureStub()
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = capture,
+            onTranscribe = { "truncated prompt" },
+        )
+        panel.setReady(true)
+        val speech = speechButton(panel)
+
+        speech.doClick()
+        waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
+        capture.limit()
+        capture.limit()
+        waitForSend { panel.text() == "truncated prompt" && notes.size == 1 }
+
+        assertEquals(1, capture.stops)
+        assertEquals(speechTooltip("prompt.speech.start"), speech.toolTipText)
+        assertEquals(KiloBundle.message("prompt.speech.limit", 2), notes.single().title)
+        assertEquals(NotificationType.WARNING, notes.single().type)
+    }
+
+    fun `test speech action stays enabled while microphone is starting after disconnect`() {
+        val capture = PendingSpeechCapture()
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = capture,
+        )
+
+        assertFalse(panel.isSpeechEnabled)
+        panel.setReady(true)
+        assertTrue(panel.isSpeechEnabled)
+        realizedEditor(panel)
+        speechButton(panel).doClick()
+        panel.setReady(false)
+
+        assertTrue(panel.isSpeechEnabled)
+    }
+
+    fun `test send while recording transcribes and submits an empty draft`() {
+        val capture = SpeechCaptureStub()
+        var sent: String? = null
+        val panel = PromptPanel(
+            project = project,
+            onSend = { text, _ -> sent = text },
+            onAbort = {},
+            cs = scope,
+            speechCapture = capture,
+            onTranscribe = { "run the tests" },
+        )
+        panel.setReady(true)
+
+        speechButton(panel).doClick()
+        waitForSend { panel.isSendEnabled }
+        panel.send()
+        waitForSend { sent != null }
+
+        assertEquals("run the tests", sent)
+        assertEquals(1, capture.stops)
+    }
+
+    fun `test recording can be stopped after connection becomes unavailable`() {
+        val capture = SpeechCaptureStub()
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = capture,
+            onTranscribe = { "dictated text" },
+        )
+        panel.setReady(true)
+        val speech = speechButton(panel)
+
+        speech.doClick()
+        waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
+        panel.setReady(false)
+
+        assertTrue(speech.isEnabled)
+        speech.doClick()
+        waitForSend { capture.stops == 1 && panel.text() == "dictated text" }
+    }
+
+    fun `test speech action is local to prompt editor and survives reattachment`() {
+        val manager = ActionManager.getInstance()
+        val action = SpeechInputAction()
+        manager.registerAction(SpeechInputAction.ID, action)
+        Disposer.register(testRootDisposable) { manager.unregisterAction(SpeechInputAction.ID) }
+        val capture = SpeechCaptureStub()
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = capture,
+            onTranscribe = { "dictated text" },
+        )
+        val global = action.shortcutSet
+        val editor = realizedEditor(panel)
+        val root = roots.last()
+
+        val actions = ActionUtil.getActions(editor.contentComponent)
+        assertEquals("actions=${actions.map(manager::getId)}", 1,
+            actions.count { ActionUtil.getDelegateChainRootAction(it) === action })
+        assertSame("The global action keeps its KeymapManager-owned shortcuts", global, action.shortcutSet)
+        root.removeNotify()
+        assertFalse(ActionUtil.getActions(editor.contentComponent)
+            .any { ActionUtil.getDelegateChainRootAction(it) === action })
+        root.addNotify()
+        UIUtil.dispatchAllInvocationEvents()
+        val attached = (panel.defaultFocusedComponent as EditorTextField).getEditor(true)!!
+        val local = ActionUtil.getActions(attached.contentComponent)
+            .first { ActionUtil.getDelegateChainRootAction(it) === action }
+        assertEquals(1, ActionUtil.getActions(attached.contentComponent)
+            .count { ActionUtil.getDelegateChainRootAction(it) === action })
+        assertSame(global, action.shortcutSet)
+
+        panel.setReady(true)
+        local.actionPerformed(AnActionEvent.createFromAnAction(local, null, ActionPlaces.UNKNOWN,
+            com.intellij.openapi.actionSystem.impl.SimpleDataContext.getSimpleContext(PromptDataKeys.SPEECH, panel)))
+        waitForSend { capture.starts == 1 }
+    }
+
+    fun `test speech action local shortcut refreshes after remap`() {
+        val manager = ActionManager.getInstance()
+        val action = SpeechInputAction()
+        manager.registerAction(SpeechInputAction.ID, action)
+        Disposer.register(testRootDisposable) { manager.unregisterAction(SpeechInputAction.ID) }
+        val keymap = KeymapManager.getInstance().activeKeymap
+        val original = keymap.getShortcuts(SpeechInputAction.ID).toList()
+        val before = KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_F9, InputEvent.ALT_DOWN_MASK), null)
+        val after = KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_F10, InputEvent.ALT_DOWN_MASK), null)
+        remap(keymap, listOf(before))
+        try {
+            val panel = PromptPanel(
+                project = project,
+                onSend = { _, _ -> },
+                onAbort = {},
+                cs = scope,
+                speechCapture = SpeechCaptureStub(),
+            )
+            val global = action.shortcutSet
+            val editor = realizedEditor(panel)
+            fun local() = ActionUtil.getActions(editor.contentComponent)
+                .first { ActionUtil.getDelegateChainRootAction(it) === action }
+                .shortcutSet.shortcuts.toList()
+            assertEquals(listOf(before), local())
+            assertSame(global, action.shortcutSet)
+
+            remap(keymap, listOf(after))
+            UIUtil.dispatchAllInvocationEvents()
+
+            assertEquals(listOf(after), local())
+            assertEquals(1, ActionUtil.getActions(editor.contentComponent)
+                .count { ActionUtil.getDelegateChainRootAction(it) === action })
+            assertSame(global, action.shortcutSet)
+        } finally {
+            remap(keymap, original)
+        }
+    }
+
+    fun `test send is disabled while speech transcription is pending`() {
+        val capture = SpeechCaptureStub()
+        val gate = CompletableDeferred<String>()
+        var sent: String? = null
+        val panel = PromptPanel(
+            project = project,
+            onSend = { text, _ -> sent = text },
+            onAbort = {},
+            cs = scope,
+            speechCapture = capture,
+            onTranscribe = { gate.await() },
+        )
+        panel.setReady(true)
+        panel.setText("existing draft")
+        val speech = speechButton(panel)
+
+        speech.doClick()
+        waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
+        speech.doClick()
+        waitForSend { speech.toolTipText == KiloBundle.message("prompt.speech.transcribing") }
+        panel.send()
+
+        assertFalse(panel.isSendEnabled)
+        assertNull(sent)
+        gate.complete("dictated text")
+        waitForSend { panel.text().contains("dictated text") }
+        assertNull(sent)
+    }
+
+    fun `test dialog prompt notifies validation while speech is active`() {
+        val gate = CompletableDeferred<String>()
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = SpeechCaptureStub(),
+            onTranscribe = { gate.await() },
+            showSubmit = false,
+        )
+        val changes = mutableListOf<Boolean>()
+        panel.onChange = { changes.add(panel.isSpeechActive) }
+        panel.setReady(true)
+        val speech = speechButton(panel)
+
+        assertFalse(panel.isSpeechActive)
+        speech.doClick()
+        assertTrue(panel.isSpeechActive)
+        waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
+        speech.doClick()
+        assertTrue(panel.isSpeechActive)
+        gate.complete("dictated prompt")
+        waitForSend { !panel.isSpeechActive }
+
+        assertEquals("dictated prompt", panel.text())
+        assertTrue(changes.contains(true))
+        assertEquals(false, changes.last())
     }
 
     fun `test enhance button follows connection and busy state`() {
@@ -1859,6 +2347,14 @@ class PromptPanelTest : BasePlatformTestCase() {
         val name = KiloBundle.message("prompt.action.enhance")
         return buttons(panel).first { it.accessibleContext.accessibleName == name }
     }
+
+    private fun speechButton(panel: PromptPanel): JButton {
+        val start = speechTooltip("prompt.speech.start")
+        return buttons(panel).first { it.accessibleContext.accessibleName == start }
+    }
+
+    private fun speechTooltip(key: String): String =
+        KeymapUtil.createTooltipText(KiloBundle.message(key), SpeechInputAction.ID)
 
     private fun buttons(root: java.awt.Component): List<JButton> {
         val out = mutableListOf<JButton>()
@@ -2052,6 +2548,13 @@ class PromptPanelTest : BasePlatformTestCase() {
         }
     }
 
+    private fun remap(keymap: Keymap, shortcuts: List<Shortcut>) {
+        ApplicationManager.getApplication().runWriteAction {
+            keymap.getShortcuts(SpeechInputAction.ID).forEach { keymap.removeShortcut(SpeechInputAction.ID, it) }
+            shortcuts.forEach { keymap.addShortcut(SpeechInputAction.ID, it) }
+        }
+    }
+
     private fun pasteContext(editor: Editor, item: Transferable) = DataContext { id ->
         when (id) {
             CommonDataKeys.EDITOR.name -> editor
@@ -2063,6 +2566,51 @@ class PromptPanelTest : BasePlatformTestCase() {
     private fun resource(path: String): String {
         val stream = PromptPanel::class.java.getResourceAsStream(path) ?: error("missing resource $path")
         return stream.use { it.readBytes().decodeToString() }
+    }
+
+    private class SpeechCaptureStub : SpeechCapture {
+        var starts = 0
+        var stops = 0
+        var cancels = 0
+        @Volatile
+        private var cap: ((String, Long) -> Unit)? = null
+
+        override suspend fun start(
+            cap: (String, Long) -> Unit,
+            fail: (String, Throwable) -> Unit,
+        ): String {
+            this.cap = cap
+            starts++
+            return "recording"
+        }
+
+        override suspend fun stop(id: String): ByteArray {
+            assertEquals("recording", id)
+            stops++
+            return byteArrayOf(1, 2, 3)
+        }
+
+        override fun cancel(id: String) {
+            assertEquals("recording", id)
+            cancels++
+        }
+
+        fun limit() {
+            requireNotNull(cap).invoke("recording", 120_000)
+        }
+    }
+
+    private class PendingSpeechCapture : SpeechCapture {
+        private val started = CompletableDeferred<String>()
+
+        override suspend fun start(
+            cap: (String, Long) -> Unit,
+            fail: (String, Throwable) -> Unit,
+        ): String = started.await()
+
+        override suspend fun stop(id: String): ByteArray = byteArrayOf()
+
+        override fun cancel(id: String) = Unit
     }
 
     private class FileListTransferable(private val files: List<File>) : Transferable {

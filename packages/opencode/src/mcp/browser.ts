@@ -1,6 +1,6 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Context, Effect, Layer } from "effect"
-import open from "open"
+import { openUrl } from "@opencode-ai/core/open" // kilocode_change - backport upstream browser URL validation
 
 export interface Interface {
   readonly open: (url: string) => Effect.Effect<void, Error>
@@ -13,7 +13,7 @@ const layer = Layer.succeed(
   Service.of({
     open: Effect.fn("McpBrowser.open")(function* (url: string) {
       const subprocess = yield* Effect.tryPromise({
-        try: () => open(url),
+        try: () => openUrl(url), // kilocode_change
         catch: (error) => (error instanceof Error ? error : new Error(String(error))),
       })
       yield* Effect.callback<void, Error>((resume) => {

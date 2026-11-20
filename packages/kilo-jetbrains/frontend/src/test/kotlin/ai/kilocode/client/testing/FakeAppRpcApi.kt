@@ -22,6 +22,9 @@ import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.RetentionConfigDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
+import ai.kilocode.rpc.dto.SpeechModelDto
+import ai.kilocode.rpc.dto.SpeechRequestDto
+import ai.kilocode.rpc.dto.SpeechResultDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import ai.kilocode.rpc.dto.WatcherConfigDto
 import kotlinx.coroutines.CompletableDeferred
@@ -52,6 +55,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
         private set
     var models = ModelStateDto()
     val selections = mutableListOf<ModelSelectionUpdateDto>()
+    val cleared = mutableListOf<String>()
     val variants = mutableListOf<ModelVariantUpdateDto>()
     val configPatches = mutableListOf<ConfigPatchDto>()
     var retention = RetentionStatusDto()
@@ -65,6 +69,12 @@ class FakeAppRpcApi : KiloAppRpcApi {
     var configUpdateError: Exception? = null
     var configUpdateReturnStale = false
     var afterConfig: (suspend (ConfigPatchDto) -> Unit)? = null
+    var speechModels = listOf(SpeechModelDto("openai/whisper-1", "Whisper"))
+    var speechModelsError: Exception? = null
+    var speechModelCalls = 0
+    var speechResult = SpeechResultDto("transcript")
+    val speechDirectories = mutableListOf<String?>()
+    val speechRequests = mutableListOf<SpeechRequestDto>()
 
     var connected = false
         private set
@@ -88,6 +98,21 @@ class FakeAppRpcApi : KiloAppRpcApi {
     override suspend fun health(): HealthDto {
         assertNotEdt("health")
         return health
+    }
+
+    override suspend fun transcriptionModels(directory: String?): List<SpeechModelDto> {
+        assertNotEdt("transcriptionModels")
+        speechModelCalls++
+        speechModelsError?.let { throw it }
+        speechDirectories.add(directory)
+        return speechModels
+    }
+
+    override suspend fun transcribe(directory: String?, request: SpeechRequestDto): SpeechResultDto {
+        assertNotEdt("transcribe")
+        speechDirectories.add(directory)
+        speechRequests.add(request)
+        return speechResult
     }
 
     override suspend fun cliVersion(): String {
@@ -153,6 +178,13 @@ class FakeAppRpcApi : KiloAppRpcApi {
         return models
     }
 
+    override suspend fun clearModelSelection(agent: String): ModelStateDto {
+        assertNotEdt("clearModelSelection")
+        cleared.add(agent)
+        models = models.copy(model = models.model - agent)
+        return models
+    }
+
     override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto {
         assertNotEdt("updateModelVariant")
         variants.add(update)
@@ -171,6 +203,25 @@ class FakeAppRpcApi : KiloAppRpcApi {
         val next = current.copy(config = applyPatch(current.config ?: ConfigDto(), patch))
         state.value = next
         if (configUpdateReturnStale) return current
+        return next
+    }
+
+    var telemetryLevels = mutableListOf<Boolean>()
+    var telemetryLevelGate: CompletableDeferred<Unit>? = null
+    var telemetryLevelError: Throwable? = null
+    var telemetryAllowed = true
+    var telemetryLevelAttempts = 0
+        private set
+
+    override suspend fun setTelemetryLevel(enabled: Boolean): KiloAppStateDto {
+        assertNotEdt("setTelemetryLevel")
+        telemetryLevelAttempts += 1
+        telemetryLevelGate?.await()
+        telemetryLevelError?.let { throw it }
+        telemetryLevels.add(enabled)
+        val current = state.value
+        val next = current.copy(config = (current.config ?: ConfigDto()).copy(telemetry = enabled && telemetryAllowed))
+        state.value = next
         return next
     }
 

@@ -33,7 +33,6 @@ function modelUsesGptTokenizer(modelName: string): boolean {
     "gemini",
     "grok",
     "moonshot",
-    "mercury",
     "claude",
     "codestral",
     "nova",

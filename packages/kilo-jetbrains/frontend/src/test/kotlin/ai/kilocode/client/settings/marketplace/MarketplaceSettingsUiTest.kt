@@ -1,4 +1,5 @@
 package ai.kilocode.client.settings.marketplace
+import ai.kilocode.client.ui.list.section
 
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
@@ -10,7 +11,7 @@ import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeMarketplaceRpcApi
 import ai.kilocode.client.ui.FilledBadgeIcon
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
@@ -27,6 +28,7 @@ import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.impl.ActionButton
 import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
@@ -54,6 +56,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class MarketplaceSettingsUiTest : BasePlatformTestCase() {
@@ -627,6 +630,53 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf(DIR), agentRpc.skillReloads)
     }
 
+    /**
+     * Mirrors the McpSettingsUi removal fix: a Marketplace-installed MCP server can also have a
+     * pending sign-in, and removing it must cancel that attempt and clear the needs-auth indicator
+     * instead of leaving the composer stuck on "Signing in...".
+     */
+    fun `test removing an installed mcp item cancels a pending sign in and clears needs auth`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        val gate = CompletableDeferred<Unit>()
+        agentRpc.beforeAuthenticate = { gate.await() }
+        val auth = service<KiloMcpAuthService>()
+        auth.sync(DIR, listOf(McpStatusDto("context7", "needs_auth")))
+        scope!!.launch { auth.signIn(DIR, "context7") }
+        flushUntil { agentRpc.mcpAuthenticateStarted }
+        TestDialogManager.setTestDialog(TestDialog.YES)
+        marketRpc.list = MarketplaceListDto(items = items().map {
+            if (it.type == "mcp") it.copy(installedGlobal = false) else it
+        })
+
+        click(panel, "mcp:context7", "removeGlobal")
+
+        flushUntil { agentRpc.mcpAuthCancels.contains("context7") }
+        flushUntil { auth.busy.value.isEmpty() }
+        assertTrue(auth.needsAuth.value[DIR].orEmpty().isEmpty())
+        assertTrue("removal must not delete credentials via auth-remove", agentRpc.mcpAuthRemovals.isEmpty())
+    }
+
+    /** Removing a non-MCP item must not touch MCP auth state at all. */
+    fun `test removing a skill item does not call mcp auth cancel`() {
+        marketRpc = FakeMarketplaceRpcApi().apply {
+            list = MarketplaceListDto(items = items().map {
+                if (it.id == "review-skill") it.copy(installedProject = true) else it
+            })
+        }
+        val panel = panel(rpc = marketRpc)
+        flushUntil { rows(panel).size == 3 }
+        TestDialogManager.setTestDialog(TestDialog.YES)
+        marketRpc.list = MarketplaceListDto(items = items().map {
+            if (it.id == "review-skill") it.copy(installedProject = false) else it
+        })
+
+        click(panel, "skill:review-skill", "removeProject")
+
+        flushUntil { rows(panel).single { it.key == "skill:review-skill" }.cells.none { it.id == "removeProject" } }
+        assertTrue(agentRpc.mcpAuthCancels.isEmpty())
+    }
+
     fun `test remove without confirmation performs no removal`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
@@ -755,12 +805,12 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: MarketplaceSettingsUi): List<ActiveListItem> {
+    private fun rows(panel: MarketplaceSettingsUi): List<ActiveItem> {
         val model = list(panel).model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun list(panel: MarketplaceSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
+    private fun list(panel: MarketplaceSettingsUi) = components(panel).filterIsInstance<JBList<ActiveItem>>().single()
 
     private fun chip(panel: MarketplaceSettingsUi, label: String) =
         components(panel).filterIsInstance<FilterChip>().single { it.label == label }
@@ -826,7 +876,7 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<ActiveListItem>, point: Point) {
+    private fun click(list: JBList<ActiveItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }

@@ -32,7 +32,7 @@ const mainNavItems: NavItem[] = [
   { label: "Automate", href: "/automate" },
   { label: "Deploy & Secure", href: "/deploy-secure" },
   { label: "Kilo Gateway", href: "/gateway" },
-  { label: "Kilo Desktop", href: "/desktop", badge: "Beta" },
+  { label: "Kilo Desktop", href: "/desktop" },
   { label: "Contributing", href: "/contributing" },
 ]
 

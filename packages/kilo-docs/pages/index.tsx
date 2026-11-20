@@ -22,7 +22,7 @@ const terminalContent = {
       {"\n"}
       <span className="terminal-prompt">$</span> export KILO_API_KEY="YOUR_API_KEY"
       {"\n"}
-      <span className="terminal-prompt">$</span> curl https://api.kilo.ai/api/gateway/chat/completions \{"\n"}
+      <span className="terminal-prompt">$</span> curl https://ai-gateway.kilo.ai/api/v1/chat/completions \{"\n"}
       -H "Authorization: Bearer $KILO_API_KEY" \{"\n"}
       -H "Content-Type: application/json" \{"\n"}
       {`  -d '{"model":"anthropic/claude-sonnet-4.5","messages":[{"role":"user","content":"Say hi from Kilo Gateway"}]}'`}

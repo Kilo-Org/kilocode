@@ -236,6 +236,12 @@ For **session** export and import, use the CLI commands:
 {% /tab %}
 {% /tabs %}
 
+## Product telemetry and crash reports
+
+Product telemetry helps us understand feature usage and improve reliability. VS Code uses the editor's telemetry preference; the standalone CLI uses its environment or global config; Kilo Desktop uses its Privacy toggle. These are separate from optional OTLP export.
+
+See [Product telemetry and crash reports](/docs/getting-started/settings/product-telemetry) for opt-out instructions and precedence.
+
 ## Sandbox
 
 On macOS and Linux, the VS Code extension includes a dedicated **Sandboxing** settings tab. The sandbox is disabled by default. When enabled, it limits agent filesystem writes and can block outbound network access from model-originated tools. Windows users do not see these settings because Windows sandboxing is not supported.
@@ -259,7 +265,7 @@ Straightforward tasks can stay solo. Enabling the board does not mean agents are
 
 All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
 
-When a main session has board messages, open the **Board** icon in its task header (VS Code) or session header (JetBrains, which also offers a **View Kilo Swarm** session menu action) to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
+In VS Code, the **Board** control lives in the session dock above the prompt, next to the background-agent row when background agents exist. It appears when Kilo Swarm is enabled and the session has board messages, works with foreground and background task agents, and stays in place after background agents are cleared. It is no longer in the task header, and Kilo Swarm is configured under **Agent Behaviour**, not Experimental settings. In JetBrains, open the **Board** icon in the session header, which also offers a **View Kilo Swarm** session menu action. Use the control to read the board messages, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
 
 ## Experimental Features
 
@@ -274,8 +280,8 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
+- **Search Ignored Paths** - list folders or files the agent's `glob` tool should search even when `.gitignore` or other ignore files exclude them, such as `packages/*/dist` (`experimental.glob_include_ignored`, empty by default). Patterns are gitignore-style and relative to the workspace: a pattern without a slash matches folders at any depth, and a single file inside an ignored folder is listed by its path (for example `build/report.json`). Ignored or hidden folders inside a listed folder stay skipped, and `.git` is never searched
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
-- **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
 
@@ -283,7 +289,6 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
 {
   "experimental": {
     "batch_tool": false,
-    "openTelemetry": true,
     "disable_paste_summary": false,
     "mcp_timeout": 30000
   }
@@ -297,7 +302,7 @@ Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of 
 
 The CLI does not expose these options through an IDE settings panel. Configure model behavior, permissions, telemetry, and other advanced options directly in JSONC config files. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
 
-Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in `kilo.jsonc` to opt out. If `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the environment, the CLI also exports OpenTelemetry traces and logs to that OTLP HTTP endpoint.
+For product telemetry, use the [standalone CLI opt-out instructions](/docs/getting-started/settings/product-telemetry#standalone-cli). The setting must be in global config, and environment values take precedence. [Optional OTLP export](/docs/getting-started/settings/product-telemetry#optional-opentelemetry-export) is configured separately.
 
 {% /tab %}
 {% /tabs %}

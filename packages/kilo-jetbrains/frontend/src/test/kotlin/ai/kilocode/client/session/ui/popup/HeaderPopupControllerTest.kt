@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui.popup
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.testing.TestUiTimers
@@ -25,8 +26,31 @@ class HeaderPopupControllerTest : BasePlatformTestCase() {
         } finally {
             controllers.clear()
             views.clear()
+            KiloPluginSettings.unsetHoverPreview()
             super.tearDown()
         }
+    }
+
+    fun `test disabled hover preview does not schedule a popup`() {
+        KiloPluginSettings.setHoverPreview(false)
+        val controller = controller()
+        val view = view()
+
+        controller.show(view)
+        timers.advanceBy(500)
+
+        assertNull(guard(controller))
+        assertNull(target(controller))
+        assertEquals(0, view.requests)
+    }
+
+    fun `test hover preview is enabled by default`() {
+        val controller = controller()
+        val view = view()
+
+        controller.show(view)
+
+        assertNotNull(guard(controller))
     }
 
     fun `test guard is disposed between repeated hover cycles`() {

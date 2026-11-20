@@ -4,8 +4,10 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.actions.CycleModeAction
 import ai.kilocode.client.actions.CycleModelAction
 import ai.kilocode.client.actions.CycleReasoningAction
+import ai.kilocode.client.actions.KiloSettingsAction
 import ai.kilocode.client.actions.ResetModelAction
 import ai.kilocode.client.actions.SendPromptAction
+import ai.kilocode.client.actions.SpeechInputAction
 import ai.kilocode.client.actions.StopSessionAction
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SpinnerIcon
@@ -19,7 +21,11 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.speech.SpeechCapture
+import ai.kilocode.client.speech.SpeechInput
+import ai.kilocode.client.speech.SpeechInputState
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.LiveBadgeIcon
 import ai.kilocode.client.ui.editor.EditorFolds
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
@@ -56,6 +62,7 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
@@ -75,6 +82,7 @@ import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.IslandsState
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
@@ -128,12 +136,16 @@ class PromptPanel(
     private val completion: KiloPromptCompletionProvider? = null,
     private val selection: SessionSelection? = null,
     private val cs: CoroutineScope = CoroutineScope(Dispatchers.Default),
+    private val speechCapture: SpeechCapture? = null,
+    private val onTranscribe: suspend (ByteArray) -> String = { error("Speech input is unavailable") },
     private val rounded: Boolean = true,
     private val showSubmit: Boolean = true,
     private val approve: Boolean = true,
     private val showEnhance: Boolean = true,
     private val hostedInEditorTab: Boolean = false,
-) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, PromptSelectors, UiDataProvider {
+    private val framed: Boolean = false,
+    private val files: Boolean = true,
+) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, SpeechInputContext, PromptSelectors, UiDataProvider {
 
     companion object {
         private val LOG = KiloLog.create(PromptPanel::class.java)
@@ -142,6 +154,10 @@ class PromptPanel(
         private val SHIELD_ICON: Icon = IconLoader.getIcon("/icons/shield.svg", PromptPanel::class.java)
         private val SHIELD_FILLED_ICON: Icon = IconLoader.getIcon("/icons/shield-filled.svg", PromptPanel::class.java)
         private val WAND_ICON: Icon = IconLoader.getIcon("/icons/wand-sparkles.svg", PromptPanel::class.java)
+        private val SPEECH_ICON: Icon = AllIcons.CodeWithMe.CwmMicOn
+        private val SPEECH_RECORDING_ICON: Icon =
+            LiveBadgeIcon(SPEECH_ICON, JBUI.CurrentTheme.IconBadge.ERROR)
+        private val SPEECH_ERROR_ICON: Icon = AllIcons.CodeWithMe.CwmMicOff
         private val MENTION_KEY = DefaultLanguageHighlighterColors.METADATA
         private val COMMAND_KEY = DefaultLanguageHighlighterColors.KEYWORD
         private val INVALID_KEY = CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES
@@ -177,6 +193,9 @@ class PromptPanel(
     // by a failure permanently loses whatever the user typed -- there is no draft store or
     // prompt history to fall back on.
     private var lastSubmission: Pair<String, List<PromptAttachment>>? = null
+    // What restoreLastSubmission() put back, so it can be dropped again if the send turns out to
+    // have been persisted after all -- but only while the user has not touched it.
+    private var restoredSubmission: Pair<String, List<PromptAttachment>>? = null
     private val highlighters = mutableListOf<RangeHighlighter>()
     private val folds: EditorFolds = EditorFolds(live = { editor.getEditor(false) }, resize = ::syncEditorHeight)
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
@@ -189,6 +208,7 @@ class PromptPanel(
     private var autoApprove = false
     private var attachment = true
     private var submitting = false
+    private var speechBinding: Disposable? = null
     private var root: SessionRootPanel? = null
     private val resize = object : ComponentAdapter() {
         override fun componentResized(e: ComponentEvent) {
@@ -196,7 +216,7 @@ class PromptPanel(
         }
     }
 
-    private val editor = PromptEditorTextField(project, this, completion, selection).apply {
+    private val editor = PromptEditorTextField(project, this@PromptPanel, this@PromptPanel, completion, selection).apply {
         border = JBUI.Borders.empty()
         setFontInheritedFromLAF(false)
         setPlaceholder(placeholder())
@@ -215,10 +235,11 @@ class PromptPanel(
             ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
             ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             installCompletionShortcut(ed)
+            installSpeechShortcut(ed)
             completion?.let { MentionNavigator(ed, it).install() }
             installFileDrop(ed.contentComponent, "editor")
             installFileDrop(ed.scrollPane, "scroll")
-            syncHighlights()
+            syncHighlights(ed)
             folds.install(ed)
             ed.caretModel.addCaretListener(object : CaretListener {
                 override fun caretPositionChanged(e: CaretEvent) {
@@ -246,7 +267,7 @@ class PromptPanel(
         isFocusPainted = false
         addActionListener {
             syncTooltip()
-            val id = if (busy && !hasDraft()) StopSessionAction.ID else SendPromptAction.ID
+            val id = if (stopping()) StopSessionAction.ID else SendPromptAction.ID
             val action = ActionManager.getInstance().getAction(id)
                 ?: return@addActionListener
             val ctx = DataManager.getInstance().getDataContext(button)
@@ -280,7 +301,7 @@ class PromptPanel(
     private val issuesSlot = issuesButton.align(HAlign.RIGHT, VAlign.TOP).apply { isVisible = false }
 
     /**
-     * Opens the Kilo.Session.PromptMenu popup (auto-approve + sharing). Resolves its context from
+     * Opens the Kilo.Session.PromptMenu popup (auto-approve, sharing, Core). Resolves its context from
      * DataManager, so it reads live SessionActionsKeys.ACTIONS from the session ancestor chain rather
      * than needing SessionUi to wire anything through this panel directly.
      */
@@ -306,6 +327,11 @@ class PromptPanel(
         alignmentY = Component.CENTER_ALIGNMENT
         border = JBUI.Borders.customLineLeft(SessionUiStyle.View.Prompt.separator())
     }
+    private val speechButton = HoverIcon()
+    private val speech = speechCapture?.let { capture ->
+        SpeechInput(cs, capture, onTranscribe, ::insertSpeech, ::syncSpeech, ::warn)
+    }
+    private var speechState = SpeechInputState.IDLE
 
     @Volatile
     private var busy = false
@@ -315,10 +341,39 @@ class PromptPanel(
     private var deferred = false
 
     override val isSendEnabled: Boolean
-        get() = ready && !submitting && (text().isNotEmpty() || attachments.isNotEmpty())
+        get() {
+            val state = speech?.state
+            val active = state == SpeechInputState.STARTING ||
+                state == SpeechInputState.RECORDING ||
+                state == SpeechInputState.TRANSCRIBING
+            val input = text().isNotEmpty() || attachments.isNotEmpty()
+            return ready && !submitting && (state == SpeechInputState.RECORDING || (!active && input))
+        }
 
     override val isStopEnabled: Boolean
         get() = busy
+
+    override val isSpeechEnabled: Boolean
+        get() {
+            val state = speech?.state ?: return false
+            return when (state) {
+                SpeechInputState.IDLE -> ready
+                SpeechInputState.STARTING, SpeechInputState.RECORDING, SpeechInputState.ERROR -> true
+                SpeechInputState.TRANSCRIBING -> false
+            }
+        }
+
+    val isSpeechActive: Boolean
+        get() = speechState == SpeechInputState.STARTING ||
+            speechState == SpeechInputState.RECORDING ||
+            speechState == SpeechInputState.TRANSCRIBING
+
+    @RequiresEdt
+    override fun toggleSpeech() {
+        val input = speech ?: return
+        if (input.state == SpeechInputState.IDLE && !ready) return
+        input.toggle()
+    }
 
     override val resettable: Boolean
         get() = reset.isVisible
@@ -328,6 +383,8 @@ class PromptPanel(
     }
 
     init {
+        speechButton.addActionListener { toggleSpeech() }
+        syncSpeech(SpeechInputState.IDLE, null)
         applyStyle(style)
         syncBorder()
         selection?.register(editor)
@@ -387,12 +444,16 @@ class PromptPanel(
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         }
         if (showEnhance) bar.add(enhance)
-        if (showSubmit) {
+        if (showSubmit || speech != null) {
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
             bar.add(separator)
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-            bar.add(button)
         }
+        if (speech != null) {
+            bar.add(speechButton)
+            if (showSubmit) bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        }
+        if (showSubmit) bar.add(button)
         shell.add(bar, BorderLayout.SOUTH)
         add(shell, BorderLayout.CENTER)
         addComponentListener(resize)
@@ -400,6 +461,7 @@ class PromptPanel(
         syncTooltip()
         syncAutoApprove()
         syncEnhance()
+        syncBorder()
     }
 
     override fun updateUI() {
@@ -425,6 +487,10 @@ class PromptPanel(
     }
 
     private fun syncBorder() {
+        if (framed) {
+            border = JBUI.Borders.customLine(UiStyle.Colors.contentBorder())
+            return
+        }
         border = JBUI.Borders.compound(
             if (focused) {
                 JBUI.Borders.emptyTop(JBUI.scale(1))
@@ -518,6 +584,7 @@ class PromptPanel(
         ready = value
         if (value) completion?.prewarm()
         if (!value) invalidateEnhancement() else syncEnhance()
+        syncSpeech(speech?.state ?: SpeechInputState.IDLE, speech?.error)
     }
 
     @RequiresEdt
@@ -530,7 +597,6 @@ class PromptPanel(
         busy = value
         if (value) invalidateEnhancement() else syncEnhance()
         syncButton()
-        syncTooltip()
     }
 
     @RequiresEdt
@@ -563,14 +629,31 @@ class PromptPanel(
     @RequiresEdt
     fun hasDraft(): Boolean = text().isNotEmpty() || attachments.isNotEmpty()
 
+    /** A cleared editor can still own a submission being prepared or awaiting persistence. */
     @RequiresEdt
-    fun hasAttachments(): Boolean = attachments.isNotEmpty()
+    fun hasInput(): Boolean = hasDraft() || submitting || lastSubmission != null
+
+    @RequiresEdt
+    fun attachments(): List<PromptAttachment> = attachments.toList()
 
     @RequiresEdt
     fun setText(value: String) {
         editor.text = value
         syncEditorHeight()
         syncHighlights()
+    }
+
+    // Replaces the whole draft (text and attachments) at once, used to refill the box from a
+    // reverted message. Attachment chips are cleared first so the result is exactly [items].
+    @RequiresEdt
+    fun setDraft(text: String, items: List<PromptAttachment>) {
+        if (this.text() == text.trim() && attachments == items) return
+        setText(text)
+        attachments.clear()
+        strip.clear()
+        items.forEach(::addAttachment)
+        syncEditorHeight()
+        syncButton()
     }
 
     @RequiresEdt
@@ -626,9 +709,14 @@ class PromptPanel(
         syncHighlights()
     }
 
-    // Puts the most recently submitted prompt back in the editor after the server rejected it
-    // or the send failed, so the user doesn't lose what they typed. A no-op once consumed, or
-    // if the user already started a new draft in the meantime (we must not clobber that).
+    // Programmatic sends must retain the same fallback as submissions from the editor.
+    @RequiresEdt
+    fun retainSubmission(text: String, items: List<PromptAttachment> = emptyList()) {
+        lastSubmission = text to items
+        restoredSubmission = null
+    }
+
+    // Restore after rejection without clobbering a draft the user has already started.
     @RequiresEdt
     fun restoreLastSubmission() {
         val (text, items) = lastSubmission ?: return
@@ -636,6 +724,17 @@ class PromptPanel(
         if (hasDraft()) return
         setText(text)
         items.forEach(::addAttachment)
+        restoredSubmission = text to items
+    }
+
+    // Drops a restored draft once the send is confirmed to have been persisted. Only clears while
+    // the draft still matches what was restored, so a user edit made in the meantime is kept.
+    @RequiresEdt
+    fun discardRestoredSubmission() {
+        val (text, items) = restoredSubmission ?: return
+        restoredSubmission = null
+        if (this.text() != text || attachments != items) return
+        clear()
     }
 
     // Drops the retained submission once the send is confirmed. A pasted image is held as a full
@@ -654,18 +753,24 @@ class PromptPanel(
         completion?.clearMentions()
         completion?.prewarm()
         strip.clear()
+        restoredSubmission = null
         syncEditorHeight()
         syncHighlights()
         syncButton()
-        syncTooltip()
     }
 
     @RequiresEdt
-    private fun syncHighlights() {
-        val provider = completion ?: return
-        val ed = editor.getEditor(false) ?: return
-        highlighters.forEach(ed.markupModel::removeHighlighter)
+    private fun clearHighlights() {
+        // Each handle owns its markup model, which may belong to a replaced editor.
+        highlighters.forEach { if (it.isValid) it.dispose() }
         highlighters.clear()
+    }
+
+    @RequiresEdt
+    private fun syncHighlights(ed: EditorEx? = editor.getEditor(false)) {
+        clearHighlights()
+        val provider = completion ?: return
+        if (ed == null || ed.isDisposed) return
         val length = ed.document.textLength
         val text = ed.document.text
         val caret = ed.caretModel.offset
@@ -716,13 +821,16 @@ class PromptPanel(
 
     override fun addNotify() {
         super.addNotify()
+        refreshSpeechShortcut()
         bindRoot()
         bindKeymap()
         bindLookup()
         bindCommandRefresh()
     }
 
+    @RequiresEdt
     override fun removeNotify() {
+        clearHighlights()
         root?.removeComponentListener(resize)
         root = null
         bus?.disconnect()
@@ -732,6 +840,8 @@ class PromptPanel(
         commandJob?.cancel()
         commandJob = null
         uninstallCompletionShortcut()
+        uninstallSpeechShortcut()
+        speech?.cancel()
         super.removeNotify()
     }
 
@@ -741,7 +851,9 @@ class PromptPanel(
         val ctx = DataManager.getInstance().getDataContext(menu)
         val popup = JBPopupFactory.getInstance().createActionGroupPopup(
             null,
-            group,
+            // The nested Core submenu updates on the BGT (version/architecture footer), same as the
+            // tool window gear popup.
+            KiloSettingsAction.popupGroup(group),
             ctx,
             JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
             true,
@@ -834,13 +946,91 @@ class PromptPanel(
     }
 
     @RequiresEdt
+    private fun syncSpeech(state: SpeechInputState, error: String?) {
+        val previous = speechState
+        speechState = state
+        val label = speechLabel(state)
+        speechButton.icon = speechIcon(state)
+        speechButton.isEnabled = when (state) {
+            SpeechInputState.RECORDING, SpeechInputState.ERROR -> true
+            SpeechInputState.IDLE -> ready
+            SpeechInputState.STARTING, SpeechInputState.TRANSCRIBING -> false
+        }
+        speechButton.toolTipText = label
+        speechButton.accessibleContext.accessibleName = label
+        if (state == SpeechInputState.ERROR && previous != SpeechInputState.ERROR) {
+            error?.takeIf(String::isNotBlank)?.let { LOG.warn("kind=prompt-speech failed detail=$it") }
+            KiloNotifications.error(project, KiloBundle.message("prompt.speech.error.title"), null)
+        }
+        syncButton()
+        if (previous != state) onChange()
+    }
+
+    private fun speechLabel(state: SpeechInputState): String = when (state) {
+        SpeechInputState.IDLE -> KeymapUtil.createTooltipText(
+            KiloBundle.message("prompt.speech.start"),
+            SpeechInputAction.ID,
+        )
+        SpeechInputState.STARTING -> KiloBundle.message("prompt.speech.starting")
+        SpeechInputState.RECORDING -> KeymapUtil.createTooltipText(
+            KiloBundle.message("prompt.speech.stop"),
+            SpeechInputAction.ID,
+        )
+        SpeechInputState.TRANSCRIBING -> KiloBundle.message("prompt.speech.transcribing")
+        SpeechInputState.ERROR -> KiloBundle.message("prompt.speech.error")
+    }
+
+    private fun speechIcon(state: SpeechInputState): Icon = when (state) {
+        SpeechInputState.STARTING, SpeechInputState.TRANSCRIBING -> SpinnerIcon.icon
+        SpeechInputState.ERROR -> SPEECH_ERROR_ICON
+        SpeechInputState.RECORDING -> SPEECH_RECORDING_ICON
+        SpeechInputState.IDLE -> SPEECH_ICON
+    }
+
+    @RequiresEdt
+    private fun insertSpeech(value: String) {
+        val ed = editor.getEditor(false)
+        if (ed == null) {
+            val current = editor.text
+            val prefix = if (current.isNotEmpty() && !current.last().isWhitespace()) " " else ""
+            setText(current + prefix + value)
+            return
+        }
+        val text = ed.document.text
+        val selection = ed.selectionModel
+        val start = if (selection.hasSelection()) selection.selectionStart else ed.caretModel.offset
+        val end = if (selection.hasSelection()) selection.selectionEnd else start
+        val before = text.take(start)
+        val after = text.drop(end)
+        val prefix = if (before.isNotEmpty() && !before.last().isWhitespace()) " " else ""
+        val suffix = if (after.isNotEmpty() && !after.first().isWhitespace()) " " else ""
+        val inserted = prefix + value + suffix
+        WriteCommandAction.runWriteCommandAction(project) {
+            ed.document.replaceString(start, end, inserted)
+            ed.caretModel.moveToOffset(start + inserted.length)
+        }
+        editor.requestFocusInWindow()
+    }
+
+    // A running session always offers Stop, even with a draft in the box: the turn is the thing the
+    // user may need to interrupt, and a draft (typed, or restored after a send) must not hide that.
+    // The draft can still be queued while busy through the Send shortcut, which the tooltip names.
+    // The click, icon, and tooltip all read this one decision so they cannot disagree.
+    private fun stopping() = busy
+
+    @RequiresEdt
     private fun syncButton() {
-        button.icon = if (busy && !hasDraft()) STOP_ICON else SEND_ICON
+        button.icon = if (stopping()) STOP_ICON else SEND_ICON
+        syncTooltip()
     }
 
     @RequiresEdt
     private fun submit(src: String) {
         if (!isSendEnabled) return
+        if (speech?.state == SpeechInputState.STARTING || speech?.state == SpeechInputState.RECORDING) {
+            transcribeAndSend()
+            return
+        }
         val txt = text()
         val items = attachments.toList()
         submitting = true
@@ -853,7 +1043,7 @@ class PromptPanel(
                     if (project.isDisposed) return@withContext
                     val parts = files + mentioned
                     LOG.debug { "${ChatLogSummary.prompt(promptDto(txt, parts))} src=$src busy=$busy" }
-                    lastSubmission = txt to items
+                    retainSubmission(txt, items)
                     onSend(txt, parts)
                 }
             } catch (e: CancellationException) {
@@ -870,6 +1060,17 @@ class PromptPanel(
                 }
             }
         }
+    }
+
+    @RequiresEdt
+    private fun transcribeAndSend() {
+        val input = speech ?: return
+        val draft = editor.text
+        val items = attachments.toList()
+        input.stop(
+            done = { submit("speech") },
+            ready = { editor.text == draft && attachments == items && ready && !submitting },
+        )
     }
 
     private fun triggerCompletion(e: DocumentEvent) {
@@ -950,7 +1151,38 @@ class PromptPanel(
     }
 
     @RequiresEdt
+    private fun installSpeechShortcut(ed: com.intellij.openapi.editor.Editor) {
+        uninstallSpeechShortcut()
+        if (speech == null) return
+        val action = ActionManager.getInstance().getAction(SpeechInputAction.ID) ?: return
+        val binding = Disposer.newDisposable("Kilo speech input shortcut")
+        // Register the component-local shortcut on a wrapper so the globally registered action's
+        // shortcut set stays owned by KeymapManager.
+        ActionUtil.wrap(action).registerCustomShortcutSet(
+            KeymapUtil.getActiveKeymapShortcuts(SpeechInputAction.ID),
+            ed.contentComponent,
+            binding,
+        )
+        speechBinding = binding
+    }
+
+    @RequiresEdt
+    private fun refreshSpeechShortcut() {
+        editor.getEditor(false)?.let(::installSpeechShortcut)
+    }
+
+    @RequiresEdt
+    private fun uninstallSpeechShortcut() {
+        speechBinding?.let(Disposer::dispose)
+        speechBinding = null
+    }
+
+    @RequiresEdt
     private fun addAttachment(item: PromptAttachment) {
+        if (!files) {
+            notify(KiloBundle.message("hosted.prompt.textOnly"))
+            return
+        }
         if (!attachment && !item.reference && PromptAttachmentExtractor.image(item.mime)) {
             LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} blocked=unsupported-model" }
             notify(KiloBundle.message("prompt.attachment.unsupported.model"))
@@ -965,7 +1197,6 @@ class PromptPanel(
         LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} count=${attachments.size}" }
         syncEditorHeight()
         syncButton()
-        syncTooltip()
         onChange()
     }
 
@@ -975,7 +1206,6 @@ class PromptPanel(
         strip.remove(item)
         syncEditorHeight()
         syncButton()
-        syncTooltip()
         onChange()
     }
 
@@ -1054,6 +1284,12 @@ class PromptPanel(
         sourceMs: Long,
     ): Future<*> {
         return ApplicationManager.getApplication().executeOnPooledThread {
+            if (!this.files) {
+                ApplicationManager.getApplication().invokeLater {
+                    if (!project.isDisposed) notify(KiloBundle.message("hosted.prompt.textOnly"))
+                }
+                return@executeOnPooledThread
+            }
             val start = System.nanoTime()
             try {
                 val list = files ?: transferable?.let { FileCopyPasteUtil.getFileList(it).orEmpty() }.orEmpty()
@@ -1097,6 +1333,11 @@ class PromptPanel(
     }
 
     @RequiresEdt
+    private fun warn(text: String) {
+        KiloNotifications.warning(project, text)
+    }
+
+    @RequiresEdt
     private fun bindKeymap() {
         if (bus != null) return
         val connection = ApplicationManager.getApplication().messageBus.connect()
@@ -1105,8 +1346,10 @@ class PromptPanel(
             override fun activeKeymapChanged(keymap: Keymap?) {
                 editor.setPlaceholder(placeholder())
                 syncTooltip()
+                syncSpeech(speech?.state ?: SpeechInputState.IDLE, speech?.error)
                 syncSelectorTooltips()
                 refreshCompletionShortcut()
+                refreshSpeechShortcut()
             }
 
             override fun shortcutsChanged(keymap: Keymap, actionIds: Collection<String>, fromSettings: Boolean) {
@@ -1116,6 +1359,10 @@ class PromptPanel(
                     syncTooltip()
                 }
                 if (IdeActions.ACTION_CODE_COMPLETION in actionIds) refreshCompletionShortcut()
+                if (SpeechInputAction.ID in actionIds) {
+                    syncSpeech(speech?.state ?: SpeechInputState.IDLE, speech?.error)
+                    refreshSpeechShortcut()
+                }
                 if (CycleModeAction.ID in actionIds || CycleModelAction.ID in actionIds ||
                     CycleReasoningAction.ID in actionIds || ResetModelAction.ID in actionIds) {
                     syncSelectorTooltips()
@@ -1150,7 +1397,8 @@ class PromptPanel(
 
     @RequiresEdt
     private fun syncTooltip() {
-        button.toolTipText = tooltip()
+        val tip = tooltip()
+        if (button.toolTipText != tip) button.toolTipText = tip
     }
 
     private fun syncAutoApprove() {
@@ -1170,20 +1418,22 @@ class PromptPanel(
     }
 
     private fun tooltip(): String {
-        val stop = busy && !hasDraft()
-        val id = if (stop) StopSessionAction.ID else SendPromptAction.ID
-        val text = if (stop) {
-            KiloBundle.message("prompt.button.stop")
-        } else {
-            KiloBundle.message("prompt.button.send")
+        if (stopping()) {
+            val tip = KeymapUtil.createTooltipText(KiloBundle.message("prompt.button.stop"), StopSessionAction.ID)
+            if (!hasDraft()) return tip
+            return hint(tip, SendPromptAction.ID, "prompt.button.stop.tooltip.send")
         }
-        val tip = KeymapUtil.createTooltipText(text, id)
-        if (stop) return tip
-        val shortcut = KeymapUtil.getFirstKeyboardShortcutText(StopSessionAction.ID)
+        val tip = KeymapUtil.createTooltipText(KiloBundle.message("prompt.button.send"), SendPromptAction.ID)
+        return hint(tip, StopSessionAction.ID, "prompt.button.send.tooltip.stop")
+    }
+
+    /** Appends a second line naming the other action's shortcut, when it has one. */
+    private fun hint(tip: String, id: String, key: String): String {
+        val shortcut = KeymapUtil.getFirstKeyboardShortcutText(id)
         if (shortcut.isEmpty()) return tip
         return XmlStringUtil.wrapInHtml(
             XmlStringUtil.escapeString(tip) + "<br>" +
-                XmlStringUtil.escapeString(KiloBundle.message("prompt.button.send.tooltip.stop", shortcut))
+                XmlStringUtil.escapeString(KiloBundle.message(key, shortcut))
         )
     }
 

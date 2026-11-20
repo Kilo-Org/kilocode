@@ -66,6 +66,9 @@ class WorktreeStatusService internal constructor(
     private var want: Want? = null
     /** Worktree activity as of the previous snapshot, so an agent that stopped can be spotted. */
     private var kinds = emptyMap<String, SessionActivityKind>()
+    private val exclusions = mutableListOf<() -> Set<String>>()
+    private var hidden = emptySet<String>()
+    private var deferred = emptySet<String>()
     private var refs = 0
     private var lastPr = 0L
     private var github = KiloPluginSettings.getGithub()
@@ -107,10 +110,13 @@ class WorktreeStatusService internal constructor(
         val paths: Set<String>,
     )
 
-    fun attach(): AutoCloseable {
+    @RequiresEdt(generateAssertion = false)
+    fun attach(excluded: (() -> Set<String>)? = null): AutoCloseable {
+        if (excluded != null) exclusions.add(excluded)
         refs++
         if (refs == 1) start()
         return AutoCloseable {
+            if (excluded != null) exclusions.remove(excluded)
             refs = (refs - 1).coerceAtLeast(0)
             if (refs == 0) stop()
         }
@@ -133,6 +139,7 @@ class WorktreeStatusService internal constructor(
      * [fresh] names worktrees whose cached answers the backend must refuse whatever [maxAge] says,
      * for a caller that learned something about those rows in particular. See [stopped].
      */
+    @RequiresEdt(generateAssertion = false)
     fun refreshPr(force: Boolean = false, maxAge: Long? = null, fresh: List<String> = emptyList()) {
         if (project.isDisposed || refs == 0 || !github) return
         // One lookup at a time, whatever the caller asked for. [force] bypasses the throttle, so
@@ -155,6 +162,33 @@ class WorktreeStatusService internal constructor(
         }
         lastPr = now
         loadPr(maxAge, fresh)
+    }
+
+    /** Refresh a newly visible worktree without bypassing the polling throttle. */
+    @RequiresEdt(generateAssertion = false)
+    fun visibilityChanged() {
+        if (hidden.isNotEmpty() && (hidden - excluded()).isNotEmpty()) hold(null)
+    }
+
+    /**
+     * Reloads PR state after the checkouts at [paths] moved to another branch.
+     *
+     * The badges those rows show were resolved against the old branch, so they are dropped at once
+     * instead of waiting for a lookup. A lookup already running resolved against that old branch
+     * too, so its answer is discarded and the fresh one runs as soon as it finishes — including past
+     * the throttle, because a branch change is exactly the external change the throttle must not let
+     * a recent poll hide.
+     */
+    fun branchChanged(paths: Collection<String>) {
+        if (project.isDisposed || refs == 0 || !github) return
+        if (paths.isEmpty()) return
+        val keys = paths.mapTo(LinkedHashSet(), ::normalizeWorktreePath)
+        prFlow.value = prFlow.value - keys
+        generation++
+        // Put the last lookup behind the floor rather than relying on the wall clock having advanced
+        // past it: a branch change is the one event that must not wait out a recent poll.
+        lastPr = timers.now() - PR_THROTTLE - 1
+        hold(0, keys)
     }
 
     /**
@@ -339,6 +373,8 @@ class WorktreeStatusService internal constructor(
         prTimer = null
         trail = null
         want = null
+        hidden = emptySet()
+        deferred = emptySet()
         prJob = null
         statsJob = null
         dirtyJob = null
@@ -364,6 +400,8 @@ class WorktreeStatusService internal constructor(
             trail?.stop()
             trail = null
             want = null
+            hidden = emptySet()
+            deferred = emptySet()
             prFlow.value = emptyMap()
             ghFlow.value = GhAvailability.OK
             return
@@ -413,11 +451,21 @@ class WorktreeStatusService internal constructor(
         }
     }
 
-    private fun loadPr(maxAge: Long? = null, fresh: List<String> = emptyList()) {
+    @RequiresEdt(generateAssertion = false)
+    private fun excluded(): Set<String> = exclusions.map { it() }.reduceOrNull { left, right -> left intersect right }.orEmpty()
+
+    @RequiresEdt(generateAssertion = false)
+    private fun loadPr(maxAge: Long?, fresh: List<String>) {
+        val excluded = excluded()
+        hidden = excluded
+        // Preserve invalidations that the backend cannot spend while their rows are hidden.
+        val pending = deferred + fresh.map(::normalizeWorktreePath)
+        val paths = pending.filterNot(excluded::contains)
+        deferred = pending intersect excluded
         val gen = ++generation
         val job = cs.launch {
             val dir = project.kiloRoot() ?: return@launch
-            runCatching { service<KiloWorktreeService>().prStatus(dir, maxAge, fresh) }
+            runCatching { service<KiloWorktreeService>().prStatus(dir, maxAge, paths, excluded.toList()) }
                 .onSuccess { dto ->
                     // KiloWorktreeService.prStatus swallows the cancellation and answers with an
                     // empty DTO, so a lookup cancelled by a disable still lands here — and after a
@@ -427,15 +475,18 @@ class WorktreeStatusService internal constructor(
                     if (gen != generation) return@onSuccess
                     LOG.info(
                         "worktree PR refresh done items=${dto.items.size} value=${dto.availability} " +
-                            "maxAge=${maxAge ?: "default"} fresh=${fresh.size}",
+                            "maxAge=${maxAge ?: "default"} fresh=${paths.size} excluded=${excluded.size}",
                     )
                     // A spent GitHub budget carries no pull request data and says nothing about the
                     // pull requests themselves, so the rows keep what they had and the banner explains
                     // why it stopped moving. Publishing the empty list would instead blank every badge
                     // for up to an hour over something the user cannot act on. A gh that timed out is
                     // in exactly the same position: it answered nothing about these pull requests.
-                    if (dto.availability != GhAvailability.RATE_LIMITED && dto.availability != GhAvailability.TIMEOUT) {
-                        prFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) }
+                    when (dto.availability) {
+                        GhAvailability.RATE_LIMITED, GhAvailability.TIMEOUT -> Unit
+                        GhAvailability.OK -> prFlow.value = prFlow.value.filterKeys(excluded::contains) +
+                            dto.items.associateBy { normalizeWorktreePath(it.path) }
+                        else -> prFlow.value = emptyMap()
                     }
                     ghFlow.value = dto.availability
                     service<GhStatusCoordinator>().report(project, dto.availability)
@@ -444,9 +495,11 @@ class WorktreeStatusService internal constructor(
         }
         prJob = job
         // Covers every way the lookup can end — answered, failed, cancelled, or returned early on an
-        // unresolved root — so a return held behind it is spent rather than left for the poll. A
-        // superseded generation means a newer lookup already owns the loop and will drain it instead.
-        job.invokeOnCompletion { edt { if (gen == generation) spend() } }
+        // unresolved root — so a request held behind it is spent rather than left for the poll. A
+        // superseded generation must still call this: [branchChanged] discards that answer and has no
+        // other completion to run the fresh lookup after it. If a newer lookup is active, spend()
+        // simply leaves the request held for that one.
+        job.invokeOnCompletion { edt { spend() } }
     }
 
     /**

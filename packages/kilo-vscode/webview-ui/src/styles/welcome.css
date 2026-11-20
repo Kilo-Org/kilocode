@@ -65,6 +65,34 @@
   line-height: 1.4;
 }
 
+.workspace-scope-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  max-width: 360px;
+  padding: 8px;
+  box-sizing: border-box;
+  border: 1px solid var(--vscode-widget-border, var(--border-weak-base));
+  border-radius: 6px;
+  font-size: var(--kilo-font-size-12);
+  line-height: 1.5;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.workspace-scope-hint-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.workspace-scope-hint [data-component="icon-button"] {
+  flex-shrink: 0;
+}
+
 /* ============================================
    Work Style Picker
    ============================================ */

@@ -12,7 +12,7 @@ Fireworks AI is a high-performance platform for running AI models that offers fa
 ## Getting an API Key
 
 1. **Sign Up/Sign In:** Go to [Fireworks AI](https://fireworks.ai/) and create an account or sign in.
-2. **Navigate to API Keys:** After logging in, go to the [API Keys page](https://app.fireworks.ai/settings/users/api-keys) in the account settings.
+2. **Navigate to API Keys:** After signing in, open **API Keys** in your Fireworks user settings. See the [Fireworks API key setup guide](https://docs.fireworks.ai/getting-started/quickstart#step-1-create-and-export-an-api-key).
 3. **Create a Key:** Click "Create API key" and give your key a descriptive name (e.g., "Kilo Code").
 4. **Copy the Key:** Copy the API key _immediately_ and store it securely. You will not be able to see it again.
 

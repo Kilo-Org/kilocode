@@ -10,6 +10,8 @@ interface Props {
   onToggle?: () => void
   onClick?: () => void
   count?: JSX.Element
+  /** Decorative badge between the label and the count, used by the splash preview. */
+  marker?: JSX.Element
   actions?: JSX.Element
   class?: string
   title?: string
@@ -68,6 +70,7 @@ export const SidebarSectionHeader: Component<Props> = (props) => {
         </Show>
         <div class="am-sidebar-header-label">{props.label}</div>
       </div>
+      {props.marker}
       <Show when={props.count !== undefined}>
         <span class="am-sidebar-header-count">{props.count}</span>
       </Show>

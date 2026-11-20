@@ -17,6 +17,7 @@ import { createWorkerRemoteExit } from "@/kilocode/cli/cmd/tui/remote-exit-worke
 import { createWorkerShutdown } from "@/cli/tui/worker-shutdown" // kilocode_change
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
 import { KiloRpc } from "@/kilocode/util/rpc" // kilocode_change
+import { WorkerConsole } from "@/kilocode/cli/cmd/tui/worker-console" // kilocode_change
 
 // kilocode_change start - queue parent requests before the await below; KiloRpc.listen replays them
 KiloRpc.arm()
@@ -24,6 +25,7 @@ KiloRpc.arm()
 
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
+WorkerConsole.redirect() // kilocode_change - and keep console writes from this realm off the TUI frame
 Heap.start()
 
 // kilocode_change start - startup checkpoints: these separate "worker never started" from

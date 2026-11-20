@@ -81,6 +81,24 @@ describe("git-transfer", () => {
       expect(snapshot.untracked[0].path).toBe("sub/deep.txt")
     })
 
+    it("captures untracked files with non-ASCII names", async () => {
+      await git(["config", "core.quotePath", "true"], dir)
+      await fs.writeFile(path.join(dir, "résumé.txt"), "accented\n")
+      await fs.writeFile(path.join(dir, "报价.txt"), "cjk\n")
+      const snapshot = await capture(dir, noop)
+      const files = snapshot.untracked.map((f) => [f.path, f.content.toString()]).sort()
+      expect(files).toEqual([
+        ["résumé.txt", "accented\n"],
+        ["报价.txt", "cjk\n"],
+      ])
+    })
+
+    it.skipIf(process.platform === "win32")("captures untracked files whose name ends with a space", async () => {
+      await fs.writeFile(path.join(dir, "notes.txt "), "spaced\n")
+      const snapshot = await capture(dir, noop)
+      expect(snapshot.untracked.map((f) => [f.path, f.content.toString()])).toEqual([["notes.txt ", "spaced\n"]])
+    })
+
     it("returns null patches when working tree is clean", async () => {
       const snapshot = await capture(dir, noop)
       expect(snapshot.unstaged).toBeNull()
@@ -113,6 +131,14 @@ describe("git-transfer", () => {
       // Should show as modified in target
       const status = await git(["status", "--porcelain"], target)
       expect(status).toContain("M init.txt")
+    })
+
+    it("writes untracked files with non-ASCII names", async () => {
+      await git(["config", "core.quotePath", "true"], dir)
+      await fs.writeFile(path.join(dir, "résumé.txt"), "accented\n")
+      const result = await apply(await capture(dir, noop), target, noop)
+      expect(result.ok).toBe(true)
+      expect(await fs.readFile(path.join(target, "résumé.txt"), "utf8")).toBe("accented\n")
     })
 
     it("applies staged changes and re-stages them", async () => {

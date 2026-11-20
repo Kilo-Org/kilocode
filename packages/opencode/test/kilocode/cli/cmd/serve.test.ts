@@ -43,7 +43,8 @@ test("prints the local IPv6 URL for wildcard binds", async () => {
     },
   )
   const errors = new Response(proc.stderr).text()
-  const timeout = setTimeout(() => proc.kill(), 15_000)
+  // Cold CLI start from source can exceed 15s on loaded Windows CI runners.
+  const timeout = setTimeout(() => proc.kill(), 45_000)
   const output = await (async () => {
     const reader = proc.stdout.getReader()
     const decoder = new TextDecoder()
@@ -67,4 +68,4 @@ test("prints the local IPv6 URL for wildcard binds", async () => {
   expect(output, `stdout:\n${output}\nstderr:\n${stderr}`).toMatch(
     /kilo server listening on http:\/\/\[::\]:(\d+)\r?\n  Local:   http:\/\/\[::1\]:\1(?:\r?\n|$)/,
   )
-}, 30_000)
+}, 60_000)

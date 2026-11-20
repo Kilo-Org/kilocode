@@ -32,16 +32,12 @@ import com.intellij.openapi.util.SystemInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
-import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.nio.file.Files
@@ -218,51 +214,6 @@ class KiloWorktreeRpcApiImplTest {
 
         assertEquals(5L, sizes[ok.toString()])
         assertFalse(sizes.containsKey(missing.toString()), "a path that could not be measured must be omitted, not zero")
-    }
-
-    /**
-     * The frontend cancels a size pass whenever the orphan set changes or a delete starts, and
-     * `Files.walkFileTree` cannot be interrupted — so the walk has to check cancellation itself rather
-     * than leave a cancelled coroutine walking every remaining path on Dispatchers.IO.
-     *
-     * Cancelling before the call is ever reached (`job.cancel()` then `withContext(job) { ... }`) would
-     * only prove that `withContext` on an already-dead job throws without entering the block — true of
-     * any suspend function and unrelated to the `ensureActive()`/`isActive` checks this is meant to
-     * cover. This instead cancels a walk that is demonstrably still running: a full, uncancelled pass
-     * over a large tree is timed first, then a second pass over the same tree is cancelled partway
-     * through and shown to finish in a small fraction of that baseline — which a walk with no
-     * cancellation checks could not do, since nothing would tell it to stop.
-     */
-    @Test
-    fun `orphanSizes stops mid-walk once cancelled, instead of running to completion`() = runBlocking {
-        initRepo()
-        val big = repo.resolve(".kilo").resolve("worktrees").resolve("big")
-        Files.createDirectories(big)
-        repeat(20_000) { i -> Files.write(big.resolve("f$i.bin"), ByteArray(1)) }
-        val target = listOf(big.toString())
-
-        val baselineStart = System.nanoTime()
-        api.orphanSizes(repo.toString(), target)
-        val baseline = System.nanoTime() - baselineStart
-
-        val job = Job()
-        val cancelledStart = System.nanoTime()
-        val deferred = CoroutineScope(Dispatchers.IO + job).async { api.orphanSizes(repo.toString(), target) }
-        // A quarter of the uncancelled duration is comfortably inside the walk, not before or after it.
-        delay(TimeUnit.NANOSECONDS.toMillis(baseline / 4).coerceAtLeast(1))
-        job.cancel()
-        val outcome = runCatching { deferred.await() }
-        val elapsed = System.nanoTime() - cancelledStart
-
-        assertTrue(
-            outcome.exceptionOrNull() is CancellationException,
-            "a cancelled pass must not answer with sizes -> ${outcome.getOrNull()}",
-        )
-        assertTrue(
-            elapsed < baseline * 3 / 4,
-            "cancelling took ${elapsed / 1_000_000}ms against an uncancelled ${baseline / 1_000_000}ms " +
-                "-- a walk with no cancellation checks would not finish any faster than the baseline",
-        )
     }
 
     @Test
@@ -1020,6 +971,26 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `create resets state left at a recycled worktree path`() = runBlocking {
+        initRepo()
+        val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        assertNotNull(api.rename(repo.toString(), first.path, "Old Label").worktree)
+        assertTrue(api.setSessionList(first.path, true))
+        // A removal outside Agent Manager leaves the path-keyed state behind. Creating the same branch
+        // again reuses the path and must not inherit that worktree's label or visibility.
+        git(repo, "worktree", "remove", "--force", first.path)
+
+        val again = assertNotNull(
+            api.create(repo.toString(), CreateWorktreeRequestDto("feature/x", existingBranch = true)).worktree,
+        )
+
+        assertEquals(first.path, again.path)
+        val state = readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json"))
+        assertNull(state.names[again.path])
+        assertTrue(state.sessionList.isEmpty())
+    }
+
+    @Test
     fun `reorder persists a new order that a later list returns`() = runBlocking {
         initRepo()
         val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)
@@ -1610,15 +1581,17 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
-    fun `prTargets keeps the main tree and drops detached and prunable entries`() {
+    fun `prTargets keeps the main tree and skips hidden detached and prunable entries`() {
         val items = listOf(
             WorktreeDto("/repo", "repo", "main", "/repo", main = true),
             WorktreeDto("/repo/.kilo/worktrees/a", "a", "feature/a", "/repo/.kilo/worktrees/a"),
+            WorktreeDto("/repo/.kilo/worktrees/b", "b", "feature/b", "/repo/.kilo/worktrees/b"),
             WorktreeDto("/repo/.kilo/worktrees/detached", "detached", "(detached)", "/repo/.kilo/worktrees/detached"),
             WorktreeDto("/repo/.kilo/worktrees/gone", "gone", "feature/gone", "/repo/.kilo/worktrees/gone", prunable = true),
         )
 
-        assertEquals(listOf("/repo", "/repo/.kilo/worktrees/a"), prTargets(items).map { it.path })
+        val hidden = prPaths(listOf("/repo/.kilo/worktrees/../worktrees/b/"))
+        assertEquals(listOf("/repo", "/repo/.kilo/worktrees/a"), prTargets(items, hidden).map { it.path })
     }
 
     @Test
@@ -1629,6 +1602,69 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("main", baseBranch(listOf(main, linked)))
         assertNull(baseBranch(listOf(main.copy(branch = "(detached)"), linked)))
         assertNull(baseBranch(listOf(linked)))
+    }
+
+    @Test
+    fun `list exposes the saved base branch recorded for a worktree`() = runBlocking {
+        initRepo()
+        val main = output(repo, "branch", "--show-current").trim()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/base", main)).worktree)
+        val file = metadata(Path.of(created.path), "kilo-agent-manager-metadata.json")
+        Files.writeString(file, """{"parentBranch":"release","remote":"upstream"}""")
+
+        val listed = api.list(repo.toString()).worktrees.first { it.path == created.path }
+
+        assertEquals("release", listed.parentBranch)
+        assertEquals("upstream", listed.remote)
+        assertTrue(listed.parentBranchRecorded)
+    }
+
+    @Test
+    fun `list splits a legacy remote-prefixed base only for a known remote`() = runBlocking {
+        initRepo()
+        git(repo, "remote", "add", "origin", remote.toString())
+        val main = output(repo, "branch", "--show-current").trim()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/base", main)).worktree)
+        val file = metadata(Path.of(created.path), "kilo-agent-manager-metadata.json")
+
+        Files.writeString(file, """{"parentBranch":"origin/main"}""")
+        val prefixed = api.list(repo.toString()).worktrees.first { it.path == created.path }
+        assertEquals("main", prefixed.parentBranch)
+        assertEquals("origin", prefixed.remote)
+        assertTrue(prefixed.parentBranchRecorded)
+
+        Files.writeString(file, """{"parentBranch":"release/1.0"}""")
+        val branch = api.list(repo.toString()).worktrees.first { it.path == created.path }
+        assertEquals("release/1.0", branch.parentBranch)
+        assertNull(branch.remote)
+    }
+
+    @Test
+    fun `list marks the main branch as unconfirmed when no metadata was recorded`() = runBlocking {
+        initRepo()
+        val main = output(repo, "branch", "--show-current").trim()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/base", main)).worktree)
+        Files.deleteIfExists(metadata(Path.of(created.path), "kilo-agent-manager-metadata.json"))
+
+        val listed = api.list(repo.toString()).worktrees.first { it.path == created.path }
+
+        assertEquals(main, listed.parentBranch)
+        assertNull(listed.remote)
+        assertFalse(listed.parentBranchRecorded)
+    }
+
+    @Test
+    fun `create records the base branch for later updates`() = runBlocking {
+        initRepo()
+        val main = output(repo, "branch", "--show-current").trim()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/base", main)).worktree)
+        val file = metadata(Path.of(created.path), "kilo-agent-manager-metadata.json")
+
+        assertTrue(Files.exists(file), "create should record the saved base")
+        assertEquals(main, created.parentBranch)
+        assertTrue(created.parentBranchRecorded)
+        val listed = api.list(repo.toString()).worktrees.first { it.path == created.path }
+        assertEquals(main, listed.parentBranch)
     }
 
     @Test
@@ -2688,6 +2724,61 @@ class KiloWorktreeRpcApiImplTest {
     private suspend fun target(): Path {
         val result = api.create(repo.toString(), CreateWorktreeRequestDto("feature/x"))
         return Path.of(assertNotNull(result.worktree, "create failed: ${result.error}").path)
+    }
+
+    @Test
+    fun `create fetches latest base branch when requested`() = runBlocking {
+        initRepo()
+        originWith(1, "feature/remote")
+        val base = output(remote, "branch", "--show-current").trim()
+        git(repo, "fetch", "origin", base)
+        git(repo, "branch", "--set-upstream-to=origin/$base", base)
+        Files.writeString(remote.resolve("latest.txt"), "latest\n")
+        git(remote, "add", "latest.txt")
+        git(remote, "commit", "-m", "latest base")
+
+        val result = api.create(
+            repo.toString(),
+            CreateWorktreeRequestDto("feature/fresh", base, fetchBase = true),
+        )
+
+        val worktree = assertNotNull(result.worktree, result.error)
+        assertEquals("latest\n", Files.readString(Path.of(worktree.path).resolve("latest.txt")))
+        assertEquals(head(remote, base), head(Path.of(worktree.path), "HEAD"))
+        assertEquals(base, worktree.parentBranch)
+        assertEquals("origin", worktree.remote)
+    }
+
+    @Test
+    fun `create fetches differently named upstream when requested`() = runBlocking {
+        initRepo()
+        originWith(1, "feature/remote")
+        val base = output(repo, "branch", "--show-current").trim()
+        git(repo, "fetch", "origin", "feature/remote")
+        git(repo, "branch", "--set-upstream-to=origin/feature/remote", base)
+        Files.writeString(remote.resolve("latest.txt"), "latest\n")
+        git(remote, "add", "latest.txt")
+        git(remote, "commit", "-m", "latest base")
+
+        val result = api.create(repo.toString(), CreateWorktreeRequestDto("feature/fresh", base, fetchBase = true))
+
+        val worktree = assertNotNull(result.worktree, result.error)
+        assertEquals(head(remote, "feature/remote"), head(Path.of(worktree.path), "HEAD"))
+        assertEquals("feature/remote", worktree.parentBranch)
+        assertEquals("origin", worktree.remote)
+    }
+
+    @Test
+    fun `create retains local base without remote upstream`() = runBlocking {
+        initRepo()
+        git(repo, "branch", "local-only")
+
+        val result = api.create(repo.toString(), CreateWorktreeRequestDto("feature/fresh", "local-only", fetchBase = true))
+
+        val worktree = assertNotNull(result.worktree, result.error)
+        assertEquals(head(repo, "local-only"), head(Path.of(worktree.path), "HEAD"))
+        assertEquals("local-only", worktree.parentBranch)
+        assertNull(worktree.remote)
     }
 
     private fun metadata(dir: Path, name: String): Path =

@@ -84,8 +84,9 @@ export async function capture(cwd: string, log: (...args: unknown[]) => void, bi
     raw(["rev-parse", "HEAD"], cwd, binary),
     patch(["diff", "--binary"]),
     patch(["diff", "--cached", "--binary"]),
-    raw(["ls-files", "--others", "--exclude-standard"], cwd, binary).then((s: string) =>
-      s.split("\n").filter((l: string) => l.length > 0),
+    // -z lists names verbatim; without it Git quotes and escapes non-ASCII names, which then fail to read.
+    git(["ls-files", "--others", "--exclude-standard", "-z"], cwd, undefined, binary).then((r) =>
+      r.stdout.split("\0").filter((l) => l.length > 0),
     ),
   ])
 

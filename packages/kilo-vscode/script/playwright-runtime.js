@@ -16,7 +16,13 @@ function copy(name, from, dir) {
   fs.cpSync(root, target, {
     recursive: true,
     dereference: true,
-    filter: (file) => path.basename(file) !== "node_modules",
+    // Runtime only: skip nested installs, type declarations, source maps, and zod's TypeScript sources.
+    filter: (file) => {
+      const base = path.basename(file)
+      if (base === "node_modules") return false
+      if (/\.d\.[cm]?ts$|\.map$/.test(base)) return false
+      return !(name === "zod" && file === path.join(root, "src"))
+    },
   })
   for (const dep of Object.keys(pkg.dependencies ?? {})) copy(dep, root, path.join(target, "node_modules"))
 }

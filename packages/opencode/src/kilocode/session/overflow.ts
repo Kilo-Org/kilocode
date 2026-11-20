@@ -115,10 +115,9 @@ export namespace KiloSessionOverflow {
       // New messages only; the report already covers the rest of the previous
       // request. New media is priced as its placeholder, not its bytes.
       tail: Math.ceil(size(pending(input.messages)).chars * FACTOR),
-      // System content and tool schemas are re-sent every request and may have changed
-      // since the report. Adding the current copies in full double-counts unchanged
-      // ones - bounded over-projection, never an under-count that bypasses the
-      // threshold. Request prep delivers system content as leading messages.
+      // System content and tool schemas are re-sent every request. The report already
+      // includes the previous copies, so this only replaces the baseline when it is
+      // larger. Request prep delivers system content as leading messages.
       overhead: Math.ceil((tools + lead) * FACTOR),
       continuation: continued(input.messages),
     }
@@ -143,11 +142,13 @@ export namespace KiloSessionOverflow {
     if (!enabled(input)) return false
     const stats = "tokens" in input ? input : measure(input)
     if (stats.continuation) return false
-    // Baseline = report plus inflated content added since it (messages, system, tools).
-    // Without a usable report the full estimate decides alone.
+    // Baseline = report plus inflated messages added since it. The report already
+    // counts the system prompt and tool schemas, so adding them again moves the
+    // trigger earlier by their full size. They replace the report only when they
+    // alone exceed it. Without a usable report the full estimate decides alone.
     const baseline =
       typeof input.reported === "number" && input.reported > 0
-        ? input.reported + stats.tail + (stats.overhead ?? 0)
+        ? Math.max(input.reported, stats.overhead ?? 0) + stats.tail
         : undefined
     const projected = baseline ?? ("tokens" in stats ? stats.tokens : stats.normalized)
     return projected >= limit(input)

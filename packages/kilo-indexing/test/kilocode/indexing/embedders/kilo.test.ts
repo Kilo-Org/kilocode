@@ -28,7 +28,7 @@ describe("KiloEmbedder", () => {
     await embedder.createEmbeddings(["hello"])
 
     expect(seen[0]).toEqual({
-      baseURL: "https://api.kilo.ai/api/gateway/",
+      baseURL: "https://ai-gateway.kilo.ai/api/v1/",
       apiKey: "kilo-token",
       defaultHeaders: {
         "X-KILOCODE-FEATURE": KILO_INDEXING_FEATURE,

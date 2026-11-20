@@ -34,6 +34,8 @@ import { McpOAuthPendingProvider, McpOAuthProvider, OAUTH_CALLBACK_PATH } from "
 import { McpOAuthCallback } from "./oauth-callback"
 import { McpAuth } from "./auth"
 import { probe } from "@/kilocode/mcp/sse-probe" // kilocode_change - normalize the optional GET stream probe
+import { oauthGuard } from "@/kilocode/mcp/oauth-fetch" // kilocode_change - bind automatic invalidation to the rejected credential
+import { refreshExpired } from "@/kilocode/mcp/refresh" // kilocode_change - refresh an expired token the SDK would otherwise report as needs_auth
 import * as KiloMcpCleanup from "@/kilocode/mcp/cleanup" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { TuiEvent } from "@/server/tui-event"
@@ -48,6 +50,7 @@ import { McpCatalog } from "./catalog"
 import { McpEvent } from "@opencode-ai/schema/mcp-event"
 import { McpBrowser } from "./browser"
 import { authFailure } from "@/kilocode/mcp/auth-failure" // kilocode_change
+import * as KiloAuthTelemetry from "@/kilocode/mcp/auth-telemetry" // kilocode_change
 
 const DEFAULT_TIMEOUT = 30_000
 const CLIENT_OPTIONS = {
@@ -343,13 +346,33 @@ const layer = Layer.effect(
         )
       }
 
+      // kilocode_change start - scope the stream probe to this endpoint and compose it with
+      // the OAuth refresh guard so a rejected refresh cannot wipe newer rotated credentials
+      const remoteFetch = authProvider
+        ? oauthGuard(probe(fetch, url.href), {
+            name: key,
+            serverUrl: mcp.url,
+            auth,
+            provider: authProvider,
+          })
+        : probe(fetch, url.href)
+
+      // kilocode_change start - some servers reject an expired access token with 403, which the
+      // SDK never retries as an auth failure; refresh a stored-but-expired token before connecting,
+      // bounded by the connect timeout so a stalled server cannot block MCP startup
+      if (authProvider) {
+        const timeout = mcp.timeout ?? DEFAULT_TIMEOUT
+        yield* Effect.promise(() => refreshExpired({ name: key, serverUrl: mcp.url, auth, fetch: remoteFetch, timeout }))
+      }
+      // kilocode_change end
+
       const transports: Array<{ name: string; transport: TransportWithAuth }> = [
         {
           name: "StreamableHTTP",
           transport: new StreamableHTTPClientTransport(url, {
             authProvider,
             requestInit: mcp.headers ? { headers: mcp.headers } : undefined,
-            fetch: probe(), // kilocode_change - a non-SSE body on the GET probe must not start a reconnect loop
+            fetch: remoteFetch,
           }),
         },
         {
@@ -357,9 +380,11 @@ const layer = Layer.effect(
           transport: new SSEClientTransport(url, {
             authProvider,
             requestInit: mcp.headers ? { headers: mcp.headers } : undefined,
+            fetch: remoteFetch,
           }),
         },
       ]
+      // kilocode_change end
 
       const connectTimeout = mcp.timeout ?? DEFAULT_TIMEOUT
       let lastStatus: Status | undefined
@@ -995,6 +1020,7 @@ const layer = Layer.effect(
       opts?: { external?: boolean }, // kilocode_change
     ) {
       const result: AuthResult = yield* startAuth(mcpName, { callback: false }) // kilocode_change
+      yield* KiloAuthTelemetry.redirect(!!result.authorizationUrl) // kilocode_change
       if (!result.authorizationUrl) {
         const client = "client" in result ? result.client : undefined
         const mcpConfig = yield* requireMcpConfig(mcpName).pipe(
@@ -1033,11 +1059,13 @@ const layer = Layer.effect(
         }),
       )
       if (err) {
+        yield* KiloAuthTelemetry.fail("callback_unavailable")
         const pending = pendingOAuthTransports.get(mcpName)
         pendingOAuthTransports.delete(mcpName)
         yield* Effect.tryPromise(() => pending?.transport.close() ?? Promise.resolve()).pipe(Effect.ignore)
         return { status: "failed", error: err.message } as Status
       }
+      yield* KiloAuthTelemetry.phase("authorization")
       // kilocode_change end
 
       yield* Effect.logInfo("opening browser for oauth", {
@@ -1071,6 +1099,7 @@ const layer = Layer.effect(
 
       // kilocode_change start
       const callback = yield* Effect.promise(() => callbackSettled)
+      yield* KiloAuthTelemetry.callback(callback)
       const flow: PendingFlow = { transport: result.transport!, provider: result.provider }
       if (!callback.ok) {
         // A newer attempt for the same server can take this flow's callback listener over
@@ -1095,6 +1124,7 @@ const layer = Layer.effect(
       // server during the wait, which is not an authorization attempt.
       const owner = pendingOAuthTransports.get(mcpName)
       if (!owner || (owner.provider !== undefined && owner.provider !== result.provider)) {
+        yield* KiloAuthTelemetry.superseded()
         yield* releaseFlow(mcpName, flow)
         return {
           status: "failed",
@@ -1120,11 +1150,14 @@ const layer = Layer.effect(
       )
 
       if (failure) {
+        yield* KiloAuthTelemetry.exchange(failure)
         yield* releaseFlow(mcpName, flow)
         return { status: "failed", error: `Token exchange failed: ${oauthReason(failure)}` } satisfies Status
       }
 
+      yield* KiloAuthTelemetry.phase("credential_store")
       yield* Effect.promise(() => flow.provider?.commit() ?? Promise.resolve())
+      yield* KiloAuthTelemetry.persisted(flow.provider)
       pendingOAuthTransports.delete(mcpName)
 
       const mcpConfig = yield* requireMcpConfig(mcpName)
@@ -1192,7 +1225,7 @@ const layer = Layer.effect(
       getPrompt,
       readResource,
       startAuth,
-      authenticate,
+      authenticate: KiloAuthTelemetry.observe(authenticate, getMcpConfig), // kilocode_change - sign-in outcome telemetry
       finishAuth,
       removeAuth,
       cancelAuth, // kilocode_change

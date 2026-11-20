@@ -310,7 +310,7 @@ describe("RemoteProtocol", () => {
         startedAt: "2024-02-29T12:34:56.789Z",
         gitBranch: "feature/current",
       },
-      capabilities: { attachments: true, sessionClone: true },
+      capabilities: { attachments: true, sessionClone: true, sessionCloneAtMessage: true },
     }
     expect(RemoteProtocol.Outbound.parse(JSON.parse(JSON.stringify(msg)))).toEqual(msg)
   })

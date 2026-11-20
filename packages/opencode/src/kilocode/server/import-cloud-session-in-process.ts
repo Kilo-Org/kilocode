@@ -46,6 +46,9 @@ export namespace CloudSessionImportInProcess {
   // Any other failure (fetch threw, prepare threw, or the write failed).
   export class Internal extends Schema.TaggedErrorClass<Internal>()("CloudSessionImportInternal", {}) {}
 
+  // A cut was requested but the cut message is not in the cloud session.
+  export class CutNotFound extends Schema.TaggedErrorClass<CutNotFound>()("CloudSessionImportCutNotFound", {}) {}
+
   function name(error: unknown): string {
     if (error instanceof Error) return error.name
     if (typeof error === "object" && error !== null && "_tag" in error && typeof error._tag === "string") {
@@ -57,8 +60,13 @@ export namespace CloudSessionImportInProcess {
   // Persist the imported session (events, messages, parts) and decode the
   // diffs, but do NOT touch the workspace or session_diff storage keys. Those
   // side effects are deferred to `finalizeSessionImport` so the clone path can
-  // run them only after a successful attach.
-  const importSessionCore = Effect.fn("CloudSessionImportInProcess.importSessionCore")(function* (sessionId: string) {
+  // run them only after a successful attach. An optional `upToMessageId` cut
+  // keeps messages up to and including that message and drops sessionDiff, so
+  // diffs come only from the kept messages' summaries.
+  const importSessionCore = Effect.fn("CloudSessionImportInProcess.importSessionCore")(function* (
+    sessionId: string,
+    opts?: { upToMessageId?: string },
+  ) {
     const auth = yield* Auth.Service
     const events = yield* EventV2Bridge.Service
     const database = yield* Database.Service
@@ -69,12 +77,13 @@ export namespace CloudSessionImportInProcess {
     if (!token) return yield* Effect.fail(new Unauthorized())
 
     const fetched = yield* Effect.tryPromise({
-      try: () => fetchCloudSessionForImport(token, sessionId),
+      try: () => fetchCloudSessionForImport(token, sessionId, opts),
       catch: (err) => {
         log.error("cloud session import failed", { route: "cloud/session/import", stage: "fetch", error: name(err) })
         return new Internal()
       },
     })
+    if (!fetched.ok && fetched.code === "clone_cut_not_found") return yield* Effect.fail(new CutNotFound())
     if (!fetched.ok) return yield* Effect.fail(new Upstream({ status: fetched.status, error: fetched.error }))
     if (!fetched.data?.info?.id) return yield* Effect.fail(new BadRequest())
 
@@ -201,8 +210,8 @@ export namespace CloudSessionImportInProcess {
 
   // Persist only: no workspace restore and no session_diff storage writes.
   export const importSessionWithoutRestore = Effect.fn("CloudSessionImportInProcess.importSessionWithoutRestore")(
-    function* (sessionId: string) {
-      return yield* importSessionCore(sessionId)
+    function* (sessionId: string, opts?: { upToMessageId?: string }) {
+      return yield* importSessionCore(sessionId, opts)
     },
   )
 }

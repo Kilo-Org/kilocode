@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.model
 
 import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.TodoDto
@@ -26,7 +27,7 @@ data class ContextUsage(
 )
 
 data class TimelineItem(
-    val id: String,
+    val message: String,
     val part: Content,
     val title: String,
     val weight: Int,
@@ -49,6 +50,7 @@ data class ModelLimitItem(
 /** A single message with its typed contents. */
 class Message(
     val info: MessageDto,
+    val terminal: ChatEventDto.MessageTerminal? = null,
 ) {
     val parts = LinkedHashMap<String, Content>()
 }
@@ -59,6 +61,22 @@ sealed class Content(val id: String)
 /** Streamed text content from the assistant. */
 class Text(id: String) : Content(id) {
     val content = StringBuilder()
+    /** Set when Kilo composed this prompt, e.g. "Update from main". */
+    var injectedTitle: String? = null
+}
+
+/**
+ * A non-error informational note rendered inline in the transcript, e.g. an attachment the server
+ * could not read. Derived from a persisted synthetic user text part, so it survives a reload like
+ * any other part.
+ *
+ * [path] is the full source path the CLI reported, kept so the attachment can be rebuilt when the
+ * message is reverted back into the prompt; [name] is just its file name for display.
+ */
+class Notice(id: String, val kind: String, val name: String?, val path: String? = null) : Content(id) {
+    companion object {
+        const val ATTACHMENT_READ_FAILED = "attachment_read_failed"
+    }
 }
 
 /** Model reasoning / chain-of-thought. */

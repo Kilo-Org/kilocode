@@ -51,7 +51,12 @@ export namespace RemoteProtocol {
     // attachments are confirmed retired.
     kind: z.enum(["cli", "remote"]).optional(),
     startedAt: z.iso.datetime({ precision: 3 }).length(24).optional(),
-    gitBranch: z.string().max(24).optional(),
+    // zod counts code points; the wire contract (and the sender's slice) is UTF-16 code units.
+    gitBranch: z
+      .string()
+      .max(24)
+      .refine((value) => value.length <= 24, { message: "Too big: expected at most 24 UTF-16 code units" })
+      .optional(),
   })
   export type InstanceAdvertisement = z.infer<typeof InstanceAdvertisement>
 
@@ -68,6 +73,10 @@ export namespace RemoteProtocol {
       // wire form omits sessionClone; remove the mobile fail-closed check
       // when every shipped CLI advertises it.
       sessionClone: z.boolean().optional(),
+      // kilocode_change - sessionCloneAtMessage: present only when the CLI
+      // accepts create_session.cloneUpToMessageId (fork at a message).
+      // Absent means unsupported; mobile hides "Fork from here".
+      sessionCloneAtMessage: z.boolean().optional(),
     })
     .optional()
   export const Heartbeat = z.object({

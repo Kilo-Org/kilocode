@@ -64,7 +64,7 @@ describe("generate-image provider resolver", () => {
     expect(result!.token).toBe("kilo-token")
     expect(result!.organizationId).toBe("org-123")
     expect(result!.provider).toBe("kilo")
-    expect(result!.url).toContain("openrouter")
+    expect(result!.url).toBe("https://ai-gateway.kilo.ai/api/v1/chat/completions")
   })
 
   test("uses Kilo cloud with API key auth", () => {

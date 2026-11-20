@@ -8,7 +8,7 @@ import { batch, createContext, useContext, createSignal, createMemo, onCleanup }
 import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
 import type { Provider, ProviderModel, ModelSelection, ExtensionMessage, ProviderAuthState } from "../types/messages"
-import type { ProviderAuthMethod } from "@kilocode/sdk/v2/client"
+import type { ProviderAuthMethod, ProviderFailure } from "@kilocode/sdk/v2/client"
 import { flattenModels, findModel as _findModel, isModelValid as isValid } from "./provider-utils"
 import { KILO_AUTO } from "../../../src/shared/provider-model"
 
@@ -28,6 +28,8 @@ interface ProviderContextValue {
   isModelValid: (selection: ModelSelection | null) => boolean
   /** The organization's Kilo catalog failed to load; the host retries until it recovers. */
   kiloUnavailable: Accessor<boolean>
+  /** Typed reasons providers failed to load, so the UI can explain why instead of hiding them. */
+  failures: Accessor<ProviderFailure[]>
 }
 
 export const ProviderContext = createContext<ProviderContextValue>()
@@ -44,6 +46,7 @@ export const ProviderProvider: ParentComponent = (props) => {
   const [authMethods, setAuthMethods] = createSignal<Record<string, ProviderAuthMethod[]>>({})
   const [authStates, setAuthStates] = createSignal<Record<string, ProviderAuthState>>({})
   const [kiloUnavailable, setKiloUnavailable] = createSignal(false)
+  const [failures, setFailures] = createSignal<ProviderFailure[]>([])
 
   const models = createMemo<EnrichedModel[]>(() => flattenModels(providers()))
 
@@ -73,6 +76,7 @@ export const ProviderProvider: ParentComponent = (props) => {
           return next
         })
         setConnected((prev) => prev.filter((id) => id !== "kilo"))
+        setFailures((prev) => prev.filter((item) => item.providerID !== "kilo"))
       })
       return
     }
@@ -88,6 +92,7 @@ export const ProviderProvider: ParentComponent = (props) => {
       setAuthMethods(message.authMethods)
       setAuthStates(message.authStates)
       setKiloUnavailable(message.kiloUnavailable ?? false)
+      setFailures(message.failures ?? [])
     })
   })
 
@@ -130,6 +135,7 @@ export const ProviderProvider: ParentComponent = (props) => {
     authStates,
     isModelValid,
     kiloUnavailable,
+    failures,
   }
 
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>

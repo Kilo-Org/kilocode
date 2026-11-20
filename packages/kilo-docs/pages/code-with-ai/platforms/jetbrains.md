@@ -19,6 +19,10 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
 
+## Product telemetry
+
+Product telemetry is currently always on in the JetBrains plugin. See [Product telemetry and crash reports](/docs/getting-started/settings/product-telemetry#jetbrains).
+
 ## Chat and worktrees
 
 Use **Chat** for the current workspace and **Agents** to manage parallel tasks in isolated git worktrees. **+ Session** starts a conversation; **+ Worktree** opens the worktree creation dialog.
@@ -27,6 +31,7 @@ Use **Chat** for the current workspace and **Agents** to manage parallel tasks i
 - **Move to Worktree** moves the conversation and uncommitted changes into a new worktree while the session is idle. This action is also available from the main checkout's session list.
 - Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it and drag worktree rows to reorder them.
 - Worktree rows show session activity, pull request checks and reviews, unresolved review conversations, merge conflicts, and active build/run processes. Use the row menu to copy the branch name, directory, or pull request reference.
+- Choose **Update from Base** in a worktree's row menu to have its agent fetch the saved base branch's remote and merge the latest commit. For worktrees created before the saved base metadata existed, the agent first asks you to confirm the main branch as the base. The agent preserves staged, unstaged, and untracked work without using Git stash, resolves conflicts, and runs checks; it does not push or merge the base.
 
 ### Worktree setup scripts
 

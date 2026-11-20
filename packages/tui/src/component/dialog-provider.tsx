@@ -126,8 +126,9 @@ export function createDialogProviderOptions() {
         const connected = sync.data.provider_next.connected.includes(providerID)
         // kilocode_change start
         const failed = sync.data.provider_next.failed ?? []
+        const failures = sync.data.provider_next.failures ?? []
         const failedGutter = KiloProvider.renderGutter(providerID, failed, theme)
-        const failedDesc = KiloProvider.failedDescription(providerID, failed)
+        const failedDesc = KiloProvider.failedDescription(providerID, failed, failures)
         const baseDesc = KiloProvider.PROVIDER_DESCRIPTIONS[providerID]
         // kilocode_change end
 

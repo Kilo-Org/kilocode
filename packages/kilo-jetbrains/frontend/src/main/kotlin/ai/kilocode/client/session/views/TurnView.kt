@@ -11,6 +11,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.ui.search.TranscriptSearchBody
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.Disposable
@@ -45,6 +46,8 @@ class TurnView(
     private val onPromoteBackgroundAgent: BackgroundPromote? = null,
     /** Sibling color slot for a child session's generated avatar. See [ai.kilocode.client.session.AgentAvatar]. */
     private val avatarColor: (String) -> Int? = { null },
+    /** Whether this turn's transcript is on screen. Combined with `!settled` to gate auto-expand. */
+    private val visible: () -> Boolean = { true },
 ) : SessionLayoutPanel(SessionUiStyle.SessionLayout.GAP), Disposable, SessionEditorStyleTarget, SessionView {
 
     private val messages = LinkedHashMap<String, MessageView>()
@@ -84,7 +87,7 @@ class TurnView(
     fun addMessage(msg: Message): MessageView {
         val view = MessageView(
             msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert, fork,
-            onOpenSubagent, onPromoteBackgroundAgent, avatarColor,
+            onOpenSubagent, onPromoteBackgroundAgent, avatarColor, live = { visible() && !settled },
         ).also {
             it.setDiffOpener(openDiff, sessionId)
         }
@@ -146,6 +149,10 @@ class TurnView(
 
     /** Ordered message ids currently displayed — stable for test assertions. */
     fun messageIds(): List<String> = messages.keys.toList()
+
+    @RequiresEdt
+    internal fun searchBodies(): List<TranscriptSearchBody> =
+        if (!isVisible) emptyList() else messages.values.flatMap { it.searchBodies() }
 
     /** Compact dump for test assertions. */
     fun dump(): String = messages.entries.joinToString(", ") { (id, mv) -> "${mv.role}#$id" }

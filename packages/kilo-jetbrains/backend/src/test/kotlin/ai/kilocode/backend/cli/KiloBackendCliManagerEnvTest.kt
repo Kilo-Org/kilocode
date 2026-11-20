@@ -39,19 +39,62 @@ class KiloBackendCliManagerEnvTest {
         assertEquals("true", env["KILO_ENABLE_QUESTION_TOOL"])
         assertEquals("jetbrains", env["KILO_PLATFORM"])
         assertEquals("kilo-code", env["KILO_APP_NAME"])
-        assertEquals("all", env["KILO_TELEMETRY_LEVEL"])
+        assertFalse(env.containsKey("KILO_TELEMETRY_LEVEL"))
         assertEquals("true", env["KILO_DISABLE_CLAUDE_CODE"])
         assertEquals("jetbrains-plugin", env["KILOCODE_FEATURE"])
         assertEquals("pwd123", env["KILO_SERVER_PASSWORD"])
     }
 
     @Test
-    fun `dev mode disables CLI telemetry`() {
-        System.setProperty("idea.plugin.in.sandbox.mode", "true")
-
-        val env = manager.buildEnv("pwd123", emptyMap())
-
+    fun `production preserves an inherited telemetry opt-out`() {
+        val env = manager.buildEnv("pwd123", mapOf("KILO_TELEMETRY_LEVEL" to "off"))
         assertEquals("off", env["KILO_TELEMETRY_LEVEL"])
+    }
+
+    @Test
+    fun `sandbox disables CLI telemetry even when the inherited environment enables it`() {
+        System.setProperty("idea.plugin.in.sandbox.mode", "true")
+        val env = manager.buildEnv("pwd123", mapOf("KILO_TELEMETRY_LEVEL" to "all"))
+        assertEquals("off", env["KILO_TELEMETRY_LEVEL"])
+    }
+
+    @Test
+    fun `pinned CLI - rc channel is forced onto the production database`() {
+        val env = manager.buildEnv("pwd123", emptyMap(), pinned = true)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+    }
+
+    @Test
+    fun `pinned CLI - inherited env cannot re-enable the channel database`() {
+        val env = manager.buildEnv("pwd123", mapOf("KILO_DISABLE_CHANNEL_DB" to "false"), pinned = true)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+    }
+
+    @Test
+    fun `local repo CLI - per-branch dev database is kept`() {
+        val env = manager.buildEnv("pwd123", emptyMap(), pinned = false)
+
+        assertFalse(env.containsKey("KILO_DISABLE_CHANNEL_DB"))
+    }
+
+    @Test
+    fun `local repo CLI - developer override is preserved`() {
+        val env = manager.buildEnv("pwd123", mapOf("KILO_DISABLE_CHANNEL_DB" to "true"), pinned = false)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+    }
+
+    @Test
+    fun `pinned CLI with isolation - production database name resolves under isolated data home`() {
+        System.setProperty("kilo.dev.storage.isolated", "true")
+        System.setProperty("kilo.dev.worktree.root", tmp.absolutePath)
+
+        val env = manager.buildEnv("pwd123", emptyMap(), pinned = true)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+        assertEquals(File(File(tmp, ".kilo-dev"), "data").absolutePath, env["XDG_DATA_HOME"])
     }
 
     @Test
@@ -64,11 +107,12 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
-    fun `isolation disabled - default CLI config asks for edit permissions without forcing bash`() {
+    fun `isolation disabled - no permission config is injected over user config`() {
+        // The plugin must not outrank the user's global/project kilo.json permission settings.
+        // The JetBrains edit-ask default now lives in the CLI's client-keyed defaults layer.
         val env = manager.buildEnv("pwd123", emptyMap())
 
-        assertEquals("""{"permission":{"edit":"ask"}}""", env["KILO_CONFIG_CONTENT"])
-        assertFalse(env["KILO_CONFIG_CONTENT"]?.contains("bash") == true)
+        assertFalse(env.containsKey("KILO_CONFIG_CONTENT"))
     }
 
     @Test

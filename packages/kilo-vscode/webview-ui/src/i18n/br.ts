@@ -293,6 +293,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Faça login no ChatGPT novamente e envie sua mensagem de novo para continuar usando os modelos Codex.",
 
+  "provider.failure.unauthorized": "Credenciais rejeitadas (HTTP {{status}}). Faça login novamente.",
+  "provider.failure.unauthorizedNoStatus": "Credenciais rejeitadas. Faça login novamente.",
+  "provider.failure.unauthenticated": "Não conectado.",
+  "provider.failure.network": "Não foi possível acessar o provedor. Verifique sua conexão.",
+  "provider.failure.http": "Erro do provedor (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Erro do provedor.",
+  "provider.failure.schema": "Resposta inesperada do provedor.",
+
   "notification.permission.title": "Permissão necessária",
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",
   "notification.permission.titleSkillShell": "Executar comandos de shell da skill “{{skill}}”?",
@@ -326,6 +334,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Ler Tarefas",
   "ui.permission.toolLabel.todoWrite": "Escrever Tarefas",
   "ui.permission.toolLabel.codeSearch": "Pesquisa de Código",
+  "ui.permission.toolLabel.browserOpen": "Navegador Integrado",
   "ui.permission.copyCommand": "Copiar",
   "ui.approval.auto": "Aprovado automaticamente",
   "ui.approval.manual": "Aprovado por você",
@@ -563,6 +572,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Buscar conteúdo de uma URL",
   "settings.permissions.tool.websearch.description": "Pesquisar na web",
   "settings.permissions.tool.codesearch.description": "Pesquisar código na web",
+  "settings.permissions.tool.browser_open.description": "Abrir uma página no Navegador Integrado",
   "settings.permissions.tool.external_directory.description": "Acessar arquivos fora do diretório do projeto",
   "settings.permissions.tool.doom_loop.description": "Detectar chamadas de ferramentas repetidas com entrada idêntica",
 
@@ -762,6 +772,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code é um assistente de programação com IA. Peça para criar funcionalidades, corrigir bugs ou explicar sua base de código.",
+  "session.workspaceScope.description":
+    "O chat do Kilo usa apenas “{{folder}}”, a primeira pasta deste espaço de trabalho.",
+  "session.workspaceScope.alternatives":
+    "Para trabalhar com outra pasta, abra-a em uma janela própria ou adicione-a como um projeto no Agent Manager.",
+  "session.workspaceScope.dismiss": "Ocultar dica sobre o escopo do espaço de trabalho",
   "session.messages.scrollToBottom": "Rolar para o final",
   "session.messages.initializing": "O teraouiñ...",
   "session.messages.taskStarting": "O kregiñ...",
@@ -858,8 +873,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
-    'A telemetria é controlada pela configuração de telemetria integrada do VS Code. Para desativá-la, vá para Configurações > Telemetria > Nível de Telemetria e defina como "off". Reinicie o VS Code para aplicar a alteração.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Abrir Configurações de Telemetria",
+    "Use este controle para alterar sua preferência de telemetria no Kilo. A telemetria permanece desativada se o VS Code ou o ambiente a desativar.",
+  "settings.aboutKiloCode.telemetry.toggle": "Ativar telemetria",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Não foi possível atualizar a configuração de telemetria",
 
   "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",
@@ -954,6 +970,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Ferramentas nativas de notebook",
   "settings.experimental.nativeNotebookTools.description":
     "Ativar ferramentas experimentais para ler, editar e executar notebooks do VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Pesquisar caminhos ignorados",
+  "settings.experimental.globIncludeIgnored.description":
+    "Pastas ou arquivos que a ferramenta glob deve pesquisar mesmo quando o .gitignore ou outros arquivos de exclusão os ignoram. Use padrões no estilo gitignore relativos ao workspace; pastas ignoradas dentro deles continuam excluídas.",
   "settings.experimental.continueOnDeny.title": "Continuar ao negar",
   "settings.experimental.continueOnDeny.description": "Continuar o loop do agente quando uma permissão é negada",
   "settings.sandboxing.title": "Isolamento em sandbox",
@@ -970,6 +989,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Histórico de prompts por conversa",
   "settings.experimental.conversationPromptHistory.description":
     "Mantenha o histórico de prompts (ArrowUp/ArrowDown) separado para cada conversa, em vez de compartilhar um único histórico entre todas as conversas.",
+  "settings.experimental.agentManagerSplash.title": "Tela de boas-vindas do Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Experimente a nova introdução do Agent Manager com exemplos de fluxos de trabalho. Aplicação imediata.",
   "settings.experimental.claudeMigration.title": "Migração do Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importe uma vez instruções globais CLAUDE.md compatíveis, habilidades simples e definições MCP desativadas. Os arquivos originais do Claude permanecem inalterados; reinicie o backend após ativar.",
@@ -1179,6 +1201,8 @@ export const dict = {
     "Gerenciar lista de tarefas. Permite ler e atualizar a lista de tarefas interna.",
   "settings.autoApprove.tool.webfetch": "Buscar uma URL. Permite recuperar o conteúdo de uma URL específica.",
   "settings.autoApprove.tool.websearch": "Pesquisar na web. Permite realizar pesquisas externas na web.",
+  "settings.autoApprove.tool.browser_open":
+    "Abrir páginas no Navegador Integrado. Esta é a pré-visualização no aplicativo, não a automação de navegador do Playwright.",
   "settings.autoApprove.tool.external_directory":
     "Acessar arquivos fora do workspace. Acionado ao acessar arquivos fora do diretório do projeto atual.",
   "settings.autoApprove.tool.doom_loop":

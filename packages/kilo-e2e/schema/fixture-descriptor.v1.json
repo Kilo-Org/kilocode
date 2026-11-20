@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lane": {
+      "type": "string",
+      "enum": [
+        "local",
+        "cloud"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+    },
+    "fakeLlmScope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "origins": {
+      "type": "object",
+      "properties": {
+        "web": {
+          "type": "string",
+          "format": "uri"
+        },
+        "cloudAgent": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sessionIngest": {
+          "type": "string",
+          "format": "uri"
+        },
+        "events": {
+          "type": "string",
+          "format": "uri"
+        },
+        "gateway": {
+          "type": "string",
+          "format": "uri"
+        },
+        "fakeLlm": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "web",
+        "cloudAgent",
+        "fakeLlm"
+      ]
+    },
+    "credentials": {
+      "type": "object",
+      "properties": {
+        "apiKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "orgId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "apiKey"
+      ]
+    },
+    "project": {
+      "type": "object",
+      "properties": {
+        "fixture": {
+          "type": "string",
+          "const": "deterministic-git"
+        },
+        "gitUrl": {
+          "type": "string",
+          "minLength": 1
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seed": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "fixture",
+        "gitUrl",
+        "branch",
+        "model",
+        "seed"
+      ]
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspaceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cloudSessionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nativeSessionId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "kind",
+              "id"
+            ]
+          }
+        }
+      },
+      "required": [
+        "token",
+        "ids"
+      ]
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "minLength": 1
+        },
+        "config": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cache": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "data",
+        "config",
+        "state",
+        "cache"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "runId",
+    "lane",
+    "createdAt",
+    "fakeLlmScope",
+    "origins",
+    "credentials",
+    "project",
+    "resources",
+    "cleanup",
+    "state"
+  ]
+}

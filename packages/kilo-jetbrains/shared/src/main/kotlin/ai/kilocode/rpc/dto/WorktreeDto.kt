@@ -13,6 +13,12 @@ data class WorktreeDto(
     val locked: Boolean = false,   // git worktree lock — blocks a plain remove
     val lockReason: String? = null, // optional reason recorded when the tree was locked
     val prunable: Boolean = false, // git marks metadata stale because the directory is gone
+    /** Saved base branch this worktree was created from, when recorded. */
+    val parentBranch: String? = null,
+    /** Remote recorded for [parentBranch], e.g. `origin`. Null means resolve the base's upstream. */
+    val remote: String? = null,
+    /** False when [parentBranch] is only the current main branch, not a recorded base. */
+    val parentBranchRecorded: Boolean = false,
 )
 
 @Serializable
@@ -46,6 +52,13 @@ data class WorktreeStatsDto(
     val unavailable: Boolean = false,
     /** Why the poll failed, for logs and tooltips. Empty when [unavailable] is false. */
     val reason: String = "",
+    /**
+     * True when the counts are a lower bound because files or line totals were truncated.
+     *
+     * Unlike [unavailable], the numbers are still meaningful: a surface should show them and say
+     * they may be incomplete rather than replacing them with "unknown".
+     */
+    val incomplete: Boolean = false,
 )
 
 @Serializable
@@ -79,6 +92,8 @@ data class WorktreeDirtyDto(
     val unavailable: Boolean = false,
     /** Why the poll failed, for logs and tooltips. Empty when [unavailable] is false. */
     val reason: String = "",
+    /** True when the counts are a lower bound; see [WorktreeStatsDto.incomplete]. */
+    val incomplete: Boolean = false,
 )
 
 @Serializable
@@ -236,6 +251,7 @@ data class CreateWorktreeRequestDto(
     // When true, check out an existing branch (`git worktree add <dir> <branch>`) instead of creating
     // a new one (`-b`). Used by the Import tab to adopt an existing local/remote branch.
     val existingBranch: Boolean = false,
+    val fetchBase: Boolean = false,
 )
 
 @Serializable

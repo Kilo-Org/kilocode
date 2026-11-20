@@ -1,0 +1,130 @@
+package ai.kilocode.client.ui.tree
+
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.UIUtil
+import java.awt.event.MouseEvent
+import javax.swing.tree.TreePath
+
+/** Press/release pairing must survive renderer reuse but never a geometry invalidation. */
+internal class ActiveTreePointer(private val view: ActiveTreeView, private val actions: ActiveTreeActions) {
+    private data class Press(val key: String, val id: String?)
+    private var press: Press? = null
+    private var disclosure = false
+
+    fun clear() {
+        press = null
+        disclosure = false
+    }
+
+    @RequiresEdt
+    fun process(event: MouseEvent): Boolean {
+        if (disclosure && (event.id == MouseEvent.MOUSE_RELEASED || event.id == MouseEvent.MOUSE_CLICKED)) {
+            if (event.id == MouseEvent.MOUSE_CLICKED) disclosure = false
+            return true
+        }
+        return when (event.id) {
+            MouseEvent.MOUSE_PRESSED -> pressed(event)
+            MouseEvent.MOUSE_RELEASED -> released(event)
+            MouseEvent.MOUSE_CLICKED -> clicked(event)
+            else -> false
+        }
+    }
+
+    @RequiresEdt
+    private fun pressed(event: MouseEvent): Boolean {
+        return if (event.isPopupTrigger || event.button == MouseEvent.BUTTON3) view.showMenu(event.point, true)
+        else if (UIUtil.isActionClick(event, MouseEvent.MOUSE_PRESSED, true)) {
+            view.requestFocusInWindow()
+            clear()
+            val menu = view.showMenu(event.point)
+            if (!menu) remember(event)
+            menu || press != null
+        } else false
+    }
+
+    private fun remember(event: MouseEvent) {
+        val hit = view.regions.hit(event, true) ?: return
+        if (hit.id == null) {
+            // Group bodies select on press and toggle on release; leaf bodies and disclosure clicks
+            // stay with the delegate.
+            if (!hit.entry.allowsChildren) return
+            if (view.regions.control(hit.entry)?.contains(event.point) == true) return
+            view.selectionModel.selectionPath = TreePath(hit.entry.path)
+        }
+        press = Press(hit.entry.key, hit.id)
+    }
+
+    @RequiresEdt
+    private fun released(event: MouseEvent): Boolean {
+        val down = press
+        clear()
+        val hit = view.regions.hit(event, true) ?: return false
+        val match = down != null && hit.id == down.id && hit.entry.key == down.key
+        val actionable = UIUtil.isActionClick(event, MouseEvent.MOUSE_RELEASED, true) &&
+            hit.entry.item.progress == null
+        if (!match || !actionable) return false
+        val id = down.id
+        if (id == null && hit.entry.allowsChildren) {
+            view.selectionModel.selectionPath = TreePath(hit.entry.path)
+            toggle(hit.entry)
+            return true
+        }
+        if (id == null) return false
+        view.fire(hit.entry.item, id)
+        return true
+    }
+
+    @RequiresEdt
+    private fun clicked(event: MouseEvent): Boolean {
+        val hit = view.regions.hit(event, false)
+        if (!UIUtil.isActionClick(event, MouseEvent.MOUSE_CLICKED, true) || hit == null) return false
+        return if (hit.id == null) {
+            val entry = hit.entry
+            val path = TreePath(entry.path)
+            when {
+                entry.allowsChildren -> {
+                    // Disclosure bounds stay with the native delegate; every other click is consumed
+                    // because the release already toggled the section, double clicks included.
+                    if (view.regions.control(entry)?.contains(event.point) == true) return false
+                    view.selectionModel.selectionPath = path
+                    true
+                }
+                entry.item.progress == null && event.clickCount in 1..2 -> {
+                    view.selectionModel.selectionPath = path
+                    if (event.clickCount == 1 && !actions.openOnClick) actions.click?.invoke(entry.item)
+                    else view.open(entry.item, event.clickCount == 2)
+                    true
+                }
+                else -> false
+            }
+        } else true
+    }
+
+    private fun toggle(entry: ActiveEntry) {
+        val path = TreePath(entry.path)
+        if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
+    }
+
+    @RequiresEdt
+    fun headless(event: MouseEvent) {
+        if (event.button != MouseEvent.BUTTON1) return
+        val entry = view.regions.entry(event.point) ?: return
+        val path = TreePath(entry.path)
+        when {
+            event.id == MouseEvent.MOUSE_PRESSED && view.regions.control(entry)?.contains(event.point) == true -> {
+                disclosure = true
+                if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
+            }
+            event.id == MouseEvent.MOUSE_PRESSED ->
+                view.selectionModel.selectionPath = path
+            event.id == MouseEvent.MOUSE_RELEASED && entry.allowsChildren &&
+                view.regions.control(entry)?.contains(event.point) != true -> {
+                view.selectionModel.selectionPath = path
+                toggle(entry)
+            }
+            event.id == MouseEvent.MOUSE_CLICKED && entry.allowsChildren -> Unit
+            event.id == MouseEvent.MOUSE_CLICKED && event.clickCount == 1 ->
+                view.selectionModel.selectionPath = path
+        }
+    }
+}

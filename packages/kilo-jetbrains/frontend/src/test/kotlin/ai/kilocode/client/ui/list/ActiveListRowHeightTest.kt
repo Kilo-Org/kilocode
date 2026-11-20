@@ -1,5 +1,9 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveRowHeight
+import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.edtWait
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -60,22 +64,22 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
         return view
     }
 
-    private fun rows(vararg keys: String, glyph: Icon): List<ActiveListItem> = keys.map { Row(it, glyph) }
+    private fun rows(vararg keys: String, glyph: Icon): List<ActiveItem> = keys.map { Row(it, glyph) }
 
     /**
      * A row shaped like the worktree list's: equality ignores the click handlers, and the badge getter
      * builds a fresh lambda on every read.
      */
-    private inner class Row(override val key: String, private val glyph: Icon) : ActiveListItem {
+    private inner class Row(override val key: String, private val glyph: Icon) : ActiveSection {
         override val title get() = key
         override val search get() = key
         override val section get() = "Section"
-        override val badges: List<ActiveListBadge>
+        override val badges: List<ActiveBadge>
             get() {
                 reads++
                 // The handler captures state, so every read allocates a lambda the previous one cannot
                 // be equal to — exactly what a badge that opens its own PR url does.
-                return listOf(ActiveListBadge("", id = "pr-checks", icon = glyph, action = { clicks++ }))
+                return listOf(ActiveBadge("", id = "pr-checks", icon = glyph, action = { clicks++ }))
             }
 
         override fun equals(other: Any?): Boolean {
@@ -86,11 +90,29 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
         override fun hashCode() = 31 * key.hashCode() + glyph.hashCode()
     }
 
-    // --- ActiveListConfig.wrapDescription ---
+    fun `test ordinary rows discard placeholder preferred dimensions`() {
+        val row = wrapRow("Description")
+        val model = CollectionListModel<ActiveItem>(listOf(row))
+        val list = JBList(model).apply { setSize(400, 200) }
+        val renderer = ActiveListRenderer(model, ActiveConfig.Preferred)
+        val expected = renderer.getListCellRendererComponent(list, row, 0, false, false).preferredSize
+        assertTrue(expected.height > 0)
+        val gap = ActiveGap(row, expected.height * 3)
+        assertEquals(
+            gap.height,
+            renderer.getListCellRendererComponent(list, gap, 0, false, false).preferredSize.height,
+        )
+
+        val stamp = renderer.getListCellRendererComponent(list, row, 0, false, false)
+
+        assertEquals(expected, stamp.preferredSize)
+    }
+
+    // --- ActiveConfig.wrapDescription ---
 
     fun `test wrapDescription is opt-in - default config keeps a single-line description at any width`() {
-        val renderer = ActiveListRenderer(CollectionListModel(), ActiveListConfig.Preferred)
-        val list = JBList<ActiveListItem>()
+        val renderer = ActiveListRenderer(CollectionListModel(), ActiveConfig.Preferred)
+        val list = JBList<ActiveItem>()
         val row = wrapRow("word ".repeat(40).trim())
 
         list.setSize(600, 200)
@@ -104,8 +126,8 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
     }
 
     fun `test wrapDescription grows row height as the list narrows, without growing preferred width`() {
-        val renderer = ActiveListRenderer(CollectionListModel(), ActiveListConfig(height = ActiveListRowHeight.PREFERRED, wrapDescription = true))
-        val list = JBList<ActiveListItem>()
+        val renderer = ActiveListRenderer(CollectionListModel(), ActiveConfig(height = ActiveRowHeight.PREFERRED, wrapDescription = true))
+        val list = JBList<ActiveItem>()
         val row = wrapRow("word ".repeat(40).trim())
 
         list.setSize(600, 200)
@@ -123,8 +145,8 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
     }
 
     fun `test wrapDescription preserves explicit line breaks in the underlying text component`() {
-        val renderer = ActiveListRenderer(CollectionListModel(), ActiveListConfig(height = ActiveListRowHeight.PREFERRED, wrapDescription = true))
-        val list = JBList<ActiveListItem>()
+        val renderer = ActiveListRenderer(CollectionListModel(), ActiveConfig(height = ActiveRowHeight.PREFERRED, wrapDescription = true))
+        val list = JBList<ActiveItem>()
         list.setSize(400, 200)
         val row = wrapRow("first line\nsecond line")
 
@@ -135,8 +157,8 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
     }
 
     fun `test wrapDescription body color matches the row regardless of selection`() {
-        val renderer = ActiveListRenderer(CollectionListModel(), ActiveListConfig(height = ActiveListRowHeight.PREFERRED, wrapDescription = true))
-        val list = JBList<ActiveListItem>()
+        val renderer = ActiveListRenderer(CollectionListModel(), ActiveConfig(height = ActiveRowHeight.PREFERRED, wrapDescription = true))
+        val list = JBList<ActiveItem>()
         list.setSize(400, 200)
         val row = wrapRow("body text")
 
@@ -155,7 +177,7 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
 
     fun `test wrapDescription remeasures cached preferred heights when the list narrows`() {
         edtWait {
-            val view = ActiveListView("", ActiveListConfig(height = ActiveListRowHeight.PREFERRED, wrapDescription = true)) { _, _ -> }
+            val view = ActiveListView("", ActiveConfig(height = ActiveRowHeight.PREFERRED, wrapDescription = true)) { _, _ -> }
             val pane = JPanel()
             pane.add(view)
             pane.setSize(600, 400)
@@ -178,7 +200,7 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
 
     fun `test resize leaves non-wrapping cell measurements unchanged`() {
         edtWait {
-            val view = ActiveListView("", ActiveListConfig.Equal) { _, _ -> }
+            val view = ActiveListView("", ActiveConfig.Equal) { _, _ -> }
             view.list.setSize(600, 400)
             view.update(listOf(wrapRow("Description")))
             view.list.fixedCellHeight = 777
@@ -190,7 +212,7 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
         }
     }
 
-    private fun wrapRow(description: String): ActiveListItem = object : ActiveListItem {
+    private fun wrapRow(description: String): ActiveItem = object : ActiveItem {
         override val key = "row"
         override val title = "Title"
         override val description = description
