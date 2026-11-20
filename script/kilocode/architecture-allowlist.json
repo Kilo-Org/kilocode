@@ -23,6 +23,46 @@
           "owner": "kilo-cli",
           "reason": "One-time copy of an earlier build's database file before the server starts. It counts sessions in the candidate files read-only to pick the copy source; Database.Service does not exist yet and would run migrations on the old file. The copy itself opens the source through packages/kilo-cli/src/sqlite-readonly.ts. Remove with the legacy copy."
         },
+        "packages/kilo-cli/src/migration/cutover.ts": {
+          "count": 1,
+          "owner": "kilo-cli",
+          "reason": "After the upstream converter closes, verify the private candidate, write its cutover receipt and checkpoint it before publication. The server's managed connection must not outlive staging."
+        },
+        "packages/kilo-cli/src/migration/owner.ts": {
+          "count": 3,
+          "owner": "kilo-cli",
+          "reason": "The migration lock is a separate SQLite file, not a session store. Consent may create it, recovery must open an existing file, and an observer uses a read-only connection to test the owner's exclusive lock."
+        },
+        "packages/kilo-cli/src/migration/preview.ts": {
+          "count": 1,
+          "owner": "kilo-cli",
+          "reason": "Compare closed preview stores with the private candidate using immutable reads. Opening a preview through Database.Service could migrate the very input being checked for conflicts."
+        },
+        "packages/kilo-cli/src/migration/project-config.ts": {
+          "count": 1,
+          "owner": "kilo-cli",
+          "reason": "Inventory project paths from standalone files or a private snapshot before conversion replaces the old workspace tables. The immutable connection does not create SQLite sidecars."
+        },
+        "packages/kilo-cli/src/migration/publish.ts": {
+          "count": 2,
+          "owner": "kilo-cli",
+          "reason": "Publication needs an exclusive SQLite connection to an existing file and an independent reader to verify that the lock actually excludes clients before replacing the file."
+        },
+        "packages/kilo-cli/src/migration/receipt.ts": {
+          "count": 1,
+          "owner": "kilo-cli",
+          "reason": "Before normal database startup, read the checkpointed receipt immutably to verify this launcher's selected inputs. Starting Database.Service to authorize its own startup would be too late."
+        },
+        "packages/kilo-cli/src/migration/snapshot.ts": {
+          "count": 5,
+          "owner": "kilo-cli",
+          "reason": "Snapshot capture pins a reader, reserves the writer slot and opens an independent VACUUM INTO reader to include committed WAL frames. Two verification connections operate only on the staged copy: one normalizes its journal mode and one checks it immutably. The original must not run schema migrations."
+        },
+        "packages/kilo-cli/src/migration/verify-published.ts": {
+          "count": 1,
+          "owner": "kilo-cli",
+          "reason": "After an interrupted publication, verify the standalone published store against the attached v1 recovery file with immutable reads. Recovery must not upgrade or write either file to establish which history survived."
+        },
         "packages/kilo-cli/src/sqlite-readonly.ts": {
           "count": 2,
           "owner": "kilo-cli",
