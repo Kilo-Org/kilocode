@@ -65,12 +65,24 @@ function branch(node: Record<string, unknown>, type: string) {
     if (TYPED.has(key) && !own.has(key)) continue
     out[key] = value
   }
-  if (Array.isArray(node.enum)) out.enum = node.enum.filter((value) => matches(type, value))
-  if (Array.isArray(node.examples)) out.examples = node.examples.filter((value) => matches(type, value))
+  // An empty enum allows no value at all, so leave the key off instead.
+  for (const key of ["enum", "examples"]) {
+    const list = node[key]
+    const values = Array.isArray(list) ? list.filter((value) => matches(type, value)) : []
+    if (values.length > 0) out[key] = values
+  }
   if ("const" in node && matches(type, node.const)) out.const = node.const
   if ("default" in node && matches(type, node.default)) out.default = node.default
   return out
 }
+
+// `projectNode` in gemini-tool-schema.ts drops object schemas with no
+// properties, which would leave a hole in a generated `anyOf`. Keep this in
+// sync with its `emptyObjectSchema`.
+const empty = (node: Record<string, unknown>) =>
+  node.type === "object" &&
+  (!isRecord(node.properties) || Object.keys(node.properties).length === 0) &&
+  !node.additionalProperties
 
 function lower(node: Record<string, unknown>, types: string[]) {
   const unique = [...new Set(types)]
@@ -81,13 +93,16 @@ function lower(node: Record<string, unknown>, types: string[]) {
   // An unsatisfiable enum or const is the caller's bug. Keep every declared type.
   const live = filtered.length > 0 ? filtered : unique
   const nullable = live.includes("null") || node.nullable === true
-  const rest = live.filter((type) => type !== "null")
   const description = "description" in node ? { description: node.description } : {}
+  const all = live.filter((type) => type !== "null").map((type) => branch(node, type))
+  // A lone empty object keeps its usual projection. Beside other types, it goes.
+  const kept = all.filter((item) => !empty(item))
+  const rest = all.length > 1 && kept.length > 0 ? kept : all
 
   if (rest.length === 0) return { ...branch(node, "null"), ...description }
   const flag = nullable ? { nullable: true } : {}
-  if (rest.length === 1) return { ...branch(node, rest[0]), ...flag, ...description }
-  return { anyOf: rest.map((type) => branch(node, type)), ...flag, ...description }
+  if (rest.length === 1) return { ...rest[0], ...flag, ...description }
+  return { anyOf: rest, ...flag, ...description }
 }
 
 // A typed schema only admits null through `nullable`, which a type array has

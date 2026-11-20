@@ -114,6 +114,23 @@ describe("gemini type arrays", () => {
     expect(fields(ToolSchemaProjection.gemini(pages())).mode).toEqual({ type: "string", enum: ["a", "b"] })
   })
 
+  test("drops an empty object branch instead of sending a null anyOf entry", () => {
+    const project = (x: unknown) => ToolSchemaProjection.gemini({ type: "object", properties: { x } }).properties
+    expect(project({ type: ["object", "string"] })).toEqual({ x: { type: "string" } })
+    expect(project({ type: ["object", "string", "number", "null"] })).toEqual({
+      x: { anyOf: [{ type: "string" }, { type: "number" }], nullable: true },
+    })
+    expect(JSON.stringify(project({ type: ["object", "string", "number"] }))).not.toContain("null")
+  })
+
+  test("leaves enum off a branch when no value matches the declared types", () => {
+    const project = (x: unknown) => ToolSchemaProjection.gemini({ type: "object", properties: { x } }).properties
+    expect(project({ type: ["string"], enum: [1] })).toEqual({ x: { type: "string" } })
+    expect(project({ type: ["string", "boolean"], enum: [1] })).toEqual({
+      x: { anyOf: [{ type: "string" }, { type: "boolean" }] },
+    })
+  })
+
   test("marks an untyped enum with null as nullable", () => {
     expect(fields(ToolSchemaProjection.gemini(pages())).loose).toEqual({ nullable: true, enum: ["x"] })
   })
