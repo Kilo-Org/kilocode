@@ -657,6 +657,10 @@ class KiloBackendAppServiceTest {
         )
         val stateText = (listOf(err.message) + err.errors.mapNotNull { it.detail }).joinToString(" ")
         assertFalse(stateText.contains("marker-7f3a9c"), stateText)
+        val detail = assertNotNull(err.errors.single { it.resource == "config" }.detail)
+        assertTrue(detail.startsWith("HTTP 400"), detail)
+        assertTrue(detail.contains("ConfigJsonError"), detail)
+        assertFalse(detail.contains("chars="), detail)
         val lines = log.messages.count { it.contains("Global config fetch failed") }
         assertEquals(mock.requestCount("/global/config"), lines, log.messages.toString())
     }
@@ -696,6 +700,30 @@ class KiloBackendAppServiceTest {
             log.messages.any {
                 it.contains("Notifications fetch failed: HTTP 500:") && it.contains("chars=")
             },
+            log.messages.toString(),
+        )
+    }
+
+    @Test
+    fun `fetch failure detail carries the error name without a size`() = runBlocking {
+        mock.notificationsStatus = 500
+        mock.notifications = """{"name":"ConfigJsonError"}"""
+        val svc = create()
+        svc.connect()
+
+        val state = assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+        val err = assertIs<KiloAppState.Error>(state)
+        val detail = assertNotNull(err.errors.single { it.resource == "notifications" }.detail)
+
+        assertEquals("HTTP 500 ConfigJsonError", detail)
+        assertFalse(detail.contains("chars="), detail)
+        assertTrue(
+            log.messages.any { it.contains("Notifications fetch failed: HTTP 500:") && it.contains("chars=") },
             log.messages.toString(),
         )
     }

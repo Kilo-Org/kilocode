@@ -6,7 +6,10 @@ import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.SseEvent
 import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.cli.KiloCliDataParser
+import ai.kilocode.backend.cli.ResponseFailure
+import ai.kilocode.backend.cli.bodyName
 import ai.kilocode.backend.cli.bodySummary
+import ai.kilocode.backend.cli.responseFailure
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.infrastructure.ClientError
@@ -269,7 +272,7 @@ class KiloBackendWorkspace(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            logFailure("Config warnings fetch failed for $directory: ${detail(e)}", e)
+            logFailure("Config warnings fetch failed for $directory", e)
             emptyList()
         }
     }
@@ -298,7 +301,7 @@ class KiloBackendWorkspace(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            logFailure("Agents fetch failed: ${detail(e)}", e)
+            logFailure("Agents fetch failed", e)
             FetchResult.fail("agents", e)
         }
     }
@@ -327,7 +330,7 @@ class KiloBackendWorkspace(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            logFailure("Skills fetch failed: ${detail(e)}", e)
+            logFailure("Skills fetch failed", e)
             FetchResult.fail("skills", e)
         }
     }
@@ -349,7 +352,7 @@ class KiloBackendWorkspace(
         val request = Request.Builder().url("http://127.0.0.1:$port$path").get().build()
         http.newCall(request).execute().use { response ->
             val raw = response.body?.string().orEmpty()
-            if (!response.isSuccessful) throw RuntimeException("HTTP ${response.code}: ${bodySummary(raw)}")
+            if (!response.isSuccessful) throw responseFailure(response.code, null, raw)
             return raw
         }
     }
@@ -379,11 +382,18 @@ class KiloBackendWorkspace(
     }
 
     /**
-     * Log a failed CLI call as its message only when the call carried a response body or the body
-     * failed to decode; the formatter otherwise writes the throwable with its stack trace.
+     * Log a failed CLI call with its status and body size. The throwable is passed only when the
+     * call carried no response body and the body did not fail to decode — the formatter otherwise
+     * writes the throwable with its stack trace.
      */
     private fun logFailure(message: String, e: Exception) {
-        if (body(e) != null || e is SerializationException) log.warn(message) else log.warn(message, e)
+        val line = "$message: ${logDetail(e)}"
+        val bodyOnly = body(e) != null || e is SerializationException || e is ResponseFailure
+        if (bodyOnly) {
+            log.warn(line)
+            return
+        }
+        log.warn(line, e)
     }
 
     private fun error(err: LoadError): String {
@@ -420,11 +430,21 @@ private fun body(e: Exception): String? = when (e) {
     else -> null
 }
 
+/** User-facing detail of a failed call: the status and, when the body carries one, the error name. */
 private fun detail(e: Exception): String? {
-    val body = body(e)
     val status = status(e)
-    if (status != null && !body.isNullOrBlank()) return "HTTP $status: ${bodySummary(body)}"
-    if (status != null) return "HTTP $status: ${e.message}"
+    val name = bodyName(body(e).orEmpty())
+    if (status != null && name != null) return "HTTP $status $name"
+    if (status != null) return "HTTP $status"
     if (e is SerializationException) return "Response parse error: ${e.javaClass.simpleName}"
     return e.message
+}
+
+/** Status and body size for the log line of a failed call. */
+private fun logDetail(e: Exception): String {
+    if (e is ResponseFailure) return e.summary
+    val status = status(e)
+    val body = body(e)
+    if (status != null && !body.isNullOrBlank()) return "HTTP $status: ${bodySummary(body)}"
+    return detail(e).orEmpty()
 }

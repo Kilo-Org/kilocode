@@ -339,8 +339,8 @@ class KiloBackendWorkspaceTest {
         val item = err.errors.single { it.resource == "agents" }
         assertEquals(500, item.status)
         val detail = assertNotNull(item.detail)
-        assertTrue(detail.contains("HTTP 500"), detail)
-        assertTrue(detail.contains("chars="), detail)
+        assertEquals("HTTP 500", detail)
+        assertFalse(detail.contains("chars="), detail)
         assertFalse(detail.contains("invalid agent config"), detail)
         assertTrue(
             log.messages.any {

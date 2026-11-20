@@ -2,4 +2,4 @@
 "@kilocode/kilo-jetbrains": patch
 ---
 
-Report backend fetch failures with the resource, the HTTP status and the response size.
+Report backend fetch failures by resource, HTTP status and response size, and keep user-facing fetch errors short.

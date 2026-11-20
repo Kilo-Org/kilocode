@@ -3,7 +3,10 @@ package ai.kilocode.backend.app
 import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.cli.KiloBackendCliManager
 import ai.kilocode.backend.cli.KiloCliDataParser
+import ai.kilocode.backend.cli.ResponseFailure
+import ai.kilocode.backend.cli.bodyName
 import ai.kilocode.backend.cli.bodySummary
+import ai.kilocode.backend.cli.responseFailure
 import ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService
 import ai.kilocode.backend.migration.LegacyMigrationDetection
 import ai.kilocode.backend.migration.LegacyMigrationStatus
@@ -617,17 +620,17 @@ class KiloBackendAppService private constructor(
                 logResponseBody("profile", e)
                 return FetchResult.ok(null)
             }
-            logFailure("Profile fetch failed: HTTP ${e.statusCode}", e)
+            logFailure("Profile fetch failed", e)
             logResponseBody("profile", e)
             FetchResult.fail("profile", e)
         } catch (e: ServerException) {
             // 5xx from the CLI — profile endpoint is unreachable (no auth,
             // gateway down, etc.). Treat the same as not-logged-in.
-            logFailure("Profile fetch: server error (${e.statusCode}) — treating as unavailable", e)
+            logFailure("Profile fetch: server error — treating as unavailable", e)
             logResponseBody("profile", e)
             FetchResult.ok(null)
         } catch (e: Exception) {
-            logFailure("Profile fetch failed: ${failureDetail(e)}", e)
+            logFailure("Profile fetch failed", e)
             FetchResult.fail("profile", e)
         }
     }
@@ -648,10 +651,7 @@ class KiloBackendAppService private constructor(
                     try {
                         val text = call.execute().use { response ->
                             val text = response.body?.string().orEmpty()
-                            if (!response.isSuccessful) {
-                                val failure = "HTTP ${response.code} ${response.message} ${bodySummary(text)}"
-                                throw IllegalStateException(failure)
-                            }
+                            if (!response.isSuccessful) throw responseFailure(response.code, response.message, text)
                             text
                         }
                         if (cont.isActive) cont.resume(text)
@@ -664,7 +664,7 @@ class KiloBackendAppService private constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Global config fetch failed: ${e.message}", e)
+            log.warn("Global config fetch failed: ${failureLogDetail(e)}", e)
             FetchResult.fail("config", e)
         }
     }
@@ -675,7 +675,7 @@ class KiloBackendAppService private constructor(
         return try {
             FetchResult.ok(client.kiloNotifications())
         } catch (e: Exception) {
-            logFailure("Notifications fetch failed: ${failureDetail(e)}", e)
+            logFailure("Notifications fetch failed", e)
             FetchResult.fail("notifications", e)
         }
     }
@@ -695,7 +695,7 @@ class KiloBackendAppService private constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            logFailure("Experimental capabilities fetch failed: ${failureDetail(e)}", e)
+            logFailure("Experimental capabilities fetch failed", e)
             false
         }
     }
@@ -806,11 +806,18 @@ class KiloBackendAppService private constructor(
     }
 
     /**
-     * Log a failed CLI call as its message only when the call carried a response body or the body
-     * failed to decode; the formatter otherwise writes the throwable with its stack trace.
+     * Log a failed CLI call with its status and body size. The throwable is passed only when the
+     * call carried no response body and the body did not fail to decode — the formatter otherwise
+     * writes the throwable with its stack trace.
      */
     private fun logFailure(message: String, e: Exception) {
-        if (failureBody(e) != null || e is SerializationException) log.warn(message) else log.warn(message, e)
+        val line = "$message: ${failureLogDetail(e)}"
+        val bodyOnly = failureBody(e) != null || e is SerializationException || e is ResponseFailure
+        if (bodyOnly) {
+            log.warn(line)
+            return
+        }
+        log.warn(line, e)
     }
 
     private suspend fun <T> fetchWithRetry(
@@ -1078,25 +1085,33 @@ private fun failureStatus(e: Exception): Int? = when (e) {
 }
 
 /** Raw response body of a failed CLI call. */
-
 private fun failureBody(e: Exception): Any? = when (e) {
     is ClientException -> (e.response as? ClientError<*>)?.body
     is ServerException -> (e.response as? ServerError<*>)?.body
     else -> null
 }
 
-/** Status and body size for a failed call. */
+/** User-facing detail of a failed call: the status and, when the body carries one, the error name. */
 private fun failureDetail(e: Exception): String? {
     val status = failureStatus(e)
-    val body = failureBody(e)
+    val name = bodyName(failureBody(e)?.toString().orEmpty())
     return when {
-        status != null && body != null -> "HTTP $status: ${bodySummary(body.toString())}"
+        status != null && name != null -> "HTTP $status $name"
         status != null -> "HTTP $status"
         e is ConnectException -> "Connection refused: ${e.message}"
         e is SocketTimeoutException -> "Timeout: ${e.message}"
         e is SerializationException -> "Response parse error: ${e.javaClass.simpleName}"
         else -> e.message
     }
+}
+
+/** Status and body size for the log line of a failed call. */
+private fun failureLogDetail(e: Exception): String {
+    if (e is ResponseFailure) return e.summary
+    val status = failureStatus(e)
+    val body = failureBody(e)
+    if (status != null && body != null) return "HTTP $status: ${bodySummary(body.toString())}"
+    return failureDetail(e).orEmpty()
 }
 
 /** Thrown when a required data fetch exhausts all retries. */
