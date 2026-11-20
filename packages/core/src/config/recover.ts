@@ -79,7 +79,7 @@ function prune(input: unknown, issues: readonly Issue[], diagnostics: Diagnostic
     // Rewalk the removed branch upward: a container that kept no member holds nothing, so it goes too.
     for (let length = target.path.length - 1; length >= 1; length -= 1) {
       const branch = target.path.slice(0, length)
-      const value = valueAt(next, branch)
+      const value = probe(next, branch).value
       if (!container(value) || Object.keys(value).length) break
       drop(next, branch)
     }
@@ -96,13 +96,17 @@ function atomic(path: readonly Segment[]) {
   return index === -1 ? path : path.slice(0, index + 1)
 }
 
-function valueAt(root: unknown, path: readonly Segment[]): unknown {
+/**
+ * Reports whether the document holds the value at `path`, and that value. Presence is a property of the
+ * containers alone: a member with an explicit `undefined` value is present, so it is what gets removed.
+ */
+function probe(root: unknown, path: readonly Segment[]): { readonly found: boolean; readonly value: unknown } {
   let current: unknown = root
   for (const segment of path) {
-    if (!container(current) || !holds(current, segment)) return undefined
+    if (!container(current) || !holds(current, segment)) return { found: false, value: undefined }
     current = lookup(current, segment)
   }
-  return current
+  return { found: true, value: current }
 }
 
 /**
@@ -113,7 +117,7 @@ function valueAt(root: unknown, path: readonly Segment[]): unknown {
 function locate(root: unknown, path: readonly Segment[]): Segment[] | undefined {
   for (let length = path.length; length > 0; length -= 1) {
     const candidate = path.slice(0, length)
-    if (valueAt(root, candidate) !== undefined) return candidate
+    if (probe(root, candidate).found) return candidate
   }
   return undefined
 }
@@ -186,8 +190,15 @@ function summarize(issues: readonly Issue[]) {
     .join("; ")
 }
 
+/** A setting name that reads as a plain member after a dot. Any other name is quoted in brackets. */
+const identifier = /^[A-Za-z_$][A-Za-z0-9_$]*$/
+
 function render(path: readonly Segment[]): string {
   let text = "$"
-  for (const segment of path) text = typeof segment === "number" ? `${text}[${segment}]` : `${text}.${segment}`
+  for (const segment of path) {
+    if (typeof segment === "number") text = `${text}[${segment}]`
+    else if (identifier.test(segment)) text = `${text}.${segment}`
+    else text = `${text}[${JSON.stringify(segment)}]`
+  }
   return text
 }

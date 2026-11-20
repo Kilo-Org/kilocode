@@ -4,6 +4,7 @@ import { Effect, Layer } from "effect"
 import { type ParseError, parse } from "jsonc-parser"
 import { Config } from "@opencode-ai/core/config"
 import { ConfigRecover } from "@opencode-ai/core/config/recover"
+import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(Layer.empty)
@@ -103,6 +104,33 @@ describe("ConfigRecover", () => {
       expect(result.value.agents?.reviewer?.mode).toBe("subagent")
       expect(result.diagnostics.map((diagnostic) => diagnostic.path)).toEqual([
         "$.agents.reviewer.request.headers.bad",
+      ])
+    }),
+  )
+
+  it.effect("keeps the siblings of a member that is present with an explicit undefined value", () =>
+    Effect.sync(() => {
+      const result = ConfigRecover.recover(Config.Info, {
+        agents: { reviewer: { request: { headers: { good: "one", bad: undefined } } } },
+      })
+      if (result.type !== "recovered") throw new Error("expected the agent to survive")
+      expect(result.value.agents?.reviewer?.request?.headers).toEqual({ good: "one" })
+      expect(result.diagnostics.map((diagnostic) => diagnostic.path)).toEqual([
+        "$.agents.reviewer.request.headers.bad",
+      ])
+    }),
+  )
+
+  it.effect("quotes a permission key that is not a plain identifier in brackets", () =>
+    Effect.sync(() => {
+      const result = ConfigRecover.recover(ConfigV1.Info, {
+        permission: { edit: { "*": "maybe" }, bash: { "git push*": "maybe" }, "custom.action": "maybe" },
+      })
+      if (result.type !== "recovered") throw new Error("expected the permission map to survive")
+      expect(result.diagnostics.map((diagnostic) => diagnostic.path)).toEqual([
+        '$.permission.edit["*"]',
+        '$.permission["custom.action"]',
+        '$.permission.bash["git push*"]',
       ])
     }),
   )
