@@ -8,6 +8,8 @@ type State = "connecting" | "connected" | "disconnected" | "error"
 type Internals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   providersRetry: boolean
+  providersRefresh: Promise<void> | null
+  setProjectDirectory: (directory: string | null) => void
   cachedConfigMessage: unknown
   cachedConfigDirectory: string | null
   retryInitialization: () => Promise<void>
@@ -30,7 +32,8 @@ type Internals = {
   startStatsPolling: () => void
 }
 
-function connection(online = true, custom?: unknown) {
+function connection(online: boolean | (() => boolean) = true, custom?: unknown) {
+  const up = typeof online === "function" ? online : () => online
   let listener: ((state: State, error?: Error) => void) | undefined
   const client = custom ?? { kilo: { profile: async () => ({ data: null }) } }
   return {
@@ -40,7 +43,7 @@ function connection(online = true, custom?: unknown) {
     },
     connect: async () => {},
     getClient: () => {
-      if (!online) throw new Error("Not connected — call connect() first")
+      if (!up()) throw new Error("Not connected — call connect() first")
       return client as never
     },
     onEventFiltered: () => () => undefined,
@@ -86,6 +89,25 @@ function stub(internal: Internals) {
   internal.seedSessionStatusMap = async () => {}
   internal.sendNotificationSettings = () => {}
   internal.startStatsPolling = () => {}
+}
+
+function remote(requests: string[]) {
+  return {
+    kilo: {
+      authStatus: async () => ({ data: { authenticated: false } }),
+      profile: async () => ({ data: null }),
+    },
+    provider: {
+      list: async (input: { directory: string }) => {
+        requests.push(input.directory)
+        return { data: { all: [], connected: [], default: {} } }
+      },
+    },
+  }
+}
+
+function loaded(messages: unknown[]) {
+  return messages.filter((message) => (message as { type?: string } | null)?.type === "providersLoaded")
 }
 
 describe("KiloProvider providers on reconnect", () => {
@@ -216,5 +238,76 @@ describe("KiloProvider providers on reconnect", () => {
     await Bun.sleep(0)
 
     expect(providers).toBe(before)
+  })
+
+  it("keeps the provider view on the active project after a project switch", async () => {
+    let dir = "/project-a"
+    let online = true
+    const requests: string[] = []
+    const messages: unknown[] = []
+    const internal = provider(
+      connection(() => online, remote(requests)),
+      () => dir,
+    )
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    await internal.fetchAndSendProviders()
+    expect(loaded(messages)).toHaveLength(1)
+    expect(requests).toEqual(["/project-a"])
+
+    online = false
+    dir = "/project-b"
+    internal.setProjectDirectory("/project-b")
+    const before = messages.length
+
+    await internal.fetchAndSendProviders()
+
+    expect(loaded(messages.slice(before))).toHaveLength(0)
+    expect(internal.providersRetry).toBe(true)
+  })
+
+  it("sends the new project's provider payload on the next connection", async () => {
+    let dir = "/project-a"
+    let online = true
+    const requests: string[] = []
+    const messages: unknown[] = []
+    const service = connection(() => online, remote(requests))
+    const internal = provider(service, () => dir)
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    await internal.fetchAndSendProviders()
+    online = false
+    dir = "/project-b"
+    internal.setProjectDirectory("/project-b")
+    const before = messages.length
+
+    await internal.initializeConnection()
+    online = true
+    service.emitState("connected")
+    if (internal.providersRefresh) await internal.providersRefresh
+
+    expect(requests.at(-1)).toBe("/project-b")
+    expect(loaded(messages.slice(before))).toHaveLength(1)
+  })
+
+  it("fetches providers for the project a retained panel switched to", async () => {
+    let dir = "/project-a"
+    const requests: string[] = []
+    const messages: unknown[] = []
+    const internal = provider(connection(true, remote(requests)), () => dir)
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    await internal.fetchAndSendProviders()
+    const before = messages.length
+
+    dir = "/project-b"
+    internal.setProjectDirectory("/project-b")
+    if (internal.providersRefresh) await internal.providersRefresh
+
+    expect(requests).toEqual(["/project-a", "/project-b"])
+    expect(loaded(messages.slice(before))).toHaveLength(1)
   })
 })

@@ -740,8 +740,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.cachedProviderUsageMessage = null
     this.configBindings.clear()
     this.cachedConfigMessage = null
+    this.invalidateProviders()
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
     this.postMessage({ type: "configBindingExpired", reason: "project-changed" })
+    void this.fetchAndSendProviders()
   }
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
@@ -2875,6 +2877,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private invalidateProviders(): void {
     this.providersGeneration++
     this.cachedProvidersMessage = null
+    this.cachedProvidersDirectory = null
     this.postMessage({ type: "providersLoading" })
   }
 
@@ -2892,11 +2895,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.providersQueued = false
         const client = this.client
         if (!client) {
-          // Nothing was loaded, so remember to fetch once a client is available.
-          // The webview retries may already be spent by then.
-          if (!this.cachedProvidersMessage) this.providersRetry = true
-          if (this.cachedProvidersMessage && generation === this.providersGeneration)
-            this.postMessage(this.cachedProvidersMessage)
+          // Keep the provider view on the panel's project: replay only a payload loaded for
+          // that project, and mark the fetch to run once a client is available.
+          const runnable =
+            this.cachedProvidersMessage !== null &&
+            this.cachedProvidersDirectory !== null &&
+            sameDirectory(this.cachedProvidersDirectory, this.settingsDirectory())
+          if (runnable && generation === this.providersGeneration) this.postMessage(this.cachedProvidersMessage)
+          else this.providersRetry = true
           return
         }
         try {
