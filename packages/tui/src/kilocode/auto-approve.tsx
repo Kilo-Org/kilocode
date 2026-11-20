@@ -4,6 +4,7 @@
 // "auto" while it is on.
 import { dict } from "@kilocode/kilo-i18n/en"
 import { Plugin } from "@opencode/plugin/tui"
+import { KiloAutoApproveRpc } from "@opencode/schema/kilocode/auto-approve"
 import { KiloSettingsRpc } from "@opencode/schema/kilocode/settings"
 import { createEffect, createSignal, on, onCleanup } from "solid-js"
 import { useConfig } from "../config"
@@ -12,41 +13,31 @@ import { usePermission } from "../context/permission"
 import { isRecord } from "../util/record"
 import { nextPermissionMode, permissionModeOverride, setPermissionMode } from "./permission-mode"
 
-export type ServerAutoApproveState = "enabled" | "narrowed" | "disabled"
+export type ServerAutoApproveState = KiloAutoApproveRpc.State
 
-/** The location the settings RPC answers for: the TUI's own project, the same one every other Kilo command reads. */
+/** The location the Kilo RPCs answer for: the TUI's own project, the same one every other Kilo command reads. */
 const located = (context: Plugin.Context) => ({
   location: context.location ?? context.data.location.default(),
 })
 
-/**
- * The saved auto-approve state: only the global config can enable it; a project `false` reports `"narrowed"` so the
- * toggle surfaces the project override instead of writing a global rule that cannot take effect here.
- */
-export function savedAutoApproveState(global: unknown, project: unknown): ServerAutoApproveState {
-  if (isRecord(project) && project.auto_approve === false) return "narrowed"
-  if (isRecord(global) && global.auto_approve === true) return "enabled"
-  return "disabled"
-}
-
-async function readAutoApprove(context: Plugin.Context) {
-  const settings = context.client.rpc(KiloSettingsRpc.Definition)
-  const location = located(context)
-  const [global, project] = await Promise.all([
-    settings.read({ scope: "global" }, location),
-    settings.read({ scope: "project" }, location).catch(() => undefined),
-  ])
-  return savedAutoApproveState(global.document, project?.document)
+/** Reads the effective auto-approve state from the server plugin, resolved across every loaded config entry. */
+async function readAutoApprove(context: Plugin.Context): Promise<ServerAutoApproveState> {
+  const result = await context.client.rpc(KiloAutoApproveRpc.Definition).get({}, located(context))
+  return result.state
 }
 
 async function writeOnce(context: Plugin.Context, enabled: boolean) {
   const settings = context.client.rpc(KiloSettingsRpc.Definition)
   const location = located(context)
   const current = await settings.read({ scope: "global" }, location)
+  // Removing the key avoids leaving a stale `false` when the write target holds it; if a lower-precedence global file
+  // holds `true` instead, write `false` so the higher-precedence write target overrides it.
+  const hasKey = isRecord(current.document) && current.document.auto_approve !== undefined
+  const value = enabled ? true : hasKey ? null : false
   await settings.write(
     {
       scope: "global",
-      set: { auto_approve: enabled ? true : null } as never,
+      set: { auto_approve: value } as never,
       ...(current.target.revision
         ? { expected: { path: current.target.path, revision: current.target.revision } }
         : {}),
@@ -55,7 +46,7 @@ async function writeOnce(context: Plugin.Context, enabled: boolean) {
   )
 }
 
-/** Writes the global rule, removing the key on disable and retrying once on a concurrent revision conflict. */
+/** Writes the global rule, retrying once on a concurrent revision conflict. */
 async function writeAutoApprove(context: Plugin.Context, enabled: boolean) {
   try {
     await writeOnce(context, enabled)

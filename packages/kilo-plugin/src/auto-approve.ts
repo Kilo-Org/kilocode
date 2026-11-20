@@ -7,6 +7,7 @@ import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Permission } from "@opencode/core/permission"
 import { define, type Context } from "@opencode/plugin/effect/plugin"
 import type { Entry } from "@opencode/schema/config"
+import { KiloAutoApproveRpc } from "@opencode/schema/kilocode/auto-approve"
 import { KiloPermission } from "@opencode/schema/kilocode/permission"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
@@ -14,33 +15,43 @@ import { Effect, Option, type Scope, Stream } from "effect"
 import { within } from "./settings"
 
 /**
- * Resolves the effective `auto_approve` flag from config entries in load order. Only a document inside the global
- * config directory can enable it, so a checked-in project file cannot grant the bypass; any nearer document can still
- * turn it off with `false`.
+ * Resolves the effective `auto_approve` state from every loaded config entry in load order. Only a document inside the
+ * canonical global config directory can enable it (`"enabled"`), so a checked-in project file cannot grant the bypass;
+ * any non-global document setting `false` narrows it (`"narrowed"`).
  */
-export const isAutoApproveEnabled = Effect.fnUntraced(function* (
+export const autoApproveState = Effect.fnUntraced(function* (
   entries: readonly Entry[],
   globalConfig: string,
   resolve: (file: string) => Effect.Effect<string>,
 ) {
   const globalDirectory = yield* resolve(globalConfig)
-  let enabled = false
+  let state: KiloAutoApproveRpc.State = "disabled"
   for (const entry of entries) {
     if (entry.type !== "document" || !(entry.info instanceof KiloConfigPolicy.Info)) continue
     const setting = entry.info.auto_approve
     if (setting === undefined) continue
-    if (setting) {
-      if (!entry.path) continue
-      if (!within(globalDirectory, yield* resolve(entry.path))) continue
+    const isGlobal = entry.path !== undefined && within(globalDirectory, yield* resolve(entry.path))
+    if (isGlobal) {
+      state = setting ? "enabled" : "disabled"
+      continue
     }
-    enabled = setting
+    if (!setting) state = "narrowed"
   }
-  return enabled
+  return state
 })
+
+export const isAutoApproveEnabled = (
+  entries: readonly Entry[],
+  globalConfig: string,
+  resolve: (file: string) => Effect.Effect<string>,
+) => autoApproveState(entries, globalConfig, resolve).pipe(Effect.map((state) => state === "enabled"))
 
 export const installAutoApprove = Effect.fn("KiloAutoApprovePlugin")(function* (ctx: {
   readonly permission: Pick<Context["permission"], "hook">
-  readonly event: { readonly subscribe: (options: { readonly types: readonly ["config.updated"] }) => Stream.Stream<unknown, unknown> }
+  readonly rpc?: Pick<Context["rpc"], "register">
+  readonly event: {
+    readonly subscribe: (options: { readonly types: readonly ["config.updated"] }) => Stream.Stream<unknown, unknown>
+  }
 }) {
   const config = yield* Effect.serviceOption(Config.Service)
   if (Option.isNone(config)) return
@@ -48,8 +59,17 @@ export const installAutoApprove = Effect.fn("KiloAutoApprovePlugin")(function* (
   const fs = yield* FSUtil.Service
   const global = yield* Global.Service
 
-  const enabled = () =>
-    config.value.entries().pipe(Effect.flatMap((entries) => isAutoApproveEnabled(entries, global.config, fs.resolve)))
+  const state = () =>
+    config.value.entries().pipe(Effect.flatMap((entries) => autoApproveState(entries, global.config, fs.resolve)))
+  const enabled = () => state().pipe(Effect.map((current) => current === "enabled"))
+
+  if (ctx.rpc) {
+    yield* ctx.rpc
+      .register(KiloAutoApproveRpc.Definition, {
+        get: () => state().pipe(Effect.map((current) => ({ state: current }))),
+      })
+      .pipe(Effect.orDie)
+  }
 
   // Registered before Flow, Browser, Agent Manager, managed Policy and Sandbox hooks, so every hardening rule and
   // deny runs after this hook and still wins.

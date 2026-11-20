@@ -52,6 +52,8 @@ async function sessionApp(input: { config?: Config.Info; auto?: boolean }) {
     args: { sessionID, auto: input.auto },
     config: { animations: false, tabs: { mode: "off" }, ...input.config },
     fetch: async (url, request) => {
+      if (url.pathname === "/api/rpc/kilocode.auto-approve/get")
+        return json({ output: { state: autoApprove ? "enabled" : "disabled" } })
       if (url.pathname === "/api/rpc/kilocode.settings/read")
         return json({
           output: {

@@ -9,6 +9,7 @@ import { Location } from "@opencode/core/location"
 import { Permission } from "@opencode/core/permission"
 import { PermissionSaved } from "@opencode/core/permission/saved"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
+import { Rpc } from "@opencode/core/rpc"
 import { Project } from "@opencode/core/project"
 import { ProjectTable } from "@opencode/core/project/sql"
 import { AbsolutePath } from "@opencode/core/schema"
@@ -24,7 +25,7 @@ import { Deferred, Effect, Fiber, Layer } from "effect"
 import { location } from "../../core/test/fixture/location"
 import { testEffect } from "../../core/test/lib/effect"
 import { installPermission } from "../src/agent-manager/permission"
-import { installAutoApprove, isAutoApproveEnabled } from "../src/auto-approve"
+import { installAutoApprove, autoApproveState, isAutoApproveEnabled } from "../src/auto-approve"
 
 const resolveIdentity = (file: string) => Effect.succeed(file)
 const document = (value?: boolean, file?: string) =>
@@ -34,24 +35,47 @@ const document = (value?: boolean, file?: string) =>
     info: new KiloConfigPolicy.Info(value === undefined ? {} : { auto_approve: value }),
   })
 
-describe("isAutoApproveEnabled", () => {
-  test("only lets the global config enable it, while a project can narrow it", async () => {
-    const run = (entries: Entry[], resolve = resolveIdentity) =>
+describe("autoApproveState", () => {
+  test("resolves effective state across all loaded global and non-global documents", async () => {
+    const state = (entries: Entry[], resolve = resolveIdentity) =>
+      Effect.runPromise(autoApproveState(entries, "/global", resolve))
+    const enabled = (entries: Entry[], resolve = resolveIdentity) =>
       Effect.runPromise(isAutoApproveEnabled(entries, "/global", resolve))
 
-    expect(await run([])).toBe(false)
-    expect(await run([document(true, "/global/kilo2.json")])).toBe(true)
-    expect(await run([document(true, "/project/kilo2.json")])).toBe(false)
-    expect(await run([document(true, "/global/kilo2.json"), document(false, "/project/kilo2.json")])).toBe(false)
-    expect(await run([document(false, "/global/kilo2.json"), document(true, "/project/kilo2.json")])).toBe(false)
-    expect(await run([document(true)])).toBe(false)
-    expect(await run([document(true, "/global/kilo2.json"), document(false)])).toBe(false)
+    expect(await state([])).toBe("disabled")
+    expect(await state([document(true, "/global/kilo2.json")])).toBe("enabled")
+    // A lower-precedence global true remains enabled when a higher-precedence global file omits the key.
+    expect(await state([document(true, "/global/kilo2.json"), document(undefined, "/global/kilo2.jsonc")])).toBe(
+      "enabled",
+    )
+    expect(await state([document(true, "/global/kilo2.json"), document(false, "/global/kilo2.jsonc")])).toBe("disabled")
+    expect(await state([document(true, "/project/kilo2.json")])).toBe("disabled")
+    expect(await state([document(true, "/global/kilo2.json"), document(false, "/project/kilo2.json")])).toBe("narrowed")
+    // A lower-precedence project false still narrows even when a nearer project file omits the key or sets true.
+    expect(
+      await state([
+        document(true, "/global/kilo2.json"),
+        document(false, "/project/.kilo2/kilo2.json"),
+        document(undefined, "/project/sub/kilo2.json"),
+      ]),
+    ).toBe("narrowed")
+    expect(
+      await state([
+        document(true, "/global/kilo2.json"),
+        document(false, "/project/kilo2.json"),
+        document(true, "/project/sub/kilo2.json"),
+      ]),
+    ).toBe("narrowed")
+    expect(await state([document(false, "/global/kilo2.json"), document(true, "/project/kilo2.json")])).toBe("disabled")
+    expect(await state([document(true)])).toBe("disabled")
+    expect(await state([document(true, "/global/kilo2.json"), document(false)])).toBe("narrowed")
+    expect(await enabled([document(true, "/global/kilo2.json"), document(false, "/project/kilo2.json")])).toBe(false)
     // Symlinked roots resolve before comparison (for example /tmp -> /private/tmp on macOS).
     expect(
-      await run([document(true, "/private/global/kilo2.json")], (file) =>
+      await state([document(true, "/private/global/kilo2.json")], (file) =>
         Effect.succeed(file.startsWith("/global") ? `/private${file}` : file),
       ),
-    ).toBe(true)
+    ).toBe("enabled")
   })
 })
 
@@ -73,6 +97,7 @@ const it = testEffect(
       PermissionSaved.node,
       Agent.node,
       PluginHooks.node,
+      Rpc.node,
       Permission.node,
     ]),
     [Location.node.replace(current), Global.node.replace(globalLayer), Config.node.replace(Config.testLayer(entries))],
@@ -112,18 +137,22 @@ function setup(initial: Entry[] = [], rules: Permission.Ruleset = []) {
       }),
     )
     const hooks = yield* PluginHooks.Service
+    const rpc = yield* Rpc.Service
     const bus = yield* Bus.Service
     const ctx = {
       permission: {
         hook: (name: "evaluate", callback: Parameters<Context["permission"]["hook"]>[1]) =>
           hooks.register("permission", name, callback),
       },
+      rpc: {
+        register: rpc.register,
+      },
       event: {
         subscribe: () => bus.subscribe(Event.Updated),
       },
     }
     yield* installAutoApprove(ctx)
-    return { ctx }
+    return { ctx, rpcGet: () => rpc.call("kilocode.auto-approve", "get", {}) }
   })
 }
 
@@ -138,6 +167,17 @@ function assertion(input: Partial<Permission.AssertInput> = {}): Permission.Asse
 }
 
 describe("KiloAutoApprovePlugin", () => {
+  it.effect("reports effective enabled, narrowed and disabled state through its RPC", () =>
+    Effect.gen(function* () {
+      const { rpcGet } = yield* setup([])
+      expect(yield* rpcGet()).toEqual({ state: "disabled" })
+      entries.splice(0, entries.length, document(true, "/global/kilo2.json"))
+      expect(yield* rpcGet()).toEqual({ state: "enabled" })
+      entries.push(document(false, "/project/.kilo2/kilo2.json"))
+      expect(yield* rpcGet()).toEqual({ state: "narrowed" })
+    }),
+  )
+
   it.effect("allows an ordinary ask when global auto_approve is on", () =>
     Effect.gen(function* () {
       yield* setup([document(true, "/global/kilo2.json")])

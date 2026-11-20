@@ -1,20 +1,24 @@
 import { beforeEach, describe, expect, it, test } from "bun:test"
-import { savedAutoApproveState } from "../../src/kilocode/auto-approve"
 import { nextPermissionMode, permissionModeOverride, setPermissionMode } from "../../src/kilocode/permission-mode"
 import { createAppFixture } from "../fixture/app"
 import { directory, json } from "../fixture/tui-client"
 
 const location = { directory, project: { id: "project", directory, canonical: directory } }
 
-type AutoApproveState = { enabled: boolean; project?: boolean; writes?: number }
+type AutoApproveState = { enabled: boolean; project?: boolean; writes?: number; globalHasKey?: boolean }
 
-/** The `kilocode.settings` RPC over the global and project auto-approve keys. */
+/** The `kilocode.auto-approve` and `kilocode.settings` RPCs over one in-memory store. */
 function settings(state: AutoApproveState) {
   return async (url: URL, request: Request) => {
+    if (url.pathname === "/api/rpc/kilocode.auto-approve/get") {
+      const value = state.project === false ? "narrowed" : state.enabled ? "enabled" : "disabled"
+      return json({ output: { state: value } })
+    }
     if (url.pathname === "/api/rpc/kilocode.settings/read") {
       const body = (await request.clone().json()) as { input?: { scope?: "global" | "project" } }
       const scope = body.input?.scope ?? "global"
-      const value = scope === "project" ? state.project : state.enabled ? true : undefined
+      const globalKey = state.globalHasKey ?? state.enabled
+      const value = scope === "project" ? state.project : globalKey ? true : undefined
       return json({
         output: {
           scope,
@@ -26,7 +30,9 @@ function settings(state: AutoApproveState) {
     if (url.pathname === "/api/rpc/kilocode.settings/write") {
       const body = (await request.clone().json()) as { input?: { set?: { auto_approve?: boolean | null } } }
       state.writes = (state.writes ?? 0) + 1
-      state.enabled = body.input?.set?.auto_approve === true
+      const written = body.input?.set?.auto_approve
+      state.enabled = written === true
+      state.globalHasKey = written === true ? true : written === false ? true : false
       return json({
         output: {
           scope: "global",
@@ -108,15 +114,6 @@ describe("auto-approve mode", () => {
     setPermissionMode("autoaccept")
     setPermissionMode(undefined)
     expect(permissionModeOverride()).toBeUndefined()
-  })
-
-  it("only lets the global config enable the saved rule, while a project can narrow it", () => {
-    expect(savedAutoApproveState({ auto_approve: true }, undefined)).toBe("enabled")
-    expect(savedAutoApproveState({ auto_approve: true }, { auto_approve: true })).toBe("enabled")
-    expect(savedAutoApproveState({}, { auto_approve: true })).toBe("disabled")
-    expect(savedAutoApproveState({ auto_approve: true }, { auto_approve: false })).toBe("narrowed")
-    expect(savedAutoApproveState({}, { auto_approve: false })).toBe("narrowed")
-    expect(savedAutoApproveState(undefined, undefined)).toBe("disabled")
   })
 })
 
@@ -243,6 +240,38 @@ test(
     await app.waitForFrame((frame) => frame.includes("Auto-approve enabled."))
     expect(attempts).toBe(2)
     expect(state.enabled).toBe(true)
+  },
+  30000,
+)
+
+test(
+  "writes false when disabling a lower-precedence global file not defined in the write target",
+  async () => {
+    const sessionID = "ses_autoapprove_lower_global"
+    const state: AutoApproveState = { enabled: true, globalHasKey: false }
+    const writtenValues: unknown[] = []
+    const base = withSession(sessionID, state)
+    await using app = await createAppFixture({
+      width: 110,
+      height: 34,
+      args: { sessionID },
+      config: { animations: false, tabs: { mode: "off" } },
+      fetch: async (url, request) => {
+        if (url.pathname === "/api/rpc/kilocode.settings/write") {
+          const body = (await request.clone().json()) as { input?: { set?: { auto_approve?: unknown } } }
+          writtenValues.push(body.input?.set?.auto_approve)
+        }
+        return base(url, request)
+      },
+    })
+    await app.ready
+    await until(app, "session", (frame) => frame.includes("Demo Model"))
+    expect(app.captureCharFrame()).toContain(" auto ")
+
+    app.mockInput.pressKey("a", { ctrl: true, meta: true })
+    await until(app, "disabled toast", (frame) => frame.includes("Auto-approve disabled."))
+    expect(writtenValues).toEqual([false])
+    expect(app.captureCharFrame()).not.toContain(" auto ")
   },
   30000,
 )
