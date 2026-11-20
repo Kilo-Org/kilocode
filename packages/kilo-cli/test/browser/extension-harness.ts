@@ -45,11 +45,11 @@ async function playwright(): Promise<Playwright> {
 
 /**
  * The Chromium the harness launches: the revision the resolved playwright-core drives (its `browsers.json`;
- * chromium-1244 for 1.64-alpha), found in PLAYWRIGHT_BROWSERS_PATH, ~/.cache/ms-playwright or /opt/ms-playwright.
- * Another revision connects but times out every `worker.evaluate`, so E2E_CHROMIUM naming another `chromium-<n>` and
- * a missing build both stop the run with what to install.
+ * chromium-1244 for 1.64-alpha), found in `extraRoots` first, then PLAYWRIGHT_BROWSERS_PATH, ~/.cache/ms-playwright and
+ * /opt/ms-playwright. Another revision connects but times out every `worker.evaluate`, so E2E_CHROMIUM naming another
+ * `chromium-<n>` and a missing build both stop the run with what to install.
  */
-export async function chromiumExecutable(): Promise<string> {
+export async function chromiumExecutable(extraRoots: string[] = []): Promise<string> {
   const packageFile = Bun.resolveSync("playwright-core/package.json", pluginDirectory)
   const version = String((await Bun.file(packageFile).json()).version)
   const browsers = (await Bun.file(path.join(path.dirname(packageFile), "browsers.json")).json()) as {
@@ -68,6 +68,7 @@ export async function chromiumExecutable(): Promise<string> {
     return override
   }
   const roots = [
+    ...extraRoots,
     process.env.PLAYWRIGHT_BROWSERS_PATH,
     path.join(os.homedir(), ".cache", "ms-playwright"),
     "/opt/ms-playwright",

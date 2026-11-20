@@ -417,7 +417,9 @@ const install = await spawnText(
   base,
 )
 console.error(`install-chromium exit ${install.code}: ${(install.out + install.err).trim().slice(-200)}`)
-const chromium = await chromiumExecutable()
+// The extension side runs the pinned revision `install-chromium` just wrote into `browsersDir`, so a machine with no
+// system Playwright cache still has one build for both backends.
+const chromium = await chromiumExecutable([browsersDir])
 
 const cliVersion = (await spawnText([binary, "--version"], baseEnv("playwright").env, base)).out.trim()
 const chromiumVersion = (await spawnText([chromium, "--version"], baseEnv("playwright").env, base)).out.trim()
