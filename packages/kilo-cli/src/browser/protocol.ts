@@ -26,6 +26,8 @@ export const ExtensionInfo = z.object({
     dialogs: z.boolean(),
     fileUpload: z.boolean(),
     tabGroups: z.boolean(),
+    // Extensions built before the loopback hub sent keepalives omit it; a hub keeps such an extension alive no other way.
+    keepalive: z.boolean().optional(),
   }),
 })
 export type ExtensionInfo = z.infer<typeof ExtensionInfo>
@@ -94,10 +96,15 @@ export const Routed = z.object({
 })
 export type Routed = z.infer<typeof Routed>
 
+// Carries nothing. A loopback hub sends it while a CLI is attached: Chrome keeps an extension service worker alive
+// while its WebSocket exchanges messages, and stops it after 30 s without any.
+export const HubKeepalive = z.object({ type: z.literal("hub.keepalive") })
+
 export const HubToExtension = z.discriminatedUnion("type", [
   HubHello,
   ControllerConnected,
   ControllerDisconnected,
+  HubKeepalive,
   Routed,
 ])
 export type HubToExtension = z.infer<typeof HubToExtension>
@@ -256,6 +263,9 @@ export const ErrorCodes = {
   tab_taken: -32003,
   user_stopped: -32004,
   unsupported_in_browser: -32005,
+  // The extension holds no session for this handle and the user did not end it (a restart without its state, a
+  // dropped connection). The call did not run, so the CLI may open a new session and send it once more.
+  session_lost: -32006,
   needs_permission: -32010,
   blocked: -32011,
   origin_changed: -32012,

@@ -30,7 +30,14 @@ export type Options = {
   // Answers a request on the hub itself instead of forwarding it to the extension.
   // Returning undefined forwards it; a value is sent back to that controller only.
   local?(method: string, params: unknown): unknown | undefined
+  // How often a loopback hub sends `hub.keepalive` while a CLI is attached (default `Keepalive`); tests shorten it.
+  keepalive?: number
 }
+
+// Chrome stops an extension service worker after 30 s without events, and a WebSocket message counts as one
+// (Chrome 116+), so one keepalive every 20 s keeps the worker, and the CLI's session in it, alive.
+// https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle#chrome_116
+const Keepalive = 20_000
 
 export type Hub = {
   readonly id: string
@@ -55,6 +62,7 @@ export function create(input: Options): Hub {
   const controllers = new Map<string, { send: (frame: proto.HubToCli) => void; close: (reason: string) => void }>()
   let slot: Slot = { kind: "empty" }
   let shut = false
+  let keepalive: NodeJS.Timeout | undefined
 
   function broadcast() {
     const frame: proto.HubToCli =
@@ -64,6 +72,7 @@ export function create(input: Options): Hub {
 
   function vacate(reason: string) {
     if (slot.kind === "empty") return
+    clearInterval(keepalive)
     const link = slot.link
     slot = { kind: "empty" }
     broadcast()
@@ -159,6 +168,15 @@ export function create(input: Options): Hub {
           return
         }
         slot = { kind: "ready", info, link }
+        // A native port keeps the worker alive by itself (Chrome 105+); a WebSocket only while messages cross it.
+        // An extension built before `hub.keepalive` drops the connection over that unknown frame, which would end
+        // every session in it, so only an extension that advertises the capability is kept alive this way.
+        if (input.mode === "loopback" && info.capabilities.keepalive === true) {
+          keepalive = setInterval(() => {
+            if (slot.kind === "ready" && controllers.size > 0) slot.link.send({ type: "hub.keepalive" })
+          }, input.keepalive ?? Keepalive)
+          keepalive.unref()
+        }
         // Controllers that joined while the transport was still handshaking never
         // saw controller.connected, so announce them before the ready broadcast.
         for (const controllerId of controllers.keys()) link.send({ type: "controller.connected", controllerId })
