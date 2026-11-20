@@ -314,9 +314,10 @@ function statusOf(): Status {
 }
 
 /**
- * A plain run ends with exit 1 when the CLI auto-rejected at least one ask, with this diagnostic on stderr
- * (`packages/cli/src/kilocode/run-permission.ts`). That is the documented contract, not a harness failure, so the
- * scenario keeps checking what it was written to check. Any other non-zero exit still fails.
+ * A plain run ends with exit 1 when the CLI auto-rejected at least one ask, with this diagnostic in the run output
+ * (`packages/cli/src/kilocode/run-permission.ts`): the `error` event on stdout in JSON mode, stderr in text mode. That
+ * is the documented contract, not a harness failure, so the scenario keeps checking what it was written to check. Any
+ * other non-zero exit still fails.
  */
 const AUTO_REJECTED = "run ended with an auto-rejected permission"
 
