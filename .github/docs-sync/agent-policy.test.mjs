@@ -143,6 +143,23 @@ check("configContent merges over an existing KILO_CONFIG_CONTENT", () => {
   assert.deepEqual(cfg.permission, { "*": "deny", read: "allow" })
 })
 
+// A base may carry provider settings, and the mode still owns every rule: a
+// base rule would land before the catch-all, where evaluation never reaches it,
+// and a base value the CLI rejects would drop the whole config.
+check("the emitted permission map is the mode's, whatever the base holds", () => {
+  const base = JSON.stringify({
+    provider: { test: { npm: "@ai-sdk/openai-compatible" } },
+    permission: { read: "deny", webfetch: 5, bash: { "*": "allow" } },
+  })
+  for (const mode of [MODE.docsWrite, MODE.toolsDenied]) {
+    const cfg = JSON.parse(configContent(mode, base))
+    assert.deepEqual(cfg.permission, policy().modes[mode].permission, `${mode} must own its permission map`)
+    assert.equal(Object.keys(cfg.permission)[0], "*", `${mode} must keep the catch-all first`)
+    assert.ok(cfg.provider.test, `${mode} must keep the caller's provider settings`)
+    validateMode(mode, { permission: cfg.permission })
+  }
+})
+
 check("configContent rejects an unknown mode", () => {
   assert.throws(() => configContent("nope"), /unknown agent policy mode/)
 })

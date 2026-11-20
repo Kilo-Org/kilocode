@@ -73,8 +73,9 @@ export function validateMode(mode, entry) {
 
 /**
  * `KILO_CONFIG_CONTENT` for one mode, merged over the value already in the
- * environment so a caller's own provider or model settings survive. The policy
- * wins where both define a permission key.
+ * environment so a caller's own provider or model settings survive. The mode
+ * owns `permission` outright: a rule from the base would otherwise land before
+ * the catch-all, and evaluation takes the last matching rule.
  */
 export function configContent(mode, base = process.env.KILO_CONFIG_CONTENT) {
   const modes = policy().modes
@@ -82,7 +83,7 @@ export function configContent(mode, base = process.env.KILO_CONFIG_CONTENT) {
   if (!entry) throw new Error(`unknown agent policy mode: ${mode} (expected one of ${Object.keys(modes).join(", ")})`)
   validateMode(mode, entry)
   const merged = base ? JSON.parse(base) : {}
-  merged.permission = { ...(merged.permission ?? {}), ...entry.permission }
+  merged.permission = { ...entry.permission }
   return JSON.stringify(merged)
 }
 
