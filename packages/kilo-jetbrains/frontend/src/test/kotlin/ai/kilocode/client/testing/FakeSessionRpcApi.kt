@@ -381,24 +381,42 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     var replyPermissionThrows: Exception? = null
 
+    /** Restricts [replyPermissionThrows] to these request ids; empty means every request. */
+    var replyPermissionThrowsFor: Set<String> = emptySet()
+
+    /** Every reply attempt, including the refused ones, in call order. */
+    val permissionReplyAttempts = mutableListOf<String>()
+
     override suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto) {
         assertNotEdt("replyPermission")
-        replyPermissionThrows?.let { throw it }
+        permissionReplyAttempts.add(requestId)
+        replyPermissionThrows?.let { failure ->
+            if (replyPermissionThrowsFor.isEmpty() || requestId in replyPermissionThrowsFor) throw failure
+        }
         permissionReplies.add(Triple(requestId, directory, reply))
     }
 
+    var permissionRulesThrows: Exception? = null
+
     override suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto) {
         assertNotEdt("savePermissionRules")
+        permissionRulesThrows?.let { throw it }
         permissionRulesSaved.add(Triple(requestId, directory, rules))
     }
 
+    var replyQuestionThrows: Exception? = null
+
     override suspend fun replyQuestion(requestId: String, directory: String, answers: QuestionReplyDto) {
         assertNotEdt("replyQuestion")
+        replyQuestionThrows?.let { throw it }
         questionReplies.add(Triple(requestId, directory, answers))
     }
 
+    var rejectQuestionThrows: Exception? = null
+
     override suspend fun rejectQuestion(requestId: String, directory: String) {
         assertNotEdt("rejectQuestion")
+        rejectQuestionThrows?.let { throw it }
         questionRejects.add(requestId to directory)
     }
 

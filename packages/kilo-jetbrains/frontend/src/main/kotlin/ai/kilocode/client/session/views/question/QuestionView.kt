@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
+import ai.kilocode.client.session.model.QuestionRequestState
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.editor.SessionEditorTextField
@@ -82,6 +83,10 @@ class QuestionView(
     }
 
     private val summary = JBLabel()
+    private val failure = JBLabel().apply {
+        border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
+        isVisible = false
+    }
     private val nav = JPanel().apply {
         isOpaque = false
         layout = BoxLayout(this, BoxLayout.X_AXIS)
@@ -125,6 +130,7 @@ class QuestionView(
         nav.add(fwd)
         topPanel.add(summary, BorderLayout.WEST)
         topPanel.add(nav, BorderLayout.EAST)
+        topPanel.add(failure, BorderLayout.SOUTH)
 
         setTopPanel(topPanel)
         setContent(body)
@@ -149,6 +155,25 @@ class QuestionView(
             scroll(follow())
             return
         }
+        // A refused decision only changes state and message: keep the answers the user already gave
+        // and just surface the outcome (or clear it) instead of wiping the form. The card is hidden
+        // between the reply and the outcome, so this covers re-showing a hidden card too.
+        val shown = question
+        if (request == q.id && shown != null &&
+            shown.items == q.items && shown.tool == q.tool && shown.blocking == q.blocking
+        ) {
+            question = q
+            if (isVisible) {
+                syncHeader(q)
+                refresh()
+                return
+            }
+            isVisible = true
+            applyStyle(SessionEditorStyle.current())
+            syncPage()
+            scroll(follow())
+            return
+        }
         request = q.id
         question = q
         idx = 0
@@ -164,18 +189,16 @@ class QuestionView(
 
     @RequiresEdt
     fun hideView() {
-        request = null
-        question = null
-        idx = 0
-        selections = emptyList()
-        customTexts = emptyList()
-        customOpen = emptyList()
+        // Keep the draft: a refused decision re-shows the same request and must restore the answers
+        // already given, so request, question, selections, custom texts and page position survive.
         disposeCustomEditor()
         customFocus = null
         disposeRegs()
         texts.clear()
         body.removeAll()
         setActions(emptyList())
+        failure.text = ""
+        failure.isVisible = false
         isVisible = false
         refresh()
     }
@@ -227,7 +250,9 @@ class QuestionView(
         summary.foreground = SessionUiStyle.Text.Secondary.foreground()
         summary.isVisible = total > 1
         nav.isVisible = total > 1
-        topPanel.isVisible = total > 1
+        failure.text = q.message ?: KiloBundle.message("session.question.error")
+        failure.isVisible = q.state == QuestionRequestState.ERROR
+        topPanel.isVisible = total > 1 || failure.isVisible
         if (total > 1) {
             topPanel.border = JBUI.Borders.empty(0, 0, UiStyle.Gap.sm(), 0)
             setSpacing(UiStyle.Gap.sm(), UiStyle.Gap.pad())

@@ -23,6 +23,7 @@ import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
+import ai.kilocode.client.session.model.QuestionRequestState
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.ui.mode.agentTitle
 import ai.kilocode.client.session.model.ToolCallRef
@@ -1298,7 +1299,13 @@ class SessionController(
             if (!autoApprove) return count
             // Sensitive permissions need a human; skip them here (callers surface the card).
             if (manual(request.metadata)) continue
-            sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
+            // One refused reply must not strand the rest of the batch: report it and keep draining.
+            try {
+                sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
+            } catch (e: Exception) {
+                LOG.warn("${ChatLogSummary.sid(request.sessionID)} kind=permission-auto rid=${request.id} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                continue
+            }
             capture("Permission Auto Approved", sessionProps(request.sessionID) + mapOf("tool" to request.permission, "source" to "drain"))
             count++
         }
@@ -1331,9 +1338,20 @@ class SessionController(
         updateModel { model.setState(SessionState.AwaitingPermission(perm)) }
     }
 
+    @RequiresEdt
+    private fun updateQuestion(id: String, state: QuestionRequestState, message: String? = null) {
+        assertEdt()
+        val current = model.state
+        if (current !is SessionState.AwaitingQuestion) return
+        if (current.question.id != id) return
+        val q = current.question
+        updateModel { model.setState(SessionState.AwaitingQuestion(q.copy(state = state, message = message))) }
+    }
+
     fun replyQuestion(requestId: String, answers: QuestionReplyDto, options: List<List<String>> = answers.answers) {
         assertEdt()
         promptRevision++
+        updateQuestion(requestId, QuestionRequestState.PENDING)
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size}" }
         val current = model.state
         followup = if (current is SessionState.AwaitingQuestion
@@ -1355,6 +1373,7 @@ class SessionController(
             } catch (e: Exception) {
                 edt { followup = null }
                 LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt { updateQuestion(requestId, QuestionRequestState.ERROR, e.message ?: KiloBundle.message("session.question.error")) }
             }
         }
     }
@@ -1362,6 +1381,7 @@ class SessionController(
     fun rejectQuestion(requestId: String) {
         assertEdt()
         promptRevision++
+        updateQuestion(requestId, QuestionRequestState.PENDING)
         followup = null
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId rejected=true" }
         cs.launch {
@@ -1371,6 +1391,7 @@ class SessionController(
                 LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId ok=true" }
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId rejected=true dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt { updateQuestion(requestId, QuestionRequestState.ERROR, e.message ?: KiloBundle.message("session.question.error")) }
             }
         }
     }

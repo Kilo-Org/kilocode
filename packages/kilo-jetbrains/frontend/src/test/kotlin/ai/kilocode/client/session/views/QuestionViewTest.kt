@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
+import ai.kilocode.client.session.model.QuestionRequestState
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -1111,6 +1112,58 @@ class QuestionViewTest : BasePlatformTestCase() {
 
         assertFalse(view.isVisible)
         assertEquals(listOf(listOf("my answer")), replies.single().second.answers)
+    }
+
+    // ------ refused decision ------
+
+    fun `test state-only show keeps the selection and shows the failure`() {
+        val q = singleSelectQuestion("q_refused")
+        view.show(q)
+        option<JBRadioButton>(view, "Minimal").doClick()
+
+        view.show(q.copy(state = QuestionRequestState.ERROR, message = "boom"))
+
+        assertTrue(view.isVisible)
+        assertTrue(
+            "A state-only show must keep the answer the user picked",
+            option<JBRadioButton>(view, "Minimal").isSelected,
+        )
+        val failure = findAll<JBLabel>(view).first { it.text == "boom" }
+        assertTrue("The refusal should be shown", failure.isVisible)
+    }
+
+    fun `test state-only show clears a previous failure`() {
+        val q = singleSelectQuestion("q_recovered")
+        view.show(q)
+        view.show(q.copy(state = QuestionRequestState.ERROR, message = "boom"))
+
+        view.show(q.copy(state = QuestionRequestState.PENDING, message = null))
+
+        assertTrue(
+            "A recovered question must not keep showing the refusal",
+            findAll<JBLabel>(view).none { it.text == "boom" && it.isVisible },
+        )
+    }
+
+    fun `test refused reply restores the answers after the card hides`() {
+        val q = singleSelectQuestion("q_restore")
+        view.show(q)
+        option<JBRadioButton>(view, "Minimal").doClick()
+        button(view, "Submit").doClick()
+
+        assertFalse("Submitting hides the card until the outcome is known", view.isVisible)
+
+        view.show(q.copy(state = QuestionRequestState.ERROR, message = "boom"))
+
+        assertTrue(view.isVisible)
+        assertTrue(
+            "A refused reply must restore the answer the user gave",
+            option<JBRadioButton>(view, "Minimal").isSelected,
+        )
+        assertTrue(
+            "The refusal should be shown",
+            findAll<JBLabel>(view).any { it.text == "boom" && it.isVisible },
+        )
     }
 
     // ------ helpers ------
