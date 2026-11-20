@@ -2988,7 +2988,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.client,
       (m) => this.postMessage(m),
       getErrorMessage,
-      this.getWorkspaceDirectory(),
+      // Provider actions read and write the config of the project the panel shows.
+      this.settingsDirectory(),
       () => this.fetchAndSendProviders(),
     )
     const set = (m: unknown) => {

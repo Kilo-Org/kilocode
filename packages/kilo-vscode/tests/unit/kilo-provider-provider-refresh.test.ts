@@ -30,6 +30,7 @@ type Internals = {
   seedSessionStatusMap: () => Promise<void>
   sendNotificationSettings: () => void
   startStatsPolling: () => void
+  handleProviderAction: (msg: Record<string, unknown>) => Promise<void>
 }
 
 function connection(online: boolean | (() => boolean) = true, custom?: unknown) {
@@ -332,5 +333,36 @@ describe("KiloProvider providers on reconnect", () => {
     const after = loaded(messages.slice(before))
     expect(after).toHaveLength(1)
     expect(after[0]).toMatchObject({ defaults: { "/repo/packages/other": true } })
+  })
+
+  it("runs provider actions against the project the panel shows", async () => {
+    const inputs: unknown[] = []
+    const custom = {
+      kilo: { authStatus: async () => ({ data: { authenticated: false } }) },
+      provider: { list: async () => ({ data: { all: [], connected: [], default: {} } }) },
+      config: {
+        get: async (input: unknown) => {
+          inputs.push(input)
+          return { data: {} }
+        },
+      },
+      global: { config: { get: async () => ({ data: {} }) }, dispose: async () => {} },
+      auth: { remove: async () => ({ data: true }) },
+    }
+    const messages: unknown[] = []
+    const internal = new KiloProvider({} as never, connection(true, custom) as never, undefined, {
+      rootDirectory: () => "/repo",
+      projectDirectory: "/repo/packages/app",
+    }) as unknown as Internals
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    await internal.handleProviderAction({ type: "disconnectProvider", requestId: "r1", providerID: "vercel" })
+
+    expect(inputs).toContainEqual({ directory: "/repo/packages/app" })
+    expect(inputs).not.toContainEqual({ directory: "/repo" })
+    expect(messages).toContainEqual(
+      expect.objectContaining({ type: "providerDisconnected", requestId: "r1", providerID: "vercel" }),
+    )
   })
 })
