@@ -27,6 +27,7 @@ import { usePermission } from "./permission"
 import { useLocation } from "./location"
 import { parse } from "../util/model"
 import { createGatewayDefaultModel } from "../kilocode/default-model" // kilocode_change(gateway)
+import { createAgentModelPreferences } from "../kilocode/agent-models" // kilocode_change(tui)
 
 export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
   name: "Local",
@@ -45,6 +46,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     const models = () => data.location.model.list(location.ref)
     const providers = () => data.location.provider.list(location.ref)
     const gatewayDefault = createGatewayDefaultModel() // kilocode_change(gateway)
+    const agentModels = createAgentModelPreferences() // kilocode_change(tui)
 
     function isModelValid(model: ModelPreferenceModel) {
       return !!models()?.some((item) => item.providerID === model.providerID && item.id === model.modelID)
@@ -194,6 +196,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           }
         }
 
+        const remembered = agentModels?.get(agent.current()) // kilocode_change(tui)
+        if (remembered && isModelValid(remembered)) return remembered // kilocode_change(tui)
         const configured = configuredModel()
         if (configured && isModelValid(configured)) return configured
 
@@ -431,6 +435,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           const val = recent[next]
           if (!val) return
           selectModel({ ...val })
+          agentModels?.save(agent.current(), val) // kilocode_change(tui)
         },
         cycleFavorite(direction: 1 | -1) {
           const favorites = preferences.favorite.filter((item) => isModelValid(item))
@@ -457,6 +462,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           const next = favorites[index]
           if (!next) return
           if (!selectModel({ ...next })) return
+          agentModels?.save(agent.current(), next) // kilocode_change(tui)
           setPreferences("recent", recentModels(next, preferences.recent))
           void repository.addRecent(next).catch(() => undefined)
         },
@@ -465,6 +471,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             if (!isModelValid(model)) return
             if (!selectModel(model)) return
             if (options?.recent) {
+              agentModels?.save(agent.current(), model) // kilocode_change(tui)
               setPreferences("recent", recentModels(model, preferences.recent))
               void repository.addRecent(model).catch(() => undefined)
             }
