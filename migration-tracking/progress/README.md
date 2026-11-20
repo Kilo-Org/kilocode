@@ -8,20 +8,20 @@ Measures Kilo's v1 feature delta: Kilo `main` pinned at `fb7e96eda540` (the v1 t
 
 ## Summary
 
-**2015 / 5339 cells done (37.7%)**, 101 dropped. `██████░░░░░░░░░░`
+**2024 / 5337 cells done (37.9%)**, 103 dropped. `██████░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 1493 | 3266 | 45.7% |
+| module | 1498 | 3265 | 45.9% |
 | api | 19 | 36 | 52.8% |
-| patch | 66 | 318 | 20.8% |
-| test | 437 | 1719 | 25.4% |
+| patch | 65 | 318 | 20.4% |
+| test | 442 | 1718 | 25.7% |
 
 Not counted: 4163 unattributed shared-file hunks (no feature tag, Kilo import or Kilo identifier; v2 ports behavior through plugins, host composition and generic seams rather than re-applying v1 monolith patches), 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Counted patch attribution: 0 by tag, 261 by import, 97 by identifier.
 
-Landed by rung, for patch cells closed by a done-proof: 46 plugin, 15 host, 6 seam, 2 patch.
+Landed by rung, for patch cells closed by a done-proof: 46 plugin, 15 host, 5 seam, 2 patch.
 
-Ratchets: 65 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/agent`, `@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/config/plugin/source`, `@opencode/core/credential`, `@opencode/core/database/database`, `@opencode/core/database/path`, `@opencode/core/database/v1-migration`, `@opencode/core/effect/app-node-builder`, `@opencode/core/effect/app-node-platform`, `@opencode/core/environment`, `@opencode/core/file-access`, `@opencode/core/flag`, `@opencode/core/form`, `@opencode/core/generate`, `@opencode/core/instance/service`, `@opencode/core/integration`, `@opencode/core/job`, `@opencode/core/location`, `@opencode/core/location-service-map`, `@opencode/core/managed-policy`, `@opencode/core/mcp`, `@opencode/core/mcp/host`, `@opencode/core/mcp/pool`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin`, `@opencode/core/plugin/module`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/project`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schedule`, `@opencode/core/schema`, `@opencode/core/session`, `@opencode/core/session/event`, `@opencode/core/session/projector`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/store`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/shell/parse`, `@opencode/core/skill`, `@opencode/core/snapshot`, `@opencode/core/tool`, `@opencode/core/tool-output`, `@opencode/core/tool/plugin/file-diff`, `@opencode/core/tool/plugin/question`, `@opencode/core/tool/plugin/subagent`, `@opencode/core/tool/plugin/todo`, `@opencode/core/tool/read-filesystem`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 137 shared patches by rung: 78 seam, 59 patch (`script/upstream/shared-patches.json`).
+Ratchets: 69 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/agent`, `@opencode/core/app`, `@opencode/core/automation`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/config/plugin/source`, `@opencode/core/credential`, `@opencode/core/database/database`, `@opencode/core/database/path`, `@opencode/core/database/v1-migration`, `@opencode/core/effect/app-node-builder`, `@opencode/core/effect/app-node-platform`, `@opencode/core/environment`, `@opencode/core/file-access`, `@opencode/core/flag`, `@opencode/core/form`, `@opencode/core/generate`, `@opencode/core/instance/service`, `@opencode/core/integration`, `@opencode/core/job`, `@opencode/core/location`, `@opencode/core/location-service-map`, `@opencode/core/managed-policy`, `@opencode/core/mcp`, `@opencode/core/mcp/host`, `@opencode/core/mcp/pool`, `@opencode/core/mcp/stdio`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin`, `@opencode/core/plugin/module`, `@opencode/core/plugin/provider/claude-agent/language-model/system-prompt`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/project`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session`, `@opencode/core/session/error`, `@opencode/core/session/event`, `@opencode/core/session/inbox`, `@opencode/core/session/projector`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/store`, `@opencode/core/session/stored`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/shell/parse`, `@opencode/core/skill`, `@opencode/core/snapshot`, `@opencode/core/tool`, `@opencode/core/tool-output`, `@opencode/core/tool/plugin/file-diff`, `@opencode/core/tool/plugin/question`, `@opencode/core/tool/plugin/todo`, `@opencode/core/tool/read-filesystem`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 167 shared patches by rung: 88 seam, 79 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -47,7 +47,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-11-10 | 1869 | 5355 | 34.9% |
 | 2026-11-11 | 1972 | 5351 | 36.9% |
 | 2026-11-12 | 2013 | 5339 | 37.7% |
-| now | 2015 | 5339 | 37.7% |
+| 2026-11-16 | 2015 | 5339 | 37.7% |
+| now | 2024 | 5337 | 37.9% |
 
 ## Features
 
@@ -67,7 +68,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | branch-name | 1/1 |  |  | 1/1 | 2/2 | 100% | `████████████████` |  |
 | caffeination | 1/1 |  |  |  | 1/1 | 100% | `████████████████` |  |
 | cleanup |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| cli | 4/72 |  | 2/25 | 2/51 | 8/148 | 5.4% | `█░░░░░░░░░░░░░░░` | 1 plugin, 1 patch |
+| cli | 6/72 |  | 2/25 | 3/51 | 11/148 | 7.4% | `█░░░░░░░░░░░░░░░` | 1 plugin, 1 patch |
 | cloud | 0/16 |  | 0/2 | 0/9 | 0/27 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | command | 0/3 | 0/2 |  | 0/3 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | commit-message | 4/4 |  |  | 3/3 | 7/7 | 100% | `████████████████` |  |
@@ -97,7 +98,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | jetbrains | 0/800 |  |  | 0/432 | 0/1232 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | markdown | 0/2 |  |  | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | marketplace | 8/8 | 3/3 |  | 3/3 | 14/14 | 100% | `████████████████` |  |
-| mcp | 5/6 |  | 3/6 | 7/7 | 15/19 | 78.9% | `█████████████░░░` | 1 host, 2 seam |
+| mcp | 5/6 |  | 2/6 | 7/7 | 14/19 | 73.7% | `████████████░░░░` | 1 host, 1 seam |
 | memory | 0/59 |  | 0/2 | 0/14 | 0/75 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | mermaid | 0/7 |  | 0/1 | 0/2 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | migration |  |  | 0/4 |  | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -105,7 +106,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | notebook | 2/2 |  | 1/1 | 2/2 | 5/5 | 100% | `████████████████` | 1 plugin |
 | npm-publish |  |  | 0/2 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | oauth | 1/1 |  | 4/6 | 0/1 | 5/8 | 62.5% | `██████████░░░░░░` | 1 host, 3 seam |
-| permission | 1/12 |  | 0/6 | 1/16 | 2/34 | 5.9% | `█░░░░░░░░░░░░░░░` |  |
+| permission | 3/11 |  | 0/6 | 4/15 | 7/32 | 21.9% | `████░░░░░░░░░░░░` |  |
 | pii | 1/1 |  |  |  | 1/1 | 100% | `████████████████` |  |
 | plan | 2/2 |  |  | 4/4 | 6/6 | 100% | `████████████████` |  |
 | plugin | 9/26 |  | 1/2 | 2/6 | 12/34 | 35.3% | `██████░░░░░░░░░░` | 1 seam |
@@ -144,12 +145,12 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | telemetry | 0/5 |  | 0/2 | 0/7 | 0/14 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | tool | 23/61 |  | 1/7 | 9/41 | 33/109 | 30.3% | `█████░░░░░░░░░░░` | 1 plugin |
 | ts-check | 0/2 |  | 0/2 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| tui | 2/15 |  | 1/6 | 2/24 | 5/45 | 11.1% | `██░░░░░░░░░░░░░░` | 1 plugin |
+| tui | 2/15 |  | 1/6 | 3/24 | 6/45 | 13.3% | `██░░░░░░░░░░░░░░` | 1 plugin |
 | tui-sync | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| ui | 151/248 |  | 0/1 | 3/18 | 154/267 | 57.7% | `█████████░░░░░░░` |  |
+| ui | 151/248 |  | 0/1 | 4/18 | 155/267 | 58.1% | `█████████░░░░░░░` |  |
 | usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | util | 0/8 |  | 0/4 | 0/8 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| vscode | 1047/1415 |  |  | 266/596 | 1313/2011 | 65.3% | `██████████░░░░░░` |  |
+| vscode | 1048/1415 |  |  | 265/596 | 1313/2011 | 65.3% | `██████████░░░░░░` |  |
 | wakeup | 5/5 | 1/1 | 1/1 | 4/4 | 11/11 | 100% | `████████████████` | 1 host |
 | worktree | 4/4 | 1/1 | 1/1 | 6/6 | 12/12 | 100% | `████████████████` | 1 plugin |
 
@@ -231,6 +232,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 - `module:packages/kilo-vscode/webview-ui/src/stories/marketplace.stories.tsx`: v2 has no webview storybook surface for the extension; the marketplace components are exercised by test/marketplace-render.test.ts and test/marketplace-install-modal.test.ts against the real components. (marketplace-panel)
 - `module:packages/kilo-vscode/webview-ui/src/utils/open-config.ts`: The v1 helper built the localized openConfigFile message: scope, loaded status, create entry and all source labels. v2 has no such message: the webview posts openFile with the host-resolved target and the host quick pick uses fixed English labels like the other host-side confirmations, so configMessage is not carried. The picker behavior is the separate kilo-provider/open-config.ts cell ported to packages/kilo-vscode/src/open-config.ts. (fix-progress-map)
 - `module:packages/opencode/src/kilocode/agent/scout.txt`: Scout prompt. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
+- `module:packages/opencode/src/kilocode/bash-hierarchy.ts`: BashHierarchy.addAll built hierarchical always-patterns for a bash command (`npm *`, `npm install *`, then the exact text). It had no caller on v1: `git grep -n BashHierarchy fb7e96eda540 -- packages` finds only its own test, and the v1 shell tool built its always-patterns from BashArity.prefix directly (packages/opencode/src/tool/shell.ts). Dead code; no user-visible behavior is lost. v2 saves one `<prefix> *` pattern per parsed command (packages/core/src/tool/plugin/shell.ts:325). (permission-cell-dispositions)
 - `module:packages/opencode/src/kilocode/indexing-feature.ts`: indexingEnabled and ensureIndexingPlugin read and injected @kilocode/kilo-indexing in the config plugin list. v2 always registers KiloIndexingPlugin (packages/kilo-plugin/src/index.ts); the TUI command and sidebar are always present, as with the v1 default built-in plugin. (codebase-indexing-2)
 - `module:packages/opencode/src/kilocode/marketplace/detection.ts`: Runtime detection of installed marketplace items (skill/MCP/agent/plugin scans) is intentionally replaced: v2 lists only marketplace-managed records from the server database (the `kv` table) and reports their status by comparing content fingerprints with the files on disk (packages/kilo-plugin/src/marketplace/index.ts installed/restore, installer.ts inspect). Native/manual items are not adopted. Agent and plugin installs are covered by the same record: a plugin entry is located by package identity in the scope config and compared by its value fingerprint (packages/kilo-plugin/src/marketplace/plugin-config.ts). Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307. (kilo-new-marketplace)
 - `module:packages/opencode/src/kilocode/marketplace/relevance.ts`: Workspace suggest_for.filename relevance scanning (ripgrep budget/skip rules) is not carried on v2: browse/search filter the catalog client-side by text match; relevance ranking re-lands with its own unit if wanted. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307. (kilo-new-marketplace)
@@ -239,6 +241,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 - `module:packages/opencode/src/kilocode/presence/policy.ts`: The presence policy. Attached-session presence is an excluded epic: .kilo/plans/agent-manager-v2-conventions.md lists it as excluded, and PR #15737 has no presence module, /presence route or import. Visible presence uses session.view, which is tracked by its own agent-manager work. (am-progress-map)
 - `module:packages/opencode/src/kilocode/presence/service.ts`: The presence service and its event-service connection. Attached-session presence is an excluded epic: .kilo/plans/agent-manager-v2-conventions.md lists it as excluded, and PR #15737 has no presence module, /presence route or import. Visible presence uses session.view, which is tracked by its own agent-manager work. (am-progress-map)
 - `module:packages/opencode/src/kilocode/storage/json-migration.ts`: v1 lazily migrated the JSON file store (storage/**/*.json) into SQLite on first access. v2 replaced the JSON store with an event-sourced SQLite store, so there is no JSON tree to migrate. Legacy import is handled natively at the SQLite level by packages/core/src/database/v1-migration.bun.ts, and D-4 isolation (packages/kilo-cli/src/env.ts keeps CONFIG/CONFIG_DIR/DB out of the translated OPENCODE_* names) keeps v2 out of v1's store. The JSON migrator is obsolete. (store-paths)
+- `module:packages/opencode/test/kilocode/bash-hierarchy.test.ts`: Tests BashHierarchy.addAll, which had no caller on v1 (see module:packages/opencode/src/kilocode/bash-hierarchy.ts). (permission-cell-dispositions)
 - `module:packages/opencode/test/kilocode/config/indexing-default-plugin.test.ts`: Tests the injection of @kilocode/kilo-indexing into the config plugin list. v2 has no such injection: KiloIndexingPlugin is registered in KiloPlugins. (codebase-indexing-2)
 - `module:packages/opencode/test/kilocode/indexing-feature.test.ts`: Tests indexing-feature.ts, which is dropped (no plugin entry in the v2 config plugin list). (codebase-indexing-2)
 - `module:packages/opencode/test/kilocode/marketplace-api.test.ts`: The carried assertions (YAML response parsing, item normalization, per-kind fetch failure aggregation, cached fallback with warning) are covered by packages/kilo-plugin/test/marketplace.test.ts and packages/kilo-plugin/test/marketplace-plugin.test.ts. Dropped on purpose: kebab display-name synthesis (the Kilo catalog ships display names) and JSON-only endpoints (the Kilo catalog serves YAML). (kilo-new-marketplace)
