@@ -56,6 +56,7 @@
           "find *-fprint*": "deny",
           "find *-fprintf*": "deny",
           "find *-fls*": "deny",
+          "find *-ok*": "deny",
           "rg *--pre *": "deny",
           "rg *--pre=*": "deny",
           "rg *--hostname-bin*": "deny",

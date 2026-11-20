@@ -118,6 +118,18 @@ check("docs-write denies the operator blocklist after the allows", () => {
   }
 })
 
+check("docs-write denies every find form that runs a command", () => {
+  const bash = policy().modes["docs-write"].permission.bash
+  const keys = Object.keys(bash)
+  const allow = keys.indexOf("find *")
+  assert.ok(allow > -1, "the find * allow rule missing")
+  for (const rule of ["find *-delete*", "find *-exec*", "find *-execdir*", "find *-fprint*", "find *-fprintf*", "find *-fls*", "find *-ok*"]) {
+    assert.ok(keys.includes(rule), `${rule} missing`)
+    assert.equal(bash[rule], "deny", `${rule} must be deny`)
+    assert.ok(keys.indexOf(rule) > allow, `${rule} must come after the find * allow, because the last match wins`)
+  }
+})
+
 check("docs-write keeps the docs build and test commands", () => {
   const bash = policy().modes["docs-write"].permission.bash
   for (const cmd of [
