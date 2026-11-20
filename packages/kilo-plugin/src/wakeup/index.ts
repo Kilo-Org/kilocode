@@ -1,7 +1,7 @@
 // The Kilo wakeup plugin: the wakeup and cron tools, and the pending state clients show as `scheduled`. Each task is a
 // native schedule with a hook action, claimed here through the schedule hook so this plugin owns the prompt it
 // delivers. That keeps buffered timing, restart recovery and multi-process leadership in the native loop.
-import { Schedule } from "@opencode/core/schedule"
+import { Automation } from "@opencode/core/automation"
 import { define } from "@opencode/plugin/effect/plugin"
 import { KiloWakeupRpc } from "@opencode/schema/kilocode/wakeup"
 import { Cause, Effect, Ref, Stream } from "effect"
@@ -23,7 +23,7 @@ export function cleanup(event: { readonly type: string; readonly data: unknown }
 export const KiloWakeupPlugin = define({
   id: "kilocode.wakeup",
   effect: Effect.fn("KiloWakeupPlugin")(function* (ctx) {
-    const schedules = yield* Schedule.Service
+    const schedules = yield* Automation.Service
     const emit = yield* Ref.make<(event: KiloWakeupRpc.Changed) => Effect.Effect<void>>(() => Effect.void)
     const wake = makeService(ctx, schedules, () => (event) =>
       Effect.flatMap(Ref.get(emit), (publish) => publish(event)),
@@ -50,9 +50,9 @@ export const KiloWakeupPlugin = define({
 
     // A due occurrence is ours when the record still exists. `fire` delivers before it retires the record, so a delivery
     // failure keeps the task instead of losing it; only a deleted session drops it.
-    yield* ctx.session.hook("experimental.schedule", (event) =>
+    yield* ctx.session.hook("experimental.automation", (event) =>
       wake
-        .fire(event.schedule)
+        .fire(event.automation)
         .pipe(
           Effect.tap((ours) =>
             Effect.sync(() => {

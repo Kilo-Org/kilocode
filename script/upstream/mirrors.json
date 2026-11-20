@@ -24,7 +24,7 @@
     },
     "packages/cli/src/server-process.ts": {
       "mirror": "packages/kilo-cli/src/server-process.ts",
-      "sha": "2f64e3ec7b86586cd8b87b20a2e16a12eb4865d2",
+      "sha": "1c40512d2724ffdc0d5d1301c6b0831341a4f60e",
       "why": "Kilo starts the server with its own service replacements and authenticated remote HTTP aliases; upstream's `ServerProcess.run` has no option for either.",
       "invariants": [
         "`Options.overrides` stays optional and reaches the server launch as its last argument, so a caller that omits it gets upstream's behavior.",

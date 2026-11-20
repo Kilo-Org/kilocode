@@ -6,14 +6,15 @@ import { Plugin } from "@opencode/core/plugin"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { Provider } from "@opencode/core/provider"
-import { Schedule } from "@opencode/core/schedule"
+import { Automation } from "@opencode/core/automation"
 import { Tool } from "@opencode/core/tool"
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { AbsolutePath } from "@opencode/schema/schema"
-import { assemble, create, flowPermissions, list, permissionInstructions, scheduled, storedRecord } from "../src/flow"
+import { assemble, create, flowPermissions, list, permissionInstructions, scheduled, storedRecord, update } from "../src/flow"
 import { KiloFlowPlugin } from "../src/flow"
+import { automationID, backingSchedule, endsError, legacyScheduleKey } from "../src/flow/native"
 import { validatePermissions } from "../src/flow/permissions"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Session } from "@opencode/schema/session"
@@ -23,28 +24,30 @@ import { DateTime, Deferred, Effect, Fiber, Layer, Schema, Semaphore } from "eff
 import { testEffect } from "../../core/test/lib/effect"
 import { makePluginTestLayer, PluginTestLayer } from "../../core/test/plugin/fixture"
 
-const backingSchedules = new Map<Schedule.ID, Schedule.Info>()
+const backingSchedules = new Map<Automation.ID, Automation.Info>()
 let scheduleCounter = 0
 
-const scheduleMock = Layer.mock(Schedule.Service, {
+const scheduleMock = Layer.mock(Automation.Service, {
   list: () => Effect.succeed([...backingSchedules.values()]),
   get: (scheduleID) => {
     const found = backingSchedules.get(scheduleID)
-    return found ? Effect.succeed(found) : Effect.fail(new Schedule.NotFoundError({ scheduleID }))
+    return found ? Effect.succeed(found) : Effect.fail(new Automation.NotFoundError({ automationID: scheduleID }))
   },
   create: (input) =>
     Effect.sync(() => {
       const now = Date.now()
-      const schedule = Schema.decodeUnknownSync(Schedule.Info)({
-        id: `sch_flow_${++scheduleCounter}`,
-        sessionID: input.sessionID,
+      const schedule = Schema.decodeUnknownSync(Automation.Info)({
+        id: `aut_flow_${++scheduleCounter}`,
         name: input.name,
-        when: input.when,
-        tz: input.when?.tz ?? "UTC",
+        projectID: "proj_flow_test",
+        sessionID: input.sessionID,
+        directory: input.directory ?? "/workspace",
+        trigger: input.trigger,
+        tz: (input.trigger.type === "event" ? undefined : input.trigger.tz) ?? "UTC",
         action: input.action,
         status: "active",
         nextDueAt: now + 60_000,
-        ...(input.ends?.times === undefined ? {} : { remainingRuns: input.ends.times }),
+        ...(input.expires === undefined ? {} : { expires: Date.parse(input.expires) }),
         runCount: 0,
         time: { created: now, updated: now },
       })
@@ -53,10 +56,17 @@ const scheduleMock = Layer.mock(Schedule.Service, {
     }),
   pause: (scheduleID) => {
     const found = backingSchedules.get(scheduleID)
-    if (!found) return Effect.fail(new Schedule.NotFoundError({ scheduleID }))
-    const paused: Schedule.Info = { ...found, status: "paused" }
+    if (!found) return Effect.fail(new Automation.NotFoundError({ automationID: scheduleID }))
+    const paused: Automation.Info = { ...found, status: "paused" }
     backingSchedules.set(scheduleID, paused)
     return Effect.succeed(paused)
+  },
+  resume: (scheduleID) => {
+    const found = backingSchedules.get(scheduleID)
+    if (!found) return Effect.fail(new Automation.NotFoundError({ automationID: scheduleID }))
+    const active: Automation.Info = { ...found, status: "active" }
+    backingSchedules.set(scheduleID, active)
+    return Effect.succeed(active)
   },
   remove: (scheduleID) => Effect.sync(() => backingSchedules.delete(scheduleID)).pipe(Effect.asVoid),
 })
@@ -79,6 +89,7 @@ const recording = testEffect(
           get: () => Effect.succeed(undefined),
           forSession: () => Effect.succeed([]),
           list: () => Effect.succeed([]),
+          nested: () => Effect.void,
         }),
       ),
     ),
@@ -97,29 +108,23 @@ const session = Schema.decodeUnknownSync(Session.Info)({
   location: { directory: "/workspace" },
 })
 
-const schedule = (input: {
-  id: string
-  sessionID?: string
-  status?: "active" | "paused" | "done"
-  poll?: "if" | "until"
-  next?: number
-}) =>
-  Schema.decodeUnknownSync(Schedule.Info)({
+const schedule = (input: { id: string; sessionID?: string; status?: "active" | "paused" | "done"; next?: number }) =>
+  Schema.decodeUnknownSync(Automation.Info)({
     id: input.id,
-    sessionID: input.sessionID,
     name: input.id,
-    when: { type: "every", every: "5 minutes" },
+    projectID: "proj_flow_test",
+    sessionID: input.sessionID,
+    directory: "/workspace",
+    trigger: { type: "every", every: "5 minutes" },
     tz: "America/Detroit",
-    ...(input.poll === "if" ? { if: { type: "shell", run: "test -f ready" } } : {}),
-    ...(input.poll === "until" ? { until: { type: "code", code: "return true" } } : {}),
-    action: { type: "prompt", prompt: `Run ${input.id}` },
+    action: { type: "prompt", prompt: `Run ${input.id}`, to: { session: session.id } },
     status: input.status ?? "active",
     ...(input.next === undefined ? {} : { nextDueAt: input.next }),
     runCount: 0,
     time: { created: 10, updated: 20 },
   })
 
-const record = (id: string, scheduleID?: Schedule.ID) =>
+const record = (id: string, scheduleID?: KiloFlowRpc.ScheduleID) =>
   Schema.decodeUnknownSync(KiloFlowRpc.Record)({
     version: 1,
     id,
@@ -150,15 +155,51 @@ const record = (id: string, scheduleID?: Schedule.ID) =>
     time: { created: 1, updated: 2 },
   })
 
-test("aggregates time and polling schedules with Session metadata and status mapping", () => {
-  const time = schedule({ id: "sch_time", sessionID: session.id, next: 200 })
-  const poll = schedule({ id: "sch_poll", sessionID: session.id, poll: "until", status: "done" })
+test("resolves a carried sch_ backing id on its renamed aut_ row", () => {
+  expect(String(automationID("sch_abc"))).toBe("aut_abc")
+  expect(String(automationID("aut_abc"))).toBe("aut_abc")
+  expect(legacyScheduleKey(Automation.ID.make("aut_abc"))).toBe("flow-schedule:v1:sch_abc")
+})
+
+test("keeps the earlier ends limit when both are present", () => {
+  const far = new Date(Date.now() + 86_400_000).toISOString()
+  const input = backingSchedule(
+    { ...record("flw_ends"), ends: { at: far, after: "1 millisecond" } } as KiloFlowRpc.Record,
+    session.id,
+  )
+  expect(input.expires).toBeDefined()
+  expect(Date.parse(input.expires!)).toBeLessThan(Date.parse(far))
+})
+
+test("lists a carried Flow once, under its renamed row", () => {
+  const carried = record("flw_carried", "sch_carried")
+  const backing = schedule({ id: "aut_carried", sessionID: session.id })
+  const output = assemble({
+    records: [carried],
+    schedules: [backing],
+    sessions: new Map(),
+    warnings: [],
+    observedAt: 1,
+  })
+  expect(output.flows).toHaveLength(1)
+  expect(output.flows[0]?.reference).toMatchObject({ type: "managed", flowID: carried.id })
+})
+
+test("reports an unreadable ends value before it can be saved", () => {
+  expect(endsError({ at: "not-a-time" }, "UTC")).toBe("Invalid ends.at: not-a-time")
+  expect(endsError({ after: "soon" }, "UTC")).toBe("Invalid ends.after: soon")
+  expect(endsError({ at: "2026-12-31T18:00" }, "UTC")).toBeUndefined()
+})
+
+test("aggregates timed native automations with Session metadata and status mapping", () => {
+  const time = schedule({ id: "aut_time", sessionID: session.id, next: 200 })
+  const done = schedule({ id: "aut_done", sessionID: session.id, status: "done" })
   const output = assemble({
     records: [],
-    schedules: [time, poll],
+    schedules: [time, done],
     sessions: new Map([
       [time.id, session],
-      [poll.id, session],
+      [done.id, session],
     ]),
     warnings: [],
     observedAt: 100,
@@ -178,12 +219,12 @@ test("aggregates time and polling schedules with Session metadata and status map
     status: "active",
     nextRunAt: 200,
   })
-  expect(output.flows[1]).toMatchObject({ trigger: { type: "poll", mode: "until" }, status: "completed" })
+  expect(output.flows[1]).toMatchObject({ trigger: { type: "time" }, status: "completed" })
 })
 
 test("managed records suppress native duplicates and stale backing schedules remain visible as errors", () => {
-  const backing = schedule({ id: "sch_managed", sessionID: session.id })
-  const stale = record("flw_stale", Schedule.ID.make("sch_missing"))
+  const backing = schedule({ id: "aut_managed", sessionID: session.id })
+  const stale = record("flw_stale", Automation.ID.make("aut_missing"))
   const managed = record("flw_managed", backing.id)
   const output = assemble({
     records: [managed, stale],
@@ -226,8 +267,8 @@ test("managed definitions without a scheduler remain visible as paused and execu
 })
 
 test("a skipped occurrence does not hide the latest executable run", () => {
-  const managed = record("flw_latest", Schedule.ID.make("sch_latest"))
-  const backing = schedule({ id: "sch_latest", sessionID: session.id })
+  const managed = record("flw_latest", Automation.ID.make("aut_latest"))
+  const backing = schedule({ id: "aut_latest", sessionID: session.id })
   const running = Schema.decodeUnknownSync(KiloFlowRpc.Run)({
     version: 1,
     id: "flr_running",
@@ -360,7 +401,7 @@ test.each(["*", "/*", "home/user/*", "../home/user/*", "/home/user/../*"])(
 )
 
 test("missing Sessions and malformed stored records are isolated", () => {
-  const missing = schedule({ id: "sch_orphan", sessionID: "ses_missing" })
+  const missing = schedule({ id: "aut_orphan", sessionID: "ses_missing" })
   const output = assemble({ records: [], schedules: [missing], sessions: new Map(), warnings: [], observedAt: 100 })
   expect(output.flows[0]).toMatchObject({ status: "error", health: { status: "error" } })
 
@@ -371,7 +412,7 @@ test("missing Sessions and malformed stored records are isolated", () => {
       message: "Stored Flow record is malformed or stale",
     },
   })
-  const valid = record("flw_valid", Schedule.ID.make("sch_valid"))
+  const valid = record("flw_valid", Automation.ID.make("aut_valid"))
   expect(storedRecord(`flow:v1:${valid.id}`, JSON.stringify(valid))).toEqual({ record: valid })
   const legacy = Schema.decodeUnknownSync(KiloFlowRpc.Record)({
     ...valid,
@@ -381,12 +422,84 @@ test("missing Sessions and malformed stored records are isolated", () => {
   expect(storedRecord(`flow:v1:${legacy.id}`, JSON.stringify(legacy))).toEqual({ record: legacy })
 })
 
+it.live("fails a create with an unreadable limit before storing the Flow", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    const schedules = yield* Automation.Service
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const runtime = { locks: new Map(), changed: () => Effect.void }
+    const input = {
+      sourceSessionID: source.id,
+      name: "Bad limit",
+      when: { every: "1 day" as const, tz: "UTC" },
+      ends: { at: "not-a-time" },
+      prompt: "Check once",
+      worktree: "reuse" as const,
+      permissions: [],
+      requestID: "102132435465768798a9bacbdcedfe0f",
+    }
+    const failure = yield* create(context, schedules, input, source.projectID, runtime).pipe(Effect.flip)
+    expect(failure.message).toBe("Invalid ends.at: not-a-time")
+    expect(yield* context.storage.get(`flow:v1:flw_${input.requestID}`)).toBeUndefined()
+    expect(backingSchedules.size).toBe(0)
+  }),
+)
+
+it.live("fails an update with an unreadable limit before rewriting the Flow", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    const schedules = yield* Automation.Service
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const fs = yield* FSUtil.Service
+    const runtime = { fs, locks: new Map(), changed: () => Effect.void }
+    const flowID = KiloFlowRpc.ID.make("flw_203142536475869708b9cadbecfd0e1f")
+    yield* create(
+      context,
+      schedules,
+      {
+        sourceSessionID: source.id,
+        name: "Bad limit update",
+        when: { every: "1 day" as const, tz: "UTC" },
+        prompt: "Check once",
+        worktree: "reuse" as const,
+        permissions: [],
+        requestID: "203142536475869708b9cadbecfd0e1f",
+      },
+      source.projectID,
+      runtime,
+    )
+    const before = yield* context.storage.get(`flow:v1:${flowID}`)
+    const failure = yield* update(
+      context,
+      schedules,
+      { flowID, ends: { at: "not-a-time" } },
+      source.projectID,
+      runtime,
+    ).pipe(Effect.flip)
+    expect(failure.message).toBe("Invalid ends.at: not-a-time")
+    expect(yield* context.storage.get(`flow:v1:${flowID}`)).toEqual(before)
+    expect(backingSchedules.size).toBe(1)
+  }),
+)
+
 it.live("drops the lock of a create that fails before its Flow exists", () =>
   Effect.gen(function* () {
     backingSchedules.clear()
     const plugins = yield* Plugin.Service
     const context = yield* PluginHost.make(plugins, "test")
-    const schedules = yield* Schedule.Service
+    const schedules = yield* Automation.Service
     const source = yield* context.session.create({
       title: "Flow source",
       agent: Agent.ID.make("build"),
@@ -403,7 +516,7 @@ it.live("drops the lock of a create that fails before its Flow exists", () =>
       permissions: [],
       requestID: "00112233445566778899aabbccddeeff",
     }
-    const failing = { ...schedules, create: () => Effect.fail(new Schedule.InvalidError({ reason: "scheduler unavailable" })) }
+    const failing = { ...schedules, create: () => Effect.fail(new Automation.InvalidError({ reason: "scheduler unavailable" })) }
     const failure = yield* create(context, failing, input, source.projectID, runtime).pipe(Effect.flip)
     expect(failure.message).toContain("scheduler unavailable")
     expect(locks.size).toBe(0)
@@ -420,7 +533,7 @@ it.live("drops the lock of a create that fails before its Flow exists", () =>
       create: () =>
         Deferred.succeed(entered, undefined).pipe(
           Effect.andThen(Deferred.await(gate)),
-          Effect.andThen(Effect.fail(new Schedule.InvalidError({ reason: "scheduler unavailable" }))),
+          Effect.andThen(Effect.fail(new Automation.InvalidError({ reason: "scheduler unavailable" }))),
         ),
     }
     const first = yield* create(context, blocked, raced, source.projectID, runtime).pipe(Effect.flip, Effect.forkChild)
@@ -608,7 +721,7 @@ it.live("returns the existing Flow when a create is retried with the same reques
     expect(second.output.reference.flowID).toBe(first.output.reference.flowID)
     expect(second.output.reference.flowID).toBe(`flw_${requestID}`)
     expect(second.output.reference.scheduleID).toBe(first.output.reference.scheduleID)
-    expect((yield* (yield* Schedule.Service).list()).length).toBe(1)
+    expect((yield* (yield* Automation.Service).list()).length).toBe(1)
     expect(backingSchedules.size).toBe(1)
     // Reusing the key with other settings is a conflict that names the Flow, never a silent return or a duplicate.
     const stored = yield* context.storage.get(`flow:v1:flw_${requestID}`)
@@ -627,7 +740,7 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
     scheduleCounter = 0
     const plugins = yield* Plugin.Service
     const context = yield* PluginHost.make(plugins, "test")
-    const schedules = yield* Schedule.Service
+    const schedules = yield* Automation.Service
     const fs = yield* FSUtil.Service
     const abandoned = record("flw_abandoned")
     const abandonedRun = Schema.decodeUnknownSync(KiloFlowRpc.Run)({
@@ -790,34 +903,34 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
     // The scheduler never admits a hook prompt; it only lets schedule inventories show what the Flow runs.
     expect(backing.action).toEqual({ type: "hook", prompt: "Check the project" })
     expect(yield* context.storage.get(`flow-schedule:v1:${backing.id}`)).toBe(created.output.reference.flowID)
-    const mimic = yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
+    const mimic = yield* (yield* PluginHooks.Service).trigger("session", "experimental.automation", {
       sessionID: source.id,
-      schedule: { ...backing, id: Schedule.ID.make("sch_mimic") },
+      automation: { ...backing, id: Automation.ID.make("aut_mimic") },
     })
     expect(mimic.claimed).toBeUndefined()
-    yield* context.storage.set("flow-schedule:v1:sch_stale", "flw_missing")
-    const stale = yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
+    yield* context.storage.set("flow-schedule:v1:aut_stale", "flw_missing")
+    const stale = yield* (yield* PluginHooks.Service).trigger("session", "experimental.automation", {
       sessionID: source.id,
-      schedule: { ...backing, id: Schedule.ID.make("sch_stale") },
+      automation: { ...backing, id: Automation.ID.make("aut_stale") },
     })
     expect(stale.claimed).toBeUndefined()
-    expect(yield* context.storage.get("flow-schedule:v1:sch_stale")).toBeUndefined()
+    expect(yield* context.storage.get("flow-schedule:v1:aut_stale")).toBeUndefined()
     const broken = Schema.decodeUnknownSync(KiloFlowRpc.Record)({
-      ...record("flw_broken", Schedule.ID.make("sch_broken")),
+      ...record("flw_broken", Automation.ID.make("aut_broken")),
       context: { directory: source.location.directory, projectID: source.projectID, agent: source.agent },
     })
     yield* context.storage.set(`flow:v1:${broken.id}`, JSON.stringify(broken))
-    yield* context.storage.set("flow-schedule:v1:sch_broken", broken.id)
+    yield* context.storage.set("flow-schedule:v1:aut_broken", broken.id)
     const failedStart = yield* (yield* PluginHooks.Service)
-      .trigger("session", "experimental.schedule", {
+      .trigger("session", "experimental.automation", {
         sessionID: source.id,
-        schedule: { ...backing, id: Schedule.ID.make("sch_broken") },
+        automation: { ...backing, id: Automation.ID.make("aut_broken") },
       })
       .pipe(Effect.exit)
     // A failed start stays unclaimed so the scheduler keeps the due time and retries it.
     expect(failedStart._tag).toBe("Failure")
     yield* context.storage.remove(`flow:v1:${broken.id}`)
-    yield* context.storage.remove("flow-schedule:v1:sch_broken")
+    yield* context.storage.remove("flow-schedule:v1:aut_broken")
     const activeID = KiloFlowRpc.RunID.make("flr_active")
     const active: KiloFlowRpc.Run = {
       version: 1,
@@ -831,17 +944,17 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
     }
     yield* context.storage.set(`flow-run:v1:${active.flowID}:${active.id}`, JSON.stringify(active))
     yield* context.storage.set(`flow-active:v1:${active.flowID}`, active.id)
-    const claimed = yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
+    const claimed = yield* (yield* PluginHooks.Service).trigger("session", "experimental.automation", {
       sessionID: source.id,
-      schedule: backing,
+      automation: backing,
     })
     expect(claimed.claimed).toBeTrue()
     const dueAt = DateTime.toEpochMillis(backing.nextDueAt)
     const skippedID = KiloFlowRpc.RunID.make(`flr_${created.output.reference.flowID.slice(4)}_${dueAt}`)
     expect(yield* context.storage.get(`flow-run:v1:${active.flowID}:${skippedID}`)).toContain('"status":"skipped"')
-    yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
+    yield* (yield* PluginHooks.Service).trigger("session", "experimental.automation", {
       sessionID: source.id,
-      schedule: backing,
+      automation: backing,
     })
     expect(
       (yield* context.storage.scan({
@@ -1019,7 +1132,7 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
         time: { created: 1, updated: 1, completed: 1 },
       }),
     )
-    const retried = yield* hooks.trigger("session", "experimental.schedule", { sessionID: source.id, schedule: later })
+    const retried = yield* hooks.trigger("session", "experimental.automation", { sessionID: source.id, automation: later })
     // A slot skipped while another run was active is attempted again when it is re-dispatched.
     expect(retried.claimed).toBeTrue()
     expect(yield* context.storage.get(`flow-run:v1:${created.output.reference.flowID}:${laterID}`)).toContain(
@@ -1042,7 +1155,7 @@ recording.live("lists, updates, and deletes Flows through the agent tools, appro
     approvals.length = 0
     const plugins = yield* Plugin.Service
     const context = yield* PluginHost.make(plugins, "test")
-    const schedules = yield* Schedule.Service
+    const schedules = yield* Automation.Service
     yield* KiloFlowPlugin.effect(context)
     const tools = yield* Tool.Service
     const registered = yield* tools.list()
@@ -1185,7 +1298,7 @@ it.live("pauses a scheduled Flow whose directory no longer exists instead of ret
     backingSchedules.clear()
     const plugins = yield* Plugin.Service
     const context = yield* PluginHost.make(plugins, "test")
-    const schedules = yield* Schedule.Service
+    const schedules = yield* Automation.Service
     const fs = yield* FSUtil.Service
     yield* KiloFlowPlugin.effect(context)
     const source = yield* context.session.create({
@@ -1196,7 +1309,7 @@ it.live("pauses a scheduled Flow whose directory no longer exists instead of ret
     const backing = yield* schedules.create({
       sessionID: source.id,
       name: "Flow: Gone",
-      when: { type: "every", every: "1 hour" },
+      trigger: { type: "every", every: "1 hour" },
       action: { type: "hook", prompt: "Clean up" },
     })
     const gone = Schema.decodeUnknownSync(KiloFlowRpc.Record)({
@@ -1212,9 +1325,9 @@ it.live("pauses a scheduled Flow whose directory no longer exists instead of ret
     yield* context.storage.set(`flow:v1:${gone.id}`, JSON.stringify(gone))
     yield* context.storage.set(`flow-schedule:v1:${backing.id}`, gone.id)
 
-    const result = yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
+    const result = yield* (yield* PluginHooks.Service).trigger("session", "experimental.automation", {
       sessionID: source.id,
-      schedule: backing,
+      automation: backing,
     })
     expect(result.claimed).toBeTrue()
     expect(backingSchedules.get(backing.id)?.status).toBe("paused")
@@ -1238,7 +1351,7 @@ it.live("retries an occurrence in the worktree it kept and removes only with for
     backingSchedules.clear()
     const plugins = yield* Plugin.Service
     const context = yield* PluginHost.make(plugins, "test")
-    const schedules = yield* Schedule.Service
+    const schedules = yield* Automation.Service
     const fs = yield* FSUtil.Service
     const source = yield* context.session.create({
       title: "Flow source",
@@ -1269,7 +1382,7 @@ it.live("retries an occurrence in the worktree it kept and removes only with for
     const backing = yield* schedules.create({
       sessionID: source.id,
       name: "Flow: Retry",
-      when: { type: "every", every: "1 hour" },
+      trigger: { type: "every", every: "1 hour" },
       action: { type: "hook", prompt: "Retry" },
     })
     const retry = Schema.decodeUnknownSync(KiloFlowRpc.Record)({
@@ -1305,23 +1418,23 @@ it.live("retries an occurrence in the worktree it kept and removes only with for
 )
 
 test("labels a native row with the action that owns it", () => {
-  const hooked: Schedule.Info = {
-    ...schedule({ id: "sch_wakeup", sessionID: session.id }),
+  const hooked: Automation.Info = {
+    ...schedule({ id: "aut_wakeup", sessionID: session.id }),
     name: "Wakeup: check the build",
     action: { type: "hook", prompt: "check the build" },
   }
   const output = assemble({
     records: [],
-    schedules: [schedule({ id: "sch_prompt", sessionID: session.id }), hooked],
+    schedules: [schedule({ id: "aut_prompt", sessionID: session.id }), hooked],
     sessions: new Map([
-      [Schedule.ID.make("sch_prompt"), session],
+      [Automation.ID.make("aut_prompt"), session],
       [hooked.id, session],
     ]),
     warnings: [],
     observedAt: 100,
   })
   expect(output.flows.map((flow) => flow.reference)).toEqual([
-    { type: "native-schedule", scheduleID: Schedule.ID.make("sch_prompt"), action: "prompt" },
+    { type: "native-schedule", scheduleID: Automation.ID.make("aut_prompt"), action: "prompt" },
     { type: "native-schedule", scheduleID: hooked.id, action: "hook" },
   ])
   expect(output.flows[1]?.prompt).toBe("check the build")

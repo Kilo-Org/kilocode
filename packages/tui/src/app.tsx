@@ -23,6 +23,7 @@ import {
   type ThemeMode,
 } from "@opentui/core"
 import { RouteProvider, useRoute } from "./context/route"
+import { createResumedPrompt, ResumedPrompt } from "./kilocode/resumed-prompt" // kilocode_change(startup)
 import {
   Switch,
   Match,
@@ -665,6 +666,7 @@ function App() {
 
   const args = useArgs()
   const startupPrompt = args.prompt ? { text: args.prompt, files: [], agents: [], pasted: [] } : undefined
+  const launch = createResumedPrompt(startupPrompt) // kilocode_change(startup) - one owner above keyed session views
   onMount(() => {
     batch(() => {
       if (args.agent) local.agent.set(args.agent)
@@ -1448,6 +1450,7 @@ function App() {
                   <Home />
                 </Match>
                 <Match when={route.data.type === "session"}>
+                  <ResumedPrompt.Provider value={launch}>{/* kilocode_change(startup) */}
                   <Show when={route.data.type === "session" ? route.data.sessionID : undefined} keyed>
                     {(sessionID) => (
                       <SessionFrame
@@ -1456,6 +1459,7 @@ function App() {
                       />
                     )}
                   </Show>
+                  </ResumedPrompt.Provider>{/* kilocode_change(startup) */}
                 </Match>
                 <Match when={route.data.type === "plugin"}>
                   <PluginRoute

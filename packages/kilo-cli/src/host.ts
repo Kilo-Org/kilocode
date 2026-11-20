@@ -24,7 +24,7 @@ import { KiloMcpRecovery } from "@opencode/core/kilocode/mcp/recovery"
 import { KiloMcpRefresh } from "@opencode/core/kilocode/mcp/refresh"
 import { Model } from "@opencode/core/model"
 import { Mcp } from "@opencode/core/mcp/index"
-import { Schedule } from "@opencode/core/schedule"
+import { Automation } from "@opencode/core/automation"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import { Plugin } from "@opencode/core/plugin"
 import { Session } from "@opencode/core/session"
@@ -71,7 +71,7 @@ const plugins = makeGlobalNode({
         FSUtil.Service,
         Global.Service,
         Npm.Service,
-        Schedule.Service,
+        Automation.Service,
         KiloSessionSync.Service,
         KiloRemote.Service,
         BrowserHub.Service,
@@ -82,7 +82,7 @@ const plugins = makeGlobalNode({
           | FSUtil.Service
           | Global.Service
           | Npm.Service
-          | Schedule.Service
+          | Automation.Service
           | KiloSessionSync.Service
           | KiloRemote.Service
           | BrowserHub.Service
@@ -95,7 +95,7 @@ const plugins = makeGlobalNode({
           | FSUtil.Service
           | Global.Service
           | Npm.Service
-          | Schedule.Service
+          | Automation.Service
           | KiloSessionSync.Service
           | KiloRemote.Service
           | BrowserHub.Service
@@ -127,7 +127,7 @@ const plugins = makeGlobalNode({
     FSUtil.node,
     Global.node,
     Npm.node,
-    Schedule.node,
+    Automation.node,
     SessionSync.node,
     Remote.node,
     KiloBrowserHub.node,
@@ -136,12 +136,14 @@ const plugins = makeGlobalNode({
 })
 
 /**
- * The `OPENCODE_FLAGS` value the scheduler reads in Kilo. Scheduling is always on, except that a deliberate
- * `-schedules` entry stays an escape hatch so a release can stop unattended schedules without a new build.
+ * The `OPENCODE_FLAGS` value the scheduler reads in Kilo. Automations are always on, except that a deliberate
+ * `-automations` (or legacy `-schedules`) entry stays an escape hatch so a release can stop unattended automations
+ * without a new build.
  */
 export function schedulingOverrides(overrides: string | undefined) {
-  if (overrides?.split(",").some((flag) => flag.trim() === "-schedules")) return overrides
-  return [overrides, "schedules"].filter(Boolean).join(",")
+  const entries = overrides?.split(",").map((flag) => flag.trim()) ?? []
+  if (entries.some((flag) => flag === "-automations" || flag === "-schedules")) return overrides
+  return [overrides, "automations"].filter(Boolean).join(",")
 }
 
 /**
@@ -182,9 +184,9 @@ export const overrides: LayerNode.Replacements = [
                   // on both backends). The upstream desktop browser plugin registers the same names in its `browser`
                   // namespace, so it would shadow the Kilo tools; the CLI serves the Playwright backend instead.
                   { type: "remove" as const, target: "opencode.browser" },
-                  // One scheduling surface: the wakeup plugin owns the wakeup and cron tools, so the native schedule
-                  // tools (and their /schedule command) would only duplicate the prompt and the model's choice.
-                  { type: "remove" as const, target: "opencode.tool.schedule" },
+                  // One scheduling surface: the wakeup plugin owns the wakeup and cron tools, so the native automation
+                  // tools (and their /automation command) would only duplicate the prompt and the model's choice.
+                  { type: "remove" as const, target: "opencode.tool.automation" },
                   ...operations,
                 ]),
               ),
@@ -194,9 +196,9 @@ export const overrides: LayerNode.Replacements = [
     ),
   ),
   App.node.replace(App.configured(KiloApp)),
-  // Scheduling is always on: the wakeup and Flow plugins own Kilo's schedules, so the scheduler reads
-  // `experimental.schedules` as on whatever a config says. Only an explicit `-schedules` in OPENCODE_FLAGS turns it off
-  // (see schedulingOverrides).
+  // Automations are always on: the wakeup and Flow plugins own Kilo's timed work, so the scheduler reads
+  // `experimental.automations` as on whatever a config says. Only an explicit `-automations` (or legacy `-schedules`)
+  // in OPENCODE_FLAGS turns it off (see schedulingOverrides).
   // The scheduler resolves flags through each Location's Flag service, which reads the overrides when it is built.
   Flag.node.replace(
     Flag.node.mapLayer((layer) =>

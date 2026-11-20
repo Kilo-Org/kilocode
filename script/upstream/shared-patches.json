@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 164,
-    "markedLines": 2983,
-    "unmarkedLines": 468,
+    "files": 167,
+    "markedLines": 3020,
+    "unmarkedLines": 560,
     "deletedFiles": 0
   },
   "files": {
@@ -23,6 +23,10 @@
     "packages/core/src/tool-output.ts": {
       "rung": 3,
       "seam": "Export the existing layer and cleanup node so the Kilo host can decorate native file allocations while preserving native truncation and cleanup. A plugin cannot observe allocation provenance, and replacing the service without these exports would duplicate the upstream implementation. No algorithm or upstream default changes."
+    },
+    "packages/core/src/database/migration/20261116043204_automation.ts": {
+      "rung": 4,
+      "seam": "Carry a hook-owned row across the schedule→automation migration as a hook action instead of rewriting it to a native prompt, and keep its `times` limit with the plugin owner. Kilo's Flow and wakeup records resolve the migrated row through the deterministic `sch_`→`aut_` id, so the rename is safe; dropping the row or converting it to a prompt would lose the feature or admit raw prompts into the source session. The migration is a one-shot upstream artifact that no plugin hook or host composition can reach."
     },
     "specs/v2/session-sync.md": {
       "rung": 4,
@@ -118,12 +122,12 @@
     },
     "packages/client/src/promise/generated/types.ts": {
       "rung": 3,
-      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, the optional PTY create size, and the optional `workspace` restoration outcome on `Session.Revert`. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
+      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, the optional PTY create size, the `hook` action variant of `Automation.Action` that lets a Kilo plugin own an automation row, and the optional `workspace` restoration outcome on `Session.Revert`. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, the optional `workspace` restoration outcome on `Session.Revert`, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, the optional `workspace` restoration outcome on `Session.Revert`, and the `hook` action variant of `Automation.Action` that lets a Kilo-owned plugin own an automation row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. Its unmarked growth in the 2.3.1 sync is this regeneration: the net +12 lines are the `Automation.Action.Hook` component with the removed `Schedule.Action` components. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
@@ -135,13 +139,13 @@
       "rung": 3,
       "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Optional systemFiles and parse hooks let a host select managed file order and decode its own config schema from raw and normalized fields; the decoder also preserves host fields when managed policies split from settings. Optional input normalization and command document composition let the host apply model-only overrides after file discovery. Upstream's integration reloads (v2.2) run discovery with a captured layer context, so that context also carries the layout service. Without the hooks, the default graph and canonical schema behave as upstream. The Kilo host supplies kilo2 names, file orders, a worktree boundary and Kilo-owned config policy. Rungs 1 and 2 cannot do it alone: config parsing precedes plugins, the command editor cannot update captured definitions, and replacing Config.node would lose the server's configured options. Codebase indexing (feature `indexing`): an optional `reload` re-reads the config sources after a host write, so a saved `indexing` key applies also when `fs.filewatcher` is false. It runs the same reload as the watcher and publishes `config.updated` when the result changes. Without a caller nothing changes. Rungs 1 and 2 cannot do it: the reload is a closure inside the Config layer."
     },
-    "packages/core/src/schedule.ts": {
+    "packages/core/src/automation.ts": {
       "rung": 3,
-      "seam": "Generic due-schedule claim seam for location plugins. An experimental session hook receives a due time schedule before native prompt admission; claiming it suppresses that prompt while preserving the scheduler's existing leader election, advancement, retry and outcome bookkeeping. A hook-owned action remains suppressed when its owner is unavailable and rejects native conditions that could otherwise admit it. The hook runs after the native experimental.schedules check, which the Kilo host turns on through Flag.Overrides; a hook failure leaves the row unclaimed and uses the existing failed-retry backoff. Kilo managed Flows and the wakeup plugin use the hook, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior."
+      "seam": "Generic due-automation claim seam for location plugins. Only a hook-owned row is offered to the experimental session hook, after plugin activation has finished (hooks register during activation), so native prompt and code rows keep upstream behavior exactly. Claiming a row suppresses its prompt and advances it through the existing settle path, preserving leader election, advancement and outcome bookkeeping. A hook-owned action stays suppressed when its owner is unavailable. The hook runs after the native experimental.automations flag check, which the Kilo host turns on through Flag.Overrides; a hook defect propagates instead of counting as fired, so the row keeps its due time and uses the existing failed-retry backoff. Kilo managed Flows and the wakeup plugin use the hook, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior."
     },
-    "packages/schema/src/schedule.ts": {
+    "packages/schema/src/automation.ts": {
       "rung": 3,
-      "seam": "Add a generic hook-owned schedule action alongside the native prompt action. The scheduler advances it without native prompt admission even when its plugin owner is unavailable, while the public schedule-create request remains prompt-only. A plugin hook cannot make the stored action safe before plugin activation, and host composition cannot persist ownership in the shared schedule model."
+      "seam": "Add a generic hook-owned automation action alongside the native prompt and code actions, and widen only the service create input (`ServiceCreateInput`) so a plugin can write it; the public tool, RPC and OpenAPI create schemas stay prompt-and-code, without hook. The scheduler advances a hook row without native prompt admission even when its plugin owner is unavailable. A plugin hook cannot make the stored action safe before plugin activation, and host composition cannot persist ownership in the shared automation model."
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,
@@ -150,10 +154,6 @@
     "packages/core/src/command.ts": {
       "rung": 3,
       "seam": "Keep optional template and model metadata on registered commands and return it from command.list. The command editor exposes only add and cannot recover a definition's captured config after registration. Definitions without metadata remain unchanged."
-    },
-    "packages/core/src/ripgrep.ts": {
-      "rung": 4,
-      "seam": "Accept ripgrep's base64 `bytes` shape alongside `text` for the matched path, line and submatch. Ripgrep emits `bytes` as soon as one byte of a record is not valid UTF-8, and the text-only schema then rejected the record and failed the whole search with `Invalid ripgrep match output`. Bytes decode as lossy UTF-8 with the replacement character, and the line and submatch limits still apply after decoding. No plugin hook or host composition reaches this parser: it runs inside the core ripgrep service before any tool result exists, and no knob can express an alternate decoder for the fixed `rg --json` shape. Records that carry `text` behave exactly as before."
     },
     "packages/core/src/config/plugin/command.ts": {
       "rung": 4,
@@ -291,6 +291,16 @@
       "rung": 3,
       "seam": "Test timing only: the organization integration test waits up to 15 s (1500 retries of 10 ms) for each plugin reload instead of 2 s. The 2 s budget and a 5 s budget both ran out on loaded Linux CI runners, where the plugin supervisor restart outran the window. No product code changes. No seam: the retry budget is a literal inside the upstream test."
     },
+    "packages/core/test/automation.test.ts": {
+      "rung": 4,
+      "seam": "Cover the automation claim seam: a hook row is offered only after activation, a claim suppresses the native prompt, and a hook defect keeps the occurrence with `last_outcome: failed` and the failed retry. The behaviour under test is Kilo's seam, so this coverage exists only for Kilo.",
+      "unmarked": "The tests are added to an upstream suite, so retrieval markers would sit inside unrelated fixtures; the whole addition is Kilo-only coverage."
+    },
+    "packages/core/test/database-migration.test.ts": {
+      "rung": 4,
+      "seam": "Cover the automation carry-over of a hook-owned schedule row: the fixture inserts an action of type `hook` with a `times` limit and asserts the row becomes a hook action instead of a native prompt. The behaviour under test is Kilo's migration seam, so this coverage exists only for Kilo.",
+      "unmarked": "The insert helper and the expected-row fixture are upstream test bodies edited in place, so markers would obscure the test; the whole change is Kilo-only coverage."
+    },
     "packages/core/test/filesystem/watcher.test.ts": {
       "rung": 4,
       "seam": "Test timing only, the same kind of patch as packages/core/test/plugin/supervisor-reload.test.ts: the two event-arrival waits in the entries watcher test go from 1 s to 10 s, and the first wait rewrites the ignored `opencode.jsonc` and then the watched `opencode.json` after each failed check. fs.watch starts its macOS FSEvents stream asynchronously, so on a loaded shared runner the test's writes can land before the stream is live; then no event ever arrives and the wait times out however long it is (the macOS platform job failed at 10 s). Repeating the ignored name keeps the filter tested on that path: a broken filter reports it, and the assertion that only `opencode.json` is reported fails. The 10 ms retry cadence is unchanged, so a passing run returns as soon as the event arrives. No product code changes. Rung 4: the deadline and the writes are literals inside the upstream test and no seam can parameterize them from Kilo code."
@@ -345,8 +355,8 @@
       "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Also declare `app.header` for plugin status above the main view; existing slots are below the view or inside the session composer/sidebar, so none can supply a process-wide header indicator. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. Two generic lines with no Kilo value."
     },
     "packages/tui/src/app.tsx": {
-      "rung": 3,
-      "seam": "Render the optional `app.header` slot above the main view and session tabs. Existing slots cannot place a process-wide status indicator at the top of both home and session screens, and server host composition cannot alter the TUI layout. One generic line; without a claim it renders nothing and preserves upstream defaults."
+      "rung": 4,
+      "seam": "The optional `app.header` slot above the main view and session tabs remains a generic rung-3 seam. Existing slots cannot place a process-wide status indicator there; without a claim it renders nothing. The Kilo launch-prompt provider is rung 4: only App holds the original --prompt object above the keyed session views. A server plugin, host override or TUI slot cannot bind that draft to its session across route remounts."
     },
     "packages/tui/src/mini/runtime.lifecycle.ts": {
       "rung": 4,
@@ -415,7 +425,7 @@
     },
     "packages/tui/src/routes/session/index.tsx": {
       "rung": 4,
-      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows. Browser tool rows (feature `browser`) mask typed text: the tool props, the Code Mode call rows, the subagent live child line and the expanded turn-token table (`turnTokenToolSummary`, exported for its test) pass the input through the Kilo-owned `browserDisplayInput`/`browserDisplayCalls`/`browserDisplayText` (packages/tui/src/kilocode/browser-display.ts), the live child line also leaves out the keys in `ROW_INPUT_OMIT` (Code Mode's `code`, whose program can type text inline), and the turn-token table shows no input at all for Code Mode's own tool (`ROW_PROGRAM_TOOL`, whose whole input is that program, streaming or not), because no renderer hook sees a row's input before it is drawn. Auto-accept mode (feature `sandbox`) replies `once` to every pending permission request in this route and hides the prompt; a request whose metadata sets `interactive: true` (a Kilo sandbox escalation, a sensitive browser step) must still be answered by a person, as `run --auto` already enforces. The auto-approve effect, the prompted list and the tool-row highlight call the Kilo-owned `requiresPerson` predicate (packages/tui/src/kilocode/permission-mode.ts) so the three cannot drift. The TUI plugin API has no hook into this route's permission replies or prompt selection (rung 1), the host cannot reach the TUI process (rung 2), and an inline generic check would repeat the same condition three times (rung 3)."
+      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows. Browser tool rows (feature `browser`) mask typed text: the tool props, the Code Mode call rows, the subagent live child line and the expanded turn-token table (`turnTokenToolSummary`, exported for its test) pass the input through the Kilo-owned `browserDisplayInput`/`browserDisplayCalls`/`browserDisplayText` (packages/tui/src/kilocode/browser-display.ts), the live child line also leaves out the keys in `ROW_INPUT_OMIT` (Code Mode's `code`, whose program can type text inline), and the turn-token table shows no input at all for Code Mode's own tool (`ROW_PROGRAM_TOOL`, whose whole input is that program, streaming or not), because no renderer hook sees a row's input before it is drawn. Auto-accept mode (feature `sandbox`) replies `once` to every pending permission request in this route and hides the prompt; a request whose metadata sets `interactive: true` (a Kilo sandbox escalation, a sensitive browser step) must still be answered by a person, as `run --auto` already enforces. The auto-approve effect, the prompted list and the tool-row highlight call the Kilo-owned `requiresPerson` predicate (packages/tui/src/kilocode/permission-mode.ts) so the three cannot drift. The TUI plugin API has no hook into this route's permission replies or prompt selection (rung 1), the host cannot reach the TUI process (rung 2), and an inline generic check would repeat the same condition three times (rung 3). Only this route knows when it seeds a resumed --prompt; neither the host nor a plugin can defer that one-shot submission until the saved model appears."
     },
     "packages/tui/src/routes/session/group-view.tsx": {
       "rung": 4,
@@ -447,7 +457,7 @@
     },
     "packages/plugin/src/effect/session.ts": {
       "rung": 3,
-      "seam": "Session hooks for host-owned behavior. The `route` hook lets a plugin select another catalog model before a request is built; no existing hook reaches the request model early enough. The experimental `schedule` hook carries a due time schedule and a mutable claimed flag so a location plugin can take ownership before native prompt admission; no existing hook runs between scheduler leader election and admission. Both are generic type-only hooks with no Kilo values."
+      "seam": "Session hooks for host-owned behavior. The `route` hook lets a plugin select another catalog model before a request is built; no existing hook reaches the request model early enough. The experimental `automation` hook carries a due automation and a mutable claimed flag so a location plugin can take ownership before native prompt admission; no existing hook runs between scheduler leader election and admission. Both are generic type-only hooks with no Kilo values."
     },
     "packages/core/src/session/model-request.ts": {
       "rung": 3,
@@ -555,6 +565,10 @@
       "rung": 3,
       "seam": "One condition in the existing typed-message list so the generic ReadToolFileSystem.ReaderError reaches the model instead of the fallback message. The read tool, its schema, codemode setting, bounding and instruction loading are unchanged; no Kilo identifier or value."
     },
+    "packages/core/src/tool/plugin/automation.ts": {
+      "rung": 4,
+      "seam": "Describe the `hook` action an automation row may carry. Kilo's Flow and wakeup plugins create hook-owned rows, so the list view must render one without naming a prompt target. Native rows only carry prompt or code actions, so upstream output does not change."
+    },
     "patches/mammoth@1.12.0.patch": {
       "rung": 4,
       "seam": "Mammoth 1.12.0 is written for the @xmldom/xmldom 0.8 errorHandler API. Kilo raises xmldom to the patched 0.9 line for the XML injection and resource-consumption fixes, so mammoth's xml reader must use the 0.9 onError API and pass text/xml. Set through patchedDependencies in the root package.json, so the patch applies from the root install. The same patch and override ship on v1. No lower rung: the parser call is inside mammoth's shipped lib/xml/xmldom.js and no host or plugin hook replaces that module.",
@@ -654,7 +668,7 @@
     },
     "packages/tui/src/component/prompt/index.tsx": {
       "rung": 3,
-      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. On first Home render, reveal the confirmed agent label while the model catalog is pending."
+      "seam": "Optional submit-readiness feedback. Only the editor owns the submit entry point; typing, paste and cursor movement must continue without dispatching or consuming the draft. Its programmatic submit reports a reversible preflight refusal synchronously so a waiting caller can retry without replaying a dispatched request. Only the editor sees which stashed draft it restored, when history or user input replaced it, and pending native edits at unmount. An optional callback exposes those distinctions without changing manual submission. On first Home render, reveal the confirmed agent label while the model catalog is pending."
     },
     "packages/tui/src/component/startup-loading.tsx": {
       "rung": 3,

@@ -1,4 +1,8 @@
-import { describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it, jest } from "bun:test"
+import { createData } from "@opencode/client/solid"
+import { createRoot } from "solid-js"
+import { setImmediate } from "node:timers/promises"
+import { events } from "../webview-ui/src/v2/events"
 import {
   dispatchInitialPrompt,
   initialCommand,
@@ -6,21 +10,43 @@ import {
   initialModel,
 } from "../webview-ui/agent-manager/initial-message"
 
-function store() {
+const selected = { providerID: "anthropic", id: "claude-sonnet-4", enabled: true }
+
+function store(models = [selected]) {
   const calls: unknown[][] = []
-  return {
-    calls,
-    value: {
-      api: {
-        session: {
-          switchAgent: async (input: unknown) => void calls.push(["switchAgent", input]),
-          switchModel: async (input: unknown) => void calls.push(["switchModel", input]),
-          command: async (input: unknown) => void calls.push(["command", input]),
-        },
+  const reads: string[] = []
+  const event = events()
+  const api = {
+    model: {
+      list: async ({ location }: { location: { directory: string } }) => {
+        reads.push(location.directory)
+        return { location, data: location.directory === "/worktree" ? [...models] : [selected] }
       },
-      data: { session: { prompt: (input: unknown) => void calls.push(["prompt", input]) } },
+    },
+    session: {
+      switchAgent: async (input: unknown) => void calls.push(["switchAgent", input]),
+      switchModel: async (input: unknown) => void calls.push(["switchModel", input]),
+      command: async (input: unknown) => void calls.push(["command", input]),
     },
   }
+  return createRoot((dispose) => {
+    const data = createData({ api: () => api as never, directory: "/worktree", event })
+    return {
+      calls,
+      reads,
+      models,
+      update: () =>
+        event.emit({
+          type: "model.updated",
+          id: "update",
+          created: 1,
+          location: { directory: "/worktree" },
+          data: {},
+        }),
+      value: { api, data: { ...data, session: { prompt: (input: unknown) => void calls.push(["prompt", input]) } } },
+      [Symbol.dispose]: dispose,
+    }
+  })
 }
 
 const base = {
@@ -29,9 +55,61 @@ const base = {
   worktreeId: "wt-a",
 }
 
+const choice = { ...base, agent: "code", providerID: selected.providerID, modelID: selected.id, variant: "high" }
+
+afterEach(() => jest.useRealTimers())
+
 describe("dispatchInitialPrompt", () => {
+  it("waits for the target worktree's selected model before switching or admitting its initial prompt", async () => {
+    using ctx = store([
+      { ...selected, providerID: "other" },
+      { ...selected, id: "other" },
+      { ...selected, enabled: false },
+    ])
+    const pending = dispatchInitialPrompt(ctx.value as never, { ...choice, text: "Fix it" })
+    await setImmediate()
+    expect(ctx.reads).toEqual(["/worktree"])
+    expect(ctx.calls).toEqual([])
+
+    ctx.models.push(selected)
+    ctx.update()
+    await pending
+    ctx.update()
+    await setImmediate()
+    expect(ctx.calls).toEqual([
+      ["switchAgent", { sessionID: "session-a", agent: "code" }],
+      [
+        "switchModel",
+        { sessionID: "session-a", model: { id: selected.id, providerID: selected.providerID, variant: "high" } },
+      ],
+      ["prompt", { sessionID: "session-a", text: "Fix it", files: undefined }],
+    ])
+  })
+
+  it.each(["timeout", "disposal"])("does not send after %s even if the model becomes ready", async (reason) => {
+    jest.useFakeTimers()
+    using ctx = store([])
+    const controller = new AbortController()
+    const pending = dispatchInitialPrompt(ctx.value as never, { ...choice, command: "goal" }, controller.signal)
+    await setImmediate()
+    if (reason === "timeout") jest.advanceTimersToNextTimer()
+    else controller.abort()
+    await expect(pending).rejects.toMatchObject({ name: reason === "timeout" ? "TimeoutError" : "AbortError" })
+    ctx.models.push(selected)
+    ctx.update()
+    await setImmediate()
+    expect(ctx.calls).toEqual([])
+  })
+
+  it("keeps a selection-only event independent of the model catalog", async () => {
+    using ctx = store([])
+    await dispatchInitialPrompt(ctx.value as never, choice)
+    expect(ctx.reads).toEqual([])
+    expect(ctx.calls.map(([operation]) => operation)).toEqual(["switchAgent", "switchModel"])
+  })
+
   it("switches the agent and model, then runs a command prompt", async () => {
-    const ctx = store()
+    using ctx = store()
     await dispatchInitialPrompt(ctx.value as never, {
       ...base,
       command: "goal",
@@ -44,20 +122,23 @@ describe("dispatchInitialPrompt", () => {
 
     expect(ctx.calls).toEqual([
       ["switchAgent", { sessionID: "session-a", agent: "code" }],
-      ["switchModel", { sessionID: "session-a", model: { id: "claude-sonnet-4", providerID: "anthropic", variant: "high" } }],
+      [
+        "switchModel",
+        { sessionID: "session-a", model: { id: "claude-sonnet-4", providerID: "anthropic", variant: "high" } },
+      ],
       ["command", { sessionID: "session-a", name: "goal", text: "ship it", files: undefined }],
     ])
   })
 
   it("submits a plain message for a text prompt", async () => {
-    const ctx = store()
+    using ctx = store()
     await dispatchInitialPrompt(ctx.value as never, { ...base, text: "Fix it" })
 
     expect(ctx.calls).toEqual([["prompt", { sessionID: "session-a", text: "Fix it", files: undefined }]])
   })
 
   it("does nothing without text or a command", async () => {
-    const ctx = store()
+    using ctx = store()
     await dispatchInitialPrompt(ctx.value as never, base)
 
     expect(ctx.calls).toHaveLength(0)
