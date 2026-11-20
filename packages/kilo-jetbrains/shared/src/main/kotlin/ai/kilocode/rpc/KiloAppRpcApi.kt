@@ -11,6 +11,7 @@ import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.SpeechModelDto
 import ai.kilocode.rpc.dto.SpeechRequestDto
@@ -127,9 +128,9 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
 
     /**
      * Complete the device auth login flow. Blocks until the user completes authentication.
-     * Returns the fresh profile on success, null if aborted.
+     * Returns the fresh profile, or the reason a follow-up profile read did not complete.
      */
-    suspend fun completeLogin(directory: String?): ProfileDto?
+    suspend fun completeLogin(directory: String?): ProfileSyncDto
 
     /** Log out from Kilo Gateway. */
     suspend fun logout(): Boolean
@@ -137,9 +138,9 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /**
      * Switch the active account context.
      * Pass null for personal account, or an organization ID for org context.
-     * Returns the updated profile, or null if not logged in.
+     * Returns the updated profile, or the reason a follow-up profile read did not complete.
      */
-    suspend fun setOrganization(organizationId: String?): ProfileDto?
+    suspend fun setOrganization(organizationId: String?): ProfileSyncDto
 
     /** Fire-and-forget behavior telemetry routed through the CLI server. */
     suspend fun captureTelemetry(capture: TelemetryCaptureDto)

@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -1258,5 +1259,123 @@ class KiloBackendAppServiceTest {
             thrown = true
         }
         assertTrue(thrown, "completeLogin with 500 callback status should throw")
+    }
+
+    // ------ Account step profile sync tests ------
+
+    @Test
+    fun `complete login keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 500
+        val failure = assertFailsWith<LoadFailure> { svc.completeLogin(null) }
+        assertEquals("profile", failure.error.resource)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `set organization keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 500
+        val failure = assertFailsWith<LoadFailure> { svc.setOrganization("org_1") }
+        assertEquals("profile", failure.error.resource)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `complete login keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 400
+        val failure = assertFailsWith<LoadFailure> { svc.completeLogin(null) }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(400, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `set organization keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 400
+        val failure = assertFailsWith<LoadFailure> { svc.setOrganization("org_1") }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(400, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `complete login clears the account when nobody is signed in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 401
+        assertNull(svc.completeLogin(null))
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `set organization clears the account when nobody is signed in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 401
+        assertNull(svc.setOrganization("org_1"))
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `refresh profile publishes no account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 500
+        assertNull(svc.refreshProfile())
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `startup keeps the app ready when the profile read fails`() = runBlocking {
+        mock.profileStatus = 500
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
     }
 }

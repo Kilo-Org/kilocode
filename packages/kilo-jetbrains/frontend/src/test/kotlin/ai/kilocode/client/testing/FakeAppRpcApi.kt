@@ -19,6 +19,7 @@ import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.PermissionConfigDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.RetentionConfigDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
@@ -421,6 +422,12 @@ class FakeAppRpcApi : KiloAppRpcApi {
     var completes = 0
         private set
 
+    /** When set, [completeLogin] returns this result instead of the profile-derived one. */
+    var completeResult: ProfileSyncDto? = null
+
+    /** When set, [setOrganization] returns this result instead of the profile-derived one. */
+    var organizationResult: ProfileSyncDto? = null
+
     override suspend fun refreshProfile(): ProfileDto? {
         assertNotEdt("refreshProfile")
         refreshError?.let { throw it }
@@ -435,13 +442,14 @@ class FakeAppRpcApi : KiloAppRpcApi {
         return fakeDeviceAuth
     }
 
-    override suspend fun completeLogin(directory: String?): ProfileDto? {
+    override suspend fun completeLogin(directory: String?): ProfileSyncDto {
         assertNotEdt("completeLogin")
         completes++
         completeDirectories.add(directory)
         completeGate?.await()
         completeError?.let { throw it }
-        return fakeProfile
+        completeResult?.let { return it }
+        return ProfileSyncDto(profile = fakeProfile)
     }
 
     override suspend fun logout(): Boolean {
@@ -451,12 +459,13 @@ class FakeAppRpcApi : KiloAppRpcApi {
         return logoutResult
     }
 
-    override suspend fun setOrganization(organizationId: String?): ProfileDto? {
+    override suspend fun setOrganization(organizationId: String?): ProfileSyncDto {
         assertNotEdt("setOrganization")
         organizationError?.let { throw it }
         orgSelections.add(organizationId)
+        organizationResult?.let { return it }
         if (orgProfiles.containsKey(organizationId)) fakeProfile = orgProfiles[organizationId]
-        return fakeProfile
+        return ProfileSyncDto(profile = fakeProfile)
     }
 
     override suspend fun captureTelemetry(capture: TelemetryCaptureDto) {

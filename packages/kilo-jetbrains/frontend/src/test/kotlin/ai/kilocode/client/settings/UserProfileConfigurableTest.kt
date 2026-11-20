@@ -13,12 +13,14 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.LoadProgressDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileKiloPassDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.SimpleColoredComponent
@@ -51,6 +53,7 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
     private lateinit var app: KiloAppService
     private lateinit var panel: ProfileUi
     private val urls = mutableListOf<String>()
+    private val notice = "Signed in, but your account details could not be loaded. Use Refresh to try again."
 
     override fun setUp() {
         super.setUp()
@@ -622,6 +625,133 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
             val t = text(panel)
             assertTrue(t, t.contains("Login failed"))
             assertTrue(buttons(panel).any { it.text == "Try Again" })
+        }
+    }
+
+    fun `test failed profile read after sign-in keeps the account and shows the notice`() {
+        // No balance and no Kilo Pass: the account card shows no action of its own, so the notice
+        // has to keep its Refresh reachable.
+        val profile = ProfileDto(email = "alice@test.com", name = "Alice")
+        rpc.completeResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+        rpc.completeGate = CompletableDeferred()
+
+        edt { buttons(panel).first { it.text == "Login with Kilo Code" }.doClick() }
+        flushUntil { text(panel).contains("Sign in to Kilo Code") }
+
+        // The account becomes known while the sign-in still waits for its final profile read.
+        edt {
+            app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = profile)
+            panel.update(app._state.value)
+        }
+        edt { rpc.completeGate!!.complete(Unit) }
+        flushUntil { text(panel).contains(notice) }
+
+        edt {
+            val t = text(panel)
+            assertTrue("account must stay visible", t.contains("Alice"))
+            assertTrue("notice must be shown", t.contains(notice))
+            assertFalse("logged-out card must not appear", t.contains("Not logged in"))
+            assertFalse("the notice must not fabricate balance content", t.contains("BALANCE"))
+            assertTrue("Refresh must stay reachable", buttons(panel).any { it.text == "Refresh" })
+        }
+    }
+
+    fun `test failed profile read after an organization switch keeps the account and the previous organization`() {
+        val orgs = listOf(ProfileOrganizationDto(id = "org_1", name = "Acme", role = "ADMIN"))
+        val personal = ProfileDto(
+            email = "alice@test.com",
+            name = "Alice",
+            organizations = orgs,
+            balance = ProfileBalanceDto(10.0),
+        )
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = personal)
+        edt { panel.update(personal, KiloAppStatusDto.READY) }
+        rpc.organizationResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+
+        edt { combos(panel).single().selectedIndex = 1 }
+        flush()
+
+        edt {
+            val t = text(panel)
+            assertTrue("account must stay visible", t.contains("Alice"))
+            assertTrue("notice must be shown", t.contains(notice))
+            assertEquals("combo must show the previous organization", 0, combos(panel).single().selectedIndex)
+            assertTrue("Refresh must stay reachable", buttons(panel).any { it.text == "Refresh" })
+        }
+        assertEquals(listOf<String?>("org_1"), rpc.orgSelections)
+    }
+
+    fun `test refresh re-reads the profile and clears the notice`() {
+        val orgs = listOf(ProfileOrganizationDto(id = "org_1", name = "Acme", role = "ADMIN"))
+        val personal = ProfileDto(
+            email = "alice@test.com",
+            name = "Alice",
+            organizations = orgs,
+            balance = ProfileBalanceDto(10.0),
+        )
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = personal)
+        edt { panel.update(personal, KiloAppStatusDto.READY) }
+        rpc.organizationResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+
+        edt { combos(panel).single().selectedIndex = 1 }
+        flushUntil { text(panel).contains(notice) }
+
+        edt {
+            rpc.fakeProfile = personal.copy(balance = ProfileBalanceDto(25.0))
+            buttons(panel).first { it.text == "Refresh" }.doClick()
+        }
+        flush()
+
+        edt {
+            val t = text(panel)
+            assertFalse("notice must clear once the profile is read", t.contains(notice))
+            assertTrue("the refreshed balance must be shown", t.contains("\$25.00"))
+            assertFalse("Refreshing must finish", t.contains("Refreshing...."))
+        }
+        assertEquals(listOf<String?>("org_1"), rpc.orgSelections)
+    }
+
+    fun `test notice survives unrelated state updates until a profile read succeeds`() {
+        val orgs = listOf(ProfileOrganizationDto(id = "org_1", name = "Acme", role = "ADMIN"))
+        val personal = ProfileDto(
+            email = "alice@test.com",
+            name = "Alice",
+            organizations = orgs,
+            balance = ProfileBalanceDto(10.0),
+        )
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = personal)
+        edt { panel.update(personal, KiloAppStatusDto.READY) }
+        rpc.organizationResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+
+        edt { combos(panel).single().selectedIndex = 1 }
+        flushUntil { text(panel).contains(notice) }
+
+        // An unrelated app state emission carries the same account and reads nothing.
+        edt { panel.update(app._state.value) }
+        flush()
+
+        edt {
+            assertTrue("the notice must stay until a read succeeds", text(panel).contains(notice))
+            assertTrue("the account must stay visible", text(panel).contains("Alice"))
+            assertTrue("Refresh must stay reachable", buttons(panel).any { it.text == "Refresh" })
+        }
+    }
+
+    fun `test failed profile read after sign-in without an earlier account shows the notice with Refresh`() {
+        rpc.completeResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+        rpc.completeGate = CompletableDeferred()
+
+        edt { buttons(panel).first { it.text == "Login with Kilo Code" }.doClick() }
+        flushUntil { text(panel).contains("Sign in to Kilo Code") }
+        edt { rpc.completeGate!!.complete(Unit) }
+        flushUntil { text(panel).contains(notice) }
+
+        edt {
+            val t = text(panel)
+            assertTrue("notice must be shown", t.contains(notice))
+            assertFalse("signed-out copy must not appear", t.contains("Not logged in"))
+            assertTrue("Refresh must be offered", buttons(panel).any { it.text == "Refresh" })
+            assertFalse("the sign-in must not be restarted", buttons(panel).any { it.text == "Try Again" })
         }
     }
 

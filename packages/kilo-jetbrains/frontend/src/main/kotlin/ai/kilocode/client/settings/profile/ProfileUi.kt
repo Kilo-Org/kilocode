@@ -59,6 +59,7 @@ internal class ProfileUi(
         retry = { app.retryAsync() },
         cancel = ::cancel,
         browse = browse,
+        refresh = ::refreshProfile,
         timers = timers,
     )
     private val account = LoggedInProfileUi(
@@ -212,13 +213,17 @@ internal class ProfileUi(
                     sync()
                     browse(next.verificationUrl)
                 }
-                val profile = app.completeLogin()
-                telemetry("Account Connect Success", mapOf("surface" to "settings", "hasOrganizations" to ((profile?.organizations?.isNotEmpty()) == true).toString()))
+                val result = app.completeLogin()
+                telemetry("Account Connect Success", mapOf("surface" to "settings", "hasOrganizations" to ((result.profile?.organizations?.isNotEmpty()) == true).toString()))
                 val state = app.state.value
                 withContext(edt) {
                     if (id != attempt) return@withContext
                     login = LoginState.Idle
-                    update(profile ?: state.profile, state.status)
+                    if (result.error != null) showUnavailable(state.profile, state.status)
+                    else {
+                        update(result.profile ?: state.profile, state.status)
+                        account.setNotice(null)
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -264,11 +269,22 @@ internal class ProfileUi(
     private fun organization(org: String?) {
         cs.launch {
             try {
-                val profile = app.setOrganization(org)
+                val result = app.setOrganization(org)
+                if (result.error != null) {
+                    val state = app.state.value
+                    withContext(edt) {
+                        // The switch itself finished, so the previous account stays: re-applying it
+                        // reverts the combo, and the notice keeps Refresh within reach.
+                        update(state.profile, state.status)
+                        account.setNotice(accountUnavailable())
+                    }
+                    return@launch
+                }
                 telemetry("Organization Switched", mapOf("target" to if (org == null) "personal" else "organization"))
                 val state = app.state.value
                 withContext(edt) {
-                    update(profile ?: state.profile, state.status)
+                    update(result.profile ?: state.profile, state.status)
+                    account.setNotice(null)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -280,6 +296,26 @@ internal class ProfileUi(
         }
     }
 
+    /**
+     * Report an account step whose follow-up profile read did not complete.
+     *
+     * A known account keeps its card and gains the notice that offers Refresh; without one the
+     * logged-out card shows the same text and offers Refresh itself.
+     */
+    @RequiresEdt
+    private fun showUnavailable(fallback: ProfileDto?, appStatus: KiloAppStatusDto) {
+        val known = prof ?: fallback
+        if (known == null) {
+            login = LoginState.Error(accountUnavailable(), LoginState.Retry.PROFILE)
+            sync()
+            return
+        }
+        update(known, appStatus)
+        account.setNotice(accountUnavailable())
+    }
+
+    private fun accountUnavailable(): String = KiloBundle.message("profile.notice.accountUnavailable")
+
     private fun refreshProfile() {
         cs.launch {
             try {
@@ -287,6 +323,7 @@ internal class ProfileUi(
                 val state = app.state.value
                 withContext(edt) {
                     update(profile ?: state.profile, state.status)
+                    if (profile != null) account.setNotice(null)
                     account.setRefreshing(false)
                 }
             } catch (e: CancellationException) {

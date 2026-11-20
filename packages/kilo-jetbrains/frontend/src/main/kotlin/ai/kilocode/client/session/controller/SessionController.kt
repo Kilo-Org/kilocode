@@ -3149,8 +3149,21 @@ class SessionController(
         refreshAccountOverlay()
         cs.launch {
             try {
-                app.setOrganization(org)
+                val result = app.setOrganization(org)
+                val error = result.error
+                if (error != null) {
+                    capture("Account Connect Failed", mapOf("stage" to "organization", "errorClass" to accountErrorToken(error)))
+                    LOG.warn("account switch failed org=$org resource=${error.resource} status=${error.status}")
+                    edt {
+                        if (disposed) return@edt
+                        target = null
+                        refreshAccountOverlay()
+                    }
+                    return@launch
+                }
                 capture("Organization Switched", mapOf("target" to if (org == null) "personal" else "organization"))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 capture("Account Connect Failed", mapOf("stage" to "organization", "errorClass" to e::class.java.name))
                 LOG.warn("account switch failed org=$org message=${e.message}", e)
@@ -3162,6 +3175,13 @@ class SessionController(
             }
         }
     }
+
+    /**
+     * Telemetry token for an account step that reported a load error instead of throwing: the
+     * resource it failed on, plus the HTTP status when the backend reports one.
+     */
+    private fun accountErrorToken(error: LoadErrorDto): String =
+        error.status?.let { "${error.resource}Http$it" } ?: error.resource
 
     fun openProfile() {
         assertEdt()
