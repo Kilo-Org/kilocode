@@ -21,9 +21,18 @@ export const TelemetrySetEnabledPayload = Schema.Struct({
   enabled: Schema.Boolean,
 })
 
+export const TelemetryLevelPayload = Schema.Struct({
+  enabled: Schema.Boolean,
+})
+
+export const TelemetryLevelResult = Schema.Struct({
+  enabled: Schema.Boolean,
+})
+
 export const TelemetryPaths = {
   capture: `${root}/capture`,
   setEnabled: `${root}/setEnabled`,
+  level: `${root}/level`,
 } as const
 
 export const TelemetryApi = HttpApi.make("telemetry")
@@ -50,9 +59,33 @@ export const TelemetryApi = HttpApi.make("telemetry")
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "telemetry.setEnabled",
-            summary: "Set PostHog telemetry enabled state",
+            summary: "Set host telemetry permission",
             description:
-              "Update the PostHog client's opt-in/out state at runtime. The CLI reads KILO_TELEMETRY_LEVEL once at spawn — this route lets clients (e.g. the VS Code extension) propagate runtime telemetry consent changes.",
+              "Apply the host editor's telemetry permission at runtime without changing config. This cannot override a config or environment opt-out. Use telemetry.setLevel for the Kilo preference.",
+          }),
+        ),
+        HttpApiEndpoint.get("level", TelemetryPaths.level, {
+          query: WorkspaceRoutingQuery,
+          success: described(TelemetryLevelResult, "Effective telemetry level"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "telemetry.level",
+            summary: "Get effective telemetry level",
+            description: "Read whether global Kilo config, the host editor, and the environment all allow telemetry.",
+          }),
+        ),
+        HttpApiEndpoint.post("setLevel", TelemetryPaths.level, {
+          query: WorkspaceRoutingQuery,
+          payload: TelemetryLevelPayload,
+          success: described(TelemetryLevelResult, "Effective telemetry level after saving the preference"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "telemetry.setLevel",
+            summary: "Save the Kilo telemetry preference",
+            description:
+              "Persist experimental.openTelemetry to the global Kilo config and apply it to the running telemetry client. Return the effective level, which can still be off due to a host or environment opt-out.",
           }),
         ),
       )
