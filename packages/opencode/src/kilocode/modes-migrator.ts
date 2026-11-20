@@ -60,12 +60,14 @@ export namespace ModesMigrator {
    *
    * `mcpServers` names the MCP servers the same migration wrote to `mcp`, so an `mcp`
    * group can grant their tools; there is no `mcp` permission key in the CLI.
-   * `mcpAvailable` reports whether the legacy store declared any MCP server at all.
+   * `mcpAvailable` reports whether the legacy store declared any MCP server, not whether
+   * one was converted: a store that declared a server the migration could not convert
+   * still warns instead of silently dropping the `mcp` group.
    */
   export function convertPermissions(
     groups: KilocodeMode["groups"],
-    mcpServers: string[] = [],
-    mcpAvailable = mcpServers.length > 0,
+    mcpServers: string[],
+    mcpAvailable: boolean,
   ): ConfigPermission.Info {
     return convert(groups, mcpServers, mcpAvailable).permission
   }
@@ -169,8 +171,8 @@ export namespace ModesMigrator {
 
   export function convertMode(
     mode: KilocodeMode,
-    mcpServers: string[] = [],
-    mcpAvailable = mcpServers.length > 0,
+    mcpServers: string[],
+    mcpAvailable: boolean,
   ): ConfigAgentV1.Info {
     return build(mode, mcpServers, mcpAvailable).agent
   }
@@ -212,7 +214,8 @@ export namespace ModesMigrator {
       mode: "primary",
       description: cfg.description ?? cfg.whenToUse ?? mode.name,
       prompt: prompt || undefined,
-      permission: convertPermissions(groups),
+      // An organization mode has no legacy MCP store, so no server-key grant applies.
+      permission: convertPermissions(groups, [], false),
       // Typed metadata fields — must NOT live in `options`, which is forwarded to the provider.
       displayName: mode.name,
       source: "organization",
