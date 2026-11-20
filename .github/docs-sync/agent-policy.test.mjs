@@ -18,7 +18,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, "..", "..")
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8")
 
-const { MODE, configContent, policy } = await import("./agent-policy.mjs")
+const { MODE, configContent, policy, validateMode } = await import("./agent-policy.mjs")
 
 const workflow = read(".github/workflows/docs-sync.yml")
 
@@ -143,6 +143,46 @@ check("configContent rejects an unknown mode", () => {
   assert.throws(() => configContent("nope"), /unknown agent policy mode/)
 })
 
+// 2b. Each mode must state a usable rule map, so a run always carries the
+//     scope its mode declares.
+check("validateMode accepts both committed modes", () => {
+  for (const mode of [MODE.toolsDenied, MODE.docsWrite]) {
+    validateMode(mode, policy().modes[mode])
+  }
+})
+
+check("validateMode rejects a mode without the leading catch-all deny", () => {
+  assert.throws(() => validateMode("x", { permission: { read: "allow" } }), /first rule must be "\*": "deny"/)
+  assert.throws(
+    () => validateMode("x", { permission: { "*": "allow", read: "allow" } }),
+    /first rule must be "\*": "deny"/,
+  )
+})
+
+check("validateMode rejects an invalid action value", () => {
+  assert.throws(() => validateMode("x", { permission: { "*": "deny", edit: "permit" } }), /rule "edit" must be/)
+  assert.throws(
+    () => validateMode("x", { permission: { "*": "deny", edit: { "*": "deny", "docs/*.md": "write" } } }),
+    /rule "edit" pattern "docs\/\*\.md" must be/,
+  )
+  assert.throws(() => validateMode("x", { permission: { "*": "deny", read: 5 } }), /rule "read" must be/)
+})
+
+check("validateMode rejects a non-object permission map", () => {
+  assert.throws(() => validateMode("x", {}), /permission must be an object/)
+  assert.throws(() => validateMode("x", { permission: "deny" }), /permission must be an object/)
+  assert.throws(() => validateMode("x", { permission: [] }), /permission must be an object/)
+  assert.throws(() => validateMode("x", undefined), /no mode entry/)
+})
+
+check("configContent validates the mode before it merges", () => {
+  const src = read(".github/docs-sync/agent-policy.mjs")
+  const call = src.lastIndexOf("validateMode(mode, entry)")
+  assert.ok(call >= 0, "configContent must call validateMode, so env and the CLI entry point fail too")
+  assert.ok(call > src.indexOf("unknown agent policy mode"), "the unknown-mode error must stay the first rejection")
+  assert.ok(call < src.indexOf("merged.permission"), "validation must run before the merge")
+})
+
 // 3. Every kilo call site names a mode, and none passes --auto.
 check("runKilo requires a mode", () => {
   assert.match(read(".github/docs-sync/lib.mjs"), /if \(!mode\) throw new Error\(`runKilo: mode is required/)
@@ -162,6 +202,40 @@ check("the fix step runs kilo without --auto and with the policy", () => {
   const block = step("Fix verify failures")
   assert.ok(block.includes("agent-policy.mjs docs-write"), "fix step must export the docs-write policy")
   assert.ok(!/\s--auto\b/.test(block), "fix step must not pass --auto")
+})
+
+check("the fix step requires a built policy before it runs", () => {
+  const block = step("Fix verify failures")
+  // Build the policy into a variable of its own, so its result is visible
+  // before `kilo run` starts.
+  assert.match(
+    block,
+    /if ! \w+="\$\(node \.github\/docs-sync\/agent-policy\.mjs docs-write\)" \|\| \[ -z "\$\w+" \]; then/,
+    "the fix step must assign the policy to a variable and check the assignment",
+  )
+  assert.match(block, /^\s+exit 1$/m, "the check must stop the step")
+  const guard = block.search(/if ! \w+="\$\(node \.github\/docs-sync\/agent-policy\.mjs docs-write\)"/)
+  const kilo = block.indexOf("kilo run")
+  assert.ok(
+    guard >= 0 && kilo > guard,
+    "`kilo run` must come after the check, so the pass always carries its policy",
+  )
+  // The policy variable, not a second inline substitution, is what the CLI gets.
+  assert.match(
+    block,
+    /KILO_CONFIG_CONTENT="\$\w+" \\\n\s+kilo run/,
+    "kilo run must read KILO_CONFIG_CONTENT from the guarded variable",
+  )
+  assert.ok(
+    block.includes('--variant "$DOCS_SYNC_VARIANT"') && block.includes("-f docs-sync-out/verify.log"),
+    "the step keeps --variant and the verify.log attachment",
+  )
+  assert.match(block, /\| node \.github\/docs-sync\/redact-stream\.mjs/, "the step keeps the redaction filter")
+  assert.match(
+    block,
+    /tee -a docs-sync-out\/edit-log\.txt[\s\S]*\|\| echo "::warning::/,
+    "the redaction + tee pipeline keeps its || echo warning guard",
+  )
 })
 
 // 4. Gateway credentials live on the steps that call the CLI, nowhere else.

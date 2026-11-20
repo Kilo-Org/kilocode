@@ -239,7 +239,14 @@ jobs:
           # The run's tool and path scope comes from agent-permissions.json
           # (mode docs-write), passed as KILO_CONFIG_CONTENT: markdown docs and
           # navigation files, read-only inspection, and the docs build and tests.
-          KILO_CONFIG_CONTENT="$(node .github/docs-sync/agent-policy.mjs docs-write)" \
+          # Build the policy into a variable first and require a non-empty
+          # value: this step runs only when the policy is in place, and
+          # agent-policy.mjs validates the mode as it builds it.
+          if ! KILO_POLICY="$(node .github/docs-sync/agent-policy.mjs docs-write)" || [ -z "$KILO_POLICY" ]; then
+            echo "::error::the docs-write agent policy is required for this pass and could not be built"
+            exit 1
+          fi
+          KILO_CONFIG_CONTENT="$KILO_POLICY" \
             kilo run "The docs build or tests failed. Read the attached docs-sync-out/verify.log and fix the packages/kilo-docs changes so they pass. Do not revert doc edits; fix them. Do not modify anything outside packages/kilo-docs." \
             -m "$EDIT_MODEL" --variant "$DOCS_SYNC_VARIANT" --dir "$GITHUB_WORKSPACE" -f docs-sync-out/verify.log \
             | node .github/docs-sync/redact-stream.mjs \

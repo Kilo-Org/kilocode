@@ -31,6 +31,46 @@ export function policy() {
   return JSON.parse(fs.readFileSync(POLICY_FILE, "utf8"))
 }
 
+/** The action literals a permission rule may take; `null` clears a rule. */
+const ACTIONS = new Set(["allow", "deny", "ask"])
+
+/** One accepted rule value: an action literal, or `null`. */
+const isAction = (value) => value === null || ACTIONS.has(value)
+
+/**
+ * Require every mode to state a usable rule map before it becomes
+ * `KILO_CONFIG_CONTENT`: the leading catch-all deny, and an action literal for
+ * each rule and pattern. A malformed mode stops the run here, so a run always
+ * carries the scope its mode declares.
+ */
+export function validateMode(mode, entry) {
+  const fail = (message) => {
+    throw new Error(`agent policy mode ${mode}: ${message}`)
+  }
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) fail("no mode entry")
+  const permission = entry.permission
+  if (!permission || typeof permission !== "object" || Array.isArray(permission)) {
+    fail("permission must be an object of tool rules")
+  }
+  const keys = Object.keys(permission)
+  if (keys.length === 0) fail("permission is empty")
+  if (keys[0] !== "*" || permission["*"] !== "deny") {
+    fail('the first rule must be "*": "deny", because permission evaluation takes the last matching rule')
+  }
+  for (const key of keys) {
+    const rule = permission[key]
+    if (isAction(rule)) continue
+    if (!rule || typeof rule !== "object" || Array.isArray(rule)) {
+      fail(`rule ${JSON.stringify(key)} must be allow, deny, ask, null or a map of patterns to one of them`)
+    }
+    for (const pattern of Object.keys(rule)) {
+      if (!isAction(rule[pattern])) {
+        fail(`rule ${JSON.stringify(key)} pattern ${JSON.stringify(pattern)} must be allow, deny, ask or null`)
+      }
+    }
+  }
+}
+
 /**
  * `KILO_CONFIG_CONTENT` for one mode, merged over the value already in the
  * environment so a caller's own provider or model settings survive. The policy
@@ -40,6 +80,7 @@ export function configContent(mode, base = process.env.KILO_CONFIG_CONTENT) {
   const modes = policy().modes
   const entry = modes[mode]
   if (!entry) throw new Error(`unknown agent policy mode: ${mode} (expected one of ${Object.keys(modes).join(", ")})`)
+  validateMode(mode, entry)
   const merged = base ? JSON.parse(base) : {}
   merged.permission = { ...(merged.permission ?? {}), ...entry.permission }
   return JSON.stringify(merged)
