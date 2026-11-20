@@ -5,7 +5,7 @@ import { directory, json } from "../fixture/tui-client"
 
 const location = { directory, project: { id: "project", directory, canonical: directory } }
 
-type AutoApproveState = { enabled: boolean; project?: boolean; writes?: number; globalHasKey?: boolean }
+type AutoApproveState = { enabled: boolean; project?: boolean; writes?: number; values?: unknown[] }
 
 /** The `kilocode.auto-approve` and `kilocode.settings` RPCs over one in-memory store. */
 function settings(state: AutoApproveState) {
@@ -14,25 +14,17 @@ function settings(state: AutoApproveState) {
       const value = state.project === false ? "narrowed" : state.enabled ? "enabled" : "disabled"
       return json({ output: { state: value } })
     }
-    if (url.pathname === "/api/rpc/kilocode.settings/read") {
-      const body = (await request.clone().json()) as { input?: { scope?: "global" | "project" } }
-      const scope = body.input?.scope ?? "global"
-      const globalKey = state.globalHasKey ?? state.enabled
-      const value = scope === "project" ? state.project : globalKey ? true : undefined
+    if (url.pathname === "/api/rpc/kilocode.settings/target") {
       return json({
-        output: {
-          scope,
-          target: { scope, path: `${directory}/${scope}-kilo2.json`, revision: "rev", exists: true },
-          document: value === undefined ? {} : { auto_approve: value },
-        },
+        output: { scope: "global", path: `${directory}/global-kilo2.json`, revision: "rev", exists: true },
       })
     }
     if (url.pathname === "/api/rpc/kilocode.settings/write") {
       const body = (await request.clone().json()) as { input?: { set?: { auto_approve?: boolean | null } } }
       state.writes = (state.writes ?? 0) + 1
       const written = body.input?.set?.auto_approve
+      state.values = [...(state.values ?? []), written]
       state.enabled = written === true
-      state.globalHasKey = written === true ? true : written === false ? true : false
       return json({
         output: {
           scope: "global",
@@ -245,11 +237,36 @@ test(
 )
 
 test(
-  "writes false when disabling a lower-precedence global file not defined in the write target",
+  "writes false on disable so a lower-precedence global file cannot keep auto-approve on",
   async () => {
     const sessionID = "ses_autoapprove_lower_global"
-    const state: AutoApproveState = { enabled: true, globalHasKey: false }
-    const writtenValues: unknown[] = []
+    const state: AutoApproveState = { enabled: true }
+    await using app = await createAppFixture({
+      width: 110,
+      height: 34,
+      args: { sessionID },
+      config: { animations: false, tabs: { mode: "off" } },
+      fetch: withSession(sessionID, state),
+    })
+    await app.ready
+    await until(app, "session", (frame) => frame.includes("Demo Model"))
+    expect(app.captureCharFrame()).toContain(" auto ")
+
+    app.mockInput.pressKey("a", { ctrl: true, meta: true })
+    await until(app, "disabled toast", (frame) => frame.includes("Auto-approve disabled."))
+    expect(state.values).toEqual([false])
+    expect(app.captureCharFrame()).not.toContain(" auto ")
+  },
+  30000,
+)
+
+test(
+  "ignores a config.updated refresh while a toggle write is in flight",
+  async () => {
+    const sessionID = "ses_autoapprove_race"
+    const state: AutoApproveState = { enabled: false }
+    const writeStarted = Promise.withResolvers<void>()
+    const releaseWrite = Promise.withResolvers<void>()
     const base = withSession(sessionID, state)
     await using app = await createAppFixture({
       width: 110,
@@ -258,11 +275,39 @@ test(
       config: { animations: false, tabs: { mode: "off" } },
       fetch: async (url, request) => {
         if (url.pathname === "/api/rpc/kilocode.settings/write") {
-          const body = (await request.clone().json()) as { input?: { set?: { auto_approve?: unknown } } }
-          writtenValues.push(body.input?.set?.auto_approve)
+          writeStarted.resolve()
+          await releaseWrite.promise
         }
         return base(url, request)
       },
+    })
+    await app.ready
+    await until(app, "session", (frame) => frame.includes("Demo Model"))
+
+    app.mockInput.pressKey("a", { ctrl: true, meta: true })
+    await writeStarted.promise
+    app.events.emit({ id: "evt_mid_write", created: 1, type: "config.updated", data: {} })
+    await Bun.sleep(50)
+    releaseWrite.resolve()
+
+    await until(app, "enabled toast", (frame) => frame.includes("Auto-approve enabled."))
+    expect(state.enabled).toBe(true)
+    expect(app.captureCharFrame()).toContain(" auto ")
+  },
+  30000,
+)
+
+test(
+  "toggling off local session.permissions leaves the global config untouched",
+  async () => {
+    const sessionID = "ses_autoapprove_local_off"
+    const state: AutoApproveState = { enabled: false }
+    await using app = await createAppFixture({
+      width: 110,
+      height: 34,
+      args: { sessionID },
+      config: { animations: false, tabs: { mode: "off" }, session: { permissions: "autoaccept" } },
+      fetch: withSession(sessionID, state),
     })
     await app.ready
     await until(app, "session", (frame) => frame.includes("Demo Model"))
@@ -270,8 +315,32 @@ test(
 
     app.mockInput.pressKey("a", { ctrl: true, meta: true })
     await until(app, "disabled toast", (frame) => frame.includes("Auto-approve disabled."))
-    expect(writtenValues).toEqual([false])
     expect(app.captureCharFrame()).not.toContain(" auto ")
+    expect(state.writes ?? 0).toBe(0)
+  },
+  30000,
+)
+
+test(
+  "keeps --auto active when another client disables the saved global rule",
+  async () => {
+    const sessionID = "ses_autoapprove_flag_remote_off"
+    const state: AutoApproveState = { enabled: true }
+    await using app = await createAppFixture({
+      width: 110,
+      height: 34,
+      args: { sessionID, auto: true },
+      config: { animations: false, tabs: { mode: "off" } },
+      fetch: withSession(sessionID, state),
+    })
+    await app.ready
+    await until(app, "session", (frame) => frame.includes("Demo Model"))
+    expect(app.captureCharFrame()).toContain(" auto ")
+
+    state.enabled = false
+    app.events.emit({ id: "evt_remote_disable", created: 1, type: "config.updated", data: {} })
+    await Bun.sleep(150)
+    expect(app.captureCharFrame()).toContain(" auto ")
   },
   30000,
 )

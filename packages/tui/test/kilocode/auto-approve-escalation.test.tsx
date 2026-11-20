@@ -54,13 +54,9 @@ async function sessionApp(input: { config?: Config.Info; auto?: boolean }) {
     fetch: async (url, request) => {
       if (url.pathname === "/api/rpc/kilocode.auto-approve/get")
         return json({ output: { state: autoApprove ? "enabled" : "disabled" } })
-      if (url.pathname === "/api/rpc/kilocode.settings/read")
+      if (url.pathname === "/api/rpc/kilocode.settings/target")
         return json({
-          output: {
-            scope: "global",
-            target: { scope: "global", path: `${directory}/kilo2.json`, revision: "rev", exists: true },
-            document: autoApprove ? { auto_approve: true } : {},
-          },
+          output: { scope: "global", path: `${directory}/kilo2.json`, revision: "rev", exists: true },
         })
       if (url.pathname === "/api/rpc/kilocode.settings/write") {
         const body = (await request.clone().json()) as { input?: { set?: { auto_approve?: boolean | null } } }
