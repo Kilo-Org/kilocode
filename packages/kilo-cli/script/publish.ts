@@ -22,7 +22,9 @@ import { $ } from "bun"
 import { mkdir, rm } from "node:fs/promises"
 import path from "node:path"
 import { Script } from "@opencode/script"
+import { isPreview } from "../src/update-version"
 import { launcherPostinstall } from "./postinstall"
+import { refuseStale, waitForRegistry } from "./registry-readiness"
 
 const dir = path.resolve(import.meta.dirname, "..")
 const root = path.join(dir, "dist")
@@ -119,11 +121,21 @@ await Bun.write(
 )
 
 // The launcher goes last: its postinstall script needs the platform packages on the registry.
+const platformPackages = Object.entries(binaries)
+// A rerun of an older workflow run must fail before it can move the launcher or platform `kilo-v2` tags back to its
+// version. The tag reads are public and stay out of the dry run, which must not touch the network.
+if (!dryRun) {
+  if (!isPreview(version)) throw new Error(`Refusing to publish ${name}@${version}: ${tag} needs a Kilo v2 preview.`)
+  const packages: Array<[string, string]> = [...platformPackages, [name, version]]
+  await Promise.all(packages.map(([pkg, build]) => refuseStale(pkg, build, tag)))
+}
 await Promise.all(
-  Object.entries(binaries).map(([pkg, version]) =>
-    publish(path.join(root, pkg.slice("@kilocode/".length)), pkg, version),
-  ),
+  platformPackages.map(([pkg, version]) => publish(path.join(root, pkg.slice("@kilocode/".length)), pkg, version)),
 )
+// A successful publish or a visible version does not mean the tarball is served yet. npm hides a platform package
+// that 404s as a skipped optional dependency, so the launcher would be installable with no binary on that platform.
+// Wait for every exact-version manifest and tarball before the launcher can become visible. Dry runs publish nothing.
+if (!dryRun) await waitForRegistry(platformPackages.map(([name, version]) => ({ name, version })))
 await publish(launcher, name, version)
 console.log(`${dryRun ? "dry run: " : ""}${name}@${version} published with dist-tag ${tag}`)
 

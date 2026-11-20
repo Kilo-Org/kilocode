@@ -349,11 +349,10 @@ for (const args of [["--help"], ["auth", "logout", "--help"]]) {
 }
 
 for (const args of [["upgrade"], ["upgrade", "99.0.0", "--method", "npm"], ["update", "99.0.0", "--method", "curl"]]) {
-  test(`Kilo rejects inherited updates: ${args.join(" ")}`, async () => {
+  test(`Kilo does not update source builds: ${args.join(" ")}`, async () => {
     await using root = await temporary()
     const output = await run([process.execPath, "run", "dev", ...args], root.path, true, 1)
-    expect(output).toContain("Kilo updates are disabled")
-    expect(output).toContain("Update Kilo manually")
+    expect(output).toContain("This is a source build. Update the checkout")
     expect(output).not.toContain("opencode.ai")
   }, 60_000)
 }

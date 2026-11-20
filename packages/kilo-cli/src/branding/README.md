@@ -11,7 +11,7 @@ Branding is applied by a Bun loader, not by editing committed upstream files:
 
 Both paths call `KiloBranding.transform(file, source)` in `text.ts`, which is the single entry point. For an intercepted file it applies three stages in order:
 
-1. **Overrides** (`rules.ts`, `overrides`) — whole-file, file-scoped exact replacements for Kilo _product copy_ that is not a mechanical brand swap (for example, upgrades are disabled, so the upgrade description changes meaning). Applied first so a later OpenCode -> Kilo pass cannot pre-empt them.
+1. **Overrides** (`rules.ts`, `overrides`) — whole-file, file-scoped exact replacements for Kilo _product copy_ that is not a mechanical brand swap. Applied first so a later OpenCode -> Kilo pass cannot pre-empt them.
 2. **Structural transforms** (`structural.ts`) — not branding text: they rewrite imports and logic so the TUI uses Kilo's logo art (`logo-art.ts`), and swap the OAuth wordmark SVG. These are exact and **fail loudly** when upstream moves the code, so a human re-inspects the new implementation during a sync. The `logo.ts` wordmark export is replaced the same way (`brandLogoModule`).
 3. **Rule engine** (`engine.ts` + `rules.ts`) — the dynamic part. The module is parsed with Babel and the rules run over **user-visible text only** (string literals, template text, JSX text), located by AST offsets and spliced into the original source so every other byte is preserved. The rules are, per span: a literal map (domains, repo URL, config file name, title prefix), then `\bOpenCode\b` -> `Kilo`, then the command token `opencode` -> `kilo2`.
 

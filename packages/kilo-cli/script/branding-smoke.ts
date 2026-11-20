@@ -49,11 +49,12 @@ try {
     COLORTERM: "truecolor",
   }
   const program = binary ? [binary] : [process.execPath, "dev"]
+  const unsupported = binary ? "not managed by a supported global package manager" : "This is a source build"
   for (const check of [
     { args: ["--help"], code: 0, text: "Kilo command line interface" },
     { args: ["auth", "logout", "--help"], code: 0, text: "kilo2 auth logout" },
-    { args: ["upgrade", "99.0.0", "--method", "npm"], code: 1, text: "Kilo updates are disabled" },
-    { args: ["update", "99.0.0", "--method", "curl"], code: 1, text: "Kilo updates are disabled" },
+    { args: ["upgrade", "99.0.0", "--method", "npm"], code: 1, text: unsupported },
+    { args: ["update", "99.0.0", "--method", "curl"], code: 1, text: unsupported },
   ]) {
     const child = Bun.spawn([...program, ...check.args], {
       cwd: binary ? path.join(root, "workspace") : repo,
@@ -91,16 +92,11 @@ try {
         openedUpdate = true
         terminal.write("/update")
       }
-      if (
-        openedUpdate &&
-        !confirmedUpdate &&
-        screen.includes("/update") &&
-        screen.includes("Kilo update instructions")
-      ) {
+      if (openedUpdate && !confirmedUpdate && screen.includes("/update") && screen.includes("Update Kilo")) {
         confirmedUpdate = true
         terminal.write("\r")
       }
-      if (confirmedUpdate && screen.includes("Kilo updates are disabled")) found.resolve()
+      if (confirmedUpdate && screen.includes(unsupported)) found.resolve()
     },
   })
   try {
@@ -122,7 +118,7 @@ try {
         }),
       ])
       console.log(
-        `PASS: ${binary ? "compiled" : "source"} Kilo logo, help, blocked upgrades, terminal title and update instructions`,
+        `PASS: ${binary ? "compiled" : "source"} Kilo logo, help, terminal title and unsupported update guidance`,
       )
     } finally {
       clearTimeout(timeout)

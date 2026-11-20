@@ -13,7 +13,7 @@ The `package-vscode` job in `.github/workflows/kilo-v2-publish.yml` packages and
 ## Verify before the first publish
 
 - Run the packaged VSIX self-test on macOS, Linux and Windows. Check that the bundled `kilo2` starts, the panels load, and the Linux sandbox helpers are present.
-- v1 copied the CLI tree-sitter resources into the extension. The v2 build does not copy `dist/tree-sitter`, and `tree-sitter-wasms` is not a dependency. Verify autocomplete in the packaged VSIX and port the resource copy if it is needed.
+- Each VSIX includes the matching CLI's `bin/tree-sitter` resources. Packaging checks that the runtime WASM is present in the final archive; verify autocomplete in the packaged extension as part of the release smoke test.
 
 ## Deferred
 

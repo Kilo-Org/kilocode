@@ -40,6 +40,8 @@ on:
       - .github/workflows/kilo-v2-publish.yml
       - packages/kilo-cli/script/build.ts
       - packages/kilo-cli/script/publish.ts
+      - packages/kilo-cli/script/registry-readiness.ts
+      - packages/kilo-cli/src/update-version.ts
       - packages/kilo-cli/script/postinstall.ts
       - packages/kilo-cli/script/theme-smoke.ts
       - packages/cli/script/postinstall.mjs
@@ -132,6 +134,8 @@ jobs:
           test "$("$prefix/node_modules/.bin/kilo2" --version)" = "kilo2 v$KILO_VERSION"
           # v2 must not install a `kilo` command, which would start v2 for v1 users.
           test ! -e "$prefix/node_modules/.bin/kilo"
+          test ! -e "$prefix/node_modules/.bin/opencode"
+          test -f "$prefix/node_modules/@kilocode/cli/bin/tree-sitter/tree-sitter.wasm"
         env:
           KILO_VERSION: ${{ steps.version.outputs.version }}
 
@@ -257,7 +261,8 @@ jobs:
           {
             echo "Published \`@kilocode/cli@${{ needs.build.outputs.version }}\` with dist-tag \`kilo-v2\`."
             echo ""
-            echo "Install: \`npm i -g @kilocode/cli@kilo-v2\`"
+            echo 'Install alongside v1 on POSIX: `npm install -g --prefix "$HOME/.local/share/kilo2-npm" @kilocode/cli@kilo-v2`.'
+            echo 'Run `$HOME/.local/share/kilo2-npm/bin/kilo2`. Keep v1 and v2 in separate npm prefixes.'
           } >> "$GITHUB_STEP_SUMMARY"
 
   # Separate from the CLI publish, so a problem with one does not block the other. A rerun publishes only what is missing.
@@ -355,6 +360,7 @@ jobs:
           for target in $VSIX_TARGETS; do
             bun run package --target="$target"
             unzip -p "out/kilo-vscode-$target.vsix" extension/LICENSE.txt | cmp - ../../LICENSE
+            unzip -tq "out/kilo-vscode-$target.vsix" extension/bin/tree-sitter/tree-sitter.wasm
           done
 
       # Keep the packages for the publish job and for inspection when a later publish fails.

@@ -1,0 +1,11 @@
+# Kilo v2 preview updates
+
+**Keep v1 and v2 in separate npm prefixes.** Both use `@kilocode/cli`; installing one into the other's prefix replaces the other package. On POSIX, install a side-by-side preview with `npm install -g --prefix "$HOME/.local/share/kilo2-npm" @kilocode/cli@kilo-v2` and run `$HOME/.local/share/kilo2-npm/bin/kilo2`. To get the first release containing the updater, rerun the tagged install in your existing v2-only prefix. Don't use an unqualified `npm update -g` for the preview: npm's `latest` is still the v1 line.
+
+The interactive CLI checks on startup and every ten minutes and notifies by default. Use `/update` or `kilo2 upgrade` to apply a release. Set `"update": "auto"` in global `kilo2.json` or `kilo2.jsonc` for unattended installs, or `"update": "disable"` to stop background checks. `KILO_DISABLE_AUTOUPDATE=1` also stops background checks. Relaunch the CLI when ready; the updater itself does not stop the background server or touch session data.
+
+Kilo verifies that a supported global npm, pnpm, or Yarn Classic install owns the running binary before applying an update. It reads only the `kilo-v2` tag on public npm and installs the exact version into that install. It won't switch to `latest`, install a different package, or downgrade to an older preview build. If ownership cannot be established, update with the original package manager, keeping the `@kilo-v2` tag explicit. For example, a Bun global install can be updated with `bun install -g --trust @kilocode/cli@kilo-v2`.
+
+The macOS arm64 native alpha is a separate internal installer. Rerun `bun run install:alpha` from a Kilo v2 checkout to install the latest authenticated GitHub Actions build; it won't overwrite a `kilo2` installed by a different method. The [VS Code preview](../../packages/kilo-vscode/README.md#updates) gets its bundled server through the extension gallery, not npm or the alpha installer.
+
+The release workflow waits for all exact-version platform tarballs to be served by public npm before publishing the launcher under `kilo-v2`. If an artifact is missing at install time, the updater reports the issue without invoking the package manager.
