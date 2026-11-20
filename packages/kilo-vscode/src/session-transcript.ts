@@ -18,18 +18,19 @@ export function formatSessionTranscript(transfer: SessionTransferData): string {
   const messages = transfer.messages.filter(
     (message): message is TranscriptMessage => message.type === "user" || message.type === "assistant",
   )
-  const body = messages.map(formatMessage).join("---\n\n")
-  return `${head}${body}${messages.length > 0 ? "---\n\n" : ""}`
+  const body = messages.flatMap(formatMessage)
+  return `${head}${body.join("---\n\n")}${body.length > 0 ? "---\n\n" : ""}`
 }
 
-function formatMessage(message: TranscriptMessage): string {
-  if (message.type === "user") return `## User\n\n${message.text}\n\n`
-  const content = message.content
-    .map((item) => {
-      if (item.type === "text") return `${item.text}\n\n`
-      if (item.type === "tool") return `**Tool: ${item.name}**\n\n`
-      return ""
-    })
-    .join("")
-  return `## Assistant\n\n${content}`
+// An assistant step that stopped before storing text or a tool call, such as a thinking-only retry, stays out of the
+// export so the file does not gain an empty section between two separators.
+function formatMessage(message: TranscriptMessage) {
+  if (message.type === "user") return [`## User\n\n${message.text}\n\n`]
+  const content = message.content.flatMap((item) => {
+    if (item.type === "text") return [`${item.text}\n\n`]
+    if (item.type === "tool") return [`**Tool: ${item.name}**\n\n`]
+    return []
+  })
+  if (content.length === 0) return []
+  return [`## Assistant\n\n${content.join("")}`]
 }

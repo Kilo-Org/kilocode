@@ -7,11 +7,12 @@ import { Session } from "@opencode/schema/session"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { Uri, window, workspace } from "vscode"
 import { exportTranscript } from "../src/kilo-provider/export-transcript"
-import { command, manager, type Manager } from "../src/server"
+import { command, manager, type Manager, type Server } from "../src/server"
 
 let root: string
 let directory: string
 let server: Manager
+let target: Server | undefined
 let sessionID: string
 const texts = Array.from({ length: 205 }, (_, index) => `Message ${index + 1}: café 🌱`)
 
@@ -24,7 +25,7 @@ beforeAll(async () => {
     cwd: root,
     env: process.env,
   })
-  const target = await server.get()
+  target = await server.get()
   const client = OpenCode.make({ baseUrl: target.url, headers: { authorization: target.authorization } })
   const time = Date.now()
   const info = await client.experimental.session.import({
@@ -49,8 +50,17 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  // `stop` closes stdin and resolves before the child exits, so the profile and database it holds stay open.
+  const exited = new Promise<void>((resolve) => {
+    if (!target || target.process.exitCode !== null) {
+      resolve()
+      return
+    }
+    target.process.once("exit", () => resolve())
+  })
   await server?.stop()
-  if (root) await rm(root, { recursive: true, force: true })
+  await exited
+  if (root) await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
 })
 
 test("exports all pages in server order to the chosen Markdown path as UTF-8", async () => {

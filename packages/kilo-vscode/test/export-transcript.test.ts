@@ -128,6 +128,21 @@ describe("formatSessionTranscript", () => {
     expect(text).toContain("Working")
   })
 
+  it("omits assistant steps that carry no text or tool content", () => {
+    const text = formatSessionTranscript(
+      transfer([
+        user("Question"),
+        assistant([{ type: "reasoning", text: "Only thinking" }]),
+        assistant([]),
+        assistant([{ type: "text", text: "Answer" }]),
+      ]),
+    )
+
+    expect(text).toContain("## User\n\nQuestion\n\n---\n\n## Assistant\n\nAnswer\n\n---\n\n")
+    expect(text.match(/## Assistant/g)).toHaveLength(1)
+    expect(text).not.toContain("Only thinking")
+  })
+
   it("keeps an empty session export readable", () => {
     const text = formatSessionTranscript(transfer([], { id: "ses_empty", title: "Empty" }))
 
