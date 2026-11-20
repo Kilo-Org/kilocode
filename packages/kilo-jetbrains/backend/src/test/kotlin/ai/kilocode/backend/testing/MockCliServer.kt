@@ -55,6 +55,7 @@ class MockCliServer : AutoCloseable {
     @Volatile var transcriptionRelease: CountDownLatch? = null
     @Volatile var configStatus = 200
     @Volatile var workspaceConfigStatus = 200
+    @Volatile var configOverlayStatus = 200
     @Volatile var warningsStatus = 200
     @Volatile var notificationsStatus = 200
 
@@ -514,6 +515,15 @@ class MockCliServer : AutoCloseable {
                 }
                 bare == "/global/dispose" && method == "POST" -> respond(output, disposeStatus, "true")
                 path.startsWith("/config/warnings") -> respond(output, warningsStatus, warnings)
+                bare == "/config/overlay" && method == "GET" -> {
+                    // Reports each config file's raw content so a caller can tell a project-scope
+                    // setting from one inherited from the global file. A non-200 answer has no body.
+                    if (configOverlayStatus == 200) {
+                        respond(output, configOverlayStatus, """{"scope":"project","global":$config,"project":$workspaceConfig}""")
+                    } else {
+                        respond(output, configOverlayStatus, "")
+                    }
+                }
                 bare == "/config/overlay" && method == "PATCH" -> {
                     if (body.contains("\"scope\":\"global\"")) {
                         lastConfigPatchBody = body

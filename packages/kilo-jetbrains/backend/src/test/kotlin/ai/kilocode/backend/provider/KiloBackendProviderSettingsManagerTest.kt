@@ -330,6 +330,92 @@ class KiloBackendProviderSettingsManagerTest {
     }
 
     @Test
+    fun `state attributes a globally disabled provider to the global scope when the project config does not list it`() = runBlocking {
+        // The resolved `/config` repeats the global list verbatim when the project file does not
+        // override it, so attributing a disabled id to the workspace would show a project-scope
+        // override that no file contains.
+        mock.config = """{"disabled_providers":["global-only"]}"""
+        mock.workspaceConfig = "{}"
+        val manager = manager()
+
+        mock.resetCounts()
+        val state = manager.state("/test")
+
+        assertEquals(
+            listOf("global"),
+            state.disabledScopes["global-only"],
+            "a provider disabled only in the global file must not be reported as workspace-scoped",
+        )
+        assertTrue(state.disabled.contains("global-only"), "the merged disabled list must still contain the provider")
+        assertEquals(1, mock.requestCount("/config/overlay"), "the per-scope maps must come from the overlay")
+        assertEquals(0, mock.requestCount("/config"), "the resolved config is only a fallback and must not be read")
+    }
+
+    @Test
+    fun `state attributes a shared disable to both scopes when the project config lists it`() = runBlocking {
+        mock.config = """{"disabled_providers":["anthropic"]}"""
+        mock.workspaceConfig = """{"disabled_providers":["anthropic"]}"""
+        mock.providers = """{
+            "all":[{"id":"anthropic","name":"Anthropic","source":"config","models":{}}],
+            "default":{},
+            "connected":[],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        val state = manager.state("/test")
+
+        assertEquals(
+            listOf("global", "workspace"),
+            state.disabledScopes["anthropic"],
+            "the project file lists the id itself, so enable must clear it from both files",
+        )
+
+        mock.resetCounts()
+        val result = manager.enable(ProviderEnableDto("/test", "anthropic"))
+
+        assertNull(result.error)
+        assertFalse(
+            mock.lastConfigPatchBody.orEmpty().contains("\"anthropic\""),
+            "the global config patch must drop the enabled provider",
+        )
+        assertFalse(
+            mock.lastWorkspaceConfigPatchBody.orEmpty().contains("\"anthropic\""),
+            "the workspace config patch must drop the enabled provider",
+        )
+        assertFalse(
+            result.state.disabled.contains("anthropic"),
+            "merged disabled list still contains anthropic after enable, so the provider stays hidden",
+        )
+        assertEquals(1, mock.requestCount("/global/dispose"))
+    }
+
+    @Test
+    fun `state falls back to the resolved workspace config when the overlay is unavailable`() = runBlocking {
+        // The fallback body carries inherited global values, so the shared id must stay global-only
+        // there: the workspace file's own content is unknown when the overlay fails.
+        mock.config = """{"disabled_providers":["anthropic"]}"""
+        mock.workspaceConfig = """{"disabled_providers":["anthropic","workspace-only"]}"""
+        mock.configOverlayStatus = 503
+        val manager = manager()
+
+        mock.resetCounts()
+        val state = manager.state("/test")
+
+        assertEquals(
+            listOf("global"),
+            state.disabledScopes["anthropic"],
+            "an inherited global id must not gain a false workspace attribution from the resolved config",
+        )
+        assertEquals(listOf("workspace"), state.disabledScopes["workspace-only"])
+        assertTrue(state.disabled.contains("anthropic"), "the state must still load the merged disabled list")
+        assertEquals(1, mock.requestCount("/config/overlay"))
+        assertEquals(1, mock.requestCount("/config"), "the resolved config must be read as the overlay fallback")
+        val error = state.errors.single { it.resource == "config_overlay" }
+        assertContains(error.detail.orEmpty(), "503")
+    }
+
+    @Test
     fun `saving custom provider without models returns error and does not patch config`() = runBlocking {
         val manager = manager()
 

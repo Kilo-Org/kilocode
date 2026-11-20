@@ -55,14 +55,21 @@ internal class KiloBackendProviderSettingsManager(
         val global = load("global_config", errors) {
             parsed(get("/global/config"))
         } ?: empty
-        val local = load("workspace_config", errors) {
+        // The resolved `/config` body repeats every global setting the project file does not
+        // override, so it cannot distinguish a workspace-scoped list entry from an inherited one.
+        // The overlay reports each file's raw content instead; the resolved config is only the
+        // fallback when the overlay endpoint is unavailable.
+        val project = load("config_overlay", errors) {
+            KiloCliDataParser.parseConfigOverlayProject(get("/config/overlay?directory=${enc(directory)}&scope=project"))?.let { parsed(it) }
+        }
+        val local = project ?: load("workspace_config", errors) {
             parsed(get("/config?directory=${enc(directory)}"))
         } ?: empty
         val cfg = scopedConfig(global.config, local.config)
         val disabled = (global.disabled + local.disabled).distinct().sorted()
         val enabled = (global.enabled + local.enabled).distinct().sorted()
-        val disabledScopes = scopedIds(global.disabled, local.disabled)
-        val enabledScopes = scopedIds(global.enabled, local.enabled)
+        val disabledScopes = scopedIds(global.disabled, local.disabled, merged = project == null)
+        val enabledScopes = scopedIds(global.enabled, local.enabled, merged = project == null)
         val result = ProviderSettingsDto(
             providers = providers?.first ?: emptyList(),
             connected = providers?.second ?: emptyList(),
@@ -281,13 +288,21 @@ internal class KiloBackendProviderSettingsManager(
         }.toMap()
     }
 
-    private fun scopedIds(global: List<String>, local: List<String>): Map<String, List<String>> {
+    /**
+     * Maps every listed id to the scopes whose config file lists it.
+     *
+     * `merged` says that [local] is not the project file's own list but the resolved config,
+     * which repeats whatever the global file sets. In that case an id that is already global
+     * must not also be attributed to the workspace, or the UI would claim a workspace override
+     * that does not exist and `enable` would rewrite the workspace file for nothing.
+     */
+    private fun scopedIds(global: List<String>, local: List<String>, merged: Boolean = false): Map<String, List<String>> {
         val globals = global.toSet()
         val locals = local.toSet()
         return (global + local).distinct().associateWith { id ->
             buildList {
                 if (id in globals) add("global")
-                if (id in locals) add("workspace")
+                if (id in locals && (!merged || id !in globals)) add("workspace")
             }
         }
     }
