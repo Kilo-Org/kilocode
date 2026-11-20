@@ -95,9 +95,12 @@ export function configContent(mode, base = process.env.KILO_CONFIG_CONTENT) {
 const STEP_ONLY = /^GIT_CONFIG_(?:COUNT|KEY_[0-9]+|VALUE_[0-9]+)$/
 
 /**
- * Credential-shaped names. The environment is filtered by name rather than
- * rebuilt from a keep-list, so a pass keeps the caller's provider and model
- * settings while a credential added to a step later never reaches a run.
+ * Credential-shaped names, matched on the name ending: `KEY`, `TOKEN`,
+ * `SECRET`, `CREDENTIAL`, `PASSWORD`, `ORG_ID` and `_PAT`. The environment is
+ * filtered rather than rebuilt from a keep-list, so a pass keeps the caller's
+ * provider and model settings while a step's credential stays with the step.
+ * The match is on the ending alone: a name that ends differently is outside
+ * this rule and needs its own entry when a step starts setting it.
  */
 const SECRET_NAME = /(?:KEY|TOKEN|SECRET|CREDENTIAL|PASSWORD|ORG_ID|_PAT)$/i
 
@@ -110,9 +113,10 @@ const GATEWAY = new Set(["KILO_API_KEY", "KILO_ORG_ID"])
 /**
  * Child environment for a `kilo run` under `mode`.
  *
- * The child receives no credential and no git credential-helper definition,
- * because those belong to the calling step and are not needed by the model. The
- * gateway credentials stay, because the CLI authenticates with them.
+ * The child receives the caller's environment without the names the two rules
+ * above match, so a step's credential and credential-helper definition stay
+ * with the step. The gateway credentials stay, because the CLI authenticates
+ * with them.
  */
 export function env(mode, base = process.env) {
   const child = { ...base }
