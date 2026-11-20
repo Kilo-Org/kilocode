@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Tracker, diff, modeFor, observe, split, snapshot } from "../../src/browser/observation"
+import { Tracker, diff, modeFor, observe, reportsPage, split, snapshot } from "../../src/browser/observation"
 
 const first = `### Result
 Clicked "Sign in"
@@ -214,5 +214,24 @@ describe("explicit observation requests", () => {
     expect(modeFor("browser_click", "none")).toBe("none")
     expect(modeFor("browser_click", "diff")).toBe("diff")
     expect(modeFor("browser_navigate", "full")).toBe("full")
+  })
+})
+
+describe("reportsPage", () => {
+  test("follows the steps the pinned Playwright MCP reports the page after", () => {
+    expect(reportsPage("browser_click", {})).toBe(true)
+    expect(reportsPage("browser_navigate", { url: "http://localhost:3000" })).toBe(true)
+    expect(reportsPage("browser_type", { target: "e1", text: "a" })).toBe(false)
+    expect(reportsPage("browser_type", { target: "e1", text: "a", submit: true })).toBe(true)
+    expect(reportsPage("browser_type", { target: "e1", text: "a", slowly: true })).toBe(true)
+    expect(reportsPage("browser_tabs", { action: "new", url: "http://localhost:3000" })).toBe(true)
+    expect(reportsPage("browser_tabs", { action: "new" })).toBe(false)
+    expect(reportsPage("browser_tabs", { action: "list" })).toBe(false)
+    expect(reportsPage("browser_fill_form", { fields: [] })).toBe(false)
+    expect(reportsPage("browser_evaluate", { function: "() => 1" })).toBe(false)
+  })
+
+  test("none mode keeps a result a backend wrote without the MCP's headings", () => {
+    expect(observe({ mode: "none", text: '{"done":true}' }).text).toBe('### Status\n- ok\n{"done":true}')
   })
 })
