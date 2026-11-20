@@ -433,6 +433,26 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertEquals(listOf("cancel:linear", "remove:linear"), rpc.mcpAuthCalls)
     }
 
+    /**
+     * When neither call lands, the reset changes nothing, so the running sign-in still reports its
+     * own result.
+     */
+    fun `test reset leaves a running sign in alone when neither call lands`() = runBlocking(Dispatchers.Default) {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeAuthenticate = { gate.await() }
+        rpc.mcpAuthCancelResult = false
+        rpc.mcpAuthRemoveResult = false
+        rpc.mcpAuthenticateResult = McpAuthResultDto("connected")
+        val service = service()
+        val signIn = async { service.signIn("/test", "linear") }
+        withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+        assertFalse(service.reset("/test", "linear"))
+        gate.complete(Unit)
+
+        assertEquals("connected", signIn.await().status)
+    }
+
     fun `test reset keeps needs auth state when reconnect fails`() = runBlocking(Dispatchers.Default) {
         rpc.mcps = listOf(McpStatusDto("linear", "connected"))
         rpc.mcpConnectError = RuntimeException("offline")

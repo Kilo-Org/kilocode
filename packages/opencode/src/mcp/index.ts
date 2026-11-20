@@ -790,6 +790,7 @@ const layer = Layer.effect(
       delete s.instructions[name]
       delete s.status[name]
       delete s.config[name]
+      authEpoch.delete(name) // kilocode_change - the name is gone, so its epoch guards nothing
     })
     // kilocode_change end
 
@@ -1170,12 +1171,14 @@ const layer = Layer.effect(
       }
 
       yield* KiloAuthTelemetry.phase("credential_store")
-      // kilocode_change start - credentials are stored for the flow that obtained them. A removal or
-      // a cancelled sign-in advances the server's epoch, so a flow that started earlier finishes
-      // without storing. The pending entry is keyed by server and cannot tell two attempts apart;
-      // the epoch can. The exchange itself cannot be aborted - the SDK sends it without the
-      // transport's abort signal - so this check is where the flow's result is accepted.
-      if (epochOf(mcpName) !== flow.epoch) {
+      // kilocode_change start - a credential belongs to the flow that obtained it. The acceptance
+      // test runs with the write, and a removal or a cancelled sign-in advances the server's epoch,
+      // so a flow that started earlier stores nothing. The pending entry is keyed by server, so the
+      // epoch is what identifies the flow.
+      const stored = yield* Effect.promise(
+        () => flow.provider?.commit(() => epochOf(mcpName) === flow.epoch) ?? Promise.resolve(true),
+      )
+      if (!stored) {
         yield* KiloAuthTelemetry.superseded()
         yield* releaseFlow(mcpName, flow)
         return {
@@ -1184,7 +1187,6 @@ const layer = Layer.effect(
         } satisfies Status
       }
       // kilocode_change end
-      yield* Effect.promise(() => flow.provider?.commit() ?? Promise.resolve())
       yield* KiloAuthTelemetry.persisted(flow.provider)
       pendingOAuthTransports.delete(mcpName)
 

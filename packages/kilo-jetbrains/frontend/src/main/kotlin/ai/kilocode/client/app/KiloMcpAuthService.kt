@@ -96,6 +96,11 @@ class KiloMcpAuthService internal constructor(
             abandoned = true
         }
 
+        /** Clears the abandoned marker when the reset released nothing. */
+        fun resume() {
+            abandoned = false
+        }
+
         fun stop(forget: Boolean = false) {
             if (forget) forgotten = true
             abort.complete(Unit)
@@ -257,6 +262,7 @@ class KiloMcpAuthService internal constructor(
     suspend fun reset(dir: String, name: String): Boolean {
         val key = busyKey(dir, name)
         val pending = active[key]
+        var released = false
         if (pending != null) {
             pending.abandon()
             // Release the flow before the removal lands, in the order forget documents: while the
@@ -265,10 +271,16 @@ class KiloMcpAuthService internal constructor(
             // block the reset: the CLI answers success for any server it still knows, so a refusal
             // means the name is gone or the RPC broke, and the removal below is what decides the
             // outcome.
-            attempt("mcp auth reset cancel failed dir=$dir name=$name", false) { svc().mcpAuthCancel(dir, name) }
+            released = attempt("mcp auth reset cancel failed dir=$dir name=$name", false) {
+                svc().mcpAuthCancel(dir, name)
+            }
         }
         val removed = attempt("mcp auth reset failed dir=$dir name=$name", false) { svc().mcpAuthRemove(dir, name) }
-        if (!removed) return false
+        if (!removed) {
+            // Neither call landed, so the sign-in is untouched: it still owns its own result.
+            if (!released) pending?.resume()
+            return false
+        }
         pending?.stop()
         var reconnected = false
         try {
