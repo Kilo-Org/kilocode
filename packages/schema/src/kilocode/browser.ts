@@ -111,7 +111,10 @@ export const Definition = Rpc.define({
       input: portable(Session),
       output: portable(Share),
     },
-    /** Gives the session the most recent ended tab group; lifts the session's stop. */
+    /**
+     * Gives the session the most recent ended tab group. Lifts the session's stop only when the session then has tabs
+     * (`adopted`, or `kept` its own); `none` and `unconfirmed` leave it stopped.
+     */
     adopt: {
       input: portable(Session),
       output: portable(Adopt),
