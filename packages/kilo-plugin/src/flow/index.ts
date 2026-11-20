@@ -1,7 +1,7 @@
 import path from "node:path"
 import { define } from "@opencode/plugin/effect/plugin"
 import type { Plugin } from "@opencode/plugin/effect"
-import { Schedule } from "@opencode/core/schedule"
+import { Automation } from "@opencode/core/automation"
 import type { Agent } from "@opencode/schema/agent"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import type { Model } from "@opencode/schema/model"
@@ -11,6 +11,20 @@ import type { SessionEvent } from "@opencode/schema/session-event"
 import { Tool } from "@opencode/schema/tool"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Cause, DateTime, Effect, Option, Ref, Schema, Semaphore, Stream } from "effect"
+import {
+  automationID,
+  backingSchedule,
+  instant,
+  legacyScheduleKey,
+  outcome,
+  remaining,
+  requireEnds,
+  scheduleKey,
+  settledStatus,
+  status,
+  time,
+  trigger,
+} from "./native"
 import {
   flowPermissions,
   permissionInstructions,
@@ -23,7 +37,6 @@ export { flowPermissions, permissionInstructions } from "./permissions"
 const prefix = "flow:v1:"
 const runPrefix = "flow-run:v1:"
 const activePrefix = "flow-active:v1:"
-const schedulePrefix = "flow-schedule:v1:"
 const latestPrefix = "flow-latest:v1:"
 const metadataKey = KiloFlowRpc.sessionMetadata
 const permissionAction = "flow"
@@ -59,7 +72,7 @@ type Runtime = {
 export const KiloFlowPlugin = define({
   id: "kilocode.flow",
   effect: Effect.fn(function* (ctx) {
-    const schedules = yield* Schedule.Service
+    const schedules = yield* Automation.Service
     const publish = yield* Ref.make<(event: KiloFlowRpc.Changed) => Effect.Effect<void>>(() => Effect.void)
     const runtime = {
       fs: yield* FSUtil.Service,
@@ -71,13 +84,15 @@ export const KiloFlowPlugin = define({
     yield* reconcileActive(ctx, runtime).pipe(
       Effect.catchCause((cause) => Effect.logWarning("failed to reconcile active Flow runs", { cause })),
     )
-    yield* ctx.session.hook("experimental.schedule", (event) =>
+    yield* ctx.session.hook("experimental.automation", (event) =>
       Effect.gen(function* () {
-        const flowID = Option.getOrUndefined(decodeFlowID(yield* ctx.storage.get(scheduleKey(event.schedule.id))))
+        const current = yield* ctx.storage.get(scheduleKey(event.automation.id))
+        const migrated = current === undefined ? yield* ctx.storage.get(legacyScheduleKey(event.automation.id)) : current
+        const flowID = Option.getOrUndefined(decodeFlowID(migrated))
         if (flowID === undefined) return
         // Claim only once the occurrence has started or was deliberately skipped. A start failure dies here so the
         // scheduler keeps the due time and retries with its failed-retry backoff instead of advancing the row.
-        const outcome = yield* scheduled(ctx, schedules, event.schedule, flowID, runtime).pipe(Effect.orDie)
+        const outcome = yield* scheduled(ctx, schedules, event.automation, flowID, runtime).pipe(Effect.orDie)
         if (outcome === "orphaned") return
         event.claimed = true
       }),
@@ -327,7 +342,7 @@ function inventory(output: KiloFlowRpc.ListOutput) {
     .join("\n")
 }
 
-function describeWhen(when: Schedule.When) {
+function describeWhen(when: KiloFlowRpc.When) {
   if (when.type === "in") return `in ${when.in}`
   if (when.type === "at") return `at ${when.at}`
   if (when.type === "every") return `every ${when.every}`
@@ -336,7 +351,7 @@ function describeWhen(when: Schedule.When) {
 
 export function create(
   ctx: Plugin.Context,
-  schedules: Pick<Schedule.Interface, "create" | "remove" | "get">,
+  schedules: Pick<Automation.Interface, "create" | "remove" | "get">,
   input: KiloFlowRpc.CreateInput,
   projectID: Session.Info["projectID"] | undefined,
   runtime: Pick<Runtime, "changed" | "locks">,
@@ -401,10 +416,13 @@ export function create(
               new FlowExists(id, `Flow ${id} was already created from this request with different settings`),
             )
           const schedule = existing.scheduleID
-            ? Option.getOrUndefined(yield* schedules.get(existing.scheduleID).pipe(Effect.option))
+            ? Option.getOrUndefined(yield* schedules.get(automationID(existing.scheduleID)).pipe(Effect.option))
             : undefined
           return managed(existing, schedule)
         }
+        // Validate the limit before anything is saved, so a bad value fails the request instead of leaving a Flow
+        // record behind with no backing row.
+        yield* requireEnds(record.ends, record.trigger.timezone)
         yield* ctx.permission.assert({
           action: permissionAction,
           resources:
@@ -479,20 +497,9 @@ export function create(
   })
 }
 
-/** The native schedule row that fires a Flow. Its hook prompt is descriptive only: the scheduler never admits it. */
-function backingSchedule(record: KiloFlowRpc.Record, sessionID: Session.ID): Schedule.CreateInput {
-  return {
-    sessionID,
-    name: `Flow: ${record.name}`,
-    when: record.trigger.when,
-    ...(record.ends ? { ends: record.ends } : {}),
-    action: { type: "hook", prompt: record.prompt },
-  }
-}
-
 export function update(
   ctx: Plugin.Context,
-  schedules: Pick<Schedule.Interface, "create" | "remove" | "get" | "pause">,
+  schedules: Pick<Automation.Interface, "create" | "remove" | "get" | "pause">,
   input: KiloFlowRpc.UpdateInput,
   authorizedProjectID: Session.Info["projectID"],
   runtime: Runtime,
@@ -543,9 +550,11 @@ export function update(
           ...(record.scheduleID ? { scheduleID: record.scheduleID } : {}),
           time: { ...record.time, updated: Date.now() },
         }
+        // Validate the limit before rewriting the record or replacing the row, so a bad value fails the update.
+        yield* requireEnds(next.ends, next.trigger.timezone)
         const key = `${prefix}${record.id}`
         const previous = record.scheduleID
-          ? Option.getOrUndefined(yield* schedules.get(record.scheduleID).pipe(Effect.option))
+          ? Option.getOrUndefined(yield* schedules.get(automationID(record.scheduleID)).pipe(Effect.option))
           : undefined
         // There is no schedule update: a new trigger or limit replaces the backing row. Its native run counters
         // restart, while the Flow's own run records keep the history users see. A rename or a new prompt keeps the
@@ -580,7 +589,7 @@ export function update(
         yield* ctx.storage.set(scheduleKey(schedule.id), record.id)
         if (record.scheduleID) {
           yield* ctx.storage.remove(scheduleKey(record.scheduleID))
-          yield* schedules.remove(record.scheduleID).pipe(Effect.ignore)
+          yield* schedules.remove(automationID(record.scheduleID)).pipe(Effect.ignore)
         }
         yield* notify(runtime, rescheduled, "updated")
         return managed(rescheduled, schedule, (yield* latest(ctx, record.id)).run)
@@ -701,7 +710,7 @@ export function run(
 
 function control(
   ctx: Plugin.Context,
-  schedules: Pick<Schedule.Interface, "pause" | "resume">,
+  schedules: Pick<Automation.Interface, "get" | "pause" | "resume">,
   input: KiloFlowRpc.ControlInput,
   authorizedProjectID: Session.Info["projectID"],
   operation: "pause" | "resume",
@@ -710,10 +719,16 @@ function control(
   return Effect.gen(function* () {
     const record = yield* requireRecord(ctx, input.flowID, authorizedProjectID)
     if (!record.scheduleID) return yield* Effect.fail(new Error(`Flow ${record.id} has no backing schedule`))
-    const schedule = yield* (operation === "pause"
-      ? schedules.pause(record.scheduleID)
-      : schedules.resume(record.scheduleID)
-    ).pipe(Effect.mapError((error) => new Error(error.message)))
+    const id = automationID(record.scheduleID)
+    // A `times`-exhausted Flow stays finished: resuming it would fire a phantom run the limit already used up.
+    if (operation === "resume") {
+      const current = yield* schedules.get(id).pipe(Effect.mapError((error) => new Error(error.message)))
+      if (remaining(record.ends, current) === 0)
+        return yield* Effect.fail(new Error(`Flow ${record.id} has finished all ${record.ends?.times} runs`))
+    }
+    const schedule = yield* (operation === "pause" ? schedules.pause(id) : schedules.resume(id)).pipe(
+      Effect.mapError((error) => new Error(error.message)),
+    )
     yield* notify(runtime, record, "updated")
     return managed(record, schedule, (yield* latest(ctx, record.id)).run)
   })
@@ -721,7 +736,7 @@ function control(
 
 function remove(
   ctx: Plugin.Context,
-  schedules: Pick<Schedule.Interface, "remove">,
+  schedules: Pick<Automation.Interface, "remove">,
   input: KiloFlowRpc.RemoveInput,
   authorizedProjectID: Session.Info["projectID"],
   runtime: Runtime,
@@ -737,8 +752,8 @@ function remove(
         const worktrees = input.deleteWorktrees ? yield* runWorktrees(ctx, record) : []
         const sessions = input.deleteSessions ? yield* runSessions(ctx, record) : []
         if (record.scheduleID)
-          yield* schedules.remove(record.scheduleID).pipe(
-            Effect.catchTag("Schedule.NotFoundError", () => Effect.void),
+          yield* schedules.remove(automationID(record.scheduleID)).pipe(
+            Effect.catchTag("Automation.NotFoundError", () => Effect.void),
           )
         // Remove the definition keys first so a failed run cleanup cannot leave a half-removed Flow listed.
         yield* Effect.all(
@@ -875,17 +890,27 @@ function requireRecord(
 
 export function scheduled(
   ctx: Plugin.Context,
-  schedules: Pick<Schedule.Interface, "pause">,
-  schedule: Schedule.Info,
+  schedules: Pick<Automation.Interface, "pause">,
+  schedule: Automation.Info,
   flowID: KiloFlowRpc.ID,
   runtime: Runtime,
 ): Effect.Effect<"fired" | "skipped" | "paused" | "orphaned", Error> {
   return Effect.gen(function* () {
     const record = Option.getOrUndefined(decodeRecord(yield* ctx.storage.get(`${prefix}${flowID}`)))
-    if (!record || record.id !== flowID || (record.scheduleID !== undefined && record.scheduleID !== schedule.id)) {
+    if (
+      !record ||
+      record.id !== flowID ||
+      (record.scheduleID !== undefined && automationID(record.scheduleID) !== schedule.id)
+    ) {
       // A stale index must not retry forever; the hook action is never admitted, so the row simply advances.
       yield* Effect.logWarning("removing stale Flow schedule index", { scheduleID: schedule.id, flowID })
       yield* ctx.storage.remove(scheduleKey(schedule.id))
+      yield* ctx.storage.remove(legacyScheduleKey(schedule.id))
+      return "orphaned" as const
+    }
+    // A Flow's `times` limit is Kilo-side: an automation row only carries a single expiry.
+    if (record.ends?.times !== undefined && schedule.runCount >= record.ends.times) {
+      yield* schedules.pause(schedule.id).pipe(Effect.ignore)
       return "orphaned" as const
     }
     if (schedule.nextDueAt === undefined)
@@ -920,6 +945,9 @@ export function scheduled(
     if (execution.status === "skipped") return "skipped" as const
     if (execution.status === "failed" && execution.time.started === undefined)
       return yield* Effect.fail(new Error(execution.error ?? `Flow ${record.id} failed to start`))
+    // The last allowed run has started; stop the row so a fresh slot cannot fire it again.
+    if (record.ends?.times !== undefined && schedule.runCount + 1 >= record.ends.times)
+      yield* schedules.pause(schedule.id).pipe(Effect.ignore)
     return "fired" as const
   })
 }
@@ -1093,14 +1121,17 @@ function failRun(ctx: Plugin.Context, run: KiloFlowRpc.Run, error: unknown) {
 
 export function list(
   ctx: Plugin.Context,
-  schedules: Pick<Schedule.Interface, "list">,
+  schedules: Pick<Automation.Interface, "list">,
   projectID: Session.Info["projectID"],
   fs: Pick<FSUtil.Interface, "isDir">,
 ): Effect.Effect<KiloFlowRpc.ListOutput> {
   return Effect.gen(function* () {
     const observedAt = Date.now()
     const nativeResult = yield* schedules.list().pipe(Effect.result)
-    const native = nativeResult._tag === "Success" ? nativeResult.success : []
+    const native = (nativeResult._tag === "Success" ? nativeResult.success : []).filter(
+      // Event automations are watches, not schedules; the Flow inventory only lists timed rows.
+      (schedule) => schedule.trigger.type !== "event",
+    )
     const nativeWarnings: KiloFlowRpc.Warning[] =
       nativeResult._tag === "Failure"
         ? [
@@ -1128,7 +1159,7 @@ export function list(
       { concurrency: lookups },
     ).pipe(Effect.map((ids) => new Set(ids.flat())))
     const managedScheduleIDs = new Set(
-      stored.records.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])),
+      stored.records.flatMap((record) => (record.scheduleID ? [automationID(record.scheduleID)] : [])),
     )
     const unowned = native.filter((schedule) => !managedScheduleIDs.has(schedule.id))
     const sessions = yield* Effect.forEach(
@@ -1146,7 +1177,7 @@ export function list(
       { concurrency: lookups },
     ).pipe(Effect.map((entries) => new Map(entries)))
     const scopedManagedScheduleIDs = new Set(
-      scopedRecords.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])),
+      scopedRecords.flatMap((record) => (record.scheduleID ? [automationID(record.scheduleID)] : [])),
     )
     const scopedSchedules = native.filter(
       (schedule) =>
@@ -1168,15 +1199,17 @@ export function list(
 export function assemble(input: {
   readonly records: readonly KiloFlowRpc.Record[]
   readonly runs?: readonly KiloFlowRpc.Run[]
-  readonly schedules: readonly Schedule.Info[]
-  readonly sessions: ReadonlyMap<Schedule.ID, Session.Info | undefined>
+  readonly schedules: readonly Automation.Info[]
+  readonly sessions: ReadonlyMap<Automation.ID, Session.Info | undefined>
   /** Flows whose source directory no longer exists. */
   readonly missing?: ReadonlySet<KiloFlowRpc.ID>
   readonly warnings: readonly KiloFlowRpc.Warning[]
   readonly observedAt: number
 }): KiloFlowRpc.ListOutput {
   const native = new Map(input.schedules.map((schedule) => [schedule.id, schedule]))
-  const managedSchedules = new Set(input.records.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])))
+  const managedSchedules = new Set(
+    input.records.flatMap((record) => (record.scheduleID ? [automationID(record.scheduleID)] : [])),
+  )
   const latest = new Map(
     input.records.flatMap((record) => {
       const run = latestRun(input.runs ?? [], record.id)
@@ -1188,7 +1221,7 @@ export function assemble(input: {
       ...input.records.map((record) =>
         managed(
           record,
-          record.scheduleID ? native.get(record.scheduleID) : undefined,
+          record.scheduleID ? native.get(automationID(record.scheduleID)) : undefined,
           latest.get(record.id),
           input.missing?.has(record.id),
         ),
@@ -1204,7 +1237,7 @@ export function assemble(input: {
 
 function managed(
   record: KiloFlowRpc.Record,
-  schedule: Schedule.Info | undefined,
+  schedule: Automation.Info | undefined,
   run?: KiloFlowRpc.Run,
   missing = false,
 ): KiloFlowRpc.Info {
@@ -1243,33 +1276,22 @@ function managed(
       status: "error",
       health: { status: "error", message: `Backing schedule ${record.scheduleID} no longer exists` },
     }
+  const left = remaining(record.ends, schedule)
   return {
     ...shared,
-    status: status(schedule.status),
+    // A `times`-exhausted row is paused by the claim hook; the Flow itself is finished, not paused.
+    status: settledStatus(status(schedule.status), left),
     nextRunAt: instant(schedule.nextDueAt),
-    lastRunAt: run?.time.started ?? run?.time.created ?? instant(schedule.lastFiredAt),
+    lastRunAt: run?.time.started ?? run?.time.created ?? instant(schedule.lastRunAt),
     lastOutcome: (run && outcome(run)) ?? schedule.lastOutcome,
-    ...(schedule.endsAt ? { endsAt: instant(schedule.endsAt) } : {}),
-    ...(schedule.remainingRuns === undefined ? {} : { remainingRuns: schedule.remainingRuns }),
+    ...(schedule.expires ? { endsAt: instant(schedule.expires) } : {}),
+    ...(left === undefined ? {} : { remainingRuns: left }),
     ...(run ? { latestRun: run } : {}),
     health,
   }
 }
 
-function outcome(run: KiloFlowRpc.Run): KiloFlowRpc.RunOutcome | undefined {
-  if (run.status === "succeeded" || run.status === "failed" || run.status === "interrupted" || run.status === "skipped")
-    return run.status
-  return undefined
-}
-
-function time(input: KiloFlowRpc.CreateInput["when"]): Schedule.When {
-  if (input.in !== undefined) return { type: "in", in: input.in, tz: input.tz }
-  if (input.at !== undefined) return { type: "at", at: input.at, tz: input.tz }
-  if (input.every !== undefined) return { type: "every", every: input.every, tz: input.tz }
-  return { type: "cron", cron: input.cron, tz: input.tz }
-}
-
-function unmanaged(schedule: Schedule.Info, session: Session.Info | undefined): KiloFlowRpc.Info {
+function unmanaged(schedule: Automation.Info, session: Session.Info | undefined): KiloFlowRpc.Info {
   const missing =
     schedule.sessionID === undefined
       ? "Native schedule has no Session"
@@ -1291,33 +1313,14 @@ function unmanaged(schedule: Schedule.Info, session: Session.Info | undefined): 
       model: session?.model,
       agent: session?.agent,
     },
-    prompt: schedule.action.prompt,
+    prompt: schedule.action.type === "code" ? schedule.action.code : schedule.action.prompt,
     status: session ? status(schedule.status) : "error",
     nextRunAt: instant(schedule.nextDueAt),
-    lastRunAt: instant(schedule.lastFiredAt),
+    lastRunAt: instant(schedule.lastRunAt),
     lastOutcome: schedule.lastOutcome,
     health: session ? { status: "healthy" } : { status: "error", message: missing },
     time: { created: instant(schedule.time.created), updated: instant(schedule.time.updated) },
   }
-}
-
-function trigger(schedule: Schedule.Info): KiloFlowRpc.Trigger {
-  if (schedule.if)
-    return { type: "poll", when: schedule.when, timezone: schedule.tz, mode: "if", condition: schedule.if }
-  if (schedule.until)
-    return { type: "poll", when: schedule.when, timezone: schedule.tz, mode: "until", condition: schedule.until }
-  return { type: "time", when: schedule.when, timezone: schedule.tz }
-}
-
-function status(value: Schedule.Status): KiloFlowRpc.Status {
-  if (value === "done") return "completed"
-  return value
-}
-
-function instant(value: DateTime.Utc): number
-function instant(value: DateTime.Utc | undefined): number | undefined
-function instant(value: DateTime.Utc | undefined) {
-  return value && DateTime.toEpochMillis(value)
 }
 
 type Entry = { readonly key: string; readonly value: Schema.Json }
@@ -1532,10 +1535,6 @@ function flowLock(runtime: Pick<Runtime, "locks">, flowID: KiloFlowRpc.ID) {
 
 function activeKey(flowID: KiloFlowRpc.ID) {
   return `${activePrefix}${flowID}`
-}
-
-function scheduleKey(scheduleID: Schedule.ID) {
-  return `${schedulePrefix}${scheduleID}`
 }
 
 function latestKey(flowID: KiloFlowRpc.ID) {

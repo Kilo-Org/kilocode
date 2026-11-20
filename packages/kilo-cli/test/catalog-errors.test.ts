@@ -47,6 +47,7 @@ const runner = (
           resolveModel: resolver.resolveModel,
           fallback: resolver.fallback ?? (() => Effect.undefined),
           resolveImage: () => Effect.undefined,
+          resolveVideo: () => Effect.undefined,
           resolveDecision: () => Effect.undefined,
         }),
       ),

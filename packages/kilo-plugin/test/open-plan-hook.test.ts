@@ -14,6 +14,7 @@ const planPath = ".kilo2/plans/1000-dark-mode-plan.md"
 
 test("keeps and attaches a Code Mode open_plan path when another nested tool fails", async () => {
   const space = await workspace()
+  const beforeHooks: Array<(event: never) => Effect.Effect<void>> = []
   const hooks: Array<(event: never) => Effect.Effect<void>> = []
   const idleHooks: Array<(event: never) => Effect.Effect<void>> = []
   const previous = process.env.OPENCODE_CLIENT
@@ -29,6 +30,7 @@ test("keeps and attaches a Code Mode open_plan path when another nested tool fai
                 ...host().tool,
                 transform: () => Effect.succeed({ dispose: Effect.void }),
                 hook: ((name: string, callback: (event: never) => Effect.Effect<void>) => {
+                  if (name === "execute.before") beforeHooks.push(callback)
                   if (name === "execute.after") hooks.push(callback)
                   return Effect.succeed({ dispose: Effect.void })
                 }) as never,
@@ -74,6 +76,15 @@ test("keeps and attaches a Code Mode open_plan path when another nested tool fai
             input: { path: "missing" },
             error: new Error("missing"),
           }
+          const executeBefore = {
+            tool: "execute",
+            sessionID,
+            agent: code,
+            messageID,
+            id,
+            input: {},
+          }
+          for (const hook of beforeHooks) yield* hook(executeBefore as never)
           for (const hook of hooks) yield* hook(openEvent as never)
           for (const hook of hooks) yield* hook(readError as never)
           for (const hook of hooks) yield* hook(executeEvent as never)
@@ -81,6 +92,7 @@ test("keeps and attaches a Code Mode open_plan path when another nested tool fai
 
           const prunedID = "call-pruned"
           const prunedOpen = { ...openEvent, id: prunedID }
+          for (const hook of beforeHooks) yield* hook({ ...executeBefore, id: prunedID } as never)
           for (const hook of hooks) yield* hook(prunedOpen as never)
           for (const hook of idleHooks) yield* hook({ sessionID, background: [] } as never)
           const prunedExecute = { ...executeEvent, id: prunedID, result: { ...executeEvent.result, metadata: { toolCalls: [] } } }

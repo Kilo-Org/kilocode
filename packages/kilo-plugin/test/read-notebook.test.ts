@@ -18,7 +18,7 @@ const run = (file: string, page: { limit?: number; offset?: number } = {}) =>
     return {
       value,
       output: ReadTool.toModelContent(path.basename(file), undefined, value),
-      text: value.type === "text-page" ? value : undefined,
+      text: value.type === "text" ? value : undefined,
     }
   })
 
@@ -137,7 +137,7 @@ describe("kilo notebook reads", () => {
         const result = yield* run(filepath, { offset: 2, limit: 2 })
 
         expect(result.text?.content).toBe("# Analysis\nUseful introduction")
-        expect(result.text?.truncated).toBe(true)
+        expect(result.text?.next).toBeDefined()
         expect(result.output).toContain("2: # Analysis")
         expect(result.output).toContain("3: Useful introduction")
         expect(result.output).not.toContain("value = 42")
@@ -182,10 +182,9 @@ describe("kilo notebook reads", () => {
 
         const result = yield* run(filepath)
 
-        expect(result.value.type).toBe("file")
-        if (result.value.type === "file") {
+        expect(result.value.type).toBe("media")
+        if (result.value.type === "media") {
           expect(result.value.mime).toBe("application/pdf")
-          expect(result.value.encoding).toBe("base64")
         }
       }),
     ),

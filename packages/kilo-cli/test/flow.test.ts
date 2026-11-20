@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { OpenCode } from "@opencode/client"
-import { Schedule } from "@opencode/core/schedule"
+import { Automation } from "@opencode/core/automation"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Session } from "@opencode/schema/session"
 import { createRoutes } from "@opencode/server/routes"
@@ -40,7 +40,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
         writeFile(
           path.join(directory, "kilo2.json"),
           JSON.stringify({
-            experimental: { schedules: directory !== projects[2] },
+            experimental: { automations: directory !== projects[2] },
             permission: { execute: "allow" },
             worktree: { directory: "../worktrees" },
           }),
@@ -88,7 +88,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
           const handler = Context.get(context, HttpRouter.HttpRouter)
             .asHttpEffect()
             .pipe(HttpEffect.toWebHandlerWith(context))
-          const schedules = Context.get(context, Schedule.Service)
+          const schedules = Context.get(context, Automation.Service)
           const client = OpenCode.make({
             baseUrl: "http://kilo.local",
             headers: { authorization: `Basic ${btoa("opencode:secret")}` },
@@ -112,13 +112,6 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               model: { providerID: "kilo", id: "kilo-auto/free" },
               permissions: [{ action: "execute", resource: "*", effect: "allow" }],
             })
-            const second = await client.session.create({
-              title: "Second automation",
-              location: { directory: projects[1]! },
-              agent: "plan",
-              model: { providerID: "kilo", id: "kilo-auto/free" },
-              permissions: [{ action: "execute", resource: "*", effect: "allow" }],
-            })
             const disabled = await client.session.create({
               title: "Disabled automation",
               location: { directory: projects[2]! },
@@ -130,17 +123,10 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               schedules.create({
                 sessionID: Session.ID.make(first.id),
                 name: "Daily cleanup",
-                when: { type: "cron", cron: "0 9 * * *", tz: "America/Detroit" },
+                trigger: { type: "cron", cron: "0 9 * * *", tz: "America/Detroit" },
                 action: { type: "prompt", prompt: "Clean the project" },
               }),
             )
-            const poll = await client.experimental.schedule.create({
-              sessionID: second.id,
-              name: "Wait for release",
-              when: { every: "1 hour" },
-              if: { code: "return false" },
-              prompt: "Publish the release",
-            })
 
             const rpc = client.rpc(KiloFlowRpc.Definition)
             const output = await rpc.list({}, { location: { directory: nested } })
@@ -159,13 +145,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             ])
             const secondOutput = await rpc.list({}, { location: { directory: projects[1]! } })
             expect(secondOutput.warnings).toEqual([])
-            expect(secondOutput.flows).toEqual([
-              expect.objectContaining({
-                reference: { type: "native-schedule", scheduleID: poll.id, action: "prompt" },
-                trigger: expect.objectContaining({ type: "poll", mode: "if" }),
-                context: expect.objectContaining({ directory: projects[1], sessionID: second.id, agent: "plan" }),
-              }),
-            ])
+            expect(secondOutput.flows).toEqual([])
 
             const requestedPermissions = [{ action: "shell", resource: "taskctl *" }]
             const permissions = [
@@ -294,7 +274,13 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             if (readOnly.reference.type !== "managed" || !readOnly.reference.scheduleID)
               throw new Error("Expected a managed read-only Flow with a schedule")
             // The hook prompt only describes the Flow to schedule inventories; the scheduler never admits it.
-            expect((await Effect.runPromise(schedules.get(readOnly.reference.scheduleID))).action).toEqual({
+            expect(
+              (
+                await Effect.runPromise(
+                  schedules.get(Automation.ID.make(readOnly.reference.scheduleID)),
+                )
+              ).action,
+            ).toEqual({
               type: "hook",
               prompt: "Summarize the existing context without tools",
             })
@@ -313,29 +299,11 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
                 }),
               }),
             )
-            await expect(
-              Effect.runPromise(
-                schedules.create({
-                  sessionID: Session.ID.make(first.id),
-                  if: { type: "code", code: "return true" },
-                  action: { type: "hook", prompt: "" },
-                }),
-              ),
-            ).rejects.toThrow("Hook-owned schedule actions do not support conditions")
-            await expect(
-              Effect.runPromise(
-                schedules.create({
-                  sessionID: Session.ID.make(first.id),
-                  until: { type: "code", code: "return false" },
-                  action: { type: "hook", prompt: "" },
-                }),
-              ),
-            ).rejects.toThrow("Hook-owned schedule actions do not support conditions")
             const orphan = await Effect.runPromise(
               schedules.create({
                 sessionID: Session.ID.make(first.id),
                 name: "Missing Flow owner",
-                when: { type: "in", in: "10 millis" },
+                trigger: { type: "at", at: "in 10 millis" },
                 action: { type: "hook", prompt: "" },
               }),
             )
@@ -497,16 +465,16 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
               (await Effect.runPromise(schedules.list())).some((item) => item.id === rescheduled.reference.scheduleID),
             ).toBeFalse()
 
-            // Kilo keeps scheduling on whatever a project config says: this project turns `experimental.schedules`
-            // off, yet the native schedule API and Flows still work in it.
-            const native = await client.experimental.schedule.create({
+            // Kilo keeps scheduling on whatever a project config says: this project turns `experimental.automations`
+            // off, yet the native automation API and Flows still work in it.
+            const native = await client.experimental.automation.create({
               sessionID: disabled.id,
               name: "Native reminder",
-              when: { in: "1 hour" },
-              prompt: "Native prompts stay on",
+              trigger: { type: "at", at: "in 1 hour" },
+              action: { type: "prompt", prompt: "Native prompts stay on" },
             })
             expect(native).toMatchObject({ status: "active" })
-            await Effect.runPromise(schedules.remove(Schedule.ID.make(native.id)))
+            await Effect.runPromise(schedules.remove(Automation.ID.make(native.id)))
             const disabledCreation = rpc.create(
               {
                 sourceSessionID: disabled.id,
