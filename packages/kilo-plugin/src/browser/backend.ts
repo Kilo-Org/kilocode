@@ -36,6 +36,8 @@ export type CallContext = {
   sensitive?: readonly string[]
   /** `browser.allow_sensitive`: a download this call starts is kept, with no prompt. */
   allowSensitive?: boolean
+  /** The conversation's own title, when it has one: the browser names the session's tab group after it. */
+  title?: string
 }
 
 /**
@@ -87,12 +89,23 @@ export type BrowserBackend = {
 export class NeedsPermissionError extends Error {
   readonly items: readonly Item[]
   readonly stepToken?: string
+  /** The origin the browser moved the tab to (a redirect) before it asked; undefined when the tab did not move. */
+  readonly moved?: string
 
-  constructor(items: readonly Item[], stepToken?: string) {
+  constructor(items: readonly Item[], stepToken?: string, moved?: string) {
     super("The browser step needs permission.")
     this.name = "BrowserNeedsPermissionError"
     this.items = items
     this.stepToken = stepToken
+    this.moved = moved
+  }
+}
+
+/** The browser moved the tab to a page it did not name before the step ran; the step did not run. */
+export class PageMovedError extends Error {
+  constructor() {
+    super("The page changed before the step ran. Call the tool again.")
+    this.name = "BrowserPageMovedError"
   }
 }
 

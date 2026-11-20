@@ -5,6 +5,7 @@ import {
   CancelledError,
   IncompatibleError,
   NeedsPermissionError,
+  PageMovedError,
   TimeoutError,
   UNAVAILABLE_MESSAGE,
   UnavailableError,
@@ -169,6 +170,24 @@ function finishMeta(meta: BrowserHub.Meta, stepToken?: string, step?: BrowserHub
 
 const UNDESCRIBABLE = "The browser asked for permission the CLI cannot describe."
 
+/**
+ * What a call the side panel took the tab from reports. A take-over can land mid-action (part of a long text typed),
+ * so the model re-reads the page instead of replaying the step; the extension's own text gives the same instruction.
+ */
+export const TAKEN =
+  "The side panel took over the tab, so the action may have partly run. Take a fresh snapshot before retrying."
+
+/**
+ * The name the browser shows for a session in its tab group and settings: the conversation's title, or the project
+ * folder and a short id while the title is not generated yet. The protocol has no title update, so the first open
+ * decides it.
+ */
+export function sessionTitle(input: { title?: string; directory: string; session: string }) {
+  if (input.title) return input.title
+  const folder = path.basename(input.directory) || "Kilo agent"
+  return input.session ? `${folder} (${input.session.slice(-6)})` : folder
+}
+
 function reply(value: BrowserHub.Reply): CallResult {
   const content: ContentBlock[] = []
   for (const block of value.content) {
@@ -204,10 +223,9 @@ function permissionError(error: BrowserHub.Failure): Error {
   if (described === undefined) return new Error(UNDESCRIBABLE)
   const { items, refusal } = grantable(described)
   if (refusal !== undefined) return new Error(refusal)
-  if (error.kind === "moved" && !items.length) {
-    return new Error("The page changed before the step ran. Call the tool again.")
-  }
-  return new NeedsPermissionError(items, error.stepToken)
+  if (error.kind === "moved" && !items.length) return new PageMovedError()
+  // A redirect names only the origin it reached, which is the read it asks for.
+  return new NeedsPermissionError(items, error.stepToken, error.kind === "moved" ? items[0]?.origin : undefined)
 }
 
 /** Every failure kind the transport reports, as the tool layer sees it. */
@@ -220,7 +238,7 @@ const MAPPED: Record<string, (error: BrowserHub.Failure) => Error> = {
   permission: permissionError,
   moved: permissionError,
   busy: () => new Error("The tab is busy with another browser action. Try again in a moment."),
-  taken: () => new Error("Another Kilo surface took over the tab. The action did not run; try again."),
+  taken: () => new Error(TAKEN),
   stopped: () => new StoppedError(STOPPED),
   lost: (error) => new Error(error.message || "This agent session is no longer open in the browser."),
   unsupported: () => new UnsupportedError(),
@@ -391,6 +409,8 @@ type Call = {
   key: Record<string, unknown>
   /** The turn that made the call: a stop of that turn ends it, even when the turn ended while the call waited. */
   turn: number | undefined
+  /** The conversation's title: an open from this call names the browser session after it, as share and adopt do. */
+  title: string | undefined
 }
 
 /**
@@ -526,7 +546,7 @@ export class ExtensionBackend implements BrowserBackend {
   private async run(port: BrowserHub.Port, call: Call) {
     await this.ready(port)
     const opener: Opener = { kind: "turn", turn: call.turn }
-    let handle = await this.handle(port, call.session, opener)
+    let handle = await this.handle(port, call.session, opener, call.title)
     // Taken once the call is about to reach the browser: a call that fails before (the extension not back in time, an
     // open refused after a stop) leaves a remembered token for its repeat, and a call sent again carries the same one.
     const sensitive = this.sensitive(call.ctx, call.session, call.name, call.key)
@@ -542,7 +562,7 @@ export class ExtensionBackend implements BrowserBackend {
         if (this.halts(call.session, call.turn)) throw new StoppedError(STOPPED)
         this.live()
         if (error.kind === "lost") this.drop(call.session, handle)
-        handle = await this.handle(port, call.session, opener)
+        handle = await this.handle(port, call.session, opener, call.title)
       }
     }
   }
@@ -636,7 +656,7 @@ export class ExtensionBackend implements BrowserBackend {
     try {
       await this.accepts(name)
       const input = name === "browser_file_upload" ? await this.upload(port, args) : args
-      return reply(await this.run(port, { session, name, args: input, key: args, ctx, turn }))
+      return reply(await this.run(port, { session, name, args: input, key: args, ctx, turn, title: ctx.title }))
     } catch (error) {
       if (error instanceof BrowserHub.Failure) {
         const withheld = this.withheld(error)
@@ -760,12 +780,15 @@ export class ExtensionBackend implements BrowserBackend {
     })
   }
 
-  /** `/browser share`: the browser's active tab joins this conversation's group. The user's own command lifts a stop. */
-  async share(session: string): Promise<void> {
+  /**
+   * `/browser share`: the browser's active tab joins this conversation's group. The user's own command lifts a stop.
+   * `title` names the session when this command opens it, as a tool call's open does.
+   */
+  async share(session: string, title?: string): Promise<void> {
     const port = this.available()
     const stop = this.stopped.get(session)
     try {
-      await port.share(await this.handle(port, session, { kind: "user" }))
+      await port.share(await this.handle(port, session, { kind: "user" }, title))
     } catch (error) {
       throw map(error)
     }
@@ -775,13 +798,14 @@ export class ExtensionBackend implements BrowserBackend {
   /**
    * `/browser adopt`: the most recent ended group becomes this conversation's. The user's own command lifts a stop once
    * the conversation has tabs again (`adopted`, or `kept` its own); `none` and `unconfirmed` leave it stopped, so the
-   * model's next call is refused instead of opening a fresh browser session.
+   * model's next call is refused instead of opening a fresh browser session. `title` names the session when this
+   * command opens it.
    */
-  async adopt(session: string): Promise<BrowserHub.Adoption> {
+  async adopt(session: string, title?: string): Promise<BrowserHub.Adoption> {
     const port = this.available()
     const stop = this.stopped.get(session)
     try {
-      const adopted = await port.adopt(await this.handle(port, session, { kind: "user" }))
+      const adopted = await port.adopt(await this.handle(port, session, { kind: "user" }, title))
       if (adopted === "adopted" || adopted === "kept") this.resume(session, stop)
       return adopted
     } catch (error) {
@@ -865,7 +889,7 @@ export class ExtensionBackend implements BrowserBackend {
    * One session handle per tool session, opened once and shared by concurrent calls. A turn's open is refused once the
    * user stopped that turn or conversation; the user's own `/browser share` or `/browser adopt` opens all the same.
    */
-  private handle(port: BrowserHub.Port, session: string, opener: Opener): Promise<string> {
+  private handle(port: BrowserHub.Port, session: string, opener: Opener, title?: string): Promise<string> {
     const existing = this.handles.get(session)
     if (existing) return existing
     // Each attempt is its own promise: a later attempt for the same session supersedes an earlier one, and the earlier
@@ -873,7 +897,7 @@ export class ExtensionBackend implements BrowserBackend {
     const attempt = Promise.withResolvers<string>()
     this.handles.set(session, attempt.promise)
     // The turn that starts the open owns it: a stop of that turn still applies when the open answers after it ended.
-    void this.open(port, session, attempt.promise, opener).then(attempt.resolve, attempt.reject)
+    void this.open(port, session, title, attempt.promise, opener).then(attempt.resolve, attempt.reject)
     attempt.promise.catch(() => {
       if (this.handles.get(session) === attempt.promise) this.handles.delete(session)
     })
@@ -883,6 +907,7 @@ export class ExtensionBackend implements BrowserBackend {
   private async open(
     port: BrowserHub.Port,
     session: string,
+    title: string | undefined,
     attempt: Promise<string>,
     opener: Opener,
   ): Promise<string> {
@@ -891,7 +916,7 @@ export class ExtensionBackend implements BrowserBackend {
     this.live()
     const opened = await port.open({
       sessionId: session || "unknown",
-      title: session || "Kilo agent",
+      title: sessionTitle({ title, directory: this.input.directory, session }),
       cwd: this.input.directory,
     })
     // The session ended, another attempt replaced this one, or the user stopped the turn while the extension was still
