@@ -997,9 +997,10 @@ const layer = Layer.effect(
         requestInit: mcpConfig.headers ? { headers: mcpConfig.headers } : undefined,
       })
       const directory = yield* InstanceState.directory
-      // kilocode_change - the flow records the epoch it started in, before the connect that can be
+      // kilocode_change start - the flow records the epoch it started in, before the connect that can be
       // overtaken by a removal or a cancelled sign-in; reading it afterwards would read theirs
       const epoch = epochOf(mcpName)
+      // kilocode_change end
 
       return yield* Effect.tryPromise({
         try: () => {
