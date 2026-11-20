@@ -632,6 +632,34 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `config fetch failure logs the status and size`() = runBlocking {
+        mock.configStatus = 400
+        mock.config = """{"name":"ConfigJsonError","data":{"message":"marker-7f3a9c"}}"""
+        val svc = create()
+        svc.connect()
+
+        val state = assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+        val err = assertIs<KiloAppState.Error>(state)
+
+        assertTrue(log.messages.none { it.contains("marker-7f3a9c") }, log.messages.toString())
+        assertTrue(
+            log.messages.any {
+                it.contains("Global config fetch failed: HTTP 400") &&
+                    it.contains("chars=") &&
+                    it.contains("ConfigJsonError")
+            },
+            log.messages.toString(),
+        )
+        val stateText = (listOf(err.message) + err.errors.mapNotNull { it.detail }).joinToString(" ")
+        assertFalse(stateText.contains("marker-7f3a9c"), stateText)
+    }
+
+    @Test
     fun `notifications failure transitions to Error`() = runBlocking {
         mock.notificationsStatus = 500
         mock.notifications = """{"error":"internal"}"""
@@ -644,6 +672,30 @@ class KiloBackendAppServiceTest {
 
         val err = svc.appState.value as KiloAppState.Error
         assertTrue(err.errors.any { it.resource == "notifications" })
+    }
+
+    @Test
+    fun `notification fetch failure logs the status and size`() = runBlocking {
+        mock.notificationsStatus = 500
+        mock.notifications = """{"message":"marker-7f3a9c"}"""
+        val svc = create()
+        svc.connect()
+
+        assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+
+        assertTrue(log.messages.none { it.contains("marker-7f3a9c") }, log.messages.toString())
+        assertTrue(log.throwables.none { it.contains("marker-7f3a9c") }, log.throwables.toString())
+        assertTrue(
+            log.messages.any {
+                it.contains("notifications response failed: status=500") && it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
     }
 
     @Test

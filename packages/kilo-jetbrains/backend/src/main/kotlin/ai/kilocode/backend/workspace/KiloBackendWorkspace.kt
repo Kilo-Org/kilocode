@@ -6,6 +6,7 @@ import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.SseEvent
 import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.cli.KiloCliDataParser
+import ai.kilocode.backend.cli.bodySummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.infrastructure.ClientError
@@ -267,7 +268,7 @@ class KiloBackendWorkspace(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Config warnings fetch failed for $directory: ${e.message}", e)
+            logFailure("Config warnings fetch failed for $directory: ${detail(e)}", e)
             emptyList()
         }
     }
@@ -296,7 +297,7 @@ class KiloBackendWorkspace(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Agents fetch failed: ${detail(e)}", e)
+            logFailure("Agents fetch failed: ${detail(e)}", e)
             logResponseBody("agents", e)
             FetchResult.fail("agents", e)
         }
@@ -326,7 +327,7 @@ class KiloBackendWorkspace(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Skills fetch failed: ${detail(e)}", e)
+            logFailure("Skills fetch failed: ${detail(e)}", e)
             logResponseBody("skills", e)
             FetchResult.fail("skills", e)
         }
@@ -349,7 +350,7 @@ class KiloBackendWorkspace(
         val request = Request.Builder().url("http://127.0.0.1:$port$path").get().build()
         http.newCall(request).execute().use { response ->
             val raw = response.body?.string().orEmpty()
-            if (!response.isSuccessful) throw RuntimeException("HTTP ${response.code}: $raw")
+            if (!response.isSuccessful) throw RuntimeException("HTTP ${response.code}: ${bodySummary(raw)}")
             return raw
         }
     }
@@ -380,7 +381,15 @@ class KiloBackendWorkspace(
 
     private fun logResponseBody(resource: String, e: Exception) {
         val body = body(e) ?: return
-        log.warn("$resource response body: $body")
+        log.warn("$resource response failed: status=${status(e)} chars=${body.length}")
+    }
+
+    /**
+     * Log a failed CLI call. A call that produced a response body is logged as its message only,
+     * because the formatter writes a throwable with its stack trace.
+     */
+    private fun logFailure(message: String, e: Exception) {
+        if (body(e) != null) log.warn(message) else log.warn(message, e)
     }
 
     private fun error(err: LoadError): String {
@@ -420,7 +429,7 @@ private fun body(e: Exception): String? = when (e) {
 private fun detail(e: Exception): String? {
     val body = body(e)
     val status = status(e)
-    if (status != null && !body.isNullOrBlank()) return "HTTP $status: $body"
+    if (status != null && !body.isNullOrBlank()) return "HTTP $status: ${bodySummary(body)}"
     if (status != null) return "HTTP $status: ${e.message}"
     return e.message
 }

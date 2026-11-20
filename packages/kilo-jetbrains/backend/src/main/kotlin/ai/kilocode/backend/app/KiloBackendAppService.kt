@@ -3,6 +3,7 @@ package ai.kilocode.backend.app
 import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.cli.KiloBackendCliManager
 import ai.kilocode.backend.cli.KiloCliDataParser
+import ai.kilocode.backend.cli.bodySummary
 import ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService
 import ai.kilocode.backend.migration.LegacyMigrationDetection
 import ai.kilocode.backend.migration.LegacyMigrationStatus
@@ -615,17 +616,17 @@ class KiloBackendAppService private constructor(
                 logResponseBody("profile", e)
                 return FetchResult.ok(null)
             }
-            log.warn("Profile fetch failed: HTTP ${e.statusCode}", e)
+            logFailure("Profile fetch failed: HTTP ${e.statusCode}", e)
             logResponseBody("profile", e)
             FetchResult.fail("profile", e)
         } catch (e: ServerException) {
             // 5xx from the CLI — profile endpoint is unreachable (no auth,
             // gateway down, etc.). Treat the same as not-logged-in.
-            log.warn("Profile fetch: server error (${e.statusCode}) — treating as unavailable", e)
+            logFailure("Profile fetch: server error (${e.statusCode}) — treating as unavailable", e)
             logResponseBody("profile", e)
             FetchResult.ok(null)
         } catch (e: Exception) {
-            log.warn("Profile fetch failed: ${e.message}", e)
+            logFailure("Profile fetch failed: ${failureDetail(e)}", e)
             logResponseBody("profile", e)
             FetchResult.fail("profile", e)
         }
@@ -648,8 +649,9 @@ class KiloBackendAppService private constructor(
                         val text = call.execute().use { response ->
                             val text = response.body?.string().orEmpty()
                             if (!response.isSuccessful) {
-                                log.warn("Global config fetch failed: HTTP ${response.code} ${response.message} $text")
-                                throw IllegalStateException("Global config fetch failed: HTTP ${response.code} ${response.message}")
+                                val failure = "HTTP ${response.code} ${response.message} ${bodySummary(text)}"
+                                log.warn("Global config fetch failed: $failure")
+                                throw IllegalStateException(failure)
                             }
                             text
                         }
@@ -674,7 +676,7 @@ class KiloBackendAppService private constructor(
         return try {
             FetchResult.ok(client.kiloNotifications())
         } catch (e: Exception) {
-            log.warn("Notifications fetch failed: ${e.message}", e)
+            logFailure("Notifications fetch failed: ${failureDetail(e)}", e)
             logResponseBody("notifications", e)
             FetchResult.fail("notifications", e)
         }
@@ -695,7 +697,7 @@ class KiloBackendAppService private constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Experimental capabilities fetch failed: ${e.message}", e)
+            logFailure("Experimental capabilities fetch failed: ${failureDetail(e)}", e)
             false
         }
     }
@@ -795,20 +797,22 @@ class KiloBackendAppService private constructor(
     }
 
     /**
-     * Dump the HTTP response body from a failed API call for debugging.
+     * Log the resource, status and size of the response from a failed API call.
      * The generated client wraps the response in [ClientException.response]
      * or [ServerException.response] as a [ClientError] / [ServerError] with
-     * a `body` field containing the raw response string.
+     * a `body` field.
      */
     private fun logResponseBody(resource: String, e: Exception) {
-        val body = when (e) {
-            is ClientException -> (e.response as? ClientError<*>)?.body
-            is ServerException -> (e.response as? ServerError<*>)?.body
-            else -> null
-        }
-        if (body != null) {
-            log.warn("$resource response body: $body")
-        }
+        val body = failureBody(e) ?: return
+        log.warn("$resource response failed: status=${failureStatus(e)} chars=${body.toString().length}")
+    }
+
+    /**
+     * Log a failed CLI call. A call that produced a response body is logged as its message only,
+     * because the formatter writes a throwable with its stack trace.
+     */
+    private fun logFailure(message: String, e: Exception) {
+        if (failureBody(e) != null) log.warn(message) else log.warn(message, e)
     }
 
     private suspend fun <T> fetchWithRetry(
@@ -1056,8 +1060,8 @@ private data class FetchResult<T>(val value: T?, val error: LoadError?) {
             value = null,
             error = LoadError(
                 resource = resource,
-                status = httpStatus(exception),
-                detail = httpDetail(exception),
+                status = failureStatus(exception),
+                detail = failureDetail(exception),
             ),
         )
 
@@ -1065,22 +1069,34 @@ private data class FetchResult<T>(val value: T?, val error: LoadError?) {
             value = null,
             error = LoadError(resource = resource, detail = detail),
         )
+    }
+}
 
-        private fun httpStatus(e: Exception): Int? =
-            when (e) {
-                is ClientException -> e.statusCode
-                is ServerException -> e.statusCode
-                else -> null
-            }
+/** HTTP status of a failed CLI call, or null when the call never reached the server. */
+private fun failureStatus(e: Exception): Int? = when (e) {
+    is ClientException -> e.statusCode
+    is ServerException -> e.statusCode
+    else -> null
+}
 
-        private fun httpDetail(e: Exception): String? =
-            when (e) {
-                is ClientException -> "HTTP ${e.statusCode}: ${e.message}"
-                is ServerException -> "HTTP ${e.statusCode}: ${e.message}"
-                is ConnectException -> "Connection refused: ${e.message}"
-                is SocketTimeoutException -> "Timeout: ${e.message}"
-                else -> e.message
-            }
+/** Raw response body of a failed CLI call. */
+
+private fun failureBody(e: Exception): Any? = when (e) {
+    is ClientException -> (e.response as? ClientError<*>)?.body
+    is ServerException -> (e.response as? ServerError<*>)?.body
+    else -> null
+}
+
+/** Status and body size for a failed call. */
+private fun failureDetail(e: Exception): String? {
+    val status = failureStatus(e)
+    val body = failureBody(e)
+    return when {
+        status != null && body != null -> "HTTP $status: ${bodySummary(body.toString())}"
+        status != null -> "HTTP $status"
+        e is ConnectException -> "Connection refused: ${e.message}"
+        e is SocketTimeoutException -> "Timeout: ${e.message}"
+        else -> e.message
     }
 }
 

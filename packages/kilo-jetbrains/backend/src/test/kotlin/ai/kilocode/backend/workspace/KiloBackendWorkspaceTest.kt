@@ -32,6 +32,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -337,8 +338,17 @@ class KiloBackendWorkspaceTest {
         assertTrue(err.message.contains("agents"))
         val item = err.errors.single { it.resource == "agents" }
         assertEquals(500, item.status)
-        assertTrue(item.detail?.contains("invalid agent config") == true)
-        assertTrue(log.messages.any { it.contains("agents response body:") && it.contains("invalid agent config") })
+        val detail = assertNotNull(item.detail)
+        assertTrue(detail.contains("HTTP 500"), detail)
+        assertTrue(detail.contains("chars="), detail)
+        assertFalse(detail.contains("invalid agent config"), detail)
+        assertTrue(
+            log.messages.any {
+                it.contains("agents response failed:") && it.contains("status=500") && it.contains("chars=")
+            },
+        )
+        assertTrue(log.messages.none { it.contains("invalid agent config") })
+        assertTrue(log.throwables.none { it.contains("invalid agent config") }, log.throwables.toString())
         assertTrue(log.messages.any { it.contains("WARN: agents: all 3 attempts failed") })
         assertTrue(log.messages.none { it.contains("ERROR: agents: all 3 attempts failed") })
     }
