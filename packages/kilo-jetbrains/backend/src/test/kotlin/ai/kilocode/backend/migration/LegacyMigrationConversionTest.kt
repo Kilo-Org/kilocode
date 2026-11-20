@@ -248,6 +248,15 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
+    fun `convertCustomMode - browser group writes browser_open`() {
+        val mode = LegacyCustomMode("b", "B", "Role.", null, null, null, listOf("browser"))
+        val perm = LegacyMigrationConverters.convertCustomMode(mode).agent["permission"]?.jsonObject
+        assertNotNull(perm)
+        assertEquals("allow", perm["browser_open"]?.jsonPrimitive?.content)
+        assertEquals("deny", perm["bash"]?.jsonPrimitive?.content)
+    }
+
+    @Test
     fun `convertCustomModePermissions - command maps to bash`() {
         val result = LegacyMigrationConverters.convertCustomModePermissions(listOf("command"))
         assertEquals("allow", result.permission["bash"]?.jsonPrimitive?.content)
