@@ -247,6 +247,17 @@ check("validateMode rejects an invalid action value", () => {
   assert.throws(() => validateMode("x", { permission: { "*": "deny", read: 5 } }), /rule "read" must be/)
 })
 
+// A headless run has no one to answer an ask, so a mode that leaves one would
+// fail at that tool call instead of before the model starts. The validator is
+// where that guarantee is kept, for a whole rule and for one pattern.
+check("validateMode rejects an ask, at a rule and at a pattern", () => {
+  assert.throws(() => validateMode("x", { permission: { "*": "deny", bash: "ask" } }), /rule "bash" must be allow, deny, null/)
+  assert.throws(
+    () => validateMode("x", { permission: { "*": "deny", bash: { "*": "deny", "ls *": "ask" } } }),
+    /rule "bash" pattern "ls \*" must be allow, deny or null/,
+  )
+})
+
 check("validateMode rejects a non-object permission map", () => {
   assert.throws(() => validateMode("x", {}), /permission must be an object/)
   assert.throws(() => validateMode("x", { permission: "deny" }), /permission must be an object/)

@@ -31,17 +31,24 @@ export function policy() {
   return JSON.parse(fs.readFileSync(POLICY_FILE, "utf8"))
 }
 
-/** The action literals a permission rule may take; `null` clears a rule. */
-const ACTIONS = new Set(["allow", "deny", "ask"])
+/**
+ * The action literals a permission rule may take; `null` clears a rule.
+ *
+ * `ask` is not one of them. No client is attached to these runs, so an ask
+ * would be auto-rejected mid-pass and end the run; a mode has to state its
+ * decision up front instead of leaving one to a prompt that nobody answers.
+ */
+const ACTIONS = new Set(["allow", "deny"])
 
 /** One accepted rule value: an action literal, or `null`. */
 const isAction = (value) => value === null || ACTIONS.has(value)
 
 /**
  * Require every mode to state a usable rule map before it becomes
- * `KILO_CONFIG_CONTENT`: the leading catch-all deny, and an action literal for
- * each rule and pattern. A malformed mode stops the run here, so a run always
- * carries the scope its mode declares.
+ * `KILO_CONFIG_CONTENT`: the leading catch-all deny, and an allow or deny for
+ * each rule and pattern. `ask` is refused here rather than at the first tool
+ * call, because a headless run cannot answer one. A malformed mode stops the
+ * run here, so a run always carries the scope its mode declares.
  */
 export function validateMode(mode, entry) {
   const fail = (message) => {
@@ -61,11 +68,11 @@ export function validateMode(mode, entry) {
     const rule = permission[key]
     if (isAction(rule)) continue
     if (!rule || typeof rule !== "object" || Array.isArray(rule)) {
-      fail(`rule ${JSON.stringify(key)} must be allow, deny, ask, null or a map of patterns to one of them`)
+      fail(`rule ${JSON.stringify(key)} must be allow, deny, null or a map of patterns to one of them`)
     }
     for (const pattern of Object.keys(rule)) {
       if (!isAction(rule[pattern])) {
-        fail(`rule ${JSON.stringify(key)} pattern ${JSON.stringify(pattern)} must be allow, deny, ask or null`)
+        fail(`rule ${JSON.stringify(key)} pattern ${JSON.stringify(pattern)} must be allow, deny or null`)
       }
     }
   }
