@@ -65,6 +65,7 @@ const fakePermission = Permission.Service.of({
   saveAlwaysRules: () => Effect.void,
   allowEverything: () => Effect.void,
   pending: () => Effect.succeed(undefined),
+  rejectForSession: () => Effect.void, // kilocode_change - added for permission abort cleanup (#33)
   // kilocode_change end
 } satisfies Permission.Interface)
 
