@@ -157,14 +157,17 @@ class QuestionView(
         }
         // A refused decision only changes state and message: keep the answers the user already gave
         // and just surface the outcome (or clear it) instead of wiping the form. The card is hidden
-        // between the reply and the outcome, so this covers re-showing a hidden card too.
+        // between the reply and the outcome, so this covers re-showing a hidden card too. A request
+        // already sent stays off screen until the service answers: only a refusal brings it back.
         val shown = question
         if (request == q.id && shown != null &&
             shown.items == q.items && shown.tool == q.tool && shown.blocking == q.blocking
         ) {
+            if (!isVisible && q.state == QuestionRequestState.RESPONDING) return
             question = q
             if (isVisible) {
                 syncHeader(q)
+                syncControls(q)
                 refresh()
                 return
             }
@@ -289,10 +292,12 @@ class QuestionView(
 
     @RequiresEdt
     private fun syncControls(q: Question) {
+        val responding = q.state == QuestionRequestState.RESPONDING
         val ready = isReady(idx)
-        back.isEnabled = idx > 0
-        fwd.isEnabled = idx < q.items.size && ready
-        setActionEnabled(ID_MAIN, review(q) || ready)
+        back.isEnabled = idx > 0 && !responding
+        fwd.isEnabled = idx < q.items.size && ready && !responding
+        setActionEnabled(ID_MAIN, !responding && (review(q) || ready))
+        setActionEnabled(ID_DISMISS, !responding)
     }
 
     /**
@@ -850,6 +855,7 @@ class QuestionView(
     @RequiresEdt
     private fun doReply() {
         val id = request ?: return
+        if (question?.state == QuestionRequestState.RESPONDING) return
         if ((question?.items?.indices ?: return).any { !isReady(it) }) return
         val answers = (question?.items?.indices ?: return).map { effectiveAnswers(it) }
         val opts = (question?.items?.indices ?: return).map { optionAnswers(it) }
@@ -861,6 +867,7 @@ class QuestionView(
     @RequiresEdt
     private fun doReject() {
         val id = request ?: return
+        if (question?.state == QuestionRequestState.RESPONDING) return
         reject(id)
         hideView()
         scroll(follow())

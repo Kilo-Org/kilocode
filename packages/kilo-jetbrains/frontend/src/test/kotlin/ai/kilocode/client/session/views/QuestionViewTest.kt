@@ -1166,6 +1166,28 @@ class QuestionViewTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test submitted question is not shown again while it waits`() {
+        val q = singleSelectQuestion("q_waiting")
+        view.show(q)
+        option<JBRadioButton>(view, "Minimal").doClick()
+        button(view, "Submit").doClick()
+
+        view.show(q.copy(state = QuestionRequestState.RESPONDING))
+
+        assertFalse("A request already sent stays off screen", view.isVisible)
+    }
+
+    fun `test submitted question disables its actions`() {
+        val q = singleSelectQuestion("q_inflight")
+        view.show(q)
+        option<JBRadioButton>(view, "Minimal").doClick()
+
+        view.show(q.copy(state = QuestionRequestState.RESPONDING))
+
+        assertFalse("A request already sent cannot be sent again", button(view, "Submit").isEnabled)
+        assertFalse("A request already sent cannot be dismissed again", button(view, "Dismiss").isEnabled)
+    }
+
     // ------ helpers ------
 
     /**

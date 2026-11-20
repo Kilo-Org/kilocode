@@ -99,6 +99,32 @@ class ReplyFailureTest : SessionControllerTestBase() {
         assertTrue(rpc.questionRejects.isEmpty())
     }
 
+    fun `test submitted question waits on the service before it resolves`() {
+        val (m, _, _) = prompted()
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q1")))
+
+        edt { m.replyQuestion("q1", QuestionReplyDto(listOf(listOf("A")))) }
+        flush()
+
+        val state = m.model.state as? SessionState.AwaitingQuestion ?: error("Expected AwaitingQuestion")
+        assertEquals("q1", state.question.id)
+        assertEquals(QuestionRequestState.RESPONDING, state.question.state)
+        assertEquals(1, rpc.questionReplies.size)
+    }
+
+    fun `test rejected question waits on the service before it resolves`() {
+        val (m, _, _) = prompted()
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q1")))
+
+        edt { m.rejectQuestion("q1") }
+        flush()
+
+        val state = m.model.state as? SessionState.AwaitingQuestion ?: error("Expected AwaitingQuestion")
+        assertEquals("q1", state.question.id)
+        assertEquals(QuestionRequestState.RESPONDING, state.question.state)
+        assertEquals(1, rpc.questionRejects.size)
+    }
+
     fun `test refused auto approval does not abort the rest of the drain`() {
         val (m, _, _) = prompted()
         rpc.pendingPermissionList.add(permission("perm1"))

@@ -1299,7 +1299,9 @@ class SessionController(
             if (!autoApprove) return count
             // Sensitive permissions need a human; skip them here (callers surface the card).
             if (manual(request.metadata)) continue
-            // One refused reply must not strand the rest of the batch: report it and keep draining.
+            // One refused reply must not strand the rest of the batch: log it and keep draining. The
+            // refused permission is not counted as approved; if the request is shown to the user
+            // later, its own reply path reports the failure on the card.
             try {
                 sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
             } catch (e: Exception) {
@@ -1351,7 +1353,7 @@ class SessionController(
     fun replyQuestion(requestId: String, answers: QuestionReplyDto, options: List<List<String>> = answers.answers) {
         assertEdt()
         promptRevision++
-        updateQuestion(requestId, QuestionRequestState.PENDING)
+        updateQuestion(requestId, QuestionRequestState.RESPONDING)
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size}" }
         val current = model.state
         followup = if (current is SessionState.AwaitingQuestion
@@ -1381,7 +1383,7 @@ class SessionController(
     fun rejectQuestion(requestId: String) {
         assertEdt()
         promptRevision++
-        updateQuestion(requestId, QuestionRequestState.PENDING)
+        updateQuestion(requestId, QuestionRequestState.RESPONDING)
         followup = null
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId rejected=true" }
         cs.launch {
