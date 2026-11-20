@@ -216,9 +216,11 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Перемкнути автосхвалення",
-  "tui.autoApprove.description": "Автоматично схвалювати запити дозволів для цього процесу",
+  "tui.autoApprove.description": "Автоматично схвалювати запити дозволів для кожного клієнта і запам'ятовувати це налаштування",
   "tui.autoApprove.enabled": "Автосхвалення увімкнено. Запити дозволів схвалюються автоматично.",
   "tui.autoApprove.disabled": "Автосхвалення вимкнено.",
+  "tui.autoApprove.projectDisabled": "Автосхвалення вимкнено в конфігурації цього проєкту.",
+  "tui.autoApprove.saveFailed": "Не вдалося зберегти налаштування автосхвалення.",
 
   // Session transcript export
   "session.export.success": "Запис сеансу експортовано у форматі Markdown.",

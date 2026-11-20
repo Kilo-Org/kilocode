@@ -4,6 +4,7 @@ import { KiloPlugins, KiloPostPlugins } from "../src/index"
 test("Gateway modes override built-in agents before config, and post-config steps keep policy, the ceiling, options and the free-tier filter", () => {
   expect(KiloPlugins.map((plugin) => plugin.id)).toEqual([
     "kilocode.handshake",
+    "kilocode.auto-approve",
     "kilo.agent",
     "kilocode.plan",
     "kilocode.goal",

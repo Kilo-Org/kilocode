@@ -218,9 +218,11 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Переключить автоодобрение",
-  "tui.autoApprove.description": "Автоматически одобрять запросы разрешений для этого процесса",
+  "tui.autoApprove.description": "Автоматически одобрять запросы разрешений для каждого клиента и запоминать эту настройку",
   "tui.autoApprove.enabled": "Автоодобрение включено. Запросы разрешений одобряются автоматически.",
   "tui.autoApprove.disabled": "Автоодобрение отключено.",
+  "tui.autoApprove.projectDisabled": "Автоодобрение отключено в конфигурации этого проекта.",
+  "tui.autoApprove.saveFailed": "Не удалось сохранить настройку автоодобрения.",
 
   // Session transcript export
   "session.export.success": "Запись сеанса экспортирована в формате Markdown.",

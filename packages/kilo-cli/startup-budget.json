@@ -6,6 +6,7 @@
   "loadRuns": 9,
   "plugins": {
     "kilocode.handshake": 50,
+    "kilocode.auto-approve": 10,
     "kilocode.gateway": 50,
     "kilocode.provider-usage": 10,
     "kilocode.openai": 10,

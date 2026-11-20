@@ -45,12 +45,30 @@ describe("requiresPerson", () => {
 async function sessionApp(input: { config?: Config.Info; auto?: boolean }) {
   const pending = new Map<string, PermissionRequest>()
   const replies: { requestID: string; decision: string }[] = []
+  let autoApprove = false
   const app = await createAppFixture({
     width: 110,
     height: 34,
     args: { sessionID, auto: input.auto },
     config: { animations: false, tabs: { mode: "off" }, ...input.config },
     fetch: async (url, request) => {
+      if (url.pathname === "/api/rpc/kilocode.auto-approve/get")
+        return json({ output: { state: autoApprove ? "enabled" : "disabled" } })
+      if (url.pathname === "/api/rpc/kilocode.settings/target")
+        return json({
+          output: { scope: "global", path: `${directory}/kilo2.json`, revision: "rev", exists: true },
+        })
+      if (url.pathname === "/api/rpc/kilocode.settings/write") {
+        const body = (await request.clone().json()) as { input?: { set?: { auto_approve?: boolean | null } } }
+        autoApprove = body.input?.set?.auto_approve === true
+        return json({
+          output: {
+            scope: "global",
+            target: { scope: "global", path: `${directory}/kilo2.json`, revision: "next", exists: true },
+            changed: true,
+          },
+        })
+      }
       if (url.pathname === `/api/session/${sessionID}/permission`) return json({ data: [...pending.values()] })
       const reply = url.pathname.match(new RegExp(`^/api/session/${sessionID}/permission/([^/]+)/reply$`))
       if (reply) {

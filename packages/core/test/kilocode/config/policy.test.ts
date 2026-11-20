@@ -243,3 +243,16 @@ test("an invalid compaction threshold is ignored with a diagnostic and keeps the
   ])
   expect(KiloConfigPolicy.parse({ compaction: { threshold_percent: null } }, {})?.compaction?.buffer).toBeUndefined()
 })
+
+test("auto_approve is an optional boolean Kilo setting preserved by config parsing", () => {
+  const decode = Schema.decodeUnknownOption(KiloConfigPolicy.Info)
+  for (const value of [true, false]) {
+    const input = { auto_approve: value, shell: "valid" }
+    expect(Option.isSome(decode(input))).toBe(true)
+    const normalized = ConfigNormalize.normalize(input)
+    if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+    expect(KiloConfigPolicy.parse(input, normalized.encoded)).toMatchObject(input)
+  }
+  expect(KiloConfigPolicy.parse({}, {})?.auto_approve).toBeUndefined()
+  expect(Option.isNone(decode({ auto_approve: "true" }))).toBe(true)
+})

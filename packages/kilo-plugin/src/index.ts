@@ -1,4 +1,5 @@
 import { KiloAgentPlugin } from "./agent"
+import { KiloAutoApprovePlugin } from "./auto-approve"
 import { KiloAgentRemovePlugin } from "./agent/plugin"
 // The plan file, the plan_exit tool and the post-plan follow-up question live in one plugin.
 import { KiloPlanPlugin } from "./plan"
@@ -67,6 +68,8 @@ export { KiloSandbox }
 // the RPC of a plugin in this list.
 export const KiloPlugins = [
   KiloHandshakePlugin,
+  // Global saved auto-approve: runs before Flow, Browser, Agent Manager, managed Policy and Sandbox hardening hooks.
+  KiloAutoApprovePlugin,
   // v1 imported the Kilo agent module into agent.ts. kilo_port(agent:2e5632e7bfc6)
   KiloAgentPlugin.Plugin,
   // The plan_exit tool and the post-plan handoff question.

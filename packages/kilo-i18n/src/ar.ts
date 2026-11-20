@@ -207,9 +207,11 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "تبديل الموافقة التلقائية",
-  "tui.autoApprove.description": "الموافقة على طلبات الأذونات تلقائياً لهذه العملية",
+  "tui.autoApprove.description": "الموافقة على طلبات الأذونات تلقائياً لكل عميل وتذكّر هذا الإعداد",
   "tui.autoApprove.enabled": "تم تفعيل الموافقة التلقائية. ستتم الموافقة على طلبات الأذونات تلقائياً.",
   "tui.autoApprove.disabled": "تم تعطيل الموافقة التلقائية.",
+  "tui.autoApprove.projectDisabled": "الموافقة التلقائية معطّلة في إعدادات هذا المشروع.",
+  "tui.autoApprove.saveFailed": "تعذّر حفظ إعداد الموافقة التلقائية.",
 
   // Session transcript export
   "session.export.success": "تم تصدير سجل الجلسة بتنسيق Markdown.",
