@@ -17,6 +17,7 @@ import * as path from "path"
 import { createHash } from "crypto"
 import { sanitizeBranchName } from "../branch-name"
 import { pathKey } from "../project/paths"
+import { activeProfile } from "../../active-profile"
 import { markNoIndex } from "../../util/spotlight"
 
 /**
@@ -24,7 +25,11 @@ import { markNoIndex } from "../../util/spotlight"
  * specific product: the host PID alone cannot distinguish extensions in the same window.
  */
 export function poolHome(): string {
-  const data = process.env.XDG_DATA_HOME?.trim() || path.join(os.homedir(), ".local", "share")
+  if (activeProfile) return path.join(activeProfile.data, "worktree-pool-v2")
+  const profile = process.env.KILO_V2_PROFILE?.trim()
+  const data = profile
+    ? path.join(profile, "data")
+    : process.env.XDG_DATA_HOME?.trim() || path.join(os.homedir(), ".local", "share")
   return path.join(data, "kilo", "worktree-pool-v2")
 }
 

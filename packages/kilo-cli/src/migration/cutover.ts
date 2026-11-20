@@ -69,15 +69,16 @@ export async function recoverCutover(plan: Plan, report: Report) {
   if (existsSync(plan.backup) && !linkedOriginal(plan.source, plan.backup)) {
     const { verifyPublished } = await import("./verify-published")
     const { finishRecovered } = await import("./owner")
-    return finishRecovered(
+    await finishRecovered(
       plan.source,
       async () => {
         verifyPublished(plan.source, plan.backup)
         await finishResources(plan)
-        recordedStage(stageJournal(plan.source), plan.backup)?.remove()
       },
       report,
     )
+    clearStage(plan.source, plan.backup)
+    return
   }
   return retryOwner(
     plan.source,
@@ -136,9 +137,17 @@ async function convert(plan: Plan, update: Report) {
   )
   update({ phase: "Reconciling configuration" })
   await finishResources(plan)
-  recordedStage(stageJournal(plan.source), plan.backup)?.remove()
+  clearStage(plan.source, plan.backup)
   for (const item of intent.skipped) update({ phase: `Skipped: ${item}` })
   update({ phase: "Profile ready" })
+}
+
+function clearStage(source: string, backup: string) {
+  try {
+    recordedStage(stageJournal(source), backup)?.remove()
+  } catch {
+    // Publication and resource verification already succeeded; never fail completion on scratch cleanup.
+  }
 }
 
 async function finishResources(plan: Plan) {

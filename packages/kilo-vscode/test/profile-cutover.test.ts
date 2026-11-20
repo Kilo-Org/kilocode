@@ -14,7 +14,10 @@ import { manager, serverPlans } from "../src/server"
 import { window } from "vscode"
 
 const roots: string[] = []
-afterEach(() => roots.splice(0).forEach((dir) => rmSync(dir, { force: true, recursive: true })))
+afterEach(() => {
+  useProfile(undefined)
+  roots.splice(0).forEach((dir) => rmSync(dir, { force: true, recursive: true }))
+})
 
 function fixture(status: string, extras: Record<string, unknown> = {}) {
   const cwd = mkdtempSync(path.join(tmpdir(), "kilo-vscode-cutover-"))
@@ -128,6 +131,29 @@ test("native gate always presents the localized inventory before any apply", asy
   expect(calls()).toEqual(["migrate preflight"])
   expect(translate("de", "migration.accept")).not.toBe("Back up and migrate")
   expect(translate("de", "migration.summary", { source: "$&{{backup}}", backup: "s" })).toContain("$&{{backup}}")
+})
+
+test("native gate accepts, streams progress notifications, and activates the verified profile", async () => {
+  const { input, calls, profile } = fixture("required")
+  const out = window.createOutputChannel("fixture")
+  const reported: string[] = []
+  using warning = spyOn(window, "showWarningMessage").mockResolvedValue({
+    title: "Back up and migrate",
+    accepted: true,
+  } as never)
+  using progress = spyOn(window, "withProgress").mockImplementation((async (_opts: unknown, task: unknown) =>
+    (task as (p: { report: (v: { message?: string }) => void }) => unknown)({
+      report: (v) => {
+        if (v.message) reported.push(v.message)
+      },
+    })) as never)
+  const gate = profileCutover(input.cwd, out, input.env)!
+  expect(await gate.activate(input.command, input.settings)).toBe(true)
+  expect(warning).toHaveBeenCalledTimes(1)
+  expect(progress).toHaveBeenCalledTimes(1)
+  expect(reported).toEqual(["backup · 1/2", "verified"])
+  expect(calls()).toEqual(["migrate preflight", "migrate apply --accept-jetbrains-breakage", "migrate preflight"])
+  expect(resolveStateDir({}, "")).toBe(profile.state)
 })
 
 test("the selected dev CLI probes only the synthetic profile; declining a WAL store is read-only", async () => {

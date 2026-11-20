@@ -6,7 +6,7 @@ import { tmpdir } from "../../core/test/fixture/tmpdir"
 import { createModelPreferenceRepository } from "../../tui/src/model-preference"
 import { applyConfig, planConfig } from "../src/migration/config"
 import { planExtra } from "../src/migration/extra-state"
-import { assertProjectConfig } from "../src/migration/project-config"
+import { assertProjectConfig, assertProjectDirectories } from "../src/migration/project-config"
 
 function roots(root: string) {
   return {
@@ -58,8 +58,37 @@ test("opening HOME does not block a global workflow handled by the resource plan
   fs.mkdirSync(path.join(opts.home, ".git"), { recursive: true })
   put(opts.home, ".kilocode/workflows/review.md", workflow)
   assertProjectConfig([opts.home], opts.home)
+  const alias = path.join(tmp.path, "home-link")
+  fs.symlinkSync(opts.home, alias, "junction")
+  assertProjectDirectories([alias], opts.home)
+  assertProjectDirectories([opts.home], alias)
   planExtra(opts).apply()
   expect(fs.readFileSync(path.join(opts.legacyConfig, "command/review.md"), "utf8")).toContain("Inspect this diff")
+})
+
+test("root-level single-file skills migrate cleanly, refuse bad frontmatter, and detect directory collisions", async () => {
+  await using tmp = await tmpdir()
+  const opts = roots(tmp.path)
+  const single = put(opts.home, ".kilocode/skills/trace.md", skill)
+  const plan = planExtra(opts)
+  expect(plan.conflicts).toEqual([])
+  plan.apply()
+  expect(fs.readFileSync(path.join(opts.legacyConfig, "skills/trace.md"), "utf8")).toBe(skill)
+
+  const dup = put(opts.home, ".kilo/skills/trace/SKILL.md", skill)
+  expect(planExtra(opts).conflicts.join("\n")).toContain(dup)
+  fs.rmSync(path.dirname(dup), { recursive: true })
+
+  fs.writeFileSync(single, "---\nname: wrong\n---\nMismatch\n")
+  expect(planExtra(opts).conflicts.join("\n")).toContain(single)
+})
+
+test("explicit config inline commands conflict with migrated home workflows", async () => {
+  await using tmp = await tmpdir()
+  const opts = roots(tmp.path)
+  put(opts.home, ".kilocode/workflows/review.md", workflow)
+  const explicit = put(tmp.path, "explicit.json", JSON.stringify({ commands: { review: { template: "Inline" } } }))
+  expect(planExtra({ ...opts, explicitConfigFile: explicit }).conflicts.join("\n")).toContain(explicit)
 })
 
 test("preview model preferences are published privately and load through the TUI reader; repeated apply changes nothing", async () => {

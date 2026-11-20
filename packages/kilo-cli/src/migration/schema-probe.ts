@@ -13,17 +13,19 @@ export function nativeStore(file: string) {
   const result = classify(main, file)
   if (result !== undefined) return result
   const wal = `${file}-wal`
-  if (!fs.statSync(wal, { throwIfNoEntry: false })?.size) return true // Empty SQLite file, no committed schema.
-  const before = revision(file, wal)
-  if (fs.statSync(file).size + fs.statSync(wal).size > 32 * 1024 * 1024)
+  const walStat = fs.statSync(wal, { bigint: true, throwIfNoEntry: false })
+  if (!walStat?.size) return true // Empty SQLite file, no committed schema.
+  const fileStat = fs.statSync(file, { bigint: true, throwIfNoEntry: false })
+  if (!fileStat) throw changed(file)
+  const before = `${stamp(fileStat)}|${stamp(walStat)}`
+  if (fileStat.size + walStat.size > 32n * 1024n * 1024n)
     throw new Error(`Close clients using ${file} so its schema can be checkpointed before startup.`)
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-schema-"))
   try {
     const copy = path.join(dir, "probe.db")
-    fs.copyFileSync(file, copy, fs.constants.COPYFILE_FICLONE)
-    fs.copyFileSync(wal, `${copy}-wal`, fs.constants.COPYFILE_FICLONE)
-    if (revision(file, wal) !== before)
-      throw new Error(`Session store changed while checking its schema: ${file}. Retry startup.`)
+    copySnapshot(file, copy, file)
+    copySnapshot(wal, `${copy}-wal`, file)
+    if (revision(file, wal) !== before) throw changed(file)
     using db = openReadonly(copy).db
     return classify(db, file) ?? false
   } finally {
@@ -31,11 +33,28 @@ export function nativeStore(file: string) {
   }
 }
 
+function changed(file: string) {
+  return new Error(`Session store changed while checking its schema: ${file}. Retry startup.`)
+}
+
+function copySnapshot(from: string, to: string, store: string) {
+  try {
+    fs.copyFileSync(from, to, fs.constants.COPYFILE_FICLONE)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") throw changed(store)
+    throw error
+  }
+}
+
+function stamp(st: fs.BigIntStats) {
+  return `${st.dev}:${st.ino}:${st.size}:${st.mtimeNs}:${st.ctimeNs}`
+}
+
 function revision(...files: string[]) {
   return files
     .map((f) => {
-      const st = fs.statSync(f, { bigint: true })
-      return `${st.dev}:${st.ino}:${st.size}:${st.mtimeNs}:${st.ctimeNs}`
+      const st = fs.statSync(f, { bigint: true, throwIfNoEntry: false })
+      return st ? stamp(st) : "missing"
     })
     .join("|")
 }

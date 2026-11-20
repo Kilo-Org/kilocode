@@ -11,6 +11,7 @@ type Roots = {
   configBase: string
   legacyConfig: string
   legacyDefaultConfig: string
+  explicitConfigFile?: string
 }
 type Kind = "model" | "workflow" | "skill"
 type Item = { kind: Kind; source: string; target: string; digest: string }
@@ -48,7 +49,7 @@ function fingerprint(plan: Inventory) {
 
 function inventory(roots: Roots) {
   const plan: Inventory = { conflicts: new Set(), items: new Map() }
-  if (Object.values(roots).some((dir) => !path.isAbsolute(dir))) {
+  if (Object.values(roots).some((dir) => dir !== undefined && !path.isAbsolute(dir))) {
     plan.conflicts.add("Supply absolute home, state and configuration roots before migrating")
     return plan
   }
@@ -65,7 +66,7 @@ function inventory(roots: Roots) {
     // The config plan owns the complete inventory if an explicit override points here.
     if (dir === roots.legacyConfig || dir === roots.legacyDefaultConfig) continue
     inspect(plan, () => workflows(plan, roots, dir))
-    for (const name of dot.includes(dir) ? ["skills", "skill"] : ["skills"]) {
+    for (const name of ["skills", "skill"]) {
       inspect(plan, () => skills(plan, roots, path.join(dir, name)))
     }
   }
@@ -82,11 +83,36 @@ function inventory(roots: Roots) {
   }
   const resources = [...plan.items.values()].filter((item) => item.kind !== "model")
   if (resources.length) {
+    checkSkillCollisions(plan, resources)
     for (const dir of new Set([roots.legacyConfig, roots.legacyDefaultConfig]))
       for (const check of [commandClaims, skillClaims])
         inspect(plan, () => check(plan, dir, roots.legacyConfig, resources))
+    if (roots.explicitConfigFile) inspect(plan, () => explicitCommandClaims(plan, roots.explicitConfigFile!, resources))
   }
   return plan
+}
+
+function checkSkillCollisions(plan: Inventory, resources: Item[]) {
+  const seen = new Map<string, Item>()
+  for (const item of resources) {
+    if (item.kind !== "skill") continue
+    const id = fold(skillName(item.target))
+    const prior = seen.get(id)
+    if (prior && prior.target !== item.target) clash(plan, prior, item.source)
+    else seen.set(id, item)
+  }
+}
+
+function explicitCommandClaims(plan: Inventory, file: string, resources: Item[]) {
+  if (!entry(file)) return
+  const commands = new Map(
+    resources.filter((item) => item.kind === "workflow").map((item) => [fold(path.basename(item.target, ".md")), item]),
+  )
+  if (!commands.size) return
+  for (const name of commandNames(file)) {
+    const resource = commands.get(fold(name))
+    if (resource) clash(plan, resource, file)
+  }
 }
 
 function inspect(plan: Inventory, check: () => void) {
@@ -147,9 +173,13 @@ function skills(plan: Inventory, roots: Roots, base: string) {
       return
     }
     for (const child of entries) {
+      const entryPath = path.join(dir, child.name)
       if (child.isSymbolicLink())
-        plan.conflicts.add(`Inspect the linked skill entry without following it: ${path.join(dir, child.name)}`)
-      if (child.isDirectory()) visit(path.join(dir, child.name))
+        plan.conflicts.add(`Inspect the linked skill entry without following it: ${entryPath}`)
+      else if (child.isDirectory()) visit(entryPath)
+      else if (dir === base && child.isFile() && child.name.endsWith(".md")) {
+        inspect(plan, () => record(plan, "skill", entryPath, path.join(roots.legacyConfig, "skills", child.name)))
+      }
     }
   }
   visit(base)
@@ -175,7 +205,7 @@ function output(kind: Kind, source: string) {
       throw new Error(`Repair the model preference JSON object at ${source} before switching`)
     return bytes // Preserve unknown settings and ordering, including per-agent model selections.
   }
-  const name = kind === "skill" ? path.basename(path.dirname(source)) : path.basename(source, ".md")
+  const name = kind === "skill" ? skillName(source) : path.basename(source, ".md")
   if (!/^[a-zA-Z0-9][\w.-]*$/.test(name)) throw new Error(`Review the non-portable ${kind} name at ${source}`)
   if (
     !Buffer.from(text).equals(bytes) ||
@@ -256,11 +286,13 @@ function commandNames(file: string): string[] {
   )
 }
 
+function skillName(file: string) {
+  return path.basename(file) === "SKILL.md" ? path.basename(path.dirname(file)) : path.basename(file, ".md")
+}
+
 function skillClaims(plan: Inventory, dir: string, stable: string, resources: Item[]) {
   const manifests = new Map(
-    resources
-      .filter((item) => item.kind === "skill")
-      .map((item) => [fold(path.basename(path.dirname(item.target))), item]),
+    resources.filter((item) => item.kind === "skill").map((item) => [fold(skillName(item.target)), item]),
   )
   if (!manifests.size) return
   for (const top of ["skill", "skills"]) {
@@ -288,7 +320,7 @@ function skillClaims(plan: Inventory, dir: string, stable: string, resources: It
         if (
           resource &&
           (resource.target !== path.join(stable, path.relative(dir, file)) ||
-            entries.length !== 1 ||
+            (child.name === "SKILL.md" && entries.length !== 1) ||
             resource.digest !== hash(read(file)))
         )
           clash(plan, resource, file)
@@ -297,6 +329,7 @@ function skillClaims(plan: Inventory, dir: string, stable: string, resources: It
     visit(base)
     // Files with no manifest must not unexpectedly become assets of the incoming skill.
     for (const item of manifests.values()) {
+      if (path.basename(item.target) !== "SKILL.md") continue
       const folder = path.join(base, path.basename(path.dirname(item.target)))
       for (const child of children(folder))
         if (child.name !== "SKILL.md") clash(plan, item, path.join(folder, child.name))

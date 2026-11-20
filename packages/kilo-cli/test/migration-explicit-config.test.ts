@@ -38,3 +38,25 @@ test("one explicit JSONC document keeps its path, is validated, and cannot chang
   writeFileSync(file, '{"model":"kilo/changed"}')
   expect(() => applyConfig(plan)).toThrow("changed after planning")
 })
+
+test("explicit config inline commands and agents conflict with migrated directory definitions", async () => {
+  await using root = await tmpdir()
+  const stable = path.join(root.path, "kilo")
+  const commands = path.join(stable, "commands")
+  const agents = path.join(stable, "agents")
+  mkdirSync(commands, { recursive: true })
+  mkdirSync(agents, { recursive: true })
+  writeFileSync(path.join(commands, "review.md"), "---\ndescription: Review\n---\nInspect diff\n")
+  writeFileSync(path.join(agents, "audit.md"), "---\ndescription: Audit\n---\nCheck rules\n")
+  const explicit = path.join(root.path, "explicit.jsonc")
+  writeFileSync(
+    explicit,
+    JSON.stringify({
+      commands: { review: { template: "Inline review" } },
+      agents: { audit: { description: "Inline audit" } },
+    }),
+  )
+  const plan = planConfig(stable, stable, explicit)
+  expect(plan.conflicts.join("\n")).toContain("command:review")
+  expect(plan.conflicts.join("\n")).toContain("agent:audit")
+})

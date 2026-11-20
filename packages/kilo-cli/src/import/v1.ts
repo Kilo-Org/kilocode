@@ -35,16 +35,17 @@ export default Runtime.handler(
         catch: asError,
       })
       if (input.config) {
-        const config = beside(
-          path.join(path.dirname(Global.Path.config), "kilo"),
-          path.join(global.home, ".config", "kilo"),
-        )
-        const copied = existsSync(config) ? copyConfig(config, Global.Path.config) : []
-        process.stdout.write(
-          copied.length === 0
-            ? `No Kilo v1 config to copy from ${config}.${EOL}`
-            : `Copied the Kilo v1 config ${copied.join(", ")} from ${config} to ${Global.Path.config}.${EOL}`,
-        )
+        const config = path.join(global.home, ".config", "kilo")
+        if (path.resolve(config) === path.resolve(Global.Path.config)) {
+          process.stdout.write(`Active profile already uses ${Global.Path.config}; nothing to copy.${EOL}`)
+        } else {
+          const copied = existsSync(config) ? copyConfig(config, Global.Path.config) : []
+          process.stdout.write(
+            copied.length === 0
+              ? `No Kilo v1 config to copy from ${config}.${EOL}`
+              : `Copied the Kilo v1 config ${copied.join(", ")} from ${config} to ${Global.Path.config}.${EOL}`,
+          )
+        }
       }
       if (!existsSync(source) || !KiloV1Store.isV1Store(source))
         return yield* Effect.fail(
@@ -98,14 +99,6 @@ export default Runtime.handler(
     ),
   ),
 )
-
-/**
- * The v1 path beside the kilo directory, or the default v1 path in the home directory when there is none: the
- * isolated `bun dev` profile moves the kilo directories away from the user's v1 ones.
- */
-function beside(sibling: string, home: string) {
-  return existsSync(sibling) || !existsSync(home) ? sibling : home
-}
 
 function asError(cause: unknown) {
   return cause instanceof Error ? cause : new Error(String(cause))

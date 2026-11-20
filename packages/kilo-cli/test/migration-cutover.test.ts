@@ -6,6 +6,7 @@ import {
   mkdirSync,
   readFileSync,
   renameSync,
+  statfsSync,
   statSync,
   unlinkSync,
   writeFileSync,
@@ -86,8 +87,9 @@ test("internal cutover through the host: explicit consent, one switch, recoverab
   const original = readFileSync(source)
   const failed = await run("migrate", "apply", "--accept-jetbrains-breakage")
   // Unsupported filesystems must decline before changing a profile; exercise successful publication on supported hosts.
-  if (failed.code !== 0 && failed.stderr.includes("Safe database replacement requires local")) {
-    expect(failed.stderr).toMatch(/windows|filesystem|requires local/i)
+  if (!supportedVolume(profile.path)) {
+    expect(failed.code).not.toBe(0)
+    expect(failed.stderr).toContain("Safe database replacement requires local")
     expect(existsSync(`${source}.pre-v2`)).toBe(false)
     return
   }
@@ -336,7 +338,11 @@ test("a linked worktree session and its stable Agent Manager associations surviv
     )
   }
   const result = await runHost(root, ["migrate", "apply", "--accept-jetbrains-breakage"])
-  if (result.code && result.stderr.includes("Safe database replacement requires local")) return
+  if (!supportedVolume(root)) {
+    expect(result.code).not.toBe(0)
+    expect(result.stderr).toContain("Safe database replacement requires local")
+    return
+  }
   expect(result.code, result.stderr).toBe(0)
   using active = new Database(source, { readonly: true })
   expect(active.query("SELECT id FROM session_v2").get()).toEqual({ id: "ses_manager" })
@@ -375,7 +381,11 @@ test("fallback state survives cutover and inherited release paths select the sam
   expect(blocked.stderr).toContain(preview)
   writeFileSync(preview, prefs)
   const migrated = await runHost(root, ["migrate", "recover", "--accept-jetbrains-breakage"], env)
-  if (migrated.code && migrated.stderr.includes("Safe database replacement requires local")) return
+  if (!supportedVolume(root)) {
+    expect(migrated.code).not.toBe(0)
+    expect(migrated.stderr).toContain("Safe database replacement requires local")
+    return
+  }
   expect(migrated.code, migrated.stderr).toBe(0)
   const boot = await runHost(root, ["debug", "paths"], env)
   expect(boot.code, boot.stderr).toBe(0)
@@ -384,6 +394,27 @@ test("fallback state survives cutover and inherited release paths select the sam
   expect(readFileSync(path.join(state!, "model.json"), "utf8")).toBe(prefs)
   expect(readFileSync(config, "utf8")).toBe(prefs)
 }, 30_000)
+
+test("recovery copy without an owner journal refuses startup before opening the store", async () => {
+  await using p = await tmpdir()
+  const root = p.path
+  mkdirSync(path.join(root, ".git"))
+  const source = path.join(root, "data/kilo/kilo.db")
+  mkdirSync(path.dirname(source), { recursive: true })
+  {
+    using db = new Database(source)
+    db.exec(readFileSync(path.join(import.meta.dir, "fixture/kilo-v1-schema.sql"), "utf8"))
+  }
+  writeFileSync(`${source}.pre-v2`, "orphaned recovery")
+  const probe = await runHost(root, ["migrate", "preflight"])
+  expect(probe.code).not.toBe(0)
+  expect(probe.stderr).toContain(`Recovery copy exists without matching migration state: ${source}.pre-v2`)
+})
+
+function supportedVolume(root: string) {
+  if (process.platform === "darwin") return Bun.spawnSync(["/bin/df", "-t", "apfs", root]).exitCode === 0
+  return process.platform === "linux" && [0xef53, 0x58465342, 0x9123683e].includes(statfsSync(root).type >>> 0)
+}
 
 async function runHost(root: string, args: string[], extra: NodeJS.ProcessEnv = {}) {
   const proc = Bun.spawn(

@@ -43,11 +43,7 @@ const generated = new Set([
 
 // Only the supplied global config roots. Home dot-directories, editor globalStorage,
 // project/managed config, XDG state/model.json and credential stores have separate owners.
-export function planConfig(
-  legacyDir: string,
-  legacyDefaultDir = legacyDir,
-  explicitFile?: string,
-): ConfigPlan {
+export function planConfig(legacyDir: string, legacyDefaultDir = legacyDir, explicitFile?: string): ConfigPlan {
   const stable = path.resolve(legacyDir)
   const plan: ConfigPlan = {
     legacyDir: stable,
@@ -98,7 +94,12 @@ export function planConfig(
     const file = path.join(root, relative)
     const top = relative.split(path.sep)[0]!
     const name = path.basename(file)
-    if (name === ".DS_Store" || credentialFile.test(name) || stagingName.test(name) || (relative === name && generated.has(name))) {
+    if (
+      name === ".DS_Store" ||
+      credentialFile.test(name) ||
+      stagingName.test(name) ||
+      (relative === name && generated.has(name))
+    ) {
       plan.skipped.push(`${file}: credential or generated dependency; left in place`)
       return
     }
@@ -122,15 +123,24 @@ export function planConfig(
   }
 
   try {
-    if (explicitFile) {
-      const { bytes } = read(explicitFile)
-      settings(document(bytes.toString("utf8"), explicitFile, explicitFile), explicitFile)
-      plan.explicit = { file: explicitFile, digest: hash(bytes) }
+    const explicitPath = explicitFile ? path.resolve(explicitFile) : undefined
+    const roots = configRoots(plan)
+    if (explicitPath) {
+      const { bytes } = read(explicitPath)
+      const effective = settings(document(bytes.toString("utf8"), explicitPath, explicitPath), explicitPath)
+      const visitedInRoots = roots.some(
+        (root) => path.dirname(explicitPath) === root && configName.test(path.basename(explicitPath)),
+      )
+      if (!visitedInRoots) {
+        for (const name of Object.keys(effective.agents ?? {})) claim(`agent:${name}`, explicitPath)
+        for (const name of Object.keys(effective.commands ?? {})) claim(`command:${name}`, explicitPath)
+      }
+      plan.explicit = { file: explicitPath, digest: hash(bytes) }
     }
-    for (const root of configRoots(plan)) {
+    for (const root of roots) {
       if (!directory(root)) continue
       for (const name of fs.readdirSync(root).sort()) {
-        if (path.join(root, name) === explicitFile && !supported(name)) continue
+        if (path.join(root, name) === explicitPath && !supported(name)) continue
         visit(root, name)
       }
     }

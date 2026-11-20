@@ -49,7 +49,11 @@ export async function stageAndPublish(
 }
 
 export function linkedOriginal(source: string, backup: string) {
-  return fs.existsSync(backup) && identity(source) === identity(backup)
+  return (
+    !!fs.lstatSync(backup, { throwIfNoEntry: false }) &&
+    !!fs.lstatSync(source, { throwIfNoEntry: false }) &&
+    identity(source) === identity(backup)
+  )
 }
 
 /** Only under the owner lock after renewed consent. Both names must still identify
@@ -57,34 +61,40 @@ export function linkedOriginal(source: string, backup: string) {
 export function retryPublication(source: string, backup: string, journal: string) {
   const stage = recordedStage(journal, source)
   if (fs.lstatSync(backup, { throwIfNoEntry: false })) {
-    const st = fs.lstatSync(source)
-    if (
-      !stage?.linking ||
-      !linkedOriginal(source, backup) ||
-      !st.isFile() ||
-      st.nlink !== 2 ||
-      st.uid !== process.geteuid?.() ||
-      st.mode & 0o077
-    )
-      throw new Error(`Unverified recovery link; keep both files and inspect ${backup}`)
-    if (
-      family
-        .slice(1)
-        .some(
-          (s) =>
-            fs.lstatSync(backup + s, { throwIfNoEntry: false }) || fs.lstatSync(source + s, { throwIfNoEntry: false }),
-        )
-    )
-      throw new Error(`Close clients and inspect recovery sidecars at ${backup}`)
+    verifyRecoveryLink(source, backup, stage?.linking)
     using guard = exclusive(source)
     if (guard.query<{ journal_mode: string }, []>("PRAGMA journal_mode").get()?.journal_mode !== "delete")
       throw new Error(`Recovery link is not standalone: ${backup}`)
+    if (regular(source + "-wal")?.size) throw new Error(`Close clients and inspect recovery sidecars at ${backup}`)
     if (!linkedOriginal(source, backup) || fs.lstatSync(source).nlink !== 2)
       throw new Error(`Recovery link changed: ${backup}`)
+    fs.rmSync(source + "-wal", { force: true })
+    fs.rmSync(source + "-shm", { force: true })
     fs.unlinkSync(backup)
     syncDir(path.dirname(backup))
   }
   stage?.remove()
+}
+
+function verifyRecoveryLink(source: string, backup: string, linking: boolean | undefined) {
+  const st = fs.lstatSync(source, { throwIfNoEntry: false })
+  if (
+    !linking ||
+    !st ||
+    !linkedOriginal(source, backup) ||
+    !st.isFile() ||
+    st.nlink !== 2 ||
+    st.uid !== process.geteuid?.() ||
+    st.mode & 0o077
+  )
+    throw new Error(`Unverified recovery link; keep both files and inspect ${backup}`)
+  if (
+    family.slice(1).some((s) => fs.lstatSync(backup + s, { throwIfNoEntry: false })) ||
+    regular(source + "-journal") ||
+    regular(source + "-wal")?.size
+  )
+    throw new Error(`Close clients and inspect recovery sidecars at ${backup}`)
+  regular(source + "-shm")
 }
 
 function checkVolume(dir: string, file: string) {

@@ -6,7 +6,8 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { isolatedEnv } from "../../cli/test/fixture/environment"
 import { tmpdir } from "../../core/test/fixture/tmpdir"
-import { stageAndPublish } from "../src/migration/publish"
+import { linkedOriginal, retryPublication, stageAndPublish } from "../src/migration/publish"
+import { beginStage } from "../src/migration/stage-record"
 
 // A cutover must not unlock and hope that a subsequent Windows rename succeeds. Unknown volumes also fail closed.
 const canReplace =
@@ -205,4 +206,39 @@ test.if(!canReplace)("refuses a non-supported platform/volume without touching t
   await expect(stageAndPublish(file, backup, convert, noop)).rejects.toThrow("Safe database replacement requires local")
   expect(fs.readFileSync(file)).toEqual(bytes)
   expect(fs.existsSync(backup)).toBe(false)
+})
+
+test("linkedOriginal returns false when the source database is missing", async () => {
+  await using root = await tmpdir()
+  const { file, backup } = fixture(root.path)
+  fs.renameSync(file, backup)
+  expect(linkedOriginal(file, backup)).toBe(false)
+})
+
+test.if(canReplace)("retryPublication clears an empty source WAL and SHM but refuses a non-empty WAL", async () => {
+  await using root = await tmpdir()
+  const { file, backup } = fixture(root.path)
+  {
+    using db = new Database(file, { readwrite: true })
+    db.exec("PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode = DELETE")
+  }
+  fs.chmodSync(file, 0o600)
+  const scratch = fs.mkdtempSync(path.join(root.path, ".kilo-cutover-"))
+  const journal = path.join(root.path, "stage.json")
+  const markLinking = beginStage(journal, file, scratch)
+  markLinking()
+  fs.linkSync(file, backup)
+
+  fs.writeFileSync(`${file}-wal`, "uncheckpointed")
+  expect(() => retryPublication(file, backup, journal)).toThrow("inspect recovery sidecars")
+  expect(fs.existsSync(backup)).toBe(true)
+
+  fs.writeFileSync(`${file}-wal`, "")
+  fs.writeFileSync(`${file}-shm`, "stale")
+  retryPublication(file, backup, journal)
+  expect(fs.existsSync(backup)).toBe(false)
+  expect(fs.existsSync(`${file}-wal`)).toBe(false)
+  expect(fs.existsSync(`${file}-shm`)).toBe(false)
+  expect(fs.existsSync(scratch)).toBe(false)
+  expect(fs.existsSync(journal)).toBe(false)
 })

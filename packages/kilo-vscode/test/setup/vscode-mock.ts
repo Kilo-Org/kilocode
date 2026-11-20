@@ -117,6 +117,8 @@ const mockVscode = {
     showQuickPick: async () => undefined,
     showErrorMessage: async () => undefined,
     showWarningMessage: async () => undefined,
+    withProgress: async (_options: unknown, task: (progress: { report: (value: unknown) => void }) => unknown) =>
+      task({ report: noop }),
     createTerminal: () => ({ show: noop, sendText: noop, dispose: noop }),
     createOutputChannel: () => ({
       name: "",

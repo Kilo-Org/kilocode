@@ -10,14 +10,27 @@ export function assertProjectConfig(locations: Iterable<string>, home: string) {
 }
 
 export function assertProjectDirectories(directories: Iterable<string>, home: string) {
-  const homeDir = statSync(home, { throwIfNoEntry: false })?.isDirectory() ? realpathSync.native(home) : home
-  const issues = [...directories].flatMap((dir) => projectIssues(dir, homeDir))
+  const homeStat = statSync(home, { bigint: true, throwIfNoEntry: false })
+  const homeDir = homeStat?.isDirectory() ? realpathSync.native(home) : home
+  const issues = [...directories].flatMap((dir) => projectIssues(dir, sameDirectory(dir, homeDir, homeStat)))
   const globalIgnore = path.join(home, ".kilocode", ".kilocodeignore")
   if (lstatSync(globalIgnore, { throwIfNoEntry: false })) issues.push(globalIgnore)
   if (issues.length)
     throw new Error(
       `Reconcile these project resources before switching to kilo names. Preserve ignore rules as read/edit restrictions and move workflows to commands:\n${issues.sort().join("\n")}`,
     )
+}
+
+function sameDirectory(dir: string, homeDir: string, homeStat: ReturnType<typeof statSync>) {
+  if (dir === homeDir) return true
+  if (!homeStat?.isDirectory()) return false
+  const st = statSync(dir, { bigint: true, throwIfNoEntry: false })
+  if (!st?.isDirectory()) return false
+  if (st.ino !== 0n && st.dev === homeStat.dev && st.ino === homeStat.ino) return true
+  const real = realpathSync.native(dir)
+  return process.platform === "win32" || process.platform === "darwin"
+    ? real.toLowerCase() === homeDir.toLowerCase()
+    : real === homeDir
 }
 
 export function projectDirectories(locations: Iterable<string>) {
@@ -58,12 +71,12 @@ function primaryCheckout(dir: string) {
   return first.slice("worktree ".length)
 }
 
-function projectIssues(dir: string, home: string) {
+function projectIssues(dir: string, isHome: boolean) {
   const result = [".kilocodeignore"]
     .map((name) => path.join(dir, name))
     .filter((file) => lstatSync(file, { throwIfNoEntry: false }))
   // The global resource planner already migrates these directories under HOME.
-  if (dir === home) return result
+  if (isHome) return result
   for (const name of [".kilo/workflows", ".kilocode/workflows", ".kilocode/skills", ".kilocode/skill"]) {
     const file = path.join(dir, name)
     const legacy = lstatSync(file, { throwIfNoEntry: false })
