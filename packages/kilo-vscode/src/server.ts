@@ -8,6 +8,7 @@ import path from "node:path"
 import { local } from "./local"
 import { launch } from "./process"
 import { dataPlans } from "./documents/document-reader"
+import { activeProfile } from "./active-profile"
 
 export type Command = { cmd: string; args: string[]; env: Record<string, string> }
 export type Server = { url: string; authorization: string; process: ChildProcess }
@@ -85,6 +86,7 @@ export function command(input: {
 
 /** The global plan directory the server writes. The isolated dev profile moves the data directory into the profile. */
 export function serverPlans(cmd: Command | undefined, env: NodeJS.ProcessEnv): string {
+  if (activeProfile) return path.join(activeProfile.data, "plans")
   const profile = cmd?.env.KILO_V2_PROFILE
   if (profile) return path.join(path.resolve(profile), "data", "kilo2", "plans")
   return dataPlans(env)
@@ -334,6 +336,7 @@ export function manager(input: {
   cwd: string
   env: NodeJS.ProcessEnv
   settings?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>)
+  beforeStart?: (command: Command, settings?: Record<string, string>) => Promise<void>
   log?: (text: string) => void
   onError?: (error: Error) => void
   onStart?: (server: Server) => void
@@ -348,6 +351,7 @@ export function manager(input: {
         throw new Error("No Kilo v2 server found. Put a kilo2 binary in bin/ or run the extension from the repository.")
       // Settings may await host work, such as the loopback notebook and Integrated Browser broker endpoints.
       const settings = typeof input.settings === "function" ? await input.settings() : input.settings
+      if (input.beforeStart) await input.beforeStart(found, settings)
       return start({
         command: found,
         cwd: input.cwd,

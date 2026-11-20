@@ -1,4 +1,17 @@
 export const dict = {
+  // Session migration
+  "migration.title": "Kilo oturumlarınız v2’ye taşınsın mı?",
+  "migration.summary":
+    "Kaynak: {{source}}\nBoyut: {{totalBytes}} (veritabanı: {{sourceBytes}}; WAL: {{walBytes}})\nBoş alan: {{availableBytes}}\nÖnerilen yedekleme konumu: {{backup}}",
+  "migration.warning":
+    "Tüm Kilo v1 istemcilerini ve önizleme sürümlerini kapatın. Taşıma tamamlanana kadar yeniden açmayın. Taşıma sonrasında JetBrains için mevcut Kilo eklentisi bu veritabanını kullanamaz. Veritabanını bir v1 istemcisiyle yeniden açmayın.",
+  "migration.accept": "Yedekle ve taşı",
+  "migration.notNow": "Şimdi değil",
+  "migration.progress": "Kilo oturumları taşınıyor",
+  "migration.stopped": "Kilo başlatılmadı. Yeniden denemek için pencereyi yeniden yükleyin.",
+  "migration.headless":
+    "Taşıma için onay gerekiyor. Planı {{preflight}} komutuyla inceleyin. Kabul ediyorsanız {{apply}} komutunu çalıştırın.",
+
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.byok.prefix": "Daha fazla kullanım istatistiği için ",
   "provider.connect.kiloGateway.byok.link": "Kilo's Gateway üzerinden BYOK",

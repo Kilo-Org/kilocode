@@ -8,9 +8,15 @@ import { currentFfmpegTarget, ensureFfmpegForTarget, hasFfmpegPackage } from "./
 import { createSolidPlugin } from "./solid-cache"
 
 const root = path.resolve(import.meta.dir, "..")
-const dist = path.join(root, "dist")
-const solid = createSolidPlugin({ root })
 const production = Bun.argv.includes("--production")
+const target = process.env.KILO_VSCODE_TARGET ?? currentFfmpegTarget()
+if (!/^[a-z0-9]+-[a-z0-9]+$/.test(target)) throw new Error(`Invalid build target: ${target}`)
+const output =
+  production && process.env.KILO_INTERNAL_PROFILE_CUTOVER_BUILD === "1"
+    ? path.join(root, ".kilo-dev/pilot/stage", target)
+    : root
+const dist = path.join(output, "dist")
+const solid = createSolidPlugin({ root })
 // `--meta` writes the bundled source files to dist/inputs.txt (used to keep only reachable copied v1 UI files).
 const meta = Bun.argv.includes("--meta")
 await rm(dist, { recursive: true, force: true })
@@ -19,8 +25,7 @@ await mkdir(dist, { recursive: true })
 // capture need. Build each target's package on that target. `KILO_VSCODE_TARGET` selects the helper for a
 // cross-target package.
 if (production) {
-  const target = process.env.KILO_VSCODE_TARGET ?? currentFfmpegTarget()
-  const bin = path.join(root, "bin")
+  const bin = path.join(output, "bin")
   await mkdir(bin, { recursive: true })
   await ensureFfmpegForTarget(target, bin)
   const helper = path.join(bin, target.startsWith("win32") ? "ffmpeg.exe" : "ffmpeg")
@@ -135,6 +140,9 @@ const host = Bun.build({
   target: "node",
   format: "cjs",
   external: ["vscode", "playwright-core"],
+  define: {
+    KILO_INTERNAL_PROFILE_CUTOVER_BUILD: JSON.stringify(process.env.KILO_INTERNAL_PROFILE_CUTOVER_BUILD === "1"),
+  },
   sourcemap: "linked",
 })
 
@@ -199,14 +207,22 @@ const results = await Promise.all([
   }),
   // The animated Kilo logo loads its WASM renderer from next to the bundle; the CSP blocks the CDN default.
   copyFile(
-    path.join(path.dirname(Bun.resolveSync("@lottiefiles/dotlottie-web/package.json", root)), "dist", "dotlottie-player.wasm"),
+    path.join(
+      path.dirname(Bun.resolveSync("@lottiefiles/dotlottie-web/package.json", root)),
+      "dist",
+      "dotlottie-player.wasm",
+    ),
     path.join(dist, "dotlottie-player.wasm"),
   ),
 ])
 if (meta)
   await Bun.write(
     path.join(dist, "inputs.txt"),
-    [...new Set(results.flatMap((result) => Object.keys((result && "metafile" in result && result.metafile?.inputs) || {})))]
+    [
+      ...new Set(
+        results.flatMap((result) => Object.keys((result && "metafile" in result && result.metafile?.inputs) || {})),
+      ),
+    ]
       .map((file) => path.resolve(root, file))
       .join("\n"),
   )

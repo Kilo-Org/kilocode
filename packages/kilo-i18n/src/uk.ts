@@ -1,4 +1,17 @@
 export const dict = {
+  // Session migration
+  "migration.title": "Перенести сеанси Kilo до версії 2?",
+  "migration.summary":
+    "Джерело: {{source}}\nРозмір: {{totalBytes}} (база даних: {{sourceBytes}}; WAL: {{walBytes}})\nВільне місце: {{availableBytes}}\nПропонований шлях для резервної копії: {{backup}}",
+  "migration.warning":
+    "Закрийте всі клієнти Kilo v1 і попередні збірки Kilo. Не запускайте їх до завершення перенесення. Після перенесення поточний плагін Kilo для середовищ JetBrains не зможе працювати з цією базою даних. Не відкривайте її знову в клієнті v1.",
+  "migration.accept": "Створити резервну копію та перенести",
+  "migration.notNow": "Не зараз",
+  "migration.progress": "Перенесення сеансів Kilo",
+  "migration.stopped": "Kilo не запущено. Перезавантажте вікно, щоб спробувати ще раз.",
+  "migration.headless":
+    "Для перенесення потрібне підтвердження. Перегляньте план за допомогою команди {{preflight}}. Якщо ви погоджуєтеся, виконайте {{apply}}.",
+
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.byok.prefix": "Для отримання додаткової статистики використання використовуйте ",
   "provider.connect.kiloGateway.byok.link": "BYOK через Kilo's Gateway",

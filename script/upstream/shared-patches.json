@@ -1,12 +1,16 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 164,
-    "markedLines": 2971,
+    "files": 165,
+    "markedLines": 2973,
     "unmarkedLines": 468,
     "deletedFiles": 0
   },
   "files": {
+    "packages/core/src/database/v1-migration.bun.ts": {
+      "rung": 3,
+      "seam": "Optional per-session callback exposes typed skipped-row warnings before writing the projection. The host rejects lossy offline cutovers without reimplementing the decoder. There is no plugin hook in this conversion; without a callback upstream retains its warn-and-continue behavior."
+    },
     "packages/cli/src/run/run.ts": {
       "rung": 4,
       "seam": "The shared one-shot run handler owns target preparation, including resumed-session model selection. Neither a plugin nor the Kilo host can wait there before admission. The Kilo-only call checks the resolved location's catalog without changing upstream run behavior."

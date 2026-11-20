@@ -340,6 +340,25 @@ test("the import API returns the session count and reports an existing store as 
   expect(await strays(data)).toEqual([])
 })
 
+test("full profile conversion preserves session ids, provider credentials and the selected organization", async () => {
+  const { dir, data } = await root()
+  const source = path.join(dir, "kilo", "kilo.db")
+  const { db } = await v1Store(source, dir)
+  db.run("INSERT INTO account_state (id, active_account_id, active_org_id) VALUES (1, 'acc_v1', 'org_fixture')")
+  const file = path.join(data, "candidate.db")
+  db.run("VACUUM INTO ?", [file])
+  const { convertProfile } = await import("../src/v1-store")
+  expect(await convertProfile(file, { data })).toBe(2)
+  read(file, (converted) => {
+    expect(converted.query("SELECT id FROM session EXCEPT SELECT id FROM session_v2").all()).toEqual([])
+    expect(converted.query("SELECT active_org_id FROM account_state").get()).toEqual({ active_org_id: "org_fixture" })
+    expect(converted.query("SELECT count(*) AS n FROM account WHERE refresh_token = ?").get(SECRET.refresh)).toEqual({
+      n: 1,
+    })
+    expect(converted.query("SELECT count(*) AS n FROM credential WHERE id = 'crd_v1'").get()).toEqual({ n: 1 })
+  })
+})
+
 test("the Kilo-specific steps: no hidden or transient text, editor context kept, no credentials", async () => {
   const { dir, data } = await root()
   await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))

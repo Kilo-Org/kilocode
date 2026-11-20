@@ -4,7 +4,7 @@ import { existsSync } from "node:fs"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { parse } from "jsonc-parser/lib/esm/main.js"
-import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import { configFiles } from "../active-profile"
 import { resolveGlobalConfigDir } from "../settings-paths"
 import type { SpeechToTextSettings } from "./source"
 
@@ -12,7 +12,7 @@ type Record = { [key: string]: unknown }
 
 export function globalSpeechConfigFiles(env: NodeJS.ProcessEnv, profile: string): string[] {
   const directory = resolveGlobalConfigDir(env, profile)
-  return KiloConfigFiles.names.map((name: string) => path.join(directory, name))
+  return configFiles().names.map((name: string) => path.join(directory, name))
 }
 
 /** The global file a speech write targets: the first existing write candidate, else the new-file name. */
@@ -20,8 +20,9 @@ export function globalSpeechWriteTarget(env: NodeJS.ProcessEnv, profile: string)
   const first = globalSpeechConfigFiles(env, profile)[0]
   if (!first) throw new Error("No global Kilo config directory")
   const directory = path.dirname(first)
-  const candidates = KiloConfigFiles.writeCandidates(directory, true)
-  return candidates.find((file) => existsSync(file)) ?? path.join(directory, KiloConfigFiles.newFile)
+  const files = configFiles()
+  const candidates = files.writeCandidates(directory, true)
+  return candidates.find((file) => existsSync(file)) ?? path.join(directory, files.newFile)
 }
 
 /**

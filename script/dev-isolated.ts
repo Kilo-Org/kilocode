@@ -16,6 +16,11 @@ const args = process.argv.slice(2)
 // A shell or terminal of a Kilo or OpenCode server inherits that server's database, config, home, session and
 // password, and the CLI would use them instead of the profile. Pass config with OPENCODE_CONFIG_CONTENT instead.
 const inherited = [
+  // The migration inventory resolves the old CLI's override as well. A dev probe
+  // must never escape its isolated data directory via an inherited v1 path.
+  "KILO_DB",
+  "KILO_CONFIG",
+  "KILO_CONFIG_DIR",
   "OPENCODE_DB",
   "KILO2_DB",
   "OPENCODE_CONFIG",

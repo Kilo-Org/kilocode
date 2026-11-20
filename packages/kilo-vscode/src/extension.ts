@@ -59,6 +59,7 @@ import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
 import { indexingHost, type IndexingHost } from "./indexing/host"
 import { importV1, summarize, v1Store } from "./import-v1"
+import { profileCutover } from "./profile-cutover-ui"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { gitChanges } from "./git-changes"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
@@ -70,10 +71,14 @@ let shutdownExtension: (() => Promise<void>) | undefined
 const V1_IMPORT = "kilo-code.v2.importV1"
 
 /** @knipExternal VS Code calls this through the extension's manifest main. */
-export function activate(context: ExtensionContext) {
+export async function activate(context: ExtensionContext) {
   const output = window.createOutputChannel("Kilo Code (v2)")
+  context.subscriptions.push(output)
   const storage = context.globalStorageUri.fsPath
   const directory = workspace.workspaceFolders?.[0]?.uri.fsPath ?? homedir()
+  const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
+  const cutover = profileCutover(directory, output)
+  if (cutover && !(await cutover.activate(serverCommand(), serverPreferences()))) return
   const alerts = createCostAlerts({
     notify: async (alert) => {
       // This package ships no l10n bundles, so these strings remain English in every VS Code locale.
@@ -156,7 +161,6 @@ export function activate(context: ExtensionContext) {
   // Read at each start, so a settings change applies to the next server. Each broker endpoint is set only while the
   // feature is enabled, so a session sees each tool exactly when the feature is on.
   const serverSettings = async () => {
-    const values = readKiloSettings()
     const browser =
       integratedBrowserEnabled() && workspace.isTrusted
         ? await broker.env().catch((error: unknown) => {
@@ -171,18 +175,12 @@ export function activate(context: ExtensionContext) {
         })
       : {}
     return {
-      ...settingsEnvironment({
-        claudeCodeCompat: values.claudeCodeCompat === true,
-        extraCaCerts: typeof values.extraCaCerts === "string" ? values.extraCaCerts : "",
-        editor: `${env.appName} ${version}`,
-      }),
+      ...serverPreferences(),
       ...browser,
       ...notebook,
-      ...indexingEnvironment(workspace.workspaceFolders?.length),
     }
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
-  const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
   // Plan mode writes plans outside a version-controlled project to the server's data directory, so plan links resolve there too.
   usePlanDir(serverPlans(serverCommand(), process.env))
   let indexing: IndexingHost | undefined
@@ -191,6 +189,7 @@ export function activate(context: ExtensionContext) {
     cwd: directory,
     env: process.env,
     settings: serverSettings,
+    beforeStart: cutover?.beforeStart,
     log: (text) => output.append(text),
     // The autocomplete connection is declared below; the server starts only after activation returns.
     onStart: (started) => {
@@ -390,7 +389,15 @@ export function activate(context: ExtensionContext) {
     const days = choice === recent ? 14 : choice === other ? await pickV1Timespan() : undefined
     if (days) await importFromV1(days)
   }
-  void offerV1Import()
+  if (!cutover) {
+    void offerV1Import()
+    context.subscriptions.push(
+      commands.registerCommand("kilo-code.v2.importV1", async () => {
+        const days = await pickV1Timespan()
+        if (days) await importFromV1(days)
+      }),
+    )
+  }
   browserTab = new BrowserTabProvider(
     context.extensionUri,
     { browser: broker, version: (context.extension.packageJSON as { version?: string }).version },
@@ -491,7 +498,6 @@ export function activate(context: ExtensionContext) {
   ] as const
 
   context.subscriptions.push(
-    output,
     { dispose: () => void notebooks.dispose() },
     { dispose: () => diffs.dispose() },
     diffCatalog,
@@ -562,10 +568,6 @@ export function activate(context: ExtensionContext) {
     ),
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
-    commands.registerCommand("kilo-code.v2.importV1", async () => {
-      const days = await pickV1Timespan()
-      if (days) await importFromV1(days)
-    }),
     commands.registerCommand("kilo-code.v2.openBrowser", () => browserTab?.openFor(sidebarSession())),
     // Claude Code compatibility and the extra CA certificates are server start environment, so a change needs a new
     // server. The next request starts one with the current settings.
@@ -616,6 +618,18 @@ export function activate(context: ExtensionContext) {
   if (context.extensionMode === ExtensionMode.Development) {
     agentManager.openPanel(true)
     void commands.executeCommand("kilo-code.v2.chat.focus")
+  }
+}
+
+function serverPreferences() {
+  const values = readKiloSettings()
+  return {
+    ...settingsEnvironment({
+      claudeCodeCompat: values.claudeCodeCompat === true,
+      extraCaCerts: typeof values.extraCaCerts === "string" ? values.extraCaCerts : "",
+      editor: `${env.appName} ${version}`,
+    }),
+    ...indexingEnvironment(workspace.workspaceFolders?.length),
   }
 }
 

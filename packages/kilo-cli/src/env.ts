@@ -58,7 +58,17 @@ export function translate(env: Record<string, string | undefined>) {
  * `Global` service, logs, locks, tmp and the database. Every process the host starts runs this module first. The
  * database file name is Kilo's too (./database).
  */
-export const directory = "kilo2"
+export let directory = "kilo2"
+
+/** Only called after checking the completed profile journal and DB marker, before global-boot. */
+export function releaseProfile(file: string, config: string, explicitFile?: string) {
+  directory = "kilo"
+  process.env.OPENCODE_APP_DIR_NAME = directory
+  process.env.OPENCODE_DB = file
+  process.env.OPENCODE_CONFIG_DIR = config
+  if (explicitFile) process.env.OPENCODE_CONFIG = explicitFile
+  process.env.KILO_USE_RELEASE_CONFIG = "1"
+}
 
 translate(process.env)
 process.env.OPENCODE_APP_DIR_NAME = directory // kilo_port(global:0e189a57d108)

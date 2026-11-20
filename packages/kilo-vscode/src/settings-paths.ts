@@ -6,6 +6,7 @@ import { existsSync } from "node:fs"
 import { realpath } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+import { activeProfile } from "./active-profile"
 
 /**
  * The profile that holds the server config. A bundled server inherits the host environment and uses XDG paths; the
@@ -22,6 +23,7 @@ export function resolveKiloProfile(
 }
 
 export function resolveGlobalConfigDir(env: NodeJS.ProcessEnv, profile: string): string {
+  if (activeProfile) return activeProfile.config
   // The server runs `packages/kilo-cli/src/env.ts` first: `KILO2_CONFIG_DIR` wins over `OPENCODE_CONFIG_DIR`, and the
   // app directory is fixed to `kilo2` regardless of the environment, so the host must match both.
   const configured = env.KILO2_CONFIG_DIR ?? env.OPENCODE_CONFIG_DIR
@@ -35,6 +37,7 @@ export function resolveGlobalConfigDir(env: NodeJS.ProcessEnv, profile: string):
  * it is `<profile>/data/kilo2`, and a bundled server uses `<XDG_DATA_HOME or ~/.local/share>/kilo2`.
  */
 export function resolveDataDir(env: NodeJS.ProcessEnv, profile: string): string {
+  if (activeProfile) return activeProfile.data
   const base = profile ? path.join(profile, "data") : (env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"))
   return path.join(base, "kilo2")
 }
@@ -46,6 +49,7 @@ export function resolveDataDir(env: NodeJS.ProcessEnv, profile: string): string 
  * registry lives under it (`packages/kilo-cli/src/browser/paths.ts`).
  */
 export function resolveStateDir(env: NodeJS.ProcessEnv, profile: string): string {
+  if (activeProfile) return activeProfile.state
   const base = profile
     ? path.join(profile, "state")
     : (env.XDG_STATE_HOME ?? path.join(os.homedir(), ".local", "state"))

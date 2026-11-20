@@ -7,11 +7,15 @@
 import { chmodSync, existsSync } from "node:fs"
 import { cp, mkdir, readdir, rm } from "node:fs/promises"
 import path from "node:path"
+import { executableDigest } from "../../kilo-cli/script/pilot-artifact"
 
 export const root = path.resolve(import.meta.dir, "..")
-const cli = path.resolve(root, "..", "kilo-cli", "dist")
-const out = path.join(root, "out")
-const bin = path.join(root, "bin")
+const pilot = process.env.KILO_INTERNAL_PROFILE_CUTOVER_BUILD === "1"
+const cli = path.resolve(root, "..", "kilo-cli", pilot ? ".cache/pilot" : "dist")
+const out = path.join(root, pilot ? ".kilo-dev/pilot/out" : "out")
+function layout(target: Target) {
+  return pilot ? path.join(root, ".kilo-dev/pilot/stage", target) : root
+}
 
 const targets = {
   "linux-x64": { dist: "cli-linux-x64", binary: "kilo2" },
@@ -46,11 +50,24 @@ export function binary(target: Target): string {
 export async function prepare(target: Target): Promise<void> {
   const config = targets[target]
   const source = binary(target)
+  const stage = layout(target)
+  const bin = path.join(stage, "bin")
   if (!existsSync(source))
     throw new Error(
       `The ${target} CLI binary is missing at ${source}. Build it first: bun run --cwd packages/kilo-cli script/build.ts --target=${config.dist.replace(/^cli-/, "opencode-")}`,
     )
 
+  const manifest = await Bun.file(path.join(cli, config.dist, "package.json")).json()
+  if (manifest.name !== `@kilocode/${config.dist}` || pilot !== (manifest.private === true))
+    throw new Error(`Wrong CLI package for this extension: ${source}`)
+  if (pilot && manifest.kiloProfileCutover?.version !== 2)
+    throw new Error(`CLI lacks verified cutover capability: ${source}`)
+  if (pilot) {
+    await rm(stage, { recursive: true, force: true })
+    await mkdir(stage, { recursive: true })
+    for (const resource of ["package.json", "assets", "README.md", "LICENSE", "THIRD_PARTY_LICENSES", ".vscodeignore"])
+      await cp(path.join(root, resource), path.join(stage, resource), { recursive: true })
+  }
   await rm(bin, { recursive: true, force: true })
   await mkdir(bin, { recursive: true })
 
@@ -69,6 +86,8 @@ export async function prepare(target: Target): Promise<void> {
   for (const entry of await readdir(sourceBin)) {
     await cp(path.join(sourceBin, entry), path.join(bin, entry), { recursive: true, force: true })
   }
+  if (pilot && (await executableDigest(path.join(bin, config.binary))) !== manifest.kiloProfileCutover.sha256)
+    throw new Error("Bundled executable does not match the private CLI build manifest")
   if (!target.startsWith("win32")) {
     for (const name of ["kilo2", "bwrap", "kilo-sandbox-seccomp"]) {
       const file = path.join(bin, name)
@@ -92,7 +111,7 @@ export async function packageTarget(
 
   const { createVSIX } = await import("@vscode/vsce")
   await createVSIX({
-    cwd: root,
+    cwd: layout(target),
     packagePath: output,
     version,
     target,

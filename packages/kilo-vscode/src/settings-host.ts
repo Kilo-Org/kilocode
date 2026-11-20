@@ -5,7 +5,7 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
-import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import { configFiles } from "./active-profile"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import { browserSettingsService, type Service as BrowserSettings } from "./browser-settings"
 import { applyConfigEdits, configWriteQueue, isKiloConfigFile } from "./config-file-edit"
@@ -278,7 +278,7 @@ export function settingsHost(input: {
   /** Open a config file in the editor, creating it first when the target does not exist yet. */
   const openConfigFile = async (file: string) => {
     try {
-      if (KiloConfigFiles.names.includes(path.basename(file))) {
+      if (configFiles().names.includes(path.basename(file))) {
         const list = await entries()
         const files = await targets(list)
         const scope = file === files.global ? "global" : file === files.project ? "project" : undefined

@@ -2,7 +2,7 @@ import { Runtime } from "@opencode/cli/framework/runtime"
 import { Global } from "@opencode/util/global"
 import { Effect, Option } from "effect"
 import { existsSync, statSync } from "node:fs"
-import { EOL, homedir } from "node:os"
+import { EOL } from "node:os"
 import path from "node:path"
 import { KiloDatabase } from "../database"
 import { KiloV1Store } from "../v1-store"
@@ -26,7 +26,7 @@ export default Runtime.handler(
         ? existsSync(from) && statSync(from).isDirectory()
           ? path.join(from, "kilo.db")
           : from
-        : beside(KiloDatabase.v1Store(global.data), path.join(homedir(), ".local", "share", "kilo", "kilo.db"))
+        : beside(KiloDatabase.v1Store(global.data), path.join(global.home, ".local", "share", "kilo", "kilo.db"))
       const since = Option.getOrUndefined(input.since)
       const window = yield* Effect.try({
         try: () => (since === undefined ? undefined : cutoff(since)),
@@ -35,7 +35,7 @@ export default Runtime.handler(
       if (input.config) {
         const config = beside(
           path.join(path.dirname(Global.Path.config), "kilo"),
-          path.join(homedir(), ".config", "kilo"),
+          path.join(global.home, ".config", "kilo"),
         )
         const copied = existsSync(config) ? copyConfig(config, Global.Path.config) : []
         process.stdout.write(

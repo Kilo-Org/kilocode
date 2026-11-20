@@ -1,4 +1,17 @@
 export const dict = {
+  // Session migration
+  "migration.title": "Migrer vos sessions Kilo vers la v2 ?",
+  "migration.summary":
+    "Source : {{source}}\nTaille : {{totalBytes}} (base de données : {{sourceBytes}} ; WAL : {{walBytes}})\nEspace libre : {{availableBytes}}\nEmplacement de sauvegarde proposé : {{backup}}",
+  "migration.warning":
+    "Fermez tous les clients Kilo v1 ainsi que les versions de test, et laissez-les fermés jusqu’à la fin de la migration. Ensuite, le plugin Kilo actuel pour JetBrains ne pourra plus utiliser cette base de données. Ne la rouvrez pas avec un client v1.",
+  "migration.accept": "Sauvegarder et migrer",
+  "migration.notNow": "Pas maintenant",
+  "migration.progress": "Migration des sessions Kilo",
+  "migration.stopped": "Kilo n’a pas démarré. Rechargez la fenêtre pour réessayer.",
+  "migration.headless":
+    "La migration nécessite une confirmation. Vérifiez le plan avec {{preflight}}. Si vous acceptez, exécutez {{apply}}.",
+
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.byok.prefix": "Pour plus de statistiques d'utilisation, utilisez ",
   "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",

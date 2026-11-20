@@ -446,6 +446,7 @@
       },
       {
         "command": "kilo-code.v2.importV1",
+        "enablement": "!kilo-code.v2.internalProfileCutover",
         "title": "Import Sessions and Config from Kilo v1",
         "category": "Kilo Code (v2)"
       },
@@ -999,7 +1000,7 @@
         },
         {
           "command": "kilo-code.v2.importV1",
-          "when": "view == kilo-code.v2.chat",
+          "when": "view == kilo-code.v2.chat && !kilo-code.v2.internalProfileCutover",
           "group": "kilo@1"
         }
       ],
@@ -1062,6 +1063,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "kilo-code.v2.importV1",
+          "when": "!kilo-code.v2.internalProfileCutover"
+        },
         {
           "command": "kilo-code.v2.agentManager.advancedWorktree",
           "when": "false"

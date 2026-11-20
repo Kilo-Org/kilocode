@@ -13,6 +13,7 @@ export type Options = {
   readonly data: string
   /** Called with converted and total sessions while the conversion runs. */
   readonly progress?: (done: number, total: number) => void
+  readonly authFiles?: readonly string[]
 }
 
 /**
@@ -20,21 +21,47 @@ export type Options = {
  * file is not a Kilo v1 store or a step fails; the caller then discards the copy.
  */
 export async function convert(file: string, options: Options) {
+  return convertStore(file, options, "sessions")
+}
+
+/** For an explicitly accepted profile cutover. The caller owns the recovery snapshot;
+ * unlike a sessions-only import, provider and account state belongs to the new profile. */
+export async function convertProfile(file: string, options: Options) {
+  {
+    using db = new SQLite(file, { readonly: true })
+    if (db.query("SELECT 1 FROM pragma_table_info('session') WHERE name='permission'").get()) {
+      // The upstream conversion drops this column. Only an absent rule set is safe to drop.
+      const session = db
+        .query<
+          { id: string },
+          []
+        >("SELECT id FROM session WHERE permission IS NOT NULL AND CASE WHEN json_valid(permission) THEN json(permission) NOT IN ('null','[]') ELSE 1 END LIMIT 1")
+        .get()
+      if (session)
+        throw new Error(
+          `Cannot preserve session-specific permissions for ${JSON.stringify(session.id)}. Keep using the original profile until these rules can be migrated.`,
+        )
+    }
+  }
+  return convertStore(file, options, "profile")
+}
+
+async function convertStore(file: string, options: Options, mode: "profile" | "sessions") {
   requireV1Store(file)
   const { migrate } = await import("./v1-migration")
   const total = count(file, "session")
   // Progress between the blocking phases: the caller refreshes its import lock with every report.
   options.progress?.(0, total)
-  prepare(file)
+  prepare(file, mode === "profile")
   options.progress?.(0, total)
   // The conversion yields after each session, so the timer reports progress while it runs.
   const timer = setInterval(() => options.progress?.(count(file, "session_v2"), total), 2_000)
   try {
-    await migrate(file, options.data)
+    await migrate(file, options.data, mode, options.authFiles)
   } finally {
     clearInterval(timer)
   }
-  finish(file)
+  finish(file, mode === "profile")
   options.progress?.(total, total)
   return total
 }
@@ -121,7 +148,7 @@ export function requireV1Store(file: string) {
  * - The v1 credentials and account tokens are removed before the v2 migrations touch their rows (see `clearCredentials`).
  * Rows with malformed JSON stay for the upstream conversion, which skips and reports them.
  */
-function prepare(file: string) {
+function prepare(file: string, keepCredentials: boolean) {
   const db = new SQLite(file)
   try {
     db.run("PRAGMA secure_delete = ON")
@@ -135,7 +162,7 @@ function prepare(file: string) {
         ELSE 0 END
       `)
       db.run("UPDATE session SET workspace_id = NULL WHERE workspace_id IS NOT NULL")
-      clearCredentials(db)
+      if (!keepCredentials) clearCredentials(db)
     })()
   } finally {
     db.close()
@@ -152,7 +179,7 @@ function prepare(file: string) {
  *   It stays in WAL mode: servers that open it at the same time would otherwise race to switch it back, and that switch
  *   fails with "database is locked".
  */
-function finish(file: string) {
+function finish(file: string, keepCredentials: boolean) {
   const db = new SQLite(file)
   try {
     db.run("PRAGMA secure_delete = ON")
@@ -172,7 +199,7 @@ function finish(file: string) {
                 ELSE 0 END
           )
       `)
-      clearCredentials(db)
+      if (!keepCredentials) clearCredentials(db)
     })()
     const result = db.query<{ busy: number }, []>("PRAGMA wal_checkpoint(TRUNCATE)").get()
     if (result?.busy) throw new Error("could not fold the WAL into the converted store")

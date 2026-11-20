@@ -1,4 +1,16 @@
 export const dict = {
+  // Session migration
+  "migration.title": "要將 Kilo 工作階段移轉至 v2 嗎？",
+  "migration.summary":
+    "來源：{{source}}\n大小：{{totalBytes}}（資料庫：{{sourceBytes}}；WAL：{{walBytes}}）\n可用空間：{{availableBytes}}\n建議的備份路徑：{{backup}}",
+  "migration.warning":
+    "請關閉所有 Kilo v1 用戶端及預覽版用戶端，在移轉完成前請勿重新啟動。移轉後，目前的 JetBrains 專用 Kilo 外掛程式將無法使用此資料庫。請勿再以 v1 用戶端開啟此資料庫。",
+  "migration.accept": "備份並移轉",
+  "migration.notNow": "暫不移轉",
+  "migration.progress": "正在移轉 Kilo 工作階段",
+  "migration.stopped": "Kilo 未啟動。請重新載入視窗後再試一次。",
+  "migration.headless": "移轉前需要確認。請執行 {{preflight}} 檢視移轉計畫。如果同意，請執行 {{apply}}。",
+
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.byok.prefix": "如需更多使用統計資訊，請",
   "provider.connect.kiloGateway.byok.link": "透過 Kilo's Gateway 進行 BYOK",
