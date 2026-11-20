@@ -632,6 +632,9 @@ class KiloBackendAppService private constructor(
             log.warn("Profile fetch: server error (${e.statusCode}) — treating as unavailable", e)
             logResponseBody("profile", e)
             if (strict) FetchResult.fail("profile", e) else FetchResult.ok(null)
+        } catch (e: CancellationException) {
+            // A cancelled read is not a read that failed: rethrow so the caller's scope sees it.
+            throw e
         } catch (e: Exception) {
             log.warn("Profile fetch failed: ${e.message}", e)
             logResponseBody("profile", e)
@@ -967,10 +970,13 @@ class KiloBackendAppService private constructor(
     }
 
     /**
-     * Re-read the profile after a completed account step. A definitive signed-out answer publishes
-     * null; a read that could not complete keeps the published account and reports the failure.
+     * Re-read the account on demand. Used by the two account steps and by the account-details
+     * retry in the UI.
+     *
+     * A definitive signed-out answer publishes null and clears the account; a read that could not
+     * complete keeps the published account and reports the failure.
      */
-    private suspend fun refreshProfileAfterAccountStep(): KiloProfile200Response? {
+    internal suspend fun refreshAccount(): KiloProfile200Response? {
         val result = fetchProfile(strict = true)
         result.error?.let { throw LoadFailure(it) }
         val fresh = result.value
@@ -1002,7 +1008,7 @@ class KiloBackendAppService private constructor(
     suspend fun completeLogin(directory: String?): KiloProfile200Response? {
         val client = connection.api ?: throw IllegalStateException("Not connected")
         client.providerOauthCallback(providerID = "kilo", directory = directory, providerOauthCallbackRequest = ProviderOauthCallbackRequest(method = 0.0))
-        return refreshProfileAfterAccountStep()
+        return refreshAccount()
     }
 
     /**
@@ -1044,7 +1050,7 @@ class KiloBackendAppService private constructor(
                 }
             }
         }
-        return refreshProfileAfterAccountStep()
+        return refreshAccount()
     }
 
     override fun dispose() {

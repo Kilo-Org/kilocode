@@ -196,6 +196,8 @@ class KiloAppRpcApiImpl internal constructor(
 
     override suspend fun refreshProfile(): ProfileDto? = app.refreshProfile()?.let(::profileDto)
 
+    override suspend fun refreshAccount(): ProfileSyncDto = sync { app.refreshAccount() }
+
     override suspend fun transcriptionModels(directory: String?): List<SpeechModelDto> {
         app.requireReady()
         val body = request("kilo/models/transcriptions", directory, null, MODEL_TIMEOUT_SECONDS)

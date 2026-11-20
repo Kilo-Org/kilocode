@@ -114,6 +114,12 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /** Refresh the user profile and return the latest data, or null if not logged in. */
     suspend fun refreshProfile(): ProfileDto?
 
+    /**
+     * Re-read the account and report the outcome: the account, a definitive signed-out answer,
+     * or the reason the read did not complete. A failed read leaves the published account alone.
+     */
+    suspend fun refreshAccount(): ProfileSyncDto
+
     /** Speech-to-text models available through the authenticated Kilo Gateway. */
     suspend fun transcriptionModels(directory: String?): List<SpeechModelDto>
 

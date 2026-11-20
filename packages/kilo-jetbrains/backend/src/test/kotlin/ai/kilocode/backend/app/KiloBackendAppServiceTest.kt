@@ -1382,4 +1382,74 @@ class KiloBackendAppServiceTest {
         assertNull(svc.profile)
         assertNull(appStateDto(svc.appState.value).profile)
     }
+
+    // ------ Refresh account tests ------
+
+    @Test
+    fun `refresh account keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+
+        mock.profileStatus = 500
+        val failure = assertFailsWith<LoadFailure> { svc.refreshAccount() }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(500, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `refresh account keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+
+        mock.profileStatus = 400
+        val failure = assertFailsWith<LoadFailure> { svc.refreshAccount() }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(400, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `refresh account clears the account when nobody is signed in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNotNull(svc.profile, "the account must be published before the refresh")
+        assertNotNull(appStateDto(svc.appState.value).profile, "the account must be published before the refresh")
+        mock.profileStatus = 401
+        assertNull(svc.refreshAccount())
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `refresh account publishes the account when the read succeeds`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profile = """{"profile":{"email":"bob@test.com","name":"Bob"},"balance":null,"currentOrgId":null}"""
+        val fresh = svc.refreshAccount()
+        assertNotNull(fresh)
+        assertEquals("bob@test.com", fresh.profile.email)
+        assertEquals("bob@test.com", svc.profile?.profile?.email)
+        assertEquals("bob@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
 }

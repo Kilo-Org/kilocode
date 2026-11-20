@@ -425,6 +425,12 @@ class FakeAppRpcApi : KiloAppRpcApi {
     /** When set, [completeLogin] returns this result instead of the profile-derived one. */
     var completeResult: ProfileSyncDto? = null
 
+    /** When set, [refreshAccount] returns this result instead of the profile-derived one. */
+    var refreshAccountResult: ProfileSyncDto? = null
+
+    /** When set, [refreshAccount] will throw this exception. */
+    var refreshAccountError: Exception? = null
+
     /** When set, [setOrganization] returns this result instead of the profile-derived one. */
     var organizationResult: ProfileSyncDto? = null
 
@@ -432,6 +438,16 @@ class FakeAppRpcApi : KiloAppRpcApi {
         assertNotEdt("refreshProfile")
         refreshError?.let { throw it }
         return fakeProfile
+    }
+
+    override suspend fun refreshAccount(): ProfileSyncDto {
+        assertNotEdt("refreshAccount")
+        refreshAccountError?.let { throw it }
+        refreshAccountResult?.let { result ->
+            result.profile?.let { p -> fakeProfile = p }
+            return result
+        }
+        return ProfileSyncDto(profile = fakeProfile)
     }
 
     override suspend fun startLogin(directory: String?): DeviceAuthDto {
