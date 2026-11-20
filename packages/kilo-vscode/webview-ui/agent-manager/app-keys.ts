@@ -46,7 +46,7 @@ export function bindAppKeys(opts: {
   press: (event: KeyboardEvent) => void
   isDiffFocusTarget: (target: EventTarget | null) => boolean
   selection: () => string | null
-  closeWorktree: () => void
+  confirmWorktree: () => void
   setHeld: Setter<boolean>
   focusReport: () => void
   restoreFocus: () => void
@@ -94,7 +94,9 @@ export function bindAppKeys(opts: {
     const selection = opts.selection()
     if (!selection || selection === LOCAL) return
     event.preventDefault()
-    opts.closeWorktree()
+    // A held key must not confirm the delete that its first press armed.
+    if (event.repeat) return
+    opts.confirmWorktree()
   }
 
   const newTaskHandler = (event: Event) => {
