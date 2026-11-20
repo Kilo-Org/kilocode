@@ -1306,6 +1306,57 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `logout clears the signed-in snapshot before the global dispose`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        // The dispose is held open, so the snapshot must already be cleared by the time the CLI
+        // receives it: the rebuild is best-effort, the credential removal is final.
+        val gate = CountDownLatch(1)
+        mock.disposeGate = gate
+        val call = async(Dispatchers.IO) { svc.logout() }
+        try {
+            assertTrue(mock.awaitRequestCount("/global/dispose", 1), "the dispose request never arrived")
+            assertNull(svc.profile, "the signed-in profile survived the stalled dispose")
+            assertNull(appStateDto(svc.appState.value).profile, "the ready snapshot kept the profile")
+            assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+        } finally {
+            gate.countDown()
+        }
+        assertTrue(call.await(), "logout reported failure")
+    }
+
+    @Test
+    fun `logout propagates cancellation while the global dispose is stalled`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        // A cancelled caller must not be reported as a completed sign-out.
+        val gate = CountDownLatch(1)
+        mock.disposeGate = gate
+        val reached = CompletableDeferred<Boolean>()
+        val job = scope.launch {
+            svc.logout()
+            reached.complete(true)
+        }
+        try {
+            assertTrue(mock.awaitRequestCount("/global/dispose", 1), "the dispose request never arrived")
+            job.cancel()
+        } finally {
+            gate.countDown()
+        }
+        job.join()
+        assertFalse(reached.isCompleted, "sign-out swallowed the cancellation")
+        assertTrue(job.isCancelled, "sign-out swallowed the cancellation")
+    }
+
+    @Test
     fun `set organization failure leaves profile unchanged`() = runBlocking {
         mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
         val svc = create()

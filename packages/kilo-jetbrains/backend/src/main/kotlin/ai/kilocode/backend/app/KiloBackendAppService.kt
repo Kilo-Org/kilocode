@@ -998,14 +998,18 @@ class KiloBackendAppService private constructor(
         if (!result) return false
         // Close before start: close() forgets retained owners, while start() on a started manager
         // only rebinds transports and would restore the previous credential's continuity.
-        hosted.close()
-        val http = connection.apiClient
-        val port = connection.port
-        val api = connection.api
-        // The CLI may already be gone; the manager just stays closed instead of throwing.
-        if (api != null && http != null && port != 0) hosted.start(api, http, port, chat)
-        // After the credential removal: the CLI rebuilds global state without the account.
-        disposeGlobal(http, port)
+        // Under the lifecycle mutex, so a concurrent CLI restart cannot swap the transport between
+        // the read below and the bind, which would leave the manager on a replaced client.
+        mutex.withLock {
+            hosted.close()
+            val api = connection.api
+            val http = connection.apiClient
+            val port = connection.port
+            // The CLI may already be gone; the manager just stays closed instead of throwing.
+            if (api != null && http != null && port != 0) hosted.start(api, http, port, chat)
+        }
+        // Clear the snapshot first: the CLI rebuild is best-effort, while the credential
+        // removal above is already final.
         synchronized(loadLock) {
             val current = _appState.value
             if (current is KiloAppState.Ready) {
@@ -1013,6 +1017,9 @@ class KiloBackendAppService private constructor(
                 setAppReady(current.data.copy(profile = null))
             }
         }
+        // After the credential removal: the CLI rebuilds global state without the account. Reads the
+        // transport again, so a restart in between is rebuilt from as well.
+        disposeGlobal(connection.apiClient, connection.port)
         return result
     }
 
@@ -1028,14 +1035,18 @@ class KiloBackendAppService private constructor(
             .header("Accept", "application/json")
             .post("{}".toRequestBody("application/json".toMediaType()))
             .build()
-        runCatching {
+        try {
             withContext(Dispatchers.IO) {
                 KiloBackendHttpClients.bounded(http, DISPOSE_TIMEOUT_SECONDS)
                     .newCall(request)
                     .execute()
                     .use { it.body?.string() }
             }
-        }.onFailure { log.debug { "Global dispose skipped after logout: ${it.message}" } }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.debug { "Global dispose skipped after logout: ${e.message}" }
+        }
     }
 
     /**
