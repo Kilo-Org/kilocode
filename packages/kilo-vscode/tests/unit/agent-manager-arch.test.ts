@@ -604,7 +604,7 @@ describe("Agent Manager Worktree Actions", () => {
   it("keeps Cmd+W terminal handling before the empty-worktree fallback", () => {
     const source = fs.readFileSync(TSX_FILE, "utf-8")
     const start = source.indexOf("const closeActiveTab = () =>")
-    const end = source.indexOf("// Close the currently selected worktree", start)
+    const end = source.indexOf("const closeSelectedWorktree =", start)
     const action = source.slice(start, end)
 
     expect(start).toBeGreaterThanOrEqual(0)
@@ -612,6 +612,8 @@ describe("Agent Manager Worktree Actions", () => {
     expect(action).toContain("termHandlers.closeFocused()")
     expect(action).toContain("termHandlers.closeActive()")
     expect(action).toContain("if (tabs.length === 0)")
+    expect(action).toContain('closeSelectedWorktree("arm")')
+    expect(source).toContain('msg.action === "closeWorktree") closeSelectedWorktree("arm")')
   })
 
   it("forwards the quick-worktree command to immediate creation", () => {
