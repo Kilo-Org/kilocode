@@ -38,29 +38,36 @@ export namespace SandboxStore {
     return typeof entry.name === "string" && typeof entry.source === "string" && typeof entry.upstream === "string"
   }
 
+  function strings(value: unknown) {
+    return value === undefined || (Array.isArray(value) && value.every((entry) => typeof entry === "string"))
+  }
+
+  function mode(value: unknown) {
+    return value === "allow" || value === "deny" || value === "proxy"
+  }
+
+  function version(value: unknown) {
+    return Number.isSafeInteger(value) && Number(value) >= 0
+  }
+
+  function credentials(value: unknown) {
+    return value === undefined || (Array.isArray(value) && value.every(credential))
+  }
+
   function valid(value: unknown) {
     if (!value || typeof value !== "object") return false
     const state = value as Record<string, unknown>
-    const base =
-      typeof state.enabled === "boolean" &&
-      (state.mode === "allow" || state.mode === "deny" || state.mode === "proxy") &&
-      Number.isSafeInteger(state.version) &&
-      Number(state.version) >= 0
-    if (!base) return false
-    if (state.allowedHosts !== undefined && !Array.isArray(state.allowedHosts)) return false
-    if (state.writablePaths !== undefined && !Array.isArray(state.writablePaths)) return false
-    if (state.readPaths !== undefined && !Array.isArray(state.readPaths)) return false
-    if (state.readExceptions !== undefined && !Array.isArray(state.readExceptions)) return false
-    if (state.credentials !== undefined && !Array.isArray(state.credentials)) return false
-    if (Array.isArray(state.allowedHosts) && state.allowedHosts.some((value) => typeof value !== "string")) return false
-    if (Array.isArray(state.writablePaths) && state.writablePaths.some((value) => typeof value !== "string"))
+    if (typeof state.enabled !== "boolean" || !mode(state.mode) || !version(state.version)) return false
+    if (
+      !strings(state.allowedHosts) ||
+      !strings(state.writablePaths) ||
+      !strings(state.readPaths) ||
+      !strings(state.readExceptions) ||
+      !credentials(state.credentials)
+    )
       return false
-    if (Array.isArray(state.readPaths) && state.readPaths.some((value) => typeof value !== "string")) return false
-    if (Array.isArray(state.readExceptions) && state.readExceptions.some((value) => typeof value !== "string"))
-      return false
-    if (Array.isArray(state.credentials) && state.credentials.some((value) => !credential(value))) return false
-    if (state.mode === "proxy" && (!Array.isArray(state.allowedHosts) || state.allowedHosts.length === 0)) return false
-    return true
+    if (state.mode !== "proxy") return true
+    return Array.isArray(state.allowedHosts) && state.allowedHosts.length > 0
   }
 
   export async function read(directory: string, sessionID: SessionID): Promise<Snapshot | undefined> {

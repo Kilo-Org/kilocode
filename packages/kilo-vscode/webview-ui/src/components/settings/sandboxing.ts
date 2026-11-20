@@ -5,6 +5,8 @@ export type SandboxConfig = {
   network?: SandboxNetwork
   writable_paths?: string[]
   allowed_hosts?: string[]
+  /** Keys without a field here, such as the global-only grants, must survive a write from this tab. */
+  [key: string]: unknown
 }
 
 type Globals = { KILO_SANDBOX_CONTROLS?: boolean }
@@ -22,6 +24,8 @@ export function visible(controls: boolean = sandboxControls()) {
   return controls
 }
 
+const fields = new Set(["enabled", "network", "writable_paths", "allowed_hosts"])
+
 export function sandboxConfig(source: unknown): SandboxConfig {
   if (!source || typeof source !== "object" || Array.isArray(source)) return {}
   const value = source as Record<string, unknown>
@@ -32,7 +36,10 @@ export function sandboxConfig(source: unknown): SandboxConfig {
   const hosts = Array.isArray(value.allowed_hosts)
     ? value.allowed_hosts.filter((item): item is string => typeof item === "string")
     : undefined
+  // The tab replaces the whole `sandbox` node, so keys it has no field for (read_paths, read_exceptions,
+  // credentials) are copied through. Dropping them here would silently delete a hand-edited global config grant.
   return {
+    ...Object.fromEntries(Object.entries(value).filter(([key]) => !fields.has(key))),
     ...(typeof value.enabled === "boolean" ? { enabled: value.enabled } : {}),
     ...(network ? { network } : {}),
     ...(paths ? { writable_paths: paths } : {}),

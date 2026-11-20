@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import os from "node:os"
 import path from "node:path"
 import { parseCredentials } from "../src/nono-credentials"
 import { generate, restoreEnvironment } from "../src/nono-profile"
@@ -301,7 +302,9 @@ describe("restoreEnvironment", () => {
   })
 })
 
-describe("nono profile read grants", () => {
+// These fixtures use POSIX paths that do not map to Windows separators, so the suite runs only on the platforms
+// that carry the nono backend.
+describe.skipIf(process.platform === "win32")("nono profile read grants", () => {
   test("uses the profile read set when one is provided", () => {
     const base = profile()
     const result = generate(
@@ -315,17 +318,21 @@ describe("nono profile read grants", () => {
     expect(result.filesystem.read).not.toContain("/workspace")
   })
 
-  test("lifts exactly the credential location an exception names", () => {
-    const base = profile()
-    const result = generate(
-      {
-        ...base,
-        filesystem: { ...base.filesystem, readExceptions: ["$HOME/.aws"] },
-      },
-      { paths },
-    )
-    expect(result.filesystem.deny).not.toContain("$HOME/.aws")
-    expect(result.filesystem.deny).toContain("$HOME/.ssh")
-    expect(result.filesystem.deny).toContain("/tmp/kilo-data/kilo2.db")
-  })
+  // Every spelling the config boundary accepts must lift the same built-in deny entry.
+  test.each(["~/.aws", "$HOME/.aws", path.join(os.homedir(), ".aws")])(
+    "lifts exactly the credential location an exception names (%s)",
+    (entry) => {
+      const base = profile()
+      const result = generate(
+        {
+          ...base,
+          filesystem: { ...base.filesystem, readExceptions: [entry] },
+        },
+        { paths },
+      )
+      expect(result.filesystem.deny).not.toContain("$HOME/.aws")
+      expect(result.filesystem.deny).toContain("$HOME/.ssh")
+      expect(result.filesystem.deny).toContain("/tmp/kilo-data/kilo2.db")
+    },
+  )
 })

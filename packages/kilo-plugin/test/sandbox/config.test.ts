@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test"
+import os from "node:os"
+import path from "node:path"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Config } from "@opencode/schema/config"
 import { AbsolutePath } from "@opencode/schema/schema"
@@ -25,6 +27,7 @@ describe("sandbox configuration defaults", () => {
       readPaths: [],
       readExceptions: [],
       credentials: [],
+      maskedEnv: [],
     })
   })
 
@@ -46,6 +49,7 @@ describe("sandbox configuration defaults", () => {
       readPaths: [],
       readExceptions: [],
       credentials: [],
+      maskedEnv: [],
     })
 
     expect(
@@ -60,6 +64,7 @@ describe("sandbox configuration defaults", () => {
       readPaths: [],
       readExceptions: [],
       credentials: [],
+      maskedEnv: [],
     })
   })
 
@@ -214,18 +219,20 @@ describe("sandbox configuration entries", () => {
 
 describe("sandbox read and credential grants", () => {
   test("keeps read grants, read exceptions and valid credentials", () => {
+    const shared = path.join(os.tmpdir(), "shared")
+    const aws = path.join(os.homedir(), ".aws")
     const result = SandboxConfig.resolve({
       sandbox: {
-        read_paths: ["/data/shared"],
-        read_exceptions: ["/home/user/.aws"],
+        read_paths: [shared],
+        read_exceptions: [aws],
         credentials: [
           { name: "github", source: "env://GITHUB_TOKEN", upstream: "https://api.github.com" },
           { name: "bad name", source: "env://BAD", upstream: "https://example.com" },
         ],
       },
     })
-    expect(result.readPaths).toEqual(["/data/shared"])
-    expect(result.readExceptions).toEqual(["/home/user/.aws"])
+    expect(result.readPaths).toEqual([shared])
+    expect(result.readExceptions).toEqual([aws])
     expect(result.credentials).toEqual([
       {
         name: "github",
@@ -234,6 +241,7 @@ describe("sandbox read and credential grants", () => {
         upstream: "https://api.github.com",
       },
     ])
+    expect(result.maskedEnv).toEqual(["BAD"])
   })
 
   test("a project document cannot add reads, exceptions or credentials", () => {
@@ -259,5 +267,71 @@ describe("sandbox read and credential grants", () => {
     expect(SandboxConfig.fromEntries(entries, global)).toEqual({
       sandbox: { read_paths: ["/two"], read_exceptions: ["/one/.aws"] },
     })
+  })
+
+  test("expands a home path once and drops a relative one", () => {
+    const result = SandboxConfig.resolve({
+      sandbox: {
+        read_paths: ["~/.ssh", "$HOME/.aws", "relative/path"],
+        read_exceptions: ["~/.kube", ".netrc"],
+      },
+    })
+    expect(result.readPaths).toEqual([path.join(os.homedir(), ".ssh"), path.join(os.homedir(), ".aws")])
+    expect(result.readExceptions).toEqual([path.join(os.homedir(), ".kube")])
+  })
+
+  test("drops a read exception that is not a built-in credential location", () => {
+    const custom = path.join(os.homedir(), "custom", "token")
+    const ssh = path.join(os.homedir(), ".ssh")
+    const result = SandboxConfig.resolve({ sandbox: { read_exceptions: [custom, ssh] } })
+    expect(result.readExceptions).toEqual([ssh])
+  })
+
+  test("keeps every valid credential when one entry is malformed", () => {
+    const result = SandboxConfig.resolve({
+      sandbox: {
+        credentials: [
+          { name: "github", source: "env://GITHUB_TOKEN", upstream: "https://api.github.com" },
+          { name: "broken", source: "env://BROKEN" },
+          { name: "gitlab", source: "env://GITLAB_TOKEN", upstream: "https://gitlab.com" },
+        ],
+      },
+    })
+    expect(result.credentials.map((entry) => entry.name)).toEqual(["github", "gitlab"])
+    // The dropped entry's real variable is masked even though it never becomes a route.
+    expect(result.maskedEnv).toEqual(["BROKEN"])
+  })
+
+  test("rejects a duplicate name before a later entry can shadow it", () => {
+    const result = SandboxConfig.resolve({
+      sandbox: {
+        credentials: [
+          { name: "github", source: "env://GITHUB_TOKEN", upstream: "https://api.github.com" },
+          { name: "github", source: "env://GH_TOKEN", upstream: "https://api.github.com" },
+        ],
+      },
+    })
+    expect(result.credentials).toEqual([
+      {
+        name: "github",
+        source: "env://GITHUB_TOKEN",
+        envVar: "GITHUB_TOKEN",
+        upstream: "https://api.github.com",
+      },
+    ])
+    expect(result.maskedEnv).toEqual(["GH_TOKEN"])
+  })
+
+  test("rejects a second credential reading the same variable", () => {
+    const result = SandboxConfig.resolve({
+      sandbox: {
+        credentials: [
+          { name: "one", source: "env://GITHUB_TOKEN", upstream: "https://api.github.com" },
+          { name: "two", source: "env://GITHUB_TOKEN", upstream: "https://gitlab.com" },
+        ],
+      },
+    })
+    expect(result.credentials.map((entry) => entry.name)).toEqual(["one"])
+    expect(result.maskedEnv).toEqual(["GITHUB_TOKEN"])
   })
 })

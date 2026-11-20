@@ -2,7 +2,7 @@ import os from "node:os"
 import path from "node:path"
 import { parseDestination } from "./destination"
 import { aliases, type Credential } from "./nono-credentials"
-import { matches } from "./path"
+import { expandPath, matches } from "./path"
 import type { PathRule, Profile } from "./profile"
 
 interface CustomCredential {
@@ -79,7 +79,7 @@ const broaderWriteGroups = ["system_write_macos", "system_write_linux"]
 /** Commands expect these even with writes otherwise restricted; Kilo's Seatbelt policy grants them too. */
 const deviceFiles = ["/dev/null", "/dev/zero", "/dev/random", "/dev/urandom", "/dev/tty"]
 
-const credentialPaths = [
+export const credentialLocations = [
   "$HOME/.ssh",
   "$HOME/.gnupg",
   "$HOME/.aws",
@@ -126,10 +126,9 @@ function files(list: ReadonlyArray<PathRule>) {
 }
 
 /** Expands a configured grant so it can be compared with the built-in deny entries. */
-function expand(entry: string) {
-  const home = os.homedir()
-  const value = entry.startsWith("~") ? path.join(home, entry.slice(1)) : entry.replace(/^\$HOME(?=\/|$)/, home)
-  return path.resolve(value)
+function lifts(entry: string) {
+  const value = expandPath(entry)
+  return value === undefined ? [] : [value]
 }
 
 function access(profile: Profile, reads: ReadonlyArray<PathRule>, cwd: string | undefined): Access {
@@ -193,7 +192,7 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
   // denyNames is deliberately not translated: a nono deny also blocks reads, and commands must still read
   // .git for git status and git log. The gate decision record tracks the upstream primitive that closes it.
   const reads = inputs.reads ?? profile.filesystem.read ?? allowWrite
-  const lifted = new Set((profile.filesystem.readExceptions ?? []).map(expand))
+  const lifted = new Set((profile.filesystem.readExceptions ?? []).flatMap(lifts))
   const temporary = profile.filesystem.temporaryDirectory
   const stores =
     paths.data === undefined
@@ -205,7 +204,10 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
           ),
         ]
   const denied = [
-    ...credentialPaths.filter((entry) => !lifted.has(expand(entry))),
+    ...credentialLocations.filter((entry) => {
+      const location = expandPath(entry)
+      return location === undefined || !lifted.has(location)
+    }),
     ...profile.filesystem.denyWrite.map((rule) => rule.path),
     ...(paths.config === undefined ? [] : [paths.config]),
     ...(paths.data === undefined

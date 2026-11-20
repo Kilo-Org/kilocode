@@ -1,9 +1,15 @@
 import { accessSync, constants, readFileSync, realpathSync, statSync } from "node:fs"
-import os from "node:os"
 import path from "node:path"
 import { Effect, Semaphore } from "effect"
 import { Global } from "@opencode/util/global"
-import { backendSupport, run as runSandbox, unrestricted, type Credential, type Profile } from "@kilocode/sandbox"
+import {
+  backendSupport,
+  expandPath,
+  run as runSandbox,
+  unrestricted,
+  type Credential,
+  type Profile,
+} from "@kilocode/sandbox"
 import type { SessionID } from "@opencode/schema/session-id"
 import * as Network from "./network"
 import { root as protectedRoot } from "./root"
@@ -35,7 +41,7 @@ function key(directory: string, sessionID: SessionID) {
 }
 
 function expand(value: string) {
-  return value.startsWith("~") ? path.join(os.homedir(), value.slice(1)) : value
+  return expandPath(value) ?? value
 }
 
 function limits(fallback: ReturnType<typeof SandboxConfig.resolve>) {
@@ -43,8 +49,8 @@ function limits(fallback: ReturnType<typeof SandboxConfig.resolve>) {
     mode: fallback.mode,
     allowedHosts: fallback.allowedHosts,
     writablePaths: fallback.writablePaths.map(expand),
-    readPaths: fallback.readPaths.map(expand),
-    readExceptions: fallback.readExceptions.map(expand),
+    readPaths: [...fallback.readPaths],
+    readExceptions: [...fallback.readExceptions],
     credentials: fallback.credentials.map((entry) => ({ ...entry })),
   }
 }
@@ -53,7 +59,7 @@ function apply(current: Snapshot, fallback: ReturnType<typeof SandboxConfig.reso
   return { ...current, ...limits(fallback) }
 }
 
-function matches(current: Snapshot, next: Snapshot) {
+function sameState(current: Snapshot, next: Snapshot) {
   return (
     current.mode === next.mode &&
     current.allowedHosts.join("\0") === next.allowedHosts.join("\0") &&
@@ -208,6 +214,11 @@ function ancestor(value: string, target: string) {
   return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative)
 }
 
+function within(parent: string, child: string) {
+  const relative = path.relative(parent, child)
+  return relative !== "" && relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)
+}
+
 function accessible(dir: string) {
   try {
     accessSync(dir, constants.R_OK)
@@ -235,6 +246,7 @@ export function profile(
     readPaths?: readonly string[]
     readExceptions?: readonly string[]
     credentials?: readonly Credential[]
+    maskedEnv?: readonly string[]
   } = {},
 ): Profile {
   const project = isolated(ctx)
@@ -254,11 +266,22 @@ export function profile(
     Global.Path.repos,
     ...filterWritable(ctx, extraWritable ?? []),
   ].map(root)
-  const read = grants.readPaths === undefined ? undefined : [...writable, ...grants.readPaths.map(root)]
+  const denyWrite = [root(protectedRoot), root(Global.Path.config)]
+  // A read set must not re-open what the profile denies. A writable root that contains a deny root cannot be
+  // represented without re-opening it, so drop it whole. A configured grant may contain a deny root: nono still
+  // refuses the denied subtree (probe P12), and keeping the grant preserves the siblings it names.
+  const denyPaths = denyWrite.map((deny) => canonical(deny.path))
+  const inside = (value: string) => denyPaths.some((deny) => value === deny || within(deny, value))
+  const touches = (value: string) => inside(value) || denyPaths.some((deny) => within(value, deny))
+  const readable = writable.filter((rule) => !touches(canonical(rule.path)))
+  const read =
+    grants.readPaths === undefined
+      ? undefined
+      : [...readable, ...grants.readPaths.map(root).filter((rule) => !inside(canonical(rule.path)))]
   return {
     filesystem: {
       allowWrite: writable,
-      denyWrite: [root(protectedRoot), root(Global.Path.config)],
+      denyWrite,
       denyNames: [".git"],
       temporaryDirectory: Global.Path.tmp,
       ...(read === undefined ? {} : { read }),
@@ -288,6 +311,7 @@ export function profile(
         "OPENCODE_DB",
         "OPENCODE_SERVER_PASSWORD",
         "OPENCODE_SERVER_USERNAME",
+        ...(grants.maskedEnv ?? []),
       ],
       set: {
         TMPDIR: Global.Path.tmp,
@@ -464,7 +488,7 @@ const reconcile = Effect.fn("SandboxPolicy.reconcile")(function* (sessionID: Ses
         ...apply(current, SandboxConfig.resolve(config)),
         version: current.version + 1,
       }
-      if (matches(current, next)) {
+      if (sameState(current, next)) {
         synced.set(id, version)
         return false
       }
@@ -693,6 +717,9 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
           return yield* Effect.fail(new Error(support.reason ?? "The configured sandbox backend is unavailable"))
         }
         const runtime = yield* Runtime
+        // A credential the current config had to drop is not proxied and not in the snapshot, so mask its real
+        // variable explicitly instead of letting it reach the child.
+        const maskedEnv = SandboxConfig.resolve(yield* runtime.config).maskedEnv
         return yield* runSandbox(
           profile(
             { directory: runtime.directory, worktree: runtime.worktree },
@@ -703,6 +730,7 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
               readPaths: active.state.readPaths,
               readExceptions: active.state.readExceptions,
               credentials: active.state.credentials,
+              maskedEnv,
             },
           ),
           effect,

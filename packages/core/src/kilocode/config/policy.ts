@@ -24,23 +24,19 @@ const Sandbox = Schema.Struct({
     description: "Exact network destinations sandboxed tools may access while network restriction is enabled",
   }),
   read_paths: Schema.Array(Schema.String).pipe(optional).annotate({
-    description: "Additional filesystem paths sandboxed tools may read; global config only",
+    description: "Additional filesystem paths sandboxed tools may read; not accepted from project config",
   }),
   read_exceptions: Schema.Array(Schema.String).pipe(optional).annotate({
-    description: "Credential locations sandboxed tools may read; global config only",
+    description:
+      "Built-in credential locations sandboxed tools may read, such as ~/.ssh, ~/.aws and ~/.kube; not accepted from project config",
   }),
-  credentials: Schema.Array(
-    Schema.Struct({
-      name: Schema.String,
-      source: Schema.String,
-      upstream: Schema.String,
-      header: Schema.optional(Schema.String),
-      format: Schema.optional(Schema.String),
-      phantom: Schema.optional(Schema.String),
-    }),
-  )
+  // Element-level validation belongs to the sandbox plugin, which filters each entry and reports the dropped ones.
+  // A typed element here would fail the whole sandbox struct, so a single typo would disable the sandbox.
+  credentials: Schema.Array(Schema.Unknown)
     .pipe(optional)
-    .annotate({ description: "Credentials the sandbox proxy injects into eligible requests; global config only" }),
+    .annotate({
+      description: "Credentials the sandbox proxy injects into eligible requests; not accepted from project config",
+    }),
 })
 
 const Retention = Schema.Struct({
@@ -168,11 +164,51 @@ const commit = Schema.Struct({
 })
 const indexing = Schema.Struct({ indexing: Schema.optional(KiloIndexingRpc.Config) })
 const pages = Schema.Struct({ pages: Schema.optional(KiloPagesRpc.Config) })
-const sandboxSetting = Schema.Struct({ sandbox: Schema.optional(Sandbox) })
 const decodeModel = Schema.decodeUnknownOption(ConfigModel.Selection)
 
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value)
+}
+
+// Each sandbox field is decoded on its own: one hand-edited value of the wrong type (a bare string instead of an
+// array, say) must not discard `enabled`, `network` or the other grants and leave new sessions unrestricted.
+const sandboxFields = {
+  enabled: { schema: Schema.Boolean, expected: "a boolean" },
+  network: { schema: Schema.Literals(["allow", "deny"]), expected: 'one of "allow" or "deny"' },
+  writable_paths: { schema: Schema.Array(Schema.String), expected: "an array of strings" },
+  allowed_hosts: { schema: Schema.Array(Schema.String), expected: "an array of strings" },
+  read_paths: { schema: Schema.Array(Schema.String), expected: "an array of strings" },
+  read_exceptions: { schema: Schema.Array(Schema.String), expected: "an array of strings" },
+  credentials: { schema: Schema.Array(Schema.Unknown), expected: "an array of credential objects" },
+} as const
+
+function decodeSandbox(input: unknown, report?: (diagnostic: ConfigNormalize.Diagnostic) => void) {
+  if (input === undefined) return undefined
+  if (!record(input)) {
+    report?.({
+      path: ["sandbox"],
+      kind: "invalid",
+      message:
+        "ignored invalid sandbox; expected an object with optional enabled, network, writable_paths, allowed_hosts, read_paths, read_exceptions and credentials",
+    })
+    return undefined
+  }
+  const value: Record<string, unknown> = {}
+  for (const [key, field] of Object.entries(sandboxFields)) {
+    const raw = input[key]
+    if (raw === undefined) continue
+    const decoded = Option.getOrUndefined(Schema.decodeUnknownOption(field.schema)(raw))
+    if (decoded === undefined) {
+      report?.({
+        path: ["sandbox", key],
+        kind: "invalid",
+        message: `ignored invalid sandbox.${key}; expected ${field.expected}`,
+      })
+      continue
+    }
+    value[key] = decoded
+  }
+  return Object.keys(value).length === 0 ? undefined : Option.getOrUndefined(Schema.decodeUnknownOption(Sandbox)(value))
 }
 
 const settings = {
@@ -180,7 +216,6 @@ const settings = {
   auto_collapse_reasoning: { schema: Schema.Boolean, expected: "a boolean" },
   reasoning_display: { schema: ReasoningDisplay, expected: 'one of "expanded", "preview", "headline"' },
   shared_agent_board: { schema: Schema.Boolean, expected: "a boolean" },
-  sandbox: { schema: Sandbox, expected: "an object with optional enabled, network, writable_paths and allowed_hosts" },
   browser: {
     schema: Browser,
     expected: "an object with optional backend, observation, allow_sensitive, headless and target",
@@ -199,7 +234,7 @@ const settings = {
 /** Decode each Kilo-only setting on its own, so one invalid field does not drop the others. */
 function kiloSettings(input: unknown, report?: (diagnostic: ConfigNormalize.Diagnostic) => void) {
   if (!record(input)) return {}
-  return Object.fromEntries(
+  const decoded = Object.fromEntries(
     Object.entries(settings).flatMap(([key, { schema, expected }]) => {
       const raw = (input as Record<string, unknown>)[key]
       if (raw === undefined) return []
@@ -211,6 +246,8 @@ function kiloSettings(input: unknown, report?: (diagnostic: ConfigNormalize.Diag
       return [[key, value]]
     }),
   )
+  const sandbox = decodeSandbox(input.sandbox, report)
+  return sandbox === undefined ? decoded : { ...decoded, sandbox }
 }
 
 const refused = {
@@ -321,14 +358,6 @@ export function parse(
       kind: "invalid",
       message: "ignored invalid pages; expected an object with optional enabled and destination (pages or pages-dev)",
     })
-  const sandboxField = Schema.decodeUnknownOption(sandboxSetting)(input)
-  if (Option.isNone(sandboxField))
-    report?.({
-      path: ["sandbox"],
-      kind: "invalid",
-      message:
-        "ignored invalid sandbox; expected an object with optional enabled, network, writable_paths and allowed_hosts",
-    })
   // Managed policy splitting clears optional fields with undefined; the encoded schema requires omitted keys.
   return Option.getOrUndefined(
     decode(
@@ -341,7 +370,6 @@ export function parse(
           ...Option.getOrElse(synchronization, () => ({})),
           ...Option.getOrElse(indexingField, () => ({})),
           ...Option.getOrElse(pagesField, () => ({})),
-          ...Option.getOrElse(sandboxField, () => ({})),
           ...compactionSettings(input, normalized, report),
           ...displaySettings(input, report),
           ...decodedSettings,

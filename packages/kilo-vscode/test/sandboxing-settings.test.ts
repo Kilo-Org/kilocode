@@ -36,14 +36,13 @@ describe("Sandboxing settings visibility", () => {
 })
 
 describe("sandbox config", () => {
-  test("keeps only the known fields with their valid types", () => {
+  test("keeps the known fields with their valid types", () => {
     expect(
       sandboxConfig({
         enabled: true,
         network: "deny",
         writable_paths: ["/tmp", 3],
         allowed_hosts: ["api.github.com:443"],
-        extra: 1,
       }),
     ).toEqual({
       enabled: true,
@@ -54,6 +53,25 @@ describe("sandbox config", () => {
     expect(sandboxConfig(undefined)).toEqual({})
     expect(sandboxConfig([])).toEqual({})
     expect(sandboxConfig({ enabled: "yes", network: "block" })).toEqual({})
+  })
+
+  test("preserves keys the tab has no field for", () => {
+    const credentials = [{ name: "github", source: "env://GITHUB_TOKEN", upstream: "https://api.github.com" }]
+    expect(
+      sandboxConfig({
+        enabled: true,
+        read_paths: ["/data/shared"],
+        read_exceptions: ["/home/user/.aws"],
+        credentials,
+        future: { keep: true },
+      }),
+    ).toEqual({
+      enabled: true,
+      read_paths: ["/data/shared"],
+      read_exceptions: ["/home/user/.aws"],
+      credentials,
+      future: { keep: true },
+    })
   })
 
   test("merges a patch without dropping other keys", () => {

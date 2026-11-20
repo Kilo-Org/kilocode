@@ -39,6 +39,40 @@ describe("sandbox profile context", () => {
     expect(await Effect.runPromise(current)).toBeUndefined()
   })
 
+  test("keeps the read set and read exceptions on the normalized profile", async () => {
+    const profile: Profile = {
+      ...makeProfile([{ path: root, kind: "subtree" }]),
+      filesystem: {
+        allowWrite: [{ path: root, kind: "subtree" }],
+        denyWrite: [],
+        denyNames: [],
+        read: [{ path: root, kind: "subtree" }],
+        readExceptions: [path.join(root, ".aws")],
+      },
+    }
+    const value = await Effect.runPromise(run(profile, current))
+    expect(value?.filesystem.read).toEqual([{ path: root, kind: "subtree" }])
+    expect(value?.filesystem.readExceptions).toEqual([path.join(root, ".aws")])
+  })
+
+  test("keeps the read exception spelling instead of resolving a symlink", async () => {
+    const target = path.join(root, "real-aws")
+    const link = path.join(root, "linked-aws")
+    await mkdir(target, { recursive: true })
+    await symlink(target, link)
+    const profile: Profile = {
+      ...makeProfile([{ path: root, kind: "subtree" }]),
+      filesystem: {
+        allowWrite: [{ path: root, kind: "subtree" }],
+        denyWrite: [],
+        denyNames: [],
+        readExceptions: [link],
+      },
+    }
+    const value = await Effect.runPromise(run(profile, current))
+    expect(value?.filesystem.readExceptions).toEqual([link])
+  })
+
   test("rejects writes outside the allowed roots", async () => {
     const error = await Effect.runPromise(
       run(makeProfile([]), assertWrite(path.join(root, "outside.txt")).pipe(Effect.flip)),
