@@ -41,9 +41,17 @@ export function initialMessage(ev: AgentManagerSendInitialMessage) {
  * Dispatch a new worktree's first prompt as a command when it is one, or as a plain message otherwise. An empty
  * request leaves the just-created session idle as the host asked (it only wants the busy state cleared).
  */
-export async function dispatchInitialPrompt(store: V2, ev: AgentManagerSendInitialMessage): Promise<void> {
-  if (ev.agent) await store.api.session.switchAgent({ sessionID: ev.sessionId, agent: ev.agent })
+export async function dispatchInitialPrompt(
+  store: V2,
+  ev: AgentManagerSendInitialMessage,
+  signal?: AbortSignal,
+): Promise<void> {
   const model = initialModel(ev)
+  if (model && ev.worktreeId && (ev.text || ev.command)) {
+    await waitForModel(store, model, signal)
+    signal?.throwIfAborted()
+  }
+  if (ev.agent) await store.api.session.switchAgent({ sessionID: ev.sessionId, agent: ev.agent })
   if (model) await store.api.session.switchModel({ sessionID: ev.sessionId, model })
   const command = initialCommand(ev)
   if (command) {
@@ -52,4 +60,32 @@ export async function dispatchInitialPrompt(store: V2, ev: AgentManagerSendIniti
   }
   const message = initialMessage(ev)
   if (message) await store.data.session.prompt(message)
+}
+
+async function waitForModel(store: V2, model: ModelRef, signal?: AbortSignal) {
+  signal?.throwIfAborted()
+  const catalog = store.data.location.model
+  const ready = Promise.withResolvers<void>()
+  // The worktree's data layer invalidates this resource on model.updated; sync joins its refresh.
+  const check = () =>
+    catalog
+      .sync()
+      .then(() => {
+        if (catalog.list()?.some((row) => row.enabled && row.providerID === model.providerID && row.id === model.id)) {
+          ready.resolve()
+        }
+      })
+      .catch(ready.reject)
+  const off = store.data.on("model.updated", check)
+  const timeout = setTimeout(() => ready.reject(new DOMException("", "TimeoutError")), 30_000)
+  const abort = () => ready.reject(signal?.reason)
+  signal?.addEventListener("abort", abort)
+  try {
+    void check()
+    await ready.promise
+  } finally {
+    off()
+    clearTimeout(timeout)
+    signal?.removeEventListener("abort", abort)
+  }
 }

@@ -8,12 +8,14 @@
 import type { AgentInfo, CommandInfo, ModelInfo, ProviderInfo } from "@opencode/client"
 import { createEffect, createMemo, on, onCleanup, type Accessor } from "solid-js"
 import type { AgentManagerSendInitialMessage } from "../src/types/messages/agent-manager"
-import type { V2 } from "../src/v2/scope"
+import { readableMessage } from "../src/v2/error"
+import { sessionMissing, type V2 } from "../src/v2/scope"
 import type { VSCodeContext } from "./v2/bridge"
 import type { AppDirectories } from "./app-directories"
+import { reportFailure, type FailureToastDeps } from "./failure-toast"
 import { createPanelData } from "./v2/panel-data"
 import { createSessions } from "./v2/sessions"
-import { dispatchInitialPrompt } from "./initial-message"
+import { dispatchInitialPrompt, initialModel } from "./initial-message"
 import { reloadRestoredDirectories } from "./restored-directories"
 
 export function createAppSession(opts: {
@@ -74,12 +76,15 @@ export function createAppSession(opts: {
     }),
   )
 
-  createEffect(() => {
+  // A recovered worktree may not be in any project snapshot yet. Keep its model.updated subscription until admission.
+  const recovering = new Map<AgentManagerSendInitialMessage, string>()
+  const retained = () => {
     const directory = commandStore()?.directory
-    const retained = [...opts.directories.retained(), ...sessions.followed()]
-    if (directory) retained.push(directory)
-    panel.retain(retained)
-  })
+    const keep = [...opts.directories.retained(), ...sessions.followed(), ...recovering.values()]
+    if (directory) keep.push(directory)
+    return keep
+  }
+  createEffect(() => panel.retain(retained()))
 
   // A restored worktree folder loads again; its store failed while the folder was gone.
   reloadRestoredDirectories(panel, opts.directories)
@@ -105,16 +110,43 @@ export function createAppSession(opts: {
       })
   }
 
-  const sendInitial = (ev: AgentManagerSendInitialMessage) => {
+  const lifetime = new AbortController()
+  onCleanup(() => lifetime.abort())
+  const sendRecovered = async (ev: AgentManagerSendInitialMessage, signal: AbortSignal) => {
+    const session = await panel.api.session.get({ sessionID: ev.sessionId }, { signal })
+    signal.throwIfAborted()
+    const target = panel.store(session.location.directory)
+    recovering.set(ev, target.directory)
+    try {
+      await dispatchInitialPrompt(target, ev, signal)
+    } finally {
+      recovering.delete(ev)
+      if (!lifetime.signal.aborted && !retained().some((dir) => panel.find(dir) === target)) panel.release(target.directory)
+    }
+  }
+  const sendInitial = async (ev: AgentManagerSendInitialMessage, feedback: FailureToastDeps) => {
     const directory = ev.worktreeId
       ? opts.directories.worktreePathIn(ev.projectId, ev.worktreeId)
       : ev.projectId
         ? opts.directories.root(ev.projectId)
         : undefined
+    if (ev.worktreeId && !directory && (ev.text || ev.command) && initialModel(ev)) {
+      const signal = AbortSignal.any([lifetime.signal, AbortSignal.timeout(30_000)])
+      return sendRecovered(ev, signal).catch((error: unknown) => {
+        if (lifetime.signal.aborted) return
+        const message =
+          signal.aborted || timedOut(error)
+            ? feedback.t("error.failure.timeout")
+            : sessionMissing(error)
+              ? feedback.t("agentManager.project.missing")
+              : readableMessage(error, feedback.t)
+        reportFailure({ type: "error", message }, feedback)
+      })
+    }
     const store = storeFor(directory ?? opts.directories.directoryOf(ev.sessionId))
-    if (!store) return Promise.resolve()
-    return dispatchInitialPrompt(store, ev).catch((error: unknown) => {
-      store.report(error)
+    if (!store) return
+    await dispatchInitialPrompt(store, ev, lifetime.signal).catch((error: unknown) => {
+      if (!lifetime.signal.aborted) store.report(timedOut(error) ? feedback.t("error.failure.timeout") : error)
     })
   }
 
@@ -130,4 +162,8 @@ export function createAppSession(opts: {
     switchModel,
     sendInitial,
   }
+}
+
+function timedOut(error: unknown) {
+  return error instanceof DOMException && error.name === "TimeoutError"
 }
