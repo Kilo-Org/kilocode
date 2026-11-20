@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.ConflictDotIcon
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverArea
+import ai.kilocode.client.ui.PrBadgeActions
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.mergeLabel
 import ai.kilocode.client.util.edtWait
@@ -203,6 +204,55 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
             ),
             browser.urls,
         )
+    }
+
+    fun `test injected callbacks own merge and verdict lines and the embedded header`() {
+        val browser = installBrowser()
+        val calls = mutableListOf<String>()
+        val body = edt {
+            WorktreeRowPopupBody(openDiff = null, actions = PrBadgeActions(
+                open = { calls += "open" }, review = { calls += "review" },
+                checks = { calls += "checks" }, comments = { calls += "comments" },
+            ))
+        }
+        edt {
+            body.update(
+                null,
+                pr(GhReview.APPROVED, GhChecksDto(GhChecks.FAILED, total = 3, failed = 1), GhCommentsDto(4, 2))
+                    .copy(merge = GhMerge.CONFLICTING),
+                "feature-x",
+                null,
+            )
+            hovers(body).forEach { click(it) }
+            click(components(body).filterIsInstance<SimpleColoredComponent>().single())
+        }
+        assertEquals(listOf("open", "comments", "review", "checks", "open"), calls)
+        assertTrue(browser.urls.isEmpty())
+    }
+
+    fun `test explicit null handlers leave popup status and header inert`() {
+        val browser = installBrowser()
+        val body = edt { WorktreeRowPopupBody(openDiff = null, actions = PrBadgeActions()) }
+        edt {
+            body.update(
+                null,
+                pr(GhReview.APPROVED, GhChecksDto(GhChecks.FAILED, total = 3, failed = 1), GhCommentsDto(4, 2))
+                    .copy(merge = GhMerge.CONFLICTING),
+                "feature-x",
+                null,
+            )
+            val areas = components(body).filterIsInstance<HoverArea>()
+                .filter { area -> generateSequence<Component>(area) { it.parent }.all { it.isVisible } }
+            assertEquals(9, areas.size)
+            for (area in areas) {
+                assertNull(area.action)
+                assertEquals(Cursor.DEFAULT_CURSOR, area.cursor.type)
+                assertFalse(area.isFocusable)
+                click(area)
+            }
+            assertTrue(labels(body).contains("Review approved"))
+        }
+        assertTrue(browser.urls.isEmpty())
     }
 
     fun `test the tooltip covers the whole line, not just its text`() {
