@@ -112,6 +112,7 @@ class KiloBackendAppService private constructor(
     }
 
     private val mutex = Mutex()
+    private val telemetryLock = Mutex()
     private val connection = KiloConnectionService(cs, server, onReconnect = {
         cs.launch { reconnect() }
     }, appLoadTimeoutMs = loadTimeoutMs, log = log)
@@ -306,13 +307,19 @@ class KiloBackendAppService private constructor(
             log.warn("Global config patch: config reload failed after save $summary")
             return (_appState.value as? KiloAppState.Ready) ?: current
         }
-        val state = _appState.value
-        if (state is KiloAppState.Ready && state.data === current.data && connection.state.value == connected) {
-            config = cfg
-            setAppReady(current.data.copy(config = cfg))
-        }
+        publishConfig(connected, current.data, cfg)
         log.info("Global config patch: state refreshed $summary")
         return (_appState.value as? KiloAppState.Ready) ?: current
+    }
+
+    suspend fun setTelemetryLevel(enabled: Boolean): KiloAppState = telemetryLock.withLock {
+        val connected = connection.state.value as? ConnectionState.Connected ?: throw IllegalStateException("Not connected")
+        val http = connection.apiClient ?: throw IllegalStateException("Not connected")
+        requireReady()
+        val level = KiloBackendTelemetry(log).setLevel(http, connected.port, enabled)
+        log.info("Telemetry level saved: requested=$enabled effective=$level")
+        publishTelemetry(connected, level)
+        _appState.value
     }
 
     internal suspend fun resumeAfterMigration() {
@@ -467,7 +474,6 @@ class KiloBackendAppService private constructor(
                     activity.start(sessions.statuses, { id -> hosted.directory(id) ?: sessions.sessionDirectory(id) }, chat.events)
                     workspaces.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     startWatchingGlobalSseEvents()
-                    setTelemetry(true)
                     captureBackend("Backend Connected", mapOf("portKnown" to "true"))
                     captureLoad("Backend Load Completed", start, mapOf(
                         "profileStatus" to if (prof != null) "loaded" else "not_logged_in",
@@ -491,6 +497,7 @@ class KiloBackendAppService private constructor(
                     // socket and fail an otherwise-successful load. Ready therefore starts with the
                     // capability off and flips once the probe answers.
                     cs.launch { refreshCapabilities() }
+                    cs.launch { refreshTelemetry() }
                 } catch (e: TimeoutCancellationException) {
                     val err = LoadError(
                         resource = "app",
@@ -537,16 +544,6 @@ class KiloBackendAppService private constructor(
                     props + mapOf("durationMs" to (System.currentTimeMillis() - start).toString()),
                 )
             }.onFailure { log.info("Skipping backend load telemetry: ${it.message}") }
-        }
-    }
-
-    private fun setTelemetry(enabled: Boolean) {
-        val http = connection.apiClient
-        val port = connection.port
-        cs.launch {
-            runCatching {
-                service<KiloBackendTelemetry>().setEnabled(http, port, enabled)
-            }.onFailure { log.info("Skipping telemetry setEnabled: ${it.message}") }
         }
     }
 
@@ -714,15 +711,48 @@ class KiloBackendAppService private constructor(
         _capabilities.value = enabled
     }
 
+    private suspend fun refreshTelemetry() = telemetryLock.withLock {
+        val conn = connection.state.value as? ConnectionState.Connected ?: return@withLock
+        val http = connection.apiClient ?: return@withLock
+        val level = try {
+            KiloBackendTelemetry(log).level(http, conn.port)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("Could not read effective telemetry level: ${e.message}", e)
+            null
+        }
+        publishTelemetry(conn, level)
+    }
+
+    private fun publishTelemetry(conn: ConnectionState.Connected, level: Boolean?) {
+        synchronized(loadLock) {
+            val state = _appState.value as? KiloAppState.Ready ?: return
+            if (connection.state.value != conn || state.data.config.telemetry == level) return
+            val cfg = state.data.config.copy(telemetry = level)
+            config = cfg
+            setAppReady(state.data.copy(config = cfg))
+        }
+    }
+
     private suspend fun refreshConfigState() {
         val current = _appState.value as? KiloAppState.Ready ?: return
         val connection = connection.state.value as? ConnectionState.Connected ?: return
         val cfg = fetchConfig().value ?: return
-        val state = _appState.value
-        if (state !is KiloAppState.Ready || state.data !== current.data) return
-        if (this.connection.state.value != connection) return
-        config = cfg
-        setAppReady(current.data.copy(config = cfg))
+        publishConfig(connection, current.data, cfg)
+    }
+
+    private fun publishConfig(conn: ConnectionState.Connected?, before: AppData, cfg: ConfigDto) {
+        synchronized(loadLock) {
+            val state = _appState.value as? KiloAppState.Ready ?: return
+            if (connection.state.value != conn) return
+            // A telemetry probe updates the snapshot independently of the global config read.
+            val previous = state.data.config.copy(telemetry = before.config.telemetry)
+            if (state.data.copy(config = previous) != before) return
+            val next = cfg.copy(telemetry = state.data.config.telemetry)
+            config = next
+            setAppReady(state.data.copy(config = next))
+        }
     }
 
     private fun setAppReady(data: AppData) {
@@ -825,6 +855,7 @@ class KiloBackendAppService private constructor(
                             launch {
                                 refreshConfigState()
                                 log.info("Config reloaded successfully")
+                                refreshTelemetry()
                             }
                         }
                         "global.disposed" -> {
@@ -912,11 +943,15 @@ class KiloBackendAppService private constructor(
     suspend fun refreshProfile(): KiloProfile200Response? {
         val result = fetchProfile()
         val fresh = result.value
-        val current = _appState.value
-        if (current is KiloAppState.Ready) {
-            setAppReady(current.data.copy(profile = fresh))
+        // Background telemetry and config refreshes also republish Ready. Serialize the
+        // read-modify-write so a late publish cannot restore the snapshot taken before this update.
+        synchronized(loadLock) {
+            val current = _appState.value
+            if (current is KiloAppState.Ready) {
+                setAppReady(current.data.copy(profile = fresh))
+            }
+            profile = fresh
         }
-        profile = fresh
         return fresh
     }
 
@@ -954,10 +989,12 @@ class KiloBackendAppService private constructor(
     suspend fun logout(): Boolean {
         val client = connection.api ?: throw IllegalStateException("Not connected")
         val result = client.authRemove(providerID = "kilo")
-        val current = _appState.value
-        if (current is KiloAppState.Ready) {
-            profile = null
-            setAppReady(current.data.copy(profile = null))
+        synchronized(loadLock) {
+            val current = _appState.value
+            if (current is KiloAppState.Ready) {
+                profile = null
+                setAppReady(current.data.copy(profile = null))
+            }
         }
         return result
     }

@@ -4,11 +4,11 @@ import ai.kilocode.client.session.ui.header.PrHeaderView
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.ConflictDotIcon
 import ai.kilocode.client.ui.HoverArea
+import ai.kilocode.client.ui.PrBadgeActions
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.checksLabel
 import ai.kilocode.client.ui.checksOpenTooltip
-import ai.kilocode.client.ui.checksUrl
 import ai.kilocode.client.ui.commentsLabel
 import ai.kilocode.client.ui.commentsOpenTooltip
 import ai.kilocode.client.ui.conflicted
@@ -22,7 +22,6 @@ import ai.kilocode.client.ui.reviewLabel
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
-import com.intellij.ide.BrowserUtil
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -48,10 +47,17 @@ import javax.swing.JComponent
  * that names each verdict in words, so it is where someone reads "2 of 5 checks failed" and wants the log.
  */
 internal class WorktreeRowPopupBody @RequiresEdt constructor(
-    openDiff: () -> Unit,
+    openDiff: (() -> Unit)?,
     onLocal: (() -> Unit)? = null,
+    private val actions: PrBadgeActions? = null,
 ) : BorderLayoutPanel() {
-    private val header = PrHeaderView(mode = ChangesPanel.Mode.FULL, onLocal = onLocal, stacked = true, openDiff = openDiff)
+    private val header = PrHeaderView(
+        mode = ChangesPanel.Mode.FULL,
+        onLocal = onLocal,
+        stacked = true,
+        handlers = actions,
+        openDiff = openDiff,
+    )
     private val merge = Line()
     private val comments = Line()
     private val review = Line()
@@ -93,12 +99,13 @@ internal class WorktreeRowPopupBody @RequiresEdt constructor(
         // The merge line is marked with the same red dot the changes badge is marked with, and carries the
         // same sentence the badge's tooltip leads with, so the mark above and the words below match. Blank
         // text when the branches merge, which is what hides the line.
+        val actions = this.actions ?: PrBadgeActions.browser(pull)
         val conflict = if (conflicted(pull)) mergeLabel(stats?.base.orEmpty()) else ""
-        merge.update(ConflictDotIcon, conflict, pull.url, openTooltip())
-        comments.update(PrIcons.comments(pull.comments), commentsLabel(pull.comments), pull.url, commentsOpenTooltip())
-        review.update(PrIcons.review(pull.review), reviewLabel(pull.review), pull.url, openTooltip())
+        merge.update(ConflictDotIcon, conflict, actions.open, openTooltip())
+        comments.update(PrIcons.comments(pull.comments), commentsLabel(pull.comments), actions.comments, commentsOpenTooltip())
+        review.update(PrIcons.review(pull.review), reviewLabel(pull.review), actions.review, openTooltip())
         // The checks tab rather than the conversation: someone reading a failure count wants the log.
-        checks.update(PrIcons.checks(pull.checks), checksLabel(pull.checks), checksUrl(pull), checksOpenTooltip())
+        checks.update(PrIcons.checks(pull.checks), checksLabel(pull.checks), actions.checks, checksOpenTooltip())
     }
 
     /**
@@ -116,18 +123,18 @@ internal class WorktreeRowPopupBody @RequiresEdt constructor(
 
         /** Hidden when there is no glyph, so a PR with no CI does not leave an empty row behind. */
         @RequiresEdt
-        fun update(glyph: Icon?, text: String, link: String, tip: String) {
+        fun update(glyph: Icon?, text: String, action: (() -> Unit)?, tip: String) {
             val show = glyph != null && text.isNotBlank()
             if (slot.isVisible != show) {
                 slot.isVisible = show
                 label.isVisible = show
             }
+            area.action = action.takeIf { show }
             if (!show) return
             if (label.icon !== glyph) label.icon = glyph
             if (label.text != text) label.text = text
             // Announced by its sentence rather than by the hint, which alone would not say what opens.
             area.tooltip(tip, name = text)
-            area.action = { BrowserUtil.browse(link) }
         }
     }
 }
