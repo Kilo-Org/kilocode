@@ -40,7 +40,8 @@ function flag(value: string | undefined) {
 }
 
 function windows(env: NodeJS.ProcessEnv) {
-  if (env.WT_SESSION) return true
+  // Windows Terminal does not guarantee the active font supports sextant glyphs.
+  // Keep it on the block-only fallback unless users opt in with KILO_UNICODE_LOGO=1.
   if (env.TERM_PROGRAM === "vscode") return true
   if (env.WEZTERM_PANE) return true
   if (env.TERM_PROGRAM === "WezTerm") return true
