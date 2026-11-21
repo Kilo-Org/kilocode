@@ -17,6 +17,7 @@ import { KiloCustomRouter } from "@/kilocode/auto-routing/router"
 import { clientEntry, linkChoice } from "@/kilocode/auto-routing/entries"
 import { openaiMessages, openaiTools } from "@/kilocode/auto-routing/messages"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model"
+import { KiloToolLimit } from "@/kilocode/session/tool-limit"
 
 const KILO = ProviderV2.ID.make("kilo")
 
@@ -207,6 +208,73 @@ describe("KiloCustomRouter routing decision", () => {
     ])
     const pick = await KiloCustomRouter.resolve(resolveInput(fetch, "token-b"))
     expect(pick).toEqual({ kind: "client", provider: "ollama", model: "qwen3", variant: "high" })
+  })
+
+  test("caps the /decide tools array at 128 and keeps StructuredOutput", async () => {
+    // Mirror the exact LLM.route wiring: capOutboundTools -> openaiTools -> resolve.
+    const many: Record<string, Tool> = {}
+    for (let i = 0; i < 129; i++) {
+      const name = `mcp_srv_tool_${String(i).padStart(3, "0")}`
+      many[name] = { description: name, inputSchema: jsonSchema({ type: "object" }) }
+    }
+    many[KiloToolLimit.STRUCTURED_OUTPUT_TOOL] = {
+      description: "structured output",
+      inputSchema: jsonSchema({ type: "object" }),
+    }
+    expect(Object.keys(many)).toHaveLength(130)
+
+    const capped = KiloToolLimit.capOutboundTools(many, {
+      protected: new Set([KiloToolLimit.STRUCTURED_OUTPUT_TOOL]),
+    })
+    expect(Object.keys(capped.tools)).toHaveLength(KiloToolLimit.MAX_TOOLS)
+    const tools = await openaiTools(capped.tools)
+
+    const decideBodies: Array<{ tools?: Array<{ function?: { name?: string } }> }> = []
+    const fetch: FetchLike = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url
+      const path = new URL(url).pathname
+      if (path === "/api/auto-routing/custom-routers") {
+        return new Response(JSON.stringify(listResponse([clientListing()])), {
+          headers: { "content-type": "application/json" },
+        })
+      }
+      if (path === "/v1/decide") {
+        decideBodies.push(JSON.parse(typeof init?.body === "string" ? init.body : "{}"))
+        return new Response(
+          JSON.stringify({
+            decision: {
+              entry: { kind: "client", provider: "ollama", model: "qwen3" },
+              model: "client:ollama/qwen3",
+              variant: null,
+              stale: false,
+              fallback: false,
+              sticky: false,
+              taskType: null,
+              subtaskType: null,
+              tableVersion: null,
+            },
+            decisionId: "decision-cap",
+          }),
+          { headers: { "content-type": "application/json" } },
+        )
+      }
+      return new Response("{}", { status: 404 })
+    }
+
+    const pick = await KiloCustomRouter.resolve({ ...resolveInput(fetch, "token-cap"), tools })
+    expect(pick).toEqual({ kind: "client", provider: "ollama", model: "qwen3", variant: null })
+
+    expect(decideBodies).toHaveLength(1)
+    const outbound = decideBodies[0]?.tools
+    if (!outbound) throw new Error("custom router /decide request carried no tools")
+    expect(outbound).toHaveLength(KiloToolLimit.MAX_TOOLS)
+    const names = outbound.map((item) => item.function?.name)
+    expect(names).toContain(KiloToolLimit.STRUCTURED_OUTPUT_TOOL)
+    expect(names).toContain("mcp_srv_tool_000")
+    // StructuredOutput is protected and sorts first; the two alphabetically last
+    // MCP tools (127, 128) are the deterministic over-budget drops.
+    expect(names).not.toContain("mcp_srv_tool_127")
+    expect(names).not.toContain("mcp_srv_tool_128")
   })
 
   test("routes a gateway pick through the gateway with the decision token", async () => {
