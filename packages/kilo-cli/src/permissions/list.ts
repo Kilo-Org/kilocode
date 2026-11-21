@@ -24,25 +24,36 @@ export default Runtime.handler(
     const grants = yield* Effect.tryPromise(() => client.permission.saved.list({ projectID: sets.projectID })).pipe(
       Effect.map((items) => items.toSorted(compareGrants)),
     )
-    process.stdout.write(formatList(grants, sets.applied))
+    process.stdout.write(formatList(grants, sets))
   }),
 )
 
 export function formatList(
   grants: ReadonlyArray<{ readonly action: string; readonly resource: string }>,
-  applied: readonly KiloPermissionsRpc.Preset[],
+  sets: Pick<KiloPermissionsRpc.ListOutput, "enabled" | "unidentified" | "applied">,
 ) {
+  const applied = sets.applied
   const rules = applied.flatMap((set) => set.resources.map((resource) => ({ set: set.id, resource })))
   return [
+    // Without its own project identity, the directory shares the global project's grants and sets.
+    ...(sets.unidentified ? ["note: this directory has no project identity; showing the shared global project\n"] : []),
     `permissions: ${grants.length} saved grants\n`,
     ...(grants.length === 0 ? [] : [`permissions[${grants.length}]{action,resource}:\n`]),
     ...grants.map((grant) => `  ${JSON.stringify(grant.action)},${JSON.stringify(grant.resource)}\n`),
-    applied.length === 0
-      ? "active set: none\n"
-      : `active ${applied.length === 1 ? "set" : "sets"}: ${applied.map((set) => set.id).join(", ")} (${rules.length} grants)\n`,
-    ...(rules.length === 0 ? [] : [`active[${rules.length}]{set,resource}:\n`]),
+    appliedLine(sets.enabled, applied, rules.length),
+    ...(rules.length === 0 ? [] : [`${sets.enabled ? "active" : "stored"}[${rules.length}]{set,resource}:\n`]),
     ...rules.map((rule) => `  ${JSON.stringify(rule.set)},${JSON.stringify(rule.resource)}\n`),
   ].join("")
+}
+
+// With setup disabled the plugin evaluates no set, so stored sets are listed as stored, not active.
+function appliedLine(enabled: boolean, applied: readonly KiloPermissionsRpc.Preset[], grants: number) {
+  const label = applied.length === 1 ? "set" : "sets"
+  const ids = applied.map((set) => set.id).join(", ")
+  if (!enabled && applied.length === 0) return "active set: none (permission setup is disabled, flag permission_setup)\n"
+  if (!enabled) return `stored ${label}: ${ids} (${grants} grants, inactive: permission setup is disabled)\n`
+  if (applied.length === 0) return "active set: none\n"
+  return `active ${label}: ${ids} (${grants} grants)\n`
 }
 
 function compareGrants(left: { action: string; resource: string }, right: { action: string; resource: string }) {

@@ -16,7 +16,12 @@ type CopyKey = Extract<keyof typeof dict, `tui.permissions.${string}`>
 
 type ControllerState =
   | { readonly status: "idle" }
-  | { readonly status: "checking"; readonly requestID?: string; readonly sessionID?: string }
+  | {
+      readonly status: "checking"
+      readonly requestID?: string
+      readonly sessionID?: string
+      readonly directory?: string
+    }
   | {
       readonly status: "offer"
       readonly requestID?: string
@@ -34,7 +39,7 @@ type ControllerState =
       readonly location: LocationRef
       readonly action: Decision
     }
-  | { readonly status: "normal"; readonly projectID?: string }
+  | { readonly status: "normal"; readonly projectID?: string; readonly directory?: string }
 
 type Decision = "update" | "skip" | "clear"
 
@@ -85,13 +90,12 @@ function definePlugin(): Plugin.Definition {
     id: "kilocode.permissions.tui",
     setup(context) {
       const controllers = new Map<string, Controller>()
-      const byProject = new Map<string, Controller>()
       const [navigation, setNavigation] = createSignal<Navigation>()
       const applied = createApplied(context)
       const controller = (directory: string) => {
         const existing = controllers.get(directory)
         if (existing) return existing
-        const created = createController(context, byProject, applied)
+        const created = createController(context, applied)
         controllers.set(directory, created)
         return created
       }
@@ -128,8 +132,9 @@ function definePlugin(): Plugin.Definition {
       context.ui.slot({
         append: "app",
         render() {
+          // Base mode: the offer's keys pause while any dialog (palette, help, the review) is open over it.
           context.keymap.layer(() => ({
-            mode: "global",
+            mode: "base",
             priority: 2,
             enabled: () => navigation() !== undefined,
             commands: [
@@ -208,18 +213,20 @@ function createApplied(context: Plugin.Context): Applied {
   }
 }
 
-function createController(context: Plugin.Context, byProject: Map<string, Controller>, applied: Applied): Controller {
+function createController(context: Plugin.Context, applied: Applied): Controller {
   const [state, setState] = createSignal<ControllerState>({ status: "idle" })
   let operation: Promise<void> | undefined
+  // Each load takes a number; a newer load (a request from another location) makes the older one's answer stale.
+  let loads = 0
 
   // Applying a set settles the waiting requests it covers on the server; refresh the session's pending list.
   const sync = async (sessionID?: string) => {
     if (sessionID) await context.data.session.permission.sync(sessionID)
   }
 
-  const fail = (message: CopyKey, projectID?: string) => {
+  const fail = (message: CopyKey, projectID?: string, directory?: string) => {
     context.ui.toast.show({ variant: "error", message: t(message) })
-    setState({ status: "normal", projectID })
+    setState({ status: "normal", projectID, directory })
   }
 
   const load = async (
@@ -228,26 +235,27 @@ function createController(context: Plugin.Context, byProject: Map<string, Contro
     sessionID: string | undefined,
     manual: boolean,
   ): Promise<LoadResult> => {
-    setState({ status: "checking", requestID, sessionID })
+    const generation = ++loads
+    setState({ status: "checking", requestID, sessionID, directory: location.directory })
     try {
       const result = await context.client.rpc(KiloPermissionsRpc.Definition).list({}, { location })
-      const current = byProject.get(result.projectID)
-      if (!current) byProject.set(result.projectID, api)
+      if (generation !== loads) return undefined
+      const normal = { status: "normal", projectID: result.projectID, directory: location.directory } as const
       if (!result.enabled) {
-        setState({ status: "normal", projectID: result.projectID })
+        setState(normal)
         return manual ? "disabled" : undefined
       }
       if (result.unidentified) {
-        setState({ status: "normal", projectID: result.projectID })
+        setState(normal)
         return manual ? "unidentified" : undefined
       }
       // A set applied before the project stopped matching still applies, so the chooser stays open to remove it.
       if (result.presets.length === 0 && (!manual || result.applied.length === 0)) {
-        setState({ status: "normal", projectID: result.projectID })
+        setState(normal)
         return manual ? "no_matches" : undefined
       }
       if (!manual && result.decision !== null) {
-        setState({ status: "normal", projectID: result.projectID })
+        setState(normal)
         return undefined
       }
       const offer: Offer = {
@@ -262,7 +270,8 @@ function createController(context: Plugin.Context, byProject: Map<string, Contro
       setState(offer)
       return offer
     } catch {
-      fail("tui.permissions.loadFailed")
+      if (generation !== loads) return undefined
+      fail("tui.permissions.loadFailed", undefined, location.directory)
       return manual ? "failed" : undefined
     }
   }
@@ -282,41 +291,34 @@ function createController(context: Plugin.Context, byProject: Map<string, Contro
       }
     } catch {
       await syncAfterFailure(offer)
-      fail("tui.permissions.applyFailed", offer.projectID)
+      fail("tui.permissions.applyFailed", offer.projectID, offer.location.directory)
       return
     }
     try {
       await sync(offer.sessionID)
     } catch {
-      fail("tui.permissions.saveFailed", offer.projectID)
+      fail("tui.permissions.saveFailed", offer.projectID, offer.location.directory)
       return
     }
     if (decision !== "skip") await applied.refresh(offer.location)
-    setState({ status: "normal", projectID: offer.projectID })
+    setState({ status: "normal", projectID: offer.projectID, directory: offer.location.directory })
   }
 
   const api: Controller = {
     state,
     ensure(request) {
       const current = state()
-      if (current.status === "submitting") {
-        if (current.requestID !== request.id)
-          setState({ ...current, requestID: request.id, sessionID: request.sessionID })
+      // A submission already targets its own location; a new request only takes over its prompt.
+      if (current.status === "submitting") return retarget(current, request)
+      // A request from another location (a child session in another directory) needs that location's own answer,
+      // so an offer, check or decision for this controller's last location is only reused for the same directory.
+      const directory = context.data.session.get(request.sessionID)?.location.directory
+      if (current.status !== "idle" && sameDirectory(current, directory)) {
+        if (current.status !== "normal") retarget(current, request)
         return
       }
-      if (current.status === "offer") {
-        if (current.requestID !== request.id)
-          setState({ ...current, requestID: request.id, sessionID: request.sessionID })
-        return
-      }
-      if (current.status === "normal") return
-      if (current.status === "checking") {
-        if (current.requestID !== request.id)
-          setState({ ...current, requestID: request.id, sessionID: request.sessionID })
-        return
-      }
-      setState({ status: "checking", requestID: request.id, sessionID: request.sessionID })
-      operation = resolveSessionLocation(context, request.sessionID)
+      setState({ status: "checking", requestID: request.id, sessionID: request.sessionID, directory })
+      const started = resolveSessionLocation(context, request.sessionID)
         .then((location) => {
           if (!location) {
             fail("tui.permissions.loadFailed")
@@ -327,8 +329,9 @@ function createController(context: Plugin.Context, byProject: Map<string, Contro
         .catch(() => fail("tui.permissions.loadFailed"))
         .then(() => undefined)
         .finally(() => {
-          operation = undefined
+          if (operation === started) operation = undefined
         })
+      operation = started
     },
     async manual(location, sessionID) {
       const current = state()
@@ -360,11 +363,15 @@ function createController(context: Plugin.Context, byProject: Map<string, Contro
       })
     },
     // Closing the manual chooser without a choice leaves the offer state behind; without this reset the next
-    // `/permissions` sees an active offer and does nothing.
+    // `/permissions` sees an active offer and does nothing. Nothing was decided, so the next request checks again
+    // and still gets the automatic offer while the project has no decision.
     dismiss() {
-      const current = state()
-      if (current.status === "offer") setState({ status: "normal", projectID: current.projectID })
+      if (state().status === "offer") setState({ status: "idle" })
     },
+  }
+
+  const retarget = (current: Exclude<ControllerState, { status: "idle" | "normal" }>, request: PermissionRequest) => {
+    if (current.requestID !== request.id) setState({ ...current, requestID: request.id, sessionID: request.sessionID })
   }
 
   const syncAfterFailure = async (offer: Offer) => {
@@ -376,6 +383,12 @@ function createController(context: Plugin.Context, byProject: Map<string, Contro
   }
 
   return api
+}
+
+// An unknown directory on either side keeps the current state, as before locations were compared.
+function sameDirectory(state: Exclude<ControllerState, { status: "idle" }>, directory: string | undefined) {
+  const current = state.status === "offer" || state.status === "submitting" ? state.location.directory : state.directory
+  return directory === undefined || current === undefined || current === directory
 }
 
 async function resolveSessionLocation(context: Plugin.Context, sessionID: string): Promise<LocationRef | undefined> {
@@ -752,15 +765,10 @@ function PermissionOffer(props: {
       preview.scrollBy(pages * Math.max(1, preview.viewport.height))
     },
   }
-  let disposed = false
   props.registerNavigation(navigation)
-  onCleanup(() => {
-    disposed = true
-    props.registerNavigation(undefined)
-  })
+  onCleanup(() => props.registerNavigation(undefined))
 
-  // Same confirmation as `/permissions`. The offer's navigation keys are global, so they are released while the
-  // review is open; cancelling returns to the offer.
+  // Same confirmation as `/permissions`; cancelling returns to the offer.
   // Apply with nothing to change, including nothing checked, is a skip.
   const apply = async () => {
     const change = planChange(props.offer.presets, props.offer.applied, checked())
@@ -776,13 +784,7 @@ function PermissionOffer(props: {
       props.controller.decide("update", change)
       return
     }
-    props.registerNavigation(undefined)
-    const confirmed = await props.review(change.apply)
-    if (confirmed) {
-      props.controller.decide("update", change)
-      return
-    }
-    if (!disposed) props.registerNavigation(navigation)
+    if (await props.review(change.apply)) props.controller.decide("update", change)
   }
 
   return (

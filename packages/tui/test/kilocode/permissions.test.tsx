@@ -54,6 +54,8 @@ type State = {
   skipped: number
   cleared: number
   readonly removed: string[]
+  /** Every apply and remove, in call order. */
+  readonly calls: string[]
   readonly listLocations: string[]
   replyCalls: number
 }
@@ -66,6 +68,7 @@ function state(overrides: Partial<State> = {}): State {
     skipped: 0,
     cleared: 0,
     removed: [],
+    calls: [],
     listLocations: [],
     replyCalls: 0,
     ...overrides,
@@ -134,6 +137,7 @@ function fixtureFetch(
       if (url.pathname.endsWith("/apply")) {
         const body = (await requestInput.json()) as { input?: { presetID?: string } }
         if (body.input?.presetID) current.applied.push(body.input.presetID)
+        current.calls.push(`apply ${body.input?.presetID}`)
         if (current.delayApply) await current.delayApply
         if (current.applyFailure) return new Response("apply failed", { status: 500 })
         if (current.clearOnApply) current.pending = false
@@ -144,6 +148,7 @@ function fixtureFetch(
         const body = (await requestInput.json()) as { input?: { presetID?: string } }
         const presetID = body.input?.presetID ?? ""
         current.removed.push(presetID)
+        current.calls.push(`remove ${presetID}`)
         current.applied.splice(0, current.applied.length, ...current.applied.filter((id) => id !== presetID))
         return json({ output: {} })
       }
@@ -542,6 +547,75 @@ test("/permissions applies several checked sets after one review of the new ones
   await until(app, "apply requests", () => current.applied.length === 3)
   expect(current.applied).toEqual(["typescript-checks", "kilo-bun-checks", "dependency-install"])
   expect(current.removed).toEqual([])
+})
+
+test("/permissions swaps sets in one update: removals run before the apply, so it settles with the final sets", async () => {
+  const current = state({ pending: false, decision: "accepted", applied: ["typescript-checks"] })
+  await using app = await createAppFixture({
+    width: 100,
+    height: 60,
+    args: { sessionID },
+    config: { animations: false, tabs: { mode: "off" } },
+    fetch: fixtureFetch(current),
+  })
+  await app.ready
+  await until(app, "composer", (value) => value.includes("ctrl+p commands"))
+  await openManualChooser(app, "[✓] TypeScript checks")
+  app.mockInput.pressKey(" ")
+  app.mockInput.pressKey("j")
+  app.mockInput.pressKey(" ")
+  await until(app, "swapped", (value) => value.includes("[✓] Kilo / Bun checks") && value.includes("› [ ] TypeScript"))
+  app.mockInput.pressEnter()
+  const review = await until(app, "set review", (value) => value.includes("Cancel") && value.includes("Apply Kilo"))
+  expect(review).toContain("Apply Kilo / Bun checks")
+  app.mockInput.pressEnter()
+  await until(app, "update requests", () => current.calls.length === 2)
+  expect(current.calls).toEqual(["remove typescript-checks", "apply kilo-bun-checks"])
+  expect(current.applied).toEqual(["kilo-bun-checks"])
+  expect(current.cleared).toBe(0)
+})
+
+test("cancelling /permissions before any request still leaves the automatic offer for the first request", async () => {
+  const current = state({ pending: false })
+  await using app = await createAppFixture({
+    width: 100,
+    height: 34,
+    args: { sessionID },
+    config: { animations: false, tabs: { mode: "off" } },
+    fetch: fixtureFetch(current),
+  })
+  await app.ready
+  await until(app, "composer", (value) => value.includes("ctrl+p commands"))
+  await openManualChooser(app, "[ ] Kilo / Bun checks")
+  app.mockInput.pressEscape()
+  await until(app, "chooser closed", (value) => !value.includes("[ ] Kilo / Bun checks"))
+  expect(current.decision).toBeNull()
+
+  current.pending = true
+  app.events.emit({ id: "evt_asked", created: Date.now(), type: "permission.asked", data: permissionRequest(sessionID) })
+  await until(app, "permission offer", (value) => value.includes("Set up project permissions"))
+})
+
+test("the offer's keys pause while a dialog is open over it", async () => {
+  const current = state()
+  await using app = await createAppFixture({
+    width: 100,
+    height: 34,
+    args: { sessionID },
+    config: { animations: false, tabs: { mode: "off" } },
+    fetch: fixtureFetch(current),
+  })
+  await app.ready
+  await until(app, "permission offer", (value) => value.includes("› [✓] Kilo / Bun checks"))
+  app.mockInput.pressKey("p", { ctrl: true })
+  await until(app, "command palette", (value) => value.includes("Commands"))
+  app.mockInput.pressKey("down")
+  app.mockInput.pressKey(" ")
+  app.mockInput.pressEscape()
+  await until(app, "palette closed", (value) => !value.includes("Commands"))
+  const frame = await until(app, "offer again", (value) => value.includes("Set up project permissions"))
+  expect(frame).toContain("› [✓] Kilo / Bun checks")
+  expect(frame).toContain("  [ ] TypeScript checks")
 })
 
 async function openManualChooser(app: Awaited<ReturnType<typeof createAppFixture>>, label: string) {

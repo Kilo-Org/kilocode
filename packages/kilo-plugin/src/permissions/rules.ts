@@ -23,13 +23,14 @@ const grepValueOptions = new Set(["--regexp", "--max-count", "--after-context", 
 
 /**
  * True when a set allows one shell command resource. The shell resource keeps its redirections, so `echo *` would
- * match `echo x > .git/hooks/pre-commit`; a set never allows a command that writes a file through redirection or runs
- * a process substitution, and that command asks as usual. The output helpers only match forms that read no file and
- * expand nothing (see `safeHelper`), so `head .env` or `echo $API_KEY` still ask.
+ * match `echo x > .git/hooks/pre-commit`; a set never allows a command that writes or reads a file through
+ * redirection, runs a process substitution or reads a here-document, and that command asks as usual. The output
+ * helpers only match forms that read no file and expand nothing (see `safeHelper`), so `head .env`,
+ * `head < .env` or `echo $API_KEY` still ask.
  */
 export function covers(resource: string, resources: readonly string[]) {
   const rest = resource.replace(harmless, "")
-  if (rest.includes(">") || rest.includes("<(")) return false
+  if (rest.includes(">") || rest.includes("<")) return false
   return resources.some(
     (pattern) =>
       Permission.evaluate("shell", resource, [rule(pattern)]).effect === "allow" &&

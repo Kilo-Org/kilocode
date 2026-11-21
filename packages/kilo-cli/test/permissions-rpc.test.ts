@@ -278,7 +278,7 @@ test("lists saved grants, then the active set and its grants", async () => {
       const rpc = client.rpc(rpcDefinition)
       const read = async () => {
         const sets = await rpc.list({}, options)
-        return formatList(await client.permission.saved.list({ projectID: sets.projectID }), sets.applied)
+        return formatList(await client.permission.saved.list({ projectID: sets.projectID }), sets)
       }
       expect(await read()).toBe("permissions: 0 saved grants\nactive set: none\n")
 
@@ -309,6 +309,19 @@ test("lists saved grants, then the active set and its grants", async () => {
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+test("lists stored sets as inactive while setup is disabled, and names the shared global project", () => {
+  const applied = [{ id: "typescript-checks" as const, resources: ["bun run test *"] }]
+  expect(formatList([], { enabled: false, unidentified: false, applied })).toBe(
+    'permissions: 0 saved grants\nstored set: typescript-checks (1 grants, inactive: permission setup is disabled)\nstored[1]{set,resource}:\n  "typescript-checks","bun run test *"\n',
+  )
+  expect(formatList([], { enabled: false, unidentified: false, applied: [] })).toBe(
+    "permissions: 0 saved grants\nactive set: none (permission setup is disabled, flag permission_setup)\n",
+  )
+  expect(formatList([], { enabled: true, unidentified: true, applied: [] })).toBe(
+    "note: this directory has no project identity; showing the shared global project\npermissions: 0 saved grants\nactive set: none\n",
+  )
 })
 
 test("clearing the sets records no set and publishes the change to clients", async () => {
