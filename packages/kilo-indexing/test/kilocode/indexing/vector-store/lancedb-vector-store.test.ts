@@ -212,6 +212,55 @@ describe("LocalVectorStore", () => {
   })
 
   describe("initialize", () => {
+    test.each(["document", ""])("persists and reloads document prompt %j", async (prompt) => {
+      const profile = {
+        provider: "openai-compatible" as const,
+        modelId: "embeddinggemma-2",
+        dimension: vectorSize,
+        documentPrompt: prompt,
+      }
+      store = new LanceDBVectorStore(workspacePath, vectorSize, dbDirectory, profile)
+      store["db"] = mockDb
+      const rows = store["_createMetadataData"]()
+      expect(rows).toContainEqual({ key: "embedding_document_prompt", value: prompt })
+      mockTable.where.mockImplementation((query: string) => {
+        mockTable.toArray.mockResolvedValue(rows.filter((row) => query === `key = '${row.key}'`))
+        return mockTable
+      })
+
+      expect(await store["_getStoredEmbeddingProfile"](mockDb)).toEqual(profile)
+      await store.markIndexingComplete()
+      expect(mockTable.add).toHaveBeenCalledWith([{ key: "embedding_document_prompt", value: prompt }])
+    })
+
+    test("recreates unchanged-dimension vectors when a document prompt is added", async () => {
+      store = new LanceDBVectorStore(workspacePath, vectorSize, dbDirectory, {
+        provider: "openai-compatible",
+        modelId: "embeddinggemma-2",
+        dimension: vectorSize,
+        documentPrompt: "document",
+      })
+      store["db"] = mockDb
+      store["table"] = mockTable
+      mockTable.countRows.mockResolvedValue(1)
+      const rows = new Map<string, string>([
+        ["vector_size", String(vectorSize)],
+        ["index_schema", "2"],
+        ["embedding_provider", "openai-compatible"],
+        ["embedding_model_id", "embeddinggemma-2"],
+        ["embedding_dimension", String(vectorSize)],
+      ])
+      mockTable.where.mockImplementation((query: string) => {
+        mockTable.toArray.mockResolvedValue(
+          [...rows].filter(([key]) => query === `key = '${key}'`).map(([key, value]) => ({ key, value })),
+        )
+        return mockTable
+      })
+
+      expect(await store.initialize()).toBe(true)
+      expect(mockDb.dropTable).toHaveBeenCalledTimes(2)
+    })
+
     test("opens a complete compatible baseline without mutating it", async () => {
       spyOn(fs, "existsSync").mockReturnValue(true as any)
       store["_getStoredEmbeddingProfile"] = mock().mockResolvedValue({

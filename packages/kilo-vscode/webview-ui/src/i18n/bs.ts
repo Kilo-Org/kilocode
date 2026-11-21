@@ -471,6 +471,10 @@ export const dict = {
   "settings.indexing.kiloSignIn.description": "Prijavite se na Kilo za korištenje hostovanih embeddinga.",
   "settings.indexing.provider.title": "Provajder embeddinga",
   "settings.indexing.providerField.description": "Postavka veze specifična za provajdera.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "Opcionalni prompt_name za indeksiranje koda i ažuriranje datoteka. Zahtijeva podršku krajnje tačke. Promjena ove vrijednosti ponovo gradi indeks.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "Opcionalni prompt_name za pretragu koda. Zahtijeva podršku krajnje tačke.",
   "settings.indexing.qdrantApiKey.description": "Opcionalni API ključ za Qdrant instancu.",
   "settings.indexing.qdrantApiKey.placeholder": "Opcionalni API ključ",
   "settings.indexing.fileExtensions.title": "Ekstenzije datoteka",

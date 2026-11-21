@@ -135,4 +135,27 @@ describe("indexing tab scope state", () => {
     expect(indexingInheritance("project", global, {}, [["fileExtensions"]])).toBe("inherited")
     expect(indexingInheritance("project", global, { fileExtensions: [".php"] }, [["fileExtensions"]])).toBe("none")
   })
+
+  it("inherits document prompts while preserving an explicit empty query prompt", () => {
+    const global = {
+      "openai-compatible": {
+        baseUrl: "http://localhost:8080/v1",
+        documentPrompt: "document",
+        queryPrompt: "CodeRetrieval",
+      },
+    }
+    const project = { "openai-compatible": { queryPrompt: "" } }
+
+    expect(indexingConfig("project", global, project)["openai-compatible"]).toEqual({
+      baseUrl: "http://localhost:8080/v1",
+      documentPrompt: "document",
+      queryPrompt: "",
+    })
+    expect(indexingSource("project", global, project, [["openai-compatible", "documentPrompt"]])).toBe("global")
+    expect(indexingSource("project", global, project, [["openai-compatible", "queryPrompt"]])).toBe("local")
+    expect(indexingUpdate("project", global, project, { enabled: true })).toEqual({
+      enabled: true,
+      "openai-compatible": { queryPrompt: "" },
+    })
+  })
 })

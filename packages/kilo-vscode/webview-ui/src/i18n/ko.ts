@@ -747,6 +747,10 @@ export const dict = {
   "settings.indexing.kiloSignIn.description": "호스팅 임베딩을 사용하려면 Kilo에 로그인하세요.",
   "settings.indexing.provider.title": "임베딩 공급자",
   "settings.indexing.providerField.description": "공급자별 연결 설정.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "코드 인덱싱과 파일 업데이트에 사용할 선택적 prompt_name입니다. 엔드포인트의 지원이 필요합니다. 변경하면 인덱스가 다시 생성됩니다.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "코드 검색에 사용할 선택적 prompt_name입니다. 엔드포인트의 지원이 필요합니다.",
   "settings.indexing.qdrantApiKey.description": "Qdrant 인스턴스에 대한 선택적 API 키입니다.",
   "settings.indexing.qdrantApiKey.placeholder": "선택적 API 키",
   "settings.indexing.fileExtensions.title": "파일 확장자",

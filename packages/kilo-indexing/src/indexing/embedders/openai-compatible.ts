@@ -43,6 +43,8 @@ interface OpenAIEmbeddingResponse {
 type OpenAICompatibleOptions = {
   headers?: Record<string, string>
   dimensions?: number
+  documentPrompt?: string
+  queryPrompt?: string
 }
 
 /**
@@ -59,6 +61,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
   private readonly maxItemTokens: number
   private readonly headers: Record<string, string>
   private readonly dimensions?: number
+  private readonly prompts: { document?: string; query?: string }
   private readonly omitted = new Set<string>()
 
   // Global rate limiting state shared across all instances
@@ -106,6 +109,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
     this.maxItemTokens = maxItemTokens || MAX_ITEM_TOKENS
     this.headers = options.headers ?? {}
     this.dimensions = options.dimensions
+    this.prompts = { document: options.documentPrompt, query: options.queryPrompt }
   }
 
   /**
@@ -114,7 +118,11 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
    * @param model Optional model identifier
    * @returns Promise resolving to embedding response
    */
-  async createEmbeddings(texts: string[], model?: string): Promise<EmbeddingResponse> {
+  async createEmbeddings(
+    texts: string[],
+    model?: string,
+    purpose: "document" | "query" = "document",
+  ): Promise<EmbeddingResponse> {
     const modelToUse = model || this.defaultModelId
 
     // Apply model-specific query prefix if required
@@ -130,7 +138,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
       processedTexts,
       this.maxItemTokens,
       MAX_BATCH_TOKENS,
-      (batch) => this._embedBatchWithRetries(batch, modelToUse),
+      (batch) => this._embedBatchWithRetries(batch, modelToUse, this.prompts[purpose]),
       (index, tokens) => log.warn(`Text at index ${index} exceeds token limit (${tokens} > ${this.maxItemTokens})`),
     )
   }
@@ -173,6 +181,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
     model: string,
     dimensions: number | undefined,
     signal?: AbortSignal,
+    prompt?: string,
   ): Promise<OpenAIEmbeddingResponse> {
     const response = await fetch(url, {
       method: "POST",
@@ -191,6 +200,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
         model: model,
         encoding_format: "base64",
         ...(dimensions !== undefined ? { dimensions } : {}),
+        ...(prompt !== undefined ? { prompt_name: prompt } : {}),
       }),
       signal,
     })
@@ -225,14 +235,14 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
   private async request(
     texts: string[],
     model: string,
-    options: { signal?: AbortSignal; timeout?: number; maxRetries?: number } = {},
+    options: { signal?: AbortSignal; timeout?: number; maxRetries?: number; prompt?: string } = {},
   ): Promise<{
     response: OpenAIEmbeddingResponse
     projected?: { embeddings: number[][]; usage: { promptTokens: number; totalTokens: number } }
   }> {
     const send = async (dimensions: number | undefined): Promise<OpenAIEmbeddingResponse> => {
       if (this.isFullUrl) {
-        return this.makeDirectEmbeddingRequest(this.baseUrl, texts, model, dimensions, options.signal)
+        return this.makeDirectEmbeddingRequest(this.baseUrl, texts, model, dimensions, options.signal, options.prompt)
       }
       const body = {
         input: texts,
@@ -242,6 +252,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
         // By requesting base64 encoding, we bypass the package's parser and handle decoding ourselves.
         encoding_format: "base64" as const,
         ...(dimensions !== undefined ? { dimensions } : {}),
+        ...(options.prompt !== undefined ? { prompt_name: options.prompt } : {}),
       }
       if (options.timeout === undefined && options.maxRetries === undefined) {
         return this.embeddingsClient.embeddings.create(body)
@@ -309,13 +320,14 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
   private async _embedBatchWithRetries(
     batchTexts: string[],
     model: string,
+    prompt?: string,
   ): Promise<{ embeddings: number[][]; usage: { promptTokens: number; totalTokens: number } }> {
     for (let attempts = 0; attempts < MAX_RETRIES; attempts++) {
       // Check global rate limit before attempting request
       await this.waitForGlobalRateLimit()
 
       try {
-        const { projected } = await this.request(batchTexts, model)
+        const { projected } = await this.request(batchTexts, model, { prompt })
         if (!projected) throw new Error("Invalid response from embedding endpoint")
 
         return projected
@@ -364,32 +376,35 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
         // Test with a minimal embedding request
         const testTexts = ["test"]
         const modelToUse = this.defaultModelId
-        let response: OpenAIEmbeddingResponse
+        for (const prompt of new Set(Object.values(this.prompts))) {
+          let response: OpenAIEmbeddingResponse
 
-        // Abort full-endpoint requests on timeout. Base URLs get an SDK timeout instead.
-        const ctl = this.isFullUrl ? new AbortController() : undefined
-        const timer = ctl ? setTimeout(() => ctl.abort(), REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS) : undefined
+          // Abort full-endpoint requests on timeout. Base URLs get an SDK timeout instead.
+          const ctl = this.isFullUrl ? new AbortController() : undefined
+          const timer = ctl ? setTimeout(() => ctl.abort(), REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS) : undefined
 
-        try {
-          const result = await this.request(testTexts, modelToUse, {
-            signal: ctl?.signal,
-            timeout: REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
-            maxRetries: REMOTE_EMBEDDER_VALIDATION_MAX_RETRIES,
-          })
-          response = result.response
-        } finally {
-          if (timer) clearTimeout(timer)
-        }
+          try {
+            const result = await this.request(testTexts, modelToUse, {
+              signal: ctl?.signal,
+              timeout: REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
+              maxRetries: REMOTE_EMBEDDER_VALIDATION_MAX_RETRIES,
+              prompt,
+            })
+            response = result.response
+          } finally {
+            if (timer) clearTimeout(timer)
+          }
 
-        const error = (response as { error?: string | { message?: string } }).error
-        const message = typeof error === "string" ? error : error?.message
-        if (message) return { valid: false, error: message }
+          const error = (response as { error?: string | { message?: string } }).error
+          const message = typeof error === "string" ? error : error?.message
+          if (message) return { valid: false, error: message }
 
-        // Check if we got a valid response
-        if (!response?.data || response.data.length === 0) {
-          return {
-            valid: false,
-            error: "Invalid response from embedding endpoint",
+          // Check if we got a valid response
+          if (!response?.data || response.data.length === 0) {
+            return {
+              valid: false,
+              error: "Invalid response from embedding endpoint",
+            }
           }
         }
 

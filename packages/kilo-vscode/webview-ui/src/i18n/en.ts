@@ -691,6 +691,10 @@ export const dict = {
   "settings.indexing.dimension.description": "Leave empty to auto-detect the embedding dimension from the model.",
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.providerField.description": "Provider-specific connection setting.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "Optional prompt_name for indexing code and file updates. Requires endpoint support. Changing it rebuilds the index.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "Optional prompt_name for code searches. Requires endpoint support.",
   "settings.indexing.vectorStore.title": "Vector store",
   "settings.indexing.vectorStore.description": "Choose where indexed embeddings are stored.",
   "settings.indexing.lancedbDirectory.title": "LanceDB directory",

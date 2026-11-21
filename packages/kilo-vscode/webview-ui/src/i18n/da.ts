@@ -464,6 +464,10 @@ export const dict = {
   "settings.indexing.model.title": "Embedding-model",
   "settings.indexing.model.description": "Overskriv standard embedding-modellen for den valgte udbyder.",
   "settings.indexing.providerField.description": "Udbyderspecifik forbindelsesindstilling.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "Valgfrit prompt_name til indeksering af kode og filopdateringer. Kræver understøttelse fra endepunktet. Ændring genopbygger indekset.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "Valgfrit prompt_name til kodesøgninger. Kræver understøttelse fra endepunktet.",
   "settings.indexing.vectorStore.title": "Vektorlager",
   "settings.indexing.vectorStore.description": "Vælg hvor indekserede embeddings gemmes.",
   "settings.indexing.qdrantUrl.title": "Qdrant URL",

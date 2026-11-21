@@ -24,7 +24,8 @@ const store = (results: VectorStoreSearchResult[], limits: number[]): IVectorSto
   }) as unknown as IVectorStore
 
 const embedder = (calls: string[][]): IEmbedder => ({
-  async createEmbeddings(texts) {
+  async createEmbeddings(texts, _model, purpose) {
+    expect(purpose).toBe("query")
     calls.push(texts)
     return { embeddings: [[1, 2, 3]] }
   },

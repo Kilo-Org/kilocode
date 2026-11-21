@@ -477,6 +477,10 @@ export const dict = {
     "รายการที่อนุญาตคั่นด้วยเครื่องหมายจุลภาค ปล่อยว่างไว้เพื่อใช้ค่าเริ่มต้นที่มีมาให้",
   "settings.indexing.fileExtensions.invalid": "นามสกุลไฟล์ไม่ถูกต้อง: {{extension}}",
   "settings.indexing.providerField.description": "การตั้งค่าการเชื่อมต่อเฉพาะผู้ให้บริการ",
+  "settings.indexing.providerField.documentPrompt.description":
+    "ค่า prompt_name ที่ไม่บังคับสำหรับการทำดัชนีโค้ดและการอัปเดตไฟล์ ต้องได้รับการรองรับจากปลายทาง การเปลี่ยนค่านี้จะสร้างดัชนีใหม่",
+  "settings.indexing.providerField.queryPrompt.description":
+    "ค่า prompt_name ที่ไม่บังคับสำหรับการค้นหาโค้ด ต้องได้รับการรองรับจากปลายทาง",
   "settings.indexing.status.title": "สถานะ",
   "settings.indexing.tuning.description": "พารามิเตอร์การค้นหาขั้นสูงและการประมวลผลแบทช์",
 

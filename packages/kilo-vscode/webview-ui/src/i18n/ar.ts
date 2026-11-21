@@ -746,6 +746,10 @@ export const dict = {
   "settings.indexing.status.title": "الحالة",
   "settings.indexing.tuning.description": "معامل متقدم للبحث والدفعات.",
   "settings.indexing.providerField.description": "إعداد اتصال خاص بالموفر.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "حقل prompt_name اختياري لفهرسة الشيفرة وتحديثات الملفات. يتطلب دعم نقطة النهاية. يؤدي تغييره إلى إعادة بناء الفهرس.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "حقل prompt_name اختياري للبحث في الشيفرة. يتطلب دعم نقطة النهاية.",
   "prompt.action.indexing": "إعدادات الفهرسة",
   "settings.experimental.title": "تجريبي",
   "settings.language.title": "اللغة",
