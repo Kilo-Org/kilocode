@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test"
 
 import { CodeIndexOllamaEmbedder } from "../../../../src/indexing/embedders/ollama"
+import { extractStatusCode } from "../../../../src/indexing/shared/validation-helpers"
 
 const mockFetch = mock() as unknown as typeof fetch
 global.fetch = mockFetch
@@ -16,6 +17,25 @@ describe("CodeIndexOllamaEmbedder", () => {
 
   afterEach(() => {
     ;(mockFetch as any).mockReset()
+  })
+
+  describe("createEmbeddings failures", () => {
+    test.each([400, 413, 422, 500])("keeps HTTP status %d on the thrown error", async (status) => {
+      ;(mockFetch as any).mockImplementationOnce(() =>
+        Promise.resolve({
+          ok: false,
+          status,
+          statusText: "Rejected",
+          text: () => Promise.resolve("input too long"),
+        } as Response),
+      )
+
+      const error = await embedder.createEmbeddings(["text"]).catch((err: unknown) => err)
+
+      expect(error).toBeInstanceOf(Error)
+      expect(extractStatusCode(error)).toBe(status)
+      expect((error as Error).message).toContain(`${status}`)
+    })
   })
 
   describe("constructor", () => {

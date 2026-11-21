@@ -25,12 +25,49 @@ import {
 } from "../constants"
 import { FileIgnore } from "../../file/ignore"
 import { Log } from "../../util/log"
-import { sanitizeErrorMessage } from "../shared/validation-helpers"
+import { rejectionStatus, sanitizeErrorMessage } from "../shared/validation-helpers"
 import type { IndexingTelemetryMeta, IndexingTelemetryMode, IndexingTelemetryReporter } from "../interfaces/telemetry"
 import type { IgnoreMatcher } from "../shared/load-ignore"
 import { isBinary } from "../shared/is-binary"
 
 const log = Log.create({ service: "indexing-scanner" })
+
+// Deterministic client errors: the provider refuses this exact input, so identical retries cannot succeed.
+const REJECTED_STATUSES = new Set([400, 413, 422])
+
+// Text for the one-off request that tells a request-wide rejection (bad model or endpoint) from an oversized input.
+const PROBE_TEXT = "probe"
+
+// A cached hash that never equals a real content hash. Files with skipped chunks get it so the next
+// scan sees them as changed: old points are deleted before reindexing and removed files are found.
+const PARTIAL_HASH_PREFIX = "partial:"
+
+/** A single chunk the embedding provider refused. The rest of its file may still be indexed. */
+export class RejectedChunkError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "RejectedChunkError"
+  }
+}
+
+type FileInfo = { filePath: string; fileHash: string; isNew: boolean }
+
+/** State shared by all batches of one scan. */
+interface ScanRun {
+  readonly workspace: string
+  readonly mode: IndexingTelemetryMode
+  readonly onError?: (error: Error) => void
+  readonly onFilesIndexed?: (indexedCount: number) => void
+  /** Files with at least one chunk written; each is reported to onFilesIndexed once. */
+  readonly indexed: Set<string>
+  /** Files with at least one chunk the provider refused. */
+  readonly partial: Set<string>
+  /** A batch failed for a reason other than a refused chunk, so its files must not be cached. */
+  failed: boolean
+  /** The provider rejects every request, so there is nothing to split. Set once, reported once. */
+  rejectsAll: boolean
+  probe?: Promise<boolean>
+}
 
 export class DirectoryScanner implements IDirectoryScanner {
   private _cancelled = false
@@ -196,9 +233,18 @@ export class DirectoryScanner implements IDirectoryScanner {
     // Shared batch accumulators (protected by mutex)
     let currentBatchBlocks: CodeBlock[] = []
     let currentBatchTexts: string[] = []
-    let currentBatchFileInfos: { filePath: string; fileHash: string; isNew: boolean }[] = []
+    let currentBatchFileInfos: FileInfo[] = []
     const batched = new Map<string, string>()
-    let failed = false
+    const run: ScanRun = {
+      workspace: scanWorkspace,
+      mode,
+      onError,
+      onFilesIndexed,
+      indexed: new Set(),
+      partial: new Set(),
+      failed: false,
+      rejectsAll: false,
+    }
     const activeBatchPromises = new Set<Promise<void>>()
     let pendingBatchCount = 0
 
@@ -208,7 +254,7 @@ export class DirectoryScanner implements IDirectoryScanner {
     const queueBatch = async (
       batchBlocks: CodeBlock[],
       batchTexts: string[],
-      batchFileInfos: { filePath: string; fileHash: string; isNew: boolean }[],
+      batchFileInfos: FileInfo[],
     ): Promise<void> => {
       while (!this._cancelled) {
         const release = await mutex.acquire()
@@ -218,20 +264,7 @@ export class DirectoryScanner implements IDirectoryScanner {
           if (pendingBatchCount < MAX_PENDING_BATCHES) {
             pendingBatchCount++
 
-            const batchPromise = batchLimiter(() =>
-              this.processBatch(
-                batchBlocks,
-                batchTexts,
-                batchFileInfos,
-                scanWorkspace,
-                mode,
-                onError,
-                onFilesIndexed,
-                () => {
-                  failed = true
-                },
-              ),
-            )
+            const batchPromise = batchLimiter(() => this.processBatch(run, batchBlocks, batchTexts, batchFileInfos))
             activeBatchPromises.add(batchPromise)
 
             // Clean up completed promises to prevent memory accumulation
@@ -466,13 +499,15 @@ export class DirectoryScanner implements IDirectoryScanner {
       await Promise.all(activeBatchPromises)
     }
 
-    if (!failed) {
-      for (const [filePath, fileHash] of batched.entries()) {
+    for (const [filePath, fileHash] of batched.entries()) {
+      if (run.partial.has(filePath)) {
+        this.cacheManager.updateHash(filePath, `${PARTIAL_HASH_PREFIX}${fileHash}`)
+      } else if (!run.failed) {
         this.cacheManager.updateHash(filePath, fileHash)
       }
     }
 
-    if (failed && batched.size > 0) {
+    if (run.failed && batched.size > 0) {
       log.warn("skipping cache hash updates due failed batch", {
         workspacePath: scanWorkspace,
         affectedFiles: batched.size,
@@ -529,28 +564,25 @@ export class DirectoryScanner implements IDirectoryScanner {
   }
 
   private async processBatch(
+    run: ScanRun,
     batchBlocks: CodeBlock[],
     batchTexts: string[],
-    batchFileInfos: { filePath: string; fileHash: string; isNew: boolean }[],
-    scanWorkspace: string,
-    mode: IndexingTelemetryMode,
-    onError?: (error: Error) => void,
-    onFilesIndexed?: (indexedCount: number) => void,
-    onBatchFailed?: () => void,
+    batchFileInfos: FileInfo[],
   ): Promise<void> {
+    const scanWorkspace = run.workspace
+    const mode = run.mode
     // Respect cooperative cancellation
     if (this._cancelled || batchBlocks.length === 0) return
 
-    if (batchBlocks.length === 0) {
-      log.debug("Skipping empty batch processing")
-      return
-    }
+    // The provider already refused a minimal request; sending more only repeats the same answer.
+    if (run.rejectsAll) return
 
     log.debug(`Starting to process batch of ${batchBlocks.length} blocks in workspace ${scanWorkspace}`)
 
     let attempts = 0
     let success = false
     let lastError: Error | null = null
+    let rejected = false
 
     while (attempts < this.maxBatchRetries && !success) {
       attempts++
@@ -604,7 +636,15 @@ export class DirectoryScanner implements IDirectoryScanner {
 
         log.debug(`Creating embeddings for ${batchTexts.length} texts`)
 
-        const { embeddings } = await this.embedder.createEmbeddings(batchTexts)
+        let embeddings: number[][]
+        try {
+          ;({ embeddings } = await this.embedder.createEmbeddings(batchTexts))
+        } catch (embedError) {
+          // The provider refused this exact input (e.g. over the model's max input tokens).
+          // Retrying cannot succeed, so stop and let the caller split the batch.
+          if (REJECTED_STATUSES.has(rejectionStatus(embedError) ?? 0)) rejected = true
+          throw embedError
+        }
         log.debug(`Successfully created ${embeddings.length} embeddings`)
 
         // Prepare points for Qdrant
@@ -642,7 +682,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 
         await this.vectorStore.upsertPoints(points)
         log.debug("Completed Qdrant upsert")
-        onFilesIndexed?.(batchFileInfos.length)
+        this.countIndexed(run, batchBlocks)
 
         success = true
         log.debug(`Successfully processed batch of ${batchBlocks.length} blocks after ${attempts} attempt(s)`)
@@ -656,6 +696,8 @@ export class DirectoryScanner implements IDirectoryScanner {
           batchSize: batchBlocks.length,
         })
 
+        if (rejected) break
+
         if (attempts < this.maxBatchRetries) {
           this.emitRetry(mode, attempts, batchBlocks.length, error)
           const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempts - 1)
@@ -665,16 +707,86 @@ export class DirectoryScanner implements IDirectoryScanner {
       }
     }
 
+    if (!success && lastError && rejected) {
+      // Stopping a scan must not start more network requests (probe or splits).
+      if (this._cancelled) return
+      if (await this.rejectsEverything(run, lastError)) return
+
+      if (batchBlocks.length > 1) {
+        log.warn("embedding provider rejected batch, splitting", { size: batchBlocks.length })
+        // The first request already deleted these files' old points, so the halves carry no file infos.
+        const mid = Math.ceil(batchBlocks.length / 2)
+        await this.processBatch(run, batchBlocks.slice(0, mid), batchTexts.slice(0, mid), [])
+        await this.processBatch(run, batchBlocks.slice(mid), batchTexts.slice(mid), [])
+        return
+      }
+
+      // A single chunk the provider refuses: skip it, but report which file and lines were dropped.
+      const block = batchBlocks[0]
+      const reason = sanitizeErrorMessage(lastError.message || "Unknown error")
+      log.error("skipping chunk rejected by embedding provider", {
+        location: "processBatch:rejected",
+        error: reason,
+        lines: `${block.start_line}-${block.end_line}`,
+      })
+      this.emitError(mode, "scanner:processBatch", lastError, attempts)
+      run.partial.add(block.file_path)
+      run.onError?.(
+        new RejectedChunkError(
+          `Skipped ${block.file_path} lines ${block.start_line}-${block.end_line}: the embedding provider rejected the chunk. ${lastError.message || "Unknown error"}`,
+        ),
+      )
+      return
+    }
+
     if (!success && lastError) {
       log.error(`Failed to process batch after ${this.maxBatchRetries} attempts`)
       this.emitError(mode, "scanner:processBatch", lastError, this.maxBatchRetries)
-      onBatchFailed?.()
-      if (onError) {
+      run.failed = true
+      if (run.onError) {
         // Preserve the original error message from embedders which now have detailed messages
         const errorMessage = lastError.message || "Unknown error"
 
-        onError(new Error(`Failed to process batch after ${this.maxBatchRetries} retries: ${errorMessage}`))
+        run.onError(new Error(`Failed to process batch after ${this.maxBatchRetries} retries: ${errorMessage}`))
       }
     }
+  }
+
+  /** Reports each file once, the first time any of its chunks is written. */
+  private countIndexed(run: ScanRun, blocks: CodeBlock[]): void {
+    let added = 0
+    for (const file of new Set(blocks.map((block) => block.file_path))) {
+      if (run.indexed.has(file)) continue
+      run.indexed.add(file)
+      added++
+    }
+    if (added > 0) run.onFilesIndexed?.(added)
+  }
+
+  /**
+   * A 400/422 can mean the model or endpoint is misconfigured rather than the input being too large.
+   * The first time a batch is rejected, send one minimal request: if that is refused too, nothing can
+   * be indexed, so report once and let every other batch stop instead of splitting down to single chunks.
+   */
+  private async rejectsEverything(run: ScanRun, cause: Error): Promise<boolean> {
+    run.probe ??= this.embedder.createEmbeddings([PROBE_TEXT]).then(
+      () => false,
+      (probeError: unknown) => REJECTED_STATUSES.has(rejectionStatus(probeError) ?? 0),
+    )
+    const refused = await run.probe
+    if (this._cancelled) return true
+    if (!refused) return false
+    if (run.rejectsAll) return true
+
+    run.rejectsAll = true
+    run.failed = true
+    log.error("embedding provider rejects every request", { location: "processBatch:rejectsAll" })
+    this.emitError(run.mode, "scanner:processBatch", cause, 1)
+    run.onError?.(
+      new Error(
+        `The embedding provider rejected every request, including a minimal one, so no batch was indexed. Check the embedding model and endpoint settings. ${cause.message || "Unknown error"}`,
+      ),
+    )
+    return true
   }
 }
