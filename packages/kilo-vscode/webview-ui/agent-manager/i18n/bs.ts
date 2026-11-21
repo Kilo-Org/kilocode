@@ -598,4 +598,76 @@ export const dict = {
   "agentManager.orphans.deleteButton": "Izbriši {{count}} foldera ({{size}})",
   "agentManager.orphans.cancel": "Otkaži",
   "agentManager.error.title": "Greška Agent Managera",
+  "agentManager.readiness.projects.title": 'Odaberite projekat unutar "{{name}}"',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" nije Git projekat, ali sadrži projekte ({{count}}). Odaberite onaj u kojem želite raditi.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" nije Git projekat, ali sadrži jedan projekat. Odaberite ga da biste radili u njemu.',
+  "agentManager.readiness.projects.use": "Koristi {{name}}",
+  "agentManager.readiness.projects.other": "Odaberi drugi folder",
+  "agentManager.readiness.plain.title": '"{{name}}" još nije podešen za Git',
+  "agentManager.readiness.plain.body":
+    "Worktree-ovi trebaju Git. Kilo ga može podesiti u ovom folderu, a vaši fajlovi ostaju tačno onakvi kakvi jesu.",
+  "agentManager.readiness.plain.action": "Podesi Git",
+  "agentManager.readiness.plain.other": "Odaberi drugi folder",
+  "agentManager.readiness.identity.title": "Koje ime treba stajati na vašim izmjenama?",
+  "agentManager.readiness.identity.body":
+    "Git označava svaku izmjenu imenom i e-mailom. Kilo ih čuva za vašeg Git korisnika.",
+  "agentManager.readiness.identity.name": "Ime",
+  "agentManager.readiness.identity.email": "E-mail",
+  "agentManager.readiness.identity.saveInit": "Sačuvaj i podesi Git",
+  "agentManager.readiness.identity.saveCommit": "Sačuvaj i kreiraj prvi commit",
+  "agentManager.readiness.restricted.title": "Odaberite folder u kojem je vaš projekat",
+  "agentManager.readiness.restricted.body":
+    "Ovo je vaš početni folder, pa Kilo ovdje neće podesiti Git. Umjesto toga odaberite folder svog projekta.",
+  "agentManager.readiness.restricted.action": "Odaberi folder",
+  "agentManager.readiness.commit.title": '"{{name}}" treba prvi commit',
+  "agentManager.readiness.commit.body":
+    "Worktree-ovi počinju od vašeg posljednjeg commita, a ovaj projekat ga još nema. Kilo može kreirati prazan za vas.",
+  "agentManager.readiness.commit.action": "Kreiraj prvi commit",
+  "agentManager.readiness.ready.initGit": "Git je podešen.",
+  "agentManager.readiness.ready.initGitNote":
+    "Vaši postojeći fajlovi još nisu sačuvani u Gitu, pa novi worktree-ovi počinju prazni.",
+  "agentManager.readiness.ready.initialCommit": "Prvi commit je kreiran.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Vaši postojeći fajlovi još nisu u njemu, pa novi worktree-ovi počinju prazni dok ih ne commitate.",
+  "agentManager.readiness.unknown.title": "Kilo nije mogao provjeriti ovaj projekat",
+  "agentManager.readiness.untrusted": "Vjerujte ovom prozoru kako bi Kilo mogao podesiti Git.",
+  "agentManager.readiness.error": "Kilo nije mogao završiti ovaj korak.",
+  "agentManager.readiness.check": "Provjeri ponovo",
+  "agentManager.readiness.working.initGit": "Podešavanje Gita…",
+  "agentManager.readiness.working.initialCommit": "Kreiranje prvog commita…",
+  "agentManager.readiness.working.project": "Otvaranje projekta…",
+  "agentManager.readiness.blocked": "Riješite problem iznad da biste kreirali worktree.",
+  "agentManager.readiness.blockedGit": "Prvo instalirajte Git. Možete nastaviti pisati zadatak.",
+  "agentManager.readiness.blockedLfs": "Prvo instalirajte Git LFS. Možete nastaviti pisati zadatak.",
+  "agentManager.readiness.git.title": "Kilo treba Git za pravljenje worktreea",
+  "agentManager.readiness.git.body":
+    "Git još nije instaliran na ovom računaru. Instalirajte ga, pa se vratite u ovaj prozor. Vaš zadatak ostaje ovdje.",
+  "agentManager.readiness.git.bodyMac":
+    "Git još nije instaliran na ovom Macu. Instalirajte ga, pa se vratite u ovaj prozor. Vaš zadatak ostaje ovdje.",
+  "agentManager.readiness.lfs.title": "{{name}} treba Git LFS",
+  "agentManager.readiness.lfs.body":
+    "Ovaj projekat čuva neke velike datoteke u Git LFS-u, koji još nije instaliran. Instalirajte ga, pa se vratite u ovaj prozor. Vaš zadatak ostaje ovdje.",
+  "agentManager.readiness.tool.install": "Instaliraj {{tool}}",
+  "agentManager.readiness.tool.get": "Preuzmi {{tool}}",
+  "agentManager.readiness.tool.other": "Drugi načini instalacije",
+  "agentManager.readiness.install.apple.title": "Završite instalaciju u Appleovom prozoru",
+  "agentManager.readiness.install.apple.body": "Kilo će ponovo provjeriti kada se vratite u ovaj prozor.",
+  "agentManager.readiness.install.terminal.title": "Instaliranje {{tool}}…",
+  "agentManager.readiness.install.terminal.body": "Radi u terminalu ispod. Kilo će ponovo provjeriti kada završi.",
+  "agentManager.readiness.install.stale.title": "{{tool}} je instaliran, ali VS Code ga još ne vidi",
+  "agentManager.readiness.install.stale.body":
+    "Ponovno učitavanje prozora to obično rješava. Vaš zadatak se vraća nakon učitavanja.",
+  "agentManager.readiness.install.reload": "Ponovo učitaj prozor",
+  "agentManager.readiness.ready.git": "Git je spreman.",
+  "agentManager.readiness.ready.lfs": "Git LFS je spreman.",
+  "agentManager.readiness.install.failed": "Instalacija je završena s kodom {{code}}. Pogledajte izlaz terminala.",
+  "agentManager.readiness.install.stopped": "Instalacija je zaustavljena. Pogledajte izlaz terminala.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} treba podešen Git LFS",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS je instaliran, ali još nije podešen za vašeg Git korisnika. Podesite ga da biste pravili worktree.",
+  "agentManager.readiness.lfsSetup.action": "Podesi Git LFS",
+  "agentManager.readiness.blockedLfsSetup": "Prvo podesite Git LFS. Možete nastaviti pisati zadatak.",
+  "agentManager.readiness.working.setupLfs": "Podešavanje Git LFS…",
 }

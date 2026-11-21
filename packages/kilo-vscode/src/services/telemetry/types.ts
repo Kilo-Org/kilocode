@@ -72,6 +72,7 @@ export enum TelemetryEventName {
   AGENT_MANAGER_SESSION_ERROR = "Agent Manager Session Error",
   AGENT_MANAGER_LOGIN_ISSUE = "Agent Manager Login Issue",
   AGENT_MANAGER_WORKTREE_HEALTH = "Agent Manager Worktree Health",
+  AGENT_MANAGER_WORKTREE_READINESS = "Agent Manager Worktree Readiness",
   AUTO_PURGE_STARTED = "Auto Purge Started",
   AUTO_PURGE_COMPLETED = "Auto Purge Completed",
   AUTO_PURGE_FAILED = "Auto Purge Failed",

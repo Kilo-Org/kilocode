@@ -11,6 +11,7 @@
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./project/route"
 import type { PRMergeMethod } from "./types"
+import type { InstallCommand } from "./worktree-install"
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -237,6 +238,15 @@ export interface Host {
 
   /** Ask VS Code's git extension to re-scan repositories (e.g. after worktree ref migration). */
   refreshGit(): void
+
+  /** Open a repository in VS Code's Source Control view without a picker. */
+  openRepository(root: string): void
+
+  runInstall(name: string, command: InstallCommand): Promise<number | undefined>
+
+  onWindowFocus(cb: () => void): Disposable
+
+  reloadWindow(): void
 
   /** Dispose all host resources. */
   dispose(): void

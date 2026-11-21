@@ -597,4 +597,77 @@ export const dict = {
   "agentManager.orphans.deleteButton": "{{count}} 個のフォルダーを削除 ({{size}})",
   "agentManager.orphans.cancel": "キャンセル",
   "agentManager.error.title": "Agent Manager エラー",
+  "agentManager.readiness.projects.title": "「{{name}}」内のプロジェクトを選択",
+  "agentManager.readiness.projects.body":
+    "「{{name}}」自体は Git プロジェクトではありませんが、中に {{count}} 個のプロジェクトがあります。作業するプロジェクトを選んでください。",
+  "agentManager.readiness.projects.bodyOne":
+    "「{{name}}」自体は Git プロジェクトではありませんが、中にプロジェクトがあります。そこで作業するには選択してください。",
+  "agentManager.readiness.projects.use": "{{name}} を使用",
+  "agentManager.readiness.projects.other": "別のフォルダーを選択",
+  "agentManager.readiness.plain.title": "「{{name}}」はまだ Git が設定されていません",
+  "agentManager.readiness.plain.body":
+    "Worktree には Git が必要です。Kilo がこのフォルダーに設定でき、ファイルはそのまま残ります。",
+  "agentManager.readiness.plain.action": "Git を設定",
+  "agentManager.readiness.plain.other": "別のフォルダーを選択",
+  "agentManager.readiness.identity.title": "変更に表示する名前は？",
+  "agentManager.readiness.identity.body":
+    "Git はすべての変更に名前とメールアドレスを記録します。Kilo はそれらを Git ユーザー用に保存します。",
+  "agentManager.readiness.identity.name": "名前",
+  "agentManager.readiness.identity.email": "メールアドレス",
+  "agentManager.readiness.identity.saveInit": "保存して Git を設定",
+  "agentManager.readiness.identity.saveCommit": "保存して最初のコミットを作成",
+  "agentManager.readiness.restricted.title": "プロジェクトのフォルダーを選択",
+  "agentManager.readiness.restricted.body":
+    "ここはホームフォルダーなので、Kilo は Git を設定しません。代わりにプロジェクト専用のフォルダーを選んでください。",
+  "agentManager.readiness.restricted.action": "フォルダーを選択",
+  "agentManager.readiness.commit.title": "「{{name}}」には最初のコミットが必要です",
+  "agentManager.readiness.commit.body":
+    "Worktree は最新のコミットから始まりますが、このプロジェクトにはまだコミットがありません。Kilo が空のコミットを作成できます。",
+  "agentManager.readiness.commit.action": "最初のコミットを作成",
+  "agentManager.readiness.ready.initGit": "Git を設定しました。",
+  "agentManager.readiness.ready.initGitNote":
+    "既存のファイルはまだ Git に保存されていないため、新しい worktree は空の状態で始まります。",
+  "agentManager.readiness.ready.initialCommit": "最初のコミットを作成しました。",
+  "agentManager.readiness.ready.initialCommitNote":
+    "既存のファイルはまだ含まれていないため、コミットするまで新しい worktree は空の状態で始まります。",
+  "agentManager.readiness.unknown.title": "Kilo はこのプロジェクトを確認できませんでした",
+  "agentManager.readiness.untrusted": "Kilo が Git を設定できるよう、このウィンドウを信頼してください。",
+  "agentManager.readiness.error": "Kilo はこの手順を完了できませんでした。",
+  "agentManager.readiness.check": "再確認",
+  "agentManager.readiness.working.initGit": "Git を設定しています…",
+  "agentManager.readiness.working.initialCommit": "最初のコミットを作成しています…",
+  "agentManager.readiness.working.project": "プロジェクトを開いています…",
+  "agentManager.readiness.blocked": "worktree を作成するには、上の問題を解決してください。",
+  "agentManager.readiness.blockedGit": "先に Git をインストールしてください。タスクの入力は続けられます。",
+  "agentManager.readiness.blockedLfs": "先に Git LFS をインストールしてください。タスクの入力は続けられます。",
+  "agentManager.readiness.git.title": "Kilo が worktree を作るには Git が必要です",
+  "agentManager.readiness.git.body":
+    "このコンピューターにはまだ Git がインストールされていません。インストールしてからこのウィンドウに戻ってください。タスクはここに残ります。",
+  "agentManager.readiness.git.bodyMac":
+    "この Mac にはまだ Git がインストールされていません。インストールしてからこのウィンドウに戻ってください。タスクはここに残ります。",
+  "agentManager.readiness.lfs.title": "{{name}} には Git LFS が必要です",
+  "agentManager.readiness.lfs.body":
+    "このプロジェクトは一部の大きなファイルを Git LFS に保存していますが、まだインストールされていません。インストールしてからこのウィンドウに戻ってください。タスクはここに残ります。",
+  "agentManager.readiness.tool.install": "{{tool}} をインストール",
+  "agentManager.readiness.tool.get": "{{tool}} を入手",
+  "agentManager.readiness.tool.other": "その他のインストール方法",
+  "agentManager.readiness.install.apple.title": "Apple のウィンドウでインストールを完了してください",
+  "agentManager.readiness.install.apple.body": "このウィンドウに戻ると Kilo が再確認します。",
+  "agentManager.readiness.install.terminal.title": "{{tool}} をインストールしています…",
+  "agentManager.readiness.install.terminal.body": "下のターミナルで実行中です。完了すると Kilo が再確認します。",
+  "agentManager.readiness.install.stale.title": "{{tool}} はインストールされていますが、VS Code からまだ見えません",
+  "agentManager.readiness.install.stale.body":
+    "通常はウィンドウを再読み込みすると解決します。タスクは再読み込み後に戻ります。",
+  "agentManager.readiness.install.reload": "ウィンドウを再読み込み",
+  "agentManager.readiness.ready.git": "Git の準備ができました。",
+  "agentManager.readiness.ready.lfs": "Git LFS の準備ができました。",
+  "agentManager.readiness.install.failed":
+    "インストールはコード {{code}} で終了しました。ターミナルの出力を確認してください。",
+  "agentManager.readiness.install.stopped": "インストールは停止されました。ターミナルの出力を確認してください。",
+  "agentManager.readiness.lfsSetup.title": "{{name}} には Git LFS のセットアップが必要です",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS はインストールされていますが、Git ユーザーに対してまだセットアップされていません。worktree を作成するにはセットアップしてください。",
+  "agentManager.readiness.lfsSetup.action": "Git LFS をセットアップ",
+  "agentManager.readiness.blockedLfsSetup": "先に Git LFS をセットアップしてください。タスクの入力は続けられます。",
+  "agentManager.readiness.working.setupLfs": "Git LFS をセットアップしています…",
 }

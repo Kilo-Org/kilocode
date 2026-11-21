@@ -180,7 +180,7 @@ export async function identity(dir: string, git: Git) {
   return true
 }
 
-/** Save only explicitly approved identity fields, in the repository's local configuration. */
+/** Save only explicitly approved identity fields in the user's global Git configuration. */
 export async function configure(dir: string, git: Git, values: { name?: string; email?: string }): Promise<void> {
   const state = await inspect(dir, git)
   if (!state.root) throw new Error(`Not a Git repository: ${dir}`)
@@ -189,7 +189,7 @@ export async function configure(dir: string, git: Git, values: { name?: string; 
     const value = values[field]
     if (value === undefined) continue
     if (!value.trim() || /[\r\n\x00]/.test(value)) throw new Error(`Invalid Git ${field}`)
-    await run(state.root, git, ["config", "--local", `user.${field}`, value])
+    await run(state.root, git, ["config", "--global", `user.${field}`, value])
   }
 }
 

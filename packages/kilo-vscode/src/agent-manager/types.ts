@@ -536,6 +536,8 @@ interface RunStatusMessage extends RunStatus {
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
   | WorktreeDeletedMessage
+  | import("../../webview-ui/src/types/messages/agent-manager").ReadinessMessage
+  | import("../../webview-ui/src/types/messages/agent-manager").ReadinessFocusMessage
   | import("../shared/pr-comment-actions").PRCommentResult
   | WorktreeActivityMessage
   | WorktreeStatsMessage
@@ -1302,6 +1304,9 @@ interface BrowserRequestIn {
 export type AgentManagerInMessage =
   | import("../shared/pr-comment-actions").PRCommentRequest
   | import("../../webview-ui/src/types/messages/agent-manager").BaseUpdateRequest
+  | import("../../webview-ui/src/types/messages/agent-manager").CheckReadinessRequest
+  | import("../../webview-ui/src/types/messages/agent-manager").FixReadinessRequest
+  | import("../../webview-ui/src/types/messages/agent-manager").ReloadWindowRequest
   | CreateWorktreeIn
   | RequestProjectsIn
   | AddProjectIn

@@ -6,6 +6,7 @@
  * projects leave state untouched.
  */
 
+import { tmpdir } from "node:os"
 import { GitOps } from "../GitOps"
 import type { Host } from "../host"
 import type { AgentManagerInMessage, AgentManagerOutMessage } from "../types"
@@ -16,6 +17,14 @@ import { canonicalizePath, projectIdFor, resolveProjectRoot, samePath } from "./
 import type { SidebarTarget, SessionRef } from "./route"
 import { cloneProject, createProject, defaultParent, onboard, type Onboarding } from "./onboarding"
 import { runner } from "./prepare"
+import { applyWorktreeFix, checkWorktreeReadiness, type FixOutcome, type ReadinessTools } from "../worktree-readiness"
+import { DOWNLOAD, detectInstaller, installTool, stringEnv, type InstallCommand } from "../worktree-install"
+import { toolEnvironment } from "../shell-env"
+import type {
+  CheckReadinessRequest,
+  FixReadinessRequest,
+  ReadinessFix,
+} from "../../../webview-ui/src/types/messages/agent-manager"
 
 const pending = new WeakSet<ProjectMessageDeps>()
 const selections = new WeakMap<ProjectMessageDeps, symbol>()
@@ -66,6 +75,12 @@ export interface ProjectMessageDeps {
   ready: (ctx: ProjectContext, options?: { warm?: boolean }) => Promise<ProjectInitResult>
   /** Route one session to a directory inside a project (session override + project route). */
   routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
+  openRepository: (root: string) => void
+  branches: (ctx: ProjectContext) => Promise<void>
+  /** Run a terminal install task; resolves its exit code, or undefined when stopped. */
+  install: (name: string, command: import("../worktree-install").InstallCommand) => Promise<number | undefined>
+  openExternal: (url: string) => void
+  reloadWindow: () => void
   git?: GitOps
   log: (...args: unknown[]) => void
 }
@@ -76,6 +91,7 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
     deps.openSettings(m.tab, m.projectId)
     return true
   }
+  if (await local(m, deps)) return true
   if (m.type === "agentManager.requestProjects") {
     deps.push()
     return true
@@ -303,6 +319,17 @@ async function attachPrepared(
 
 /** Register a prepared root, then select it without warming a worktree of its own. */
 async function attach(root: string, deps: ProjectMessageDeps, git: GitOps): Promise<void> {
+  const project = await register(root, deps, git)
+  finish({ projectId: project.id, kind: "local" }, deps)
+  if (project.existing) deps.onboarding.notify("info", `Opened the existing project at ${project.root}.`)
+}
+
+/** Register and initialize a prepared root without selecting it. */
+async function register(
+  root: string,
+  deps: ProjectMessageDeps,
+  git: GitOps,
+): Promise<{ id: string; root: string; existing: boolean }> {
   root = canonicalizePath(root)
   const pinned = deps.contexts.pinned()
   const primary = pinned && (await resolveProjectRoot(pinned.root, runner(git)))
@@ -315,11 +342,102 @@ async function attach(root: string, deps: ProjectMessageDeps, git: GitOps): Prom
   const result = await deps.ready(ctx, { warm: false })
   deps.push()
   if (!result.current || !result.ok) throw new Error("Expand the project to retry initialization.")
-  finish({ projectId: id, kind: "local" }, deps)
-  if (existing) deps.onboarding.notify("info", `Opened the existing project at ${root}.`)
+  return { id, root, existing }
+}
+
+/** Readiness checks and the one window command this channel owns. */
+async function local(m: AgentManagerInMessage, deps: ProjectMessageDeps): Promise<boolean> {
+  if (m.type === "agentManager.reloadWindow") {
+    deps.reloadWindow()
+    return true
+  }
+  if (m.type !== "agentManager.checkReadiness" && m.type !== "agentManager.fixReadiness") return false
+  await readiness(m, deps)
+  return true
+}
+
+const FIXES: Record<ReadinessFix, true> = {
+  initGit: true,
+  initialCommit: true,
+  useProject: true,
+  pickFolder: true,
+  installGit: true,
+  installLfs: true,
+  downloadGit: true,
+  downloadLfs: true,
+  setupLfs: true,
+}
+
+/** Folder the user just picked, per project. One-shot and host-side only; the webview never supplies it. */
+const picks = new Map<string, string>()
+
+/** Check or fix a project's worktree readiness and reply with the original project and request IDs. */
+async function readiness(m: CheckReadinessRequest | FixReadinessRequest, deps: ProjectMessageDeps): Promise<void> {
+  const reply = (outcome: FixOutcome) =>
+    deps.post({ type: "agentManager.readiness", projectId: m.projectId, requestID: m.requestID, ...outcome })
+  const ctx = typeof m.projectId === "string" ? deps.contexts.resolve(m.projectId) : undefined
+  if (!ctx) return reply({ result: { status: "unknown", detail: "The project is unavailable." } })
+  const git = deps.git ?? new GitOps({ log: deps.log })
+  const manager = ctx.worktreeManager()
+  const tools: ReadinessTools = {
+    env: async (fresh) => (fresh ? toolEnvironment(true) : undefined),
+    git: (fresh, verify, env) => manager.probeGit(fresh, verify, env),
+    usesLfs: (root) => manager.repoUsesLfs(root),
+    lfs: (_root, fresh, verify, env) => manager.probeLfs(fresh, verify, env),
+    lfsSetup: (root) => manager.checkLfsFilters(root),
+    setupLfs: async () => {
+      const command: InstallCommand = {
+        command: manager.binary,
+        args: ["lfs", "install"],
+        cwd: tmpdir(),
+        env: stringEnv(await toolEnvironment(true)),
+        mode: "task",
+      }
+      return deps.install("Set up Git LFS", command)
+    },
+    installer: async (kind) => detectInstaller(kind, process.platform, await toolEnvironment()),
+    install: async (kind, root) =>
+      installTool(kind, root, {
+        platform: process.platform,
+        env: await toolEnvironment(true),
+        git: manager.binary,
+        run: deps.install,
+        open: deps.openExternal,
+        probe: (kind, fresh) => (kind === "git" ? manager.probeGit(fresh) : manager.probeLfs(fresh)),
+      }),
+    download: (kind) => deps.openExternal(DOWNLOAD[kind]),
+  }
+  const base = { git, trusted: () => deps.onboarding.isTrusted(), tools }
+  try {
+    if (m.type === "agentManager.checkReadiness")
+      return reply({ result: await checkWorktreeReadiness(ctx.root, base, m.fresh === true, m.verify === true) })
+    if (typeof m.fix !== "string" || !Object.hasOwn(FIXES, m.fix)) {
+      reply({ result: await checkWorktreeReadiness(ctx.root, base), error: `Unknown readiness fix: ${String(m.fix)}` })
+      return
+    }
+    reply(
+      await applyWorktreeFix(ctx.root, m, {
+        ...base,
+        exclude: (root) => ctx.worktreeManager().ensureGitExclude(root),
+        openRepository: (root) => deps.openRepository(root),
+        branches: async (root) => {
+          const next = deps.contexts.resolve(projectIdFor(canonicalizePath(root))) ?? ctx
+          await deps.branches(next)
+        },
+        attach: async (root) => (await register(root, deps, git)).id,
+        pick: () => deps.pickFolder({ defaultPath: ctx.root, title: "Choose your project folder" }),
+        picked: () => picks.get(ctx.id),
+        remember: (root) => picks.set(ctx.id, root),
+        forget: () => picks.delete(ctx.id),
+      }),
+    )
+  } finally {
+    if (!deps.git) git.dispose()
+  }
 }
 
 async function removeProject(id: string, deps: ProjectMessageDeps): Promise<void> {
+  picks.delete(id)
   if (deps.contexts.pinned()?.id === id) return
   const active = deps.contexts.active()?.id === id
   await deps.registry.remove(id)

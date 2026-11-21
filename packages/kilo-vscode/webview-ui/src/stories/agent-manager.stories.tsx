@@ -49,6 +49,8 @@ import type {
 } from "../types/messages"
 import type { ReviewComment } from "../../diff-viewer/review-comments"
 import { createModeRouter } from "../../agent-manager/mode-router"
+import { ReadinessCard } from "../../agent-manager/ReadinessCard"
+import type { ReadinessState } from "../../agent-manager/worktree-readiness"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
 import "../../agent-manager/pr/pr-panel.css"
@@ -2567,4 +2569,234 @@ export const ProjectsAvatars: Story = {
 export const ProjectsAvatars200: Story = {
   name: "Projects — organization avatars 200px",
   render: ProjectsStory,
+}
+
+// ---------------------------------------------------------------------------
+// Worktree readiness card (New Worktree dialog)
+// ---------------------------------------------------------------------------
+
+function ReadinessPreview(props: { state: ReadinessState; form?: boolean }) {
+  return (
+    <StoryProviders>
+      <div class="am-nv-dialog-content">
+        <ReadinessCard
+          state={props.state}
+          ref={(el) => {
+            if (!props.form) return
+            queueMicrotask(() => el.querySelector<HTMLButtonElement>("[data-readiness-action]")?.click())
+          }}
+          onFix={() => {}}
+          onProject={() => {}}
+          onFolder={() => {}}
+          onCheck={() => {}}
+          onReload={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  )
+}
+
+const readinessPlain = {
+  status: "blocked",
+  code: "not_git_repo",
+  name: "scratch",
+  trusted: true,
+  identity: true,
+} as const
+
+const readinessGit = {
+  status: "blocked",
+  code: "git_not_found",
+  name: "orbit",
+  trusted: true,
+  platform: "darwin",
+  installer: "apple",
+} as const
+
+const readinessLfs = {
+  status: "blocked",
+  code: "lfs_missing",
+  name: "orbit",
+  trusted: true,
+  platform: "darwin",
+  installer: "brew",
+} as const
+
+export const ReadinessProjects: Story = {
+  name: "Readiness — folder holds projects",
+  render: () => (
+    <ReadinessPreview
+      state={{
+        status: "blocked",
+        project: "code",
+        result: {
+          status: "blocked",
+          code: "not_git_repo",
+          name: "code",
+          trusted: true,
+          projects: [
+            { root: "/code/orbit", label: "orbit" },
+            { root: "/code/atlas", label: "atlas" },
+          ],
+        },
+      }}
+    />
+  ),
+}
+
+export const ReadinessPlain: Story = {
+  name: "Readiness — plain folder",
+  render: () => <ReadinessPreview state={{ status: "blocked", project: "scratch", result: readinessPlain }} />,
+}
+
+export const ReadinessIdentity: Story = {
+  name: "Readiness — name and email",
+  render: () => (
+    <ReadinessPreview
+      form
+      state={{ status: "blocked", project: "scratch", result: { ...readinessPlain, identity: false } }}
+    />
+  ),
+}
+
+export const ReadinessHome: Story = {
+  name: "Readiness — home folder",
+  render: () => (
+    <ReadinessPreview
+      state={{
+        status: "blocked",
+        project: "home",
+        result: { status: "blocked", code: "not_git_repo", name: "jane", trusted: true, restricted: true },
+      }}
+    />
+  ),
+}
+
+export const ReadinessNoCommits: Story = {
+  name: "Readiness — no first commit",
+  render: () => (
+    <ReadinessPreview
+      state={{
+        status: "blocked",
+        project: "notes-site",
+        result: { status: "blocked", code: "no_commits", name: "notes-site", trusted: true, identity: true },
+      }}
+    />
+  ),
+}
+
+export const ReadinessWorking: Story = {
+  name: "Readiness — setting up Git",
+  render: () => (
+    <ReadinessPreview state={{ status: "fixing", project: "scratch", result: readinessPlain, fix: "initGit" }} />
+  ),
+}
+
+export const ReadinessGitReady: Story = {
+  name: "Readiness — Git set up",
+  render: () => (
+    <ReadinessPreview state={{ status: "ready", project: "scratch", note: "uncommitted", fixed: "initGit" }} />
+  ),
+}
+
+export const ReadinessCommitReady: Story = {
+  name: "Readiness — first commit created",
+  render: () => (
+    <ReadinessPreview state={{ status: "ready", project: "notes-site", note: "uncommitted", fixed: "initialCommit" }} />
+  ),
+}
+
+export const ReadinessUnknown: Story = {
+  name: "Readiness — couldn't check",
+  render: () => (
+    <ReadinessPreview
+      state={{
+        status: "unknown",
+        project: "shared",
+        detail:
+          "fatal: detected dubious ownership in repository at '/srv/shared'\nTo add an exception for this directory, call:\n\n\tgit config --global --add safe.directory /srv/shared",
+      }}
+    />
+  ),
+}
+
+export const ReadinessUntrusted: Story = {
+  name: "Readiness — untrusted window",
+  render: () => (
+    <ReadinessPreview
+      state={{ status: "blocked", project: "scratch", result: { ...readinessPlain, trusted: false } }}
+    />
+  ),
+}
+
+export const ReadinessFixError: Story = {
+  name: "Readiness — fix failed",
+  render: () => (
+    <ReadinessPreview
+      state={{
+        status: "blocked",
+        project: "notes-site",
+        result: { status: "blocked", code: "no_commits", name: "notes-site", trusted: true, identity: true },
+        error: "fatal: unable to write new index file",
+      }}
+    />
+  ),
+}
+
+export const ReadinessGitMissing: Story = {
+  name: "Readiness — Git missing",
+  render: () => <ReadinessPreview state={{ status: "blocked", project: "orbit", result: readinessGit }} />,
+}
+
+export const ReadinessGitInstalling: Story = {
+  name: "Readiness — Git installer open",
+  render: () => (
+    <ReadinessPreview
+      state={{ status: "installing", project: "orbit", result: readinessGit, fix: "installGit", mode: "apple" }}
+    />
+  ),
+}
+
+export const ReadinessGitInstalled: Story = {
+  name: "Readiness — Git installed",
+  render: () => <ReadinessPreview state={{ status: "ready", project: "orbit", fixed: "installGit" }} />,
+}
+
+export const ReadinessLfsMissing: Story = {
+  name: "Readiness — Git LFS missing",
+  render: () => <ReadinessPreview state={{ status: "blocked", project: "orbit", result: readinessLfs }} />,
+}
+
+export const ReadinessLfsSetup: Story = {
+  name: "Readiness — Git LFS not set up",
+  render: () => (
+    <ReadinessPreview
+      state={{
+        status: "blocked",
+        project: "orbit",
+        result: { status: "blocked", code: "lfs_not_setup", name: "orbit", trusted: true },
+      }}
+    />
+  ),
+}
+
+export const ReadinessLfsInstalling: Story = {
+  name: "Readiness — installing Git LFS",
+  render: () => (
+    <ReadinessPreview
+      state={{ status: "installing", project: "orbit", result: readinessLfs, fix: "installLfs", mode: "pending" }}
+    />
+  ),
+}
+
+export const ReadinessLfsStale: Story = {
+  name: "Readiness — Git LFS installed, not visible",
+  render: () => (
+    <ReadinessPreview state={{ status: "stale", project: "orbit", result: readinessLfs, fix: "installLfs" }} />
+  ),
+}
+
+export const ReadinessLfsReady: Story = {
+  name: "Readiness — Git LFS installed",
+  render: () => <ReadinessPreview state={{ status: "ready", project: "orbit", fixed: "installLfs" }} />,
 }

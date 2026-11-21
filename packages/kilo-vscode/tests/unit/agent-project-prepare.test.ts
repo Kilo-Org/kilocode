@@ -202,15 +202,17 @@ describe("project preparation", () => {
     await expect(initialize(path.parse(dir).root, git)).rejects.toThrow("filesystem root")
   })
 
-  it("requires explicit identity and saves approved values only locally", async () => {
+  it("requires explicit identity and saves approved values globally", async () => {
     const { root } = await create(dir, "project", git)
     expect(await identity(root, git)).toBe(false)
     await expect(commit(root, git)).rejects.toThrow("auto-detection is disabled")
     const before = await fs.readFile(process.env.GIT_CONFIG_GLOBAL!)
     await configure(root, git, { name: "Test", email: "test@example.invalid" })
     expect(await identity(root, git)).toBe(true)
-    expect(await fs.readFile(process.env.GIT_CONFIG_GLOBAL!)).toEqual(before)
-    expect(await run(root, "config", "--local", "user.name")).toBe("Test")
+    expect(await fs.readFile(process.env.GIT_CONFIG_GLOBAL!)).not.toEqual(before)
+    expect(await run(root, "config", "--global", "user.name")).toBe("Test")
+    expect(await run(root, "config", "--global", "user.email")).toBe("test@example.invalid")
+    expect(await run(root, "config", "--local", "--list")).not.toContain("user.name")
   })
 
   it("respects explicit author and committer environment identity without using OS guesses", async () => {
