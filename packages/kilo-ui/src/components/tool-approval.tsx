@@ -10,7 +10,7 @@ import { Icon } from "./icon"
  * free of any i18n key coupling.
  */
 export type ToolApproval = {
-  source: "agent" | "global" | "project" | "yolo" | "session" | "manual" | "default"
+  source: "agent" | "global" | "project" | "yolo" | "session" | "manual" | "auto" | "default"
   agent?: string
   rule?: { permission: string; pattern: string; action: string }
   /** True when the tool call's target path was outside the workspace/worktree. */
@@ -28,7 +28,7 @@ export type ToolApprovalDisplay = {
   outsideWorkspace?: string
 }
 
-const SOURCE_KEYS = ["agent", "global", "project", "yolo", "session", "manual", "default"] as const
+const SOURCE_KEYS = ["agent", "global", "project", "yolo", "session", "manual", "auto", "default"] as const
 
 const Context = createContext<Accessor<ToolApprovalDisplay | undefined>>(() => undefined)
 

@@ -556,7 +556,7 @@ describe("kilocode tool registry indexing", () => {
     const session = Layer.succeed(Session.Service, {} as Session.Interface)
     const summary = Layer.succeed(SessionSummary.Service, {} as SessionSummary.Interface)
     const provider = Layer.succeed(Provider.Service, {} as Provider.Interface)
-    const config = Layer.succeed(Config.Service, {} as Config.Interface)
+    const config = Layer.succeed(Config.Service, { getGlobal: () => Effect.succeed({}) } as Config.Interface) // kilocode_change - bootstrap resolves the reviewer model
     const watcher = Layer.succeed(KilocodeWatcher.Service, KilocodeWatcher.Service.of({ init: () => Effect.void }))
     const wakeup = Layer.succeed(
       Wakeup.Service,
