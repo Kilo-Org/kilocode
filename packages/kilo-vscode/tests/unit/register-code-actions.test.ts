@@ -16,11 +16,17 @@ type Api = typeof vscode & {
 }
 
 const api = vscode as Api
+const documents = api.workspace as unknown as { textDocuments: unknown[] }
 const original = {
   register: api.commands.registerCommand,
   execute: api.commands.executeCommand,
   editor: api.window.activeTextEditor,
   diagnostics: api.languages.getDiagnostics,
+  documents: documents.textDocuments,
+}
+
+function setDocuments(docs: unknown[]) {
+  documents.textDocuments = docs
 }
 
 function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "tab", tabbed = false) {
@@ -100,7 +106,24 @@ afterEach(() => {
   api.commands.executeCommand = original.execute
   api.window.activeTextEditor = original.editor
   api.languages.getDiagnostics = original.diagnostics
+  documents.textDocuments = original.documents
 })
+
+function emptySelection() {
+  const seen: unknown[] = []
+  api.window.activeTextEditor = {
+    selection: { isEmpty: true, start: { line: 0 }, end: { line: 0 } },
+    document: {
+      uri: vscode.Uri.file("/repo/src/file.ts"),
+      getText: (selection: unknown) => {
+        seen.push(selection)
+        return "const value = 1"
+      },
+    },
+  }
+  api.languages.getDiagnostics = () => []
+  return seen
+}
 
 function expectContextPost(post: unknown) {
   const value = post as { type: string; context: Record<string, unknown> }
@@ -257,5 +280,159 @@ describe("registerCodeActions", () => {
 
     expect(state.events).toEqual(["wait"])
     expect(state.posts).toEqual([])
+  })
+
+  describe("fixCode", () => {
+    it("uses the quick fix range when the editor selection is empty", async () => {
+      const state = setup()
+      const seen = emptySelection()
+      const range = new vscode.Range(new vscode.Position(2, 0), new vscode.Position(4, 0))
+      const diagnostics = [{ source: "eslint", message: "Missing semicolon" }] as never
+
+      await state.commands.get("kilo-code.new.fixCode")?.(range, diagnostics)
+
+      expect(seen).toEqual([range])
+      const post = state.posts.at(0) as { type: string; text: string }
+      expect(post.type).toBe("triggerTask")
+      expect(post.text).toContain("src/file.ts:3-5")
+      expect(post.text).toContain("[eslint] Missing semicolon")
+    })
+
+    it("uses the marshalled quick fix range that lost its prototype over the extension host RPC", async () => {
+      const state = setup()
+      const seen = emptySelection()
+      const marshalled = { start: { line: 2, character: 0 }, end: { line: 4, character: 0 } }
+
+      await state.commands.get("kilo-code.new.fixCode")?.(marshalled)
+
+      expect(seen).toEqual([marshalled])
+      const post = state.posts.at(0) as { type: string; text: string }
+      expect(post.type).toBe("triggerTask")
+      expect(post.text).toContain("src/file.ts:3-5")
+    })
+
+    it("does nothing when the marshalled quick fix range is empty", async () => {
+      const state = setup()
+      emptySelection()
+      const marshalled = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }
+
+      await state.commands.get("kilo-code.new.fixCode")?.(marshalled)
+
+      expect(state.posts).toEqual([])
+    })
+
+    it("passes the code action diagnostics through the prompt", async () => {
+      const state = setup()
+      emptySelection()
+      const range = new vscode.Range(new vscode.Position(2, 0), new vscode.Position(4, 0))
+      api.languages.getDiagnostics = () => [{ range: { intersection: () => ({}) } }]
+      const given = [{ message: "Type error" }] as never
+
+      await state.commands.get("kilo-code.new.fixCode")?.(range, given)
+
+      expect((state.posts.at(0) as { text: string }).text).toContain("[Error] Type error")
+    })
+
+    it("falls back to the editor selection and live diagnostics without arguments", async () => {
+      const state = setup()
+      api.languages.getDiagnostics = () => [{ range: { intersection: () => ({}) } }]
+
+      await state.commands.get("kilo-code.new.fixCode")?.()
+
+      expect((state.posts.at(0) as { text: string }).text).toContain("src/file.ts:3-5")
+    })
+
+    it("does nothing when the selection is empty and no range is passed", async () => {
+      const state = setup()
+      emptySelection()
+
+      await state.commands.get("kilo-code.new.fixCode")?.()
+
+      expect(state.posts).toEqual([])
+    })
+  })
+
+  describe("lightbulb actions", () => {
+    const marshalled = { start: { line: 2, character: 0 }, end: { line: 4, character: 0 } }
+
+    it.each(["kilo-code.new.explainCode", "kilo-code.new.improveCode"] as const)(
+      "%s uses the code action range when the editor selection is empty",
+      async (command) => {
+        const state = setup()
+        const seen = emptySelection()
+
+        await state.commands.get(command)?.(marshalled)
+
+        expect(seen).toEqual([marshalled])
+        const post = state.posts.at(0) as { type: string; text: string }
+        expect(post.type).toBe("triggerTask")
+        expect(post.text).toContain("src/file.ts:3-5")
+      },
+    )
+
+    it("kilo-code.new.addToContext uses the code action range when the editor selection is empty", async () => {
+      const state = setup()
+      emptySelection()
+
+      await state.commands.get("kilo-code.new.addToContext")?.(marshalled)
+
+      expect(state.posts).toHaveLength(1)
+      expectContextPost(state.posts.at(0))
+    })
+
+    it("does nothing when the marshalled code action range is empty", async () => {
+      const state = setup()
+      emptySelection()
+
+      await state.commands.get("kilo-code.new.explainCode")?.({
+        start: { line: 0, character: 0 },
+        end: { line: 0, character: 0 },
+      })
+
+      expect(state.posts).toEqual([])
+    })
+  })
+
+  describe("target document", () => {
+    const marshalled = { start: { line: 2, character: 0 }, end: { line: 4, character: 0 } }
+
+    it("reads from the code action document when the active editor shows a different file", async () => {
+      const state = setup()
+      const seen: unknown[] = []
+      setDocuments([
+        {
+          uri: vscode.Uri.file("/repo/src/other.ts"),
+          getText: (selection: unknown) => {
+            seen.push(selection)
+            return "let other = 1"
+          },
+        },
+      ])
+
+      await state.commands.get("kilo-code.new.fixCode")?.(marshalled, undefined, "file:///repo/src/other.ts")
+
+      expect(seen).toEqual([marshalled])
+      const post = state.posts.at(0) as { type: string; text: string }
+      expect(post.text).toContain("src/other.ts:3-5")
+      expect(post.text).toContain("let other = 1")
+      expect(post.text).not.toContain("const value = 1")
+    })
+
+    it("does nothing when the code action document is no longer open", async () => {
+      const state = setup()
+
+      await state.commands.get("kilo-code.new.explainCode")?.(marshalled, "file:///repo/src/gone.ts")
+
+      expect(state.posts).toEqual([])
+    })
+
+    it("uses the editor selection when the uri matches the active editor", async () => {
+      const state = setup()
+
+      await state.commands.get("kilo-code.new.addToContext")?.(undefined, "file:///repo/src/file.ts")
+
+      expect(state.posts).toHaveLength(1)
+      expectContextPost(state.posts.at(0))
+    })
   })
 })
