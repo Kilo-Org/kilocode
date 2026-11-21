@@ -194,11 +194,11 @@ class LegacyMigrationEngine(
                         val agent = conversion.agent.toMutableMap()
                         agent["name"] = JsonPrimitive(info.name)
                         agentConfig[slug] = JsonObject(agent)
+                        val msg = customModeMessage(conversion)
                         if (conversion.warnings.isEmpty()) {
-                            results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
-                            sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.success))
+                            results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.success, msg))
+                            sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.success, msg))
                         } else {
-                            val msg = conversion.warnings.joinToString("; ")
                             results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
                             sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.warning, msg))
                         }
@@ -214,11 +214,11 @@ class LegacyMigrationEngine(
                     sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.migrating))
                     val conversion = convertCustomMode(mode, migratedServers, mcpAvailable)
                     agentConfig[slug] = conversion.agent
+                    val msg = customModeMessage(conversion)
                     if (conversion.warnings.isEmpty()) {
-                        results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
-                        sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.success))
+                        results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.success, msg))
+                        sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.success, msg))
                     } else {
-                        val msg = conversion.warnings.joinToString("; ")
                         results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
                         sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.warning, msg))
                     }
@@ -471,6 +471,21 @@ interface LegacyMigrationSink {
             override fun session(progress: LegacyMigrationSessionProgress) = Unit
         }
     }
+}
+
+// -----------------------------------------------------------------------
+// Custom mode item message
+// -----------------------------------------------------------------------
+
+/**
+ * Message for a converted custom mode: warnings first, then notes, joined with "; ".
+ *
+ * Warnings are conditions the user must act on; notes only explain the converted result, so
+ * they never change the item's status. Returns null when the mode has neither.
+ */
+private fun customModeMessage(conversion: LegacyMigrationConverters.ModeConversion): String? {
+    val parts = conversion.warnings + conversion.notes
+    return if (parts.isEmpty()) null else parts.joinToString("; ")
 }
 
 // -----------------------------------------------------------------------

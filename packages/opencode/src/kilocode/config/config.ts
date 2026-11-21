@@ -382,6 +382,11 @@ export namespace KilocodeConfig {
         log.debug("kilocode mode warning", { warning })
         warnings.push({ path: warning.path, message: warning.message })
       }
+      // Notes explain an expected outcome rather than a condition to act on, so they stay
+      // out of the config warning channel that feeds `kilo config check` and the toast.
+      for (const note of migration.notes) {
+        log.debug("kilocode mode note", { note })
+      }
     } catch (err) {
       log.warn("failed to load kilocode modes", { error: err })
     }

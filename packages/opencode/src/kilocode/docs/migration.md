@@ -102,7 +102,12 @@ This converts to:
 
 The `fileRegex` is translated into permission wildcard globs, with the catch-all `"*": "deny"` written first because the CLI resolves the last matching rule. The supported subset is the same one the JetBrains plugin migrator uses ([`permission-glob.ts`](../permission-glob.ts)): anchors, literal characters, `\`-escaped punctuation, `.` and `.*`, `(...)` alternation, and an optional `?` after any of the supported atoms. A pattern outside that subset (a character class, `+`, a `\d`-style escape, nested groups, an arm of only digits) sets that permission to `"ask"` and reports a migration warning, so the mode asks instead of silently losing the restriction. An arm of only digits is outside the subset because JavaScript enumerates such a key before `"*"`, which would make the catch-all deny win.
 
-`bash`, `browser_open` and `skill` are explicitly denied because they weren't in the original groups list. No legacy group grants skills, so a migrated mode is denied `skill` and reports `Skills are not available: no legacy group grants them`.
+`bash`, `browser_open` and `skill` are explicitly denied because they weren't in the original groups list. No legacy group grants skills, so a migrated mode is denied `skill`, and the migration notes record `Skills are not available: no legacy group grants them` once per converted mode. A note is an explanatory statement rather than a condition to act on: it is logged at debug and never becomes a config warning, so the reported warning list stays limited to conditions the user can act on.
+
+| Channel | What it carries |
+|---|---|
+| Migration warning | A condition the user has to resolve: an `mcp` group that granted nothing, a group option that was not read, a file restriction that could not be translated |
+| Migration note | An expected outcome worth explaining: the denied `skill` grant of a converted mode |
 
 ## Default Modes
 

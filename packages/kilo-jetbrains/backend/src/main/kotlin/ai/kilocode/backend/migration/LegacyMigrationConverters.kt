@@ -394,7 +394,7 @@ object LegacyMigrationConverters {
     )
     private val ALL_MODE_PERMISSIONS = listOf("read", "edit", "bash", "browser_open", "skill")
 
-    /** Reported once per converted mode whose legacy groups grant no `skill` permission. */
+    /** Explained once per converted mode whose legacy groups grant no `skill` permission. */
     private const val SKILL_NOT_GRANTED = "Skills are not available: no legacy group grants them"
 
     /** Option keys a legacy group can carry. Any other key means the group was not read fully. */
@@ -402,7 +402,10 @@ object LegacyMigrationConverters {
 
     data class ModePermissions(
         val permission: JsonObject,
+        /** Conditions that need the user's action. */
         val warnings: List<String>,
+        /** Explanatory statements about the converted result, not conditions to act on. */
+        val notes: List<String>,
     )
 
     private val PERMISSION_KEY_UNSAFE = Regex("[^a-zA-Z0-9_-]")
@@ -429,6 +432,7 @@ object LegacyMigrationConverters {
         val permission = mutableMapOf<String, JsonElement>()
         val allowed = mutableSetOf<String>()
         val warnings = mutableListOf<String>()
+        val notes = mutableListOf<String>()
         var mcpGroupSeen = false
 
         for (group in groups) {
@@ -515,8 +519,9 @@ object LegacyMigrationConverters {
             if (perm !in allowed) permission[perm] = JsonPrimitive("deny")
         }
         // No legacy group grants `skill`, so it stays denied on purpose. Say so once per mode
-        // instead of leaving the user to wonder why a migrated mode cannot load skills.
-        if ("skill" !in allowed) warnings.add(SKILL_NOT_GRANTED)
+        // instead of leaving the user to wonder why a migrated mode cannot load skills. This is a
+        // note, not a warning: nothing here needs the user to act, so the mode stays a success.
+        if ("skill" !in allowed) notes.add(SKILL_NOT_GRANTED)
 
         if (!mcpGroupSeen) {
             for (server in mcpServers) {
@@ -524,12 +529,13 @@ object LegacyMigrationConverters {
                 if (key !in allowed) permission[key] = JsonPrimitive("deny")
             }
         }
-        return ModePermissions(JsonObject(permission), warnings)
+        return ModePermissions(JsonObject(permission), warnings, notes)
     }
 
     data class ModeConversion(
         val agent: JsonObject,
         val warnings: List<String>,
+        val notes: List<String>,
     )
 
     /**
@@ -567,7 +573,7 @@ object LegacyMigrationConverters {
             put("prompt", prompt)
             put("permission", permissions.permission)
         }
-        return ModeConversion(agent, permissions.warnings)
+        return ModeConversion(agent, permissions.warnings, permissions.notes)
     }
 
     // ---------------------------------------------------------------------------

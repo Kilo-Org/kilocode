@@ -76,10 +76,11 @@ export namespace ModesMigrator {
     groups: KilocodeMode["groups"],
     mcpServers: string[],
     mcpAvailable: boolean,
-  ): { permission: ConfigPermission.Info; warnings: string[] } {
+  ): { permission: ConfigPermission.Info; warnings: string[]; notes: string[] } {
     const permission: Record<string, ConfigPermission.Rule> = {}
     const allowed = new Set<string>()
     const warnings: string[] = []
+    const notes: string[] = []
     let seen = false
 
     for (const group of groups) {
@@ -155,11 +156,12 @@ export namespace ModesMigrator {
 
     // Explicitly deny permissions that aren't granted: the CLI defaults a missing
     // permission to "ask", which would prompt for every call instead of refusing it.
-    // No legacy group grants skills, so a converted mode always reports the lost grant.
+    // No legacy group grants skills, so a converted mode always records the lost grant
+    // as a note: the denial is expected, not a condition the user has to act on.
     for (const perm of ALL_PERMISSIONS) {
       if (allowed.has(perm)) continue
       permission[perm] = "deny"
-      if (perm === "skill") warnings.push("Skills are not available: no legacy group grants them")
+      if (perm === "skill") notes.push("Skills are not available: no legacy group grants them")
     }
 
     if (!seen) {
@@ -169,7 +171,7 @@ export namespace ModesMigrator {
       }
     }
 
-    return { permission, warnings }
+    return { permission, warnings, notes }
   }
 
   export function convertMode(
@@ -184,7 +186,7 @@ export namespace ModesMigrator {
     mode: KilocodeMode,
     mcpServers: string[],
     mcpAvailable: boolean,
-  ): { agent: ConfigAgentV1.Info; warnings: string[] } {
+  ): { agent: ConfigAgentV1.Info; warnings: string[]; notes: string[] } {
     const converted = convert(mode.groups, mcpServers, mcpAvailable)
 
     return {
@@ -195,6 +197,7 @@ export namespace ModesMigrator {
         permission: converted.permission,
       },
       warnings: converted.warnings,
+      notes: converted.notes,
     }
   }
 
@@ -255,6 +258,11 @@ export namespace ModesMigrator {
     skipped: Array<{ slug: string; reason: string }>
     /** Each message names the file the mode came from, so a caller can report it. */
     warnings: Array<{ path: string; message: string }>
+    /**
+     * Explanatory statements, not conditions the user has to act on: a caller logs them
+     * but never forwards them to the config warning channel.
+     */
+    notes: Array<{ path: string; message: string }>
   }
 
   export async function migrate(options: {
@@ -274,6 +282,7 @@ export namespace ModesMigrator {
       agents: {},
       skipped: [],
       warnings: [],
+      notes: [],
     }
 
     // Collect modes from all sources, each with the file it came from so a migration
@@ -329,6 +338,9 @@ export namespace ModesMigrator {
       result.agents[slug] = converted.agent
       result.warnings.push(
         ...converted.warnings.map((warning) => ({ path: entry.source, message: `Mode '${slug}': ${warning}` })),
+      )
+      result.notes.push(
+        ...converted.notes.map((note) => ({ path: entry.source, message: `Mode '${slug}': ${note}` })),
       )
     }
 

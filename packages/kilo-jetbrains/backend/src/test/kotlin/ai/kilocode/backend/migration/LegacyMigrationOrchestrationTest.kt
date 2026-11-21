@@ -110,7 +110,7 @@ class LegacyMigrationOrchestrationTest {
         val sel = noSelections().copy(customModes = listOf("my-agent"))
         val report = eng.migrate(sel)
         val item = report.items[0]
-        assertEquals(MigrationItemStatus.warning, item.status)
+        assertEquals(MigrationItemStatus.success, item.status)
         assertEquals("Skills are not available: no legacy group grants them", item.message)
         val patch = backend.configCalls.find { it.containsKey("agent") }
         assertNotNull(patch)

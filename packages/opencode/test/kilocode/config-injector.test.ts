@@ -39,6 +39,11 @@ describe("KilocodeConfigInjector", () => {
       expect(config.agent).toBeDefined()
       expect(config.agent.translate).toBeDefined()
       expect(config.agent.translate.mode).toBe("primary")
+      expect(config.agent.translate.permission.skill).toBe("deny")
+      // The denied skill grant is expected, so it is logged as a migration note instead of
+      // surfacing as a config warning the user is asked to act on.
+      expect(result.warnings.some((warning) => warning.includes("Skills are not available"))).toBe(false)
+      expect(result.warnings).toEqual([])
     })
 
     test("adds warnings for skipped default modes", async () => {

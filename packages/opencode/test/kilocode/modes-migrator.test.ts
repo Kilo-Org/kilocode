@@ -398,7 +398,7 @@ describe("ModesMigrator", () => {
       expect(result.agents).toHaveProperty("reviewer")
     })
 
-    test("reports the denied skill permission once for a mode with read and edit groups", async () => {
+    test("records the denied skill permission as a note, not a warning", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
           await Bun.write(
@@ -417,9 +417,11 @@ describe("ModesMigrator", () => {
       const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true, mcpAvailable: false })
 
       expect(result.agents.translate.permission?.skill).toBe("deny")
-      expect(result.warnings.map((warning) => warning.message)).toEqual([
+      expect(result.warnings).toEqual([])
+      expect(result.notes.map((note) => note.message)).toEqual([
         "Mode 'translate': Skills are not available: no legacy group grants them",
       ])
+      expect(result.notes[0].path).toBe(path.join(tmp.path, ".kilocodemodes"))
     })
 
     test("grants an mcp group the tools of the migrated servers it was given", async () => {
@@ -447,7 +449,8 @@ describe("ModesMigrator", () => {
 
       expect(result.agents.helper.permission?.["github_*"]).toBe("allow")
       expect("mcp" in (result.agents.helper.permission ?? {})).toBe(false)
-      expect(result.warnings.map((warning) => warning.message)).toEqual([
+      expect(result.warnings).toEqual([])
+      expect(result.notes.map((note) => note.message)).toEqual([
         "Mode 'helper': Skills are not available: no legacy group grants them",
       ])
     })
@@ -502,9 +505,11 @@ describe("ModesMigrator", () => {
 
       expect(result.warnings.map((warning) => warning.message)).toEqual([
         "Mode 'helper': MCP access not migrated: no MCP server was migrated",
-        "Mode 'helper': Skills are not available: no legacy group grants them",
       ])
       expect(result.warnings[0].path).toBe(path.join(tmp.path, ".kilocodemodes"))
+      expect(result.notes.map((note) => note.message)).toEqual([
+        "Mode 'helper': Skills are not available: no legacy group grants them",
+      ])
       expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
     })
 
@@ -538,9 +543,10 @@ describe("ModesMigrator", () => {
       const skill = "Mode 'helper': Skills are not available: no legacy group grants them"
       const mcp = "Mode 'helper': MCP access not migrated: no MCP server was migrated"
 
-      expect(declared.warnings.map((warning) => warning.message)).toEqual([mcp, skill])
-      expect(undeclared.warnings.map((warning) => warning.message)).toEqual([skill])
+      expect(declared.warnings.map((warning) => warning.message)).toEqual([mcp])
+      expect(undeclared.warnings).toEqual([])
       for (const result of [declared, undeclared]) {
+        expect(result.notes.map((note) => note.message)).toEqual([skill])
         expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
         expect(result.agents.helper.permission?.read).toBe("allow")
       }
@@ -567,9 +573,11 @@ describe("ModesMigrator", () => {
       expect(result.agents.docs.permission?.edit).toBe("ask")
       expect(result.warnings.map((warning) => warning.message)).toEqual([
         "Mode 'docs': File restriction not migrated; edit set to ask: [0-9]+\\.md$",
-        "Mode 'docs': Skills are not available: no legacy group grants them",
       ])
       expect(result.warnings[0].path).toBe(path.join(tmp.path, ".kilocodemodes"))
+      expect(result.notes.map((note) => note.message)).toEqual([
+        "Mode 'docs': Skills are not available: no legacy group grants them",
+      ])
     })
 
     test("asks for a file restriction whose pattern is only digits", async () => {

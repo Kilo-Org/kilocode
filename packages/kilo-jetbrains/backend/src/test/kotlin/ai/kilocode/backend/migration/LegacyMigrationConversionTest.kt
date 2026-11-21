@@ -18,8 +18,8 @@ import kotlin.test.assertTrue
  */
 class LegacyMigrationConversionTest {
 
-    /** Every converted mode lacks a `skill` grant, so it carries this warning in addition. */
-    private val skillWarning = "Skills are not available: no legacy group grants them"
+    /** Every converted mode lacks a `skill` grant, so it carries this note in addition. */
+    private val skillNote = "Skills are not available: no legacy group grants them"
 
     // -----------------------------------------------------------------------
     // Provider mapping
@@ -240,7 +240,8 @@ class LegacyMigrationConversionTest {
         assertEquals("deny", perm["bash"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["browser_open"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["skill"]?.jsonPrimitive?.content)
-        assertEquals(listOf(skillWarning), result.warnings)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -249,7 +250,8 @@ class LegacyMigrationConversionTest {
         assertEquals("allow", result.permission["browser_open"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["bash"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
-        assertEquals(listOf(skillWarning), result.warnings)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -267,7 +269,8 @@ class LegacyMigrationConversionTest {
         assertEquals("allow", result.permission["bash"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["browser_open"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
-        assertEquals(listOf(skillWarning), result.warnings)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -280,7 +283,8 @@ class LegacyMigrationConversionTest {
         assertEquals("allow", result.permission["github_*"]?.jsonPrimitive?.content)
         assertEquals("allow", result.permission["my_server_*"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
-        assertEquals(listOf(skillWarning), result.warnings)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -295,7 +299,8 @@ class LegacyMigrationConversionTest {
         assertEquals("ask", result.permission["github_*"]?.jsonPrimitive?.content)
         assertEquals("ask", result.permission["my_server_*"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
-        assertEquals(listOf("File restriction not migrated; mcp set to ask: $pattern", skillWarning), result.warnings)
+        assertEquals(listOf("File restriction not migrated; mcp set to ask: $pattern"), result.warnings)
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -308,7 +313,8 @@ class LegacyMigrationConversionTest {
         )
         assertTrue(result.permission.keys.none { it.endsWith("_*") })
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
-        assertEquals(listOf("MCP access not migrated: no MCP server was migrated", skillWarning), result.warnings)
+        assertEquals(listOf("MCP access not migrated: no MCP server was migrated"), result.warnings)
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -321,7 +327,8 @@ class LegacyMigrationConversionTest {
         assertEquals("deny", result.permission["github_*"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["my_server_*"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
-        assertEquals(listOf(skillWarning), result.warnings)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -333,7 +340,8 @@ class LegacyMigrationConversionTest {
         assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
         assertEquals("allow", editPerm["*.md"]?.jsonPrimitive?.content)
         assertEquals("*", editPerm.keys.first())
-        assertEquals(listOf(skillWarning), result.warnings)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -377,7 +385,8 @@ class LegacyMigrationConversionTest {
             emptyList(),
             mcpAvailable = false,
         )
-        assertEquals(listOf(skillWarning), result.warnings)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
         assertTrue(result.permission.keys.none { it.endsWith("_*") })
     }
 
@@ -385,11 +394,13 @@ class LegacyMigrationConversionTest {
     fun `convertCustomModePermissions - mcp group without migrated servers warns only when the store had one`() {
         val groups: List<Any> = listOf("mcp")
         val available = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), mcpAvailable = true)
-        assertEquals(listOf("MCP access not migrated: no MCP server was migrated", skillWarning), available.warnings)
+        assertEquals(listOf("MCP access not migrated: no MCP server was migrated"), available.warnings)
+        assertEquals(listOf(skillNote), available.notes)
         assertTrue(available.permission.keys.none { it.endsWith("_*") })
 
         val absent = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), mcpAvailable = false)
-        assertEquals(listOf(skillWarning), absent.warnings)
+        assertTrue(absent.warnings.isEmpty())
+        assertEquals(listOf(skillNote), absent.notes)
         assertTrue(absent.permission.keys.none { it.endsWith("_*") })
     }
 
@@ -401,7 +412,8 @@ class LegacyMigrationConversionTest {
         assertEquals("allow", perm["read"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["edit"]?.jsonPrimitive?.content)
         assertFalse(perm.keys.any { it.contains("- edit") })
-        assertEquals(listOf("Group not migrated; \"- edit\" ignored", skillWarning), result.warnings)
+        assertEquals(listOf("Group not migrated; \"- edit\" ignored"), result.warnings)
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -410,9 +422,10 @@ class LegacyMigrationConversionTest {
         val result = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), false)
         assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
         assertEquals(
-            listOf("File restriction not migrated; edit set to ask: ^123$", skillWarning),
+            listOf("File restriction not migrated; edit set to ask: ^123$"),
             result.warnings,
         )
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -423,7 +436,8 @@ class LegacyMigrationConversionTest {
         assertNotNull(editPerm)
         assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
         assertEquals("allow", editPerm["*123*"]?.jsonPrimitive?.content)
-        assertEquals(listOf(skillWarning), result.warnings)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -491,7 +505,8 @@ class LegacyMigrationConversionTest {
         assertFalse(result.permission.keys.any { it == "fileRegex" || it == "description" })
         assertEquals("allow", result.permission["browser_open"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
-        assertEquals(listOf(skillWarning), result.warnings)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -517,7 +532,8 @@ class LegacyMigrationConversionTest {
             assertEquals(listOf<Any>(Pair("edit", mapOf("__unparsed" to "true"))), mode.groups)
             val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
             assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
-            assertEquals(listOf("Group options not migrated; edit set to ask", skillWarning), result.warnings)
+            assertEquals(listOf("Group options not migrated; edit set to ask"), result.warnings)
+            assertEquals(listOf(skillNote), result.notes)
         }
     }
 
@@ -539,7 +555,8 @@ class LegacyMigrationConversionTest {
         assertEquals("ask", result.permission["github_*"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["bash"]?.jsonPrimitive?.content)
-        assertEquals(listOf("Group options not migrated; mcp set to ask", skillWarning), result.warnings)
+        assertEquals(listOf("Group options not migrated; mcp set to ask"), result.warnings)
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -549,7 +566,8 @@ class LegacyMigrationConversionTest {
         val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
         assertEquals("allow", result.permission["read"]?.jsonPrimitive?.content)
         assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
-        assertEquals(listOf("Group options not migrated; edit set to ask", skillWarning), result.warnings)
+        assertEquals(listOf("Group options not migrated; edit set to ask"), result.warnings)
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -561,7 +579,8 @@ class LegacyMigrationConversionTest {
         assertNotNull(editPerm)
         assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
         assertEquals("allow", editPerm["*.md"]?.jsonPrimitive?.content)
-        assertEquals(listOf(skillWarning), result.warnings)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -663,7 +682,8 @@ class LegacyMigrationConversionTest {
         val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
         assertEquals(listOf<Any>("read", "tools: edit", "browser"), mode.groups)
         val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
-        assertEquals(listOf("Group not migrated; \"tools: edit\" ignored", skillWarning), result.warnings)
+        assertEquals(listOf("Group not migrated; \"tools: edit\" ignored"), result.warnings)
+        assertEquals(listOf(skillNote), result.notes)
         assertFalse(result.permission.keys.any { it == "tools: edit" })
         assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
     }
@@ -687,7 +707,8 @@ class LegacyMigrationConversionTest {
         assertEquals("allow", result.permission["browser_open"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["edit"]?.jsonPrimitive?.content)
         assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
-        assertEquals(listOf(skillWarning), result.warnings)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
     }
 
     @Test
@@ -761,7 +782,8 @@ class LegacyMigrationConversionTest {
         assertEquals("allow", perm["github_*"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["bash"]?.jsonPrimitive?.content)
         assertEquals("deny", perm["skill"]?.jsonPrimitive?.content)
-        assertEquals(listOf(skillWarning), conversion.warnings)
+        assertEquals(listOf(skillNote), conversion.notes)
+        assertTrue(conversion.warnings.isEmpty())
         assertTrue(perm.entries.none { it.key == "bash" && it.value.jsonPrimitive.content == "allow" })
     }
 
