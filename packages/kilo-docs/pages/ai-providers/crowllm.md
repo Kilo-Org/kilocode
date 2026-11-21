@@ -29,8 +29,10 @@ Use Kilo Code's **OpenAI Compatible** provider type — no custom code path is n
    - **Provider API** — **OpenAI Compatible**
    - **Base URL** — `https://crowllm.com/v1`
    - **API key** — your CrowLLM key
-4. Kilo queries the Base URL and lists the served models; select the ones you want, or add model ids manually.
+4. Kilo queries the Base URL and lists the served models; select the ones you want and click **Add N model(s)** (or add model ids manually).
 5. Click **Submit**, then pick a model in the model picker.
+
+Models created through this dialog start with `limit.context` and `limit.output` set to 0, which disables context management. Add the same model in `kilo.json` (CLI tab) with real limits to enable overflow handling and auto-compaction.
 
 {% /tab %}
 {% tab label="CLI" %}
