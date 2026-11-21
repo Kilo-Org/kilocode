@@ -49,7 +49,11 @@ export function regexToGlobs(regex: string): string[] | null {
     ),
   ]
 
-  if (arms.length === 0 || arms.some((arm) => arm.length === 0)) return null
+  // An empty alternative matches the empty string. Padded, it becomes `*`, which matches
+  // every path and is right without both anchors; with both anchors it matches only the
+  // empty string, which no path is, so the caller must report it instead.
+  const empty = parsed[0].some((arm) => arm.length === 0)
+  if (arms.length === 0 || (anchoredStart && anchoredEnd && empty)) return null
   if (arms.some((arm) => arm.endsWith(" *"))) return null
   if (arms.some((arm) => DIGITS.test(arm))) return null
   return arms

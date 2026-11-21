@@ -1115,7 +1115,11 @@ internal fun fileRegexToGlobs(regex: String): List<String>? {
         result
     }.distinct()
 
-    if (arms.isEmpty() || arms.any { it.isEmpty() }) return null
+    // An empty alternative matches the empty string. Padded, it becomes `*`, which matches
+    // every path and is right without both anchors; with both anchors it matches only the
+    // empty string, which no path is, so the caller must report it instead.
+    val empty = parsed.any { it.isEmpty() }
+    if (arms.isEmpty() || (anchoredStart && anchoredEnd && empty)) return null
     if (arms.any { it.endsWith(" *") }) return null
     // See the KDoc. Only ASCII digits form an array index, so only those arms are rejected.
     if (arms.any { arm -> arm.all { it in '0'..'9' } }) return null

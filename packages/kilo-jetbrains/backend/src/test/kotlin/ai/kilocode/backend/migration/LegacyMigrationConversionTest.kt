@@ -553,6 +553,32 @@ class LegacyMigrationConversionTest {
         assertEquals(listOf("*123*"), fileRegexToGlobs("123"))
     }
 
+    @Test
+    fun `fileRegexToGlobs - unanchored empty alternative matches every path`() {
+        assertEquals(listOf("*", "*a*"), fileRegexToGlobs("(|a)"))
+        assertEquals(listOf("*"), fileRegexToGlobs("(|)"))
+    }
+
+    @Test
+    fun `fileRegexToGlobs - start anchored empty alternative keeps the trailing wildcard`() {
+        assertEquals(listOf("*", "a*"), fileRegexToGlobs("^(|a)"))
+    }
+
+    @Test
+    fun `fileRegexToGlobs - end anchored empty alternative keeps the leading wildcard`() {
+        assertEquals(listOf("*", "*a"), fileRegexToGlobs("(|a)$"))
+    }
+
+    @Test
+    fun `fileRegexToGlobs - both anchored empty alternative returns null`() {
+        assertNull(fileRegexToGlobs("^(|a)$"))
+    }
+
+    @Test
+    fun `fileRegexToGlobs - wildcard pattern matches every path`() {
+        assertEquals(listOf("*"), fileRegexToGlobs(".*"))
+    }
+
     // -----------------------------------------------------------------------
     // custom_modes.yaml parser
     // -----------------------------------------------------------------------

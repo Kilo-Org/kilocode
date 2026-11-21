@@ -338,6 +338,41 @@ describe("KilocodeConfigInjector", () => {
       }
     })
 
+    test("logs each MCP migration warning once on the default path", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilocode", "mcp.json"),
+            JSON.stringify({ mcpServers: { warnserver: { command: "npx", alwaysAllow: ["something"] } } }),
+          )
+        },
+      })
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      const notes: string[] = []
+      const write = spyOn(process.stderr, "write").mockImplementation((value: unknown) => {
+        notes.push(String(value))
+        return true
+      })
+      try {
+        // No skipGlobalPaths: the single load pass must log the warning once, not once per scope.
+        await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path })
+
+        const warning = "MCP server 'warnserver' has alwaysAllow permissions that cannot be migrated: something"
+        const count = notes.filter((note) => note.includes(warning)).length
+        expect(count).toBe(1)
+      } finally {
+        write.mockRestore()
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
     test("warns about an mcp group when only a global MCP store declared a server", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {

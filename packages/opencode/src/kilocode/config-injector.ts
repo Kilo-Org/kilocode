@@ -27,24 +27,21 @@ export namespace KilocodeConfigInjector {
     // Build config object
     const config: Partial<Config.Info> = {}
 
-    // Load the project's MCP servers first so an `mcp` mode group can grant their tools.
-    // `true` keeps the keys to project scope, so the injected config never depends on a
-    // global file. Availability follows the scope the mode migration reads below: a mode
-    // whose `mcp` group grants nothing is then reported instead of dropping the grant
-    // silently, which a project-scoped load alone would hide when only a global store
-    // declared a server.
-    const project = await McpMigrator.loadMcpConfig(options.projectDir, true)
-    const scope = options.skipGlobalPaths
-      ? project
-      : await McpMigrator.loadMcpConfig(options.projectDir, options.skipGlobalPaths)
+    // Load the project's MCP servers once so an `mcp` mode group can grant their tools.
+    // One pass only: `project` names the servers that won from a project file, so the
+    // injected config never depends on a global file and its permissions stay
+    // project-scoped. Availability follows the scope this pass read: a mode whose `mcp`
+    // group grants nothing is reported instead of dropping the grant silently, which a
+    // project-scoped load alone would hide when only a global store declared a server.
+    const mcp = await McpMigrator.loadMcpConfig(options.projectDir, options.skipGlobalPaths)
 
     // Migrate custom modes
     const modesMigration = await ModesMigrator.migrate({
       projectDir: options.projectDir,
       globalSettingsDir: options.globalSettingsDir,
       skipGlobalPaths: options.skipGlobalPaths,
-      mcpServers: Object.keys(project.mcp),
-      mcpAvailable: scope.available,
+      mcpServers: mcp.project,
+      mcpAvailable: mcp.available,
     })
 
     // Log skipped default modes and mode migration warnings (for debugging)

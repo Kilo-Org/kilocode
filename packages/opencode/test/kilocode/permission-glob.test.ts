@@ -41,4 +41,24 @@ describe("regexToGlobs", () => {
   test("an unanchored numeric pattern stays a wildcard arm", () => {
     expect(regexToGlobs("123")).toEqual(["*123*"])
   })
+
+  test("an unanchored empty alternative matches every path", () => {
+    expect(regexToGlobs("(|a)")).toEqual(["*", "*a*"])
+  })
+
+  test("a start-anchored empty alternative matches every path", () => {
+    expect(regexToGlobs("^(|a)")).toEqual(["*", "a*"])
+  })
+
+  test("an end-anchored empty alternative matches every path", () => {
+    expect(regexToGlobs("(|a)$")).toEqual(["*", "*a"])
+  })
+
+  test("a fully anchored empty alternative is rejected", () => {
+    expect(regexToGlobs("^(|a)$")).toBeNull()
+  })
+
+  test("a group of only empty alternatives becomes the catch-all arm", () => {
+    expect(regexToGlobs("(|)")).toEqual(["*"])
+  })
 })
