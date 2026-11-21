@@ -38,6 +38,8 @@ import { validateCustomProvider } from "./CustomProviderValidation"
 import type { FormErrors, FormState, HeaderRow } from "./CustomProviderValidation"
 const DEBOUNCE_MS = 500
 const SEARCH_DEBOUNCE_MS = 150
+// Saving needs only a few small backend calls, so a reply that takes longer is lost.
+const SAVE_TIMEOUT_MS = 30_000
 
 const PACKAGE_OPTIONS: Array<{ value: CustomProviderPackage; label: string }> = [
   { value: "@ai-sdk/openai-compatible", label: "OpenAI Compatible" },
@@ -514,6 +516,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
         apiKeyChanged: apiTouched(),
       },
       {
+        timeout: SAVE_TIMEOUT_MS,
         onConnected: () => {
           setForm("saving", false)
           dialog.close()
@@ -527,6 +530,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
         onError: (message) => {
           setForm("saving", false)
           showToast({ title: language.t("common.requestFailed"), description: message.message })
+        },
+        onTimeout: () => {
+          setForm("saving", false)
+          showToast({
+            title: language.t("common.requestFailed"),
+            description: language.t("provider.custom.save.timeout"),
+          })
         },
       },
     )
