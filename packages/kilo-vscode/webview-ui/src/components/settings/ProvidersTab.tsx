@@ -6,6 +6,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Tag } from "@kilocode/kilo-ui/tag"
+import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Component, For, Show, createMemo, createSignal, onCleanup } from "solid-js"
 import { useConfig } from "../../context/config"
@@ -258,75 +259,190 @@ const ProvidersTab: Component = () => {
         >
           <For each={connectedProviders()}>
             {(item) => (
-              <div
-                style={{
-                  display: "flex",
-                  "flex-wrap": "wrap",
-                  "align-items": "center",
-                  "justify-content": "space-between",
-                  gap: "16px",
-                  "min-height": "56px",
-                  padding: "12px 0",
-                  "border-bottom": "1px solid var(--border-weak-base)",
-                }}
-              >
-                <div style={{ display: "flex", "align-items": "center", gap: "12px", "min-width": 0 }}>
-                  <ProviderIcon id={providerIcon(item)} width={20} height={20} />
-                  <span
-                    style={{
-                      "font-size": "var(--kilo-font-size-14)",
-                      "font-weight": "500",
-                      color: "var(--vscode-foreground)",
-                      overflow: "hidden",
-                      "text-overflow": "ellipsis",
-                      "white-space": "nowrap",
-                    }}
-                  >
-                    {item.name}
-                  </span>
-                  <Tag>{sourceTag(item)}</Tag>
-                </div>
-                <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
-                  <Show when={!canDisconnect(item)}>
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    "flex-wrap": "wrap",
+                    "align-items": "center",
+                    "justify-content": "space-between",
+                    gap: "16px",
+                    "min-height": "56px",
+                    padding: "12px 0",
+                    "border-bottom": "1px solid var(--border-weak-base)",
+                  }}
+                >
+                  <div style={{ display: "flex", "align-items": "center", gap: "12px", "min-width": 0 }}>
+                    <ProviderIcon id={providerIcon(item)} width={20} height={20} />
                     <span
                       style={{
                         "font-size": "var(--kilo-font-size-14)",
-                        color: "var(--text-base, var(--vscode-descriptionForeground))",
-                        "padding-right": "12px",
+                        "font-weight": "500",
+                        color: "var(--vscode-foreground)",
+                        overflow: "hidden",
+                        "text-overflow": "ellipsis",
+                        "white-space": "nowrap",
                       }}
                     >
-                      {language.t("settings.providers.connected.environmentDescription")}
+                      {item.name}
                     </span>
-                  </Show>
-                  <Show when={chatgpt(item)}>
-                    <Button size="large" variant="ghost" onClick={() => connectChatGPT(item)}>
-                      {language.t("settings.providers.action.signInChatGPT")}
-                    </Button>
-                  </Show>
-                  <Show when={item.id === "anaconda-desktop"}>
-                    <Button size="large" variant="ghost" onClick={() => connectProvider(item)}>
-                      {language.t("provider.anaconda.action.manage")}
-                    </Button>
-                  </Show>
-                  <Show when={canDisconnect(item)}>
-                    <Show
-                      when={canChangeProviderKey(item, config().provider?.[item.id], provider.authMethods()[item.id])}
-                    >
+                    <Tag>{sourceTag(item)}</Tag>
+                  </div>
+                  <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
+                    <Show when={!canDisconnect(item)}>
+                      <span
+                        style={{
+                          "font-size": "var(--kilo-font-size-14)",
+                          color: "var(--text-base, var(--vscode-descriptionForeground))",
+                          "padding-right": "12px",
+                        }}
+                      >
+                        {language.t("settings.providers.connected.environmentDescription")}
+                      </span>
+                    </Show>
+                    <Show when={chatgpt(item)}>
+                      <Button size="large" variant="ghost" onClick={() => connectChatGPT(item)}>
+                        {language.t("settings.providers.action.signInChatGPT")}
+                      </Button>
+                    </Show>
+                    <Show when={item.id === "anaconda-desktop"}>
                       <Button size="large" variant="ghost" onClick={() => connectProvider(item)}>
-                        {language.t("settings.providers.action.changeApiKey")}
+                        {language.t("provider.anaconda.action.manage")}
                       </Button>
                     </Show>
-                    <Show when={isCustom(item)}>
-                      <Button size="large" variant="ghost" onClick={() => editProvider(item)}>
-                        {language.t("provider.custom.edit.title")}
+                    <Show when={canDisconnect(item)}>
+                      <Show
+                        when={canChangeProviderKey(item, config().provider?.[item.id], provider.authMethods()[item.id])}
+                      >
+                        <Button size="large" variant="ghost" onClick={() => connectProvider(item)}>
+                          {language.t("settings.providers.action.changeApiKey")}
+                        </Button>
+                      </Show>
+                      <Show when={isCustom(item)}>
+                        <Button size="large" variant="ghost" onClick={() => editProvider(item)}>
+                          {language.t("provider.custom.edit.title")}
+                        </Button>
+                      </Show>
+                      <Button size="large" variant="ghost" onClick={() => disconnect(item.id, item.name)}>
+                        {language.t(isCustom(item) ? "common.delete" : "common.disconnect")}
                       </Button>
                     </Show>
-                    <Button size="large" variant="ghost" onClick={() => disconnect(item.id, item.name)}>
-                      {language.t(isCustom(item) ? "common.delete" : "common.disconnect")}
-                    </Button>
-                  </Show>
+                  </div>
                 </div>
-              </div>
+                <Collapsible variant="ghost">
+                  <Collapsible.Trigger>
+                    <span
+                      style={{
+                        "font-size": "var(--kilo-font-size-12)",
+                        "font-weight": "500",
+                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                      }}
+                    >
+                      {language.t("settings.providers.rateLimit.title")}
+                    </span>
+                    <Collapsible.Arrow />
+                  </Collapsible.Trigger>
+                  <Collapsible.Content>
+                    <div
+                      style={{
+                        "margin-top": "8px",
+                        display: "flex",
+                        "flex-direction": "column",
+                        gap: "8px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          "font-size": "var(--kilo-font-size-12)",
+                          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                          "padding-bottom": "8px",
+                          "border-bottom": "1px solid var(--border-weak-base)",
+                        }}
+                      >
+                        {language.t("settings.providers.rateLimit.description")}
+                      </div>
+                      <div style={{ display: "flex", gap: "16px", "flex-wrap": "wrap" }}>
+                        <div style={{ flex: 1, "min-width": "140px" }}>
+                          <label
+                            style={{
+                              "font-size": "var(--kilo-font-size-12)",
+                              "font-weight": "500",
+                              color: "var(--text-weak-base)",
+                              display: "block",
+                              "margin-bottom": "4px",
+                            }}
+                          >
+                            {language.t("settings.providers.rateLimit.rpm")}
+                          </label>
+                          <TextField
+                            type="number"
+                            placeholder={language.t("settings.providers.rateLimit.placeholder")}
+                            value={config().provider?.[item.id]?.rateLimit?.rpm?.toString() ?? ""}
+                            onChange={(value) => {
+                              const num = value === "" ? undefined : parseInt(value, 10)
+                              updateConfig({
+                                provider: {
+                                  ...config().provider,
+                                  [item.id]: {
+                                    ...config().provider?.[item.id],
+                                    rateLimit: {
+                                      ...config().provider?.[item.id]?.rateLimit,
+                                      rpm: Number.isNaN(num) ? undefined : num,
+                                    },
+                                  },
+                                },
+                              })
+                            }}
+                            style={{ width: "100%" }}
+                          />
+                        </div>
+                        <div style={{ flex: 1, "min-width": "140px" }}>
+                          <label
+                            style={{
+                              "font-size": "var(--kilo-font-size-12)",
+                              "font-weight": "500",
+                              color: "var(--text-weak-base)",
+                              display: "block",
+                              "margin-bottom": "4px",
+                            }}
+                          >
+                            {language.t("settings.providers.rateLimit.rps")}
+                          </label>
+                          <TextField
+                            type="number"
+                            placeholder={language.t("settings.providers.rateLimit.placeholder")}
+                            value={config().provider?.[item.id]?.rateLimit?.rps?.toString() ?? ""}
+                            onChange={(value) => {
+                              const num = value === "" ? undefined : parseInt(value, 10)
+                              updateConfig({
+                                provider: {
+                                  ...config().provider,
+                                  [item.id]: {
+                                    ...config().provider?.[item.id],
+                                    rateLimit: {
+                                      ...config().provider?.[item.id]?.rateLimit,
+                                      rps: Number.isNaN(num) ? undefined : num,
+                                    },
+                                  },
+                                },
+                              })
+                            }}
+                            style={{ width: "100%" }}
+                          />
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          "font-size": "var(--kilo-font-size-11)",
+                          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                        }}
+                      >
+                        {language.t("settings.providers.rateLimit.help")}
+                      </span>
+                    </div>
+                  </Collapsible.Content>
+                </Collapsible>
+              </>
             )}
           </For>
         </Show>

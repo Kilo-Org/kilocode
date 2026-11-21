@@ -421,6 +421,12 @@ export const dict = {
   "settings.providers.action.signInChatGPT": "Sign in with ChatGPT",
   "settings.providers.action.changeApiKey": "Change API key",
   "settings.providers.custom.description": "Add a custom provider by base URL.",
+  "settings.providers.rateLimit.title": "Rate Limit",
+  "settings.providers.rateLimit.description": "Configure request rate limits for this provider",
+  "settings.providers.rateLimit.rpm": "RPM (Requests per Minute)",
+  "settings.providers.rateLimit.rps": "RPS (Requests per Second)",
+  "settings.providers.rateLimit.placeholder": "Optional",
+  "settings.providers.rateLimit.help": "Set to 0 or leave empty to disable. Applied per provider hostname.",
 
   "provider.custom.title": "Custom provider",
   "provider.custom.description.prefix": "Configure a custom provider. See the ",

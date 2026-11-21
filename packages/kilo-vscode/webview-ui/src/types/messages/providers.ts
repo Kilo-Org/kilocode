@@ -70,4 +70,5 @@ export interface ProviderConfig {
   npm?: string
   env?: string[]
   options?: Record<string, unknown>
+  rateLimit?: { rpm?: number; rps?: number }
 }

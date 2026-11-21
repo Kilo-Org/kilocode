@@ -57,6 +57,10 @@ export const Info = Schema.Struct({
   disabled: Schema.Boolean.pipe(optional),
   api: Api,
   request: Request,
+  rateLimit: Schema.Struct({
+    rpm: Schema.Number.pipe(optional),
+    rps: Schema.Number.pipe(optional),
+  }).pipe(optional),
 })
   .annotate({ identifier: "ProviderV2.Info" })
   .pipe(
