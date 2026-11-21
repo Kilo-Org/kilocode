@@ -1,6 +1,5 @@
 import { Config } from "../config/config"
 import { ConfigPermissionV1 as ConfigPermission } from "@opencode-ai/core/v1/config/permission"
-import * as Log from "@opencode-ai/core/util/log"
 import { ModesMigrator } from "./modes-migrator"
 import { McpMigrator } from "./mcp-migrator"
 import { RulesMigrator } from "./rules-migrator"
@@ -8,8 +7,6 @@ import { WorkflowsMigrator } from "./workflows-migrator"
 import { IgnoreMigrator } from "./ignore-migrator"
 
 export namespace KilocodeConfigInjector {
-  const log = Log.create({ service: "kilocode.config-injector" })
-
   export interface InjectionResult {
     configJson: string
     warnings: string[]
@@ -55,11 +52,6 @@ export namespace KilocodeConfigInjector {
       warnings.push(`Mode '${skipped.slug}' skipped: ${skipped.reason}`)
     }
     warnings.push(...modesMigration.warnings.map((warning) => warning.message))
-    // Notes explain an expected outcome rather than a condition to act on, so they are
-    // logged only and never join the returned warnings.
-    for (const note of modesMigration.notes) {
-      log.debug("kilocode mode note", { note })
-    }
 
     if (Object.keys(modesMigration.agents).length > 0) {
       config.agent = modesMigration.agents

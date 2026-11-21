@@ -67,7 +67,7 @@ Kilocode uses "groups" to define what tools a mode can access. These are convert
 
 There is no `mcp` permission key: an `mcp` group grants the tools of each migrated server through a `<server name>_*` key, with characters outside `[a-zA-Z0-9_-]` replaced by `_`. That replacement follows the CLI's own MCP tool-id naming ([`catalog.ts`](../../mcp/catalog.ts) `sanitize`), so two legacy server names that differ only outside that class, such as `a.b` and `a_b`, produce the same `<server>_*` key and therefore share one rule. A mode without an `mcp` group denies those keys.
 
-**Important:** Permissions that are NOT in the groups list are explicitly set to `"deny"` (`read`, `edit`, `bash`, `browser_open`, `skill`, and the per-server keys). This ensures that a mode with only `read` and `edit` groups cannot run shell commands or access MCP servers.
+**Important:** Permissions that are NOT in the groups list are explicitly set to `"deny"` (`read`, `edit`, `bash`, `browser_open`, and the per-server keys). This ensures that a mode with only `read` and `edit` groups cannot run shell commands or access MCP servers.
 
 A group option outside `fileRegex` and `description` means the group was not read fully, so its permission is set to `"ask"` rather than granted.
 
@@ -94,20 +94,19 @@ This converts to:
       "*.md": "allow"
     },
     "bash": "deny",
-    "browser_open": "deny",
-    "skill": "deny"
+    "browser_open": "deny"
   }
 }
 ```
 
 The `fileRegex` is translated into permission wildcard globs, with the catch-all `"*": "deny"` written first because the CLI resolves the last matching rule. The supported subset is the same one the JetBrains plugin migrator uses ([`permission-glob.ts`](../permission-glob.ts)): anchors, literal characters, `\`-escaped punctuation, `.` and `.*`, `(...)` alternation, and an optional `?` after any of the supported atoms. A pattern outside that subset (a character class, `+`, a `\d`-style escape, nested groups, an arm of only digits) sets that permission to `"ask"` and reports a migration warning, so the mode asks instead of silently losing the restriction. An arm of only digits is outside the subset because JavaScript enumerates such a key before `"*"`, which would make the catch-all deny win.
 
-`bash`, `browser_open` and `skill` are explicitly denied because they weren't in the original groups list. No legacy group grants skills, so a migrated mode is denied `skill`, and the migration notes record `Skills are not available: no legacy group grants them` once per converted mode. A note is an explanatory statement rather than a condition to act on: it is logged at debug and never becomes a config warning, so the reported warning list stays limited to conditions the user can act on.
+`bash` and `browser_open` are explicitly denied because they weren't in the original groups list. A migrated mode carries no `skill` rule, so it keeps the CLI default and its skill access is unchanged; the JetBrains plugin migration records its own `skill` denial in the migration report it prints.
 
 | Channel | What it carries |
 |---|---|
 | Migration warning | A condition the user has to resolve: an `mcp` group that granted nothing, a group option that was not read, a file restriction that could not be translated, a repeated group that resolves to a different rule |
-| Migration note | An expected outcome worth explaining: the denied `skill` grant of a converted mode |
+| Migration note | An expected outcome worth explaining: an organization mode's `mcp` group, which attaches no MCP server at config load |
 
 When one mode lists the same group more than once, the migration keeps the narrower rule: `ask` over a file restriction over a plain grant. Two different file restrictions for the same group are not combined, so that group asks. A repeat that resolves to a different rule is reported as a migration warning that names the permission key; a repeat of the same rule produces no message.
 
@@ -160,8 +159,7 @@ customModes:
           "*src/i18n/*.json": "allow"
         },
         "bash": "deny",
-        "browser_open": "deny",
-        "skill": "deny"
+        "browser_open": "deny"
       }
     }
   }

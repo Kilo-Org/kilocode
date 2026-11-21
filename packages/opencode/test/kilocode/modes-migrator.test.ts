@@ -29,7 +29,7 @@ describe("ModesMigrator", () => {
       expect(permissions.edit).toBe("allow")
       expect(permissions.bash).toBe("allow")
       expect(permissions.browser_open).toBe("deny")
-      expect(permissions.skill).toBe("deny")
+      expect("skill" in permissions).toBe(false)
       expect("mcp" in permissions).toBe(false)
     })
 
@@ -41,7 +41,7 @@ describe("ModesMigrator", () => {
       expect(permissions.bash).toBe("deny")
       expect(permissions.read).toBe("deny")
       expect(permissions.edit).toBe("deny")
-      expect(permissions.skill).toBe("deny")
+      expect("skill" in permissions).toBe(false)
     })
 
     test("grants the tools of every migrated MCP server for an mcp group", () => {
@@ -54,7 +54,7 @@ describe("ModesMigrator", () => {
       expect(permissions.edit).toBe("deny")
       expect(permissions.bash).toBe("deny")
       expect(permissions.browser_open).toBe("deny")
-      expect(permissions.skill).toBe("deny")
+      expect("skill" in permissions).toBe(false)
       expect("mcp" in permissions).toBe(false)
     })
 
@@ -63,7 +63,7 @@ describe("ModesMigrator", () => {
 
       expect(permissions["github_*"]).toBe("deny")
       expect(permissions["my_server_*"]).toBe("deny")
-      expect(permissions.skill).toBe("deny")
+      expect("skill" in permissions).toBe(false)
       expect(permissions.read).toBe("allow")
       expect("mcp" in permissions).toBe(false)
     })
@@ -72,7 +72,7 @@ describe("ModesMigrator", () => {
       const permissions = ModesMigrator.convertPermissions(["mcp"], [], false)
 
       expect(Object.keys(permissions).some((key) => key.endsWith("_*"))).toBe(false)
-      expect(permissions.skill).toBe("deny")
+      expect("skill" in permissions).toBe(false)
     })
 
     test("converts fileRegex groups to restricted permissions", () => {
@@ -86,7 +86,7 @@ describe("ModesMigrator", () => {
       expect(permissions.edit).toEqual({ "*": "deny", "*.md": "allow" })
       expect(Object.keys(permissions.edit as Record<string, string>)[0]).toBe("*")
       expect(permissions.bash).toBe("deny")
-      expect(permissions.skill).toBe("deny")
+      expect("skill" in permissions).toBe(false)
     })
 
     test("asks for a permission whose fileRegex cannot be translated", () => {
@@ -119,7 +119,7 @@ describe("ModesMigrator", () => {
 
       expect(permissions["github_*"]).toBe("ask")
       expect(permissions["my_server_*"]).toBe("ask")
-      expect(permissions.skill).toBe("deny")
+      expect("skill" in permissions).toBe(false)
     })
 
     test("handles tuple without fileRegex", () => {
@@ -129,7 +129,7 @@ describe("ModesMigrator", () => {
       expect(permissions.edit).toBe("allow")
       expect(permissions.read).toBe("deny")
       expect(permissions.bash).toBe("deny")
-      expect(permissions.skill).toBe("deny")
+      expect("skill" in permissions).toBe(false)
       expect("mcp" in permissions).toBe(false)
     })
 
@@ -142,10 +142,10 @@ describe("ModesMigrator", () => {
       expect(permissions.edit).toBe("deny")
       expect(permissions.bash).toBe("deny")
       expect(permissions.browser_open).toBe("deny")
-      expect(permissions.skill).toBe("deny")
+      expect("skill" in permissions).toBe(false)
     })
 
-    test("denies bash, browser and skill when only read and edit are allowed", () => {
+    test("denies bash and browser when only read and edit are allowed", () => {
       const groups = ["read", "edit"]
       const permissions = ModesMigrator.convertPermissions(groups, [], false)
 
@@ -153,7 +153,7 @@ describe("ModesMigrator", () => {
       expect(permissions.edit).toBe("allow")
       expect(permissions.bash).toBe("deny")
       expect(permissions.browser_open).toBe("deny")
-      expect(permissions.skill).toBe("deny")
+      expect("skill" in permissions).toBe(false)
       expect("mcp" in permissions).toBe(false)
     })
 
@@ -490,7 +490,7 @@ describe("ModesMigrator", () => {
       expect(result.agents).toHaveProperty("reviewer")
     })
 
-    test("records the denied skill permission as a note, not a warning", async () => {
+    test("leaves the skill rule to the CLI default", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
           await Bun.write(
@@ -508,12 +508,8 @@ describe("ModesMigrator", () => {
 
       const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true, mcpAvailable: false })
 
-      expect(result.agents.translate.permission?.skill).toBe("deny")
+      expect("skill" in (result.agents.translate.permission ?? {})).toBe(false)
       expect(result.warnings).toEqual([])
-      expect(result.notes.map((note) => note.message)).toEqual([
-        "Mode 'translate': Skills are not available: no legacy group grants them",
-      ])
-      expect(result.notes[0].path).toBe(path.join(tmp.path, ".kilocodemodes"))
     })
 
     test("grants an mcp group the tools of the migrated servers it was given", async () => {
@@ -542,9 +538,6 @@ describe("ModesMigrator", () => {
       expect(result.agents.helper.permission?.["github_*"]).toBe("allow")
       expect("mcp" in (result.agents.helper.permission ?? {})).toBe(false)
       expect(result.warnings).toEqual([])
-      expect(result.notes.map((note) => note.message)).toEqual([
-        "Mode 'helper': Skills are not available: no legacy group grants them",
-      ])
     })
 
     test("stays silent for an mcp group when the legacy store had no MCP server", async () => {
@@ -599,9 +592,6 @@ describe("ModesMigrator", () => {
         "Mode 'helper': MCP access not migrated: no MCP server was migrated",
       ])
       expect(result.warnings[0].path).toBe(path.join(tmp.path, ".kilocodemodes"))
-      expect(result.notes.map((note) => note.message)).toEqual([
-        "Mode 'helper': Skills are not available: no legacy group grants them",
-      ])
       expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
     })
 
@@ -632,13 +622,11 @@ describe("ModesMigrator", () => {
         mcpAvailable: false,
       })
 
-      const skill = "Mode 'helper': Skills are not available: no legacy group grants them"
       const mcp = "Mode 'helper': MCP access not migrated: no MCP server was migrated"
 
       expect(declared.warnings.map((warning) => warning.message)).toEqual([mcp])
       expect(undeclared.warnings).toEqual([])
       for (const result of [declared, undeclared]) {
-        expect(result.notes.map((note) => note.message)).toEqual([skill])
         expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
         expect(result.agents.helper.permission?.read).toBe("allow")
       }
@@ -667,9 +655,6 @@ describe("ModesMigrator", () => {
         "Mode 'docs': File restriction not migrated; edit set to ask: [0-9]+\\.md$",
       ])
       expect(result.warnings[0].path).toBe(path.join(tmp.path, ".kilocodemodes"))
-      expect(result.notes.map((note) => note.message)).toEqual([
-        "Mode 'docs': Skills are not available: no legacy group grants them",
-      ])
     })
 
     test("asks for a file restriction whose pattern is only digits", async () => {
