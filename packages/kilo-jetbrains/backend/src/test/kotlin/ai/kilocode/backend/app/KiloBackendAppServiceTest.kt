@@ -12,6 +12,8 @@ import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.HostedIDs
+import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WatcherPatchDto
@@ -19,6 +21,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
@@ -1187,6 +1190,226 @@ class KiloBackendAppServiceTest {
         assertTrue(ok)
         assertNull(svc.profile)
         assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    private val hostedSession = HostedIDs.session("cloud", "wrk_1", "ses_cloud")
+    private val hostedNativeFeed = "/event?workspace=wrk_att_test"
+    private val hostedSystemFeed = "/cloud-agent/event?workspace=wrk_att_test"
+    private val hostedAttachPath = "/kilocode/session-host/session/cloud/ses_cloud/attach"
+
+    /** Opens both hosted SSE feeds for one retained session, so logout has live state to drop. */
+    private suspend fun hostedLive(svc: KiloBackendAppService) {
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            svc.hosted.systemEvents(HostedWorkspaceRefDto("cloud", "wrk_1"), "ses_cloud", null).collect {}
+        }
+        svc.hosted.retain(hostedSession, null)
+        svc.hosted.messages(hostedSession, null)
+        assertTrue(mock.awaitFeed(hostedNativeFeed), "native stream did not open")
+        assertTrue(mock.awaitFeed(hostedSystemFeed), "system stream did not open")
+        assertTrue(mock.requestCount(hostedAttachPath) >= 1, "no attachment was minted")
+    }
+
+    @Test
+    fun `logout resets hosted session state and asks the CLI to rebuild`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        mock.authRemoveStatus = 200
+        val ok = svc.logout()
+
+        assertTrue(ok)
+        assertEquals("/auth/kilo", mock.lastAuthDeletePath)
+        assertEquals(1, mock.requestCount("/global/dispose"))
+        assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1), "attachment was not detached")
+        assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+        // The manager cancelled both transports, so the mock observes the client closing each feed.
+        assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+        assertTrue(mock.awaitFeedClosed(hostedSystemFeed), "system stream stayed open")
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `logout leaves the hosted manager usable for the next sign-in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        svc.logout()
+        assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+
+        // A later sign-in is a different account: a fresh attachment must be minted through the
+        // restarted manager and stream from it, not from the signed-out one.
+        mock.hostedAttach =
+            """{"attachmentID":"wrk_att_next","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":${System.currentTimeMillis() + 600_000}}"""
+        svc.hosted.retain(hostedSession, null)
+        svc.hosted.messages(hostedSession, null)
+
+        assertTrue(mock.awaitFeed("/event?workspace=wrk_att_next"), "restarted manager did not open a native stream")
+        assertTrue(mock.lastHostedMessagePath.orEmpty().contains("workspace=wrk_att_next"))
+        assertEquals(attaches + 1, mock.requestCount(hostedAttachPath))
+        assertEquals(1, mock.feedCount(hostedNativeFeed), "signed-out native feed reopened")
+    }
+
+    @Test
+    fun `refused logout leaves hosted state and CLI untouched`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        mock.authRemoveStatus = 200
+        mock.authRemoveBody = "false"
+        assertFalse(svc.logout())
+
+        assertEquals("/auth/kilo", mock.lastAuthDeletePath)
+        assertEquals(0, mock.requestCount("/global/dispose"))
+        assertEquals(0, mock.feedClosedCount(hostedNativeFeed))
+        assertEquals(0, mock.feedClosedCount(hostedSystemFeed))
+        // The still-valid attachment keeps serving the retained session.
+        svc.hosted.messages(hostedSession, null)
+        assertTrue(mock.lastHostedMessagePath.orEmpty().contains("workspace=wrk_att_test"))
+        assertEquals(attaches, mock.requestCount(hostedAttachPath))
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+    }
+
+    @Test
+    fun `logout completes while the CLI stalls the global dispose`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        // A stalled CLI must not hold sign-out open: the dispose call runs on a bounded client, so
+        // logout returns and the hosted state is dropped regardless.
+        val gate = CountDownLatch(1)
+        mock.disposeGate = gate
+        try {
+            assertTrue(
+                withTimeout(20_000) { svc.logout() },
+                "logout did not return while the CLI stalled the dispose",
+            )
+            assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+            assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+            assertNull(svc.profile)
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `logout clears the signed-in snapshot before the global dispose`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        // The dispose is held open, so the snapshot must already be cleared by the time the CLI
+        // receives it: the rebuild is best-effort, the credential removal is final.
+        val gate = CountDownLatch(1)
+        mock.disposeGate = gate
+        val call = async(Dispatchers.IO) { svc.logout() }
+        try {
+            assertTrue(mock.awaitRequestCount("/global/dispose", 1), "the dispose request never arrived")
+            assertNull(svc.profile, "the signed-in profile survived the stalled dispose")
+            assertNull(appStateDto(svc.appState.value).profile, "the ready snapshot kept the profile")
+            assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+        } finally {
+            gate.countDown()
+        }
+        assertTrue(call.await(), "logout reported failure")
+    }
+
+    @Test
+    fun `logout propagates cancellation while the global dispose is stalled`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        // A cancelled caller must not be reported as a completed sign-out.
+        val gate = CountDownLatch(1)
+        mock.disposeGate = gate
+        val reached = CompletableDeferred<Boolean>()
+        val job = scope.launch {
+            svc.logout()
+            reached.complete(true)
+        }
+        try {
+            assertTrue(mock.awaitRequestCount("/global/dispose", 1), "the dispose request never arrived")
+            job.cancel()
+        } finally {
+            gate.countDown()
+        }
+        job.join()
+        assertFalse(reached.isCompleted, "sign-out swallowed the cancellation")
+        assertTrue(job.isCancelled, "sign-out swallowed the cancellation")
+    }
+
+    @Test
+    fun `logout clears hosted session state while a restart holds the lifecycle mutex`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        // A live status makes the "cleared" assertion below about state that really existed.
+        mock.pushFeed(
+            hostedNativeFeed,
+            """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""",
+        )
+        withTimeout(10_000) { svc.hosted.statuses.first { it[hostedSession]?.type == "busy" } }
+
+        val profiles = mock.requestCount("/kilo/profile")
+        val gate = CountDownLatch(1)
+        var restarter: Job? = null
+        try {
+            // Park an app reload behind the gate. A reload already blocked in a CLI call cannot be
+            // cancelled, so the restart's cancelAndJoin keeps the lifecycle mutex held.
+            mock.responseGate = gate
+            mock.pushEvent("global.disposed", "{}")
+            assertTrue(mock.awaitRequestCount("/kilo/profile", profiles + 1), "the reload never reached the CLI")
+
+            restarter = scope.launch { svc.restart() }
+            val held = withTimeoutOrNull(10_000) {
+                while (log.messages.none { it.contains("restart: acquired lifecycle mutex") }) delay(10)
+                true
+            }
+            assertNotNull(held, "the restart never took the lifecycle mutex; logs=${log.messages}")
+
+            // Release the field only: the parked request keeps its latch, so the mutex stays held
+            // while sign-out's own calls are free to complete.
+            mock.responseGate = null
+            assertTrue(svc.logout(), "sign-out reported failure while the lifecycle was busy")
+            assertTrue(restarter.isActive, "the restart had already finished, so the mutex was not held")
+            assertTrue(
+                log.messages.any { it.contains("Sign-out: lifecycle busy") },
+                "sign-out waited for the mutex instead of dropping the hosted state",
+            )
+            assertNull(appStateDto(svc.appState.value).profile, "the signed-out snapshot kept the profile")
+            assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+            assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+            assertTrue(mock.awaitFeedClosed(hostedSystemFeed), "system stream stayed open")
+            assertTrue(
+                mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1),
+                "attachment was not detached",
+            )
+        } finally {
+            mock.responseGate = null
+            gate.countDown()
+            restarter?.let { withTimeoutOrNull(20_000) { it.join() } }
+        }
     }
 
     @Test
