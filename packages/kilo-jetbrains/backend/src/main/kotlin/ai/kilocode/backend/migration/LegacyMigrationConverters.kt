@@ -415,6 +415,41 @@ object LegacyMigrationConverters {
     private fun hasUnreadableOptions(options: Map<String, String>?): Boolean =
         options != null && options.keys.any { it !in KNOWN_GROUP_OPTIONS }
 
+    /** A rule merged from repeated groups, with the warning a merge that lost a rule reports. */
+    private data class MergedRule(val value: JsonElement, val warning: String? = null)
+
+    /** Rule strength: `ask` outranks a file restriction object, which outranks `allow`. */
+    private fun ruleRank(rule: JsonElement): Int = when {
+        rule is JsonObject -> 1
+        rule is JsonPrimitive && rule.isString && rule.content == "ask" -> 2
+        else -> 0
+    }
+
+    private fun keptRuleWarning(key: String, kept: JsonElement): String? = when (kept) {
+        is JsonObject -> "Repeated group; $key kept its file restriction"
+        is JsonPrimitive -> if (ruleRank(kept) == 2) "Repeated group; $key set to ask" else null
+        else -> null
+    }
+
+    /**
+     * Merge the rule of a repeated permission group into the rule already recorded for [key].
+     *
+     * A repeated group keeps the narrower rule: `ask` over a file restriction over `allow`, and a
+     * file restriction over a plain grant. Only a merge that drops a rule as written reports it.
+     */
+    private fun mergeRepeatedRule(key: String, existing: JsonElement?, next: JsonElement): MergedRule {
+        if (existing == null || existing == next) return MergedRule(existing ?: next)
+        val existingRank = ruleRank(existing)
+        val nextRank = ruleRank(next)
+        return when {
+            existingRank == nextRank && existing is JsonObject && next is JsonObject ->
+                MergedRule(JsonPrimitive("ask"), "Repeated group; $key set to ask")
+            nextRank > existingRank -> MergedRule(next, keptRuleWarning(key, next))
+            existingRank > nextRank -> MergedRule(existing, keptRuleWarning(key, existing))
+            else -> MergedRule(next)
+        }
+    }
+
     /**
      * Convert legacy mode groups into backend permissions.
      *
@@ -470,7 +505,9 @@ object LegacyMigrationConverters {
                 for (server in mcpServers) {
                     val key = "${sanitizePermissionKey(server)}_*"
                     allowed.add(key)
-                    permission[key] = JsonPrimitive(mcpValue)
+                    val merged = mergeRepeatedRule(key, permission[key], JsonPrimitive(mcpValue))
+                    if (merged.warning != null) warnings.add(merged.warning)
+                    permission[key] = merged.value
                 }
                 continue
             }
@@ -481,38 +518,29 @@ object LegacyMigrationConverters {
                 continue
             }
 
-            if (hasUnreadableOptions(groupConfig)) {
+            val newValue: JsonElement = if (hasUnreadableOptions(groupConfig)) {
                 warnings.add("Group options not migrated; $permKey set to ask")
-                allowed.add(permKey)
-                permission[permKey] = JsonPrimitive("ask")
-                continue
-            }
-
-            val fileRegex = groupConfig?.get("fileRegex")
-            val newValue: JsonElement = if (fileRegex != null) {
-                val globs = fileRegexToGlobs(fileRegex)
-                if (globs == null) {
-                    warnings.add("File restriction not migrated; $permKey set to ask: $fileRegex")
-                    allowed.add(permKey)
-                    permission[permKey] = JsonPrimitive("ask")
-                    continue
-                }
-                buildJsonObject {
-                    put("*", "deny")
-                    globs.forEach { put(it, "allow") }
-                }
+                JsonPrimitive("ask")
             } else {
-                JsonPrimitive("allow")
+                val fileRegex = groupConfig?.get("fileRegex")
+                val globs = fileRegex?.let { fileRegexToGlobs(it) }
+                when {
+                    fileRegex == null -> JsonPrimitive("allow")
+                    globs == null -> {
+                        warnings.add("File restriction not migrated; $permKey set to ask: $fileRegex")
+                        JsonPrimitive("ask")
+                    }
+                    else -> buildJsonObject {
+                        put("*", "deny")
+                        globs.forEach { put(it, "allow") }
+                    }
+                }
             }
             allowed.add(permKey)
 
-            val existing = permission[permKey]
-            permission[permKey] = when {
-                existing == null -> newValue
-                existing == JsonPrimitive("allow") || newValue == JsonPrimitive("allow") -> JsonPrimitive("allow")
-                existing is JsonObject && newValue is JsonObject -> JsonObject(existing + newValue)
-                else -> newValue
-            }
+            val merged = mergeRepeatedRule(permKey, permission[permKey], newValue)
+            if (merged.warning != null) warnings.add(merged.warning)
+            permission[permKey] = merged.value
         }
 
         for (perm in ALL_MODE_PERMISSIONS) {

@@ -69,10 +69,55 @@ export namespace ModesMigrator {
     mcpServers: string[],
     mcpAvailable: boolean,
   ): ConfigPermission.Info {
-    return convert(groups, mcpServers, mcpAvailable).permission
+    return convertWithMessages(groups, mcpServers, mcpAvailable).permission
   }
 
-  function convert(
+  type Restriction = Record<string, ConfigPermission.Action>
+
+  function isRestriction(rule: ConfigPermission.Rule | undefined): rule is Restriction {
+    return rule != null && typeof rule === "object"
+  }
+
+  /** Strength of a rule when a mode writes the same key twice: ask keeps a prompt, a restriction keeps its files. */
+  function rank(rule: ConfigPermission.Rule): number {
+    if (rule === "ask") return 2
+    if (isRestriction(rule)) return 1
+    return 0
+  }
+
+  function sameRule(a: ConfigPermission.Rule, b: ConfigPermission.Rule): boolean {
+    if (!isRestriction(a) || !isRestriction(b)) return a === b
+    const keys = Object.keys(a)
+    return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key])
+  }
+
+  /**
+   * Merge a rule for a permission key a later group writes again. A mode that lists the same
+   * group more than once keeps the narrower rule and reports the repeat in the warnings.
+   */
+  function mergeRule(
+    key: string,
+    existing: ConfigPermission.Rule | undefined,
+    next: ConfigPermission.Rule,
+    warnings: string[],
+  ): ConfigPermission.Rule {
+    if (existing == null) return next
+    if (sameRule(existing, next)) return existing
+
+    let winner: ConfigPermission.Rule
+    if (isRestriction(existing) && isRestriction(next)) {
+      winner = "ask"
+    } else {
+      winner = rank(next) > rank(existing) ? next : existing
+    }
+
+    if (winner === "ask") warnings.push(`Repeated group; ${key} set to ask`)
+    else if (isRestriction(winner)) warnings.push(`Repeated group; ${key} kept its file restriction`)
+    return winner
+  }
+
+  /** Convert legacy mode groups to CLI permissions, with the warnings and notes they produced. */
+  export function convertWithMessages(
     groups: KilocodeMode["groups"],
     mcpServers: string[],
     mcpAvailable: boolean,
@@ -106,7 +151,7 @@ export namespace ModesMigrator {
         for (const server of mcpServers) {
           const key = `${server.replace(UNSAFE_KEY, "_")}_*`
           allowed.add(key)
-          permission[key] = action
+          permission[key] = mergeRule(key, permission[key], action, warnings)
         }
         continue
       }
@@ -120,7 +165,7 @@ export namespace ModesMigrator {
       if (unknown) {
         warnings.push(`Group options not migrated; ${permKey} set to ask`)
         allowed.add(permKey)
-        permission[permKey] = "ask"
+        permission[permKey] = mergeRule(permKey, permission[permKey], "ask", warnings)
         continue
       }
 
@@ -137,21 +182,7 @@ export namespace ModesMigrator {
         }
       }
       allowed.add(permKey)
-
-      const existing = permission[permKey]
-      if (existing == null) {
-        permission[permKey] = value
-        continue
-      }
-      if (existing === "allow" || value === "allow") {
-        permission[permKey] = "allow"
-        continue
-      }
-      if (typeof existing === "object" && existing !== null && typeof value === "object" && value !== null) {
-        permission[permKey] = { ...existing, ...value }
-        continue
-      }
-      permission[permKey] = value
+      permission[permKey] = mergeRule(permKey, permission[permKey], value, warnings)
     }
 
     // Explicitly deny permissions that aren't granted: the CLI defaults a missing
@@ -187,7 +218,7 @@ export namespace ModesMigrator {
     mcpServers: string[],
     mcpAvailable: boolean,
   ): { agent: ConfigAgentV1.Info; warnings: string[]; notes: string[] } {
-    const converted = convert(mode.groups, mcpServers, mcpAvailable)
+    const converted = convertWithMessages(mode.groups, mcpServers, mcpAvailable)
 
     return {
       agent: {
@@ -206,7 +237,7 @@ export namespace ModesMigrator {
    * Unlike legacy convertMode(), this does NOT skip default slugs —
    * organization admins can intentionally override built-in agents.
    */
-  export function convertOrganizationMode(mode: OrganizationMode): ConfigAgentV1.Info {
+  export function convertOrganizationMode(mode: OrganizationMode): { agent: ConfigAgentV1.Info; notes: string[] } {
     const cfg = mode.config
     const prompt = [cfg.roleDefinition, cfg.customInstructions].filter(Boolean).join("\n\n")
     const groups = cfg.groups ?? []
@@ -216,15 +247,25 @@ export namespace ModesMigrator {
       )
     }
 
+    // An organization mode arrives from the cloud API before the project MCP config is
+    // merged, and the CLI keys MCP tools per server, so the group cannot name them here.
+    const notes: string[] = []
+    if (groups.some((group) => (typeof group === "string" ? group : group?.[0]) === "mcp")) {
+      notes.push("MCP access is not scoped to this agent: no MCP servers are attached at config load")
+    }
+
     return {
-      mode: "primary",
-      description: cfg.description ?? cfg.whenToUse ?? mode.name,
-      prompt: prompt || undefined,
-      // An organization mode has no legacy MCP store, so no server-key grant applies.
-      permission: convertPermissions(groups, [], false),
-      // Typed metadata fields — must NOT live in `options`, which is forwarded to the provider.
-      displayName: mode.name,
-      source: "organization",
+      agent: {
+        mode: "primary",
+        description: cfg.description ?? cfg.whenToUse ?? mode.name,
+        prompt: prompt || undefined,
+        // An organization mode has no legacy MCP store, so no server-key grant applies.
+        permission: convertPermissions(groups, [], false),
+        // Typed metadata fields — must NOT live in `options`, which is forwarded to the provider.
+        displayName: mode.name,
+        source: "organization",
+      },
+      notes,
     }
   }
 
@@ -232,12 +273,18 @@ export namespace ModesMigrator {
    * Convert an array of cloud OrganizationModes to a ConfigAgentV1.Info record
    * keyed by slug. All modes are included (no default-slug filtering).
    */
-  export function convertOrganizationModes(modes: OrganizationMode[]): Record<string, ConfigAgentV1.Info> {
-    const result: Record<string, ConfigAgentV1.Info> = {}
+  export function convertOrganizationModes(modes: OrganizationMode[]): {
+    agents: Record<string, ConfigAgentV1.Info>
+    notes: Array<{ slug: string; message: string }>
+  } {
+    const agents: Record<string, ConfigAgentV1.Info> = {}
+    const notes: Array<{ slug: string; message: string }> = []
     for (const mode of modes) {
-      result[mode.slug] = convertOrganizationMode(mode)
+      const converted = convertOrganizationMode(mode)
+      agents[mode.slug] = converted.agent
+      notes.push(...converted.notes.map((message) => ({ slug: mode.slug, message })))
     }
-    return result
+    return { agents, notes }
   }
 
   export async function readModesFile(filepath: string): Promise<KilocodeMode[]> {

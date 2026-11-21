@@ -156,6 +156,74 @@ describe("ModesMigrator", () => {
       expect(permissions.skill).toBe("deny")
       expect("mcp" in permissions).toBe(false)
     })
+
+    test("keeps the file restriction when an allow group repeats it", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = ["edit", ["edit", { fileRegex: "^src/.*$" }]]
+      const converted = ModesMigrator.convertWithMessages(groups, [], false)
+
+      expect(converted.permission.edit).toEqual({ "*": "deny", "src/*": "allow" })
+      expect(converted.warnings).toEqual(["Repeated group; edit kept its file restriction"])
+    })
+
+    test("keeps the file restriction when the allow group comes second", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = [["edit", { fileRegex: "^src/.*$" }], "edit"]
+      const converted = ModesMigrator.convertWithMessages(groups, [], false)
+
+      expect(converted.permission.edit).toEqual({ "*": "deny", "src/*": "allow" })
+      expect(converted.warnings).toEqual(["Repeated group; edit kept its file restriction"])
+    })
+
+    test("asks when a repeated group is an untranslatable file restriction", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = [["read", { fileRegex: "[a-z]+\\.ts$" }], "read"]
+      const converted = ModesMigrator.convertWithMessages(groups, [], false)
+
+      expect(converted.permission.read).toBe("ask")
+      expect(converted.warnings).toEqual([
+        "File restriction not migrated; read set to ask: [a-z]+\\.ts$",
+        "Repeated group; read set to ask",
+      ])
+    })
+
+    test("asks when two different file restrictions repeat the same group", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = [
+        ["edit", { fileRegex: "^src/.*$" }],
+        ["edit", { fileRegex: "^test/.*$" }],
+      ]
+      const converted = ModesMigrator.convertWithMessages(groups, [], false)
+
+      expect(converted.permission.edit).toBe("ask")
+      expect(converted.warnings).toEqual(["Repeated group; edit set to ask"])
+    })
+
+    test("stays silent when a group is listed once or repeated with the same value", () => {
+      const once = ModesMigrator.convertWithMessages(["edit"], [], false)
+      const repeated = ModesMigrator.convertWithMessages(["edit", "edit"], [], false)
+      const repeatedRestriction = ModesMigrator.convertWithMessages(
+        [
+          ["edit", { fileRegex: "^src/.*$" }],
+          ["edit", { fileRegex: "^src/.*$" }],
+        ],
+        [],
+        false,
+      )
+
+      expect(once.warnings).toEqual([])
+      expect(repeated.warnings).toEqual([])
+      expect(repeated.permission.edit).toBe("allow")
+      expect(repeatedRestriction.warnings).toEqual([])
+      expect(repeatedRestriction.permission.edit).toEqual({ "*": "deny", "src/*": "allow" })
+    })
+
+    test("keeps the answer of a repeated restricted mcp group for every server", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = [["mcp", { fileRegex: "\\.md$" }], "mcp"]
+      const converted = ModesMigrator.convertWithMessages(groups, ["demo"], true)
+
+      expect(converted.permission["demo_*"]).toBe("ask")
+      expect(converted.warnings).toEqual([
+        "File restriction not migrated; mcp set to ask: \\.md$",
+        "Repeated group; demo_* set to ask",
+      ])
+    })
   })
 
   describe("convertMode", () => {
@@ -243,11 +311,35 @@ describe("ModesMigrator", () => {
     }
 
     test("carries displayName and source as typed fields, not provider options", () => {
-      const agent = ModesMigrator.convertOrganizationMode(mode)
-      expect(agent.displayName).toBe("Code Review custom Agent")
-      expect(agent.source).toBe("organization")
+      const converted = ModesMigrator.convertOrganizationMode(mode)
+      expect(converted.agent.displayName).toBe("Code Review custom Agent")
+      expect(converted.agent.source).toBe("organization")
       // The metadata must never live in `options`, which is forwarded to the provider.
-      expect(agent.options).toBeUndefined()
+      expect(converted.agent.options).toBeUndefined()
+      expect(converted.notes).toEqual([])
+    })
+
+    test("reports the mcp group of an organization mode as a note, without server keys", () => {
+      const converted = ModesMigrator.convertOrganizationMode({
+        ...mode,
+        config: { roleDefinition: "You are a reviewer.", groups: ["read", "mcp"] },
+      })
+      const permission = converted.agent.permission ?? {}
+
+      expect(converted.notes).toEqual([
+        "MCP access is not scoped to this agent: no MCP servers are attached at config load",
+      ])
+      expect(Object.keys(permission).some((key) => key.endsWith("_*"))).toBe(false)
+      expect(permission.bash).toBe("deny")
+      expect(permission.edit).toBe("deny")
+      expect(permission.read).toBe("allow")
+    })
+
+    test("reports no note for an organization mode without an mcp group", () => {
+      const converted = ModesMigrator.convertOrganizationMode(mode)
+
+      expect(converted.notes).toEqual([])
+      expect(converted.agent.permission?.read).toBe("allow")
     })
   })
 

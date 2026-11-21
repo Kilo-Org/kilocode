@@ -441,6 +441,112 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
+    fun `convertCustomModePermissions - plain edit then restricted edit keeps the file restriction`() {
+        val groups: List<Any> = listOf("edit", Pair("edit", mapOf("fileRegex" to "\\.md$")))
+        val result = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), false)
+        val editPerm = result.permission["edit"]?.jsonObject
+        assertNotNull(editPerm)
+        assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
+        assertEquals("allow", editPerm["*.md"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["read"]?.jsonPrimitive?.content)
+        assertEquals("deny", result.permission["skill"]?.jsonPrimitive?.content)
+        assertEquals(listOf("Repeated group; edit kept its file restriction"), result.warnings)
+        assertEquals(listOf(skillNote), result.notes)
+    }
+
+    @Test
+    fun `convertCustomModePermissions - restricted edit then plain edit keeps the file restriction`() {
+        val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "\\.md$")), "edit")
+        val result = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), false)
+        val editPerm = result.permission["edit"]?.jsonObject
+        assertNotNull(editPerm)
+        assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
+        assertEquals("allow", editPerm["*.md"]?.jsonPrimitive?.content)
+        assertEquals(listOf("Repeated group; edit kept its file restriction"), result.warnings)
+        assertEquals(listOf(skillNote), result.notes)
+    }
+
+    @Test
+    fun `convertCustomModePermissions - untranslatable restriction then plain edit keeps ask`() {
+        val groups: List<Any> = listOf(Pair("edit", mapOf("fileRegex" to "^123$")), "edit")
+        val result = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), false)
+        assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
+        assertEquals(
+            listOf(
+                "File restriction not migrated; edit set to ask: ^123$",
+                "Repeated group; edit set to ask",
+            ),
+            result.warnings,
+        )
+        assertEquals(listOf(skillNote), result.notes)
+    }
+
+    @Test
+    fun `convertCustomModePermissions - two different file restrictions ask for edit`() {
+        val groups: List<Any> = listOf(
+            Pair("edit", mapOf("fileRegex" to "\\.md$")),
+            Pair("edit", mapOf("fileRegex" to "\\.txt$")),
+        )
+        val result = LegacyMigrationConverters.convertCustomModePermissions(groups, emptyList(), false)
+        assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
+        assertEquals(listOf("Repeated group; edit set to ask"), result.warnings)
+        assertEquals(listOf(skillNote), result.notes)
+    }
+
+    @Test
+    fun `convertCustomModePermissions - identical repeated groups warn about nothing`() {
+        val plain = LegacyMigrationConverters.convertCustomModePermissions(listOf("edit", "edit"), emptyList(), false)
+        assertEquals("allow", plain.permission["edit"]?.jsonPrimitive?.content)
+        assertTrue(plain.warnings.isEmpty())
+        assertEquals(listOf(skillNote), plain.notes)
+
+        val restrictedGroups: List<Any> = listOf(
+            Pair("edit", mapOf("fileRegex" to "\\.md$")),
+            Pair("edit", mapOf("fileRegex" to "\\.md$")),
+        )
+        val restricted = LegacyMigrationConverters.convertCustomModePermissions(restrictedGroups, emptyList(), false)
+        val editPerm = restricted.permission["edit"]?.jsonObject
+        assertNotNull(editPerm)
+        assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
+        assertEquals("allow", editPerm["*.md"]?.jsonPrimitive?.content)
+        assertTrue(restricted.warnings.isEmpty())
+        assertEquals(listOf(skillNote), restricted.notes)
+    }
+
+    @Test
+    fun `convertCustomModePermissions - repeated mcp groups ask for every migrated server`() {
+        val groups: List<Any> = listOf(Pair("mcp", mapOf("fileRegex" to "\\.md$")), "mcp")
+        val result = LegacyMigrationConverters.convertCustomModePermissions(
+            groups,
+            mcpServers = listOf("github", "my server"),
+            mcpAvailable = true,
+        )
+        assertEquals("ask", result.permission["github_*"]?.jsonPrimitive?.content)
+        assertEquals("ask", result.permission["my_server_*"]?.jsonPrimitive?.content)
+        assertEquals(
+            listOf(
+                "File restriction not migrated; mcp set to ask: \\.md$",
+                "Repeated group; github_* set to ask",
+                "Repeated group; my_server_* set to ask",
+            ),
+            result.warnings,
+        )
+        assertEquals(listOf(skillNote), result.notes)
+    }
+
+    @Test
+    fun `convertCustomModePermissions - repeated plain mcp groups grant without warning`() {
+        val result = LegacyMigrationConverters.convertCustomModePermissions(
+            listOf("mcp", "mcp"),
+            mcpServers = listOf("github"),
+            mcpAvailable = true,
+        )
+        assertEquals("allow", result.permission["github_*"]?.jsonPrimitive?.content)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
+    }
+
+    @Test
     fun `fileRegexToGlobs - digit only arm returns null`() {
         assertNull(fileRegexToGlobs("^123$"))
         assertNull(fileRegexToGlobs("^(123|456)$"))

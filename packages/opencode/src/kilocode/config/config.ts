@@ -454,12 +454,17 @@ export namespace KilocodeConfig {
       if (kilo?.type === "oauth" && kilo.access && kilo.accountId) {
         const modes = await fetchOrganizationModes(kilo.access, kilo.accountId)
         if (modes.length > 0) {
-          const agents = ModesMigrator.convertOrganizationModes(modes)
+          const converted = ModesMigrator.convertOrganizationModes(modes)
           log.debug("loaded organization custom modes", {
             count: modes.length,
             modes: modes.map((m: any) => m.slug),
           })
-          return { agents, warnings }
+          // Explanatory only: kept out of `warnings`, which feeds `kilo config check`
+          // and the extension toast, and logged exactly as legacy mode notes are.
+          for (const note of converted.notes) {
+            log.debug("kilocode organization mode note", { note })
+          }
+          return { agents: converted.agents, warnings }
         }
       }
     } catch (err) {
