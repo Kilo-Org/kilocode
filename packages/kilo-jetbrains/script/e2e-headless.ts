@@ -121,6 +121,15 @@ async function main(): Promise<number> {
   const kiloCommit = gitCommit(root)
   const cloudCommit = options.cloud ? gitCommit(options.cloud) : null
   const cells: CellResult[] = []
+  // Only supported scenario/lane pairs are cells at all, so setup, display and the Cloud stack are
+  // work for what this run will actually execute rather than for every requested combination.
+  const requested = options.scenarios.flatMap((scenario) =>
+    options.lanes.filter((lane) => supportsLane(scenario, lane)).map((lane) => ({ scenario, lane })),
+  )
+  const skipped = options.scenarios.flatMap((scenario) =>
+    options.lanes.filter((lane) => !supportsLane(scenario, lane)).map((lane) => ({ scenario, lane })),
+  )
+  const needsCloud = requested.some((cell) => cell.lane === "cloud")
   const controller = new AbortController()
   const abort = () => {
     if (controller.signal.aborted) return
@@ -142,26 +151,28 @@ async function main(): Promise<number> {
     display = await startDisplay(options)
     console.log(`[headless] display: ${display.label}`)
 
-    stack = new Stack(options.cloud)
-    await ensureStack(options, stack, controller.signal)
-    console.log(`[headless] cloud stack: ${stack.label}`)
+    for (const cell of skipped) {
+      console.log(`[headless] ${cell.scenario}/${cell.lane}: skipped, the scenario does not run on the ${cell.lane} lane`)
+    }
 
-    for (const scenario of options.scenarios) {
-      for (const lane of options.lanes) {
-        if (controller.signal.aborted) {
-          cancelled = true
-          break
-        }
-        if (!supportsLane(scenario, lane)) {
-          console.log(`[headless] ${scenario}/${lane}: skipped, the scenario does not run on the ${lane} lane`)
-          continue
-        }
-        const cell = await runOne(options, runRoot, runId, scenario, lane, kiloCommit, cloudCommit, controller.signal)
-        cells.push(cell)
-        printCell(cell, runRoot)
-        if (cell.outcome === "cancelled") cancelled = true
+    stack = new Stack(options.cloud)
+    if (needsCloud) {
+      await ensureStack(options, stack, controller.signal)
+      console.log(`[headless] cloud stack: ${stack.label}`)
+    } else {
+      stack.label = "not required: no requested cell runs on the cloud lane"
+      console.log(`[headless] cloud stack: ${stack.label}`)
+    }
+
+    for (const { scenario, lane } of requested) {
+      if (controller.signal.aborted) {
+        cancelled = true
+        break
       }
-      if (cancelled) break
+      const cell = await runOne(options, runRoot, runId, scenario, lane, kiloCommit, cloudCommit, controller.signal)
+      cells.push(cell)
+      printCell(cell, runRoot)
+      if (cell.outcome === "cancelled") cancelled = true
     }
   } catch (error) {
     if (controller.signal.aborted) cancelled = true
@@ -447,6 +458,8 @@ function preflight(options: Options): Problem[] {
   }
 
   checkDisplay(options, problems)
+  // Every cell runs through the C1 fixture provider, which lives in the Cloud checkout, so the
+  // checkout is required even when no requested cell runs on the cloud lane.
   checkCloud(options, problems)
   return problems
 }

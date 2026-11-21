@@ -1,5 +1,5 @@
 import { join, resolve } from "node:path"
-import { ALL_MANIFESTS, LANES, SCENARIO_IDS, manifest } from "./scenarios"
+import { ALL_MANIFESTS, LANES, SCENARIO_IDS, manifest, supportsLane } from "./scenarios"
 import { run, RunError } from "./coordinator"
 import type { Lane, ScenarioID } from "./schema"
 
@@ -50,6 +50,9 @@ function parse(argv: string[]): Demo {
       parsed.runId = value
       index += 1
     } else usage(`unknown flag: ${flag}`)
+  }
+  if (!parsed.all && !supportsLane(parsed.scenario, parsed.lane)) {
+    usage(`scenario ${parsed.scenario} does not run on the ${parsed.lane} lane`)
   }
   return parsed
 }

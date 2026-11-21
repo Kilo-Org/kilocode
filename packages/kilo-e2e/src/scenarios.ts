@@ -122,6 +122,10 @@ const DEFINITIONS: Record<ScenarioID, Definition> = {
   },
 }
 
+/**
+ * Whether a scenario runs on a lane. Every consumer that builds a cell goes through [manifest],
+ * which enforces this, so no path can produce a cell for an unsupported lane.
+ */
 export function supportsLane(id: ScenarioID, lane: Lane): boolean {
   const lanes = DEFINITIONS[id].lanes
   return !lanes || lanes.includes(lane)
@@ -129,8 +133,9 @@ export function supportsLane(id: ScenarioID, lane: Lane): boolean {
 
 export function manifest(id: ScenarioID, lane: Lane): ScenarioManifest {
   const definition = DEFINITIONS[id]
-  if (definition.lanes && !definition.lanes.includes(lane)) {
-    throw new ManifestError(`${id} does not run on the ${lane} lane`)
+  if (!supportsLane(id, lane)) {
+    const lanes = definition.lanes?.join(", ") ?? LANES.join(", ")
+    throw new ManifestError(`${id} does not run on the ${lane} lane; it runs on: ${lanes}`)
   }
   return validateManifest({
     schemaVersion: SCHEMA_VERSION,

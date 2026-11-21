@@ -22,10 +22,16 @@ describe("scenario manifests", () => {
       "followup.new-session",
     ])
     expect(LANES).toEqual(["local", "cloud"])
-    expect(ALL_MANIFESTS.length).toBeGreaterThan(0)
-    for (const entry of ALL_MANIFESTS) expect(supportsLane(entry.id, entry.lane)).toBe(true)
+    // Every scenario keeps at least one lane, every generated cell is a supported pair, and each
+    // scenario's cells are exactly the lanes it supports — so a scenario cannot silently lose all
+    // coverage, and an unsupported pair can never be generated.
     const cells = ALL_MANIFESTS.map((entry) => `${entry.id}:${entry.lane}`)
     expect(new Set(cells).size).toBe(ALL_MANIFESTS.length)
+    for (const id of SCENARIO_IDS) {
+      const lanes = ALL_MANIFESTS.filter((entry) => entry.id === id).map((entry) => entry.lane)
+      expect(lanes.length).toBeGreaterThan(0)
+      expect(lanes).toEqual(LANES.filter((lane) => supportsLane(id, lane)))
+    }
     for (const entry of ALL_MANIFESTS) expect(validateManifest(entry)).toEqual(entry)
   })
 
@@ -33,7 +39,7 @@ describe("scenario manifests", () => {
     expect(supportsLane("followup.new-session", "local")).toBe(true)
     expect(supportsLane("followup.new-session", "cloud")).toBe(false)
     expect(manifest("followup.new-session", "local")).toMatchObject({ id: "followup.new-session", lane: "local" })
-    expect(() => manifest("followup.new-session", "cloud")).toThrow(/followup\.new-session.*cloud/)
+    expect(() => manifest("followup.new-session", "cloud")).toThrow(/followup\.new-session does not run on the cloud lane; it runs on: local/)
     expect(ALL_MANIFESTS.filter((entry) => entry.id === "followup.new-session").map((entry) => entry.lane)).toEqual([
       "local",
     ])
