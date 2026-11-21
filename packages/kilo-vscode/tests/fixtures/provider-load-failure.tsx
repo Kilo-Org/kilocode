@@ -112,6 +112,9 @@ async function scenario(name: string, value: ModelSelection | null, previousLabe
     const button = host.querySelector("button")
     return button?.getAttribute("aria-label") ?? ""
   }
+  // The provider context asks for providers while it is created, so the baseline is taken
+  // before the render call rather than after it.
+  const before = sent.length
   const dispose = render(
     () => (
       <VSCodeProvider>
@@ -131,7 +134,7 @@ async function scenario(name: string, value: ModelSelection | null, previousLabe
     await settle()
     check(`${name}: requests providers on mount`, () => {
       assert.ok(
-        sent.some((message) => message.type === "requestProviders"),
+        sent.slice(before).some((message) => message.type === "requestProviders"),
         "the provider view asks the extension for providers",
       )
     })

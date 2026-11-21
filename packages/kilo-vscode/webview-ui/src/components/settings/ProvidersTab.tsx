@@ -234,19 +234,22 @@ const ProvidersTab: Component = () => {
                 )
               }}
             </Show>
-            <Show when={loadFailed()}>
-              <span
-                style={{
-                  "font-size": "var(--kilo-font-size-12)",
-                  color: "var(--vscode-errorForeground)",
-                  "padding-left": "32px",
-                }}
-              >
-                {language.t("dialog.model.loadFailed")}
-              </span>
-            </Show>
           </div>
         </Card>
+      </Show>
+
+      {/* Reports the provider read itself, so it stays visible for every provider row. */}
+      <Show when={loadFailed()}>
+        <span
+          style={{
+            display: "block",
+            "margin-top": "8px",
+            "font-size": "var(--kilo-font-size-12)",
+            color: "var(--vscode-errorForeground)",
+          }}
+        >
+          {language.t("dialog.model.loadFailed")}
+        </span>
       </Show>
 
       {/* Connected providers (excluding Kilo) */}
