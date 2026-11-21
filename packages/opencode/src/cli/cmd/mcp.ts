@@ -22,6 +22,7 @@ import { modify, applyEdits } from "jsonc-parser"
 import { Filesystem } from "@/util/filesystem"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { KilocodeMcpAuth } from "@/kilocode/cli/cmd/mcp-auth" // kilocode_change
 
 function getAuthStatusIcon(status: MCP.AuthStatus): string {
   switch (status) {
@@ -265,10 +266,17 @@ export const McpAuthCommand = effectCmd({
         spinner.start("Waiting for authorization...")
       }),
     ).pipe(
+      // kilocode_change start - verify stored credentials before reporting success
+      Effect.tap((status) =>
+        status.status === "connected"
+          ? MCP.Service.use((mcp) => KilocodeMcpAuth.connected({ mcp, serverName, spinner, prompts }))
+          : Effect.void,
+      ),
+      // kilocode_change end
       Effect.tap((status) =>
         Effect.sync(() => {
           if (status.status === "connected") {
-            spinner.stop("Authentication successful!")
+            // kilocode_change - reported by KilocodeMcpAuth.connected
           } else if (status.status === "needs_client_registration") {
             spinner.stop("Authentication failed", 1)
             prompts.log.error(status.error)
