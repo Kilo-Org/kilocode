@@ -31,6 +31,7 @@ export interface IndexingConfigInput {
   ollamaBaseUrl?: string
   openAiCompatibleBaseUrl?: string
   openAiCompatibleApiKey?: string
+  openAiCompatibleSendDimensions?: boolean
   geminiApiKey?: string
   mistralApiKey?: string
   vercelAiGatewayApiKey?: string
@@ -59,7 +60,7 @@ export class CodeIndexConfigManager {
   private kiloOptions?: { apiKey: string; baseUrl?: string; organizationId?: string }
   private openAiOptions?: { apiKey: string }
   private ollamaOptions?: { baseUrl: string; modelId?: string }
-  private openAiCompatibleOptions?: { baseUrl: string; apiKey?: string }
+  private openAiCompatibleOptions?: { baseUrl: string; apiKey?: string; sendDimensions: boolean }
   private geminiOptions?: { apiKey: string }
   private mistralOptions?: { apiKey: string }
   private vercelAiGatewayOptions?: { apiKey: string }
@@ -117,7 +118,11 @@ export class CodeIndexConfigManager {
     const url = input.ollamaBaseUrl ?? (input.embedderProvider === "ollama" ? "http://localhost:11434" : undefined)
     this.ollamaOptions = url ? { baseUrl: url, modelId: input.modelId } : undefined
     this.openAiCompatibleOptions = input.openAiCompatibleBaseUrl
-      ? { baseUrl: input.openAiCompatibleBaseUrl, apiKey: input.openAiCompatibleApiKey?.trim() || undefined }
+      ? {
+          baseUrl: input.openAiCompatibleBaseUrl,
+          apiKey: input.openAiCompatibleApiKey?.trim() || undefined,
+          sendDimensions: input.openAiCompatibleSendDimensions ?? true,
+        }
       : undefined
     this.geminiOptions = input.geminiApiKey ? { apiKey: input.geminiApiKey } : undefined
     this.mistralOptions = input.mistralApiKey ? { apiKey: input.mistralApiKey } : undefined
@@ -147,6 +152,7 @@ export class CodeIndexConfigManager {
       ollamaBaseUrl: this.ollamaOptions?.baseUrl ?? "",
       openAiCompatibleBaseUrl: this.openAiCompatibleOptions?.baseUrl ?? "",
       openAiCompatibleApiKey: this.openAiCompatibleOptions?.apiKey ?? "",
+      openAiCompatibleSendDimensions: this.openAiCompatibleOptions?.sendDimensions ?? true,
       geminiApiKey: this.geminiOptions?.apiKey ?? "",
       mistralApiKey: this.mistralOptions?.apiKey ?? "",
       vercelAiGatewayApiKey: this.vercelAiGatewayOptions?.apiKey ?? "",
@@ -216,7 +222,8 @@ export class CodeIndexConfigManager {
     if ((prev.ollamaBaseUrl ?? "") !== (this.ollamaOptions?.baseUrl ?? "")) return true
     if (
       (prev.openAiCompatibleBaseUrl ?? "") !== (this.openAiCompatibleOptions?.baseUrl ?? "") ||
-      (prev.openAiCompatibleApiKey ?? "") !== (this.openAiCompatibleOptions?.apiKey ?? "")
+      (prev.openAiCompatibleApiKey ?? "") !== (this.openAiCompatibleOptions?.apiKey ?? "") ||
+      (prev.openAiCompatibleSendDimensions ?? true) !== (this.openAiCompatibleOptions?.sendDimensions ?? true)
     )
       return true
     if ((prev.geminiApiKey ?? "") !== (this.geminiOptions?.apiKey ?? "")) return true

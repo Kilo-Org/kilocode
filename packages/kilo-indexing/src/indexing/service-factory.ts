@@ -109,7 +109,10 @@ export class CodeIndexServiceFactory {
         config.openAiCompatibleOptions.apiKey,
         config.modelId,
         undefined,
-        { dimensions: config.modelDimension },
+        {
+          dimensions: config.modelDimension,
+          sendDimensions: config.openAiCompatibleOptions.sendDimensions,
+        },
       )
     }
     if (provider === "gemini") {
