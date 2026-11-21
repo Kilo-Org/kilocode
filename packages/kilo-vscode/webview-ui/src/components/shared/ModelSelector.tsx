@@ -151,7 +151,7 @@ export interface ModelSelectorBaseProps {
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
-  const { connected, models, findModel, kiloUnavailable, failures, loadError } = useProvider()
+  const { connected, models, findModel, kiloUnavailable, failures, loadFailed } = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
   // Session context is optional — ModelSelectorBase is also used in Settings
@@ -825,7 +825,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   }
   const triggerLabel = () => {
     // A failed provider read means no selection can be shown as current for this project.
-    if (loadError()) return language.t("dialog.model.loadFailed")
+    if (loadFailed()) return language.t("dialog.model.loadFailed")
     return buildTriggerLabel(
       activeModel()?.name,
       activeModel()?.providerID,

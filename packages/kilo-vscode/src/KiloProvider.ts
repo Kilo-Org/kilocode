@@ -2963,7 +2963,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               defaultSelection: computeDefaultSelection(null, "", ""),
               authMethods: {},
               authStates: {},
-              error: "Provider list could not be loaded.",
+              loadFailed: true,
             })
           }
           // Keep backing off while the last loaded Kilo catalog was unavailable.

@@ -52,7 +52,7 @@ const ProvidersTab: Component = () => {
 
   const kiloLoggedIn = createMemo(() => !!provider.authStates()[KILO_PROVIDER_ID])
   const kiloFailure = createMemo(() => providerFailure(KILO_PROVIDER_ID, provider.failures()))
-  const loadFailed = createMemo(() => !!provider.loadError())
+  const loadFailed = provider.loadFailed
 
   const connectedProviders = createMemo(() => {
     const ids = visibleConnectedIds(provider.connected(), provider.authStates())

@@ -565,7 +565,7 @@ export interface ProvidersLoadedMessage {
   /** Typed reasons providers failed to load, so the UI can explain why instead of hiding them. */
   failures?: ProviderFailure[]
   /** The provider read for this project failed, so the payload carries no provider data. */
-  error?: string
+  loadFailed?: boolean
 }
 
 export interface AgentsLoadedMessage {

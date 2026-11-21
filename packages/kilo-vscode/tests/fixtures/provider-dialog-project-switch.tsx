@@ -53,16 +53,37 @@ const { onMount } = await import("solid-js")
 const { DialogProvider, useDialog } = await import("@kilocode/kilo-ui/context/dialog")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
 const { ProviderProvider } = await import("../../webview-ui/src/context/provider")
+const { ConfigProvider } = await import("../../webview-ui/src/context/config")
+const { LanguageContext } = await import("../../webview-ui/src/context/language")
+const { default: CustomProviderDialog } = await import("../../webview-ui/src/components/settings/CustomProviderDialog")
+const { dict } = await import("../../webview-ui/src/i18n/en")
 const { post } = await import("../../webview-ui/src/utils/webview-message")
+
+const language = {
+  locale: () => "en",
+  setLocale: () => {},
+  userOverride: () => "",
+  t: (key: string) => dict[key as keyof typeof dict] ?? key,
+}
 
 const settle = async () => {
   await Promise.resolve()
   await window.happyDOM.waitUntilComplete()
 }
 
-const node = () => document.querySelector('[data-testid="probe-dialog"]')
+const wait = async () => {
+  // DialogProvider.close() drops its stack entry after a 100 ms timer.
+  await settle()
+  const { promise, resolve } = Promise.withResolvers<void>()
+  setTimeout(resolve, 150)
+  await promise
+  await settle()
+}
 
-// The probe below hands its dialog API back here, so the assertions drive the same stack the
+const node = () => document.querySelector('[data-testid="probe-dialog"]')
+const providerNode = () => document.querySelector('[data-component="dialog"]')
+
+// The probes below hand their dialog API back here, so the assertions drive the same stack the
 // provider context closes.
 const ui: { value?: { open: () => void; active: () => boolean } } = {}
 const probe = () => {
@@ -71,8 +92,8 @@ const probe = () => {
 }
 
 /**
- * Opens one dialog from inside the real DialogProvider, so the assertion can ask whether the
- * provider context closed it.
+ * Opens one plain dialog from inside the real DialogProvider, so the assertion can ask whether
+ * the provider context closed it.
  */
 const Probe = () => {
   const dialog = useDialog()
@@ -81,6 +102,18 @@ const Probe = () => {
     active: () => !!dialog.active,
   }
   onMount(() => ui.value?.open())
+  return null
+}
+
+const providerUi: { value?: { open: () => void } } = {}
+
+/**
+ * Opens one real provider dialog, which belongs to the provider state of the project it was
+ * opened for.
+ */
+const ProviderProbe = () => {
+  const dialog = useDialog()
+  providerUi.value = { open: () => dialog.show(() => <CustomProviderDialog />) }
   return null
 }
 
@@ -100,9 +133,14 @@ const dispose = render(
   () => (
     <VSCodeProvider>
       <DialogProvider>
-        <ProviderProvider>
-          <Probe />
-        </ProviderProvider>
+        <ConfigProvider>
+          <LanguageContext.Provider value={language as never}>
+            <ProviderProvider>
+              <Probe />
+              <ProviderProbe />
+            </ProviderProvider>
+          </LanguageContext.Provider>
+        </ConfigProvider>
       </DialogProvider>
     </VSCodeProvider>
   ),
@@ -113,35 +151,64 @@ try {
   await settle()
   await settle()
   console.log(`RESULT ${JSON.stringify({ step: "open on mount", node: !!node(), active: probe().active() })}`)
-  check("the probe dialog is open after mount", () => {
-    assert.ok(node(), "the probe dialog is rendered")
-    assert.ok(probe().active(), "the dialog stack holds the probe dialog")
+  check("the plain probe dialog is open after mount", () => {
+    assert.ok(node(), "the plain probe dialog is rendered")
+    assert.ok(probe().active(), "the dialog stack holds the plain probe dialog")
   })
 
-  // A project change closes an open dialog, because the dialog belongs to the project it was
-  // opened for. close() drops the stack entry after its 100 ms timer, so wait for that timer.
+  // A project change only closes the provider dialogs that belong to the replaced project, so
+  // an unrelated dialog stays open.
   post({ type: "providersReset" })
+  await wait()
+  console.log(
+    `RESULT ${JSON.stringify({ step: "plain dialog after reset", node: !!node(), active: probe().active() })}`,
+  )
+  check("providersReset keeps a plain dialog open", () => {
+    assert.ok(node(), "the plain probe dialog is still rendered")
+    assert.ok(probe().active(), "the dialog stack still holds the plain probe dialog")
+  })
+
+  // A provider dialog belongs to the project it was opened for, because its component
+  // registers with the provider context.
+  providerUi.value?.open()
   await settle()
-  await new Promise((resolve) => setTimeout(resolve, 150))
-  await settle()
-  console.log(`RESULT ${JSON.stringify({ step: "after reset", node: !!node(), active: probe().active() })}`)
-  check("providersReset closes the open dialog", () => {
-    assert.ok(!node(), "no probe dialog remains in the document")
+  console.log(`RESULT ${JSON.stringify({ step: "provider dialog open", node: !!providerNode() })}`)
+  check("the provider dialog opens", () => {
+    assert.ok(providerNode(), "the custom provider dialog is rendered")
+  })
+
+  post({ type: "providersReset" })
+  await wait()
+  console.log(
+    `RESULT ${JSON.stringify({ step: "provider dialog after reset", node: !!providerNode(), plain: !!node() })}`,
+  )
+  check("providersReset closes the open provider dialog", () => {
+    assert.equal(providerNode(), null, "no provider dialog remains in the document")
     assert.equal(probe().active(), false, "the dialog stack is empty")
+    assert.equal(node(), null, "the plain probe dialog was already replaced by the provider dialog")
+  })
+
+  // The closed provider dialog unregistered itself, so a later project change must not close
+  // an unrelated dialog again.
+  probe().open()
+  await settle()
+  post({ type: "providersReset" })
+  await wait()
+  console.log(
+    `RESULT ${JSON.stringify({ step: "plain dialog after a later reset", node: !!node(), active: probe().active() })}`,
+  )
+  check("the provider dialog registration does not outlive it", () => {
+    assert.ok(node(), "the plain probe dialog is still rendered")
+    assert.ok(probe().active(), "the dialog stack still holds the plain probe dialog")
   })
 
   // The loading message only drops catalog rows; it must leave an open dialog alone.
-  probe().open()
-  await settle()
-  assert.ok(node(), "the probe dialog is open again")
   post({ type: "providersLoading" })
-  await settle()
-  await new Promise((resolve) => setTimeout(resolve, 150))
-  await settle()
+  await wait()
   console.log(`RESULT ${JSON.stringify({ step: "after loading", node: !!node(), active: probe().active() })}`)
   check("providersLoading keeps the open dialog", () => {
-    assert.ok(node(), "the probe dialog is still rendered")
-    assert.ok(probe().active(), "the dialog stack still holds the probe dialog")
+    assert.ok(node(), "the plain probe dialog is still rendered")
+    assert.ok(probe().active(), "the dialog stack still holds the plain probe dialog")
   })
 
   check("no window errors", () => {

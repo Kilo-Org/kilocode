@@ -88,7 +88,7 @@ const failed = {
   defaultSelection: { providerID: "kilo", modelID: "kilo-auto" },
   authMethods: {},
   authStates: {},
-  error: failureCopy,
+  loadFailed: true,
 }
 
 const failures: string[] = []

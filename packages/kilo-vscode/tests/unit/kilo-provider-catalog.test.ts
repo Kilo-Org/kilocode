@@ -264,7 +264,7 @@ describe("KiloProvider catalog refresh", () => {
       loads.filter((message) => message.providers && Object.keys(message.providers as object).length > 0),
     ).toHaveLength(1)
     expect(messages.at(-1)).toMatchObject({ type: "providersLoaded", providers: {} })
-    expect(messages.at(-1)?.error).toBeTruthy()
+    expect(messages.at(-1)).toMatchObject({ type: "providersLoaded", providers: {}, loadFailed: true })
     expect(internal.cachedProvidersMessage).toBeNull()
   })
 

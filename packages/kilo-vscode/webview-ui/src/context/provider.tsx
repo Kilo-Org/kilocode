@@ -31,8 +31,10 @@ interface ProviderContextValue {
   kiloUnavailable: Accessor<boolean>
   /** Typed reasons providers failed to load, so the UI can explain why instead of hiding them. */
   failures: Accessor<ProviderFailure[]>
-  /** The last provider read failed; the view has no provider data for this project. */
-  loadError: Accessor<string | undefined>
+  /** The last provider read failed, so the view has no provider data for this project. */
+  loadFailed: Accessor<boolean>
+  /** Registers the calling provider dialog, so a project switch closes it with that project's state. */
+  trackDialog: () => void
 }
 
 export const ProviderContext = createContext<ProviderContextValue>()
@@ -51,7 +53,20 @@ export const ProviderProvider: ParentComponent = (props) => {
   const [authStates, setAuthStates] = createSignal<Record<string, ProviderAuthState>>({})
   const [kiloUnavailable, setKiloUnavailable] = createSignal(false)
   const [failures, setFailures] = createSignal<ProviderFailure[]>([])
-  const [loadError, setLoadError] = createSignal<string | undefined>()
+  const [loadFailed, setLoadFailed] = createSignal(false)
+  // Provider dialogs that belong to one project's provider state, so a switch closes them
+  // instead of every dialog the settings surface happens to have open.
+  const [dialogs, setDialogs] = createSignal(0)
+
+  function trackDialog() {
+    setDialogs((count) => count + 1)
+    let open = true
+    onCleanup(() => {
+      if (!open) return
+      open = false
+      setDialogs((count) => count - 1)
+    })
+  }
 
   const models = createMemo<EnrichedModel[]>(() => flattenModels(providers()))
 
@@ -79,9 +94,10 @@ export const ProviderProvider: ParentComponent = (props) => {
         setFailures([])
         setKiloUnavailable(false)
         setDefaultSelection(KILO_AUTO)
-        setLoadError(undefined)
-        // A dialog belongs to one project, so it closes with that project's provider state.
-        if (dialog.active) dialog.close()
+        setLoadFailed(false)
+        // A provider dialog belongs to one project, so it closes with that project's state;
+        // an unrelated settings dialog stays open.
+        if (dialogs() > 0 && dialog.active) dialog.close()
       })
       return
     }
@@ -101,7 +117,7 @@ export const ProviderProvider: ParentComponent = (props) => {
         })
         setConnected((prev) => prev.filter((id) => id !== "kilo"))
         setFailures((prev) => prev.filter((item) => item.providerID !== "kilo"))
-        setLoadError(undefined)
+        setLoadFailed(false)
       })
       return
     }
@@ -118,7 +134,7 @@ export const ProviderProvider: ParentComponent = (props) => {
       setAuthStates(message.authStates)
       setKiloUnavailable(message.kiloUnavailable ?? false)
       setFailures(message.failures ?? [])
-      setLoadError(message.error)
+      setLoadFailed(message.loadFailed === true)
     })
   })
 
@@ -162,7 +178,8 @@ export const ProviderProvider: ParentComponent = (props) => {
     isModelValid,
     kiloUnavailable,
     failures,
-    loadError,
+    loadFailed,
+    trackDialog,
   }
 
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>

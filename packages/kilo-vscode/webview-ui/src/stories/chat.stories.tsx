@@ -1654,7 +1654,8 @@ const usageProvider = {
   isModelValid: () => true,
   kiloUnavailable: () => false,
   failures: () => [],
-  loadError: () => undefined,
+  loadFailed: () => false,
+  trackDialog: () => {},
 }
 
 const usageStory = (open: boolean) => () => (

@@ -305,8 +305,7 @@ describe("KiloProvider providers on reconnect", () => {
       defaults: {},
       ready: false,
     })
-    expect(typeof last.error).toBe("string")
-    expect(last.error).not.toBe("")
+    expect(last).toMatchObject({ loadFailed: true })
     expect(internal.cachedProvidersMessage).toBeNull()
   })
 
@@ -445,5 +444,92 @@ describe("KiloProvider providers on reconnect", () => {
     expect(messages).toContainEqual(
       expect.objectContaining({ type: "providerDisconnected", requestId: "r1", providerID: "vercel" }),
     )
+  })
+
+  it("drops a provider read for the previous project that resolves after a switch", async () => {
+    let dir = "/project-a"
+    const requests: string[] = []
+    const messages: unknown[] = []
+    const deferred = Promise.withResolvers<{
+      data: { all: unknown[]; connected: string[]; default: Record<string, boolean> }
+    }>()
+    const internal = provider(
+      connection(true, {
+        kilo: { authStatus: async () => ({ data: { authenticated: false } }) },
+        provider: {
+          list: (input: { directory: string }) => {
+            requests.push(input.directory)
+            if (input.directory === "/project-a") return deferred.promise
+            return Promise.resolve({ data: { all: [], connected: [], default: { [input.directory]: true } } })
+          },
+        },
+      }),
+      () => dir,
+    )
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    const pending = internal.fetchAndSendProviders()
+    expect(requests).toEqual(["/project-a"])
+
+    dir = "/project-b"
+    const before = messages.length
+    internal.setProjectDirectory("/project-b")
+    deferred.resolve({ data: { all: [], connected: [], default: { "/project-a": true } } })
+    await pending
+    if (internal.providersRefresh) await internal.providersRefresh
+
+    expect(requests).toEqual(["/project-a", "/project-b"])
+    expect(loaded(messages)).not.toContainEqual(expect.objectContaining({ defaults: { "/project-a": true } }))
+    expect(messages.slice(before)).toContainEqual(expect.objectContaining({ type: "providersReset" }))
+    const after = loaded(messages.slice(before))
+    expect(after).toHaveLength(1)
+    expect(after[0]).toMatchObject({ defaults: { "/project-b": true } })
+    const cached = internal.cachedProvidersMessage
+    if (cached) expect(cached).toMatchObject({ defaults: { "/project-b": true } })
+  })
+
+  it("drops a provider read for the previous project that rejects after a switch", async () => {
+    let dir = "/project-a"
+    const requests: string[] = []
+    const messages: unknown[] = []
+    const deferred = Promise.withResolvers<{
+      data: { all: unknown[]; connected: string[]; default: Record<string, boolean> }
+    }>()
+    const internal = provider(
+      connection(true, {
+        kilo: { authStatus: async () => ({ data: { authenticated: false } }) },
+        provider: {
+          list: (input: { directory: string }) => {
+            requests.push(input.directory)
+            if (input.directory === "/project-a") return deferred.promise
+            return Promise.resolve({ data: { all: [], connected: [], default: { [input.directory]: true } } })
+          },
+        },
+      }),
+      () => dir,
+    )
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    const pending = internal.fetchAndSendProviders()
+    expect(requests).toEqual(["/project-a"])
+
+    dir = "/project-b"
+    const before = messages.length
+    internal.setProjectDirectory("/project-b")
+    deferred.reject(new Error("backend gone"))
+    await pending
+    if (internal.providersRefresh) await internal.providersRefresh
+
+    expect(requests).toEqual(["/project-a", "/project-b"])
+    expect(loaded(messages)).not.toContainEqual(expect.objectContaining({ defaults: { "/project-a": true } }))
+    const after = loaded(messages.slice(before))
+    expect(after).toHaveLength(1)
+    expect(after[0]).toMatchObject({ defaults: { "/project-b": true } })
+    expect(after).not.toContainEqual(expect.objectContaining({ loadFailed: true }))
+    expect(internal.providersRetry).toBe(false)
+    const cached = internal.cachedProvidersMessage
+    if (cached) expect(cached).toMatchObject({ defaults: { "/project-b": true } })
   })
 })

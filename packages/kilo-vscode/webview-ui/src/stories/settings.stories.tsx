@@ -153,7 +153,7 @@ export const ProvidersDisabledExpanded: Story = {
 export const ProvidersLoadFailure: Story = {
   name: "ProvidersTab — load failure",
   render: () => (
-    <StoryProviders loadError="Could not load providers for this project.">
+    <StoryProviders loadFailed>
       <div style={{ "max-height": "700px", overflow: "auto" }}>
         <ProvidersTab />
       </div>

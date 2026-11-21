@@ -99,7 +99,7 @@ const MOCK_PROVIDERS = {
 const MOCK_MODELS = flattenModels(MOCK_PROVIDERS as any)
 
 /** A synchronous mock ProviderContext — provides models without waiting for a postMessage round-trip. */
-const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boolean; loadError?: string }> = (
+const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boolean; loadFailed?: boolean }> = (
   props,
 ) => {
   const models = createMemo(() =>
@@ -122,7 +122,8 @@ const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boo
     isModelValid: () => true,
     kiloUnavailable: () => false,
     failures: () => [],
-    loadError: () => props.loadError,
+    loadFailed: () => props.loadFailed === true,
+    trackDialog: () => {},
   }
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
 }
@@ -343,8 +344,8 @@ interface StoryProvidersProps {
   onOpenFile?: OpenFileFn
   kiloAuth?: boolean
   training?: boolean
-  /** When set, the mock provider context reports a failed provider read with this message. */
-  loadError?: string
+  /** When true, the mock provider context reports a failed provider read for this project. */
+  loadFailed?: boolean
   /** When true, renders children without the default 12px padding wrapper */
   noPadding?: boolean
 }
@@ -462,7 +463,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
             onProjectConfigChange={props.onProjectConfigChange}
           >
             <DisplayProvider>
-              <MockProviderProvider kiloAuth={props.kiloAuth} training={props.training} loadError={props.loadError}>
+              <MockProviderProvider kiloAuth={props.kiloAuth} training={props.training} loadFailed={props.loadFailed}>
                 <DialogProvider>
                   <LanguageContext.Provider
                     value={{
