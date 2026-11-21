@@ -143,6 +143,10 @@ Owners, Admins, and Billing Managers can open **Request Logs** from the organiza
 
 Request Logs are available to every organization. If your organization has Enkrypt enabled, an **Enkrypt** tab appears next to **Requests**.
 
+The **Enkrypt** tab shows a card for each guardrail scan the request ran, breaking down that scan's calls -- for example, how many were needed, allowed, failed, or never sent -- and whether its verdicts came from the cache. When the shared deadline ends a scan early, its card is marked **Partly failed** and explains how many calls failed and how many were never sent.
+
+When Kilo tried a partner provider for a Kilo-paid request and it returned an error, the routing detail shows a **provider fallback** instead of BYOK failover. It names the partner provider and lists the attempts in order, and notes that both attempts are paid with Kilo credits and only the attempt that served the request is charged.
+
 ## Next Steps
 
 - [Manage team billing settings](/docs/collaborate/teams/billing)
