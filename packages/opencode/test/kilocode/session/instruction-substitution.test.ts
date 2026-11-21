@@ -52,10 +52,7 @@ describe("instruction markdown substitutions", () => {
           const project = path.join(dir, "project")
           const home = path.join(dir, "global")
           yield* write(path.join(project, "README.md"), "project")
-          yield* write(
-            path.join(home, "rules", "trusted.md"),
-            "{env:KILO_INSTRUCTION_GLOBAL_PATTERN_SECRET}",
-          )
+          yield* write(path.join(home, "rules", "trusted.md"), "{env:KILO_INSTRUCTION_GLOBAL_PATTERN_SECRET}")
           const config = TestConfig.layer({
             get: () =>
               Effect.succeed({
@@ -221,5 +218,39 @@ describe("instruction markdown substitutions", () => {
         delete process.env[name]
       }).pipe(Effect.provide(layer(path.join(dir, "global")))),
     ),
+  )
+
+  it.live("does not expose environment substitutions through scoped project rules", () =>
+    provideTmpdirInstance((dir) => {
+      const item = path.join(dir, "rules", "scoped.md")
+      const name = "KILO_SCOPED_INSTRUCTION_SECRET"
+      const config = TestConfig.layer({
+        get: () =>
+          Effect.succeed({
+            instructions: [item],
+            instruction_origins: { [item]: { trusted: false, source: path.join(dir, "kilo.json"), root: dir } },
+          }),
+      })
+      return Effect.acquireUseRelease(
+        Effect.sync(() => {
+          process.env[name] = "environment secret"
+        }),
+        () =>
+          Effect.gen(function* () {
+            yield* write(item, ["---", "paths: src/**/*.ts", "---", "", `{env:${name}}`].join("\n"))
+            yield* write(path.join(dir, "src", "file.ts"), "export const value = 1")
+
+            const svc = yield* Instruction.Service
+            const system = yield* svc.system()
+            const rules = yield* svc.resolve([], path.join(dir, "src", "file.ts"), MessageID.ascending())
+            expect(system.join("\n")).not.toContain("environment secret")
+            expect(rules.map((rule) => rule.content).join("\n")).not.toContain("environment secret")
+          }).pipe(Effect.provide(layer(path.join(dir, "global"), config))),
+        () =>
+          Effect.sync(() => {
+            delete process.env[name]
+          }),
+      )
+    }),
   )
 })
