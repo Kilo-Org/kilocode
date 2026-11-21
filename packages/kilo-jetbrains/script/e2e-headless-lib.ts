@@ -2,6 +2,7 @@ import { resolve } from "node:path"
 import {
   LANES,
   SCENARIO_IDS,
+  supportsLane,
   type Lane,
   type ScenarioID,
 } from "../../kilo-e2e/src/index"

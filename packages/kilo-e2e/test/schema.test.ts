@@ -1,11 +1,19 @@
 import { describe, expect, test } from "bun:test"
 import { join } from "node:path"
 import { SCHEMA_DOCUMENTS, SCHEMA_VERSION, jsonSchema } from "../src/schema"
-import { ALL_MANIFESTS, LANES, SCENARIO_IDS, assertSelectorFree, validateManifest } from "../src/scenarios"
+import {
+  ALL_MANIFESTS,
+  LANES,
+  SCENARIO_IDS,
+  assertSelectorFree,
+  manifest,
+  supportsLane,
+  validateManifest,
+} from "../src/scenarios"
 import { root } from "./helpers"
 
 describe("scenario manifests", () => {
-  test("defines every stable scenario for both lanes", () => {
+  test("defines every stable scenario on the lanes that support it", () => {
     expect(SCENARIO_IDS).toEqual([
       "session.open",
       "prompt.stream",
@@ -14,10 +22,21 @@ describe("scenario manifests", () => {
       "followup.new-session",
     ])
     expect(LANES).toEqual(["local", "cloud"])
-    expect(ALL_MANIFESTS).toHaveLength(SCENARIO_IDS.length * LANES.length)
+    expect(ALL_MANIFESTS.length).toBeGreaterThan(0)
+    for (const entry of ALL_MANIFESTS) expect(supportsLane(entry.id, entry.lane)).toBe(true)
     const cells = ALL_MANIFESTS.map((entry) => `${entry.id}:${entry.lane}`)
     expect(new Set(cells).size).toBe(ALL_MANIFESTS.length)
     for (const entry of ALL_MANIFESTS) expect(validateManifest(entry)).toEqual(entry)
+  })
+
+  test("only the local lane supports the follow-up scenario", () => {
+    expect(supportsLane("followup.new-session", "local")).toBe(true)
+    expect(supportsLane("followup.new-session", "cloud")).toBe(false)
+    expect(manifest("followup.new-session", "local")).toMatchObject({ id: "followup.new-session", lane: "local" })
+    expect(() => manifest("followup.new-session", "cloud")).toThrow(/followup\.new-session.*cloud/)
+    expect(ALL_MANIFESTS.filter((entry) => entry.id === "followup.new-session").map((entry) => entry.lane)).toEqual([
+      "local",
+    ])
   })
 
   test("keeps manifests semantic and free of IDE selectors", () => {

@@ -20,6 +20,7 @@ import {
   ensureDir,
   EvidenceReport,
   RunError,
+  supportsLane,
   type Lane,
   type ScenarioID,
 } from "../../kilo-e2e/src/index"
@@ -150,6 +151,10 @@ async function main(): Promise<number> {
         if (controller.signal.aborted) {
           cancelled = true
           break
+        }
+        if (!supportsLane(scenario, lane)) {
+          console.log(`[headless] ${scenario}/${lane}: skipped, the scenario does not run on the ${lane} lane`)
+          continue
         }
         const cell = await runOne(options, runRoot, runId, scenario, lane, kiloCommit, cloudCommit, controller.signal)
         cells.push(cell)
@@ -379,6 +384,17 @@ async function readStackStatus(cloud: string, signal: AbortSignal): Promise<Stac
 function preflight(options: Options): Problem[] {
   const problems: Problem[] = []
   const platform = `${process.platform}-${process.arch}`
+
+  const requested = options.scenarios.flatMap((scenario) =>
+    options.lanes.map((lane) => ({ scenario, lane, supported: supportsLane(scenario, lane) })),
+  )
+  if (!requested.some((cell) => cell.supported)) {
+    const pairs = requested.map((cell) => `${cell.scenario}/${cell.lane}`).join(", ")
+    problems.push({
+      message: `no requested scenario runs on a requested lane: ${pairs}`,
+      fix: "Run each scenario on a lane it supports, for example --scenario followup.new-session --lane local.",
+    })
+  }
 
   if (process.platform !== "darwin" && process.platform !== "linux") {
     problems.push({

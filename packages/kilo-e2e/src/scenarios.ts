@@ -54,6 +54,8 @@ type Definition = {
   prompt: { directive: PromptDirective; token: string }
   expected: { ui: string[]; model: string[]; terminalTranscriptToken: string }
   requires: Capability[]
+  /** Lanes this scenario can run on; every lane when omitted. */
+  lanes?: Lane[]
 }
 
 export const SCENARIO_IDS = ScenarioID.options
@@ -115,11 +117,21 @@ const DEFINITIONS: Record<ScenarioID, Definition> = {
       terminalTranscriptToken: "K1-FOLLOWUP-NEWSESSION",
     },
     requires: ["transcript.read"],
+    // The local CLI drives the follow-up flow; the Kotlin driver only asserts it on the local lane.
+    lanes: ["local"],
   },
 }
 
-export function manifest(id: ScenarioID, lane: (typeof LANES)[number]): ScenarioManifest {
+export function supportsLane(id: ScenarioID, lane: Lane): boolean {
+  const lanes = DEFINITIONS[id].lanes
+  return !lanes || lanes.includes(lane)
+}
+
+export function manifest(id: ScenarioID, lane: Lane): ScenarioManifest {
   const definition = DEFINITIONS[id]
+  if (definition.lanes && !definition.lanes.includes(lane)) {
+    throw new ManifestError(`${id} does not run on the ${lane} lane`)
+  }
   return validateManifest({
     schemaVersion: SCHEMA_VERSION,
     id,
@@ -131,4 +143,6 @@ export function manifest(id: ScenarioID, lane: (typeof LANES)[number]): Scenario
   })
 }
 
-export const ALL_MANIFESTS = SCENARIO_IDS.flatMap((id) => LANES.map((lane) => manifest(id, lane)))
+export const ALL_MANIFESTS = SCENARIO_IDS.flatMap((id) =>
+  LANES.filter((lane) => supportsLane(id, lane)).map((lane) => manifest(id, lane)),
+)
