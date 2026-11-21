@@ -2,4 +2,4 @@
 "@kilocode/kilo-jetbrains": patch
 ---
 
-Open the session a new-session answer created after the plan follow-up question, instead of another session that appears in the same project.
+Bind the new-session handoff of the plan follow-up question to the session the answer created.
