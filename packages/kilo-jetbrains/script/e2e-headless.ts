@@ -121,15 +121,14 @@ async function main(): Promise<number> {
   const kiloCommit = gitCommit(root)
   const cloudCommit = options.cloud ? gitCommit(options.cloud) : null
   const cells: CellResult[] = []
-  // Only supported scenario/lane pairs are cells at all, so setup, display and the Cloud stack are
-  // work for what this run will actually execute rather than for every requested combination.
+  // Only supported scenario/lane pairs are cells at all: the lane declares which flow a scenario
+  // drives, not which stack its fixture provider needs.
   const requested = options.scenarios.flatMap((scenario) =>
     options.lanes.filter((lane) => supportsLane(scenario, lane)).map((lane) => ({ scenario, lane })),
   )
   const skipped = options.scenarios.flatMap((scenario) =>
     options.lanes.filter((lane) => !supportsLane(scenario, lane)).map((lane) => ({ scenario, lane })),
   )
-  const needsCloud = requested.some((cell) => cell.lane === "cloud")
   const controller = new AbortController()
   const abort = () => {
     if (controller.signal.aborted) return
@@ -156,13 +155,10 @@ async function main(): Promise<number> {
     }
 
     stack = new Stack(options.cloud)
-    if (needsCloud) {
-      await ensureStack(options, stack, controller.signal)
-      console.log(`[headless] cloud stack: ${stack.label}`)
-    } else {
-      stack.label = "not required: no requested cell runs on the cloud lane"
-      console.log(`[headless] cloud stack: ${stack.label}`)
-    }
+    // Every cell, whatever its lane, runs through the C1 fixture provider, which resolves the
+    // local Cloud stack during prepare. So the stack is required whenever a cell runs.
+    await ensureStack(options, stack, controller.signal)
+    console.log(`[headless] cloud stack: ${stack.label}`)
 
     for (const { scenario, lane } of requested) {
       if (controller.signal.aborted) {
@@ -458,8 +454,6 @@ function preflight(options: Options): Problem[] {
   }
 
   checkDisplay(options, problems)
-  // Every cell runs through the C1 fixture provider, which lives in the Cloud checkout, so the
-  // checkout is required even when no requested cell runs on the cloud lane.
   checkCloud(options, problems)
   return problems
 }
