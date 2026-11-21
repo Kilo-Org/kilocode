@@ -268,6 +268,7 @@ Skills are markdown files at `skills/<name>/SKILL.md` (or `skill/<name>/SKILL.md
 | `instructions` | `string[]` | Glob patterns for additional instruction files |
 | `plugin` | `string[]` | Plugin specifiers (npm packages or `file://` paths) |
 | `snapshot` | `boolean` | Enable git snapshots |
+| `require_approval_for_config_edits` | `boolean` | Require approval for protected config edits (default: `true`). Global value is the default everywhere and the only value used for global config dirs and files outside the project; for the project's own config files the effective merged value applies, so a project value overrides global config but later sources (legacy `~/.kilo`, `KILO_CONFIG_DIR`, `KILO_CONFIG_CONTENT`, org/managed) can override it |
 | `share` | `"manual"\|"auto"\|"disabled"` | Session sharing mode |
 | `autoupdate` | `boolean\|"notify"` | Auto-update behavior |
 | `username` | `string` | Display name override |
