@@ -23,4 +23,7 @@ export type Request = Provider.Request
 export const Info = Provider.Info
 export type Info = Provider.Info
 
-export type MutableInfo = Omit<Types.DeepMutable<Info>, "api"> & { api: MutableApi }
+export type MutableInfo = Omit<Types.DeepMutable<Info>, "api"> & { api: MutableApi } & {
+  // kilocode_change - Kilo: rate limit configuration for custom providers
+  rateLimit?: { rpm?: number; rps?: number }
+}

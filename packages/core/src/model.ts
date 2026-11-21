@@ -28,6 +28,8 @@ export type Info = Model.Info
 
 export type MutableInfo = Omit<Types.DeepMutable<Info>, "api"> & {
   api: ProviderV2.MutableApi<Api>
+  // kilocode_change - Kilo: rate limit configuration for custom providers
+  rateLimit?: { rpm?: number; rps?: number }
 }
 
 export function parse(input: string): { providerID: ProviderV2.ID; modelID: ID } {

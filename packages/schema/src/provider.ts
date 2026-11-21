@@ -51,13 +51,18 @@ export const Request = Schema.Struct({
 
 export interface Info extends Schema.Schema.Type<typeof Info> {}
 export const Info = Schema.Struct({
-  id: ID,
-  integrationID: Integration.ID.pipe(optional),
-  name: Schema.String,
-  disabled: Schema.Boolean.pipe(optional),
-  api: Api,
-  request: Request,
-})
+   id: ID,
+   integrationID: Integration.ID.pipe(optional),
+   name: Schema.String,
+   disabled: Schema.Boolean.pipe(optional),
+   api: Api,
+   request: Request,
+   // kilocode_change - Kilo: rate limit configuration for custom providers
+   rateLimit: Schema.Struct({
+     rpm: Schema.Number.pipe(optional),
+     rps: Schema.Number.pipe(optional),
+   }).pipe(optional),
+ })
   .annotate({ identifier: "ProviderV2.Info" })
   .pipe(
     statics((schema) => ({
