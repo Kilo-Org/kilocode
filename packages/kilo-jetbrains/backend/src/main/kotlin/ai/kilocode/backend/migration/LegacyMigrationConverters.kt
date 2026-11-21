@@ -379,18 +379,96 @@ object LegacyMigrationConverters {
     // Custom mode / agent conversion
     // ---------------------------------------------------------------------------
 
+    /**
+     * Option key the YAML parser adds when a line inside a `- - <group>` options block was not
+     * readable. The key sits outside the legacy option set, so the converter narrows that group
+     * instead of granting it in full.
+     */
+    private const val UNPARSED_GROUP_OPTION = "__unparsed"
+
     private val GROUP_TO_PERMISSION = mapOf(
         "read" to "read",
         "edit" to "edit",
-        "browser" to "bash",
+        "browser" to "browser_open",
         "command" to "bash",
-        "mcp" to "skill",
     )
-    private val ALL_MODE_PERMISSIONS = listOf("read", "edit", "bash", "skill")
+    private val ALL_MODE_PERMISSIONS = listOf("read", "edit", "bash", "browser_open", "skill")
 
-    fun convertCustomModePermissions(groups: List<Any>): JsonObject {
+    /** Explained once per converted mode whose legacy groups grant no `skill` permission. */
+    private const val SKILL_NOT_GRANTED = "Skills are not available: no legacy group grants them"
+
+    /** Option keys a legacy group can carry. Any other key means the group was not read fully. */
+    private val KNOWN_GROUP_OPTIONS = setOf("fileRegex", "description")
+
+    data class ModePermissions(
+        val permission: JsonObject,
+        /** Conditions that need the user's action. */
+        val warnings: List<String>,
+        /** Explanatory statements about the converted result, not conditions to act on. */
+        val notes: List<String>,
+    )
+
+    private val PERMISSION_KEY_UNSAFE = Regex("[^a-zA-Z0-9_-]")
+
+    private fun sanitizePermissionKey(name: String): String = name.replace(PERMISSION_KEY_UNSAFE, "_")
+
+    private fun hasUnreadableOptions(options: Map<String, String>?): Boolean =
+        options != null && options.keys.any { it !in KNOWN_GROUP_OPTIONS }
+
+    /** A rule merged from repeated groups, with the warning a merge that lost a rule reports. */
+    private data class MergedRule(val value: JsonElement, val warning: String? = null)
+
+    /** Rule strength: `ask` outranks a file restriction object, which outranks `allow`. */
+    private fun ruleRank(rule: JsonElement): Int = when {
+        rule is JsonObject -> 1
+        rule is JsonPrimitive && rule.isString && rule.content == "ask" -> 2
+        else -> 0
+    }
+
+    private fun keptRuleWarning(key: String, kept: JsonElement): String? = when (kept) {
+        is JsonObject -> "Repeated group; $key kept its file restriction"
+        is JsonPrimitive -> if (ruleRank(kept) == 2) "Repeated group; $key set to ask" else null
+        else -> null
+    }
+
+    /**
+     * Merge the rule of a repeated permission group into the rule already recorded for [key].
+     *
+     * A repeated group keeps the narrower rule: `ask` over a file restriction over `allow`, and a
+     * file restriction over a plain grant. Only a merge that drops a rule as written reports it.
+     */
+    private fun mergeRepeatedRule(key: String, existing: JsonElement?, next: JsonElement): MergedRule {
+        if (existing == null || existing == next) return MergedRule(existing ?: next)
+        val existingRank = ruleRank(existing)
+        val nextRank = ruleRank(next)
+        return when {
+            existingRank == nextRank && existing is JsonObject && next is JsonObject ->
+                MergedRule(JsonPrimitive("ask"), "Repeated group; $key set to ask")
+            nextRank > existingRank -> MergedRule(next, keptRuleWarning(key, next))
+            existingRank > nextRank -> MergedRule(existing, keptRuleWarning(key, existing))
+            else -> MergedRule(next)
+        }
+    }
+
+    /**
+     * Convert legacy mode groups into backend permissions.
+     *
+     * @param mcpServers names of the MCP servers that were migrated; empty means none reached the
+     *   backend config, so no per-server `_*` keys are written.
+     * @param mcpAvailable whether the legacy store held at least one MCP server, whether or not it
+     *   was selected for migration. An `mcp` group with no migrated server only needs the
+     *   "no MCP server was migrated" warning when the store had one to lose.
+     */
+    fun convertCustomModePermissions(
+        groups: List<Any>,
+        mcpServers: List<String>,
+        mcpAvailable: Boolean,
+    ): ModePermissions {
         val permission = mutableMapOf<String, JsonElement>()
         val allowed = mutableSetOf<String>()
+        val warnings = mutableListOf<String>()
+        val notes = mutableListOf<String>()
+        var mcpGroupSeen = false
 
         for (group in groups) {
             val groupName: String
@@ -405,33 +483,101 @@ object LegacyMigrationConverters {
                 }
                 else -> continue
             }
-            val permKey = GROUP_TO_PERMISSION[groupName] ?: groupName
+
+            if (groupName == "mcp") {
+                mcpGroupSeen = true
+                if (mcpServers.isEmpty()) {
+                    if (mcpAvailable) warnings.add("MCP access not migrated: no MCP server was migrated")
+                    continue
+                }
+                val mcpRegex = groupConfig?.get("fileRegex")
+                val mcpValue = when {
+                    hasUnreadableOptions(groupConfig) -> {
+                        warnings.add("Group options not migrated; mcp set to ask")
+                        "ask"
+                    }
+                    mcpRegex != null -> {
+                        warnings.add("File restriction not migrated; mcp set to ask: $mcpRegex")
+                        "ask"
+                    }
+                    else -> "allow"
+                }
+                for (server in mcpServers) {
+                    val key = "${sanitizePermissionKey(server)}_*"
+                    allowed.add(key)
+                    val merged = mergeRepeatedRule(key, permission[key], JsonPrimitive(mcpValue))
+                    if (merged.warning != null) warnings.add(merged.warning)
+                    permission[key] = merged.value
+                }
+                continue
+            }
+
+            val permKey = GROUP_TO_PERMISSION[groupName]
+            if (permKey == null) {
+                warnings.add("Group not migrated; \"$groupName\" ignored")
+                continue
+            }
+
+            val newValue: JsonElement = if (hasUnreadableOptions(groupConfig)) {
+                warnings.add("Group options not migrated; $permKey set to ask")
+                JsonPrimitive("ask")
+            } else {
+                val fileRegex = groupConfig?.get("fileRegex")
+                val globs = fileRegex?.let { fileRegexToGlobs(it) }
+                when {
+                    fileRegex == null -> JsonPrimitive("allow")
+                    globs == null -> {
+                        warnings.add("File restriction not migrated; $permKey set to ask: $fileRegex")
+                        JsonPrimitive("ask")
+                    }
+                    else -> buildJsonObject {
+                        put("*", "deny")
+                        globs.forEach { put(it, "allow") }
+                    }
+                }
+            }
             allowed.add(permKey)
 
-            val fileRegex = groupConfig?.get("fileRegex")
-            val newValue: JsonElement = if (fileRegex != null) {
-                JsonObject(mapOf(fileRegex to JsonPrimitive("allow"), "*" to JsonPrimitive("deny")))
-            } else {
-                JsonPrimitive("allow")
-            }
-
-            val existing = permission[permKey]
-            permission[permKey] = when {
-                existing == null -> newValue
-                existing == JsonPrimitive("allow") || newValue == JsonPrimitive("allow") -> JsonPrimitive("allow")
-                existing is JsonObject && newValue is JsonObject -> JsonObject(existing + newValue)
-                else -> newValue
-            }
+            val merged = mergeRepeatedRule(permKey, permission[permKey], newValue)
+            if (merged.warning != null) warnings.add(merged.warning)
+            permission[permKey] = merged.value
         }
 
         for (perm in ALL_MODE_PERMISSIONS) {
             if (perm !in allowed) permission[perm] = JsonPrimitive("deny")
         }
+        // No legacy group grants `skill`, so it stays denied on purpose. Say so once per mode
+        // instead of leaving the user to wonder why a migrated mode cannot load skills. This is a
+        // note, not a warning: nothing here needs the user to act, so the mode stays a success.
+        if ("skill" !in allowed) notes.add(SKILL_NOT_GRANTED)
 
-        return JsonObject(permission)
+        if (!mcpGroupSeen) {
+            for (server in mcpServers) {
+                val key = "${sanitizePermissionKey(server)}_*"
+                if (key !in allowed) permission[key] = JsonPrimitive("deny")
+            }
+        }
+        return ModePermissions(JsonObject(permission), warnings, notes)
     }
 
-    fun convertCustomMode(mode: LegacyCustomMode): JsonObject {
+    data class ModeConversion(
+        val agent: JsonObject,
+        val warnings: List<String>,
+        val notes: List<String>,
+    )
+
+    /**
+     * Convert a legacy custom mode into a backend agent.
+     *
+     * @param mcpServers names of the MCP servers that were migrated into the backend config.
+     * @param mcpAvailable whether the legacy store held at least one MCP server, whether or not it
+     *   was selected for migration; see [convertCustomModePermissions].
+     */
+    fun convertCustomMode(
+        mode: LegacyCustomMode,
+        mcpServers: List<String>,
+        mcpAvailable: Boolean,
+    ): ModeConversion {
         val parts = mutableListOf(mode.roleDefinition)
         val instructions = mode.customInstructions?.trim()
         if (!instructions.isNullOrEmpty()) {
@@ -447,37 +593,46 @@ object LegacyMigrationConverters {
         }
         val prompt = parts.filter { it.isNotBlank() }.joinToString("\n\n")
         val description = mode.description ?: mode.whenToUse ?: mode.roleDefinition.take(120)
-        val permission = convertCustomModePermissions(mode.groups)
+        val permissions = convertCustomModePermissions(mode.groups, mcpServers, mcpAvailable)
 
-        return buildJsonObject {
+        val agent = buildJsonObject {
             put("mode", "primary")
             put("description", description)
             put("prompt", prompt)
-            put("permission", permission)
+            put("permission", permissions.permission)
         }
+        return ModeConversion(agent, permissions.warnings, permissions.notes)
     }
 
     // ---------------------------------------------------------------------------
     // Auto-approval / permissions conversion
     // ---------------------------------------------------------------------------
 
+    data class PermissionEntry(
+        val label: String,
+        val status: MigrationItemStatus,
+        val message: String? = null,
+    )
+
     data class PermissionConversion(
         /** config patch to write, null if nothing to write */
         val config: JsonObject?,
-        val results: List<Pair<String, MigrationItemStatus>>,
+        val results: List<PermissionEntry>,
     )
 
-    fun convertAutoApproval(settings: LegacySettings, sel: MigrationAutoApprovalSelections): PermissionConversion {
+    fun convertAutoApproval(
+        settings: LegacySettings,
+        sel: MigrationAutoApprovalSelections,
+        mcpServers: List<String>,
+    ): PermissionConversion {
         val fallback = if (settings.autoApprovalEnabled == true) "allow" else "ask"
-        val results = mutableListOf<Pair<String, MigrationItemStatus>>()
+        val results = mutableListOf<PermissionEntry>()
         val permission = mutableMapOf<String, JsonElement>()
-        var globalAllowApplied = false
 
         if (sel.commandRules) {
             val hasCommandLists = (settings.allowedCommands?.isNotEmpty() == true) || (settings.deniedCommands?.isNotEmpty() == true)
             if (settings.autoApprovalEnabled == true && !hasCommandLists) {
-                // Scalar "allow" — caller should write this as top-level permission:"allow"
-                globalAllowApplied = true
+                permission["bash"] = JsonPrimitive("allow")
             } else if (hasCommandLists) {
                 val bashRules = mutableMapOf<String, JsonElement>()
                 for (cmd in settings.allowedCommands ?: emptyList()) {
@@ -495,7 +650,7 @@ object LegacyMigrationConverters {
                 )
                 permission["bash"] = JsonObject(bashRules)
             }
-            results.add("Command rules" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Command rules", MigrationItemStatus.success))
         }
 
         if (sel.readPermission) {
@@ -512,7 +667,7 @@ object LegacyMigrationConverters {
             } else if (settings.alwaysAllowReadOnlyOutsideWorkspace == false) {
                 permission["external_directory"] = JsonPrimitive("ask")
             }
-            results.add("Read permission" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Read permission", MigrationItemStatus.success))
         }
 
         if (sel.writePermission) {
@@ -521,7 +676,7 @@ object LegacyMigrationConverters {
             } else if (settings.alwaysAllowWrite == false) {
                 permission["edit"] = JsonPrimitive("ask")
             }
-            results.add("Write permission" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Write permission", MigrationItemStatus.success))
         }
 
         if (sel.executePermission && !sel.commandRules) {
@@ -530,18 +685,31 @@ object LegacyMigrationConverters {
             } else if (settings.alwaysAllowExecute == false) {
                 permission["bash"] = JsonPrimitive("ask")
             }
-            results.add("Execute permission" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Execute permission", MigrationItemStatus.success))
         } else if (sel.executePermission) {
-            results.add("Execute permission" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Execute permission", MigrationItemStatus.success))
         }
 
         if (sel.mcpPermission) {
-            if (settings.alwaysAllowMcp == true) {
-                permission["skill"] = JsonPrimitive("allow")
-            } else if (settings.alwaysAllowMcp == false) {
-                permission["skill"] = JsonPrimitive("ask")
+            val mcpValue = settings.alwaysAllowMcp?.let { if (it) "allow" else "ask" }
+            when {
+                mcpValue == null -> results.add(PermissionEntry("MCP permission", MigrationItemStatus.success))
+                mcpServers.isEmpty() -> {
+                    results.add(
+                        PermissionEntry(
+                            "MCP permission",
+                            MigrationItemStatus.warning,
+                            "MCP auto-approval was not applied: no MCP server was migrated",
+                        )
+                    )
+                }
+                else -> {
+                    for (server in mcpServers) {
+                        permission["${sanitizePermissionKey(server)}_*"] = JsonPrimitive(mcpValue)
+                    }
+                    results.add(PermissionEntry("MCP permission", MigrationItemStatus.success))
+                }
             }
-            results.add("MCP permission" to MigrationItemStatus.success)
         }
 
         if (sel.taskPermission) {
@@ -550,11 +718,10 @@ object LegacyMigrationConverters {
             } else if (settings.alwaysAllowModeSwitch == false && settings.alwaysAllowSubtasks == false) {
                 permission["task"] = JsonPrimitive("ask")
             }
-            results.add("Task permission" to MigrationItemStatus.success)
+            results.add(PermissionEntry("Task permission", MigrationItemStatus.success))
         }
 
         val config = when {
-            globalAllowApplied -> buildJsonObject { put("permission", "allow") }
             permission.isNotEmpty() -> buildJsonObject { put("permission", JsonObject(permission)) }
             else -> null
         }
@@ -662,6 +829,53 @@ object LegacyMigrationConverters {
     // YAML parser for custom_modes.yaml
     // ---------------------------------------------------------------------------
 
+    /**
+     * Remove a trailing YAML comment from [line].
+     *
+     * A `#` starts a comment only when it is the first character of the line or is preceded by a
+     * space or tab, and only outside a single-quoted or double-quoted scalar. Inside double quotes a
+     * backslash escapes the next character. The result keeps the text before that `#` with trailing
+     * whitespace removed; a line without a comment is returned unchanged.
+     */
+    private fun stripYamlComment(line: String): String {
+        var inSingleQuotes = false
+        var inDoubleQuotes = false
+        var i = 0
+        while (i < line.length) {
+            val c = line[i]
+            if (inDoubleQuotes) {
+                when (c) {
+                    '\\' -> i++ // the backslash escapes the next character
+                    '"' -> inDoubleQuotes = false
+                }
+                i++
+                continue
+            }
+            if (inSingleQuotes) {
+                if (c == '\'') inSingleQuotes = false
+                i++
+                continue
+            }
+            when (c) {
+                '\'' -> if (opensScalar(line, i)) inSingleQuotes = true
+                '"' -> if (opensScalar(line, i)) inDoubleQuotes = true
+                '#' -> if (i == 0 || line[i - 1] == ' ' || line[i - 1] == '\t') {
+                    return line.substring(0, i).trimEnd()
+                }
+            }
+            i++
+        }
+        return line
+    }
+
+    /** True when the quote at [index] starts a scalar, not an apostrophe inside plain text. */
+    private fun opensScalar(line: String, index: Int): Boolean {
+        var i = index - 1
+        while (i >= 0 && (line[i] == ' ' || line[i] == '\t')) i--
+        if (i < 0) return true
+        return line[i] in ":-,{["
+    }
+
     fun parseCustomModesYaml(text: String): List<LegacyCustomMode> {
         val modes = mutableListOf<LegacyCustomMode>()
         val lines = text.split("\n")
@@ -671,8 +885,61 @@ object LegacyMigrationConverters {
         var blockLines = mutableListOf<String>()
         var inGroups = false
         var groups = mutableListOf<Any>()
+        var pendingGroupName: String? = null
+        var pendingGroupOptions = mutableMapOf<String, String>()
+        var pendingGroupUnparsed = false
 
-        fun stripYamlQuotes(value: String) = value.replace(Regex("^(['\"])(.*?)\\1$"), "$2")
+        fun stripYamlQuotes(value: String): String {
+            if (value.length < 2) return value
+            val quote = value.first()
+            if (value.last() != quote || (quote != '"' && quote != '\'')) return value
+            val body = value.substring(1, value.length - 1)
+            if (quote == '\'') return body
+            val out = StringBuilder(body.length)
+            var i = 0
+            while (i < body.length) {
+                val c = body[i]
+                if (c == '\\' && i + 1 < body.length) {
+                    when (body[i + 1]) {
+                        '\\' -> { out.append('\\'); i += 2; continue }
+                        '"' -> { out.append('"'); i += 2; continue }
+                    }
+                }
+                out.append(c)
+                i++
+            }
+            return out.toString()
+        }
+
+        /** Close an open `- - <name>` options block into a Pair group. */
+        fun closeGroupOptions() {
+            val name = pendingGroupName
+            if (name != null) {
+                val options = pendingGroupOptions.toMutableMap()
+                if (pendingGroupUnparsed) options[UNPARSED_GROUP_OPTION] = "true"
+                groups.add(Pair(name, options))
+            }
+            pendingGroupName = null
+            pendingGroupOptions = mutableMapOf()
+            pendingGroupUnparsed = false
+        }
+
+        /** Parse a `key: value` option line of an open group options block. */
+        fun addGroupOption(line: String) {
+            val sep = line.indexOf(": ")
+            val (key, value) = if (sep >= 0) {
+                line.substring(0, sep).trim() to stripYamlQuotes(line.substring(sep + 2).trim())
+            } else {
+                line.removeSuffix(":").trim() to ""
+            }
+            if (key.isEmpty()) return
+            pendingGroupOptions[key] = value
+        }
+
+        fun closeGroups() {
+            closeGroupOptions()
+            inGroups = false
+        }
 
         fun flush() {
             val slug = current["slug"] as? String ?: return
@@ -680,6 +947,7 @@ object LegacyMigrationConverters {
             if (blockField != null && blockLines.isNotEmpty()) {
                 current[blockField!!] = blockLines.joinToString("\n").trim()
             }
+            closeGroupOptions()
             modes.add(
                 LegacyCustomMode(
                     slug = slug,
@@ -698,11 +966,19 @@ object LegacyMigrationConverters {
             groups = mutableListOf()
         }
 
-        for (raw in lines) {
+        for (rawLine in lines) {
             if (!inModes) {
-                if (raw.trim() == "customModes:") inModes = true
+                if (stripYamlComment(rawLine).trim() == "customModes:") inModes = true
                 continue
             }
+            // Lines of an open block scalar are literal content: keep every character, '#' included.
+            if (blockField != null && rawLine.startsWith("      ")) {
+                blockLines.add(rawLine.removePrefix("      "))
+                continue
+            }
+            val raw = stripYamlComment(rawLine)
+            // A blank line or a comment-only line does not end an open groups block.
+            if (inGroups && raw.isBlank()) continue
             if (raw.matches(Regex("  - slug: .*"))) {
                 flush()
                 current["slug"] = stripYamlQuotes(raw.removePrefix("  - slug: ").trim())
@@ -721,7 +997,7 @@ object LegacyMigrationConverters {
                     current[blockField!!] = blockLines.joinToString("\n").trim()
                 }
                 blockField = blockMatch.groupValues[1]
-                inGroups = false
+                closeGroups()
                 blockLines = mutableListOf()
                 continue
             }
@@ -744,29 +1020,216 @@ object LegacyMigrationConverters {
             }
 
             if (blockField != null) {
-                if (raw.startsWith("      ")) {
-                    blockLines.add(raw.removePrefix("      "))
-                    continue
-                }
                 current[blockField!!] = blockLines.joinToString("\n").trim()
                 blockField = null
                 blockLines = mutableListOf()
             }
 
             if (raw.matches(Regex("    groups:.*"))) {
+                closeGroups()
                 inGroups = true
                 groups = mutableListOf()
+                val inline = raw.removePrefix("    groups:").trim()
+                if (inline.startsWith("[") && inline.endsWith("]")) {
+                    val body = inline.substring(1, inline.length - 1)
+                    body.split(",")
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .forEach { groups.add(stripYamlQuotes(it)) }
+                    closeGroups()
+                }
+                continue
+            }
+            if (inGroups && raw.startsWith("      - - ")) {
+                closeGroupOptions()
+                pendingGroupName = stripYamlQuotes(raw.removePrefix("      - - ").trim())
+                continue
+            }
+            if (inGroups && pendingGroupName != null && raw.startsWith("        - ")) {
+                addGroupOption(raw.removePrefix("        - ").trim())
+                continue
+            }
+            if (inGroups && pendingGroupName != null && raw.startsWith("          ") &&
+                !raw.startsWith("          - ")
+            ) {
+                addGroupOption(raw.trim())
                 continue
             }
             if (inGroups && raw.matches(Regex("      - .*"))) {
+                closeGroupOptions()
                 groups.add(stripYamlQuotes(raw.removePrefix("      - ").trim()))
                 continue
             }
             if (inGroups && !raw.startsWith("      ")) {
-                inGroups = false
+                closeGroups()
+            }
+            // An option line the shapes above do not read belongs to the open group, so the
+            // converter narrows that group instead of receiving a junk entry.
+            if (inGroups && pendingGroupName != null) {
+                pendingGroupUnparsed = true
+                continue
+            }
+            // A line the rules above did not consume is still reported as a group entry, so the
+            // converter can warn about it instead of the entry vanishing.
+            if (inGroups && raw.isNotBlank()) {
+                closeGroupOptions()
+                groups.add(stripYamlQuotes(raw.trim()))
             }
         }
         flush()
         return modes
+    }
+}
+
+private const val MAX_GLOB_ARMS = 32
+
+private val UNSUPPORTED_REGEX_CHARS = setOf('*', '+', '{', '}', '[', ']', '^', '$', '?')
+
+/**
+ * Translate a legacy `fileRegex` pattern into permission wildcard globs.
+ *
+ * Returns null when the pattern uses a construct that the glob syntax cannot
+ * express, or when every alternative is empty while both anchors are present,
+ * so the caller can report it instead of writing an unmatched rule.
+ *
+ * A glob arm made only of digits is also rejected. When the CLI reads the written config back,
+ * JavaScript enumerates such a key as an array index ahead of `"*"`, so the trailing `"*": "deny"`
+ * wins and the file the legacy mode allowed is denied.
+ */
+internal fun fileRegexToGlobs(regex: String): List<String>? {
+    if (regex.isEmpty()) return null
+    var body = regex
+    val anchoredStart = body.startsWith("^")
+    if (anchoredStart) body = body.substring(1)
+    var anchoredEnd = false
+    if (body.isNotEmpty() && body.endsWith("$") && !isEscapedAt(body, body.length - 1)) {
+        anchoredEnd = true
+        body = body.substring(0, body.length - 1)
+    }
+    if (body.isEmpty()) return null
+
+    val parsed = parseGlobSequence(body, 0, inGroup = false)?.first ?: return null
+
+    // An empty alternative matches the empty string, and no path is empty. With both anchors
+    // the pattern must consume the whole path, so empty alternatives are dropped and the arms
+    // that do name a path are kept: `^(a|)$` and `^(|a)$` both allow `a`. Only when every arm
+    // is empty does the pattern match nothing but the empty string, which no glob can express,
+    // so the caller must report it. Without both anchors an empty arm is padded to `*`, which
+    // is right because that arm then matches the rest of any path.
+    val kept = if (anchoredStart && anchoredEnd) parsed.filter { it.isNotEmpty() } else parsed
+    if (kept.isEmpty()) return null
+
+    val arms = kept.map { arm ->
+        var result = arm
+        if (!anchoredStart && !result.startsWith("*")) result = "*$result"
+        if (!anchoredEnd && !result.endsWith("*")) result = "$result*"
+        result
+    }.distinct()
+
+    if (arms.any { it.endsWith(" *") }) return null
+    // See the KDoc. Only ASCII digits form an array index, so only those arms are rejected.
+    if (arms.any { arm -> arm.all { it in '0'..'9' } }) return null
+    return arms
+}
+
+private fun isEscapedAt(text: String, index: Int): Boolean {
+    var backslashes = 0
+    var i = index - 1
+    while (i >= 0 && text[i] == '\\') {
+        backslashes++
+        i--
+    }
+    return backslashes % 2 == 1
+}
+
+private fun globProduct(left: List<String>, right: List<String>): List<String>? {
+    if (left.size.toLong() * right.size.toLong() > MAX_GLOB_ARMS) return null
+    val out = ArrayList<String>(left.size * right.size)
+    for (a in left) for (b in right) out.add(a + b)
+    return out
+}
+
+/**
+ * Parse a supported regex sequence starting at [start] into glob arms.
+ *
+ * Returns the arms and the index of the char that stopped the parse: `)` or `|`
+ * inside a group, or the end of the text at the top level.
+ */
+private fun parseGlobSequence(text: String, start: Int, inGroup: Boolean): Pair<List<String>, Int>? {
+    var arms = listOf("")
+    var i = start
+    while (i < text.length) {
+        val c = text[i]
+        if (inGroup && (c == ')' || c == '|')) return arms to i
+        if (!inGroup && (c == ')' || c == '|')) return null
+
+        val atom: List<String>
+        when (c) {
+            '\\' -> {
+                if (i + 1 >= text.length) return null
+                val escaped = text[i + 1]
+                if (escaped.isLetterOrDigit() || escaped.isWhitespace() || escaped == '\\') return null
+                if (escaped == '*' || escaped == '?') return null
+                atom = listOf(escaped.toString())
+                i += 2
+            }
+            '.' -> {
+                if (i + 1 < text.length && text[i + 1] == '*') {
+                    atom = listOf("*")
+                    i += 2
+                } else {
+                    atom = listOf("?")
+                    i += 1
+                }
+            }
+            '(' -> {
+                if (inGroup) return null
+                val group = parseGlobGroup(text, i) ?: return null
+                atom = group.first
+                i = group.second
+            }
+            else -> {
+                if (c in UNSUPPORTED_REGEX_CHARS) return null
+                atom = listOf(c.toString())
+                i += 1
+            }
+        }
+
+        val before: List<String> = arms
+        arms = globProduct(before, atom) ?: return null
+
+        if (i < text.length && text[i] == '?') {
+            val optional = (before + arms).distinct()
+            if (optional.size > MAX_GLOB_ARMS) return null
+            arms = optional
+            i += 1
+        }
+    }
+    return arms to i
+}
+
+private fun parseGlobGroup(text: String, start: Int): Pair<List<String>, Int>? {
+    var i = start + 1
+    var arms = mutableListOf<String>()
+    var current = listOf("")
+    while (true) {
+        val seq = parseGlobSequence(text, i, inGroup = true) ?: return null
+        current = globProduct(current, seq.first) ?: return null
+        val next = seq.second
+        if (next >= text.length) return null
+        when (text[next]) {
+            ')' -> {
+                arms.addAll(current)
+                if (arms.size > MAX_GLOB_ARMS) return null
+                return arms to next + 1
+            }
+            '|' -> {
+                arms.addAll(current)
+                if (arms.size > MAX_GLOB_ARMS) return null
+                current = listOf("")
+                i = next + 1
+            }
+            else -> return null
+        }
     }
 }

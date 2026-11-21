@@ -1,7 +1,10 @@
-import { test, expect, describe } from "bun:test"
+import { test, expect, describe, spyOn } from "bun:test"
 import { McpMigrator } from "../../src/kilocode/mcp-migrator"
+import { KilocodePaths } from "../../src/kilocode/paths"
 import { tmpdir } from "../fixture/fixture"
+import os from "os"
 import path from "path"
+import fs from "fs/promises"
 
 describe("McpMigrator", () => {
   describe("convertServer", () => {
@@ -173,6 +176,7 @@ describe("McpMigrator", () => {
       })
 
       expect(Object.keys(result.mcp)).toHaveLength(0)
+      expect(result.available).toBe(false)
       expect(result.warnings).toHaveLength(0)
       expect(result.skipped).toHaveLength(0)
     })
@@ -201,6 +205,7 @@ describe("McpMigrator", () => {
       })
 
       expect(result.mcp).toHaveProperty("filesystem")
+      expect(result.available).toBe(true)
       expect(result.mcp.filesystem).toEqual({
         type: "local",
         command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/home"],
@@ -425,6 +430,64 @@ describe("McpMigrator", () => {
       })
 
       expect(Object.keys(result.mcp)).toHaveLength(0)
+      expect(result.available).toBe(false)
+    })
+
+    test("reports availability when a declared server cannot be converted", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const settingsDir = path.join(dir, ".kilo")
+          await Bun.write(
+            path.join(settingsDir, "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                broken: { args: ["--no-command"] },
+              },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(Object.keys(result.mcp)).toHaveLength(0)
+      expect(result.available).toBe(true)
+    })
+
+    test("reports which converted servers won from a project file", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const settingsDir = path.join(dir, ".kilo")
+          await Bun.write(
+            path.join(settingsDir, "mcp.json"),
+            JSON.stringify({ mcpServers: { projectserver: { command: "npx" } } }),
+          )
+        },
+      })
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      // Windows resolves the global storage path from APPDATA first, so point both at the temp home.
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({ projectDir: tmp.path })
+
+        expect(result.project).toEqual(["projectserver"])
+        expect(Object.keys(result.mcp).sort()).toEqual(["globalserver", "projectserver"])
+        expect(result.available).toBe(true)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
     })
 
     // Regression: project-level MCP settings use mcp.json, not mcp_settings.json

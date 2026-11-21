@@ -2,19 +2,26 @@ import matter from "gray-matter"
 import * as fs from "fs/promises"
 import * as path from "path"
 import os from "os"
-import type { Config } from "../config/config"
 import type { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { ConfigPermissionV1 as ConfigPermission } from "@opencode-ai/core/v1/config/permission"
 import { KilocodePaths } from "./paths"
+import { regexToGlobs } from "./permission-glob"
 import type { OrganizationMode } from "@kilocode/kilo-gateway"
 
 export namespace ModesMigrator {
+  /** Options a legacy group tuple can carry. Any other key means the group was not read fully. */
+  export interface GroupOptions {
+    fileRegex?: string
+    description?: string
+    [key: string]: unknown
+  }
+
   // Kilocode mode structure
   export interface KilocodeMode {
     slug: string
     name: string
     roleDefinition: string
-    groups: Array<string | [string, { fileRegex?: string; description?: string }]>
+    groups: Array<string | [string, GroupOptions]>
     customInstructions?: string
     whenToUse?: string
     description?: string
@@ -32,62 +39,191 @@ export namespace ModesMigrator {
   const GROUP_TO_PERMISSION: Record<string, string> = {
     read: "read",
     edit: "edit",
-    browser: "bash",
+    browser: "browser_open",
     command: "bash",
-    mcp: "mcp",
   }
 
   // All permissions that should be explicitly set (deny if not in groups)
-  const ALL_PERMISSIONS = ["read", "edit", "bash", "mcp"]
+  const ALL_PERMISSIONS = ["read", "edit", "bash", "browser_open"]
+
+  /** Option keys a legacy group can carry. */
+  const KNOWN_OPTIONS = /^(fileRegex|description)$/
+
+  const UNSAFE_KEY = /[^a-zA-Z0-9_-]/g
 
   export function isDefaultMode(slug: string): boolean {
     return DEFAULT_MODE_SLUGS.has(slug)
   }
 
-  export function convertPermissions(groups: KilocodeMode["groups"]): ConfigPermission.Info {
-    const permission: Record<string, any> = {}
-    const allowedPermissions = new Set<string>()
-
-    for (const group of groups) {
-      if (typeof group === "string") {
-        const permKey = GROUP_TO_PERMISSION[group] ?? group
-        allowedPermissions.add(permKey)
-        permission[permKey] = "allow"
-      } else if (Array.isArray(group)) {
-        const [groupName, config] = group
-        const permKey = GROUP_TO_PERMISSION[groupName] ?? groupName
-        allowedPermissions.add(permKey)
-
-        if (config?.fileRegex) {
-          permission[permKey] = {
-            [config.fileRegex]: "allow",
-            "*": "deny",
-          }
-        } else {
-          permission[permKey] = "allow"
-        }
-      }
-    }
-
-    // Explicitly deny permissions that aren't in the groups
-    // This is critical because Opencode defaults to "ask" for missing permissions
-    for (const perm of ALL_PERMISSIONS) {
-      if (!allowedPermissions.has(perm)) {
-        permission[perm] = "deny"
-      }
-    }
-
-    return permission
+  /**
+   * Convert legacy mode groups to CLI permissions.
+   *
+   * `mcpServers` names the MCP servers the same migration wrote to `mcp`, so an `mcp`
+   * group can grant their tools; there is no `mcp` permission key in the CLI.
+   * `mcpAvailable` reports whether the legacy store declared any MCP server, not whether
+   * one was converted: a store that declared a server the migration could not convert
+   * still warns instead of silently dropping the `mcp` group.
+   */
+  export function convertPermissions(
+    groups: KilocodeMode["groups"],
+    mcpServers: string[],
+    mcpAvailable: boolean,
+  ): ConfigPermission.Info {
+    return convertWithMessages(groups, mcpServers, mcpAvailable).permission
   }
 
-  export function convertMode(mode: KilocodeMode): ConfigAgentV1.Info {
-    const prompt = [mode.roleDefinition, mode.customInstructions].filter(Boolean).join("\n\n")
+  type Restriction = Record<string, ConfigPermission.Action>
+
+  function isRestriction(rule: ConfigPermission.Rule | undefined): rule is Restriction {
+    return rule != null && typeof rule === "object"
+  }
+
+  /** Strength of a rule when a mode writes the same key twice: ask keeps a prompt, a restriction keeps its files. */
+  function rank(rule: ConfigPermission.Rule): number {
+    if (rule === "ask") return 2
+    if (isRestriction(rule)) return 1
+    return 0
+  }
+
+  function sameRule(a: ConfigPermission.Rule, b: ConfigPermission.Rule): boolean {
+    if (!isRestriction(a) || !isRestriction(b)) return a === b
+    const keys = Object.keys(a)
+    return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key])
+  }
+
+  /**
+   * Merge a rule for a permission key a later group writes again. A mode that lists the same
+   * group more than once keeps the narrower rule and reports the repeat in the warnings.
+   */
+  function mergeRule(
+    key: string,
+    existing: ConfigPermission.Rule | undefined,
+    next: ConfigPermission.Rule,
+    warnings: string[],
+  ): ConfigPermission.Rule {
+    if (existing == null) return next
+    if (sameRule(existing, next)) return existing
+
+    let winner: ConfigPermission.Rule
+    if (isRestriction(existing) && isRestriction(next)) {
+      winner = "ask"
+    } else {
+      winner = rank(next) > rank(existing) ? next : existing
+    }
+
+    if (winner === "ask") warnings.push(`Repeated group; ${key} set to ask`)
+    else if (isRestriction(winner)) warnings.push(`Repeated group; ${key} kept its file restriction`)
+    return winner
+  }
+
+  /** Convert legacy mode groups to CLI permissions, with the warnings they produced. */
+  export function convertWithMessages(
+    groups: KilocodeMode["groups"],
+    mcpServers: string[],
+    mcpAvailable: boolean,
+  ): { permission: ConfigPermission.Info; warnings: string[] } {
+    const permission: Record<string, ConfigPermission.Rule> = {}
+    const allowed = new Set<string>()
+    const warnings: string[] = []
+    let seen = false
+
+    for (const group of groups) {
+      const name = typeof group === "string" ? group : Array.isArray(group) ? group[0] : undefined
+      if (typeof name !== "string") continue
+      const opts = typeof group === "string" ? undefined : Array.isArray(group) ? group[1] : undefined
+      const unknown = opts != null && Object.keys(opts).some((key) => !KNOWN_OPTIONS.test(key))
+
+      if (name === "mcp") {
+        seen = true
+        if (mcpServers.length === 0) {
+          if (mcpAvailable) warnings.push("MCP access not migrated: no MCP server was migrated")
+          continue
+        }
+        let action: ConfigPermission.Action = "allow"
+        if (unknown) {
+          warnings.push("Group options not migrated; mcp set to ask")
+          action = "ask"
+        } else if (opts?.fileRegex != null) {
+          warnings.push(`File restriction not migrated; mcp set to ask: ${opts.fileRegex}`)
+          action = "ask"
+        }
+        for (const server of mcpServers) {
+          const key = `${server.replace(UNSAFE_KEY, "_")}_*`
+          allowed.add(key)
+          permission[key] = mergeRule(key, permission[key], action, warnings)
+        }
+        continue
+      }
+
+      const permKey = GROUP_TO_PERMISSION[name]
+      if (permKey == null) {
+        warnings.push(`Group not migrated; "${name}" ignored`)
+        continue
+      }
+
+      if (unknown) {
+        warnings.push(`Group options not migrated; ${permKey} set to ask`)
+        allowed.add(permKey)
+        permission[permKey] = mergeRule(permKey, permission[permKey], "ask", warnings)
+        continue
+      }
+
+      let value: ConfigPermission.Rule = "allow"
+      const pattern = opts?.fileRegex
+      if (pattern != null) {
+        const globs = regexToGlobs(pattern)
+        if (globs == null) {
+          warnings.push(`File restriction not migrated; ${permKey} set to ask: ${pattern}`)
+          value = "ask"
+        } else {
+          // Deny first: the CLI resolves the last matching rule, so the allows come after.
+          value = { "*": "deny", ...Object.fromEntries(globs.map((glob) => [glob, "allow"])) }
+        }
+      }
+      allowed.add(permKey)
+      permission[permKey] = mergeRule(permKey, permission[permKey], value, warnings)
+    }
+
+    // Explicitly deny each mapped permission the mode did not grant: the CLI defaults a missing
+    // permission to "ask", which would prompt for every call instead of refusing it.
+    for (const perm of ALL_PERMISSIONS) {
+      if (allowed.has(perm)) continue
+      permission[perm] = "deny"
+    }
+
+    if (!seen) {
+      for (const server of mcpServers) {
+        const key = `${server.replace(UNSAFE_KEY, "_")}_*`
+        if (!allowed.has(key)) permission[key] = "deny"
+      }
+    }
+
+    return { permission, warnings }
+  }
+
+  export function convertMode(
+    mode: KilocodeMode,
+    mcpServers: string[],
+    mcpAvailable: boolean,
+  ): ConfigAgentV1.Info {
+    return build(mode, mcpServers, mcpAvailable).agent
+  }
+
+  function build(
+    mode: KilocodeMode,
+    mcpServers: string[],
+    mcpAvailable: boolean,
+  ): { agent: ConfigAgentV1.Info; warnings: string[] } {
+    const converted = convertWithMessages(mode.groups, mcpServers, mcpAvailable)
 
     return {
-      mode: "primary",
-      description: mode.description ?? mode.whenToUse ?? mode.name,
-      prompt,
-      permission: convertPermissions(mode.groups),
+      agent: {
+        mode: "primary",
+        description: mode.description ?? mode.whenToUse ?? mode.name,
+        prompt: [mode.roleDefinition, mode.customInstructions].filter(Boolean).join("\n\n"),
+        permission: converted.permission,
+      },
+      warnings: converted.warnings,
     }
   }
 
@@ -96,7 +232,7 @@ export namespace ModesMigrator {
    * Unlike legacy convertMode(), this does NOT skip default slugs —
    * organization admins can intentionally override built-in agents.
    */
-  export function convertOrganizationMode(mode: OrganizationMode): ConfigAgentV1.Info {
+  export function convertOrganizationMode(mode: OrganizationMode): { agent: ConfigAgentV1.Info; notes: string[] } {
     const cfg = mode.config
     const prompt = [cfg.roleDefinition, cfg.customInstructions].filter(Boolean).join("\n\n")
     const groups = cfg.groups ?? []
@@ -106,14 +242,25 @@ export namespace ModesMigrator {
       )
     }
 
+    // An organization mode arrives from the cloud API before the project MCP config is
+    // merged, and the CLI keys MCP tools per server, so the group cannot name them here.
+    const notes: string[] = []
+    if (groups.some((group) => (typeof group === "string" ? group : group?.[0]) === "mcp")) {
+      notes.push("MCP access is not scoped to this agent: no MCP servers are attached at config load")
+    }
+
     return {
-      mode: "primary",
-      description: cfg.description ?? cfg.whenToUse ?? mode.name,
-      prompt: prompt || undefined,
-      permission: convertPermissions(groups),
-      // Typed metadata fields — must NOT live in `options`, which is forwarded to the provider.
-      displayName: mode.name,
-      source: "organization",
+      agent: {
+        mode: "primary",
+        description: cfg.description ?? cfg.whenToUse ?? mode.name,
+        prompt: prompt || undefined,
+        // An organization mode has no legacy MCP store, so no server-key grant applies.
+        permission: convertPermissions(groups, [], false),
+        // Typed metadata fields — must NOT live in `options`, which is forwarded to the provider.
+        displayName: mode.name,
+        source: "organization",
+      },
+      notes,
     }
   }
 
@@ -121,12 +268,18 @@ export namespace ModesMigrator {
    * Convert an array of cloud OrganizationModes to a ConfigAgentV1.Info record
    * keyed by slug. All modes are included (no default-slug filtering).
    */
-  export function convertOrganizationModes(modes: OrganizationMode[]): Record<string, ConfigAgentV1.Info> {
-    const result: Record<string, ConfigAgentV1.Info> = {}
+  export function convertOrganizationModes(modes: OrganizationMode[]): {
+    agents: Record<string, ConfigAgentV1.Info>
+    notes: Array<{ slug: string; message: string }>
+  } {
+    const agents: Record<string, ConfigAgentV1.Info> = {}
+    const notes: Array<{ slug: string; message: string }> = []
     for (const mode of modes) {
-      result[mode.slug] = convertOrganizationMode(mode)
+      const converted = convertOrganizationMode(mode)
+      agents[mode.slug] = converted.agent
+      notes.push(...converted.notes.map((message) => ({ slug: mode.slug, message })))
     }
-    return result
+    return { agents, notes }
   }
 
   export async function readModesFile(filepath: string): Promise<KilocodeMode[]> {
@@ -145,6 +298,8 @@ export namespace ModesMigrator {
   export interface MigrationResult {
     agents: Record<string, ConfigAgentV1.Info>
     skipped: Array<{ slug: string; reason: string }>
+    /** Each message names the file the mode came from, so a caller can report it. */
+    warnings: Array<{ path: string; message: string }>
   }
 
   export async function migrate(options: {
@@ -152,49 +307,59 @@ export namespace ModesMigrator {
     globalSettingsDir?: string
     /** Skip reading from global paths (VSCode storage, home dir). Used for testing. */
     skipGlobalPaths?: boolean
+    /** Names of the MCP servers the same migration writes, so an `mcp` group can grant their tools. */
+    mcpServers?: string[]
+    /**
+     * Whether the legacy store declared any MCP server, converted or not: a store that declared
+     * a server the migration could not convert still warns instead of silently dropping the group.
+     */
+    mcpAvailable: boolean
   }): Promise<MigrationResult> {
     const result: MigrationResult = {
       agents: {},
       skipped: [],
+      warnings: [],
     }
 
-    // Collect modes from all sources
-    const allModes: KilocodeMode[] = []
+    // Collect modes from all sources, each with the file it came from so a migration
+    // warning can name that file instead of the project directory.
+    const allModes: Array<{ mode: KilocodeMode; source: string }> = []
+    const load = async (file: string) => {
+      const modes = await readModesFile(file)
+      allModes.push(...modes.map((mode) => ({ mode, source: file })))
+    }
 
     if (!options.skipGlobalPaths) {
       // 1. VSCode extension global storage (primary location for global modes)
-      const vscodeGlobalPath = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml")
-      allModes.push(...(await readModesFile(vscodeGlobalPath)))
+      await load(path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"))
 
       // 2. CLI global settings (fallback/alternative location)
-      const cliGlobalPath = path.join(os.homedir(), ".kilocode", "cli", "global", "settings", "custom_modes.yaml")
-      allModes.push(...(await readModesFile(cliGlobalPath)))
+      await load(path.join(os.homedir(), ".kilocode", "cli", "global", "settings", "custom_modes.yaml"))
 
       // 3. Home directory .kilocodemodes
       const homeModesPath = path.join(os.homedir(), ".kilocodemodes")
-      if (homeModesPath !== options.projectDir) {
-        allModes.push(...(await readModesFile(homeModesPath)))
-      }
+      if (homeModesPath !== options.projectDir) await load(homeModesPath)
     }
 
     // 4. Legacy/explicit global settings dir (for backwards compatibility and testing)
     if (options.globalSettingsDir) {
-      const legacyPath = path.join(options.globalSettingsDir, "custom_modes.yaml")
-      allModes.push(...(await readModesFile(legacyPath)))
+      await load(path.join(options.globalSettingsDir, "custom_modes.yaml"))
     }
 
     // 5. Project .kilocodemodes
-    const projectModesPath = path.join(options.projectDir, ".kilocodemodes")
-    allModes.push(...(await readModesFile(projectModesPath)))
+    await load(path.join(options.projectDir, ".kilocodemodes"))
 
     // Deduplicate by slug (later entries win)
-    const modesBySlug = new Map<string, KilocodeMode>()
-    for (const mode of allModes) {
-      modesBySlug.set(mode.slug, mode)
+    const modesBySlug = new Map<string, { mode: KilocodeMode; source: string }>()
+    for (const entry of allModes) {
+      modesBySlug.set(entry.mode.slug, entry)
     }
 
+    const mcpServers = options.mcpServers ?? []
+
     // Process each mode
-    for (const [slug, mode] of modesBySlug) {
+    for (const [slug, entry] of modesBySlug) {
+      const mode = entry.mode
       // Skip default modes - let Opencode's native agents handle these
       if (isDefaultMode(slug)) {
         result.skipped.push({
@@ -205,7 +370,11 @@ export namespace ModesMigrator {
       }
 
       // Migrate custom mode
-      result.agents[slug] = convertMode(mode)
+      const converted = build(mode, mcpServers, options.mcpAvailable)
+      result.agents[slug] = converted.agent
+      result.warnings.push(
+        ...converted.warnings.map((warning) => ({ path: entry.source, message: `Mode '${slug}': ${warning}` })),
+      )
     }
 
     return result

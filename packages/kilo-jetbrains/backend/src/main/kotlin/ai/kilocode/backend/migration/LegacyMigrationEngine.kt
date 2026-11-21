@@ -145,6 +145,8 @@ class LegacyMigrationEngine(
         }
 
         // MCP servers
+        val migratedServers = mutableListOf<String>()
+        val mcpAvailable = mcpServers?.isNotEmpty() == true
         if (selections.mcpServers.isNotEmpty() && mcpServers != null) {
             val mcpConfig = mutableMapOf<String, JsonObject>()
             for (name in selections.mcpServers) {
@@ -157,6 +159,7 @@ class LegacyMigrationEngine(
                 val converted = convertMcpServer(name, server)
                 if (converted != null) {
                     mcpConfig[name] = converted
+                    migratedServers.add(name)
                     results.add(LegacyMigrationResultItem(name, MigrationItemCategory.mcpServer, MigrationItemStatus.success))
                     sink.item(LegacyMigrationItemProgress(name, MigrationItemProgressStatus.success))
                 } else {
@@ -187,11 +190,18 @@ class LegacyMigrationEngine(
                     )
                     if (merged != null) {
                         sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.migrating))
-                        val agent = convertCustomMode(merged).toMutableMap()
+                        val conversion = convertCustomMode(merged, migratedServers, mcpAvailable)
+                        val agent = conversion.agent.toMutableMap()
                         agent["name"] = JsonPrimitive(info.name)
                         agentConfig[slug] = JsonObject(agent)
-                        results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
-                        sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.success))
+                        val msg = customModeMessage(conversion)
+                        if (conversion.warnings.isEmpty()) {
+                            results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.success, msg))
+                            sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.success, msg))
+                        } else {
+                            results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
+                            sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.warning, msg))
+                        }
                     } else {
                         results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.error, "Failed to build merged mode"))
                     }
@@ -202,9 +212,16 @@ class LegacyMigrationEngine(
                         continue
                     }
                     sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.migrating))
-                    agentConfig[slug] = convertCustomMode(mode)
-                    results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
-                    sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.success))
+                    val conversion = convertCustomMode(mode, migratedServers, mcpAvailable)
+                    agentConfig[slug] = conversion.agent
+                    val msg = customModeMessage(conversion)
+                    if (conversion.warnings.isEmpty()) {
+                        results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.success, msg))
+                        sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.success, msg))
+                    } else {
+                        results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
+                        sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.warning, msg))
+                    }
                 }
             }
             if (agentConfig.isNotEmpty()) {
@@ -329,11 +346,11 @@ class LegacyMigrationEngine(
         val anyAutoApproval = apSel.commandRules || apSel.readPermission || apSel.writePermission ||
                 apSel.executePermission || apSel.mcpPermission || apSel.taskPermission
         if (anyAutoApproval) {
-            val conv = convertAutoApproval(settings, apSel)
+            val conv = convertAutoApproval(settings, apSel, migratedServers)
             conv.config?.let { backend.updateGlobalConfig(it) }
-            for ((label, status) in conv.results) {
-                sink.item(LegacyMigrationItemProgress(label, status.toProgressStatus()))
-                results.add(LegacyMigrationResultItem(label, MigrationItemCategory.settings, status))
+            for (entry in conv.results) {
+                sink.item(LegacyMigrationItemProgress(entry.label, entry.status.toProgressStatus(), entry.message))
+                results.add(LegacyMigrationResultItem(entry.label, MigrationItemCategory.settings, entry.status, entry.message))
             }
         }
 
@@ -454,6 +471,21 @@ interface LegacyMigrationSink {
             override fun session(progress: LegacyMigrationSessionProgress) = Unit
         }
     }
+}
+
+// -----------------------------------------------------------------------
+// Custom mode item message
+// -----------------------------------------------------------------------
+
+/**
+ * Message for a converted custom mode: warnings first, then notes, joined with "; ".
+ *
+ * Warnings are conditions the user must act on; notes only explain the converted result, so
+ * they never change the item's status. Returns null when the mode has neither.
+ */
+private fun customModeMessage(conversion: LegacyMigrationConverters.ModeConversion): String? {
+    val parts = conversion.warnings + conversion.notes
+    return if (parts.isEmpty()) null else parts.joinToString("; ")
 }
 
 // -----------------------------------------------------------------------

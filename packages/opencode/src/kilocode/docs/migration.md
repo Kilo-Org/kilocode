@@ -62,10 +62,14 @@ Kilocode uses "groups" to define what tools a mode can access. These are convert
 | `read` | `read: "allow"` | File reading |
 | `edit` | `edit: "allow"` | File editing |
 | `command` | `bash: "allow"` | Shell commands |
-| `browser` | `bash: "allow"` | Browser actions (via bash) |
-| `mcp` | `mcp: "allow"` | MCP server access |
+| `browser` | `browser_open: "allow"` | Integrated Browser navigation |
+| `mcp` | `<server>_*: "allow"` per migrated server | One key per MCP server the same migration writes |
 
-**Important:** Permissions that are NOT in the groups list are explicitly set to `"deny"`. This ensures that a mode with only `read` and `edit` groups cannot run shell commands or access MCP servers.
+There is no `mcp` permission key: an `mcp` group grants the tools of each migrated server through a `<server name>_*` key, with characters outside `[a-zA-Z0-9_-]` replaced by `_`. That replacement follows the CLI's own MCP tool-id naming ([`catalog.ts`](../../mcp/catalog.ts) `sanitize`), so two legacy server names that differ only outside that class, such as `a.b` and `a_b`, produce the same `<server>_*` key and therefore share one rule. A mode without an `mcp` group denies those keys.
+
+**Important:** Permissions that are NOT in the groups list are explicitly set to `"deny"` (`read`, `edit`, `bash`, `browser_open`, and the per-server keys). This ensures that a mode with only `read` and `edit` groups cannot run shell commands or access MCP servers.
+
+A group option outside `fileRegex` and `description` means the group was not read fully, so its permission is set to `"ask"` rather than granted.
 
 ### File Restrictions
 
@@ -86,16 +90,25 @@ This converts to:
   "permission": {
     "read": "allow",
     "edit": {
-      "\\.md$": "allow",
-      "*": "deny"
+      "*": "deny",
+      "*.md": "allow"
     },
     "bash": "deny",
-    "mcp": "deny"
+    "browser_open": "deny"
   }
 }
 ```
 
-Note: `bash` and `mcp` are explicitly denied because they weren't in the original groups list.
+The `fileRegex` is translated into permission wildcard globs, with the catch-all `"*": "deny"` written first because the CLI resolves the last matching rule. The supported subset is the same one the JetBrains plugin migrator uses ([`permission-glob.ts`](../permission-glob.ts)): anchors, literal characters, `\`-escaped punctuation, `.` and `.*`, `(...)` alternation, and an optional `?` after any of the supported atoms. A pattern outside that subset (a character class, `+`, a `\d`-style escape, nested groups, an arm of only digits) sets that permission to `"ask"` and reports a migration warning, so the mode asks instead of silently losing the restriction. An arm of only digits is outside the subset because JavaScript enumerates such a key before `"*"`, which would make the catch-all deny win. An empty alternative matches the empty string, which no path is: without both anchors it becomes `*` and grants every path, and with both anchors it is dropped so the alternatives that name a path survive; the pattern is reported only when every alternative is empty.
+
+`bash` and `browser_open` are explicitly denied because they weren't in the original groups list. A migrated mode carries no `skill` rule, so it keeps the CLI default and its skill access is unchanged; the JetBrains plugin migration records its own `skill` denial in the migration report it prints.
+
+| Channel | What it carries |
+|---|---|
+| Migration warning | A condition the user has to resolve: an `mcp` group that granted nothing, a group option that was not read, a file restriction that could not be translated, a repeated group that resolves to a different rule |
+| Migration note | An expected outcome worth explaining: an organization mode's `mcp` group, which attaches no MCP server at config load |
+
+When one mode lists the same group more than once, the migration keeps the narrower rule: `ask` over a file restriction over a plain grant. Two different file restrictions for the same group are not combined, so that group asks. A repeat that resolves to a different rule is reported as a migration warning that names the permission key; a repeat of the same rule produces no message.
 
 ## Default Modes
 
@@ -142,9 +155,11 @@ customModes:
       "permission": {
         "read": "allow",
         "edit": {
-          "src/i18n/.*\\.json$": "allow",
-          "*": "deny"
-        }
+          "*": "deny",
+          "*src/i18n/*.json": "allow"
+        },
+        "bash": "deny",
+        "browser_open": "deny"
       }
     }
   }
@@ -159,7 +174,6 @@ The following Kilocode features are not yet migrated:
 |---|---|---|
 | Rules (`.kilocode/rules/`) | Phase 2 | Will map to `instructions` array |
 | Workflows (`.kilocode/workflows/`) | Phase 2 | Will map to custom commands |
-| MCP Servers (`mcp_settings.json`) | Phase 2 | Will map to `mcp` config |
 | Provider Settings | Phase 2 | Will map to `provider` config |
 | Mode-specific API configs | Phase 2 | Different models per mode |
 | Organization modes | Not planned | `source: organization` not preserved |
