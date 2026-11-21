@@ -14,7 +14,7 @@ import { fleet } from "./fleet"
 import { createMarkers } from "./markers"
 
 const noop = () => undefined
-const deletion: WorktreeDelete = { pending: noop, cancel: noop, confirm: noop, select: noop }
+const deletion: WorktreeDelete = { pending: noop, cancel: noop, arm: noop, confirm: noop, select: noop }
 
 /** The live project sidebar, fed with an example's fixture. */
 function Fleet(props: { example: Example; marker: (id: string) => JSX.Element | undefined }) {
