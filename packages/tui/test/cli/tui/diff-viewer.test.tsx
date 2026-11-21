@@ -5,11 +5,13 @@ import { DiffRenderable, type Renderable, ScrollBoxRenderable } from "@opentui/c
 import { testRender, useRenderer } from "@opentui/solid"
 import type { TuiPluginApi, TuiPluginMeta, TuiRouteCurrent, TuiRouteDefinition } from "@kilocode/plugin/tui"
 import type { Session } from "@kilocode/sdk/v2"
+import { onCleanup } from "solid-js" // kilocode_change
 import { KVProvider } from "../../../src/context/kv"
 import { ThemeProvider } from "../../../src/context/theme"
 import { TuiConfigProvider } from "../../../src/config"
 import { TuiKeybind } from "../../../src/config/keybind"
 import { OpencodeKeymapProvider } from "../../../src/keymap"
+import { getOpencodeModeStack, registerOpencodeKeymap } from "../../../src/keymap" // kilocode_change
 import diffViewerPlugin from "../../../src/feature-plugins/system/diff-viewer"
 import { createTuiPluginApi } from "../../fixture/tui-plugin"
 import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
@@ -31,6 +33,32 @@ test("closing the diff viewer returns to the route it opened from", async () => 
     viewer.app.renderer.destroy()
   }
 })
+
+// kilocode_change start
+test("diff viewer exposes close instead of open and blocks re-entry", async () => {
+  const viewer = await renderDiffViewer([])
+  try {
+    expect(viewer.initial).toEqual(["diff.open"])
+    expect(palette(viewer.keymap())).toEqual(["diff.close"])
+
+    const pop = getOpencodeModeStack(viewer.keymap()).push("modal")
+    expect(palette(viewer.keymap())).toEqual(["diff.close"])
+    pop()
+
+    const current = viewer.current()
+    viewer.keymap().dispatchCommand("diff.open")
+    expect(viewer.current()).toBe(current)
+
+    await viewer.commands.get("diff.open")!.run?.({} as never)
+    expect(viewer.current()).toBe(current)
+
+    viewer.keymap().dispatchCommand("diff.close")
+    expect(viewer.current()).toEqual(startRoute)
+  } finally {
+    viewer.app.renderer.destroy()
+  }
+})
+// kilocode_change end
 
 test("brackets navigate diff hunks", async () => {
   const viewer = await renderDiffViewer(
@@ -107,10 +135,18 @@ async function renderDiffViewer(vcsDiff: unknown[], height = 20, initialRoute?: 
   let renderDiff: TuiRouteDefinition["render"] | undefined
   let vcsDiffInput: unknown
   let sessionDiffInput: unknown
+  // kilocode_change start
+  let keys: ReturnType<typeof createDefaultOpenTuiKeymap> | undefined
+  let initial: string[] = []
+  // kilocode_change end
   const config = createTuiResolvedConfig()
   function Harness() {
     const renderer = useRenderer()
     const keymap = createDefaultOpenTuiKeymap(renderer)
+    // kilocode_change start
+    keys = keymap
+    onCleanup(registerOpencodeKeymap(keymap, renderer, config))
+    // kilocode_change end
     const registerLayer = keymap.registerLayer.bind(keymap)
     keymap.registerLayer = (layer) => {
       layer.commands?.forEach((command) => commands.set(command.name, command))
@@ -155,6 +191,7 @@ async function renderDiffViewer(vcsDiff: unknown[], height = 20, initialRoute?: 
     } satisfies TuiPluginApi
 
     void diffViewerPlugin.tui(api, undefined, pluginMeta)
+    initial = palette(keymap) // kilocode_change
     if (!initialRoute) commands.get("diff.open")?.run?.({} as never)
 
     return (
@@ -177,6 +214,10 @@ async function renderDiffViewer(vcsDiff: unknown[], height = 20, initialRoute?: 
   return {
     app,
     commands,
+    // kilocode_change start
+    initial,
+    keymap: () => keys!,
+    // kilocode_change end
     current: () => current,
     vcsDiffInput: () => vcsDiffInput,
     sessionDiffInput: () => sessionDiffInput,
@@ -207,6 +248,15 @@ const session = {
     updated: 0,
   },
 } satisfies Session
+
+// kilocode_change start
+function palette(keymap: ReturnType<typeof createDefaultOpenTuiKeymap>) {
+  return keymap
+    .getCommandEntries({ visibility: "reachable", namespace: "palette" })
+    .map((entry) => entry.command.name)
+    .filter((name) => name.startsWith("diff."))
+}
+// kilocode_change end
 
 test("branch diff source requests branch VCS diff", async () => {
   const viewer = await renderDiffViewer([], 20, {
