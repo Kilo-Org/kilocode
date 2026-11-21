@@ -121,13 +121,14 @@ afterAll(async () => {
   await AppRuntime.dispose()
 })
 
-function config(baseURL: string) {
+function config(baseURL: string, stale = false) {
   return JSON.stringify({
     model: "test/test-model",
     small_model: "test/test-model",
     enabled_providers: ["test"],
     formatter: false,
     lsp: false,
+    ...(stale ? { agent: { code: { model: "test/unavailable-model" } } } : {}),
     provider: {
       test: {
         name: "Test",
@@ -140,7 +141,7 @@ function config(baseURL: string) {
 }
 
 describe("wakeup resume", () => {
-  test("an armed wakeup fires, resumes the session with its prompt, and clears the entry", async () => {
+  test("an armed wakeup uses the session model instead of an unavailable agent model", async () => {
     const bodies: string[] = []
     const server = Bun.serve({
       port: 0,
@@ -158,11 +159,11 @@ describe("wakeup resume", () => {
     const base = fs.realpathSync(os.tmpdir())
     const dir = fs.mkdtempSync(path.join(base, "opencode-wakeup-resume-"))
     try {
-      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`))
+      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`, true))
 
       const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
       const session = await AppRuntime.runPromise(
-        Session.Service.use((svc) => svc.create({ title: "Wakeup resume" })).pipe(
+        Session.Service.use((svc) => svc.create({ title: "Wakeup resume", model: saved })).pipe(
           Effect.provideService(InstanceRef, ctx),
         ),
       )
@@ -534,9 +535,9 @@ describe("wakeup resume", () => {
 
       const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
       const session = await AppRuntime.runPromise(
-        Session.Service.use((svc) =>
-          svc.create({ title: "Wakeup cancel restart", agent: "code", model: saved }),
-        ).pipe(Effect.provideService(InstanceRef, ctx)),
+        Session.Service.use((svc) => svc.create({ title: "Wakeup cancel restart", agent: "code", model: saved })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
       )
 
       const info = await AppRuntime.runPromise(
@@ -866,9 +867,9 @@ describe("wakeup resume", () => {
 
       const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
       const session = await AppRuntime.runPromise(
-        Session.Service.use((svc) =>
-          svc.create({ title: "Wakeup cancel others", agent: "code", model: saved }),
-        ).pipe(Effect.provideService(InstanceRef, ctx)),
+        Session.Service.use((svc) => svc.create({ title: "Wakeup cancel others", agent: "code", model: saved })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
       )
 
       const awaited = await AppRuntime.runPromise(
