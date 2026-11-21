@@ -816,6 +816,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Ingen udbydere",
   "dialog.model.unavailable": "Kilo-modeller er ikke tilgængelige",
+  "dialog.model.loadFailed": "Kunne ikke indlæse udbydere for dette projekt.",
 
   "prompt.placeholder.connecting": "Opretter forbindelse til server...",
   "prompt.placeholder.error": "Forbindelse mislykkedes. Tjek outputpanelet eller genstart udvidelsen.",
