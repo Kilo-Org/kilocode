@@ -8,7 +8,7 @@ export const EXA_BASE_URL = "https://mcp.exa.ai/mcp"
 export const exaUrl = (apiKey: string | undefined) =>
   apiKey ? `${EXA_BASE_URL}?exaApiKey=${encodeURIComponent(apiKey)}` : EXA_BASE_URL
 // kilocode_change end
-export const PARALLEL_URL = "https://search.parallel.ai/mcp"
+export const PARALLEL_URL = "https://mcp.parallel.ai/mcp" // kilocode_change
 
 const McpResult = Schema.Struct({
   result: Schema.Struct({
@@ -55,8 +55,8 @@ export const SearchArgs = Schema.Struct({
 export const ParallelSearchArgs = Schema.Struct({
   objective: Schema.String,
   search_queries: Schema.Array(Schema.String),
-  session_id: Schema.optional(Schema.String),
-  model_name: Schema.optional(Schema.String),
+  session_id: Schema.optionalKey(Schema.String), // kilocode_change
+  client_model: Schema.optionalKey(Schema.String), // kilocode_change
 })
 
 const McpRequest = <F extends Schema.Struct.Fields>(args: Schema.Struct<F>) =>

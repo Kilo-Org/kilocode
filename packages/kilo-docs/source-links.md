@@ -150,6 +150,8 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
 - <https://kilocode.ai>
   <!-- packages/opencode/src/kilocode/const.ts -->
+- <https://mcp.parallel.ai/mcp>
+  <!-- packages/opencode/src/tool/mcp-websearch.ts -->
 - <https://opencode.ai/>
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
   <!-- packages/opencode/src/kilocode/server/httpapi/public.ts -->
@@ -161,8 +163,6 @@
   <!-- packages/opencode/src/share/share-next.ts -->
 - <https://reddit.com/r/kilocode>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
-- <https://search.parallel.ai/mcp>
-  <!-- packages/opencode/src/tool/mcp-websearch.ts -->
 - <https://v5.ai-sdk.dev/providers/ai-sdk-providers/amazon-bedrock>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://v5.ai-sdk.dev/providers/ai-sdk-providers/anthropic>
