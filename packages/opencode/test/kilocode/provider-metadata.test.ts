@@ -25,6 +25,10 @@ describe("providerMetadata", () => {
     })
   })
 
+  test("uses the catalog identity for Ace Data Cloud without assigning recommendation priority", () => {
+    expect(providerMetadata("acedatacloud")).toEqual({ icon: "acedatacloud" })
+  })
+
   test("falls back to synthetic icon for unknown providers", () => {
     expect(providerMetadata("unknown-provider")).toEqual({ icon: "synthetic" })
   })

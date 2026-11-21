@@ -118,6 +118,7 @@ export const iconNames = [
   "alibaba-coding-plan-cn",
   "alibaba-cn",
   "aihubmix",
+  "acedatacloud",
   "abliteration-ai",
   "abacus",
   "302ai",
