@@ -816,7 +816,6 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   const kiloModelFailure = createMemo(() => providerFailure(KILO_GATEWAY_ID, failures()))
   const noProvidersLabel = () => {
-    if (loadError()) return language.t("dialog.model.loadFailed")
     const failure = kiloModelFailure()
     if (failure) {
       const { key, vars } = providerFailureMessageKey(failure)
@@ -824,8 +823,10 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     }
     return kiloUnavailable() ? language.t("dialog.model.unavailable") : language.t("dialog.model.noProviders")
   }
-  const triggerLabel = () =>
-    buildTriggerLabel(
+  const triggerLabel = () => {
+    // A failed provider read means no selection can be shown as current for this project.
+    if (loadError()) return language.t("dialog.model.loadFailed")
+    return buildTriggerLabel(
       activeModel()?.name,
       activeModel()?.providerID,
       props.value,
@@ -838,6 +839,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
         notSet: language.t("dialog.model.notSet"),
       },
     )
+  }
   const label = () => props.label ?? language.t("dialog.model.select.title")
   const controlLabel = () => `${label()}: ${triggerLabel()}`
   const searchLabel = () => `${controlLabel()}. ${language.t("dialog.model.search.placeholder")}`
