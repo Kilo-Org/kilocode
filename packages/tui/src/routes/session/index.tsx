@@ -1643,7 +1643,11 @@ export function Session(props: {
                     {(_) => {
                       const request = promptedPermissions()[0]
                       return request ? (
-                        <PermissionPrompt request={request} directory={session()?.location.directory} />
+                        // kilocode_change start - permission-setup seam: let a plugin replace the permission prompt
+                        <Slot path="session.permission" input={{ request, directory: session()?.location.directory }}>
+                          <PermissionPrompt request={request} directory={session()?.location.directory} />
+                        </Slot>
+                        // kilocode_change end
                       ) : null
                     }}
                   </Show>

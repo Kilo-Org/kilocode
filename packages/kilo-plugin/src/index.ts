@@ -25,6 +25,7 @@ import { KiloRemote } from "./remote"
 export { KiloSessionSync }
 export { KiloRemote }
 import { KiloPrivacyPlugin } from "./privacy"
+import { KiloPermissionsPlugin } from "./permissions"
 import { KiloFlowPlugin } from "./flow"
 import { KiloSettingsPlugin } from "./settings"
 import { KiloSkillPlugin } from "./skill"
@@ -70,6 +71,8 @@ export const KiloPlugins = [
   KiloHandshakePlugin,
   // Global saved auto-approve: runs before Flow, Browser, Agent Manager, managed Policy and Sandbox hardening hooks.
   KiloAutoApprovePlugin,
+  // Project permission sets: also before the hardening hooks, so they still decide last.
+  KiloPermissionsPlugin,
   // v1 imported the Kilo agent module into agent.ts. kilo_port(agent:2e5632e7bfc6)
   KiloAgentPlugin.Plugin,
   // The plan_exit tool and the post-plan handoff question.
