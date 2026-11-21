@@ -36,6 +36,7 @@ import { isRenderable, UPSTREAM_SUPPRESSED_TOOLS } from "../../utils/transcript-
 import { messageThroughput, formatTG } from "../../context/session-utils"
 import { formatClock, formatDuration } from "../../utils/message-time"
 import type { TurnTiming } from "../../context/transcript-rows"
+import { localeToBcp47 } from "../../context/language-utils"
 import { color as timelineColor } from "../../utils/timeline/colors"
 import type { Part as TimelinePart, QuestionRequest } from "../../types/messages"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
@@ -153,7 +154,7 @@ interface AssistantMessageProps {
   message: SDKAssistantMessage
   parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
-  /** Finish time and duration for the turn, shown inline in the assistant
+  /** Finish time, duration, and cost for the turn, shown inline in the assistant
    * action row once the turn settles. */
   timing?: TurnTiming
   feedback?: MessageFeedbackControls
@@ -376,7 +377,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             return <ThroughputBadge metrics={metrics} />
           })
 
-          // Turn finish time and duration render inline in the same action row
+          // Turn finish time, duration, and cost render inline in the same action row
           // as the copy/feedback buttons, on the trailing side, so the turn's
           // timing never introduces a second line. Only the copy-carrying part
           // builds it, which keeps it to one row per settled turn.
@@ -384,12 +385,21 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             const timing = props.timing
             if (!timing) return undefined
             if (part.id !== props.showAssistantCopyPartID) return undefined
+            const cost =
+              timing.cost == null
+                ? undefined
+                : new Intl.NumberFormat(localeToBcp47(language.locale()), {
+                    style: "currency",
+                    currency: "USD",
+                    maximumFractionDigits: 4,
+                  }).format(timing.cost)
             return (
               <span data-component="message-time">
                 {formatClock(timing.completedAt, language.locale())}
                 <Show when={timing.durationMs}>
                   {(ms) => <span data-slot="message-time-duration"> · {formatDuration(ms())}</span>}
                 </Show>
+                <Show when={cost}>{(value) => <span data-slot="message-cost"> · {value()}</span>}</Show>
               </span>
             )
           })
