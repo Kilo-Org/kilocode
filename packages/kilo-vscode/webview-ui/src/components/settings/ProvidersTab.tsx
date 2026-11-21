@@ -200,15 +200,17 @@ const ProvidersTab: Component = () => {
               >
                 Kilo Gateway
               </span>
-              <Show
-                when={kiloLoggedIn() && !(kiloFailure() && providerFailureNeedsSignIn(kiloFailure()!))}
-                fallback={
-                  <Button size="small" variant="secondary" onClick={() => server.goToLogin()}>
-                    {language.t("common.signIn")}
-                  </Button>
-                }
-              >
-                <Tag>{language.t("settings.providers.tag.gateway")}</Tag>
+              <Show when={!loadFailed()}>
+                <Show
+                  when={kiloLoggedIn() && !(kiloFailure() && providerFailureNeedsSignIn(kiloFailure()!))}
+                  fallback={
+                    <Button size="small" variant="secondary" onClick={() => server.goToLogin()}>
+                      {language.t("common.signIn")}
+                    </Button>
+                  }
+                >
+                  <Tag>{language.t("settings.providers.tag.gateway")}</Tag>
+                </Show>
               </Show>
             </div>
             <Show when={kiloFailure()}>
