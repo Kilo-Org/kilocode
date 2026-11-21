@@ -23,6 +23,7 @@ import { SessionInputTable, SessionMessageTable, SessionTable } from "@opencode-
 import * as StoredMessage from "@opencode-ai/core/kilocode/session-message" // kilocode_change
 import { testEffect } from "./lib/effect"
 import { Snapshot } from "@opencode-ai/core/snapshot"
+import { SessionV1 } from "@opencode-ai/core/v1/session" // kilocode_change
 
 const it = testEffect(AppNodeBuilder.build(LayerNode.group([Database.node, EventV2.node, SessionProjector.node])))
 const sessionsLayer = AppNodeBuilder.build(SessionV2.node, [[SessionExecution.node, SessionExecution.noopLayer]])
@@ -96,6 +97,47 @@ describe("SessionProjector", () => {
       ).toEqual([boundary])
     }),
   )
+
+  // kilocode_change start
+  it.effect("clears the archive only for an explicit unarchive, not a snapshot without it", () =>
+    Effect.gen(function* () {
+      const db = (yield* Database.Service).db
+      const events = yield* EventV2.Service
+      yield* db
+        .insert(ProjectTable)
+        .values({ id: Project.ID.global, worktree: AbsolutePath.make("/project"), sandboxes: [] })
+        .run()
+      yield* db
+        .insert(SessionTable)
+        .values({
+          id: sessionID,
+          project_id: Project.ID.global,
+          slug: "test",
+          directory: "/project",
+          title: "test",
+          version: "test",
+          time_archived: 123,
+        })
+        .run()
+      const stale = {
+        id: sessionID,
+        slug: "test",
+        projectID: Project.ID.global,
+        directory: "/project",
+        title: "test",
+        version: "test",
+        time: { created: 1, updated: 2 },
+      }
+      const archived = db.select({ time: SessionTable.time_archived }).from(SessionTable).get()
+
+      yield* events.publish(SessionV1.Event.Updated, { sessionID, info: stale })
+      expect((yield* archived)?.time).toBe(123)
+
+      yield* events.publish(SessionV1.Event.Updated, { sessionID, info: stale, unarchived: true })
+      expect((yield* archived)?.time).toBeNull()
+    }),
+  )
+  // kilocode_change end
 
   it.effect("orders projected messages and context by durable aggregate sequence", () =>
     Effect.gen(function* () {
@@ -400,11 +442,12 @@ describe("SessionProjector", () => {
         }),
       )({ ...assistant?.data, type: assistant?.type })
       // kilocode_change end
-      const messages = rows.map((row) =>
-        // kilocode_change start
-        Schema.decodeUnknownSync(SessionMessage.Message)(
-          StoredMessage.normalize({ ...row.data, id: row.id, type: row.type }),
-        ),
+      const messages = rows.map(
+        (row) =>
+          // kilocode_change start
+          Schema.decodeUnknownSync(SessionMessage.Message)(
+            StoredMessage.normalize({ ...row.data, id: row.id, type: row.type }),
+          ),
         // kilocode_change end
       )
 

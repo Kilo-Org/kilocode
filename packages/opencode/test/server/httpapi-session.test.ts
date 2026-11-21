@@ -909,6 +909,27 @@ describe("session HttpApi", () => {
         })
         expect(response.status).toBe(200)
         expect((yield* json<Session.Info>(response)).time.archived).toBe(-1)
+
+        // kilocode_change start - archiving must be reversible, and only an explicit null clears it
+        const sessionPath = pathFor(SessionPaths.update, { sessionID: session.id })
+        const retitled = yield* requestJson<Session.Info>(sessionPath, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ title: "still archived", time: {} }),
+        })
+        expect(retitled.time.archived).toBe(-1)
+
+        const unarchived = yield* request(sessionPath, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ time: { archived: null } }),
+        })
+        expect(unarchived.status).toBe(200)
+        expect((yield* json<Session.Info>(unarchived)).time.archived).toBeUndefined()
+
+        const reread = yield* requestJson<Session.Info>(sessionPath, { headers })
+        expect(reread.time.archived).toBeUndefined()
+        // kilocode_change end
       }),
     { git: true, config: { formatter: false, lsp: false } },
   )
