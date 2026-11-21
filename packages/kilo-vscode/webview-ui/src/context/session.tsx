@@ -173,8 +173,8 @@ export const SessionProvider: ParentComponent = (props) => {
   const recoveries = new Map<string, Set<string>>()
   const removedSessions = new Set<string>()
   // Sessions whose cached transcript a closed panel released. Transcript events
-  // are dropped for them until a selection or a transcript load takes over, so
-  // a child that keeps running cannot refill the cache that release dropped.
+  // are dropped for them until the session is selected, so a child that keeps
+  // running cannot refill the cache that release dropped.
   // Status, permission, question and suggestion events still arrive.
   const releasedTranscripts = new Set<string>()
   // Transcript arrival for a released session stays out of the store until the
@@ -1937,7 +1937,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Release keeps the session: it only drops the cached transcript, so drafts
   // survive and a listed session still receives its events. Transcript events
-  // stay dropped until the session is selected or its transcript is loaded.
+  // stay dropped until the session is selected.
   function releaseSession(sessionID: string) {
     releasedTranscripts.add(sessionID)
     dropTranscript(sessionID)
