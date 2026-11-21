@@ -222,8 +222,11 @@ describe("handleSessionDeleted draft cleanup contract", () => {
     // The user-initiated deleteSession() path prunes loaded optimistically, but
     // cascade deletes and external CLI/TUI deletes only come through
     // handleSessionDeleted. Without this, those ids stay in loaded until reload.
+    // The drop lives in dropTranscript(), which both the delete and the release
+    // path call, so the delete path must still run it.
     const body = extractFunctionBody(source, "handleSessionDeleted")
-    expect(body).toMatch(
+    expect(body).toContain("dropTranscript(sessionID)")
+    expect(extractFunctionBody(source, "dropTranscript")).toMatch(
       /setLoaded\(\s*\(prev\)\s*=>\s*\{[\s\S]*?prev\.has\(sessionID\)[\s\S]*?next\.delete\(sessionID\)[\s\S]*?\}\)/,
     )
   })
