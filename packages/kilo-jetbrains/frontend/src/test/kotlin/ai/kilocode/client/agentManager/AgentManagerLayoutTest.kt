@@ -49,6 +49,20 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertTrue(nodes.all { it.children == null })
     }
 
+    fun `test parent resolves membership while section resolves section rows`() = edtWait {
+        val section = layout.create("Planning")
+        layout.nodes(items)
+        layout.move(ActiveMove(local.key, 2, 0, listOf(local.key), parent = section.key))
+
+        assertEquals(section, layout.section(section.key))
+        assertNull(layout.parent(section.key))
+        assertEquals(section.key, layout.parent(local.key))
+        assertNull(layout.section(local.key))
+        assertNull(layout.parent(current.key))
+        assertNull(layout.parent("missing"))
+        assertNull(layout.section("missing"))
+    }
+
     fun `test creating sections appends distinct empty root branches`() = edtWait {
         layout.nodes(items)
         val first = layout.create("First")
@@ -170,6 +184,109 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertEquals(listOf(first.key, second.key), keys(nodes))
         assertEquals(listOf(local.key), keys(children(nodes, first)))
         assertEquals(listOf(current.key, cloud.key), keys(children(nodes, second)))
+    }
+
+    fun `test moving by key appends to existing sections clears old ordering and persists`() = edtWait {
+        val first = layout.create("First")
+        val second = layout.create("Second")
+        layout.nodes(items, pin = current.key)
+
+        layout.move(local.key, first.key)
+        layout.move(cloud.key, second.key)
+        layout.move(local.key, second.key)
+        layout.move(local.key, second.key)
+        layout.move(current.key, second.key)
+
+        assertEquals(emptyList<ActiveTreeNode>(), children(layout.nodes(items), first))
+        assertEquals(listOf(cloud.key, local.key), keys(children(layout.nodes(items), second)))
+        assertNull(layout.parent(current.key))
+        assertEquals(second.key, layout.parent(local.key))
+        val saved = PropertiesComponent.getInstance(project).getValue(STORAGE)
+        layout.move(local.key, "missing")
+        layout.move("missing", "missing-section")
+        layout.move(first.key, second.key)
+        assertEquals(saved, PropertiesComponent.getInstance(project).getValue(STORAGE))
+        val restored = AgentManagerLayout(PropertiesComponent.getInstance(project))
+        assertEquals(layout.nodes(items), restored.nodes(items.reversed(), pin = current.key))
+        restored.move(local.key, null)
+        assertNull(restored.parent(local.key))
+        assertEquals(listOf(cloud.key), keys(children(restored.nodes(items), second)))
+        assertEquals(listOf(current.key, first.key, second.key, local.key), keys(restored.nodes(items)))
+    }
+
+    fun `test inserting created rows places them first in their destination`() = edtWait {
+        val section = layout.create("Section")
+        layout.nodes(items, pin = current.key)
+        layout.move(cloud.key, section.key)
+        layout.nodes(items, pin = current.key)
+
+        layout.insert(local.key, section.key)
+        layout.insert("new-root", null)
+        layout.insert(current.key, section.key)
+
+        val nodes = layout.nodes(items + Row("new-root"), pin = current.key)
+        assertEquals(listOf(local.key, cloud.key), keys(children(nodes, section)))
+        assertEquals(listOf(current.key, "new-root"), nodes.map { it.item.key }.take(2))
+        val restored = AgentManagerLayout(PropertiesComponent.getInstance(project))
+        assertEquals(section.key, restored.parent(local.key))
+        assertNull(restored.parent(current.key))
+        assertNull(restored.parent("new-root"))
+    }
+
+    fun `test section choices follow visual order and membership resolves after deletion`() = edtWait {
+        val first = layout.create("First")
+        val second = layout.create("Second")
+        layout.nodes(items)
+        layout.move(local.key, first.key)
+        layout.move(ActiveMove(second.key, 4, 0, listOf(second.key, current.key, cloud.key, first.key)))
+
+        assertEquals(listOf(second, first), layout.sections())
+        assertEquals(first.key, layout.parent(local.key))
+        assertNull(layout.parent(cloud.key))
+        layout.delete(first.key)
+        assertNull(layout.parent(local.key))
+        assertEquals(listOf(second), layout.sections())
+    }
+
+    fun `test replacing pending keys preserves section positions across out of order completion`() = edtWait {
+        val first = Row("pending:first")
+        val second = Row("pending:second")
+        val created = Row("created:first")
+        val other = Row("created:second")
+        val section = layout.create("Section")
+        layout.nodes(items + first + second)
+        layout.move(first.key, section.key)
+        layout.move(second.key, section.key)
+
+        layout.replace(second.key, other.key)
+        layout.nodes(items + first + other)
+        layout.move(local.key, section.key)
+        layout.replace(first.key, created.key)
+
+        val nodes = layout.nodes(items + created + other)
+        assertEquals(listOf(created.key, other.key, local.key), keys(children(nodes, section)))
+        val props = PropertiesComponent.getInstance(project)
+        assertFalse(props.getValue(STORAGE)!!.contains("pending:"))
+        val restored = AgentManagerLayout(props)
+        assertEquals(nodes, restored.nodes((items + other + created).reversed()))
+        assertEquals(section.key, restored.parent(created.key))
+    }
+
+    fun `test replacement preserves root position after the chosen section is deleted`() = edtWait {
+        val pending = Row("pending:new")
+        val created = Row("created:new")
+        val section = layout.create("Section")
+        layout.nodes(items + pending, pin = current.key)
+        layout.move(pending.key, section.key)
+        layout.nodes(items + pending)
+        layout.delete(section.key)
+        val before = keys(layout.nodes(items + pending))
+
+        layout.replace(pending.key, created.key)
+
+        assertEquals(before.map { if (it == pending.key) created.key else it }, keys(layout.nodes(items + created)))
+        assertNull(layout.parent(created.key))
+        assertNull(layout.parent(pending.key))
     }
 
     fun `test sibling reordering preserves its section across discovery order changes`() = edtWait {
@@ -376,6 +493,8 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertEquals(listOf(cloud.key), keys(children(nodes, second)))
         assertEquals(AgentManagerLayout.Section("first", "Planning", "cyan"), first)
         assertEquals(AgentManagerLayout.Section("second", "Other", "magenta"), second)
+        assertTrue("Section headers keep the selected backdrop", nodes.single { it.item.key == first.key }.item.alwaysSelected)
+        assertTrue(nodes.single { it.item.key == second.key }.item.alwaysSelected)
         assertEquals(ActiveTreeColors.color("cyan"), nodes.single { it.item.key == first.key }.color)
         assertEquals(ActiveTreeColors.color("magenta"), nodes.single { it.item.key == second.key }.color)
         val saved = props.getValue(STORAGE)!!

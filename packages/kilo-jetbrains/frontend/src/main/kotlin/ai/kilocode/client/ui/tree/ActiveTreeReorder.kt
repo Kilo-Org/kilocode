@@ -146,11 +146,14 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
 
     @RequiresEdt
     fun drop() {
-        // A successful drop keeps sections that were opened to reveal its preview.
+        val collapsed = opened.toSet()
         opened.clear()
-        preview?.let { state ->
-            preview = null
-            val parent = parent(state.parent) ?: return
+        val state = preview
+        preview = null
+        // Restore the user's layout before the move callback synchronizes the selected row.
+        if (collapsed.isNotEmpty()) view.preview(collapsed) {}
+        state?.let {
+            val parent = parent(state.parent) ?: return@let
             val siblings = siblings(parent)
             val index = siblings.indexOfFirst { it.key == state.key }
             view.repaint()

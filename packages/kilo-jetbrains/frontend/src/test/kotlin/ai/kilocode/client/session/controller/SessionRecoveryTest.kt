@@ -132,6 +132,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
         assertEquals("failed", m.model.message("msg1")?.terminal?.status)
         assertTrue(rpc.prompts.isEmpty())
         assertTrue(rpc.commands.isEmpty())
+        edt { assertFalse("An older failure must stay passive during a newer turn", m.canRetryTerminal()) }
         emit(ChatEventDto.Resnapshot(id, "start"))
         emit(ChatEventDto.MessageUpdated(id, msg("msg1", id, "user")))
         emit(event)

@@ -166,6 +166,16 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(panel.messageErrors().contains("user: terminal=failed"))
     }
 
+    fun `test cloud terminal failures explain rejection and delivery failure`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.setTerminal(ChatEventDto.MessageTerminal("ses", "u1", "failed", "queued", false))
+        assertEquals(KiloBundle.message("session.cloud.message.failed.notAccepted"), cards("u1").single().text())
+
+        model.upsertMessage(msg("u2", "user"))
+        model.setTerminal(ChatEventDto.MessageTerminal("ses", "u2", "failed", "queued", true))
+        assertEquals(KiloBundle.message("session.cloud.message.failed.notSent"), cards("u2").single().text())
+    }
+
     fun `test modified files card follows turn anchor summary`() {
         model.upsertMessage(msg("u1", "user").copy(summary = summary("src/A.kt")))
 
@@ -312,7 +322,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.upsertMessage(msg("u1", "user"))
         model.upsertMessage(msg("u2", "user"))
         model.setState(SessionState.Busy("newer turn"))
-        val terminal = ChatEventDto.MessageTerminal("ses", "u1", "failed", "queued", false)
+        val terminal = ChatEventDto.MessageTerminal("ses", "u1", "failed", "sent", true)
 
         model.setTerminal(terminal)
 
@@ -325,6 +335,18 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         repeat(300) { model.setTerminal(terminal) }
         assertSame(card, cards("u1").single())
         assertEquals(count, components(panel).size)
+    }
+
+    fun `test tail Cloud failure keeps public detail and offers retry`() {
+        val item = panelWithRetry { true }
+        model.upsertMessage(msg("u1", "user").copy(error = failure("Cloud capacity unavailable")))
+        model.setTerminal(ChatEventDto.MessageTerminal("ses", "u1", "failed", "sent", true))
+        model.setState(SessionState.TurnEnded(Outcome.FAILED))
+
+        assertEquals("Cloud capacity unavailable", cards(item, "u1").single().text())
+        val outcome = find<SessionOutcomeView>(item)!!
+        assertNull(text(outcome, KiloBundle.message("session.outcome.failed.description")))
+        assertNotNull(button(outcome, KiloBundle.message("session.outcome.retry")))
     }
 
     fun `test deferred interrupted terminal renders when original prompt arrives`() {

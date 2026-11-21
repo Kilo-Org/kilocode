@@ -859,8 +859,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "원격 측정",
   "settings.aboutKiloCode.telemetry.description":
-    '원격 측정은 VS Code에 내장된 원격 측정 설정으로 제어됩니다. 비활성화하려면 설정 > 원격 측정 > 원격 측정 수준으로 이동하여 "off"로 설정하세요. 변경 사항을 적용하려면 VS Code를 다시 시작하세요.',
-  "settings.aboutKiloCode.telemetry.openSettings": "원격 측정 설정 열기",
+    "이 스위치로 Kilo의 원격 측정 설정을 변경할 수 있습니다. VS Code나 실행 환경에서 원격 측정을 비활성화하면 계속 꺼진 상태로 유지됩니다.",
+  "settings.aboutKiloCode.telemetry.toggle": "원격 측정 사용",
+  "settings.aboutKiloCode.telemetry.saveFailed": "원격 측정 설정을 업데이트하지 못했습니다",
 
   "settings.agentBehaviour.subtab.agents": "에이전트",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 서버",

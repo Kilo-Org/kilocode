@@ -87,6 +87,20 @@ const DEFINITIONS: Record<ScenarioID, Definition> = {
     },
     requires: ["transcript.read", "stream.observe", "permission.answer"],
   },
+  "settings.telemetry": {
+    prompt: { directive: "settings", token: "K1-SETTINGS-TELEMETRY" },
+    expected: {
+      ui: [
+        "settings.advanced.visible",
+        "settings.telemetry.toggle",
+        "settings.telemetry.persisted",
+        "settings.telemetry.reload",
+      ],
+      model: ["cli.ready"],
+      terminalTranscriptToken: "K1-SETTINGS-TELEMETRY",
+    },
+    requires: [],
+  },
 }
 
 export function manifest(id: ScenarioID, lane: (typeof LANES)[number]): ScenarioManifest {

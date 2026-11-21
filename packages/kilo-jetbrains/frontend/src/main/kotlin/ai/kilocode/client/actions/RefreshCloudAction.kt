@@ -1,5 +1,7 @@
 package ai.kilocode.client.actions
 
+import ai.kilocode.client.agentManager.hosted.HostedManagementService
+import ai.kilocode.client.agentManager.hosted.HostedPullRequestService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.telemetry.Telemetry
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -13,7 +15,10 @@ class RefreshCloudAction : AnAction(), DumbAware {
         val project = e.project ?: return
         val dir = e.workspaceDirectory() ?: return
         Telemetry.send("Cloud Refresh Clicked", mapOf("surface" to "menu"))
-        project.service<KiloHostedService>().refresh(dir)
+        val hosted = project.service<KiloHostedService>()
+        hosted.refresh(dir)
+        val visible = project.service<HostedManagementService>().visible(hosted.state.value.items)
+        project.service<HostedPullRequestService>().refreshAll(visible.map { it.ref }, revalidate = true)
     }
 
     override fun update(e: AnActionEvent) {

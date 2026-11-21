@@ -192,6 +192,12 @@ internal interface ActiveItem {
     /** Extra text matched by the filter field in addition to [title]; null matches title only. */
     val search: String? get() = null
 
+    /**
+     * Paints the selection background even when the row is not selected, and leaves it unchanged
+     * under the pointer. Structural rows such as section headers use this instead of hover feedback.
+     */
+    val alwaysSelected: Boolean get() = false
+
     /** Next frame delay for visible AnimationIcon glyphs; return null to leave the shared clock. */
     @RequiresEdt
     fun animation(time: Long, actions: Boolean): Int? = activeAnimation(this, time, actions)

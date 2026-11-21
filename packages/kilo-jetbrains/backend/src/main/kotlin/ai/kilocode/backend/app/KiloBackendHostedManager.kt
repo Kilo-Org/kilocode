@@ -21,9 +21,15 @@ import ai.kilocode.rpc.dto.HostedProviderDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesRefreshDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangeFileResultDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffFileResultDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
@@ -475,6 +481,46 @@ class KiloBackendHostedManager(
                 effectiveDefaultProfileID = root.string("effectiveDefaultProfileID"),
             )
         }
+
+    suspend fun workspacePullRequest(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDto = pullRequest(http, base, ref, organizationID, refresh = false)
+
+    suspend fun refreshWorkspacePullRequest(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDto = pullRequest(http, base, ref, organizationID, refresh = true)
+
+    suspend fun workspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceChangesDto =
+        HostedDiffTransport(http, base).workspaceChanges(ref, organizationID)
+
+    suspend fun refreshWorkspaceChanges(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspaceChangesRefreshDto = HostedDiffTransport(http, base).refreshWorkspaceChanges(ref, organizationID)
+
+    suspend fun workspaceChangeFile(
+        ref: HostedWorkspaceRefDto,
+        path: String,
+        scope: String?,
+        expectedRevision: Long,
+        organizationID: String?,
+    ): HostedWorkspaceChangeFileResultDto =
+        HostedDiffTransport(http, base).workspaceChangeFile(ref, path, scope, expectedRevision, organizationID)
+
+    suspend fun workspacePullRequestDiff(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDiffDto = HostedDiffTransport(http, base).workspacePullRequestDiff(ref, organizationID)
+
+    suspend fun workspacePullRequestDiffFile(
+        ref: HostedWorkspaceRefDto,
+        path: String,
+        expectedHeadSha: String,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDiffFileResultDto =
+        HostedDiffTransport(http, base).workspacePullRequestDiffFile(ref, path, expectedHeadSha, organizationID)
 
     suspend fun setPersonalDefaultProfile(profileID: String, organizationID: String?): HostedProfileDefaultDto =
         withContext(Dispatchers.IO) {

@@ -25,6 +25,7 @@ import ai.kilocode.client.speech.SpeechCapture
 import ai.kilocode.client.speech.SpeechInput
 import ai.kilocode.client.speech.SpeechInputState
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.LiveBadgeIcon
 import ai.kilocode.client.ui.editor.EditorFolds
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
@@ -154,6 +155,8 @@ class PromptPanel(
         private val SHIELD_FILLED_ICON: Icon = IconLoader.getIcon("/icons/shield-filled.svg", PromptPanel::class.java)
         private val WAND_ICON: Icon = IconLoader.getIcon("/icons/wand-sparkles.svg", PromptPanel::class.java)
         private val SPEECH_ICON: Icon = AllIcons.CodeWithMe.CwmMicOn
+        private val SPEECH_RECORDING_ICON: Icon =
+            LiveBadgeIcon(SPEECH_ICON, JBUI.CurrentTheme.IconBadge.ERROR)
         private val SPEECH_ERROR_ICON: Icon = AllIcons.CodeWithMe.CwmMicOff
         private val MENTION_KEY = DefaultLanguageHighlighterColors.METADATA
         private val COMMAND_KEY = DefaultLanguageHighlighterColors.KEYWORD
@@ -360,6 +363,11 @@ class PromptPanel(
             }
         }
 
+    val isSpeechActive: Boolean
+        get() = speechState == SpeechInputState.STARTING ||
+            speechState == SpeechInputState.RECORDING ||
+            speechState == SpeechInputState.TRANSCRIBING
+
     @RequiresEdt
     override fun toggleSpeech() {
         val input = speech ?: return
@@ -436,16 +444,16 @@ class PromptPanel(
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         }
         if (showEnhance) bar.add(enhance)
-        if (showSubmit) {
+        if (showSubmit || speech != null) {
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
             bar.add(separator)
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-            if (speech != null) {
-                bar.add(speechButton)
-                bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-            }
-            bar.add(button)
         }
+        if (speech != null) {
+            bar.add(speechButton)
+            if (showSubmit) bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        }
+        if (showSubmit) bar.add(button)
         shell.add(bar, BorderLayout.SOUTH)
         add(shell, BorderLayout.CENTER)
         addComponentListener(resize)
@@ -955,6 +963,7 @@ class PromptPanel(
             KiloNotifications.error(project, KiloBundle.message("prompt.speech.error.title"), null)
         }
         syncButton()
+        if (previous != state) onChange()
     }
 
     private fun speechLabel(state: SpeechInputState): String = when (state) {
@@ -974,7 +983,8 @@ class PromptPanel(
     private fun speechIcon(state: SpeechInputState): Icon = when (state) {
         SpeechInputState.STARTING, SpeechInputState.TRANSCRIBING -> SpinnerIcon.icon
         SpeechInputState.ERROR -> SPEECH_ERROR_ICON
-        SpeechInputState.IDLE, SpeechInputState.RECORDING -> SPEECH_ICON
+        SpeechInputState.RECORDING -> SPEECH_RECORDING_ICON
+        SpeechInputState.IDLE -> SPEECH_ICON
     }
 
     @RequiresEdt
@@ -1146,7 +1156,9 @@ class PromptPanel(
         if (speech == null) return
         val action = ActionManager.getInstance().getAction(SpeechInputAction.ID) ?: return
         val binding = Disposer.newDisposable("Kilo speech input shortcut")
-        action.registerCustomShortcutSet(
+        // Register the component-local shortcut on a wrapper so the globally registered action's
+        // shortcut set stays owned by KeymapManager.
+        ActionUtil.wrap(action).registerCustomShortcutSet(
             KeymapUtil.getActiveKeymapShortcuts(SpeechInputAction.ID),
             ed.contentComponent,
             binding,

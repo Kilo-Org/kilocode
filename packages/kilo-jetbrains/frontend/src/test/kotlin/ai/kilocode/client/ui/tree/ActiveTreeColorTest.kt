@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.active.ActiveMove
 import ai.kilocode.client.ui.active.ActiveReorder
 import ai.kilocode.client.ui.active.activeLayout
 import com.intellij.icons.AllIcons
+import com.intellij.ide.IdeEventQueue
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -30,9 +31,11 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Point
 import java.awt.Rectangle
+import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import javax.swing.Icon
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 import javax.swing.UIManager
 import javax.swing.tree.TreePath
 
@@ -40,7 +43,11 @@ import javax.swing.tree.TreePath
 class ActiveTreeColorTest : BasePlatformTestCase() {
     private val icons = linkedMapOf<String, Icon?>()
 
-    private data class Row(override val key: String, override val description: String? = null) : ActiveItem {
+    private data class Row(
+        override val key: String,
+        override val description: String? = null,
+        override val alwaysSelected: Boolean = false,
+    ) : ActiveItem {
         override val title = key
     }
 
@@ -236,7 +243,7 @@ class ActiveTreeColorTest : BasePlatformTestCase() {
                     view.collapsePath(TreePath(view.hierarchy.entries.getValue("section").path))
                     val collapsed = paint(view)
                     solid(collapsed, Rectangle(frame.x, frame.y + frame.height - gap, frame.width, gap), view.background)
-                    solid(collapsed, rail(view, "section"), color)
+                    solid(collapsed, rail(view, "section").apply { height-- }, color)
                     assertEquals(frame.height, row(view, "section").height)
                 }
             }
@@ -277,6 +284,65 @@ class ActiveTreeColorTest : BasePlatformTestCase() {
                 assertEquals(focused, state.focused)
                 assertEquals(focused, state.active)
             }
+        } finally {
+            previous.forEach { (key, value) -> UIManager.put(key, value) }
+        }
+    }
+
+    fun `test fixed colored section ignores hover and selection underlines its full width`() {
+        val keys = listOf("Tree.selectionBackground", "Tree.selectionInactiveBackground")
+        val previous = keys.associateWith(UIManager::get)
+        try {
+            UIManager.put(keys.first(), Color(0x2857A5))
+            UIManager.put(keys.last(), Color(0x626262))
+            val tree = ActiveTree("")
+            val color = requireNotNull(ActiveTreeColors.color("red"))
+            tree.update(listOf(
+                ActiveTreeNode(Row("section", alwaysSelected = true), listOf(ActiveTreeNode(Row("child"))), color),
+                ActiveTreeNode(Row("plain")),
+            ))
+            val view = attach(tree)
+            val inactive = UIUtil.getTreeBackground(true, false)
+            val header = view.hierarchy.entries.getValue("section")
+            view.collapsePath(TreePath(header.path))
+            val plain = view.hierarchy.entries.getValue("plain")
+            val initial = view.state(header, false, false)
+            assertFalse(initial.selected)
+            assertEquals(inactive, initial.selectionColor)
+            assertEquals(inactive, initial.backdrop)
+            assertEquals(inactive, initial.pillBackground)
+            val before = paint(view)
+
+            move(view, header)
+
+            val hovered = view.state(header, false, false)
+            assertTrue(hovered.hovered)
+            assertEquals(inactive, hovered.selectionColor)
+            assertEquals(inactive, hovered.backdrop)
+            assertEquals(inactive, hovered.pillBackground)
+            unchanged(before, paint(view))
+
+            tree.select(header.key)
+            val frame = requireNotNull(view.regions.frame(header))
+            val y = frame.y + frame.height - UiStyle.Gap.xs() - 1
+            val line = Rectangle(frame.x, y, frame.width, 1)
+            val selected = paint(view)
+            val gap = UiStyle.Gap.xs()
+            solid(before, Rectangle(frame.x, y, gap, 1), color)
+            solid(before, Rectangle(frame.x + gap, y, frame.width - gap, 1), inactive)
+            solid(selected, line, UIUtil.getTreeBackground(true, true))
+            unchanged(before, selected, listOf(line))
+            tree.clearSelection()
+            unchanged(before, paint(view))
+
+            move(view, plain)
+            assertTrue(view.state(plain, false, false).hovered)
+            assertEquals(JBUI.CurrentTheme.Tree.Hover.background(false),
+                view.state(plain, false, false).selectionColor)
+            val headerAgain = view.state(header, false, false)
+            assertFalse(headerAgain.hovered)
+            assertEquals(inactive, headerAgain.selectionColor)
+            assertEquals(inactive, headerAgain.backdrop)
         } finally {
             previous.forEach { (key, value) -> UIManager.put(key, value) }
         }
@@ -503,6 +569,16 @@ class ActiveTreeColorTest : BasePlatformTestCase() {
         activeLayout(host)
         UIUtil.dispatchAllInvocationEvents()
         return view
+    }
+
+    @RequiresEdt
+    private fun move(view: ActiveTreeView, entry: ActiveEntry) {
+        val bounds = row(view, entry.key)
+        val point = Point(bounds.x + 20, bounds.y + bounds.height / 2)
+        val screen = Point(point)
+        SwingUtilities.convertPointToScreen(screen, view)
+        IdeEventQueue.getInstance().dispatchEvent(MouseEvent(view, MouseEvent.MOUSE_MOVED, 0, 0,
+            point.x, point.y, screen.x, screen.y, 0, false, MouseEvent.NOBUTTON))
     }
 
     @RequiresEdt

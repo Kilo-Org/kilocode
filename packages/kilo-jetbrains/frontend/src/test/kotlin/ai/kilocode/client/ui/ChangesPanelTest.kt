@@ -83,6 +83,24 @@ class ChangesPanelTest : BasePlatformTestCase() {
         assertNull(compact.toolTipText)
     }
 
+    fun `test persistent full mode keeps both empty comparison targets`() = edt {
+        var base = 0
+        var local = 0
+        val view = ChangesPanel(ChangesPanel.Mode.FULL, onBase = { base++ }, onLocal = { local++ }, persistent = true)
+        view.update(0, 0, 0)
+
+        assertTrue(view.isVisible)
+        assertTrue(separator(view).isVisible)
+        assertEquals(listOf("0 files", "0 files"), labels(view))
+        assertTrue(groups(view).all { it.isVisible && it.isFocusable && it.cursor.type == Cursor.HAND_CURSOR })
+        groups(view).forEach(::click)
+        assertEquals(1, local)
+        assertEquals(1, base)
+
+        view.setActions(null, null)
+        assertTrue(groups(view).all { it.isVisible && !it.isFocusable && it.cursor.type == Cursor.DEFAULT_CURSOR })
+    }
+
     fun `test compact stands uncommitted counts in for an empty committed set`() = edt {
         val view = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = {})
 

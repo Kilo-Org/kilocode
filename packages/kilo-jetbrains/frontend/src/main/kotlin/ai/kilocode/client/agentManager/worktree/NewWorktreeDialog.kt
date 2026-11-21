@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.AgentManagerDialog
+import ai.kilocode.client.agentManager.AgentManagerLayout
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
@@ -21,6 +22,7 @@ import com.intellij.ui.tabs.JBTabsFactory
 import com.intellij.ui.tabs.JBTabsPosition
 import com.intellij.ui.tabs.TabInfo
 import com.intellij.ui.tabs.TabsListener
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -32,14 +34,17 @@ private const val NAME_COLUMNS = 67
 
 /** What the user confirmed in the New Worktree dialog. */
 sealed interface NewWorktreePlan {
+    val section: String?
+
     data class Create(
         val branch: String,
         val base: String?,
         val prompt: PendingPrompt?,
         val fetchBase: Boolean = false,
+        override val section: String? = null,
     ) : NewWorktreePlan
-    data class Branch(val branch: String) : NewWorktreePlan
-    data class Pr(val url: String) : NewWorktreePlan
+    data class Branch(val branch: String, override val section: String? = null) : NewWorktreePlan
+    data class Pr(val url: String, override val section: String? = null) : NewWorktreePlan
 }
 
 /**
@@ -68,7 +73,7 @@ interface NewWorktreeHandle {
  * still owns focus. Mode, model, and reasoning selections are persisted the same way the chat prompt
  * does, so the freshly-started session inherits them.
  */
-internal class NewWorktreeDialog(
+internal class NewWorktreeDialog @RequiresEdt constructor(
     parent: Component,
     project: Project,
     directory: String,
@@ -81,6 +86,8 @@ internal class NewWorktreeDialog(
     app: KiloAppService = service(),
     workspaces: KiloWorkspaceService = service(),
     private val draft: PendingWorktreePrompt.Entry? = service<PendingWorktreePrompt>().draft(directory),
+    private val sections: List<AgentManagerLayout.Section> = emptyList(),
+    private val section: String? = null,
 ) : AgentManagerDialog(parent, project, directory, true, app, workspaces), NewWorktreeHandle {
 
     // Sizes the dialog: the name field is its widest fixed-width child.
@@ -110,7 +117,8 @@ internal class NewWorktreeDialog(
         setOKButtonText(KiloBundle.message("worktree.dialog.create"))
     }
 
-    override fun createCenterPanel(): JComponent = tabs().also { center = it }
+    @RequiresEdt
+    override fun createCenterPanel(): JComponent = sectioned(tabs(), sections, section).also { center = it }
 
     /** The built content, so tests can drive the real Swing tree before the dialog is shown. */
     internal fun centerComponent(): JComponent = center ?: error("center panel not built")
@@ -125,6 +133,7 @@ internal class NewWorktreeDialog(
     override fun doOKAction() = submit()
 
     internal fun submit() {
+        if (prompt.isSpeechActive) return
         setErrorText(null)
         when (tab) {
             DialogTab.PR -> submitPr()
@@ -213,7 +222,9 @@ internal class NewWorktreeDialog(
         return false
     }
 
+    @RequiresEdt
     override fun submitCreate(text: String) {
+        if (prompt.isSpeechActive) return
         val explicit = branch.text.trim()
         val resolved = explicit.ifEmpty { name.text.trim() }.ifEmpty { suggestedName }
         val target = base.resolve()
@@ -221,10 +232,11 @@ internal class NewWorktreeDialog(
         KiloPluginSettings.setFetchWorktreeBase(fetch.isSelected)
         val payload = pending(text)
         payload?.let { service<PendingWorktreePrompt>().remember(directory, resolved, target, it, fetch.isSelected) }
-        plan = NewWorktreePlan.Create(resolved, target, payload, fetch.isSelected)
+        plan = NewWorktreePlan.Create(resolved, target, payload, fetch.isSelected, selectedSection)
         close(OK_EXIT_CODE)
     }
 
+    @RequiresEdt
     private fun submitPr() {
         val value = url.text.trim()
         if (value.isEmpty()) {
@@ -246,10 +258,11 @@ internal class NewWorktreeDialog(
             url.selectAll()
             return
         }
-        plan = NewWorktreePlan.Pr(value)
+        plan = NewWorktreePlan.Pr(value, selectedSection)
         close(OK_EXIT_CODE)
     }
 
+    @RequiresEdt
     private fun submitBranch() {
         val target = pick.resolve()
         if (target == null || !pick.known(target)) {
@@ -257,7 +270,7 @@ internal class NewWorktreeDialog(
             pick.focusText()
             return
         }
-        plan = NewWorktreePlan.Branch(target)
+        plan = NewWorktreePlan.Branch(target, selectedSection)
         close(OK_EXIT_CODE)
     }
 

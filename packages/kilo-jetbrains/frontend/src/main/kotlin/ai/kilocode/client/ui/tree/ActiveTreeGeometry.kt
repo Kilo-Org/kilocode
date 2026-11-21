@@ -11,6 +11,7 @@ import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.ui.CustomBoundsTreeUI
 import com.intellij.ui.tree.ui.DefaultControl
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.tree.TreeUtil
 import java.awt.Component
 import java.awt.Graphics
@@ -56,12 +57,11 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
             if (entry.allowsChildren) surface.selectionArc = 0
             paintLocal(g, surface, area(entry, frame))
         }
-        rail(g, entry, frame)
         val path = TreePath(entry.path)
         ActiveTreePainter.paint(
             view, g, view.insets.left, frame.y, frame.width, frame.height,
             DefaultControl(), TreeUtil.getNodeDepth(view, path), !entry.allowsChildren,
-            view.isExpanded(path), state.active,
+            view.isExpanded(path), false,
         )
         val stamp = renderer.getTreeCellRendererComponent(
             view, entry, state.selected, view.isExpanded(path), !entry.allowsChildren, row, view.hasFocus(),
@@ -71,6 +71,12 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         stamp.setBounds(0, 0, cell.width, cell.height)
         activeLayout(stamp)
         paintLocal(g, stamp, cell)
+        rail(g, entry, frame)
+        if (entry.allowsChildren && state.selected) {
+            val box = area(entry, frame)
+            g.color = UIUtil.getTreeBackground(true, true)
+            g.fillRect(box.x, box.y + box.height - 1, box.width, 1)
+        }
         val lead = !SystemInfo.isMac && !state.selected && view.leadSelectionPath?.lastPathComponent === entry
         if (lead && RenderingUtil.isFocused(view) && g is Graphics2D) {
             val bounds = area(entry, frame)

@@ -1,20 +1,27 @@
 package ai.kilocode.client.agentManager.hosted
 
+import ai.kilocode.client.actions.openHostedWorkspaceInBrowser
+import ai.kilocode.client.agentManager.WorkspaceSessionHeader
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorPanel
-import ai.kilocode.client.agentManager.WorkspaceSessionHeader
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.isDefaultSessionTitle
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.diff.HostedDiffComparison
+import ai.kilocode.client.diff.openHostedDiff
+import ai.kilocode.client.diff.refreshHostedDiffTitles
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.log.KiloLog
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.HostedHistoryItem
+import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.ui.HoverArea
 import ai.kilocode.client.ui.active.ActiveBadgeCell
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveSelection
@@ -22,6 +29,9 @@ import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
+import ai.kilocode.rpc.dto.WorktreePrDto
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
+import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -29,7 +39,6 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -60,11 +69,20 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     branch: String? = null,
 ) : WorkspaceSessionEditorPanel(parent), UiDataProvider {
     private val hosted = project.service<KiloHostedService>()
+    private val prs = project.service<HostedPullRequestService>()
     private val management = project.service<HostedManagementService>()
     private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val header = WorkspaceSessionHeader()
+    private val job get() = cs.coroutineContext[Job]!!
     private val compute = ActiveBadgeCell()
-    private val price = JBLabel().apply { isVisible = false }
+    private val status = HoverArea(compute)
+    private val header = WorkspaceSessionHeader(
+        status = status,
+        onLocal = { openDiff(HostedDiffComparison.UNCOMMITTED) },
+        openPull = { openDiff(HostedDiffComparison.PULL_REQUEST) },
+        pullHint = KiloBundle.message("hosted.diff.pr.tooltip"),
+        persistentChanges = true,
+        openDiff = { openDiff(HostedDiffComparison.COMMITTED) },
+    )
     private val workspace = hostedWorkspaceRoot(project)
     private val manager = HostedWorkspaceEditorManager(
         parent = this,
@@ -79,20 +97,24 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     private var selected: String? = null
     private var active = false
     private var loadGeneration = 0L
+    private var changesGeneration = 0L
+    private var changesJob: Job? = null
     private var titleRefresh: Job? = null
     private var retry: Job? = null
     private var attempts = 0
     private var identity: String? = null
+    private var loaded = false
     private var signedOut = false
     private var lastStatus: HostedWorkspaceStatus? = null
     private var running: Set<String> = emptySet()
+    private var pull: WorktreePrDto? = null
+    private var stats: WorktreeStatsDto? = null
+    private var dirty: WorktreeDirtyDto? = null
 
     init {
         project.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
-        compute.update(HostedWorkspaceStatus.LOADING.badge())
-        header.addAction(compute)
-        header.addAction(price)
-        header.update(null, null, title())
+        updateStatus(HostedWorkspaceStatus.LOADING)
+        syncHeader()
         initialize(
             content = manager.component,
             header = header,
@@ -125,7 +147,10 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                         // signedOut=true and must not invalidate the reload it started.
                         if (!signedOut) {
                             signedOut = true
+                            loaded = false
                             loadGeneration++
+                            changesGeneration++
+                            changesJob?.cancel()
                         }
                         observation?.let(Disposer::dispose)
                         observation = null
@@ -133,10 +158,21 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                         sessions = emptyList()
                         manager.clearPresentation()
                         list.update(emptyList())
+                        pull = null
+                        stats = null
+                        dirty = null
+                        updateStatus(HostedWorkspaceStatus.UNAVAILABLE)
+                        syncHeader()
                         return@withContext
                     }
+                    val restored = signedOut
                     signedOut = false
                     applyStatus()
+                    syncHeader()
+                    if (restored) {
+                        reload()
+                        refreshChanges()
+                    }
                 }
             }
         }
@@ -156,22 +192,44 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                     val previous = identity
                     identity = key
                     if (previous == null || previous == key) return@withContext
+                    loaded = false
                     loadGeneration++
+                    changesGeneration++
+                    changesJob?.cancel()
                     observation?.let(Disposer::dispose)
                     observation = null
                     selected = null
                     sessions = emptyList()
                     manager.clearPresentation()
                     list.update(emptyList())
+                    pull = null
+                    stats = null
+                    dirty = null
+                    updateStatus(HostedWorkspaceStatus.UNAVAILABLE)
                     header.update(null, null, ref.workspaceID)
                     reload()
+                    refreshChanges()
                 }
             }
         }
         cs.launch {
             hosted.refreshes.drop(1).collect {
                 withContext(Dispatchers.Main) {
-                    if (active && !Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) reload()
+                    if (active && !Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) {
+                        reload()
+                        refreshChanges()
+                    }
+                }
+            }
+        }
+        cs.launch {
+            prs.pulls.collect { value ->
+                withContext(Dispatchers.Main) {
+                    if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) return@withContext
+                    val next = value[ref.key]
+                    if (next == pull) return@withContext
+                    pull = next
+                    syncHeader()
                 }
             }
         }
@@ -183,6 +241,8 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     override fun onStart() {
         active = true
         reload()
+        refreshChanges()
+        prs.refresh(ref)
     }
 
     override fun onHostChanged() {
@@ -202,7 +262,12 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         val finished = running.any { it !in now }
         running = now
         sync(select = false)
-        if (finished) scheduleTitleRefresh()
+        if (finished) {
+            scheduleTitleRefresh()
+            refreshChanges()
+            // A finished turn is the first point a push can have created or updated a PR.
+            prs.refresh(ref, revalidate = true)
+        }
     }
 
     override fun rows(): List<ActiveItem> {
@@ -229,6 +294,8 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     override fun dispose() {
         super.dispose()
         loadGeneration++
+        changesGeneration++
+        changesJob?.cancel()
         titleRefresh?.cancel()
         retry?.cancel()
         manager.onCreated = null
@@ -236,15 +303,22 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         cs.cancel()
     }
 
+    suspend fun closed() {
+        manager.closed()
+        job.join()
+    }
+
     @RequiresEdt
     override fun uiDataSnapshot(sink: DataSink) {
         snapshot(sink)
         sink[SessionManager.WORKSPACE_KEY] = workspace
+        sink[HostedWorkspaceDataKeys.WORKSPACE] = dto
     }
 
     @RequiresEdt
     private fun reload() {
         applyStatus()
+        prs.refresh(ref)
         val generation = ++loadGeneration
         cs.launch { load(generation) }
     }
@@ -260,6 +334,11 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                 }
                 sessions = loaded
                 dto = item
+                this@HostedWorkspaceEditorPanel.loaded = true
+                if (dto.deletionState == "deleted" || dto.deletionState == "deleting") {
+                    stats = null
+                    dirty = null
+                }
                 attempts = 0
                 syncTitle()
                 applyStatus()
@@ -273,9 +352,34 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                     return@withContext
                 }
                 if (retryWhileStarting()) return@withContext
-                compute.update(HostedWorkspaceStatus.UNAVAILABLE.badge())
+                updateStatus(HostedWorkspaceStatus.UNAVAILABLE)
                 compute.toolTipText = KiloBundle.message("hosted.workspace.status.error", e.message ?: "")
             }
+        }
+    }
+
+    @RequiresEdt
+    private fun refreshChanges() {
+        changesJob?.cancel()
+        val generation = ++changesGeneration
+        changesJob = cs.launch { loadChanges(generation) }
+    }
+
+    /** Reads the durable snapshot only; this never wakes or attaches the Cloud sandbox. */
+    private suspend fun loadChanges(generation: Long) {
+        try {
+            val summary = hosted.workspaceChanges(ref).headerChanges()
+            withContext(Dispatchers.Main) {
+                if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel) || generation != changesGeneration) return@withContext
+                stats = summary.stats
+                dirty = summary.dirty
+                syncHeader()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Keep the last durable summary during reconnects or transient Cloud failures.
+            LOG.warn("Cloud changes unavailable for ${ref.key}", e)
         }
     }
 
@@ -294,8 +398,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         }
         if (attempts >= RETRY_LIMIT) return false
         attempts++
-        compute.update(status.badge())
-        compute.toolTipText = KiloBundle.message("hosted.workspace.status.tooltip")
+        updateStatus(status)
         retry?.cancel()
         retry = cs.launch {
             delay(RETRY_MS)
@@ -341,11 +444,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         val status = HostedWorkspaceStatus.of(item)
         val previous = lastStatus
         lastStatus = status
-        compute.update(status.badge())
-        compute.toolTipText = KiloBundle.message("hosted.workspace.status.tooltip")
-        val rate = item?.rateMicrodollarsPerHour?.let(::formatRate).orEmpty()
-        if (price.text != rate) price.text = rate
-        if (price.isVisible != rate.isNotBlank()) price.isVisible = rate.isNotBlank()
+        updateStatus(status)
         // Fetch the sessions as soon as the sandbox can answer instead of leaving the list with
         // whatever the discovery snapshot had while the workspace was still booting.
         if (active && previous != status && status == HostedWorkspaceStatus.ACTIVE &&
@@ -354,9 +453,6 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
             reload()
         }
     }
-
-    private fun formatRate(microdollars: Long): String =
-        "$" + String.format("%.2f", microdollars / 1_000_000.0) + "/h"
 
     @RequiresEdt
     private fun sync(select: Boolean = true) {
@@ -427,11 +523,59 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     @RequiresEdt
     private fun syncTitle() {
         val value = title()
-        header.update(null, null, value)
+        syncHeader()
         service<HostedWorkspaceCache>().put(dto, value)
+        refreshHostedDiffTitles(project, ref)
         project.service<KiloVfsManager>().updatePresentation(
             HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(dto),
         )
+    }
+
+    /** Keeps PR, title and passive saved changes on the exact shared header local worktrees use. */
+    @RequiresEdt
+    private fun syncHeader() {
+        val name = title()
+        val available = canDiff()
+        header.setChangeActions(
+            { openDiff(HostedDiffComparison.COMMITTED) }.takeIf { available },
+            { openDiff(HostedDiffComparison.UNCOMMITTED) }.takeIf { available },
+        )
+        header.update(stats.takeIf { available }, pull?.titled(name).takeIf { available }, name,
+            dirty.takeIf { available })
+    }
+
+    @RequiresEdt
+    private fun openDiff(comparison: HostedDiffComparison) {
+        if (!canDiff()) return
+        Telemetry.send("Cloud Diff Opened", mapOf("surface" to "workspace_header", "comparison" to comparison.name.lowercase()))
+        openHostedDiff(project, ref, comparison)
+    }
+
+    @RequiresEdt
+    private fun canDiff(): Boolean = loaded && hosted.enabled() && !hosted.state.value.signedOut &&
+        !ref.workspaceID.startsWith(HostedWorkspaceEditorKind.PENDING_PREFIX) &&
+        dto.deletionState != "deleted" && dto.deletionState != "deleting"
+
+    @RequiresEdt
+    private fun updateStatus(status: HostedWorkspaceStatus) {
+        val action = ::openBrowser.takeIf { canBrowse() }
+        val tooltip = if (action == null) KiloBundle.message("hosted.workspace.status.tooltip")
+        else KiloBundle.message("action.Kilo.HostedWorkspace.OpenInBrowser.description")
+        compute.update(status.badge())
+        this.status.action = action
+        this.status.tooltip(tooltip, status.badge().text)
+    }
+
+    @RequiresEdt
+    private fun canBrowse(): Boolean = loaded && hosted.enabled() && !hosted.state.value.signedOut &&
+        !ref.workspaceID.startsWith(HostedWorkspaceEditorKind.PENDING_PREFIX) &&
+        dto.deletionState != "deleted" && dto.deletionState != "deleting"
+
+    @RequiresEdt
+    private fun openBrowser() {
+        if (!canBrowse()) return
+        val org = service<KiloAppService>().state.value.profile?.currentOrgId
+        openHostedWorkspaceInBrowser(dto.copy(sessions = sessions), org, "workspace_header")
     }
 
     /** One label for the tab, header, and status bar, matching the tree row. */
@@ -443,6 +587,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     }
 
     private companion object {
+        val LOG = KiloLog.create(HostedWorkspaceEditorPanel::class.java)
         const val RETRY_MS = 2_000L
         const val RETRY_LIMIT = 10
         val TITLE_RETRY = listOf(2_000L, 4_000L, 8_000L, 16_000L)

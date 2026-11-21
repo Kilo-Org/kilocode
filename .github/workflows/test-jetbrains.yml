@@ -38,6 +38,9 @@ jobs:
               - '!packages/opencode/**'
               - '!packages/kilo-vscode/**'
               - '!packages/kilo-docs/**'
+              # The plugin generates its Kotlin client from the pinned released
+              # CLI and does not consume the TypeScript SDK package. # kilocode_change
+              - '!packages/sdk/**'
 
   unit:
     name: jetbrains

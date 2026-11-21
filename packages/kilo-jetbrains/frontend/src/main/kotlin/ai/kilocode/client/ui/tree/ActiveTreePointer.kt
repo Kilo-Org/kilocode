@@ -7,7 +7,7 @@ import javax.swing.tree.TreePath
 
 /** Press/release pairing must survive renderer reuse but never a geometry invalidation. */
 internal class ActiveTreePointer(private val view: ActiveTreeView, private val actions: ActiveTreeActions) {
-    private data class Press(val key: String, val id: String)
+    private data class Press(val key: String, val id: String?)
     private var press: Press? = null
     private var disclosure = false
 
@@ -43,20 +43,35 @@ internal class ActiveTreePointer(private val view: ActiveTreeView, private val a
     }
 
     private fun remember(event: MouseEvent) {
-        val hit = view.regions.hit(event, true)
-        press = hit?.id?.let { Press(hit.entry.key, it) }
+        val hit = view.regions.hit(event, true) ?: return
+        if (hit.id == null) {
+            // Group bodies select on press and toggle on release; leaf bodies and disclosure clicks
+            // stay with the delegate.
+            if (!hit.entry.allowsChildren) return
+            if (view.regions.control(hit.entry)?.contains(event.point) == true) return
+            view.selectionModel.selectionPath = TreePath(hit.entry.path)
+        }
+        press = Press(hit.entry.key, hit.id)
     }
 
     @RequiresEdt
     private fun released(event: MouseEvent): Boolean {
         val down = press
         clear()
-        val hit = view.regions.hit(event, true)
-        val match = down != null && hit?.id == down.id && hit.entry.key == down.key
+        val hit = view.regions.hit(event, true) ?: return false
+        val match = down != null && hit.id == down.id && hit.entry.key == down.key
         val actionable = UIUtil.isActionClick(event, MouseEvent.MOUSE_RELEASED, true) &&
-            hit?.entry?.item?.progress == null
-        if (match && actionable) view.fire(hit.entry.item, down.id)
-        return match && actionable
+            hit.entry.item.progress == null
+        if (!match || !actionable) return false
+        val id = down.id
+        if (id == null && hit.entry.allowsChildren) {
+            view.selectionModel.selectionPath = TreePath(hit.entry.path)
+            toggle(hit.entry)
+            return true
+        }
+        if (id == null) return false
+        view.fire(hit.entry.item, id)
+        return true
     }
 
     @RequiresEdt
@@ -68,12 +83,10 @@ internal class ActiveTreePointer(private val view: ActiveTreeView, private val a
             val path = TreePath(entry.path)
             when {
                 entry.allowsChildren -> {
-                    // Unknown disclosure bounds belong to the native delegate.
-                    if (view.regions.control(entry)?.contains(event.point) != false) return false
+                    // Disclosure bounds stay with the native delegate; every other click is consumed
+                    // because the release already toggled the section, double clicks included.
+                    if (view.regions.control(entry)?.contains(event.point) == true) return false
                     view.selectionModel.selectionPath = path
-                    if (event.clickCount == 1) {
-                        if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
-                    }
                     true
                 }
                 entry.item.progress == null && event.clickCount in 1..2 -> {
@@ -85,6 +98,11 @@ internal class ActiveTreePointer(private val view: ActiveTreeView, private val a
                 else -> false
             }
         } else true
+    }
+
+    private fun toggle(entry: ActiveEntry) {
+        val path = TreePath(entry.path)
+        if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
     }
 
     @RequiresEdt
@@ -99,10 +117,12 @@ internal class ActiveTreePointer(private val view: ActiveTreeView, private val a
             }
             event.id == MouseEvent.MOUSE_PRESSED ->
                 view.selectionModel.selectionPath = path
-            event.id == MouseEvent.MOUSE_CLICKED && event.clickCount == 1 && entry.allowsChildren -> {
+            event.id == MouseEvent.MOUSE_RELEASED && entry.allowsChildren &&
+                view.regions.control(entry)?.contains(event.point) != true -> {
                 view.selectionModel.selectionPath = path
-                if (view.isExpanded(path)) view.collapsePath(path) else view.expandPath(path)
+                toggle(entry)
             }
+            event.id == MouseEvent.MOUSE_CLICKED && entry.allowsChildren -> Unit
             event.id == MouseEvent.MOUSE_CLICKED && event.clickCount == 1 ->
                 view.selectionModel.selectionPath = path
         }
