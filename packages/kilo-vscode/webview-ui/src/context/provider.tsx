@@ -75,6 +75,8 @@ export const ProviderProvider: ParentComponent = (props) => {
         setAuthMethods({})
         setAuthStates({})
         setFailures([])
+        setKiloUnavailable(false)
+        setDefaultSelection(KILO_AUTO)
         setLoadError(undefined)
       })
       return

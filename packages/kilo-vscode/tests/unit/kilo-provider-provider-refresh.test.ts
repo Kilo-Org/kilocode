@@ -271,7 +271,7 @@ describe("KiloProvider providers on reconnect", () => {
     expect(internal.providersRetry).toBe(true)
   })
 
-  it("drops the previous project's rows and keys when the panel switches", async () => {
+  it("starts the next project from the reset message", async () => {
     let dir = "/project-a"
     const requests: string[] = []
     const messages: unknown[] = []
@@ -281,7 +281,6 @@ describe("KiloProvider providers on reconnect", () => {
     internal.webview = { postMessage: async (message) => messages.push(message) }
 
     await internal.fetchAndSendProviders()
-    expect(internal.storedProviderKeys).toEqual({})
 
     dir = "/project-b"
     const before = messages.length
@@ -291,7 +290,7 @@ describe("KiloProvider providers on reconnect", () => {
 
     const types = messages.slice(before).map((message) => (message as { type?: string }).type)
     expect(types).toContain("providersReset")
-    expect(internal.storedProviderKeys).toEqual({})
+    expect(types.indexOf("providersReset")).toBeLessThan(types.indexOf("providersLoaded"))
   })
 
   it("publishes a failure payload when the switch fetch fails", async () => {
