@@ -509,11 +509,22 @@ export class GitOps {
     return { ok: true, message: "Reverted file to base" }
   }
 
+  /**
+   * Refresh stale stat data in the index so `git apply --3way` does not report
+   * "does not match index" for files that were only touched. Content and staging
+   * are never changed. The exit code is ignored: it is non-zero when files are
+   * genuinely modified, which the apply step reports itself.
+   */
+  private async refreshIndex(cwd: string): Promise<void> {
+    await this.exec(["update-index", "-q", "--refresh"], cwd)
+  }
+
   async checkApplyPatch(targetPath: string, patch: string): Promise<ApplyCheckResult> {
     if (!patch.trim()) {
       return { ok: true, conflicts: [], message: "No changes to apply" }
     }
 
+    await this.refreshIndex(targetPath)
     const result = await this.exec(["apply", "--3way", "--check", "--whitespace=nowarn", "-"], targetPath, {
       stdin: patch,
     })
@@ -532,6 +543,7 @@ export class GitOps {
       return { ok: true, conflicts: [], message: "No changes to apply" }
     }
 
+    await this.refreshIndex(targetPath)
     const result = await this.exec(["apply", "--3way", "--whitespace=nowarn", "-"], targetPath, { stdin: patch })
     if (result.code === 0) {
       return { ok: true, conflicts: [], message: "Patch applied" }

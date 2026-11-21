@@ -255,7 +255,9 @@ export const dict = {
   "agentManager.apply.error": "Toepassen mislukt",
   "agentManager.apply.conflictsTitle": "Conflicten",
   "agentManager.apply.unknownFile": "Onopgelost bestand",
-  "agentManager.apply.reason.index": "Lokaal bestand verschilt van verwachte versie",
+  "agentManager.apply.reason.index": "Heeft niet-gecommitte wijzigingen in de lokale checkout",
+  "agentManager.apply.dirtyBaseHint":
+    "De lokale checkout heeft niet-gecommitte wijzigingen in de onderstaande bestanden die overlappen met deze worktree. Commit of stash ze in de lokale checkout en pas daarna opnieuw toe.",
   "agentManager.apply.reason.patch": "Patch kan niet netjes worden toegepast",
   "agentManager.apply.reason.contents": "Kan huidige lokale bestandsinhoud niet lezen",
   "agentManager.apply.reason.unknown": "Conflict gedetecteerd",

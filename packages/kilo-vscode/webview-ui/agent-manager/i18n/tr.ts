@@ -256,7 +256,9 @@ export const dict = {
   "agentManager.apply.error": "Uygulama başarısız oldu",
   "agentManager.apply.conflictsTitle": "Çakışmalar",
   "agentManager.apply.unknownFile": "Çözümlenmemiş dosya",
-  "agentManager.apply.reason.index": "Yerel dosya beklenen sürümden farklı",
+  "agentManager.apply.reason.index": "Yerel checkout'ta commit edilmemiş değişiklikler var",
+  "agentManager.apply.dirtyBaseHint":
+    "Yerel checkout'ta aşağıda listelenen dosyalarda bu worktree ile çakışan commit edilmemiş değişiklikler var. Bunları yerel checkout'ta commit edin veya stash'leyin, ardından tekrar uygulayın.",
   "agentManager.apply.reason.patch": "Yama (patch) sorunsuz uygulanamıyor",
   "agentManager.apply.reason.contents": "Geçerli yerel dosya içerikleri okunamıyor",
   "agentManager.apply.reason.unknown": "Çakışma algılandı",
