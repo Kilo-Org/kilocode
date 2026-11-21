@@ -72,6 +72,7 @@ const { SpeechToTextModelsProvider } = await import("../../webview-ui/src/contex
 const { drafts, imageDrafts, reviewDrafts, browserDrafts, savePromptDraft } = await import(
   "../../webview-ui/src/utils/draft-store"
 )
+const { scopeDraftKey, pendingDraftKey } = await import("../../webview-ui/src/utils/prompt-drafts")
 
 const [settings, setSettings] = createSignal<{
   model?: string
@@ -124,6 +125,22 @@ const Tabs = () => {
   tabs.value = useLocalTabs()
   return null
 }
+// Mirrors ChatView: the prompt box follows the active pending tab of the sidebar.
+const [chat, setChat] = createSignal(false)
+const chatTabs = { value: undefined as ReturnType<typeof useLocalTabs> | undefined }
+const TabbedComposer = () => {
+  const own = useLocalTabs()
+  chatTabs.value = own
+  return (
+    <IndexingProvider>
+      <MemoryProvider>
+        <SpeechToTextModelsProvider>
+          <PromptInput boxId="acceptance" pendingSessionID={own?.pending()} />
+        </SpeechToTextModelsProvider>
+      </MemoryProvider>
+    </IndexingProvider>
+  )
+}
 const Peer = () => {
   peer.value = useSession()
   return null
@@ -158,6 +175,11 @@ const Probe = () => {
       <Show when={tabbed()}>
         <LocalTabsProvider>
           <Tabs />
+        </LocalTabsProvider>
+      </Show>
+      <Show when={chat()}>
+        <LocalTabsProvider>
+          <TabbedComposer />
         </LocalTabsProvider>
       </Show>
       <Show when={sharing()}>
@@ -1349,6 +1371,103 @@ try {
   setComposer(false)
   await settle()
   await catalog("org-a", [recommended.modelID], recommended.modelID)
+
+  // New Chat with Text puts only the text in a new chat's prompt box and sends it only when asked to.
+  {
+    const field = () => {
+      const element = host.querySelector<HTMLTextAreaElement>("textarea.prompt-input")
+      assert(element)
+      return element
+    }
+    const draftOf = (id: string) => drafts.get(scopeDraftKey("acceptance", pendingDraftKey(id)))
+    const sends = requests().length
+    value.clearCurrentSession()
+    setChat(true)
+    await settle()
+    const sidebar = chatTabs.value
+    assert(sidebar)
+    const first = sidebar.active()
+    assert(first)
+    await emit({ type: "appendChatBoxMessage", text: "Draft in the first chat" })
+    assert.equal(field().value, "Draft in the first chat")
+
+    await emit({ type: "newChatWithText", text: "Prompt for the new chat" })
+    const second = sidebar.active()
+    assert(second)
+    assert.notEqual(second, first)
+    assert.equal(field().value, "Prompt for the new chat")
+    assert.equal(draftOf(second), "Prompt for the new chat")
+    sidebar.select(first)
+    await settle()
+    assert.equal(field().value, "Draft in the first chat")
+    sidebar.select(second)
+    await settle()
+    assert.equal(field().value, "Prompt for the new chat")
+
+    await emit({ type: "newChatWithText", text: "Another prompt" })
+    const third = sidebar.active()
+    assert(third)
+    assert.equal(field().value, "Another prompt")
+    assert.equal(draftOf(third), "Another prompt")
+    assert.equal(draftOf(first), "Draft in the first chat")
+    assert.equal(draftOf(second), "Prompt for the new chat")
+    assert.equal(requests().length, sends)
+
+    await emit({ type: "newChatWithText", text: "Send this prompt", send: true })
+    await settle()
+    assert.equal(requests().length, sends + 1)
+    const request = requests().at(-1)
+    assert(request?.type === "sendMessage")
+    assert.equal(request.text, "Send this prompt")
+    assert.equal(field().value, "")
+    assert.equal(draftOf(first), "Draft in the first chat")
+    assert.equal(draftOf(third), "Another prompt")
+    setChat(false)
+    await settle()
+  }
+
+  // Without tabs (Agent Manager) the new chat is the blank draft, which keeps anything already typed.
+  {
+    const field = () => {
+      const element = host.querySelector<HTMLTextAreaElement>("textarea.prompt-input")
+      assert(element)
+      return element
+    }
+    const sends = requests().length
+    value.setCurrentSessionID("composer")
+    savePromptDraft("acceptance:session:composer", "Draft in a session", [], [])
+    setComposer(true)
+    await settle()
+    assert.equal(field().value, "Draft in a session")
+
+    await emit({ type: "newChatWithText", text: "Prompt without tabs" })
+    assert.equal(value.currentSessionID(), undefined)
+    assert.equal(field().value, "Prompt without tabs")
+    assert.equal(drafts.get("acceptance:session:composer"), "Draft in a session")
+
+    await emit({ type: "newChatWithText", text: "Second prompt" })
+    assert.equal(field().value, "Prompt without tabs\n\nSecond prompt")
+    assert.equal(requests().length, sends)
+
+    // A typed draft is never sent along with the text.
+    await emit({ type: "newChatWithText", text: "Third prompt", send: true })
+    await settle()
+    assert.equal(field().value, "Prompt without tabs\n\nSecond prompt\n\nThird prompt")
+    assert.equal(requests().length, sends)
+
+    field().value = ""
+    field().dispatchEvent(new window.Event("input", { bubbles: true }))
+    await emit({ type: "newChatWithText", text: "Send without tabs", send: true })
+    await settle()
+    assert.equal(requests().length, sends + 1)
+    const request = requests().at(-1)
+    assert(request?.type === "sendMessage")
+    assert.equal(request.text, "Send without tabs")
+    assert.equal(field().value, "")
+    setComposer(false)
+    await settle()
+    value.clearCurrentSession()
+  }
 
   setSharing(true)
   await settle()

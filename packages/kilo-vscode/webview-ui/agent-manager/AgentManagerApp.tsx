@@ -125,6 +125,7 @@ import { DataBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
 import { useLanguage } from "../src/context/language"
 import { createTabFocus } from "../src/utils/tab-navigation"
+import { routeChatInput } from "../src/utils/chat-input-route"
 import { label, strongest } from "../src/utils/session-activity"
 import { canOpenRootSession, isKnownRootSession, adjacentHint, focusChatSearch, LOCAL } from "./navigate"
 import { buildProjectNavEntries, createProjectNav } from "./project-nav"
@@ -1150,6 +1151,12 @@ const AgentManagerContent: Component = () => {
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const msg = event.data
+      // The chat is unmounted behind History unless terminals keep it alive. When it is
+      // still mounted it already received this message, so only re-post to a fresh mount.
+      const mounted = showDetailStack()
+      routeChatInput(msg ?? {}, history() ? "history" : "newTask", closeHistory, (copy) => {
+        if (!mounted) window.postMessage(copy, window.origin)
+      })
       if (msg?.type === "navigate" && msg.view === "history") return openHistory()
       if (msg?.type !== "action") return
       if (msg.action === "sessionPrevious") projectNav.step("up")
