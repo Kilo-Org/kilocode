@@ -34,6 +34,7 @@ type Internals = {
   sendNotificationSettings: () => void
   startStatsPolling: () => void
   handleProviderAction: (msg: Record<string, unknown>) => Promise<void>
+  reloadAfterAuthChange: () => Promise<void>
 }
 
 function connection(online: boolean | (() => boolean) = true, custom?: unknown) {
@@ -332,6 +333,20 @@ describe("KiloProvider providers on reconnect", () => {
     expect(messages.at(-1)).toBe(retained)
     expect(internal.cachedProvidersMessage).toBe(retained)
     expect(internal.providersRetry).toBe(true)
+  })
+
+  it("keeps the stored provider key when the same project refreshes", async () => {
+    const requests: string[] = []
+    const internal = provider(connection(true, remote(requests)), () => "/project-a")
+    stub(internal)
+    internal.storedProviderKeys = { custom: { key: "secret", baseURL: "https://example.test" } }
+    // A same-project refresh runs in two steps: the invalidation, then the read. This test checks the
+    // saved keys after the first step, so the read is held back and cannot mask the result.
+    internal.fetchAndSendProviders = async () => {}
+
+    await internal.reloadAfterAuthChange()
+
+    expect(internal.storedProviderKeys).toEqual({ custom: { key: "secret", baseURL: "https://example.test" } })
   })
 
   it("sends the new project's provider payload on the next connection", async () => {

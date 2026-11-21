@@ -2873,8 +2873,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.providersGeneration++
     this.cachedProvidersMessage = null
     this.cachedProvidersDirectory = null
-    // Keys come from a directory-scoped read, so they belong to the project that read them.
-    this.storedProviderKeys = {}
     this.postMessage({ type: "providersLoading" })
   }
 
@@ -2884,6 +2882,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private resetProviders(): void {
     this.invalidateProviders()
+    // The saved keys are part of the project's own read, so only a project change replaces them.
+    this.storedProviderKeys = {}
     this.postMessage({ type: "providersReset" })
   }
 
