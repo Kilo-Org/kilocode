@@ -1913,11 +1913,9 @@ export const SessionProvider: ParentComponent = (props) => {
     setSessionsProject(hasMore ? undefined : projectId)
   }
 
-  // Drops the cached transcript of a session and its bookkeeping. Todos are
-  // session state, not transcript state: a release keeps them (an idle or
-  // finished child never re-emits `todoUpdated`), and only the delete path
-  // clears them. The session row, drafts and event suppression belong to the
-  // delete path too, not here.
+  // Drops the cached transcript. Todos are session state, not transcript state:
+  // a release keeps them and only the delete path clears them. The session row,
+  // drafts and event suppression also belong to the delete path.
   function dropTranscript(sessionID: string) {
     const ids = (store.messages[sessionID] ?? []).map((m) => m.id)
     for (const id of ids) optimisticParts.delete(id)
@@ -1937,11 +1935,8 @@ export const SessionProvider: ParentComponent = (props) => {
     pendingOptimistic.delete(sessionID)
   }
 
-  // Release keeps the session: it only drops the cached transcript, so drafts
-  // and todos survive and a listed session still receives its events. Transcript
-  // events stay dropped until the session is selected. The session stays
-  // current, so its latched loading signal has to clear here: the reply that
-  // would have cleared it is held out by the released-session gate.
+  // Release drops only the cached transcript: drafts, todos and the session's
+  // events stay. It is still current, so clear its latched loading signal.
   function releaseSession(sessionID: string) {
     releasedTranscripts.add(sessionID)
     dropTranscript(sessionID)
@@ -1959,7 +1954,7 @@ export const SessionProvider: ParentComponent = (props) => {
       setStore(
         produce((s) => {
           delete s.sessions[sessionID]
-          delete s.todos[sessionID]
+          delete s.todos[sessionID] // session state, unlike the transcript
           for (const [id, state] of Object.entries(s.modelUsage)) {
             if (id === sessionID || state.data?.sessionIDs.includes(sessionID)) delete s.modelUsage[id]
           }
