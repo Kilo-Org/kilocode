@@ -96,6 +96,9 @@ export async function fetchKiloEmbeddingModelCatalog(options: Options = {}): Pro
         })
         const skipped = parsed.data.models.length - models.length
         if (skipped > 0) options.onSkip?.(skipped)
+        if (skipped > 0 && models.length === 0) {
+          options.onError?.({ code: "invalid-response", message: "Kilo returned an invalid embedding model catalog." })
+        }
         return { ...parsed.data, models }
       }
       issue.current = {

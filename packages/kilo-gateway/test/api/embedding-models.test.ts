@@ -23,14 +23,20 @@ describe("fetchKiloEmbeddingModelCatalog", () => {
   test("fetches catalog from Kilo Gateway", async () => {
     const prev = global.fetch
     const issue = mock(() => undefined)
+    const skip = mock(() => undefined)
     const fn = mock(() => Promise.resolve(response())) as unknown as typeof fetch
     global.fetch = fn
 
     try {
-      const catalog = await fetchKiloEmbeddingModelCatalog({ baseURL: "https://example.test", onError: issue })
+      const catalog = await fetchKiloEmbeddingModelCatalog({
+        baseURL: "https://example.test",
+        onError: issue,
+        onSkip: skip,
+      })
 
       expect(catalog.defaultModel).toBe("provider/model")
       expect(issue).not.toHaveBeenCalled()
+      expect(skip).not.toHaveBeenCalled()
       const call = (fn as unknown as { mock: { calls: Array<[URL, RequestInit]> } }).mock.calls[0]
       expect(call?.[0].toString()).toBe("https://example.test/api/gateway/embedding-models")
       expect(call?.[1].redirect).toBe("error")
@@ -95,7 +101,7 @@ describe("fetchKiloEmbeddingModelCatalog", () => {
     const prev = global.fetch
     const issue = mock(() => undefined)
     const skip = mock(() => undefined)
-    global.fetch = mock(() =>
+    const fn = mock(() =>
       Promise.resolve(
         payload({
           defaultModel: "provider/model",
@@ -107,7 +113,8 @@ describe("fetchKiloEmbeddingModelCatalog", () => {
           aliases: { short: "provider/model" },
         }),
       ),
-    ) as unknown as typeof fetch
+    )
+    global.fetch = fn as unknown as typeof fetch
 
     try {
       const catalog = await fetchKiloEmbeddingModelCatalog({
@@ -121,7 +128,9 @@ describe("fetchKiloEmbeddingModelCatalog", () => {
         models: [{ id: "provider/model", name: "Provider Model", dimension: 1024, scoreThreshold: 0.4, note: "keep" }],
         aliases: { short: "provider/model" },
       })
+      expect(fn).toHaveBeenCalledTimes(1)
       expect(issue).not.toHaveBeenCalled()
+      expect(skip).toHaveBeenCalledTimes(1)
       expect(skip).toHaveBeenCalledWith(2)
     } finally {
       global.fetch = prev
@@ -157,7 +166,9 @@ describe("fetchKiloEmbeddingModelCatalog", () => {
 
   test("returns an empty model list when every entry is invalid", async () => {
     const prev = global.fetch
-    global.fetch = mock(() =>
+    const issue = mock(() => undefined)
+    const skip = mock(() => undefined)
+    const fn = mock(() =>
       Promise.resolve(
         payload({
           defaultModel: "missing/default",
@@ -165,16 +176,52 @@ describe("fetchKiloEmbeddingModelCatalog", () => {
           aliases: { short: "missing/one" },
         }),
       ),
-    ) as unknown as typeof fetch
+    )
+    global.fetch = fn as unknown as typeof fetch
 
     try {
-      const catalog = await fetchKiloEmbeddingModelCatalog({ baseURL: "https://example.test" })
+      const catalog = await fetchKiloEmbeddingModelCatalog({
+        baseURL: "https://example.test",
+        onError: issue,
+        onSkip: skip,
+      })
 
       expect(catalog).toEqual({
         defaultModel: "missing/default",
         models: [],
         aliases: { short: "missing/one" },
       })
+      expect(fn).toHaveBeenCalledTimes(1)
+      expect(skip).toHaveBeenCalledTimes(1)
+      expect(skip).toHaveBeenCalledWith(1)
+      expect(issue).toHaveBeenCalledTimes(1)
+      expect(issue).toHaveBeenCalledWith({
+        code: "invalid-response",
+        message: "Kilo returned an invalid embedding model catalog.",
+      })
+    } finally {
+      global.fetch = prev
+    }
+  })
+
+  test("accepts an empty catalog without reporting an error", async () => {
+    const prev = global.fetch
+    const issue = mock(() => undefined)
+    const skip = mock(() => undefined)
+    const fn = mock(() => Promise.resolve(payload({ defaultModel: "one", models: [], aliases: { short: "one" } })))
+    global.fetch = fn as unknown as typeof fetch
+
+    try {
+      const catalog = await fetchKiloEmbeddingModelCatalog({
+        baseURL: "https://example.test",
+        onError: issue,
+        onSkip: skip,
+      })
+
+      expect(catalog).toEqual({ defaultModel: "one", models: [], aliases: { short: "one" } })
+      expect(fn).toHaveBeenCalledTimes(1)
+      expect(issue).not.toHaveBeenCalled()
+      expect(skip).not.toHaveBeenCalled()
     } finally {
       global.fetch = prev
     }
