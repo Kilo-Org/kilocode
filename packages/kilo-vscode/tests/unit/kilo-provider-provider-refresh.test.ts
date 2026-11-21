@@ -14,6 +14,7 @@ type Internals = {
   cachedConfigDirectory: string | null
   cachedProvidersMessage: unknown
   cachedProvidersDirectory: string | null
+  storedProviderKeys: Record<string, { key: string; baseURL: string }>
   retryInitialization: () => Promise<void>
   refreshConfig: (type: "configLoaded" | "configUpdated", dir?: string) => Promise<void>
   initializeConnection: () => Promise<void>
@@ -268,6 +269,29 @@ describe("KiloProvider providers on reconnect", () => {
 
     expect(loaded(messages.slice(before))).toHaveLength(0)
     expect(internal.providersRetry).toBe(true)
+  })
+
+  it("drops the previous project's rows and keys when the panel switches", async () => {
+    let dir = "/project-a"
+    const requests: string[] = []
+    const messages: unknown[] = []
+    const client = remote(requests)
+    const internal = provider(connection(true, client), () => dir)
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    await internal.fetchAndSendProviders()
+    expect(internal.storedProviderKeys).toEqual({})
+
+    dir = "/project-b"
+    const before = messages.length
+    internal.setProjectDirectory("/project-b")
+    const pending = internal.providersRefresh
+    if (pending) await pending
+
+    const types = messages.slice(before).map((message) => (message as { type?: string }).type)
+    expect(types).toContain("providersReset")
+    expect(internal.storedProviderKeys).toEqual({})
   })
 
   it("publishes a failure payload when the switch fetch fails", async () => {

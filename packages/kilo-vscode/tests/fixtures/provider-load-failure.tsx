@@ -147,11 +147,16 @@ async function scenario(name: string, value: ModelSelection | null, previousLabe
       assert.ok(!host.textContent?.includes(failureCopy), "the failure copy is absent")
     })
 
+    // A project switch drops every row of the previous read before the new one arrives.
+    await emit({ type: "providersReset" })
     await emit({ type: "providersLoading" })
     observed.loading = selector()
     report("loading")
     check(`${name}: loading`, () => {
       assert.ok(!host.textContent?.includes(failureCopy), "the failure copy is still absent while loading")
+      // With no selection to name, the trigger can only offer the catalog, so it reports that no
+      // provider is available: the rows from the previous read are gone.
+      if (value === null) assert.equal(observed.loading, "No providers", "the previous provider rows are gone")
     })
 
     await emit({ type: "providersLoaded", ...failed })

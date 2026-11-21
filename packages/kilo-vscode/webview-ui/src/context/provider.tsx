@@ -64,6 +64,21 @@ export const ProviderProvider: ParentComponent = (props) => {
   // Register handler immediately (not in onMount) so we never miss
   // a providersLoaded message that arrives before the DOM mount.
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type === "providersReset") {
+      // A different project is shown now, so no row from the previous read may survive.
+      batch(() => {
+        setReady(false)
+        setOrganizationId(undefined)
+        setProviders({})
+        setDefaults({})
+        setConnected([])
+        setAuthMethods({})
+        setAuthStates({})
+        setFailures([])
+        setLoadError(undefined)
+      })
+      return
+    }
     if (message.type === "providersLoading") {
       batch(() => {
         setReady(false)

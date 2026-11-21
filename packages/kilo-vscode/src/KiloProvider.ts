@@ -740,7 +740,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.cachedProviderUsageMessage = null
     this.configBindings.clear()
     this.cachedConfigMessage = null
-    this.invalidateProviders()
+    this.resetProviders()
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
     this.postMessage({ type: "configBindingExpired", reason: "project-changed" })
     void this.fetchAndSendProviders()
@@ -2873,7 +2873,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.providersGeneration++
     this.cachedProvidersMessage = null
     this.cachedProvidersDirectory = null
+    // Keys come from a directory-scoped read, so they belong to the project that read them.
+    this.storedProviderKeys = {}
     this.postMessage({ type: "providersLoading" })
+  }
+
+  /**
+   * Drop the provider view for a different project. The rows describe one project's read, so the
+   * webview drops every row rather than only the gateway one.
+   */
+  private resetProviders(): void {
+    this.invalidateProviders()
+    this.postMessage({ type: "providersReset" })
   }
 
   /** Fetch providers and send to webview. Coalesced: at most one in-flight + one queued. */

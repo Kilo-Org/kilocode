@@ -1872,6 +1872,7 @@ export type ExtensionMessage =
   | SpeechToTextModelsLoadedMessage
   | ProvidersLoadedMessage
   | { type: "providersLoading" }
+  | { type: "providersReset" }
   | AgentsLoadedMessage
   | SkillsLoadedMessage
   | CommandsLoadedMessage
