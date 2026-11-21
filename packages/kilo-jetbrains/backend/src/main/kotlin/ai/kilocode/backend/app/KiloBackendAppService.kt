@@ -657,8 +657,7 @@ class KiloBackendAppService private constructor(
             // the local CLI cannot tell a revoked token from a gateway failure at this point.
             // It is still a read that could not complete, not a definitive sign-out, so a reload
             // keeps an account it already holds.
-            log.warn("Profile fetch: server error (${e.statusCode}) — treating as unavailable", e)
-            logResponseBody("profile", e)
+            logFailure("Profile fetch: server error — treating as unavailable", e)
             if (strict) FetchResult.fail("profile", e) else FetchResult.ok(null)
         } catch (e: CancellationException) {
             // A cancelled read is not a read that failed: rethrow so the caller's scope sees it.
