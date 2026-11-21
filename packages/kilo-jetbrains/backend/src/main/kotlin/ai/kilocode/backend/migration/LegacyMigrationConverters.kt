@@ -1098,9 +1098,9 @@ private val UNSUPPORTED_REGEX_CHARS = setOf('*', '+', '{', '}', '[', ']', '^', '
  *
  * A glob arm that names a home-relative path is also rejected. `Permission.fromConfig` runs every
  * configured pattern through its `expand()`, which rewrites `~`, `~/...` and `$HOME...` to an
- * absolute path under the user's home directory. Such an arm would therefore allow files there,
- * while the legacy pattern only ever matched a workspace-relative path literally beginning with
- * that text.
+ * absolute path under the user's home directory. The file permissions ask with a workspace-relative
+ * path, so such an arm does not match and the sibling catch-all deny decides instead: the migrated
+ * rule stops meaning what the legacy pattern meant.
  */
 internal fun fileRegexToGlobs(regex: String): List<String>? {
     if (regex.isEmpty()) return null

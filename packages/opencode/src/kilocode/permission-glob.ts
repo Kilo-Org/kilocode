@@ -16,8 +16,9 @@ const DIGITS = /^\d+$/
 
 // An arm that names a home-relative path. `Permission.fromConfig` runs every configured
 // pattern through `expand()`, which rewrites `~`, `~/...` and `$HOME...` to an absolute path
-// under the user's home directory, so such an arm would allow files there while the legacy
-// pattern only ever matched a workspace-relative path literally beginning with that text.
+// under the user's home directory. The file permissions ask with a workspace-relative path,
+// so such an arm does not match and the sibling catch-all deny decides instead: the rule stops
+// meaning what the legacy pattern meant.
 const HOME = /^(?:~(?:\/|$)|\$HOME)/
 
 /**
@@ -25,8 +26,8 @@ const HOME = /^(?:~(?:\/|$)|\$HOME)/
  *
  * Returns null when the pattern uses a construct that the glob syntax cannot express,
  * when every alternative is empty while both anchors are present, when an arm consists
- * only of digits, or when an arm names a home-relative path the CLI would expand, so the
- * caller can report it instead of writing a rule the CLI resolves the wrong way.
+ * only of digits, or when an arm names a home-relative path, so the caller can report it
+ * instead of writing a rule whose meaning changes when the CLI expands it.
  */
 export function regexToGlobs(regex: string): string[] | null {
   if (regex.length === 0) return null
