@@ -4,6 +4,28 @@ import type { ProjectStore } from "./project/store"
 import { LOCAL, nextSelectionAfterDelete } from "./navigate"
 import { buildSidebarOrder, buildTopLevelItems, sortWorktrees } from "./section-helpers"
 
+/**
+ * Delete/Backspace on a selected worktree triggers inline delete confirmation.
+ * Two separate key presses (within the 2500ms window) confirm the delete.
+ */
+export function createDeleteKey(opts: {
+  guard: (target: EventTarget | null) => boolean
+  selection: () => string | null | undefined
+  close: () => void
+}) {
+  return (e: KeyboardEvent) => {
+    if (e.key !== "Delete" && e.key !== "Backspace") return
+    if (opts.guard(e.target)) return
+    const tag = (e.target as HTMLElement)?.tagName
+    if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
+    const sel = opts.selection()
+    if (!sel || sel === LOCAL) return
+    e.preventDefault()
+    if (e.repeat) return
+    opts.close()
+  }
+}
+
 export function createWorktreeDelete(opts: {
   store: (projectId: string) => ProjectStore | undefined
   project: () => string | undefined
@@ -62,7 +84,7 @@ export function createWorktreeDelete(opts: {
     opts.select(next === LOCAL ? { projectId, kind: "local" } : { projectId, kind: "worktree", worktreeId: next })
   }
 
-  const confirm = (projectId: string, worktreeId: string) => {
+  const request = (projectId: string, worktreeId: string, intent: "arm" | "confirm") => {
     const store = opts.store(projectId)
     const run = store?.runStatuses()[worktreeId]?.state
     if (
@@ -75,6 +97,7 @@ export function createWorktreeDelete(opts: {
       return
     }
     if (pending()?.projectId === projectId && pending()?.worktreeId === worktreeId) {
+      if (intent === "arm") return
       cancel()
       store.setBusy((prev) => new Map([...prev, [worktreeId, { reason: "deleting" as const }]]))
       opts.remove(projectId, worktreeId)
@@ -87,7 +110,13 @@ export function createWorktreeDelete(opts: {
     timer = setTimeout(cancel, 2500)
   }
 
-  return { pending, cancel, confirm, select }
+  return {
+    pending,
+    cancel,
+    arm: (projectId: string, worktreeId: string) => request(projectId, worktreeId, "arm"),
+    confirm: (projectId: string, worktreeId: string) => request(projectId, worktreeId, "confirm"),
+    select,
+  }
 }
 
 export type WorktreeDelete = ReturnType<typeof createWorktreeDelete>
