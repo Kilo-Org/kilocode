@@ -1,5 +1,11 @@
 # kilo-code
 
+## 7.8.32
+
+### Patch Changes
+
+- [#14982](https://github.com/Kilo-Org/kilocode/pull/14982) [`fe67f44`](https://github.com/Kilo-Org/kilocode/commit/fe67f4478855977eeabd06b33c9f80c9b25b34a7) Thanks [@ykakade](https://github.com/ykakade)! - Prevent held keys and repeated close commands from confirming worktree deletion in Agent Manager. Use the Delete confirmation button or a separate Backspace or Delete press to confirm.
+
 ## 7.8.31
 
 ### Minor Changes

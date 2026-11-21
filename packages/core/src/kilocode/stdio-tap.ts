@@ -32,3 +32,10 @@ export function tap(proc: NodeChildProcess.ChildProcess) {
 export function tapped(proc: NodeChildProcess.ChildProcess, fd: "stdout" | "stderr") {
   return map.get(proc)?.[fd] ?? proc[fd]!
 }
+
+export function release(proc: NodeChildProcess.ChildProcess) {
+  for (const fd of ["stdout", "stderr"] as const) {
+    map.get(proc)?.[fd]?.destroy()
+    proc[fd]?.destroy()
+  }
+}

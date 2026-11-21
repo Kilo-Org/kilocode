@@ -88,7 +88,7 @@ import {
   projectLocalSessions,
 } from "./project/local-tabs"
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
-import type { WorktreeDelete } from "./worktree-delete"
+import { createDeleteKey, type WorktreeDelete } from "./worktree-delete"
 import { rememberTarget } from "./project/restore"
 import { createProjectHydration } from "./project/hydration"
 import { createProjectStateRouter } from "./project/state"
@@ -234,7 +234,7 @@ const AgentManagerContent: Component = () => {
     )
   const mode = createModeRouter()
   let sidebarSearchMenu: SidebarSearchMenuRef | undefined
-  let confirmDelete: WorktreeDelete["confirm"] | undefined
+  let worktreeDelete: WorktreeDelete | undefined
   const [kb, setKb] = createSignal<Record<string, string>>(defaultBindings)
   const [setup, setSetup] = createSignal<SetupState>({ active: false, message: "" })
   const worktrees = () => registry.active().worktrees()
@@ -1179,7 +1179,7 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "openPR") openSelectedPR()
       else if (msg.action === "runScript") runSelected()
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
-      else if (msg.action === "closeWorktree") closeSelectedWorktree()
+      else if (msg.action === "closeWorktree") closeSelectedWorktree("arm")
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
       else if (msg.action === "focusInput") focusCtl.focus()
       else if (msg.action === "focusSearch")
@@ -1238,17 +1238,11 @@ const AgentManagerContent: Component = () => {
     window.addEventListener("keydown", shortcut, true)
 
     // Delete/Backspace on a selected worktree triggers inline delete confirmation.
-    // Pressing the key twice in a row (within the 2500ms window) confirms the delete.
-    const deleteKeyHandler = (e: KeyboardEvent) => {
-      if (e.key !== "Delete" && e.key !== "Backspace") return
-      if (diffPanels.isFocusTarget(e.target)) return
-      const tag = (e.target as HTMLElement)?.tagName
-      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
-      const sel = selection()
-      if (!sel || sel === LOCAL) return
-      e.preventDefault()
-      closeSelectedWorktree()
-    }
+    const deleteKeyHandler = createDeleteKey({
+      guard: (target) => diffPanels.isFocusTarget(target),
+      selection,
+      close: () => closeSelectedWorktree("confirm"),
+    })
     window.addEventListener("keydown", deleteKeyHandler)
     onCleanup(diffPanels.listen())
     onCleanup(() => window.removeEventListener("agentManager.openSubagent", subagent))
@@ -2030,7 +2024,7 @@ const AgentManagerContent: Component = () => {
     }
     const tabs = activeTabs()
     if (tabs.length === 0) {
-      closeSelectedWorktree()
+      closeSelectedWorktree("arm")
       return
     }
     const target = activeTaskId()
@@ -2038,13 +2032,13 @@ const AgentManagerContent: Component = () => {
     handleCloseTab(target)
   }
 
-  // Close the currently selected worktree through the shared sidebar confirmation.
-  const closeSelectedWorktree = () => {
+  // VS Code commands have no key event, so they can only arm confirmation.
+  const closeSelectedWorktree = (intent: "arm" | "confirm") => {
     const sel = selection()
     const project = activeProjectId()
     if (!project || project !== currentProjectId() || !sel || sel === LOCAL) return
     expandSidebar()
-    confirmDelete?.(project, sel)
+    worktreeDelete?.[intent](project, sel)
   }
 
   const renderTabById = (id: string) =>
@@ -2140,7 +2134,7 @@ const AgentManagerContent: Component = () => {
           bindings={kb()}
           t={t}
           onSearchRef={(ref) => (sidebarSearchMenu = ref)}
-          onDeleteRef={(confirm) => (confirmDelete = confirm)}
+          onDeleteRef={(deletion) => (worktreeDelete = deletion)}
           onDelete={(projectId, worktreeId) => forgetContextFocus(`${projectId}:${worktreeId}`)}
           onShortcuts={handleShowKeyboardShortcuts}
           onHistory={openHistory}
