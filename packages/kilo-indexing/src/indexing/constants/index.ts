@@ -59,6 +59,12 @@ export const LANCEDB_CLEANUP_RETENTION_MS = 10 * 60_000
 /**Manager Recovery */
 export const MAX_MANAGER_RECOVERY_ATTEMPTS = 3
 export const INITIAL_MANAGER_RECOVERY_DELAY_MS = 500
+// A session that lost the writer lock re-checks it on this backoff instead of
+// parking in Standby until a manual restart. The lock is usually free within a
+// session lifetime, and a cheap periodic claim cannot tear down the search
+// path the way a full error recovery would.
+export const INITIAL_MANAGER_CONTENTION_DELAY_MS = 5_000
+export const MAX_MANAGER_CONTENTION_DELAY_MS = 60_000
 
 /**Embedder Validation */
 export const REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS = 15_000

@@ -317,8 +317,10 @@ export class FileWatcher implements IFileWatcher {
    */
   async shutdown(): Promise<void> {
     this.collecting = false
-    if (this.batchProcessDebounceTimer) clearTimeout(this.batchProcessDebounceTimer)
-    this.batchProcessDebounceTimer = undefined
+    if (this.batchProcessDebounceTimer) {
+      clearTimeout(this.batchProcessDebounceTimer)
+      this.batchProcessDebounceTimer = undefined
+    }
     const subscription = this.subscription
     this.subscription = undefined
     await subscription
