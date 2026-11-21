@@ -62,7 +62,7 @@ interface Props {
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
-  onDeleteRef?: (confirm: WorktreeDelete["confirm"]) => void
+  onDeleteRef?: (deletion: WorktreeDelete) => void
   onDelete?: (projectId: string, worktreeId: string) => void
   onShortcuts: () => void
   onHistory: (projectId: string) => void
@@ -110,7 +110,7 @@ export const ProjectList: Component<Props> = (props) => {
         vscode.postMessage({ type: "agentManager.toggleSectionCollapsed", projectId, sectionId: section })
     },
   })
-  props.onDeleteRef?.(deletion.confirm)
+  props.onDeleteRef?.(deletion)
   const search = createMemo(() => {
     const items: SidebarSearchItem[] = []
     for (const project of props.projects) {

@@ -12,7 +12,8 @@
         "session.open",
         "prompt.stream",
         "permission.continue",
-        "settings.telemetry"
+        "settings.telemetry",
+        "followup.new-session"
       ]
     },
     "lane": {
@@ -31,7 +32,8 @@
             "open",
             "stream",
             "permission",
-            "settings"
+            "settings",
+            "followup"
           ]
         },
         "token": {

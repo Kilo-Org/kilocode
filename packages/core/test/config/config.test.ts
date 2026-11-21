@@ -1,7 +1,7 @@
 import path from "path"
 import fs from "fs/promises"
 import { describe, expect } from "bun:test"
-import { Effect, Layer, Schema } from "effect"
+import { Effect, Layer, Logger, Schema } from "effect" // kilocode_change - Logger added for configuration diagnostics
 import { FastCheck } from "effect/testing"
 import { Config } from "@opencode-ai/core/config"
 import { ConfigProvider } from "@opencode-ai/core/config/provider"
@@ -729,6 +729,207 @@ describe("Config", () => {
       ),
     ),
   )
+
+  // kilocode_change start - each configuration document is decoded value by value
+  const capture = (directory: string) => {
+    const logs: unknown[] = []
+    const layer = testLayer(directory).pipe(
+      Layer.provide(
+        Logger.layer([
+          Logger.make<unknown, void>((options) => {
+            logs.push(options.message)
+          }),
+        ]),
+      ),
+    )
+    return { logs, layer }
+  }
+  const reported = (logs: unknown[], message: string) =>
+    logs.filter((item): item is [string, Record<string, unknown>] => Array.isArray(item) && item[0] === message)
+
+  const invalidFieldDocument = {
+    share: "sometimes",
+    autoupdate: "sure",
+    model: "anthropic/claude",
+    permissions: [{ action: "bash", resource: "git push*", effect: "deny" as const }],
+    agents: {
+      reviewer: {
+        description: "reviews changes",
+        steps: "twelve",
+        permissions: [{ action: "edit", resource: "*", effect: "deny" as const }],
+      },
+    },
+    experimental: {
+      policies: [{ effect: "deny" as const, action: "provider.use" as const, resource: "openai" }],
+    },
+  }
+
+  it.live("keeps valid rules and settings when an unrelated field is invalid", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            fs.writeFile(path.join(tmp.path, "kilo.json"), JSON.stringify(invalidFieldDocument)),
+          )
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            const policy = yield* Policy.Service
+            const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
+
+            expect(documents).toHaveLength(1)
+            const info = documents[0]?.info
+            if (!info) throw new Error("expected the document to load")
+            expect(info.share).toBeUndefined()
+            expect(info.autoupdate).toBeUndefined()
+            expect(info.model).toBe("anthropic/claude")
+            expect(info.permissions).toEqual([{ action: "bash", resource: "git push*", effect: "deny" }])
+            expect(info.agents?.reviewer?.description).toBe("reviews changes")
+            expect(info.agents?.reviewer?.steps).toBeUndefined()
+            expect(info.agents?.reviewer?.permissions).toEqual([
+              { action: "edit", resource: "*", effect: "deny" },
+            ])
+            expect(info.experimental?.policies).toEqual([
+              { effect: "deny", action: "provider.use", resource: "openai" },
+            ])
+            expect(yield* policy.evaluate("provider.use", "openai", "allow")).toBe("deny")
+          }).pipe(Effect.provide(testLayer(tmp.path)))
+        }),
+      ),
+    ),
+  )
+
+  it.live("reports the file and the field of every skipped value", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const file = path.join(tmp.path, "kilo.json")
+          yield* Effect.promise(() => fs.writeFile(file, JSON.stringify(invalidFieldDocument)))
+          const { logs, layer } = capture(tmp.path)
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            yield* config.entries()
+            const skipped = reported(logs, "skipping invalid configuration value")
+            expect(skipped.map(([, context]) => context.path).toSorted((a, b) => String(a).localeCompare(String(b)))).toEqual([
+              "$.agents.reviewer.steps",
+              "$.autoupdate",
+              "$.share",
+            ])
+            for (const [, context] of skipped) {
+              expect(context.source).toBe(file)
+              expect(typeof context.message).toBe("string")
+            }
+          }).pipe(Effect.provide(layer))
+        }),
+      ),
+    ),
+  )
+
+  it.live("reports an unparsable file with its path and the syntax error", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const file = path.join(tmp.path, "kilo.jsonc")
+          yield* Effect.promise(() => fs.writeFile(file, '{\n  "share": "manual"\n  "model":\n}'))
+          const { logs, layer } = capture(tmp.path)
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
+            expect(documents).toHaveLength(0)
+            const syntax = reported(logs, "skipping unparsable configuration file")
+            expect(syntax.length).toBeGreaterThan(0)
+            const first = syntax[0]?.[1]
+            expect(first?.source).toBe(file)
+            expect(first?.path).toBe("$")
+            expect(String(first?.message)).toContain("CommaExpected at line 3, column 3")
+          }).pipe(Effect.provide(layer))
+        }),
+      ),
+    ),
+  )
+
+  it.live("reports nothing for a valid configuration", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            fs.writeFile(
+              path.join(tmp.path, "kilo.json"),
+              JSON.stringify({ share: "manual", permissions: [{ action: "bash", resource: "*", effect: "ask" }] }),
+            ),
+          )
+          const { logs, layer } = capture(tmp.path)
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
+            expect(documents).toHaveLength(1)
+            expect(documents[0]?.info.permissions).toEqual([{ action: "bash", resource: "*", effect: "ask" }])
+            expect(logs.filter((item) => Array.isArray(item) && item[0] === "skipping invalid configuration value")).toEqual(
+              [],
+            )
+            expect(
+              logs.filter((item) => Array.isArray(item) && item[0] === "skipping unparsable configuration file"),
+            ).toEqual([])
+          }).pipe(Effect.provide(layer))
+        }),
+      ),
+    ),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - a legacy document is decoded value by value at both migration stages
+  it.live("keeps the valid settings of a legacy document when one value is invalid", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const file = path.join(tmp.path, "opencode.json")
+          yield* Effect.promise(() =>
+            fs.writeFile(
+              file,
+              JSON.stringify({
+                model: "anthropic/claude",
+                snapshot: "nope",
+                permission: {
+                  bash: { "git push*": "deny" },
+                  edit: { "*": "nonsense" },
+                },
+              }),
+            ),
+          )
+          const { logs, layer } = capture(tmp.path)
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
+
+            expect(documents).toHaveLength(1)
+            const info = documents[0]?.info
+            if (!info) throw new Error("expected the legacy document to load")
+            expect(info.model).toBe("anthropic/claude")
+            expect(info.snapshots).toBeUndefined()
+            expect(info.permissions).toEqual([{ action: "bash", resource: "git push*", effect: "deny" }])
+            const skipped = reported(logs, "skipping invalid configuration value")
+            expect(skipped.length).toBeGreaterThan(0)
+            for (const [, context] of skipped) expect(context.source).toBe(file)
+          }).pipe(Effect.provide(layer))
+        }),
+      ),
+    ),
+  )
+  // kilocode_change end
 
   it.live("loads policy statements in reverse config order", () =>
     Effect.acquireRelease(
