@@ -1,0 +1,36 @@
+Validate a profile JSON file
+
+Usage: nono profile validate [OPTIONS] <FILE>
+
+Arguments:
+  <FILE>
+          Profile JSON file to validate
+
+Options:
+      --draft
+          Treat the argument as a draft name under ~/.config/nono/profile-drafts
+
+      --json
+          Output as JSON
+
+      --strict
+          Treat deprecated schema warnings as errors (exit code 2 if any are found).
+          
+          Use this in CI to block profiles that still rely on the pre-#594 legacy schema keys. A canonical profile with zero deprecation warnings passes as usual.
+
+OPTIONS:
+  -s, --silent
+          Silent mode - suppress all nono output (banner, summary, status)
+
+      --theme <THEME>
+          Color theme for output (mocha, latte, frappe, macchiato, tokyo-night, minimal)
+          
+          [env: NONO_THEME=]
+
+      --log-file <PATH>
+          Write logs to a file instead of stderr
+          
+          [env: NONO_LOG_FILE=]
+
+  -h, --help
+          Print help

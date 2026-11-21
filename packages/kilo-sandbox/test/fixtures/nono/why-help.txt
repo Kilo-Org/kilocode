@@ -1,0 +1,155 @@
+Check why filesystem, Unix socket, network, scope, or command access would be allowed or denied
+
+USAGE
+  nono why [flags]
+
+QUERY:
+      --command <COMMAND>
+          Command name to check against command policy
+
+      --caller <CALLER>
+          Caller edge for command policy checks (default: session)
+          
+          [default: session]
+
+      --path <PATH>
+          Path to check
+
+      --unix-socket <PATH>
+          Pathname AF_UNIX socket to check
+
+      --socket-op <OP>
+          Unix socket operation to check (default: connect)
+
+          Possible values:
+          - connect: Connect to an existing socket
+          - bind:    Bind and create a socket at this path
+
+      --lexical-profile-path
+          Match absolute literal paths against profile rules without resolving them on this host
+
+      --op <OP>
+          Operation to check: read, write, or readwrite
+
+          Possible values:
+          - read:      Read-only access
+          - write:     Write-only access
+          - readwrite: Read and write access
+
+      --host <HOST>
+          Network host or URL to check (e.g. github.com or https://github.com/org/repo)
+
+      --scope <SCOPE>
+          Landlock scope to check
+
+          Possible values:
+          - signal:               Signal scoping
+          - abstract-unix-socket: Abstract UNIX socket scoping
+
+      --port <PORT>
+          Network port (default 443)
+          
+          [default: 443]
+
+      --allow-domain <DOMAIN_OR_URL>
+          Add a domain to the proxy allowlist for this query (repeatable)
+
+      --deny-domain <DOMAIN>
+          Block a domain through the proxy for this query (repeatable)
+
+  [ARGS]...
+          Arguments for --command after `--`
+
+OPTIONS:
+  -s, --silent
+          Silent mode - suppress all nono output (banner, summary, status)
+
+      --theme <THEME>
+          Color theme for output (mocha, latte, frappe, macchiato, tokyo-night, minimal)
+          
+          [env: NONO_THEME=]
+
+      --log-file <PATH>
+          Write logs to a file instead of stderr
+          
+          [env: NONO_LOG_FILE=]
+
+      --json
+          Output JSON instead of human-readable format
+
+      --self
+          Query current sandbox state (use inside a sandboxed process)
+
+  -h, --help
+          Print help
+
+CONTEXT:
+  -a, --allow <DIR>
+          Directories to allow read+write access (for query context)
+
+  -r, --read <DIR>
+          Directories to allow read-only access (for query context)
+
+  -w, --write <DIR>
+          Directories to allow write-only access (for query context)
+
+      --allow-file <FILE>
+          Single files to allow read+write access (for query context)
+
+      --read-file <FILE>
+          Single files to allow read-only access (for query context)
+
+      --write-file <FILE>
+          Single files to allow write-only access (for query context)
+
+      --allow-unix-socket <SOCKET>
+          Exact pathname Unix sockets to allow connect access (for query context)
+
+      --allow-unix-socket-bind <SOCKET>
+          Exact pathname Unix sockets to allow connect and bind (for query context)
+
+      --allow-unix-socket-dir <DIR>
+          Direct-child pathname Unix sockets to allow in a directory (for query context)
+
+      --allow-unix-socket-dir-bind <DIR>
+          Direct-child pathname Unix sockets to allow connect and bind (for query context)
+
+      --allow-unix-socket-subtree <DIR>
+          Descendant pathname Unix sockets to allow in a subtree (for query context)
+
+      --allow-unix-socket-subtree-bind <DIR>
+          Descendant pathname Unix sockets to allow connect and bind (for query context)
+
+      --block-net
+          Block network access (for query context)
+
+  -p, --profile <NAME>
+          Use a named profile for query context
+
+      --extends <PROFILE>
+          Extend the selected profile with an additional base profile for this query
+
+      --workdir <DIR>
+          Working directory for $WORKDIR expansion in profiles
+
+
+EXAMPLES
+  nono why --path ~/.ssh --op read             # Check if ~/.ssh is readable
+  nono why --path ./src --op write --allow .   # Check with capability context
+  nono why --json --path ~/.aws --op read      # JSON output for agents
+  nono why --unix-socket /run/docker.sock      # Query pathname Unix socket connect access
+  nono why --host api.openai.com --port 443    # Query network access
+  nono why --self --path /var --op write       # Inside sandbox, query own capabilities
+  nono why --profile gh --command gh -- issue comment 1052
+                                                # Query command-policy argv rules
+
+COMMAND-POLICY DENIALS
+  `nono why --command <cmd> -- <args...>` diagnoses command-policy argv rules.
+  A message like:
+
+    nono: command policy denied gh: Command 'gh' is blocked: agents may read issues but not comment on them
+
+  is a command-policy denial from
+  command_policies.commands.<name>.from.<caller>.invocation_policy. If the
+  command uses proxy credentials, also check endpoint_policy for HTTP method
+  and path rules.

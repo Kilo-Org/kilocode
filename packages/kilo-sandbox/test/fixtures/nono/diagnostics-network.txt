@@ -1,0 +1,42 @@
+curl: (7) Failed to connect to example.com port 443 after 29 ms: Couldn't connect to server
+{
+  "session": {
+    "exit_code": 7,
+    "denials": [],
+    "ipc_denials": [],
+    "violations": [
+      {
+        "operation": "network-outbound",
+        "target": "remote:*:443"
+      }
+    ],
+    "diagnostics": [
+      {
+        "code": "unsupported_platform_feature",
+        "severity": "warning",
+        "message": "sandbox blocked system service: network-outbound (remote:*:443)",
+        "detail": {
+          "kind": "seatbelt_violation",
+          "operation": "network-outbound",
+          "target": "remote:*:443"
+        }
+      },
+      {
+        "code": "command_failed_likely_sandbox",
+        "severity": "info",
+        "message": "discover additional paths required by the command",
+        "remediation": {
+          "kind": "run_discovery"
+        }
+      },
+      {
+        "code": "command_failed_application",
+        "severity": "info",
+        "message": "inspect sandbox policy for a specific path",
+        "remediation": {
+          "kind": "check_policy"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+
+  nono v0.82.0
+  [nono] Warning: --no-audit disables session, command-policy, and network audit events.
+  Capabilities:
+  ────────────────────────────────────────────────────
+   r+w  /tmp/kilo-fixture/work (dir)
+       + 35 system/group paths (-v to show)
+  deny  1 sensitive path kept blocked inside your grants (-v to show)
+   net  outbound blocked
+  ────────────────────────────────────────────────────
+
+  Applying sandbox...
+
+cat: /tmp/kilo-fixture/work/denied.txt: Operation not permitted
+
+Command exited with code 1.
+
+Sandbox denial: 1 path blocked.
+  /tmp/kilo-fixture/work/denied.txt (read)
+Fix flags: --read-file /tmp/kilo-fixture/work/denied.txt
