@@ -1382,8 +1382,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // session is selected or its transcript load arrives. A running child keeps
   // streaming after its panel closes, and rebuilding the dropped cache from
   // those events would restore a partial transcript before the refetch.
-  const transcriptDropped = (sessionID: string | undefined) =>
-    sessionID != null && releasedTranscripts.has(sessionID)
+  const transcriptDropped = (sessionID: string | undefined) => sessionID != null && releasedTranscripts.has(sessionID)
 
   function handleMessageCreated(message: Message) {
     if (transcriptDropped(message.sessionID)) return
@@ -1865,7 +1864,6 @@ export const SessionProvider: ParentComponent = (props) => {
   const inUseFor = (id: string) => inUse(sessionFamily(id), statusMap, [...permissions(), ...questions()])
 
   function handleTodoUpdated(sessionID: string, items: TodoItem[]) {
-    if (releasedTranscripts.has(sessionID)) return
     setStore("todos", sessionID, items)
   }
 

@@ -345,6 +345,20 @@ try {
     messageID: "other-1",
     part: { id: "other-1-p", sessionID: "other", messageID: "other-1", type: "text", text: "still working" },
   })
+  await emit({
+    type: "partUpdated",
+    sessionID: "other",
+    messageID: "other-1",
+    part: {
+      id: "other-1-tool",
+      sessionID: "other",
+      messageID: "other-1",
+      type: "tool",
+      tool: "bash",
+      callID: "call-other-1",
+      state: { status: "running", input: { command: "ls" } },
+    },
+  })
   await emit({ type: "todoUpdated", sessionID: "other", items: [{ id: "t1", content: "step", status: "pending" }] })
   await check("release-blocks-transcript-refill", () => {
     assert.deepEqual(
@@ -352,7 +366,17 @@ try {
       [],
       "a released session's transcript events must not refill the dropped cache",
     )
+    assert.deepEqual(session().getParts("other-1"), [], "a released session must not regain message parts")
     assert.deepEqual(session().getSessionToolParts("other"), [], "a released session must not regain tool parts")
+  })
+  await check("release-keeps-todos", () => {
+    assert.deepEqual(
+      session()
+        .todos()
+        .map((item) => item.id),
+      ["t1"],
+      "a released session must still receive its todo updates",
+    )
   })
   await emit({
     type: "questionRequest",
