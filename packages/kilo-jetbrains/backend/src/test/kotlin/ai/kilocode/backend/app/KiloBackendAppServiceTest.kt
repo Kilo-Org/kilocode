@@ -632,6 +632,41 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `config fetch failure logs the status and size`() = runBlocking {
+        mock.configStatus = 400
+        mock.config = """{"name":"ConfigJsonError","data":{"message":"marker-7f3a9c"}}"""
+        val svc = create()
+        svc.connect()
+
+        val state = assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+        val err = assertIs<KiloAppState.Error>(state)
+
+        assertTrue(log.messages.none { it.contains("marker-7f3a9c") }, log.messages.toString())
+        assertTrue(
+            log.messages.any {
+                it.contains("Global config fetch failed: HTTP 400") &&
+                    it.contains("chars=") &&
+                    it.contains("ConfigJsonError")
+            },
+            log.messages.toString(),
+        )
+        val stateText = (listOf(err.message) + err.errors.mapNotNull { it.detail }).joinToString(" ")
+        assertFalse(stateText.contains("marker-7f3a9c"), stateText)
+        val detail = assertNotNull(err.errors.single { it.resource == "config" }.detail)
+        assertTrue(detail.startsWith("HTTP 400"), detail)
+        assertTrue(detail.contains("ConfigJsonError"), detail)
+        assertFalse(detail.contains("chars="), detail)
+        val lines = log.messages.count { it.contains("Global config fetch failed") }
+        assertEquals(mock.requestCount("/global/config"), lines, log.messages.toString())
+        assertTrue(log.messages.none { it.contains("response failed") }, log.messages.toString())
+    }
+
+    @Test
     fun `notifications failure transitions to Error`() = runBlocking {
         mock.notificationsStatus = 500
         mock.notifications = """{"error":"internal"}"""
@@ -644,6 +679,79 @@ class KiloBackendAppServiceTest {
 
         val err = svc.appState.value as KiloAppState.Error
         assertTrue(err.errors.any { it.resource == "notifications" })
+    }
+
+    @Test
+    fun `notification fetch failure logs the status and size`() = runBlocking {
+        mock.notificationsStatus = 500
+        mock.notifications = """{"message":"marker-7f3a9c"}"""
+        val svc = create()
+        svc.connect()
+
+        assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+
+        assertTrue(log.messages.none { it.contains("marker-7f3a9c") }, log.messages.toString())
+        assertTrue(log.throwables.none { it.contains("marker-7f3a9c") }, log.throwables.toString())
+        assertTrue(
+            log.messages.any {
+                it.contains("Notifications fetch failed: HTTP 500:") && it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
+    }
+
+    @Test
+    fun `fetch failure detail carries the error name without a size`() = runBlocking {
+        mock.notificationsStatus = 500
+        mock.notifications = """{"name":"ConfigJsonError"}"""
+        val svc = create()
+        svc.connect()
+
+        val state = assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+        val err = assertIs<KiloAppState.Error>(state)
+        val detail = assertNotNull(err.errors.single { it.resource == "notifications" }.detail)
+
+        assertEquals("HTTP 500 ConfigJsonError", detail)
+        assertFalse(detail.contains("chars="), detail)
+        assertTrue(
+            log.messages.any { it.contains("Notifications fetch failed: HTTP 500:") && it.contains("chars=") },
+            log.messages.toString(),
+        )
+    }
+
+    @Test
+    fun `profile decode failure logs no payload`() = runBlocking {
+        mock.profile = """{"profile":"marker-7f3a9c"}"""
+        val svc = create()
+        svc.connect()
+
+        // The profile body cannot be decoded, so the load reports a profile load error.
+        assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+
+        assertTrue(log.messages.none { it.contains("marker-7f3a9c") }, log.messages.toString())
+        assertTrue(log.throwables.none { it.contains("marker-7f3a9c") }, log.throwables.toString())
+        assertTrue(
+            log.messages.any { it.contains("Profile fetch failed: Response parse error") },
+            log.messages.toString(),
+        )
+        val err = assertIs<KiloAppState.Error>(svc.appState.value)
+        val detail = assertNotNull(err.errors.single { it.resource == "profile" }.detail)
+        assertTrue(detail.startsWith("Response parse error"), detail)
     }
 
     @Test
@@ -762,6 +870,39 @@ class KiloBackendAppServiceTest {
 
         assertNull(svc.profile)
         assertIs<KiloAppState.Ready>(svc.appState.value)
+        assertTrue(
+            log.messages.any {
+                it.contains("Profile fetch: server error — treating as unavailable: HTTP 500:") &&
+                    it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
+        assertTrue(log.messages.none { it.contains("response failed") }, log.messages.toString())
+    }
+
+    @Test
+    fun `profile client failure logs one line without a second response line`() = runBlocking {
+        mock.profileStatus = 403
+        mock.profile = """{"name":"ForbiddenError"}"""
+        val svc = create()
+        svc.connect()
+
+        assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+
+        val lines = log.messages.count { it.contains("Profile fetch failed") }
+        assertEquals(mock.requestCount("/kilo/profile"), lines, log.messages.toString())
+        assertTrue(
+            log.messages.any {
+                it.contains("Profile fetch failed: HTTP 403:") && it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
+        assertTrue(log.messages.none { it.contains("response failed") }, log.messages.toString())
     }
 
     @Test

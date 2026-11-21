@@ -7,9 +7,12 @@ import ai.kilocode.log.KiloLog
  */
 class TestLog : KiloLog {
     private val items = mutableListOf<String>()
+    private val throwableItems = mutableListOf<String>()
     private val lock = Object()
     val messages: List<String>
         get() = synchronized(lock) { items.toList() }
+    val throwables: List<String>
+        get() = synchronized(lock) { throwableItems.toList() }
     override var isDebugEnabled: Boolean = true
 
     /** Wait until at least [count] captured messages match [predicate]. */
@@ -40,18 +43,28 @@ class TestLog : KiloLog {
     override fun warn(msg: String, t: Throwable?) {
         add("WARN: $msg")
         println("[test] WARN: $msg")
+        capture(t)
         t?.printStackTrace()
     }
 
     override fun error(msg: String, t: Throwable?) {
         add("ERROR: $msg")
         System.err.println("[test] ERROR: $msg")
+        capture(t)
         t?.printStackTrace()
     }
 
     private fun add(msg: String) {
         synchronized(lock) {
             items.add(msg)
+            lock.notifyAll()
+        }
+    }
+
+    private fun capture(t: Throwable?) {
+        val text = t?.message ?: return
+        synchronized(lock) {
+            throwableItems.add(text)
             lock.notifyAll()
         }
     }
