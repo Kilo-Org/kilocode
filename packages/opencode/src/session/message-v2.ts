@@ -664,29 +664,40 @@ export const get = Effect.fn("MessageV2.get")(function* (input: { sessionID: Ses
   }
 })
 
-export function filterCompacted(msgs: Iterable<WithParts>) {
+// kilocode_change start - share the compaction boundary between iterable and paged reads
+function scanner() {
   const result = [] as WithParts[]
   const completed = new Set<string>()
   let retain: MessageID | undefined
-  for (const msg of msgs) {
+  const push = (msg: WithParts) => {
     result.push(msg)
     if (retain) {
-      if (msg.info.id === retain) break
-      continue
+      return msg.info.id === retain
     }
     if (msg.info.role === "user" && completed.has(msg.info.id)) {
       const part = msg.parts.find((item): item is CompactionPart => item.type === "compaction")
-      if (!part) continue
-      if (!part.tail_start_id) break
+      if (!part) return false
+      if (!part.tail_start_id) return true
       retain = part.tail_start_id
-      if (msg.info.id === retain) break
-      continue
+      return msg.info.id === retain
     }
-    if (msg.info.role === "user" && completed.has(msg.info.id) && msg.parts.some((part) => part.type === "compaction"))
-      break
     if (msg.info.role === "assistant" && msg.info.summary && msg.info.finish && !msg.info.error)
       completed.add(msg.info.parentID)
+    return false
   }
+  return { result, push }
+}
+
+export function filterCompacted(msgs: Iterable<WithParts>) {
+  const scan = scanner()
+  for (const msg of msgs) {
+    if (scan.push(msg)) break
+  }
+  return project(scan.result)
+}
+
+function project(result: WithParts[]) {
+  // kilocode_change end
   result.reverse()
   KiloSessionMessageOrder.annotate(result) // kilocode_change - preserve chronology before retained-tail projection
   const compactionIndex = result.findLastIndex(
@@ -719,7 +730,23 @@ export function filterCompacted(msgs: Iterable<WithParts>) {
 }
 
 export const filterCompactedEffect = Effect.fnUntraced(function* (sessionID: SessionID) {
-  return filterCompacted(yield* stream(sessionID))
+  // kilocode_change start - hydrate only through the page containing the retained boundary
+  const scan = scanner()
+  let before: string | undefined
+  while (true) {
+    const next = yield* page({ sessionID, limit: 50, before }).pipe(
+      Effect.catchIf(NotFoundError.isInstance, () =>
+        Effect.succeed({ items: [] as WithParts[], more: false, cursor: undefined }),
+      ),
+    )
+    for (let i = next.items.length - 1; i >= 0; i--) {
+      const item = next.items.at(i)
+      if (item && scan.push(item)) return project(scan.result)
+    }
+    if (!next.more || !next.cursor) return project(scan.result)
+    before = next.cursor
+  }
+  // kilocode_change end
 })
 
 // filterCompacted reorders messages for model consumption

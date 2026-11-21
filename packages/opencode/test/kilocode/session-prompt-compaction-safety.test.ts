@@ -7,7 +7,7 @@ import fs from "fs/promises"
 import { Global } from "@opencode-ai/core/global"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
-import { describe, expect } from "bun:test"
+import { describe, expect, spyOn } from "bun:test"
 import { Effect, Fiber, Layer } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Agent as AgentSvc } from "../../src/agent/agent"
@@ -51,11 +51,13 @@ import { Snapshot } from "../../src/snapshot"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
+import { KiloSessionPromptQueue } from "../../src/kilocode/session/prompt-queue"
 import * as Log from "@opencode-ai/core/util/log"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
+import { fullHistory } from "./history-baseline"
 
 Log.init({ print: false })
 
@@ -259,7 +261,7 @@ const user = Effect.fn("prompt-safety.user")(function* (
 const assistant = Effect.fn("prompt-safety.assistant")(function* (
   sessionID: SessionID,
   parentID: MessageID,
-  input?: { text?: string; summary?: boolean; tokens?: MessageV2.Assistant["tokens"]; finish?: string },
+  input?: { text?: string; summary?: boolean; tokens?: MessageV2.Assistant["tokens"]; finish?: string; error?: MessageV2.Assistant["error"] },
 ) {
   const sessions = yield* Session.Service
   const msg = yield* sessions.updateMessage({
@@ -277,6 +279,7 @@ const assistant = Effect.fn("prompt-safety.assistant")(function* (
     time: { created: Date.now() },
     finish: input?.finish ?? "end_turn",
     summary: input?.summary,
+    error: input?.error,
   } satisfies MessageV2.Assistant)
   yield* sessions.updatePart({
     id: PartID.ascending(),
@@ -357,6 +360,134 @@ const file = Effect.fn("prompt-safety.file")(function* (
     filename: input.name,
     url: `data:${input.mime};base64,${input.body}`,
   } satisfies MessageV2.FilePart)
+})
+
+// Port the independent gate's provider-body fixtures into the durable prompt suite.
+const wirePairs = Effect.fnUntraced(function* (sessionID: SessionID, count: number, label: string) {
+  for (let i = 0; i < count; i++) {
+    const request = yield* user(sessionID, `${label} request ${i}`)
+    yield* assistant(sessionID, request.id, { text: `${label} reply ${i}` })
+  }
+})
+
+const wireCompact = Effect.fnUntraced(function* (
+  sessionID: SessionID,
+  label: string,
+  tail?: MessageID,
+  error?: MessageV2.Assistant["error"],
+) {
+  const sessions = yield* Session.Service
+  const parent = yield* sessions.updateMessage({
+    id: MessageID.ascending(), role: "user", sessionID, agent: "code", model: ref,
+    time: { created: Date.now() }, tools: {},
+  } satisfies MessageV2.User)
+  yield* sessions.updatePart({
+    id: PartID.ascending(), messageID: parent.id, sessionID, type: "compaction", auto: true,
+    ...(tail ? { tail_start_id: tail } : {}),
+  } satisfies MessageV2.CompactionPart)
+  yield* assistant(sessionID, parent.id, { text: `SUMMARY ${label}`, summary: true, error })
+  return parent
+})
+
+describe("SessionPrompt paged history wire equality", () => {
+  for (const shape of ["auto-one", "auto-tail", "several", "missing-tail", "error-summary", "tool-continuation", "real-fork", "real-revert", "queued-prompt"]) {
+    it.live(`old vs paged provider body: ${shape}`, () => provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: `Wire equality ${shape}` })
+        let sessionID = chat.id
+        yield* wirePairs(sessionID, 30, "old")
+        if (shape === "auto-tail" || shape === "real-fork") {
+          const tail = yield* user(sessionID, "TAILSTART")
+          yield* assistant(sessionID, tail.id)
+          const media = yield* user(sessionID, "tail media")
+          yield* file(sessionID, media.id, { mime: "image/png", name: "tail.png", body: "TAILIMAGE" })
+          yield* assistant(sessionID, media.id)
+          yield* wirePairs(sessionID, 8, "tail")
+          yield* wireCompact(sessionID, "tail", tail.id)
+        } else {
+          yield* wireCompact(
+            sessionID, "first", shape === "missing-tail" ? MessageID.ascending() : undefined,
+            shape === "error-summary" ? new MessageV2.APIError({ message: "synthetic", isRetryable: false }).toObject() : undefined,
+          )
+        }
+        yield* wirePairs(sessionID, 4, "after")
+        if (shape === "several") {
+          yield* wireCompact(sessionID, "second")
+          yield* wirePairs(sessionID, 4, "after second")
+        }
+        if (shape === "real-revert") {
+          const revert = yield* SessionRevert.Service
+          const target = yield* user(sessionID, "REVERTPOINT")
+          yield* assistant(sessionID, target.id)
+          yield* wireCompact(sessionID, "reverted-away")
+          yield* wirePairs(sessionID, 3, "gone")
+          yield* revert.cleanup(yield* revert.revert({ sessionID, messageID: target.id }))
+        }
+        const current = yield* user(sessionID, "continue CURRENT REQUEST")
+        yield* file(sessionID, current.id, { mime: "image/png", name: "current.png", body: "CURRENTIMAGE" })
+        if (shape === "tool-continuation") {
+          const call = yield* assistant(sessionID, current.id, { text: "calling tool", finish: "tool-calls" })
+          yield* sessions.updatePart({
+            id: PartID.ascending(), messageID: call.id, sessionID, type: "tool", callID: "call_wire", tool: "bash",
+            state: {
+              status: "completed", input: { command: "pwd" }, output: "/tmp", title: "pwd", metadata: {},
+              time: { start: 0, end: 1 },
+            },
+          } satisfies MessageV2.ToolPart)
+        }
+        if (shape === "real-fork") sessionID = (yield* sessions.fork({ sessionID })).id
+        const later = shape === "queued-prompt" ? yield* user(sessionID, "LATER QUEUED REQUEST") : undefined
+        if (later) expect(later.id > current.id).toBe(true)
+        const before = new Set((yield* sessions.messages({ sessionID })).map((message) => message.info.id))
+        const compare = Effect.gen(function* () {
+          let oldLoads = 0
+          const loader = spyOn(MessageV2, "filterCompactedEffect").mockImplementation((id) => Effect.gen(function* () {
+            oldLoads++
+            return yield* fullHistory(id)
+          }))
+          yield* llm.text("same answer")
+          yield* prompt.loop({ sessionID }).pipe(Effect.ensuring(Effect.sync(() => loader.mockRestore())))
+          expect(oldLoads).toBeGreaterThan(0)
+          const oldBody = JSON.stringify((yield* llm.inputs).at(-1))
+          for (const message of yield* sessions.messages({ sessionID })) {
+            if (!before.has(message.info.id)) yield* sessions.removeMessage({ sessionID, messageID: message.info.id })
+          }
+          let newLoads = 0
+          const paged = MessageV2.filterCompactedEffect
+          const through = spyOn(MessageV2, "filterCompactedEffect").mockImplementation((id) => {
+            newLoads++
+            return paged(id)
+          })
+          yield* llm.text("same answer")
+          yield* prompt.loop({ sessionID }).pipe(Effect.ensuring(Effect.sync(() => through.mockRestore())))
+          const newBody = JSON.stringify((yield* llm.inputs).at(-1))
+          console.log(JSON.stringify({
+            wireShape: shape, oldLoads, newLoads, bytes: Buffer.byteLength(newBody), equal: oldBody === newBody,
+            oldHash: new Bun.CryptoHasher("sha256").update(oldBody).digest("hex"),
+            newHash: new Bun.CryptoHasher("sha256").update(newBody).digest("hex"),
+          }))
+          expect(newLoads).toBeGreaterThan(0)
+          expect(yield* llm.calls).toBe(2)
+          expect(Buffer.from(newBody)).toEqual(Buffer.from(oldBody))
+          if (later) {
+            expect(newBody).not.toContain("LATER QUEUED REQUEST")
+            expect(newBody).toContain("CURRENT REQUEST")
+          }
+        })
+        if (later) {
+          yield* KiloSessionPromptQueue.enqueue(sessionID, current.id, Effect.gen(function* () {
+            const waiting = yield* KiloSessionPromptQueue.enqueue(sessionID, later.id, Effect.void, Effect.void).pipe(Effect.forkChild)
+            yield* Effect.yieldNow
+            expect(KiloSessionPromptQueue.snapshot(sessionID)).toContain(later.id)
+            yield* compare.pipe(Effect.ensuring(Fiber.interrupt(waiting)))
+          }), Effect.die("unexpected queue cancellation"))
+        } else yield* compare
+      }),
+      { git: false, config: (url) => ({ ...providerCfg(url), snapshot: false, compaction: { auto: false, prune: false } }) },
+    ))
+  }
 })
 
 describe("SessionPrompt compaction safety", () => {
@@ -623,6 +754,52 @@ describe("SessionPrompt compaction safety", () => {
         { git: true, config: providerCfg },
       ),
     30_000,
+  )
+
+  it.live("sends byte-identical requests with full and bounded history hydration", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Hydration equivalence" })
+        for (let i = 0; i < 60; i++) {
+          const request = yield* user(chat.id, `old request ${i}`)
+          yield* assistant(chat.id, request.id)
+        }
+        const parent = yield* user(chat.id, "manual summary parent")
+        yield* assistant(chat.id, parent.id, { summary: true, text: "same summary" })
+        const request = yield* user(chat.id, "continue", {
+          editorContext: { activeFile: "src/app.ts", openTabs: ["src/app.ts"] },
+        })
+        yield* file(chat.id, request.id, { mime: "image/png", name: "current.png", body: "CURRENTIMAGE" })
+        const before = new Set((yield* sessions.messages({ sessionID: chat.id })).map((message) => message.info.id))
+
+        // The only replacement selects the old production loader. Every later prompt/provider transform is real.
+        let oldLoads = 0
+        const loader = spyOn(MessageV2, "filterCompactedEffect").mockImplementation((sessionID) =>
+          Effect.gen(function* () {
+            oldLoads++
+            return yield* fullHistory(sessionID)
+          }),
+        )
+        yield* llm.text("same answer")
+        yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.ensuring(Effect.sync(() => loader.mockRestore())))
+        expect(oldLoads).toBeGreaterThan(0)
+        const old = Buffer.from(JSON.stringify((yield* llm.inputs).at(-1)?.messages))
+        for (const message of yield* sessions.messages({ sessionID: chat.id })) {
+          if (!before.has(message.info.id)) yield* sessions.removeMessage({ sessionID: chat.id, messageID: message.info.id })
+        }
+
+        yield* llm.text("same answer")
+        yield* prompt.loop({ sessionID: chat.id })
+        const next = Buffer.from(JSON.stringify((yield* llm.inputs).at(-1)?.messages))
+        expect(yield* llm.calls).toBe(2)
+        expect(next).toEqual(old)
+        expect(next.toString()).toContain("CURRENTIMAGE")
+        expect(next.toString()).not.toContain("old request")
+      }),
+      { git: false, config: (url) => ({ ...providerCfg(url), snapshot: false, compaction: { auto: false, prune: false } }) },
+    ),
   )
 
   it.live("trims plain-text summary history before provider request", () =>
