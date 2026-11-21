@@ -1,4 +1,5 @@
 import { isRecord } from "../../utils/record"
+import { lowerTypeArrays } from "./kilocode/gemini-type-arrays" // kilocode_change
 
 // Gemini accepts a JSON Schema-like dialect for tool parameters, but rejects a
 // handful of common JSON Schema shapes. Keep this projection isolated so the
@@ -70,7 +71,12 @@ const projectNode = (schema: unknown): Record<string, unknown> | undefined => {
       ["required", schema.required],
       ["format", schema.format],
       ["type", Array.isArray(schema.type) ? schema.type.filter((type) => type !== "null")[0] : schema.type],
-      ["nullable", Array.isArray(schema.type) && schema.type.includes("null") ? true : undefined],
+      // kilocode_change start
+      [
+        "nullable",
+        schema.nullable === true || (Array.isArray(schema.type) && schema.type.includes("null")) ? true : undefined,
+      ],
+      // kilocode_change end
       ["enum", schema.const !== undefined ? [schema.const] : schema.enum],
       [
         "properties",
@@ -94,6 +100,6 @@ const projectNode = (schema: unknown): Record<string, unknown> | undefined => {
   )
 }
 
-export const convert = (schema: unknown) => projectNode(sanitizeNode(schema))
+export const convert = (schema: unknown) => projectNode(sanitizeNode(lowerTypeArrays(schema))) // kilocode_change
 
 export * as GeminiToolSchema from "./gemini-tool-schema"
