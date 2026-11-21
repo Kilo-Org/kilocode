@@ -21,6 +21,7 @@ import {
   LLMError as LLMErrorClass,
   PreparedRequest,
   ProviderID,
+  RateLimit,
   mergeGenerationOptions,
   mergeHttpOptions,
   mergeProviderOptions,
@@ -65,20 +66,24 @@ export type RouteModelInput = Omit<Model.Input, "provider" | "route">
 export type RouteRoutedModelInput = Omit<Model.Input, "route">
 
 export interface RouteDefaults {
-  readonly headers?: Record<string, string>
-  readonly limits?: ModelLimits
-  readonly generation?: GenerationOptions
-  readonly providerOptions?: ProviderOptions
-  readonly http?: HttpOptions
-}
+   readonly headers?: Record<string, string>
+   readonly limits?: ModelLimits
+   readonly generation?: GenerationOptions
+   readonly providerOptions?: ProviderOptions
+   readonly http?: HttpOptions
+   // kilocode_change - Kilo: rate limit configuration for custom providers
+   readonly rateLimit?: RateLimit
+ }
 
 export interface RouteDefaultsInput {
-  readonly headers?: Record<string, string>
-  readonly limits?: ModelLimits.Input
-  readonly generation?: GenerationOptions.Input
-  readonly providerOptions?: ProviderOptions
-  readonly http?: HttpOptions.Input
-}
+   readonly headers?: Record<string, string>
+   readonly limits?: ModelLimits.Input
+   readonly generation?: GenerationOptions.Input
+   readonly providerOptions?: ProviderOptions
+   readonly http?: HttpOptions.Input
+   // kilocode_change - Kilo: rate limit input for route defaults
+   readonly rateLimit?: RateLimit.Input
+ }
 
 export interface RoutePatch<Body, Prepared> extends RouteDefaultsInput {
   readonly id?: string
@@ -94,7 +99,7 @@ const makeRouteModel = (route: AnyRoute, mapped: RouteMappedModelInput) => {
   const provider = route.provider ?? ("provider" in mapped ? mapped.provider : undefined)
   if (!provider) throw new Error(`Route.model(${route.id}) requires a provider`)
   if (!endpointBaseURL(route.endpoint))
-    throw new Error(`Route.model(${route.id}) requires an endpoint baseURL — configure it on the route first`)
+    throw new Error(`Route.model(${route.id}) requires an endpoint baseURL â€” configure it on the route first`)
   return Model.make({
     ...mapped,
     provider,
@@ -103,21 +108,23 @@ const makeRouteModel = (route: AnyRoute, mapped: RouteMappedModelInput) => {
 }
 
 const mergeRouteDefaults = (base: RouteDefaults | undefined, patch: RouteDefaultsInput): RouteDefaults => {
-  const headers = mergeHeaders(base?.headers, patch.headers)
-  return {
-    ...base,
-    ...patch,
-    headers,
-    limits: patch.limits === undefined ? base?.limits : ModelLimits.make(patch.limits),
-    generation: mergeGenerationOptions(generationOptions(base?.generation), generationOptions(patch.generation)),
-    providerOptions: mergeProviderOptions(base?.providerOptions, patch.providerOptions),
-    http: mergeHttpOptions(
-      base?.http,
-      httpOptions(patch.http),
-      headers === undefined ? undefined : new HttpOptions({ headers }),
-    ),
-  }
-}
+   const headers = mergeHeaders(base?.headers, patch.headers)
+   return {
+     ...base,
+     ...patch,
+     headers,
+     limits: patch.limits === undefined ? base?.limits : ModelLimits.make(patch.limits),
+     generation: mergeGenerationOptions(generationOptions(base?.generation), generationOptions(patch.generation)),
+     providerOptions: mergeProviderOptions(base?.providerOptions, patch.providerOptions),
+     http: mergeHttpOptions(
+       base?.http,
+       httpOptions(patch.http),
+       headers === undefined ? undefined : new HttpOptions({ headers }),
+     ),
+     // kilocode_change - Kilo: merge rate limit from config
+     rateLimit: patch.rateLimit === undefined ? base?.rateLimit : RateLimit.make(patch.rateLimit),
+   }
+ }
 
 const endpointBaseURL = <Body>(endpoint: Endpoint<Body>) =>
   typeof endpoint.baseURL === "string" ? endpoint.baseURL : undefined
@@ -145,7 +152,7 @@ export interface Interface {
    * provider-native body.
    *
    * Pass a `Body` type argument to statically expose the route's body
-   * shape (e.g. `prepare<OpenAIChatBody>(...)`) — the runtime body is
+   * shape (e.g. `prepare<OpenAIChatBody>(...)`) â€” the runtime body is
    * identical, so this is a type-level assertion the caller makes about which
    * route the request will resolve to.
    */
@@ -168,14 +175,24 @@ const resolveRequestOptions = (request: LLMRequest) => {
   const routeDefaults = request.model.route.defaults
   const modelDefaults = request.model.defaults
   const generation = mergeGenerationOptions(routeDefaults.generation, modelDefaults?.generation, request.generation)
+  const providerOptions = mergeProviderOptions(
+    routeDefaults.providerOptions,
+    modelDefaults?.providerOptions,
+    request.providerOptions,
+  )
+  const http = mergeHttpOptions(routeDefaults.http, modelDefaults?.http, request.http)
+  const modelRateLimit = modelDefaults?.rateLimit
+  const requestRateLimit = request.rateLimit
+  const rateLimit = RateLimit.make({
+    rpm: requestRateLimit?.rpm ?? modelRateLimit?.rpm, // kilocode_change - request overrides model
+    rps: requestRateLimit?.rps ?? modelRateLimit?.rps, // kilocode_change - request overrides model
+  })
+  const hasRateLimit = rateLimit.rpm !== undefined || rateLimit.rps !== undefined
   return LLMRequest.update(request, {
     generation: generation ?? new GenerationOptions({}),
-    providerOptions: mergeProviderOptions(
-      routeDefaults.providerOptions,
-      modelDefaults?.providerOptions,
-      request.providerOptions,
-    ),
-    http: mergeHttpOptions(routeDefaults.http, modelDefaults?.http, request.http),
+    providerOptions,
+    http: http ?? undefined,
+    rateLimit: hasRateLimit ? rateLimit : undefined,
   })
 }
 
@@ -184,13 +201,13 @@ export interface MakeInput<Body, Frame, Event, State> {
   readonly id: string
   /** Provider identity for route-owned model construction. */
   readonly provider?: string | ProviderID
-  /** Semantic API contract — owns body construction, body schema, and parsing. */
+  /** Semantic API contract â€” owns body construction, body schema, and parsing. */
   readonly protocol: Protocol<Body, Frame, Event, State>
   /** Where the request is sent. */
   readonly endpoint: Endpoint<Body>
   /** Per-request transport auth. Provider facades override this via `route.with(...)`. */
   readonly auth?: AuthDef
-  /** Stream framing — bytes -> frames before `protocol.stream.event` decoding. */
+  /** Stream framing â€” bytes -> frames before `protocol.stream.event` decoding. */
   readonly framing: Framing<Frame>
   /** Static / per-request headers added before `auth` runs. */
   readonly headers?: (input: { readonly request: LLMRequest }) => Record<string, string>
@@ -203,7 +220,7 @@ export interface MakeTransportInput<Body, Prepared, Frame, Event, State> {
   readonly id: string
   /** Provider identity for route-owned model construction. */
   readonly provider?: string | ProviderID
-  /** Semantic API contract — owns body construction, body schema, and parsing. */
+  /** Semantic API contract â€” owns body construction, body schema, and parsing. */
   readonly protocol: Protocol<Body, Frame, Event, State>
   /** Where the request is sent. */
   readonly endpoint: Endpoint<Body>
@@ -306,10 +323,10 @@ export function make<Body, Prepared, Frame, Event, State>(
 /**
  * Build a `Route` by composing the four orthogonal pieces of a deployment:
  *
- * - `Protocol` — what is the API I'm speaking?
- * - `Endpoint` — where do I send the request?
- * - `Auth` — how do I authenticate it?
- * - `Framing` — how do I cut the response stream into protocol frames?
+ * - `Protocol` â€” what is the API I'm speaking?
+ * - `Endpoint` â€” where do I send the request?
+ * - `Auth` â€” how do I authenticate it?
+ * - `Framing` â€” how do I cut the response stream into protocol frames?
  *
  * Plus optional `headers` for cross-cutting deployment concerns (provider
  * version pins, per-deployment quirks).

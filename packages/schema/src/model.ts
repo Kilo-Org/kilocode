@@ -79,11 +79,16 @@ export const Info = Schema.Struct({
   status: Schema.Literals(["alpha", "beta", "deprecated", "active"]),
   enabled: Schema.Boolean,
   limit: Schema.Struct({
-    context: Schema.Int,
-    input: Schema.Int.pipe(optional),
-    output: Schema.Int,
-  }),
-})
+     context: Schema.Int,
+     input: Schema.Int.pipe(optional),
+     output: Schema.Int,
+   }),
+   // kilocode_change - Kilo: rate limit configuration for custom providers
+   rateLimit: Schema.Struct({
+     rpm: Schema.Number.pipe(optional),
+     rps: Schema.Number.pipe(optional),
+   }).pipe(optional),
+ })
   .annotate({ identifier: "ModelV2.Info" })
   .pipe(
     statics((schema) => ({
