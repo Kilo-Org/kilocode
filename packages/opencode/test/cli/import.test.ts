@@ -6,10 +6,15 @@ import {
   bootstrapImportedSessionIngest,
   ingestBootstrapWarning,
   shouldAttachShareAuthHeaders,
+  decodeImportMessages, // kilocode_change
+  formatImportWriteError, // kilocode_change
   type ShareData,
 } from "../../src/cli/cmd/import"
 import { FSUtil } from "@opencode-ai/core/fs-util"
-import { PlatformError } from "effect"
+import { Cause, PlatformError } from "effect" // kilocode_change
+import { SqlError, UnknownError } from "effect/unstable/sql/SqlError" // kilocode_change
+import { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors" // kilocode_change
+import { assistantMessage, malformedToolPartDocument, textPart, toolPart, userMessage } from "../fixture/import" // kilocode_change
 
 test("formats import file errors", () => {
   expect(
@@ -138,3 +143,146 @@ test("bootstrapImportedSessionIngest warns and continues on failure", async () =
   expect(warnings[0]).toContain("session-fail")
   expect(warnings[0]).toContain("boom")
 })
+
+// kilocode_change start - pre-flight validation of the whole document and the store-write failure path
+// decodeImportMessages tests
+test("decodeImportMessages decodes a valid document", () => {
+  const decoded = decodeImportMessages([
+    { info: userMessage(1), parts: [textPart("msg_000000000001", 1)] },
+    { info: assistantMessage(2), parts: [toolPart("msg_000000000002", 2), textPart("msg_000000000002", 3)] },
+  ])
+
+  expect(decoded).toHaveLength(2)
+  expect(String(decoded[0].info.id)).toBe("msg_000000000001")
+  expect(decoded[0].info.role).toBe("user")
+  expect(decoded[0].parts).toHaveLength(1)
+  expect(decoded[1].info.role).toBe("assistant")
+  expect(decoded[1].parts).toHaveLength(2)
+  expect(decoded[1].parts[0]).toMatchObject({ type: "tool", callID: "call_2" })
+  expect(decoded[1].parts[1]).toMatchObject({ type: "text", text: "hello" })
+})
+
+test("decodeImportMessages rejects a malformed part and reports both indexes", () => {
+  expect(() => decodeImportMessages(malformedToolPartDocument())).toThrow(/Invalid part 0 of message 1/)
+  expect(() => decodeImportMessages(malformedToolPartDocument())).toThrow(/title/)
+})
+
+test("decodeImportMessages rejects a malformed message and reports its index", () => {
+  const document = [
+    { info: userMessage(1), parts: [] },
+    { info: { role: "user" }, parts: [] },
+  ]
+
+  expect(() => decodeImportMessages(document)).toThrow(/Invalid message 1/)
+})
+
+test("decodeImportMessages rejects documents without a messages array", () => {
+  expect(() => decodeImportMessages(undefined)).toThrow(/no "messages" array/)
+  expect(() => decodeImportMessages(null)).toThrow(/no "messages" array/)
+  expect(() => decodeImportMessages({})).toThrow(/no "messages" array/)
+})
+
+test("decodeImportMessages rejects a message without a parts array", () => {
+  const document = [{ info: userMessage(1), parts: [textPart("msg_000000000001", 1)] }, { info: assistantMessage(2) }]
+
+  expect(() => decodeImportMessages(document)).toThrow('Message 1 has no "parts" array')
+})
+
+test("decodeImportMessages names the offending value when a message is not an object", () => {
+  // These have no `parts` field at all, so "has no parts array" would point at the
+  // wrong reason; the message has to say what it actually got.
+  expect(() => decodeImportMessages([null])).toThrow("Message 0 is not an object (got null)")
+  expect(() => decodeImportMessages([[]])).toThrow("Message 0 is not an object (got object)")
+  expect(() => decodeImportMessages(["x"])).toThrow("Message 0 is not an object (got string)")
+  expect(() => decodeImportMessages([42])).toThrow("Message 0 is not an object (got number)")
+})
+
+// formatImportWriteError tests
+const sqlError = (cause: unknown) =>
+  new SqlError({
+    reason: new UnknownError({ cause, message: "Failed to execute statement", operation: "execute" }),
+  })
+
+test("formatImportWriteError unwraps a drizzle failure to the sqlite reason", () => {
+  const error = new EffectDrizzleQueryError({
+    query: "insert into kv_secret values (?)",
+    params: ["<redacted>"],
+    cause: Cause.fail(sqlError(new Error("FOREIGN KEY constraint failed"))),
+  })
+
+  expect(formatImportWriteError(error)).toBe("FOREIGN KEY constraint failed")
+  // The statement/params are redacted by drizzle and must never reach the user.
+  expect(formatImportWriteError(error)).not.toContain("<redacted>")
+})
+
+test("formatImportWriteError unwraps a nested drizzle wrapper", () => {
+  // The wrapper is not always the outermost value: a layer that wraps its own
+  // errors again puts the inner wrapper inside the cause, so the unwrapping has
+  // to keep recursing until it reaches the sqlite reason.
+  const error = new EffectDrizzleQueryError({
+    query: "insert into kv_secret values (?)",
+    params: ["<redacted>"],
+    cause: Cause.fail(
+      new EffectDrizzleQueryError({
+        query: "insert into kv_secret values (?)",
+        params: ["<redacted>"],
+        cause: Cause.fail(sqlError(new Error("FOREIGN KEY constraint failed"))),
+      }),
+    ),
+  })
+
+  expect(formatImportWriteError(error)).toBe("FOREIGN KEY constraint failed")
+})
+
+test("formatImportWriteError reports the reason of a bare SqlError", () => {
+  // begin/commit failures are not wrapped by drizzle.
+  expect(formatImportWriteError(sqlError(new Error("disk I/O error")))).toBe("disk I/O error")
+})
+
+test("formatImportWriteError falls back when the cause holds no failure", () => {
+  const error = new EffectDrizzleQueryError({
+    query: "select 1",
+    params: ["<redacted>"],
+    cause: Cause.die("boom"),
+  })
+
+  expect(formatImportWriteError(error)).toContain("Failed query")
+})
+
+test("formatImportWriteError falls back to the reason message then the reason tag", () => {
+  expect(formatImportWriteError(sqlError(undefined))).toBe("Failed to execute statement")
+  expect(formatImportWriteError(sqlError(null))).toBe("Failed to execute statement")
+
+  const bare = new SqlError({ reason: new UnknownError({ cause: undefined, operation: "execute" }) })
+  expect(formatImportWriteError(bare)).toBe("UnknownError")
+})
+
+test("formatImportWriteError passes through errors that are not sql failures", () => {
+  expect(formatImportWriteError(new Error("no database here"))).toBe("no database here")
+  expect(formatImportWriteError("plain string")).toBe("plain string")
+})
+
+// The unwrapping recurses through `cause` chains, so it has to terminate on a
+// cyclic one. This runs on the write-failure path, which only executes after the
+// transaction has already rolled back, so hanging here would turn a diagnosed
+// failure into a stuck command.
+test("formatImportWriteError terminates on a self-referencing cause", () => {
+  const self: Record<string, unknown> = {}
+  self["cause"] = self
+  expect(formatImportWriteError(self)).toBeDefined()
+})
+
+test("formatImportWriteError terminates on a cyclic cause chain", () => {
+  const first: Record<string, unknown> = {}
+  const second: Record<string, unknown> = { cause: first }
+  first["cause"] = second
+  expect(formatImportWriteError(first)).toBeDefined()
+  expect(formatImportWriteError(second)).toBeDefined()
+})
+
+test("formatImportWriteError terminates on a chain longer than the depth cap", () => {
+  let head: Record<string, unknown> = { cause: sqlError(new Error("FOREIGN KEY constraint failed")) }
+  for (let i = 0; i < 40; i++) head = { cause: head }
+  expect(formatImportWriteError(head)).toBeDefined()
+})
+// kilocode_change end
