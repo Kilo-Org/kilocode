@@ -5,6 +5,7 @@ describe("webSearchProviderLabel", () => {
   test("labels known providers", () => {
     expect(webSearchProviderLabel("parallel")).toBe("Parallel Web Search")
     expect(webSearchProviderLabel("exa")).toBe("Exa Web Search")
+    expect(webSearchProviderLabel("keenable")).toBe("Keenable Web Search") // kilocode_change
   })
 
   for (const [name, provider] of [

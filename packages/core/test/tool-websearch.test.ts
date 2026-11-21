@@ -36,6 +36,11 @@ describe("WebSearchTool provider selection", () => {
       "parallel",
     )
     expect(WebSearchTool.selectProvider(sessionID, { enableExa: false, enableParallel: false }, "exa")).toBe("exa")
+    // kilocode_change start
+    expect(WebSearchTool.selectProvider(sessionID, { enableExa: false, enableParallel: false }, "keenable")).toBe(
+      "keenable",
+    )
+    // kilocode_change end
   })
 
   test("prefers Parallel when both explicit flags are enabled", () => {
@@ -121,6 +126,11 @@ const websearchConfig = Layer.succeed(
     get parallelApiKey() {
       return config.parallelApiKey
     },
+    // kilocode_change start
+    get keenableApiKey() {
+      return config.keenableApiKey
+    },
+    // kilocode_change end
   }),
 )
 const it = testEffect(
@@ -241,6 +251,56 @@ describe("WebSearchTool registration", () => {
       expect(JSON.stringify(settled)).not.toContain("parallel-secret")
     }),
   )
+
+  // kilocode_change start
+  it.effect("calls Keenable keyless by default and keeps its API key out of output", () =>
+    Effect.gen(function* () {
+      requests.length = 0
+      assertions.length = 0
+      responseBody = payload("keenable results")
+      config = { provider: "keenable", enableExa: false, enableParallel: false }
+      const registry = yield* ToolRegistry.Service
+
+      const settled = yield* settleTool(registry, {
+        sessionID,
+        ...toolIdentity,
+        call: {
+          type: "tool-call",
+          id: "call-keenable",
+          name: "websearch",
+          input: { query: "effect streams", numResults: 4 },
+        },
+      })
+
+      expect(requests[0]).toMatchObject({
+        url: WebSearchTool.KEENABLE_URL,
+        headers: { "x-keenable-title": "Kilo Code" },
+        body: {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name: "search_web_pages", arguments: { query: "effect streams", max_results: 4 } },
+        },
+      })
+      expect(requests[0]?.headers).not.toHaveProperty("x-api-key")
+      expect(settled).toMatchObject({
+        result: { type: "text", value: "keenable results" },
+        output: { structured: { provider: "keenable", text: "keenable results" } },
+      })
+
+      requests.length = 0
+      config = { provider: "keenable", enableExa: false, enableParallel: false, keenableApiKey: "keenable-secret" }
+      const keyed = yield* settleTool(registry, {
+        sessionID,
+        ...toolIdentity,
+        call: { type: "tool-call", id: "call-keenable-key", name: "websearch", input: { query: "effect streams" } },
+      })
+      expect(requests[0]?.headers).toMatchObject({ "x-api-key": "keenable-secret" })
+      expect(requests[0]?.body).toMatchObject({ params: { arguments: { max_results: 8 } } })
+      expect(JSON.stringify(keyed)).not.toContain("keenable-secret")
+    }),
+  )
+  // kilocode_change end
 
   it.effect("keeps an Exa credential in the transport URL and out of model output", () =>
     Effect.gen(function* () {

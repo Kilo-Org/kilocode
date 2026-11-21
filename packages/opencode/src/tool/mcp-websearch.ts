@@ -9,6 +9,7 @@ export const exaUrl = (apiKey: string | undefined) =>
   apiKey ? `${EXA_BASE_URL}?exaApiKey=${encodeURIComponent(apiKey)}` : EXA_BASE_URL
 // kilocode_change end
 export const PARALLEL_URL = "https://search.parallel.ai/mcp"
+export const KEENABLE_URL = "https://api.keenable.ai/mcp" // kilocode_change - Keenable provider
 
 const McpResult = Schema.Struct({
   result: Schema.Struct({
@@ -51,6 +52,13 @@ export const SearchArgs = Schema.Struct({
   livecrawl: Schema.String,
   contextMaxCharacters: Schema.optional(Schema.Number),
 })
+
+// kilocode_change start - Keenable provider
+export const KeenableSearchArgs = Schema.Struct({
+  query: Schema.String,
+  max_results: Schema.Number,
+})
+// kilocode_change end
 
 export const ParallelSearchArgs = Schema.Struct({
   objective: Schema.String,

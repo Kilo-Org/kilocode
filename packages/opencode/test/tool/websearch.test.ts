@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { parseResponse } from "../../src/tool/mcp-websearch"
-import { selectWebSearchProvider, webSearchModelName, webSearchProviderLabel } from "../../src/tool/websearch"
+import { selectWebSearchProvider, webSearchModelName, webSearchProviderLabel, keenableHeaders } from "../../src/tool/websearch" // kilocode_change
 
 import { webSearchEnabled } from "../../src/tool/registry"
 import { it } from "../lib/effect"
@@ -18,6 +18,7 @@ describe("websearch provider", () => {
     // kilocode_change start - the override is resolved via Env.Service by the tool and passed in
     expect(selectWebSearchProvider(SESSION_ID, undefined, "parallel")).toBe("parallel")
     expect(selectWebSearchProvider(SESSION_ID, undefined, "exa")).toBe("exa")
+    expect(selectWebSearchProvider(SESSION_ID, undefined, "keenable")).toBe("keenable")
     expect(selectWebSearchProvider(SESSION_ID, undefined, "bogus")).toBe(selectWebSearchProvider(SESSION_ID))
     // kilocode_change end
   })
@@ -43,8 +44,17 @@ describe("websearch provider", () => {
   test("uses branded labels", () => {
     expect(webSearchProviderLabel("parallel")).toBe("Parallel Web Search")
     expect(webSearchProviderLabel("exa")).toBe("Exa Web Search")
+    expect(webSearchProviderLabel("keenable")).toBe("Keenable Web Search") // kilocode_change
     expect(webSearchProviderLabel(undefined)).toBe("Web Search")
   })
+
+  // kilocode_change start
+  test("sends Keenable keyless by default and the API key when set", () => {
+    expect(keenableHeaders(undefined)).toMatchObject({ "X-Keenable-Title": "Kilo Code" })
+    expect(keenableHeaders(undefined)).not.toHaveProperty("X-API-Key")
+    expect(keenableHeaders("kn-secret")).toMatchObject({ "X-Keenable-Title": "Kilo Code", "X-API-Key": "kn-secret" })
+  })
+  // kilocode_change end
 
   test("uses the provider API model id for Parallel analytics", () => {
     expect(
