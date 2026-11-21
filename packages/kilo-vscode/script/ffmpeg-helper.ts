@@ -1,4 +1,3 @@
-import { $ } from "bun"
 import { chmodSync, copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs"
 import { join } from "node:path"
 
@@ -32,11 +31,17 @@ export async function ensureFfmpegForTarget(target: string, bin: string): Promis
   mkdirSync(tmp, { recursive: true })
 
   try {
-    const packed = await $`npm pack ${spec} --pack-destination ${tmp}`.quiet()
-    const name = packed.text().trim().split(/\s+/).pop()
+    // Bun shell builds an unquoted command line for `.cmd` shims on Windows, so
+    // `npm` breaks when Node lives under a path with spaces (e.g. "C:\Program
+    // Files\nodejs"). Spawn with an argument array to avoid the shell entirely.
+    const packed = Bun.spawnSync(["npm", "pack", spec, "--pack-destination", tmp], { stderr: "pipe" })
+    if (packed.exitCode !== 0) throw new Error(`npm pack failed for ${spec}: ${packed.stderr.toString().trim()}`)
+    const name = packed.stdout.toString().trim().split(/\s+/).pop()
     if (!name) throw new Error(`npm pack did not return a tarball for ${spec}`)
 
-    await $`tar -xzf ${join(tmp, name)} -C ${tmp}`.quiet()
+    const tar = Bun.spawnSync(["tar", "-xzf", join(tmp, name), "-C", tmp], { stderr: "pipe" })
+    if (tar.exitCode !== 0) throw new Error(`tar failed for ${spec}: ${tar.stderr.toString().trim()}`)
+
     copyFileSync(join(tmp, "package", exe), dest)
     if (!target.startsWith("win32")) chmodSync(dest, 0o755)
     await Bun.write(marker, `${target}\n`)
