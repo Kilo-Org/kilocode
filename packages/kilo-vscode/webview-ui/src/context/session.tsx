@@ -1913,8 +1913,11 @@ export const SessionProvider: ParentComponent = (props) => {
     setSessionsProject(hasMore ? undefined : projectId)
   }
 
-  // Drops the cached transcript of a session and its bookkeeping. The session
-  // row, drafts and event suppression belong to the delete path, not here.
+  // Drops the cached transcript of a session and its bookkeeping. Todos are
+  // session state, not transcript state: a release keeps them (an idle or
+  // finished child never re-emits `todoUpdated`), and only the delete path
+  // clears them. The session row, drafts and event suppression belong to the
+  // delete path too, not here.
   function dropTranscript(sessionID: string) {
     const ids = (store.messages[sessionID] ?? []).map((m) => m.id)
     for (const id of ids) optimisticParts.delete(id)
@@ -1925,7 +1928,6 @@ export const SessionProvider: ParentComponent = (props) => {
         delete s.messages[sessionID]
         for (const id of ids) delete s.parts[id]
         delete s.toolParts[sessionID]
-        delete s.todos[sessionID]
       }),
     )
     // prettier-ignore
@@ -1936,11 +1938,14 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   // Release keeps the session: it only drops the cached transcript, so drafts
-  // survive and a listed session still receives its events. Transcript events
-  // stay dropped until the session is selected.
+  // and todos survive and a listed session still receives its events. Transcript
+  // events stay dropped until the session is selected. The session stays
+  // current, so its latched loading signal has to clear here: the reply that
+  // would have cleared it is held out by the released-session gate.
   function releaseSession(sessionID: string) {
     releasedTranscripts.add(sessionID)
     dropTranscript(sessionID)
+    if (sessionID === currentSessionID()) setLoading(false)
   }
 
   function handleSessionDeleted(sessionID: string) {
@@ -1954,6 +1959,7 @@ export const SessionProvider: ParentComponent = (props) => {
       setStore(
         produce((s) => {
           delete s.sessions[sessionID]
+          delete s.todos[sessionID]
           for (const [id, state] of Object.entries(s.modelUsage)) {
             if (id === sessionID || state.data?.sessionIDs.includes(sessionID)) delete s.modelUsage[id]
           }

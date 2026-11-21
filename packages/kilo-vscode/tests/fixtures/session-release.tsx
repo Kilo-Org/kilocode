@@ -162,12 +162,33 @@ try {
   // below fails if release clears the released session's status.
   session().selectSession("child")
   await emit({ type: "sessionStatus", sessionID: "child", status: "busy" })
+  // Todos are session state, not transcript state: only a live `todoUpdated`
+  // fills them, so an idle or finished child never restores a dropped list.
+  await emit({ type: "todoUpdated", sessionID: "child", items: [{ content: "ship the fix", status: "in_progress" }] })
+  await check("todo-seeded", () => {
+    assert.deepEqual(
+      session()
+        .todos()
+        .map((item) => item.content),
+      ["ship the fix"],
+      "the selected session should hold the todo list it was given",
+    )
+  })
 
   session().releaseSession("child")
   await settle()
 
   await check("release-drops-transcript", () => {
     assert.deepEqual(session().allMessages()["child"] ?? [], [], "cached transcript should be dropped")
+  })
+  await check("release-preserves-todos", () => {
+    assert.deepEqual(
+      session()
+        .todos()
+        .map((item) => item.content),
+      ["ship the fix"],
+      "release must keep the session's todo list",
+    )
   })
   await check("release-keeps-draft", () => {
     assert.equal(drafts.get(draftKey), "draft text", "session draft should survive release")
@@ -194,6 +215,49 @@ try {
       | undefined
     assert(load, "selecting the released session should request its transcript")
     assert.equal(load.mode, "replace", "the released marker should make the fetch a full replace")
+  })
+  // A reopened child answers with a plain snapshot: the backend only puts a
+  // `todowrite` part in the transcript when the child wrote one, so a finished
+  // child's checklist is gone unless the release kept it.
+  await emit({
+    type: "messagesLoaded",
+    sessionID: "child",
+    mode: "replace",
+    messages: [message("child-1", "child")],
+  })
+  await check("reselect-keeps-todos", () => {
+    assert.deepEqual(
+      session()
+        .todos()
+        .map((item) => item.content),
+      ["ship the fix"],
+      "a replace snapshot without a todo part must not clear the kept todo list",
+    )
+  })
+  await check("release-clears-loading", () => {
+    // The first release drops the loaded marker, so the next selection is a
+    // cold one and latches its loading state.
+    session().releaseSession("child")
+    session().selectSession("child")
+    assert.equal(session().loading(), true, "selecting a released session should latch its load")
+    const before = sent.length
+    session().releaseSession("child")
+    assert.equal(session().loading(), false, "releasing the current session must clear its latched loading state")
+    assert.equal(sent.length, before, "release must not post a request")
+  })
+  await emit({ type: "messagesLoaded", sessionID: "child", messages: [message("child-1", "child")] })
+  await check("release-holds-loading-off", () => {
+    assert.equal(session().loading(), false, "a held-out snapshot must not turn the loading state back on")
+  })
+  await check("release-select-loads-again", () => {
+    const before = sent.length
+    session().selectSession("child")
+    const load = sent.slice(before).find((item) => item.type === "loadMessages" && item.sessionID === "child") as
+      | Extract<WebviewMessage, { type: "loadMessages" }>
+      | undefined
+    assert(load, "selecting the released session should request its transcript again")
+    assert.equal(load.mode, "replace", "the second release should make the fetch a full replace again")
+    assert.equal(session().loading(), true, "selecting the released session should show loading again")
   })
 
   await emit({ type: "sessionStatus", sessionID: "child", status: "busy" })
@@ -258,6 +322,14 @@ try {
         .some((item) => item.id === "child"),
       "a re-listed session should appear again",
     )
+  })
+  // The delete path, unlike the release path, must forget the todo list: a
+  // re-listed session is a new one and must not show the deleted child's
+  // checklist.
+  session().selectSession("child")
+  await settle()
+  await check("delete-clears-todos", () => {
+    assert.deepEqual(session().todos(), [], "a deleted session must not keep its todo list")
   })
 
   await emit({ type: "questionRequest", question: { id: "q-live", sessionID: "child", questions: [] } })
