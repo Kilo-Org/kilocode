@@ -380,6 +380,7 @@ export namespace KilocodeConfig {
       }
       for (const warning of migration.warnings) {
         log.debug("kilocode mode warning", { warning })
+        warnings.push({ path: warning.path, message: warning.message })
       }
     } catch (err) {
       log.warn("failed to load kilocode modes", { error: err })

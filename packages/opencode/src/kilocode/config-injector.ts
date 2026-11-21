@@ -45,7 +45,7 @@ export namespace KilocodeConfigInjector {
     for (const skipped of modesMigration.skipped) {
       warnings.push(`Mode '${skipped.slug}' skipped: ${skipped.reason}`)
     }
-    warnings.push(...modesMigration.warnings)
+    warnings.push(...modesMigration.warnings.map((warning) => warning.message))
 
     if (Object.keys(modesMigration.agents).length > 0) {
       config.agent = modesMigration.agents

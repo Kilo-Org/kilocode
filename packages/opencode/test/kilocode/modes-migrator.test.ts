@@ -466,7 +466,10 @@ describe("ModesMigrator", () => {
         mcpAvailable: true,
       })
 
-      expect(result.warnings).toEqual(["Mode 'helper': MCP access not migrated: no MCP server was migrated"])
+      expect(result.warnings.map((warning) => warning.message)).toEqual([
+        "Mode 'helper': MCP access not migrated: no MCP server was migrated",
+      ])
+      expect(result.warnings[0].path).toBe(path.join(tmp.path, ".kilocodemodes"))
       expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
     })
 
@@ -497,7 +500,9 @@ describe("ModesMigrator", () => {
         mcpAvailable: false,
       })
 
-      expect(declared.warnings).toEqual(["Mode 'helper': MCP access not migrated: no MCP server was migrated"])
+      expect(declared.warnings.map((warning) => warning.message)).toEqual([
+        "Mode 'helper': MCP access not migrated: no MCP server was migrated",
+      ])
       expect(undeclared.warnings).toHaveLength(0)
       for (const result of [declared, undeclared]) {
         expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
@@ -525,8 +530,9 @@ describe("ModesMigrator", () => {
 
       expect(result.agents.docs.permission?.edit).toBe("ask")
       expect(result.warnings).toHaveLength(1)
-      expect(result.warnings[0]).toContain("docs")
-      expect(result.warnings[0]).toContain("ask")
+      expect(result.warnings[0].path).toBe(path.join(tmp.path, ".kilocodemodes"))
+      expect(result.warnings[0].message).toContain("docs")
+      expect(result.warnings[0].message).toContain("ask")
     })
   })
 })

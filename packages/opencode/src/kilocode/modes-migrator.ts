@@ -250,7 +250,8 @@ export namespace ModesMigrator {
   export interface MigrationResult {
     agents: Record<string, ConfigAgentV1.Info>
     skipped: Array<{ slug: string; reason: string }>
-    warnings: string[]
+    /** Each message names the file the mode came from, so a caller can report it. */
+    warnings: Array<{ path: string; message: string }>
   }
 
   export async function migrate(options: {
@@ -272,45 +273,45 @@ export namespace ModesMigrator {
       warnings: [],
     }
 
-    // Collect modes from all sources
-    const allModes: KilocodeMode[] = []
+    // Collect modes from all sources, each with the file it came from so a migration
+    // warning can name that file instead of the project directory.
+    const allModes: Array<{ mode: KilocodeMode; source: string }> = []
+    const load = async (file: string) => {
+      const modes = await readModesFile(file)
+      allModes.push(...modes.map((mode) => ({ mode, source: file })))
+    }
 
     if (!options.skipGlobalPaths) {
       // 1. VSCode extension global storage (primary location for global modes)
-      const vscodeGlobalPath = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml")
-      allModes.push(...(await readModesFile(vscodeGlobalPath)))
+      await load(path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"))
 
       // 2. CLI global settings (fallback/alternative location)
-      const cliGlobalPath = path.join(os.homedir(), ".kilocode", "cli", "global", "settings", "custom_modes.yaml")
-      allModes.push(...(await readModesFile(cliGlobalPath)))
+      await load(path.join(os.homedir(), ".kilocode", "cli", "global", "settings", "custom_modes.yaml"))
 
       // 3. Home directory .kilocodemodes
       const homeModesPath = path.join(os.homedir(), ".kilocodemodes")
-      if (homeModesPath !== options.projectDir) {
-        allModes.push(...(await readModesFile(homeModesPath)))
-      }
+      if (homeModesPath !== options.projectDir) await load(homeModesPath)
     }
 
     // 4. Legacy/explicit global settings dir (for backwards compatibility and testing)
     if (options.globalSettingsDir) {
-      const legacyPath = path.join(options.globalSettingsDir, "custom_modes.yaml")
-      allModes.push(...(await readModesFile(legacyPath)))
+      await load(path.join(options.globalSettingsDir, "custom_modes.yaml"))
     }
 
     // 5. Project .kilocodemodes
-    const projectModesPath = path.join(options.projectDir, ".kilocodemodes")
-    allModes.push(...(await readModesFile(projectModesPath)))
+    await load(path.join(options.projectDir, ".kilocodemodes"))
 
     // Deduplicate by slug (later entries win)
-    const modesBySlug = new Map<string, KilocodeMode>()
-    for (const mode of allModes) {
-      modesBySlug.set(mode.slug, mode)
+    const modesBySlug = new Map<string, { mode: KilocodeMode; source: string }>()
+    for (const entry of allModes) {
+      modesBySlug.set(entry.mode.slug, entry)
     }
 
     const mcpServers = options.mcpServers ?? []
 
     // Process each mode
-    for (const [slug, mode] of modesBySlug) {
+    for (const [slug, entry] of modesBySlug) {
+      const mode = entry.mode
       // Skip default modes - let Opencode's native agents handle these
       if (isDefaultMode(slug)) {
         result.skipped.push({
@@ -323,7 +324,9 @@ export namespace ModesMigrator {
       // Migrate custom mode
       const converted = build(mode, mcpServers, options.mcpAvailable)
       result.agents[slug] = converted.agent
-      result.warnings.push(...converted.warnings.map((warning) => `Mode '${slug}': ${warning}`))
+      result.warnings.push(
+        ...converted.warnings.map((warning) => ({ path: entry.source, message: `Mode '${slug}': ${warning}` })),
+      )
     }
 
     return result
