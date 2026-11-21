@@ -1349,7 +1349,7 @@ export class WorktreeManager {
 
   async repoUsesLfs(): Promise<boolean> {
     // Check .git/lfs/ directory
-    const gitDir = await resolveGitDir(this.root)
+    const gitDir = await resolveGitDir(this.root, this.binary)
     if (fs.existsSync(path.join(gitDir, "lfs"))) return true
 
     // Check .gitattributes
