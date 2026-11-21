@@ -754,6 +754,11 @@ export const dict = {
   "context.usage.sessionCost": "工作階段費用",
   "context.usage.olderSessions": "{{count}} 個較早的工作階段",
   "context.stats.thisSession": "此工作階段",
+  "context.limits.missing.title": "模型限制未設定",
+  "context.limits.missing.context":
+    "此模型未設定上下文視窗，因此無法顯示上下文使用百分比，自動壓縮可能無法執行。手動壓縮在大型工作階段中也可能失敗。請在提供者設定中為此模型設定 limit.context。",
+  "context.limits.missing.both":
+    "此模型未設定上下文視窗或最大輸出限制。自動壓縮可能無法執行，且無法顯示上下文使用百分比。手動壓縮在大型工作階段中也可能失敗。請在提供者設定中為此模型設定 limit.context 與 limit.output。",
 
   "time.today": "今天",
   "time.yesterday": "昨天",

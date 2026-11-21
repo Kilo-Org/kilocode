@@ -841,6 +841,11 @@ export const dict = {
   "context.usage.sessionCost": "Coût de la session",
   "context.usage.olderSessions": "{{count}} sessions précédentes",
   "context.stats.thisSession": "Cette session",
+  "context.limits.missing.title": "Limites du modèle non configurées",
+  "context.limits.missing.context":
+    "Aucune fenêtre de contexte n'est définie pour ce modèle, le pourcentage d'utilisation du contexte n'est donc pas disponible et la compaction automatique peut ne pas s'exécuter. La compaction manuelle peut également échouer sur les sessions volumineuses. Définissez limit.context pour ce modèle dans la configuration du fournisseur.",
+  "context.limits.missing.both":
+    "Aucune fenêtre de contexte ni limite de sortie maximale n'est définie pour ce modèle. La compaction automatique peut ne pas s'exécuter et le pourcentage d'utilisation du contexte n'est pas disponible. La compaction manuelle peut également échouer sur les sessions volumineuses. Définissez limit.context et limit.output pour ce modèle dans la configuration du fournisseur.",
 
   "time.today": "Aujourd'hui",
   "time.yesterday": "Hier",

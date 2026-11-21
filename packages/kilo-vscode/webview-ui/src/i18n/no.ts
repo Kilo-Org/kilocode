@@ -789,6 +789,11 @@ export const dict = {
   "context.usage.sessionCost": "Sesjonskostnad",
   "context.usage.olderSessions": "{{count}} eldre sesjoner",
   "context.stats.thisSession": "Denne sesjonen",
+  "context.limits.missing.title": "Modellgrenser er ikke konfigurert",
+  "context.limits.missing.context":
+    "Det er ikke angitt et kontekstvindu for denne modellen, så prosenten for kontekstbruk er utilgjengelig, og automatisk komprimering kjører kanskje ikke. Manuell komprimering kan også mislykkes i store økter. Angi limit.context for denne modellen i leverandørkonfigurasjonen.",
+  "context.limits.missing.both":
+    "Det er verken angitt et kontekstvindu eller en maksimal utdatagrense for denne modellen. Automatisk komprimering kjører kanskje ikke, og prosenten for kontekstbruk er utilgjengelig. Manuell komprimering kan også mislykkes i store økter. Angi limit.context og limit.output for denne modellen i leverandørkonfigurasjonen.",
 
   "time.today": "I dag",
   "time.yesterday": "I går",

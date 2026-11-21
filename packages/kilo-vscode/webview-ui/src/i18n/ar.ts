@@ -809,6 +809,11 @@ export const dict = {
   "context.usage.sessionCost": "تكلفة الجلسة",
   "context.usage.olderSessions": "{{count}} جلسات أقدم",
   "context.stats.thisSession": "هذه الجلسة",
+  "context.limits.missing.title": "حدود النموذج غير مُهيأة",
+  "context.limits.missing.context":
+    "لم يتم تعيين نافذة سياق لهذا النموذج، لذا فإن نسبة استخدام السياق غير متاحة وقد لا يعمل الضغط التلقائي. قد يفشل الضغط اليدوي أيضًا في الجلسات الكبيرة. عيّن limit.context لهذا النموذج في إعدادات المزوّد.",
+  "context.limits.missing.both":
+    "لم يتم تعيين نافذة سياق أو حد أقصى للمخرجات لهذا النموذج. قد لا يعمل الضغط التلقائي، ونسبة استخدام السياق غير متاحة. قد يفشل الضغط اليدوي أيضًا في الجلسات الكبيرة. عيّن limit.context وlimit.output لهذا النموذج في إعدادات المزوّد.",
 
   "time.today": "اليوم",
   "time.yesterday": "أمس",
