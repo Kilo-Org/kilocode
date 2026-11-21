@@ -78,4 +78,25 @@ describe("regexToGlobs", () => {
   test("a group of only empty alternatives becomes the catch-all arm", () => {
     expect(regexToGlobs("(|)")).toEqual(["*"])
   })
+
+  test("a home-relative arm is rejected because the CLI expands it", () => {
+    expect(regexToGlobs("^~/\\.ssh/")).toBeNull()
+    expect(regexToGlobs("^~/\\.ssh/id_rsa$")).toBeNull()
+    expect(regexToGlobs("^~$")).toBeNull()
+  })
+
+  test("a $HOME arm is rejected because the CLI expands it", () => {
+    expect(regexToGlobs("^\\$HOME/\\.ssh/")).toBeNull()
+  })
+
+  test("a tilde that is not at the start of the arm still translates", () => {
+    // `*~*` and `*~/.ssh*` keep the leading `*`, so the CLI leaves them alone.
+    expect(regexToGlobs("~")).toEqual(["*~*"])
+    expect(regexToGlobs("~/\\.ssh")).toEqual(["*~/.ssh*"])
+    expect(regexToGlobs("^src/~backup/")).toEqual(["src/~backup/*"])
+  })
+
+  test("a plain suffix anchor is not caught by the home guard", () => {
+    expect(regexToGlobs(".*\\.md$")).toEqual(["*.md"])
+  })
 })

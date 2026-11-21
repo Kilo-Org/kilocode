@@ -595,6 +595,22 @@ class LegacyMigrationConversionTest {
         assertEquals(listOf("*"), fileRegexToGlobs(".*"))
     }
 
+    @Test
+    fun `fileRegexToGlobs - home relative arm returns null`() {
+        assertNull(fileRegexToGlobs("^~/\\.ssh/"))
+        assertNull(fileRegexToGlobs("^~/\\.ssh/id_rsa${'$'}"))
+        assertNull(fileRegexToGlobs("^~${'$'}"))
+        assertNull(fileRegexToGlobs("^\\${'$'}HOME/\\.ssh/"))
+    }
+
+    @Test
+    fun `fileRegexToGlobs - tilde away from the start of the arm still translates`() {
+        assertEquals(listOf("*~*"), fileRegexToGlobs("~"))
+        assertEquals(listOf("*~/.ssh*"), fileRegexToGlobs("~/\\.ssh"))
+        assertEquals(listOf("src/~backup/*"), fileRegexToGlobs("^src/~backup/"))
+        assertEquals(listOf("*.md"), fileRegexToGlobs(".*\\.md${'$'}"))
+    }
+
     // -----------------------------------------------------------------------
     // custom_modes.yaml parser
     // -----------------------------------------------------------------------

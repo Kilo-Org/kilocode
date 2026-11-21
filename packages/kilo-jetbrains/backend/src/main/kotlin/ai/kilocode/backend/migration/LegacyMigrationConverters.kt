@@ -1095,6 +1095,12 @@ private val UNSUPPORTED_REGEX_CHARS = setOf('*', '+', '{', '}', '[', ']', '^', '
  * A glob arm made only of digits is also rejected. When the CLI reads the written config back,
  * JavaScript enumerates such a key as an array index ahead of `"*"`, so the trailing `"*": "deny"`
  * wins and the file the legacy mode allowed is denied.
+ *
+ * A glob arm that names a home-relative path is also rejected. `Permission.fromConfig` runs every
+ * configured pattern through its `expand()`, which rewrites `~`, `~/...` and `$HOME...` to an
+ * absolute path under the user's home directory. Such an arm would therefore allow files there,
+ * while the legacy pattern only ever matched a workspace-relative path literally beginning with
+ * that text.
  */
 internal fun fileRegexToGlobs(regex: String): List<String>? {
     if (regex.isEmpty()) return null
@@ -1126,11 +1132,26 @@ internal fun fileRegexToGlobs(regex: String): List<String>? {
         result
     }.distinct()
 
+    // `Wildcard.match` rewrites a pattern ending in `" .*"` into `"( .*)?"`, so an arm ending in
+    // ` *` also matches the text before the space. A pattern ending in a literal space (`^docs `
+    // becomes `docs *`) is expressible but is rejected here, so that group asks and the
+    // restriction is reported.
     if (arms.any { it.endsWith(" *") }) return null
+    // See the KDoc: the CLI expands such an arm to an absolute home path before matching.
+    if (arms.any { isHomeArm(it) }) return null
     // See the KDoc. Only ASCII digits form an array index, so only those arms are rejected.
     if (arms.any { arm -> arm.all { it in '0'..'9' } }) return null
     return arms
 }
+
+/**
+ * True when the CLI's `expand()` would rewrite [arm] against the user's home directory.
+ *
+ * The check is anchored at the start, so an arm that merely contains `~` later, such as
+ * `*~*`, is left alone.
+ */
+private fun isHomeArm(arm: String): Boolean =
+    arm == "~" || arm.startsWith("~/") || arm.startsWith("\$HOME")
 
 private fun isEscapedAt(text: String, index: Int): Boolean {
     var backslashes = 0

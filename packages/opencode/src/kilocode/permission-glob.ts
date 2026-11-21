@@ -14,13 +14,19 @@ const UNSUPPORTED = /[*+{}[\]^$?]/
 // before `"*"`: the catch-all deny would then win and refuse the files the mode allowed.
 const DIGITS = /^\d+$/
 
+// An arm that names a home-relative path. `Permission.fromConfig` runs every configured
+// pattern through `expand()`, which rewrites `~`, `~/...` and `$HOME...` to an absolute path
+// under the user's home directory, so such an arm would allow files there while the legacy
+// pattern only ever matched a workspace-relative path literally beginning with that text.
+const HOME = /^(?:~(?:\/|$)|\$HOME)/
+
 /**
  * Translate a legacy `fileRegex` pattern into permission wildcard globs.
  *
  * Returns null when the pattern uses a construct that the glob syntax cannot express,
- * when every alternative is empty while both anchors are present, or when an arm consists
- * only of digits, so the caller can report it instead of writing a rule the CLI resolves
- * the wrong way.
+ * when every alternative is empty while both anchors are present, when an arm consists
+ * only of digits, or when an arm names a home-relative path the CLI would expand, so the
+ * caller can report it instead of writing a rule the CLI resolves the wrong way.
  */
 export function regexToGlobs(regex: string): string[] | null {
   if (regex.length === 0) return null
@@ -61,7 +67,13 @@ export function regexToGlobs(regex: string): string[] | null {
     ),
   ]
 
+  // A pattern ending in `" .*"` is rewritten by `Wildcard.match` into `"( .*)?"`, so an arm
+  // ending in ` *` also matches the text before the space. A pattern ending in a literal
+  // space (`^docs ` becomes `docs *`) is expressible but is rejected here, so that group
+  // asks and the restriction is reported.
   if (arms.some((arm) => arm.endsWith(" *"))) return null
+  // See the HOME comment above.
+  if (arms.some((arm) => HOME.test(arm))) return null
   if (arms.some((arm) => DIGITS.test(arm))) return null
   return arms
 }
