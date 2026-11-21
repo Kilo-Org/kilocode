@@ -18,6 +18,9 @@ type Args = NetworkOptions & {
   agent?: string
   model?: string
   fork?: boolean
+  auto?: boolean
+  yolo?: boolean
+  "dangerously-skip-permissions"?: boolean
 }
 
 type Input = {
@@ -99,6 +102,7 @@ export namespace KiloTuiThreadDaemon {
         model: input.args.model,
         prompt,
         fork: input.args.fork,
+        auto: input.args.auto || input.args.yolo || input.args["dangerously-skip-permissions"],
       },
     })
     return true
