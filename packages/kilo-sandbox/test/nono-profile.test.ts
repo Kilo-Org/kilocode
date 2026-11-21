@@ -1,14 +1,15 @@
 import { describe, expect, test } from "bun:test"
-import { unlinkSync, writeFileSync } from "node:fs"
+import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { load, parse } from "../src/nono-credentials"
-import { generate, restoreEnvironment } from "../src/nono-profile"
+import { parseCredentials } from "../src/nono-credentials"
+import { generate, restoreEnvironment, writableLocation } from "../src/nono-profile"
+import { resolvePath } from "../src/path"
 import type { Profile } from "../src/profile"
 
 const paths = { data: "/tmp/kilo-data", config: "/tmp/kilo-config" }
 
-const routes = parse({
+const routes = parseCredentials({
   credentials: [
     {
       name: "github",
@@ -247,7 +248,7 @@ describe.skipIf(process.platform === "win32")("nono profile generation", () => {
 
   test("rejects two credentials that read the same variable", () => {
     expect(() =>
-      parse({
+      parseCredentials({
         credentials: [
           { name: "one", source: "env://SHARED", upstream: "https://example.com" },
           { name: "two", source: "env://SHARED", upstream: "https://example.com" },
@@ -266,7 +267,7 @@ describe.skipIf(process.platform === "win32")("nono profile generation", () => {
   })
 
   test("denies the canonical name when a route uses an alias", () => {
-    const aliased = parse({
+    const aliased = parseCredentials({
       credentials: [{ name: "github", source: "env://GH_TOKEN", upstream: "https://example.com" }],
     })
     const result = generate(profile({ mode: "proxy", allowedHosts: ["api.github.com:443"] }), {
@@ -279,27 +280,13 @@ describe.skipIf(process.platform === "win32")("nono profile generation", () => {
 })
 
 // Reading a credential file is platform independent, so these stay outside the POSIX-only suite above.
-describe("nono credential file", () => {
-  test("treats an absent file as no routes", () => {
-    expect(load(path.join(os.tmpdir(), `kilo-absent-${process.pid}-${Date.now()}.json`))).toEqual([])
-  })
-
-  test("rejects malformed JSON", () => {
-    const file = path.join(os.tmpdir(), `kilo-invalid-${process.pid}-${Date.now()}.json`)
-    writeFileSync(file, "{")
-    try {
-      expect(() => load(file)).toThrow()
-    } finally {
-      unlinkSync(file)
-    }
-  })
-
+describe("nono credential validation", () => {
   test("rejects a phantom longer than nono accepts", () => {
     const credential = (shaped: string) => ({
       credentials: [{ name: "one", source: "env://ONE", upstream: "https://example.com", phantom: shaped }],
     })
-    expect(() => parse(credential(`${"a".repeat(65)}{}`))).toThrow()
-    expect(parse(credential(`${"a".repeat(64)}{}`))).toHaveLength(1)
+    expect(() => parseCredentials(credential(`${"a".repeat(65)}{}`))).toThrow()
+    expect(parseCredentials(credential(`${"a".repeat(64)}{}`))).toHaveLength(1)
   })
 })
 
@@ -314,5 +301,77 @@ describe("restoreEnvironment", () => {
 
   test("returns nothing when the launch carries none of them", () => {
     expect(restoreEnvironment({ PATH: "/usr/bin:/bin" })).toEqual({})
+  })
+})
+
+// These fixtures use POSIX paths that do not map to Windows separators, so the suite runs only on the platforms
+// that carry the nono backend.
+describe.skipIf(process.platform === "win32")("nono profile read grants", () => {
+  test("uses the profile read set when one is provided", () => {
+    const base = profile()
+    const result = generate(
+      {
+        ...base,
+        filesystem: { ...base.filesystem, read: [{ path: "/data/shared", kind: "subtree" }] },
+      },
+      { paths },
+    )
+    expect(result.filesystem.read).toContain("/data/shared")
+    expect(result.filesystem.read).not.toContain("/workspace")
+  })
+
+  // Every spelling the config boundary accepts must lift the same built-in deny entry.
+  test.each(["~/.aws", "$HOME/.aws", path.join(os.homedir(), ".aws")])(
+    "lifts exactly the credential location an exception names (%s)",
+    (entry) => {
+      const base = profile()
+      const result = generate(
+        {
+          ...base,
+          filesystem: { ...base.filesystem, readExceptions: [entry] },
+        },
+        { paths },
+      )
+      expect(result.filesystem.deny).not.toContain("$HOME/.aws")
+      expect(result.filesystem.deny).toContain("$HOME/.ssh")
+      expect(result.filesystem.deny).toContain("/tmp/kilo-data/kilo2.db")
+    },
+  )
+
+  test("canonicalizes the exception before checking a write grant", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-nono-writable-"))
+    const real = path.join(root, "real")
+    const link = path.join(root, "link")
+    await fs.mkdir(real, { recursive: true })
+    await fs.symlink(real, link)
+    try {
+      // The grant is canonicalized (as normalization does); the exception still spells the symlink, so the
+      // guard must canonicalize the exception to see that the grant covers it.
+      const grant = resolvePath(real)
+      expect(writableLocation([{ path: grant, kind: "subtree" }], path.join(link, "secret"))).toBe(true)
+      expect(writableLocation([{ path: resolvePath(path.join(root, "other")), kind: "subtree" }], path.join(link, "secret"))).toBe(
+        false,
+      )
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("keeps a lifted exception denied when a write grant would make it writable", () => {
+    const base = profile()
+    const result = generate(
+      {
+        ...base,
+        filesystem: {
+          ...base.filesystem,
+          // A write grant covers the home directory, so lifting the ~/.aws read deny would also grant writes;
+          // nono has no write-only deny, so the entry must stay denied instead.
+          allowWrite: [...base.filesystem.allowWrite, { path: os.homedir(), kind: "subtree" }],
+          readExceptions: ["~/.aws"],
+        },
+      },
+      { paths },
+    )
+    expect(result.filesystem.deny).toContain("$HOME/.aws")
   })
 })

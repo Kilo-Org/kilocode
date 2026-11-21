@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { root as base } from "./root"
-import type { Profile } from "@kilocode/sandbox"
+import type { Credential, Profile } from "@kilocode/sandbox"
 import type { SessionID } from "@opencode/schema/session-id"
 
 export namespace SandboxStore {
@@ -12,6 +12,9 @@ export namespace SandboxStore {
     mode: Profile["network"]["mode"]
     allowedHosts: string[]
     writablePaths: string[]
+    readPaths?: string[]
+    readExceptions?: string[]
+    credentials?: Credential[]
     version: number
   }
 
@@ -29,25 +32,45 @@ export namespace SandboxStore {
     return path.join(dir(sessionID), hash(directory) + ".json")
   }
 
+  function credential(value: unknown) {
+    if (!value || typeof value !== "object") return false
+    const entry = value as Record<string, unknown>
+    return typeof entry.name === "string" && typeof entry.source === "string" && typeof entry.upstream === "string"
+  }
+
+  function strings(value: unknown) {
+    return value === undefined || (Array.isArray(value) && value.every((entry) => typeof entry === "string"))
+  }
+
+  function mode(value: unknown) {
+    return value === "allow" || value === "deny" || value === "proxy"
+  }
+
+  function version(value: unknown) {
+    return Number.isSafeInteger(value) && Number(value) >= 0
+  }
+
+  function credentials(value: unknown) {
+    return value === undefined || (Array.isArray(value) && value.every(credential))
+  }
+
   function valid(value: unknown) {
     if (!value || typeof value !== "object") return false
     const state = value as Record<string, unknown>
-    const base =
-      typeof state.enabled === "boolean" &&
-      (state.mode === "allow" || state.mode === "deny" || state.mode === "proxy") &&
-      Number.isSafeInteger(state.version) &&
-      Number(state.version) >= 0
-    if (!base) return false
-    if (state.allowedHosts !== undefined && !Array.isArray(state.allowedHosts)) return false
-    if (state.writablePaths !== undefined && !Array.isArray(state.writablePaths)) return false
-    if (Array.isArray(state.allowedHosts) && state.allowedHosts.some((value) => typeof value !== "string")) return false
-    if (Array.isArray(state.writablePaths) && state.writablePaths.some((value) => typeof value !== "string"))
+    if (typeof state.enabled !== "boolean" || !mode(state.mode) || !version(state.version)) return false
+    if (
+      !strings(state.allowedHosts) ||
+      !strings(state.writablePaths) ||
+      !strings(state.readPaths) ||
+      !strings(state.readExceptions) ||
+      !credentials(state.credentials)
+    )
       return false
-    if (state.mode === "proxy" && (!Array.isArray(state.allowedHosts) || state.allowedHosts.length === 0)) return false
-    return true
+    if (state.mode !== "proxy") return true
+    return Array.isArray(state.allowedHosts) && state.allowedHosts.length > 0
   }
 
-  export async function read(directory: string, sessionID: SessionID) {
+  export async function read(directory: string, sessionID: SessionID): Promise<Snapshot | undefined> {
     const target = file(directory, sessionID)
     const text = await fs.readFile(target, "utf8").catch((err: NodeJS.ErrnoException) => {
       if (err.code === "ENOENT") return undefined
@@ -62,6 +85,9 @@ export namespace SandboxStore {
       mode: state.mode as Snapshot["mode"],
       allowedHosts: (state.allowedHosts as string[] | undefined) ?? [],
       writablePaths: (state.writablePaths as string[] | undefined) ?? [],
+      readPaths: (state.readPaths as string[] | undefined) ?? [],
+      readExceptions: (state.readExceptions as string[] | undefined) ?? [],
+      credentials: (state.credentials as Credential[] | undefined) ?? [],
       version: state.version as number,
     } satisfies Snapshot
   }

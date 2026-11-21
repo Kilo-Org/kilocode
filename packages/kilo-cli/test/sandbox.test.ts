@@ -129,6 +129,9 @@ test(
           mode: "deny",
           allowedHosts: [],
           writablePaths: [],
+          readPaths: [],
+          readExceptions: [],
+          credentials: [],
           version: 1,
         })
 

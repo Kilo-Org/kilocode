@@ -27,10 +27,14 @@ test("session_sync is an optional boolean Kilo setting preserved by config parsi
   expect(KiloConfigPolicy.parse({}, {})?.session_sync).toBeUndefined()
   expect(Option.isNone(decode({ session_sync: "false" }))).toBe(true)
   const diagnostics: ConfigNormalize.Diagnostic[] = []
-  const parsed = KiloConfigPolicy.parse({ session_sync: "false", shell: "valid" }, { shell: "valid" }, (diagnostic) => diagnostics.push(diagnostic))
+  const parsed = KiloConfigPolicy.parse({ session_sync: "false", shell: "valid" }, { shell: "valid" }, (diagnostic) =>
+    diagnostics.push(diagnostic),
+  )
   expect(parsed?.shell).toBe("valid")
   expect(parsed?.session_sync).toBeUndefined()
-  expect(diagnostics).toEqual([{ kind: "invalid", path: ["session_sync"], message: expect.stringContaining("expected a boolean") }])
+  expect(diagnostics).toEqual([
+    { kind: "invalid", path: ["session_sync"], message: expect.stringContaining("expected a boolean") },
+  ])
 })
 
 test("remote_control is an optional boolean preserved beside canonical config", () => {
@@ -45,13 +49,20 @@ test("remote_control is an optional boolean preserved beside canonical config", 
   expect(KiloConfigPolicy.parse({}, {})?.remote_control).toBeUndefined()
 })
 
-test.each(["true", 1, null, {}])("invalid remote_control %p is reported without discarding canonical settings", (value) => {
-  const diagnostics: ConfigNormalize.Diagnostic[] = []
-  const parsed = KiloConfigPolicy.parse({ remote_control: value, shell: "valid" }, { shell: "valid" }, (diagnostic) => diagnostics.push(diagnostic))
-  expect(parsed?.shell).toBe("valid")
-  expect(parsed?.remote_control).toBeUndefined()
-  expect(diagnostics).toEqual([{ kind: "invalid", path: ["remote_control"], message: expect.stringContaining("expected a boolean") }])
-})
+test.each(["true", 1, null, {}])(
+  "invalid remote_control %p is reported without discarding canonical settings",
+  (value) => {
+    const diagnostics: ConfigNormalize.Diagnostic[] = []
+    const parsed = KiloConfigPolicy.parse({ remote_control: value, shell: "valid" }, { shell: "valid" }, (diagnostic) =>
+      diagnostics.push(diagnostic),
+    )
+    expect(parsed?.shell).toBe("valid")
+    expect(parsed?.remote_control).toBeUndefined()
+    expect(diagnostics).toEqual([
+      { kind: "invalid", path: ["remote_control"], message: expect.stringContaining("expected a boolean") },
+    ])
+  },
+)
 
 test.each(["true", null, 0])("invalid Kilo flag %p preserves canonical settings and managed policies", (value) => {
   const input = {
@@ -166,14 +177,20 @@ test("pages config merges per field, and the last document that sets a field win
   const document = (pages?: { enabled?: boolean; destination?: "pages" | "pages-dev" }) =>
     new Document({ type: "document", info: new KiloConfigPolicy.Info({ pages }) })
   expect(KiloConfigPolicy.pagesConfig([])).toEqual({})
-  expect(KiloConfigPolicy.pagesConfig([document(), document({})])).toEqual({ enabled: undefined, destination: undefined })
+  expect(KiloConfigPolicy.pagesConfig([document(), document({})])).toEqual({
+    enabled: undefined,
+    destination: undefined,
+  })
   // A nearer document that sets only the destination does not reset enabled.
   expect(KiloConfigPolicy.pagesConfig([document({ enabled: true }), document({ destination: "pages-dev" })])).toEqual({
     enabled: true,
     destination: "pages-dev",
   })
   expect(
-    KiloConfigPolicy.pagesConfig([document({ enabled: true, destination: "pages-dev" }), document({ enabled: false, destination: "pages" })]),
+    KiloConfigPolicy.pagesConfig([
+      document({ enabled: true, destination: "pages-dev" }),
+      document({ enabled: false, destination: "pages" }),
+    ]),
   ).toEqual({ enabled: false, destination: "pages" })
 })
 
@@ -242,4 +259,47 @@ test("an invalid compaction threshold is ignored with a diagnostic and keeps the
     },
   ])
   expect(KiloConfigPolicy.parse({ compaction: { threshold_percent: null } }, {})?.compaction?.buffer).toBeUndefined()
+})
+
+test("a malformed sandbox credential keeps the rest of the sandbox config", () => {
+  const input = {
+    sandbox: {
+      enabled: true,
+      network: "deny",
+      read_paths: ["/data/shared"],
+      credentials: [{ name: "broken", source: "env://BROKEN", upstream: 42 }],
+    },
+  }
+  const normalized = ConfigNormalize.normalize(input)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse(input, normalized.encoded, (diagnostic) => diagnostics.push(diagnostic))
+  expect(parsed?.sandbox).toMatchObject({ enabled: true, network: "deny", read_paths: ["/data/shared"] })
+  // The entry stays raw for the sandbox plugin, which validates each credential and reports the dropped ones.
+  expect(parsed?.sandbox?.credentials).toEqual([{ name: "broken", source: "env://BROKEN", upstream: 42 }])
+  expect(diagnostics).toEqual([])
+})
+
+test("a wrong-typed sandbox grant keeps the rest of the sandbox config", () => {
+  const input = { sandbox: { enabled: true, network: "deny", read_paths: "~/.ssh", credentials: "env://GITHUB_TOKEN" } }
+  const normalized = ConfigNormalize.normalize(input)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse(input, normalized.encoded, (diagnostic) => diagnostics.push(diagnostic))
+  expect(parsed?.sandbox).toEqual({ enabled: true, network: "deny" })
+  expect(diagnostics.map((diagnostic) => diagnostic.path.join("."))).toEqual([
+    "sandbox.read_paths",
+    "sandbox.credentials",
+  ])
+})
+
+test("a sandbox that is not an object is reported without affecting other settings", () => {
+  const input = { sandbox: "on", auto_collapse_reasoning: true }
+  const normalized = ConfigNormalize.normalize(input)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse(input, normalized.encoded, (diagnostic) => diagnostics.push(diagnostic))
+  expect(parsed?.sandbox).toBeUndefined()
+  expect(parsed?.auto_collapse_reasoning).toBe(true)
+  expect(diagnostics.map((diagnostic) => diagnostic.path.join("."))).toEqual(["sandbox"])
 })

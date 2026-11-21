@@ -4,13 +4,7 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { Effect, Redacted } from "effect"
 import { ChildProcess } from "effect/process"
-import {
-  backendSupport,
-  CurrentProxyFactory,
-  prepareCommand,
-  startProxy,
-  type ProxyFactory,
-} from "@kilocode/sandbox"
+import { backendSupport, CurrentProxyFactory, prepareCommand, startProxy, type ProxyFactory } from "@kilocode/sandbox"
 import { Session } from "@opencode/schema/session"
 import * as SandboxPolicy from "../../src/sandbox/policy"
 import { cleanup, harness, provide, tempdir, type Harness } from "./support"
@@ -19,8 +13,19 @@ afterAll(cleanup)
 
 const id = (value: string) => Session.ID.make(value)
 const filesystem = backendSupport({ mode: "deny", allowedHosts: [] }).available ? test : test.skip
+// The nono backend mediates egress itself, so this test's Kilo proxy stub cannot resolve its fake host. The
+// probe matrix in packages/kilo-sandbox/script/nono-poc.ts covers the same paths (P7, P8, P16). Match the
+// backend selection exactly: the variable alone also appears in runs where seatbelt is the real backend.
+const external = process.env.KILO_V2_DEV === "1" && process.env.KILO_SANDBOX_BACKEND === "nono"
+// nono confines reads, so this test's Bun child is refused before it can connect and a non-zero exit would pass
+// without proving network denial. P6 and P8 in the nono probe matrix cover that path instead.
+const network =
+  !external && backendSupport({ mode: "deny", allowedHosts: [] }).available ? test : test.skip
 const proxy =
-  process.platform === "darwin" && existsSync("/usr/bin/curl") && backendSupport({ mode: "proxy", allowedHosts: [] }).available
+  !external &&
+  process.platform === "darwin" &&
+  existsSync("/usr/bin/curl") &&
+  backendSupport({ mode: "proxy", allowedHosts: [] }).available
     ? test
     : test.skip
 
@@ -61,11 +66,7 @@ function command(value: Harness, args: string[], env: Record<string, string | un
 }
 
 function shell(value: Harness, sessionID: Session.ID, commandline: string) {
-  return SandboxPolicy.executeTool(
-    sessionID,
-    { id: "shell" },
-    command(value, ["/bin/sh", "-c", commandline]),
-  )
+  return SandboxPolicy.executeTool(sessionID, { id: "shell" }, command(value, ["/bin/sh", "-c", commandline]))
 }
 
 async function enabled(value: Harness, sessionID: Session.ID) {
@@ -73,38 +74,52 @@ async function enabled(value: Harness, sessionID: Session.ID) {
   return status.available
 }
 
-filesystem("confines shell writes inside the workspace and denies outside and .git", async () => {
+filesystem("confines shell writes inside the workspace and outside, and records the .git gap under nono", async () => {
   const root = await tempdir()
   const project = path.join(root, "project")
   const outside = path.join(root, "outside")
-  await Promise.all([fs.mkdir(project, { recursive: true }), fs.mkdir(outside, { recursive: true })])
+  await Promise.all([
+    fs.mkdir(project, { recursive: true }),
+    fs.mkdir(outside, { recursive: true }),
+    // The `.git` target must exist, or the write fails on a missing directory instead of the confinement rule.
+    fs.mkdir(path.join(project, ".git"), { recursive: true }),
+  ])
   const value = harness({ directory: project })
   const sessionID = id("ses_confinement_write")
   if (!(await enabled(value, sessionID))) return
 
-  const write = (file: string) => Effect.runPromise(provide(value, shell(value, sessionID, `printf confined > ${quote(file)}`)))
+  const write = (file: string) =>
+    Effect.runPromise(provide(value, shell(value, sessionID, `printf confined > ${quote(file)}`)))
   const inside = path.join(project, "inside.txt")
   const escaped = path.join(outside, "outside.txt")
   const blocked = path.join(project, ".git", "blocked.txt")
 
-  const [insideResult, escapedResult, gitResult] = await Promise.all([
-    write(inside),
-    write(escaped),
-    write(blocked),
-  ])
+  const [insideResult, escapedResult, gitResult] = await Promise.all([write(inside), write(escaped), write(blocked)])
+
+  const exists = (file: string) =>
+    fs.access(file).then(
+      () => true,
+      () => false,
+    )
 
   expect(insideResult.code).toBe(0)
   expect(escapedResult.code).not.toBe(0)
-  expect(gitResult.code).not.toBe(0)
   expect(await fs.readFile(inside, "utf8")).toBe("confined")
-  expect(await fs.access(escaped).then(() => true, () => false)).toBe(false)
-  expect(await fs.access(blocked).then(() => true, () => false)).toBe(false)
+  expect(await exists(escaped)).toBe(false)
+  if (external) {
+    // nono has no name-based deny for `.git`; packages/kilo-sandbox/script/nono-poc.ts records the same gap.
+    expect(gitResult.code).toBe(0)
+    expect(await exists(blocked)).toBe(true)
+  } else {
+    expect(gitResult.code).not.toBe(0)
+    expect(await exists(blocked)).toBe(false)
+  }
 
   await Effect.runPromise(provide(value, SandboxPolicy.toggle(sessionID)))
   expect((await write(escaped)).code).toBe(0)
 })
 
-filesystem("denies a direct connection while the network is denied", async () => {
+network("denies a direct connection while the network is denied", async () => {
   let accepted = 0
   const target = Bun.listen({
     hostname: "127.0.0.1",

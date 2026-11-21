@@ -95,6 +95,9 @@ describe("sandbox policy store", () => {
       mode: "proxy" as const,
       allowedHosts: ["api.github.com:443"],
       writablePaths: ["/tmp/output"],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
       version: 2,
     }
 
@@ -130,11 +133,99 @@ describe("sandbox policy store", () => {
     await expect(SandboxStore.read(directory, sessionID)).rejects.toThrow()
   })
 
+  test("defaults the read grants when a stored snapshot omits them", async () => {
+    const directory = await tempdir()
+    const sessionID = id("ses_store_defaults")
+    // Omit readPaths/readExceptions/credentials; JSON.stringify drops the undefined keys, so the file matches
+    // an older snapshot written before the grant fields existed.
+    await SandboxStore.write(directory, sessionID, {
+      enabled: true,
+      mode: "deny",
+      allowedHosts: [],
+      writablePaths: [],
+      version: 1,
+    })
+    expect(await SandboxStore.read(directory, sessionID)).toEqual({
+      enabled: true,
+      mode: "deny",
+      allowedHosts: [],
+      writablePaths: [],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
+      version: 1,
+    })
+  })
+
+  test("validates the stored grant and credential fields", async () => {
+    const directory = await tempdir()
+    const sessionID = id("ses_store_valid")
+    const before = new Set(await files(SandboxStore.root))
+    await SandboxStore.write(directory, sessionID, {
+      enabled: false,
+      mode: "deny",
+      allowedHosts: [],
+      writablePaths: [],
+      version: 0,
+    })
+    const stored = (await files(SandboxStore.root)).find((file) => !before.has(file))
+    if (!stored) throw new Error("stored snapshot was not written")
+
+    const base = {
+      enabled: true,
+      mode: "deny",
+      allowedHosts: [],
+      writablePaths: [],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
+      version: 1,
+    }
+    const rejected = [
+      { ...base, readPaths: ["/ok", 3] },
+      { ...base, readExceptions: [true] },
+      { ...base, credentials: [{ name: "x", source: "env://X" }] },
+      { ...base, mode: "proxy", allowedHosts: [] },
+      { ...base, version: -1 },
+    ]
+    for (const value of rejected) {
+      await fs.writeFile(stored, JSON.stringify(value))
+      await expect(SandboxStore.read(directory, sessionID)).rejects.toThrow("Invalid sandbox policy state")
+    }
+
+    await fs.writeFile(
+      stored,
+      JSON.stringify({
+        ...base,
+        mode: "proxy",
+        allowedHosts: ["api.github.com:443"],
+        readPaths: ["/data/shared"],
+        readExceptions: ["/home/user/.aws"],
+        credentials: [{ name: "github", source: "env://GITHUB_TOKEN", envVar: "GITHUB_TOKEN", upstream: "https://api.github.com" }],
+      }),
+    )
+    expect(await SandboxStore.read(directory, sessionID)).toMatchObject({
+      mode: "proxy",
+      readPaths: ["/data/shared"],
+      readExceptions: ["/home/user/.aws"],
+      credentials: [{ name: "github", envVar: "GITHUB_TOKEN" }],
+    })
+  })
+
   test("removes one session snapshot and disposes every directory snapshot", async () => {
     const first = await tempdir()
     const second = await tempdir()
     const sessionID = id("ses_store_remove")
-    const snapshot = { enabled: true, mode: "deny" as const, allowedHosts: [], writablePaths: [], version: 1 }
+    const snapshot = {
+      enabled: true,
+      mode: "deny" as const,
+      allowedHosts: [],
+      writablePaths: [],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
+      version: 1,
+    }
     await SandboxStore.write(first, sessionID, snapshot)
     await SandboxStore.write(second, sessionID, snapshot)
 

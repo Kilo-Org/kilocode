@@ -148,6 +148,58 @@ jobs:
         working-directory: packages/kilo-sandbox
         run: bun run test ./test/nono-backend.test.ts ./test/nono-profile.test.ts
 
+  # Kilo: the nono backend is macOS-only. This job stages the pinned binary, runs the real enforcement
+  # probes and then the backend suites with nono selected. It needs no secrets and consumes no credentials.
+  sandbox-nono:
+    name: sandbox nono
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.host }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Bun and install dependencies
+        uses: ./.github/actions/setup-bun
+
+      # `runner` is not an allowed job-level env context, so the paths come from `$RUNNER_TEMP` here and the
+      # later steps read them from the environment file.
+      - name: Point the sandbox state at the runner temp
+        run: |
+          echo "KILO_NONO_STATE=$RUNNER_TEMP/kilo-nono/state" >> "$GITHUB_ENV"
+          echo "KILO_NONO_HOME=$RUNNER_TEMP/kilo-nono/home" >> "$GITHUB_ENV"
+
+      - name: Stage the pinned nono
+        working-directory: packages/kilo-sandbox
+        run: bun run nono:pin --stage
+
+      - name: Run the probe matrix
+        working-directory: packages/kilo-sandbox
+        env:
+          # macOS runners have egress, so the allowlisted-host probe (P16) executes instead of being recorded.
+          KILO_NONO_POC_NETWORK: "1"
+        run: bun run poc
+
+      - name: Run the sandbox suites with nono selected
+        working-directory: packages/kilo-sandbox
+        env:
+          KILO_V2_DEV: "1"
+          KILO_SANDBOX_BACKEND: nono
+        run: bun run test ./test/nono-backend.test.ts ./test/nono-profile.test.ts ./test/nono-worker.test.ts
+
+      - name: Run the macOS confinement suite with nono selected
+        working-directory: packages/kilo-plugin
+        env:
+          KILO_V2_DEV: "1"
+          KILO_SANDBOX_BACKEND: nono
+        run: bun run test ./test/sandbox/macos-confinement.test.ts
+
   shared:
     name: shared upstream patches
     runs-on: ubuntu-24.04
@@ -562,6 +614,7 @@ jobs:
       - workflows
       - build
       - macos
+      - sandbox-nono
       - shared
       - progress
       - upstream-tooling
@@ -572,11 +625,12 @@ jobs:
     steps:
       - name: Verify the Kilo v2 jobs passed
         run: |
-          echo "workflows=${{ needs.workflows.result }} build=${{ needs.build.result }} macos=${{ needs.macos.result }} shared=${{ needs.shared.result }}"
+          echo "workflows=${{ needs.workflows.result }} build=${{ needs.build.result }} macos=${{ needs.macos.result }} sandbox-nono=${{ needs.sandbox-nono.result }} shared=${{ needs.shared.result }}"
           echo "progress=${{ needs.progress.result }} upstream-tooling=${{ needs.upstream-tooling.result }} kilo-packages=${{ needs.kilo-packages.result }}"
           test "${{ needs.workflows.result }}" = "success"
           test "${{ needs.build.result }}" = "success"
           test "${{ needs.macos.result }}" = "success"
+          test "${{ needs.sandbox-nono.result }}" = "success"
           test "${{ needs.shared.result }}" = "success"
           test "${{ needs.progress.result }}" = "success"
           test "${{ needs.upstream-tooling.result }}" = "success"

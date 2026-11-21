@@ -29,6 +29,9 @@ test("a subagent without its own state inherits the parent snapshot", async () =
     mode: "deny",
     allowedHosts: [],
     writablePaths: [],
+    readPaths: [],
+    readExceptions: [],
+    credentials: [],
     version: 0,
   })
 })
@@ -77,6 +80,9 @@ test("intersects inherited network and write authority", async () => {
     mode: "proxy",
     allowedHosts: ["api.github.com:443"],
     writablePaths: ["/shared"],
+    readPaths: [],
+    readExceptions: [],
+    credentials: [],
     version: 1,
   })
 })
@@ -102,6 +108,9 @@ test("carries confinement into another directory without a phantom parent record
     mode: "deny",
     allowedHosts: [],
     writablePaths: [],
+    readPaths: [],
+    readExceptions: [],
+    credentials: [],
     version: 0,
   })
   expect(await SandboxStore.read(worktree, parent)).toBeUndefined()
@@ -115,7 +124,16 @@ test("a nested subagent inherits a sandboxed ancestor when its parent has no sta
   const root = addSession(value, session("ses_nested_root", directory))
   const child = addSession(value, session("ses_nested_child", directory, { parentID: root.id }))
   const grandchild = addSession(value, session("ses_nested_grandchild", directory, { parentID: child.id }))
-  const confined = { enabled: true, mode: "deny" as const, allowedHosts: [], writablePaths: [], version: 1 }
+  const confined = {
+    enabled: true,
+    mode: "deny" as const,
+    allowedHosts: [],
+    writablePaths: [],
+    readPaths: [],
+    readExceptions: [],
+    credentials: [],
+    version: 1,
+  }
   await SandboxStore.write(directory, root.id, confined)
 
   await run(value, SandboxPolicy.status(grandchild.id))
@@ -139,6 +157,9 @@ test("inherits a fallback when the parent has no stored snapshot", async () => {
     mode: "deny",
     allowedHosts: [],
     writablePaths: [],
+    readPaths: [],
+    readExceptions: [],
+    credentials: [],
     version: 0,
   })
   expect(await SandboxStore.read(directory, parent)).toBeUndefined()
@@ -180,4 +201,44 @@ test("reports a family idle only when no member runs or owns a background job", 
   value.active.clear()
   value.background.add(child)
   expect(await run(value, SandboxActivation.idle(parent, family))).toBe(false)
+})
+
+test("intersects inherited reads, exceptions and credentials without widening", async () => {
+  const directory = await tempdir()
+  const value = harness({ directory })
+  const parent = id("ses_grants_parent")
+  const child = id("ses_grants_child")
+  const route = (name: string, variable: string) => ({
+    name,
+    source: `env://${variable}`,
+    envVar: variable,
+    upstream: "https://example.com",
+  })
+  await SandboxStore.write(directory, parent, {
+    enabled: true,
+    mode: "deny",
+    allowedHosts: [],
+    writablePaths: [],
+    readPaths: ["/shared", "/parent"],
+    readExceptions: ["/home/user/.aws", "/home/user/.ssh"],
+    credentials: [route("github", "GITHUB_TOKEN"), route("extra", "EXTRA_TOKEN")],
+    version: 0,
+  })
+  await SandboxStore.write(directory, child, {
+    enabled: false,
+    mode: "deny",
+    allowedHosts: [],
+    writablePaths: [],
+    readPaths: ["/shared", "/child"],
+    readExceptions: ["/home/user/.aws"],
+    credentials: [route("github", "GITHUB_TOKEN"), route("new", "NEW_TOKEN")],
+    version: 0,
+  })
+
+  await run(value, SandboxPolicy.inherit(parent, child))
+
+  const stored = await SandboxStore.read(directory, child)
+  expect(stored?.readPaths).toEqual(["/shared"])
+  expect(stored?.readExceptions).toEqual(["/home/user/.aws"])
+  expect(stored?.credentials).toEqual([route("github", "GITHUB_TOKEN")])
 })

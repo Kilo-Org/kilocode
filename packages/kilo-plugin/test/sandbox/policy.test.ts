@@ -180,12 +180,73 @@ describe("sandbox policy profile", () => {
     expect(policy.filesystem.temporaryDirectory).toBe(Global.Path.tmp)
     expect(policy.filesystem.denyWrite.map((rule) => rule.path)).toContain(path.dirname(SandboxStore.root))
     expect(policy.filesystem.denyWrite.map((rule) => rule.path)).toContain(Global.Path.config)
+    // The read set drops the config root and the state root that contains the protected sandbox root, while a
+    // configured grant that contains the deny root keeps the siblings it names. Grants inside the deny root are
+    // dropped, including one whose first segment starts with two dots.
+    const buried = path.join(SandboxStore.root, "..", "..state", "git")
+    const read =
+      SandboxPolicy.profile(context(dirs.a, dirs.a), "deny", [], [], {
+        readPaths: [dirs.approved, Global.Path.state, SandboxStore.root, buried],
+      }).filesystem.read?.map((rule) => rule.path) ?? []
+    expect(read).toContain(dirs.approved)
+    expect(read).toContain(Global.Path.state)
+    expect(read.filter((value) => value === Global.Path.state)).toHaveLength(1)
+    expect(read).not.toContain(Global.Path.config)
+    expect(read).not.toContain(SandboxStore.root)
+    expect(read).not.toContain(buried)
+    expect(
+      SandboxPolicy.profile(context(dirs.a, dirs.a), "deny", [], [], { maskedEnv: ["DROPPED_TOKEN"] }).environment
+        .deny,
+    ).toContain("DROPPED_TOKEN")
     expect(policy.environment.deny).toContain("KILO_CONFIG")
     expect(policy.environment.deny).toContain("KILO_SERVER_PASSWORD")
     expect(policy.environment.deny).toContain("OPENCODE_CONFIG")
     expect(Exit.isSuccess(dataWrite)).toBe(true)
     expect(Exit.isFailure(storeWrite)).toBe(true)
     expect(Exit.isFailure(prefWrite)).toBe(true)
+  })
+
+  test("forwards snapshot grants and masked variables into the profile", async () => {
+    const dirs = await layout()
+    const exception = path.join(os.homedir(), ".aws")
+    const state: SandboxStore.Snapshot = {
+      enabled: true,
+      mode: "deny",
+      allowedHosts: [],
+      writablePaths: [],
+      readPaths: [dirs.approved],
+      readExceptions: [exception],
+      credentials: [
+        { name: "github", source: "env://GITHUB_TOKEN", envVar: "GITHUB_TOKEN", upstream: "https://api.github.com" },
+      ],
+      version: 1,
+    }
+    const result = SandboxPolicy.profileFor(context(dirs.a, dirs.a), state, ["DROPPED_TOKEN"])
+    expect(result.filesystem.read?.map((rule) => rule.path)).toContain(dirs.approved)
+    expect(result.filesystem.readExceptions).toEqual([exception])
+    expect(result.credentials).toEqual(state.credentials)
+    expect(result.environment.deny).toContain("DROPPED_TOKEN")
+  })
+
+  test("masks configured credentials the snapshot no longer routes", () => {
+    const github = {
+      name: "github",
+      source: "env://GITHUB_TOKEN",
+      envVar: "GITHUB_TOKEN",
+      upstream: "https://api.github.com",
+    }
+    const gitlab = {
+      name: "gitlab",
+      source: "env://GITLAB_TOKEN",
+      envVar: "GITLAB_TOKEN",
+      upstream: "https://gitlab.com",
+    }
+    // A credential narrowed out of the snapshot is denied, a routed one stays available, and dropped entries
+    // keep their own masked variable.
+    expect(SandboxPolicy.maskedVariables({ credentials: [github, gitlab], maskedEnv: ["BROKEN"] }, [github])).toEqual(
+      ["GITLAB_TOKEN", "BROKEN"],
+    )
+    expect(SandboxPolicy.maskedVariables({ credentials: [github], maskedEnv: [] }, [])).toEqual(["GITHUB_TOKEN"])
   })
 
   test("uses deny-by-default and configurable network profiles", async () => {
@@ -212,10 +273,7 @@ describe("sandbox policy profile", () => {
           SandboxPolicy.profile(linked),
           assertWrite(path.join(dirs.a, "nested", ".git", "config")).pipe(Effect.exit),
         ),
-        runSandbox(
-          SandboxPolicy.profile(local),
-          assertWrite(path.join(dirs.main, ".git", "config")).pipe(Effect.exit),
-        ),
+        runSandbox(SandboxPolicy.profile(local), assertWrite(path.join(dirs.main, ".git", "config")).pipe(Effect.exit)),
       ]),
     )
 
@@ -277,6 +335,9 @@ describe("sandbox policy state", () => {
       mode: "deny",
       allowedHosts: [],
       writablePaths: [],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
       version: 0,
     })
   })
@@ -304,7 +365,42 @@ describe("sandbox policy state", () => {
       mode: "proxy",
       allowedHosts: ["api.github.com:443"],
       writablePaths: [path.join(os.homedir(), "sandbox-output")],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
       version: 0,
+    })
+  })
+
+  test("carries configured read and credential grants into the snapshot", async () => {
+    const directory = await tempdir()
+    const value = harness({
+      directory,
+      config: {
+        sandbox: {
+          enabled: true,
+          network: "deny",
+          read_paths: ["~/shared-read"],
+          read_exceptions: ["~/.aws"],
+          credentials: [{ name: "github", source: "env://GITHUB_TOKEN", upstream: "https://api.github.com" }],
+        },
+      },
+    })
+    const sessionID = id("ses_policy_grants")
+
+    await execute(value, SandboxPolicy.status(sessionID))
+
+    expect(await SandboxStore.read(directory, sessionID)).toMatchObject({
+      readPaths: [path.join(os.homedir(), "shared-read")],
+      readExceptions: [path.join(os.homedir(), ".aws")],
+      credentials: [
+        {
+          name: "github",
+          source: "env://GITHUB_TOKEN",
+          envVar: "GITHUB_TOKEN",
+          upstream: "https://api.github.com",
+        },
+      ],
     })
   })
 
@@ -427,6 +523,9 @@ describe("sandbox policy state", () => {
       mode: "deny",
       allowedHosts: [],
       writablePaths: [path.join(os.homedir(), "sandbox-refresh")],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
       version: 1,
     })
     // The published state is effective: without a backend for the denied network it reports the sandbox off.
@@ -468,6 +567,9 @@ describe("sandbox policy state", () => {
       mode: "allow",
       allowedHosts: [],
       writablePaths: ["/sandbox-enable-refresh"],
+      readPaths: [],
+      readExceptions: [],
+      credentials: [],
       version: 1,
     })
   })
