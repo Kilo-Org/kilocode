@@ -947,6 +947,7 @@ export class AgentManagerProvider implements Disposable {
     boot?: { at: number; metadata: () => Promise<Record<string, unknown>> },
     timing?: Timing,
     agent?: string,
+    title?: string,
   ): Promise<Session | null> {
     let client: KiloClient
     try {
@@ -990,6 +991,7 @@ export class AgentManagerProvider implements Disposable {
               directory: worktreePath,
               metadata,
               agent,
+              title,
               sandboxInheritanceToken: source?.sandboxInheritanceToken,
             }),
             { throwOnError: true },

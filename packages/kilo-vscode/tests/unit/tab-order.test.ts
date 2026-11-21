@@ -241,6 +241,24 @@ describe("firstOrderedTitle", () => {
   it("returns fallback for empty items", () => {
     expect(firstOrderedTitle([], ["a"], "fallback")).toBe("fallback")
   })
+
+  const placeholder = "New session - 2026-01-02T03:04:05.678Z"
+
+  it("uses the slug for placeholder titles", () => {
+    expect(firstOrderedTitle([{ id: "a", title: placeholder, slug: "calm-river" }], ["a"], "branch")).toBe("calm-river")
+  })
+
+  it("prefers a real title over the slug", () => {
+    const items = [
+      { id: "a", title: placeholder, slug: "calm-river" },
+      { id: "b", title: "Real", slug: "other" },
+    ]
+    expect(firstOrderedTitle(items, ["b", "a"], "branch")).toBe("Real")
+  })
+
+  it("falls back to the branch when a placeholder has no slug", () => {
+    expect(firstOrderedTitle([{ id: "a", title: placeholder }], ["a"], "branch")).toBe("branch")
+  })
 })
 
 describe("replaceInTabOrder", () => {

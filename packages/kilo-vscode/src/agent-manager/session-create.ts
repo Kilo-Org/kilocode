@@ -11,12 +11,14 @@ export function sessionCreateBody(input: {
   directory: string
   metadata: Record<string, unknown>
   agent?: string
+  title?: string
   sandboxInheritanceToken?: string
 }) {
   return {
     directory: input.directory,
     platform: PLATFORM,
     metadata: input.metadata,
+    ...(input.title ? { title: input.title } : {}),
     ...(input.agent ? { agent: input.agent } : {}),
     ...(input.sandboxInheritanceToken ? { sandboxInheritanceToken: input.sandboxInheritanceToken } : {}),
   }
