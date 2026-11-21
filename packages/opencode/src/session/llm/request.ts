@@ -8,6 +8,7 @@ import type { Agent } from "@/agent/agent"
 import type { MessageV2 } from "../message-v2"
 import type { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
+import { isExplicitOllamaTemperature } from "./sampling-temperature"
 import { SystemPrompt } from "../system"
 import { USER_AGENT } from "@/installation" // kilocode_change
 import { Effect, Record } from "effect"
@@ -147,9 +148,13 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
       message: input.user,
     },
     {
-      temperature: input.model.capabilities.temperature
-        ? (input.agent.temperature ?? ProviderTransform.temperature(input.model))
-        : undefined,
+      // Ollama supports explicit temperature values even when provider metadata
+      // incorrectly marks its model as not supporting sampling temperature.
+      temperature:
+        input.model.capabilities.temperature ||
+        isExplicitOllamaTemperature(input.model.providerID, input.agent.temperature)
+          ? (input.agent.temperature ?? ProviderTransform.temperature(input.model))
+          : undefined,
       topP: input.agent.topP ?? ProviderTransform.topP(input.model),
       topK: ProviderTransform.topK(input.model),
       // kilocode_change start - gpt-5 via @ai-sdk/openai-compatible proxies (e.g. LiteLLM)
