@@ -876,6 +876,227 @@ object LegacyMigrationConverters {
         return line[i] in ":-,{["
     }
 
+    /**
+     * Strip one pair of YAML quotes around [value] and decode the escapes inside double quotes.
+     *
+     * Single-quoted text is literal. Inside double quotes only `\\` and `\"` are decoded; any other
+     * backslash sequence is kept, so a regex or a path is not rewritten.
+     */
+    private fun stripYamlQuotes(value: String): String {
+        if (value.length < 2) return value
+        val quote = value.first()
+        if (value.last() != quote || (quote != '"' && quote != '\'')) return value
+        val body = value.substring(1, value.length - 1)
+        if (quote == '\'') return body
+        val out = StringBuilder(body.length)
+        var i = 0
+        while (i < body.length) {
+            val c = body[i]
+            if (c == '\\' && i + 1 < body.length) {
+                when (body[i + 1]) {
+                    '\\' -> { out.append('\\'); i += 2; continue }
+                    '"' -> { out.append('"'); i += 2; continue }
+                }
+            }
+            out.append(c)
+            i++
+        }
+        return out.toString()
+    }
+
+    /**
+     * Split the body of a YAML flow sequence or mapping at its top-level commas.
+     *
+     * A comma inside a single-quoted or double-quoted scalar, or inside `[...]` or `{...}` nesting,
+     * does not split. Returns null for an unterminated quote or a bracket or brace that does not
+     * close, so the caller treats the whole value as unread instead of taking a part of it.
+     */
+    private fun splitFlowSequence(body: String): List<String>? {
+        val items = mutableListOf<String>()
+        val open = mutableListOf<Char>()
+        var inSingleQuotes = false
+        var inDoubleQuotes = false
+        var start = 0
+        var i = 0
+        while (i < body.length) {
+            val c = body[i]
+            if (inDoubleQuotes) {
+                when (c) {
+                    '\\' -> i++ // the backslash escapes the next character
+                    '"' -> inDoubleQuotes = false
+                }
+                i++
+                continue
+            }
+            if (inSingleQuotes) {
+                if (c == '\'') inSingleQuotes = false
+                i++
+                continue
+            }
+            when (c) {
+                '\'' -> if (opensScalar(body, i)) inSingleQuotes = true
+                '"' -> if (opensScalar(body, i)) inDoubleQuotes = true
+                '[', '{' -> { open.add(c) }
+                ']' -> if (open.removeLastOrNull() != '[') return null
+                '}' -> if (open.removeLastOrNull() != '{') return null
+                ',' -> if (open.isEmpty()) {
+                    items.add(body.substring(start, i))
+                    start = i + 1
+                }
+            }
+            i++
+        }
+        if (inSingleQuotes || inDoubleQuotes || open.isNotEmpty()) return null
+        items.add(body.substring(start))
+        return items
+    }
+
+    /**
+     * Read one `{ key: value, ... }` flow mapping into its string options.
+     *
+     * Returns null when [text] is not a closed mapping, or an entry has no `key: value` shape, so
+     * the caller treats the options as unread rather than half-reading them.
+     */
+    private fun parseFlowMapping(text: String): Map<String, String>? {
+        val body = text.trim()
+        if (!body.startsWith("{") || !body.endsWith("}")) return null
+        val entries = splitFlowSequence(body.substring(1, body.length - 1)) ?: return null
+        val options = mutableMapOf<String, String>()
+        for (rawEntry in entries) {
+            val entry = rawEntry.trim()
+            if (entry.isEmpty()) continue
+            val sep = entry.indexOf(':')
+            if (sep < 0) return null
+            val key = stripYamlQuotes(entry.substring(0, sep).trim())
+            if (key.isEmpty() || key.any { it in "[]{}" }) return null
+            options[key] = stripYamlQuotes(entry.substring(sep + 1).trim())
+        }
+        return options
+    }
+
+    /** One item of a `groups:` flow sequence, in the shapes [convertCustomModePermissions] reads. */
+    private sealed interface FlowGroupItem {
+        /** A plain group name. */
+        data class Name(val name: String) : FlowGroupItem
+
+        /** A `[name, { ... }]` pair. */
+        data class Group(val pair: Pair<String, Map<String, String>>) : FlowGroupItem
+
+        /** Options with no group name of their own; they belong to the name just before them. */
+        object Options : FlowGroupItem
+
+        /** An item whose brackets, braces or quotes do not read. */
+        object Unreadable : FlowGroupItem
+    }
+
+    /**
+     * Read one item of a `groups:` flow sequence.
+     *
+     * A scalar is a group name and `[name, { ... }]` is a (name, options) pair. A bare `{ ... }`
+     * mapping, and a bare `key: value` scalar, are [FlowGroupItem.Options]: neither is a group,
+     * because each carries the options the user meant for the plain name just before it.
+     */
+    private fun parseFlowGroupItem(item: String): FlowGroupItem {
+        val text = item.trim()
+        if (text.startsWith("[")) return parseFlowPair(text)
+        if (text.startsWith("{")) {
+            return if (parseFlowMapping(text) != null) FlowGroupItem.Options else FlowGroupItem.Unreadable
+        }
+        parseFlowScalarOptions(text)?.let { return it }
+        // A scalar keeps every character but a quote pair around it. A bracket left over means the
+        // item was a list or a mapping that did not close, so it is not a name.
+        val name = stripYamlQuotes(text)
+        if (name.any { it in "[]{}" }) return FlowGroupItem.Unreadable
+        return FlowGroupItem.Name(name)
+    }
+
+    /**
+     * Index of the `:` that turns a plain scalar into a YAML mapping, or -1 for a plain name.
+     *
+     * YAML forbids `: ` inside a plain scalar, so such a colon starts a mapping entry. A colon
+     * inside quotes, or one followed by a non-space such as the `:` in `https://`, is part of the
+     * scalar. A trailing `:` is the separator of an entry with an empty value.
+     */
+    private fun flowScalarSeparator(text: String): Int {
+        var inSingleQuotes = false
+        var inDoubleQuotes = false
+        var i = 0
+        while (i < text.length) {
+            val c = text[i]
+            if (inDoubleQuotes) {
+                when (c) {
+                    '\\' -> i++ // the backslash escapes the next character
+                    '"' -> inDoubleQuotes = false
+                }
+                i++
+                continue
+            }
+            if (inSingleQuotes) {
+                if (c == '\'') inSingleQuotes = false
+                i++
+                continue
+            }
+            when (c) {
+                '\'' -> if (opensScalar(text, i)) inSingleQuotes = true
+                '"' -> if (opensScalar(text, i)) inDoubleQuotes = true
+                ':' -> if (i == text.length - 1 || text[i + 1] == ' ' || text[i + 1] == '\t') return i
+            }
+            i++
+        }
+        return -1
+    }
+
+    /**
+     * Read a plain `key: value` list item as the options-bearing item it is, or null for a name.
+     *
+     * The item is [FlowGroupItem.Options] when its key reads. An empty key, or one holding a
+     * bracket, is [FlowGroupItem.Unreadable] so the group it qualifies narrows to ask.
+     */
+    private fun parseFlowScalarOptions(text: String): FlowGroupItem? {
+        val sep = flowScalarSeparator(text)
+        if (sep < 0) return null
+        val key = stripYamlQuotes(text.substring(0, sep).trim())
+        if (key.isEmpty() || key.any { it in "[]{}" }) return FlowGroupItem.Unreadable
+        return FlowGroupItem.Options
+    }
+
+    /** Read `[name, { ... }, ...]` as a (name, options) pair, or report why it does not read. */
+    private fun parseFlowPair(text: String): FlowGroupItem {
+        if (!text.endsWith("]")) return FlowGroupItem.Unreadable
+        val parts = splitFlowSequence(text.substring(1, text.length - 1)) ?: return FlowGroupItem.Unreadable
+        val items = parts.map { it.trim() }.filter { it.isNotEmpty() }
+        val nameText = items.firstOrNull() ?: return FlowGroupItem.Unreadable
+        if (nameText.startsWith("[") || nameText.startsWith("{")) return FlowGroupItem.Unreadable
+        val name = stripYamlQuotes(nameText)
+        if (name.any { it in "[]{}" }) return FlowGroupItem.Unreadable
+        val options = mutableMapOf<String, String>()
+        for (extra in items.drop(1)) {
+            // A second scalar, or a mapping this parser cannot read, leaves the pair unread: the
+            // options the user wrote are not recoverable, so the group narrows to ask.
+            val mapping = parseFlowMapping(extra)
+                ?: return FlowGroupItem.Group(Pair(name, mapOf(UNPARSED_GROUP_OPTION to "true")))
+            options.putAll(mapping)
+        }
+        return FlowGroupItem.Group(Pair(name, options))
+    }
+
+    /**
+     * Read a flow value written after `groups:` or `- ` into the items it holds.
+     *
+     * A `[...]` sequence yields its items and a `{ ... }` mapping yields the one item it is, which
+     * the caller reads as the options of the group just before it. Returns null when the value does
+     * not read, so no part of it is taken as a group.
+     */
+    private fun splitFlowItems(text: String): List<String>? {
+        val body = text.trim()
+        if (body.startsWith("[")) {
+            if (!body.endsWith("]")) return null
+            return splitFlowSequence(body.substring(1, body.length - 1))
+        }
+        if (body.startsWith("{")) return if (parseFlowMapping(body) != null) listOf(body) else null
+        return null
+    }
+
     fun parseCustomModesYaml(text: String): List<LegacyCustomMode> {
         val modes = mutableListOf<LegacyCustomMode>()
         val lines = text.split("\n")
@@ -889,26 +1110,32 @@ object LegacyMigrationConverters {
         var pendingGroupOptions = mutableMapOf<String, String>()
         var pendingGroupUnparsed = false
 
-        fun stripYamlQuotes(value: String): String {
-            if (value.length < 2) return value
-            val quote = value.first()
-            if (value.last() != quote || (quote != '"' && quote != '\'')) return value
-            val body = value.substring(1, value.length - 1)
-            if (quote == '\'') return body
-            val out = StringBuilder(body.length)
-            var i = 0
-            while (i < body.length) {
-                val c = body[i]
-                if (c == '\\' && i + 1 < body.length) {
-                    when (body[i + 1]) {
-                        '\\' -> { out.append('\\'); i += 2; continue }
-                        '"' -> { out.append('"'); i += 2; continue }
+        /**
+         * Record the items of one `groups:` flow value.
+         *
+         * A bare `{ ... }` mapping, or an item whose brackets do not read, is never a group: it
+         * carries the options the user meant for the plain name just before it, so that name is
+         * replaced by an unread pair and the converter writes `ask`. With no such name the item is
+         * reported as written, so the converter warns about it instead of it vanishing.
+         */
+        fun addFlowGroups(items: List<String>) {
+            for (item in items) {
+                val text = item.trim()
+                if (text.isEmpty()) continue
+                when (val parsed = parseFlowGroupItem(text)) {
+                    is FlowGroupItem.Name -> groups.add(parsed.name)
+                    is FlowGroupItem.Group -> groups.add(parsed.pair)
+                    FlowGroupItem.Options, FlowGroupItem.Unreadable -> {
+                        val last = groups.lastIndex
+                        val name = groups.getOrNull(last) as? String
+                        if (name != null) {
+                            groups[last] = Pair(name, mapOf(UNPARSED_GROUP_OPTION to "true"))
+                        } else {
+                            groups.add(stripYamlQuotes(text))
+                        }
                     }
                 }
-                out.append(c)
-                i++
             }
-            return out.toString()
         }
 
         /** Close an open `- - <name>` options block into a Pair group. */
@@ -1030,13 +1257,17 @@ object LegacyMigrationConverters {
                 inGroups = true
                 groups = mutableListOf()
                 val inline = raw.removePrefix("    groups:").trim()
-                if (inline.startsWith("[") && inline.endsWith("]")) {
-                    val body = inline.substring(1, inline.length - 1)
-                    body.split(",")
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
-                        .forEach { groups.add(stripYamlQuotes(it)) }
-                    closeGroups()
+                if (inline.startsWith("[") || inline.startsWith("{")) {
+                    val items = splitFlowItems(inline)
+                    if (items != null) {
+                        addFlowGroups(items)
+                        closeGroups()
+                    } else {
+                        // A flow value that does not read is still reported as a group entry, so the
+                        // converter warns about it instead of the whole value vanishing. The block
+                        // stays open, so an indented list item below it is still read.
+                        groups.add(stripYamlQuotes(inline))
+                    }
                 }
                 continue
             }
@@ -1055,9 +1286,23 @@ object LegacyMigrationConverters {
                 addGroupOption(raw.trim())
                 continue
             }
+            if (inGroups && (raw.startsWith("      - [") || raw.startsWith("      - {"))) {
+                closeGroupOptions()
+                // The list item is one flow value: `[name, { ... }]` is the pair shape the legacy
+                // docs show, and a `{ ... }` item carries the options of the name before it.
+                addFlowGroups(listOf(raw.removePrefix("      - ").trim()))
+                continue
+            }
             if (inGroups && raw.matches(Regex("      - .*"))) {
                 closeGroupOptions()
-                groups.add(stripYamlQuotes(raw.removePrefix("      - ").trim()))
+                val entry = raw.removePrefix("      - ").trim()
+                // A `key: value` list item is a mapping, so it carries the options of the plain
+                // name just before it instead of naming a group of its own.
+                if (parseFlowScalarOptions(entry) != null) {
+                    addFlowGroups(listOf(entry))
+                } else {
+                    groups.add(stripYamlQuotes(entry))
+                }
                 continue
             }
             if (inGroups && !raw.startsWith("      ")) {

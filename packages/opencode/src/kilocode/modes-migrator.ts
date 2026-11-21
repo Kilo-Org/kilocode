@@ -21,7 +21,12 @@ export namespace ModesMigrator {
     slug: string
     name: string
     roleDefinition: string
-    groups: Array<string | [string, GroupOptions]>
+    /**
+     * A group is a name or a (name, options) pair. The YAML parser also leaves the options of a
+     * pair as a standalone mapping item, so a bare `GroupOptions` can appear in the list and
+     * carries the options of the plain name just before it.
+     */
+    groups: Array<string | GroupOptions | [string, GroupOptions]>
     customInstructions?: string
     whenToUse?: string
     description?: string
@@ -73,6 +78,15 @@ export namespace ModesMigrator {
   }
 
   type Restriction = Record<string, ConfigPermission.Action>
+
+  /**
+   * A `groups` entry the YAML parser left as a bare options mapping. `["edit", { fileRegex }]`
+   * parses as the two items `"edit"` and `{ fileRegex }`, so such a mapping is never a group of
+   * its own: it carries the options of the plain name just before it.
+   */
+  function isOptions(group: unknown): group is GroupOptions {
+    return typeof group === "object" && group != null && !Array.isArray(group)
+  }
 
   function isRestriction(rule: ConfigPermission.Rule | undefined): rule is Restriction {
     return rule != null && typeof rule === "object"
@@ -127,11 +141,19 @@ export namespace ModesMigrator {
     const warnings: string[] = []
     let seen = false
 
-    for (const group of groups) {
+    for (let index = 0; index < groups.length; index++) {
+      const group = groups[index]
+      // A bare mapping is consumed with the plain name before it, never as a group of its own.
+      if (isOptions(group)) continue
       const name = typeof group === "string" ? group : Array.isArray(group) ? group[0] : undefined
       if (typeof name !== "string") continue
-      const opts = typeof group === "string" ? undefined : Array.isArray(group) ? group[1] : undefined
-      const unknown = opts != null && Object.keys(opts).some((key) => !KNOWN_OPTIONS.test(key))
+      const next = groups[index + 1]
+      // The YAML parser writes the options of a pair as their own item, so a mapping right after
+      // a plain name is that name's options. They cannot be read as a group, and the grant must
+      // narrow to a prompt: an allow here would widen a file restriction to the whole workspace.
+      const carried = typeof group === "string" && isOptions(next) ? next : undefined
+      const opts = carried ?? (Array.isArray(group) ? group[1] : undefined)
+      const unknown = carried != null || (opts != null && Object.keys(opts).some((key) => !KNOWN_OPTIONS.test(key)))
 
       if (name === "mcp") {
         seen = true

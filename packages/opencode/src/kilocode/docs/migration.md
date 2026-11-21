@@ -71,6 +71,8 @@ There is no `mcp` permission key: an `mcp` group grants the tools of each migrat
 
 A group option outside `fileRegex` and `description` means the group was not read fully, so its permission is set to `"ask"` rather than granted.
 
+An entry that holds only options, as in the YAML shape `groups: ["edit", { fileRegex: "^docs/" }]` or `groups: [edit, fileRegex: "^docs/"]`, is not a group of its own. The migration reads it as the options of the plain group name just before it, so that group is set to `"ask"` with a warning instead of granted. An options entry with no plain group name before it grants nothing.
+
 ### File Restrictions
 
 Kilocode supports restricting edit access to specific file patterns:

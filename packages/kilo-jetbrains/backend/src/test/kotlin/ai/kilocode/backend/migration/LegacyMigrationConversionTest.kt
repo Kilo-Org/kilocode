@@ -728,6 +728,141 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
+    fun `parseCustomModesYaml - flow style groups list keeps a nested pair`() {
+        val yaml = """
+            customModes:
+              - slug: flowpair
+                name: Flow Pair
+                roleDefinition: You edit docs.
+                groups: [read, [edit, { fileRegex: "^docs/" }], browser]
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals(
+            listOf<Any>("read", Pair("edit", mapOf("fileRegex" to "^docs/")), "browser"),
+            mode.groups,
+        )
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
+        val editPerm = result.permission["edit"]?.jsonObject
+        assertNotNull(editPerm)
+        assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
+        assertEquals("allow", editPerm["docs/*"]?.jsonPrimitive?.content)
+        assertTrue(result.warnings.isEmpty())
+        assertEquals(listOf(skillNote), result.notes)
+    }
+
+    @Test
+    fun `parseCustomModesYaml - block list item pair keeps the file restriction`() {
+        val yaml = """
+            customModes:
+              - slug: blockpair
+                name: Block Pair
+                roleDefinition: You edit markdown.
+                groups:
+                  - read
+                  - [edit, { fileRegex: '\.md${'$'}' }]
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals(
+            listOf<Any>("read", Pair("edit", mapOf("fileRegex" to "\\.md$"))),
+            mode.groups,
+        )
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
+        val editPerm = result.permission["edit"]?.jsonObject
+        assertNotNull(editPerm)
+        assertEquals("deny", editPerm["*"]?.jsonPrimitive?.content)
+        assertEquals("allow", editPerm["*.md"]?.jsonPrimitive?.content)
+        assertTrue(result.warnings.isEmpty())
+    }
+
+    @Test
+    fun `parseCustomModesYaml - flow bare options mapping makes the name before it ask`() {
+        val yaml = """
+            customModes:
+              - slug: flowbare
+                name: Flow Bare
+                roleDefinition: You edit docs.
+                groups: ["edit", { fileRegex: "^docs/" }]
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals(listOf<Any>(Pair("edit", mapOf("__unparsed" to "true"))), mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
+        assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
+        assertEquals(listOf("Group options not migrated; edit set to ask"), result.warnings)
+        assertEquals(listOf(skillNote), result.notes)
+    }
+
+    @Test
+    fun `parseCustomModesYaml - block bare options mapping makes the name before it ask`() {
+        val yaml = """
+            customModes:
+              - slug: blockbare
+                name: Block Bare
+                roleDefinition: You edit markdown.
+                groups:
+                  - edit
+                  - { fileRegex: '\.md${'$'}' }
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals(listOf<Any>(Pair("edit", mapOf("__unparsed" to "true"))), mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
+        assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
+        assertEquals(listOf("Group options not migrated; edit set to ask"), result.warnings)
+    }
+
+    @Test
+    fun `parseCustomModesYaml - flow scalar mapping makes the name before it ask`() {
+        val yaml = """
+            customModes:
+              - slug: flowscalar
+                name: Flow Scalar
+                roleDefinition: You edit docs.
+                groups: [read, edit, fileRegex: "^docs/"]
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals(listOf<Any>("read", Pair("edit", mapOf("__unparsed" to "true"))), mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
+        assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
+        assertEquals(listOf("Group options not migrated; edit set to ask"), result.warnings)
+        assertEquals(listOf(skillNote), result.notes)
+    }
+
+    @Test
+    fun `parseCustomModesYaml - block scalar mapping makes the name before it ask`() {
+        val yaml = """
+            customModes:
+              - slug: blockscalar
+                name: Block Scalar
+                roleDefinition: You edit docs.
+                groups:
+                  - read
+                  - edit
+                  - fileRegex: "^docs/"
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals(listOf<Any>("read", Pair("edit", mapOf("__unparsed" to "true"))), mode.groups)
+        val result = LegacyMigrationConverters.convertCustomModePermissions(mode.groups, emptyList(), false)
+        assertEquals("ask", result.permission["edit"]?.jsonPrimitive?.content)
+        assertEquals(listOf("Group options not migrated; edit set to ask"), result.warnings)
+    }
+
+    @Test
+    fun `parseCustomModesYaml - unterminated flow groups list is reported and does not throw`() {
+        val yaml = """
+            customModes:
+              - slug: broken
+                name: Broken
+                roleDefinition: You are broken.
+                groups: [read, edit
+        """.trimIndent()
+        val parsed = runCatching { LegacyMigrationConverters.parseCustomModesYaml(yaml) }
+        assertNull(parsed.exceptionOrNull())
+        val modes = parsed.getOrThrow()
+        assertEquals(1, modes.size)
+        assertEquals("broken", modes[0].slug)
+        assertEquals(listOf<Any>("[read, edit"), modes[0].groups)
+    }
+
+    @Test
     fun `parseCustomModesYaml - trailing comment after flow style groups is dropped`() {
         val yaml = """
             customModes:

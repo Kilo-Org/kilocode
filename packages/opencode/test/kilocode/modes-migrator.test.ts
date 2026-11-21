@@ -224,6 +224,46 @@ describe("ModesMigrator", () => {
         "Repeated group; demo_* set to ask",
       ])
     })
+
+    test("asks for the edit group whose options parsed as their own item", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = ["edit", { fileRegex: "^docs/" }]
+      const converted = ModesMigrator.convertWithMessages(groups, [], false)
+
+      expect(converted.permission.edit).toBe("ask")
+      expect(converted.warnings).toEqual(["Group options not migrated; edit set to ask"])
+    })
+
+    test("asks for the read group whose options parsed as their own item", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = ["read", { fileRegex: "^docs/" }]
+      const converted = ModesMigrator.convertWithMessages(groups, [], false)
+
+      expect(converted.permission.read).toBe("ask")
+      expect(converted.warnings).toEqual(["Group options not migrated; read set to ask"])
+    })
+
+    test("asks for every server key when the mcp group options parsed as their own item", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = ["mcp", { fileRegex: "^docs/" }]
+      const converted = ModesMigrator.convertWithMessages(groups, ["demo"], true)
+
+      expect(converted.permission["demo_*"]).toBe("ask")
+      expect(converted.warnings).toEqual(["Group options not migrated; mcp set to ask"])
+    })
+
+    test("ignores a leading bare mapping with no group name before it", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = [{ fileRegex: "^docs/" }, "read"]
+      const converted = ModesMigrator.convertWithMessages(groups, [], false)
+
+      expect(converted.permission.read).toBe("allow")
+      expect(converted.warnings).toEqual([])
+    })
+
+    test("keeps the nested tuple path for a restricted edit group", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = [["edit", { fileRegex: "^docs/" }]]
+      const converted = ModesMigrator.convertWithMessages(groups, [], false)
+
+      expect(converted.permission.edit).toEqual({ "*": "deny", "docs/*": "allow" })
+      expect(converted.warnings).toEqual([])
+    })
   })
 
   describe("convertMode", () => {
