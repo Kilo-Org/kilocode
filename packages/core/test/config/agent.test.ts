@@ -9,15 +9,36 @@ import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
+import { Layer } from "effect" // kilocode_change - Layer for the real config service
+import { Location } from "@opencode-ai/core/location" // kilocode_change - bound location for the config layer
 import { PermissionV2 } from "@opencode-ai/core/permission"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { ConfigMigrateV1 } from "@opencode-ai/core/v1/config/migrate"
+import { location } from "../fixture/location" // kilocode_change - fixture location
 import { tmpdir } from "../fixture/tmpdir"
 import { testEffect } from "../lib/effect"
 import { agentHost, host } from "../plugin/host"
 
 const it = testEffect(AppNodeBuilder.build(LayerNode.group([AgentV2.node, FSUtil.node, Global.node])))
 const decode = Schema.decodeUnknownSync(Config.Info)
+
+// kilocode_change start - real Config service over a temporary project, so the loader runs on real files
+function configLayer(directory: string) {
+  const bound = Layer.succeed(
+    Location.Service,
+    Location.Service.of(
+      location(
+        { directory: AbsolutePath.make(directory) },
+        { projectDirectory: AbsolutePath.make(directory) },
+      ),
+    ),
+  )
+  return AppNodeBuilder.build(LayerNode.group([Config.node, Global.node]), [
+    [Location.node, bound],
+    [Global.node, Global.layerWith({ config: path.join(directory, "global") })],
+  ])
+}
+// kilocode_change end
 
 describe("ConfigAgentPlugin.Plugin", () => {
   it.effect("matches POSIX paths against home-relative permissions", () =>
@@ -298,6 +319,46 @@ Use native v2 fields.`,
       ),
     ),
   )
+
+  // kilocode_change start - a document with an unrelated invalid value still applies its own rules to agents
+  it.live("applies a config document rule to an agent beside an unrelated invalid value", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const file = path.join(tmp.path, "kilo.json")
+          yield* Effect.promise(() =>
+            fs.writeFile(
+              file,
+              JSON.stringify({
+                share: "sometimes",
+                agents: { reviewer: { steps: "twelve" } },
+                permissions: [{ action: "bash", resource: "git push*", effect: "deny" }],
+              }),
+            ),
+          )
+          return yield* Effect.gen(function* () {
+            const agents = yield* AgentV2.Service
+            const build = AgentV2.ID.make("build")
+            yield* agents.transform((editor) => editor.update(build, () => {}))
+
+            const config = yield* Config.Service
+            yield* ConfigAgentPlugin.Plugin.effect(host({ agent: agentHost(agents) })).pipe(
+              Effect.provideService(Config.Service, config),
+            )
+
+            const agent = yield* agents.get(build)
+            if (!agent) throw new Error("expected the built-in agent")
+            expect(PermissionV2.evaluate("bash", "git push origin main", agent.permissions).effect).toBe("deny")
+            expect(PermissionV2.evaluate("bash", "ls", agent.permissions).effect).toBe("ask")
+          }).pipe(Effect.provide(configLayer(tmp.path)))
+        }),
+      ),
+    ),
+  )
+  // kilocode_change end
 })
 
 function loadHomePermissions(home: string) {

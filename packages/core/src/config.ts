@@ -3,7 +3,7 @@ export * as Config from "./config"
 import { makeLocationNode } from "./effect/app-node"
 import path from "path"
 import { type ParseError, parse } from "jsonc-parser"
-import { Context, Effect, Layer, Option, Schema } from "effect"
+import { Context, Effect, Layer, Schema } from "effect" // kilocode_change - Option removed with the lenient decoder
 import { Permission } from "@opencode-ai/schema/permission"
 import { FSUtil } from "./fs-util"
 import { Flag } from "./flag/flag" // kilocode_change
@@ -22,6 +22,7 @@ import { ConfigMCP } from "./config/mcp"
 import { ConfigPlugin } from "./config/plugin"
 import { ConfigProvider } from "./config/provider"
 import { ConfigReference } from "./config/reference"
+import { ConfigRecover } from "./config/recover" // kilocode_change
 import { ConfigToolOutput } from "./config/tool-output"
 import { ConfigWatcher } from "./config/watcher"
 import { ConfigV1 } from "./v1/config/config"
@@ -141,9 +142,14 @@ const layer = Layer.effect(
     const location = yield* Location.Service
     const policy = yield* Policy.Service
     const names = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"] // kilocode_change
-    const decodeOptions = { errors: "all", onExcessProperty: "ignore", propertyOrder: "original" } as const
-    const decodeInfo = Schema.decodeUnknownOption(Info, decodeOptions)
-    const decodeV1Info = Schema.decodeUnknownOption(ConfigV1.Info, decodeOptions)
+
+    // kilocode_change start - decode a document value by value and report every value it skips.
+    const migrate = (input: unknown): ConfigRecover.Result<Info> => {
+      const legacy = ConfigRecover.recover(ConfigV1.Info, input)
+      if (legacy.type === "rejected") return legacy
+      const migrated = ConfigRecover.recover(Info, ConfigMigrateV1.migrate(legacy.value))
+      return { ...migrated, diagnostics: [...legacy.diagnostics, ...migrated.diagnostics] }
+    }
 
     const loadFile = Effect.fnUntraced(function* (filepath: string) {
       const text = yield* fs.readFileStringSafe(filepath)
@@ -151,16 +157,30 @@ const layer = Layer.effect(
 
       const errors: ParseError[] = []
       const input: unknown = parse(text, errors, { allowTrailingComma: true })
-      if (errors.length) return
+      if (errors.length) {
+        yield* Effect.forEach(ConfigRecover.syntax(text, errors), (diagnostic) =>
+          Effect.logWarning("skipping unparsable configuration file", {
+            source: filepath,
+            path: diagnostic.path,
+            message: diagnostic.message,
+          }),
+        )
+        return
+      }
 
-      const info = Option.getOrUndefined(
-        ConfigMigrateV1.isV1(input)
-          ? decodeV1Info(input).pipe(Option.map(ConfigMigrateV1.migrate), Option.flatMap(decodeInfo))
-          : decodeInfo(input),
+      const recovered = ConfigMigrateV1.isV1(input) ? migrate(input) : ConfigRecover.recover(Info, input)
+      yield* Effect.forEach(recovered.diagnostics, (diagnostic) =>
+        Effect.logWarning(
+          recovered.type === "rejected"
+            ? "skipping invalid configuration file"
+            : "skipping invalid configuration value",
+          { source: filepath, path: diagnostic.path, message: diagnostic.message },
+        ),
       )
-      if (!info) return
-      return new Document({ type: "document", path: filepath, info })
+      if (recovered.type === "rejected") return
+      return new Document({ type: "document", path: filepath, info: recovered.value })
     })
+    // kilocode_change end
 
     const loadDirectory = Effect.fnUntraced(function* (directory: AbsolutePath) {
       return [
