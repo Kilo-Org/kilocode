@@ -611,6 +611,21 @@ class LegacyMigrationConversionTest {
         assertEquals(listOf("*.md"), fileRegexToGlobs(".*\\.md${'$'}"))
     }
 
+    @Test
+    fun `fileRegexToGlobs - escaped non-ASCII character returns null`() {
+        assertNull(fileRegexToGlobs("a\\\u00a0b"))
+        assertNull(fileRegexToGlobs("a\\\u2007b"))
+        assertNull(fileRegexToGlobs("a\\\u202fb"))
+        assertNull(fileRegexToGlobs("a\\\u2167b"))
+        assertNull(fileRegexToGlobs("a\\\u20acb"))
+    }
+
+    @Test
+    fun `fileRegexToGlobs - escaped ASCII punctuation still translates`() {
+        assertEquals(listOf("*a-b*"), fileRegexToGlobs("a\\-b"))
+        assertEquals(listOf("*a@b*"), fileRegexToGlobs("a\\@b"))
+    }
+
     // -----------------------------------------------------------------------
     // custom_modes.yaml parser
     // -----------------------------------------------------------------------

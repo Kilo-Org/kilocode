@@ -10,6 +10,12 @@ const MAX_ARMS = 32
 // Characters the glob syntax cannot express; a plain `?` is still handled as an atom suffix.
 const UNSUPPORTED = /[*+{}[\]^$?]/
 
+// A backslash may escape only an ASCII punctuation character that the glob carries literally.
+// Backslash, `*` and `?` are excluded because the glob syntax has no literal form for them.
+// The set is written out because a Unicode-aware predicate cannot be mirrored exactly between
+// JavaScript and Java; a fixed ASCII set keeps this translator identical to the Kotlin one.
+const ESCAPABLE = new Set("!\"#$%&'()+,-./:;<=>@[]^_`{|}~")
+
 // An arm made only of digits becomes an integer-like JSON key, which JavaScript enumerates
 // before `"*"`: the catch-all deny would then win and refuse the files the mode allowed.
 const DIGITS = /^\d+$/
@@ -113,7 +119,7 @@ function sequence(text: string, start: number, inGroup: boolean): [string[], num
     if (c === "\\") {
       const next = text[i + 1]
       if (next == null) return null
-      if (/[\p{L}\p{N}\s\\]/u.test(next) || next === "*" || next === "?") return null
+      if (!ESCAPABLE.has(next)) return null
       atom = [next]
       i += 2
     } else if (c === ".") {

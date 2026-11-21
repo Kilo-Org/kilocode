@@ -99,4 +99,17 @@ describe("regexToGlobs", () => {
   test("a plain suffix anchor is not caught by the home guard", () => {
     expect(regexToGlobs(".*\\.md$")).toEqual(["*.md"])
   })
+
+  test("an escaped non-ASCII character is rejected", () => {
+    expect(regexToGlobs("a\\\u00a0b")).toBeNull()
+    expect(regexToGlobs("a\\\u2007b")).toBeNull()
+    expect(regexToGlobs("a\\\u202fb")).toBeNull()
+    expect(regexToGlobs("a\\\u2167b")).toBeNull()
+    expect(regexToGlobs("a\\\u20acb")).toBeNull()
+  })
+
+  test("an escaped ASCII punctuation character still translates", () => {
+    expect(regexToGlobs("a\\-b")).toEqual(["*a-b*"])
+    expect(regexToGlobs("a\\@b")).toEqual(["*a@b*"])
+  })
 })

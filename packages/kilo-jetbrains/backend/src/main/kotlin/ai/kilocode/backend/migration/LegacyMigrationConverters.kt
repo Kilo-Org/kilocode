@@ -1085,6 +1085,12 @@ private const val MAX_GLOB_ARMS = 32
 
 private val UNSUPPORTED_REGEX_CHARS = setOf('*', '+', '{', '}', '[', ']', '^', '$', '?')
 
+// A backslash may escape only an ASCII punctuation character that the glob carries literally.
+// Backslash, `*` and `?` are excluded because the glob syntax has no literal form for them.
+// The set is written out because a Unicode-aware predicate cannot be mirrored exactly between
+// JavaScript and Java; a fixed ASCII set keeps this translator identical to the TypeScript one.
+private val ESCAPABLE: Set<Char> = "!\"#\$%&'()+,-./:;<=>@[]^_`{|}~".toSet()
+
 /**
  * Translate a legacy `fileRegex` pattern into permission wildcard globs.
  *
@@ -1189,8 +1195,7 @@ private fun parseGlobSequence(text: String, start: Int, inGroup: Boolean): Pair<
             '\\' -> {
                 if (i + 1 >= text.length) return null
                 val escaped = text[i + 1]
-                if (escaped.isLetterOrDigit() || escaped.isWhitespace() || escaped == '\\') return null
-                if (escaped == '*' || escaped == '?') return null
+                if (escaped !in ESCAPABLE) return null
                 atom = listOf(escaped.toString())
                 i += 2
             }
