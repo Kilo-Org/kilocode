@@ -2485,6 +2485,7 @@ const AgentManagerContent: Component = () => {
                         cancelAmbientSetup()
                         termHandlers.addSide()
                       }}
+                      onClosePanel={sideCtl.closePanel}
                       onStop={(id) => {
                         cancelAmbientSetup()
                         termHandlers.stopSide(id)

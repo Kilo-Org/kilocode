@@ -41,6 +41,8 @@ interface Props {
   onCloseOthers: (terminalId: string) => void
   /** Create a new side terminal for this context. */
   onStart: () => void
+  /** Dismiss the panel without killing its terminals. */
+  onClosePanel: () => void
   nextKeybind: string
   closeKeybind: string
   /** Deliberately stop a running script terminal. */
@@ -126,6 +128,18 @@ export const SideTerminalPanel: Component<Props> = (props) => {
                 onClick={() => {
                   api.release()
                   props.onStart()
+                }}
+              />
+            </Tooltip>
+            <Tooltip value={t("common.close")} placement="bottom" class="am-side-terminal-close">
+              <IconButton
+                icon="close"
+                size="small"
+                variant="ghost"
+                aria-label={t("common.close")}
+                onClick={() => {
+                  api.release()
+                  props.onClosePanel()
                 }}
               />
             </Tooltip>

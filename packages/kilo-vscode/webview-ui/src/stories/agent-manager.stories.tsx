@@ -1595,6 +1595,7 @@ export const SideTerminalPanelEmpty: Story = {
                   onClose={() => undefined}
                   onCloseOthers={() => undefined}
                   onStart={() => undefined}
+                  onClosePanel={() => undefined}
                   onStop={() => undefined}
                 />
               </div>
@@ -1640,6 +1641,7 @@ export const SideTerminalPanelTabs: Story = {
                   onClose={() => undefined}
                   onCloseOthers={() => undefined}
                   onStart={() => undefined}
+                  onClosePanel={() => undefined}
                   onStop={() => undefined}
                 />
               </div>
