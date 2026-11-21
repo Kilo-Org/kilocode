@@ -186,6 +186,15 @@ try {
     assert.equal(session().currentSessionID(), "child", "release should not change the current session")
     assert.equal(session().status(), "busy", "release should keep the released session's status")
   })
+  await check("release-refetches-on-select", () => {
+    const before = sent.length
+    session().selectSession("child")
+    const load = sent.slice(before).find((item) => item.type === "loadMessages" && item.sessionID === "child") as
+      | Extract<WebviewMessage, { type: "loadMessages" }>
+      | undefined
+    assert(load, "selecting the released session should request its transcript")
+    assert.equal(load.mode, "replace", "the released marker should make the fetch a full replace")
+  })
 
   await emit({ type: "sessionStatus", sessionID: "child", status: "busy" })
   await check("release-keeps-events-status", () => {
@@ -260,13 +269,15 @@ try {
   await settle()
 
   await check("reply-attribution", () => {
-    session().replyToQuestion("q-live", [["a"]])
+    const posted = session().replyToQuestion("q-live", [["a"]])
+    assert.equal(posted, true, "a live question should report that the reply was posted")
     const reply = lastOf("questionReply")
     assert.equal(reply?.requestID, "q-live", "reply should be posted for the live question")
     assert.equal(reply?.sessionID, "child", "reply should carry the request's own session")
   })
   await check("reject-attribution", () => {
-    session().rejectQuestion("q-live")
+    const posted = session().rejectQuestion("q-live")
+    assert.equal(posted, true, "a live question should report that the reject was posted")
     const reject = lastOf("questionReject")
     assert.equal(reject?.requestID, "q-live", "reject should be posted for the live question")
     assert.equal(reject?.sessionID, "child", "reject should carry the request's own session")
@@ -288,8 +299,10 @@ try {
   await emit({ type: "questionResolved", requestID: "q-live" })
   await check("stale-question-posts-nothing", () => {
     const before = sent.length
-    session().replyToQuestion("q-live", [["a"]])
-    session().rejectQuestion("q-live")
+    const replied = session().replyToQuestion("q-live", [["a"]])
+    const rejected = session().rejectQuestion("q-live")
+    assert.equal(replied, false, "a resolved question should report that nothing was posted")
+    assert.equal(rejected, false, "a resolved question should report that nothing was rejected")
     assert.equal(sent.length, before, "a resolved question must not post a reply or reject")
   })
   await emit({ type: "suggestionResolved", requestID: "s-live" })
