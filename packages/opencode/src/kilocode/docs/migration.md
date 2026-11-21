@@ -106,10 +106,10 @@ The `fileRegex` is translated into permission wildcard globs, with the catch-all
 
 | Channel | What it carries |
 |---|---|
-| Migration warning | A condition the user has to resolve: an `mcp` group that granted nothing, a group option that was not read, a file restriction that could not be translated, a group that the mode lists more than once |
+| Migration warning | A condition the user has to resolve: an `mcp` group that granted nothing, a group option that was not read, a file restriction that could not be translated, a repeated group that resolves to a different rule |
 | Migration note | An expected outcome worth explaining: the denied `skill` grant of a converted mode |
 
-When one mode lists the same group more than once, the migration keeps the narrower rule: `ask` over a file restriction over a plain grant. Two different file restrictions for the same group cannot be combined, so that group asks. The repeat is reported as a migration warning that names the permission key.
+When one mode lists the same group more than once, the migration keeps the narrower rule: `ask` over a file restriction over a plain grant. Two different file restrictions for the same group are not combined, so that group asks. A repeat that resolves to a different rule is reported as a migration warning that names the permission key; a repeat of the same rule produces no message.
 
 ## Default Modes
 
