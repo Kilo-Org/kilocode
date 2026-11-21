@@ -101,7 +101,9 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const reply = (answers: string[][]) => {
     if (store.sending) return
     setStore("sending", true)
-    session.replyToQuestion(props.request.id, answers)
+    // Nothing is posted for a request that already left the pending list; drop
+    // the sending state so a held card stays usable instead of staying latched.
+    if (!session.replyToQuestion(props.request.id, answers)) setStore("sending", false)
     focusPrompt()
     // prevAgent is intentionally left set until either questionError (rollback)
     // or the question is dismissed (success — the question unmounts, so no cleanup needed)
@@ -114,7 +116,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       prevAgent = undefined
     }
     setStore("sending", true)
-    session.rejectQuestion(props.request.id)
+    if (!session.rejectQuestion(props.request.id)) setStore("sending", false)
     focusPrompt()
   }
 
