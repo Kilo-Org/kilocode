@@ -158,7 +158,8 @@ export const ReviewDiffItem: Component<Props> = (props) => {
                   />
                 </Tooltip>
               </Show>
-              <Show when={isMarkdownFile(props.diff.file) && props.onMarkdownRenderChange}>
+              {/* Rendered Markdown uses content-relative lines, not original excerpt coordinates. */}
+              <Show when={!props.diff.excerpt && isMarkdownFile(props.diff.file) && props.onMarkdownRenderChange}>
                 <Tooltip value={props.markdownRender() ? "Show raw Markdown" : "Render Markdown"} placement="top">
                   <IconButton
                     icon={props.markdownRender() ? "code" : "eye"}
@@ -215,7 +216,7 @@ export const ReviewDiffItem: Component<Props> = (props) => {
               when={props.diff.kind === "image"}
               fallback={
                 <Show
-                  when={props.markdownRender() && isMarkdownFile(props.diff.file)}
+                  when={props.markdownRender() && !props.diff.excerpt && isMarkdownFile(props.diff.file)}
                   fallback={
                     <Diff<DiffAnnotationMeta>
                       before={{ name: props.diff.file, contents: props.diff.before }}

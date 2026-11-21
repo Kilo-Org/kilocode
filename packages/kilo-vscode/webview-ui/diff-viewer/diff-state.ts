@@ -22,6 +22,7 @@ export function sameDiffMeta(left: WorktreeFileDiff, right: WorktreeFileDiff) {
     left.tracked === right.tracked &&
     left.generatedLike === right.generatedLike &&
     left.summarized === right.summarized &&
+    left.excerpt === right.excerpt &&
     left.stamp === right.stamp &&
     left.kind === right.kind
   )
