@@ -50,6 +50,7 @@ import { McpCatalog } from "./catalog"
 import { McpEvent } from "@opencode-ai/schema/mcp-event"
 import { McpBrowser } from "./browser"
 import { authFailure } from "@/kilocode/mcp/auth-failure" // kilocode_change
+import * as KiloAdvertisedOAuth from "@/kilocode/mcp/advertised-oauth" // kilocode_change
 import * as KiloAuthTelemetry from "@/kilocode/mcp/auth-telemetry" // kilocode_change
 
 const DEFAULT_TIMEOUT = 30_000
@@ -189,6 +190,8 @@ interface AuthResult {
   // kilocode_change start - identifies the flow that opened the browser
   provider?: McpOAuthPendingProvider
   transport?: TransportWithAuth
+  /** Set when the server advertises OAuth but needs a pre-registered client ID. */
+  registration?: string
   // kilocode_change end
 }
 
@@ -993,6 +996,19 @@ const layer = Layer.effect(
         try: () => {
           const client = createClient(directory)
           return client.connect(transport).then(async () => {
+            // kilocode_change start - a server that accepted the anonymous connection may still
+            // advertise OAuth (Kilo-Org/kilocode#15492); an explicit auth request must run it
+            const advertised = await KiloAdvertisedOAuth.start(authProvider, url)
+            if (advertised.type === "redirect" || advertised.type === "registration") {
+              await client.close().catch(() => undefined)
+            }
+            if (advertised.type === "redirect") {
+              throw new UnauthorizedError("Server advertises OAuth; authorization required")
+            }
+            if (advertised.type === "registration") {
+              return { authorizationUrl: "", oauthState, registration: advertised.error } satisfies AuthResult
+            }
+            // kilocode_change end
             await authProvider.commit()
             return { authorizationUrl: "", oauthState, client } satisfies AuthResult
           })
@@ -1021,6 +1037,11 @@ const layer = Layer.effect(
     ) {
       const result: AuthResult = yield* startAuth(mcpName, { callback: false }) // kilocode_change
       yield* KiloAuthTelemetry.redirect(!!result.authorizationUrl) // kilocode_change
+      // kilocode_change start - surface the advertised-OAuth registration failure like connect does
+      if (result.registration) {
+        return { status: "needs_client_registration", error: result.registration } satisfies Status
+      }
+      // kilocode_change end
       if (!result.authorizationUrl) {
         const client = "client" in result ? result.client : undefined
         const mcpConfig = yield* requireMcpConfig(mcpName).pipe(
