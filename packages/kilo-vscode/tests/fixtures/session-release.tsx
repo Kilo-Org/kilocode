@@ -411,6 +411,16 @@ try {
   session().releaseSession("other")
   await settle()
   await emit({ type: "messagesLoaded", sessionID: "other", messages: [message("other-3", "other")] })
+  await check("release-holds-unrequested-snapshot", () => {
+    assert.deepEqual(
+      session().allMessages()["other"] ?? [],
+      [],
+      "a snapshot for a released session must wait until the session is selected",
+    )
+  })
+  session().selectSession("other")
+  await settle()
+  await emit({ type: "messagesLoaded", sessionID: "other", messages: [message("other-3", "other")] })
   const afterLoad = message("other-4", "other")
   await emit({
     type: "messageCreated",
@@ -418,7 +428,7 @@ try {
   })
   await check("transcript-load-restores-transcript-events", () => {
     const ids = (session().allMessages()["other"] ?? []).map((item) => item.id)
-    assert(ids.includes("other-3"), "a transcript load must populate a released session")
+    assert(ids.includes("other-3"), "a transcript load must populate a selected session")
     assert(ids.includes("other-4"), "a transcript load must accept later transcript events again")
   })
 } finally {

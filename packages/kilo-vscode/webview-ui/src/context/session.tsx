@@ -177,6 +177,9 @@ export const SessionProvider: ParentComponent = (props) => {
   // a child that keeps running cannot refill the cache that release dropped.
   // Status, permission, question and suggestion events still arrive.
   const releasedTranscripts = new Set<string>()
+  // Transcript arrival for a released session stays out of the store until the
+  // session is selected: a running child keeps streaming after its panel closes.
+  const transcriptDropped = (sessionID: string | undefined) => sessionID != null && releasedTranscripts.has(sessionID)
   const terminalPermissions = new Map<string, undefined>()
   const aborts = createAbortState()
 
@@ -1240,7 +1243,11 @@ export const SessionProvider: ParentComponent = (props) => {
   ) {
     const mode = input.mode ?? "replace"
     const reset = mode === "prepend"
-    releasedTranscripts.delete(sessionID)
+    // A released session's rows come back only when the user asks for it: a
+    // selection clears the marker before it posts its fetch, so a snapshot that
+    // arrives on its own, such as the host re-syncing a still-running child,
+    // cannot rebuild the transcript behind a closed panel.
+    if (transcriptDropped(sessionID)) return
 
     if (submissionMap[sessionID]) {
       for (const message of messages) {
@@ -1377,12 +1384,6 @@ export const SessionProvider: ParentComponent = (props) => {
     })
     if (reset) requestAnimationFrame(() => patchPage(sessionID, { lastMutation: undefined }))
   }
-
-  // Transcript events for a released session stay out of the store until the
-  // session is selected or its transcript load arrives. A running child keeps
-  // streaming after its panel closes, and rebuilding the dropped cache from
-  // those events would restore a partial transcript before the refetch.
-  const transcriptDropped = (sessionID: string | undefined) => sessionID != null && releasedTranscripts.has(sessionID)
 
   function handleMessageCreated(message: Message) {
     if (transcriptDropped(message.sessionID)) return
