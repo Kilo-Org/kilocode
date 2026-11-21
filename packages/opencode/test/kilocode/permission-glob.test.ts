@@ -112,4 +112,10 @@ describe("regexToGlobs", () => {
     expect(regexToGlobs("a\\-b")).toEqual(["*a-b*"])
     expect(regexToGlobs("a\\@b")).toEqual(["*a@b*"])
   })
+
+  test("an escape the glob cannot carry literally is rejected", () => {
+    expect(regexToGlobs("^foo\\*\\.txt$")).toBeNull()
+    expect(regexToGlobs("^foo\\?\\.txt$")).toBeNull()
+    expect(regexToGlobs("^foo\\\\bar$")).toBeNull()
+  })
 })

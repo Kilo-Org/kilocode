@@ -626,6 +626,13 @@ class LegacyMigrationConversionTest {
         assertEquals(listOf("*a@b*"), fileRegexToGlobs("a\\@b"))
     }
 
+    @Test
+    fun `fileRegexToGlobs - escape the glob cannot carry literally returns null`() {
+        assertNull(fileRegexToGlobs("^foo\\*\\.txt${'$'}"))
+        assertNull(fileRegexToGlobs("^foo\\?\\.txt${'$'}"))
+        assertNull(fileRegexToGlobs("^foo\\\\bar${'$'}"))
+    }
+
     // -----------------------------------------------------------------------
     // custom_modes.yaml parser
     // -----------------------------------------------------------------------
