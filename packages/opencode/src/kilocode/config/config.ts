@@ -559,12 +559,21 @@ export namespace KilocodeConfig {
 
   // ── Config merge utilities ───────────────────────────────────────────
 
-  /** Recursively remove null values and drop objects left empty after removal. */
+  function plain(value: object) {
+    const proto = Object.getPrototypeOf(value)
+    return proto === Object.prototype || proto === null
+  }
+
+  /**
+   * Recursively remove null values and drop objects left empty after removal.
+   * Only plain objects are rebuilt: schema class instances (e.g. object-form `reference` entries) are kept
+   * as-is, since copying them into plain objects makes them fail encoding in the config overlay response.
+   */
   export function stripNulls(obj: Record<string, unknown>): Record<string, unknown> {
     const result: Record<string, unknown> = {}
     for (const [key, value] of Object.entries(obj)) {
       if (value === null) continue
-      if (isRecord(value)) {
+      if (isRecord(value) && plain(value)) {
         const stripped = stripNulls(value)
         if (Object.keys(stripped).length > 0) result[key] = stripped
       } else {
