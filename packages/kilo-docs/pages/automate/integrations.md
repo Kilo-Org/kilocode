@@ -20,7 +20,7 @@ Kilo Integrations lets you connect GitHub or GitLab for repository workflows and
 - **Connect GitHub, GitLab, or DoltHub to Kilo Code** in a few clicks
 - **Enable advanced features** like Cloud Agents, Code Reviews, and Kilo Deploy
 - **Authorize GitHub or GitLab repository access** so Kilo can analyze and work with your code
-- **Query Dolt-versioned data** and authorize DoltHub access for Gas Town Wasteland
+- **Query Dolt-versioned data** and authorize DoltHub access
 
 ## Prerequisites
 
@@ -114,7 +114,7 @@ For self-hosted GitLab instances using OAuth, you need to register an OAuth appl
 
 ## Connecting DoltHub
 
-Use the DoltHub integration page to connect your DoltHub account. Kilo uses this OAuth connection for [Kilo Connect](/docs/code-with-ai/platforms/kilo-connect) and as the default auth method for [Gas Town Wasteland](/docs/code-with-ai/gastown/wasteland).
+Use the DoltHub integration page to connect your DoltHub account. Kilo uses this OAuth connection for [Kilo Connect](/docs/code-with-ai/platforms/kilo-connect).
 
 1. Go to the **Integrations** page:
    - **Personal**: [app.kilo.ai/integrations/dolthub](https://app.kilo.ai/integrations/dolthub)
@@ -159,7 +159,6 @@ Once your integrations are connected, the following features are enabled in Kilo
 
 - Query Dolt-versioned databases from your workspace
 - Use DoltHub alongside GitHub or GitLab when a workflow also needs repository access
-- Authorize Gas Town Wasteland to fork commons databases, push claims and evidence, and manage DoltHub PRs. Wasteland also supports an advanced API token option when OAuth is not available.
 
 ### Bitbucket
 
