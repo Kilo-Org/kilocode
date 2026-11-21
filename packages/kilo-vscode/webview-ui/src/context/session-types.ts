@@ -237,8 +237,10 @@ export interface SessionContextValue {
   consumeScrollBottom: (id: string) => boolean
   /**
    * Drops the cached transcript of a session (messages, their parts, tool parts,
-   * todos, paging entry and loaded marker) while keeping the session row, its
-   * drafts and its status. Unlike `deleteSession` it is not permanent: reopening
+   * paging entry and loaded marker) while keeping the session row, its todos,
+   * its drafts and its status. Todos are session state, not transcript state: an
+   * idle or finished child never re-emits them, so reopening the session shows
+   * the checklist it had. Unlike `deleteSession` it is not permanent: reopening
    * refetches the transcript, and the session keeps its prompt and status events.
    * Transcript events are held out until the session is selected, so a session
    * that keeps running does not rebuild the dropped cache before the refetch.

@@ -246,8 +246,15 @@ try {
     assert.equal(sent.length, before, "release must not post a request")
   })
   await emit({ type: "messagesLoaded", sessionID: "child", messages: [message("child-1", "child")] })
-  await check("release-holds-loading-off", () => {
-    assert.equal(session().loading(), false, "a held-out snapshot must not turn the loading state back on")
+  await check("release-holds-snapshot-out", () => {
+    // The load signal cannot turn on here, so assert the gate's own effect: the
+    // held-out snapshot must not rebuild the transcript the release dropped.
+    assert.deepEqual(
+      session().allMessages()["child"] ?? [],
+      [],
+      "a held-out snapshot must not rebuild the dropped transcript",
+    )
+    assert.equal(session().loading(), false, "a held-out snapshot must leave the loading state alone")
   })
   await check("release-select-loads-again", () => {
     const before = sent.length
