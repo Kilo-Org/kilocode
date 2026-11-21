@@ -153,6 +153,17 @@
     }
   }
 
+  [data-slot="permission-reason"] {
+    margin-bottom: 1em;
+    font-size: var(--kilo-font-size-12);
+
+    &[data-wrap] {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
+  }
+
   [data-slot="permission-patterns"] {
     display: flex;
     flex-direction: column;

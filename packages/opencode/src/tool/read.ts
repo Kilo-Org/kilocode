@@ -19,6 +19,7 @@ import * as KiloConfiguredReference from "@/kilocode/reference"
 import { KiloReadObject } from "@/kilocode/tool/read-object"
 import * as Extract from "../kilocode/tool/read-extract"
 import * as TextStream from "../kilocode/text-stream"
+import * as KiloRead from "@/kilocode/tool/read"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -38,6 +39,12 @@ const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "
 // unchanged; purely CLI-facing uses must now send numbers rather than strings.
 export const Parameters = Schema.Struct({
   filePath: Schema.String.annotate({ description: "The absolute path to the file or directory to read" }),
+  // kilocode_change start
+  description: Schema.optional(Schema.String).annotate({
+    description:
+      "Always provide a concise reason for reading this content, grounded in the user's request. Explain what you need to learn; avoid repeating the path or inventing a purpose. Example: Check localhost mappings to diagnose the reported connection failure.",
+  }),
+  // kilocode_change end
   offset: Schema.optional(NonNegativeInt).annotate({
     description: "The line number to start reading from (1-indexed)",
   }),
@@ -394,8 +401,9 @@ export const ReadTool = Tool.define<
     return {
       description: DESCRIPTION,
       parameters: Parameters,
+      jsonSchema: KiloRead.schema(Parameters), // kilocode_change
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
-        run(params, ctx).pipe(Effect.orDie),
+        run(params, KiloRead.context(ctx, params.description)).pipe(Effect.orDie), // kilocode_change
     }
   }),
 )
