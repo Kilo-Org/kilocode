@@ -172,6 +172,11 @@ export const SessionProvider: ParentComponent = (props) => {
   const pendingSubmissions = new Map<string, string>()
   const recoveries = new Map<string, Set<string>>()
   const removedSessions = new Set<string>()
+  // Sessions whose cached transcript a closed panel released. Transcript events
+  // are dropped for them until a selection or a transcript load takes over, so
+  // a child that keeps running cannot refill the cache that release dropped.
+  // Status, permission, question and suggestion events still arrive.
+  const releasedTranscripts = new Set<string>()
   const terminalPermissions = new Map<string, undefined>()
   const aborts = createAbortState()
 
@@ -1075,6 +1080,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Event handlers
   function handleSessionCreated(session: SessionInfo, draftID?: string) {
     removedSessions.delete(session.id)
+    releasedTranscripts.delete(session.id)
     freshSessions.add(session.id)
     if (draftID) aborts.move(draftID, session.id)
     batch(() => {
@@ -1234,6 +1240,7 @@ export const SessionProvider: ParentComponent = (props) => {
   ) {
     const mode = input.mode ?? "replace"
     const reset = mode === "prepend"
+    releasedTranscripts.delete(sessionID)
 
     if (submissionMap[sessionID]) {
       for (const message of messages) {
@@ -1371,7 +1378,15 @@ export const SessionProvider: ParentComponent = (props) => {
     if (reset) requestAnimationFrame(() => patchPage(sessionID, { lastMutation: undefined }))
   }
 
+  // Transcript events for a released session stay out of the store until the
+  // session is selected or its transcript load arrives. A running child keeps
+  // streaming after its panel closes, and rebuilding the dropped cache from
+  // those events would restore a partial transcript before the refetch.
+  const transcriptDropped = (sessionID: string | undefined) =>
+    sessionID != null && releasedTranscripts.has(sessionID)
+
   function handleMessageCreated(message: Message) {
+    if (transcriptDropped(message.sessionID)) return
     if (message.role === "assistant") clearSessionDraftDiscarded(message.sessionID)
     // Message confirmed by server — no longer optimistic.
     // Keep placeholder parts until their canonical part.updated events arrive.
@@ -1430,6 +1445,8 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[Kilo New] Part updated without messageID:", part.id, part.type)
       return
     }
+
+    if (transcriptDropped(sessionID ?? part.sessionID)) return
 
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
     patchToolPart(sessionID, effectiveMessageID, part)
@@ -1495,6 +1512,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handlePartRemoved(sessionID: string | undefined, messageID: string, partID: string) {
+    if (transcriptDropped(sessionID)) return
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
     dropToolPart(sessionID, partID)
     stash.removePart(messageID, partID)
@@ -1847,6 +1865,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const inUseFor = (id: string) => inUse(sessionFamily(id), statusMap, [...permissions(), ...questions()])
 
   function handleTodoUpdated(sessionID: string, items: TodoItem[]) {
+    if (releasedTranscripts.has(sessionID)) return
     setStore("todos", sessionID, items)
   }
 
@@ -1918,13 +1937,16 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   // Release keeps the session: it only drops the cached transcript, so drafts
-  // survive and a listed session still receives its events.
+  // survive and a listed session still receives its events. Transcript events
+  // stay dropped until the session is selected or its transcript is loaded.
   function releaseSession(sessionID: string) {
+    releasedTranscripts.add(sessionID)
     dropTranscript(sessionID)
   }
 
   function handleSessionDeleted(sessionID: string) {
     removedSessions.add(sessionID)
+    releasedTranscripts.delete(sessionID)
     freshSessions.delete(sessionID)
     aborts.clear(sessionID)
     confirmSubmissions(sessionID)
@@ -1994,6 +2016,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
+    if (transcriptDropped(sessionID)) return
     pendingOptimistic.get(sessionID)?.delete(messageID)
     finishSubmission(messageID)
     optimisticParts.delete(messageID)
@@ -2611,6 +2634,7 @@ export const SessionProvider: ParentComponent = (props) => {
     // Always reassign: a later plain selection must clear a request that
     // MessageList never got to consume, or it would fire on a future switch.
     setScrollBottomID(options.scrollToBottom ? id : undefined)
+    releasedTranscripts.delete(id)
     const ready = loaded().has(id)
     batch(() => {
       agentDrafts.prune(draftSessionID())

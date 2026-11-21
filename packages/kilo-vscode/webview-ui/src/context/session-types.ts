@@ -239,7 +239,10 @@ export interface SessionContextValue {
    * Drops the cached transcript of a session (messages, their parts, tool parts,
    * todos, paging entry and loaded marker) while keeping the session row, its
    * drafts and its status. Unlike `deleteSession` it is not permanent: reopening
-   * refetches the transcript, and later events for the session are not suppressed.
+   * refetches the transcript, and the session keeps its prompt and status events.
+   * Transcript events are held out until the session is selected or its
+   * transcript loads, so a session that keeps running does not rebuild the
+   * dropped cache before the refetch.
    */
   releaseSession: (id: string) => void
   /** Permanently forgets the session here: drops its data, drafts and later events. */

@@ -328,6 +328,75 @@ try {
     session().respondToPermission("missing-again", "once", [], [])
     assert.equal(sent.length, before, "an unknown permission must not post a response")
   })
+
+  // A released session keeps streaming. Its transcript events must not rebuild
+  // the cache release just dropped, or a reopened panel would show a partial
+  // transcript until the full fetch lands.
+  session().releaseSession("other")
+  await settle()
+  const later = message("other-1", "other")
+  await emit({
+    type: "messageCreated",
+    message: { ...later, role: "assistant", time: { created: 1, completed: 2 }, finish: "stop" },
+  })
+  await emit({
+    type: "partUpdated",
+    sessionID: "other",
+    messageID: "other-1",
+    part: { id: "other-1-p", sessionID: "other", messageID: "other-1", type: "text", text: "still working" },
+  })
+  await emit({ type: "todoUpdated", sessionID: "other", items: [{ id: "t1", content: "step", status: "pending" }] })
+  await check("release-blocks-transcript-refill", () => {
+    assert.deepEqual(
+      session().allMessages()["other"] ?? [],
+      [],
+      "a released session's transcript events must not refill the dropped cache",
+    )
+    assert.deepEqual(session().getSessionToolParts("other"), [], "a released session must not regain tool parts")
+  })
+  await emit({
+    type: "questionRequest",
+    question: { id: "q-after-release", sessionID: "other", questions: [] },
+  })
+  await check("release-keeps-prompts-after-transcript-drop", () => {
+    assert(
+      session()
+        .questions()
+        .some((item) => item.id === "q-after-release"),
+      "a released session must still receive its question requests",
+    )
+  })
+  await emit({ type: "questionResolved", requestID: "q-after-release" })
+  await emit({ type: "sessionStatus", sessionID: "other", status: "busy" })
+  await check("release-keeps-status-events-after-transcript-drop", () => {
+    assert.equal(session().activityFor("other"), "busy", "a released session must still receive status events")
+  })
+  session().selectSession("other")
+  await settle()
+  const resumed = message("other-2", "other")
+  await emit({
+    type: "messageCreated",
+    message: { ...resumed, role: "assistant", time: { created: 3, completed: 4 }, finish: "stop" },
+  })
+  await check("select-restores-transcript-events", () => {
+    assert(
+      (session().allMessages()["other"] ?? []).some((item) => item.id === "other-2"),
+      "selecting a released session must accept its transcript events again",
+    )
+  })
+  session().releaseSession("other")
+  await settle()
+  await emit({ type: "messagesLoaded", sessionID: "other", messages: [message("other-3", "other")] })
+  const afterLoad = message("other-4", "other")
+  await emit({
+    type: "messageCreated",
+    message: { ...afterLoad, role: "assistant", time: { created: 5, completed: 6 }, finish: "stop" },
+  })
+  await check("transcript-load-restores-transcript-events", () => {
+    const ids = (session().allMessages()["other"] ?? []).map((item) => item.id)
+    assert(ids.includes("other-3"), "a transcript load must populate a released session")
+    assert(ids.includes("other-4"), "a transcript load must accept later transcript events again")
+  })
 } finally {
   dispose()
   await window.happyDOM.cancelAsync()
