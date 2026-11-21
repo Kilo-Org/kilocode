@@ -105,6 +105,7 @@ Each repository can have one saved environment that applies automatically when a
 - Network access
 - A setup script and a start script
 - Variables, including secrets (encrypted at rest)
+- [Network secrets](#network-secrets) (encrypted at rest; injected only into requests to their allowed domains)
 
 Open **Env** beside a repository to create or edit its environment. In an organization, owners and admins can manage repository environments. Other members can open an environment from the **Env** chip or Cloud Agent settings to view its scripts and variables read-only; editing, save, delete, and upload controls, and sandbox selection, are unavailable to them.
 
@@ -329,6 +330,7 @@ Agent environment profiles are reusable bundles of environment settings for clou
 
 - Environment variables (plaintext)
 - Secrets (encrypted at rest; decrypted only by the cloud agent)
+- [Network secrets](#network-secrets) (encrypted at rest; injected only into requests to their allowed domains)
 - Setup commands (which Cloud Agent will execute before starting a session)
 
 Profiles are owned by either a user or an organization. Names are unique per owner, and each owner can have a single default profile. This lets teams share standard environment setups across multiple sessions and triggers.
@@ -348,6 +350,27 @@ You can import a local Kilo configuration ZIP into a profile to move your agents
 Kilo validates the archive and shows a preview of what it contains before anything is saved. Review the preview, then confirm to replace the profile's agents, slash commands, skills, and instructions. Definitions that match keep their IDs, and definitions missing from the archive are removed; variables, setup commands, and MCP servers are not changed. If the archive is invalid — for example, it uses a reserved built-in agent name — Kilo shows the validation error and disables the import.
 
 Imported instruction files appear on the profile's **Instructions** tab.
+
+## Network secrets
+
+A network secret keeps a credential out of the session environment while still letting commands authenticate to a specific service. Instead of injecting the real value, Kilo gives commands an opaque placeholder and substitutes the real value at the network boundary, so the value is never exposed to the agent, its tools, or the workspace.
+
+Configure network secrets in a **Network secrets** section, separate from environment variables:
+
+- In a repository environment, open **Env** beside the repository and edit the environment.
+- In an [agent environment profile](#agent-environment-profiles), open the profile's **Variables** tab.
+
+Each network secret has a variable name, a write-only value that is hidden after you save, and between one and ten exact allowed domains. An environment or profile holds up to 20 network secrets, and a name cannot be both an environment variable and a network secret in the same source.
+
+Network secrets require a Cloudflare Containers sandbox. If a workspace with network secrets runs on another sandbox, it fails with **Network secrets require a Cloudflare sandbox** instead of receiving the plaintext value. When the workspace has restricted [network access](#network-access), add each secret's allowed domains to the allowlist so the proxy can reach them.
+
+Commands — during workspace setup and agent execution — receive only the placeholder. Kilo replaces the placeholder with the real value only in request headers, including Basic authentication passwords, for HTTPS requests on port 443 to an allowed domain. It does not substitute the value in query strings or request bodies. A request that sends the placeholder to any other domain is rejected with `403 network_secret_host_mismatch`, and a temporary resolver failure returns `503 network_secret_unavailable`.
+
+Configuration files must reference the variable name, not a value expanded during the environment build. Build placeholders stop working when the build finishes and are not present in sessions.
+
+{% callout type="warning" %}
+Responses are not scrubbed. If an allowed service echoes the request — for example an echo endpoint or a token exchange — it can return the secret in its response, so bind each secret to the narrowest set of domains that works.
+{% /callout %}
 
 ## Environment Variables & Secrets & Startup Commands
 
