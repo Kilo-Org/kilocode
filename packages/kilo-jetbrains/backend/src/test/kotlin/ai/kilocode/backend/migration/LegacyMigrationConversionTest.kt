@@ -1,8 +1,12 @@
 package ai.kilocode.backend.migration
 
 import ai.kilocode.backend.migration.LegacyMigrationConverters.PermissionEntry
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -547,90 +551,30 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
-    fun `fileRegexToGlobs - digit only arm returns null`() {
-        assertNull(fileRegexToGlobs("^123$"))
-        assertNull(fileRegexToGlobs("^(123|456)$"))
-        assertEquals(listOf("*123*"), fileRegexToGlobs("123"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - unanchored empty alternative matches every path`() {
-        assertEquals(listOf("*", "*a*"), fileRegexToGlobs("(|a)"))
-        assertEquals(listOf("*"), fileRegexToGlobs("(|)"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - start anchored empty alternative keeps the trailing wildcard`() {
-        assertEquals(listOf("*", "a*"), fileRegexToGlobs("^(|a)"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - end anchored empty alternative keeps the leading wildcard`() {
-        assertEquals(listOf("*", "*a"), fileRegexToGlobs("(|a)$"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - both anchored empty alternative keeps the arm that names a path`() {
-        assertEquals(listOf("a"), fileRegexToGlobs("^(|a)$"))
-        assertEquals(listOf("a"), fileRegexToGlobs("^(a|)$"))
-        assertEquals(listOf("a"), fileRegexToGlobs("^(|a|)$"))
-        assertEquals(listOf("package.json"), fileRegexToGlobs("^(package\\.json|)$"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - both anchored pattern of only empty alternatives returns null`() {
-        assertNull(fileRegexToGlobs("^(|)$"))
-        assertNull(fileRegexToGlobs("^(||)$"))
-        assertNull(fileRegexToGlobs("^()$"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - single start anchor keeps an empty alternative as the catch-all arm`() {
-        assertEquals(listOf("*"), fileRegexToGlobs("^(|)"))
-        assertEquals(listOf("*", "a*"), fileRegexToGlobs("^(|a|)"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - wildcard pattern matches every path`() {
-        assertEquals(listOf("*"), fileRegexToGlobs(".*"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - home relative arm returns null`() {
-        assertNull(fileRegexToGlobs("^~/\\.ssh/"))
-        assertNull(fileRegexToGlobs("^~/\\.ssh/id_rsa${'$'}"))
-        assertNull(fileRegexToGlobs("^~${'$'}"))
-        assertNull(fileRegexToGlobs("^\\${'$'}HOME/\\.ssh/"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - tilde away from the start of the arm still translates`() {
-        assertEquals(listOf("*~*"), fileRegexToGlobs("~"))
-        assertEquals(listOf("*~/.ssh*"), fileRegexToGlobs("~/\\.ssh"))
-        assertEquals(listOf("src/~backup/*"), fileRegexToGlobs("^src/~backup/"))
-        assertEquals(listOf("*.md"), fileRegexToGlobs(".*\\.md${'$'}"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - escaped non-ASCII character returns null`() {
-        assertNull(fileRegexToGlobs("a\\\u00a0b"))
-        assertNull(fileRegexToGlobs("a\\\u2007b"))
-        assertNull(fileRegexToGlobs("a\\\u202fb"))
-        assertNull(fileRegexToGlobs("a\\\u2167b"))
-        assertNull(fileRegexToGlobs("a\\\u20acb"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - escaped ASCII punctuation still translates`() {
-        assertEquals(listOf("*a-b*"), fileRegexToGlobs("a\\-b"))
-        assertEquals(listOf("*a@b*"), fileRegexToGlobs("a\\@b"))
-    }
-
-    @Test
-    fun `fileRegexToGlobs - escape the glob cannot carry literally returns null`() {
-        assertNull(fileRegexToGlobs("^foo\\*\\.txt${'$'}"))
-        assertNull(fileRegexToGlobs("^foo\\?\\.txt${'$'}"))
-        assertNull(fileRegexToGlobs("^foo\\\\bar${'$'}"))
+    fun `fileRegexToGlobs matches the shared case fixture`() {
+        // The same file is read by the TypeScript suite
+        // (packages/opencode/test/kilocode/permission-glob.test.ts), so the two translators
+        // cannot drift apart without a failure on one side.
+        val resource = "/migration/permission-glob-cases.json"
+        val stream = assertNotNull(
+            LegacyMigrationConversionTest::class.java.getResourceAsStream(resource),
+            "missing test resource $resource",
+        )
+        val cases = stream.bufferedReader().use { reader ->
+            Json.parseToJsonElement(reader.readText()).jsonArray
+        }
+        assertTrue(cases.isNotEmpty(), "fixture $resource is empty")
+        for (element in cases) {
+            val row = element.jsonObject
+            val name = row.getValue("name").jsonPrimitive.content
+            val regex = row.getValue("regex").jsonPrimitive.content
+            val expected: List<String>? = when (val globs = row.getValue("globs")) {
+                is JsonNull -> null
+                is JsonArray -> globs.map { it.jsonPrimitive.content }
+                else -> error("fixture case '$name' has a globs value that is neither an array nor null")
+            }
+            assertEquals(expected, fileRegexToGlobs(regex), "fixture case: $name")
+        }
     }
 
     // -----------------------------------------------------------------------
