@@ -228,6 +228,27 @@ describe("sandbox policy profile", () => {
     expect(result.environment.deny).toContain("DROPPED_TOKEN")
   })
 
+  test("masks configured credentials the snapshot no longer routes", () => {
+    const github = {
+      name: "github",
+      source: "env://GITHUB_TOKEN",
+      envVar: "GITHUB_TOKEN",
+      upstream: "https://api.github.com",
+    }
+    const gitlab = {
+      name: "gitlab",
+      source: "env://GITLAB_TOKEN",
+      envVar: "GITLAB_TOKEN",
+      upstream: "https://gitlab.com",
+    }
+    // A credential narrowed out of the snapshot is denied, a routed one stays available, and dropped entries
+    // keep their own masked variable.
+    expect(SandboxPolicy.maskedVariables({ credentials: [github, gitlab], maskedEnv: ["BROKEN"] }, [github])).toEqual(
+      ["GITLAB_TOKEN", "BROKEN"],
+    )
+    expect(SandboxPolicy.maskedVariables({ credentials: [github], maskedEnv: [] }, [])).toEqual(["GITHUB_TOKEN"])
+  })
+
   test("uses deny-by-default and configurable network profiles", async () => {
     const dirs = await layout()
     expect(SandboxPolicy.profile(context(dirs.a, dirs.a)).network).toEqual({ mode: "deny", allowedHosts: [] })

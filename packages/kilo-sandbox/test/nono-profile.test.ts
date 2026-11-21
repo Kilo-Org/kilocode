@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test"
+import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { parseCredentials } from "../src/nono-credentials"
-import { generate, restoreEnvironment } from "../src/nono-profile"
+import { generate, restoreEnvironment, writableLocation } from "../src/nono-profile"
+import { resolvePath } from "../src/path"
 import type { Profile } from "../src/profile"
 
 const paths = { data: "/tmp/kilo-data", config: "/tmp/kilo-config" }
@@ -335,6 +337,25 @@ describe.skipIf(process.platform === "win32")("nono profile read grants", () => 
       expect(result.filesystem.deny).toContain("/tmp/kilo-data/kilo2.db")
     },
   )
+
+  test("canonicalizes the exception before checking a write grant", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-nono-writable-"))
+    const real = path.join(root, "real")
+    const link = path.join(root, "link")
+    await fs.mkdir(real, { recursive: true })
+    await fs.symlink(real, link)
+    try {
+      // The grant is canonicalized (as normalization does); the exception still spells the symlink, so the
+      // guard must canonicalize the exception to see that the grant covers it.
+      const grant = resolvePath(real)
+      expect(writableLocation([{ path: grant, kind: "subtree" }], path.join(link, "secret"))).toBe(true)
+      expect(writableLocation([{ path: resolvePath(path.join(root, "other")), kind: "subtree" }], path.join(link, "secret"))).toBe(
+        false,
+      )
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
 
   test("keeps a lifted exception denied when a write grant would make it writable", () => {
     const base = profile()

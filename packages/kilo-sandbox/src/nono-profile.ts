@@ -2,7 +2,7 @@ import os from "node:os"
 import path from "node:path"
 import { parseDestination } from "./destination"
 import { aliases, type Credential } from "./nono-credentials"
-import { expandPath, matches } from "./path"
+import { expandPath, matches, resolvePath } from "./path"
 import type { PathRule, Profile } from "./profile"
 
 interface CustomCredential {
@@ -154,6 +154,21 @@ function warnPorts(hosts: ReadonlyArray<string>) {
   )
 }
 
+/**
+ * Whether a write grant covers the location. The location is canonicalized first so a symlinked spelling still
+ * matches a grant the profile already canonicalized, and an unresolvable location is treated as covered so the
+ * read exception's deny is kept instead of silently becoming writable.
+ */
+export function writableLocation(allowWrite: ReadonlyArray<PathRule>, location: string) {
+  let target: string
+  try {
+    target = resolvePath(location)
+  } catch {
+    return true
+  }
+  return allowWrite.some((rule) => matches(rule, target) || matches(rule, location))
+}
+
 const warnedExceptions = new Set<string>()
 
 /** A read exception inside a write grant cannot be lifted without also granting writes, so it stays denied. */
@@ -221,7 +236,7 @@ export function generate(profile: Profile, inputs: Inputs = {}): NonoProfile {
       // A read exception is honored by dropping the built-in deny, but a nono deny also blocks writes, so
       // dropping it inside a write grant would make the credential location writable. Keep the deny in that
       // case: the location stays read-denied (nono has no write-only deny) rather than becoming writable.
-      const writable = allowWrite.some((rule) => matches(rule, location))
+      const writable = writableLocation(allowWrite, location)
       if (writable) warnException(entry)
       return writable
     }),

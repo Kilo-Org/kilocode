@@ -701,6 +701,20 @@ export function dispose<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, 
   )
 }
 
+/**
+ * Variables to deny for one execution: every configured credential variable the active snapshot does not route,
+ * plus the ones dropped at parse time. Routed variables are masked by nono and must stay available.
+ */
+export function maskedVariables(
+  configured: Pick<ReturnType<typeof SandboxConfig.resolve>, "credentials" | "maskedEnv">,
+  routed: ReadonlyArray<Credential>,
+) {
+  const active = new Set(routed.map((route) => route.envVar))
+  return [...new Set([...configured.credentials.map((route) => route.envVar), ...configured.maskedEnv])].filter(
+    (envVar) => !active.has(envVar),
+  )
+}
+
 /** Maps a resolved snapshot and the masked variables into a backend profile. Exported for the forwarding test. */
 export function profileFor(ctx: InstanceContext, state: Snapshot, maskedEnv: readonly string[]) {
   return profile(ctx, state.mode, state.writablePaths, state.allowedHosts, {
@@ -727,14 +741,10 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
           return yield* Effect.fail(new Error(support.reason ?? "The configured sandbox backend is unavailable"))
         }
         const runtime = yield* Runtime
-        // Any configured credential variable the active snapshot does not route must be denied, so a dropped
-        // entry (malformed, duplicate) or one narrowed away by subagent intersection cannot leak its real value
-        // to the child. Variables the snapshot still routes are masked by nono itself, so they are excluded.
+        // A credential the snapshot no longer routes (dropped, or narrowed away by subagent intersection) would
+        // otherwise pass its real value to the child; routed ones are masked by nono itself.
         const configured = SandboxConfig.resolve(yield* runtime.config)
-        const routed = new Set((active.state.credentials ?? []).map((route) => route.envVar))
-        const maskedEnv = [
-          ...new Set([...configured.credentials.map((route) => route.envVar), ...configured.maskedEnv]),
-        ].filter((envVar) => !routed.has(envVar))
+        const maskedEnv = maskedVariables(configured, active.state.credentials ?? [])
         return yield* runSandbox(
           profileFor({ directory: runtime.directory, worktree: runtime.worktree }, active.state, maskedEnv),
           effect,
