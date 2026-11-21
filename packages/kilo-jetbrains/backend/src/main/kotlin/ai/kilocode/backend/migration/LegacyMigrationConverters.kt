@@ -394,6 +394,9 @@ object LegacyMigrationConverters {
     )
     private val ALL_MODE_PERMISSIONS = listOf("read", "edit", "bash", "browser_open", "skill")
 
+    /** Reported once per converted mode whose legacy groups grant no `skill` permission. */
+    private const val SKILL_NOT_GRANTED = "Skills are not available: no legacy group grants them"
+
     /** Option keys a legacy group can carry. Any other key means the group was not read fully. */
     private val KNOWN_GROUP_OPTIONS = setOf("fileRegex", "description")
 
@@ -511,6 +514,9 @@ object LegacyMigrationConverters {
         for (perm in ALL_MODE_PERMISSIONS) {
             if (perm !in allowed) permission[perm] = JsonPrimitive("deny")
         }
+        // No legacy group grants `skill`, so it stays denied on purpose. Say so once per mode
+        // instead of leaving the user to wonder why a migrated mode cannot load skills.
+        if ("skill" !in allowed) warnings.add(SKILL_NOT_GRANTED)
 
         if (!mcpGroupSeen) {
             for (server in mcpServers) {
@@ -1050,6 +1056,10 @@ private val UNSUPPORTED_REGEX_CHARS = setOf('*', '+', '{', '}', '[', ']', '^', '
  *
  * Returns null when the pattern uses a construct that the glob syntax cannot
  * express, so the caller can report it instead of writing an unmatched rule.
+ *
+ * A glob arm made only of digits is also rejected. When the CLI reads the written config back,
+ * JavaScript enumerates such a key as an array index ahead of `"*"`, so the trailing `"*": "deny"`
+ * wins and the file the legacy mode allowed is denied.
  */
 internal fun fileRegexToGlobs(regex: String): List<String>? {
     if (regex.isEmpty()) return null
@@ -1073,6 +1083,8 @@ internal fun fileRegexToGlobs(regex: String): List<String>? {
 
     if (arms.isEmpty() || arms.any { it.isEmpty() }) return null
     if (arms.any { it.endsWith(" *") }) return null
+    // See the KDoc. Only ASCII digits form an array index, so only those arms are rejected.
+    if (arms.any { arm -> arm.all { it in '0'..'9' } }) return null
     return arms
 }
 

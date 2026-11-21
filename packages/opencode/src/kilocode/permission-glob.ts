@@ -10,11 +10,16 @@ const MAX_ARMS = 32
 // Characters the glob syntax cannot express; a plain `?` is still handled as an atom suffix.
 const UNSUPPORTED = /[*+{}[\]^$?]/
 
+// An arm made only of digits becomes an integer-like JSON key, which JavaScript enumerates
+// before `"*"`: the catch-all deny would then win and refuse the files the mode allowed.
+const DIGITS = /^\d+$/
+
 /**
  * Translate a legacy `fileRegex` pattern into permission wildcard globs.
  *
  * Returns null when the pattern uses a construct that the glob syntax cannot express,
- * so the caller can report it instead of writing an unmatched rule.
+ * or when an arm consists only of digits, so the caller can report it instead of writing
+ * a rule the CLI resolves the wrong way.
  */
 export function regexToGlobs(regex: string): string[] | null {
   if (regex.length === 0) return null
@@ -46,6 +51,7 @@ export function regexToGlobs(regex: string): string[] | null {
 
   if (arms.length === 0 || arms.some((arm) => arm.length === 0)) return null
   if (arms.some((arm) => arm.endsWith(" *"))) return null
+  if (arms.some((arm) => DIGITS.test(arm))) return null
   return arms
 }
 

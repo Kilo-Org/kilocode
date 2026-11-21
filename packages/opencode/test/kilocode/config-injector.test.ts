@@ -336,6 +336,47 @@ describe("KilocodeConfigInjector", () => {
       }
     })
 
+    test("warns about an mcp group when only a global MCP store declared a server", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: mcpmode
+    name: MCP mode
+    roleDefinition: You are an MCP helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        // The mode migration reads global paths here, so the declared server makes the empty
+        // grant reportable; the injected keys stay project-scoped, so no global key is written.
+        const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path })
+        const permission = JSON.parse(result.configJson).agent.mcpmode.permission
+
+        expect(Object.keys(permission).some((key) => key.endsWith("_*"))).toBe(false)
+        expect(
+          result.warnings.filter((warning) => warning.includes("MCP access not migrated: no MCP server was migrated")),
+        ).toEqual(["Mode 'mcpmode': MCP access not migrated: no MCP server was migrated"])
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
     test("does not warn about MCP access when the project has no MCP server", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {

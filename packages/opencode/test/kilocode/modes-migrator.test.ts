@@ -97,6 +97,14 @@ describe("ModesMigrator", () => {
       expect(permissions.read).toBe("deny")
     })
 
+    test("asks for a permission whose fileRegex is only digits", () => {
+      const groups: ModesMigrator.KilocodeMode["groups"] = [["edit", { fileRegex: "^123$" }]]
+      const permissions = ModesMigrator.convertPermissions(groups, [], false)
+
+      expect(permissions.edit).toBe("ask")
+      expect(permissions.read).toBe("deny")
+    })
+
     test("asks for a permission whose group options cannot be read", () => {
       const groups: ModesMigrator.KilocodeMode["groups"] = [["edit", { regex: "\\.md$" }]]
       const permissions = ModesMigrator.convertPermissions(groups, [], false)
@@ -390,6 +398,30 @@ describe("ModesMigrator", () => {
       expect(result.agents).toHaveProperty("reviewer")
     })
 
+    test("reports the denied skill permission once for a mode with read and edit groups", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: translate
+    name: Translate
+    roleDefinition: Translator
+    groups:
+      - read
+      - edit`,
+          )
+        },
+      })
+
+      const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true, mcpAvailable: false })
+
+      expect(result.agents.translate.permission?.skill).toBe("deny")
+      expect(result.warnings.map((warning) => warning.message)).toEqual([
+        "Mode 'translate': Skills are not available: no legacy group grants them",
+      ])
+    })
+
     test("grants an mcp group the tools of the migrated servers it was given", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
@@ -415,7 +447,9 @@ describe("ModesMigrator", () => {
 
       expect(result.agents.helper.permission?.["github_*"]).toBe("allow")
       expect("mcp" in (result.agents.helper.permission ?? {})).toBe(false)
-      expect(result.warnings).toHaveLength(0)
+      expect(result.warnings.map((warning) => warning.message)).toEqual([
+        "Mode 'helper': Skills are not available: no legacy group grants them",
+      ])
     })
 
     test("stays silent for an mcp group when the legacy store had no MCP server", async () => {
@@ -440,7 +474,7 @@ describe("ModesMigrator", () => {
         mcpAvailable: false,
       })
 
-      expect(result.warnings).toHaveLength(0)
+      expect(result.warnings.some((warning) => warning.message.includes("MCP access not migrated"))).toBe(false)
       expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
     })
 
@@ -468,6 +502,7 @@ describe("ModesMigrator", () => {
 
       expect(result.warnings.map((warning) => warning.message)).toEqual([
         "Mode 'helper': MCP access not migrated: no MCP server was migrated",
+        "Mode 'helper': Skills are not available: no legacy group grants them",
       ])
       expect(result.warnings[0].path).toBe(path.join(tmp.path, ".kilocodemodes"))
       expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
@@ -500,10 +535,11 @@ describe("ModesMigrator", () => {
         mcpAvailable: false,
       })
 
-      expect(declared.warnings.map((warning) => warning.message)).toEqual([
-        "Mode 'helper': MCP access not migrated: no MCP server was migrated",
-      ])
-      expect(undeclared.warnings).toHaveLength(0)
+      const skill = "Mode 'helper': Skills are not available: no legacy group grants them"
+      const mcp = "Mode 'helper': MCP access not migrated: no MCP server was migrated"
+
+      expect(declared.warnings.map((warning) => warning.message)).toEqual([mcp, skill])
+      expect(undeclared.warnings.map((warning) => warning.message)).toEqual([skill])
       for (const result of [declared, undeclared]) {
         expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
         expect(result.agents.helper.permission?.read).toBe("allow")
@@ -529,10 +565,35 @@ describe("ModesMigrator", () => {
       const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true, mcpAvailable: false })
 
       expect(result.agents.docs.permission?.edit).toBe("ask")
-      expect(result.warnings).toHaveLength(1)
+      expect(result.warnings.map((warning) => warning.message)).toEqual([
+        "Mode 'docs': File restriction not migrated; edit set to ask: [0-9]+\\.md$",
+        "Mode 'docs': Skills are not available: no legacy group grants them",
+      ])
       expect(result.warnings[0].path).toBe(path.join(tmp.path, ".kilocodemodes"))
-      expect(result.warnings[0].message).toContain("docs")
+    })
+
+    test("asks for a file restriction whose pattern is only digits", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: numbered
+    name: Numbered
+    roleDefinition: Numbered
+    groups:
+      - - edit
+        - fileRegex: "^123$"`,
+          )
+        },
+      })
+
+      const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true, mcpAvailable: false })
+
+      expect(result.agents.numbered.permission?.edit).toBe("ask")
+      expect(result.warnings[0].message).toContain("Mode 'numbered'")
       expect(result.warnings[0].message).toContain("ask")
+      expect(result.warnings[0].message).toContain("^123$")
     })
   })
 })

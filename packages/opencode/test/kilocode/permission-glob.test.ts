@@ -33,4 +33,12 @@ describe("regexToGlobs", () => {
   test("an empty pattern is rejected", () => {
     expect(regexToGlobs("")).toBeNull()
   })
+
+  test("an anchored pattern of only digits is rejected", () => {
+    expect(regexToGlobs("^123$")).toBeNull()
+  })
+
+  test("an unanchored numeric pattern stays a wildcard arm", () => {
+    expect(regexToGlobs("123")).toEqual(["*123*"])
+  })
 })

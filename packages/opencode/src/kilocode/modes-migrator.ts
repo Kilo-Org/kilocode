@@ -155,8 +155,11 @@ export namespace ModesMigrator {
 
     // Explicitly deny permissions that aren't granted: the CLI defaults a missing
     // permission to "ask", which would prompt for every call instead of refusing it.
+    // No legacy group grants skills, so a converted mode always reports the lost grant.
     for (const perm of ALL_PERMISSIONS) {
-      if (!allowed.has(perm)) permission[perm] = "deny"
+      if (allowed.has(perm)) continue
+      permission[perm] = "deny"
+      if (perm === "skill") warnings.push("Skills are not available: no legacy group grants them")
     }
 
     if (!seen) {

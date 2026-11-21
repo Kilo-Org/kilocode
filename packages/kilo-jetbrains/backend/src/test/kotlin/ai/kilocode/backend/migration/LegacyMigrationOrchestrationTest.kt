@@ -109,14 +109,16 @@ class LegacyMigrationOrchestrationTest {
         }
         val sel = noSelections().copy(customModes = listOf("my-agent"))
         val report = eng.migrate(sel)
-        assertEquals(MigrationItemStatus.success, report.items[0].status)
+        val item = report.items[0]
+        assertEquals(MigrationItemStatus.warning, item.status)
+        assertEquals("Skills are not available: no legacy group grants them", item.message)
         val patch = backend.configCalls.find { it.containsKey("agent") }
         assertNotNull(patch)
         assertTrue(patch!!["agent"]?.jsonObject?.containsKey("my-agent") == true)
     }
 
     @Test
-    fun `migrate - custom mode with two warnings reports one result item and one progress item`() {
+    fun `migrate - custom mode with warnings reports one result item and one progress item`() {
         val (eng, _, _) = setup {
             mcpSettings = """{"mcpServers":{"tool1":{"command":"node","args":["tool.js"]}}}"""
             customModes = """
@@ -139,7 +141,8 @@ class LegacyMigrationOrchestrationTest {
         assertEquals(1, results.size)
         assertEquals(MigrationItemStatus.warning, results[0].status)
         assertEquals(
-            "MCP access not migrated: no MCP server was migrated; Group not migrated; \"unknown-group\" ignored",
+            "MCP access not migrated: no MCP server was migrated; Group not migrated; \"unknown-group\" ignored; " +
+                "Skills are not available: no legacy group grants them",
             results[0].message,
         )
         val progress = items.filter { it.item == "Warned Mode" }
