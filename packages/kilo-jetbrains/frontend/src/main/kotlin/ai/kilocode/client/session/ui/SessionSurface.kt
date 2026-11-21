@@ -6,6 +6,8 @@ import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import java.awt.Shape
+import java.awt.geom.Path2D
 import java.awt.geom.RoundRectangle2D
 
 /**
@@ -35,11 +37,23 @@ internal object SessionSurface {
         val g2 = g.create() as Graphics2D
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            val arc = arc().toFloat()
-            g2.clip(RoundRectangle2D.Float(0f, 0f, width.toFloat(), height.toFloat(), arc, arc))
+            g2.clip(outline(width, height))
             return paint(g2)
         } finally {
             g2.dispose()
         }
     }
+
+    /**
+     * The rounded block as straight segments. Surfaces nest with shared edges, and intersecting curved
+     * clips that overlap makes Java2D's Area math block the EDT for hundreds of milliseconds per paint.
+     * Clips are not antialiased, so the flattened outline looks the same.
+     */
+    fun outline(width: Int, height: Int): Shape {
+        val arc = arc().toFloat()
+        val round = RoundRectangle2D.Float(0f, 0f, width.toFloat(), height.toFloat(), arc, arc)
+        return Path2D.Float().apply { append(round.getPathIterator(null, FLATNESS), false) }
+    }
+
+    private const val FLATNESS = 0.05
 }
