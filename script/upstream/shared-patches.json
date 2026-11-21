@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 165,
-    "markedLines": 3143,
+    "files": 166,
+    "markedLines": 3226,
     "unmarkedLines": 468,
     "deletedFiles": 0
   },
@@ -35,6 +35,10 @@
     "docs/nono-acceptance.md": {
       "rung": 4,
       "seam": "Acceptance evidence for the nono sandbox series: the case matrix, the arm64/x64 environment and the eight decision records. It belongs in docs/ because it records measured pin behaviour, accepted gaps and their trackers for reviewers and release notes. The first-line `<!-- kilocode_change - new file -->` marker covers the file, so its 91 lines raise the markedLines budget from 3052 to 3143 and the file budget from 164 to 165; unmarked-line and deletion budgets are unchanged. No plugin or host path can carry repository design text."
+    },
+    "docs/nono-sandbox.md": {
+      "rung": 4,
+      "seam": "Design and user-facing limits for the nono sandbox backend: how the profile, launch adapter, credential proxy, mutation worker and refusal model fit together, plus the development-only opt-in and links to the acceptance and .git records. It belongs in docs/ because it records repository design text and operator instructions for reviewers and release notes. The first-line `<!-- kilocode_change - new file -->` marker covers the file, so its 83 lines raise the markedLines budget from 3143 to 3226 and the file budget from 165 to 166; unmarked-line and deletion budgets are unchanged. No plugin or host path can carry repository design text."
     },
     "packages/cli/src/commands/commands.ts": {
       "rung": 3,
