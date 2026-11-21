@@ -1,10 +1,11 @@
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
 import type { Agent } from "@/agent/agent"
 import type { Config } from "@/config/config"
 import type { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import type { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { usable } from "@/session/overflow"
 import type { SessionProcessor } from "@/session/processor"
 import { MessageID, PartID, type SessionID } from "@/session/schema"
@@ -31,6 +32,34 @@ export namespace KiloCompactionChunks {
     "Compaction did not run: the model returned an empty summary. Retry with /compact. If it keeps failing, start a new session to continue."
   export const TRUNCATED_SUMMARY =
     "Compaction did not run: the summary was cut off at the output limit. Retry with /compact. If it keeps failing, start a new session to continue."
+
+  export const CONTENT_FILTER =
+    "Compaction did not run: the model provider's content filter blocked the summary. Retrying will likely fail the same way. Switch the compaction model, change the conversation, or start a new session to continue."
+
+  export function filtered(): NonNullable<MessageV2.Assistant["error"]> {
+    return new SessionV1.ContentFilterError({ message: CONTENT_FILTER }).toObject()
+  }
+
+  export function blocked(error: MessageV2.Assistant["error"]) {
+    return error?.name === "ContentFilterError"
+  }
+
+  // A content-filtered response is never a usable summary, even if it has text.
+  export function refuse<R extends SessionProcessor.Result>(input: {
+    result: R
+    message: MessageV2.Assistant
+    session: Pick<Session.Interface, "updateMessage">
+  }) {
+    return Effect.gen(function* () {
+      if (input.result !== "continue" || input.message.finish !== "content-filter" || input.message.error)
+        return input.result
+      input.message.error = filtered()
+      input.message.finish = "error"
+      input.message.time.completed = Date.now()
+      yield* input.session.updateMessage(input.message)
+      return "stop" as const
+    })
+  }
 
   export function incomplete(
     error: MessageV2.Assistant["error"],
@@ -77,6 +106,9 @@ export namespace KiloCompactionChunks {
     output: string | undefined
     error: MessageV2.Assistant["error"]
   }
+
+  // Fails the sequential reduce traversal so later groups never run.
+  class Blocked extends Data.TaggedError("KiloCompactionBlocked")<{ output: Output }> {}
 
   type Deps = {
     processors: SessionProcessor.Interface
@@ -128,6 +160,11 @@ export namespace KiloCompactionChunks {
       const size = budget({ cfg: input.cfg, model: input.model, outputTokenMax: input.outputTokenMax })
       if (!(yield* large({ messages: chunk.messages, model: input.model, size }))) return input.replay
       const result = yield* summarize({ ...input, chunk, total: 1 })
+      // A blocked replay summary stops compaction instead of replaying the oversized request.
+      if (blocked(result.error)) {
+        yield* fail(input, result)
+        return undefined
+      }
       if (result.result !== "continue" || !result.output) return input.replay
       return {
         info: input.replay.info,
@@ -324,6 +361,9 @@ export namespace KiloCompactionChunks {
       )
       const result = out.result
       const output = out.output
+      // A content-filtered response is never a usable summary, even with text.
+      if (!out.error && out.finish === "content-filter")
+        return { result: "stop" as const, output: undefined, error: filtered() }
       if (out.error || (result !== "continue" && out.finish !== "length"))
         return { result, output: undefined, error: out.error }
       if (!output || out.finish === "length")
@@ -386,9 +426,13 @@ export namespace KiloCompactionChunks {
     })
   }
 
-  function reduce(
+  function reduce(input: Input & { summaries: string[]; depth: number }) {
+    return descend(input).pipe(Effect.catchTag("KiloCompactionBlocked", (error) => Effect.succeed(error.output)))
+  }
+
+  function descend(
     input: Input & { summaries: string[]; depth: number },
-  ): Effect.Effect<Output, never, Database.Service> {
+  ): Effect.Effect<Output, Blocked, Database.Service> {
     return Effect.gen(function* () {
       const result = yield* run({ ...input, data: [], text: input.prompt(context({ summaries: input.summaries })) })
       if (
@@ -396,6 +440,7 @@ export namespace KiloCompactionChunks {
         (result.error?.name === "APIError" && result.error.data.message === TRUNCATED_SUMMARY)
       )
         return result
+      if (blocked(result.error)) return yield* new Blocked({ output: result })
       if (input.depth >= DEPTH || input.summaries.length <= 1) return result
 
       const size = Math.ceil(input.summaries.length / 2)
@@ -404,12 +449,12 @@ export namespace KiloCompactionChunks {
       )
       const next: Output[] = yield* Effect.forEach(
         groups,
-        (group) => reduce({ ...input, summaries: group, depth: input.depth + 1 }),
+        (group) => descend({ ...input, summaries: group, depth: input.depth + 1 }),
         { concurrency: 1 },
       )
       const failed = next.find(fatal) ?? next.find((item) => item.result !== "continue" || !item.output)
       if (failed) return fatal(failed) ? failed : result
-      return yield* reduce({ ...input, summaries: next.map((item) => item.output!), depth: input.depth + 2 })
+      return yield* descend({ ...input, summaries: next.map((item) => item.output!), depth: input.depth + 2 })
     })
   }
 
@@ -419,9 +464,21 @@ export namespace KiloCompactionChunks {
       const chunks = yield* split({ messages: input.messages, model: input.model, size })
       log.info("fallback", { chunks: chunks.length, concurrency: CONCURRENCY })
 
-      const partial = yield* Effect.forEach(chunks, (chunk) => summarize({ ...input, chunk, total: chunks.length }), {
-        concurrency: Math.min(CONCURRENCY, chunks.length),
-      })
+      // Once a chunk is filtered, queued chunks are skipped. In-flight workers finish on their own:
+      // interrupting them would publish MessageAbortedError events that hide the filter error.
+      let hit: Output | undefined
+      const results = yield* Effect.forEach(
+        chunks,
+        (chunk) =>
+          Effect.gen(function* () {
+            if (hit) return undefined
+            const out = yield* summarize({ ...input, chunk, total: chunks.length })
+            if (blocked(out.error)) hit ??= out
+            return out
+          }),
+        { concurrency: Math.min(CONCURRENCY, chunks.length) },
+      )
+      const partial: Output[] = hit ? [hit] : results.flatMap((item) => (item ? [item] : []))
       const failed = partial.find(fatal) ?? partial.find((item) => item.result !== "continue" || !item.output)
       if (failed) {
         if (yield* fail(input, failed)) return "stop" as const
