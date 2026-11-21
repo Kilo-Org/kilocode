@@ -583,7 +583,7 @@ object LegacyMigrationConverters {
     fun convertAutoApproval(
         settings: LegacySettings,
         sel: MigrationAutoApprovalSelections,
-        mcpServers: List<String> = emptyList(),
+        mcpServers: List<String>,
     ): PermissionConversion {
         val fallback = if (settings.autoApprovalEnabled == true) "allow" else "ask"
         val results = mutableListOf<PermissionEntry>()

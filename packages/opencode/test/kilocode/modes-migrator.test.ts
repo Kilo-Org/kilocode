@@ -305,7 +305,7 @@ describe("ModesMigrator", () => {
         },
       })
 
-      const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true })
+      const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true, mcpAvailable: false })
 
       expect(result.skipped).toHaveLength(1)
       expect(result.skipped[0].slug).toBe("code")
@@ -347,6 +347,7 @@ describe("ModesMigrator", () => {
       const result = await ModesMigrator.migrate({
         projectDir: tmp.path,
         globalSettingsDir: tmp.extra,
+        mcpAvailable: false,
       })
 
       expect(result.agents.translate.prompt).toBe("Project translator")
@@ -355,7 +356,7 @@ describe("ModesMigrator", () => {
     test("returns empty agents when no custom modes exist", async () => {
       await using tmp = await tmpdir()
 
-      const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true })
+      const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true, mcpAvailable: false })
 
       expect(Object.keys(result.agents)).toHaveLength(0)
       expect(result.skipped).toHaveLength(0)
@@ -382,7 +383,7 @@ describe("ModesMigrator", () => {
         },
       })
 
-      const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true })
+      const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true, mcpAvailable: false })
 
       expect(Object.keys(result.agents)).toHaveLength(2)
       expect(result.agents).toHaveProperty("translate")
@@ -409,6 +410,7 @@ describe("ModesMigrator", () => {
         projectDir: tmp.path,
         skipGlobalPaths: true,
         mcpServers: ["github"],
+        mcpAvailable: true,
       })
 
       expect(result.agents.helper.permission?.["github_*"]).toBe("allow")
@@ -519,7 +521,7 @@ describe("ModesMigrator", () => {
         },
       })
 
-      const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true })
+      const result = await ModesMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true, mcpAvailable: false })
 
       expect(result.agents.docs.permission?.edit).toBe("ask")
       expect(result.warnings).toHaveLength(1)

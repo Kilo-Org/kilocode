@@ -686,7 +686,7 @@ class LegacyMigrationConversionTest {
             language = null, autocomplete = null,
         )
         val sel = MigrationAutoApprovalSelections(commandRules = true, readPermission = false, writePermission = false, executePermission = false, mcpPermission = false, taskPermission = false)
-        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel)
+        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
         assertNotNull(conv.config)
         val perm = conv.config!!["permission"]?.jsonObject
         assertNotNull(perm)
@@ -708,7 +708,7 @@ class LegacyMigrationConversionTest {
             language = null, autocomplete = null,
         )
         val sel = MigrationAutoApprovalSelections(commandRules = true, readPermission = true, writePermission = true, executePermission = false, mcpPermission = false, taskPermission = false)
-        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel)
+        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
         val perm = conv.config!!["permission"]?.jsonObject
         assertNotNull(perm)
         assertEquals("ask", perm["read"]?.jsonPrimitive?.content)
@@ -743,7 +743,7 @@ class LegacyMigrationConversionTest {
             language = null, autocomplete = null,
         )
         val sel = MigrationAutoApprovalSelections(commandRules = true, readPermission = false, writePermission = false, executePermission = false, mcpPermission = false, taskPermission = false)
-        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel)
+        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
         val perm = conv.config!!["permission"]?.jsonObject
         val bash = perm?.get("bash")?.jsonObject
         assertNotNull(bash)
@@ -756,7 +756,7 @@ class LegacyMigrationConversionTest {
     fun `convertAutoApproval - read permission`() {
         val settings = LegacySettings(null, null, null, alwaysAllowReadOnly = true, alwaysAllowReadOnlyOutsideWorkspace = true, null, null, null, null, null, null, null)
         val sel = MigrationAutoApprovalSelections(false, readPermission = true, false, false, false, false)
-        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel)
+        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
         val perm = conv.config!!["permission"]?.jsonObject!!
         assertEquals("allow", perm["read"]?.jsonPrimitive?.content)
         assertEquals("allow", perm["external_directory"]?.jsonPrimitive?.content)
@@ -766,7 +766,7 @@ class LegacyMigrationConversionTest {
     fun `convertAutoApproval - write permission`() {
         val settings = LegacySettings(null, null, null, null, null, alwaysAllowWrite = true, null, null, null, null, null, null)
         val sel = MigrationAutoApprovalSelections(false, false, writePermission = true, false, false, false)
-        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel)
+        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
         assertEquals("allow", conv.config!!["permission"]?.jsonObject?.get("edit")?.jsonPrimitive?.content)
     }
 

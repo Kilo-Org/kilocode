@@ -261,10 +261,10 @@ export namespace ModesMigrator {
     /** Names of the MCP servers the same migration writes, so an `mcp` group can grant their tools. */
     mcpServers?: string[]
     /**
-     * Whether the legacy store had at least one MCP server, converted or not.
-     * Defaults to `mcpServers` being non-empty.
+     * Whether the legacy store declared any MCP server, converted or not: a store that declared
+     * a server the migration could not convert still warns instead of silently dropping the group.
      */
-    mcpAvailable?: boolean
+    mcpAvailable: boolean
   }): Promise<MigrationResult> {
     const result: MigrationResult = {
       agents: {},
@@ -308,7 +308,6 @@ export namespace ModesMigrator {
     }
 
     const mcpServers = options.mcpServers ?? []
-    const mcpAvailable = options.mcpAvailable ?? mcpServers.length > 0
 
     // Process each mode
     for (const [slug, mode] of modesBySlug) {
@@ -322,7 +321,7 @@ export namespace ModesMigrator {
       }
 
       // Migrate custom mode
-      const converted = build(mode, mcpServers, mcpAvailable)
+      const converted = build(mode, mcpServers, options.mcpAvailable)
       result.agents[slug] = converted.agent
       result.warnings.push(...converted.warnings.map((warning) => `Mode '${slug}': ${warning}`))
     }

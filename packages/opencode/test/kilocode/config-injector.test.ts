@@ -314,7 +314,8 @@ describe("KilocodeConfigInjector", () => {
         await fs.mkdir(path.dirname(settings), { recursive: true })
         await Bun.write(settings, JSON.stringify({ mcpServers: { otherserver: { command: "npx" } } }))
 
-        // The caller omits skipGlobalPaths, as the default injection path does.
+        // The caller omits skipGlobalPaths, and the injected permissions still name only the
+        // project's server although a global settings file declares another.
         const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path })
         const config = JSON.parse(result.configJson)
         const permission = config.agent.mcpmode.permission
