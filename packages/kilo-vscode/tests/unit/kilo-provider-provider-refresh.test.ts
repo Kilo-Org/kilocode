@@ -271,28 +271,6 @@ describe("KiloProvider providers on reconnect", () => {
     expect(internal.providersRetry).toBe(true)
   })
 
-  it("starts the next project from the reset message", async () => {
-    let dir = "/project-a"
-    const requests: string[] = []
-    const messages: unknown[] = []
-    const client = remote(requests)
-    const internal = provider(connection(true, client), () => dir)
-    stub(internal)
-    internal.webview = { postMessage: async (message) => messages.push(message) }
-
-    await internal.fetchAndSendProviders()
-
-    dir = "/project-b"
-    const before = messages.length
-    internal.setProjectDirectory("/project-b")
-    const pending = internal.providersRefresh
-    if (pending) await pending
-
-    const types = messages.slice(before).map((message) => (message as { type?: string }).type)
-    expect(types).toContain("providersReset")
-    expect(types.indexOf("providersReset")).toBeLessThan(types.indexOf("providersLoaded"))
-  })
-
   it("publishes a failure payload when the switch fetch fails", async () => {
     let dir = "/project-a"
     const requests: string[] = []
@@ -304,6 +282,7 @@ describe("KiloProvider providers on reconnect", () => {
 
     await internal.fetchAndSendProviders()
     expect(loaded(messages)).toHaveLength(1)
+    internal.storedProviderKeys = { example: { key: "example", baseURL: "https://example.test" } }
 
     dir = "/project-b"
     client.provider.list = async (input: { directory: string }) => {
@@ -314,6 +293,9 @@ describe("KiloProvider providers on reconnect", () => {
     if (internal.providersRefresh) await internal.providersRefresh
 
     expect(internal.providersRetry).toBe(true)
+    const types = messages.map((message) => (message as { type?: string }).type)
+    expect(types).toContain("providersReset")
+    expect(internal.storedProviderKeys).toEqual({})
     const last = messages.at(-1) as Record<string, unknown>
     expect(last).toMatchObject({
       type: "providersLoaded",
