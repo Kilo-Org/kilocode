@@ -102,7 +102,11 @@ function enrichKilo(input: ReturnType<typeof toIndexingConfigInput>, auth: KiloI
 async function model(input: ReturnType<typeof toIndexingConfigInput>, auth: KiloIndexingAuth) {
   if (input.embedderProvider !== "kilo" || !input.enabled) return input
 
-  const catalog = await fetchKiloEmbeddingModelCatalog({ baseURL: auth.baseUrl, token: auth.apiKey })
+  const catalog = await fetchKiloEmbeddingModelCatalog({
+    baseURL: auth.baseUrl,
+    token: auth.apiKey,
+    onSkip: (count) => log.warn("skipped invalid Kilo embedding models", { count }),
+  })
 
   if (input.modelId) {
     const id = catalog.aliases[input.modelId] ?? input.modelId
