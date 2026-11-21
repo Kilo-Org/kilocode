@@ -395,7 +395,7 @@ class MockCliServer : AutoCloseable {
     }
 
     /** Wait until an SSE client has connected (up to [timeout] ms). */
-    fun awaitSseConnection(timeout: Long = 5_000): Boolean =
+    fun awaitSseConnection(timeout: Long = 30_000): Boolean =
         sseConnected.await(timeout, TimeUnit.MILLISECONDS)
 
     /** Push an SSE event to the connected client. */

@@ -130,7 +130,15 @@ class SessionController(
 ) : Disposable {
 
     private data class OrganizationTarget(val org: String?)
-    private data class Followup(val dir: String, val time: Long)
+    /**
+     * An answer that asked the CLI for a new session: [session] asked and [question] is the answered request.
+     * [time] is the local clock, used only for the handoff window. [since] is the asking session's newest
+     * positive CLI timestamp, the anchor for the "created after the answer" check, and is null when the CLI
+     * has stamped that session with nothing usable: the creation check is then skipped and only the
+     * directory, root, not-the-asking-session and child gates remain. No client clock is ever compared with
+     * a CLI one, so a client and a backend on different hosts are never compared.
+     */
+    private data class Followup(val dir: String, val time: Long, val session: String?, val question: String, val since: Double?)
     /** [submitted] is the message the create call itself delivered; every other dispatch still sends. */
     private data class Created(val id: String, val submitted: String? = null)
     private data class Pref(val agent: String?, val model: String?, val variants: List<String>, val variant: String?, val reset: Boolean)
@@ -1336,11 +1344,20 @@ class SessionController(
         promptRevision++
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size}" }
         val current = model.state
+        val asking = sid
         followup = if (current is SessionState.AwaitingQuestion
             && current.question.id == requestId
             && options.any { labels -> labels.any { it.trim() == FOLLOWUP_NEW_SESSION } }
         ) {
-            Followup(directory, System.currentTimeMillis())
+            // The anchor is the asking session's newest positive CLI timestamp, so the creation check stays on
+            // the CLI's clock. A CLI that has stamped nothing usable leaves it null and the creation check is
+            // skipped; the local answer time only bounds the handoff window and is never compared.
+            val known = model.session
+            val time = System.currentTimeMillis()
+            val since = known?.time?.let { stamp ->
+                stamp.updated.takeIf { it > 0.0 } ?: stamp.created.takeIf { it > 0.0 }
+            }
+            Followup(directory, time, asking, requestId, since)
         } else null
         val follow = followup != null
         cs.launch {
@@ -3036,7 +3053,20 @@ class SessionController(
             return
         }
         if (pathKey(item.dir) != pathKey(session.directory)) return
+        // The created-session payload carries no creator, so the handoff binds to what it does carry: the
+        // session this answer produced is a root session of the answered question's directory, created
+        // after the answer. The anchor is a CLI stamp and may be absent, and a candidate whose own created
+        // time is unstamped (0.0, the CLI's unknown sentinel) cannot be ordered against it: either case
+        // skips the comparison, leaving the directory, root, not-the-asking-session and child gates.
+        // A candidate that does not qualify leaves the arming in place, so the intended session still
+        // opens when it arrives.
+        if (session.id == item.session) return
+        if (session.parentID != null) return
+        if (session.id in childIds) return
+        val since = item.since
+        if (since != null && session.time.created > 0.0 && session.time.created < since) return
         followup = null
+        LOG.debug { "${ChatLogSummary.sid(session.id)} kind=followup adopt=true rid=${item.question}" }
         open(SessionRef.Local(session))
     }
 

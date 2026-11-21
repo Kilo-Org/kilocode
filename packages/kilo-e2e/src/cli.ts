@@ -1,5 +1,5 @@
 import { join, resolve } from "node:path"
-import { ALL_MANIFESTS, LANES, SCENARIO_IDS, manifest } from "./scenarios"
+import { ALL_MANIFESTS, LANES, ManifestError, SCENARIO_IDS, manifest, supportsLane } from "./scenarios"
 import { run, RunError } from "./coordinator"
 import type { Lane, ScenarioID } from "./schema"
 
@@ -51,6 +51,9 @@ function parse(argv: string[]): Demo {
       index += 1
     } else usage(`unknown flag: ${flag}`)
   }
+  if (!parsed.all && !supportsLane(parsed.scenario, parsed.lane)) {
+    usage(`scenario ${parsed.scenario} does not run on the ${parsed.lane} lane`)
+  }
   return parsed
 }
 
@@ -78,7 +81,17 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
   }
   const kiloCommit = await commit()
   const base = options.runId ?? `demo-${Date.now()}`
-  const cells = options.all ? ALL_MANIFESTS : [manifest(options.scenario, options.lane)]
+  const cells = (() => {
+    try {
+      return options.all ? ALL_MANIFESTS : [manifest(options.scenario, options.lane)]
+    } catch (caught) {
+      // manifest() refuses a lane the scenario does not run on; report it like every other usage error.
+      if (!(caught instanceof ManifestError)) throw caught
+      console.error(caught.message)
+      return undefined
+    }
+  })()
+  if (!cells) return 2
   const controller = new AbortController()
   const stop = () => controller.abort()
   process.once("SIGINT", stop)
