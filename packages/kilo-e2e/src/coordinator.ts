@@ -14,7 +14,7 @@ import {
   type Resource,
   type ScenarioManifest,
 } from "./schema"
-import { ManifestError, validateManifest } from "./scenarios"
+import { ManifestError, supportsLane, validateManifest } from "./scenarios"
 import { OriginError, assertLoopbackOrigins, driverEnv, providerEnv } from "./env"
 import { EvidenceError, parseDriverResult, validateEvidence } from "./evidence"
 import { GitError, createProject, type Project } from "./git"
@@ -335,6 +335,11 @@ export async function run(options: RunOptions): Promise<EvidenceReport> {
       throw caught
     }
   })()
+  // A manifest may be written by hand, bypassing manifest(), so the lane declaration is checked here
+  // too: a scenario that declares its lanes cannot be driven on one it does not support.
+  if (!supportsLane(manifest.id, manifest.lane)) {
+    throw config(`scenario ${manifest.id} does not run on the ${manifest.lane} lane`)
+  }
   const runId = options.runId ?? crypto.randomUUID()
   if (!RUN_ID.test(runId) || runId.includes("..")) throw config("run id must be a safe single path segment")
   if (options.provider.command.length === 0) throw config("fixture provider command is empty")
