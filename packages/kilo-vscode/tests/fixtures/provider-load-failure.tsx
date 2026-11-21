@@ -45,6 +45,7 @@ Object.assign(globalThis, {
 const { render } = await import("solid-js/web")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
 const { ProviderProvider } = await import("../../webview-ui/src/context/provider")
+const { DialogProvider } = await import("@kilocode/kilo-ui/context/dialog")
 const { LanguageContext } = await import("../../webview-ui/src/context/language")
 const { ModelSelectorBase } = await import("../../webview-ui/src/components/shared/ModelSelector")
 const { dict } = await import("../../webview-ui/src/i18n/en")
@@ -118,11 +119,13 @@ async function scenario(name: string, value: ModelSelection | null, previousLabe
   const dispose = render(
     () => (
       <VSCodeProvider>
-        <ProviderProvider>
-          <LanguageContext.Provider value={language as never}>
-            <ModelSelectorBase value={value} onSelect={() => {}} allowClear={false} placement="bottom-start" />
-          </LanguageContext.Provider>
-        </ProviderProvider>
+        <DialogProvider>
+          <ProviderProvider>
+            <LanguageContext.Provider value={language as never}>
+              <ModelSelectorBase value={value} onSelect={() => {}} allowClear={false} placement="bottom-start" />
+            </LanguageContext.Provider>
+          </ProviderProvider>
+        </DialogProvider>
       </VSCodeProvider>
     ),
     host,

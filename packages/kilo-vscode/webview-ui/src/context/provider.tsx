@@ -9,6 +9,7 @@ import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
 import type { Provider, ProviderModel, ModelSelection, ExtensionMessage, ProviderAuthState } from "../types/messages"
 import type { ProviderAuthMethod, ProviderFailure } from "@kilocode/sdk/v2/client"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { flattenModels, findModel as _findModel, isModelValid as isValid } from "./provider-utils"
 import { KILO_AUTO } from "../../../src/shared/provider-model"
 
@@ -38,6 +39,7 @@ export const ProviderContext = createContext<ProviderContextValue>()
 
 export const ProviderProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
+  const dialog = useDialog()
 
   const [providers, setProviders] = createSignal<Record<string, Provider>>({})
   const [connected, setConnected] = createSignal<string[]>([])
@@ -78,6 +80,8 @@ export const ProviderProvider: ParentComponent = (props) => {
         setKiloUnavailable(false)
         setDefaultSelection(KILO_AUTO)
         setLoadError(undefined)
+        // A dialog belongs to one project, so it closes with that project's provider state.
+        if (dialog.active) dialog.close()
       })
       return
     }
