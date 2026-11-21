@@ -26,6 +26,7 @@ type Ctx = {
   modelUsage: (message: ModelUsageMessage) => Promise<void>
   backgroundJobs: (sessionID: string, requestID: string) => Promise<void>
   board: (message: Record<string, unknown>) => Promise<boolean>
+  agentMap: (message: { type: string }) => Promise<boolean>
   cancelBackgroundJob: (jobID: string, sessionID: string, requestID: string) => Promise<void>
   promoteBackgroundJob: (jobID: string, sessionID: string) => Promise<void>
   caffeination: () => void
@@ -40,6 +41,7 @@ async function routeBackgroundMessage(
     return true
   }
   if (message.type === "requestSessionBoard" || message.type === "resetSessionBoard") return ctx.board(message)
+  if (message.type === "requestAgentMap" || message.type === "stopBackgroundProcess") return ctx.agentMap(message)
   if (message.type === "requestBackgroundJobs") {
     if (typeof message.sessionID === "string" && typeof message.requestID === "string") {
       await ctx.backgroundJobs(message.sessionID, message.requestID)

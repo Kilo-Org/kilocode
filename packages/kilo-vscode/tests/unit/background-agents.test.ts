@@ -4,9 +4,10 @@ import {
   backgroundJobAgents,
   taskChildren,
   mergePromptAgents,
-  stackFit,
+  reverted,
+  shown,
   stackPlace,
-  showBackgroundAgent,
+  starter,
 } from "../../webview-ui/src/components/chat/background-agents"
 import { childForeground, showChildPromotion } from "../../webview-ui/src/components/chat/task-tool-state"
 import { latestTaskPart } from "../../webview-ui/src/context/session-utils"
@@ -68,6 +69,52 @@ describe("children", () => {
     const bash = { id: "part_3", type: "tool", tool: "bash", state: { status: "running", input: {} } } as ToolPart
 
     expect(taskChildren([bash, taskPart({ id: "part_4", background: true })])).toEqual([])
+  })
+})
+
+describe("reverts", () => {
+  const at = (messageID: string, id: string, child: string) => ({ ...taskPart({ id, child }), messageID })
+  const tools = [
+    at("msg_1", "prt_1", "ses_kept"),
+    at("msg_2", "prt_2a", "ses_early"),
+    at("msg_2", "prt_2b", "ses_late"),
+    at("msg_3", "prt_3", "ses_kept"),
+    at("msg_3", "prt_4", "ses_undone"),
+  ]
+
+  it("shows the parts before the revert boundary, as the chat does", () => {
+    const whole = tools.filter((part) => shown(part, { messageID: "msg_2" })).map((part) => part.id)
+    const split = tools.filter((part) => shown(part, { messageID: "msg_2", partID: "prt_2b" })).map((part) => part.id)
+
+    expect(tools.every((part) => shown(part))).toBe(true)
+    expect(whole).toEqual(["prt_1"])
+    expect(split).toEqual(["prt_1", "prt_2a"])
+  })
+
+  it("lists children that only reverted turns started", () => {
+    expect([...reverted(tools, { messageID: "msg_2" })]).toEqual(["ses_early", "ses_late", "ses_undone"])
+    expect([...reverted(tools, { messageID: "msg_3" })]).toEqual(["ses_undone"])
+    expect(reverted(tools).size).toBe(0)
+  })
+})
+
+describe("starter", () => {
+  const call = (tool: string, input: Record<string, unknown>, metadata: Record<string, unknown>) =>
+    ({ id: "part", type: "tool", tool, state: { status: "completed", input, metadata } }) as unknown as ToolPart
+
+  it("counts the calls that started something the agent map shows", () => {
+    expect(starter(taskPart({ child: "ses_child" }))).toBe(true)
+    expect(starter(call("agent_manager", { action: "start" }, { action: "start", requestID: "am-1" }))).toBe(true)
+    expect(starter(call("background_process", { action: "start" }, { processID: "proc-1" }))).toBe(true)
+    expect(starter(call("background_process", { action: "monitor" }, { processID: "proc-1" }))).toBe(true)
+  })
+
+  it("ignores calls that only act on what exists", () => {
+    expect(starter(taskPart())).toBe(false)
+    expect(starter(call("agent_manager", { action: "list" }, { action: "list", count: 2 }))).toBe(false)
+    expect(starter(call("agent_manager", { action: "stop" }, { action: "stop", sessionID: "ses_am" }))).toBe(false)
+    expect(starter(call("background_process", { action: "status", id: "proc-1" }, { processID: "proc-1" }))).toBe(false)
+    expect(starter(call("read", {}, { sessionId: "ses_child" }))).toBe(false)
   })
 })
 
@@ -303,19 +350,6 @@ describe("backgroundAgents", () => {
 
     expect(rows.filter((row) => row.question || row.permission)).toHaveLength(1)
   })
-
-  it("shows a restarted running job after its earlier result was dismissed", () => {
-    const hidden = new Set(["job"])
-    const agent = {
-      id: "child",
-      status: "running" as const,
-      startedAt: 1,
-      jobID: "job",
-    }
-
-    expect(showBackgroundAgent(agent, hidden)).toBe(true)
-    expect(showBackgroundAgent({ ...agent, status: "completed" }, hidden)).toBe(false)
-  })
 })
 
 describe("mergePromptAgents", () => {
@@ -357,21 +391,6 @@ describe("mergePromptAgents", () => {
     expect(mergePromptAgents(prev, [live("ses_a", "New")])).toEqual([
       { id: "ses_a", description: "New", agent: "general", done: false },
     ])
-  })
-})
-
-describe("stackFit", () => {
-  it("shows up to three avatars when there is room", () => {
-    expect(stackFit(500, 10)).toBe(3)
-    expect(stackFit(500, 2)).toBe(2)
-  })
-
-  it("drops avatars before it overflows and keeps at least one", () => {
-    // Three avatars and "+7" need 90px, two avatars and "+8" need 69px.
-    expect(stackFit(90, 10)).toBe(3)
-    expect(stackFit(89, 10)).toBe(2)
-    expect(stackFit(68, 10)).toBe(1)
-    expect(stackFit(0, 10)).toBe(1)
   })
 })
 

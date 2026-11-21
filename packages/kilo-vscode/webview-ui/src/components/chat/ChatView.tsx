@@ -32,6 +32,7 @@ import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 import { taskChildren } from "./background-agents"
 import { pollBackgroundJobs } from "./background-jobs"
+import { SwarmBoardProvider } from "./SwarmBoard"
 import { showTabStrip } from "../../utils/local-tabs"
 import { forcesExternalBrowser } from "../../utils/link-modifier"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
@@ -410,87 +411,89 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   return (
     <AgentAvatarPalette ids={siblings()}>
       <TranscriptSearchProvider>
-        <div
-          class="chat-view"
-          data-browser-links={data.browserLinks ? "true" : undefined}
-          ref={(node) => {
-            node.addEventListener("click", openLink, true)
-            onCleanup(() => node.removeEventListener("click", openLink, true))
-          }}
-        >
-          <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
-            <SessionTabStrip />
-          </Show>
-          <TaskHeader readonly={props.readonly} />
-          <div class="chat-messages-wrapper">
-            <div class="chat-messages">
-              <MessageList
-                onSelectSession={props.onSelectSession}
-                isSessionOpen={props.isSessionOpen}
-                onShowHistory={props.onShowHistory}
-                onForkMessage={props.onForkMessage}
-                onEditMessage={edit}
-                onScrollToBottomReady={setScroll}
-                queuedDisabled={editing()?.sessionID === id() && !!editing()}
-                editDisabled={!editable() || !!editing()}
-                questions={standaloneQuestions}
-                suggestions={standaloneSuggestions}
-                readonly={props.readonly}
-                interactivePrompts={ownsPrompts()}
-                emptyState={props.emptyState}
-                introduction={props.introduction}
-                announce={isSidebar()}
-                sessionID={pendingSessionID}
-              />
-            </div>
-          </div>
-
-          <Show when={dock()}>
-            <div class="chat-input">
-              <Show when={server.connectionState() === "error" && server.errorMessage()}>
-                <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
-              </Show>
-              <Show when={permissionRequest()} keyed>
-                {(perm) => (
-                  <PermissionDock
-                    request={perm}
-                    responding={session.respondingPermissions().has(perm.id)}
-                    onDecide={decide}
-                  />
-                )}
-              </Show>
-              <SessionDock
-                blocked={dockBlocked()}
-                hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}
-                actions={(control, agents, todos) => renderActions(hasMessages(), control, agents, todos)}
-                onScrollToBottom={scrollToBottom}
-                readonly={props.readonly}
-                projectId={props.projectId}
-              />
-              <Show when={ownsPrompts() && !props.readonly}>
-                <PromptInput
-                  blocked={blocked}
-                  edit={editing()}
-                  onEditComplete={() => setEditing(undefined)}
-                  onEditReady={setEditable}
-                  suggesting={suggesting}
-                  questioning={questioning}
-                  worktree={props.worktree}
-                  onUpdateBase={props.onUpdateBase}
-                  boxId={props.promptBoxId}
-                  terminalContext={props.terminalContext}
-                  worktrees={props.worktrees}
-                  deferFocusToQuestion={props.deferFocusToQuestion}
-                  pendingSessionID={pendingSessionID()}
-                  focusOnDraftChange={props.focusOnDraftChange}
-                  onFocusChange={props.onFocusChange}
-                  resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
-                  manager={props.manager}
+        <SwarmBoardProvider readonly={props.readonly} projectId={props.projectId}>
+          <div
+            class="chat-view"
+            data-browser-links={data.browserLinks ? "true" : undefined}
+            ref={(node) => {
+              node.addEventListener("click", openLink, true)
+              onCleanup(() => node.removeEventListener("click", openLink, true))
+            }}
+          >
+            <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
+              <SessionTabStrip />
+            </Show>
+            <TaskHeader readonly={props.readonly} />
+            <div class="chat-messages-wrapper">
+              <div class="chat-messages">
+                <MessageList
+                  onSelectSession={props.onSelectSession}
+                  isSessionOpen={props.isSessionOpen}
+                  onShowHistory={props.onShowHistory}
+                  onForkMessage={props.onForkMessage}
+                  onEditMessage={edit}
+                  onScrollToBottomReady={setScroll}
+                  queuedDisabled={editing()?.sessionID === id() && !!editing()}
+                  editDisabled={!editable() || !!editing()}
+                  questions={standaloneQuestions}
+                  suggestions={standaloneSuggestions}
+                  readonly={props.readonly}
+                  interactivePrompts={ownsPrompts()}
+                  emptyState={props.emptyState}
+                  introduction={props.introduction}
+                  announce={isSidebar()}
+                  sessionID={pendingSessionID}
                 />
-              </Show>
+              </div>
             </div>
-          </Show>
-        </div>
+
+            <Show when={dock()}>
+              <div class="chat-input">
+                <Show when={server.connectionState() === "error" && server.errorMessage()}>
+                  <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
+                </Show>
+                <Show when={permissionRequest()} keyed>
+                  {(perm) => (
+                    <PermissionDock
+                      request={perm}
+                      responding={session.respondingPermissions().has(perm.id)}
+                      onDecide={decide}
+                    />
+                  )}
+                </Show>
+                <SessionDock
+                  blocked={dockBlocked()}
+                  hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}
+                  actions={(control, agents, todos) => renderActions(hasMessages(), control, agents, todos)}
+                  onScrollToBottom={scrollToBottom}
+                  readonly={props.readonly}
+                  projectId={props.projectId}
+                />
+                <Show when={ownsPrompts() && !props.readonly}>
+                  <PromptInput
+                    blocked={blocked}
+                    edit={editing()}
+                    onEditComplete={() => setEditing(undefined)}
+                    onEditReady={setEditable}
+                    suggesting={suggesting}
+                    questioning={questioning}
+                    worktree={props.worktree}
+                    onUpdateBase={props.onUpdateBase}
+                    boxId={props.promptBoxId}
+                    terminalContext={props.terminalContext}
+                    worktrees={props.worktrees}
+                    deferFocusToQuestion={props.deferFocusToQuestion}
+                    pendingSessionID={pendingSessionID()}
+                    focusOnDraftChange={props.focusOnDraftChange}
+                    onFocusChange={props.onFocusChange}
+                    resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+                    manager={props.manager}
+                  />
+                </Show>
+              </div>
+            </Show>
+          </div>
+        </SwarmBoardProvider>
       </TranscriptSearchProvider>
     </AgentAvatarPalette>
   )

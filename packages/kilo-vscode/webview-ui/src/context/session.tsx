@@ -304,12 +304,6 @@ export const SessionProvider: ParentComponent = (props) => {
   // Cloud session preview state
   const [cloudPreviewId, setCloudPreviewId] = createSignal<string | null>(null)
   const [hiddenErrors, setHiddenErrors] = createSignal<Set<string>>(new Set())
-  const [dismissals, setDismissals] = createStore<Record<string, ReadonlySet<string>>>({})
-  const dismissedBackgroundJobs = (id: string): ReadonlySet<string> => dismissals[id] ?? new Set<string>()
-  const dismissBackgroundJobs = (id: string, ids: string[]) => {
-    if (!ids.length) return
-    setDismissals(id, (current) => new Set([...(current ?? []), ...ids]))
-  }
 
   // Live worktree diff stats from extension polling
   const [worktreeStats, setWorktreeStats] = createSignal<
@@ -963,11 +957,6 @@ export const SessionProvider: ParentComponent = (props) => {
 
       case "sessionDeleted":
         handleSessionDeleted(message.sessionID)
-        setDismissals(
-          produce((map) => {
-            delete map[message.sessionID]
-          }),
-        )
         break
 
       case "messageRemoved":
@@ -2965,8 +2954,6 @@ export const SessionProvider: ParentComponent = (props) => {
     getParts,
     getSessionToolParts,
     getSessionToolCount,
-    dismissedBackgroundJobs,
-    dismissBackgroundJobs,
     isErrorHidden: (messageID: string) => hiddenErrors().has(messageID),
     hydrateParts,
     todos,

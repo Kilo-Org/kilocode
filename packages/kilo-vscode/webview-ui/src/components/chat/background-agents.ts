@@ -21,6 +21,7 @@ import type {
   SessionStatusInfo,
   ToolPart,
 } from "../../types/messages"
+import type { RevertBoundary } from "../../context/session-queue"
 
 export type BackgroundAgentStatus = BackgroundJobInfo["status"]
 
@@ -36,10 +37,6 @@ export interface BackgroundAgent {
   jobID: string
   permission?: PermissionRequest
   question?: QuestionRequest
-}
-
-export function showBackgroundAgent(agent: BackgroundAgent, hidden: ReadonlySet<string>): boolean {
-  return agent.status === "running" || !hidden.has(agent.jobID)
 }
 
 function text(value: unknown): string | undefined {
@@ -63,6 +60,41 @@ export function taskChildren(tools: ToolPart[]): string[] {
     ids.push(id)
   }
   return ids
+}
+
+/**
+ * True when a tool call started something the agent map shows: a Task
+ * subagent, Agent Manager sessions, or a background process. The other
+ * `agent_manager` and `background_process` actions only act on what exists.
+ * Mirrors `starts()` in `src/kilo-provider/agent-map.ts`.
+ */
+export function starter(part: ToolPart): boolean {
+  if (part.tool === "task") return !!text(meta(part, "sessionId"))
+  if (part.tool === "agent_manager") return !!text(meta(part, "requestID"))
+  if (part.tool !== "background_process") return false
+  return ["start", "monitor"].includes(String(part.state.input?.action)) && !!text(meta(part, "processID"))
+}
+
+/**
+ * True when the chat still shows a tool part under the session's revert.
+ * Message and part IDs sort in the order they were created.
+ */
+export function shown(part: ToolPart, revert?: RevertBoundary | null): boolean {
+  const message = part.messageID ?? ""
+  if (!revert || message < revert.messageID) return true
+  return message === revert.messageID && !!revert.partID && part.id < revert.partID
+}
+
+/** Child sessions that only reverted turns started. */
+export function reverted(tools: ToolPart[], revert?: RevertBoundary | null): Set<string> {
+  if (!revert) return new Set()
+  const kept = new Set(taskChildren(tools.filter((part) => shown(part, revert))))
+  return new Set(taskChildren(tools).filter((id) => !kept.has(id)))
+}
+
+/** The latest Task tool part that ran the child session `id`. */
+export function taskPart(tools: ToolPart[], id: string): ToolPart | undefined {
+  return tools.findLast((part) => part.tool === "task" && text(meta(part, "sessionId")) === id)
 }
 
 function working(status: SessionStatusInfo | undefined): boolean {
@@ -126,31 +158,11 @@ export function mergePromptAgents(prev: PromptAgent[], live: BackgroundAgent[]):
 }
 
 /**
- * The width of a stack with `n` avatars for `count` agents. Mirrors the stack
- * CSS: 18px avatars with 3px gaps, 4px side padding, the count text, and the
- * 4px rule margin. Layout code uses this target width instead of measuring,
- * because the measured width changes while the stack animates.
- */
-export function stackWidth(n: number, count: number) {
-  const rest = count - n
-  // One avatar shows the total ("3"), more show the hidden rest ("+7").
-  const text = n === 1 ? String(count) : `+${rest}`
-  const extra = rest > 0 ? 4 + 7 * text.length : 0
-  return 4 + 8 + 18 * n + 3 * (n - 1) + extra
-}
-
-/** How many avatars fit in `space` pixels for `count` agents. At least one always shows. */
-export function stackFit(space: number, count: number) {
-  const top = Math.min(3, Math.max(1, count))
-  for (let n = top; n > 1; n--) if (stackWidth(n, count) <= space) return n
-  return 1
-}
-
-/**
- * Where the stack goes in the wrapping actions row, so it does not push an
- * action onto a new line. `used` is the width taken on each line without the
- * stack. It leads the first line when that line has room, else it ends the
- * first line with room. When no line has room it leads, and the row wraps.
+ * Where the dock's agent map button goes in the wrapping actions row, so it
+ * does not push an action onto a new line. `used` is the width taken on each
+ * line without the button. It leads the first line when that line has room,
+ * else it ends the first line with room. When no line has room it leads, and
+ * the row wraps.
  */
 export function stackPlace(used: number[], width: number, need: number) {
   if (used.length === 0 || width - (used.at(0) ?? 0) >= need) return { line: 0, end: false }

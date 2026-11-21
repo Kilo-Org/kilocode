@@ -374,13 +374,13 @@
   padding: 6px 12px;
 }
 
-/* Status, not a button: no border and no fill at rest. Hover matches the
-   working indicator next to it.
+/* The agent map button. Status, not a call to action: no border and no fill
+   at rest. Hover matches the working indicator next to it.
 
-   Every size change animates, so nothing next to the stack jumps: the stack
-   opens from zero width, collapses to zero before it unmounts, and each avatar
-   grows in and collapses out. The one-column grid is what lets the width
-   animate between zero and the content width without measuring it. */
+   Opening and closing animate, so nothing next to the button jumps: it opens
+   from zero width and collapses to zero before it unmounts. The one-column
+   grid is what lets the width animate between zero and the content width
+   without measuring it. */
 [data-component="agent-stack"] {
   --agent-stack-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --agent-stack-open: 260ms;
@@ -507,7 +507,7 @@
   }
 }
 
-/* Waiting on the user: a small dot marks the stack. */
+/* Waiting on the user: a small dot marks the button. */
 [data-component="agent-stack"][data-attention]::before {
   content: "";
   position: absolute;
@@ -519,354 +519,21 @@
   background: var(--icon-warning-base, var(--vscode-editorWarning-foreground));
 }
 
-/* A small gap keeps each dot glyph separate. Overlapping glyphs merge into one
-   dot field and lose the identity that links them to their cards. */
-[data-slot="agent-stack-avatars"] {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-[data-slot="agent-stack-avatar"] {
-  display: inline-flex;
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  overflow: hidden;
-  transition:
-    opacity 300ms ease,
-    width 240ms cubic-bezier(0.22, 1, 0.36, 1),
-    margin 240ms cubic-bezier(0.22, 1, 0.36, 1);
-
-  &[data-done="true"] {
-    opacity: 0.4;
-  }
-
-  /* A new avatar in a visible stack grows in from zero width. One that only
-     replaces another fades in, so the width does not change. */
-  &[data-enter="grow"] {
-    animation: agent-stack-avatar-in 240ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  }
-
-  &[data-enter="fade"] {
-    animation: agent-stack-avatar-fade 240ms ease-out backwards;
-  }
-
-  /* A finished avatar collapses, taking its 3px gap with it. */
-  &[data-leaving] {
-    width: 0;
-    margin-inline-start: -3px;
-    opacity: 0;
-  }
-}
-
-/* Same surface as the Goal menu in this row. */
-.agent-panel[data-component="popover-content"] {
-  box-sizing: border-box;
-  width: 300px;
-  max-width: calc(100vw - 24px);
-  padding: 6px;
-  border-radius: var(--radius-xl);
-}
-
-[data-slot="agent-panel"] {
-  display: grid;
-  gap: 4px;
-  font-size: var(--kilo-font-size-12);
-}
-
-[data-slot="agent-panel-header"] {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-inline-start: 8px;
-}
-
-[data-slot="agent-panel-title"] {
-  color: var(--text-weak);
-  font-size: var(--kilo-font-size-10);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-[data-slot="agent-panel-attention"] {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: var(--radius-lg);
-  color: var(--text-warning-base, var(--vscode-editorWarning-foreground));
-  background: var(--surface-warning-weak, transparent);
-}
-
-[data-slot="agent-panel-list"] {
-  display: grid;
-  gap: 2px;
-  max-height: 220px;
-  overflow-y: auto;
-
-  /* A rule separates finished agents only from active ones above them. */
-  & + &[data-finished],
-  [data-slot="agent-panel-stop-all"] + &[data-finished] {
-    padding-top: 4px;
-    border-top: 1px solid var(--border-weak-base, var(--vscode-panel-border));
-  }
-}
-
-[data-slot="agent-panel-row"] {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  border-radius: var(--radius-lg);
-
-  &:hover,
-  &:focus-within {
-    background: var(--surface-raised-base-hover);
-  }
-
-  &:not([data-status="running"], [data-status="waiting"]) [data-slot="agent-panel-main"] {
-    opacity: 0.6;
-  }
-}
-
-[data-slot="agent-panel-main"] {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
-  flex: 1;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  min-height: 28px;
-  padding: 5px 8px;
-  border: 0;
-  border-radius: inherit;
-  background: none;
-  color: var(--text-base);
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 1px solid var(--vscode-focusBorder);
-  }
-}
-
-[data-slot="agent-panel-label"] {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-[data-slot="agent-panel-status"] {
-  color: var(--text-weak);
-  font-size: var(--kilo-font-size-11);
-
-  [data-status="waiting"] & {
-    color: var(--text-warning-base, var(--vscode-editorWarning-foreground));
-  }
-
-  [data-status="error"] & {
-    color: var(--text-critical-base, var(--vscode-errorForeground));
-  }
-}
-
-[data-slot="agent-panel-stop-all"],
-[data-slot="agent-panel-clear"] {
-  justify-self: end;
-}
-
-/* ============================================
-   Board button
-   ============================================ */
-
-/* The same quiet surface as the agent stack it follows. */
-[data-component="board-trigger"] {
-  position: relative;
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--session-action-radius);
-  background: transparent;
-  color: var(--vscode-descriptionForeground);
-  cursor: pointer;
-  animation: board-trigger-in 200ms ease-out backwards;
-  transition:
-    color 150ms ease,
-    background-color 150ms ease;
-
-  &:hover,
-  &:focus-visible,
-  &[aria-expanded="true"] {
-    background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
-    color: var(--vscode-foreground);
-  }
-
-  &:focus-visible {
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
-  }
-}
-
-.session-actions-row > [data-component="board-trigger"] {
-  height: 22px;
-  overflow: visible;
-}
-
-/* At the end of an actions line nothing follows the button, so it drops its rule. */
-.session-actions-row > [data-component="board-trigger"][data-place="end"] {
-  margin-inline-end: 0;
-
-  &::after {
-    display: none;
-  }
-}
-
-/* The rule after the stack moves here when the button follows it. */
-[data-component="board-trigger"][data-rule] {
-  margin-inline-end: 4px;
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset-inline-end: -3px;
-    top: 50%;
-    width: 1px;
-    height: 14px;
-    transform: translateY(-50%);
-    background: var(--border-weak-base, var(--vscode-panel-border));
-  }
-}
-
-/* With agents, the button joins the stack like the New Worktree split
-   button: the stack keeps its look, and the posts open from the narrow part
-   on its right, 2px apart. At rest nothing changes. Hovering either part
-   shades both, so they read as one control with two targets. */
-[data-component="agent-stack"]:not([data-idle]):has(+ [data-component="board-trigger"]) {
-  border-start-end-radius: 0;
-  border-end-end-radius: 0;
-}
-
-[data-component="agent-stack"]:not([data-idle]) + [data-component="board-trigger"] {
-  width: 20px;
-  margin-inline-start: 2px;
-  border-start-start-radius: 0;
-  border-end-start-radius: 0;
-}
-
-[data-component="agent-stack"]:not([data-idle]):is(:hover, :focus-visible, [aria-expanded="true"])
-  + [data-component="board-trigger"],
-[data-component="agent-stack"]:not([data-idle]):has(
-    + [data-component="board-trigger"]:is(:hover, :focus-visible, [aria-expanded="true"])
-  ) {
-  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+/* How many agents still work, next to the icon. */
+[data-slot="agent-stack-count"] {
   color: var(--vscode-foreground);
 }
 
-/* The rows put a gap between their items. The split keeps only its 2px. */
-.session-actions-row > [data-component="agent-stack"]:not([data-idle]) + [data-component="board-trigger"] {
-  margin-inline-start: -2px;
-}
-
-.session-agents > [data-component="agent-stack"]:not([data-idle]) + [data-component="board-trigger"] {
-  margin-inline-start: -4px;
-}
-
-/* New posts since the user last looked. Blue, not the warning color of the
-   stack: posts are for the main agent, not a request to the user. */
-[data-component="board-trigger"][data-unread]::before {
-  content: "";
-  position: absolute;
-  top: 3px;
-  inset-inline-end: 3px;
+/* New board posts since the user last looked. Blue, not the warning color of
+   an agent that waits: posts are for the main agent, not a request to the user. */
+[data-slot="agent-stack-unread"] {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--vscode-activityBarBadge-background, var(--icon-info-base));
 }
 
-/* Same surface as the agent panel. */
-.board-panel[data-component="popover-content"] {
-  box-sizing: border-box;
-  width: 340px;
-  max-width: calc(100vw - 24px);
-  padding: 6px;
-  border-radius: var(--radius-xl);
-}
-
-[data-slot="board-panel"] {
-  display: grid;
-  gap: 4px;
-  font-size: var(--kilo-font-size-12);
-}
-
-[data-slot="board-panel-header"] {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-inline-start: 8px;
-}
-
-[data-slot="board-panel-actions"] {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-[data-slot="board-panel-title"] {
-  color: var(--text-weak);
-  font-size: var(--kilo-font-size-10);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-/* Recent posts only, so each body stays short. The full board shows all. */
-[data-slot="board-panel-list"][data-component="board-messages"] {
-  gap: 10px;
-  max-height: min(360px, 50vh);
-  padding: 2px 8px 6px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  container-type: inline-size;
-
-  [data-slot="board-message"] {
-    gap: 4px;
-  }
-
-  [data-slot="board-message"] + [data-slot="board-message"] {
-    padding-top: 10px;
-  }
-
-  [data-slot="board-message-body"] {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-    overflow: hidden;
-  }
-}
-
-/* The full board dialog, opened from the panel. */
-.task-board[data-slot="dialog-content"] {
-  height: 100%;
-  min-height: 0;
-}
-
-.task-board [data-slot="dialog-body"] {
-  min-height: 0;
-}
-
-.task-board-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
+/* The board history in the agent map's Board tab. */
 .task-board-scroll {
   flex: 1;
   min-height: 0;
@@ -878,16 +545,6 @@
 
 .task-board-list {
   container-type: inline-size;
-}
-
-.task-board [role="alert"] {
-  margin: 0 20px 12px;
-}
-
-@keyframes board-trigger-in {
-  from {
-    opacity: 0;
-  }
 }
 
 @keyframes agent-stack-in {
@@ -911,28 +568,13 @@
   }
 }
 
-@keyframes agent-stack-avatar-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes agent-stack-avatar-in {
-  from {
-    width: 0;
-    margin-inline-start: -3px;
-    opacity: 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  [data-component="agent-stack"],
-  [data-slot="agent-stack-avatar"] {
+  [data-component="agent-stack"] {
     animation: none;
     transition: none;
   }
 
-  /* Without motion, keep the finished stack at full size until it unmounts. */
+  /* Without motion, keep the closing button at full size until it unmounts. */
   [data-component="agent-stack"][data-idle="true"] {
     grid-template-columns: 1fr;
     padding-inline: 4px;

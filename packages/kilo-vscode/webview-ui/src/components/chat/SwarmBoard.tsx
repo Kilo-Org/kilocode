@@ -2,43 +2,30 @@
  * The shared agent board of a root session.
  *
  * The board belongs to the session, not to a run, so it outlives the
- * background agents that post on it. The dock shows its button next to the
- * agent stack while agents exist, and alone in the same place after they are
- * cleared or the view reloads. The button opens the latest posts. The full
- * board, with history and reset, opens in a dialog.
+ * background agents that post on it. The agent map reads it in its Board
+ * tab, and the dock's agent map button marks new posts.
  */
 
 import {
   For,
-  Show,
+  createContext,
   createEffect,
   createMemo,
   createSignal,
   on,
   onCleanup,
+  useContext,
   type Component,
-  type ComponentProps,
-  type JSX,
+  type ParentComponent,
 } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
 import { BoardMessage } from "@kilocode/kilo-ui/board-message"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
-import { Dialog } from "@kilocode/kilo-ui/dialog"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Popover } from "@kilocode/kilo-ui/popover"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useBoardNavigation } from "@kilocode/kilo-ui/context/board-navigation"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import type { SessionBoard, SessionBoardLoadedMessage } from "../../types/messages"
-
-/** Posts shown in the dock panel. Older posts are in the full board. */
-const RECENT = 5
 
 type Probe = { requestID: string; sessionID: string; projectId?: string; scope: string; epoch?: number }
 
@@ -59,23 +46,18 @@ export function useSwarmBoard(props: { readonly?: boolean; projectId?: string })
   const config = useConfig()
   const language = useLanguage()
   const vscode = useVSCode()
-  const dialog = useDialog()
   const navigate = useBoardNavigation()
-  const [open, setOpen] = createSignal(false)
   const [board, setBoard] = createSignal<SessionBoard>()
   const [error, setError] = createSignal<string>()
-  const [pending, setPending] = createSignal<Probe & { before?: string; confirmation?: string }>()
+  const [pending, setPending] = createSignal<Probe & { before?: string }>()
   // A one-post check runs on its own, so it never blocks or replaces a full load.
   const [peeking, setPeeking] = createSignal<Probe>()
   // The newest post, and the newest post the user has seen. The first load
   // of a view counts as seen, so a reload does not mark old posts as new.
   const [latest, setLatest] = createSignal<string>()
   const [seen, setSeen] = createSignal<string>()
-  // True only for the full board reader, not the reset confirmation.
-  const [reading, setReading] = createSignal(false)
   let fresh = true
   let jobs = ""
-  let layer: string | undefined
   // Bumped when a full load or a reset lands, so a late one-post check cannot
   // restore a board that a reset just cleared.
   let epoch = 0
@@ -93,19 +75,17 @@ export function useSwarmBoard(props: { readonly?: boolean; projectId?: string })
     )
   })
 
-  const request = (
-    before?: string,
-    target?: { scope: string; sessionID: string; projectId?: string; revision: number },
-  ) => {
-    const sessionID = target?.sessionID ?? session.currentSessionID()
-    if (!sessionID || !allowed() || pending() || (target && target.scope !== scope())) return
-    const base = { sessionID, projectId: target?.projectId ?? props.projectId, requestID: crypto.randomUUID() }
-    setPending({ ...base, scope: scope(), before, confirmation: target ? dialog.active?.id : undefined })
+  /** Loads the newest page, an older page with `before`, or resets the board at `revision`. */
+  const request = (before?: string, revision?: number) => {
+    const sessionID = session.currentSessionID()
+    if (!sessionID || !allowed() || pending()) return
+    const base = { sessionID, projectId: props.projectId, requestID: crypto.randomUUID() }
+    setPending({ ...base, scope: scope(), before })
     setError(undefined)
     vscode.postMessage(
-      target
-        ? { type: "resetSessionBoard", ...base, revision: target.revision }
-        : { type: "requestSessionBoard", ...base, before, limit: 50 },
+      revision === undefined
+        ? { type: "requestSessionBoard", ...base, before, limit: 50 }
+        : { type: "resetSessionBoard", ...base, revision },
     )
   }
 
@@ -179,14 +159,12 @@ export function useSwarmBoard(props: { readonly?: boolean; projectId?: string })
         epoch += 1
       }
       setBoard(merge(board(), message.board, expected.before))
-      if (dialog.active?.id === expected.confirmation) dialog.close()
     }),
   )
   createEffect(
     on(
       scope,
       () => {
-        setOpen(false)
         setBoard(undefined)
         setPending(undefined)
         setPeeking(undefined)
@@ -203,354 +181,164 @@ export function useSwarmBoard(props: { readonly?: boolean; projectId?: string })
 
   createEffect(on([scope, allowed, vscode.active], check))
 
-  createEffect(() => {
-    if (!allowed() || !present() || !vscode.active()) setOpen(false)
-  })
-
-  const mark = () => setSeen(latest())
-  createEffect(() => {
-    if (reading()) mark()
-  })
-
-  const show = (content: () => JSX.Element, read = false) => {
-    const current = scope()
-    const valid = () => current === scope() && allowed() && present() && vscode.active()
-    void dialog
-      .show(
-        () => {
-          setOpen(true)
-          setReading(read)
-          onCleanup(() => {
-            setOpen(false)
-            setReading(false)
-          })
-          createEffect(() => {
-            const ready = valid()
-            if (!ready && dialog.active?.id === layer) dialog.close()
-          })
-          return content()
-        },
-        () => setOpen(false),
-      )
-      .then(() => {
-        layer = dialog.active?.id
-        if (!valid()) dialog.close()
-      })
-  }
-  onCleanup(() => {
-    if (layer && dialog.active?.id === layer) dialog.close()
-  })
-
-  const reset = () => {
-    const current = board()
-    const sessionID = session.currentSessionID()
-    if (!current || !sessionID || pending()) return
-    const target = { scope: scope(), sessionID, projectId: props.projectId, revision: current.revision }
-    setError(undefined)
-    show(() => {
-      return (
-        <Dialog title={language.t("task.swarm.resetTitle")} fit>
-          <div class="dialog-confirm-body">
-            <p>{language.t("task.swarm.resetDescription")}</p>
-            <Show when={error()}>{(message) => <p role="alert">{message()}</p>}</Show>
-            <div class="dialog-confirm-actions">
-              <Button variant="ghost" onClick={() => dialog.close()}>
-                {language.t("common.cancel")}
-              </Button>
-              <Button
-                variant="primary"
-                disabled={!!pending()}
-                onClick={() => {
-                  if (error()) return view()
-                  request(undefined, target)
-                }}
-              >
-                <Show when={pending()}>
-                  <Spinner />
-                </Show>
-                {language.t(error() ? "task.swarm.refresh" : "task.swarm.reset")}
-              </Button>
-            </div>
-          </div>
-        </Dialog>
-      )
-    })
-  }
-
-  const openAgent = (id: string, title?: string) => {
-    dialog.close()
-    navigate?.(id, title)
-  }
-
-  const view = () => {
-    request()
-    show(() => {
-      const scroll = createAutoScroll({ working: open, overflowAnchor: "dynamic" })
-      let viewport: HTMLDivElement | undefined
-      let resize: ResizeObserver | undefined
-      let anchor: { element: HTMLElement; top: number } | undefined
-      const more = () => {
-        const current = board()
-        if (
-          !open() ||
-          !viewport ||
-          viewport.scrollTop > 160 ||
-          !current?.hasMore ||
-          !current.cursor ||
-          pending() ||
-          error()
-        )
-          return
-        const element = viewport.querySelector<HTMLElement>('[data-slot="board-message-body"]')
-        if (scroll.userScrolled() && element)
-          anchor = { element, top: element.getBoundingClientRect().top - viewport.getBoundingClientRect().top }
-        request(current.cursor)
-      }
-      createEffect(
-        on(
-          () => board()?.messages,
-          () => {
-            const current = anchor
-            anchor = undefined
-            if (!current) return
-            queueMicrotask(() => {
-              if (!viewport?.isConnected || !current.element.isConnected) return
-              viewport.scrollTop +=
-                current.element.getBoundingClientRect().top - viewport.getBoundingClientRect().top - current.top
-            })
-          },
-        ),
-      )
-      onCleanup(() => resize?.disconnect())
-      return (
-        <Dialog
-          title={language.t("task.swarm.title")}
-          size="large"
-          class="task-board"
-          action={
-            <div class="task-board-actions">
-              <Show when={pending()}>
-                <span
-                  role="status"
-                  aria-label={language.t(pending()?.before ? "session.messages.loadingEarlier" : "task.swarm.loading")}
-                >
-                  <Spinner />
-                </span>
-              </Show>
-              <Tooltip value={language.t("task.swarm.refresh")}>
-                <IconButton
-                  icon="refresh"
-                  size="small"
-                  variant="ghost"
-                  aria-label={language.t("task.swarm.refresh")}
-                  disabled={!!pending()}
-                  onClick={() => {
-                    scroll.resume()
-                    request()
-                  }}
-                />
-              </Tooltip>
-              <Tooltip value={language.t("task.swarm.reset")}>
-                <IconButton
-                  icon="trash"
-                  size="small"
-                  variant="ghost"
-                  aria-label={language.t("task.swarm.reset")}
-                  disabled={!!pending()}
-                  onClick={reset}
-                />
-              </Tooltip>
-              <IconButton
-                icon="close-small"
-                size="small"
-                variant="ghost"
-                aria-label={language.t("common.close")}
-                onClick={() => dialog.close()}
-              />
-            </div>
-          }
-        >
-          <Show when={error()}>{(message) => <p role="alert">{message()}</p>}</Show>
-          <div
-            class="task-board-scroll"
-            tabIndex={0}
-            role="region"
-            aria-label={language.t("task.swarm.title")}
-            ref={(el) => {
-              viewport = el
-              scroll.scrollRef(el)
-            }}
-            onScroll={() => {
-              scroll.handleScroll()
-              if (anchor && pending()?.before && viewport) {
-                anchor = scroll.userScrolled()
-                  ? {
-                      element: anchor.element,
-                      top: anchor.element.getBoundingClientRect().top - viewport.getBoundingClientRect().top,
-                    }
-                  : undefined
-              }
-              more()
-            }}
-            onWheel={(event) => {
-              if (event.deltaY < 0) {
-                scroll.pause()
-                more()
-              }
-            }}
-            onKeyDown={(event) => {
-              if (["ArrowUp", "PageUp", "Home"].includes(event.key)) {
-                scroll.pause()
-                more()
-              }
-            }}
-          >
-            <div
-              class="task-board-list"
-              data-component="board-messages"
-              ref={(el) => {
-                resize?.disconnect()
-                if (!el) return
-                scroll.contentRef(el)
-                resize = new ResizeObserver(() => {
-                  if (viewport && viewport.scrollHeight <= viewport.clientHeight) more()
-                })
-                resize.observe(el)
-              }}
-            >
-              <For each={board()?.messages ?? []}>
-                {(message) => <BoardMessage {...message} onSessionClick={openAgent} />}
-              </For>
-            </div>
-          </div>
-        </Dialog>
-      )
-    }, true)
-  }
+  const source: BoardSource = { board, pending, error, request: (before) => request(before) }
 
   return {
+    /** The board has posts to show. */
     shown: () => allowed() && present(),
+    /** The board can exist for this session, posts or not. */
+    available: allowed,
     unread: () => !!latest() && latest() !== seen(),
     messages: () => board()?.messages ?? [],
     busy: () => !!pending(),
     load: () => request(),
-    mark,
-    view,
-    reset,
+    /** Clears every post. The caller confirms first. */
+    reset: () => {
+      const current = board()
+      if (current) request(undefined, current.revision)
+    },
+    source,
+    mark: () => setSeen(latest()),
     navigate: (id: string, title?: string) => navigate?.(id, title),
   }
 }
 
 export type SwarmBoardState = ReturnType<typeof useSwarmBoard>
 
-/** The dock button: the latest posts in a small panel, with a way to the full board. */
-export const SwarmBoardButton: Component<{ state: SwarmBoardState; rule?: boolean; active: boolean }> = (props) => {
+/** What a board reader reads and pages through. */
+interface BoardSource {
+  board: () => SessionBoard | undefined
+  pending: () => { before?: string } | undefined
+  error: () => string | undefined
+  request: (before?: string) => void
+}
+
+type BoardPost = SessionBoard["messages"][number]
+
+/**
+ * The board history, newest at the bottom. Scrolling up pages in older
+ * posts and keeps the post under the pointer in place.
+ */
+export const BoardReader: Component<{
+  source: BoardSource
+  /** Keeps the view pinned to the newest post while true. */
+  working: () => boolean
+  /** Shows only the posts that pass. Paging continues until older posts run out. */
+  filter?: (post: BoardPost) => boolean
+  onAgent: (id: string, title?: string) => void
+  controls?: (value: { resume: () => void }) => void
+}> = (props) => {
   const language = useLanguage()
-  const [open, setOpen] = createSignal(false)
-  const recent = createMemo(() => props.state.messages().slice(-RECENT))
-  let list: HTMLDivElement | undefined
-
-  createEffect(() => {
-    if (!props.state.shown()) setOpen(false)
+  const scroll = createAutoScroll({ working: props.working, overflowAnchor: "dynamic" })
+  props.controls?.({ resume: () => scroll.resume() })
+  let viewport: HTMLDivElement | undefined
+  let resize: ResizeObserver | undefined
+  let anchor: { element: HTMLElement; top: number } | undefined
+  const posts = createMemo(() => {
+    const list = props.source.board()?.messages ?? []
+    return props.filter ? list.filter(props.filter) : list
   })
-  // The panel is a portal, so it would outlive the dock state that hides this
-  // button. Close it when that state stops being the active one.
-  createEffect(() => {
-    if (!props.active) setOpen(false)
-  })
-  createEffect(() => {
-    if (open()) props.state.mark()
-  })
-  // The newest post is at the bottom, like the full board.
+  const more = () => {
+    const current = props.source.board()
+    if (
+      !props.working() ||
+      !viewport ||
+      viewport.scrollTop > 160 ||
+      !current?.hasMore ||
+      !current.cursor ||
+      props.source.pending() ||
+      props.source.error()
+    )
+      return
+    const element = viewport.querySelector<HTMLElement>('[data-slot="board-message-body"]')
+    if (scroll.userScrolled() && element)
+      anchor = { element, top: element.getBoundingClientRect().top - viewport.getBoundingClientRect().top }
+    props.source.request(current.cursor)
+  }
   createEffect(
-    on([open, recent], () => {
-      if (open()) queueMicrotask(() => list && (list.scrollTop = list.scrollHeight))
-    }),
+    on(
+      () => props.source.board()?.messages,
+      () => {
+        const current = anchor
+        anchor = undefined
+        if (!current) return
+        queueMicrotask(() => {
+          if (!viewport?.isConnected || !current.element.isConnected) return
+          viewport.scrollTop +=
+            current.element.getBoundingClientRect().top - viewport.getBoundingClientRect().top - current.top
+        })
+      },
+    ),
   )
-
-  const toggle = (next: boolean) => {
-    setOpen(next)
-    if (next) props.state.load()
-  }
-  const full = () => {
-    setOpen(false)
-    props.state.view()
-  }
-  const clear = () => {
-    setOpen(false)
-    props.state.reset()
-  }
-  const agent = (id: string, title?: string) => {
-    setOpen(false)
-    props.state.navigate(id, title)
-  }
-
-  // Data attributes are not part of the button prop type, so they go through
-  // a plain record. Popover spreads it onto its trigger button.
-  const attrs = createMemo(
-    () =>
-      ({
-        type: "button",
-        "data-component": "board-trigger",
-        "data-rule": props.rule ? "" : undefined,
-        "data-unread": props.state.unread() ? "" : undefined,
-        "aria-label": language.t("task.swarm.title"),
-      }) as Record<string, string | undefined> as ComponentProps<"button">,
-  )
-
+  onCleanup(() => resize?.disconnect())
   return (
-    <Show when={props.state.shown()}>
-      <Popover
-        open={open()}
-        onOpenChange={toggle}
-        placement="top-start"
-        gutter={6}
-        class="board-panel"
-        contentLabel={language.t("task.swarm.title")}
-        triggerAs="button"
-        triggerProps={attrs()}
-        trigger={<Icon name="speech-bubble" size="small" />}
+    <div
+      class="task-board-scroll"
+      tabIndex={0}
+      role="region"
+      aria-label={language.t("task.swarm.title")}
+      ref={(el) => {
+        viewport = el
+        scroll.scrollRef(el)
+      }}
+      onScroll={() => {
+        scroll.handleScroll()
+        if (anchor && props.source.pending()?.before && viewport) {
+          anchor = scroll.userScrolled()
+            ? {
+                element: anchor.element,
+                top: anchor.element.getBoundingClientRect().top - viewport.getBoundingClientRect().top,
+              }
+            : undefined
+        }
+        more()
+      }}
+      onWheel={(event) => {
+        if (event.deltaY < 0) {
+          scroll.pause()
+          more()
+        }
+      }}
+      onKeyDown={(event) => {
+        if (["ArrowUp", "PageUp", "Home"].includes(event.key)) {
+          scroll.pause()
+          more()
+        }
+      }}
+    >
+      <div
+        class="task-board-list"
+        data-component="board-messages"
+        ref={(el) => {
+          resize?.disconnect()
+          if (!el) return
+          scroll.contentRef(el)
+          resize = new ResizeObserver(() => {
+            if (viewport && viewport.scrollHeight <= viewport.clientHeight) more()
+          })
+          resize.observe(el)
+        }}
       >
-        <div data-slot="board-panel">
-          <div data-slot="board-panel-header">
-            <span data-slot="board-panel-title">{language.t("task.swarm.title")}</span>
-            <span data-slot="board-panel-actions">
-              <Tooltip value={language.t("task.swarm.refresh")} placement="top">
-                <IconButton
-                  icon="refresh"
-                  variant="ghost"
-                  size="small"
-                  aria-label={language.t("task.swarm.refresh")}
-                  disabled={props.state.busy()}
-                  onClick={() => props.state.load()}
-                />
-              </Tooltip>
-              <Tooltip value={language.t("task.swarm.reset")} placement="top">
-                <IconButton
-                  icon="trash"
-                  variant="ghost"
-                  size="small"
-                  aria-label={language.t("task.swarm.reset")}
-                  disabled={props.state.busy()}
-                  onClick={clear}
-                />
-              </Tooltip>
-              <Tooltip value={language.t("task.swarm.open")} placement="top">
-                <IconButton
-                  icon="square-arrow-top-right"
-                  variant="ghost"
-                  size="small"
-                  aria-label={language.t("task.swarm.open")}
-                  onClick={full}
-                />
-              </Tooltip>
-            </span>
-          </div>
-          <div data-slot="board-panel-list" data-component="board-messages" ref={list}>
-            <For each={recent()}>{(message) => <BoardMessage {...message} onSessionClick={agent} />}</For>
-          </div>
-        </div>
-      </Popover>
-    </Show>
+        <For each={posts()}>{(message) => <BoardMessage {...message} onSessionClick={props.onAgent} />}</For>
+      </div>
+    </div>
   )
+}
+
+const SwarmBoardContext = createContext<SwarmBoardState>()
+
+/**
+ * One board per chat view. The dock button and the agent map read the same
+ * board, so a post read in the map clears the button's mark. A read-only view
+ * keeps a board that stays empty, so the chat is not rebuilt when it turns
+ * read-only.
+ */
+export const SwarmBoardProvider: ParentComponent<{ readonly?: boolean; projectId?: string }> = (props) => {
+  const state = useSwarmBoard(props)
+  return <SwarmBoardContext.Provider value={state}>{props.children}</SwarmBoardContext.Provider>
+}
+
+/** The chat view's board, if the surface has one. */
+export function useSharedSwarmBoard() {
+  return useContext(SwarmBoardContext)
 }
