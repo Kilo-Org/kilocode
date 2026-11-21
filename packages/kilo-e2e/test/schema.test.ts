@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { join } from "node:path"
-import { SCHEMA_DOCUMENTS, SCHEMA_VERSION, jsonSchema } from "../src/schema"
+import { SCHEMA_DOCUMENTS, SCHEMA_VERSION, jsonSchema, type Lane, type ScenarioID } from "../src/schema"
 import {
   ALL_MANIFESTS,
   LANES,
@@ -12,6 +12,16 @@ import {
 } from "../src/scenarios"
 import { root } from "./helpers"
 
+// The lanes each scenario must declare, written out rather than derived from the generator, so a
+// scenario that wrongly loses a lane fails here instead of shrinking the matrix silently.
+const EXPECTED_LANES: Record<ScenarioID, Lane[]> = {
+  "session.open": ["local", "cloud"],
+  "prompt.stream": ["local", "cloud"],
+  "permission.continue": ["local", "cloud"],
+  "settings.telemetry": ["local", "cloud"],
+  "followup.new-session": ["local"],
+}
+
 describe("scenario manifests", () => {
   test("defines every stable scenario on the lanes that support it", () => {
     expect(SCENARIO_IDS).toEqual([
@@ -22,17 +32,27 @@ describe("scenario manifests", () => {
       "followup.new-session",
     ])
     expect(LANES).toEqual(["local", "cloud"])
-    // Every scenario keeps at least one lane, every generated cell is a supported pair, and each
-    // scenario's cells are exactly the lanes it supports — so a scenario cannot silently lose all
-    // coverage, and an unsupported pair can never be generated.
+    expect(Object.keys(EXPECTED_LANES).sort()).toEqual([...SCENARIO_IDS].sort())
+    // Every scenario keeps at least one lane, every generated cell is a supported pair, no cell is
+    // generated twice, and the generated matrix is exactly the declared one — so a scenario cannot
+    // silently lose a lane, and an unsupported pair can never be generated.
     const cells = ALL_MANIFESTS.map((entry) => `${entry.id}:${entry.lane}`)
     expect(new Set(cells).size).toBe(ALL_MANIFESTS.length)
     for (const id of SCENARIO_IDS) {
       const lanes = ALL_MANIFESTS.filter((entry) => entry.id === id).map((entry) => entry.lane)
       expect(lanes.length).toBeGreaterThan(0)
-      expect(lanes).toEqual(LANES.filter((lane) => supportsLane(id, lane)))
     }
+    const declared = SCENARIO_IDS.flatMap((id) => EXPECTED_LANES[id].map((lane) => `${id}:${lane}`))
+    expect(cells.sort()).toEqual(declared.sort())
     for (const entry of ALL_MANIFESTS) expect(validateManifest(entry)).toEqual(entry)
+  })
+
+  test("generates both lanes for a scenario that declares no lanes", () => {
+    expect(manifest("session.open", "cloud")).toMatchObject({ id: "session.open", lane: "cloud" })
+    expect(ALL_MANIFESTS.filter((entry) => entry.id === "session.open").map((entry) => entry.lane)).toEqual([
+      "local",
+      "cloud",
+    ])
   })
 
   test("only the local lane supports the follow-up scenario", () => {
