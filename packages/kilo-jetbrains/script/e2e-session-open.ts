@@ -17,7 +17,7 @@
 
 import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
-import { RunError, SCENARIO_IDS, type Lane, type ScenarioID } from "../../kilo-e2e/src/index"
+import { RunError, SCENARIO_IDS, supportsLane, type Lane, type ScenarioID } from "../../kilo-e2e/src/index"
 import { runCell } from "./e2e-cell"
 
 const root = resolve(import.meta.dir, "..")
@@ -48,7 +48,13 @@ if (laneArg && laneArg !== "both" && laneArg !== "local" && laneArg !== "cloud")
   console.error(`[jetbrains-e2e] unknown lane: ${laneArg}`)
   process.exit(2)
 }
-const lanes: Lane[] = !laneArg || laneArg === "both" ? ["local", "cloud"] : [laneArg]
+const lanes: Lane[] = (!laneArg || laneArg === "both" ? ["local", "cloud"] : [laneArg]).filter((lane) =>
+  supportsLane(scenario, lane),
+)
+if (lanes.length === 0) {
+  console.error(`[jetbrains-e2e] ${scenario} does not run on the requested lane`)
+  process.exit(2)
+}
 const git = Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: root, stdout: "pipe", stderr: "pipe" })
 const kiloCommit = git.exitCode === 0 ? new TextDecoder().decode(git.stdout).trim() : null
 
