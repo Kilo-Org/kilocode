@@ -380,6 +380,7 @@ export const dict = {
   "common.signIn": "تسجيل الدخول",
   "common.dismiss": "رفض",
   "common.requestFailed": "فشل الطلب",
+  "common.copyFailed": "فشل النسخ",
   "common.rename": "إعادة تسمية",
   "common.delete": "حذف",
   "common.close": "إغلاق",

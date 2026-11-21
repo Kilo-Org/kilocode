@@ -389,6 +389,7 @@ export const dict = {
   "common.signIn": "Zaloguj się",
   "common.dismiss": "Odrzuć",
   "common.requestFailed": "Żądanie nie powiodło się",
+  "common.copyFailed": "Nie udało się skopiować",
   "common.rename": "Zmień nazwę",
   "common.delete": "Usuń",
   "common.close": "Zamknij",

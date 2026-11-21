@@ -370,6 +370,7 @@ export const dict = {
   "common.signIn": "登入",
   "common.dismiss": "忽略",
   "common.requestFailed": "要求失敗",
+  "common.copyFailed": "複製失敗",
   "common.rename": "重新命名",
   "common.delete": "刪除",
   "common.close": "關閉",

@@ -391,6 +391,7 @@ export const dict = {
   "common.signIn": "Увійти",
   "common.dismiss": "Закрити",
   "common.requestFailed": "Запит не вдався",
+  "common.copyFailed": "Не вдалося скопіювати",
   "common.rename": "Перейменувати",
   "common.delete": "Видалити",
   "common.close": "Закрити",

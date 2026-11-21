@@ -388,6 +388,7 @@ export const dict = {
   "common.signIn": "로그인",
   "common.dismiss": "닫기",
   "common.requestFailed": "요청 실패",
+  "common.copyFailed": "복사 실패",
   "common.rename": "이름 바꾸기",
   "common.delete": "삭제",
   "common.close": "닫기",

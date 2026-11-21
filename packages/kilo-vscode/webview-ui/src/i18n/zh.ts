@@ -372,6 +372,7 @@ export const dict = {
   "common.signIn": "登录",
   "common.dismiss": "忽略",
   "common.requestFailed": "请求失败",
+  "common.copyFailed": "复制失败",
   "common.rename": "重命名",
   "common.delete": "删除",
   "common.close": "关闭",

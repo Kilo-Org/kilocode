@@ -357,6 +357,7 @@ export const dict = {
   "common.signIn": "ورود",
   "common.dismiss": "رد کردن",
   "common.requestFailed": "درخواست ناموفق بود",
+  "common.copyFailed": "کپی ناموفق بود",
   "common.rename": "تغییر نام",
   "common.delete": "حذف",
   "common.close": "بستن",

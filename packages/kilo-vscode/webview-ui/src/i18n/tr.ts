@@ -387,6 +387,7 @@ export const dict = {
   "common.signIn": "Giriş yap",
   "common.dismiss": "Kapat",
   "common.requestFailed": "İstek başarısız",
+  "common.copyFailed": "Kopyalama başarısız",
   "common.rename": "Yeniden adlandır",
   "common.delete": "Sil",
   "common.close": "Kapat",
