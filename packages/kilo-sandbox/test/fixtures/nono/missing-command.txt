@@ -1,0 +1,1 @@
+nono: Command execution failed: /tmp/kilo-fixture/work/nope: cannot find binary path

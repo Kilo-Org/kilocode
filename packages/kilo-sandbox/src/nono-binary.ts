@@ -119,10 +119,7 @@ function ensure(dir: string) {
  * nono reads its config and state only through the XDG roots, so the POC points them at its own protected
  * subtree and never touches a user's system installation.
  */
-export function environment(
-  base: Readonly<Record<string, string | undefined>>,
-  cwd: string = process.cwd(),
-) {
+export function environment(base: Readonly<Record<string, string | undefined>>, cwd: string = process.cwd()) {
   const nono = home(cwd)
   const roots = {
     config: path.join(nono, "config"),
@@ -320,6 +317,69 @@ function check(): Checked {
     }
   }
   return { available: true }
+}
+
+/** Verdicts are cached per profile and binary. A long-lived host must not accumulate every version it launched. */
+export function createVerdicts(limit = 100) {
+  const values = new Map<string, string | undefined>()
+  return {
+    get size() {
+      return values.size
+    },
+    get(key: string) {
+      return values.has(key) ? { value: values.get(key) } : undefined
+    },
+    set(key: string, value: string | undefined) {
+      if (values.size >= limit && !values.has(key)) {
+        const oldest = values.keys().next().value
+        if (oldest !== undefined) values.delete(oldest)
+      }
+      values.set(key, value)
+    },
+  }
+}
+
+const verdicts = createVerdicts()
+
+function reason(stdout: string, stderr: string, status: number) {
+  try {
+    const parsed = JSON.parse(stdout) as { errors?: unknown }
+    if (Array.isArray(parsed.errors)) {
+      const errors = parsed.errors.filter((entry): entry is string => typeof entry === "string")
+      if (errors.length > 0) return errors.join("; ")
+    }
+  } catch {
+    // Not the JSON form; fall through to the raw output.
+  }
+  return stderr.trim() || stdout.trim() || `exit ${status}`
+}
+
+/**
+ * Validates a generated profile before a launch. nono rejects a malformed profile at startup, and that exit would
+ * otherwise look like the command's own. A success cannot change for the same profile bytes, and a failure is
+ * deterministic for the same binary, so the verdict is cached per profile and binary fingerprint and the oldest
+ * entry is evicted at the cap. A spawn failure or timeout is not a verdict, so it is skipped instead of failing the
+ * command (support() already gated the binary).
+ */
+export function validate(profile: string, env: Readonly<Record<string, string | undefined>>) {
+  const file = resolve()
+  if (!file) return undefined
+  const key = `${file}|${fingerprint(file)}|${profile}`
+  const known = verdicts.get(key)
+  if (known !== undefined) return known.value
+  const answered = spawnSync(file, ["--silent", "profile", "validate", "--json", profile], {
+    encoding: "utf8",
+    timeout: dryTimeout,
+    env,
+  })
+  if (answered.status === null) return undefined
+  if (answered.status === 0) {
+    verdicts.set(key, undefined)
+    return undefined
+  }
+  const problem = reason(answered.stdout ?? "", answered.stderr ?? "", answered.status)
+  verdicts.set(key, problem)
+  return problem
 }
 
 function prepareSmoke() {

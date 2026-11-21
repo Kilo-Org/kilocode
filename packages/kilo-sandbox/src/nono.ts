@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync, write
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
 import type { Backend, Launch, Support } from "./backend"
-import { binary, environment, root, support, version } from "./nono-binary"
+import { binary, environment, root, support, validate, version } from "./nono-binary"
 import { aliases, type Credential } from "./nono-credentials"
 import { generate, restoreEnvironment, type NonoProfile } from "./nono-profile"
 import { canonicalize } from "./path"
@@ -15,6 +15,8 @@ export function wrap(input: {
   readonly launch: Launch
   readonly environment: Record<string, string | undefined>
   readonly allowCwd: boolean
+  /** Opt-in for probes and tests: nono prints the JSON block on success too, so launches must not set it. */
+  readonly diagnostics?: boolean
 }): Launch {
   const { command, args } = shellCommand(input.launch)
   return {
@@ -23,6 +25,7 @@ export function wrap(input: {
       "--silent",
       "run",
       "--no-audit",
+      ...(input.diagnostics ? ["--diagnostics-json"] : []),
       ...(input.allowCwd ? ["--allow-cwd"] : []),
       "--profile",
       input.profile,
@@ -124,11 +127,24 @@ const backend: Backend = {
             secret: [...masked],
           })
           const profileFile = write(generated)
+          const base = launch.environment ?? {}
+          const env = environment(base, launch.cwd ?? process.cwd())
+          // A rejected profile would otherwise exit as the command's own failure, so fail it before the spawn.
+          const problem = validate(profileFile, {
+            HOME: base.HOME,
+            PATH: base.PATH,
+            TMPDIR: base.TMPDIR,
+            XDG_CONFIG_HOME: env.XDG_CONFIG_HOME,
+            XDG_STATE_HOME: env.XDG_STATE_HOME,
+            XDG_CACHE_HOME: env.XDG_CACHE_HOME,
+            XDG_DATA_HOME: env.XDG_DATA_HOME,
+          })
+          if (problem !== undefined) throw new Error(`nono rejected the generated profile: ${problem}`)
           return wrap({
             binary: file,
             profile: profileFile,
             launch,
-            environment: environment(launch.environment ?? {}, launch.cwd ?? process.cwd()),
+            environment: env,
             allowCwd: generated.workdir.access !== "none",
           })
         },

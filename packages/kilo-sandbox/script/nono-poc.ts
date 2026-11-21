@@ -4,6 +4,7 @@ import path from "node:path"
 import type { Profile } from "../src/profile"
 import { wrap } from "../src/nono"
 import { binary, environment, support } from "../src/nono-binary"
+import { classify } from "../src/nono-diagnostics"
 import { parseCredentials, type Credential } from "../src/nono-credentials"
 import { generate } from "../src/nono-profile"
 
@@ -89,7 +90,7 @@ const proxied: Profile = { ...local, network: { mode: "proxy", allowedHosts: ["e
 /** Stands in for a user XDG value the profile must restore after nono's own redirect. */
 const original = path.join(root, "original")
 
-async function child(profile: Profile, script: string) {
+async function child(profile: Profile, script: string, diagnostics = false) {
   const generated = generate(profile, {
     credentials: routes,
     paths: { data, config },
@@ -115,6 +116,7 @@ async function child(profile: Profile, script: string) {
     launch: { command: script, args: [], cwd: workspace, environment: env, shell: "/bin/sh" },
     environment: environment(env),
     allowCwd: generated.workdir.access !== "none",
+    diagnostics,
   })
   // Asynchronous on purpose: the fixture echo upstream runs in this process and must answer while nono runs.
   const proc = Bun.spawn({
@@ -164,7 +166,7 @@ try {
     process.exit(2)
   }
 
-  const ssh = await child(local, 'cat "$HOME/.ssh/id_ed25519"')
+  const ssh = await child(local, 'cat "$HOME/.ssh/id_ed25519"', true)
   check("P1 read ~/.ssh", "denied", refused(ssh) && !ssh.out.includes(canary), refusal(ssh))
 
   const readable = await child(local, "cat readme.txt")
@@ -189,7 +191,7 @@ try {
   const git = await child(local, "printf nope > .git/config")
   check("P5 write .git", "recorded", "recorded", git.code === 0 ? "written (known gap)" : "denied")
 
-  const egress = await child(local, "curl -sS -m 5 https://example.com")
+  const egress = await child(local, "curl -sS -m 5 https://example.com", true)
   check("P6 egress deny mode", "blocked", egress.code !== 0, egress.code === 0 ? "connected" : "blocked")
 
   const injected = await child(
@@ -248,6 +250,18 @@ try {
 
   const restoredXdg = await child(local, 'printf "%s" "$XDG_CONFIG_HOME"')
   check("P15 XDG value restored", original, restoredXdg.out === original, restoredXdg.out || "absent")
+
+  const denial = classify({ code: ssh.code, stderr: ssh.err, secrets: [secret] })
+  check("P18 path denial diagnostics", "denied-path", denial?.kind === "denied-path", denial?.kind ?? "unknown")
+  const network = classify({ code: egress.code, stderr: egress.err, secrets: [secret] })
+  // The pin reports egress denial as a network violation on one arch and as an incidental path denial on another,
+  // so the probe asserts a sandbox denial; the network kind is pinned by the diagnostics-network fixture.
+  check(
+    "P19 egress denial diagnostics",
+    "sandbox denial",
+    network?.kind === "denied-network" || network?.kind === "denied-path",
+    network?.kind ?? "unknown",
+  )
 
   const devices = await child(local, "printf ok >/dev/null 2>&1 && printf done")
   check(

@@ -1,0 +1,297 @@
+Run a command inside the sandbox
+
+USAGE
+  nono run [flags] <program>...
+
+FILESYSTEM:
+  -a, --allow <DIR>
+          Allow read+write access to a directory (recursive)
+          
+          [env: NONO_ALLOW=]
+
+  -r, --read <DIR>
+          Allow read-only access to a directory (recursive)
+
+  -w, --write <DIR>
+          Allow write-only access to a directory (recursive). Directory deletion NOT included
+
+      --allow-file <FILE>
+          Allow read+write access to a single file
+
+      --read-file <FILE>
+          Allow read-only access to a single file
+
+      --write-file <FILE>
+          Allow write-only access to a single file
+
+      --allow-unix-socket <SOCKET>
+          Allow connect() to an AF_UNIX socket at this path (implies --read-file)
+
+      --allow-unix-socket-bind <SOCKET>
+          Allow connect() and bind() on an AF_UNIX socket at this path. If the path exists, implies --allow-file on the socket. If it does not yet exist (the typical bind(2) case), implies --allow on the parent directory so the kernel can create the socket file. A covering deny therefore requires bypassing the parent. Prefer --allow-unix-socket-dir-bind for runtime-generated filenames
+
+      --allow-unix-socket-dir <DIR>
+          Allow connect() to any AF_UNIX socket directly within this directory. Non-recursive on macOS and future Linux AF_UNIX mediation; current Linux Landlock filesystem fallback is recursive
+
+      --allow-unix-socket-dir-bind <DIR>
+          Allow connect() and bind() on any AF_UNIX socket directly within this directory. Non-recursive on macOS and future Linux AF_UNIX mediation; current Linux Landlock filesystem fallback is recursive. Use for runtime-generated socket filenames (PID-derived paths, etc.)
+
+      --allow-unix-socket-subtree <DIR>
+          Allow connect() to any AF_UNIX socket within this directory subtree (recursive; implies --read)
+
+      --allow-unix-socket-subtree-bind <DIR>
+          Allow connect() and bind() on any AF_UNIX socket within this directory subtree (recursive; implies --allow)
+
+      --bypass-protection <PATH>
+          Override a deny rule. Pair with a filesystem or Unix socket grant
+
+      --suppress-save-prompt <PATH>
+          Suppress save-profile prompts for denials under this path. Does not grant access
+
+      --allow-cwd
+          Allow CWD access without prompting (level set by profile, defaults to read-only)
+
+      --workdir <DIR>
+          Working directory for $WORKDIR expansion in profiles
+
+NETWORK:
+      --block-net
+          Block outbound network access (allowed by default)
+          
+          [env: NONO_BLOCK_NET=]
+
+      --network-profile <PROFILE>
+          Enable proxy filtering with a named network profile
+          
+          [env: NONO_NETWORK_PROFILE=]
+
+      --allow-domain <DOMAIN_OR_URL>
+          Add a domain to the proxy allowlist (repeatable). Use a plain hostname for unrestricted access, or a URL with a path glob to restrict to specific endpoints (e.g., https://github.com/org/**)
+          
+          [env: NONO_ALLOW_DOMAIN=]
+
+      --deny-domain <DOMAIN>
+          Block a domain through the proxy. Evaluated before the allowlist. Supports wildcards (e.g. *.ads.example.com). Incompatible with --allow-net
+          
+          [env: NONO_DENY_DOMAIN=]
+
+      --listen-port <PORT>
+          Allow the sandboxed child to listen on a TCP port (repeatable)
+
+      --open-port <PORT>
+          Allow bidirectional localhost TCP on a port: connect + listen (repeatable)
+
+      --allow-connect-port <PORT>
+          Allow outbound TCP connect to a specific port (repeatable; Linux Landlock V4+ only)
+
+      --upstream-proxy <HOST:PORT>
+          Chain outbound traffic through an upstream proxy (host:port)
+          
+          [env: NONO_UPSTREAM_PROXY=]
+
+      --upstream-bypass <DOMAIN>
+          Route these domains direct instead of through the upstream proxy
+          
+          [env: NONO_UPSTREAM_BYPASS=]
+
+      --proxy-port <PORT>
+          Fixed port for the credential proxy (default: OS-assigned)
+
+      --trust-proxy-ca
+          Add the proxy CA to the macOS user trust store (enables Go CLI tools). Shares the CA across sessions via Keychain; regenerates daily
+          
+          [env: NONO_TRUST_PROXY_CA=]
+
+      --proxy-ca-validity <DAYS>
+          Proxy CA certificate validity in days (1–365, default: 1). Controls how long the ephemeral CA (and its leaf certificates) remain valid
+          
+          [env: NONO_PROXY_CA_VALIDITY=]
+
+CREDENTIALS:
+      --credential <SERVICE>
+          Inject credentials via reverse proxy for a service (repeatable)
+          
+          [env: NONO_CREDENTIAL=]
+
+      --allow-endpoint <SERVICE:METHOD:PATH>
+          Restrict a credential service to specific HTTP method+path patterns (repeatable). Format: "SERVICE:METHOD:/path/pattern" (e.g., "github:GET:/repos/*/issues") Use "*" for any method: "github:*:/repos/*/issues" Patterns: "*" matches one path segment, "**" matches zero or more
+
+      --env-credential <CREDENTIALS>
+          Load credentials as env vars. For network API keys, prefer --credential
+          
+          [env: NONO_ENV_CREDENTIAL=]
+
+      --env-credential-map <CREDENTIAL_REF> <ENV_VAR>
+          Map a credential reference to an environment variable (repeatable)
+
+COMMANDS:
+      --allow-command <CMD>
+          Deprecated startup-only command allowlist override (not child-process enforced)
+
+      --block-command <CMD>
+          Deprecated startup-only command denylist extension (not child-process enforced)
+
+OPTIONS:
+  -s, --silent
+          Silent mode - suppress all nono output (banner, summary, status)
+
+      --theme <THEME>
+          Color theme for output (mocha, latte, frappe, macchiato, tokyo-night, minimal)
+          
+          [env: NONO_THEME=]
+
+      --log-file <PATH>
+          Write logs to a file instead of stderr
+          
+          [env: NONO_LOG_FILE=]
+
+  -p, --profile <NAME_OR_PATH>
+          Use a profile by name or file path
+          
+          [env: NONO_PROFILE=]
+
+      --allow-launch-services
+          Allow direct LaunchServices opens on macOS (temporary login/setup flows)
+
+      --allow-gpu
+          Allow GPU access (Metal/IOKit on Apple Silicon macOS, render nodes on Linux)
+
+      --strict-broker-path
+          Refuse to start instead of warning when a filesystem grant overlaps a directory on PATH. nono's own credential/browser brokers already sanitize PATH before resolving anything by bare name, so this isn't about protecting them — it's about the directory itself: once the sandboxed process can plant a same-named binary there, anything else on the host that later resolves that name (a shell, cron, another tool) runs it with full privileges, outside nono entirely
+
+      --allow-http2
+          Allow HTTP/2 multiplexing for upstream proxy connections.
+          
+          When enabled, the proxy negotiates HTTP/2 via ALPN with upstream servers that support it, allowing multiple requests to be multiplexed over a single TCP connection. This can significantly improve throughput for workloads that make many concurrent requests to the same host (e.g., Maven/Gradle artifact downloads).
+          
+          Without this flag, the proxy uses HTTP/1.1 with keep-alive connection pooling (connections are reused but requests are serialized per connection). This is the conservative default since some upstream servers may not handle HTTP/2 correctly.
+
+      --extends <PROFILE>
+          Extend the selected profile with an additional base profile for this invocation
+
+  -c, --config <FILE>
+          Capability manifest file (JSON). A fully-resolved sandbox specification — mutually exclusive with all other sandbox configuration flags
+
+  -v, --verbose...
+          Enable verbose output
+
+      --dry-run
+          Show what would be sandboxed without executing
+
+      --detached
+          Start the session without attaching the current terminal. The supervisor keeps the sandboxed process running in the background; use `nono attach <session>` later to inspect or interact with it. ALIAS(canonical="--detached", introduced="unreleased", remove_by="indefinite", issue="N/A")
+
+      --detach-timeout <SECS>
+          How long (seconds) to wait for a detached session to become attachable. Only meaningful with --detached. Env: NONO_DETACH_STARTUP_TIMEOUT
+          
+          [env: NONO_DETACH_STARTUP_TIMEOUT=]
+
+      --skip-dir <DIR_NAME>
+          Skip large directory trees during trust scanning and rollback preflight. Matched as an exact path component name. Repeatable
+
+      --no-diagnostics
+          Suppress diagnostic footer on command failure
+
+      --diagnostics-json
+          After the run, print session diagnostics as JSON on stderr (merged with proxy diagnostics when present)
+
+      --startup-timeout <SECS>
+          Kill the process if it has not entered alt-screen mode after this many seconds. Startup banners and log lines do not count; only a full-screen TUI transition satisfies the check. Set to 0 to disable. Env: NONO_STARTUP_TIMEOUT
+          
+          [env: NONO_STARTUP_TIMEOUT=]
+
+      --network-denial-audit-rate <PER_SEC>
+          Sustained number of denied network syscalls recorded individually per second (default 20). Denials beyond the budget are still denied and are reported in one summary audit event. Overrides `diagnostics.network_denial_audit.rate_per_sec`
+
+      --network-denial-audit-burst <COUNT>
+          Number of denied network syscalls that may be recorded individually in one burst (default 50). Overrides `diagnostics.network_denial_audit.burst`
+
+      --no-audit
+          Disable the audit trail for this session
+
+      --no-audit-integrity
+          Disable the default Merkleized append-only audit log
+
+      --audit-integrity
+          Add filesystem-state hashing over in-scope writable paths
+
+      --audit-sign-key <SECRET_REF>
+          Sign the audit Merkle root with a keyed signing key loaded from the given secret reference. Accepts bare trust-key IDs, keystore:// names, file:// paths, op:// URIs, apple-password:// URIs, keyring:// URIs, or env:// URIs
+
+      --trust-override
+          Disable trust verification (not recommended for production)
+          
+          [env: NONO_TRUST_OVERRIDE=]
+
+      --name <NAME>
+          Name for this session (shown in `nono ps`)
+
+      --capability-elevation
+          Enable runtime capability elevation (seccomp-notify + approval prompts). Overrides the profile's capability_elevation setting. When enabled, the supervisor can grant access to paths not in the initial capability set via interactive prompts
+          
+          [env: NONO_CAPABILITY_ELEVATION=]
+
+  -h, --help
+          Print help
+
+RESOURCES:
+      --memory <SIZE>
+          Maximum resident memory for the process tree (e.g. 512M, 1Gi). Enforced on Linux via cgroup v2; requires a supervised run
+
+      --max-processes <COUNT>
+          Maximum number of processes and threads in the process tree. Enforced on Linux via cgroup v2 (pids.max); requires a supervised run. At the cap the kernel refuses new forks rather than killing anything
+
+ROLLBACK:
+      --rollback
+          Enable atomic rollback snapshots for the session
+
+      --no-rollback-prompt
+          Skip the post-exit rollback review prompt
+
+      --no-rollback
+          Disable rollback entirely (no snapshots taken)
+
+      --rollback-exclude <PATTERN>
+          Exclude from snapshots. Globs match filenames; plain names match path components
+
+      --rollback-include <DIR_NAME>
+          Force-include an auto-excluded directory (name only, not full path)
+
+      --rollback-all
+          Include all directories in snapshots. VCS dirs (.git) always excluded
+
+      --rollback-dest <PATH>
+          Override the rollback snapshot destination directory. By default, snapshots are stored in $XDG_STATE_HOME/nono/rollbacks/. The destination must be within a path already granted write access by --allow (or profile); nono will fail with a clear error if not. Useful for Docker volume mounts or shared storage paths
+
+RECORDING:
+      --record
+          Record the session's terminal into the audit log
+          
+          [env: NONO_RECORD=]
+
+      --record-required
+          Stop the session rather than run it unrecorded (implies --record)
+          
+          [env: NONO_RECORD_REQUIRED=]
+
+      --record-file <PATH>
+          Also write the finished recording, and a chunk manifest beside it, to this new file (implies --record)
+          
+          [env: NONO_RECORD_FILE=]
+
+      --deliver-to <RECEIVER>
+          Upload the recording as it is made (implies --record). RECEIVER is `platform`, the platform this host is enrolled with
+          
+          [env: NONO_DELIVER_TO=]
+
+
+EXAMPLES
+  nono run --allow . claude                    # Read/write current dir, run claude
+  nono run --profile nolabs-ai/claude claude        # Use a profile
+  nono run --profile nolabs-ai/claude --allow-domain api.openai.com claude
+                                               # Restrict outbound access to listed domains
+  nono run --read ./src --write ./output cargo build
+                                               # Separate read/write permissions
+  nono run --allow . --block-net cargo build   # Block network access
+  nono run --allow . --env-credential openai_api_key,anthropic_api_key -- claude
+                                               # Load secrets from system keystore

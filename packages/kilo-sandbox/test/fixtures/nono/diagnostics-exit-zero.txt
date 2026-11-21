@@ -1,0 +1,26 @@
+{
+  "session": {
+    "exit_code": 0,
+    "denials": [],
+    "ipc_denials": [],
+    "violations": [],
+    "diagnostics": [
+      {
+        "code": "command_failed_likely_sandbox",
+        "severity": "info",
+        "message": "discover additional paths required by the command",
+        "remediation": {
+          "kind": "run_discovery"
+        }
+      },
+      {
+        "code": "command_failed_application",
+        "severity": "info",
+        "message": "inspect sandbox policy for a specific path",
+        "remediation": {
+          "kind": "check_policy"
+        }
+      }
+    ]
+  }
+}
