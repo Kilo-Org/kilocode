@@ -260,6 +260,18 @@ class MockCliServer : AutoCloseable {
     @Volatile var pendingQuestions = "[]"
     @Volatile var pendingQuestionsStatus = 200
     val pendingQuestionsStatuses = ConcurrentLinkedQueue<Int>()
+    @Volatile var permissionReplyStatus = 200
+    @Volatile var permissionRulesStatus = 200
+    @Volatile var questionReplyStatus = 200
+    @Volatile var questionRejectStatus = 200
+    @Volatile var lastPermissionReplyPath: String? = null
+    @Volatile var lastPermissionReplyBody: String? = null
+    @Volatile var lastPermissionRulesPath: String? = null
+    @Volatile var lastPermissionRulesBody: String? = null
+    @Volatile var lastQuestionReplyPath: String? = null
+    @Volatile var lastQuestionReplyBody: String? = null
+    @Volatile var lastQuestionRejectPath: String? = null
+    @Volatile var lastQuestionRejectBody: String? = null
     @Volatile var instanceReloadStatus = 200
     @Volatile var lastInstanceReloadPath: String? = null
 
@@ -765,6 +777,26 @@ class MockCliServer : AutoCloseable {
                     respond(output, pendingPermissionsStatuses.poll() ?: pendingPermissionsStatus, pendingPermissions)
                 bare == "/question" && method == "GET" ->
                     respond(output, pendingQuestionsStatuses.poll() ?: pendingQuestionsStatus, pendingQuestions)
+                bare.matches(Regex("/permission/[^/]+/reply")) && method == "POST" -> {
+                    lastPermissionReplyPath = path
+                    lastPermissionReplyBody = body
+                    respond(output, permissionReplyStatus, if (permissionReplyStatus in 200..299) "true" else """{"error":"refused"}""")
+                }
+                bare.matches(Regex("/permission/[^/]+/always-rules")) && method == "POST" -> {
+                    lastPermissionRulesPath = path
+                    lastPermissionRulesBody = body
+                    respond(output, permissionRulesStatus, if (permissionRulesStatus in 200..299) "true" else """{"error":"refused"}""")
+                }
+                bare.matches(Regex("/question/[^/]+/reply")) && method == "POST" -> {
+                    lastQuestionReplyPath = path
+                    lastQuestionReplyBody = body
+                    respond(output, questionReplyStatus, if (questionReplyStatus in 200..299) "true" else """{"error":"refused"}""")
+                }
+                bare.matches(Regex("/question/[^/]+/reject")) && method == "POST" -> {
+                    lastQuestionRejectPath = path
+                    lastQuestionRejectBody = body
+                    respond(output, questionRejectStatus, if (questionRejectStatus in 200..299) "true" else """{"error":"refused"}""")
+                }
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->

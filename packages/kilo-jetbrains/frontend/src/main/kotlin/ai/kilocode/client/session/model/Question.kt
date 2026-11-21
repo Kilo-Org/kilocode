@@ -8,6 +8,7 @@ data class Question(
     val tool: ToolCallRef? = null,
     val state: QuestionRequestState = QuestionRequestState.PENDING,
     val blocking: Boolean = false,
+    val message: String? = null,
 )
 
 data class QuestionItem(
