@@ -1,6 +1,7 @@
 import * as fs from "fs/promises"
 import * as path from "path"
 import os from "os"
+import { Flag } from "@opencode-ai/core/flag/flag"
 
 export namespace RulesMigrator {
   // Only support .kilocoderules (no migration for .roorules or .clinerules)
@@ -62,6 +63,9 @@ export namespace RulesMigrator {
         rules.push({ path: file, source: "global" })
       }
     }
+
+    // Project and legacy rule files are project config, so the flag leaves only global rules
+    if (Flag.KILO_DISABLE_PROJECT_CONFIG) return rules
 
     // 2. Project .kilo/rules/ and .kilocode/rules/ directories
     const seen = new Set<string>()
