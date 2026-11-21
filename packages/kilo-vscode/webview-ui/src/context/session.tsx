@@ -60,7 +60,7 @@ import { createSessionPaging, mergeSessionsLoaded } from "./session-paging"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import {
   computeStatus,
-  calcContextUsage,
+  latestContextUsage,
   buildFamilyCosts,
   buildFamilyParentsFromTools,
   buildFamilyLabelsFromTools,
@@ -2926,18 +2926,9 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   const contextUsage = createMemo<ContextUsage | undefined>(() => {
-    const msgs = visibleMessages()
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      const m = msgs[i]
-      if (m.role !== "assistant" || !m.tokens) continue
-      const usage = calcContextUsage(m.tokens, undefined)
-      if (usage.tokens === 0) continue
-      const sel = selected()
-      const model = sel ? provider.findModel(sel) : undefined
-      const limit = model?.limit?.context ?? model?.contextLength
-      return calcContextUsage(m.tokens, limit)
-    }
-    return undefined
+    const sel = selected()
+    const model = sel ? provider.findModel(sel) : undefined
+    return latestContextUsage(visibleMessages(), model?.limit?.context ?? model?.contextLength)
   })
 
   const value: SessionContextValue = {

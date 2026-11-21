@@ -41,7 +41,7 @@ export const ContextProgress: Component = () => {
     const pctReserved = (reserved / max) * 100
     const pctAvail = (available / max) * 100
 
-    return { used, reserved, available, limit: max, pctUsed, pctReserved, pctAvail, output }
+    return { used, reserved, available, limit: max, pctUsed, pctReserved, pctAvail, output, estimated: usage.estimated }
   })
 
   // The skeleton is a loading state, so it shows only while a turn is running
@@ -53,7 +53,7 @@ export const ContextProgress: Component = () => {
   const tip = createMemo(() => {
     const d = data()
     if (!d) return ""
-    const lines = [`${fmt(d.used)} / ${fmt(d.limit)} tokens used`]
+    const lines = [`${d.estimated ? "~" : ""}${fmt(d.used)} / ${fmt(d.limit)} tokens used`]
     if (d.output > 0) lines.push(`${fmt(d.output)} reserved for output`)
     if (d.available > 0) lines.push(`${fmt(d.available)} available`)
     return lines.join("\n")
@@ -74,7 +74,10 @@ export const ContextProgress: Component = () => {
     >
       {(d) => (
         <div class="context-progress">
-          <span class="context-progress-count">{fmt(d().used)}</span>
+          <span class="context-progress-count">
+            {d().estimated ? "~" : ""}
+            {fmt(d().used)}
+          </span>
           <Tooltip value={tip()} placement="top">
             <div class="context-progress-bar">
               <div
