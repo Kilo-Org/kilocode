@@ -29,13 +29,13 @@ Use Kilo Code's **OpenAI Compatible** provider type — no custom code path is n
    - **Provider API** — **OpenAI Compatible**
    - **Base URL** — `https://crowllm.com/v1`
    - **API key** — your CrowLLM key
-4. Click **Fetch models**; the picker lists what the gateway serves right now.
-5. Click **Submit**, then pick a model.
+4. Kilo queries the Base URL and lists the served models; select the ones you want, or add model ids manually.
+5. Click **Submit**, then pick a model in the model picker.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-**Method 1 — environment variable**
+Define the provider in your Kilo config file — `~/.config/kilo/kilo.json` for a global setup, or `./kilo.json` inside a project — and keep the key in an environment variable:
 
 ```bash
 export CROWLLM_API_KEY="your-api-key"
@@ -47,13 +47,19 @@ export CROWLLM_API_KEY="your-api-key"
     "crowllm": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "CrowLLM",
+      "env": ["CROWLLM_API_KEY"],
       "options": {
         "baseURL": "https://crowllm.com/v1",
       },
-      "env": ["CROWLLM_API_KEY"],
       "models": {
-        "deepseek-v4-flash": { "name": "DeepSeek V4 Flash" },
-        "glm-5.3": { "name": "GLM 5.3" },
+        "deepseek-v4-flash": {
+          "name": "DeepSeek V4 Flash",
+          "limit": { "context": 128000, "output": 16384 },
+        },
+        "glm-5.3": {
+          "name": "GLM 5.3",
+          "limit": { "context": 200000, "output": 32768 },
+        },
       },
     },
   },
@@ -61,7 +67,7 @@ export CROWLLM_API_KEY="your-api-key"
 }
 ```
 
-Add any id from `GET https://crowllm.com/v1/models` (keyless) under `models`.
+Add any id from `GET https://crowllm.com/v1/models` (keyless) under `models`. Each entry needs `limit.context` and `limit.output`; omitted limits are treated as zero and disable context management.
 
 {% /tab %}
 {% /tabs %}
@@ -93,7 +99,7 @@ Ids ending in `:free` bill at zero and need no card. They are rate-limited, so t
 
 - **401 Unauthorized:** the key is missing or revoked; create a new one in the console.
 - **Model not found:** copy an exact id from `GET https://crowllm.com/v1/models`; aliases change as the catalog rotates.
-- **Auto-detection returns nothing:** confirm the Base URL is exactly `https://crowllm.com/v1` (with `/v1`), then press **Fetch models** again.
+- **Model list comes back empty:** confirm the Base URL is exactly `https://crowllm.com/v1` (with `/v1`) and reopen the dialog so Kilo queries the endpoint again.
 
 {% callout type="note" %}
 This documentation was contributed by a CrowLLM maintainer.
