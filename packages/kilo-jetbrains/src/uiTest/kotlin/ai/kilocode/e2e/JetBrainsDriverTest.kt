@@ -212,12 +212,15 @@ class JetBrainsDriverTest {
     }
 
     private fun isPlanFollowup(request: DriverRequest): Boolean =
-        "question.visible" in request.scenario.expected.ui
+        request.scenario.id == FOLLOWUP_SCENARIO
 
     private companion object {
         /** IDE-local mode the prompt picker persists for the next new session. */
         const val MODE_KEY = "kilo.session.agent"
         const val MODE = "plan"
+
+        /** K1 scenario id the plan-follow-up branch is selected by; its expectations are assertions only. */
+        const val FOLLOWUP_SCENARIO = "followup.new-session"
     }
 
     private fun isTranscriptSessionOpen(request: DriverRequest): Boolean =
@@ -236,16 +239,26 @@ class JetBrainsDriverTest {
         isTranscriptSessionOpen(request) || isPromptStream(request)
 
     /**
-     * Plan-mode follow-up. The plan agent writes its plan and finishes with `plan_exit`, the CLI
-     * asks "Ready to implement?", the driver answers `Start new session` through the real question
-     * card, and the CLI-created follow-up session must take over the transcript with the plan
-     * handoff. The asking and adopted session ids are recorded so the two can be compared.
+     * Plan-mode follow-up. The branch is selected by the K1 scenario id `followup.new-session`;
+     * the scenario's `expected` lists are assertions only. The plan agent writes its plan and
+     * finishes with `plan_exit`, the CLI asks "Ready to implement?", the driver answers `Start new
+     * session` through the real question card, and the CLI-created follow-up session must take over
+     * the transcript with the plan handoff. The asking and adopted session ids are recorded so the
+     * two can be compared. The flow drives the local CLI, so it refuses any lane but `local`.
      */
     private fun planFollowup(
         request: DriverRequest,
         ide: KiloIdePage,
         evidence: DriverEvidence,
     ) {
+        if (request.scenario.lane != "local") {
+            evidence.fail(
+                "followup.local-lane",
+                "$FOLLOWUP_SCENARIO drives the local CLI only; received lane '${request.scenario.lane}'",
+            )
+            return
+        }
+
         val token = request.scenario.prompt.token
         val sessions = SessionOpenPage(ide, watchdog)
         val card = PlanFollowupPage(ide, watchdog)

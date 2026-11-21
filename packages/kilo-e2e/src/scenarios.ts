@@ -101,6 +101,21 @@ const DEFINITIONS: Record<ScenarioID, Definition> = {
     },
     requires: [],
   },
+  "followup.new-session": {
+    prompt: { directive: "followup", token: "K1-FOLLOWUP-NEWSESSION" },
+    expected: {
+      ui: [
+        "question.visible",
+        "question.requested",
+        "question.answered",
+        "followup.adopted",
+        "followup.plan.marker",
+      ],
+      model: ["plan.mode", "session.ready"],
+      terminalTranscriptToken: "K1-FOLLOWUP-NEWSESSION",
+    },
+    requires: ["transcript.read"],
+  },
 }
 
 export function manifest(id: ScenarioID, lane: (typeof LANES)[number]): ScenarioManifest {

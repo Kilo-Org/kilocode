@@ -6,7 +6,13 @@ import { root } from "./helpers"
 
 describe("scenario manifests", () => {
   test("defines every stable scenario for both lanes", () => {
-    expect(SCENARIO_IDS).toEqual(["session.open", "prompt.stream", "permission.continue", "settings.telemetry"])
+    expect(SCENARIO_IDS).toEqual([
+      "session.open",
+      "prompt.stream",
+      "permission.continue",
+      "settings.telemetry",
+      "followup.new-session",
+    ])
     expect(LANES).toEqual(["local", "cloud"])
     expect(ALL_MANIFESTS).toHaveLength(SCENARIO_IDS.length * LANES.length)
     const cells = ALL_MANIFESTS.map((entry) => `${entry.id}:${entry.lane}`)
