@@ -3,3 +3,4 @@
 ---
 
 Reload the provider and authentication state when the panel switches to another project, so the view always describes the project shown.
+When the provider list cannot be read for the project shown, the panel states the failure.

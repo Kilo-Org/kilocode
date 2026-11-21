@@ -52,6 +52,7 @@ const ProvidersTab: Component = () => {
 
   const kiloLoggedIn = createMemo(() => !!provider.authStates()[KILO_PROVIDER_ID])
   const kiloFailure = createMemo(() => providerFailure(KILO_PROVIDER_ID, provider.failures()))
+  const loadFailed = createMemo(() => !!provider.loadError())
 
   const connectedProviders = createMemo(() => {
     const ids = visibleConnectedIds(provider.connected(), provider.authStates())
@@ -232,6 +233,17 @@ const ProvidersTab: Component = () => {
                   </span>
                 )
               }}
+            </Show>
+            <Show when={loadFailed()}>
+              <span
+                style={{
+                  "font-size": "var(--kilo-font-size-12)",
+                  color: "var(--vscode-errorForeground)",
+                  "padding-left": "32px",
+                }}
+              >
+                {language.t("dialog.model.loadFailed")}
+              </span>
             </Show>
           </div>
         </Card>

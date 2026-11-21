@@ -30,6 +30,8 @@ interface ProviderContextValue {
   kiloUnavailable: Accessor<boolean>
   /** Typed reasons providers failed to load, so the UI can explain why instead of hiding them. */
   failures: Accessor<ProviderFailure[]>
+  /** The last provider read failed; the view has no provider data for this project. */
+  loadError: Accessor<string | undefined>
 }
 
 export const ProviderContext = createContext<ProviderContextValue>()
@@ -47,6 +49,7 @@ export const ProviderProvider: ParentComponent = (props) => {
   const [authStates, setAuthStates] = createSignal<Record<string, ProviderAuthState>>({})
   const [kiloUnavailable, setKiloUnavailable] = createSignal(false)
   const [failures, setFailures] = createSignal<ProviderFailure[]>([])
+  const [loadError, setLoadError] = createSignal<string | undefined>()
 
   const models = createMemo<EnrichedModel[]>(() => flattenModels(providers()))
 
@@ -77,6 +80,7 @@ export const ProviderProvider: ParentComponent = (props) => {
         })
         setConnected((prev) => prev.filter((id) => id !== "kilo"))
         setFailures((prev) => prev.filter((item) => item.providerID !== "kilo"))
+        setLoadError(undefined)
       })
       return
     }
@@ -93,6 +97,7 @@ export const ProviderProvider: ParentComponent = (props) => {
       setAuthStates(message.authStates)
       setKiloUnavailable(message.kiloUnavailable ?? false)
       setFailures(message.failures ?? [])
+      setLoadError(message.error)
     })
   })
 
@@ -136,6 +141,7 @@ export const ProviderProvider: ParentComponent = (props) => {
     isModelValid,
     kiloUnavailable,
     failures,
+    loadError,
   }
 
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>

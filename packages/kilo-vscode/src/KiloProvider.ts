@@ -2897,11 +2897,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         if (!client) {
           // Keep the provider view on the panel's project: replay only a payload loaded for
           // that project, and mark the fetch to run once a client is available.
-          const runnable =
-            this.cachedProvidersMessage !== null &&
-            this.cachedProvidersDirectory !== null &&
-            sameDirectory(this.cachedProvidersDirectory, this.settingsDirectory())
-          if (runnable && generation === this.providersGeneration) this.postMessage(this.cachedProvidersMessage)
+          const retained = this.retainedProviders()
+          if (retained && generation === this.providersGeneration) this.postMessage(retained)
           else this.providersRetry = true
           return
         }
@@ -2946,8 +2943,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             generation = this.providersGeneration
             continue
           }
-          // A rejected fetch leaves nothing cached, so retry on the next connect.
-          if (!this.cachedProvidersMessage) this.providersRetry = true
+          // This project has no provider payload yet, so publish an explicit failure for it:
+          // the view reports the failure rather than a loading state, and the fetch runs again
+          // on the next connect.
+          if (!this.retainedProviders()) {
+            this.providersRetry = true
+            this.postMessage({
+              type: "providersLoaded",
+              providers: {},
+              connected: [],
+              defaults: {},
+              ready: false,
+              defaultSelection: computeDefaultSelection(null, "", ""),
+              authMethods: {},
+              authStates: {},
+              error: "Provider list could not be loaded.",
+            })
+          }
           // Keep backing off while the last loaded Kilo catalog was unavailable.
           const last = this.cachedProvidersMessage as { kiloUnavailable?: boolean } | null
           this.catalogRetry.update(last?.kiloUnavailable === true)
@@ -4520,6 +4532,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private settingsDirectory(): string {
     return this.projectDirectory ?? this.getRootDirectory()
+  }
+
+  /** The retained provider payload, only while it was loaded for the panel's project. */
+  private retainedProviders(): unknown | null {
+    if (this.cachedProvidersMessage === null || this.cachedProvidersDirectory === null) return null
+    if (!sameDirectory(this.cachedProvidersDirectory, this.settingsDirectory())) return null
+    return this.cachedProvidersMessage
   }
 
   private async handleAgentManagerSettingsMessage(

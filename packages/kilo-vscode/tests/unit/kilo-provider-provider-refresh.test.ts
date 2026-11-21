@@ -12,6 +12,8 @@ type Internals = {
   setProjectDirectory: (directory: string | null) => void
   cachedConfigMessage: unknown
   cachedConfigDirectory: string | null
+  cachedProvidersMessage: unknown
+  cachedProvidersDirectory: string | null
   retryInitialization: () => Promise<void>
   refreshConfig: (type: "configLoaded" | "configUpdated", dir?: string) => Promise<void>
   initializeConnection: () => Promise<void>
@@ -266,6 +268,64 @@ describe("KiloProvider providers on reconnect", () => {
 
     expect(loaded(messages.slice(before))).toHaveLength(0)
     expect(internal.providersRetry).toBe(true)
+  })
+
+  it("publishes a failure payload when the switch fetch fails", async () => {
+    let dir = "/project-a"
+    const requests: string[] = []
+    const messages: unknown[] = []
+    const client = remote(requests)
+    const internal = provider(connection(true, client), () => dir)
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    await internal.fetchAndSendProviders()
+    expect(loaded(messages)).toHaveLength(1)
+
+    dir = "/project-b"
+    client.provider.list = async (input: { directory: string }) => {
+      requests.push(input.directory)
+      throw new Error("backend gone")
+    }
+    internal.setProjectDirectory("/project-b")
+    if (internal.providersRefresh) await internal.providersRefresh
+
+    expect(internal.providersRetry).toBe(true)
+    const last = messages.at(-1) as Record<string, unknown>
+    expect(last).toMatchObject({
+      type: "providersLoaded",
+      providers: {},
+      connected: [],
+      defaults: {},
+      ready: false,
+    })
+    expect(typeof last.error).toBe("string")
+    expect(last.error).not.toBe("")
+    expect(internal.cachedProvidersMessage).toBeNull()
+  })
+
+  it("keeps the current project's payload when a refresh fails", async () => {
+    const dir = "/project-a"
+    const requests: string[] = []
+    const messages: unknown[] = []
+    const client = remote(requests)
+    const internal = provider(connection(true, client), () => dir)
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    await internal.fetchAndSendProviders()
+    const retained = internal.cachedProvidersMessage
+    expect(retained).not.toBeNull()
+    const before = messages.length
+
+    client.provider.list = async () => {
+      throw new Error("backend gone")
+    }
+    await internal.fetchAndSendProviders()
+
+    expect(loaded(messages.slice(before))).toHaveLength(0)
+    expect(messages.at(-1)).toBe(retained)
+    expect(internal.cachedProvidersMessage).toBe(retained)
   })
 
   it("sends the new project's provider payload on the next connection", async () => {

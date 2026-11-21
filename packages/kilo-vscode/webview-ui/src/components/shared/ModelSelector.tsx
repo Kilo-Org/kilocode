@@ -151,7 +151,7 @@ export interface ModelSelectorBaseProps {
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
-  const { connected, models, findModel, kiloUnavailable, failures } = useProvider()
+  const { connected, models, findModel, kiloUnavailable, failures, loadError } = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
   // Session context is optional — ModelSelectorBase is also used in Settings
@@ -816,6 +816,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   const kiloModelFailure = createMemo(() => providerFailure(KILO_GATEWAY_ID, failures()))
   const noProvidersLabel = () => {
+    if (loadError()) return language.t("dialog.model.loadFailed")
     const failure = kiloModelFailure()
     if (failure) {
       const { key, vars } = providerFailureMessageKey(failure)
