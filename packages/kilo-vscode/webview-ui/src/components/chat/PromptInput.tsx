@@ -49,6 +49,7 @@ import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { SandboxButtonBase, SandboxTooltipContent } from "../shared/SandboxButton"
 import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
+import { EnhanceStatus, type EnhanceState } from "./EnhanceStatus"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { PromptSelectors } from "./PromptSelectors"
 import { PromptOverflow, type OverflowItem } from "./PromptOverflow"
@@ -548,10 +549,40 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (sandboxID() === sessionID) requestSandbox()
     }, 1000)
   }
-  let enhanceCounter = 0
+  // The in-flight Enhance request and the draft it was sent for.
+  let enhanceRequest: { id: string; text: string } | undefined
   let preEnhanceText: string | null = null
   // Backing text of collapsed pastes, restored alongside preEnhanceText on undo.
   let preEnhancePastes: string[] | null = null
+
+  // How the last Enhance request ended, shown above the draft with a retry action.
+  const [enhanceState, setEnhanceState] = createSignal<EnhanceState>()
+
+  // Stop the in-flight Enhance request and return its id. The draft stays as
+  // the user left it, and undo no longer reverts an earlier Enhance result.
+  const stopEnhance = () => {
+    const request = enhanceRequest
+    enhanceRequest = undefined
+    preEnhanceText = null
+    preEnhancePastes = null
+    setEnhancing(false)
+    setEnhanceState(undefined)
+    if (request) vscode.postMessage({ type: "cancelEnhancePrompt", requestId: request.id })
+    return request?.id
+  }
+
+  // Any change to the draft while Enhance runs stops it, so a late result
+  // cannot replace what the user typed.
+  createEffect(() => {
+    if (!enhancing() || text() === enhanceRequest?.text) return
+    const id = stopEnhance()
+    if (id) setEnhanceState({ kind: "changed", id })
+  })
+
+  // An empty draft, for example after a send, has nothing left to retry.
+  createEffect(() => {
+    if (!text().trim()) setEnhanceState(undefined)
+  })
 
   createEffect(() => {
     const sessionID = sandboxID()
@@ -666,9 +697,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       setBrowsers(references.get(key) ?? [])
       setContexts(contextDrafts.get(key) ?? [])
       imageAttach.replace(imageDrafts.get(key) ?? [])
-      setEnhancing(false)
-      preEnhanceText = null
-      preEnhancePastes = null
+      stopEnhance()
       history.reset()
       if (textareaRef) {
         if (textareaRef.value !== draft) textareaRef.value = draft
@@ -955,9 +984,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       savePromptDraft(key, value, comments, images, undefined, undefined, codeContexts, pastes)
       mentionDrafts.set(key, { paths: state.paths, sessions: state.sessions })
       if (!active) return
-      enhanceCounter++
-      preEnhanceText = null
-      preEnhancePastes = null
+      stopEnhance()
       history.reset()
       setText(value)
       mention.seedFromParts(state.paths, value)
@@ -1279,10 +1306,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "enhancePromptResult") {
       const result = message as import("../../types/messages").EnhancePromptResultMessage
-      if (result.requestId === `enhance-${draftKey()}-${enhanceCounter}`) {
+      if (result.requestId === enhanceRequest?.id) {
+        // Undo restores the draft as it was right before the replacement.
+        preEnhanceText = text()
+        preEnhancePastes = paste.pastes().map((item) => item.text)
+        enhanceRequest = undefined
+        setEnhancing(false)
         setText(result.text)
         mention.seedFromText(result.text)
-        setEnhancing(false)
         if (textareaRef) {
           textareaRef.value = result.text
           adjustHeight()
@@ -1293,8 +1324,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "enhancePromptError") {
       const result = message as import("../../types/messages").EnhancePromptErrorMessage
-      if (result.requestId === `enhance-${draftKey()}-${enhanceCounter}`) {
+      if (result.requestId === enhanceRequest?.id) {
+        enhanceRequest = undefined
         setEnhancing(false)
+        setEnhanceState({
+          kind: result.reason === "timeout" ? "timeout" : "failed",
+          id: result.requestId,
+          error: result.error,
+        })
       }
     }
 
@@ -1307,6 +1344,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   onCleanup(() => {
     props.onEditReady?.(false)
+    // Nothing is left to show a late Enhance result in.
+    stopEnhance()
     // Keep delayed host input in its draft even if the composer unmounts before acknowledgement.
     flushing = true
     for (const [key, work] of deferred) work.forEach((apply) => apply(key))
@@ -1548,7 +1587,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
   }
 
-  const canEnhance = () => !isBusy() && !isDisabled() && !enhancing()
+  // While Enhance runs, its button stops it.
+  const canEnhance = () => enhancing() || (!isBusy() && !isDisabled())
+  const enhanceLabel = () => language.t(enhancing() ? "prompt.action.enhanceStop" : "prompt.action.enhance")
 
   const handleOpenIndexingSettings = () => {
     vscode.postMessage({ type: "openSettingsTab", tab: "indexing" })
@@ -1566,7 +1607,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   )
 
   const handleEnhance = () => {
-    if (isDisabled() || enhancing() || isBusy()) return
+    if (enhancing()) {
+      const id = stopEnhance()
+      if (id) setEnhanceState({ kind: "stopped", id })
+      return
+    }
+    if (isDisabled() || isBusy()) return
+    setEnhanceState(undefined)
     const draft = paste.plainText(text()).trim()
     if (!draft) {
       const description = language.t("prompt.action.enhanceDescription")
@@ -1578,11 +1625,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
       return
     }
-    preEnhanceText = text()
-    preEnhancePastes = paste.pastes().map((item) => item.text)
-    enhanceCounter++
+    // Short enough to read from the status row and find in the extension log.
+    enhanceRequest = { id: `enhance-${crypto.randomUUID().slice(0, 8)}`, text: text() }
     setEnhancing(true)
-    vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${draftKey()}-${enhanceCounter}` })
+    vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: enhanceRequest.id })
   }
 
   const insertSpeechText = (value: string) => {
@@ -2007,7 +2053,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     list.push({
       key: "enhance",
       icon: "wand-sparkles",
-      label: language.t("prompt.action.enhance"),
+      label: enhanceLabel(),
       disabled: !canEnhance(),
       busy: enhancing(),
       run: handleEnhance,
@@ -2249,6 +2295,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </For>
         </div>
       </Show>
+      <Show when={enhanceState()}>
+        {(state) => (
+          <EnhanceStatus
+            state={state()}
+            disabled={isBusy() || isDisabled()}
+            onRetry={handleEnhance}
+            onDismiss={() => setEnhanceState(undefined)}
+          />
+        )}
+      </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <Show when={keycaps()} keyed>
@@ -2415,15 +2471,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </div>
           </Show>
           <div class="prompt-action" data-folded={folded("enhance") ? "" : undefined}>
-            <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
+            <Tooltip value={enhanceLabel()} placement="top" openDelay={0}>
               <IconButton
-                icon="wand-sparkles"
+                icon={enhancing() ? "stop" : "wand-sparkles"}
                 variant="ghost"
                 size="small"
                 onClick={handleEnhance}
                 disabled={!canEnhance()}
-                loading={enhancing()}
-                aria-label={language.t("prompt.action.enhance")}
+                aria-label={enhanceLabel()}
               />
             </Tooltip>
           </div>
