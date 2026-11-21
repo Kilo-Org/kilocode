@@ -302,42 +302,43 @@ export class McpOAuthPendingProvider extends McpOAuthProvider {
     if (type === "all" || type === "tokens") this.pendingTokens = undefined
   }
 
-  async commit(): Promise<void> {
-    if (!this.pendingTokens) return
+  /** Store this flow's credentials and report whether they were stored. */
+  async commit(accept?: () => boolean): Promise<boolean> {
+    if (!this.pendingTokens) return true
     // kilocode_change start
     const stored = this.config.clientId
       ? (await Effect.runPromise(this.auth.getForUrl(this.mcpName, this.serverUrl)))?.clientInfo
       : undefined
     // kilocode_change end
-    await Effect.runPromise(
-      this.auth.set(
-        this.mcpName,
-        {
-          tokens: {
-            accessToken: this.pendingTokens.access_token,
-            refreshToken: this.pendingTokens.refresh_token,
-            expiresAt: this.pendingTokens.expires_in ? Date.now() / 1000 + this.pendingTokens.expires_in : undefined,
-            scope: this.pendingTokens.scope,
-            issuer: this.pendingTokens.issuer, // kilocode_change
-          },
-          clientInfo:
-            this.pendingClientInfo && !this.config.clientId
-              ? {
-                  clientId: this.pendingClientInfo.client_id,
-                  clientSecret: this.pendingClientInfo.client_secret,
-                  clientIdIssuedAt: this.pendingClientInfo.client_id_issued_at,
-                  clientSecretExpiresAt: this.pendingClientInfo.client_secret_expires_at,
-                  issuer: this.pendingClientInfo.issuer, // kilocode_change
-                }
-              : // kilocode_change start - keep the issuer binding of pre-registered credentials
-                this.config.clientId
-                ? retain(this.pendingClientInfo, stored, this.config.clientId)
-                : undefined,
-          // kilocode_change end
-        },
-        this.serverUrl,
-      ),
-    )
+    const entry = {
+      tokens: {
+        accessToken: this.pendingTokens.access_token,
+        refreshToken: this.pendingTokens.refresh_token,
+        expiresAt: this.pendingTokens.expires_in ? Date.now() / 1000 + this.pendingTokens.expires_in : undefined,
+        scope: this.pendingTokens.scope,
+        issuer: this.pendingTokens.issuer, // kilocode_change
+      },
+      clientInfo:
+        this.pendingClientInfo && !this.config.clientId
+          ? {
+              clientId: this.pendingClientInfo.client_id,
+              clientSecret: this.pendingClientInfo.client_secret,
+              clientIdIssuedAt: this.pendingClientInfo.client_id_issued_at,
+              clientSecretExpiresAt: this.pendingClientInfo.client_secret_expires_at,
+              issuer: this.pendingClientInfo.issuer, // kilocode_change
+            }
+          : // kilocode_change start - keep the issuer binding of pre-registered credentials
+            this.config.clientId
+            ? retain(this.pendingClientInfo, stored, this.config.clientId)
+            : undefined,
+      // kilocode_change end
+    }
+    // kilocode_change start - the acceptance test runs with the write, so the store follows the
+    // same order as the epoch it reads
+    if (accept) return Effect.runPromise(this.auth.setIf(this.mcpName, entry, this.serverUrl, accept))
+    // kilocode_change end
+    await Effect.runPromise(this.auth.set(this.mcpName, entry, this.serverUrl))
+    return true
   }
 }
 

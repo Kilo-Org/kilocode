@@ -59,6 +59,8 @@ export interface Interface {
     type: "tokens" | "client",
     expected: Invalidation.Expected,
   ) => Effect.Effect<Invalidation.Outcome>
+  /** Store a credential when `accept` still holds, in the same transaction as the write. */
+  readonly setIf: (mcpName: string, entry: Entry, serverUrl: string, accept: () => boolean) => Effect.Effect<boolean>
   // kilocode_change end
 }
 
@@ -183,6 +185,21 @@ const layer = Layer.effect(
     })
     // kilocode_change end
 
+    // kilocode_change start - the acceptance test and the write run in one transaction, so what the
+    // test observed still holds when the credential is stored
+    const setIf = Effect.fn("McpAuth.setIf")(function* (
+      mcpName: string,
+      entry: Entry,
+      serverUrl: string,
+      accept: () => boolean,
+    ) {
+      return yield* mutateWith((data) => {
+        if (!accept()) return { result: false }
+        return { next: { ...data, [mcpName]: { ...entry, serverUrl } }, result: true }
+      })
+    })
+    // kilocode_change end
+
     return Service.of({
       all,
       get,
@@ -197,6 +214,7 @@ const layer = Layer.effect(
       getOAuthState,
       clearOAuthState,
       invalidate, // kilocode_change
+      setIf, // kilocode_change
     })
   }),
 )

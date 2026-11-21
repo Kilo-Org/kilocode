@@ -362,6 +362,129 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertEquals("cancelled", signIn.await().status)
     }
 
+    /**
+     * A reset releases the pending CLI flow before it clears the stored credential, and the badge
+     * and busy state follow the reconnect.
+     */
+    fun `test reset cancels an active sign in before removing credentials`() = runBlocking(Dispatchers.Default) {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeAuthenticate = { gate.await() }
+        rpc.mcpAuthenticateResult = McpAuthResultDto("failed", "Authorization cancelled")
+        rpc.afterMcpConnect = { _, name -> rpc.mcps = listOf(McpStatusDto(name, "needs_auth")) }
+        val service = service()
+        val signIn = async { service.signIn("/test", "linear") }
+        withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+        assertTrue(service.reset("/test", "linear"))
+        gate.complete(Unit)
+
+        assertEquals(listOf("cancel:linear", "remove:linear"), rpc.mcpAuthCalls)
+        assertEquals("cancelled", signIn.await().status)
+        assertTrue(service.busy.value.isEmpty())
+        assertEquals(setOf("linear"), service.needsAuth.value["/test"])
+    }
+
+    /**
+     * The CLI answers a released flow with a failure, and it can answer while the reset still runs.
+     * The caller that started the sign-in must still see the cancellation.
+     */
+    fun `test reset reports cancelled when the CLI answers the cancelled flow first`() = runBlocking(Dispatchers.Default) {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeAuthenticate = { gate.await() }
+        rpc.afterMcpAuthCancel = { gate.complete(Unit) }
+        rpc.mcpAuthenticateResult = McpAuthResultDto("failed", "Browser authorization failed: Authorization cancelled")
+        rpc.afterMcpConnect = { _, name -> rpc.mcps = listOf(McpStatusDto(name, "needs_auth")) }
+        val service = service()
+        val signIn = async { service.signIn("/test", "linear") }
+        withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+        assertTrue(service.reset("/test", "linear"))
+
+        assertEquals("cancelled", signIn.await().status)
+    }
+
+    /** With nothing pending there is no flow to release, so the reset must not call cancel. */
+    fun `test reset without an active sign in removes without cancelling`() = runBlocking(Dispatchers.Default) {
+        rpc.mcps = listOf(McpStatusDto("linear", "connected"))
+        val service = service()
+
+        assertTrue(service.reset("/test", "linear"))
+
+        assertEquals(listOf("remove:linear"), rpc.mcpAuthCalls)
+        assertTrue(rpc.mcpAuthCancels.isEmpty())
+    }
+
+    /**
+     * A server the CLI no longer knows refuses the cancel. The removal decides the reset, so it
+     * still runs.
+     */
+    fun `test reset proceeds to removal when the CLI refuses the cancel`() = runBlocking(Dispatchers.Default) {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeAuthenticate = { gate.await() }
+        rpc.afterMcpAuthCancel = { gate.complete(Unit) }
+        rpc.mcpAuthCancelResult = false
+        val service = service()
+        val signIn = async { service.signIn("/test", "linear") }
+        withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+        assertTrue(service.reset("/test", "linear"))
+        signIn.await()
+
+        assertEquals(listOf("cancel:linear", "remove:linear"), rpc.mcpAuthCalls)
+    }
+
+    /**
+     * When neither call lands, the reset changes nothing, so the running sign-in still reports its
+     * own result.
+     */
+    fun `test reset leaves a running sign in alone when neither call lands`() = runBlocking(Dispatchers.Default) {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeAuthenticate = { gate.await() }
+        rpc.mcpAuthCancelResult = false
+        rpc.mcpAuthRemoveResult = false
+        rpc.mcpAuthenticateResult = McpAuthResultDto("connected")
+        val service = service()
+        val signIn = async { service.signIn("/test", "linear") }
+        withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+        assertFalse(service.reset("/test", "linear"))
+        gate.complete(Unit)
+
+        assertEquals("connected", signIn.await().status)
+    }
+
+    /**
+     * The reset publishes [KiloMcpAuthService.needsAuth] from a `finally`, so a cancelled reset
+     * still runs its cleanup. That cleanup must not leave the attempt abandoned when nothing was
+     * released, or a sign-in the user never lost reports `cancelled` and strands its own result.
+     */
+    fun `test reset keeps a running sign in alive when it is cancelled before either call lands`() =
+        runBlocking(Dispatchers.Default) {
+            val gate = CompletableDeferred<Unit>()
+            val entered = CompletableDeferred<Unit>()
+            rpc.beforeAuthenticate = { gate.await() }
+            rpc.mcpAuthenticateResult = McpAuthResultDto("connected")
+            // The cancel never lands: the reset is cancelled while it is still inside it.
+            rpc.mcpAuthCancelResult = false
+            rpc.mcpAuthRemoveResult = false
+            rpc.beforeMcpAuthCancel = {
+                entered.complete(Unit)
+                CompletableDeferred<Unit>().await()
+            }
+            val service = service(authTimeoutMs = 60_000L)
+            val signIn = async { service.signIn("/test", "linear") }
+            withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+            val reset = async { service.reset("/test", "linear") }
+            withTimeout(5000) { entered.await() }
+            reset.cancel()
+            withTimeout(2000) { reset.join() }
+
+            gate.complete(Unit)
+            assertEquals("the sign-in was never released", "connected", withTimeout(2000) { signIn.await() }.status)
+            assertTrue(service.busy.value.isEmpty())
+        }
+
     fun `test reset keeps needs auth state when reconnect fails`() = runBlocking(Dispatchers.Default) {
         rpc.mcps = listOf(McpStatusDto("linear", "connected"))
         rpc.mcpConnectError = RuntimeException("offline")

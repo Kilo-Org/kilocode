@@ -42,12 +42,19 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     val mcpAuthentications = mutableListOf<String>()
     val mcpAuthCancels = mutableListOf<String>()
     val mcpAuthRemovals = mutableListOf<String>()
+
+    /** Auth endpoints in arrival order, so a test can assert cancel-before-remove. */
+    val mcpAuthCalls = mutableListOf<String>()
     val mcpAuthEventsFlow = MutableSharedFlow<McpAuthEventDto>(extraBufferCapacity = 8)
     val creations = mutableListOf<AgentCreateDto>()
     val createDirs = mutableListOf<String>()
     var afterCreate: (suspend (String, AgentCreateDto) -> Unit)? = null
     var afterRemove: (suspend (String, String) -> Unit)? = null
     var afterMcpConnect: (suspend (String, String) -> Unit)? = null
+    var afterMcpAuthCancel: (suspend () -> Unit)? = null
+
+    /** Runs at the top of `mcpAuthCancel`, before the call is recorded, so a test can hold it open. */
+    var beforeMcpAuthCancel: (suspend () -> Unit)? = null
     var createError: Exception? = null
     var agentsError: Exception? = null
     var skillsError: Exception? = null
@@ -230,13 +237,17 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
 
     override suspend fun mcpAuthCancel(directory: String, name: String): Boolean {
         assertNotEdt("agentBehavior.mcpAuthCancel")
+        beforeMcpAuthCancel?.invoke()
         mcpAuthCancels.add(name)
+        mcpAuthCalls.add("cancel:$name")
+        afterMcpAuthCancel?.invoke()
         return mcpAuthCancelResult
     }
 
     override suspend fun mcpAuthRemove(directory: String, name: String): Boolean {
         assertNotEdt("agentBehavior.mcpAuthRemove")
         mcpAuthRemovals.add(name)
+        mcpAuthCalls.add("remove:$name")
         return mcpAuthRemoveResult
     }
 

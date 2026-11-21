@@ -76,6 +76,12 @@ class KiloMcpAuthService internal constructor(
      * server is being removed so it skips its trailing refresh. The flag lives on the attempt rather
      * than in a separate set so it cannot outlive the attempt it describes: [stop] writes it before
      * completing [abort], and the only reader is the `signIn` that already holds this reference.
+     *
+     * [abandoned] records that a reset has taken the attempt over. The CLI answers a released flow
+     * with a failure, and it can answer before [stop] runs, so the caller reports the cancellation
+     * it asked for instead of that failure. The marker only holds while the reset owns the flow:
+     * a landed cancel or removal [stop]s the attempt, and while neither has landed - including
+     * when the reset is cancelled itself - [resume] hands the sign-in back its own result.
      */
     private class Attempt {
         val abort = CompletableDeferred<Unit>()
@@ -83,6 +89,19 @@ class KiloMcpAuthService internal constructor(
         @Volatile
         var forgotten = false
             private set
+
+        @Volatile
+        var abandoned = false
+            private set
+
+        fun abandon() {
+            abandoned = true
+        }
+
+        /** Clears the abandoned marker when the reset released nothing, so the sign-in keeps its own result. */
+        fun resume() {
+            abandoned = false
+        }
 
         fun stop(forget: Boolean = false) {
             if (forget) forgotten = true
@@ -161,7 +180,7 @@ class KiloMcpAuthService internal constructor(
         return try {
             val result = withTimeoutOrNull(authTimeoutMs) { race(dir, name, pending.abort) }
             if (result != null) {
-                if (pending.abort.isCompleted) return McpAuthResultDto("cancelled", null)
+                if (pending.abort.isCompleted || pending.abandoned) return McpAuthResultDto("cancelled", null)
                 return result
             }
             // Cancel rather than remove: a timeout should abandon this attempt, not discard
@@ -241,11 +260,17 @@ class KiloMcpAuthService internal constructor(
         if (name in names) updateNeedsAuth(dir, names - name)
     }
 
-    /** Clears stored credentials and reconnects so the runtime immediately reports [needsAuth]. */
+    /**
+     * Clears stored credentials and reconnects so the runtime immediately reports [needsAuth].
+     *
+     * An in-flight sign-in for the same server ends with the flow it started: a landed cancel or
+     * removal stops the attempt, so its caller reports the cancellation instead of the failure the
+     * CLI answers a released flow with. See [release].
+     */
     suspend fun reset(dir: String, name: String): Boolean {
-        val removed = attempt("mcp auth reset failed dir=$dir name=$name", false) { svc().mcpAuthRemove(dir, name) }
+        val pending = active[busyKey(dir, name)]
+        val removed = if (pending == null) removeAuth(dir, name) else release(dir, name, pending)
         if (!removed) return false
-        active[busyKey(dir, name)]?.stop()
         var reconnected = false
         try {
             val disconnected = attempt("mcp disconnect after auth reset failed dir=$dir name=$name", false) {
@@ -267,6 +292,47 @@ class KiloMcpAuthService internal constructor(
             } else {
                 markNeedsAuth(dir, name)
                 refreshAll(dir, skip = dir)
+            }
+        }
+    }
+
+    /** Deletes the stored credential for [name], reporting only whether the CLI accepted it. */
+    private suspend fun removeAuth(dir: String, name: String): Boolean =
+        attempt("mcp auth reset failed dir=$dir name=$name", false) { svc().mcpAuthRemove(dir, name) }
+
+    /**
+     * Releases the pending CLI flow for [name] and removes its credential, returning whether the
+     * removal landed.
+     *
+     * The abandoned marker on [pending] must reflect what actually happened on every exit: a landed
+     * cancel or removal stops it, so its `signIn` caller reports the cancellation, and only while
+     * neither landed does it get resumed and keep its own result. The `finally` covers the window
+     * where this reset is cancelled between `abandon` and `stop`, deciding from those two flags
+     * without an RPC, a suspend point, or swallowing the cancellation.
+     */
+    private suspend fun release(dir: String, name: String, pending: Attempt): Boolean {
+        pending.abandon()
+        var released = false
+        var removed = false
+        var stopped = false
+        try {
+            // Release the flow before the removal lands, in the order forget documents: while the
+            // CLI still knows the name it releases the pending flow and its callback port, and it
+            // also drops an exchange that completes after the removal. A refused cancel must not
+            // block the reset: the CLI answers success for any server it still knows, so a refusal
+            // means the name is gone or the RPC broke, and the removal is what decides the outcome.
+            released = attempt("mcp auth reset cancel failed dir=$dir name=$name", false) {
+                svc().mcpAuthCancel(dir, name)
+            }
+            removed = removeAuth(dir, name)
+            // Neither call landed, so the sign-in is untouched: it still owns its own result.
+            if (!removed && !released) return false
+            stopped = true
+            pending.stop()
+            return removed
+        } finally {
+            if (!stopped) {
+                if (released || removed) pending.stop() else pending.resume()
             }
         }
     }
