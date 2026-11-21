@@ -4,6 +4,22 @@
 
 ### Minor Changes
 
+- [#16284](https://github.com/Kilo-Org/kilocode/pull/16284) [`e90c8a2`](https://github.com/Kilo-Org/kilocode/commit/e90c8a2f0ae4c7ef42244ed3160b01e0f0120d38) - View saved Cloud workspace changes and published pull request diffs in the native diff editor without a local checkout.
+
+  Use a shared capability-aware menu and badge actions for local and Cloud workspaces in Agent Manager.
+
+  Use the local workspace header for Cloud sessions, with passive saved-change counters and a browser-linked compute status. The Cloud header no longer shows the hourly workspace rate; the status badge links to the session instead.
+
+  Name Cloud diff tabs with the task or branch instead of the internal workspace ID.
+
+### Patch Changes
+
+- [#16293](https://github.com/Kilo-Org/kilocode/pull/16293) [`3f4422d`](https://github.com/Kilo-Org/kilocode/commit/3f4422d1c029512e9abe07fc12f0bf74588e578b) - Respect telemetry settings from `kilo.json` without client-side overrides, and add a switch under Settings > Tools > Kilo Code > Advanced that updates `experimental.openTelemetry` through the CLI core.
+
+## 7.9.0
+
+### Minor Changes
+
 - [#16257](https://github.com/Kilo-Org/kilocode/pull/16257) [`dbfbeb4`](https://github.com/Kilo-Org/kilocode/commit/dbfbeb443b480a936b8259c1bb7e20e7152dd17b) - Show Cloud workspace pull request status in Agent Manager: hosted rows and workspace editor headers now display the PR number, state, review, and check verdicts backed by Cloud, with the same browsable detail as a local worktree pull request.
 
 ### Patch Changes
