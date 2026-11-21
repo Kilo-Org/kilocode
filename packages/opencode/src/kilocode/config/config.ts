@@ -455,7 +455,7 @@ export namespace KilocodeConfig {
             modes: modes.map((m: any) => m.slug),
           })
           // Explanatory only: kept out of `warnings`, which feeds `kilo config check`
-          // and the extension toast, and logged exactly as legacy mode notes are.
+          // and the extension toast, and logged at debug level.
           for (const note of converted.notes) {
             log.debug("kilocode organization mode note", { note })
           }
