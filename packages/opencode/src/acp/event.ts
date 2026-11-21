@@ -12,6 +12,7 @@ import type {
 import { Effect } from "effect"
 import { ACPSession } from "./session"
 import { ACPPermission } from "./permission"
+import { ACPQuestion } from "./question" // kilocode_change
 import { partsToContentChunks, type ReplayPart } from "./content"
 import {
   duplicateRunningToolUpdate,
@@ -23,7 +24,7 @@ import {
 } from "./tool"
 
 type Connection = Pick<AgentSideConnection, "sessionUpdate"> &
-  Partial<Pick<AgentSideConnection, "requestPermission" | "writeTextFile">>
+  Partial<Pick<AgentSideConnection, "requestPermission" | "writeTextFile" | "unstable_createElicitation">> // kilocode_change
 type GlobalEventEnvelope = {
   payload?: Event
 }
@@ -31,7 +32,14 @@ type GlobalEventStream = {
   stream: AsyncIterable<GlobalEventEnvelope>
 }
 
-export function start(input: { sdk: KiloClient; connection: Connection; session: ACPSession.Interface }) {
+// kilocode_change start - carry the initialized client capabilities into the event subscription
+export function start(input: {
+  sdk: KiloClient
+  connection: Connection
+  session: ACPSession.Interface
+  capabilities?: ACPQuestion.ClientCapabilities
+}) {
+  // kilocode_change end
   const subscription = new Subscription(input)
   subscription.start()
   return subscription
@@ -44,6 +52,7 @@ export class Subscription {
   private readonly connectionWaiters = new Set<() => void>()
   private readonly idleWaiters = new Map<string, Set<ReturnType<typeof turn>>>() // kilocode_change
   private readonly permission: ACPPermission.Handler
+  private readonly question: ACPQuestion.Handler // kilocode_change
   private connected = false
   private started = false
 
@@ -52,9 +61,12 @@ export class Subscription {
       sdk: KiloClient
       connection: Connection
       session: ACPSession.Interface
+      capabilities?: ACPQuestion.ClientCapabilities // kilocode_change
     },
   ) {
     this.permission = new ACPPermission.Handler(input)
+    // kilocode_change - question prompts travel as ACP form elicitations
+    this.question = new ACPQuestion.Handler({ ...input, capabilities: input.capabilities ?? { elicitation: false } }) // kilocode_change
   }
 
   start() {
@@ -114,6 +126,11 @@ export class Subscription {
       case "permission.asked":
         this.permission.handle(event)
         return
+      // kilocode_change start - surface the question tool through ACP elicitation
+      case "question.asked":
+        this.question.handle(event)
+        return
+      // kilocode_change end
       case "message.updated":
         this.message(event) // kilocode_change - correlate idle with this response message
         return
