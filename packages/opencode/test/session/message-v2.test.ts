@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
-import { APICallError } from "ai"
+import { APICallError, generateText } from "ai" // kilocode_change
+import { createAnthropic } from "@ai-sdk/anthropic" // kilocode_change
 import { MessageV2 } from "../../src/session/message-v2"
 import { ProviderTransform } from "@/provider/transform"
 import type { Provider } from "@/provider/provider"
@@ -1421,6 +1422,187 @@ describe("session.message-v2.toModelMessage", () => {
     const texts = (result[0].content as any[]).filter((p) => p.type === "text")
     expect(texts.map((t) => t.text)).toStrictEqual(["", "hello"])
   })
+
+  // kilocode_change start - aborted turns with no real text must not replay as empty blocks (#16139)
+  function abortedError() {
+    return new SessionV1.AbortedError({ message: "aborted" }).toObject() as SessionV1.Assistant["error"]
+  }
+
+  test("does not replay an aborted turn whose only text part is empty", async () => {
+    const userID = "m-user"
+    const assistantID = "m-assistant"
+    const input: SessionV1.WithParts[] = [
+      {
+        info: userInfo(userID),
+        parts: [{ ...basePart(userID, "u1"), type: "text", text: "hello" }] as SessionV1.Part[],
+      },
+      {
+        info: assistantInfo(assistantID, userID, abortedError()),
+        parts: [
+          { ...basePart(assistantID, "a1"), type: "step-start" },
+          { ...basePart(assistantID, "a2"), type: "text", text: "" },
+        ] as SessionV1.Part[],
+      },
+    ]
+
+    expect(await MessageV2.toModelMessages(input, model)).toStrictEqual([
+      { role: "user", content: [{ type: "text", text: "hello" }] },
+    ])
+  })
+
+  test("does not replay an aborted turn whose only text is whitespace", async () => {
+    const userID = "m-user"
+    const assistantID = "m-assistant"
+    const input: SessionV1.WithParts[] = [
+      {
+        info: userInfo(userID),
+        parts: [{ ...basePart(userID, "u1"), type: "text", text: "hello" }] as SessionV1.Part[],
+      },
+      {
+        info: assistantInfo(assistantID, userID, abortedError()),
+        parts: [{ ...basePart(assistantID, "a1"), type: "text", text: " \n\t " }] as SessionV1.Part[],
+      },
+    ]
+
+    expect(await MessageV2.toModelMessages(input, model)).toStrictEqual([
+      { role: "user", content: [{ type: "text", text: "hello" }] },
+    ])
+  })
+
+  test("does not replay the signed-reasoning space from an aborted turn with no real text", async () => {
+    const userID = "m-user"
+    const assistantID = "m-assistant"
+    const input: SessionV1.WithParts[] = [
+      {
+        info: userInfo(userID),
+        parts: [{ ...basePart(userID, "u1"), type: "text", text: "hello" }] as SessionV1.Part[],
+      },
+      {
+        info: assistantInfo(assistantID, userID, abortedError()),
+        parts: [
+          { ...basePart(assistantID, "a1"), type: "step-start" },
+          {
+            ...basePart(assistantID, "a2"),
+            type: "reasoning",
+            text: "thinking",
+            metadata: { anthropic: { signature: "sig" } },
+          },
+          { ...basePart(assistantID, "a3"), type: "text", text: "" },
+        ] as SessionV1.Part[],
+      },
+    ]
+
+    expect(await MessageV2.toModelMessages(input, model)).toStrictEqual([
+      { role: "user", content: [{ type: "text", text: "hello" }] },
+    ])
+  })
+
+  test("drops blank text from an aborted turn that also has real text", async () => {
+    const assistantID = "m-assistant"
+    const input: SessionV1.WithParts[] = [
+      {
+        info: assistantInfo(assistantID, "m-parent", abortedError()),
+        parts: [
+          { ...basePart(assistantID, "a1"), type: "text", text: "" },
+          { ...basePart(assistantID, "a2"), type: "text", text: "  " },
+          { ...basePart(assistantID, "a3"), type: "text", text: "partial answer" },
+        ] as SessionV1.Part[],
+      },
+    ]
+
+    expect(await MessageV2.toModelMessages(input, model)).toStrictEqual([
+      { role: "assistant", content: [{ type: "text", text: "partial answer" }] },
+    ])
+  })
+
+  test("does not send an aborted empty text block through the Kilo gateway Anthropic route", async () => {
+    const userID = "m-user"
+    const assistantID = "m-assistant"
+    const kilo: Provider.Model = {
+      ...model,
+      id: ModelV2.ID.make("anthropic/claude-sonnet-4-5"),
+      providerID: ProviderV2.ID.make("kilo"),
+      api: {
+        id: "anthropic/claude-sonnet-4-5",
+        url: "https://api.kilo.ai/api/gateway",
+        npm: "@kilocode/kilo-gateway",
+      },
+    }
+    const input: SessionV1.WithParts[] = [
+      {
+        info: userInfo(userID),
+        parts: [{ ...basePart(userID, "u1"), type: "text", text: "hello" }] as SessionV1.Part[],
+      },
+      {
+        info: assistantInfo(assistantID, userID, abortedError(), {
+          providerID: kilo.providerID,
+          modelID: kilo.id,
+        }),
+        parts: [
+          { ...basePart(assistantID, "a1"), type: "step-start" },
+          { ...basePart(assistantID, "a2"), type: "text", text: "" },
+        ] as SessionV1.Part[],
+      },
+    ]
+
+    const replayed = await MessageV2.toModelMessages(input, kilo)
+    const transformed = ProviderTransform.message(replayed, kilo, {})
+    let sent: { messages?: Array<{ role?: string; content?: unknown }> } | undefined
+    const provider = createAnthropic({
+      apiKey: "test-key",
+      fetch: Object.assign(
+        async (...args: Parameters<typeof fetch>) => {
+          sent = JSON.parse(String(args[1]?.body))
+          return Response.json({
+            type: "message",
+            id: "msg_1",
+            model: "claude-sonnet-4-5",
+            role: "assistant",
+            content: [{ type: "text", text: "ok" }],
+            stop_reason: "end_turn",
+            usage: { input_tokens: 1, output_tokens: 1 },
+          })
+        },
+        { preconnect: () => undefined },
+      ),
+    })
+    await generateText({ model: provider("claude-sonnet-4-5"), messages: transformed, maxRetries: 0 })
+
+    const blocks = (sent?.messages ?? []).flatMap((msg) => (Array.isArray(msg.content) ? msg.content : []))
+    expect(blocks).not.toContainEqual(expect.objectContaining({ type: "text", text: "" }))
+    expect(sent?.messages?.some((msg) => msg.role === "assistant")).toBe(false)
+  })
+
+  test("keeps the signed-reasoning separator when an aborted turn also has real text", async () => {
+    const assistantID = "m-assistant"
+    const input: SessionV1.WithParts[] = [
+      {
+        info: assistantInfo(assistantID, "m-parent", abortedError()),
+        parts: [
+          {
+            ...basePart(assistantID, "a1"),
+            type: "reasoning",
+            text: "thinking",
+            metadata: { anthropic: { signature: "sig" } },
+          },
+          { ...basePart(assistantID, "a2"), type: "text", text: "" },
+          { ...basePart(assistantID, "a3"), type: "text", text: "partial answer" },
+        ] as SessionV1.Part[],
+      },
+    ]
+
+    expect(await MessageV2.toModelMessages(input, model)).toStrictEqual([
+      {
+        role: "assistant",
+        content: [
+          { type: "reasoning", text: "thinking", providerOptions: { anthropic: { signature: "sig" } } },
+          { type: "text", text: " " },
+          { type: "text", text: "partial answer" },
+        ],
+      },
+    ])
+  })
+  // kilocode_change end
 })
 
 describe("session.message-v2.fromError", () => {
