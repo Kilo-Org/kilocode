@@ -720,6 +720,87 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
     }
 
+    fun `test follow-up handoff treats a zero CLI updated time as unknown`() {
+        val opened = mutableListOf<SessionRef>()
+        val m = controller(open = { opened.add(it) })
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        // The CLI never stamped an update, so the anchor falls back to its created time and a zero update is
+        // never taken as a real instant on the CLI's clock.
+        val cli = System.currentTimeMillis().toDouble() - 3_600_000
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(time = SessionTimeDto(created = cli, updated = 0.0))))
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+        flush()
+
+        emit(ChatEventDto.SessionCreated("ses_stale", session("ses_stale", dir = "/test", created = cli - 1_000)))
+
+        assertTrue(opened.isEmpty())
+
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test", created = cli + 1_000)))
+
+        assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
+    }
+
+    fun `test follow-up handoff skips the creation check when the CLI has stamped no time`() {
+        val opened = mutableListOf<SessionRef>()
+        val m = controller(open = { opened.add(it) })
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        // Both CLI stamps are the unknown sentinel, so there is no anchor to order a candidate against and
+        // the creation check is skipped instead of failing closed.
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(time = SessionTimeDto(created = 0.0, updated = 0.0))))
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+        flush()
+
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test", created = 1.0)))
+
+        assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
+    }
+
+    fun `test follow-up handoff keeps the root gate without a CLI stamp`() {
+        val opened = mutableListOf<SessionRef>()
+        val m = controller(open = { opened.add(it) })
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(time = SessionTimeDto(created = 0.0, updated = 0.0))))
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+        flush()
+
+        emit(ChatEventDto.SessionCreated("ses_child", session("ses_child", dir = "/test", created = 1.0).copy(parentID = "ses_test")))
+
+        assertTrue(opened.isEmpty())
+    }
+
     fun `test rejectQuestion calls RPC`() {
         val (m, _, _) = prompted()
         emit(ChatEventDto.QuestionAsked("ses_test", question("q1")))
