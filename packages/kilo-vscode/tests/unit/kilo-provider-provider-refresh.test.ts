@@ -326,6 +326,7 @@ describe("KiloProvider providers on reconnect", () => {
     expect(loaded(messages.slice(before))).toHaveLength(0)
     expect(messages.at(-1)).toBe(retained)
     expect(internal.cachedProvidersMessage).toBe(retained)
+    expect(internal.providersRetry).toBe(true)
   })
 
   it("sends the new project's provider payload on the next connection", async () => {

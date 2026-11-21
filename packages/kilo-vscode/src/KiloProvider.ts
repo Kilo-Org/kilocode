@@ -1134,12 +1134,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Retry failed workspace initialization against the newly selected project. */
   public async retryInitialization(): Promise<void> {
     const dir = this.settingsDirectory()
-    if (
-      this.cachedProvidersMessage &&
-      this.cachedConfigMessage &&
-      this.cachedProvidersDirectory === dir &&
-      this.cachedConfigDirectory === dir
-    )
+    if (this.retainedProviders() && this.cachedConfigMessage && sameDirectory(this.cachedConfigDirectory ?? "", dir))
       return
     await this.fetchAndSendConfig()
     await Promise.all([
@@ -2944,10 +2939,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             continue
           }
           // This project has no provider payload yet, so publish an explicit failure for it:
-          // the view reports the failure rather than a loading state, and the fetch runs again
-          // on the next connect.
+          // the view reports the failure rather than a loading state. Either way the fetch runs
+          // again on the next connect.
+          this.providersRetry = true
           if (!this.retainedProviders()) {
-            this.providersRetry = true
             this.postMessage({
               type: "providersLoaded",
               providers: {},
