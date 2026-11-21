@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import type { Profile } from "../src/profile"
@@ -49,15 +58,22 @@ writeFileSync(path.join(home, ".zshrc"), `export GITHUB_TOKEN=${canary}\n`)
 writeFileSync(path.join(workspace, "readme.txt"), canary)
 mkdirSync(path.join(workspace, ".git"))
 writeFileSync(path.join(workspace, ".git", "config"), "original")
+mkdirSync(path.join(workspace, "nested", ".git"), { recursive: true })
+mkdirSync(path.join(workspace, "worktree"))
+writeFileSync(path.join(workspace, "worktree", ".git"), "gitdir: ../.git/worktrees/wt\n")
+symlinkSync(home, path.join(workspace, "link"), "dir")
 writeFileSync(path.join(data, "kilo2.db"), canary)
 
 const echo = Bun.serve({
   hostname: "127.0.0.1",
   port: 0,
   fetch(request) {
+    if (new URL(request.url).pathname === "/redirect") return Response.redirect("https://example.org/", 302)
     return Response.json({ authorization: request.headers.get("authorization") })
   },
 })
+/** A second loopback listener, used to check whether the pin preserves ports in the allowlist. */
+const other = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("other") })
 const route: Credential = {
   name: "demo",
   source: "env://DEMO_TOKEN",
@@ -66,7 +82,16 @@ const route: Credential = {
   header: "Authorization",
   format: "Bearer {}",
 }
-const routes = parseCredentials({ credentials: [route] })
+/** A second route whose upstream host is also allowlisted, the #1831 shadowing case. */
+const shadowRoute: Credential = {
+  name: "shadow",
+  source: "env://SHADOW_TOKEN",
+  envVar: "SHADOW_TOKEN",
+  upstream: `http://localhost:${echo.port}`,
+  header: "Authorization",
+  format: "Bearer {}",
+}
+const routes = parseCredentials({ credentials: [route, shadowRoute] })
 
 const local: Profile = {
   filesystem: {
@@ -86,11 +111,18 @@ const local: Profile = {
 }
 
 const proxied: Profile = { ...local, network: { mode: "proxy", allowedHosts: ["example.com:443"] } }
+/** The credential upstream is also an allowlisted endpoint, the #1831 shadowing case. */
+const shadowed: Profile = {
+  ...proxied,
+  network: { mode: "proxy", allowedHosts: [`localhost:${echo.port}`, "example.com:443"] },
+}
+/** Only the echo port is allowlisted, used to check whether the pin keeps the port. */
+const ports: Profile = { ...proxied, network: { mode: "proxy", allowedHosts: [`localhost:${echo.port}`] } }
 
 /** Stands in for a user XDG value the profile must restore after nono's own redirect. */
 const original = path.join(root, "original")
 
-async function child(profile: Profile, script: string, diagnostics = false) {
+function prepared(profile: Profile, script: string, diagnostics = false) {
   const generated = generate(profile, {
     credentials: routes,
     paths: { data, config },
@@ -107,6 +139,7 @@ async function child(profile: Profile, script: string, diagnostics = false) {
     HOME: home,
     DEMO_TOKEN: secret,
     GH_TOKEN: secret,
+    SHADOW_TOKEN: secret,
     NODE_OPTIONS: "--poc-marker",
     XDG_CONFIG_HOME: original,
   }
@@ -127,14 +160,41 @@ async function child(profile: Profile, script: string, diagnostics = false) {
     stderr: "pipe",
     signal: AbortSignal.timeout(60_000),
   })
-  const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()])
-  return {
-    code: await proc.exited,
-    out,
-    err,
-    profile: readFileSync(file, "utf8"),
-    profileFile: file,
+  return { proc, file, profile: readFileSync(file, "utf8") }
+}
+
+async function child(profile: Profile, script: string, diagnostics = false) {
+  const started = prepared(profile, script, diagnostics)
+  const [out, err] = await Promise.all([
+    new Response(started.proc.stdout).text(),
+    new Response(started.proc.stderr).text(),
+  ])
+  return { code: await started.proc.exited, out, err, profile: started.profile, profileFile: started.file }
+}
+
+/** Starts a command, kills the supervisor, and reports whether the child process outlived it. */
+async function interrupted(profile: Profile) {
+  const started = prepared(profile, "sleep 30 & echo $! > child.pid; wait")
+  const file = path.join(workspace, "child.pid")
+  for (let tries = 0; tries < 100 && !existsSync(file); tries++) await Bun.sleep(50)
+  const value = existsSync(file) ? readFileSync(file, "utf8").trim() : ""
+  const parsed = /^\d+$/.test(value) ? Number(value) : undefined
+  const pid = parsed !== undefined && Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined
+  started.proc.kill("SIGTERM")
+  await started.proc.exited
+  await Bun.sleep(750)
+  let alive = false
+  if (pid !== undefined) {
+    try {
+      process.kill(pid, 0)
+      alive = true
+      process.kill(pid, "SIGKILL")
+    } catch {
+      alive = false
+    }
   }
+  rmSync(file, { force: true })
+  return { pid, alive }
 }
 
 type Child = Awaited<ReturnType<typeof child>>
@@ -251,6 +311,99 @@ try {
   const restoredXdg = await child(local, 'printf "%s" "$XDG_CONFIG_HOME"')
   check("P15 XDG value restored", original, restoredXdg.out === original, restoredXdg.out || "absent")
 
+  const nested = await child(local, "printf nope > nested/.git/config")
+  check("P20 nested .git write", "recorded", "recorded", nested.code === 0 ? "written (known gap)" : "denied")
+
+  const worktree = await child(local, "printf nope > worktree/.git")
+  check("P21 worktree .git write", "recorded", "recorded", worktree.code === 0 ? "written (known gap)" : "denied")
+
+  const symlink = await child(local, "printf nope > link/escape.txt")
+  check(
+    "P22 symlink escape",
+    "denied",
+    refused(symlink) && !existsSync(path.join(home, "escape.txt")),
+    refusal(symlink),
+  )
+
+  const grandchild = await child(local, "sh -c 'printf nope > \"$HOME/child.txt\"'")
+  check(
+    "P23 child process",
+    "denied",
+    refused(grandchild) && !existsSync(path.join(home, "child.txt")),
+    refusal(grandchild),
+  )
+
+  const shadow = await child(
+    shadowed,
+    'curl -sS -i -m 10 --noproxy localhost -H "Authorization: Bearer $SHADOW_TOKEN" -H "X-Nono-Token: $NONO_PROXY_TOKEN" "$SHADOW_BASE_URL/echo"',
+  )
+  check(
+    "P24 credential host also allowlisted",
+    "recorded",
+    "recorded",
+    shadow.out.includes(secret) ? "injected" : "not injected (#1831)",
+  )
+
+  const redirect = await child(
+    proxied,
+    'curl -sS -L -o /dev/null -w "%{http_code}|%{num_redirects}" -m 10 -H "Authorization: Bearer $DEMO_TOKEN" -H "X-Nono-Token: $NONO_PROXY_TOKEN" "$DEMO_BASE_URL/redirect"',
+  )
+  // An HTTP refusal also exits 0, and a first-hop refusal is not redirect evidence. Require a redirect to have
+  // been issued before judging the follow; without one the probe fails, so lost evidence cannot pass silently.
+  const [redirected = "", seen = "0"] = redirect.out.trim().split("|")
+  const followed = redirected === "200"
+  const issued = Number(seen) >= 1
+  check(
+    "P25 redirect off allowlist",
+    "blocked after a redirect",
+    issued && !followed,
+    followed ? "followed (gap)" : issued ? `blocked (${redirected})` : `no redirect observed (${redirected})`,
+  )
+
+  const privateHost = await child(
+    proxied,
+    `curl -sS -o /dev/null -w "%{http_code}" -m 5 "http://127.0.0.1:${echo.port}/echo"`,
+  )
+  const privateStatus = privateHost.out.trim()
+  check(
+    "P26 private destination",
+    "recorded",
+    "recorded",
+    privateStatus === "200" ? "reachable (known gap)" : privateStatus === "000" ? "blocked" : `status ${privateStatus}`,
+  )
+
+  const exact = await child(ports, `curl -sS -o /dev/null -w "%{http_code}" -m 5 "http://localhost:${other.port}/"`)
+  const exactStatus = exact.out.trim()
+  check(
+    "P27 exact port",
+    "recorded",
+    "recorded",
+    exactStatus === "200"
+      ? "other port reachable (known gap)"
+      : exactStatus === "000"
+        ? "blocked"
+        : `status ${exactStatus}`,
+  )
+
+  const unauthorized = await child(
+    proxied,
+    'curl -sS -o /dev/null -w "%{http_code}" -m 10 --noproxy localhost -H "Authorization: Bearer $SHADOW_TOKEN" "$SHADOW_BASE_URL/echo"',
+  )
+  check(
+    "P28 missing proxy token",
+    "recorded",
+    "recorded",
+    unauthorized.out.trim() || unauthorized.err.trim() || `exit ${unauthorized.code}`,
+  )
+
+  const outage = await interrupted(local)
+  check(
+    "P29 supervisor interruption",
+    "child exits",
+    outage.pid === undefined ? "recorded" : outage.alive ? "recorded" : true,
+    outage.pid === undefined ? "no child pid" : outage.alive ? "child survived (recorded)" : "child exited",
+  )
+
   const denial = classify({ code: ssh.code, stderr: ssh.err, secrets: [secret] })
   check("P18 path denial diagnostics", "denied-path", denial?.kind === "denied-path", denial?.kind ?? "unknown")
   const network = classify({ code: egress.code, stderr: egress.err, secrets: [secret] })
@@ -272,6 +425,7 @@ try {
   )
 } finally {
   echo.stop(true)
+  other.stop(true)
   rmSync(root, { recursive: true, force: true })
 }
 
