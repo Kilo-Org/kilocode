@@ -31,6 +31,8 @@ Type `@` in the chat input to get autocomplete suggestions. You can mention:
 
 Selecting a suggestion inserts the mention and highlights it in the input. File contents, terminal output, and git changes are attached as context when you send the message.
 
+When a folder is highlighted, press **Right Arrow** to search inside it while keeping the picker open. Repeat for subfolders, or keep typing to find a file. **Tab** and **Enter** still insert the highlighted file or folder into your prompt.
+
 Terminal context is limited to 500 lines or 50,000 characters. Longer output is truncated. If no terminal content is available, Kilo reports that terminal content is unavailable instead of attaching an empty file.
 
 ### Referencing Past Chats
