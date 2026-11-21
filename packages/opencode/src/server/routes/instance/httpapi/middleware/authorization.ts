@@ -4,6 +4,7 @@ import { HttpEffect, HttpRouter, HttpServerRequest, HttpServerResponse } from "e
 import { HttpApiError, HttpApiMiddleware } from "effect/unstable/httpapi"
 import { hasPtyConnectTicketURL } from "@/server/shared/pty-ticket"
 import { isPublicUIPath } from "@/server/shared/public-ui"
+import { CorsConfig, isAllowedRequestOrigin } from "@opencode-ai/server/cors" // kilocode_change
 export {
   Authorization as ServerAuthorization,
   authorizationLayer as serverAuthorizationLayer,
@@ -150,12 +151,26 @@ export const ptyConnectAuthorizationLayer = Layer.effect(
   PtyConnectAuthorization,
   Effect.gen(function* () {
     const config = yield* ServerAuth.Config
-    if (!ServerAuth.required(config)) return PtyConnectAuthorization.of((effect) => effect)
+    // kilocode_change start - check Origin here, before workspace routing can proxy the upgrade
+    // to a remote target (the proxy does not forward Origin). Without password auth Origin is
+    // the only cross-site guard; tickets always require an allowed Origin.
+    const cors = yield* CorsConfig
+    const allowed = (request: HttpServerRequest.HttpServerRequest) =>
+      isAllowedRequestOrigin(request.headers.origin, request.headers.host, cors)
+    const forbidden = () => HttpServerResponse.empty({ status: 403 })
+    if (!ServerAuth.required(config))
+      return PtyConnectAuthorization.of((effect) =>
+        Effect.gen(function* () {
+          if (!allowed(yield* HttpServerRequest.HttpServerRequest)) return forbidden()
+          return yield* effect
+        }),
+      )
+    // kilocode_change end
     return PtyConnectAuthorization.of((effect) =>
       Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest
         const url = new URL(request.url, "http://localhost")
-        if (hasPtyConnectTicketURL(url)) return yield* effect
+        if (hasPtyConnectTicketURL(url)) return allowed(request) ? yield* effect : forbidden() // kilocode_change
         return yield* credentialFromURL(url, request).pipe(
           Effect.flatMap((credential) => validateCredential(effect, credential, config)),
         )
