@@ -73,8 +73,8 @@ export function SplashExpanded(props: {
           </div>
           <span class="am-splash-eyebrow">{t("agentManager.splash.eyebrow")}</span>
           <Button
-            variant="ghost"
-            size="small"
+            variant="secondary"
+            icon="close"
             class="am-splash-hide"
             aria-label={t("agentManager.splash.hideLabel")}
             onClick={props.onHide}

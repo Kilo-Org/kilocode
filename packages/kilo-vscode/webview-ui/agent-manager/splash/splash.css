@@ -61,12 +61,15 @@
 }
 
 .am-splash-hide[data-component="button"] {
+  flex-shrink: 0;
   margin-inline-start: auto;
-  color: var(--text-weak);
+  border: 1px solid var(--border-base);
+  box-shadow: none;
+  font-weight: 600;
 }
 
-.am-splash-hide[data-component="button"]:hover {
-  color: var(--text-base);
+.am-splash-hide[data-component="button"][data-icon] {
+  padding-inline: calc(var(--spacing) * 3);
 }
 
 .am-splash-title {
