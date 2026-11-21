@@ -7,8 +7,11 @@ import {
   HostedFailure,
   StartInput,
   WorkspacePullRequestResult,
+  WorkspaceRepositoryFailures,
   deletionDispatched,
   pullRequestFailure,
+  workspaceRepositoryFailure,
+  workspaceRepositorySelection,
   type ContinueWorkspaceInput,
   type CreateWorkspaceInput,
   type HostedWorkspaceID,
@@ -19,6 +22,7 @@ import {
   type WorkspaceID,
   type WorkspaceChangeScope,
   type WorkspaceProfileDefaultInput,
+  type WorkspaceRepositoryListInput,
   WorkspaceChangeFileResult,
   WorkspaceChanges,
   WorkspaceChangesRefresh,
@@ -29,6 +33,7 @@ import {
 import { SessionHostEvent } from "@opencode-ai/schema/kilocode/session-host-event"
 import {
   ConflictError,
+  ForbiddenError,
   InvalidRequestError,
   ServiceUnavailableError,
   UnauthorizedError,
@@ -74,6 +79,28 @@ function mapFailure(error: HostedFailure) {
     default:
       return new ServiceUnavailableError({ message: error.message, service: SERVICE })
   }
+}
+
+function repositoryFailure(error: HostedFailure) {
+  const reason = error.reason
+  if (reason) {
+    switch (WorkspaceRepositoryFailures[reason]) {
+      case 400:
+        return new InvalidRequestError({ message: reason, kind: reason })
+      case 403:
+        return new ForbiddenError({ message: reason })
+      case 404:
+        return notFound(reason)
+      case 409:
+        return new ConflictError({ message: reason })
+      case 503:
+        return new ServiceUnavailableError({ message: reason, service: SERVICE })
+    }
+  }
+  if (error.code === "creation_in_progress" || error.code === "operation_key_reuse_mismatch") {
+    return new ConflictError({ message: error.code })
+  }
+  return mapFailure(error)
 }
 
 export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "session-host", (handlers) =>
@@ -272,6 +299,18 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
         .pipe(Effect.mapError(mapFailure))
     })
 
+    const listWorkspaceRepositories = Effect.fn("SessionHostHttpApi.listWorkspaceRepositories")(function* (ctx: {
+      query: WorkspaceRepositoryListInput
+    }) {
+      const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
+      if (!provider.listWorkspaceRepositories) {
+        return yield* Effect.fail(
+          repositoryFailure(workspaceRepositoryFailure("hosted_workspace_repository_unsupported")),
+        )
+      }
+      return yield* provider.listWorkspaceRepositories(ctx.query).pipe(Effect.mapError(repositoryFailure))
+    })
+
     const setWorkspacePersonalDefaultProfile = Effect.fn("SessionHostHttpApi.setWorkspacePersonalDefaultProfile")(
       function* (ctx: { payload: WorkspaceProfileDefaultInput }) {
         const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
@@ -295,7 +334,15 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       payload: CreateWorkspaceInput
     }) {
       const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
-      return yield* provider.createWorkspace(ctx.payload).pipe(Effect.mapError(mapFailure))
+      const selection = yield* workspaceRepositorySelection(ctx.payload).pipe(Effect.mapError(repositoryFailure))
+      if (selection && !provider.listWorkspaceRepositories) {
+        return yield* Effect.fail(
+          repositoryFailure(workspaceRepositoryFailure("hosted_workspace_repository_unsupported")),
+        )
+      }
+      return yield* provider
+        .createWorkspace(ctx.payload)
+        .pipe(Effect.mapError(selection ? repositoryFailure : mapFailure))
     })
 
     /**
@@ -634,6 +681,7 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       .handle("detach", detach)
       .handle("listWorkspaces", listWorkspaces)
       .handle("listWorkspaceProfiles", listWorkspaceProfiles)
+      .handle("listWorkspaceRepositories", listWorkspaceRepositories)
       .handle("setWorkspacePersonalDefaultProfile", setWorkspacePersonalDefaultProfile)
       .handle("clearWorkspacePersonalDefaultProfile", clearWorkspacePersonalDefaultProfile)
       .handle("createWorkspace", createWorkspace)

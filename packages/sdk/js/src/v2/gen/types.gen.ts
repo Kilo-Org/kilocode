@@ -5057,6 +5057,8 @@ export type SessionHostCreateWorkspaceInput = {
   operationKey: string
   messageID?: string
   organizationID?: SessionHostOrganizationId
+  additionalRepositoryIDs?: Array<number>
+  integrationID?: string
 }
 
 export type SessionHostCreateWorkspaceResult = {
@@ -5064,6 +5066,11 @@ export type SessionHostCreateWorkspaceResult = {
   session: SessionHostIdentity
   messageID?: string
   replayed: boolean
+}
+
+export type ForbiddenError = {
+  _tag: "ForbiddenError"
+  message: string
 }
 
 export type SessionHostContinueWorkspaceInput = {
@@ -5123,6 +5130,17 @@ export type SessionHostWorkspaceProfilePage = {
   personalDefaultProfileID: string | null
   organizationDefaultProfileID: string | null
   effectiveDefaultProfileID: string | null
+}
+
+export type SessionHostWorkspaceRepositoryPage = {
+  hostedAdditionalRepositoriesVersion: 1
+  integrationID: string
+  repositories: Array<{
+    id: number
+    fullName: string
+    private: boolean
+  }>
+  nextPage?: number
 }
 
 export type SessionHostWorkspaceProfileDefaultInput = {
@@ -5763,11 +5781,6 @@ export type V2Event =
   | SessionHostContinuation
 
 export type V2EventStream = string
-
-export type ForbiddenError = {
-  _tag: "ForbiddenError"
-  message: string
-}
 
 export type ProjectCopyError = {
   name: "ProjectCopyError"
@@ -19650,6 +19663,10 @@ export type SessionHostCreateWorkspaceErrors = {
    */
   402: SessionHostPaymentRequiredError
   /**
+   * ForbiddenError
+   */
+  403: ForbiddenError
+  /**
    * NotFoundError
    */
   404: NotFoundError
@@ -19774,6 +19791,62 @@ export type SessionHostListWorkspaceProfilesResponses = {
 
 export type SessionHostListWorkspaceProfilesResponse =
   SessionHostListWorkspaceProfilesResponses[keyof SessionHostListWorkspaceProfilesResponses]
+
+export type SessionHostListWorkspaceRepositoriesData = {
+  body?: never
+  path?: never
+  query: {
+    organizationID: string
+    primaryRepo: string
+    integrationID?: string
+    page?: string
+  }
+  url: "/kilocode/session-host/workspace/repositories"
+}
+
+export type SessionHostListWorkspaceRepositoriesErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * ForbiddenError
+   */
+  403: ForbiddenError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostListWorkspaceRepositoriesError =
+  SessionHostListWorkspaceRepositoriesErrors[keyof SessionHostListWorkspaceRepositoriesErrors]
+
+export type SessionHostListWorkspaceRepositoriesResponses = {
+  /**
+   * Eligible additional repositories
+   */
+  200: SessionHostWorkspaceRepositoryPage
+}
+
+export type SessionHostListWorkspaceRepositoriesResponse =
+  SessionHostListWorkspaceRepositoriesResponses[keyof SessionHostListWorkspaceRepositoriesResponses]
 
 export type SessionHostSetWorkspacePersonalDefaultProfileData = {
   body?: SessionHostWorkspaceProfileDefaultInput

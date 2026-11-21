@@ -30,6 +30,8 @@ import {
   WorkspaceProfileDefaultInput,
   WorkspaceProfileDefaultResult,
   WorkspaceProfilePage,
+  WorkspaceRepositoryListInput,
+  WorkspaceRepositoryPage,
   WorkspacePullRequestResult,
   WorkspaceSessionStartBody,
   WorkspaceSessionStartResult,
@@ -38,6 +40,7 @@ import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import {
   ApiNotFoundError,
   ConflictError,
+  ForbiddenError,
   InvalidRequestError,
   ServiceUnavailableError,
   UnauthorizedError,
@@ -59,6 +62,7 @@ export const SessionHostPaths = {
   workspace: `${root}/workspace`,
   workspaceContinue: `${root}/workspace/continue`,
   workspaceProfiles: `${root}/workspace/profiles`,
+  workspaceRepositories: `${root}/workspace/repositories`,
   workspaceProfilePersonalDefault: `${root}/workspace/profiles/personal-default`,
   workspaceProfilePersonalDefaultDetail: `${root}/workspace/profiles/personal-default/:profileID`,
   workspaceDetail: `${root}/workspace/:providerID/:workspaceID`,
@@ -158,6 +162,11 @@ const WorkspaceGetQuery = Schema.Struct({
 })
 
 const WorkspaceProfilesQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
+
+const WorkspaceRepositoriesQuery = WorkspaceRepositoryListInput.mapFields((fields) => ({
+  ...fields,
+  page: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 }))),
+}))
 
 const WorkspaceStatusQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
 
@@ -301,13 +310,13 @@ export const SessionHostApi = HttpApi.make("session-host")
         HttpApiEndpoint.post("createWorkspace", SessionHostPaths.workspace, {
           payload: CreateWorkspaceInput,
           success: described(CreateWorkspaceResult, "Hosted workspace created"),
-          error: SessionErrors,
+          error: [...SessionErrors, ForbiddenError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "sessionHost.createWorkspace",
             summary: "Create a hosted workspace",
             description:
-              "Create a hosted workspace and, optionally, its root initial turn and explicit profile. Omit prompt and messageID to create an empty workspace; Cloud applies the effective default profile when profile is omitted. Reuse the same operation key and message ID to retry safely.",
+              "Create a hosted workspace and, optionally, its initial turn, explicit profile, and additional repositories. For a nonempty selection, send the organization and integrationID from the repository catalog. Omit prompt and messageID to create an empty workspace. Reuse the same operation key and unchanged intent to retry safely.",
           }),
         ),
         HttpApiEndpoint.post("continueWorkspace", SessionHostPaths.workspaceContinue, {
@@ -332,6 +341,18 @@ export const SessionHostApi = HttpApi.make("session-host")
             summary: "List workspace creation profiles",
             description:
               "List personal and organization profile summaries for workspace creation with their default flags. Secret and environment values are never returned.",
+          }),
+        ),
+        HttpApiEndpoint.get("listWorkspaceRepositories", SessionHostPaths.workspaceRepositories, {
+          query: WorkspaceRepositoriesQuery,
+          success: described(WorkspaceRepositoryPage, "Eligible additional repositories"),
+          error: [...SessionErrors, ForbiddenError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.listWorkspaceRepositories",
+            summary: "List eligible additional workspace repositories",
+            description:
+              "Passively list authorized repositories for a GitHub primary in the selected organization. Preserve the returned integrationID for subsequent pages and create. Only a successful supported catalog response enables additional repositories.",
           }),
         ),
         HttpApiEndpoint.post("setWorkspacePersonalDefaultProfile", SessionHostPaths.workspaceProfilePersonalDefault, {
