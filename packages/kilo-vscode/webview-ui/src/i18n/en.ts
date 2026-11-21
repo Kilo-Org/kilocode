@@ -83,6 +83,8 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "Compaction queued",
+  "session.compaction.queued.busy": "Compaction queued. It will start when the current step finishes.",
   "revert.banner.workspace.snapshotsDisabled":
     "Conversation reverted. File changes were not restored because snapshots are disabled.",
   "revert.banner.workspace.unavailable":

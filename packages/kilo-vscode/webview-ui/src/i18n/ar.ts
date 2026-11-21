@@ -86,6 +86,8 @@ export const dict = {
   "revert.banner.redo": "إعادة",
   "revert.banner.redo.all": "إعادة الكل",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "الضغط في قائمة الانتظار",
+  "session.compaction.queued.busy": "الضغط في قائمة الانتظار. سيبدأ عند انتهاء الخطوة الحالية.",
   "revert.banner.workspace.snapshotsDisabled": "تم التراجع عن المحادثة. لم تُستعَد تغييرات الملفات لأن اللقطات معطّلة.",
   "revert.banner.workspace.unavailable":
     "تم التراجع عن المحادثة. لم تكن هناك نقطة تحقق للملفات، لذا لم تُستعَد تغييرات مساحة العمل.",

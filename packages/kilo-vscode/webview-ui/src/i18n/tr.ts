@@ -87,6 +87,8 @@ export const dict = {
   "revert.banner.redo": "Yinele",
   "revert.banner.redo.all": "Tümünü Yinele",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "Sıkıştırma sırada",
+  "session.compaction.queued.busy": "Sıkıştırma sırada. Geçerli adım bittiğinde başlayacak.",
   "revert.banner.workspace.snapshotsDisabled":
     "Konuşma geri alındı. Anlık görüntüler devre dışı olduğu için dosya değişiklikleri geri yüklenmedi.",
   "revert.banner.workspace.unavailable":

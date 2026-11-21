@@ -11,6 +11,7 @@ import type {
 } from "@kilocode/sdk/v2"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
+import { CompactionQueuedBanner } from "../components/chat/CompactionQueuedBanner"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
 import { PermissionDock } from "../components/chat/PermissionDock"
 import { QuestionDock } from "../components/chat/QuestionDock"
@@ -1097,6 +1098,30 @@ export const SearchPreviews: Story = {
       revert: () => ({ messageID: "tool-call-lab-user-message", workspace: "snapshots-disabled" as const }),
       summary: () => undefined,
     }
+    const finished = { id: "tool-call-lab-finished", sessionID: SID, role: "assistant" as const, finish: "stop" }
+    const marker = {
+      id: "tool-call-lab-compact",
+      sessionID: SID,
+      role: "user" as const,
+      createdAt: new Date(stamp).toISOString(),
+      parts: [
+        {
+          id: "tool-call-lab-compact-part",
+          sessionID: SID,
+          messageID: "tool-call-lab-compact",
+          type: "compaction" as const,
+          auto: false,
+        },
+      ],
+    }
+    const compactionIdle = {
+      ...session,
+      messages: () => [{ ...finished, createdAt: marker.createdAt }, marker],
+      getParts: (id: string) => (id === marker.id ? marker.parts : []),
+      revert: () => undefined,
+      status: () => "idle",
+    }
+    const compactionBusy = { ...compactionIdle, status: () => "busy" }
 
     return (
       <StoryProviders
@@ -1186,6 +1211,18 @@ export const SearchPreviews: Story = {
                   <span class="tool-call-lab-example-label">Conversation-only revert</span>
                   <SessionContext.Provider value={conversationOnly as any}>
                     <RevertBanner />
+                  </SessionContext.Provider>
+                </div>
+                <div class="tool-call-lab-example">
+                  <span class="tool-call-lab-example-label">Compaction queued (idle)</span>
+                  <SessionContext.Provider value={compactionIdle as any}>
+                    <CompactionQueuedBanner />
+                  </SessionContext.Provider>
+                </div>
+                <div class="tool-call-lab-example">
+                  <span class="tool-call-lab-example-label">Compaction queued (busy)</span>
+                  <SessionContext.Provider value={compactionBusy as any}>
+                    <CompactionQueuedBanner />
                   </SessionContext.Provider>
                 </div>
                 <div class="tool-call-lab-example">

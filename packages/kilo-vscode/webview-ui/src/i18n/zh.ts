@@ -87,6 +87,8 @@ export const dict = {
   "revert.banner.redo": "重做",
   "revert.banner.redo.all": "全部重做",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "压缩已排队",
+  "session.compaction.queued.busy": "压缩已排队，将在当前步骤完成后开始。",
   "revert.banner.workspace.snapshotsDisabled": "会话已还原。由于快照已禁用，文件更改未恢复。",
   "revert.banner.workspace.unavailable": "会话已还原。没有可用的文件检查点，因此未恢复工作区更改。",
   "revert.banner.workspace.notAGitRepo": "会话已还原。文件检查点需要 Git 仓库，因此未恢复工作区更改。",

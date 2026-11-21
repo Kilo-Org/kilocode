@@ -93,6 +93,8 @@ export const dict = {
   "revert.banner.redo": "Wiederholen",
   "revert.banner.redo.all": "Alle wiederholen",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "Komprimierung eingereiht",
+  "session.compaction.queued.busy": "Komprimierung eingereiht. Sie startet, sobald der aktuelle Schritt beendet ist.",
   "revert.banner.workspace.snapshotsDisabled":
     "Unterhaltung zurückgesetzt. Dateiänderungen wurden nicht wiederhergestellt, weil Snapshots deaktiviert sind.",
   "revert.banner.workspace.unavailable":
