@@ -570,8 +570,24 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
-    fun `fileRegexToGlobs - both anchored empty alternative returns null`() {
-        assertNull(fileRegexToGlobs("^(|a)$"))
+    fun `fileRegexToGlobs - both anchored empty alternative keeps the arm that names a path`() {
+        assertEquals(listOf("a"), fileRegexToGlobs("^(|a)$"))
+        assertEquals(listOf("a"), fileRegexToGlobs("^(a|)$"))
+        assertEquals(listOf("a"), fileRegexToGlobs("^(|a|)$"))
+        assertEquals(listOf("package.json"), fileRegexToGlobs("^(package\\.json|)$"))
+    }
+
+    @Test
+    fun `fileRegexToGlobs - both anchored pattern of only empty alternatives returns null`() {
+        assertNull(fileRegexToGlobs("^(|)$"))
+        assertNull(fileRegexToGlobs("^(||)$"))
+        assertNull(fileRegexToGlobs("^()$"))
+    }
+
+    @Test
+    fun `fileRegexToGlobs - single start anchor keeps an empty alternative as the catch-all arm`() {
+        assertEquals(listOf("*"), fileRegexToGlobs("^(|)"))
+        assertEquals(listOf("*", "a*"), fileRegexToGlobs("^(|a|)"))
     }
 
     @Test

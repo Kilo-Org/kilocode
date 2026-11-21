@@ -1089,7 +1089,8 @@ private val UNSUPPORTED_REGEX_CHARS = setOf('*', '+', '{', '}', '[', ']', '^', '
  * Translate a legacy `fileRegex` pattern into permission wildcard globs.
  *
  * Returns null when the pattern uses a construct that the glob syntax cannot
- * express, so the caller can report it instead of writing an unmatched rule.
+ * express, or when every alternative is empty while both anchors are present,
+ * so the caller can report it instead of writing an unmatched rule.
  *
  * A glob arm made only of digits is also rejected. When the CLI reads the written config back,
  * JavaScript enumerates such a key as an array index ahead of `"*"`, so the trailing `"*": "deny"`
@@ -1108,18 +1109,23 @@ internal fun fileRegexToGlobs(regex: String): List<String>? {
     if (body.isEmpty()) return null
 
     val parsed = parseGlobSequence(body, 0, inGroup = false)?.first ?: return null
-    val arms = parsed.map { arm ->
+
+    // An empty alternative matches the empty string, and no path is empty. With both anchors
+    // the pattern must consume the whole path, so empty alternatives are dropped and the arms
+    // that do name a path are kept: `^(a|)$` and `^(|a)$` both allow `a`. Only when every arm
+    // is empty does the pattern match nothing but the empty string, which no glob can express,
+    // so the caller must report it. Without both anchors an empty arm is padded to `*`, which
+    // is right because that arm then matches the rest of any path.
+    val kept = if (anchoredStart && anchoredEnd) parsed.filter { it.isNotEmpty() } else parsed
+    if (kept.isEmpty()) return null
+
+    val arms = kept.map { arm ->
         var result = arm
         if (!anchoredStart && !result.startsWith("*")) result = "*$result"
         if (!anchoredEnd && !result.endsWith("*")) result = "$result*"
         result
     }.distinct()
 
-    // An empty alternative matches the empty string. Padded, it becomes `*`, which matches
-    // every path and is right without both anchors; with both anchors it matches only the
-    // empty string, which no path is, so the caller must report it instead.
-    val empty = parsed.any { it.isEmpty() }
-    if (arms.isEmpty() || (anchoredStart && anchoredEnd && empty)) return null
     if (arms.any { it.endsWith(" *") }) return null
     // See the KDoc. Only ASCII digits form an array index, so only those arms are rejected.
     if (arms.any { arm -> arm.all { it in '0'..'9' } }) return null

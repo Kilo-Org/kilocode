@@ -54,8 +54,25 @@ describe("regexToGlobs", () => {
     expect(regexToGlobs("(|a)$")).toEqual(["*", "*a"])
   })
 
-  test("a fully anchored empty alternative is rejected", () => {
-    expect(regexToGlobs("^(|a)$")).toBeNull()
+  test("a fully anchored empty alternative keeps the arm that names a path", () => {
+    expect(regexToGlobs("^(|a)$")).toEqual(["a"])
+    expect(regexToGlobs("^(a|)$")).toEqual(["a"])
+    expect(regexToGlobs("^(|a|)$")).toEqual(["a"])
+  })
+
+  test("a fully anchored pattern with one empty alternative allows the other one", () => {
+    expect(regexToGlobs("^(package\\.json|)$")).toEqual(["package.json"])
+  })
+
+  test("a fully anchored pattern of only empty alternatives is rejected", () => {
+    expect(regexToGlobs("^(|)$")).toBeNull()
+    expect(regexToGlobs("^(||)$")).toBeNull()
+    expect(regexToGlobs("^()$")).toBeNull()
+  })
+
+  test("a single start anchor keeps an empty alternative as the catch-all arm", () => {
+    expect(regexToGlobs("^(|)")).toEqual(["*"])
+    expect(regexToGlobs("^(|a|)")).toEqual(["*", "a*"])
   })
 
   test("a group of only empty alternatives becomes the catch-all arm", () => {

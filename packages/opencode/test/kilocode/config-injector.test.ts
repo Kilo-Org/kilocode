@@ -1,5 +1,6 @@
 import { test, expect, describe, spyOn } from "bun:test"
 import { KilocodeConfigInjector } from "../../src/kilocode/config-injector"
+import { McpMigrator } from "../../src/kilocode/mcp-migrator"
 import { KilocodePaths } from "../../src/kilocode/paths"
 import { tmpdir } from "../fixture/fixture"
 import os from "os"
@@ -338,13 +339,23 @@ describe("KilocodeConfigInjector", () => {
       }
     })
 
-    test("logs each MCP migration warning once on the default path", async () => {
+    test("loads the MCP store once on the default path", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: mcpmode
+    name: MCP mode
+    roleDefinition: You are an MCP helper
+    groups:
+      - read
+      - mcp`,
+          )
           await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
           await Bun.write(
             path.join(dir, ".kilocode", "mcp.json"),
-            JSON.stringify({ mcpServers: { warnserver: { command: "npx", alwaysAllow: ["something"] } } }),
+            JSON.stringify({ mcpServers: { projectserver: { command: "npx" } } }),
           )
         },
       })
@@ -353,20 +364,23 @@ describe("KilocodeConfigInjector", () => {
       const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
       const appdata = process.env.APPDATA
       process.env.APPDATA = home.path
-      const notes: string[] = []
-      const write = spyOn(process.stderr, "write").mockImplementation((value: unknown) => {
-        notes.push(String(value))
-        return true
+      // Count the load passes: each pass re-reads the store and re-emits every MCP migration
+      // warning through the log, so one pass is what keeps each message to one line.
+      const real = McpMigrator.loadMcpConfig
+      let passes = 0
+      const spy = spyOn(McpMigrator, "loadMcpConfig").mockImplementation((dir: string, skip?: boolean) => {
+        passes++
+        return real(dir, skip)
       })
       try {
-        // No skipGlobalPaths: the single load pass must log the warning once, not once per scope.
-        await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path })
+        const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path })
 
-        const warning = "MCP server 'warnserver' has alwaysAllow permissions that cannot be migrated: something"
-        const count = notes.filter((note) => note.includes(warning)).length
-        expect(count).toBe(1)
+        expect(passes).toBe(1)
+        // The one pass still feeds the mode migration: the project server is granted.
+        const permission = JSON.parse(result.configJson).agent.mcpmode.permission
+        expect(permission["projectserver_*"]).toBe("allow")
       } finally {
-        write.mockRestore()
+        spy.mockRestore()
         homedir.mockRestore()
         if (appdata === undefined) delete process.env.APPDATA
         else process.env.APPDATA = appdata

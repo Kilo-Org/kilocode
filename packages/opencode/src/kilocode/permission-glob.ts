@@ -18,8 +18,9 @@ const DIGITS = /^\d+$/
  * Translate a legacy `fileRegex` pattern into permission wildcard globs.
  *
  * Returns null when the pattern uses a construct that the glob syntax cannot express,
- * or when an arm consists only of digits, so the caller can report it instead of writing
- * a rule the CLI resolves the wrong way.
+ * when every alternative is empty while both anchors are present, or when an arm consists
+ * only of digits, so the caller can report it instead of writing a rule the CLI resolves
+ * the wrong way.
  */
 export function regexToGlobs(regex: string): string[] | null {
   if (regex.length === 0) return null
@@ -38,9 +39,20 @@ export function regexToGlobs(regex: string): string[] | null {
   const parsed = sequence(body, 0, false)
   if (!parsed) return null
 
+  const raw = parsed[0]
+
+  // An empty alternative matches the empty string, and no path is empty. With both anchors
+  // the pattern must consume the whole path, so empty alternatives are dropped and the arms
+  // that do name a path are kept: `^(a|)$` and `^(|a)$` both allow `a`. Only when every arm
+  // is empty does the pattern match nothing but the empty string, which no glob can express,
+  // so the caller must report it. Without both anchors an empty arm is padded to `*`, which
+  // is right because that arm then matches the rest of any path.
+  const kept = anchoredStart && anchoredEnd ? raw.filter((arm) => arm.length > 0) : raw
+  if (kept.length === 0) return null
+
   const arms = [
     ...new Set(
-      parsed[0].map((arm) => {
+      kept.map((arm) => {
         let glob = arm
         if (!anchoredStart && !glob.startsWith("*")) glob = `*${glob}`
         if (!anchoredEnd && !glob.endsWith("*")) glob = `${glob}*`
@@ -49,11 +61,6 @@ export function regexToGlobs(regex: string): string[] | null {
     ),
   ]
 
-  // An empty alternative matches the empty string. Padded, it becomes `*`, which matches
-  // every path and is right without both anchors; with both anchors it matches only the
-  // empty string, which no path is, so the caller must report it instead.
-  const empty = parsed[0].some((arm) => arm.length === 0)
-  if (arms.length === 0 || (anchoredStart && anchoredEnd && empty)) return null
   if (arms.some((arm) => arm.endsWith(" *"))) return null
   if (arms.some((arm) => DIGITS.test(arm))) return null
   return arms
