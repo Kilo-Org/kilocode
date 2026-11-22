@@ -97,6 +97,9 @@ export function recoverablePermissions(
  * A recorded directory came from a directory-scoped permission.list, so it is
  * exact and stays authoritative. Without one, an id that maps to more than one
  * project has no single directory, so the response is reported back instead.
+ * That includes an already claimed response: its recorded directory may have
+ * been pruned or the route may have changed since, so a claimed replay is
+ * refused too.
  */
 function permissionRoute(
   ctx: PermissionContext,
@@ -107,7 +110,7 @@ function permissionRoute(
   const target = owner ?? sessionID
   const recorded = ctx.getPermissionDirectory(permissionId)
   const claimed = ctx.isPermissionResponseClaimed?.(permissionId) ?? false
-  if (!recorded && !claimed && ctx.isSessionAmbiguous?.(target)) {
+  if (!recorded && ctx.isSessionAmbiguous?.(target)) {
     console.error("[Kilo New] KiloProvider: Permission route has no single owning project:", target)
     ctx.postMessage({ type: "permissionError", permissionID: permissionId, message: SESSION_ROUTE_UNRESOLVED })
     return

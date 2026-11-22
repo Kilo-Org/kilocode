@@ -2747,6 +2747,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    if (this.isAmbiguousSession(sessionID)) {
+      this.postAmbiguousSession(sessionID)
+      return
+    }
+
     try {
       const workspaceDir = this.getSessionDirectory(
         sessionID,
@@ -2811,6 +2816,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle renaming a session.
    */
   private async handleRenameSession(sessionID: string, title: string): Promise<void> {
+    if (!this.client) {
+      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
+      return
+    }
+
+    if (this.isAmbiguousSession(sessionID)) {
+      this.postAmbiguousSession(sessionID)
+      return
+    }
+
     try {
       const updated = await renameSession({
         client: this.client,

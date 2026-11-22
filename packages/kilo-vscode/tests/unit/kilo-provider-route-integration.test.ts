@@ -24,6 +24,8 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
   const revertCalls: Array<{ sessionID: string; messageID: string; directory?: string }> = []
   const unrevertCalls: Array<{ sessionID: string; directory?: string }> = []
   const deleteCalls: Array<{ sessionID: string; messageID: string; directory?: string }> = []
+  const sessionDeleteCalls: Array<{ sessionID: string; directory?: string }> = []
+  const sessionUpdateCalls: Array<{ sessionID: string; directory?: string; title?: string }> = []
   const abortCalls: Array<{ sessionID: string; directory?: string; scope?: string }> = []
   const client = {
     session: {
@@ -74,6 +76,24 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
         deleteCalls.push(p)
         return { data: true }
       },
+      delete: async (p: { sessionID: string; directory?: string }) => {
+        sessionDeleteCalls.push(p)
+        return { data: true }
+      },
+      update: async (p: { sessionID: string; directory?: string; title?: string }) => {
+        sessionUpdateCalls.push(p)
+        return {
+          data: {
+            id: p.sessionID,
+            slug: p.sessionID,
+            projectID: "prj-test",
+            directory: p.directory,
+            title: p.title ?? "s",
+            version: "1",
+            time: { created: 1, updated: 1 },
+          },
+        }
+      },
       abort: async (p: { sessionID: string; directory?: string; scope?: string }) => {
         abortCalls.push(p)
         return { data: true }
@@ -88,6 +108,7 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
       },
     },
     provider: { list: async () => ({ data: { all: [], connected: {}, default: {} } }) },
+    backgroundProcess: { stopSession: async () => ({ data: true }) },
     app: {
       agents: async () => ({ data: [] }),
       skills: async () => ({ data: [] }),
@@ -106,6 +127,8 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
     revertCalls,
     unrevertCalls,
     deleteCalls,
+    sessionDeleteCalls,
+    sessionUpdateCalls,
     abortCalls,
     connection: {
       connect: async () => {
@@ -125,6 +148,8 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
       onModelSelectorExpandedChanged: () => () => undefined,
       onClearPendingPrompts: () => () => undefined,
       registerDirectoryProvider: () => () => undefined,
+      clearPermissionSession: () => undefined,
+      pruneSession: () => undefined,
       unregisterVisible: () => undefined,
       unregisterAttached: () => undefined,
       getServerInfo: () => ({ port: 12345 }),
@@ -172,6 +197,8 @@ type ProviderInternals = {
   handleRevertSession: (sessionID: string, messageID: string, partID?: string) => Promise<void>
   handleUnrevertSession: (sessionID: string) => Promise<void>
   handleDeleteMessage: (sessionID: string, messageID: string, requestID?: string) => Promise<void>
+  handleDeleteSession: (sessionID: string) => Promise<void>
+  handleRenameSession: (sessionID: string, title: string) => Promise<void>
   handleAbort: (sessionID?: string, scope?: "session" | "tree") => Promise<void>
   handleSendCommand: (
     command: string,
@@ -940,6 +967,78 @@ describe("KiloProvider route integration", () => {
 
     expect(abortCalls).toEqual([])
     expect(posted).toEqual([])
+  })
+
+  it("reports a session delete when the session maps to more than one project", async () => {
+    const { connection, sessionDeleteCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+
+    await internal.handleDeleteSession("same")
+
+    expect(sessionDeleteCalls).toEqual([])
+    expect(posted).toContainEqual(refusal("same"))
+  })
+
+  it("reports a session rename when the session maps to more than one project", async () => {
+    const { connection, sessionUpdateCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+
+    await internal.handleRenameSession("same", "New title")
+
+    expect(sessionUpdateCalls).toEqual([])
+    expect(posted).toContainEqual(refusal("same"))
+  })
+
+  it("deletes a session on its one exact route", async () => {
+    const routes = new ProjectRouteService()
+    routes.registerProject("a", "/repo/a", 1)
+    routes.registerSession({ projectId: "a", sessionId: "ses-a" }, "/repo/a", 1)
+    const { connection, sessionDeleteCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: routes,
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    internal.webview = { postMessage: async () => undefined }
+
+    await internal.handleDeleteSession("ses-a")
+
+    expect(sessionDeleteCalls).toHaveLength(1)
+    expect(sessionDeleteCalls[0]).toMatchObject({ sessionID: "ses-a", directory: "/repo/a" })
+  })
+
+  it("renames a session on its one exact route", async () => {
+    const routes = new ProjectRouteService()
+    routes.registerProject("a", "/repo/a", 1)
+    routes.registerSession({ projectId: "a", sessionId: "ses-a" }, "/repo/a", 1)
+    const { connection, sessionUpdateCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: routes,
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    internal.webview = { postMessage: async () => undefined }
+
+    await internal.handleRenameSession("ses-a", "New title")
+
+    expect(sessionUpdateCalls).toHaveLength(1)
+    expect(sessionUpdateCalls[0]).toMatchObject({ sessionID: "ses-a", directory: "/repo/a", title: "New title" })
   })
 
   it("reports an unrevert when the session maps to more than one project", async () => {
