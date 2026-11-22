@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-The Cloudflare AI Gateway provider now attaches the gateway authorization header from the configured gateway token and the upstream provider key together, for every combination of gateway options and environment variables.
+Report a missing Cloudflare AI Gateway credential as a missing credential that names the environment variable to set, and report a gateway token that is configured but cannot be resolved as a configuration error instead of silently falling back to another credential source.
