@@ -49,11 +49,11 @@ describe("displayLines", () => {
   })
 
   it("escapes invisible format characters in block text", () => {
-    expect(displayLines("{\n  \"a\": \"x\u200by\ufeff\"\n}")).toBe("{\n  \"a\": \"x\\u200by\\ufeff\"\n}")
+    expect(displayLines('{\n  "a": "x\u200by\ufeff"\n}')).toBe('{\n  "a": "x\\u200by\\ufeff"\n}')
   })
 
   it("escapes zero-width format characters in block text", () => {
-    expect(displayLines("{\n  \"a\": \"x\u2060y\u2064\"\n}")).toBe("{\n  \"a\": \"x\\u2060y\\u2064\"\n}")
+    expect(displayLines('{\n  "a": "x\u2060y\u2064"\n}')).toBe('{\n  "a": "x\\u2060y\\u2064"\n}')
   })
 })
 
