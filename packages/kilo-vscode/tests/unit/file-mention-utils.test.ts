@@ -504,6 +504,35 @@ describe("buildFileAttachments", () => {
     expect(result[0]!.url).not.toContain("\\")
   })
 
+  it("attaches nothing when the workspace root is unknown", () => {
+    const paths = new Set(["/outside/file.ts"])
+    expect(buildFileAttachments("@/outside/file.ts", paths, "")).toEqual([])
+  })
+
+  it("attaches nothing for a relative mention when the workspace root is unknown", () => {
+    const paths = new Set(["src/foo.ts"])
+    expect(buildFileAttachments("@src/foo.ts", paths, "")).toEqual([])
+  })
+
+  it("attaches nothing when the workspace root is only whitespace", () => {
+    const paths = new Set(["src/foo.ts"])
+    expect(buildFileAttachments("@src/foo.ts", paths, "   ")).toEqual([])
+  })
+
+  it("treats a bare root as a known workspace root", () => {
+    const paths = new Set(["/etc/hosts"])
+    const result = buildFileAttachments("@/etc/hosts", paths, "/")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.url).toContain("/etc/hosts")
+  })
+
+  it("still attaches a relative mention that lives under a known root", () => {
+    const paths = new Set(["src/foo.ts"])
+    const result = buildFileAttachments("@src/foo.ts", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.url).toContain("/workspace/src/foo.ts")
+  })
+
   it("includes source.text with correct position for a plain mention", () => {
     const paths = new Set(["src/foo.ts"])
     const text = "check @src/foo.ts here"

@@ -25,15 +25,18 @@ describe("work style presets", () => {
     expect(bash).toMatchObject({ "*": "ask", "rg *": "allow", "*>*": "ask" })
     expect(Object.keys(bash).at(-1)).toBe("*>*")
     // The shell readers apply the same level as the read rule for environment
-    // files, including the operand-first shape; the sample file stays allowed.
+    // files, including a later operand and a nested path; the sample file stays allowed.
     for (const command of ["cat", "head", "tail", "less", "diff", "grep", "rg", "ag", "uniq", "cut", "jq"]) {
       expect(bash[`${command} .env`]).toBe("ask")
       expect(bash[`${command} .env *`]).toBe("ask")
       expect(bash[`${command} * .env`]).toBe("ask")
       expect(bash[`${command} */.env`]).toBe("ask")
       expect(bash[`${command} .env.*`]).toBe("ask")
+      expect(bash[`${command} * .env.local`]).toBeUndefined()
       expect(bash[`${command} .env.example`]).toBe("allow")
     }
+    expect(bash["cat *.env"]).toBe("ask")
+    expect(bash["rg *.env"]).toBeUndefined()
     expect(bash["printenv *"]).toBe("ask")
     for (const command of [
       "touch *",

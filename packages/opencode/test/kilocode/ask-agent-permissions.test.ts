@@ -213,7 +213,8 @@ describe("Ask agent bash permissions", () => {
   })
 
   // An environment file gets the same level from the shell as from the read rule.
-  // Both operand positions count, because a pattern matches the whole command.
+  // Both operand positions and nested paths count, because a pattern matches the
+  // whole command.
   describe("environment files keep the read level", () => {
     const commands = [
       "cat .env",
@@ -230,6 +231,11 @@ describe("Ask agent bash permissions", () => {
       "uniq .env",
       "cut -d= -f1 .env",
       "jq . .env",
+      "grep -rn KEY .env.local",
+      "head -n 5 .env.production",
+      "diff a.txt .env.local",
+      "cat config/prod.env",
+      "cat apps/web/.env.local",
       "printenv HOME",
       // A sample file is a later operand here, and the first operand sets the level.
       "diff .env .env.example",
@@ -251,6 +257,7 @@ describe("Ask agent bash permissions", () => {
       expect(Permission.evaluate("bash", "diff a.txt b.txt", ruleset).action).toBe("allow")
       // A search for the identifier is not a read of an environment file.
       expect(Permission.evaluate("bash", "rg process.env", ruleset).action).toBe("allow")
+      expect(Permission.evaluate("bash", "grep -rn process.env src", ruleset).action).toBe("allow")
     })
   })
 })

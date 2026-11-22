@@ -28227,6 +28227,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
           }
         },
         "description": "Complete a code-based OAuth attempt and store the resulting credential.",

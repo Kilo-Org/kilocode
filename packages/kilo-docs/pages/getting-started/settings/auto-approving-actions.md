@@ -85,7 +85,7 @@ For full details and examples, see [MCP Tool Permissions](/docs/automate/mcp/usi
 
 Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Notable exceptions that prompt by default:
 
-- **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed. The same prompt applies when a shell reader such as `cat`, `grep`, or `diff` names one of these files, so the file cannot be printed through the shell while the read tool asks.
+- **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed. A shell reader such as `cat`, `grep`, or `diff` asks as well when its arguments name one of these files, including a named path under a directory. The protection is pattern-based: a directory-wide search or a copy followed by a read is not covered.
 - **`external_directory`** — accessing files outside the project prompts for approval
 - **`doom_loop`** — prompts when the agent enters a repeated failure cycle
 - **`edit` (JetBrains plugin only)** — file edits prompt for approval. This is a plugin default, not an environment override: set `permission.edit` in your global or project `kilo.jsonc`, or use **Settings → Tools → Kilo Code → Auto-Approve**, to change it.
@@ -277,7 +277,7 @@ For shell commands, saved approvals are written under `permission.bash` and appl
 
 Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Notable exceptions that prompt by default:
 
-- **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed. The same prompt applies when a shell reader such as `cat`, `grep`, or `diff` names one of these files, so the file cannot be printed through the shell while the read tool asks.
+- **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed. A shell reader such as `cat`, `grep`, or `diff` asks as well when its arguments name one of these files, including a named path under a directory. The protection is pattern-based: a directory-wide search or a copy followed by a read is not covered.
 - **`external_directory`** — accessing files outside the project prompts for approval
 - **`doom_loop`** — prompts when the agent enters a repeated failure cycle
 - **`edit` (JetBrains plugin only)** — file edits prompt for approval. This is a plugin default, not an environment override: set `permission.edit` in your global or project `kilo.jsonc`, or use **Settings → Tools → Kilo Code → Auto-Approve**, to change it.
