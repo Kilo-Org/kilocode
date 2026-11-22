@@ -272,7 +272,11 @@ export const ConfigProvider: ParentComponent = (props) => {
     pending.hasStored = true
     pending.storedOrder = order
   }
-  /** Adopt a host-stored value as both the rendered and the discard value. */
+  /**
+   * Adopt a host-stored value as both the rendered and the discard value. A newer draft edit
+   * for the same property stays in front: the user changed it again after this write, so the
+   * control must keep showing that edit with `isDirty()` true.
+   */
   const storeSetting = (property: string, value: unknown) => {
     const adopt = (prev: Record<string, unknown>) => {
       const next = { ...prev }
@@ -280,8 +284,11 @@ export const ConfigProvider: ParentComponent = (props) => {
       else next[property] = value
       return next
     }
-    setSettings(adopt)
     setSavedSettings(adopt)
+    setSettings((prev) => {
+      if (Object.hasOwn(settingsDraft(), property)) return prev
+      return adopt(prev)
+    })
   }
 
   // Register handler immediately (not in onMount) so we never miss

@@ -375,6 +375,20 @@ try {
     assert.deepEqual(probe().saveError(), { message: "rejected after bound", details: undefined })
   })
 
+  await check("a stored value does not overwrite a newer draft edit", async () => {
+    const key = "agentManager.worktreePool"
+    probe().applySetting(key, true)
+    await Promise.resolve()
+    // The user edits the same control again before the answer arrives.
+    probe().updateSetting(key, false)
+    await Promise.resolve()
+    assert.equal(probe().settings()[key], false, "the display holds the newer edit")
+    post({ type: "settingUpdated", key, value: true })
+    await settle()
+    assert.equal(probe().settings()[key], false, "the stored value does not replace the newer edit")
+    assert.equal(probe().isDirty(), true, "the newer edit stays pending")
+  })
+
 } finally {
   dispose()
 }
