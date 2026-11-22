@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect } from "bun:test"
-import { Duration, Effect, Exit, Fiber, Scope, Stream } from "effect"
+import { Deferred, Duration, Effect, Exit, Fiber, Scope, Stream } from "effect"
 import * as TestClock from "effect/testing/TestClock"
 import { Credential } from "@opencode-ai/core/credential"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
@@ -484,6 +484,47 @@ describe("Integration", () => {
       const second = yield* integrations.attempt.complete({ attemptID: attempt.attemptID }).pipe(Effect.flip)
       expect(second).toBeInstanceOf(Integration.AttemptCompletingError)
       expect(yield* credentials.list(integrationID)).toEqual([])
+
+      // The same state applies once a code attempt's first completion is under way.
+      const codeID = Integration.MethodID.make("chatgpt")
+      const started = yield* Deferred.make<void>()
+      const release = yield* Deferred.make<void>()
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: codeID, type: "oauth", label: "ChatGPT" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "code" as const,
+              url: "https://example.com/authorize",
+              instructions: "Paste the code",
+              callback: () =>
+                Deferred.succeed(started, undefined).pipe(
+                  Effect.andThen(Deferred.await(release)),
+                  Effect.as(
+                    Credential.OAuth.make({ type: "oauth", methodID: codeID, access: "access", refresh: "refresh", expires: 1 }),
+                  ),
+                ),
+            }),
+        }),
+      )
+      const code = yield* integrations.connection.oauth({ integrationID, methodID: codeID, inputs: {} })
+      const fiber = yield* integrations.attempt
+        .complete({ attemptID: code.attemptID, code: "1234" })
+        .pipe(Effect.forkScoped)
+      yield* Deferred.await(started)
+      const conflict = yield* integrations.attempt
+        .complete({ attemptID: code.attemptID, code: "1234" })
+        .pipe(Effect.flip)
+      expect(conflict).toBeInstanceOf(Integration.AttemptCompletingError)
+      yield* Deferred.succeed(release, undefined)
+      yield* Fiber.join(fiber)
+
+      expect(yield* credentials.list(integrationID)).toHaveLength(1)
+      expect(yield* integrations.attempt.status(code.attemptID)).toEqual({
+        status: "complete",
+        time: code.time,
+      })
     }),
   )
   // kilocode_change end
