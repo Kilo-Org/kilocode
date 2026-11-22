@@ -117,7 +117,12 @@ for (const { mode, ctx } of cases) {
       assert.equal(row()?.getAttribute("data-source"), "config")
       assert.equal(root.querySelector('[aria-label="ui.permission.rule.removeFromAllowed"]'), null)
       assert.equal(root.querySelector('[data-slot="permission-rule-toggle"]'), null)
-      assert(root.querySelector('[aria-label="ui.permission.rule.fromConfig"]'))
+      // The state indicator names the state as well, so assistive tech announces
+      // whether the saved rule allows or denies.
+      assert.equal(
+        root.querySelector('[data-slot="permission-rule-source"]')?.getAttribute("aria-label"),
+        "settings.autoApprove.level.allow \u2014 ui.permission.rule.fromConfig",
+      )
       enter()
     }
     if (mode === "approve") {

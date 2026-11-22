@@ -332,7 +332,11 @@ export const PermissionDock: Component<{
                                   <span
                                     data-slot="permission-rule-source"
                                     role="img"
-                                    aria-label={language.t("ui.permission.rule.fromConfig")}
+                                    aria-label={`${language.t(
+                                      loadState[index()] === "approved"
+                                        ? "settings.autoApprove.level.allow"
+                                        : "settings.autoApprove.level.deny",
+                                    )} — ${language.t("ui.permission.rule.fromConfig")}`}
                                   >
                                     <Icon
                                       name={loadState[index()] === "approved" ? "check-small" : "close-small"}
