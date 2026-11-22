@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { ConfigProvider, Effect, Exit, Schema } from "effect" // kilocode_change
+import { Config, ConfigProvider, Effect, Exit, Schema } from "effect" // kilocode_change
 import { HttpClientRequest } from "effect/unstable/http"
 import { LLM } from "../../src"
 import { CloudflareAIGateway, CloudflareWorkersAI } from "../../src/providers/cloudflare"
@@ -205,6 +205,18 @@ describe("Cloudflare", () => {
           headers: { authorization: "Bearer provider-token" },
         },
         {
+          name: "empty gateway key with no gateway credential",
+          model: gateway({ accountId: "test-account", gatewayApiKey: "", apiKey: "provider-token" }),
+          env: {},
+          headers: { authorization: "Bearer provider-token" },
+        },
+        {
+          name: "gateway key takes precedence over a gateway environment token",
+          model: gateway({ accountId: "test-account", gatewayApiKey: "option-token", apiKey: "provider-token" }),
+          env: { CLOUDFLARE_API_TOKEN: "environment-token" },
+          headers: { "cf-aig-authorization": "Bearer option-token", authorization: "Bearer provider-token" },
+        },
+        {
           name: "empty gateway key with a gateway environment token",
           model: gateway({ accountId: "test-account", gatewayApiKey: "", apiKey: "provider-token" }),
           env: { CLOUDFLARE_API_TOKEN: "gateway-token" },
@@ -220,6 +232,18 @@ describe("Cloudflare", () => {
           headers: item.headers,
         })
       }
+    }),
+  )
+
+  it.effect("reports a configured gateway credential that cannot be resolved", () =>
+    Effect.gen(function* () {
+      const result = yield* gatewayRequest(
+        gateway({ accountId: "test-account", gatewayApiKey: Config.redacted("CF_AIG_GATEWAY_UNSET"), apiKey: "provider-token" }),
+        {},
+      )
+
+      expect(Exit.isSuccess(result.exit)).toBe(false)
+      expect(result.headers).toBeUndefined()
     }),
   )
 

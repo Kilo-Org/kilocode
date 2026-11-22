@@ -1,6 +1,6 @@
-import type { Config, Redacted } from "effect"
+import { Effect, Option, Config, Redacted } from "effect" // kilocode_change
 import * as OpenAICompatibleChat from "../protocols/openai-compatible-chat"
-import { Auth } from "../route/auth"
+import { Auth, MissingCredentialError } from "../route/auth" // kilocode_change
 import { AuthOptions, type AtLeastOne, type ProviderAuthOption } from "../route/auth-options"
 import type { RouteDefaultsInput } from "../route/client"
 import { ProviderID, type ModelID } from "../schema"
@@ -39,21 +39,48 @@ export const aiGatewayBaseURL = (input: GatewayURL) => {
   return `https://gateway.ai.cloudflare.com/v1/${encodeURIComponent(input.accountId)}/${encodeURIComponent(input.gatewayId?.trim() || "default")}/compat`
 }
 
+// kilocode_change start
+// An unset or empty gateway environment variable is an absent credential, while a
+// variable that is set and unusable stays a configuration error.
+const gatewayEnv = (name: string) =>
+  Auth.effect(
+    Config.option(Config.redacted(name)).pipe(
+      Effect.flatMap((value) =>
+        Option.isNone(value) || Redacted.value(value.value) === ""
+          ? Effect.fail(new MissingCredentialError(name))
+          : Effect.succeed(value.value),
+      ),
+    ),
+  )
+
+// Only an absent credential falls through to the next source, so a `gatewayApiKey` that
+// is configured but cannot be resolved reports its own error instead of looking unset.
+const gatewayAuth = (input: AIGatewayOptions) =>
+  [Auth.optional(input.gatewayApiKey, "gatewayApiKey"), gatewayEnv("CLOUDFLARE_API_TOKEN"), gatewayEnv("CF_AIG_TOKEN")]
+    .reduce((left, right) =>
+      Auth.effect(left.load.pipe(Effect.catchIf((error) => error instanceof MissingCredentialError, () => right.load))),
+    )
+    .pipe(Auth.bearerHeader("cf-aig-authorization"))
+
 const aiGatewayAuth = (input: AIGatewayOptions) => {
   if ("auth" in input && input.auth) return input.auth
-  const gateway = Auth.optional(input.gatewayApiKey, "gatewayApiKey")
-    .orElse(Auth.config("CLOUDFLARE_API_TOKEN"))
-    .orElse(Auth.config("CF_AIG_TOKEN"))
-    .pipe(Auth.bearerHeader("cf-aig-authorization"))
+  const gateway = gatewayAuth(input)
   if (!("apiKey" in input) || input.apiKey === undefined) return gateway
-  // kilocode_change start
   // Gateway and provider credentials are resolved separately: `cf-aig-authorization`
   // carries the gateway token from `gatewayApiKey` or a gateway environment variable,
-  // and `authorization` carries the provider key. When the gateway token does not resolve,
-  // the request carries the provider bearer alone.
-  return gateway.orElse(Auth.none).andThen(Auth.bearer(input.apiKey))
-  // kilocode_change end
+  // and `authorization` carries the provider key. An absent gateway token is skipped,
+  // while a configured one that fails to resolve still reports its error.
+  const optional = Auth.custom((request) =>
+    Auth.toEffect(gateway)(request).pipe(
+      Effect.catchIf(
+        (error) => error.reason._tag === "Authentication" && error.reason.kind === "missing",
+        () => Effect.succeed(request.headers),
+      ),
+    ),
+  )
+  return optional.andThen(Auth.bearer(input.apiKey))
 }
+// kilocode_change end
 
 export const workersAIBaseURL = (input: WorkersAIURL) => {
   if (input.baseURL) return input.baseURL
