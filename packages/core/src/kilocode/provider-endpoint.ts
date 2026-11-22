@@ -19,19 +19,24 @@ export class EndpointConfigError extends Error {
   }
 }
 
+/**
+ * Trims and lowercases a Google Vertex location, or returns `undefined` when it is not a region.
+ * Never throws, so a catalog transform can skip an unusable value instead of failing everyone.
+ */
+export const normalizeVertexLocation = (value: unknown): string | undefined => {
+  const location = typeof value === "string" ? value.trim().toLowerCase() : ""
+  return REGION.test(location) ? location : undefined
+}
+
 /** Accepts a Google Cloud region or multi-region name such as `global`, `eu`, or `us-central1`. */
 export const parseVertexLocation = (value: unknown) => {
-  const location = typeof value === "string" ? value.trim().toLowerCase() : ""
-  if (!REGION.test(location)) {
+  const location = normalizeVertexLocation(value)
+  if (location === undefined) {
     throw new EndpointConfigError(
       `Invalid Google Vertex location "${String(value)}". Use a Google Cloud region or multi-region name: for example, global, eu, or us-central1.`,
     )
   }
   return location
-}
-
-export const isVertexLocation = (value: unknown) => {
-  return typeof value === "string" && REGION.test(value.trim().toLowerCase())
 }
 
 /** Accepts an Azure resource name, which is one DNS label and never a URL. */
@@ -72,4 +77,16 @@ export const requestHost = (input: unknown) => {
   } catch {
     return undefined
   }
+}
+
+/**
+ * True when the request URL cannot carry the caller's endpoint as given, so a Vertex location must be
+ * resolved and validated: an unset, non-string or empty URL, or a catalog template. The location is
+ * validated only when the request URL is derived from it; a concrete URL, including a Vertex API
+ * host, is used as given by both SDKs.
+ */
+export const vertexEndpointDerived = (url: unknown): boolean => {
+  if (url === undefined || typeof url !== "string") return true
+  if (url === "") return true
+  return url.includes("GOOGLE_VERTEX_ENDPOINT") || url.includes("GOOGLE_VERTEX_LOCATION")
 }

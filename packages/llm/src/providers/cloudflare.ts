@@ -40,8 +40,8 @@ export const aiGatewayBaseURL = (input: GatewayURL) => {
 }
 
 // kilocode_change start - the environment gateway credential goes to a Cloudflare AI Gateway endpoint
-const isGatewayHost = (baseURL: string | undefined) => {
-  if (baseURL === undefined) return true
+const isGatewayHost = (baseURL: string | null | undefined) => {
+  if (!baseURL?.trim()) return true
   try {
     return new URL(baseURL).hostname.toLowerCase() === "gateway.ai.cloudflare.com"
   } catch {

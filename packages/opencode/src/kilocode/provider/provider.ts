@@ -16,7 +16,13 @@ import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
 import { reasoningSummary } from "./reasoning-summary"
-import { parseAzureResourceName, parseVertexLocation } from "@opencode-ai/core/kilocode/provider-endpoint"
+import {
+  isVertexHost,
+  parseAzureResourceName,
+  parseVertexLocation,
+  requestHost,
+  vertexEndpointDerived,
+} from "@opencode-ai/core/kilocode/provider-endpoint"
 import type { Provider } from "@/provider/provider"
 import type { Auth } from "@/auth"
 import type { Config } from "@/config/config"
@@ -298,26 +304,20 @@ export function patchCustomLoaderResult(
 /**
  * Validates the endpoint inputs a provider model is configured with.
  *
- * A configured `baseURL` is used as given. Without one, a Vertex location must be a Google Cloud
- * region or multi-region name, and an Azure resource name must be a single DNS label; anything else
- * raises a configuration error when the model is used.
+ * A Vertex location is validated only when the request URL derives from it: an unset or empty URL,
+ * or a catalog template. Then it must be a Google Cloud region or multi-region name, and it is
+ * stored normalized. Any concrete URL, including a Vertex API host, is used as given by the SDK, so
+ * its location input is not validated and is left untouched. An Azure resource name must be a
+ * single DNS label unless a `baseURL` is configured. Anything else raises a configuration error
+ * when the model is used.
  */
-export function resolveEndpointOptions(
-  providerID: string,
-  npm: string,
-  modelURL: string | undefined,
-  options: Record<string, any>,
-) {
-  if (typeof options.baseURL === "string" && options.baseURL !== "") return
+export function resolveEndpointOptions(providerID: string, modelURL: string | undefined, options: Record<string, any>) {
+  const url = typeof options.baseURL === "string" && options.baseURL !== "" ? options.baseURL : modelURL
   if (providerID === "google-vertex" || providerID === "google-vertex-anthropic") {
-    const derived =
-      npm.includes("@ai-sdk/google-vertex") ||
-      modelURL === undefined ||
-      modelURL === "" ||
-      modelURL.includes("${GOOGLE_VERTEX_ENDPOINT}")
-    if (derived) options.location = parseVertexLocation(options.location ?? "global")
+    if (vertexEndpointDerived(url)) options.location = parseVertexLocation(options.location ?? "global")
     return
   }
+  if (typeof options.baseURL === "string" && options.baseURL !== "") return
   if (providerID === "azure" && typeof options.resourceName === "string") {
     options.resourceName = parseAzureResourceName(options.resourceName)
   }
@@ -344,6 +344,37 @@ export function hasKiloCredentials(
   if (auth) return true
   if (cfg.provider?.["kilo"]?.options?.apiKey) return true
   return false
+}
+
+// ---------------------------------------------------------------------------
+// Vertex authentication
+// ---------------------------------------------------------------------------
+
+/**
+ * Wraps `fetch` so a Google Cloud access token is attached only to a Vertex API host.
+ *
+ * An explicit `baseURL` on another host (a proxy, or an OpenAI-compatible gateway) is forwarded
+ * unchanged, so no Google credentials travel to a host that is not Vertex. `credentials` is the
+ * stored service-account key, used in place of application default credentials when present.
+ */
+export function vertexAuthFetch(credentials: Record<string, unknown> | undefined) {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
+    const host = requestHost(input)
+    if (host === undefined || !isVertexHost(host)) return fetch(input, init)
+    // Loaded on first Vertex request: a static import would pull the library into every CLI start.
+    const { GoogleAuth } = await import("google-auth-library")
+    const auth = new GoogleAuth({
+      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+      ...(credentials ? { credentials } : {}),
+    })
+    const client = await auth.getClient()
+    const token = await client.getAccessToken()
+
+    const headers = new Headers(init?.headers)
+    headers.set("Authorization", `Bearer ${token.token}`)
+
+    return fetch(input, { ...init, headers })
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -240,6 +240,36 @@ describe("Cloudflare", () => {
       )
     }),
   )
+  it.effect("sends the environment gateway credential when the baseURL is blank", () =>
+    Effect.gen(function* () {
+      yield* LLM.generate(
+        LLM.request({
+          model: CloudflareAIGateway.configure({
+            accountId: "test-account",
+            baseURL: "",
+            apiKey: "provider-token",
+          }).model("openai/gpt-4o-mini"),
+          prompt: "Say hello.",
+        }),
+      ).pipe(
+        withEnv({ CLOUDFLARE_API_TOKEN: "env-gateway-token" }),
+        Effect.provide(
+          dynamicResponse((input) =>
+            Effect.gen(function* () {
+              const web = yield* HttpClientRequest.toWeb(input.request).pipe(Effect.orDie)
+              expect(web.url).toBe("https://gateway.ai.cloudflare.com/v1/test-account/default/compat/chat/completions")
+              expect(web.headers.get("cf-aig-authorization")).toBe("Bearer env-gateway-token")
+              expect(web.headers.get("authorization")).toBe("Bearer provider-token")
+              return input.respond(
+                sseEvents(deltaChunk({ role: "assistant", content: "Hello" }), deltaChunk({}, "stop")),
+                { headers: { "content-type": "text/event-stream" } },
+              )
+            }),
+          ),
+        ),
+      )
+    }),
+  )
   // kilocode_change end
 
   it.effect("allows a fully configured baseURL override", () =>

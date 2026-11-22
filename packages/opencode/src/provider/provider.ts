@@ -49,10 +49,11 @@ import {
   buildTimeoutSignal,
   requestTimeout,
   wrapFirstByte,
+  vertexAuthFetch,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 import { bedrockAuth, providerKey, vertexAuth, vertexCredentials, vertexOptions } from "@/kilocode/provider/cloud-auth"
-import { EndpointConfigError, isVertexHost, requestHost } from "@opencode-ai/core/kilocode/provider-endpoint" // kilocode_change
+import { EndpointConfigError, normalizeVertexLocation } from "@opencode-ai/core/kilocode/provider-endpoint" // kilocode_change
 // kilocode_change end
 import { ProviderError } from "./error"
 
@@ -551,7 +552,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         env["GCP_PROJECT"] ??
         env["GCLOUD_PROJECT"]
 
-      const location = String(
+      // kilocode_change start - a valid Google Cloud region is stored trimmed and lowercased
+      const raw = String(
         provider.options?.location ??
           stored?.location ?? // kilocode_change
           env["GOOGLE_VERTEX_LOCATION"] ??
@@ -559,6 +561,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           env["VERTEX_LOCATION"] ??
           "us-central1",
       )
+      const location = normalizeVertexLocation(raw) ?? raw
+      // kilocode_change end
 
       const autoload = Boolean(project)
       if (!autoload) return { autoload: false }
@@ -575,26 +579,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           project,
           location,
           ...(stored ? vertexCredentials(stored.credentials) : {}), // kilocode_change
-          fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-            // kilocode_change start - the access token is for a Vertex API host
-            const host = requestHost(input)
-            if (host === undefined || !isVertexHost(host)) return fetch(input, init)
-            // kilocode_change end
-            const { GoogleAuth } = await import("google-auth-library")
-            // kilocode_change start - authenticate OpenAI-compatible Vertex endpoints with stored credentials
-            const auth = new GoogleAuth({
-              scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-              ...(stored ? { credentials: stored.credentials } : {}),
-            })
-            // kilocode_change end
-            const client = await auth.getClient()
-            const token = await client.getAccessToken()
-
-            const headers = new Headers(init?.headers)
-            headers.set("Authorization", `Bearer ${token.token}`)
-
-            return fetch(input, { ...init, headers })
-          },
+          fetch: vertexAuthFetch(stored?.credentials), // kilocode_change - token only for a Vertex API host
         },
         async getModel(sdk: any, modelID: string) {
           const id = String(modelID).trim()
@@ -1848,7 +1833,7 @@ const layer = Layer.effect(
         vertexOptions(model.providerID, model.api.npm, options) // kilocode_change - hydrate stored credentials
 
         // kilocode_change start - validate the endpoint inputs of the provider model
-        resolveEndpointOptions(model.providerID, model.api.npm, model.api.url, options)
+        resolveEndpointOptions(model.providerID, model.api.url, options)
         // kilocode_change end
 
         if (
