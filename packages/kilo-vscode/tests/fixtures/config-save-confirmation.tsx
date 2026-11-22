@@ -68,6 +68,7 @@ interface ConfigProbe {
   isDirty: () => boolean
   saving: () => boolean
   saveError: () => ProbeSaveError | null
+  clearSaveError: () => void
   updateConfig: (partial: Record<string, unknown>) => void
   saveConfig: () => void
   discardConfig: () => void
@@ -332,11 +333,44 @@ try {
       saveBound.ms = realBound
     }
   })
+
+  await check("dismissing the bound report leaves the late answer that resolves the save armed", async () => {
+    probe().discardConfig()
+    await settle()
+    assert.equal(probe().isDirty(), false, "the discarded edit is gone")
+    try {
+      saveBound.ms = 800
+      probe().updateConfig({ model: "dismissed" })
+      await settle()
+      probe().saveConfig()
+      await settle()
+      const id = lastSave().requestId
+      assert.equal(typeof id, "string", "the save names itself so its late answer can be told apart")
+      const settled = await until(() => probe().saving() === false, 5_000)
+      assert.ok(settled, "the save settled at the bound")
+      assert.deepEqual(probe().saveError(), { key: "settings.saveBar.unconfirmedSave" })
+      probe().clearSaveError()
+      await settle()
+      assert.equal(probe().saveError(), null, "the report is dismissed")
+      post({ type: "configUpdated", config: { model: "dismissed" }, features, requestId: id })
+      await settle()
+      assert.equal(probe().saving(), false, "the answer does not restart the save")
+      assert.equal(probe().isDirty(), false, "the answer clears the paths the save posted")
+      assert.deepEqual(probe().config(), { model: "dismissed" }, "the server config replaces the posted draft")
+      assert.equal(probe().saveError(), null, "the dismissed report stays dismissed")
+      const posted = saves().length
+      probe().saveConfig()
+      await settle()
+      assert.equal(saves().length, posted, "the stored value is not posted again")
+    } finally {
+      saveBound.ms = realBound
+    }
+  })
 } finally {
   dispose()
 }
 
 if (failures.length > 0) console.error(failures.join("\n"))
 // A fixture that reached no case would exit 0 without proving anything.
-if (checked !== 9) failures.push(`ran ${checked} of 9 cases`)
+if (checked !== 10) failures.push(`ran ${checked} of 10 cases`)
 process.exit(failures.length === 0 ? 0 : 1)

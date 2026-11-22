@@ -904,10 +904,12 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSaveError(null)
   }
 
-  /** Dismiss the reported error; the expiry reports it may stand for are dismissed with it. */
+  /**
+   * Dismiss the reported error. The settings-write expiry goes with it, but the save expiry
+   * stays: a dismissed report must not disable the answer that resolves it.
+   */
   function clearSaveError() {
     expiredWrite = undefined
-    expiredSave = undefined
     setSaveError(null)
   }
 
