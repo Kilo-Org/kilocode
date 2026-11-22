@@ -24,9 +24,11 @@ export type AIGatewayOptions = GatewayURL &
   ProviderAuthOption<"optional"> & {
     /**
      * Cloudflare AI Gateway authentication token. Sent as `cf-aig-authorization`.
+     * kilocode_change start - the environment credential applies to the Cloudflare gateway host
      * The gateway credential comes from this option, or from `CLOUDFLARE_API_TOKEN` / `CF_AIG_TOKEN` when the
      * gateway host is `gateway.ai.cloudflare.com`. A gateway on any other host, such as a Cloudflare custom
      * domain, authenticates with this option or `auth`.
+     * kilocode_change end
      */
     readonly gatewayApiKey?: CloudflareSecret
   }
