@@ -187,7 +187,11 @@ const layer = Layer.effect(
               return hasUtf8Bom(head.subarray(0, size))
             }),
           )
-          // kilocode_change - the sandbox allows a read descriptor only, so the identity check and the write use separate opens
+          // kilocode_change start - state the scope of the identity check
+          // The identity is verified on the descriptor opened for the read/BOM probe, so it covers the target identity
+          // as of the check. The content write then reopens the path through writeWithDirs. KeyedMutex serializes
+          // agent-internal writes to one target.
+          // kilocode_change end
           yield* fs.writeWithDirs(input.target.canonical, joinBom(next.text, bom || next.bom))
           return writeResult(input.target, true)
           // kilocode_change end

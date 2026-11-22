@@ -90,13 +90,17 @@ const layer = Layer.effectDiscard(
                 return yield* files.writeTextPreservingBom({ target, content: input.content, approved }) // kilocode_change - approved identity
                 // kilocode_change start - report a changed target distinctly from other write failures
               }).pipe(
-                Effect.mapError((error) =>
-                  error instanceof FileMutation.TargetChangedError
-                    ? new ToolFailure({
-                        message: `Unable to write ${input.path}: file changed after permission approval. Read it again before writing.`,
-                      })
-                    : new ToolFailure({ message: `Unable to write ${input.path}` }),
-                ),
+                Effect.mapError((error) => {
+                  if (error instanceof FileMutation.TargetChangedError)
+                    return new ToolFailure({
+                      message: `Unable to write ${input.path}: file changed after permission approval. Read it again before writing.`,
+                    })
+                  if (error instanceof FileMutation.TargetKindError)
+                    return new ToolFailure({
+                      message: `Unable to write ${input.path}: the target is not a regular file, or the filesystem does not report its identity.`,
+                    })
+                  return new ToolFailure({ message: `Unable to write ${input.path}` })
+                }),
               ),
               // kilocode_change end
           }),

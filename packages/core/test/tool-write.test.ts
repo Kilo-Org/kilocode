@@ -445,6 +445,32 @@ describe("WriteTool", () => {
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
   )
+
+  it.live("reports a directory target as not a regular file", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const target = path.join(tmp.path, "directory")
+        return Effect.promise(() => fs.mkdir(target)).pipe(
+          Effect.andThen(
+            withTool(tmp.path, (registry) => executeTool(registry, call({ path: "directory", content: "over" }))),
+          ),
+          Effect.andThen((result) =>
+            Effect.gen(function* () {
+              expect(result).toEqual({
+                type: "error",
+                value:
+                  "Unable to write directory: the target is not a regular file, or the filesystem does not report its identity.",
+              })
+              expect(writes).toEqual([])
+            }),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
   // kilocode_change end
 })
 
