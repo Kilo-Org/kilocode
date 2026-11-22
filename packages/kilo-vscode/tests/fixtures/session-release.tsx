@@ -91,10 +91,9 @@ const host = document.createElement("div")
 document.body.append(host)
 const dispose = render(
   () => (
-    <VSCodeProvider>
-      <ServerProvider>
-        {/* ProviderProvider resolves dialogs, so it needs the same provider the app mounts. */}
-        <DialogProvider>
+    <DialogProvider>
+      <VSCodeProvider>
+        <ServerProvider>
           <ProviderProvider>
             <ConfigContext.Provider value={config as never}>
               <LanguageContext.Provider value={language as never}>
@@ -106,9 +105,9 @@ const dispose = render(
               </LanguageContext.Provider>
             </ConfigContext.Provider>
           </ProviderProvider>
-        </DialogProvider>
-      </ServerProvider>
-    </VSCodeProvider>
+        </ServerProvider>
+      </VSCodeProvider>
+    </DialogProvider>
   ),
   host,
 )

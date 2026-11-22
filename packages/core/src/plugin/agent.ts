@@ -105,6 +105,13 @@ export const Plugin = define({
         (resource): PermissionV2.Rule => ({ action: "external_directory", resource, effect: "allow" }),
       ),
     ]
+    // kilocode_change start
+    const envReads: PermissionV2.Ruleset = [
+      { action: "read", resource: "*.env", effect: "ask" },
+      { action: "read", resource: "*.env.*", effect: "ask" },
+      { action: "read", resource: "*.env.example", effect: "allow" },
+    ]
+    // kilocode_change end
     const defaults: PermissionV2.Ruleset = [
       { action: "*", resource: "*", effect: "allow" },
       ...readonlyExternalDirectory,
@@ -112,9 +119,7 @@ export const Plugin = define({
       { action: "plan_enter", resource: "*", effect: "deny" },
       { action: "plan_exit", resource: "*", effect: "deny" },
       { action: "read", resource: "*", effect: "allow" },
-      { action: "read", resource: "*.env", effect: "ask" },
-      { action: "read", resource: "*.env.*", effect: "ask" },
-      { action: "read", resource: "*.env.example", effect: "allow" },
+      ...envReads, // kilocode_change
     ]
 
     yield* ctx.agent.transform((draft) => {
@@ -171,6 +176,7 @@ export const Plugin = define({
               { action: "webfetch", resource: "*", effect: "allow" },
               { action: "websearch", resource: "*", effect: "allow" },
               { action: "read", resource: "*", effect: "allow" },
+              ...envReads, // kilocode_change
             ],
             readonlyExternalDirectory,
           ),
