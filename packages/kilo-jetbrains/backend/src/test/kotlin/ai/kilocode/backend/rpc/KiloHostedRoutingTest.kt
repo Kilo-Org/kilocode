@@ -314,6 +314,8 @@ class KiloHostedRoutingTest {
 
         assertEquals(1, mock.requestCount("/permission/per_1/reply"))
         assertTrue(mock.paths.any { it.startsWith("/permission/per_1/reply") && it.contains("workspace=wrk_att_test") })
+        // The hosted transport accepts the decision only; the human-answered flag is local to this CLI.
+        assertEquals("""{"reply":"once"}""", mock.lastPermissionReplyBody)
         events.cancelAndJoin()
     }
 
