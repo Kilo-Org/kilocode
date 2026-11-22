@@ -1887,7 +1887,7 @@ describe("legacy MCP group reporting", () => {
   }
 
   const mcpWarnings = (warnings: Config.Warning[]) =>
-    warnings.filter((warning) => warning.message.includes("MCP access not migrated"))
+    warnings.filter((warning) => /MCP access (not migrated|incomplete)/.test(warning.message))
 
   const serverKeys = (permission: Record<string, unknown> | undefined) =>
     Object.keys(permission ?? {}).filter((key) => key.endsWith("_*"))
@@ -1905,10 +1905,36 @@ describe("legacy MCP group reporting", () => {
       const mcp = mcpWarnings(result.warnings)
       expect(mcp).toHaveLength(1)
       expect(mcp[0].path).toBe(path.join(settings, "custom_modes.yaml"))
+      expect(mcp[0].message).toContain("MCP access incomplete: a global store this load did not read declared MCP servers")
       expect(Object.keys(result.config.mcp ?? {})).toHaveLength(0)
       // The mode itself still migrated from the global file, it just cannot honour the group.
       expect(result.config.agent?.helper?.permission?.read).toBe("allow")
       expect(serverKeys(result.config.agent?.helper?.permission)).toEqual([])
+    })
+  })
+
+  test("reports the skipped store even when a project server was granted", async () => {
+    await withHome("cli", async (home) => {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(
+        path.join(settings, "mcp_settings.json"),
+        JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }),
+      )
+      // The project store is read on this platform, so its server is migrated and granted.
+      await Filesystem.write(
+        path.join(home, ".kilo", "mcp.json"),
+        JSON.stringify({ mcpServers: { projectserver: { command: "npx" } } }),
+      )
+
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      const mcp = mcpWarnings(result.warnings)
+      expect(mcp).toHaveLength(1)
+      expect(mcp[0].message).toContain("MCP access incomplete: a global store this load did not read declared MCP servers")
+      // The group grants what this load migrated; the skipped store's key is neither granted nor denied.
+      expect(serverKeys(result.config.agent?.helper?.permission)).toEqual(["projectserver_*"])
+      expect(result.config.agent?.helper?.permission?.["projectserver_*"]).toBe("allow")
+      expect(result.config.agent?.helper?.permission?.["globalserver_*"]).toBeUndefined()
     })
   })
 

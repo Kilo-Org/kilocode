@@ -362,13 +362,17 @@ export namespace KilocodeConfig {
     }
 
     // Load Kilocode custom modes, granting an `mcp` group the tools of the servers loaded above.
-    // The mode migration still reads global mode files, so a mode from a store the MCP load
-    // skipped reports the `mcp` group it cannot honour instead of dropping it silently.
+    // The mode migration still reads global mode files, so it receives the two MCP facts
+    // separately: `available` for a store this load read that declared a server none converted,
+    // and `skippedGlobal` for the global store this load skipped while it declared servers. A
+    // mode whose `mcp` group cannot cover that skipped store reports it instead of dropping the
+    // group silently, even when the project store did supply servers to grant.
     try {
       const migration = await ModesMigrator.migrate({
         projectDir: input.projectDir,
         mcpServers: Object.keys(mcp),
-        mcpAvailable: available || skippedGlobal,
+        mcpAvailable: available,
+        mcpSkippedGlobal: skippedGlobal,
       })
       if (Object.keys(migration.agents).length > 0) {
         result = input.merge(result, { agent: migration.agents })

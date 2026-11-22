@@ -672,6 +672,98 @@ describe("ModesMigrator", () => {
       }
     })
 
+    test("reports an incomplete mcp group even when a project server was migrated", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: helper
+    name: Helper
+    roleDefinition: Helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+
+      const result = await ModesMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+        mcpServers: ["projectserver"],
+        mcpAvailable: false,
+        mcpSkippedGlobal: true,
+      })
+
+      // The migrated server is still granted: only the skipped store's servers are missing.
+      expect(result.agents.helper.permission?.["projectserver_*"]).toBe("allow")
+      const messages = result.warnings.map((warning) => warning.message)
+      expect(messages).toEqual([
+        "Mode 'helper': MCP access incomplete: a global store this load did not read declared MCP servers",
+      ])
+    })
+
+    test("reports only the incomplete message when nothing was migrated and the store was skipped", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: helper
+    name: Helper
+    roleDefinition: Helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+
+      const result = await ModesMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+        mcpServers: [],
+        mcpAvailable: false,
+        mcpSkippedGlobal: true,
+      })
+
+      expect(result.warnings.map((warning) => warning.message)).toEqual([
+        "Mode 'helper': MCP access incomplete: a global store this load did not read declared MCP servers",
+      ])
+      expect(Object.keys(result.agents.helper.permission ?? {}).some((key) => key.endsWith("_*"))).toBe(false)
+    })
+
+    test("keeps the existing message when no store was skipped", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: helper
+    name: Helper
+    roleDefinition: Helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+
+      const result = await ModesMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+        mcpServers: [],
+        mcpAvailable: true,
+        mcpSkippedGlobal: false,
+      })
+
+      expect(result.warnings.map((warning) => warning.message)).toEqual([
+        "Mode 'helper': MCP access not migrated: no MCP server was migrated",
+      ])
+      expect(result.warnings.some((warning) => warning.message.includes("MCP access incomplete"))).toBe(false)
+    })
+
     test("reports a mode warning for a fileRegex that cannot be translated", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
