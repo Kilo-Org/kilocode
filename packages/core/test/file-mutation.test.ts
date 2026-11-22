@@ -137,6 +137,24 @@ describe("FileMutation", () => {
     ),
   )
 
+  it.live("refuses a text write when the approved file is gone before the write", () =>
+    withTmp((directory) =>
+      Effect.gen(function* () {
+        const targetPath = path.join(directory, "gone.txt")
+        yield* Effect.promise(() => fs.writeFile(targetPath, "original"))
+        const target = yield* (yield* LocationMutation.Service).resolve({ path: "gone.txt" })
+        const files = yield* FileMutation.Service
+        const approved = yield* files.inspect(target)
+        yield* Effect.promise(() => fs.rm(targetPath))
+
+        expect(
+          yield* files.writeTextPreservingBom({ target, approved, content: "replacement" }).pipe(Effect.flip),
+        ).toMatchObject({ _tag: "FileMutation.TargetChangedError", path: target.canonical })
+        expect(yield* Effect.promise(() => fs.access(targetPath).then(() => true, () => false))).toBe(false)
+      }).pipe(provide(directory)),
+    ),
+  )
+
   it.live("fails inspect when the filesystem reports no inode for an existing regular file", () =>
     withTmp((directory) =>
       Effect.gen(function* () {
