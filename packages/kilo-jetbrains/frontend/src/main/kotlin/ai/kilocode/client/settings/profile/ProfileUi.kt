@@ -381,7 +381,10 @@ internal class ProfileUi(
     private fun refreshProfile() {
         cs.launch {
             try {
-                val result = if (unavailable) app.refreshAccount() else ProfileSyncDto(app.refreshProfile())
+                // `unavailable` is written only on the EDT, while this coroutine runs on
+                // Dispatchers.Default. Read it on the EDT so the retry reliably takes the strict read.
+                val strict = withContext(edt) { unavailable }
+                val result = if (strict) app.refreshAccount() else ProfileSyncDto(app.refreshProfile())
                 withContext(edt) {
                     if (result.error != null) applyState()
                     else {
