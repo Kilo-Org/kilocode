@@ -42,7 +42,10 @@ export interface SaveError {
 
 interface ConfigContextValue {
   config: Accessor<Config>
+  /** Raw primary global config file — the file a settings write targets. */
   globalConfig: Accessor<Config>
+  /** Merged global scope: every global config file combined. */
+  mergedGlobalConfig: Accessor<Config>
   globalDraft: Accessor<Partial<Config>>
   projectConfig: Accessor<Config>
   /** Merged workspace scope from the overlay, every project file combined. */
@@ -103,6 +106,7 @@ export const ConfigProvider: ParentComponent = (props) => {
 
   const [config, setConfig] = createSignal<Config>({})
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
+  const [mergedGlobalConfig, setMergedGlobalConfig] = createSignal<Config>({})
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
   const [workspaceConfig, setWorkspaceConfig] = createSignal<Config>({})
   const [collections, setCollections] = createSignal<ConfigCollections>({})
@@ -176,6 +180,11 @@ export const ConfigProvider: ParentComponent = (props) => {
     if (message.type !== "shortcutContext") return
     setShortcuts({ bindings: message.bindings, selection: message.selection })
   })
+  // The merged global scope is read-only here: it describes what every global file
+  // supplies together, which no single draft write can change.
+  const applyMergedGlobal = (message: { mergedGlobalConfig?: Config }) => {
+    if (message.mergedGlobalConfig !== undefined) setMergedGlobalConfig(message.mergedGlobalConfig)
+  }
   // The merged workspace scope is read-only: no draft merges on top of it.
   const applyWorkspace = (message: { workspaceConfig?: Config }) => {
     if (message.workspaceConfig !== undefined) setWorkspaceConfig(message.workspaceConfig)
@@ -206,6 +215,7 @@ export const ConfigProvider: ParentComponent = (props) => {
         setProjectConfig(mergeScopedConfig(project, hideRemovedMcp(projectDraft() as Config, removedMcp())))
         setSavedProject(project)
       }
+      applyMergedGlobal(message)
       applyWorkspace(message)
       setRemovedMcp((current) => retainUnconfirmedMcpRemovals(current, message.config))
       updateCollections(message.collections)
@@ -239,6 +249,7 @@ export const ConfigProvider: ParentComponent = (props) => {
           setProjectConfig(project)
           setSavedProject(project)
         }
+        applyMergedGlobal(message)
         applyWorkspace(message)
         updateCollections(message.collections)
         setFeatures(message.features)
@@ -263,6 +274,7 @@ export const ConfigProvider: ParentComponent = (props) => {
           setProjectConfig(mergeScopedConfig(project, hideRemovedMcp(projectDraft() as Config, removedMcp())))
           setSavedProject(project)
         }
+        applyMergedGlobal(message)
         applyWorkspace(message)
         updateCollections(message.collections)
         setFeatures(message.features)
@@ -482,6 +494,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const value: ConfigContextValue = {
     config,
     globalConfig,
+    mergedGlobalConfig,
     globalDraft,
     projectConfig,
     workspaceConfig,

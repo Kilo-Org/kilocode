@@ -272,6 +272,8 @@ type SandboxSupportClient = {
 type ConfigSnapshot = {
   effective: Config
   targets: { global: ConfigTarget; project: ConfigTarget }
+  /** Merged global scope: every global config file combined. */
+  mergedGlobal?: Config
   /** Merged workspace scope: every project config file combined. */
   project?: Config
 }
@@ -4169,6 +4171,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // The overlay response carries the merged workspace scope as `project`; the
       // config snapshot names the same data `workspaceConfig`.
       const workspaceConfig = snapshot.project as Config | undefined
+      // The merged global scope is every global config file combined, which differs
+      // from the single file the delete targets.
+      const mergedGlobalConfig = (snapshot.mergedGlobal ?? global) as Config
       // Capture the previous source before cachedGlobalConfig moves, so a source
       // change still triggers a catalog refresh.
       const previousSpeech = this.speechToTextSource()
@@ -4177,6 +4182,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "configLoaded",
         config: snapshot.effective,
         globalConfig: global,
+        mergedGlobalConfig,
         projectConfig,
         workspaceConfig,
         bindings,
@@ -4188,6 +4194,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "configUpdated",
         config: snapshot.effective,
         globalConfig: global,
+        mergedGlobalConfig,
         projectConfig,
         workspaceConfig,
         bindings,
@@ -4218,11 +4225,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const projectConfig = bindings.project ? (snapshot.targets?.project.raw as Config) : undefined
     const previousSpeech = this.speechToTextSource()
     this.cachedGlobalConfig = globalConfig ?? null
+    const mergedGlobalConfig = (snapshot.mergedGlobal ?? snapshot.globalConfig ?? globalConfig) as Config
     const workspaceConfig = snapshot.workspaceConfig
     this.cachedConfigMessage = {
       type: "configLoaded",
       config: snapshot.config,
       globalConfig,
+      mergedGlobalConfig,
       projectConfig,
       workspaceConfig,
       bindings,
@@ -4235,6 +4244,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       type,
       config: snapshot.config,
       globalConfig,
+      mergedGlobalConfig,
       projectConfig,
       workspaceConfig,
       bindings,
@@ -4265,6 +4275,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       completedScopes: completed,
       config: snapshot?.effective,
       globalConfig: snapshot?.targets.global.raw,
+      mergedGlobalConfig: snapshot?.mergedGlobal ?? snapshot?.targets.global.raw,
       projectConfig: bindings?.project ? snapshot?.targets.project.raw : undefined,
       bindings,
     })

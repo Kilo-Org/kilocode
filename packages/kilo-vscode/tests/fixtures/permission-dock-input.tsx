@@ -28,6 +28,7 @@ const language = { t: (key: string) => key }
 const config = {
   config: () => ({ permission: {} }),
   globalConfig: () => ({ permission: {} }),
+  mergedGlobalConfig: () => ({ permission: {} }),
   workspaceConfig: () => ({ permission: {} }),
 }
 Object.defineProperty(document, "hasFocus", { value: () => true })

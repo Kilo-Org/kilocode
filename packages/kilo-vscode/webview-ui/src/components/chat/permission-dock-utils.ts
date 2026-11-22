@@ -74,10 +74,18 @@ function ruleCovers(entry: string, pattern: string): boolean {
 }
 
 /**
- * The rows this prompt can change: the global config supplies the pattern, the
- * effective state matches that global entry, and no workspace scope entry decides
- * the row. A row another scope decides is shown without the removal control,
- * because this write cannot change that scope.
+ * The rows this prompt can change: the merged global scope supplies the pattern,
+ * the effective state matches that global entry, no workspace scope entry decides
+ * the row, and no broader entry of the same merged global scope decides it too.
+ *
+ * `global` is the merged global scope — every global config file combined, later
+ * files winning — because a deletion only reaches one file. An entry whose pattern
+ * covers the row with the same action keeps deciding the row after that deletion, so
+ * the row stays out of scope: the control would appear to do nothing. A scalar merged
+ * value is the tool-wide `*` entry, and a `*` key covers every pattern.
+ *
+ * A row another scope decides is shown without the removal control, because this
+ * write cannot change that scope.
  */
 export function removableRuleIndices(input: {
   rules: string[]
@@ -93,9 +101,25 @@ export function removableRuleIndices(input: {
       typeof input.global === "string" ? (pattern === "*" ? input.global : undefined) : input.global?.[pattern]
     if (action !== "allow" && action !== "deny") continue
     if (coveredByWorkspace(input.workspace, pattern)) continue
+    if (coveredByBroaderGlobal(input.global, pattern, action)) continue
     if (fromGlobal[i] === input.effective[i]) result.add(i)
   }
   return result
+}
+
+/**
+ * Whether another entry of the merged global scope covers the pattern with the same
+ * action. Deleting the row's own entry cannot change the outcome then, because the
+ * broader entry keeps deciding it.
+ */
+function coveredByBroaderGlobal(global: PermissionRule | undefined, pattern: string, action: "allow" | "deny"): boolean {
+  // The scalar form is the tool-wide entry, so it is the row itself for `*` and a
+  // broader entry for every other pattern.
+  if (typeof global === "string") return pattern !== "*" && action === global
+  if (!global) return false
+  return Object.entries(global).some(
+    ([key, value]) => key !== pattern && value === action && ruleCovers(key, pattern),
+  )
 }
 
 /** Whether the workspace scope supplies an allow/deny entry that decides the row. */

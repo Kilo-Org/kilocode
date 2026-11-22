@@ -388,6 +388,7 @@ const ConfigWrapper: ParentComponent<{
     const value = {
       config: createMemo(() => cfg()),
       globalConfig: createMemo(() => (scoped ? global() : cfg())),
+      mergedGlobalConfig: createMemo(() => (scoped ? global() : cfg())),
       globalDraft: () => ({}),
       projectConfig: createMemo(() => (scoped ? project() : cfg())),
       // The workspace layer is its own scope: never fall back to the effective

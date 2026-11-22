@@ -50,7 +50,7 @@ export const PermissionDock: Component<{
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
-  const { config, globalConfig, workspaceConfig } = useConfig()
+  const { config, mergedGlobalConfig, workspaceConfig } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
   // Skill shell batches are never persisted, so they show no auto-approve rules. The command
@@ -97,12 +97,13 @@ export const PermissionDock: Component<{
   // approved/denied patterns show their saved state immediately.
   const saved = config().permission?.[props.request.toolName]
   const loadState = savedRuleStates(rules(), saved)
-  // A saved rule is revocable from here only when the global config decides it.
-  // The effective config also merges workspace rules, and this write cannot
-  // delete those, so their rows stay read-only.
+  // A row is revocable from here only when the merged global scope decides it. The
+  // removal write deletes one entry from the primary global file, so a grant another
+  // global file still supplies cannot be revoked. The effective config also merges
+  // workspace rules, and this write cannot delete those, so their rows stay read-only.
   const revocable = removableRuleIndices({
     rules: rules(),
-    global: globalConfig().permission?.[props.request.toolName],
+    global: mergedGlobalConfig().permission?.[props.request.toolName],
     workspace: workspaceConfig().permission?.[props.request.toolName],
     effective: loadState,
   })

@@ -36,6 +36,7 @@ const language = { t: (key: string, params?: Record<string, string>) => resolveT
 const config = {
   config: () => ({ permission: {} }),
   globalConfig: () => ({ permission: {} }),
+  mergedGlobalConfig: () => ({ permission: {} }),
   workspaceConfig: () => ({ permission: {} }),
 }
 Object.defineProperty(document, "hasFocus", { value: () => true })

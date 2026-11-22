@@ -304,4 +304,38 @@ describe("removableRuleIndices", () => {
       }),
     ).toEqual(new Set([0]))
   })
+
+  it("leaves a row alone when the merged global scope also holds a catch-all with the same action", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "touch *": "allow", "*": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves a row alone when the merged global scope is a scalar with the same action", () => {
+    expect(call({ rules: ["touch *"], global: "allow", effective: { 0: "approved" } })).toEqual(new Set())
+  })
+
+  it("keeps rows in scope when the merged global catch-all only asks", () => {
+    expect(
+      call({
+        rules: ["touch *", "npm *"],
+        global: { "*": "ask", "touch *": "allow", "npm *": "allow" },
+        effective: { 0: "approved", 1: "approved" },
+      }),
+    ).toEqual(new Set([0, 1]))
+  })
+
+  it("leaves a denied row alone when the merged global scope also denies a broader pattern", () => {
+    expect(
+      call({
+        rules: ["rm *"],
+        global: { "*": "deny", "rm *": "deny" },
+        effective: { 0: "denied" },
+      }),
+    ).toEqual(new Set())
+  })
 })

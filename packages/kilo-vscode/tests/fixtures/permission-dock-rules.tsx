@@ -40,17 +40,20 @@ Object.defineProperty(document, "hasFocus", { value: () => true })
 const savedAllow = {
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
+  mergedGlobalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
   workspaceConfig: () => ({ permission: {} }),
 }
 const savedDeny = {
   config: () => ({ permission: { edit: { "*": "deny" } } }),
   globalConfig: () => ({ permission: { edit: { "*": "deny" } } }),
+  mergedGlobalConfig: () => ({ permission: { edit: { "*": "deny" } } }),
   workspaceConfig: () => ({ permission: {} }),
 }
 // A rule that another config scope supplies.
 const workspaceAllow = {
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: {} }),
+  mergedGlobalConfig: () => ({ permission: {} }),
   workspaceConfig: () => ({ permission: { edit: { "*": "allow" } } }),
 }
 // A workspace-supplied deny row, so the indicator's state wording is covered in
@@ -58,14 +61,25 @@ const workspaceAllow = {
 const workspaceDeny = {
   config: () => ({ permission: { edit: { "*": "deny" } } }),
   globalConfig: () => ({ permission: {} }),
+  mergedGlobalConfig: () => ({ permission: {} }),
   workspaceConfig: () => ({ permission: { edit: { "*": "deny" } } }),
 }
 // Both scopes save the same allow for the row.
 const bothAllow = {
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
+  mergedGlobalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
   workspaceConfig: () => ({ permission: { edit: { "*": "allow" } } }),
 }
+// The primary global file holds the row, and a broader entry of the same merged scope
+// holds the same action, so deleting the row cannot change the outcome.
+const broaderAllow = {
+  config: () => ({ permission: { edit: { "edit *": "allow" } } }),
+  globalConfig: () => ({ permission: { edit: { "edit *": "allow" } } }),
+  mergedGlobalConfig: () => ({ permission: { edit: { "*": "allow", "edit *": "allow" } } }),
+  workspaceConfig: () => ({ permission: {} }),
+}
+const broaderRequest: PermissionRequest = { ...request, always: ["edit *"] }
 
 type Mode =
   | "reject"
@@ -79,9 +93,10 @@ type Mode =
   | "workspace"
   | "both"
   | "workspaceDeny"
+  | "broader"
 type Call = { response: string; approved: string[]; denied: string[]; removed: string[]; feedback?: string }
 
-const cases: Array<{ mode: Mode; ctx: typeof savedAllow }> = [
+const cases: Array<{ mode: Mode; ctx: typeof savedAllow; request?: PermissionRequest }> = [
   { mode: "reject", ctx: savedAllow },
   { mode: "once", ctx: savedAllow },
   { mode: "approve", ctx: savedAllow },
@@ -93,9 +108,11 @@ const cases: Array<{ mode: Mode; ctx: typeof savedAllow }> = [
   { mode: "workspace", ctx: workspaceAllow },
   { mode: "both", ctx: bothAllow },
   { mode: "workspaceDeny", ctx: workspaceDeny },
+  { mode: "broader", ctx: broaderAllow, request: broaderRequest },
 ]
 
-for (const { mode, ctx } of cases) {
+for (const item of cases) {
+  const { mode, ctx } = item
   const root = document.createElement("div")
   document.body.append(root)
   const calls: Call[] = []
@@ -105,7 +122,7 @@ for (const { mode, ctx } of cases) {
         <LanguageContext.Provider value={language as never}>
           <ConfigContext.Provider value={ctx as never}>
             <PermissionDock
-              request={request}
+              request={item.request ?? request}
               responding={false}
               onDecide={(_id, response, approved, denied, removed, feedback) => {
                 calls.push({ response, approved, denied, removed, feedback })
@@ -131,11 +148,13 @@ for (const { mode, ctx } of cases) {
   const row = () => root.querySelector('[data-slot="permission-rule-row"]')
   try {
     // Removing a saved rule and answering without feedback are the plain paths.
-    const plain = ["once", "remove", "removeDenied", "undoDeny", "workspace", "both", "workspaceDeny"].includes(mode)
+    const plain = ["once", "remove", "removeDenied", "undoDeny", "workspace", "both", "workspaceDeny", "broader"].includes(
+      mode,
+    )
     const denied = mode === "removeDenied" || mode === "workspaceDeny"
     assert.equal(row()?.getAttribute("data-decision"), denied ? "denied" : "approved")
 
-    if (mode === "workspace" || mode === "both" || mode === "workspaceDeny") {
+    if (mode === "workspace" || mode === "both" || mode === "workspaceDeny" || mode === "broader") {
       // A rule another scope supplies, shown with a state indicator.
       assert.equal(row()?.getAttribute("data-source"), "config")
       assert.equal(root.querySelector('[aria-label="ui.permission.rule.removeFromAllowed"]'), null)

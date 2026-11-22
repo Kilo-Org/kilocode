@@ -1,4 +1,4 @@
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { Config, KiloClient } from "@kilocode/sdk/v2/client"
 import { configFeatures, serverFeatures } from "../features"
 import { retry } from "../services/cli-backend/retry"
 import type { ConfigTarget } from "./config-bindings"
@@ -23,6 +23,9 @@ export async function fetchSnapshot(client: Client, dir: string, settings: () =>
     config,
     globalConfig: global,
     targets: overlay?.targets as { global: ConfigTarget; project: ConfigTarget } | undefined,
+    // The overlay response carries the merged global scope as `global`; the config
+    // snapshot names the same data `mergedGlobal`.
+    mergedGlobal: (overlay?.global ?? global) as Config | undefined,
     workspaceConfig: overlay?.project,
     collections: overlay?.collections,
     settings: settings(),

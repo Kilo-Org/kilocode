@@ -186,6 +186,7 @@ describe("KiloProvider indexing refresh", () => {
     const payload = {
       config: snapshot.config,
       globalConfig: snapshot.targets!.global.raw,
+      mergedGlobalConfig: snapshot.mergedGlobal,
       projectConfig: snapshot.targets!.project.raw,
       workspaceConfig: snapshot.workspaceConfig,
       collections: snapshot.collections,

@@ -776,7 +776,10 @@ export interface SettingsConfigBinding {
 export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
+  /** Raw primary global config file — the file a settings write targets. */
   globalConfig?: Config
+  /** Merged global scope: every global config file combined. */
+  mergedGlobalConfig?: Config
   projectConfig?: Config
   /** Merged workspace scope from the overlay, every project file combined. */
   workspaceConfig?: Config
@@ -789,7 +792,10 @@ export interface ConfigLoadedMessage {
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
   config: Config
+  /** Raw primary global config file — the file a settings write targets. */
   globalConfig?: Config
+  /** Merged global scope: every global config file combined. */
+  mergedGlobalConfig?: Config
   projectConfig?: Config
   /** Merged workspace scope from the overlay, every project file combined. */
   workspaceConfig?: Config
@@ -805,7 +811,10 @@ export interface ConfigUpdateFailedMessage {
   details?: string
   completedScopes?: Array<"global" | "project">
   config?: Config
+  /** Raw primary global config file — the file a settings write targets. */
   globalConfig?: Config
+  /** Merged global scope: every global config file combined. */
+  mergedGlobalConfig?: Config
   projectConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
 }
