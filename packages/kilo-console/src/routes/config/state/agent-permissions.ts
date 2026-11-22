@@ -1,7 +1,33 @@
 import type { AgentPayload } from "../../../client"
+import { sorted } from "../../../shared/utils"
 import type { PermissionAction } from "./permissions"
 
 export type Permission = NonNullable<AgentPayload["permission"]>
+
+export function toPermission(input: unknown): Permission {
+  if (!Array.isArray(input)) return record(input) as Permission
+  const result: Record<string, Record<string, PermissionAction>> = {}
+  for (const entry of input) {
+    const rule = record(entry)
+    const tool = rule.permission
+    const action = rule.action
+    if (typeof tool !== "string" || !tool) continue
+    if (action !== "allow" && action !== "deny" && action !== "ask") continue
+    const pattern = string(rule.pattern) || "*"
+    const map = result[tool] ?? {}
+    map[pattern] = action
+    result[tool] = map
+  }
+  return result as Permission
+}
+
+export function split(input: unknown) {
+  const entries = Object.entries(toPermission(input))
+  return {
+    tools: sorted(entries.filter(([, value]) => value === "allow").map(([key]) => key)),
+    permission: Object.fromEntries(entries.filter(([, value]) => value !== "allow")) as Permission,
+  }
+}
 
 export function addRule(
   permission: Permission,
@@ -42,4 +68,9 @@ export function removeRule(permission: Permission, item: { tool: string; pattern
 function record(input: unknown): Record<string, unknown> {
   if (input && typeof input === "object" && !Array.isArray(input)) return input as Record<string, unknown>
   return {}
+}
+
+function string(input: unknown) {
+  if (typeof input === "string") return input
+  return ""
 }

@@ -1,7 +1,46 @@
 import { describe, expect, test } from "bun:test"
-import { addRule, removeRule } from "./agent-permissions"
+import { addRule, removeRule, split, toPermission } from "./agent-permissions"
+
+const catchAll = [
+  { permission: "bash", pattern: "*", action: "deny" },
+  { permission: "bash", pattern: "git *", action: "allow" },
+]
 
 describe("agent permission rule editing", () => {
+  test("keeps a catch-all deny and a pattern allow for one tool", () => {
+    const next = toPermission(catchAll)
+    expect(next).toEqual({ bash: { "*": "deny", "git *": "allow" } })
+    expect(JSON.stringify(next)).toBe('{"bash":{"*":"deny","git *":"allow"}}')
+  })
+
+  test("keeps a pattern deny and a later catch-all allow for one tool", () => {
+    const next = toPermission([
+      { permission: "bash", pattern: "git *", action: "deny" },
+      { permission: "bash", pattern: "*", action: "allow" },
+    ])
+    expect(next).toEqual({ bash: { "git *": "deny", "*": "allow" } })
+    expect(split(next)).toEqual({ tools: [], permission: { bash: { "git *": "deny", "*": "allow" } } })
+  })
+
+  test("survives a split and rebuild round trip without losing rules", () => {
+    const parts = split(catchAll)
+    expect(toPermission(parts.permission)).toEqual(toPermission(catchAll))
+    expect(JSON.stringify(toPermission(parts.permission))).toBe('{"bash":{"*":"deny","git *":"allow"}}')
+  })
+
+  test("keeps map input as it is", () => {
+    expect(split({ bash: "allow", edit: "deny" })).toEqual({ tools: ["bash"], permission: { edit: "deny" } })
+  })
+
+  test("skips unknown actions and entries without a tool", () => {
+    expect(
+      toPermission([
+        { permission: "bash", pattern: "p", action: "maybe" },
+        { pattern: "q", action: "allow" },
+      ]),
+    ).toEqual({})
+  })
+
   test("keeps a scalar default as the catch-all when a pattern is added", () => {
     const next = addRule({ bash: "deny" }, "bash", "git status", "allow")
     expect(next).toEqual({ bash: { "*": "deny", "git status": "allow" } })
