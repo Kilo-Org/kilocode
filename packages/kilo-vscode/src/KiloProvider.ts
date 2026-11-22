@@ -23,12 +23,7 @@ import { buildWebviewHtml, getWebviewFontSize, isCursorHost } from "./utils"
 import { saveImage } from "./kilo-provider/save-image"
 import { handleEditorAction } from "./kilo-provider/editor-actions"
 import { exportTranscript } from "./kilo-provider/export-transcript"
-import {
-  TelemetryProxy,
-  type TelemetryPropertiesProvider,
-  pushTelemetryState,
-  watchTelemetryState,
-} from "./services/telemetry"
+import { TelemetryProxy, type TelemetryPropertiesProvider, pushTelemetryState } from "./services/telemetry"
 import {
   sessionToWebview,
   indexProvidersById,
@@ -556,9 +551,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private autoApprovalReasonConfigDisposable: vscode.Disposable | null = null
   private pushFixesConfigDisposable: vscode.Disposable | null = null
   private shortcutHintsConfigDisposable: vscode.Disposable | null = null
+  private readonly telemetryDisposable: vscode.Disposable
   private workspaceFoldersDisposable: vscode.Disposable | null = null
   private shortcutContextDisposable: vscode.Disposable | null = null
-  private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
   private view: vscode.WebviewView | undefined
@@ -634,7 +629,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       this.postMessage({ type: "mcpRemovalState", name: event.name, removing: event.phase === "removing" })
     })
-    TelemetryProxy.getInstance().setProvider(this)
+    const telemetry = TelemetryProxy.getInstance()
+    telemetry.setProvider(this)
+    this.telemetryDisposable = telemetry.onChange(() => void this.syncTelemetryState())
     this.latch = watchRestore({
       focused: () => vscode.window.state.focused,
       onChange: (listener) => vscode.window.onDidChangeWindowState(listener),
@@ -743,8 +740,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.cachedProviderUsageMessage = null
     this.configBindings.clear()
     this.cachedConfigMessage = null
-    this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
+    this.resetProviders()
+    this.postDirectory(directory ?? "")
     this.postMessage({ type: "configBindingExpired", reason: "project-changed" })
+    void this.fetchAndSendProviders()
   }
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
@@ -771,7 +770,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       editorName: vscode.env.appName,
       vscodeVersion: vscode.version,
       machineId: vscode.env.machineId,
-      vscodeIsTelemetryEnabled: vscode.env.isTelemetryEnabled,
     }
   }
 
@@ -859,6 +857,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  private async syncTelemetryState(): Promise<void> {
+    if (!this.isWebviewReady) return
+    const webview = this.webview
+    const enabled = await TelemetryProxy.getInstance().level()
+    if (enabled !== null && this.isWebviewReady && this.webview === webview) {
+      pushTelemetryState((msg) => this.postMessage(msg), enabled)
+    }
+  }
+
   private async syncWebviewState(reason: string): Promise<void> {
     const serverInfo = this.connectionService.getServerInfo()
     console.log("[Kilo New] KiloProvider: 🔄 syncWebviewState()", {
@@ -876,7 +883,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Always push connection state first so the UI can render appropriately.
     this.postConnectionState()
-    pushTelemetryState((m) => this.postMessage(m))
 
     // Re-send ready so the webview can recover after refresh.
     if (serverInfo) {
@@ -890,6 +896,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
       })
     }
+
+    void this.syncTelemetryState()
 
     // Always attempt to fetch+push profile when connected.
     // Profile returns 401 when user isn't logged into Kilo Gateway — that's expected.
@@ -1126,12 +1134,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Retry failed workspace initialization against the newly selected project. */
   public async retryInitialization(): Promise<void> {
     const dir = this.settingsDirectory()
-    if (
-      this.cachedProvidersMessage &&
-      this.cachedConfigMessage &&
-      this.cachedProvidersDirectory === dir &&
-      this.cachedConfigDirectory === dir
-    )
+    if (this.retainedProviders() && this.cachedConfigMessage && sameDirectory(this.cachedConfigDirectory ?? "", dir))
       return
     await this.fetchAndSendConfig()
     await Promise.all([
@@ -1268,8 +1271,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.workspaceFoldersDisposable = vscode.workspace.onDidChangeWorkspaceFolders(() => this.sendWorkspaceScope())
     this.shortcutContextDisposable?.dispose()
     this.shortcutContextDisposable = watchShortcutContext(this.extensionContext, (msg) => this.postMessage(msg))
-    this.telemetryStateDisposable?.dispose()
-    this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
       if (this.acknowledge(message)) return
       const intercepted = await interceptMessage(message, {
@@ -1423,6 +1424,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.contextSessionID = undefined
           this.setCurrentSession(null)
           this.focusSession()
+          this.postDirectory()
           break
         case "loadMessages":
           // Don't await: allow parallel loads so rapid session switching
@@ -1454,16 +1456,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "logout":
           await handleLogout(this.authCtx)
           break
-        case "setOrganization":
+        case "setOrganization": {
+          const requestID =
+            typeof message.requestID === "string" && message.requestID.length > 0
+              ? message.requestID
+              : crypto.randomUUID()
           if (typeof message.organizationId === "string" || message.organizationId === null) {
-            await handleSetOrganization(this.authCtx, message.organizationId)
+            await handleSetOrganization(this.authCtx, message.organizationId, requestID)
+            break
           }
+          // A malformed id cannot be dispatched, but the caller still waits for its
+          // correlated outcome, so answer it rather than leaving the attempt pending.
+          // No message is attached, so the webview shows its localized failure copy.
+          this.postMessage({
+            type: "organizationSwitchResult",
+            requestID,
+            organizationId: null,
+            ok: false,
+            data: null,
+          })
           break
+        }
         case "openSettingsPanel":
           vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab, message.projectId)
-          break
-        case "openVSCodeSettings":
-          vscode.commands.executeCommand("workbench.action.openSettings", message.query)
           break
         case "openConfigFile":
           await openConfig(message.scope, message.labels, this.getProjectDirectory(this.currentSession?.id))
@@ -1567,6 +1582,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "toggleSandbox":
           await this.handleToggleSandbox(message)
           break
+        case "setTelemetryLevel": {
+          const enabled = await TelemetryProxy.getInstance().setLevel(message.enabled)
+          if (enabled === null) {
+            this.postMessage({ type: "telemetryLevelResult", ok: false })
+            break
+          }
+          this.postMessage({ type: "telemetryLevelResult", ok: true, enabled: message.enabled })
+          void this.fetchAndSendGlobalConfig()
+          break
+        }
         case "requestConfig":
           this.fetchAndSendConfig().catch((e) => console.error("[Kilo New] fetchAndSendConfig failed:", e))
           break
@@ -1656,7 +1681,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleRenameSession(message.sessionID, message.title)
           break
         case "updateSetting":
-          await this.handleUpdateSetting(message.key, message.value)
+          // The handler answers every write itself, so this only logs a failure it could not
+          // report; posting here too would answer a write twice.
+          this.handleUpdateSetting(message.key, message.value, message.writeId).catch((e) =>
+            console.error("[Kilo New] handleUpdateSetting failed:", e),
+          )
           break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
@@ -2864,7 +2893,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private invalidateProviders(): void {
     this.providersGeneration++
     this.cachedProvidersMessage = null
+    this.cachedProvidersDirectory = null
     this.postMessage({ type: "providersLoading" })
+  }
+
+  /**
+   * Drop the provider view for a different project. The rows describe one project's read, so the
+   * webview drops every row rather than only the gateway one.
+   */
+  private resetProviders(): void {
+    this.invalidateProviders()
+    // The saved keys are part of the project's own read, so only a project change replaces them.
+    this.storedProviderKeys = {}
+    this.postMessage({ type: "providersReset" })
   }
 
   /** Fetch providers and send to webview. Coalesced: at most one in-flight + one queued. */
@@ -2881,16 +2922,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.providersQueued = false
         const client = this.client
         if (!client) {
-          // Nothing was loaded, so remember to fetch once a client is available.
-          // The webview retries may already be spent by then.
-          if (!this.cachedProvidersMessage) this.providersRetry = true
-          if (this.cachedProvidersMessage && generation === this.providersGeneration)
-            this.postMessage(this.cachedProvidersMessage)
+          // Keep the provider view on the panel's project: replay only a payload loaded for
+          // that project, and mark the fetch to run once a client is available.
+          const retained = this.retainedProviders()
+          if (retained && generation === this.providersGeneration) this.postMessage(retained)
+          else this.providersRetry = true
           return
         }
         try {
+          // Read the provider view for the same directory that keys the retained payload, so a
+          // panel with an explicit project reads that project.
+          const dir = this.settingsDirectory()
           const { response, authMethods, authStates, storedKeys, organizationId, ready, unavailable } =
-            await fetchProviderData(client, this.getWorkspaceDirectory())
+            await fetchProviderData(client, dir)
           if (generation !== this.providersGeneration || client !== this.client) {
             if (!this.providersQueued) return
             generation = this.providersGeneration
@@ -2916,7 +2960,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             failures: response.failures,
           }
           this.cachedProvidersMessage = message
-          this.cachedProvidersDirectory = this.settingsDirectory()
+          this.cachedProvidersDirectory = dir
           this.providersRetry = false
           this.postMessage(message)
           this.catalogRetry.update(unavailable)
@@ -2926,8 +2970,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             generation = this.providersGeneration
             continue
           }
-          // A rejected fetch leaves nothing cached, so retry on the next connect.
-          if (!this.cachedProvidersMessage) this.providersRetry = true
+          // This project has no provider payload yet, so publish an explicit failure for it:
+          // the view reports the failure rather than a loading state. Either way the fetch runs
+          // again on the next connect.
+          this.providersRetry = true
+          if (!this.retainedProviders()) {
+            this.postMessage({
+              type: "providersLoaded",
+              providers: {},
+              connected: [],
+              defaults: {},
+              ready: false,
+              defaultSelection: computeDefaultSelection(null, "", ""),
+              authMethods: {},
+              authStates: {},
+              loadFailed: true,
+            })
+          }
           // Keep backing off while the last loaded Kilo catalog was unavailable.
           const last = this.cachedProvidersMessage as { kiloUnavailable?: boolean } | null
           this.catalogRetry.update(last?.kiloUnavailable === true)
@@ -2968,7 +3027,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.client,
       (m) => this.postMessage(m),
       getErrorMessage,
-      this.getWorkspaceDirectory(),
+      // Provider actions read and write the config of the project the panel shows.
+      this.settingsDirectory(),
       () => this.fetchAndSendProviders(),
     )
     const set = (m: unknown) => {
@@ -4501,6 +4561,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return this.projectDirectory ?? this.getRootDirectory()
   }
 
+  /** The retained provider payload, only while it was loaded for the panel's project. */
+  private retainedProviders(): unknown | null {
+    if (this.cachedProvidersMessage === null || this.cachedProvidersDirectory === null) return null
+    if (!sameDirectory(this.cachedProvidersDirectory, this.settingsDirectory())) return null
+    return this.cachedProvidersMessage
+  }
+
   private async handleAgentManagerSettingsMessage(
     message: TypedWebviewMessage & { projectId?: string; branch?: string; requestId?: string },
   ): Promise<boolean> {
@@ -5166,34 +5233,72 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Handle a generic setting update from the webview.
    */
-  private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
-    if (key === "maxCost") {
-      const normalized = this.setMaxCost(value)
-      await vscode.workspace
-        .getConfiguration("kilo-code.new")
-        .update("maxCost", normalized, vscode.ConfigurationTarget.Global)
-      for (const sid of this.trackedSessionIds) {
-        const oldLimit = this.activeAlerts.get(sid)
-        if (oldLimit !== undefined) {
-          this.activeAlerts.delete(sid)
-          this.postMessage({ type: "sessionCostAlertResolved", sessionID: sid, limit: oldLimit })
+  private async handleUpdateSetting(key: string, value: unknown, writeId?: string): Promise<void> {
+    // Every write answers with exactly one terminal message so the webview can
+    // reconcile optimistic state: `settingUpdated` for a stored write and
+    // `settingUpdateFailed` for an invalid value or a rejected write. A write id
+    // from the request comes back unchanged on that message, so a sender can
+    // tell which write it settles; a request without one yields no id.
+    const echo = writeId == null ? {} : { writeId }
+    try {
+      if (key === "maxCost") {
+        const config = vscode.workspace.getConfiguration("kilo-code.new")
+        // The runtime limit takes effect before the write so in-flight sessions
+        // see the new limit immediately. When the write does not commit, the limit is
+        // re-read from the stored setting, so a concurrent write that did commit is not
+        // overwritten by a value captured before it.
+        const normalized = this.setMaxCost(value)
+        try {
+          await config.update("maxCost", normalized, vscode.ConfigurationTarget.Global)
+        } catch (error) {
+          this.setMaxCost(config.get<number>("maxCost", 0))
+          throw error
         }
-        this.costs.rearm(sid)
-        this.requestCostAlert(sid, this.costs.sessionCost(sid))
+        // Re-apply the committed limit so an older write that rejects in between
+        // cannot leave the runtime limit on the value it restored.
+        this.setMaxCost(normalized)
+        for (const sid of this.trackedSessionIds) {
+          const oldLimit = this.activeAlerts.get(sid)
+          if (oldLimit !== undefined) {
+            this.activeAlerts.delete(sid)
+            this.postMessage({ type: "sessionCostAlertResolved", sessionID: sid, limit: oldLimit })
+          }
+          this.costs.rearm(sid)
+          this.requestCostAlert(sid, this.costs.sessionCost(sid))
+        }
+        this.postMessage({ type: "settingUpdated", key, value: normalized, ...echo })
+        return
       }
-      return
+      const { section, leaf } = buildSettingPath(key)
+      const invalid =
+        (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) ||
+        (section === "indexing" && !validIndexingSetting(leaf, value)) ||
+        (section === "chat" && !validChatSetting(leaf, value))
+      if (invalid) {
+        this.postMessage({
+          type: "settingUpdateFailed",
+          key,
+          message: `Invalid value for the ${key} setting.`,
+          ...echo,
+        })
+        return
+      }
+      const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
+      // Normalize a webview-side clear to `undefined` so VS Code removes the
+      // key from settings.json rather than persisting a literal `null`. This
+      // lets the runtime fall back to the resolved default.
+      const next = value === null ? undefined : value
+      await config.update(leaf, next, vscode.ConfigurationTarget.Global)
+      if (isWorkStyleSetting(key)) this.sendWorkStyle()
+      this.postMessage({ type: "settingUpdated", key, value: next, ...echo })
+    } catch (error) {
+      this.postMessage({
+        type: "settingUpdateFailed",
+        key,
+        message: getErrorMessage(error) || `Failed to update the ${key} setting.`,
+        ...echo,
+      })
     }
-    const { section, leaf } = buildSettingPath(key)
-    if (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) return
-    if (section === "indexing" && !validIndexingSetting(leaf, value)) return
-    if (section === "chat" && !validChatSetting(leaf, value)) return
-    const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
-    // Normalize a webview-side clear to `undefined` so VS Code removes the
-    // key from settings.json rather than persisting a literal `null`. This
-    // lets the runtime fall back to the resolved default.
-    const next = value === null ? undefined : value
-    await config.update(leaf, next, vscode.ConfigurationTarget.Global)
-    if (isWorkStyleSetting(key)) this.sendWorkStyle()
   }
 
   /**
@@ -5981,6 +6086,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  /** Tell the webview which directory the active prompt now resolves against. */
+  private postDirectory(directory = this.getWorkspaceDirectory()): void {
+    this.postMessage({ type: "workspaceDirectoryChanged", directory })
+  }
+
   private getWorkspaceDirectory(sessionId?: string): string {
     const routed = this.routeSessionDirectory(sessionId ?? undefined)
     // Ambiguous ids degrade to the legacy resolution instead of throwing: this
@@ -6354,9 +6464,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.autoApprovalReasonConfigDisposable?.dispose()
     this.pushFixesConfigDisposable?.dispose()
     this.shortcutHintsConfigDisposable?.dispose()
+    this.telemetryDisposable?.dispose()
     this.workspaceFoldersDisposable?.dispose()
     this.shortcutContextDisposable?.dispose()
-    this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()
     this.inputs.dispose()

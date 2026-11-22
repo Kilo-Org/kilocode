@@ -334,6 +334,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Читати завдання",
   "ui.permission.toolLabel.todoWrite": "Записати завдання",
   "ui.permission.toolLabel.codeSearch": "Пошук коду",
+  "ui.permission.toolLabel.browserOpen": "Вбудований браузер",
   "ui.permission.copyCommand": "Копіювати",
   "ui.approval.auto": "Схвалено автоматично",
   "ui.approval.manual": "Схвалено вами",
@@ -562,6 +563,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Отримати вміст з URL",
   "settings.permissions.tool.websearch.description": "Шукати в інтернеті",
   "settings.permissions.tool.codesearch.description": "Шукати код в інтернеті",
+  "settings.permissions.tool.browser_open.description": "Відкрити сторінку у вбудованому браузері",
   "settings.permissions.tool.external_directory.description": "Доступ до файлів поза директорією проєкту",
   "settings.permissions.tool.doom_loop.description":
     "Виявляти повторювані виклики інструментів з однаковими вхідними даними",
@@ -804,6 +806,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Немає провайдерів",
   "dialog.model.unavailable": "Моделі Kilo недоступні",
+  "dialog.model.loadFailed": "Не вдалося завантажити провайдерів для цього проєкту.",
 
   "prompt.placeholder.connecting": "Підключення до сервера...",
   "prompt.placeholder.default":
@@ -855,8 +858,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Телеметрія",
   "settings.aboutKiloCode.telemetry.description":
-    'Телеметрія керується вбудованим налаштуванням телеметрії VS Code. Щоб вимкнути її, перейдіть до Налаштування > Телеметрія > Рівень телеметрії та встановіть значення "off". Перезапустіть VS Code, щоб застосувати зміну.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Відкрити налаштування телеметрії",
+    "Скористайтеся цим перемикачем, щоб змінити налаштування телеметрії в Kilo. Якщо телеметрію вимкнено у VS Code або в середовищі виконання, вона залишиться вимкненою.",
+  "settings.aboutKiloCode.telemetry.toggle": "Увімкнути телеметрію",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Не вдалося оновити налаштування телеметрії",
 
   "settings.agentBehaviour.subtab.agents": "Агенти",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-сервери",
@@ -970,6 +974,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Історія промптів для кожної розмови",
   "settings.experimental.conversationPromptHistory.description":
     "Зберігати історію промптів (ArrowUp/ArrowDown) окремо для кожної розмови замість однієї спільної історії для всіх.",
+  "settings.experimental.agentManagerSplash.title": "Екран привітання Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Спробуйте нове знайомство з Agent Manager із прикладами робочих процесів. Застосовується відразу.",
   "settings.experimental.claudeMigration.title": "Міграція Claude Code",
   "settings.experimental.claudeMigration.description":
     "Одноразово імпортуйте підтримувані глобальні інструкції CLAUDE.md, прості навички та вимкнені визначення MCP. Оригінальні файли Claude не змінюються; після ввімкнення перезапустіть бекенд.",
@@ -1140,6 +1147,8 @@ export const dict = {
     "Керувати списком завдань. Дозволяє читання та оновлення внутрішнього списку завдань.",
   "settings.autoApprove.tool.webfetch": "Отримати URL. Дозволяє отримання вмісту з вказаного URL.",
   "settings.autoApprove.tool.websearch": "Шукати в інтернеті. Дозволяє зовнішній веб-пошук.",
+  "settings.autoApprove.tool.browser_open":
+    "Відкривати сторінки у вбудованому браузері. Це вбудований перегляд, а не автоматизація Playwright.",
   "settings.autoApprove.tool.doom_loop":
     "Запобігати повторюваним діям. Спрацьовує, коли той самий виклик інструменту повторюється з однаковими вхідними даними.",
 
@@ -1386,6 +1395,8 @@ export const dict = {
   "settings.saveBar.cancel": "Скасувати",
   "settings.saveBar.saving": "Збереження…",
   "settings.saveBar.saveFailed": "Не вдалося зберегти налаштування",
+  "settings.saveBar.dismissError": "Закрити",
+  "settings.saveBar.unconfirmedWrite": "Хост розширення не підтвердив «{{name}}».",
   "notifications.action.next": "Далі",
   "notifications.action.close": "Закрити",
   "notifications.action.tryModel": "Спробувати {{model}}",
@@ -1396,6 +1407,8 @@ export const dict = {
   "settings.indexing.kiloSignIn.description": "Увійдіть у Kilo, щоб використовувати hosted embeddings.",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Перемикання акаунту…",
+  "profile.unavailableAccount": "Недоступний акаунт",
+  "profile.switchFailed": "Не вдалося підтвердити перемикання акаунта.",
   "settings.agentBehaviour.createMode": "Створити новий режим",
   "settings.agentBehaviour.createMode.button": "Створити",
   "settings.agentBehaviour.createMode.cancel": "Скасувати",

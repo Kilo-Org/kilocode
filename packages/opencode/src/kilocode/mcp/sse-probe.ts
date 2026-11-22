@@ -10,10 +10,17 @@
  * The spec already answers "this endpoint has no stream" with `405`, and the SDK returns from the
  * probe cleanly on it, so normalize the response instead of patching the SDK.
  *
- * Normalization is scoped to the optional stream request only: a GET to the MCP endpoint with an
- * SSE `Accept` header. The same fetch wrapper also serves OAuth discovery, registration, and token
- * requests, and rewriting any of those would break authentication. When [endpoint] is omitted the
- * method and Accept checks still apply, which keeps the wrapper safe for other callers.
+ * Normalization is scoped to the optional stream request only: a GET with an SSE `Accept` header to
+ * the MCP endpoint, or to a same-origin redirect target of that request. The SDK follows those
+ * redirects itself and calls this wrapper again with the target, so each target is recorded from the
+ * endpoint's redirect response and consumed by the hop that uses it.
+ *
+ * The URL check is what keeps everything else out. The same fetch wrapper also serves OAuth
+ * discovery, registration, and token requests, and rewriting any of those would break
+ * authentication. The `Accept` header cannot tell them apart: the SDK merges user-configured MCP
+ * headers into discovery requests, so an `Accept: application/json, text/event-stream` header
+ * reaches discovery too, and resource metadata may live at any same-origin path. When [endpoint] is
+ * omitted the method and Accept checks still apply, which keeps the wrapper safe for other callers.
  */
 
 type Request = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -37,12 +44,23 @@ function acceptsEventStream(init: RequestInit | undefined, request: RequestInfo 
 }
 
 export const probe = (base: Request = fetch, endpoint?: string) => {
+  // Same-origin redirect targets of the stream request, each consumed by the hop that follows it.
+  const hops = new Set<string>()
   return async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = requestUrl(input)
+    const hop = hops.delete(url)
     const response = await base(input, init)
-    if (endpoint && requestUrl(input) !== endpoint) return response
+    if (endpoint && url !== endpoint && !hop) return response
     const method = init?.method ?? (input instanceof Request ? input.method : "GET")
-    if (method !== "GET" || !response.ok) return response
+    if (method !== "GET") return response
     if (!acceptsEventStream(init, input)) return response
+    if (endpoint && response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location")
+      const target = location && URL.canParse(location, url) ? new URL(location, url) : undefined
+      if (target && target.origin === new URL(url).origin) hops.add(target.href)
+      return response
+    }
+    if (!response.ok) return response
     const type = response.headers.get("content-type")?.toLowerCase()
     if (!type || type.includes("text/event-stream")) return response
     await response.body?.cancel()

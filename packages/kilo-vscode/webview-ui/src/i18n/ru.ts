@@ -330,6 +330,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Чтение списка задач",
   "ui.permission.toolLabel.todoWrite": "Запись списка задач",
   "ui.permission.toolLabel.codeSearch": "Поиск кода",
+  "ui.permission.toolLabel.browserOpen": "Встроенный браузер",
   "ui.permission.copyCommand": "Копировать",
   "ui.approval.auto": "Одобрено автоматически",
   "ui.approval.manual": "Одобрено вами",
@@ -608,6 +609,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Получить содержимое по URL",
   "settings.permissions.tool.websearch.description": "Поиск в интернете",
   "settings.permissions.tool.codesearch.description": "Поиск кода в интернете",
+  "settings.permissions.tool.browser_open.description": "Открыть страницу во встроенном браузере",
   "settings.permissions.tool.external_directory.description": "Доступ к файлам вне директории проекта",
   "settings.permissions.tool.doom_loop.description": "Обнаружение повторных вызовов инструментов с одинаковым вводом",
 
@@ -814,6 +816,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Нет провайдеров",
   "dialog.model.unavailable": "Модели Kilo недоступны",
+  "dialog.model.loadFailed": "Не удалось загрузить провайдеров для этого проекта.",
 
   "prompt.placeholder.connecting": "Подключение к серверу...",
   "prompt.placeholder.error": "Не удалось подключиться. Проверьте панель вывода или перезапустите расширение.",
@@ -864,8 +867,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Телеметрия",
   "settings.aboutKiloCode.telemetry.description":
-    'Телеметрия управляется встроенной настройкой телеметрии VS Code. Чтобы отключить её, перейдите в Настройки > Телеметрия > Уровень телеметрии и установите значение "off". Перезапустите VS Code, чтобы применить изменение.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Открыть настройки телеметрии",
+    "Используйте этот переключатель, чтобы изменить настройку телеметрии в Kilo. Если телеметрия отключена в VS Code или в среде выполнения, она останется отключённой.",
+  "settings.aboutKiloCode.telemetry.toggle": "Включить телеметрию",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Не удалось обновить настройку телеметрии",
 
   "settings.agentBehaviour.subtab.agents": "Агенты",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-серверы",
@@ -975,6 +979,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "История промптов для каждого разговора",
   "settings.experimental.conversationPromptHistory.description":
     "Хранить историю промптов (ArrowUp/ArrowDown) отдельно для каждого разговора вместо одной общей истории для всех.",
+  "settings.experimental.agentManagerSplash.title": "Экран приветствия Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Попробуйте новое знакомство с Agent Manager с примерами рабочих процессов. Применяется сразу.",
   "settings.experimental.claudeMigration.title": "Миграция Claude Code",
   "settings.experimental.claudeMigration.description":
     "Однократно импортируйте поддерживаемые глобальные инструкции CLAUDE.md, простые навыки и отключённые определения MCP. Исходные файлы Claude не изменяются; после включения перезапустите backend.",
@@ -1181,6 +1188,8 @@ export const dict = {
   "settings.autoApprove.tool.webfetch": "Получение URL. Разрешает извлечение содержимого по указанному URL-адресу.",
   "settings.autoApprove.tool.websearch":
     "Поиск в интернете. Разрешает выполнение внешних поисковых запросов в интернете.",
+  "settings.autoApprove.tool.browser_open":
+    "Открывать страницы во встроенном браузере. Это встроенный предпросмотр, а не автоматизация Playwright.",
   "settings.autoApprove.tool.external_directory":
     "Доступ к файлам вне рабочей области. Срабатывает при доступе к файлам за пределами текущего каталога проекта.",
   "settings.autoApprove.tool.doom_loop":
@@ -1327,6 +1336,8 @@ export const dict = {
   "dialog.model.notSet": "Не задано",
   "profile.personalAccount": "Личный аккаунт",
   "profile.switchingAccount": "Переключение аккаунта…",
+  "profile.unavailableAccount": "Недоступный аккаунт",
+  "profile.switchFailed": "Не удалось подтвердить переключение аккаунта.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ru.ts
 
   "question.summary": "{{n}} из {{total}} вопросов",
@@ -1411,6 +1422,8 @@ export const dict = {
   "settings.saveBar.cancel": "Отмена",
   "settings.saveBar.saving": "Сохранение…",
   "settings.saveBar.saveFailed": "Не удалось сохранить настройки",
+  "settings.saveBar.dismissError": "Закрыть",
+  "settings.saveBar.unconfirmedWrite": "Хост расширения не подтвердил «{{name}}».",
   "notifications.action.next": "Далее",
   "notifications.action.close": "Закрыть",
   "notifications.action.tryModel": "Попробовать {{model}}",

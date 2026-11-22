@@ -232,7 +232,7 @@ Only **Owners** can modify model access controls. Individual members cannot over
 
 All organization members draw from a single shared credit balance. Administrators can configure:
 
-- **Auto top-up:** Automatically replenish credits when the balance drops below a threshold (minimum $50 balance, minimum $100 purchase)
+- **Auto top-up:** Replenish credits when usage or a requested credit-funded service triggers a top-up below the threshold (minimum $50 balance, minimum $100 purchase). Expiration and balance viewing alone never trigger a charge
 - **Minimum balance alerts:** Email notifications when the balance drops below a configured amount
 
 **Where to configure:** Dashboard → Billing.

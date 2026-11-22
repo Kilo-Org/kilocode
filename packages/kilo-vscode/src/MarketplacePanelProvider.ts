@@ -344,6 +344,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       this.project ?? undefined,
       this.directory(),
     )
+    // The CLI reports `Marketplace Item Installed`/`Removed` for every client; sending them here would double count.
     if (result.success) void vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
     if (result.success && item.type === "mcp") {
       mcpRemoval(this.connection).emit({ directory: this.directory(), name: item.id, phase: "installed" })

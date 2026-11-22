@@ -46,10 +46,11 @@ internal class PromptRailController(
     parent: Disposable,
     timers: UiTimerSource = UiTimers,
     /**
-     * Marks the prompt a navigator jump landed on, with the same cue the header timeline draws for a
-     * step. Called only when the prompt exists and the jump can target it.
+     * Marks the prompt or question part a navigator jump landed on, with the same cue the header
+     * timeline draws for a step. Called only when the target exists and the jump can reach it.
      */
     private val onReveal: (String) -> Unit = {},
+    private val onRevealPart: (String, String) -> Unit = { _, _ -> },
 ) : Disposable {
     val rail = PromptRail()
     private val popup = SidePopupController(timers, SessionUiStyle.PromptRail.OPEN_MS)
@@ -174,12 +175,7 @@ internal class PromptRailController(
     @RequiresEdt
     private fun rebuild() {
         val items = PromptRailItems.items(model, cache)
-        val capacity = PromptRailItems.capacity(
-            scroll.component.viewport.height,
-            JBUI.scale(SessionUiStyle.PromptRail.STEP_MIN),
-            JBUI.scale(SessionUiStyle.PromptRail.RAIL_INSET) / 2,
-        )
-        val entries = PromptRailItems.entries(items, capacity)
+        val entries = PromptRailItems.entries(items, capacity())
         val stale = body != null && rail.items() != items
         rail.update(items, entries, activeIndex(items))
         rail.setAvailable(scroll.view === messages)
@@ -190,16 +186,25 @@ internal class PromptRailController(
         relayout()
     }
 
+    private fun capacity() = PromptRailItems.capacity(
+        scroll.component.viewport.height,
+        JBUI.scale(SessionUiStyle.PromptRail.STEP_MIN),
+        JBUI.scale(SessionUiStyle.PromptRail.RAIL_INSET) / 2,
+    )
+
     @RequiresEdt
     private fun recomputeActive() {
         rail.setAvailable(scroll.view === messages)
-        if (rail.items().isEmpty()) return
-        rail.update(rail.items(), rail.entries(), activeIndex(rail.items()))
+        val items = rail.items()
+        if (items.isEmpty()) return
+        // The viewport height decides how many ticks fit, so a scroll or resize can change which tick
+        // stands in for the prompts. Recompute both rather than only the active index.
+        rail.update(items, PromptRailItems.entries(items, capacity()), activeIndex(items))
     }
 
     private fun activeIndex(items: List<PromptRailItem>): Int? {
         if (items.isEmpty()) return null
-        val tops = items.map { top(it.id) }
+        val tops = items.map(::top)
         val vp = scroll.component.viewport
         val bar = scroll.bar
         val scrollable = bar.maximum > bar.visibleAmount
@@ -207,9 +212,12 @@ internal class PromptRailController(
         return PromptRailItems.active(tops, vp.viewPosition.y, scrollable, atTop)
     }
 
-    private fun top(id: String): Int {
-        val turn = messages.findTurn(id) ?: return 0
-        return SwingUtilities.convertPoint(turn, Point(0, 0), messages).y
+    private fun top(item: PromptRailItem): Int {
+        val part = item.message?.let { message ->
+            item.part?.let { messages.findPart(message, it) }
+        }
+        val target = part ?: messages.findTurn(item.turn ?: item.id) ?: return 0
+        return SwingUtilities.convertPoint(target, Point(0, 0), messages).y
     }
 
     @RequiresEdt
@@ -220,7 +228,7 @@ internal class PromptRailController(
 
     private fun select(entry: PromptRailEntry) {
         when (entry) {
-            is PromptRailEntry.Prompt -> jump(rail.items().getOrNull(entry.index)?.id)
+            is PromptRailEntry.Prompt -> jump(rail.items().getOrNull(entry.index))
             // The overflow tick stands in for prompts with no tick of their own, so its only action is
             // revealing them in the list — without waiting out the hover dwell.
             is PromptRailEntry.Overflow -> {
@@ -235,9 +243,16 @@ internal class PromptRailController(
         }
     }
 
-    private fun jump(id: String?) {
-        if (id == null) return
-        if (scroll.scrollMessageTop(id)) onReveal(id)
+    private fun jump(item: PromptRailItem?) {
+        if (item == null) return
+        val message = item.message
+        val part = item.part
+        if (message != null && part != null) {
+            messages.expandPart(message, part)
+            if (scroll.scrollPartPinned(message, part)) onRevealPart(message, part)
+            return
+        }
+        if (scroll.scrollMessageTop(item.id)) onReveal(item.id)
     }
 
     /**
@@ -254,7 +269,7 @@ internal class PromptRailController(
         pending = index
         rail.setOpen(tick(index))
         body?.select(index, scroll)
-        jump(item.id)
+        jump(item)
     }
 
     /** Tick showing the prompt at [item], or -1 when that prompt sits behind the overflow tick. */

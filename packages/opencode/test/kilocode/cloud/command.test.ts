@@ -3,7 +3,14 @@ import { expect } from "bun:test"
 import { Agent } from "@/agent/agent"
 import { Auth } from "@/auth"
 import { Config } from "@/config/config"
-import type { AgentSendRequest, AgentStartRequest, MessageResult } from "@/kilocode/cloud/contracts"
+import {
+  AgentSendRequestSchema,
+  AgentStartRequestSchema,
+  GetMessageResultInputSchema,
+  type AgentSendRequest,
+  type AgentStartRequest,
+  type MessageResult,
+} from "@/kilocode/cloud/contracts"
 import { CloudCommands } from "@/kilocode/cloud/commands"
 import { CloudError } from "@/kilocode/cloud/errors"
 import { Git } from "@/git"
@@ -14,7 +21,12 @@ import { testEffect } from "../../lib/effect"
 const SESSION = "agent_12345678-1234-1234-1234-123456789abc"
 const MESSAGE = "msg_018f1e2d3c4bAbCdEfGhIjKlMn"
 const TOKEN = "command-test-token"
+const CONTROL = "command-test-control-token"
 const ORG = "11111111-1111-4111-8111-111111111111"
+
+function control() {
+  return Response.json({ token: CONTROL, expiresAt: new Date(Date.now() + 600_000).toISOString() })
+}
 
 const auth = Layer.mock(Auth.Service)({
   get: (id) =>
@@ -31,7 +43,14 @@ const auth = Layer.mock(Auth.Service)({
     ),
 })
 
-const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Agent.node), AppNodeBuilder.build(Config.node), AppNodeBuilder.build(Git.node), auth))
+const it = testEffect(
+  Layer.mergeAll(
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(Config.node),
+    AppNodeBuilder.build(Git.node),
+    auth,
+  ),
+)
 
 const run = Effect.fn("CloudCommandTest.git")(function* (cwd: string, ...args: string[]) {
   const git = yield* Git.Service
@@ -50,6 +69,7 @@ it.instance(
           port: 0,
           fetch(request) {
             const url = new URL(request.url)
+            if (url.pathname === "/api/cloud-agent-next/token") return control()
             if (url.pathname.endsWith("/models")) {
               return Response.json({ data: [{ id: "anthropic/command-model", supported_parameters: ["tools"] }] })
             }
@@ -81,7 +101,7 @@ it.instance(
               prompt: "Inspect the current repository",
             },
             {
-              env: { KILO_API_URL: server.url.origin },
+              env: { KILO_API_URL: server.url.origin, KILO_WEB_APP_URL: server.url.origin },
               make: (options) => {
                 keys.push(options.apiKey)
                 return {
@@ -102,7 +122,7 @@ it.instance(
           )
 
           expect(result).toEqual(response)
-          expect(keys).toEqual([TOKEN])
+          expect(keys).toEqual([CONTROL])
           expect(requests).toHaveLength(1)
           expect(requests[0]).toEqual({
             message: { prompt: "Inspect the current repository" },
@@ -137,6 +157,7 @@ it.instance(
           port: 0,
           fetch(request) {
             const url = new URL(request.url)
+            if (url.pathname === "/api/cloud-agent-next/token") return control()
             if (url.pathname.endsWith("/models")) {
               return Response.json({ data: [{ id: "anthropic/command-model", supported_parameters: ["tools"] }] })
             }
@@ -169,7 +190,7 @@ it.instance(
               stream: true,
             },
             {
-              env: { KILO_API_URL: server.url.origin },
+              env: { KILO_API_URL: server.url.origin, KILO_WEB_APP_URL: server.url.origin },
               make: () => ({
                 async start() {
                   return response
@@ -226,6 +247,7 @@ it.instance(
           port: 0,
           fetch(request) {
             const url = new URL(request.url)
+            if (url.pathname === "/api/cloud-agent-next/token") return control()
             if (url.pathname.endsWith("/models")) {
               return Response.json({ data: [{ id: "anthropic/command-model", supported_parameters: ["tools"] }] })
             }
@@ -258,7 +280,7 @@ it.instance(
               stream: true,
             },
             {
-              env: { KILO_API_URL: server.url.origin },
+              env: { KILO_API_URL: server.url.origin, KILO_WEB_APP_URL: server.url.origin },
               make: () => ({
                 async start() {
                   return response
@@ -309,6 +331,7 @@ it.instance(
           port: 0,
           fetch(request) {
             const url = new URL(request.url)
+            if (url.pathname === "/api/cloud-agent-next/token") return control()
             if (url.pathname.endsWith("/models")) {
               return Response.json({ data: [{ id: "anthropic/command-model", supported_parameters: ["tools"] }] })
             }
@@ -338,7 +361,7 @@ it.instance(
               stream: true,
             },
             {
-              env: { KILO_API_URL: server.url.origin },
+              env: { KILO_API_URL: server.url.origin, KILO_WEB_APP_URL: server.url.origin },
               make: () => ({
                 async start() {
                   return response
@@ -389,6 +412,7 @@ it.instance(
           port: 0,
           fetch(request) {
             const url = new URL(request.url)
+            if (url.pathname === "/api/cloud-agent-next/token") return control()
             if (url.pathname.endsWith("/models")) {
               return Response.json({ data: [{ id: "anthropic/command-model", supported_parameters: ["tools"] }] })
             }
@@ -419,7 +443,7 @@ it.instance(
               stream: true,
             },
             {
-              env: { KILO_API_URL: server.url.origin },
+              env: { KILO_API_URL: server.url.origin, KILO_WEB_APP_URL: server.url.origin },
               make: () => ({
                 async start() {
                   return response
@@ -457,6 +481,10 @@ it.instance(
 
 it.instance("sends follow-ups, prints status without assistant content, and applies the result exit code", () =>
   Effect.gen(function* () {
+    const server = yield* Effect.acquireRelease(
+      Effect.sync(() => Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: control })),
+      (server) => Effect.promise(() => server.stop(true)),
+    )
     const output: string[] = []
     const exits: number[] = []
     const sends: AgentSendRequest[] = []
@@ -486,7 +514,7 @@ it.instance("sends follow-ups, prints status without assistant content, and appl
       },
     ]
     const deps = {
-      env: { KILO_ORG_ID: "not-relevant-to-existing-sessions" },
+      env: { KILO_ORG_ID: "not-relevant-to-existing-sessions", KILO_WEB_APP_URL: server.url.origin },
       make: () => ({
         async start() {
           throw new Error("unused start")
@@ -537,5 +565,111 @@ it.instance("sends follow-ups, prints status without assistant content, and appl
     expect(error.message).toBe(
       "Cloud Agent send was admitted but output could not be written; do not retry automatically",
     )
+  }),
+)
+
+it.instance("exchanges credentials before cloud commands and never sends source credentials to the worker", () =>
+  Effect.gen(function* () {
+    const calls: { path: string; auth: string | null; org: string | null; body: string }[] = []
+    const output: string[] = []
+    let status = 200
+    const server = yield* Effect.acquireRelease(
+      Effect.sync(() =>
+        Bun.serve({
+          hostname: "127.0.0.1",
+          port: 0,
+          async fetch(request) {
+            const url = new URL(request.url)
+            if (url.pathname.endsWith("/models")) {
+              return Response.json({ data: [{ id: "anthropic/command-model", supported_parameters: ["tools"] }] })
+            }
+            if (url.pathname.endsWith("/defaults")) {
+              return Response.json({ defaultModel: "anthropic/command-model" })
+            }
+            const body = request.method === "POST" ? await request.text() : ""
+            calls.push({
+              path: url.pathname,
+              auth: request.headers.get("authorization"),
+              org: request.headers.get("x-kilocode-organizationid"),
+              body,
+            })
+            if (url.pathname === "/api/cloud-agent-next/token") {
+              if (status !== 200) return Response.json({ error: TOKEN }, { status })
+              return control()
+            }
+            if (request.headers.get("authorization") !== `Bearer ${CONTROL}`) {
+              return new Response(null, { status: 400 })
+            }
+            const input =
+              url.pathname === "/trpc/getMessageResult"
+                ? GetMessageResultInputSchema.parse(JSON.parse(url.searchParams.get("input") ?? "null"))
+                : undefined
+            const id = input
+              ? input.messageId
+              : url.pathname === "/trpc/start"
+                ? AgentStartRequestSchema.parse(JSON.parse(body)).message.id
+                : AgentSendRequestSchema.parse(JSON.parse(body)).message.id
+            return Response.json({
+              result: {
+                data: {
+                  cloudAgentSessionId: SESSION,
+                  kiloSessionId: "ses_command_test",
+                  messageId: id,
+                  delivery: "queued",
+                  status: input ? "completed" : "started",
+                  createdAt: 1,
+                  terminalAt: 2,
+                  streamUrl: "/stream?ticket=test",
+                },
+              },
+            })
+          },
+        }),
+      ),
+      (server) => Effect.promise(() => server.stop(true)),
+    )
+    const deps = {
+      env: {
+        KILO_API_URL: server.url.origin,
+        KILO_WEB_APP_URL: server.url.origin,
+        CLOUD_AGENT_NEXT_BASE_URL: server.url.origin,
+      },
+      write: (text: string) => output.push(text),
+      exit: () => undefined,
+    }
+    const start = { prompt: "Inspect the repository", repo: "Kilo-Org/kilocode", mode: "code", orgID: ORG }
+    const result = yield* CloudCommands.start(start, deps)
+    yield* CloudCommands.send({ sessionID: SESSION, prompt: "Continue" }, deps)
+    yield* CloudCommands.status({ sessionID: SESSION, messageID: result.messageId }, deps)
+    yield* CloudCommands.result({ sessionID: SESSION, messageID: result.messageId }, deps)
+
+    const issued = calls.filter((call) => call.path === "/api/cloud-agent-next/token")
+    const worker = calls.filter((call) => call.path.startsWith("/trpc/"))
+    expect(issued).toHaveLength(4)
+    expect(issued.every((call) => call.auth === `Bearer ${TOKEN}`)).toBe(true)
+    expect(issued.at(0)).toMatchObject({ org: ORG, body: JSON.stringify({ organizationId: ORG }) })
+    expect(issued.slice(1).every((call) => call.org === null && call.body === "{}")).toBe(true)
+    expect(worker.map((call) => call.path)).toEqual([
+      "/trpc/start",
+      "/trpc/send",
+      "/trpc/getMessageResult",
+      "/trpc/getMessageResult",
+    ])
+    expect(worker.every((call) => call.auth === `Bearer ${CONTROL}` && !call.body.includes(TOKEN))).toBe(true)
+    expect(output.join("")).not.toContain(TOKEN)
+    expect(output.join("")).not.toContain(CONTROL)
+
+    for (const code of [401, 503]) {
+      status = code
+      const error = yield* CloudCommands.start(start, deps).pipe(Effect.flip)
+      expect(error.message).toBe(
+        code === 401
+          ? "Kilo Cloud denied the control token request"
+          : "Kilo Cloud token issuance is temporarily unavailable",
+      )
+      expect(error.message).not.toContain(TOKEN)
+    }
+    expect(calls.filter((call) => call.path === "/api/cloud-agent-next/token")).toHaveLength(6)
+    expect(calls.filter((call) => call.path.startsWith("/trpc/"))).toHaveLength(4)
   }),
 )

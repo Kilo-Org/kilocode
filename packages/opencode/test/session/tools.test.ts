@@ -191,7 +191,7 @@ it.effect("preserves running tool start time across metadata updates", () =>
       model,
       session: sessionInfo, // kilocode_change - shared with the Session.Service mock
       processor,
-      bypassAgentCheck: false,
+      namedAgentTypes: [], // kilocode_change
       messages: [],
       promptOps: {} as never,
       memoryCache: {}, // kilocode_change - required by Kilo's resolve signature

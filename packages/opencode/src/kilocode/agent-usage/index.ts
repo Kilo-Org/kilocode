@@ -74,6 +74,30 @@ export namespace AgentUsage {
     agent?: string
     from?: number
     to?: number
+    /** Maximum number of runs to return. Only `runs` pages; `summary` ignores it. */
+    limit?: number
+    /** Return runs strictly older than this key in `(startedAt, id)` order. */
+    cursor?: Cursor
+  }
+
+  const Cursor = Schema.Struct({
+    startedAt: NonNegativeInt,
+    id: MessageID,
+  })
+
+  export type Cursor = typeof Cursor.Type
+
+  const decodeCursor = Schema.decodeUnknownSync(Cursor)
+
+  /** Opaque `(startedAt, id)` paging token. Decoding throws on malformed input. */
+  export const cursor = {
+    encode(input: Cursor) {
+      // Project the key so callers can pass a full run without leaking extra fields into the token.
+      return Buffer.from(JSON.stringify({ startedAt: input.startedAt, id: input.id })).toString("base64url")
+    },
+    decode(input: string) {
+      return decodeCursor(JSON.parse(Buffer.from(input, "base64url").toString("utf8")))
+    },
   }
 
   type Row = {
@@ -113,11 +137,15 @@ export namespace AgentUsage {
     lastRunAt: number
   }
 
-  const where = (filter: Filter) => {
+  const where = (filter: Filter, pageable: boolean) => {
     const conditions: SQL[] = []
     if (filter.agent !== undefined) conditions.push(sql`runs.agent = ${filter.agent}`)
     if (filter.from !== undefined) conditions.push(sql`runs.startedAt >= ${filter.from}`)
     if (filter.to !== undefined) conditions.push(sql`runs.startedAt <= ${filter.to}`)
+    if (pageable && filter.cursor !== undefined)
+      conditions.push(
+        sql`(runs.startedAt < ${filter.cursor.startedAt} OR (runs.startedAt = ${filter.cursor.startedAt} AND runs.id < ${filter.cursor.id}))`,
+      )
     return conditions.length ? sql` WHERE ${sql.join(conditions, sql` AND `)}` : sql``
   }
 
@@ -287,9 +315,10 @@ export namespace AgentUsage {
       runs.read AS read,
       runs.write AS write,
       runs.outcome AS outcome
-    FROM runs${where(filter)}
-    ORDER BY runs.startedAt DESC, runs.id DESC`
+    FROM runs${where(filter, true)}
+    ORDER BY runs.startedAt DESC, runs.id DESC${filter.limit !== undefined ? sql` LIMIT ${filter.limit}` : sql``}`
 
+  // `summarySql` folds every matching run, so it deliberately ignores `limit`/`cursor`.
   const summarySql = (projectID: ProjectV2.ID, filter: Filter) => sql`
     ${cte(projectID)}
     SELECT
@@ -305,7 +334,7 @@ export namespace AgentUsage {
       sum(runs.write) AS write,
       sum(CASE WHEN runs.outcome = 'errored' THEN 1 ELSE 0 END) AS errors,
       max(runs.startedAt) AS lastRunAt
-    FROM runs${where(filter)}
+    FROM runs${where(filter, false)}
     GROUP BY runs.agent
     ORDER BY runs.agent`
 

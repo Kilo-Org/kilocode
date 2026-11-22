@@ -324,6 +324,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "قراءة المهام",
   "ui.permission.toolLabel.todoWrite": "كتابة المهام",
   "ui.permission.toolLabel.codeSearch": "بحث الكود",
+  "ui.permission.toolLabel.browserOpen": "المتصفح المدمج",
   "ui.permission.copyCommand": "نسخ",
   "ui.approval.auto": "تمت الموافقة تلقائيًا",
   "ui.approval.manual": "تمت الموافقة من قبلك",
@@ -558,6 +559,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "جلب محتوى من عنوان URL",
   "settings.permissions.tool.websearch.description": "البحث في الويب",
   "settings.permissions.tool.codesearch.description": "البحث عن كود على الويب",
+  "settings.permissions.tool.browser_open.description": "فتح صفحة في المتصفح المدمج",
   "settings.permissions.tool.external_directory.description": "الوصول إلى الملفات خارج دليل المشروع",
   "settings.permissions.tool.doom_loop.description": "اكتشاف استدعاءات الأدوات المتكررة بمدخلات متطابقة",
 
@@ -799,6 +801,7 @@ export const dict = {
 
   "dialog.model.noProviders": "لا يوجد موفرون",
   "dialog.model.unavailable": "نماذج Kilo غير متاحة",
+  "dialog.model.loadFailed": "تعذّر تحميل الموفرين لهذا المشروع.",
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
   "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",
@@ -846,8 +849,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":
-    'يتم التحكم في Telemetry بواسطة إعداد Telemetry المدمج في VS Code. لتعطيله، انتقل إلى الإعدادات > Telemetry > Telemetry Level واضبطه على "off". أعد تشغيل VS Code لتطبيق التغيير.',
-  "settings.aboutKiloCode.telemetry.openSettings": "فتح إعدادات Telemetry",
+    "استخدم هذا المفتاح لتغيير إعداد القياس عن بُعد في Kilo. يظل القياس عن بُعد معطّلًا إذا عطّله VS Code أو عطّلته بيئة التشغيل.",
+  "settings.aboutKiloCode.telemetry.toggle": "تفعيل القياس عن بُعد",
+  "settings.aboutKiloCode.telemetry.saveFailed": "تعذّر تحديث إعداد القياس عن بُعد",
 
   "settings.agentBehaviour.subtab.agents": "الوكلاء",
   "settings.agentBehaviour.subtab.mcpServers": "خوادم MCP",
@@ -954,6 +958,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "سجل مطالبات لكل محادثة",
   "settings.experimental.conversationPromptHistory.description":
     "إبقاء سجل مطالبات الإدخال (استدعاء بالسهمين لأعلى/لأسفل) منفصلاً لكل محادثة بدلاً من مشاركة سجل واحد بين جميع المحادثات.",
+  "settings.experimental.agentManagerSplash.title": "شاشة ترحيب Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "جرّب المقدمة الجديدة لـ Agent Manager مع أمثلة لسير العمل. تُطبّق فورًا.",
   "settings.experimental.claudeMigration.title": "ترحيل Claude Code",
   "settings.experimental.claudeMigration.description":
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",
@@ -1152,6 +1159,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "إدارة قائمة المهام. يسمح بقراءة وتحديث قائمة المهام الداخلية.",
   "settings.autoApprove.tool.webfetch": "جلب رابط ويب. يسمح باسترداد المحتوى من رابط (URL) محدد.",
   "settings.autoApprove.tool.websearch": "البحث في الويب. يسمح بإجراء عمليات بحث خارجية في الويب.",
+  "settings.autoApprove.tool.browser_open":
+    "فتح صفحات في المتصفح المدمج. هذه معاينة داخل التطبيق، وليست أتمتة متصفح Playwright.",
   "settings.autoApprove.tool.external_directory":
     "الوصول للملفات خارج مساحة العمل. يتم تشغيله عند الوصول إلى ملفات خارج مسار المشروع الحالي.",
   "settings.autoApprove.tool.doom_loop":
@@ -1294,6 +1303,8 @@ export const dict = {
   "dialog.model.notSet": "غير محدد",
   "profile.personalAccount": "حساب شخصي",
   "profile.switchingAccount": "جارٍ تبديل الحساب…",
+  "profile.unavailableAccount": "حساب غير متاح",
+  "profile.switchFailed": "تعذّر تأكيد تبديل الحساب.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ar.ts
 
@@ -1379,6 +1390,8 @@ export const dict = {
   "settings.saveBar.cancel": "إلغاء",
   "settings.saveBar.saving": "جارٍ الحفظ…",
   "settings.saveBar.saveFailed": "تعذر حفظ الإعدادات",
+  "settings.saveBar.dismissError": "رفض",
+  "settings.saveBar.unconfirmedWrite": "لم يؤكد مضيف الإضافة «{{name}}».",
   "notifications.action.next": "التالي",
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",

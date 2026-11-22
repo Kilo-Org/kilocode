@@ -83,6 +83,7 @@ class PermissionView(
 
     private var requestId: String? = null
     private var responding = false
+    private var hosted = false
     private var style = SessionEditorStyle.current()
     private var openDiff: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
@@ -148,9 +149,10 @@ class PermissionView(
         syncCode(tool, target)
         syncDiffs(permission.meta.fileDiffs)
         responding = permission.state == PermissionRequestState.RESPONDING || permission.state == PermissionRequestState.RESOLVED
-        // Skill-shell approvals are never persisted, so no auto-approve rule toggles even if a
-        // future backend change starts sending candidates for this batch.
-        rules.update(if (skillShell) emptyList() else permission.meta.ruleDecisions, reset = prev != permission.id)
+        hosted = permission.hosted
+        // A skill-shell batch is never persisted, and a hosted workspace stores no always-rules, so
+        // neither offers auto-approve toggles even if a future backend change starts sending candidates.
+        rules.update(if (skillShell || hosted) emptyList() else permission.meta.ruleDecisions, reset = prev != permission.id)
         syncState(permission)
         syncPrimaryText()
 
@@ -179,6 +181,7 @@ class PermissionView(
     fun hideView() {
         requestId = null
         responding = false
+        hosted = false
         disposeMd()
         disposeDiffs()
         rules.update(emptyList(), reset = true)
@@ -312,28 +315,59 @@ class PermissionView(
 
     // Escape control chars (CR/LF/ESC/etc.) and bidi/format characters so a skill command can't
     // repaint the prompt or use Trojan-Source reordering to make the displayed text differ from
-    // what executes; newlines become a visible marker. Mirrors displayCommand in the CLI
-    // (packages/opencode/src/kilocode/skills/display.ts); keep the ranges in sync.
+    // what executes; newlines become a visible marker. The traversal is by code point so
+    // supplementary-plane characters escape as a whole. The ranges cover every character Unicode
+    // marks Default_Ignorable or Format, plus the C0 and C1 controls and the line and paragraph
+    // separators. Each escape writes `\x` below 0x100, `\u` up to 0xffff and `\u{...}` above.
+    // Mirrors displayCommand in the CLI (packages/opencode/src/kilocode/skills/display.ts); keep
+    // the ranges in sync.
     private fun escapeControl(command: String): String = buildString {
-        for (ch in command) {
-            val code = ch.code
+        var index = 0
+        while (index < command.length) {
+            val cp = command.codePointAt(index)
+            index += Character.charCount(cp)
             when {
-                ch == '\n' -> append("\\n")
-                ch == '\r' -> append("\\r")
-                ch == '\t' -> append("\\t")
-                isEscapedControlOrFormat(code) -> append(if (code <= 0xff) "\\x%02x".format(code) else "\\u%04x".format(code))
-                else -> append(ch)
+                cp == 0x0a -> append("\\n")
+                cp == 0x0d -> append("\\r")
+                cp == 0x09 -> append("\\t")
+                isEscapedControlOrFormat(cp) -> when {
+                    cp <= 0xff -> append("\\x%02x".format(cp))
+                    cp <= 0xffff -> append("\\u%04x".format(cp))
+                    else -> append("\\u{%x}".format(cp))
+                }
+                else -> appendCodePoint(cp)
             }
         }
     }
 
     private fun isEscapedControlOrFormat(code: Int): Boolean =
-        code < 0x20 ||
-            code in 0x7f..0x9f ||
-            code in 0x200e..0x200f ||
-            code in 0x2028..0x2029 ||
-            code in 0x202a..0x202e ||
-            code in 0x2066..0x2069
+        code in 0x0000..0x001f ||
+            code in 0x007f..0x009f ||
+            code == 0x00ad ||
+            code == 0x034f ||
+            code in 0x0600..0x0605 ||
+            code == 0x061c ||
+            code == 0x06dd ||
+            code == 0x070f ||
+            code in 0x0890..0x0891 ||
+            code == 0x08e2 ||
+            code in 0x115f..0x1160 ||
+            code in 0x17b4..0x17b5 ||
+            code in 0x180b..0x180f ||
+            code in 0x200b..0x200f ||
+            code in 0x2028..0x202e ||
+            code in 0x2060..0x206f ||
+            code == 0x3164 ||
+            code in 0xfe00..0xfe0f ||
+            code == 0xfeff ||
+            code == 0xffa0 ||
+            code in 0xfff0..0xfffb ||
+            code == 0x110bd ||
+            code == 0x110cd ||
+            code in 0x13430..0x1343f ||
+            code in 0x1bca0..0x1bca3 ||
+            code in 0x1d173..0x1d17a ||
+            code in 0xe0000..0xe0fff
 
     private fun description(permission: Permission): String = if (permission.name == "bash") {
         permission.meta.raw["description"] ?: toolLabel(permission.name)
@@ -397,7 +431,7 @@ class PermissionView(
 
     @RequiresEdt
     private fun rulePayload(): PermissionAlwaysRulesDto? {
-        if (!rules.anyDecided()) return null
+        if (hosted || !rules.anyDecided()) return null
         return PermissionAlwaysRulesDto(approvedAlways = rules.approved(), deniedAlways = rules.denied())
     }
 

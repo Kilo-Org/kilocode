@@ -24,7 +24,7 @@ Remote backends, remote-only model endpoints, and non-interactive or headless se
 
 ## Set Up Anaconda Desktop
 
-1. Download and install Anaconda Desktop from the [official product page](https://www.anaconda.com/products/desktop). See Anaconda's [installation guide](https://www.anaconda.com/docs/tools/anaconda-desktop/install-desktop) for platform-specific steps.
+1. Download and install Anaconda Desktop from the [official product page](https://www.anaconda.com/products/desktop). See Anaconda's [getting started guide](https://www.anaconda.com/docs/anaconda-desktop/getting-started-desktop) for platform-specific launch steps.
 2. Open Anaconda Desktop and sign in with your Anaconda account or your organization's assigned credentials.
 3. Select **Model Catalog** and filter for a **Text Generation** model. Prefer a model tagged **Tool Calling** for full Kilo agent functionality.
 4. Select a quantization that fits your computer, then click **Download**. Anaconda's [model catalog guide](https://www.anaconda.com/docs/tools/anaconda-desktop/model-catalog) explains model types, hardware requirements, and quantization choices.

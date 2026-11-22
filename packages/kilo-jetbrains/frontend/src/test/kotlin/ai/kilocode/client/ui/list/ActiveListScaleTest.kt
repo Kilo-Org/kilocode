@@ -1,5 +1,8 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveMetrics
+import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -87,7 +90,7 @@ class ActiveListScaleTest : BasePlatformTestCase() {
         val view = ActiveListView("") { _, _ -> }
         view.update(
             listOf(
-                row("a", section = "Local", metrics = ActiveListMetrics(files = 14, additions = 742, deletions = 169), badge = "#12967"),
+                row("a", section = "Local", metrics = ActiveMetrics(files = 14, additions = 742, deletions = 169), badge = "#12967"),
                 row("b", section = "Local"),
             ),
         )
@@ -188,19 +191,19 @@ class ActiveListScaleTest : BasePlatformTestCase() {
         return ExpandedItemListCellRendererWrapper.unwrap(view.list.cellRenderer) as ActiveListRenderer
     }
 
-    private fun rows(vararg keys: String): List<ActiveListItem> = keys.map { row(it) }
+    private fun rows(vararg keys: String): List<ActiveItem> = keys.map { row(it) }
 
     private fun row(
         key: String,
         section: String? = null,
-        metrics: ActiveListMetrics? = null,
+        metrics: ActiveMetrics? = null,
         badge: String? = null,
-    ): ActiveListItem = object : ActiveListItem {
+    ): ActiveItem = object : ActiveSection {
         override val key = key
         override val title = key
         override val description = "desc"
         override val section = section
         override val metrics = metrics
-        override val secondaryBadges = badge?.let { listOf(ActiveListBadge(it, UiStyle.Badge.Secondary)) }.orEmpty()
+        override val secondaryBadges = badge?.let { listOf(ActiveBadge(it, UiStyle.Badge.Secondary)) }.orEmpty()
     }
 }

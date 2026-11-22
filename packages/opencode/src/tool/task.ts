@@ -139,7 +139,8 @@ export const TaskTool = Tool.define(
         )
       }
 
-      if (!ctx.extra?.bypassAgentCheck) {
+      const named = ctx.extra?.namedAgentTypes // kilocode_change
+      if (!(Array.isArray(named) && named.includes(params.subagent_type))) { // kilocode_change
         yield* ctx.ask({
           permission: id,
           patterns: [params.subagent_type],
@@ -212,7 +213,7 @@ export const TaskTool = Tool.define(
       const fallback = SandboxPolicy.fallback(cfg)
       if (session) {
         yield* SandboxPolicy.inherit(ctx.sessionID, session.id, fallback)
-        const permission = KiloTask.merge(session.permission ?? [], childPermission)
+        const permission = KiloTask.refresh(session.permission ?? [], childPermission)
         session.permission = permission
         yield* sessions.setPermission({ sessionID: session.id, permission })
       }

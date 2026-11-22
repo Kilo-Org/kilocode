@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IntelliJ Desktop</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        background: #17191c;
+        color: #ddd;
+        font:
+          12px system-ui,
+          sans-serif;
+      }
+      header {
+        height: 38px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 0 12px;
+        border-bottom: 1px solid #333;
+      }
+      strong {
+        color: #fafafa;
+        font-weight: 600;
+      }
+      #status {
+        color: #aaa;
+        flex: 1;
+      }
+      button {
+        color: #ddd;
+        background: transparent;
+        border: 1px solid #444;
+        border-radius: 4px;
+        padding: 3px 9px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #303338;
+      }
+      button:focus-visible {
+        outline: 2px solid #a9c8ff;
+      }
+      #screen {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+      @media (max-width: 500px) {
+        header {
+          gap: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>IntelliJ Desktop</strong>
+      <span id="status" role="status">Connecting...</span>
+      <button id="reconnect" type="button">Reconnect</button>
+      <button id="fullscreen" type="button">Fullscreen</button>
+    </header>
+    <main id="screen" aria-label="Interactive sandbox desktop"></main>
+    <script type="module">
+      import RFB from "/core/rfb.js"
+      import Channel from "/http.js"
+
+      const status = document.querySelector("#status")
+      const rfb = new RFB(document.querySelector("#screen"), new Channel(), { shared: true })
+      rfb.scaleViewport = true
+      // Keep modal dialogs reachable when the browser is smaller than the desktop.
+      rfb.resizeSession = false
+      rfb.background = "#17191c"
+      window.addEventListener("pagehide", () => rfb.disconnect())
+      rfb.addEventListener("connect", () => {
+        status.textContent = "Connected (HTTP)"
+      })
+      rfb.addEventListener("disconnect", (event) => {
+        status.textContent = event.detail.clean ? "Disconnected" : "Connection lost. Select Reconnect."
+      })
+      rfb.addEventListener("securityfailure", () => {
+        status.textContent = "Desktop authentication failed"
+      })
+      document.querySelector("#reconnect").addEventListener("click", () => location.reload())
+      document.querySelector("#fullscreen").addEventListener("click", async () => {
+        if (document.fullscreenElement) return document.exitFullscreen()
+        await document.documentElement.requestFullscreen().catch(() => {
+          status.textContent = "Fullscreen unavailable in this browser"
+        })
+      })
+    </script>
+  </body>
+</html>

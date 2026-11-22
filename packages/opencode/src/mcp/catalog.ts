@@ -7,6 +7,9 @@ import {
 } from "@modelcontextprotocol/sdk/types.js"
 import { dynamicTool, jsonSchema, type JSONSchema7, type Tool } from "ai"
 import { Effect } from "effect"
+// kilocode_change start
+import { sanitize, toolName } from "@/kilocode/mcp/tool-id"
+// kilocode_change end
 
 const DEFAULT_TIMEOUT = 30_000
 const MAX_LIST_PAGES = 1_000
@@ -114,9 +117,9 @@ export function collect<T extends { name: string }>( // kilocode_change - distin
   )
 }
 
-export const sanitize = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "_")
-
-export const toolName = (clientName: string, name: string) => sanitize(clientName) + "_" + sanitize(name)
+// kilocode_change start - the one definition lives in the Kilo-owned leaf, re-exported here
+export { sanitize, toolName }
+// kilocode_change end
 
 export function prompts(client: Client, timeout?: number) {
   if (!client.getServerCapabilities()?.prompts) return Promise.resolve([])

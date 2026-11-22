@@ -13,6 +13,8 @@ import { createReviewComposers } from "../../agent-manager/review-composers"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
 import { createIntro } from "../../agent-manager/intro/AgentManagerIntro"
+import { createSplashIntro } from "../../agent-manager/splash"
+import { SplashExpanded } from "../../agent-manager/splash/Splash"
 import { SessionTab } from "../components/chat/SessionTab"
 import { ChatView } from "../components/chat/ChatView"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
@@ -37,7 +39,7 @@ import { PRConversation } from "../../agent-manager/pr/PRConversation"
 import { PRPanel } from "../../agent-manager/pr/PRPanel"
 import { PRReviewers } from "../../agent-manager/pr/PRReviewers"
 import type { PRComment, PRReviewer, PRTimelineItem } from "../../agent-manager/pr/pr-types"
-import { For, createSignal, onCleanup, onMount, type JSX } from "solid-js"
+import { For, Show, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type {
   AgentProjectSnapshot,
   WorktreeFileDiff,
@@ -149,8 +151,8 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
-function IntroductionPreview(props: { skipped?: boolean }) {
-  const intro = createIntro({
+function IntroductionPreview(props: { skipped?: boolean; folded?: boolean }) {
+  const opts = {
     base: () => "main",
     git: () => true,
     onCreateWorktree: () => {},
@@ -158,7 +160,10 @@ function IntroductionPreview(props: { skipped?: boolean }) {
     onShowHistory: () => {},
     reveal: () => {},
     focus: () => {},
-  })
+    compose: () => {},
+  }
+  // Stories force the splash through its own controller, independent of the setting.
+  const intro = props.folded === undefined ? createIntro(opts) : createSplashIntro(opts, props.folded)
   if (props.skipped) intro.dismiss()
   const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
   const session = {
@@ -196,6 +201,108 @@ export const IntroductionSkipped: Story = {
     <StoryProviders>
       <IntroductionPreview skipped />
     </StoryProviders>
+  ),
+}
+
+/** The expanded splash at a given content width, inside the intro host layout. */
+function SplashPreview(props: { example: number; width?: string; dir?: "rtl" }) {
+  return (
+    <StoryProviders>
+      <div
+        class="am-intro-layout"
+        dir={props.dir}
+        style={{ height: "1400px", width: props.width, "max-width": "100%" }}
+      >
+        <div data-slot="message-list" style={{ flex: "1", "min-height": "0" }}>
+          <div data-slot="message-list-content">
+            <SplashExpanded
+              git
+              onHide={() => {}}
+              onCompose={() => {}}
+              onCreateWorktree={() => {}}
+              initialExample={props.example}
+            />
+          </div>
+        </div>
+      </div>
+    </StoryProviders>
+  )
+}
+
+export const SplashCrossStackStory1280: Story = {
+  name: "Splash cross-stack",
+  render: () => <SplashPreview example={0} />,
+}
+
+export const SplashDelegateStory1280: Story = {
+  name: "Splash delegate",
+  render: () => <SplashPreview example={1} />,
+}
+
+export const SplashCompareStory1280: Story = {
+  name: "Splash compare",
+  render: () => <SplashPreview example={2} />,
+}
+
+export const SplashNarrowStory1280: Story = {
+  name: "Splash narrow",
+  render: () => <SplashPreview example={0} width="560px" />,
+}
+
+export const SplashThinStory: Story = {
+  name: "Splash thin",
+  render: () => <SplashPreview example={0} width="340px" />,
+}
+
+export const SplashRtlStory1280: Story = {
+  name: "Splash RTL",
+  render: () => <SplashPreview example={1} dir="rtl" />,
+}
+
+/** The folded splash inside the real chat host, which splash.css lays out around the welcome header. */
+function FoldedChat() {
+  const intro = createSplashIntro(
+    {
+      base: () => "main",
+      git: () => true,
+      onCreateWorktree: () => {},
+      reveal: () => {},
+      focus: () => {},
+      compose: () => {},
+    },
+    true,
+  )
+  return (
+    <ServerContext.Provider value={chatServer}>
+      <WorktreeModeProvider>
+        <div class="am-chat-wrapper" style={{ height: "100vh" }}>
+          <ChatView emptyState={intro.render} introduction={intro.visible()} />
+        </div>
+      </WorktreeModeProvider>
+    </ServerContext.Provider>
+  )
+}
+
+export const SplashFoldedStory1280: Story = {
+  name: "Splash folded",
+  parameters: { layout: "fullscreen" },
+  render: () => (
+    <StoryProviders noPadding>
+      <FoldedChat />
+    </StoryProviders>
+  ),
+}
+
+export const SplashFoldedThin1280: Story = {
+  name: "Splash folded thin",
+  render: () => (
+    <div style={{ width: "440px" }}>
+      <StoryProviders noPadding>
+        <div style={{ height: "640px" }}>
+          <IntroductionPreview folded />
+        </div>
+      </StoryProviders>
+    </div>
   ),
 }
 

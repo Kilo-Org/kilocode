@@ -18,6 +18,7 @@ export interface ToolTask {
   prompt?: string
   name?: string
   branchName?: string
+  baseBranch?: string
   agent?: string
   model?: { providerID: string; modelID: string }
   variant?: string
@@ -54,6 +55,7 @@ export interface ToolDeps {
   waitReady: (context: string) => Promise<void>
   createWorktree: (opts: {
     groupId?: string
+    baseBranch?: string
     branchName?: string
     name?: string
     label?: string
@@ -210,12 +212,13 @@ async function worktree(
   versions?: boolean,
   source?: ToolSource,
 ) {
-  const baseBranch = task.branchName ?? branch(task.name)
+  const seed = task.branchName ?? branch(task.name)
   const baseLabel = label(task.name) ?? label(task.branchName) ?? label(task.prompt)
-  const version = versionedName(baseBranch, versions ? index : 0, versions ? total : 1)
+  const version = versionedName(seed, versions ? index : 0, versions ? total : 1)
   const timing = Timing.start(`create ${version.branch ?? "worktree"}`, deps.log)
   const created = await deps.createWorktree({
     groupId,
+    baseBranch: clean(task.baseBranch),
     branchName: version.branch,
     name: version.branch,
     label: versionedLabel(baseLabel, versions ? index : 0, versions ? total : 1),
@@ -371,7 +374,7 @@ function agent(value: unknown): Pick<ToolTask, "agent"> {
 function task(value: unknown): ToolTask | undefined {
   if (!record(value)) return undefined
   const out: ToolTask = { ...agent(value.agent) }
-  for (const key of ["prompt", "name", "branchName"] as const) {
+  for (const key of ["prompt", "name", "branchName", "baseBranch"] as const) {
     if (Object.hasOwn(value, key) && typeof value[key] === "string" && value[key].trim()) out[key] = value[key]
   }
   const hasModel = Object.hasOwn(value, "model")
@@ -398,7 +401,7 @@ export function parseToolRequest(value: unknown): ToolRequest | undefined {
   if (value.worktreeID != null) {
     if (typeof value.worktreeID !== "string" || !value.worktreeID.trim()) return undefined
     if (mode !== "local" || value.versions === true) return undefined
-    if (tasks.some((item) => record(item) && item.branchName != null)) return undefined
+    if (tasks.some((item) => record(item) && (item.branchName != null || item.baseBranch != null))) return undefined
   }
   const parsed = limited.map(task).filter((item): item is ToolTask => !!item)
   if (parsed.length !== limited.length) return undefined

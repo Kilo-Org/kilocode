@@ -330,6 +330,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "خواندن Todo",
   "ui.permission.toolLabel.todoWrite": "نوشتن Todo",
   "ui.permission.toolLabel.codeSearch": "جستجوی کد",
+  "ui.permission.toolLabel.browserOpen": "مرورگر یکپارچه",
   "ui.permission.copyCommand": "کپی",
   "ui.approval.auto": "تأیید خودکار",
   "ui.approval.manual": "تأیید شده توسط شما",
@@ -526,6 +527,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "دریافت محتوا از یک URL",
   "settings.permissions.tool.websearch.description": "جستجو در وب",
   "settings.permissions.tool.codesearch.description": "جستجوی کد در وب",
+  "settings.permissions.tool.browser_open.description": "باز کردن صفحه در مرورگر یکپارچه",
   "settings.permissions.tool.external_directory.description": "دسترسی به فایل‌های خارج از پوشه پروژه",
   "settings.permissions.tool.doom_loop.description": "تشخیص فراخوانی‌های تکراری ابزار با ورودی یکسان",
 
@@ -796,6 +798,7 @@ export const dict = {
 
   "dialog.model.noProviders": "هیچ ارائه‌دهنده‌ای وجود ندارد",
   "dialog.model.unavailable": "مدل‌های Kilo در دسترس نیستند",
+  "dialog.model.loadFailed": "بارگذاری ارائه‌دهندگان این پروژه ممکن نشد.",
 
   "prompt.placeholder.connecting": "در حال اتصال به سرور...",
   "prompt.placeholder.default": "پیامی بنویسید... (Enter برای ارسال، Shift+Enter برای خط جدید)",
@@ -847,8 +850,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "تله‌متری",
   "settings.aboutKiloCode.telemetry.description":
-    "تله‌متری توسط تنظیمات داخلی تله‌متری VS Code کنترل می‌شود. برای غیرفعال کردن آن، به Settings > Telemetry > Telemetry Level بروید و آن را روی «off» تنظیم کنید. VS Code را مجدداً راه‌اندازی کنید تا تغییر اعمال شود.",
-  "settings.aboutKiloCode.telemetry.openSettings": "باز کردن تنظیمات تله‌متری",
+    "با این کلید می‌توانید تنظیم تله‌متری Kilo را تغییر دهید. اگر VS Code یا محیط اجرا تله‌متری را غیرفعال کند، تله‌متری غیرفعال می‌ماند.",
+  "settings.aboutKiloCode.telemetry.toggle": "فعال کردن تله‌متری",
+  "settings.aboutKiloCode.telemetry.saveFailed": "به‌روزرسانی تنظیم تله‌متری ممکن نبود",
 
   "settings.agentBehaviour.subtab.agents": "عوامل",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
@@ -967,6 +971,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "تاریخچه پرامپت برای هر گفتگو",
   "settings.experimental.conversationPromptHistory.description":
     "تاریخچه پرامپت (ArrowUp/ArrowDown) را برای هر گفتگو جداگانه نگه دارید، به جای اشتراک یک تاریخچه بین همه گفتگوها.",
+  "settings.experimental.agentManagerSplash.title": "صفحه خوشامدگویی Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "معرفی جدید Agent Manager را با نمونه‌های گردش کار امتحان کنید. بلافاصله اعمال می‌شود.",
   "settings.experimental.claudeMigration.title": "مهاجرت Claude Code",
   "settings.experimental.claudeMigration.description":
     "دستورالعمل‌های سراسری CLAUDE.md پشتیبانی‌شده، مهارت‌های ساده و تعریف‌های MCP غیرفعال را فقط یک‌بار وارد کنید. فایل‌های اصلی Claude تغییر نمی‌کنند؛ پس از فعال‌سازی backend را دوباره راه‌اندازی کنید.",
@@ -1166,6 +1173,8 @@ export const dict = {
     "مدیریت فهرست وظایف. اجازه خواندن و به‌روزرسانی فهرست وظایف داخلی را می‌دهد.",
   "settings.autoApprove.tool.webfetch": "دریافت یک URL. امکان بازیابی محتوا از یک URL مشخص را فراهم می‌کند.",
   "settings.autoApprove.tool.websearch": "جستجو در وب. امکان انجام جستجوهای خارجی در وب را فراهم می‌کند.",
+  "settings.autoApprove.tool.browser_open":
+    "باز کردن صفحه‌ها در مرورگر یکپارچه. این پیش‌نمایش درون‌برنامه‌ای است، نه خودکارسازی مرورگر Playwright.",
   "settings.autoApprove.tool.doom_loop":
     "جلوگیری از اقدامات تکراری یکسان. زمانی فعال می‌شود که همان فراخوانی ابزار با ورودی یکسان تکرار شود.",
 
@@ -1322,6 +1331,8 @@ export const dict = {
 
   "profile.personalAccount": "حساب شخصی",
   "profile.switchingAccount": "در حال تغییر حساب…",
+  "profile.unavailableAccount": "حساب در دسترس نیست",
+  "profile.switchFailed": "تغییر حساب تأیید نشد.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1407,6 +1418,8 @@ export const dict = {
   "settings.saveBar.saveAnyway": "در هر صورت ذخیره کن",
   "settings.saveBar.cancel": "لغو",
   "settings.saveBar.saveFailed": "ذخیره تنظیمات ممکن نشد",
+  "settings.saveBar.dismissError": "رد کردن",
+  "settings.saveBar.unconfirmedWrite": "میزبان افزونه «{{name}}» را تأیید نکرد.",
 
   "notifications.action.next": "بعدی",
   "notifications.action.close": "بستن",

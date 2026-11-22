@@ -32,6 +32,8 @@ Open **Groups** in your organization's sidebar on the [Organization dashboard](h
 
 Deleting a group removes the group, its policies, and its member assignments. Members keep whatever access the organization defaults and their remaining groups grant.
 
+Owners can also list, create, edit members of, and delete groups from the **Groups** row in an organization's hub in the [mobile app](/docs/code-with-ai/platforms/mobile#organization-custom-modes-and-groups).
+
 ## Model access policies
 
 A model access policy has one of three modes:

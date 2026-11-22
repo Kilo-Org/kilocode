@@ -334,6 +334,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Todo Lezen",
   "ui.permission.toolLabel.todoWrite": "Todo Schrijven",
   "ui.permission.toolLabel.codeSearch": "Code Zoeken",
+  "ui.permission.toolLabel.browserOpen": "Geïntegreerde browser",
   "ui.permission.copyCommand": "Kopiëren",
   "ui.approval.auto": "Automatisch goedgekeurd",
   "ui.approval.manual": "Door jou goedgekeurd",
@@ -563,6 +564,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Haal inhoud op van een URL",
   "settings.permissions.tool.websearch.description": "Zoek op het web",
   "settings.permissions.tool.codesearch.description": "Zoek code op het web",
+  "settings.permissions.tool.browser_open.description": "Een pagina openen in de geïntegreerde browser",
   "settings.permissions.tool.external_directory.description": "Krijg toegang tot bestanden buiten de projectmap",
   "settings.permissions.tool.doom_loop.description": "Detecteer herhaalde tool calls met identieke invoer",
 
@@ -805,6 +807,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Geen providers",
   "dialog.model.unavailable": "Kilo-modellen niet beschikbaar",
+  "dialog.model.loadFailed": "Kan de providers voor dit project niet laden.",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
   "prompt.placeholder.default":
@@ -858,8 +861,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrie",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetrie wordt beheerd door de ingebouwde telemetrie-instelling van VS Code. Om dit uit te schakelen, gaat u naar Instellingen > Telemetrie > Telemetrieniveau en stelt u dit in op "off". Herstart VS Code om de wijziging toe te passen.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-instellingen openen",
+    "Gebruik deze schakelaar om uw telemetrievoorkeur voor Kilo te wijzigen. Telemetrie blijft uitgeschakeld als VS Code of de omgeving deze uitschakelt.",
+  "settings.aboutKiloCode.telemetry.toggle": "Telemetrie inschakelen",
+  "settings.aboutKiloCode.telemetry.saveFailed": "De telemetrie-instelling kon niet worden gewijzigd",
 
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
@@ -976,6 +980,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Promptgeschiedenis per gesprek",
   "settings.experimental.conversationPromptHistory.description":
     "Houd de promptgeschiedenis (ArrowUp/ArrowDown) gescheiden per gesprek in plaats van één geschiedenis te delen over alle gesprekken.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager-welkomstscherm",
+  "settings.experimental.agentManagerSplash.description":
+    "Probeer de nieuwe Agent Manager-introductie met workflowvoorbeelden. Wordt direct toegepast.",
   "settings.experimental.claudeMigration.title": "Claude Code-migratie",
   "settings.experimental.claudeMigration.description":
     "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",
@@ -1151,6 +1158,8 @@ export const dict = {
     "Takenlijst beheren. Staat het lezen en bijwerken van de interne takenlijst toe.",
   "settings.autoApprove.tool.webfetch": "Een URL ophalen. Staat het ophalen van inhoud van een specifieke URL toe.",
   "settings.autoApprove.tool.websearch": "Zoek op het web. Staat het uitvoeren van externe web-zoekopdrachten toe.",
+  "settings.autoApprove.tool.browser_open":
+    "Pagina's openen in de geïntegreerde browser. Dit is de voorbeeldweergave in de app, niet de Playwright-browserautomatisering.",
   "settings.autoApprove.tool.doom_loop":
     "Voorkom herhaalde identieke acties. Geactiveerd wanneer dezelfde tool call herhaald wordt met identieke invoer.",
 
@@ -1314,6 +1323,8 @@ export const dict = {
 
   "profile.personalAccount": "Persoonlijk Account",
   "profile.switchingAccount": "Account wisselen…",
+  "profile.unavailableAccount": "Niet-beschikbaar account",
+  "profile.switchFailed": "Kon de accountwissel niet bevestigen.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1400,6 +1411,8 @@ export const dict = {
   "settings.saveBar.cancel": "Annuleren",
   "settings.saveBar.saving": "Bezig met opslaan…",
   "settings.saveBar.saveFailed": "Instellingen konden niet worden opgeslagen",
+  "settings.saveBar.dismissError": "Negeren",
+  "settings.saveBar.unconfirmedWrite": "“{{name}}” is niet bevestigd door de extensiehost.",
   "notifications.action.next": "Volgende",
   "notifications.action.close": "Sluiten",
   "notifications.action.tryModel": "Probeer {{model}}",

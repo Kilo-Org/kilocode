@@ -124,13 +124,13 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   private connectionService: KiloConnectionService
   private costTrackingCallback: CostTrackingCallback
   private getSettings: () => AutocompleteServiceSettings | null
-  public readonly recentlyVisitedRangesService: RecentlyVisitedRangesService
+  private recentlyVisitedRangesService: RecentlyVisitedRangesService
   private recentlyEditedTracker: RecentlyEditedTracker
   private debounceTimer: NodeJS.Timeout | null = null
   /** The pending request associated with the current debounce timer (if any) */
   private debouncedPendingRequest: PendingRequest | null = null
   private isFirstCall: boolean = true
-  public readonly ignoreController: Promise<FileIgnoreController>
+  private ignoreController: Promise<FileIgnoreController>
   /** Abort controllers for in-flight FIM requests, scoped by file/notebook context. */
   private fimAbortControllers = new Map<string, AbortController>()
   private acceptedCommand: vscode.Disposable | null = null
@@ -239,10 +239,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     const { prefix, suffix } = extractPrefixSuffix(document, position)
     const languageId = document.languageId
 
-    const prompt = await this.fimPromptBuilder.getFimPrompts(
-      autocompleteInput,
-      this.contextProvider.modelId || "codestral",
-    )
+    const prompt = await this.fimPromptBuilder.getFimPrompts(autocompleteInput)
 
     return { prompt, prefix, suffix }
   }

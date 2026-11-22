@@ -38,7 +38,11 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
-      - uses: oven-sh/setup-bun@v2
+      # kilocode_change start
+      - uses: ./.github/actions/setup-bun
+        with:
+          install: false
+      # kilocode_change end
 
       - name: Check kilocode_change annotations in shared upstream files
         env:

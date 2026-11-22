@@ -14,7 +14,7 @@ import ai.kilocode.client.testing.FakeMarketplaceRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.testing.rowLines
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -601,7 +601,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         )
     }
 
-    private fun click(list: JBList<ActiveListItem>, panel: SkillsSettingsUi, key: String, id: String) {
+    private fun click(list: JBList<ActiveItem>, panel: SkillsSettingsUi, key: String, id: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
@@ -614,7 +614,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun doubleClick(list: JBList<ActiveListItem>, panel: SkillsSettingsUi, key: String) {
+    private fun doubleClick(list: JBList<ActiveItem>, panel: SkillsSettingsUi, key: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
@@ -626,16 +626,16 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: SkillsSettingsUi): List<ActiveListItem> = items(skillsList(panel))
+    private fun rows(panel: SkillsSettingsUi): List<ActiveItem> = items(skillsList(panel))
 
-    private fun sourceRows(panel: SkillsSettingsUi): List<ActiveListItem> = items(sourceList(panel))
+    private fun sourceRows(panel: SkillsSettingsUi): List<ActiveItem> = items(sourceList(panel))
 
-    private fun items(list: JBList<ActiveListItem>): List<ActiveListItem> {
+    private fun items(list: JBList<ActiveItem>): List<ActiveItem> {
         val model = list.model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun skillsList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().first()
+    private fun skillsList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveItem>>().first()
 
     private fun searchField(panel: SkillsSettingsUi) = components(panel).filterIsInstance<SearchTextField>().single()
 
@@ -644,9 +644,9 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         return pane.text.replace(Regex("<[^>]+>"), "").replace(Regex("\\s+"), " ").trim()
     }
 
-    private fun sourceList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().last()
+    private fun sourceList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveItem>>().last()
 
-    private fun scrollFor(panel: SkillsSettingsUi, list: JBList<ActiveListItem>) = components(panel)
+    private fun scrollFor(panel: SkillsSettingsUi, list: JBList<ActiveItem>) = components(panel)
         .filterIsInstance<JBScrollPane>()
         .single { pane -> pane.viewport.view === list.parent }
 
@@ -676,12 +676,12 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<ActiveListItem>, point: Point) {
+    private fun click(list: JBList<ActiveItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
 
-    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(list: JBList<ActiveItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),

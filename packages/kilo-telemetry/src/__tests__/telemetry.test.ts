@@ -75,6 +75,13 @@ describe("TelemetryEvent", () => {
   test("MCP events are defined", () => {
     expect(TelemetryEvent.MCP_SERVER_CONNECTED).toBeDefined()
     expect(TelemetryEvent.MCP_SERVER_ERROR).toBeDefined()
+    // Reporting models select these names; renaming them breaks dashboards.
+    const names: string[] = Object.values(TelemetryEvent)
+    expect(names).toContain("MCP Auth Started")
+    expect(names).toContain("MCP Auth Completed")
+    // The editors sent these names before the CLI owned them; existing reports select them.
+    expect(names).toContain("Marketplace Item Installed")
+    expect(names).toContain("Marketplace Item Removed")
   })
 
   test("share events are defined", () => {
@@ -164,6 +171,7 @@ shell("uses conda's effective client ID in events", async () => {
   const token = "abcdefghijklmnopqrstuv"
   const conda = join(root, "conda")
   const capture = spyOn(Client, "capture").mockImplementation(() => {})
+  const machine = spyOn(Identity, "getMachineId").mockResolvedValue(undefined)
 
   try {
     await mkdir(join(root, ".conda"))
@@ -180,8 +188,18 @@ shell("uses conda's effective client ID in events", async () => {
 
     await Bun.write(conda, "#!/bin/sh\nprintf '%s\\n' '{\"user_agent\":\"conda/26.1\"}'\n")
     expect(await Conda.clientToken()).toBeUndefined()
+
+    Telemetry.setEnabled(false)
+    capture.mockClear()
+    Telemetry.trackCliStart()
+    expect(capture).toHaveBeenCalledTimes(1)
+    expect(capture.mock.calls.at(0)?.at(1)).not.toHaveProperty("aauClientToken")
   } finally {
+    // Clear conda properties while the client is still active; shutdown alone
+    // leaves them behind for tests that run later in randomized order.
+    Telemetry.setEnabled(false)
     capture.mockRestore()
+    machine.mockRestore()
     await Client.shutdown()
     if (home === undefined) delete process.env.HOME
     else process.env.HOME = home

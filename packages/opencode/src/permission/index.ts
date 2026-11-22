@@ -9,6 +9,7 @@ import os from "os"
 import z from "zod" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { PermissionV2 } from "@opencode-ai/core/permission" // kilocode_change - shared file-path case rule
 import { Database } from "@opencode-ai/core/database/database" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { SessionID } from "@/session/schema" // kilocode_change - used by AllowEverythingInput
@@ -100,15 +101,20 @@ interface State {
 }
 
 export function evaluate(permission: string, pattern: string, ...rulesets: PermissionV1.Ruleset[]): PermissionV1.Rule {
+  // kilocode_change start - file-path rules follow the volume's case rules on macOS
+  const fold = PermissionV2.ignoresCase(permission)
   return (
     rulesets
       .flat()
-      .findLast((rule) => Wildcard.match(permission, rule.permission) && Wildcard.match(pattern, rule.pattern)) ?? {
+      .findLast(
+        (rule) => Wildcard.match(permission, rule.permission) && Wildcard.match(pattern, rule.pattern, fold),
+      ) ?? {
       action: "ask",
       permission,
       pattern: "*",
     }
   )
+  // kilocode_change end
 }
 
 // kilocode_change start
@@ -127,7 +133,9 @@ export function resolve(permission: string, pattern: string, ruleset: Ruleset, .
   if (base.action === "deny") return base
   if (saved.action === "deny") return saved
   if (base.action === "ask") {
-    if (saved.action === "allow" && Wildcard.match(saved.pattern, base.pattern)) return saved
+    // kilocode_change - compare saved coverage the way the rules matched this request
+    if (saved.action === "allow" && Wildcard.match(saved.pattern, base.pattern, PermissionV2.ignoresCase(permission)))
+      return saved
     return base
   }
   if (saved.action === "allow") return saved
@@ -502,12 +510,27 @@ export function merge(...rulesets: PermissionV1.Ruleset[]): PermissionV1.Rule[] 
   return rulesets.flat()
 }
 
+// kilocode_change start - the one map from a tool name to the permission that governs it
+// A Map keeps the lookup to entries this file defines, so a name inherited from
+// Object.prototype resolves to itself instead of to a built-in member.
+const ALIASES = new Map<string, string>([
+  ["edit", "edit"],
+  ["write", "edit"],
+  ["apply_patch", "edit"],
+  ["list_mcp_resources", "read"],
+  ["list_mcp_resource_templates", "read"],
+  ["read_mcp_resource", "read"],
+])
+
+export function permissionFor(tool: string): string {
+  return ALIASES.get(tool) ?? tool
+}
+// kilocode_change end
+
 export function disabled(tools: string[], ruleset: PermissionV1.Ruleset): Set<string> {
-  const edits = ["edit", "write", "apply_patch"]
-  const reads = ["list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"]
   return new Set(
     tools.filter((tool) => {
-      const permission = edits.includes(tool) ? "edit" : reads.includes(tool) ? "read" : tool
+      const permission = permissionFor(tool) // kilocode_change - shared tool-to-permission map
       const rule = ruleset.findLast((rule) => Wildcard.match(permission, rule.permission))
       return rule?.pattern === "*" && rule.action === "deny"
     }),

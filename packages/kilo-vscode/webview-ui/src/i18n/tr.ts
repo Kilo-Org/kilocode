@@ -330,6 +330,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Görev Oku",
   "ui.permission.toolLabel.todoWrite": "Görev Yaz",
   "ui.permission.toolLabel.codeSearch": "Kod Araması",
+  "ui.permission.toolLabel.browserOpen": "Entegre Tarayıcı",
   "ui.permission.copyCommand": "Kopyala",
   "ui.approval.auto": "Otomatik onaylandı",
   "ui.approval.manual": "Sizin tarafınızdan onaylandı",
@@ -558,6 +559,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Bir URL'den içerik getir",
   "settings.permissions.tool.websearch.description": "Web'de ara",
   "settings.permissions.tool.codesearch.description": "Web'de kod ara",
+  "settings.permissions.tool.browser_open.description": "Sayfayı Entegre Tarayıcıda aç",
   "settings.permissions.tool.external_directory.description": "Proje dizini dışındaki dosyalara eriş",
   "settings.permissions.tool.doom_loop.description": "Aynı girdiyle tekrarlanan araç çağrılarını algıla",
 
@@ -804,6 +806,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Sağlayıcı yok",
   "dialog.model.unavailable": "Kilo modelleri kullanılamıyor",
+  "dialog.model.loadFailed": "Bu proje için sağlayıcılar yüklenemedi.",
 
   "prompt.placeholder.connecting": "Sunucuya bağlanılıyor...",
   "prompt.placeholder.default":
@@ -855,8 +858,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetri",
   "settings.aboutKiloCode.telemetry.description":
-    "Telemetri, VS Code'un yerleşik telemetri ayarı tarafından kontrol edilir. Devre dışı bırakmak için Ayarlar > Telemetri > Telemetri Düzeyi'ne gidin ve \"off\" olarak ayarlayın. Değişikliği uygulamak için VS Code'u yeniden başlatın.",
-  "settings.aboutKiloCode.telemetry.openSettings": "Telemetri Ayarlarını Aç",
+    "Kilo'nun telemetri ayarını değiştirmek için bu anahtarı kullanın. VS Code veya çalışma ortamı telemetriyi devre dışı bırakırsa telemetri kapalı kalır.",
+  "settings.aboutKiloCode.telemetry.toggle": "Telemetriyi etkinleştir",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Telemetri ayarı güncellenemedi",
 
   "settings.agentBehaviour.subtab.agents": "Ajanlar",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Sunucuları",
@@ -969,6 +973,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Sohbet başına istem geçmişi",
   "settings.experimental.conversationPromptHistory.description":
     "İstem geçmişini (ArrowUp/ArrowDown) tüm sohbetlerde tek bir geçmiş paylaşmak yerine her sohbet için ayrı tutun.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager karşılama ekranı",
+  "settings.experimental.agentManagerSplash.description":
+    "İş akışı örnekleriyle yeni Agent Manager tanıtımını deneyin. Hemen uygulanır.",
   "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
   "settings.experimental.claudeMigration.description":
     "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
@@ -1141,6 +1148,8 @@ export const dict = {
     "Görev listesini yönet. Dahili görev listesini okuma ve güncellemeye izin verir.",
   "settings.autoApprove.tool.webfetch": "URL getir. Belirli bir URL'den içerik almaya izin verir.",
   "settings.autoApprove.tool.websearch": "Web'de ara. Harici web aramaları yapmaya izin verir.",
+  "settings.autoApprove.tool.browser_open":
+    "Sayfaları Entegre Tarayıcıda aç. Bu, uygulama içi önizlemedir, Playwright tarayıcı otomasyonu değildir.",
   "settings.autoApprove.tool.doom_loop":
     "Tekrarlanan aynı eylemleri önle. Aynı araç çağrısı aynı girdiyle tekrarlandığında tetiklenir.",
 
@@ -1387,6 +1396,8 @@ export const dict = {
   "settings.saveBar.cancel": "İptal",
   "settings.saveBar.saving": "Kaydediliyor…",
   "settings.saveBar.saveFailed": "Ayarlar kaydedilemedi",
+  "settings.saveBar.dismissError": "Kapat",
+  "settings.saveBar.unconfirmedWrite": "“{{name}}” uzantı ana bilgisayarı tarafından onaylanmadı.",
   "notifications.action.next": "Sonraki",
   "notifications.action.close": "Kapat",
   "notifications.action.tryModel": "Dene {{model}}",
@@ -1397,6 +1408,8 @@ export const dict = {
   "settings.indexing.kiloSignIn.description": "Hosted embeddings kullanmak için Kilo'da oturum açın.",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Hesap değiştiriliyor…",
+  "profile.unavailableAccount": "Kullanılamayan hesap",
+  "profile.switchFailed": "Hesap değişikliği doğrulanamadı.",
   "settings.agentBehaviour.createMode": "Yeni Mod Oluştur",
   "settings.agentBehaviour.createMode.button": "Oluştur",
   "settings.agentBehaviour.createMode.cancel": "İptal",

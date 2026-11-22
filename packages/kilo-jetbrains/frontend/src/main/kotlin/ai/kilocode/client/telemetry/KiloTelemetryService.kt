@@ -6,7 +6,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloAppRpcApi
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.components.service
+import com.intellij.openapi.components.serviceOrNull
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 object Telemetry {
     fun send(event: String, properties: Map<String, String> = emptyMap()) {
-        KiloTelemetryService.getInstance().send(event, properties)
+        KiloTelemetryService.getInstance()?.send(event, properties)
     }
 }
 
@@ -33,7 +33,7 @@ class KiloTelemetryService internal constructor(
         private const val MAX_PENDING = 64
         private const val TIMEOUT_MS = 5_000L
 
-        fun getInstance(): KiloTelemetryService = service()
+        fun getInstance(): KiloTelemetryService? = serviceOrNull()
     }
 
     private val pending = AtomicInteger()

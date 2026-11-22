@@ -7,6 +7,7 @@ import { Effect, Layer } from "effect"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2 } from "@opencode-ai/core/event"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Agent } from "@/agent/agent"
 import { InstanceRef } from "@/effect/instance-ref"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -74,7 +75,9 @@ function makeLayer(dir: string) {
   )
   return Layer.mergeAll(
     Layer.succeed(InstanceRef, { directory: dir, worktree: dir, project: {} as any }),
-    Wakeup.layer.pipe(Layer.provide(Layer.mergeAll(storage, fire, events))),
+    Wakeup.layer.pipe(
+      Layer.provide(Layer.mergeAll(storage, fire, events, LayerNode.compile(LayerNode.group([EffectFlock.node])))),
+    ),
     Layer.succeed(Agent.Service, agents),
     Layer.succeed(Truncate.Service, truncate),
   )

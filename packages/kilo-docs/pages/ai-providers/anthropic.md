@@ -10,6 +10,10 @@ Anthropic is an AI safety and research company that builds reliable, interpretab
 
 **Website:** [https://www.anthropic.com/](https://www.anthropic.com/)
 
+{% callout type="tip" title="Recommended: link Claude billing instead of sharing an API key" %}
+Kilo recommends using [Claude linked billing](/docs/ai-providers/claude-linked-billing), where Anthropic bills your Claude API organization directly for Claude usage through the Kilo Gateway with no API key required.
+{% /callout %}
+
 ## Getting an API Key
 
 1.  **Sign Up/Sign In:** Go to the [Anthropic Console](https://console.anthropic.com/). Create an account or sign in.

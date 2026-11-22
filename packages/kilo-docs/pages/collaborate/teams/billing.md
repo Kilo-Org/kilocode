@@ -5,7 +5,7 @@ description: "Manage billing and subscriptions for your team"
 
 # Billing
 
-Kilo seats use a transparent, two-part billing system: a monthly subscription per seat, plus pay-as-you-go Kilo credits. Model inference is charged at provider rates with no markup. A separate 5% payment-processing fee applies to credit purchases (including automatic top-ups) and to Kilo Pass purchases.
+Kilo seats use a transparent, two-part billing system: a monthly subscription per seat, plus pay-as-you-go Kilo credits. Model inference is charged at provider rates with no markup. Kilo is not currently charging a payment-processing fee on credit purchases (including automatic top-ups) or on Kilo Pass purchases; purchases made while the 5% fee was in effect keep that charge.
 
 {% callout type="note" %}
 
@@ -13,7 +13,7 @@ Kilo Code seats purchases of Teams or Enterprise are separate from Kilo credits.
 
 No Kilo credits are included with a Teams or Enterprise purchase.
 
-$1 of purchased credits funds $1 of usage. The 5% processing fee is charged separately and does not increase the organization's credit balance.
+$1 of purchased credits funds $1 of usage. A payment-processing fee, when one is charged, is billed separately and does not increase the organization's credit balance.
 
 {% /callout %}
 
@@ -72,7 +72,7 @@ To fill empty seats or remove members ahead of seat deletion, see the [team mana
 
 Organizations can subscribe to [Kilo Pass](https://kilo.ai/pricing/kilo-pass) at the organization level, pooling the subscription's credit capacity across the team instead of each member holding a personal Kilo Pass. Personal Kilo Pass subscriptions stay separate and are not affected.
 
-A 5% payment-processing fee applies to every Kilo Pass purchase, including recurring billing. The fee is charged separately and does not increase the credits the pass provides.
+Kilo is not currently charging a payment-processing fee on Kilo Pass purchases, including recurring billing. A fee, when one is charged, is billed separately and does not increase the credits the pass provides.
 
 - **One pass per seat** — purchased capacity always matches your paid seat count and adjusts automatically as seats are added or removed.
 - **Pooled credits** — each service window's Kilo Pass credits are issued to the organization's pool rather than to individuals.
@@ -89,33 +89,34 @@ Ensure your team has uninterrupted access to Kilo Code by enabling [Automatic To
 ### How It Works
 
 - **Initial Verification** — To verify your payment method, a one-time charge for your selected top-up amount will be processed immediately upon enabling this feature.
-- **Automatic Thresholds** — Once enabled, Kilo Code will automatically recharge your balance whenever it falls below $50.00.
+- **Automatic Thresholds** — Once enabled, usage or a requested credit-funded service can trigger a recharge when your balance falls below your trigger balance. Choose **$50** (the default), **$100**, or **$500**. Viewing the balance or credit expiration alone never triggers a charge.
 
 {% callout type="warning" title="Payment Failure" %}
 If a payment fails, we will notify you via email and automatically pause auto-top-ups to prevent repeated billing attempts. You can resume this feature at any time from your settings.
 {% /callout %}
 
 - **Flexibility** — You can disable automatic top-ups at any time.
-- **No Expiration** — Any credits you purchase will never expire; they remain available in your account until used.
+- **Credit terms** — Paid purchases expire one calendar year after purchase, and each organization Pass paid allotment expires one calendar year after issuance, including allotments under annual plans. Existing balances and previously disclosed purchase terms are preserved; prepaid annual terms keep their terms until renewal. Promotional and bonus deadlines are unchanged. Credits are spent earliest-expiring first, with nonexpiring credits last. See [credit expiration and spending order](/docs/getting-started/adding-credits#credit-expiration-and-spending-order).
 
 ### Configuring Automatic Top-Up
 
 1. Navigate to your **Organization Settings**
 2. Select **Billing & Credits**
 3. Locate the **Automatic Top-Up** section and toggle the feature **ON**
-4. Set your **Top-Up Amount** — the amount to add to your balance each time a recharge is triggered
+4. Choose the balance that triggers a top up — **$50** (the default), **$100**, or **$500**
+5. Set your **Top-Up Amount** — the amount to add to your balance each time a recharge is triggered. Organization amounts are **$100**, **$500**, **$1,000**, or **$5,000**.
 
 {% callout type="note" %}
-The minimum top-up amount is **$100.00**.
+The minimum top-up amount is **$100.00**. The top-up amount must be at least the trigger balance, so a **$500** trigger requires a top-up of **$500** or more. The dialog disables combinations that break this rule.
 {% /callout %}
 
-5. Click **Save Changes** to confirm
+6. Click **Save Changes** to confirm
 
 Once saved, your initial top-up will be processed immediately to verify your payment method.
 
 ## Spend alerts
 
-Owners can set spend alerts in the spend view, on the web or in the mobile app, to be notified when spending crosses a limit or when an hour runs far above the usual rate. Alerts go to the owner's authorized billing contacts by email or mobile push. See [Spend alerts](/docs/getting-started/cost-controls-and-usage-safeguards#spend-alerts) for how to configure them.
+Owners can set spend alerts in the spend view, on the web or in the mobile app, to be notified when spending crosses a limit or when an hour runs far above the usual rate. Spending includes Cloud Agent compute charges as well as model inference. Alerts go by email or mobile push to the scope's recipients: your billing contacts for a personal account, or the alert's creator, the organization's owners, and members holding the `billing_manager` role for an organization. See [Spend alerts](/docs/getting-started/cost-controls-and-usage-safeguards#spend-alerts) for how to configure them.
 
 ## Invoices
 

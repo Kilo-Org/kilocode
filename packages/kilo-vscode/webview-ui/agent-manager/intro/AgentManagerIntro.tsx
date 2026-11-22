@@ -3,8 +3,11 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { useLanguage } from "../../src/context/language"
 import { useVSCode } from "../../src/context/vscode"
+import { useConfig } from "../../src/context/config"
 import type { SessionInfo } from "../../src/types/messages"
-import { WelcomeEmptyState, KiloLogo } from "../../src/components/chat/WelcomeEmptyState"
+import { KiloLogo } from "../../src/components/chat/WelcomeEmptyState"
+import { createSplashIntro } from "../splash"
+import { Reopen } from "../splash/Splash"
 import { IntroGraph } from "./IntroGraph"
 import "./intro.css"
 
@@ -15,7 +18,7 @@ interface IntroProps {
   onDismiss: () => void
 }
 
-export function createIntro(opts: {
+export interface IntroOptions {
   base: () => string
   git: () => boolean
   sessions?: () => SessionInfo[]
@@ -24,8 +27,23 @@ export function createIntro(opts: {
   onShowHistory?: () => void
   reveal: () => void
   focus: () => void
+  /** Focuses the local prompt. */
+  compose: () => void
   hints?: () => JSX.Element
-}) {
+}
+
+export interface Intro {
+  visible: () => boolean
+  dismiss: () => void
+  render: () => JSX.Element
+  /** Called when the first root session is accepted. */
+  started: () => void
+}
+
+export function createIntro(opts: IntroOptions): Intro {
+  const config = useConfig()
+  const splash = createSplashIntro(opts)
+  const enabled = () => config.settings().agentManagerSplash === true
   const vscode = useVSCode()
   const [dismissed, setDismissed] = createSignal(
     (window as { KILO_AGENT_MANAGER_INTRO_DISMISSED?: boolean }).KILO_AGENT_MANAGER_INTRO_DISMISSED === true,
@@ -46,8 +64,9 @@ export function createIntro(opts: {
       opts.focus()
     },
   }
-  return {
+  const legacy: Intro = {
     ...state,
+    started: () => {},
     render: (): JSX.Element => (
       <AgentManagerEmptyState
         base={opts.base()}
@@ -61,10 +80,21 @@ export function createIntro(opts: {
       />
     ),
   }
+  const current = () => (enabled() ? splash : legacy)
+  return {
+    visible: () => current().visible(),
+    dismiss: () => current().dismiss(),
+    started: () => current().started(),
+    render: () => (
+      <Show when={enabled()} fallback={legacy.render()}>
+        {splash.render()}
+      </Show>
+    ),
+  }
 }
 
 interface EmptyProps extends Omit<IntroProps, "onDismiss"> {
-  intro: Pick<ReturnType<typeof createIntro>, "visible" | "open" | "dismiss">
+  intro: { visible: () => boolean; open: () => void; dismiss: () => void }
   sessions?: () => SessionInfo[]
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
@@ -72,29 +102,16 @@ interface EmptyProps extends Omit<IntroProps, "onDismiss"> {
 }
 
 function AgentManagerEmptyState(props: EmptyProps) {
-  const { t } = useLanguage()
   return (
     <Show
       when={props.intro.visible()}
       fallback={
-        <WelcomeEmptyState
+        <Reopen
           sessions={props.sessions}
           onSelectSession={props.onSelectSession}
           onShowHistory={props.onShowHistory}
-          footer={
-            <>
-              {props.hints?.()}
-              <Button
-                variant="ghost"
-                size="small"
-                icon="help"
-                data-action="agent-manager-intro"
-                onClick={props.intro.open}
-              >
-                {t("agentManager.intro.reopen")}
-              </Button>
-            </>
-          }
+          hints={props.hints}
+          onOpen={props.intro.open}
         />
       }
     >

@@ -259,6 +259,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Todo Read",
   "ui.permission.toolLabel.todoWrite": "Todo Write",
   "ui.permission.toolLabel.codeSearch": "Ricerca codice",
+  "ui.permission.toolLabel.browserOpen": "Browser integrato",
   "ui.permission.copyCommand": "Copia",
   "ui.approval.auto": "Approvato automaticamente",
   "ui.approval.manual": "Approvato da te",
@@ -445,6 +446,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Recupera contenuti da una pagina web",
   "settings.permissions.tool.websearch.description": "Cerca sul web",
   "settings.permissions.tool.codesearch.description": "Cerca codice sul web",
+  "settings.permissions.tool.browser_open.description": "Apri una pagina nel Browser integrato",
   "settings.permissions.tool.external_directory.description": "Accede a file fuori dalla directory del progetto",
   "settings.permissions.tool.doom_loop.description": "Rileva chiamate tool ripetute con input identico",
   "session.delete.title": "Elimina sessione",
@@ -677,6 +679,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Valutazione prossimi passi...",
   "dialog.model.noProviders": "Nessun provider",
   "dialog.model.unavailable": "Modelli Kilo non disponibili",
+  "dialog.model.loadFailed": "Impossibile caricare i provider di questo progetto.",
   "prompt.placeholder.connecting": "Connessione al server...",
   "prompt.placeholder.default":
     "Scrivi un messaggio, @ per menzionare i file... (Invio per inviare, Maiusc+Invio per nuova riga)",
@@ -722,8 +725,9 @@ export const dict = {
     "Impostazioni importate. Controlla le modifiche sopra, poi fai clic su Salva.",
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
-    'La telemetria è controllata dall\'impostazione integrata di VS Code. Per disabilitarla, vai in Impostazioni > Telemetria > Livello telemetria e impostala su "off". Riavvia VS Code per applicare la modifica.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Apri impostazioni telemetria",
+    "Usa questo interruttore per modificare la tua preferenza sulla telemetria di Kilo. La telemetria rimane disattivata se VS Code o l'ambiente la disattivano.",
+  "settings.aboutKiloCode.telemetry.toggle": "Attiva la telemetria",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Impossibile aggiornare l'impostazione della telemetria",
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "Server MCP",
   "settings.agentBehaviour.subtab.rules": "Regole",
@@ -817,6 +821,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Cronologia dei prompt per conversazione",
   "settings.experimental.conversationPromptHistory.description":
     "Mantieni la cronologia dei prompt (ArrowUp/ArrowDown) separata per ogni conversazione invece di condividerne una sola tra tutte le conversazioni.",
+  "settings.experimental.agentManagerSplash.title": "Schermata iniziale di Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Prova la nuova introduzione di Agent Manager con esempi di flussi di lavoro. Si applica immediatamente.",
   "settings.experimental.claudeMigration.title": "Migrazione Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importa una volta le istruzioni globali CLAUDE.md supportate, le competenze semplici e le definizioni MCP disabilitate. I file Claude originali restano invariati; riavvia il backend dopo l'attivazione.",
@@ -1039,6 +1046,8 @@ export const dict = {
     "Gestisci lista task. Consente lettura e aggiornamento della lista task interna.",
   "settings.autoApprove.tool.webfetch": "Recupera URL. Consente di recuperare contenuti da un URL specifico.",
   "settings.autoApprove.tool.websearch": "Cerca sul web. Consente ricerche web esterne.",
+  "settings.autoApprove.tool.browser_open":
+    "Apri pagine nel Browser integrato. È l'anteprima integrata, non l'automazione Playwright.",
   "settings.autoApprove.tool.doom_loop":
     "Previeni azioni identiche ripetute. Si attiva quando la stessa chiamata tool si ripete con input identico.",
   "settings.checkpoints.enable.title": "Abilita snapshot",
@@ -1187,6 +1196,8 @@ export const dict = {
   "dialog.model.notSet": "Non impostato",
   "profile.personalAccount": "Account personale",
   "profile.switchingAccount": "Cambio account...",
+  "profile.unavailableAccount": "Account non disponibile",
+  "profile.switchFailed": "Impossibile confermare il cambio di account.",
   "question.summary": "{{n}} di {{total}} domande",
   "common.review": "Revisione",
   "settings.aboutKiloCode.rooImport.description":
@@ -1263,6 +1274,8 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Salva comunque",
   "settings.saveBar.cancel": "Annulla",
   "settings.saveBar.saveFailed": "Impossibile salvare le impostazioni",
+  "settings.saveBar.dismissError": "Ignora",
+  "settings.saveBar.unconfirmedWrite": "L'host dell'estensione non ha confermato “{{name}}”.",
   "notifications.action.next": "Avanti",
   "notifications.action.close": "Chiudi",
   "notifications.action.tryModel": "Prova {{model}}",

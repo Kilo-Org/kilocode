@@ -121,6 +121,38 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "removed session's timers.",
   },
   "tool/recall.test.ts": { count: 11, reason: "existing runtime integration test" },
+  "kilocode/session-hosting/continuation-run.test.ts": {
+    count: 13,
+    reason:
+      "Continue-in-Cloud preparation is a legacy module boundary: the test drives the exported Continuation.run and the real " +
+      "KiloSessions.syncForContinuation against a temporary instance, and that path resolves Session, Database, Question, " +
+      "Permission, and Provider from the global AppRuntime — exactly as the HTTP route handler does (handlers/session-host.ts " +
+      "runs the same effect on AppRuntime). The test builds the sessions, messages, and durable intent rows, and reads them " +
+      "back, through that same runtime, so a scoped layer cannot express the boundary under test.",
+  },
+  "kilocode/sessions/continuation-sync.test.ts": {
+    count: 6,
+    reason:
+      "syncForContinuation is a legacy module-level async boundary whose fullSync reads Session, MessageV2, and Provider from " +
+      "the global AppRuntime while it persists through Storage; the test creates the session and its messages through that " +
+      "same runtime so the acknowledged-transcript contract is observed on the production path. A scoped layer cannot express " +
+      "it because the module resolves the runtime internally.",
+  },
+  "kilocode/server/session-host-httpapi.test.ts": {
+    count: 2,
+    reason:
+      "The continue route test seeds one durable continuation intent through the global AppRuntime Database — the same Database " +
+      "the route's replay path reads — so the generated SDK client can be driven against the real handler's typed 409/402 " +
+      "responses without a scoped-layer copy of that runtime.",
+  },
+  "kilocode/server/session-host-continuation-sync.test.ts": {
+    count: 7,
+    reason:
+      "Regression for the real continuation route: the request instance exists only as the route's directory-derived InstanceRef " +
+      "(no ambient ALS), and the fixture seeds sessions/messages/diffs through the same global AppRuntime the route resolves. " +
+      "The nested Session/Storage reads inside syncForContinuation/fullSync run on that runtime, so a scoped layer would not " +
+      "reproduce the Effect→Promise→AppRuntime boundary this test guards.",
+  },
 }
 
 const owned = (file: string) => file.startsWith("kilocode/") || file.startsWith("kilo-sessions/")

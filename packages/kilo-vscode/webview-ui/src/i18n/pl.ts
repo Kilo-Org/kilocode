@@ -333,6 +333,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Odczyt Todo",
   "ui.permission.toolLabel.todoWrite": "Zapis Todo",
   "ui.permission.toolLabel.codeSearch": "Wyszukiwanie kodu",
+  "ui.permission.toolLabel.browserOpen": "Zintegrowana przeglądarka",
   "ui.permission.copyCommand": "Kopiuj",
   "ui.approval.auto": "Zatwierdzono automatycznie",
   "ui.approval.manual": "Zatwierdzone przez Ciebie",
@@ -569,6 +570,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Pobieranie zawartości z adresu URL",
   "settings.permissions.tool.websearch.description": "Przeszukiwanie sieci",
   "settings.permissions.tool.codesearch.description": "Przeszukiwanie kodu w sieci",
+  "settings.permissions.tool.browser_open.description": "Otwórz stronę w zintegrowanej przeglądarce",
   "settings.permissions.tool.external_directory.description": "Dostęp do plików poza katalogiem projektu",
   "settings.permissions.tool.doom_loop.description": "Wykrywanie powtarzających się wywołań narzędzi (doom loop)",
 
@@ -774,6 +776,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Brak dostawców",
   "dialog.model.unavailable": "Modele Kilo niedostępne",
+  "dialog.model.loadFailed": "Nie udało się wczytać dostawców dla tego projektu.",
 
   "prompt.placeholder.connecting": "Łączenie z serwerem...",
   "prompt.placeholder.error": "Połączenie nie powiodło się. Sprawdź panel wyjściowy lub uruchom ponownie rozszerzenie.",
@@ -825,8 +828,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetria jest kontrolowana przez wbudowane ustawienie telemetrii VS Code. Aby ją wyłączyć, przejdź do Ustawienia > Telemetria > Poziom telemetrii i ustaw na "off". Uruchom ponownie VS Code, aby zastosować zmianę.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Otwórz ustawienia telemetrii",
+    "Użyj tego przełącznika, aby zmienić ustawienie telemetrii w Kilo. Telemetria pozostanie wyłączona, jeśli wyłączy ją VS Code lub środowisko uruchomieniowe.",
+  "settings.aboutKiloCode.telemetry.toggle": "Włącz telemetrię",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Nie udało się zaktualizować ustawienia telemetrii",
 
   "settings.agentBehaviour.subtab.agents": "Agenci",
   "settings.agentBehaviour.subtab.mcpServers": "Serwery MCP",
@@ -937,6 +941,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Historia promptów dla każdej rozmowy",
   "settings.experimental.conversationPromptHistory.description":
     "Przechowuj historię promptów (ArrowUp/ArrowDown) osobno dla każdej rozmowy zamiast współdzielić jedną historię we wszystkich rozmowach.",
+  "settings.experimental.agentManagerSplash.title": "Ekran powitalny Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Wypróbuj nowe wprowadzenie do Agent Manager z przykładami przepływów pracy. Zmiany są stosowane natychmiast.",
   "settings.experimental.claudeMigration.title": "Migracja Claude Code",
   "settings.experimental.claudeMigration.description":
     "Jednorazowo importuj obsługiwane globalne instrukcje CLAUDE.md, proste umiejętności i wyłączone definicje MCP. Oryginalne pliki Claude pozostają niezmienione; po włączeniu uruchom ponownie backend.",
@@ -1187,6 +1194,8 @@ export const dict = {
   "settings.autoApprove.tool.webfetch": "Pobieranie URL. Pozwala na pobieranie zawartości z określonego adresu URL.",
   "settings.autoApprove.tool.websearch":
     "Przeszukiwanie sieci. Pozwala na wykonywanie zewnętrznych wyszukiwań w sieci.",
+  "settings.autoApprove.tool.browser_open":
+    "Otwieraj strony w zintegrowanej przeglądarce. To podgląd w aplikacji, a nie automatyzacja Playwright.",
   "settings.autoApprove.tool.external_directory":
     "Dostęp do plików poza obszarem roboczym. Uruchamiane przy dostępie do plików poza bieżącym katalogiem projektu.",
   "settings.autoApprove.tool.doom_loop":
@@ -1335,6 +1344,8 @@ export const dict = {
   "dialog.model.notSet": "Nie ustawiono",
   "profile.personalAccount": "Konto osobiste",
   "profile.switchingAccount": "Przełączanie konta…",
+  "profile.unavailableAccount": "Konto niedostępne",
+  "profile.switchFailed": "Nie udało się potwierdzić przełączenia konta.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/pl.ts
 
   "question.summary": "{{n}} z {{total}} pytań",
@@ -1419,6 +1430,8 @@ export const dict = {
   "settings.saveBar.cancel": "Anuluj",
   "settings.saveBar.saving": "Zapisywanie…",
   "settings.saveBar.saveFailed": "Nie można zapisać ustawień",
+  "settings.saveBar.dismissError": "Odrzuć",
+  "settings.saveBar.unconfirmedWrite": "Host rozszerzenia nie potwierdził „{{name}}”.",
   "notifications.action.next": "Następny",
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",

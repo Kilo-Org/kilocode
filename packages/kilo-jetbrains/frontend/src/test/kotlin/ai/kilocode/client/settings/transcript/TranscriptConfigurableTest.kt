@@ -38,6 +38,7 @@ class TranscriptConfigurableTest : BasePlatformTestCase() {
             KiloPluginSettings.unsetTerminalCommandDisplay()
             KiloPluginSettings.unsetCodeEditDisplay()
             KiloPluginSettings.unsetMcpToolDisplay()
+            KiloPluginSettings.unsetQuestionDisplay()
             KiloPluginSettings.unsetHoverPreview()
         } finally {
             super.tearDown()
@@ -63,6 +64,7 @@ class TranscriptConfigurableTest : BasePlatformTestCase() {
             assertTrue("terminal expanded by default", toggles[TERMINAL].isSelected)
             assertFalse("code edit collapsed by default", toggles[CODE_EDIT].isSelected)
             assertFalse("mcp tool collapsed by default", toggles[MCP_TOOL].isSelected)
+            assertTrue("question cards expanded by default", toggles[QUESTION].isSelected)
             assertTrue("hover preview on by default", toggles[HOVER].isSelected)
         }
     }
@@ -91,13 +93,16 @@ class TranscriptConfigurableTest : BasePlatformTestCase() {
             assertTrue(preview.shellCard().isExpanded())
             assertFalse(preview.editCard().isExpanded())
             assertFalse(preview.mcpCard().isExpanded())
+            assertTrue(preview.questionCard().isExpanded())
             val shell = preview.shellCard().height
             val edit = preview.editCard().height
             val mcp = preview.mcpCard().height
+            val question = preview.questionCard().height
 
             toggles[TERMINAL].doClick()
             toggles[CODE_EDIT].doClick()
             toggles[MCP_TOOL].doClick()
+            toggles[QUESTION].doClick()
             revealAll()
             UIUtil.dispatchAllInvocationEvents()
             layoutTree(ui)
@@ -105,9 +110,11 @@ class TranscriptConfigurableTest : BasePlatformTestCase() {
             assertFalse("terminal switch closes the sample", preview.shellCard().isExpanded())
             assertTrue("code edit switch opens the sample", preview.editCard().isExpanded())
             assertTrue("MCP switch opens the sample", preview.mcpCard().isExpanded())
+            assertFalse("question switch closes the sample", preview.questionCard().isExpanded())
             assertTrue("closed terminal must shrink visibly", preview.shellCard().height < shell)
             assertTrue("open code edit must grow visibly", preview.editCard().height > edit)
             assertTrue("open MCP tool must grow visibly", preview.mcpCard().height > mcp)
+            assertTrue("closed question must shrink visibly", preview.questionCard().height < question)
             assertEquals("draft still is not persisted", DEFAULTS, KiloPluginSettings.getTranscriptDisplay())
         }
     }
@@ -224,7 +231,7 @@ class TranscriptConfigurableTest : BasePlatformTestCase() {
     }
 
     private fun revealAll() {
-        repeat(3) { timers.advanceBy(PREVIEW_STEP_MS.toLong()) }
+        repeat(4) { timers.advanceBy(PREVIEW_STEP_MS.toLong()) }
     }
 
     private fun uiOf(root: JComponent): TranscriptSettingsUi {
@@ -256,11 +263,13 @@ class TranscriptConfigurableTest : BasePlatformTestCase() {
     companion object {
         private val DEFAULTS = TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED)
 
-        // Toggle order follows the rendered rows: approval reason, terminal, code edit, MCP, hover.
+        // Toggle order follows the rendered rows: approval reason, terminal, code edit, MCP, question,
+        // hover.
         private const val APPROVAL = 0
         private const val TERMINAL = 1
         private const val CODE_EDIT = 2
         private const val MCP_TOOL = 3
-        private const val HOVER = 4
+        private const val QUESTION = 4
+        private const val HOVER = 5
     }
 }

@@ -6,15 +6,31 @@ import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.Turn
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.question.QuestionResultParser
 import kotlin.math.floor
 
-/** One navigable prompt: a user turn, its preview text, and the start of its response, if any. */
+enum class PromptRailKind { PROMPT, QUESTION }
+
+/**
+ * One navigable entry: a user turn, or an answered question inside it. [prompt] is the row's title — the
+ * prompt text, or a question header — and [answer] its preview — the start of the response, or the
+ * user's answers.
+ */
 data class PromptRailItem(
     val id: String,
     val queued: Boolean,
     val prompt: String,
     val answer: String,
+    val kind: PromptRailKind = PromptRailKind.PROMPT,
+    /** Turn the entry sits in, for questions whose [id] is not the turn id. */
+    val turn: String? = null,
+    /** Owning message of a question tool, used to resolve the part view it scrolls to. */
+    val message: String? = null,
+    /** Question tool part id, used to resolve the part view it scrolls to. */
+    val part: String? = null,
 )
 
 /** One rail tick: a navigable prompt, or a placeholder standing in for a run of hidden prompts. */
@@ -54,16 +70,17 @@ object PromptRailItems {
      * Per-turn preview cache. Rebuilds are driven by streamed content, so without this every delta
      * re-previews every turn in the transcript; with it only the turn that changed is recomputed.
      *
-     * Keyed by turn id, holding the [stamp] the entry was built from. EDT-only, like the model it reads.
+     * Keyed by turn id, holding the [stamp] the entries were built from. EDT-only, like the model it
+     * reads.
      */
     class Cache {
-        internal val entries = HashMap<String, Pair<Long, PromptRailItem>>()
+        internal val entries = HashMap<String, Pair<Long, List<PromptRailItem>>>()
 
-        internal fun take(id: String, mark: Long): PromptRailItem? =
+        internal fun take(id: String, mark: Long): List<PromptRailItem>? =
             entries[id]?.takeIf { it.first == mark }?.second
 
-        internal fun put(id: String, mark: Long, item: PromptRailItem) {
-            entries[id] = mark to item
+        internal fun put(id: String, mark: Long, items: List<PromptRailItem>) {
+            entries[id] = mark to items
         }
 
         /** Drops turns that are no longer in the transcript, so a cleared session does not linger. */
@@ -74,7 +91,7 @@ object PromptRailItems {
         fun size(): Int = entries.size
     }
 
-    /** One item per navigable user turn, in transcript order. */
+    /** One entry per navigable user turn, plus one per answered question in it, in transcript order. */
     fun items(model: SessionModel, cache: Cache? = null): List<PromptRailItem> {
         val out = mutableListOf<PromptRailItem>()
         val seen = mutableSetOf<String>()
@@ -87,23 +104,72 @@ object PromptRailItems {
             seen.add(turn.id)
             val mark = if (cache == null) 0L else stamp(model, turn)
             cache?.take(turn.id, mark)?.let {
-                out.add(it)
+                out.addAll(it)
                 continue
             }
-            val prompt = truncate(preview(text(anchor.parts.values)), PROMPT_LIMIT)
-            val answer = truncate(preview(answerText(model, turn.messageIds)), ANSWER_LIMIT)
-            val item = if (prompt.isEmpty()) {
-                // Promoted to the title, so it takes the title's limit rather than keeping the longer
-                // answer one.
-                PromptRailItem(turn.id, model.isQueued(turn.id), truncate(answer, PROMPT_LIMIT), "")
-            } else {
-                PromptRailItem(turn.id, model.isQueued(turn.id), prompt, answer)
+            val list = buildList {
+                add(prompt(model, turn, anchor))
+                addAll(questions(model, turn))
             }
-            cache?.put(turn.id, mark, item)
-            out.add(item)
+            cache?.put(turn.id, mark, list)
+            out.addAll(list)
         }
         cache?.retain(seen)
         return out
+    }
+
+    private fun prompt(model: SessionModel, turn: Turn, anchor: Message): PromptRailItem {
+        val prompt = truncate(preview(text(anchor.parts.values)), PROMPT_LIMIT)
+        val answer = truncate(preview(answerText(model, turn.messageIds)), ANSWER_LIMIT)
+        return if (prompt.isEmpty()) {
+            // Promoted to the title, so it takes the title's limit rather than keeping the longer
+            // answer one.
+            PromptRailItem(turn.id, model.isQueued(turn.id), truncate(answer, PROMPT_LIMIT), "")
+        } else {
+            PromptRailItem(turn.id, model.isQueued(turn.id), prompt, answer)
+        }
+    }
+
+    /** Answered question items of [turn], one per question the user answered, in tool-part order. */
+    private fun questions(model: SessionModel, turn: Turn): List<PromptRailItem> {
+        val out = mutableListOf<PromptRailItem>()
+        for (messageId in turn.messageIds.drop(1)) {
+            val message = model.message(messageId) ?: continue
+            if (message.info.role != "assistant") continue
+            for (part in message.parts.values) {
+                val tool = part as? Tool ?: continue
+                for (answer in QuestionResultParser.answered(tool)) {
+                    out.add(
+                        PromptRailItem(
+                            id = "${turn.id}/${tool.id}/${answer.index}",
+                            queued = false,
+                            prompt = truncate(preview(answer.header), PROMPT_LIMIT),
+                            answer = answers(answer.answers),
+                            kind = PromptRailKind.QUESTION,
+                            turn = turn.id,
+                            message = messageId,
+                            part = tool.id,
+                        ),
+                    )
+                }
+            }
+        }
+        return out
+    }
+
+    /**
+     * Preview of the user's [answers] to one question: one line per answer, capped to the same number
+     * of lines the reasoning preview shows once it is no longer streaming.
+     */
+    private fun answers(answers: List<String>): String {
+        // preview() drops fenced and inline code, so a code-only answer would become blank even though
+        // the user did answer. Fall back to the raw text rather than showing the navigator's no-answer label.
+        val lines = answers.map { raw -> preview(raw).ifBlank { raw.trim() } }.filter { it.isNotBlank() }
+        if (lines.isEmpty()) return ""
+        val room = SessionUiStyle.View.Reasoning.BODY_LINES
+        val kept = lines.take(room)
+        val text = kept.joinToString("\n")
+        return truncate(if (lines.size > kept.size) "$text…" else text, ANSWER_LIMIT)
     }
 
     /**
@@ -227,6 +293,13 @@ object PromptRailItems {
             hash = hash * 31 + msg.info.role.hashCode()
             for (part in msg.parts.values) {
                 hash = hash * 31 + part.id.hashCode()
+                // A question part only becomes navigable when it completes with answers, so the stamp
+                // has to fold in the fields that transition carries.
+                if (part is Tool && part.name == "question") {
+                    hash = hash * 31 + part.state.hashCode()
+                    hash = hash * 31 + part.input["questions"].hashCode()
+                    hash = hash * 31 + part.metadata["answers"].hashCode()
+                }
                 if (part !is Text) continue
                 hash = hash * 31 + part.content.length
                 hash = hash * 31 + head(part.content)

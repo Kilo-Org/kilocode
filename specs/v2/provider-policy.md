@@ -289,3 +289,7 @@ Equivalent v2 policy:
   },
 }
 ```
+
+The converted statements follow any statement the same document already authored, because the legacy lists restricted provider selection directly while an authored statement did not restrict it.
+
+A converted allowlist restricts providers per document, not per key. Policies resolve per document, and a user-global document resolves after a repository document (`## Ordering Across Authored Config Documents`). A repository allowlist therefore cannot remove a provider that the user-global document allows. State that intent in the user-global document when a repository-level restriction must not be overridden.

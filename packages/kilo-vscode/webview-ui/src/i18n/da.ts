@@ -331,6 +331,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Læs To-do",
   "ui.permission.toolLabel.todoWrite": "Skriv To-do",
   "ui.permission.toolLabel.codeSearch": "Kodesøgning",
+  "ui.permission.toolLabel.browserOpen": "Integreret browser",
   "ui.permission.copyCommand": "Kopiér",
   "ui.approval.auto": "Automatisk godkendt",
   "ui.approval.manual": "Godkendt af dig",
@@ -610,6 +611,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Hent indhold fra en URL",
   "settings.permissions.tool.websearch.description": "Søg på nettet",
   "settings.permissions.tool.codesearch.description": "Søg kode på nettet",
+  "settings.permissions.tool.browser_open.description": "Åbn en side i den integrerede browser",
   "settings.permissions.tool.external_directory.description": "Få adgang til filer uden for projektmappen",
   "settings.permissions.tool.doom_loop.description": "Opdag gentagne værktøjskald med identisk input",
 
@@ -815,6 +817,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Ingen udbydere",
   "dialog.model.unavailable": "Kilo-modeller er ikke tilgængelige",
+  "dialog.model.loadFailed": "Kunne ikke indlæse udbydere for dette projekt.",
 
   "prompt.placeholder.connecting": "Opretter forbindelse til server...",
   "prompt.placeholder.error": "Forbindelse mislykkedes. Tjek outputpanelet eller genstart udvidelsen.",
@@ -866,8 +869,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetri",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetri styres af VS Codes indbyggede telemetriindstilling. For at deaktivere den, gå til Indstillinger > Telemetry > Telemetry Level og sæt den til "off". Genstart VS Code for at anvende ændringen.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Åbn telemetriindstillinger",
+    "Brug denne til/fra-knap til at ændre din telemetriindstilling i Kilo. Telemetri forbliver slået fra, hvis VS Code eller miljøet deaktiverer den.",
+  "settings.aboutKiloCode.telemetry.toggle": "Aktivér telemetri",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Telemetriindstillingen kunne ikke opdateres",
 
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
@@ -978,6 +982,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Prompthistorik pr. samtale",
   "settings.experimental.conversationPromptHistory.description":
     "Hold prompthistorikken (ArrowUp/ArrowDown) adskilt for hver samtale i stedet for at dele én historik på tværs af alle samtaler.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager-velkomstskærm",
+  "settings.experimental.agentManagerSplash.description":
+    "Prøv den nye introduktion til Agent Manager med eksempler på arbejdsgange. Træder i kraft med det samme.",
   "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importér understøttede globale CLAUDE.md-instruktioner, enkle færdigheder og deaktiverede MCP-definitioner én gang. Originale Claude-filer forbliver uændrede; genstart backend efter aktivering.",
@@ -1180,6 +1187,8 @@ export const dict = {
     "Administrer opgaveliste. Tillader læsning og opdatering af den interne opgaveliste.",
   "settings.autoApprove.tool.webfetch": "Hent en URL. Tillader hentning af indhold fra en specifik URL.",
   "settings.autoApprove.tool.websearch": "Søg på nettet. Tillader udførelse af eksterne websøgninger.",
+  "settings.autoApprove.tool.browser_open":
+    "Åbn sider i den integrerede browser. Dette er forhåndsvisningen i appen, ikke Playwright-browserautomatisering.",
   "settings.autoApprove.tool.external_directory":
     "Få adgang til filer uden for arbejdsområdet. Udløses ved adgang til filer uden for den aktuelle projektmappe.",
   "settings.autoApprove.tool.doom_loop":
@@ -1326,6 +1335,8 @@ export const dict = {
   "dialog.model.notSet": "Ikke angivet",
   "profile.personalAccount": "Personlig konto",
   "profile.switchingAccount": "Skifter konto…",
+  "profile.unavailableAccount": "Utilgængelig konto",
+  "profile.switchFailed": "Kunne ikke bekræfte kontoskiftet.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/da.ts
 
@@ -1411,6 +1422,8 @@ export const dict = {
   "settings.saveBar.cancel": "Annuller",
   "settings.saveBar.saving": "Gemmer…",
   "settings.saveBar.saveFailed": "Kunne ikke gemme indstillinger",
+  "settings.saveBar.dismissError": "Afvis",
+  "settings.saveBar.unconfirmedWrite": "„{{name}}“ blev ikke bekræftet af udvidelsesværten.",
   "notifications.action.next": "Næste",
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",

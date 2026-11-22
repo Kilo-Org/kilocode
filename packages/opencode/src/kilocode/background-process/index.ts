@@ -894,7 +894,13 @@ export namespace BackgroundProcess {
             watch(shared, active)
             return
           }
-          exited(active, 0, null)
+          if (active.proc) {
+            if (!stopped(active.proc)) {
+              watch(shared, active)
+              return
+            }
+            exited(active, active.proc.exitCode, active.proc.signalCode)
+          } else exited(active, 0, null)
           await forget(shared, active)
         })
         .catch((err) => {

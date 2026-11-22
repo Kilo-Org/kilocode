@@ -8,7 +8,7 @@ import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.testing.rowLines
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.CommandFileDto
@@ -380,7 +380,7 @@ class CommandsSettingsUiTest : BasePlatformTestCase() {
         ApplicationManager.getApplication().replaceService(KiloWorkspaceService::class.java, KiloWorkspaceService(cs, workspaceRpc), testRootDisposable)
     }
 
-    private fun click(list: JBList<ActiveListItem>, panel: CommandsSettingsUi, key: String, id: String) {
+    private fun click(list: JBList<ActiveItem>, panel: CommandsSettingsUi, key: String, id: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
@@ -392,7 +392,7 @@ class CommandsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun doubleClick(list: JBList<ActiveListItem>, panel: CommandsSettingsUi, key: String) {
+    private fun doubleClick(list: JBList<ActiveItem>, panel: CommandsSettingsUi, key: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
@@ -404,21 +404,21 @@ class CommandsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: CommandsSettingsUi): List<ActiveListItem> = items(commandsList(panel))
+    private fun rows(panel: CommandsSettingsUi): List<ActiveItem> = items(commandsList(panel))
 
-    private fun items(list: JBList<ActiveListItem>): List<ActiveListItem> {
+    private fun items(list: JBList<ActiveItem>): List<ActiveItem> {
         val model = list.model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun commandsList(panel: CommandsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().first()
+    private fun commandsList(panel: CommandsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveItem>>().first()
 
     private fun bannerIntro(info: SettingsInfo): String {
         val pane = UIUtil.findComponentOfType(info, javax.swing.JEditorPane::class.java) ?: error("no banner text")
         return pane.text.replace(Regex("<[^>]+>"), "").replace(Regex("\\s+"), " ").trim()
     }
 
-    private fun scrollFor(panel: CommandsSettingsUi, list: JBList<ActiveListItem>) = components(panel)
+    private fun scrollFor(panel: CommandsSettingsUi, list: JBList<ActiveItem>) = components(panel)
         .filterIsInstance<JBScrollPane>()
         .single { pane -> pane.viewport.view === list.parent }
 
@@ -448,12 +448,12 @@ class CommandsSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<ActiveListItem>, point: Point) {
+    private fun click(list: JBList<ActiveItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
 
-    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(list: JBList<ActiveItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),

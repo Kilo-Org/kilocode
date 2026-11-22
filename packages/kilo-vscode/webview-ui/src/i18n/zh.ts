@@ -316,6 +316,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "读取待办",
   "ui.permission.toolLabel.todoWrite": "更新待办",
   "ui.permission.toolLabel.codeSearch": "代码搜索",
+  "ui.permission.toolLabel.browserOpen": "集成浏览器",
   "ui.permission.copyCommand": "复制",
   "ui.approval.auto": "已自动批准",
   "ui.approval.manual": "由你批准",
@@ -584,6 +585,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "从 URL 获取内容",
   "settings.permissions.tool.websearch.description": "搜索网页",
   "settings.permissions.tool.codesearch.description": "在网上搜索代码",
+  "settings.permissions.tool.browser_open.description": "在集成浏览器中打开页面",
   "settings.permissions.tool.external_directory.description": "访问项目目录之外的文件",
   "settings.permissions.tool.doom_loop.description": "检测具有相同输入的重复工具调用",
 
@@ -785,6 +787,7 @@ export const dict = {
 
   "dialog.model.noProviders": "无供应商",
   "dialog.model.unavailable": "Kilo 模型不可用",
+  "dialog.model.loadFailed": "无法加载此项目的供应商。",
 
   "prompt.placeholder.connecting": "正在连接服务器...",
   "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",
@@ -831,8 +834,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "遥测",
   "settings.aboutKiloCode.telemetry.description":
-    '遥测由 VS Code 的内置遥测设置控制。若要将其禁用，请转到「设置」>「遥测」>「遥测级别」并将其设置为 "off"。重启 VS Code 以应用更改。',
-  "settings.aboutKiloCode.telemetry.openSettings": "打开遥测设置",
+    "使用此开关更改 Kilo 的遥测设置。如果 VS Code 或运行环境禁用了遥测，遥测将保持关闭。",
+  "settings.aboutKiloCode.telemetry.toggle": "启用遥测",
+  "settings.aboutKiloCode.telemetry.saveFailed": "无法更新遥测设置",
 
   "settings.agentBehaviour.subtab.agents": "代理",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 服务器",
@@ -936,6 +940,8 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "按对话区分的提示历史",
   "settings.experimental.conversationPromptHistory.description":
     "为每个对话单独保存提示历史(ArrowUp/ArrowDown),而不是在所有对话间共享同一份。",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager 欢迎页",
+  "settings.experimental.agentManagerSplash.description": "试用带有工作流示例的新版 Agent Manager 介绍页。立即生效。",
   "settings.experimental.claudeMigration.title": "Claude Code 迁移",
   "settings.experimental.claudeMigration.description":
     "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",
@@ -1119,6 +1125,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "管理任务列表。允许读取和更新内部任务列表。",
   "settings.autoApprove.tool.webfetch": "获取 URL。允许从特定 URL 检索内容。",
   "settings.autoApprove.tool.websearch": "搜索网页。允许执行外部 Web 搜索。",
+  "settings.autoApprove.tool.browser_open": "在集成浏览器中打开页面。这是应用内预览，不是 Playwright 浏览器自动化。",
   "settings.autoApprove.tool.external_directory": "访问工作区外部的文件。访问当前项目目录之外的文件时触发。",
   "settings.autoApprove.tool.doom_loop": "防止重复相同操作。当相同的工具调用以相同的输入重复时触发。",
   "settings.checkpoints.enable.title": "启用快照",
@@ -1252,6 +1259,8 @@ export const dict = {
   "dialog.model.notSet": "未设置",
   "profile.personalAccount": "个人账户",
   "profile.switchingAccount": "正在切换账户…",
+  "profile.unavailableAccount": "不可用的账户",
+  "profile.switchFailed": "无法确认账户切换。",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/zh.ts
 
   "question.summary": "第 {{n}} / {{total}} 个问题",
@@ -1334,6 +1343,8 @@ export const dict = {
   "settings.saveBar.saveAnyway": "仍然保存",
   "settings.saveBar.saving": "保存中…",
   "settings.saveBar.saveFailed": "无法保存设置",
+  "settings.saveBar.dismissError": "忽略",
+  "settings.saveBar.unconfirmedWrite": "扩展宿主未确认「{{name}}」。",
   "settings.saveBar.cancel": "取消",
   "notifications.action.next": "下一个",
   "notifications.action.close": "关闭",

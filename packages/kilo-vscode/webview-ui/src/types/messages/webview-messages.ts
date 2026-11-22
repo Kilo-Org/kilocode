@@ -222,6 +222,11 @@ export interface CancelLoginRequest {
 export interface SetOrganizationRequest {
   type: "setOrganization"
   organizationId: string | null
+  /**
+   * Correlates the `organizationSwitchResult` reply with this request. The host
+   * supplies one when a caller omits it, so every dispatched request is answered.
+   */
+  requestID?: string
 }
 
 export interface WebviewReadyRequest {
@@ -287,11 +292,6 @@ export interface ConfigureAgentManagerSetupScriptMessage {
 
 export interface OpenProfilePanelRequest {
   type: "openProfilePanel"
-}
-
-export interface OpenVSCodeSettingsRequest {
-  type: "openVSCodeSettings"
-  query: string
 }
 
 export interface OpenConfigFileRequest {
@@ -542,6 +542,8 @@ export interface UpdateSettingRequest {
   type: "updateSetting"
   key: string
   value: unknown
+  /** Echoed unchanged on the outcome message so the sender can match it to this write. */
+  writeId?: string
 }
 
 export interface RequestTimelineSettingMessage {
@@ -709,6 +711,11 @@ export interface TelemetryRequest {
   type: "telemetry"
   event: string
   properties?: Record<string, unknown>
+}
+
+export interface SetTelemetryLevelRequest {
+  type: "setTelemetryLevel"
+  enabled: boolean
 }
 
 // Create a new worktree (with auto-created first session)
@@ -961,6 +968,14 @@ export interface OpenWorktreeRequest {
   worktreeId: string
 }
 
+// Copy one worktree's sessions into a new hosted workspace in Cloud. The
+// extension host owns the open session selection and the active session.
+export interface ContinueInCloudRequest {
+  type: "agentManager.continueInCloud"
+  projectId?: string
+  worktreeId: string
+}
+
 export interface AgentManagerCopyToClipboardRequest {
   type: "agentManager.copyToClipboard"
   text: string
@@ -969,6 +984,11 @@ export interface AgentManagerCopyToClipboardRequest {
 export interface AgentManagerSetIntroDismissedRequest {
   type: "agentManager.setIntroDismissed"
   dismissed: boolean
+}
+
+export interface AgentManagerSetSplashFoldedRequest {
+  type: "agentManager.setSplashFolded"
+  folded: boolean
 }
 
 // Copy text to the system clipboard via the extension host
@@ -1779,7 +1799,6 @@ export type WebviewMessage =
   | SetAgentManagerDefaultBaseBranchMessage
   | ConfigureAgentManagerSetupScriptMessage
   | OpenProfilePanelRequest
-  | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest
   | OpenMarketplacePanelRequest
   | OpenAgentManagerRequest
@@ -1879,6 +1898,7 @@ export type WebviewMessage =
   | ForgetSessionRequest
   | RenameWorktreeRequest
   | TelemetryRequest
+  | SetTelemetryLevelRequest
   | RequestRepoInfoMessage
   | RequestStateMessage
   | RequestProjectsMessage
@@ -1901,8 +1921,10 @@ export type WebviewMessage =
   | ShowLocalTerminalRequest
   | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
+  | ContinueInCloudRequest
   | AgentManagerCopyToClipboardRequest
   | AgentManagerSetIntroDismissedRequest
+  | AgentManagerSetSplashFoldedRequest
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest

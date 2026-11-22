@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "8e919778-bf29-4e1b-a106-88bc9d8b8b21",
+  "id": "24a2f570-b6b3-4711-9b02-abd2aaeee400",
   "prevIds": [
-    "38a74186-5907-4662-9e14-e059300a8b4e"
+    "8e919778-bf29-4e1b-a106-88bc9d8b8b21"
   ],
   "ddl": [
     {
@@ -44,6 +44,10 @@
     },
     {
       "name": "kilo_board",
+      "entityType": "tables"
+    },
+    {
+      "name": "kilo_continuation_intent",
       "entityType": "tables"
     },
     {
@@ -749,6 +753,86 @@
       "name": "time_updated",
       "entityType": "columns",
       "table": "kilo_board"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "kilo_continuation_intent"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "operation_key",
+      "entityType": "columns",
+      "table": "kilo_continuation_intent"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "selection_json",
+      "entityType": "columns",
+      "table": "kilo_continuation_intent"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cloud_origin",
+      "entityType": "columns",
+      "table": "kilo_continuation_intent"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "kilo_continuation_intent"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "prepared_json",
+      "entityType": "columns",
+      "table": "kilo_continuation_intent"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "kilo_continuation_intent"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "table": "kilo_continuation_intent"
     },
     {
       "type": "text",
@@ -1927,6 +2011,16 @@
     },
     {
       "columns": [
+        "account_id",
+        "operation_key"
+      ],
+      "nameExplicit": false,
+      "name": "kilo_continuation_intent_pk",
+      "entityType": "pks",
+      "table": "kilo_continuation_intent"
+    },
+    {
+      "columns": [
         "project_id",
         "directory"
       ],
@@ -2504,4 +2598,3 @@
   ],
   "renames": []
 }
-

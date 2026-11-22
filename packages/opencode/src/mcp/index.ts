@@ -50,6 +50,7 @@ import { McpCatalog } from "./catalog"
 import { McpEvent } from "@opencode-ai/schema/mcp-event"
 import { McpBrowser } from "./browser"
 import { authFailure } from "@/kilocode/mcp/auth-failure" // kilocode_change
+import * as KiloAuthTelemetry from "@/kilocode/mcp/auth-telemetry" // kilocode_change
 
 const DEFAULT_TIMEOUT = 30_000
 const CLIENT_OPTIONS = {
@@ -1019,6 +1020,7 @@ const layer = Layer.effect(
       opts?: { external?: boolean }, // kilocode_change
     ) {
       const result: AuthResult = yield* startAuth(mcpName, { callback: false }) // kilocode_change
+      yield* KiloAuthTelemetry.redirect(!!result.authorizationUrl) // kilocode_change
       if (!result.authorizationUrl) {
         const client = "client" in result ? result.client : undefined
         const mcpConfig = yield* requireMcpConfig(mcpName).pipe(
@@ -1057,11 +1059,13 @@ const layer = Layer.effect(
         }),
       )
       if (err) {
+        yield* KiloAuthTelemetry.fail("callback_unavailable")
         const pending = pendingOAuthTransports.get(mcpName)
         pendingOAuthTransports.delete(mcpName)
         yield* Effect.tryPromise(() => pending?.transport.close() ?? Promise.resolve()).pipe(Effect.ignore)
         return { status: "failed", error: err.message } as Status
       }
+      yield* KiloAuthTelemetry.phase("authorization")
       // kilocode_change end
 
       yield* Effect.logInfo("opening browser for oauth", {
@@ -1095,6 +1099,7 @@ const layer = Layer.effect(
 
       // kilocode_change start
       const callback = yield* Effect.promise(() => callbackSettled)
+      yield* KiloAuthTelemetry.callback(callback)
       const flow: PendingFlow = { transport: result.transport!, provider: result.provider }
       if (!callback.ok) {
         // A newer attempt for the same server can take this flow's callback listener over
@@ -1119,6 +1124,7 @@ const layer = Layer.effect(
       // server during the wait, which is not an authorization attempt.
       const owner = pendingOAuthTransports.get(mcpName)
       if (!owner || (owner.provider !== undefined && owner.provider !== result.provider)) {
+        yield* KiloAuthTelemetry.superseded()
         yield* releaseFlow(mcpName, flow)
         return {
           status: "failed",
@@ -1144,11 +1150,14 @@ const layer = Layer.effect(
       )
 
       if (failure) {
+        yield* KiloAuthTelemetry.exchange(failure)
         yield* releaseFlow(mcpName, flow)
         return { status: "failed", error: `Token exchange failed: ${oauthReason(failure)}` } satisfies Status
       }
 
+      yield* KiloAuthTelemetry.phase("credential_store")
       yield* Effect.promise(() => flow.provider?.commit() ?? Promise.resolve())
+      yield* KiloAuthTelemetry.persisted(flow.provider)
       pendingOAuthTransports.delete(mcpName)
 
       const mcpConfig = yield* requireMcpConfig(mcpName)
@@ -1216,7 +1225,7 @@ const layer = Layer.effect(
       getPrompt,
       readResource,
       startAuth,
-      authenticate,
+      authenticate: KiloAuthTelemetry.observe(authenticate, getMcpConfig), // kilocode_change - sign-in outcome telemetry
       finishAuth,
       removeAuth,
       cancelAuth, // kilocode_change

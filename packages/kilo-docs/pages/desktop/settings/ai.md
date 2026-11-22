@@ -11,7 +11,7 @@ Open settings from the gear at the bottom of the sidebar, and use the search box
 
 The **Agent Behavior** section is where you review and install the [agents](/docs/code-with-ai/agents/using-agents), [skills](/docs/customize/skills), and [MCP servers](/docs/automate/mcp/what-is-mcp) Kilo can use.
 
-Installed items are grouped by type, and you can search them or filter by **Agents**, **MCPs**, or **Skills**. You can also filter by {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} **Workspace**. Each item shows the workspaces it applies to (such as **All Workspaces**) and its author. Expand an item to see its details and to remove it; an MCP also shows whether it's **Connected**. **Refresh** re-checks for changes.
+Installed items are grouped by type, and you can search them or filter by **Agents**, **MCPs**, or **Skills**. You can also filter by {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} **Workspace**. Each item shows the workspaces it applies to (such as **All workspaces**) and its author. Expand an item to see its details and to remove it; an MCP also shows whether it's **Connected**. **Refresh** re-checks for changes.
 
 Select **+ Add** to open the **Kilo Marketplace**, where you can browse specialized agents, skills, and MCPs by category and install them. See [Marketplace](/docs/customize/marketplace) for the full catalog and how installing works.
 
@@ -29,13 +29,14 @@ If the program an MCP needs isn't installed (for example `npx`), you'll see **Th
 
 The **AI Providers** section lists your enabled AI providers, and **Add AI Provider** (top-right) connects a new one.
 
-The **Kilo Gateway** is the default path to models. When you're signed in it shows your account email and available balance; when you're signed out, use **Sign In**. Manage your account from the [Account](/docs/desktop/settings/general#account) section.
+The **Kilo Gateway** is the default path to models. When you're signed in it shows your account email and available balance; when you're signed out, use **Sign in**. Manage your account from the [Account](/docs/desktop/settings/general#account) section.
 
 Other providers appear below the gateway:
 
-- **Local Model Server** — models running on your machine; **Manage** opens the [Local model server](#local-model-server) settings.
 - **Providers you add** — anything you connect with an API key, each with edit and delete actions.
 - **System credentials** — some providers (such as **Amazon Bedrock**) connect automatically using credentials already on your machine rather than a stored API key. Expand the card to see the environment variables that were detected (for example, `AWS_PROFILE`). These are managed outside the app, so they can't be edited or removed here.
+
+Local models are managed in the [Local model server](#local-model-server) section.
 
 To add a provider, select **Add AI Provider** and either:
 
@@ -55,13 +56,30 @@ For details on the gateway itself, see [Models & Providers](/docs/gateway/models
 
 ## Local model server
 
-The **Local Model Server** section runs models on your own machine and exposes them to Kilo through an OpenAI-compatible endpoint. The toggle at the top starts and stops the server; the status beside it reads **Idle**, **Starting…**, or **Running**.
+The **Local Model Server** section manages a server that runs models on your own machine and makes them available to Kilo through an OpenAI-compatible endpoint. The toggle at the top starts and stops the server; the status beside it reads **Idle**, **Starting…**, or **Running**.
 
 **System Monitor** shows live **CPU**, **RAM**, and **GPU** usage so you can gauge how much headroom a model has.
 
 **Connect** holds the details an external client needs once the server is running: a copyable **Server Address** (for example `http://127.0.0.1:51009/v1`) and a masked **API Key**. Both read *Unavailable* until the server starts. {% svgIcon src="/docs/img/desktop/cable.svg" /%} **Request info** opens example request URLs and `curl` commands for the endpoints.
 
-**Models** lists the models you've added and lets you configure each one. Select **Add model → Import GGUF** to add a model from a `.gguf` file on disk. Each model shows whether it's **Loaded** or **Not loaded**, and its {% svgIcon src="/docs/img/desktop/ellipsis.svg" /%} menu can remove it from the server or reveal the file on disk.
+**Models** lists the models you've added and lets you configure each one. Select **Add model** and choose:
+
+- **From catalog** — opens the **Local Model Catalog**, where you can browse and download models from Anaconda. See [Model catalog](#model-catalog).
+- **Import GGUF** — adds a model from a `.gguf` file on disk.
+
+Once you have models, use **Search models** and the source filter (**All models**, **Catalog models**, or **Imported models**) to narrow the list. Each model shows whether it's **Loaded** or **Not loaded**. Its {% svgIcon src="/docs/img/desktop/ellipsis.svg" /%} menu can **Remove from model server** or reveal the file on disk. For a model you downloaded from the catalog, it can also **Delete downloaded model**, which removes the file from your computer; you can download it again later. Expand a catalog model and select **View in catalog** to open its catalog entry.
+
+### Model catalog
+
+The **Local Model Catalog** lists models available through your Anaconda account. If you aren't signed in, select **Sign in to Anaconda**. Kilo Desktop opens your browser to finish signing in, and the button reads **Waiting for browser…** until you do; select **Cancel** to stop. You can also sign in from [Account](/docs/desktop/settings/general#account).
+
+- **Recommended Models** suggests **Chat & coding** and **Lightweight models** that suit your machine.
+- **Search models** matches names, publishers, descriptions, licenses, tags, and quantizations. The sort button orders the list by **Newest**, **Estimated performance**, **Fastest**, **Largest**, or **Smallest**.
+- Each model shows its capabilities (**Chat**, **Tool calling**, **Vision**, **Embedding**) and an estimate of how it runs on your machine, from **Runs Great** to **Too Heavy**, with approximate tokens per second.
+
+Select a model to see its **Details**: a description, **Parameters**, **Context Window**, **License**, **Purpose**, and **Capabilities**. To download it, go to **Add to model server**, choose a quantization (each one shows its file size), and select **Add model**. Kilo Desktop picks the quantization that best fits your hardware by default, and you can't add one that needs more memory than your machine can safely use.
+
+While the file downloads, the model shows **Downloading** with a percentage; select {% svgIcon src="/docs/img/desktop/x.svg" /%} to cancel. Kilo Desktop checks the finished file before adding it to the server, and the model shows **Added** when it's ready. If a download fails — for example, because there isn't enough disk space — the error appears below the quantization, and you can select **Try again**.
 
 ### Model settings
 

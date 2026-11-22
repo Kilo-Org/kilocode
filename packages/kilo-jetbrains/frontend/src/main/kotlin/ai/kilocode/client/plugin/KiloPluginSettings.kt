@@ -16,7 +16,9 @@ object KiloPluginSettings {
     private const val TERMINAL_COMMAND_DISPLAY_KEY = "kilo.session.terminalCommandDisplay"
     private const val CODE_EDIT_DISPLAY_KEY = "kilo.session.codeEditDisplay"
     private const val MCP_TOOL_DISPLAY_KEY = "kilo.session.mcpToolDisplay"
+    private const val QUESTION_DISPLAY_KEY = "kilo.session.questionDisplay"
     private const val HOVER_PREVIEW_KEY = "kilo.session.hoverPreview"
+    private const val FETCH_WORKTREE_BASE_KEY = "kilo.worktree.fetchBase"
 
     /**
      * Mode the prompt picker last selected, or null when the CLI's own default should win.
@@ -129,6 +131,16 @@ object KiloPluginSettings {
         PropertiesComponent.getInstance().unsetValue(MCP_TOOL_DISPLAY_KEY)
     }
 
+    fun getQuestionDisplay(): BlockDisplay = blockDisplay(QUESTION_DISPLAY_KEY, BlockDisplay.EXPANDED)
+
+    fun setQuestionDisplay(value: BlockDisplay) {
+        PropertiesComponent.getInstance().setValue(QUESTION_DISPLAY_KEY, value.storageKey)
+    }
+
+    internal fun unsetQuestionDisplay() {
+        PropertiesComponent.getInstance().unsetValue(QUESTION_DISPLAY_KEY)
+    }
+
     fun getHoverPreview(): Boolean = PropertiesComponent.getInstance().getBoolean(HOVER_PREVIEW_KEY, true)
 
     fun setHoverPreview(value: Boolean) {
@@ -139,12 +151,23 @@ object KiloPluginSettings {
         PropertiesComponent.getInstance().unsetValue(HOVER_PREVIEW_KEY)
     }
 
+    fun getFetchWorktreeBase(): Boolean = PropertiesComponent.getInstance().getBoolean(FETCH_WORKTREE_BASE_KEY, true)
+
+    fun setFetchWorktreeBase(value: Boolean) {
+        PropertiesComponent.getInstance().setValue(FETCH_WORKTREE_BASE_KEY, value.toString())
+    }
+
+    internal fun unsetFetchWorktreeBase() {
+        PropertiesComponent.getInstance().unsetValue(FETCH_WORKTREE_BASE_KEY)
+    }
+
     /** Reads every transcript appearance preference as one snapshot. */
     fun getTranscriptDisplay(): TranscriptDisplay = TranscriptDisplay(
         reasoning = getReasoningDisplay(),
         terminal = getTerminalCommandDisplay(),
         codeEdit = getCodeEditDisplay(),
         mcpTool = getMcpToolDisplay(),
+        question = getQuestionDisplay(),
         approvalReason = getShowApprovalReason(),
         hoverPreview = getHoverPreview(),
     )
@@ -155,6 +178,7 @@ object KiloPluginSettings {
         setTerminalCommandDisplay(value.terminal)
         setCodeEditDisplay(value.codeEdit)
         setMcpToolDisplay(value.mcpTool)
+        setQuestionDisplay(value.question)
         setShowApprovalReason(value.approvalReason)
         setHoverPreview(value.hoverPreview)
     }

@@ -332,6 +332,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "할 일 읽기",
   "ui.permission.toolLabel.todoWrite": "할 일 쓰기",
   "ui.permission.toolLabel.codeSearch": "코드 검색",
+  "ui.permission.toolLabel.browserOpen": "통합 브라우저",
   "ui.permission.copyCommand": "복사",
   "ui.approval.auto": "자동 승인됨",
   "ui.approval.manual": "사용자가 승인함",
@@ -566,6 +567,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "URL에서 콘텐츠 가져오기",
   "settings.permissions.tool.websearch.description": "웹 검색",
   "settings.permissions.tool.codesearch.description": "웹에서 코드 검색",
+  "settings.permissions.tool.browser_open.description": "통합 브라우저에서 페이지 열기",
   "settings.permissions.tool.external_directory.description": "프로젝트 디렉터리 외부의 파일에 액세스",
   "settings.permissions.tool.doom_loop.description": "동일한 입력으로 반복되는 도구 호출 감지",
 
@@ -809,6 +811,7 @@ export const dict = {
 
   "dialog.model.noProviders": "공급자 없음",
   "dialog.model.unavailable": "Kilo 모델을 사용할 수 없음",
+  "dialog.model.loadFailed": "이 프로젝트의 공급자를 불러올 수 없습니다.",
 
   "prompt.placeholder.connecting": "서버에 연결 중...",
   "prompt.placeholder.error": "연결에 실패했습니다. 출력 패널을 확인하거나 확장 프로그램을 다시 시작하세요.",
@@ -858,8 +861,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "원격 측정",
   "settings.aboutKiloCode.telemetry.description":
-    '원격 측정은 VS Code에 내장된 원격 측정 설정으로 제어됩니다. 비활성화하려면 설정 > 원격 측정 > 원격 측정 수준으로 이동하여 "off"로 설정하세요. 변경 사항을 적용하려면 VS Code를 다시 시작하세요.',
-  "settings.aboutKiloCode.telemetry.openSettings": "원격 측정 설정 열기",
+    "이 스위치로 Kilo의 원격 측정 설정을 변경할 수 있습니다. VS Code나 실행 환경에서 원격 측정을 비활성화하면 계속 꺼진 상태로 유지됩니다.",
+  "settings.aboutKiloCode.telemetry.toggle": "원격 측정 사용",
+  "settings.aboutKiloCode.telemetry.saveFailed": "원격 측정 설정을 업데이트하지 못했습니다",
 
   "settings.agentBehaviour.subtab.agents": "에이전트",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 서버",
@@ -968,6 +972,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "대화별 프롬프트 기록",
   "settings.experimental.conversationPromptHistory.description":
     "프롬프트 기록(ArrowUp/ArrowDown)을 모든 대화에서 공유하지 않고 대화별로 분리하여 유지합니다.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager 시작 화면",
+  "settings.experimental.agentManagerSplash.description":
+    "워크플로 예제가 포함된 새로운 Agent Manager 소개 화면을 사용해 보세요. 즉시 적용됩니다.",
   "settings.experimental.claudeMigration.title": "Claude Code 마이그레이션",
   "settings.experimental.claudeMigration.description":
     "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
@@ -1163,6 +1170,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "작업 목록 관리. 내부 작업 목록을 읽고 업데이트할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.webfetch": "URL 가져오기. 특정 URL에서 콘텐츠를 검색할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.websearch": "웹 검색. 외부 웹 검색을 수행할 수 있도록 허용합니다.",
+  "settings.autoApprove.tool.browser_open":
+    "통합 브라우저에서 페이지를 엽니다. 앱 내 미리보기이며 Playwright 브라우저 자동화가 아닙니다.",
   "settings.autoApprove.tool.external_directory":
     "작업 공간 외부 파일 접근. 현재 프로젝트 디렉토리 외부의 파일에 접근할 때 트리거됩니다.",
   "settings.autoApprove.tool.doom_loop":
@@ -1304,6 +1313,8 @@ export const dict = {
   "dialog.model.notSet": "설정되지 않음",
   "profile.personalAccount": "개인 계정",
   "profile.switchingAccount": "계정 전환 중…",
+  "profile.unavailableAccount": "사용할 수 없는 계정",
+  "profile.switchFailed": "계정 전환을 확인하지 못했습니다.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ko.ts
 
   "question.summary": "{{total}}개 질문 중 {{n}}번째",
@@ -1388,6 +1399,8 @@ export const dict = {
   "settings.saveBar.cancel": "취소",
   "settings.saveBar.saving": "저장 중…",
   "settings.saveBar.saveFailed": "설정을 저장할 수 없습니다",
+  "settings.saveBar.dismissError": "닫기",
+  "settings.saveBar.unconfirmedWrite": "확장 프로그램 호스트가 “{{name}}”을(를) 확인하지 않았습니다.",
   "notifications.action.next": "다음",
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",

@@ -150,6 +150,12 @@ Manage your Kilo Teams plan and seat allocation.
   - Context Length
   - Pricing
 
+### Gateway availability
+
+Open a model's details to see a read-only **Gateway availability** table at the bottom of the dialog. It shows whether Vercel AI Gateway and OpenRouter serve the model, and for Vercel the inference regions the model is served from (US, EU, AU, JP). OpenRouter requests are not pinned to a region, so its region cell shows a dash.
+
+The table appears only when the organization's gateway settings feature is enabled; otherwise the dialog ends after the provider table.
+
 ## Single Sign-On (SSO) (Enterprise Only)
 
 - Set up SSO if not already configured

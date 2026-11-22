@@ -42,22 +42,22 @@ describe("buildAutocompleteSettingsMessage", () => {
   })
 
   it("passes an explicit BYOK selection through verbatim", () => {
-    state.set("provider", "inception")
-    state.set("model", "mercury-edit-2")
+    state.set("provider", "mistral")
+    state.set("model", "codestral-2508")
 
     const msg = buildAutocompleteSettingsMessage()
 
-    expect(msg.settings.provider).toBe("inception")
-    expect(msg.settings.model).toBe("mercury-edit-2")
+    expect(msg.settings.provider).toBe("mistral")
+    expect(msg.settings.model).toBe("codestral-2508")
   })
 
   it("does not coerce a bare model setting to a default — let the webview see what was stored", () => {
-    state.set("model", "mercury-edit-2")
+    state.set("model", "codestral-2508")
 
     const msg = buildAutocompleteSettingsMessage()
 
     expect(msg.settings.provider).toBeNull()
-    expect(msg.settings.model).toBe("mercury-edit-2")
+    expect(msg.settings.model).toBe("codestral-2508")
   })
 })
 
@@ -70,8 +70,8 @@ describe("validAutocompleteSetting", () => {
   })
 
   it("accepts known providers and models", () => {
-    expect(validAutocompleteSetting("provider", "inception")).toBe(true)
-    expect(validAutocompleteSetting("model", "mercury-edit-2")).toBe(true)
+    expect(validAutocompleteSetting("provider", "mistral")).toBe(true)
+    expect(validAutocompleteSetting("model", "codestral-2508")).toBe(true)
   })
 
   it("rejects unknown providers and models", () => {

@@ -3,7 +3,7 @@ import z from "zod"
 export const MessageIdSchema = z.string().regex(/^msg_[0-9a-f]{12}[0-9A-Za-z]{14}$/)
 export const CloudAgentSessionIdSchema = z
   .string()
-  .regex(/^agent_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+  .regex(/^(agent|workspace)_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
 
 const BranchSchema = z
   .string()
@@ -57,6 +57,8 @@ const AgentSchema = z
   })
   .strict()
 
+export const CreationOriginSchema = z.enum(["kilo-cli", "desktop"])
+
 export const AgentStartRequestSchema = z
   .object({
     message: StartMessageSchema,
@@ -64,10 +66,11 @@ export const AgentStartRequestSchema = z
     repository: RepositoryInputSchema,
     options: z
       .object({
-        createdOnPlatform: z.literal("kilo-cli"),
+        createdOnPlatform: CreationOriginSchema,
         kilocodeOrganizationId: z.string().uuid().optional(),
       })
       .strict(),
+    operationKey: z.string().uuid().optional(),
   })
   .strict()
 
@@ -84,6 +87,7 @@ export const AgentStartResponseSchema = z.object({
   kiloSessionId: z.string(),
   messageId: MessageIdSchema,
   delivery: z.string().min(1).max(50),
+  replayed: z.boolean().optional(),
   streamUrl: z.string().min(1).optional(),
   wrapperRunId: z.string().optional(),
 })

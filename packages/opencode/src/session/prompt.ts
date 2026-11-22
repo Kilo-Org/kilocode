@@ -475,7 +475,7 @@ export const layer = Layer.effect(
           callID: part.callID,
           // kilocode_change start
           extra: {
-            bypassAgentCheck: true,
+            namedAgentTypes: [task.agent],
             promptOps,
             workflow, // kilocode_change
           },
@@ -1490,6 +1490,8 @@ export const layer = Layer.effect(
         if (!ticket.running()) return message
         const dismiss = Effect.gen(function* () {
           yield* Effect.promise(() => Suggestion.dismissAll(input.sessionID)).pipe(Effect.orDie)
+          // Background results must wait for the user's answer, not dismiss it.
+          if (background) return
           yield* question.dismissAll(input.sessionID)
         })
         if (input.noReply === true) {
@@ -1512,6 +1514,7 @@ export const layer = Layer.effect(
           ), // kilocode_change
           bridge.run(lastAssistant(input.sessionID)),
           dismiss,
+          !background,
         )
         // kilocode_change end
       },
@@ -1647,13 +1650,21 @@ export const layer = Layer.effect(
         }
 
         if (task?.type === "compaction") {
-          const result = yield* compaction.process({
-            messages: msgs,
-            parentID: task.messageID, // kilocode_change
-            sessionID,
-            auto: task.auto,
-            overflow: task.overflow,
-          })
+          // kilocode_change start - an interrupted compaction must not stay pending
+          const result = yield* compaction
+            .process({
+              messages: msgs,
+              parentID: task.messageID,
+              sessionID,
+              auto: task.auto,
+              overflow: task.overflow,
+            })
+            .pipe(
+              Effect.onInterrupt(() =>
+                KiloSessionPrompt.settleCompaction({ sessions, sessionID, parentID: task.messageID }),
+              ),
+            )
+          // kilocode_change end
           // kilocode_change start - compaction.process returns "stop" after
           // setting a terminal error on the summary message: either a
           // ContextOverflowError or the empty-summary APIError; surface as turn error
@@ -1749,7 +1760,7 @@ export const layer = Layer.effect(
 
         const outcome: "break" | "continue" = yield* Effect.gen(function* () {
           const lastUserMsg = msgs.findLast((m) => m.info.role === "user")
-          const bypassAgentCheck = lastUserMsg?.parts.some((p) => p.type === "agent") ?? false
+          const namedAgentTypes = lastUserMsg?.parts.flatMap((p) => (p.type === "agent" ? [p.name] : [])) ?? [] // kilocode_change
           const promptOps = yield* ops(sessionID) // kilocode_change
 
           // kilocode_change start
@@ -1768,7 +1779,7 @@ export const layer = Layer.effect(
             session,
             model,
             processor: handle,
-            bypassAgentCheck,
+            namedAgentTypes, // kilocode_change
             messages: msgs,
             promptOps,
             goalOps: goals, // kilocode_change
@@ -2376,7 +2387,7 @@ export const layer = Layer.effect(
         template = template + "\n\n" + input.arguments
       }
 
-      const shellMatches = ConfigMarkdown.shell(template)
+      const shellMatches = cmd.source === "mcp" ? [] : ConfigMarkdown.shell(template) // kilocode_change - MCP prompt text is not a local shell template
       // kilocode_change start - skill templates run !`cmd`` only when trusted and the kill-switch is off,
       // mirroring the skill tool's gate (the slash-command path is user-initiated, so it is not prompted).
       const skillTemplate = cmd.source === "skill"

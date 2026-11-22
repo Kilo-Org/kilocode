@@ -104,6 +104,19 @@
   margin-right: auto;
 }
 
+/* Without the save bar the error block is the last thing in the panel, so it
+   brings its own bottom inset instead of borrowing the bar's padding. */
+.settings-save-bar-wrap-error-only {
+  padding-bottom: 8px;
+}
+
+/* The dismiss control sits outside the expander header so AT exposes it as its own button. */
+.settings-save-bar-error-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 10px 8px 10px;
+}
+
 /* Save error — mirrors the startup-error-banner style */
 .settings-save-bar-error {
   border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
