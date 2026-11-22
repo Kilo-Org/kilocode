@@ -71,11 +71,12 @@ export function envGuards(
     }
     gated[`${command} * *.env`] = level
     gated[`${command} * *.env.*`] = level
-    // No trailing-operand form is emitted for these two shapes. Reaching a file
-    // that is neither the first nor the last operand needs a trailing wildcard,
-    // and a searcher compares text rather than operands, so that wildcard also
-    // reaches a search term that reads like a file name. The shell map cannot
-    // separate the two, so the shape stays at the command's existing level.
+    // The two suffix shapes above stop at the trailing operand. A third form that
+    // also reached a file in the middle of the command would need a trailing
+    // wildcard, and a searcher compares text rather than operands, so that
+    // wildcard would also reach a search term that reads like a file name. The
+    // shell map cannot separate the two, so those shapes stay at the command's
+    // existing level rather than prompt for an ordinary search.
     samples[`${command} .env.example`] = "allow"
   }
 
