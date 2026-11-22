@@ -133,7 +133,9 @@ export function resolve(permission: string, pattern: string, ruleset: Ruleset, .
   if (base.action === "deny") return base
   if (saved.action === "deny") return saved
   if (base.action === "ask") {
-    if (saved.action === "allow" && Wildcard.match(saved.pattern, base.pattern)) return saved
+    // kilocode_change - compare saved coverage the way the rules matched this request
+    if (saved.action === "allow" && Wildcard.match(saved.pattern, base.pattern, PermissionV2.ignoresCase(permission)))
+      return saved
     return base
   }
   if (saved.action === "allow") return saved

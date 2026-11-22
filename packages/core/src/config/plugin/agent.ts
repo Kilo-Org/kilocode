@@ -28,7 +28,6 @@ type PathAction =
   | LocationMutation.ExternalDirectoryAuthorization["action"]
   | typeof ReadTool.name
   | typeof EditTool.name
-const pathActions = ["external_directory", "read", "edit"] as const satisfies readonly PathAction[]
 const agentKeys = new Set([
   "model",
   "variant",
@@ -125,7 +124,8 @@ function expandPermissions(rules: PermissionV2.Ruleset, home: string): Permissio
 }
 
 function isPathAction(action: string): action is PathAction {
-  return pathActions.some((item) => item === action)
+  // kilocode_change - reuse the shared path action list so both copies cannot drift
+  return (PermissionV2.pathActions satisfies readonly PathAction[]).some((item) => item === action)
 }
 
 function expandHome(resource: string, home: string) {
