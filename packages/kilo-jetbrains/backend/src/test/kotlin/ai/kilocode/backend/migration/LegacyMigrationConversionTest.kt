@@ -51,6 +51,54 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
+    fun `convertProvider - kilo provider with organization carries accountId`() {
+        val settings = buildJsonObject {
+            put("apiProvider", "kilocode")
+            put("kilocodeToken", "tok-123")
+            put("kilocodeOrganizationId", "org-abc")
+        }
+        val result = LegacyMigrationConverters.convertProvider("kilo-profile", settings) { null }
+        assertEquals(MigrationItemStatus.success, result.status)
+        val auth = result.auth!!
+        assertEquals("oauth", auth["type"]?.jsonPrimitive?.content)
+        assertEquals("tok-123", auth["access"]?.jsonPrimitive?.content)
+        assertEquals("tok-123", auth["refresh"]?.jsonPrimitive?.content)
+        assertEquals("org-abc", auth["accountId"]?.jsonPrimitive?.content)
+        val expires = auth["expires"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
+        assertTrue(expires > System.currentTimeMillis())
+    }
+
+    @Test
+    fun `provider map - the gateway is the only mapping with an organization field`() {
+        val withOrg = PROVIDER_MAP.filterValues { it.organizationIdField != null }
+        assertEquals(
+            setOf("kilocode"),
+            withOrg.keys,
+            message = "a provider profile reaches the gateway credential envelope only through the mapping that declares an organization field",
+        )
+        assertEquals(
+            setOf("kilo"),
+            withOrg.values.map { it.id }.toSet(),
+            message = "the mapping that declares an organization field must be the gateway provider id",
+        )
+        assertEquals("kilocodeOrganizationId", withOrg.getValue("kilocode").organizationIdField)
+    }
+
+    @Test
+    fun `convertProvider - provider without an organization field stores an api credential`() {
+        val settings = buildJsonObject {
+            put("apiProvider", "anthropic")
+            put("apiKey", "sk-ant-abc")
+        }
+        val result = LegacyMigrationConverters.convertProvider("anthropic-profile", settings) { null }
+        assertEquals(MigrationItemStatus.success, result.status)
+        val auth = result.auth!!
+        assertEquals("api", auth["type"]?.jsonPrimitive?.content)
+        assertEquals("sk-ant-abc", auth["key"]?.jsonPrimitive?.content)
+        assertEquals(2, auth.size, message = "api credential carries type and key only")
+    }
+
+    @Test
     fun `convertProvider - unsupported provider returns warning`() {
         val settings = buildJsonObject {
             put("apiProvider", "glama")
@@ -114,6 +162,7 @@ class LegacyMigrationConversionTest {
         assertNotNull(result.config)
         val opts = result.config!!["provider"]?.jsonObject?.get("openai-compatible")?.jsonObject?.get("options")?.jsonObject
         assertEquals("https://my.openai.com/v1", opts?.get("baseURL")?.jsonPrimitive?.content)
+        assertNull(opts?.get("apiKey"), message = "the provider options must not carry the secret")
     }
 
     @Test

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect } from "bun:test"
-import { Duration, Effect, Exit, Fiber, Scope, Stream } from "effect"
-import { Cause, Clock, Deferred } from "effect" // kilocode_change - single-flight refresh tests
+import { Deferred, Duration, Effect, Exit, Fiber, Scope, Stream } from "effect" // kilocode_change - Deferred
+import { Cause, Clock } from "effect" // kilocode_change - single-flight refresh tests
 import * as TestClock from "effect/testing/TestClock"
 import { Credential } from "@opencode-ai/core/credential"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
@@ -389,6 +389,142 @@ describe("Integration", () => {
         .complete({ attemptID: attempt.attemptID, code: "1234" })
         .pipe(Effect.flip)
       expect(exit).toBeInstanceOf(Integration.AttemptNotFoundError)
+    }),
+  )
+
+  it.effect("reports a failed attempt as not found when completing", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const credentials = yield* Credential.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("chatgpt")
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "code" as const,
+              url: "https://example.com/authorize",
+              instructions: "Paste the code",
+              callback: () => Effect.fail(new Error("access denied")),
+            }),
+        }),
+      )
+
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
+      const failure = yield* integrations.attempt
+        .complete({ attemptID: attempt.attemptID, code: "1234" })
+        .pipe(Effect.flip)
+      expect(failure).toBeInstanceOf(Integration.AuthorizationError)
+      const exit = yield* integrations.attempt
+        .complete({ attemptID: attempt.attemptID, code: "1234" })
+        .pipe(Effect.flip)
+      expect(exit).toBeInstanceOf(Integration.AttemptNotFoundError)
+      expect(yield* credentials.list(integrationID)).toEqual([])
+    }),
+  )
+
+  it.effect("reports an expired attempt as not found when completing", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("chatgpt")
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "code" as const,
+              url: "https://example.com/authorize",
+              instructions: "Paste the code",
+              callback: () => Effect.die("unexpected callback"),
+            }),
+        }),
+      )
+
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
+      yield* TestClock.adjust(Duration.minutes(10))
+      yield* Effect.yieldNow
+      expect(yield* integrations.attempt.status(attempt.attemptID)).toEqual({
+        status: "expired",
+        time: attempt.time,
+      })
+      const exit = yield* integrations.attempt
+        .complete({ attemptID: attempt.attemptID, code: "1234" })
+        .pipe(Effect.flip)
+      expect(exit).toBeInstanceOf(Integration.AttemptNotFoundError)
+    }),
+  )
+
+  it.effect("reports an attempt as completing when it is still in flight", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const credentials = yield* Credential.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("browser")
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "Browser" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "auto" as const,
+              url: "https://example.com/authorize",
+              instructions: "Sign in",
+              callback: Effect.never,
+            }),
+        }),
+      )
+
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
+      const first = yield* integrations.attempt.complete({ attemptID: attempt.attemptID }).pipe(Effect.flip)
+      expect(first).toBeInstanceOf(Integration.AttemptCompletingError)
+      const second = yield* integrations.attempt.complete({ attemptID: attempt.attemptID }).pipe(Effect.flip)
+      expect(second).toBeInstanceOf(Integration.AttemptCompletingError)
+      expect(yield* credentials.list(integrationID)).toEqual([])
+
+      // The same state applies once a code attempt's first completion is under way.
+      const codeID = Integration.MethodID.make("chatgpt")
+      const started = yield* Deferred.make<void>()
+      const release = yield* Deferred.make<void>()
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: codeID, type: "oauth", label: "ChatGPT" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "code" as const,
+              url: "https://example.com/authorize",
+              instructions: "Paste the code",
+              callback: () =>
+                Deferred.succeed(started, undefined).pipe(
+                  Effect.andThen(Deferred.await(release)),
+                  Effect.as(
+                    Credential.OAuth.make({ type: "oauth", methodID: codeID, access: "access", refresh: "refresh", expires: 1 }),
+                  ),
+                ),
+            }),
+        }),
+      )
+      const code = yield* integrations.connection.oauth({ integrationID, methodID: codeID, inputs: {} })
+      const fiber = yield* integrations.attempt
+        .complete({ attemptID: code.attemptID, code: "1234" })
+        .pipe(Effect.forkScoped)
+      yield* Deferred.await(started)
+      const conflict = yield* integrations.attempt
+        .complete({ attemptID: code.attemptID, code: "1234" })
+        .pipe(Effect.flip)
+      expect(conflict).toBeInstanceOf(Integration.AttemptCompletingError)
+      yield* Deferred.succeed(release, undefined)
+      yield* Fiber.join(fiber)
+
+      expect(yield* credentials.list(integrationID)).toHaveLength(1)
+      expect(yield* integrations.attempt.status(code.attemptID)).toEqual({
+        status: "complete",
+        time: code.time,
+      })
     }),
   )
   // kilocode_change end

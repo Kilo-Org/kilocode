@@ -115,6 +115,76 @@ describe("Config", () => {
     }),
   )
 
+  // kilocode_change start - request header placement in the v1 migration fallback
+  it.effect("places provider-level credentials and headers in request headers", () =>
+    Effect.sync(() => {
+      const migrated = ConfigMigrateV1.migrate({
+        provider: {
+          custom: {
+            options: { apiKey: "secret", headers: { "x-test": "1" }, region: "eu" },
+            models: {
+              chat: {
+                options: { authToken: "model-token", custom: "value" },
+              },
+            },
+          },
+        },
+      })
+
+      expect(migrated.providers?.custom?.request).toEqual({
+        headers: { "x-test": "1" },
+        body: { apiKey: "secret", region: "eu" },
+      })
+      expect(migrated.providers?.custom?.models?.chat?.request).toEqual({
+        headers: { Authorization: "Bearer model-token" },
+        body: { custom: "value" },
+      })
+    }),
+  )
+
+  it.effect("places model-level credentials and headers in request headers", () =>
+    Effect.sync(() => {
+      const migrated = ConfigMigrateV1.migrate({
+        provider: {
+          custom: {
+            npm: "custom-ai-sdk-package",
+            options: { apiKey: "secret" },
+            models: {
+              chat: { options: { apiKey: "model-secret", authToken: "token", custom: "value" } },
+              other: { options: { authToken: "token", custom: "value" }, headers: { "x-model": "1" } },
+            },
+          },
+        },
+      })
+
+      expect(migrated.providers?.custom?.request).toEqual({ headers: undefined, body: { apiKey: "secret" } })
+      expect(migrated.providers?.custom?.models?.chat?.request).toEqual({
+        headers: { Authorization: "Bearer token" },
+        body: { apiKey: "model-secret", custom: "value" },
+      })
+      expect(migrated.providers?.custom?.models?.other?.request).toEqual({
+        headers: { Authorization: "Bearer token", "x-model": "1" },
+        body: { custom: "value" },
+      })
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - a bearer header from authToken is reported alongside the apiKey body option
+  it.effect("reports a bearer header alongside the apiKey body option", () =>
+    Effect.sync(() => {
+      const migrated = ConfigMigrateV1.migrate({
+        provider: { custom: { options: { apiKey: "secret", authToken: "token" } } },
+      })
+
+      expect(migrated.providers?.custom?.request).toEqual({
+        headers: { Authorization: "Bearer token" },
+        body: { apiKey: "secret" },
+      })
+    }),
+  )
+  // kilocode_change end
+
   it.effect("migrates v1 command configuration", () =>
     Effect.sync(() => {
       expect(
@@ -245,7 +315,7 @@ describe("Config", () => {
       ),
     ),
   )
-            // kilocode_change end
+  // kilocode_change end
 
   it.live("loads opencode JSON and JSONC files from lowest to highest priority", () =>
     Effect.acquireRelease(
@@ -923,9 +993,7 @@ describe("Config", () => {
             expect(info.permissions).toEqual([{ action: "bash", resource: "git push*", effect: "deny" }])
             expect(info.agents?.reviewer?.description).toBe("reviews changes")
             expect(info.agents?.reviewer?.steps).toBeUndefined()
-            expect(info.agents?.reviewer?.permissions).toEqual([
-              { action: "edit", resource: "*", effect: "deny" },
-            ])
+            expect(info.agents?.reviewer?.permissions).toEqual([{ action: "edit", resource: "*", effect: "deny" }])
             expect(info.experimental?.policies).toEqual([
               { effect: "deny", action: "provider.use", resource: "openai" },
             ])
@@ -950,11 +1018,9 @@ describe("Config", () => {
             const config = yield* Config.Service
             yield* config.entries()
             const skipped = reported(logs, "skipping invalid configuration value")
-            expect(skipped.map(([, context]) => context.path).toSorted((a, b) => String(a).localeCompare(String(b)))).toEqual([
-              "$.agents.reviewer.steps",
-              "$.autoupdate",
-              "$.share",
-            ])
+            expect(
+              skipped.map(([, context]) => context.path).toSorted((a, b) => String(a).localeCompare(String(b))),
+            ).toEqual(["$.agents.reviewer.steps", "$.autoupdate", "$.share"])
             for (const [, context] of skipped) {
               expect(context.source).toBe(file)
               expect(typeof context.message).toBe("string")
@@ -1010,9 +1076,9 @@ describe("Config", () => {
             const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
             expect(documents).toHaveLength(1)
             expect(documents[0]?.info.permissions).toEqual([{ action: "bash", resource: "*", effect: "ask" }])
-            expect(logs.filter((item) => Array.isArray(item) && item[0] === "skipping invalid configuration value")).toEqual(
-              [],
-            )
+            expect(
+              logs.filter((item) => Array.isArray(item) && item[0] === "skipping invalid configuration value"),
+            ).toEqual([])
             expect(
               logs.filter((item) => Array.isArray(item) && item[0] === "skipping unparsable configuration file"),
             ).toEqual([])
