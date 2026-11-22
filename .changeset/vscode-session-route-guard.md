@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Keep session actions on one project: reverting, deleting a message, stopping, and replying to a permission or question request now report when the session's directory cannot be determined instead of choosing one.
+Session actions keep to one project: revert, unrevert, message delete, stop, and permission and question replies act on the directory that owns the session, and report the action when that directory cannot be determined.
