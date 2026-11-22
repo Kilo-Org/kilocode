@@ -92,8 +92,8 @@ document.body.append(host)
 const dispose = render(
   () => (
     <VSCodeProvider>
-      <ServerProvider>
-        <DialogProvider>
+      <DialogProvider>
+        <ServerProvider>
           <ProviderProvider>
             <ConfigContext.Provider value={config as never}>
               <LanguageContext.Provider value={language as never}>
@@ -105,8 +105,8 @@ const dispose = render(
               </LanguageContext.Provider>
             </ConfigContext.Provider>
           </ProviderProvider>
-        </DialogProvider>
-      </ServerProvider>
+        </ServerProvider>
+      </DialogProvider>
     </VSCodeProvider>
   ),
   host,
