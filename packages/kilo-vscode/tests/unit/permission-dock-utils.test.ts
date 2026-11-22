@@ -200,6 +200,17 @@ describe("removableRuleIndices", () => {
     ).toEqual(new Set([0]))
   })
 
+  it("leaves a row alone when a workspace entry matches across separators", () => {
+    expect(
+      call({
+        rules: ["src\\foo.ts"],
+        global: { "src\\foo.ts": "allow" },
+        workspace: { "src/*": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
   it("keeps an unrelated row in scope when the workspace scope covers another pattern", () => {
     expect(
       call({

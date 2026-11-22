@@ -37,18 +37,23 @@ export function savedRuleStates(rules: string[], saved: PermissionRule | undefin
 /**
  * Whether a workspace entry decides the commands of a row pattern. Mirrors
  * `packages/opencode/src/util/wildcard.ts` `match`, kept local because the webview
- * must not import backend modules: escape the entry, turn `*` into `.*` and `?`
- * into `.`, anchor both ends, and make a trailing ` *` optional so `touch *` also
- * covers `touch`.
+ * must not import backend modules: normalise both separators to `/`, escape the
+ * entry, turn `*` into `.*` and `?` into `.`, anchor both ends, and make a trailing
+ * ` *` optional so `touch *` also covers `touch`.
+ *
+ * The backend also folds case on Windows and on macOS file rules; this matcher
+ * compares case exactly.
  */
 function ruleCovers(entry: string, pattern: string): boolean {
-  if (entry === "*" || entry === pattern) return true
+  const value = pattern.replaceAll("\\", "/")
+  if (entry === "*" || entry === value) return true
   let escaped = entry
+    .replaceAll("\\", "/")
     .replace(/[.+^${}()|[\]\\]/g, "\\$&")
     .replace(/\*/g, ".*")
     .replace(/\?/g, ".")
   if (escaped.endsWith(" .*")) escaped = escaped.slice(0, -3) + "( .*)?"
-  return new RegExp("^" + escaped + "$", "s").test(pattern)
+  return new RegExp("^" + escaped + "$", "s").test(value)
 }
 
 /**
