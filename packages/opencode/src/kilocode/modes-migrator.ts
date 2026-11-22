@@ -56,12 +56,12 @@ export namespace ModesMigrator {
   const KNOWN_OPTIONS = /^(fileRegex|description)$/
 
   /**
-   * Reported for an `mcp` group when a global store this load did not read declared servers:
-   * the group can cover only the servers that were loaded, so it is incomplete even when some
-   * server was migrated. Distinct from {@link MCP_NO_SERVER} because the cause is the skipped
-   * store, not a migration that converted nothing.
+   * Reported for an `mcp` group when the skipped global store declared a server this load did
+   * not cover: the group can grant only the servers this load converted, so it lost one even
+   * when some server was migrated. Distinct from {@link MCP_NO_SERVER} because the cause is the
+   * skipped store, not a migration that converted nothing.
    */
-  const MCP_SKIPPED_GLOBAL = "MCP access incomplete: a global store this load did not read declared MCP servers"
+  const MCP_SKIPPED_GLOBAL = "MCP access incomplete: a global store this load skipped declared MCP servers"
 
   /** Reported for an `mcp` group when a store this load read declared a server none of them converted. */
   const MCP_NO_SERVER = "MCP access not migrated: no MCP server was migrated"
@@ -78,16 +78,18 @@ export namespace ModesMigrator {
    * `mcpAvailable` reports whether a store this run read declared any MCP server, not whether
    * one was converted: a store that declared a server the migration could not convert
    * still warns instead of silently dropping the `mcp` group.
-   * `mcpSkippedGlobal` reports whether a global store this run did not read declared at
-   * least one MCP server; such an `mcp` group is incomplete whatever else was migrated.
+   * `mcpSkippedGlobalServers` names the servers a skipped global store declared that this load
+   * did not cover; an `mcp` group lost one when the list names a server the migrated set does
+   * not, whatever else was migrated. Empty means the store was not checked, or it had nothing
+   * this load lost.
    */
   export function convertPermissions(
     groups: KilocodeMode["groups"],
     mcpServers: string[],
     mcpAvailable: boolean,
-    mcpSkippedGlobal = false,
+    mcpSkippedGlobalServers: string[] = [],
   ): ConfigPermission.Info {
-    return convertWithMessages(groups, mcpServers, mcpAvailable, mcpSkippedGlobal).permission
+    return convertWithMessages(groups, mcpServers, mcpAvailable, mcpSkippedGlobalServers).permission
   }
 
   type Restriction = Record<string, ConfigPermission.Action>
@@ -148,7 +150,7 @@ export namespace ModesMigrator {
     groups: KilocodeMode["groups"],
     mcpServers: string[],
     mcpAvailable: boolean,
-    mcpSkippedGlobal = false,
+    mcpSkippedGlobalServers: string[] = [],
   ): { permission: ConfigPermission.Info; warnings: string[] } {
     const permission: Record<string, ConfigPermission.Rule> = {}
     const allowed = new Set<string>()
@@ -171,12 +173,14 @@ export namespace ModesMigrator {
 
       if (name === "mcp") {
         seen = true
-        // The skipped store comes first: it makes the group incomplete even when this load
-        // migrated servers, and it subsumes the empty case when nothing was migrated.
-        if (mcpSkippedGlobal) {
-          warnings.push(MCP_SKIPPED_GLOBAL)
-          if (mcpServers.length === 0) continue
-        } else if (mcpServers.length === 0) {
+        // Two independent facts, reported in this order: a server a skipped store declared that
+        // this load did not cover makes the group incomplete, and a store this load read that
+        // declared a server none converted leaves it granting nothing. Nothing migrated grants
+        // nothing here: the group adds no key, so the mode only denies what the servers name.
+        // A server the migrated set already names is covered, so only the rest was lost.
+        const lost = mcpSkippedGlobalServers.some((server) => !mcpServers.includes(server))
+        if (lost) warnings.push(MCP_SKIPPED_GLOBAL)
+        if (mcpServers.length === 0) {
           if (mcpAvailable) warnings.push(MCP_NO_SERVER)
           continue
         }
@@ -245,15 +249,16 @@ export namespace ModesMigrator {
   /**
    * Convert one legacy mode. The MCP arguments carry the two separate facts of the load:
    * `mcpAvailable` for a store this run read that declared a server none converted, and
-   * `mcpSkippedGlobal` for a global store this run did not read that declared servers.
+   * `mcpSkippedGlobalServers` for the servers a skipped global store declared that this load did
+   * not cover.
    */
   export function convertMode(
     mode: KilocodeMode,
     mcpServers: string[],
     mcpAvailable: boolean,
-    mcpSkippedGlobal = false,
+    mcpSkippedGlobalServers: string[] = [],
   ): ConfigAgentV1.Info {
-    return build(mode, mcpServers, mcpAvailable, mcpSkippedGlobal).agent
+    return build(mode, mcpServers, mcpAvailable, mcpSkippedGlobalServers).agent
   }
 
   /** {@link convertMode} with the warnings the conversion produced. */
@@ -261,9 +266,9 @@ export namespace ModesMigrator {
     mode: KilocodeMode,
     mcpServers: string[],
     mcpAvailable: boolean,
-    mcpSkippedGlobal = false,
+    mcpSkippedGlobalServers: string[] = [],
   ): { agent: ConfigAgentV1.Info; warnings: string[] } {
-    const converted = convertWithMessages(mode.groups, mcpServers, mcpAvailable, mcpSkippedGlobal)
+    const converted = convertWithMessages(mode.groups, mcpServers, mcpAvailable, mcpSkippedGlobalServers)
 
     return {
       agent: {
@@ -365,11 +370,13 @@ export namespace ModesMigrator {
      */
     mcpAvailable: boolean
     /**
-     * Whether a global MCP store this run did not read declared at least one server. That store
-     * is never loaded, so an `mcp` group can cover only what this run migrated and is reported
-     * as incomplete - independently of `mcpAvailable`, which concerns stores this run read.
+     * Names of the servers a skipped global MCP store declared that this load did not cover. That
+     * store is never loaded, so an `mcp` group can grant only what this run migrated and is
+     * reported as incomplete when it lost one of them - independently of `mcpAvailable`, which
+     * concerns stores this run read. Empty means the store was not checked, or it lost nothing
+     * here.
      */
-    mcpSkippedGlobal?: boolean
+    mcpSkippedGlobalServers?: string[]
   }): Promise<MigrationResult> {
     const result: MigrationResult = {
       agents: {},
@@ -426,7 +433,7 @@ export namespace ModesMigrator {
       }
 
       // Migrate custom mode
-      const converted = build(mode, mcpServers, options.mcpAvailable, options.mcpSkippedGlobal ?? false)
+      const converted = build(mode, mcpServers, options.mcpAvailable, options.mcpSkippedGlobalServers ?? [])
       result.agents[slug] = converted.agent
       result.warnings.push(
         ...converted.warnings.map((warning) => ({ path: entry.source, message: `Mode '${slug}': ${warning}` })),

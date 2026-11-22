@@ -38,14 +38,20 @@ export namespace McpMigrator {
     /** Whether a store this run read declared at least one MCP server, converted or not. */
     available: boolean
     /**
-     * Whether a global store this run did not read - because the caller skipped global paths -
-     * declared at least one MCP server. True only when the caller also asked for the report
-     * (`reportSkippedGlobal`): without that request the store is never opened, so `false` means
-     * "not checked", not "nothing was skipped". When the report is asked for, such a store is
-     * read only to answer the question: its servers are never added to `mcp`, so a mode can
-     * report the `mcp` group it cannot honour.
+     * Names of the servers a skipped global store declared that this load did not cover: the
+     * store a caller skipped - because `skipGlobalPaths` is set - is opened only to answer what
+     * it held, its servers never enter `mcp`, and each of them this load could have granted but
+     * did not is a loss a mode's `mcp` group cannot honour.
+     *
+     * A server is a loss when it is not disabled, the conversion would accept it, and the final
+     * `mcp` does not hold its name: a same-named entry of a store this load read wins the dedup,
+     * so that entry is the one converted or dropped.
+     *
+     * Only the caller that asked for the report (`reportSkippedGlobal`) gets that store opened.
+     * An empty list therefore means "not checked" when the report was not asked for, and
+     * "nothing was lost" when it was. The list never names a server this load covered.
      */
-    skippedGlobal: boolean
+    skippedGlobalServers: string[]
     warnings: string[]
     skipped: Array<{ name: string; reason: string }>
   }
@@ -100,36 +106,39 @@ export namespace McpMigrator {
     projectDir?: string
     skipGlobalPaths?: boolean
     /**
-     * Read the global store that `skipGlobalPaths` skipped only to report whether it declared
-     * servers. Off by default, so skipping global paths stays hermetic: a caller that does not
-     * ask for the report never touches a global path, and `skippedGlobal` stays false, meaning
-     * "not checked".
+     * Read the global store that `skipGlobalPaths` skipped only to answer what it held. Off by
+     * default, so skipping global paths stays hermetic: a caller that does not ask for the report
+     * never touches a global path, and `skippedGlobalServers` stays empty, meaning "not checked".
      */
     reportSkippedGlobal?: boolean
   }): Promise<MigrationResult> {
     const warnings: string[] = []
     const skipped: Array<{ name: string; reason: string }> = []
     const mcp: Record<string, ConfigMCP.Info> = {}
+    // Servers a skipped store declared that no store this load read covers: what the load lost.
+    const held = new Set<string>()
 
     const allServers: Array<{ name: string; server: KilocodeMcpServer }> = []
 
     // 1. VSCode extension global storage (primary location for global MCP settings)
     // A caller that skipped global paths and asked for the report gets the store read only to
-    // answer whether a mode's `mcp` group lost it: its servers never enter `allServers` then, so
+    // answer what a mode's `mcp` group lost: its servers never enter `allServers` then, so
     // nothing from a skipped store is granted. A file that does not parse reads as absent.
     const skipGlobal = options?.skipGlobalPaths === true
     const report = options?.reportSkippedGlobal === true
     const readGlobal = !skipGlobal || report
-    let skippedGlobal = false
     if (readGlobal) {
       const vscodeSettingsPath = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
       const vscodeSettings = await readMcpSettings(vscodeSettingsPath)
-      const globalServers = Object.entries(vscodeSettings?.mcpServers ?? {})
-      skippedGlobal = skipGlobal && globalServers.length > 0
-      if (!skipGlobal) {
-        for (const [name, server] of globalServers) {
+      for (const [name, server] of Object.entries(vscodeSettings?.mcpServers ?? {})) {
+        if (!skipGlobal) {
           allServers.push({ name, server })
+          continue
         }
+        // A disabled server grants nothing when it is read, and neither does an entry the
+        // conversion refuses, so withholding either loses nothing: only a server this load could
+        // have granted is a loss.
+        if (!server.disabled && (isRemote(server) ? !!server.url : !!server.command)) held.add(name)
       }
     }
 
@@ -170,23 +179,28 @@ export namespace McpMigrator {
       }
     }
 
-    return { mcp, available: serversByName.size > 0, skippedGlobal, warnings, skipped }
+    // A same-named entry a store this load read wins the dedup, so it is the one that converts: a
+    // skipped name the final `mcp` holds is covered. An entry that did not convert is no loss
+    // either, and `held` never includes one.
+    const lost = [...held].filter((name) => !Object.hasOwn(mcp, name))
+
+    return { mcp, available: serversByName.size > 0, skippedGlobalServers: lost, warnings, skipped }
   }
 
   /**
    * Load Kilocode MCP servers and report what the legacy stores declared.
    * `available` is true when a store this run read had at least one MCP server, even if
-   * none of them could be converted. `skippedGlobal` is true only when the caller asked for the
-   * report, skipped global paths, and the VS Code global store declared a server: that store is
-   * then read only to answer the question, and none of its servers is loaded. Without the
-   * report the store is never opened and `skippedGlobal` is false, meaning "not checked". This
-   * function handles all logging internally.
+   * none of them could be converted. `skippedGlobalServers` names the servers of the VS Code
+   * global store that this load skipped and did not cover: that store is then read only to answer
+   * the question, and none of its servers is loaded. Without the report the store is never opened
+   * and the list is empty, meaning "not checked" - and it is empty too when the store was read and
+   * lost nothing. This function handles all logging internally.
    */
   export async function loadMcpConfig(
     projectDir: string,
     skipGlobalPaths?: boolean,
     reportSkippedGlobal?: boolean,
-  ): Promise<{ mcp: Record<string, ConfigMCP.Info>; available: boolean; skippedGlobal: boolean }> {
+  ): Promise<{ mcp: Record<string, ConfigMCP.Info>; available: boolean; skippedGlobalServers: string[] }> {
     try {
       const result = await migrate({ projectDir, skipGlobalPaths, reportSkippedGlobal })
 
@@ -205,10 +219,10 @@ export namespace McpMigrator {
         log.warn("kilocode MCP migration warning", { warning })
       }
 
-      return { mcp: result.mcp, available: result.available, skippedGlobal: result.skippedGlobal }
+      return { mcp: result.mcp, available: result.available, skippedGlobalServers: result.skippedGlobalServers }
     } catch (err) {
       log.warn("failed to load kilocode MCP servers", { error: err })
-      return { mcp: {}, available: false, skippedGlobal: false }
+      return { mcp: {}, available: false, skippedGlobalServers: [] }
     }
   }
 }

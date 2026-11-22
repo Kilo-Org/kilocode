@@ -356,7 +356,7 @@ export namespace KilocodeConfig {
 
     // Load Kilocode MCP servers (skip global VSCode extension paths unless running in an editor or Console daemon)
     const skipGlobal = process.env["KILO_PLATFORM"] !== "vscode" && process.env["KILOCODE_FEATURE"] !== "daemon"
-    const { mcp, available, skippedGlobal } = await McpMigrator.loadMcpConfig(input.projectDir, skipGlobal, true)
+    const { mcp, available, skippedGlobalServers } = await McpMigrator.loadMcpConfig(input.projectDir, skipGlobal, true)
     if (Object.keys(mcp).length > 0) {
       result = input.merge(result, { mcp })
     }
@@ -364,15 +364,17 @@ export namespace KilocodeConfig {
     // Load Kilocode custom modes, granting an `mcp` group the tools of the servers loaded above.
     // The mode migration still reads global mode files, so it receives the two MCP facts
     // separately: `available` for a store this load read that declared a server none converted,
-    // and `skippedGlobal` for the global store this load skipped while it declared servers. A
-    // mode whose `mcp` group cannot cover that skipped store reports it instead of dropping the
-    // group silently, even when the project store did supply servers to grant.
+    // and `skippedGlobalServers` for the servers of a skipped global store that this load did not
+    // cover. That store is opened only to answer the question, so a mode whose `mcp` group lost
+    // one of them reports it instead of dropping the group silently, even when the project store
+    // did supply servers to grant. A skipped store's server that a store this load read also names
+    // is covered, so nothing was lost and nothing is reported.
     try {
       const migration = await ModesMigrator.migrate({
         projectDir: input.projectDir,
         mcpServers: Object.keys(mcp),
         mcpAvailable: available,
-        mcpSkippedGlobal: skippedGlobal,
+        mcpSkippedGlobalServers: skippedGlobalServers,
       })
       if (Object.keys(migration.agents).length > 0) {
         result = input.merge(result, { agent: migration.agents })

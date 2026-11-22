@@ -513,8 +513,9 @@ describe("McpMigrator", () => {
       expect(Object.keys(result.mcp)).toHaveLength(0)
     })
 
-    // A global store the caller skipped is read only to report that a mode's `mcp` group was lost.
-    test("reports a skipped global store that declared a server without loading it", async () => {
+    // A skipped global store that declared a server this load cannot cover is named in the
+    // report, so a mode's `mcp` group knows which server it lost. Reading it grants nothing.
+    test("names the server a skipped global store declared without loading it", async () => {
       await using home = await tmpdir()
 
       const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
@@ -532,7 +533,7 @@ describe("McpMigrator", () => {
           reportSkippedGlobal: true,
         })
 
-        expect(result.skippedGlobal).toBe(true)
+        expect(result.skippedGlobalServers).toEqual(["globalserver"])
         expect(Object.keys(result.mcp)).toHaveLength(0)
         expect(result.available).toBe(false)
       } finally {
@@ -543,7 +544,7 @@ describe("McpMigrator", () => {
     })
 
     // Skipping global paths stays hermetic: a host whose real global store declares a server
-    // must not change this result, so the report is opt-in.
+    // must not change this result, so the report is opt-in and its absence means "not checked".
     test("does not read a skipped global store unless the report is asked for", async () => {
       await using home = await tmpdir()
 
@@ -557,7 +558,7 @@ describe("McpMigrator", () => {
 
         const result = await McpMigrator.migrate({ projectDir: home.path, skipGlobalPaths: true })
 
-        expect(result.skippedGlobal).toBe(false)
+        expect(result.skippedGlobalServers).toEqual([])
         expect(Object.keys(result.mcp)).toHaveLength(0)
         expect(result.available).toBe(false)
       } finally {
@@ -581,8 +582,102 @@ describe("McpMigrator", () => {
 
         const result = await McpMigrator.migrate({ projectDir: home.path })
 
-        expect(result.skippedGlobal).toBe(false)
+        expect(result.skippedGlobalServers).toEqual([])
         expect(Object.keys(result.mcp)).toEqual(["globalserver"])
+        expect(result.available).toBe(true)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // A disabled server of the skipped store grants nothing when it is read, so withholding it
+    // from the `mcp` group loses nothing and the group is complete.
+    test("reports nothing for a skipped store whose only server is disabled", async () => {
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx", disabled: true } } }))
+
+        const result = await McpMigrator.migrate({
+          projectDir: home.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(Object.keys(result.mcp)).toHaveLength(0)
+        expect(result.available).toBe(false)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // An entry the conversion refuses grants nothing when it is read, so the `mcp` group loses
+    // nothing it could have granted.
+    test("reports nothing for a skipped store server that cannot be converted", async () => {
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { broken: { args: ["--no-command"] } } }))
+
+        const result = await McpMigrator.migrate({
+          projectDir: home.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(Object.keys(result.mcp)).toHaveLength(0)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // The project store wins the dedup for the same name, so its entry is the one granted and
+    // the skipped store's server is covered: the `mcp` group lost nothing.
+    test("reports nothing for a skipped server the project store also names", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({ mcpServers: { globalserver: { command: "bunx" } } }),
+          )
+        },
+      })
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(tmp.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = tmp.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({
+          projectDir: tmp.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(result.mcp.globalserver).toMatchObject({ command: ["bunx"] })
         expect(result.available).toBe(true)
       } finally {
         homedir.mockRestore()

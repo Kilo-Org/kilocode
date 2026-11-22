@@ -1905,7 +1905,7 @@ describe("legacy MCP group reporting", () => {
       const mcp = mcpWarnings(result.warnings)
       expect(mcp).toHaveLength(1)
       expect(mcp[0].path).toBe(path.join(settings, "custom_modes.yaml"))
-      expect(mcp[0].message).toContain("MCP access incomplete: a global store this load did not read declared MCP servers")
+      expect(mcp[0].message).toContain("MCP access incomplete: a global store this load skipped declared MCP servers")
       expect(Object.keys(result.config.mcp ?? {})).toHaveLength(0)
       // The mode itself still migrated from the global file, it just cannot honour the group.
       expect(result.config.agent?.helper?.permission?.read).toBe("allow")
@@ -1930,11 +1930,33 @@ describe("legacy MCP group reporting", () => {
 
       const mcp = mcpWarnings(result.warnings)
       expect(mcp).toHaveLength(1)
-      expect(mcp[0].message).toContain("MCP access incomplete: a global store this load did not read declared MCP servers")
+      expect(mcp[0].message).toContain("MCP access incomplete: a global store this load skipped declared MCP servers")
       // The group grants what this load migrated; the skipped store's key is neither granted nor denied.
       expect(serverKeys(result.config.agent?.helper?.permission)).toEqual(["projectserver_*"])
       expect(result.config.agent?.helper?.permission?.["projectserver_*"]).toBe("allow")
       expect(result.config.agent?.helper?.permission?.["globalserver_*"]).toBeUndefined()
+    })
+  })
+
+  // The project store wins the dedup for the same name, so the skipped store's server is the one
+  // this load converted: nothing was lost, and the group has nothing to report.
+  test("stays silent when the project store also names the skipped store's server", async () => {
+    await withHome("cli", async (home) => {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(
+        path.join(settings, "mcp_settings.json"),
+        JSON.stringify({ mcpServers: { sharedserver: { command: "npx" } } }),
+      )
+      await Filesystem.write(
+        path.join(home, ".kilo", "mcp.json"),
+        JSON.stringify({ mcpServers: { sharedserver: { command: "bunx" } } }),
+      )
+
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      expect(mcpWarnings(result.warnings)).toHaveLength(0)
+      expect(result.config.mcp?.sharedserver).toMatchObject({ command: ["bunx"] })
+      expect(result.config.agent?.helper?.permission?.["sharedserver_*"]).toBe("allow")
     })
   })
 
