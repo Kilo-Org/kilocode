@@ -836,7 +836,9 @@ class KiloBackendHostedManager(
         reply: PermissionReplyDto,
     ) {
         val session = permissionOwner[requestId] ?: findOwner(requestId, directory, question = false)
-        val body = KiloCliDataParser.buildPermissionReplyJson(reply)
+        // The hosted transport accepts the decision and its message only; the human-answered flag is
+        // a local CLI field with no hosted equivalent, and sending it would be rejected.
+        val body = KiloCliDataParser.buildPermissionReplyJson(reply.copy(interactive = false))
         if (session != null) {
             attached(session, organizationID) { attachment ->
                 post("/permission/$requestId/reply?workspace=${encode(attachment.id)}", body, "replyPermission")

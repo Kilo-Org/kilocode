@@ -83,6 +83,7 @@ class PermissionView(
 
     private var requestId: String? = null
     private var responding = false
+    private var hosted = false
     private var style = SessionEditorStyle.current()
     private var openDiff: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
@@ -148,9 +149,10 @@ class PermissionView(
         syncCode(tool, target)
         syncDiffs(permission.meta.fileDiffs)
         responding = permission.state == PermissionRequestState.RESPONDING || permission.state == PermissionRequestState.RESOLVED
-        // Skill-shell approvals are never persisted, so no auto-approve rule toggles even if a
-        // future backend change starts sending candidates for this batch.
-        rules.update(if (skillShell) emptyList() else permission.meta.ruleDecisions, reset = prev != permission.id)
+        hosted = permission.hosted
+        // A skill-shell batch is never persisted, and a hosted workspace stores no always-rules, so
+        // neither offers auto-approve toggles even if a future backend change starts sending candidates.
+        rules.update(if (skillShell || hosted) emptyList() else permission.meta.ruleDecisions, reset = prev != permission.id)
         syncState(permission)
         syncPrimaryText()
 
@@ -179,6 +181,7 @@ class PermissionView(
     fun hideView() {
         requestId = null
         responding = false
+        hosted = false
         disposeMd()
         disposeDiffs()
         rules.update(emptyList(), reset = true)
@@ -397,7 +400,7 @@ class PermissionView(
 
     @RequiresEdt
     private fun rulePayload(): PermissionAlwaysRulesDto? {
-        if (!rules.anyDecided()) return null
+        if (hosted || !rules.anyDecided()) return null
         return PermissionAlwaysRulesDto(approvedAlways = rules.approved(), deniedAlways = rules.denied())
     }
 
