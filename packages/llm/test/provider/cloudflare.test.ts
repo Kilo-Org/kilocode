@@ -212,7 +212,7 @@ describe("Cloudflare", () => {
       )
     }),
   )
-  it.effect("sends the environment gateway credential to a Cloudflare gateway endpoint", () =>
+  it.effect("sends the environment gateway credential only to a Cloudflare gateway endpoint", () =>
     Effect.gen(function* () {
       yield* LLM.generate(
         LLM.request({
