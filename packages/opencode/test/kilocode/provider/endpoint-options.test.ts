@@ -86,6 +86,87 @@ describe("resolveEndpointOptions", () => {
     )
   })
 
+  test("uses GOOGLE_VERTEX_LOCATION for the region when no location option is set", () => {
+    const options: Record<string, unknown> = {}
+    resolveEndpointOptions("google-vertex", "https://${GOOGLE_VERTEX_LOCATION}-aiplatform.googleapis.com/v1", options, {
+      GOOGLE_VERTEX_LOCATION: "EUROPE-WEST4",
+    })
+    expect(options.location).toBe("europe-west4")
+  })
+
+  test("falls back to GOOGLE_CLOUD_LOCATION when GOOGLE_VERTEX_LOCATION is absent", () => {
+    const options: Record<string, unknown> = {}
+    resolveEndpointOptions("google-vertex", undefined, options, {
+      GOOGLE_VERTEX_LOCATION: undefined,
+      GOOGLE_CLOUD_LOCATION: "asia-northeast1",
+    })
+    expect(options.location).toBe("asia-northeast1")
+  })
+
+  test("falls back to VERTEX_LOCATION when the other environment names are absent", () => {
+    const options: Record<string, unknown> = {}
+    resolveEndpointOptions("google-vertex", undefined, options, {
+      GOOGLE_VERTEX_LOCATION: undefined,
+      GOOGLE_CLOUD_LOCATION: undefined,
+      VERTEX_LOCATION: "us-east5",
+    })
+    expect(options.location).toBe("us-east5")
+  })
+
+  test("lets a location option win over the environment", () => {
+    const options: Record<string, unknown> = { location: "europe-west1" }
+    resolveEndpointOptions("google-vertex", undefined, options, {
+      GOOGLE_VERTEX_LOCATION: "us-central1",
+      VERTEX_LOCATION: "asia-east1",
+    })
+    expect(options.location).toBe("europe-west1")
+  })
+
+  test("skips a blank environment value and uses the next one", () => {
+    const options: Record<string, unknown> = {}
+    resolveEndpointOptions("google-vertex", undefined, options, {
+      GOOGLE_VERTEX_LOCATION: "  ",
+      GOOGLE_CLOUD_LOCATION: "",
+      VERTEX_LOCATION: "europe-west4",
+    })
+    expect(options.location).toBe("europe-west4")
+
+    const fallback: Record<string, unknown> = {}
+    resolveEndpointOptions("google-vertex", undefined, fallback, { GOOGLE_VERTEX_LOCATION: "" })
+    expect(fallback.location).toBe("us-central1")
+  })
+
+  test("uses the provider default region when neither the option nor the environment names one", () => {
+    const options: Record<string, unknown> = {}
+    resolveEndpointOptions("google-vertex", undefined, options, {})
+    expect(options.location).toBe("us-central1")
+  })
+
+  test("uses the Anthropic provider default region when neither the option nor the environment names one", () => {
+    const options: Record<string, unknown> = {}
+    resolveEndpointOptions("google-vertex-anthropic", undefined, options, {})
+    expect(options.location).toBe("global")
+
+    const envOnly: Record<string, unknown> = {}
+    resolveEndpointOptions("google-vertex-anthropic", undefined, envOnly, { GOOGLE_VERTEX_LOCATION: "europe-west4" })
+    expect(envOnly.location).toBe("global")
+  })
+
+  test("refuses an environment value that is not a Google Cloud region", () => {
+    const options: Record<string, unknown> = {}
+    expect(() =>
+      resolveEndpointOptions("google-vertex", undefined, options, { GOOGLE_VERTEX_LOCATION: "proxy.example/x" }),
+    ).toThrow(/Invalid Google Vertex location/)
+  })
+
+  test("leaves the location untouched for a concrete model URL even when the environment names a region", () => {
+    const options: Record<string, unknown> = {}
+    resolveEndpointOptions("google-vertex", "https://proxy.example/v1", options, {
+      GOOGLE_VERTEX_LOCATION: "europe-west4",
+    })
+    expect(options.location).toBeUndefined()
+  })
+
   test("accepts a single-label Azure resource name", () => {
     const options: Record<string, unknown> = { resourceName: " my-resource " }
     resolveEndpointOptions("azure", undefined, options)

@@ -7,6 +7,7 @@ import {
   normalizeVertexLocation,
   parseVertexLocation,
   requestHost,
+  resolveVertexLocation,
   vertexEndpointDerived,
 } from "../../kilocode/provider-endpoint"
 // kilocode_change end
@@ -20,16 +21,6 @@ function resolveProject(options: Record<string, any>) {
     process.env.GOOGLE_CLOUD_PROJECT ??
     process.env.GCP_PROJECT ??
     process.env.GCLOUD_PROJECT
-  )
-}
-
-function resolveLocation(options: Record<string, any>) {
-  return (
-    options.location ??
-    process.env.GOOGLE_VERTEX_LOCATION ??
-    process.env.GOOGLE_CLOUD_LOCATION ??
-    process.env.VERTEX_LOCATION ??
-    "us-central1"
   )
 }
 
@@ -87,7 +78,9 @@ export const GoogleVertexPlugin = define({
           const project = resolveProject(item.provider.request.body)
           // kilocode_change start - an invalid location is reported when the provider model is used,
           // because a failing catalog transform would disable every provider.
-          const location = normalizeVertexLocation(resolveLocation(item.provider.request.body))
+          const location = normalizeVertexLocation(
+            resolveVertexLocation(item.provider.request.body.location, process.env, "google-vertex"),
+          )
           if (location === undefined) continue
           // kilocode_change end
           evt.provider.update(item.provider.id, (provider) => {
@@ -109,7 +102,9 @@ export const GoogleVertexPlugin = define({
           // kilocode_change start - a location is a Vertex region only when the endpoint is derived from it;
           // an explicit other host keeps its own location input
           if (vertexEndpointDerived(evt.options.baseURL))
-            evt.options.location = parseVertexLocation(resolveLocation(evt.options))
+            evt.options.location = parseVertexLocation(
+              resolveVertexLocation(evt.options.location, process.env, "google-vertex"),
+            )
           // kilocode_change end
           evt.options.fetch = authFetch(evt.options.fetch)
           return
@@ -118,7 +113,7 @@ export const GoogleVertexPlugin = define({
         const mod = yield* Effect.promise(() => import("@ai-sdk/google-vertex"))
         const project = resolveProject(evt.options)
         // kilocode_change start - validate the location only when the endpoint derives from it
-        const raw = String(resolveLocation(evt.options))
+        const raw = resolveVertexLocation(evt.options.location, process.env, "google-vertex")
         const location = vertexEndpointDerived(evt.options.baseURL) ? parseVertexLocation(raw) : raw
         // kilocode_change end
         const options = { ...evt.options }
@@ -152,12 +147,13 @@ export const GoogleVertexAnthropicPlugin = define({
             process.env.GOOGLE_CLOUD_PROJECT ??
             process.env.GCP_PROJECT ??
             process.env.GCLOUD_PROJECT
-          const location =
-            item.provider.request.body.location ??
-            process.env.GOOGLE_CLOUD_LOCATION ??
-            process.env.VERTEX_LOCATION ??
-            "global"
-          // kilocode_change start - an invalid location is reported when the provider model is used
+          // kilocode_change start - one region resolution shared with the model-time validator;
+          // an invalid location is reported when the provider model is used
+          const location = resolveVertexLocation(
+            item.provider.request.body.location,
+            process.env,
+            "google-vertex-anthropic",
+          )
           const normalized = normalizeVertexLocation(location)
           if (normalized === undefined) continue
           // kilocode_change end
@@ -178,10 +174,7 @@ export const GoogleVertexAnthropicPlugin = define({
             : (process.env.GOOGLE_CLOUD_PROJECT ?? process.env.GCP_PROJECT ?? process.env.GCLOUD_PROJECT)
         // kilocode_change start - require a Google Cloud region only when the endpoint derives
         // from the location; an explicit other host keeps its own location input
-        const raw =
-          typeof evt.options.location === "string"
-            ? evt.options.location
-            : (process.env.GOOGLE_CLOUD_LOCATION ?? process.env.VERTEX_LOCATION ?? "global")
+        const raw = resolveVertexLocation(evt.options.location, process.env, "google-vertex-anthropic")
         const location = vertexEndpointDerived(evt.options.baseURL) ? parseVertexLocation(raw) : raw
         // kilocode_change end
         evt.sdk = mod.createVertexAnthropic({

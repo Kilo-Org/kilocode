@@ -39,6 +39,38 @@ export const parseVertexLocation = (value: unknown) => {
   return location
 }
 
+/** Provider whose request endpoint is built from a Google Vertex location. */
+export type VertexLocationProvider = "google-vertex" | "google-vertex-anthropic"
+
+/** Environment names that carry the region, in the order each provider reads them. */
+const VERTEX_LOCATION_ENV: Record<VertexLocationProvider, readonly string[]> = {
+  "google-vertex": ["GOOGLE_VERTEX_LOCATION", "GOOGLE_CLOUD_LOCATION", "VERTEX_LOCATION"],
+  "google-vertex-anthropic": ["GOOGLE_CLOUD_LOCATION", "VERTEX_LOCATION"],
+}
+
+/** Region a provider uses when neither the option nor the environment names one. */
+export const VERTEX_LOCATION_DEFAULT: Record<VertexLocationProvider, string> = {
+  "google-vertex": "us-central1",
+  "google-vertex-anthropic": "global",
+}
+
+/**
+ * Resolves a Google Vertex location: the value when it is set, otherwise the environment names the
+ * region in the order the provider reads it, otherwise the provider default. The environment names the
+ * region when the option does not. A blank entry is treated as unset, so an exported but empty variable
+ * falls through. The result is raw, and the caller validates it before a request URL is built.
+ */
+export const resolveVertexLocation = (
+  value: unknown,
+  env: Record<string, string | undefined>,
+  providerID: VertexLocationProvider,
+): string => {
+  const names = VERTEX_LOCATION_ENV[providerID]
+  const chain = [value, ...names.map((name) => env[name])]
+  const raw = chain.find((entry) => typeof entry === "string" && entry.trim() !== "")
+  return typeof raw === "string" ? raw : VERTEX_LOCATION_DEFAULT[providerID]
+}
+
 /** Accepts an Azure resource name, which is one DNS label and never a URL. */
 export const parseAzureResourceName = (value: string) => {
   if (!isResourceName(value)) {

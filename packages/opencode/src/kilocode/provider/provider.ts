@@ -21,6 +21,7 @@ import {
   parseAzureResourceName,
   parseVertexLocation,
   requestHost,
+  resolveVertexLocation,
   vertexEndpointDerived,
 } from "@opencode-ai/core/kilocode/provider-endpoint"
 import type { Provider } from "@/provider/provider"
@@ -305,16 +306,25 @@ export function patchCustomLoaderResult(
  * Validates the endpoint inputs a provider model is configured with.
  *
  * A Vertex location is validated only when the request URL derives from it: an unset or empty URL,
- * or a catalog template. Then it must be a Google Cloud region or multi-region name, and it is
- * stored normalized. Any concrete URL, including a Vertex API host, is used as given by the SDK, so
- * its location input is not validated and is left untouched. An Azure resource name must be a
+ * or a catalog template. Then the location is the option when set, otherwise the environment names
+ * the region, otherwise the provider default; it must be a Google Cloud region or multi-region name,
+ * and it is stored normalized. Any concrete URL, including a Vertex API host, is used as given by the
+ * SDK, so its location input is not validated and is left untouched. An Azure resource name must be a
  * single DNS label unless a `baseURL` is configured. Anything else raises a configuration error
  * when the model is used.
  */
-export function resolveEndpointOptions(providerID: string, modelURL: string | undefined, options: Record<string, any>) {
+export function resolveEndpointOptions(
+  providerID: string,
+  modelURL: string | undefined,
+  options: Record<string, any>,
+  env: Record<string, string | undefined> = process.env,
+) {
   const url = typeof options.baseURL === "string" && options.baseURL !== "" ? options.baseURL : modelURL
   if (providerID === "google-vertex" || providerID === "google-vertex-anthropic") {
-    if (vertexEndpointDerived(url)) options.location = parseVertexLocation(options.location ?? "global")
+    if (vertexEndpointDerived(url)) {
+      const location = resolveVertexLocation(options.location, env, providerID)
+      options.location = parseVertexLocation(location)
+    }
     return
   }
   if (typeof options.baseURL === "string" && options.baseURL !== "") return

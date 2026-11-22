@@ -22,7 +22,12 @@ type GatewayURL = AtLeastOne<{
 export type AIGatewayOptions = GatewayURL &
   RouteDefaultsInput &
   ProviderAuthOption<"optional"> & {
-    /** Cloudflare AI Gateway authentication token. Sent as `cf-aig-authorization`. */
+    /**
+     * Cloudflare AI Gateway authentication token. Sent as `cf-aig-authorization`.
+     * The gateway credential comes from this option, or from `CLOUDFLARE_API_TOKEN` / `CF_AIG_TOKEN` when the
+     * gateway host is `gateway.ai.cloudflare.com`. A gateway on any other host, such as a Cloudflare custom
+     * domain, authenticates with this option or `auth`.
+     */
     readonly gatewayApiKey?: CloudflareSecret
   }
 
@@ -52,7 +57,8 @@ const isGatewayHost = (baseURL: string | null | undefined) => {
 
 const aiGatewayAuth = (input: AIGatewayOptions) => {
   if ("auth" in input && input.auth) return input.auth
-  // kilocode_change start - resolve the environment gateway credential for a Cloudflare gateway endpoint
+  // kilocode_change start - resolve the environment gateway credential for a Cloudflare gateway endpoint;
+  // on any other host the credential comes from `gatewayApiKey`
   const explicit = Auth.optional(input.gatewayApiKey, "gatewayApiKey")
   const source = isGatewayHost(input.baseURL)
     ? explicit.orElse(Auth.config("CLOUDFLARE_API_TOKEN")).orElse(Auth.config("CF_AIG_TOKEN"))
