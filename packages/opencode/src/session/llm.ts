@@ -253,7 +253,8 @@ const live: Layer.Layer<
           }
         }
 
-        // kilocode_change start - only a resolving `allow` rule preapproves a tool
+        // kilocode_change start - the gate decides which tools need no prompt: a whole-tool
+        // deny or ask withholds the tool, and a path-scoped rule leaves it to the tool's own check
         workflowModel.sessionPreapprovedTools = gate.preapproved
         // kilocode_change end
 
