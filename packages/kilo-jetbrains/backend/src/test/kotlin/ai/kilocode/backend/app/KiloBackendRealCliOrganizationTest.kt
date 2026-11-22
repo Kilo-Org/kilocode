@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -117,6 +118,14 @@ class KiloBackendRealCliOrganizationTest {
                 )
                 note("first lease=${first.single()} organization=${ORG_ONE}")
 
+                // A hosted status has to exist before the switch, so the assertion after it cannot
+                // hold merely because no status ever arrived.
+                assertNotNull(
+                    withTimeoutOrNull(10_000) { svc.hosted.statuses.first { it[session]?.type != null } },
+                    "no hosted status arrived before the selection change",
+                )
+                note("hosted status observed before the switch: ${svc.hosted.statuses.value[session]}")
+
                 // -------------------------------------------------- (2) switch the context ----
                 standIn.select(ORG_TWO)
                 svc.setOrganization(ORG_TWO)
@@ -129,11 +138,16 @@ class KiloBackendRealCliOrganizationTest {
 
                 // The plugin detaches locally, through the CLI it drives, so the stand-in never sees
                 // the DELETE. Ask the CLI's own lease registry instead: a disposed lease answers 410
-                // (`server/routes/hosted-routing.ts`, `disposed`), which is the real boundary.
+                // (`server/routes/hosted-routing.ts`, `disposed`), which is the real boundary. Detach
+                // is asynchronous, so poll until the registry settles.
                 val firstFeed = first.single()
+                val disposed = withTimeoutOrNull(10_000) {
+                    while (cli.probeAttachment(firstFeed) != 410) delay(50)
+                    true
+                }
                 assertEquals(
-                    410,
-                    cli.probeAttachment(firstFeed),
+                    true,
+                    disposed,
                     "the lease from the earlier context is still live in the CLI: " +
                         "lease=$firstFeed port=${cli.port}",
                 )

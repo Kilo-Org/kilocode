@@ -383,15 +383,17 @@ class KiloBackendHostedManager(
     }
 
     /**
-     * Starts a fresh hosted context on the bound CLI transport: attachments, retained owners and
-     * statuses are dropped, and the manager keeps serving on the same transport.
+     * Starts a fresh hosted context: attachments, retained owners and statuses are dropped. When the
+     * manager is running it keeps serving on the same transport; when it is not, the observation
+     * still lands, so the next [start] finds no retained owners to restore.
+     *
+     * Serialized on [lock], which [ensure] holds across the attach call, so a reset cannot interleave
+     * with an attach that is already installing an attachment.
      */
-    @Synchronized
-    fun resetContext() {
-        if (!started) return
-        val chat = this.chat ?: return
+    suspend fun resetContext() = lock.withLock {
+        val chat = this.chat
         reset(detach = true)
-        begin(chat)
+        if (started && chat != null) begin(chat)
     }
 
     /** Full teardown for application disposal, where no RPC collector can survive the service. */
