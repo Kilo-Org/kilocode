@@ -70,6 +70,7 @@ const layer = Layer.effectDiscard(
                   callID: context.toolCallID,
                 }
                 const target = yield* mutation.resolve({ path: input.path, kind: "file" })
+                const approved = yield* files.inspect(target) // kilocode_change - retain the approved filesystem identity
                 const external = target.externalDirectory
                 if (external)
                   yield* permission.assert({
@@ -86,7 +87,7 @@ const layer = Layer.effectDiscard(
                   agent: context.agent,
                   source,
                 })
-                return yield* files.writeTextPreservingBom({ target, content: input.content })
+                return yield* files.writeTextPreservingBom({ target, content: input.content, approved }) // kilocode_change - approved identity
               }).pipe(Effect.mapError(() => new ToolFailure({ message: `Unable to write ${input.path}` }))),
           }),
           "edit",

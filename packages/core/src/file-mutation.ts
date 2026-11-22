@@ -1,7 +1,7 @@
 export * as FileMutation from "./file-mutation"
 
 import { makeLocationNode } from "./effect/app-node"
-import { Context, Effect, Layer, Schema } from "effect"
+import { Context, Effect, Layer, Option, Schema } from "effect" // kilocode_change - Option for filesystem identity
 import { dirname } from "path"
 import { KeyedMutex } from "./effect/keyed-mutex"
 import { FSUtil } from "./fs-util"
@@ -16,9 +16,25 @@ export interface WriteInput {
   readonly content: string | Uint8Array
 }
 
+// kilocode_change start - bind a write to the filesystem identity the approval covered
+export type Identity =
+  | { readonly type: "file"; readonly dev: number; readonly ino: number }
+  | { readonly type: "absent" }
+
+export class TargetChangedError extends Schema.TaggedErrorClass<TargetChangedError>()(
+  "FileMutation.TargetChangedError",
+  { path: Schema.String },
+) {}
+
+export class TargetKindError extends Schema.TaggedErrorClass<TargetKindError>()("FileMutation.TargetKindError", {
+  path: Schema.String,
+}) {}
+// kilocode_change end
+
 export interface TextWriteInput {
   readonly target: Target
   readonly content: string
+  readonly approved: Identity // kilocode_change - the identity observed when the write was approved
 }
 
 export interface ConditionalWriteInput extends WriteInput {
@@ -52,11 +68,19 @@ export interface RemoveResult {
 }
 
 export interface Interface {
+  // kilocode_change start - identity binding for approved writes
+  /** Observe the filesystem identity a write approval covers. */
+  readonly inspect: (target: Target) => Effect.Effect<Identity, FSUtil.Error | TargetKindError>
+  // kilocode_change end
   /** Create without replacing an existing target. */
   readonly create: (input: WriteInput) => Effect.Effect<WriteResult, TargetExistsError | FSUtil.Error>
   readonly write: (input: WriteInput) => Effect.Effect<WriteResult, FSUtil.Error>
   /** Write text while retaining an existing UTF-8 BOM and emitting at most one BOM. */
-  readonly writeTextPreservingBom: (input: TextWriteInput) => Effect.Effect<WriteResult, FSUtil.Error>
+  // kilocode_change start - the write must carry its approved identity
+  readonly writeTextPreservingBom: (
+    input: TextWriteInput,
+  ) => Effect.Effect<WriteResult, FSUtil.Error | TargetChangedError>
+  // kilocode_change end
   /** Commit only if an existing target still has the expected bytes. */
   readonly writeIfUnchanged: (
     input: ConditionalWriteInput,
@@ -105,18 +129,49 @@ const layer = Layer.effect(
       ),
     )
 
+    // kilocode_change start - observe the filesystem identity a write approval covers
+    const inspect = Effect.fn("FileMutation.inspect")(function* (target: Target) {
+      const info = yield* fs
+        .stat(target.canonical)
+        .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
+      if (info === undefined) return { type: "absent" } satisfies Identity
+      if (info.type !== "File") return yield* Effect.fail(new TargetKindError({ path: target.canonical }))
+      const ino = Option.getOrUndefined(info.ino)
+      if (ino === undefined) return yield* Effect.die(new Error("Filesystem identity is unavailable"))
+      return { type: "file", dev: info.dev, ino } satisfies Identity
+    })
+    // kilocode_change end
+
     const writeTextPreservingBom = Effect.fn("FileMutation.writeTextPreservingBom")((input: TextWriteInput) =>
       withTargetLock(input.target)(
         Effect.gen(function* () {
+          // kilocode_change start - write only the filesystem object the approval covered
           const next = splitBom(input.content)
+          if (input.approved.type === "absent") {
+            const create = fs.writeFileString(input.target.canonical, joinBom(next.text, next.bom), { flag: "wx" })
+            yield* create.pipe(
+              Effect.catchReason("PlatformError", "NotFound", () =>
+                fs.ensureDir(dirname(input.target.canonical)).pipe(Effect.andThen(create)),
+              ),
+              Effect.catchReason("PlatformError", "AlreadyExists", () =>
+                Effect.fail(new TargetChangedError({ path: input.target.canonical })),
+              ),
+            )
+            return writeResult(input.target, false)
+          }
+          const approved = input.approved
+          const changed = () => new TargetChangedError({ path: input.target.canonical })
           const current = yield* fs
             .readFile(input.target.canonical)
-            .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
-          yield* fs.writeWithDirs(
-            input.target.canonical,
-            joinBom(next.text, Boolean(current && hasUtf8Bom(current)) || next.bom),
-          )
-          return writeResult(input.target, current !== undefined)
+            .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.fail(changed())))
+          const info = yield* fs
+            .stat(input.target.canonical)
+            .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.fail(changed())))
+          if (info.dev !== approved.dev || Option.getOrUndefined(info.ino) !== approved.ino)
+            return yield* Effect.fail(changed())
+          yield* fs.writeWithDirs(input.target.canonical, joinBom(next.text, hasUtf8Bom(current) || next.bom))
+          return writeResult(input.target, true)
+          // kilocode_change end
         }),
       ),
     )
@@ -168,7 +223,7 @@ const layer = Layer.effect(
       ),
     )
 
-    return Service.of({ create, write, writeTextPreservingBom, writeIfUnchanged, remove })
+    return Service.of({ inspect, create, write, writeTextPreservingBom, writeIfUnchanged, remove }) // kilocode_change - inspect registered
   }),
 )
 

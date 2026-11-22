@@ -80,14 +80,63 @@ describe("FileMutation", () => {
         const created = yield* (yield* LocationMutation.Service).resolve({ path: "created.txt" })
         const files = yield* FileMutation.Service
 
-        yield* files.writeTextPreservingBom({ target: preserved, content: "\uFEFFafter" })
-        yield* files.writeTextPreservingBom({ target: created, content: "\uFEFF\uFEFF\uFEFFcreated" })
+        // kilocode_change start - bind the write to the approved target identity
+        yield* files.writeTextPreservingBom({
+          target: preserved,
+          approved: yield* files.inspect(preserved),
+          content: "\uFEFFafter",
+        })
+        yield* files.writeTextPreservingBom({
+          target: created,
+          approved: yield* files.inspect(created),
+          content: "\uFEFF\uFEFF\uFEFFcreated",
+        })
+        // kilocode_change end
 
         expect(yield* Effect.promise(() => fs.readFile(preservedPath, "utf8"))).toBe("\uFEFFafter")
         expect(yield* Effect.promise(() => fs.readFile(created.canonical, "utf8"))).toBe("\uFEFFcreated")
       }).pipe(provide(directory)),
     ),
   )
+
+  // kilocode_change start - reject a write whose approved target changed
+  it.live("refuses a text write whose approved identity no longer matches the target", () =>
+    withTmp((directory) =>
+      Effect.gen(function* () {
+        const targetPath = path.join(directory, "replaced.txt")
+        yield* Effect.promise(() => fs.writeFile(targetPath, "original"))
+        const target = yield* (yield* LocationMutation.Service).resolve({ path: "replaced.txt" })
+        const files = yield* FileMutation.Service
+        const approved = yield* files.inspect(target)
+        yield* Effect.promise(() => fs.writeFile(`${targetPath}.next`, "later"))
+        yield* Effect.promise(() => fs.rm(targetPath))
+        yield* Effect.promise(() => fs.rename(`${targetPath}.next`, targetPath))
+
+        expect(
+          yield* files.writeTextPreservingBom({ target, approved, content: "replacement" }).pipe(Effect.flip),
+        ).toMatchObject({ _tag: "FileMutation.TargetChangedError", path: target.canonical })
+        expect(yield* Effect.promise(() => fs.readFile(targetPath, "utf8"))).toBe("later")
+      }).pipe(provide(directory)),
+    ),
+  )
+
+  it.live("refuses an absent-approved text write when the file appeared before the write", () =>
+    withTmp((directory) =>
+      Effect.gen(function* () {
+        const targetPath = path.join(directory, "late.txt")
+        const target = yield* (yield* LocationMutation.Service).resolve({ path: "late.txt" })
+        const files = yield* FileMutation.Service
+        const approved = yield* files.inspect(target)
+        yield* Effect.promise(() => fs.writeFile(targetPath, "later"))
+
+        expect(
+          yield* files.writeTextPreservingBom({ target, approved, content: "replacement" }).pipe(Effect.flip),
+        ).toMatchObject({ _tag: "FileMutation.TargetChangedError", path: target.canonical })
+        expect(yield* Effect.promise(() => fs.readFile(targetPath, "utf8"))).toBe("later")
+      }).pipe(provide(directory)),
+    ),
+  )
+  // kilocode_change end
 
   it.live("rejects create when a prospective target appears after resolution", () =>
     withTmp((directory) =>
