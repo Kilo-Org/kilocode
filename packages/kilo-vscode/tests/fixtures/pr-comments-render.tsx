@@ -7,6 +7,12 @@ const reactions: WebviewMessage[] = []
 const replies: Record<string, unknown>[] = []
 const mutations: Record<string, unknown>[] = []
 const settings: Record<string, unknown>[] = []
+// Each write carries a generated id; the assertions here describe key and value only.
+const withoutWriteId = (message: Record<string, unknown> | undefined) => {
+  const copy: Record<string, unknown> = { ...(message ?? {}) }
+  delete copy.writeId
+  return copy
+}
 const copied: WebviewMessage[] = []
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
@@ -1010,13 +1016,17 @@ assert.equal(pushButton.hasAttribute("data-active"), true)
 assert.equal(pushButton.disabled, false)
 pushButton.click()
 await window.happyDOM.waitUntilComplete()
-assert.deepEqual(settings.at(-1), { type: "updateSetting", key: "agentManager.pushFixes", value: false })
+assert.deepEqual(withoutWriteId(settings.at(-1)), {
+  type: "updateSetting",
+  key: "agentManager.pushFixes",
+  value: false,
+})
 assert.equal(pushButton.getAttribute("aria-pressed"), "false")
 assert.equal(pushButton.hasAttribute("data-active"), false)
 assert.equal(pushButton.disabled, false)
 pushButton.click()
 await window.happyDOM.waitUntilComplete()
-assert.deepEqual(settings.at(-1), { type: "updateSetting", key: "agentManager.pushFixes", value: true })
+assert.deepEqual(withoutWriteId(settings.at(-1)), { type: "updateSetting", key: "agentManager.pushFixes", value: true })
 assert.equal(pushButton.getAttribute("aria-pressed"), "true")
 assert.equal(pushButton.hasAttribute("data-active"), true)
 post({ type: "pushFixesSettingLoaded", enabled: false })
