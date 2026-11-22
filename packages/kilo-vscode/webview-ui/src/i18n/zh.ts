@@ -1258,6 +1258,8 @@ export const dict = {
   "dialog.model.notSet": "未设置",
   "profile.personalAccount": "个人账户",
   "profile.switchingAccount": "正在切换账户…",
+  "profile.unavailableAccount": "不可用的账户",
+  "profile.switchFailed": "无法确认账户切换。",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/zh.ts
 
   "question.summary": "第 {{n}} / {{total}} 个问题",

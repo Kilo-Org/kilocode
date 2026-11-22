@@ -1455,11 +1455,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "logout":
           await handleLogout(this.authCtx)
           break
-        case "setOrganization":
+        case "setOrganization": {
           if (typeof message.organizationId === "string" || message.organizationId === null) {
-            await handleSetOrganization(this.authCtx, message.organizationId)
+            const requestID =
+              typeof message.requestID === "string" && message.requestID.length > 0
+                ? message.requestID
+                : crypto.randomUUID()
+            await handleSetOrganization(this.authCtx, message.organizationId, requestID)
           }
           break
+        }
         case "openSettingsPanel":
           vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab, message.projectId)
           break

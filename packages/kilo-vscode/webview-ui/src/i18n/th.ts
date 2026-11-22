@@ -1309,6 +1309,8 @@ export const dict = {
   "dialog.model.notSet": "ไม่ได้ตั้งค่า",
   "profile.personalAccount": "บัญชีส่วนตัว",
   "profile.switchingAccount": "กำลังสลับบัญชี…",
+  "profile.unavailableAccount": "บัญชีที่ใช้ไม่ได้",
+  "profile.switchFailed": "ยืนยันการสลับบัญชีไม่สำเร็จ",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/th.ts
 
   "question.summary": "{{n}} จาก {{total}} คำถาม",

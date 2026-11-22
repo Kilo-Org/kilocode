@@ -7,6 +7,7 @@
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { getErrorMessage } from "../../kilo-provider-utils"
+import type { ProfileData } from "../../../webview-ui/src/types/messages/profile"
 
 export interface AuthContext {
   readonly client: KiloClient | null
@@ -105,37 +106,68 @@ export async function handleLogout(ctx: AuthContext): Promise<void> {
 
 /**
  * Handle organization switch.
- * Persists the selection and refreshes profile + providers since both change with org context.
+ * Persists the selection, refreshes profile + providers since both change with
+ * org context, and reports one correlated outcome for the request.
  */
-export async function handleSetOrganization(ctx: AuthContext, organizationId: string | null): Promise<void> {
-  if (!ctx.client) return
+export async function handleSetOrganization(
+  ctx: AuthContext,
+  organizationId: string | null,
+  requestID: string,
+): Promise<void> {
+  if (!ctx.client) {
+    ctx.postMessage({
+      type: "organizationSwitchResult",
+      requestID,
+      organizationId,
+      ok: false,
+      data: null,
+      error: "Not connected to CLI backend",
+    })
+    return
+  }
 
   console.log("[Kilo New] KiloProvider: Switching organization:", organizationId ?? "personal")
+
+  let failure: string | undefined
   try {
     await ctx.client.kilo.organization.set({ organizationId }, { throwOnError: true })
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to switch organization:", error)
-    // Re-fetch current profile to reset webview state — best-effort
-    try {
-      const result = await ctx.client.kilo.profile()
-      ctx.postMessage({ type: "profileData", data: result.data ?? null })
-    } catch (profileError) {
-      console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch error:", profileError)
-    }
-    return
+    failure = getErrorMessage(error) || "Failed to switch organization"
   }
 
-  ctx.invalidateProviderUsage()
-  ctx.invalidateProviders()
-  await ctx.disposeGlobal()
+  if (failure === undefined) {
+    ctx.invalidateProviderUsage()
+    ctx.invalidateProviders()
+    await ctx.disposeGlobal().catch((error) => {
+      console.error("[Kilo New] KiloProvider: Failed to dispose global state after org switch:", error)
+    })
+  }
 
-  // Org switch succeeded — refresh profile and providers independently (best-effort)
+  // The profile read is the client's confirmation of the applied context, so a
+  // failed read leaves the switch unconfirmed even when the write succeeded.
+  let profile: ProfileData | null = null
+  let profileError: string | undefined
   try {
-    const result = await ctx.client.kilo.profile()
-    ctx.postMessage({ type: "profileData", data: result.data ?? null })
+    const result = await ctx.client.kilo.profile(undefined, { throwOnError: true })
+    profile = result.data ?? null
+    ctx.postMessage({ type: "profileData", data: profile })
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
+    profileError = getErrorMessage(error) || "Failed to refresh profile"
   }
+
+  ctx.postMessage({
+    type: "organizationSwitchResult",
+    requestID,
+    organizationId,
+    ok: failure === undefined && profileError === undefined,
+    data: profile,
+    ...(failure !== undefined ? { error: failure } : profileError !== undefined ? { error: profileError } : {}),
+  })
+
+  if (failure !== undefined) return
+
   try {
     await ctx.fetchAndSendProviders()
   } catch (error) {

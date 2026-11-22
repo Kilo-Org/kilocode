@@ -1405,6 +1405,8 @@ export const dict = {
   "settings.indexing.kiloSignIn.description": "Hosted embeddings kullanmak için Kilo'da oturum açın.",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Hesap değiştiriliyor…",
+  "profile.unavailableAccount": "Kullanılamayan hesap",
+  "profile.switchFailed": "Hesap değişikliği doğrulanamadı.",
   "settings.agentBehaviour.createMode": "Yeni Mod Oluştur",
   "settings.agentBehaviour.createMode.button": "Oluştur",
   "settings.agentBehaviour.createMode.cancel": "İptal",

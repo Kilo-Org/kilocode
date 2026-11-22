@@ -1404,6 +1404,8 @@ export const dict = {
   "settings.indexing.kiloSignIn.description": "Увійдіть у Kilo, щоб використовувати hosted embeddings.",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Перемикання акаунту…",
+  "profile.unavailableAccount": "Недоступний акаунт",
+  "profile.switchFailed": "Не вдалося підтвердити перемикання акаунта.",
   "settings.agentBehaviour.createMode": "Створити новий режим",
   "settings.agentBehaviour.createMode.button": "Створити",
   "settings.agentBehaviour.createMode.cancel": "Скасувати",

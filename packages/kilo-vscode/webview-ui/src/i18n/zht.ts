@@ -1221,6 +1221,8 @@ export const dict = {
   "dialog.model.notSet": "未設定",
   "profile.personalAccount": "個人帳戶",
   "profile.switchingAccount": "正在切換帳戶…",
+  "profile.unavailableAccount": "無法使用的帳戶",
+  "profile.switchFailed": "無法確認帳戶切換。",
 
   "prompt.action.indexing": "索引設定",
 
