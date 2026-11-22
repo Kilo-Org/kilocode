@@ -319,6 +319,10 @@ class KiloBackendHostedManager(
     }
 
     private fun begin(chat: KiloBackendChatManager) {
+        statusJob?.cancel()
+        statusJob = null
+        lifecycle?.cancel()
+        lifecycle = null
         lifecycle = CoroutineScope(cs.coroutineContext + SupervisorJob(cs.coroutineContext[Job]))
         statusJob = lifecycle!!.launch(start = CoroutineStart.UNDISPATCHED) {
             chat.events.collect { event ->
@@ -387,13 +391,18 @@ class KiloBackendHostedManager(
      * manager is running it keeps serving on the same transport; when it is not, the observation
      * still lands, so the next [start] finds no retained owners to restore.
      *
-     * Serialized on [lock], which [ensure] holds across the attach call, so a reset cannot interleave
-     * with an attach that is already installing an attachment.
+     * The whole reset is serialized on [lock], which [ensure] holds across the attach call, so a reset
+     * cannot interleave with an attach that is already installing an attachment. It is also
+     * serialized on the manager monitor, against [start], [stop] and [close], so the `started` and
+     * `chat` it reads cannot change under it: a reset racing a stop leaves nothing for the next
+     * [start] to restore.
      */
     suspend fun resetContext() = lock.withLock {
-        val chat = this.chat
-        reset(detach = true)
-        if (started && chat != null) begin(chat)
+        synchronized(this@KiloBackendHostedManager) {
+            reset(detach = true)
+            val chat = this.chat
+            if (started && chat != null) begin(chat)
+        }
     }
 
     /** Full teardown for application disposal, where no RPC collector can survive the service. */
