@@ -899,6 +899,11 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     }
 
     fun testCurrentSessionIsReobservedAfterSignInRestoresTheGate() {
+        // The signed-out wait below treats `active == 0` as proof that the gate reset cancelled the
+        // session's feed. That reading only holds if a feed existed: on a loaded runner setUp's
+        // session panel can mount before its load-then-observe chain finishes, and then the
+        // signed-out refresh would race the still-running sign-in path instead of following it.
+        assertTrue(coroutines.pumpUntil { rpc.collectors == 1 && rpc.active == 1 })
         val initial = rpc.collectors
         rpc.list = HostedWorkspaceListDto(signedOut = true)
         hosted.refresh("/signed-out")
@@ -1125,8 +1130,10 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
 
         val events = MutableSharedFlow<HostedSystemEventDto>(replay = 16)
-        var collectors = 0
-        var active = 0
+        // Written by the collecting coroutine and read by the test thread's waits, so they must be
+        // volatile: a plain field may legally be cached by the waiting loop's JIT-compiled predicate.
+        @Volatile var collectors = 0
+        @Volatile var active = 0
         var workspaceCalls = 0
         var statusCalls = 0
         var starts = 0

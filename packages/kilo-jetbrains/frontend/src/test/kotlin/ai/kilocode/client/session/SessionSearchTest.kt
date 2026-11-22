@@ -78,16 +78,24 @@ class SessionSearchTest : SessionUiTestBase() {
         emit(ChatEventDto.PartUpdated("ses_test", part("asst_stream_text", "asst_stream", "text", content)), flush = false)
         forceFlushWithoutDispatch()
 
-        var refreshed = false
-        repeat(20) {
-            content += " hello"
-            emit(
-                ChatEventDto.PartUpdated("ses_test", part("asst_stream_text", "asst_stream", "text", content)),
-                flush = false,
-            )
-            forceFlushWithoutDispatch()
-            settleShort(20)
-            if (bar.statusText.matches(Regex("1 of [2-9]\\d*"))) refreshed = true
+        // Production debounces a content refresh for DEBOUNCE_CONTENT_MS on the EDT and only then
+        // publishes the result set, so a fixed per-iteration sleep races the debounce instead of
+        // waiting for it. Emit from the wait's own predicate, cap how many times the stream is fed,
+        // and keep pumping to the wait deadline so the refresh is decided by the condition rather
+        // than by how fast the runner is.
+        var emitted = 0
+        val refreshed = pumpUntil {
+            if (bar.statusText.matches(Regex("1 of [2-9]\\d*"))) return@pumpUntil true
+            if (emitted < 20) {
+                content += " hello"
+                emit(
+                    ChatEventDto.PartUpdated("ses_test", part("asst_stream_text", "asst_stream", "text", content)),
+                    flush = false,
+                )
+                forceFlushWithoutDispatch()
+                emitted++
+            }
+            false
         }
 
         assertTrue("the throttled refresh must run during a continuous stream", refreshed)

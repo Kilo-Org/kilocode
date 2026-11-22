@@ -19,6 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -706,7 +707,22 @@ class KiloBackendWorkspaceTest {
         )
         withTimeout(15_000) { reload.await() }
 
-        val ws = app.workspaces.get(project.toString())
+        // A new revision can also come from an independent config/telemetry publish of the initial
+        // load, so the awaited rev bump alone does not prove the reload rebuilt its workspaces.
+        // Poll the manager until it hands back a replacement instance under a real deadline.
+        val ws = assertNotNull(
+            withTimeoutOrNull(15_000) {
+                var replacement: KiloBackendWorkspace? = null
+                while (replacement == null) {
+                    replacement = runCatching { app.workspaces.get(project.toString()) }
+                        .getOrNull()
+                        ?.takeIf { it !== initial }
+                    if (replacement == null) delay(10)
+                }
+                replacement
+            },
+            "global.disposed did not rebuild the workspace; state=${app.appState.value}; logs=${log.messages}",
+        )
         assertTrue(ws !== initial)
         val state = withTimeout(15_000) {
             ws.state.first {
