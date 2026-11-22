@@ -63,11 +63,11 @@ export const PermissionDock: Component<{
   // A bare "*" (global wildcard) becomes empty so only the tool name shows.
   // The rule text is model-supplied, so escape it before it reaches the card.
   const label = (rule: string) => (rule === "*" ? "" : displayText(rule.replace(/ \*$/, "")))
+  // The command the request carries. Each command surface normalizes its IDN hosts and escapes
+  // controls for display; the copy button returns exactly these bytes.
   const command = () => {
     const cmd = props.request.args?.command
-    if (typeof cmd !== "string") return undefined
-    // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
-    return normalizeUrls(cmd)
+    return typeof cmd === "string" ? cmd : undefined
   }
   const text = (rule: string) => (command() ? label(rule) : describeRule(props.request.toolName, rule, language.t))
   const external = () => props.request.toolName === "external_directory"
@@ -371,7 +371,7 @@ export const PermissionDock: Component<{
                   <Show when={command()}>
                     {(cmd) => (
                       <PermissionCommand
-                        command={displayLines(cmd())}
+                        command={displayLines(normalizeUrls(cmd()))}
                         raw={cmd()}
                         plain={props.request.args.heredoc === true}
                       />
@@ -404,9 +404,10 @@ export const PermissionDock: Component<{
                 </>
               }
             >
-              {/* Verbatim commands (args.commands), displayed in the same escaped form as the rest of the card. */}
+              {/* Verbatim commands (args.commands): Unicode hosts are normalized to punycode like the
+                  ordinary command, then escaped for display; copying returns the original bytes. */}
               <For each={skillShellCommands()}>
-                {(cmd) => <PermissionCommand command={displayText(cmd)} raw={cmd} />}
+                {(cmd) => <PermissionCommand command={displayText(normalizeUrls(cmd))} raw={cmd} />}
               </For>
             </Show>
 

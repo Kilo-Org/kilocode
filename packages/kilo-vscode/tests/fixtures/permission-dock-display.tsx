@@ -147,4 +147,66 @@ check({ ...base, toolName: `acme_${RAW}lookup`, patterns: [`src/${RAW}gnp.exe`],
   escaped(hint, "Unknown tool label")
 })
 
+// A bash rule label is model-supplied too. Its rows sit in the collapsed rules section, so open it.
+check({ ...base, toolName: "bash", args: { command: "echo hi", rules: [`git log ${RAW} *`] } }, (root) => {
+  const header = root.querySelector('[data-slot="permission-rules-header"]')
+  assert(header, "Expected the rules header to render")
+  header.dispatchEvent(new window.MouseEvent("click", { bubbles: true }))
+  const rule = text(root, '[data-slot="permission-rule"]')
+  assert(rule.includes(ESCAPED), `Bash rule label lost the escaped control: ${JSON.stringify(rule)}`)
+  assert(!rule.includes(RAW), `Bash rule label showed the raw control: ${JSON.stringify(rule)}`)
+})
+
+// Capture what the copy button writes, so a copy keeps the request's own bytes.
+const copied: string[] = []
+Object.defineProperty(navigator, "clipboard", {
+  configurable: true,
+  value: { writeText: (value: string) => copied.push(value) },
+})
+
+async function copy(root: Element) {
+  const button = root.querySelector('[data-slot="permission-command-copy"]')
+  assert(button, "Missing the copy button")
+  button.dispatchEvent(new window.MouseEvent("click", { bubbles: true }))
+  await Promise.resolve()
+  assert.equal(copied.length, 1, "The copy button wrote nothing")
+  return copied.pop()!
+}
+
+// A skill-shell command gets the same IDN normalization as the ordinary command, and copies raw.
+const skillCmd = `curl https://\u0430pitest.com/status\u2026`
+{
+  const shown = mount({
+    ...base,
+    toolName: "bash",
+    args: { skillShell: true, skill: "check", commands: [skillCmd] },
+  })
+  try {
+    const code = text(shown.root, '[data-slot="permission-command-code"]')
+    assert(code.includes("xn--pitest-2nf.com"), `Skill-shell command kept the Unicode host: ${JSON.stringify(code)}`)
+    assert(!code.includes("\u0430"), "Skill-shell command showed the Unicode host")
+    assert.equal(await copy(shown.root), skillCmd, "Skill-shell copy did not return the request's bytes")
+  } finally {
+    shown.dispose()
+    shown.root.remove()
+  }
+}
+
+// The ordinary command normalizes its Unicode host for display and copies the original bytes.
+const rawCmd = `curl https://\u0430pitest.com/status\nprintf '${RAW}x'\tls`
+{
+  const shown = mount({ ...base, toolName: "bash", args: { command: rawCmd } })
+  try {
+    const code = text(shown.root, '[data-slot="permission-command-code"]')
+    assert(code.includes("xn--pitest-2nf.com"), `Ordinary command kept the Unicode host: ${JSON.stringify(code)}`)
+    assert(code.includes(ESCAPED), `Ordinary command lost the escaped control: ${JSON.stringify(code)}`)
+    assert(code.includes("\\t"), `Ordinary command lost the escaped tab: ${JSON.stringify(code)}`)
+    assert(!code.includes(RAW) && !code.includes("\u0430"), "Ordinary command showed raw request bytes")
+    assert.equal(await copy(shown.root), rawCmd, "Ordinary copy did not return the request's bytes")
+  } finally {
+    shown.dispose()
+    shown.root.remove()
+  }
+}
+
 await window.happyDOM.close()
