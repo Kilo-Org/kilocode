@@ -1371,6 +1371,7 @@
     "eslint-config-prettier": "^10.1.8",
     "happy-dom": "21.0.4",
     "knip": "5.85.0",
+    "ovsx": "1.4.0",
     "prettier": "3.6.2",
     "qrcode": "^1.5.4",
     "storybook": "10.6.2",

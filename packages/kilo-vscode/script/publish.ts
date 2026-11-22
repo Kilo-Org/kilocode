@@ -48,6 +48,10 @@ const evidence = await verifyEvidence()
 
 const flag = prerelease ? ["--pre-release"] : []
 
+// Resolved from the checkout so the Open VSX client comes from bun.lock, not a
+// registry fetch at publish time.
+const ovsx = join(import.meta.dir, "..", "node_modules", ".bin", "ovsx")
+
 for (const target of targets) {
   const vsixPath = join(outDir, `kilo-vscode-${target}.vsix`)
   console.log(`\n🚀 Publishing ${target} to VS Code Marketplace${prerelease ? " (pre-release)" : ""}...`)
@@ -60,7 +64,7 @@ for (const target of targets) {
 
   console.log(`\n📤 Publishing ${target} to Open VSX${prerelease ? " (pre-release)" : ""}...`)
   await retry(
-    () => $`npx ovsx publish ${flag} --skip-duplicate --pat ${process.env.OPENVSX_TOKEN} --packagePath ${vsixPath}`,
+    () => $`${ovsx} publish ${flag} --skip-duplicate --pat ${process.env.OPENVSX_TOKEN} --packagePath ${vsixPath}`,
     {
       attempts: 3,
       delay: 30_000,
