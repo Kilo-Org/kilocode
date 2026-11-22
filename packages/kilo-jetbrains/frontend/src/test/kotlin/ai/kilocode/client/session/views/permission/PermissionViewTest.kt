@@ -301,6 +301,66 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertEquals("Allow once", view.runButtonForTest().text)
     }
 
+    fun `test hosted permission card offers no always rules`() {
+        view.show(
+            Permission(
+                id = "perm_hosted",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("git status"),
+                always = listOf("git status"),
+                meta = PermissionMeta(
+                    // Simulates a hosted workspace whose backend sends rule candidates anyway; a
+                    // hosted workspace stores no always-rules, so the card still offers none.
+                    ruleDecisions = listOf(PermissionRuleCandidate("git status")),
+                ),
+                hosted = true,
+            )
+        )
+
+        val text = allText(view)
+        assertFalse("Should not contain rules title, got: $text", text.contains("Auto-approve Rules"))
+        assertFalse(view.rulesForTest().isVisible)
+        assertEquals("Allow once", view.runButtonForTest().text)
+
+        view.runButtonForTest().doClick()
+
+        assertEquals(1, replies.size)
+        assertEquals("perm_hosted", replies.single().first)
+        assertEquals("once", replies.single().second.reply)
+        assertTrue(replies.single().second.interactive)
+        assertNull(replies.single().third)
+    }
+
+    fun `test hosted permission reject sends its reply without rules`() {
+        view.show(
+            Permission(
+                id = "perm_hosted_reject",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("git status"),
+                always = listOf("git status"),
+                meta = PermissionMeta(ruleDecisions = listOf(PermissionRuleCandidate("git status"))),
+                hosted = true,
+            )
+        )
+
+        view.denyButtonForTest().doClick()
+
+        assertEquals(1, replies.size)
+        assertEquals("perm_hosted_reject", replies.single().first)
+        assertEquals("reject", replies.single().second.reply)
+        assertNull(replies.single().third)
+    }
+
+    fun `test local permission card offers always rules after a hosted card`() {
+        view.show(permission().copy(hosted = true))
+        view.show(permissionWithRules("perm_local_after", listOf("git status *")))
+
+        assertTrue(view.rulesForTest().isVisible)
+        assertEquals("Allow once", view.runButtonForTest().text)
+    }
+
     fun `test non-bash patterns show action and path in editor`() {
         view.show(
             Permission(

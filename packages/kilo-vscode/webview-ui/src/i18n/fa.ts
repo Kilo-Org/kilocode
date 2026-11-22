@@ -798,6 +798,7 @@ export const dict = {
 
   "dialog.model.noProviders": "هیچ ارائه‌دهنده‌ای وجود ندارد",
   "dialog.model.unavailable": "مدل‌های Kilo در دسترس نیستند",
+  "dialog.model.loadFailed": "بارگذاری ارائه‌دهندگان این پروژه ممکن نشد.",
 
   "prompt.placeholder.connecting": "در حال اتصال به سرور...",
   "prompt.placeholder.default": "پیامی بنویسید... (Enter برای ارسال، Shift+Enter برای خط جدید)",

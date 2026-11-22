@@ -66,10 +66,24 @@ export function migrate(info: typeof ConfigV1.Info.Type) {
     plugins: info.plugin?.map((plugin) =>
       typeof plugin === "string" ? plugin : { package: plugin[0], options: plugin[1] },
     ),
-    experimental: info.experimental?.policies && { policies: info.experimental.policies },
+    experimental: policies(info), // kilocode_change - v1 provider lists become provider.use policy statements
     providers: providers(info.provider),
   }
 }
+
+// kilocode_change start - v1 selection lists restricted providers directly, so the
+// translated statements come last and win over authored policies in the same document.
+function policies(info: typeof ConfigV1.Info.Type) {
+  const rule = (effect: "allow" | "deny", resource: string) => ({ effect, action: "provider.use" as const, resource })
+  const legacy = [
+    ...(info.enabled_providers ? [rule("deny", "*")] : []),
+    ...(info.enabled_providers ?? []).map((id) => rule("allow", id)),
+    ...(info.disabled_providers ?? []).map((id) => rule("deny", id)),
+  ]
+  const statements = [...(info.experimental?.policies ?? []), ...legacy]
+  return statements.length ? { policies: statements } : undefined
+}
+// kilocode_change end
 
 function permissions(info?: ConfigPermissionV1.Info, tools?: Readonly<Record<string, boolean>>) {
   const rules: Array<{ action: string; resource: string; effect: "allow" | "ask" | "deny" }> = Object.entries(

@@ -25,6 +25,7 @@ function AnacondaDesktopDialog(props: AnacondaDesktopDialogProps) {
   const provider = useProvider()
   const vscode = useVSCode()
   const action = createAnacondaDesktopAction(vscode)
+  provider.trackDialog()
   const [status, setStatus] = createSignal<AnacondaDesktopStatus | undefined>(props.status)
   const [checking, setChecking] = createSignal(false)
   const [opening, setOpening] = createSignal(false)

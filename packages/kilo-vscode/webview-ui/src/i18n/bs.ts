@@ -818,6 +818,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Nema pružatelja",
   "dialog.model.unavailable": "Kilo modeli nisu dostupni",
+  "dialog.model.loadFailed": "Nije moguće učitati pružatelje za ovaj projekat.",
 
   "prompt.placeholder.connecting": "Povezivanje na server...",
   "prompt.placeholder.error": "Povezivanje nije uspjelo. Provjerite panel za izlaz ili ponovo pokrenite ekstenziju.",

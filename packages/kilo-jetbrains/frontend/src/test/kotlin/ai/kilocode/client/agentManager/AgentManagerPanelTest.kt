@@ -1707,6 +1707,12 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         timers.advanceBy(300)
         flush()
+        // The debounce fires the dirty poll, but its answer reaches the row through the status
+        // service's own coroutine and an EDT hop, so a fixed drain can finish before the counts do.
+        waitUntil {
+            val metrics = row(panel, 0).metrics
+            metrics?.localFiles == 3 && metrics.localAdditions == 2 && metrics.localDeletions == 1
+        }
 
         edt {
             val view = tree(panel)

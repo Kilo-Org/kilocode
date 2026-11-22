@@ -801,6 +801,7 @@ export const dict = {
 
   "dialog.model.noProviders": "لا يوجد موفرون",
   "dialog.model.unavailable": "نماذج Kilo غير متاحة",
+  "dialog.model.loadFailed": "تعذّر تحميل الموفرين لهذا المشروع.",
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
   "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",

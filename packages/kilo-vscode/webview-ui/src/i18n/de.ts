@@ -830,6 +830,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Keine Anbieter",
   "dialog.model.unavailable": "Kilo-Modelle nicht verfügbar",
+  "dialog.model.loadFailed": "Anbieter für dieses Projekt konnten nicht geladen werden.",
 
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
   "prompt.placeholder.error":

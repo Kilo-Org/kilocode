@@ -832,6 +832,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Aucun fournisseur",
   "dialog.model.unavailable": "Modèles Kilo indisponibles",
+  "dialog.model.loadFailed": "Impossible de charger les fournisseurs de ce projet.",
 
   "prompt.placeholder.connecting": "Connexion au serveur...",
   "prompt.placeholder.error": "Échec de la connexion. Vérifiez le panneau de sortie ou redémarrez l'extension.",
