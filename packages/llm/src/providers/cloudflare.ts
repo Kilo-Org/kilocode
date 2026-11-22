@@ -34,24 +34,53 @@ type WorkersAIURL = AtLeastOne<{
 export type WorkersAIOptions = WorkersAIURL & RouteDefaultsInput & ProviderAuthOption<"optional">
 
 export const aiGatewayBaseURL = (input: GatewayURL) => {
-  if (input.baseURL) return input.baseURL
+  // kilocode_change start - a blank or whitespace-only baseURL is unset, so the derived endpoint applies
+  const baseURL = input.baseURL?.trim()
+  if (baseURL) return baseURL
+  // kilocode_change end
   if (!input.accountId) throw new Error("CloudflareAIGateway.configure requires accountId unless baseURL is supplied")
   return `https://gateway.ai.cloudflare.com/v1/${encodeURIComponent(input.accountId)}/${encodeURIComponent(input.gatewayId?.trim() || "default")}/compat`
 }
 
+// kilocode_change start - the environment gateway credential goes to a Cloudflare AI Gateway endpoint
+const isGatewayHost = (baseURL: string | null | undefined) => {
+  if (!baseURL?.trim()) return true
+  try {
+    return new URL(baseURL).hostname.toLowerCase() === "gateway.ai.cloudflare.com"
+  } catch {
+    return false
+  }
+}
+// kilocode_change end
+
 const aiGatewayAuth = (input: AIGatewayOptions) => {
   if ("auth" in input && input.auth) return input.auth
-  const gateway = Auth.optional(input.gatewayApiKey, "gatewayApiKey")
-    .orElse(Auth.config("CLOUDFLARE_API_TOKEN"))
-    .orElse(Auth.config("CF_AIG_TOKEN"))
-    .pipe(Auth.bearerHeader("cf-aig-authorization"))
+  // kilocode_change start - resolve the environment gateway credential for a Cloudflare gateway endpoint;
+  // on any other host the credential comes from `gatewayApiKey`
+  const gatewayHost = isGatewayHost(input.baseURL)
+  const explicit = Auth.optional(
+    input.gatewayApiKey,
+    gatewayHost
+      ? "gatewayApiKey"
+      : "gatewayApiKey (the environment token is sent only to gateway.ai.cloudflare.com; alternatively set a cf-aig-authorization header)",
+  )
+  const source = gatewayHost
+    ? explicit.orElse(Auth.config("CLOUDFLARE_API_TOKEN")).orElse(Auth.config("CF_AIG_TOKEN"))
+    : explicit
+  const gateway = source.pipe(Auth.bearerHeader("cf-aig-authorization"))
+  // kilocode_change end
   if (!("apiKey" in input) || input.apiKey === undefined) return gateway
-  if (input.gatewayApiKey === undefined) return Auth.bearer(input.apiKey)
-  return Auth.bearerHeader("cf-aig-authorization", input.gatewayApiKey).andThen(Auth.bearer(input.apiKey))
+  // kilocode_change start - keep the resolved gateway credential next to the upstream key;
+  // `orElse(none)` keeps a gateway without its own authentication working
+  return gateway.orElse(Auth.none).andThen(Auth.bearer(input.apiKey))
+  // kilocode_change end
 }
 
 export const workersAIBaseURL = (input: WorkersAIURL) => {
-  if (input.baseURL) return input.baseURL
+  // kilocode_change start - a blank or whitespace-only baseURL is unset, so the derived endpoint applies
+  const baseURL = input.baseURL?.trim()
+  if (baseURL) return baseURL
+  // kilocode_change end
   if (!input.accountId) throw new Error("CloudflareWorkersAI.configure requires accountId unless baseURL is supplied")
   return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(input.accountId)}/ai/v1`
 }

@@ -106,6 +106,8 @@ const gateway = CloudflareAIGateway.configure({
 
 Included providers: OpenAI, Anthropic, Google (Gemini), Amazon Bedrock, Azure OpenAI, Cloudflare AI Gateway, Cloudflare Workers AI, GitHub Copilot, OpenRouter, xAI, plus generic OpenAI-compatible helpers for DeepSeek, Cerebras, Groq, Fireworks, Together, etc.
 
+The Cloudflare AI Gateway credential is read from `gatewayApiKey` (or `auth`), or from `CLOUDFLARE_API_TOKEN` / `CF_AIG_TOKEN` when the gateway host is `gateway.ai.cloudflare.com`; a gateway reached on another host, such as a Cloudflare custom domain, uses `gatewayApiKey` or `auth`.
+
 ## Provider options & HTTP overlays
 
 Three escape hatches in order of stability:
