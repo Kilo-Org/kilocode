@@ -263,4 +263,17 @@ describe("KiloSessionPrompt.recoverProviderFinishError", () => {
       expect(remaining).toEqual([seeded.userID, seeded.assistantID])
     }),
   )
+
+  it.instance("removes an error-finished tail when the turn marker belongs to this process", () =>
+    Effect.gen(function* () {
+      const seeded = yield* seed({ finish: "error", parts: ["step-start", "step-finish"] })
+      const marker = yield* markForeign(seeded.sessionID, process.pid)
+
+      const remaining = yield* runProviderFinish(seeded.sessionID).pipe(
+        Effect.ensuring(Effect.promise(() => fs.rm(marker))),
+      )
+
+      expect(remaining).toEqual([seeded.userID])
+    }),
+  )
 })
