@@ -102,22 +102,7 @@ const layer = Layer.effectDiscard(
           ],
           execute: (input, context) =>
             Effect.gen(function* () {
-              yield* permission.assert({
-                action: name,
-                resources: [input.pattern],
-                save: ["*"],
-                metadata: {
-                  root: ".",
-                  path: input.path,
-                  reference: input.reference, // kilocode_change
-                  include: input.include,
-                  limit: input.limit,
-                },
-                sessionID: context.sessionID,
-                agent: context.agent,
-                source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
-              })
-              // kilocode_change start - enforce the active Location despite RelativePath being a nominal brand
+              // kilocode_change start - record the searched directory with the approval
               const ref = input.reference
                 ? (yield* references.list()).find((item) => item.name === input.reference)
                 : undefined
@@ -134,6 +119,21 @@ const layer = Layer.effectDiscard(
               if (root.type !== "directory" || (!contained && !retained))
                 return yield* Effect.fail(new Error("Path escapes the active Location"))
               const cwd = target.type === "directory" ? target.path : path.dirname(target.path)
+              yield* permission.assert({
+                action: name,
+                resources: [input.pattern],
+                save: ["*"],
+                metadata: {
+                  root: cwd,
+                  path: input.path,
+                  reference: input.reference,
+                  include: input.include,
+                  limit: input.limit,
+                },
+                sessionID: context.sessionID,
+                agent: context.agent,
+                source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
+              })
               // kilocode_change end
               return yield* ripgrep
                 .grep({

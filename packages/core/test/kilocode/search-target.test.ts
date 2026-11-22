@@ -44,13 +44,21 @@ describe("search target confinement", () => {
         const directory = path.join(tmp, "tool-output")
         const retained = path.join(directory, "tool_123")
         const unrelated = path.join(directory, "notes.txt")
+        const nested = path.join(directory, "nested")
+        const nestedRetained = path.join(nested, "tool_456")
+        const namedDirectory = path.join(directory, "tool_directory")
         yield* Effect.promise(() => fs.mkdir(directory))
+        yield* Effect.promise(() => fs.mkdir(nested))
+        yield* Effect.promise(() => fs.mkdir(namedDirectory))
         yield* Effect.promise(() => fs.writeFile(retained, "retained"))
         yield* Effect.promise(() => fs.writeFile(unrelated, "unrelated"))
+        yield* Effect.promise(() => fs.writeFile(nestedRetained, "nested"))
         const fsys = yield* FSUtil.Service
 
         expect(yield* SearchTarget.managed(fsys, tmp, yield* SearchTarget.inspect(fsys, retained))).toBe(true)
         expect(yield* SearchTarget.managed(fsys, tmp, yield* SearchTarget.inspect(fsys, unrelated))).toBe(false)
+        expect(yield* SearchTarget.managed(fsys, tmp, yield* SearchTarget.inspect(fsys, nestedRetained))).toBe(false)
+        expect(yield* SearchTarget.managed(fsys, tmp, yield* SearchTarget.inspect(fsys, namedDirectory))).toBe(false)
       }),
     ),
   )

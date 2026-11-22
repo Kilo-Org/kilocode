@@ -83,21 +83,7 @@ const layer = Layer.effectDiscard(
           ],
           execute: (input, context) =>
             Effect.gen(function* () {
-              yield* permission.assert({
-                action: name,
-                resources: [input.pattern],
-                save: ["*"],
-                metadata: {
-                  root: input.path ?? ".",
-                  path: input.path,
-                  reference: input.reference, // kilocode_change
-                  limit: input.limit,
-                },
-                sessionID: context.sessionID,
-                agent: context.agent,
-                source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
-              })
-              // kilocode_change start - enforce the active Location despite RelativePath being a nominal brand
+              // kilocode_change start - record the searched directory with the approval
               const ref = input.reference
                 ? (yield* references.list()).find((item) => item.name === input.reference)
                 : undefined
@@ -110,6 +96,20 @@ const layer = Layer.effectDiscard(
               const target = yield* SearchTarget.inspect(fs, requested)
               if (root.type !== "directory" || target.type !== "directory" || !FSUtil.contains(root.path, target.path))
                 return yield* Effect.fail(new Error("Path escapes the active Location"))
+              yield* permission.assert({
+                action: name,
+                resources: [input.pattern],
+                save: ["*"],
+                metadata: {
+                  root: target.path,
+                  path: input.path,
+                  reference: input.reference,
+                  limit: input.limit,
+                },
+                sessionID: context.sessionID,
+                agent: context.agent,
+                source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
+              })
               // kilocode_change end
               return yield* ripgrep
                 .glob({
