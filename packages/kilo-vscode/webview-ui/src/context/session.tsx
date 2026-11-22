@@ -2491,10 +2491,8 @@ export const SessionProvider: ParentComponent = (props) => {
     if (isTerminalPermission(permissionId, permission.sessionID)) return false
     if (respondingPermissions().has(permissionId)) return false
 
-    // Mark as responding so the UI disables the buttons.
-    // The permission is removed when the server confirms via permission.replied SSE.
+    // Disable the buttons until the server confirms via the permission.replied event.
     setRespondingPermissions((prev) => new Set(prev).add(permissionId))
-
     const message = feedback?.trim()
     vscode.postMessage({
       type: "permissionResponse",
