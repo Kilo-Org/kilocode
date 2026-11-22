@@ -298,7 +298,7 @@ describe("Config", () => {
     }),
   )
 
-  // kilocode_change start - the deprecated toggle decides where the permission block maps onto its action
+  // The deprecated toggle decides where the permission block maps onto its action.
   it.effect("keeps the v1 tool toggle ahead of a permission key for the same capability", () =>
     Effect.sync(() => {
       const blocked = v1({ tools: { write: false }, permission: { write: "allow" } })
@@ -317,7 +317,6 @@ describe("Config", () => {
       expect(PermissionV2.evaluate("edit", "src/index.ts", current.permissions ?? []).effect).toBe("deny")
     }),
   )
-  // kilocode_change end
 
   it.effect("migrates per-resource v1 write and patch permission maps to the edit action", () =>
     Effect.sync(() => {
