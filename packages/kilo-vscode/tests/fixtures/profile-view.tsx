@@ -257,6 +257,14 @@ try {
   assert(alert(), "a push for a different account must keep the failure")
   assert.equal(trigger().disabled, false, "the selector is interactive for the retry")
 
+  // A push that reports an account other than the one the attempt started from
+  // was superseded by a switch made in the other surface, so it ends the
+  // failure: the failed attempt here started on Org One and the push reports
+  // personal.
+  await push({ type: "profileData", data: profile(null) })
+  assert.equal(alert(), null, "a push for another account must clear the failure")
+  assert.equal(trigger().disabled, false, "the selector stays interactive after the clear")
+
   // Signing out ends any live attempt, so nothing returns after the next login.
   await open()
   await press(option("Org Two"))

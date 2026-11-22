@@ -16,8 +16,8 @@ import type { OrganizationSwitchResultMessage } from "../../types/messages"
 /** One request lifecycle: idle, awaiting its correlated result, or failed with its target kept for retry. */
 type Switch =
   | { kind: "idle" }
-  | { kind: "switching"; requestID: string; target: string | null }
-  | { kind: "failed"; message: string; target: string | null }
+  | { kind: "switching"; requestID: string; target: string | null; origin: string | null }
+  | { kind: "failed"; message: string; target: string | null; origin: string | null }
 
 export const AccountSwitcher: Component<{ class?: string }> = (props) => {
   const server = useServer()
@@ -66,7 +66,7 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
       setSwitch({ kind: "idle" })
       return
     }
-    setSwitch({ kind: "failed", message: result.error ?? "", target: state.target })
+    setSwitch({ kind: "failed", message: result.error ?? "", target: state.target, origin: state.origin })
   }
 
   const unsubscribe = vscode.onMessage((message) => {
@@ -83,16 +83,19 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
       if (current().kind !== "idle") setSwitch({ kind: "idle" })
       return
     }
-    // A later profile read can show the attempted account applied, so a failed
-    // attempt ends rather than keeping a stale alert and a redundant retry.
+    // A failed attempt ends only when a later profile read shows an account
+    // other than the one it started from: a push that still reports the origin
+    // leaves the attempt unconfirmed, while any other account means the applied
+    // context moved on (here or in the other surface), so a stale alert and a
+    // redundant retry cannot survive.
     const state = current()
-    if (state.kind === "failed" && message.data.currentOrgId === state.target) setSwitch({ kind: "idle" })
+    if (state.kind === "failed" && (message.data.currentOrgId ?? null) !== state.origin) setSwitch({ kind: "idle" })
   })
   onCleanup(unsubscribe)
 
   function submit(target: string | null) {
     const requestID = crypto.randomUUID()
-    setSwitch({ kind: "switching", requestID, target })
+    setSwitch({ kind: "switching", requestID, target, origin: active() })
     vscode.postMessage({ type: "setOrganization", organizationId: target, requestID })
   }
 

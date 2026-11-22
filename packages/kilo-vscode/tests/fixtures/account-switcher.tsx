@@ -357,6 +357,14 @@ try {
   await push({ type: "profileData", data: profile("org-2", true) })
   assert(alert(), "a push for a different account must keep the failure")
 
+  // A push that reports an account other than the one the attempt started from
+  // was superseded by a switch made in the other surface, so it ends too: here
+  // the failed attempt started on Org Two and a push now reports personal.
+  await push({ type: "profileData", data: profile(null, true) })
+  assert.equal(alert(), null, "a push for another account must clear the failure")
+  assert.equal(trigger().disabled, false, "the trigger stays enabled after the clear")
+  assert.equal(trigger().textContent?.includes("Personal Account"), true, "the label follows the applied account")
+
   // Signing out after a failed attempt must not leave the control mounted.
   await push({ type: "profileData", data: null })
   assert.equal(root.querySelector(".account-switcher"), null, "a signed-out session must not show the control")

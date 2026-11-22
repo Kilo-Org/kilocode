@@ -38,14 +38,8 @@ interface OrgOption {
 /** One switch attempt: awaiting its correlated result, or failed with its message and target kept for retry. */
 type Attempt =
   | { kind: "idle" }
-  | { kind: "pending"; requestID: string; target: string }
-  | { kind: "failed"; message: string; target: string }
-
-/** Whether a profile push reports the attempted target as the applied account. */
-function applied(target: string, profile: ProfileData): boolean {
-  const current = profile.currentOrgId ?? PERSONAL
-  return target === current
-}
+  | { kind: "pending"; requestID: string; target: string; origin: string }
+  | { kind: "failed"; message: string; target: string; origin: string }
 
 const ProfileView: Component<ProfileViewProps> = (props) => {
   const vscode = useVSCode()
@@ -63,8 +57,11 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   // The correlated result owns termination: only the reply to this component's
   // request may clear the pending state, so a late reply is ignored. A null
   // profile means the session ended, so no attempt may outlive it either. A
-  // failed attempt also ends once a later profile read shows its target applied,
-  // so a stale alert and a Retry for an applied switch cannot survive.
+  // failed attempt also ends once a later profile read shows an account other
+  // than the one it started from: a push that still reports the origin leaves
+  // it unconfirmed, while any other account means the applied context moved on
+  // (here or in the other surface), so a stale alert and a Retry for an applied
+  // switch cannot survive.
   const unsubscribe = vscode.onMessage((message) => {
     const state = attempt()
     if (message.type === "profileData") {
@@ -72,7 +69,9 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
         setAttempt({ kind: "idle" })
         return
       }
-      if (state.kind === "failed" && applied(state.target, message.data)) setAttempt({ kind: "idle" })
+      if (state.kind === "failed" && (message.data.currentOrgId ?? PERSONAL) !== state.origin) {
+        setAttempt({ kind: "idle" })
+      }
       return
     }
     if (message.type !== "organizationSwitchResult") return
@@ -81,7 +80,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
       setAttempt({ kind: "idle" })
       return
     }
-    setAttempt({ kind: "failed", message: message.error ?? "", target: state.target })
+    setAttempt({ kind: "failed", message: message.error ?? "", target: state.target, origin: state.origin })
   })
   onCleanup(unsubscribe)
 
@@ -116,7 +115,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
 
   const submit = (target: string) => {
     const requestID = crypto.randomUUID()
-    setAttempt({ kind: "pending", requestID, target })
+    setAttempt({ kind: "pending", requestID, target, origin: props.profileData?.currentOrgId ?? PERSONAL })
     vscode.postMessage({
       type: "setOrganization",
       organizationId: target === PERSONAL ? null : target,
