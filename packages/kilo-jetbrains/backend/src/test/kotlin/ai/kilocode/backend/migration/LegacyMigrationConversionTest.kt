@@ -1276,7 +1276,7 @@ class LegacyMigrationConversionTest {
         )
 
         val sel = MigrationAutoApprovalSelections(false, false, false, executePermission = true, false, false)
-        val discarded = "Execute permission not migrated: the master auto-approval switch was off"
+        val discarded = "Execute permission not migrated: the master auto-approval switch was not on"
 
         fun assertCase(
             master: Boolean?,
@@ -1300,6 +1300,64 @@ class LegacyMigrationConversionTest {
         assertCase(null, true, MigrationItemStatus.warning, discarded, null)
         assertCase(false, false, MigrationItemStatus.warning, discarded, null)
         assertCase(true, null, MigrationItemStatus.success, null, null)
+    }
+
+    @Test
+    fun `convertAutoApproval - execute selection dropped under command rules still warns`() {
+        val sel = MigrationAutoApprovalSelections(
+            commandRules = true,
+            readPermission = false,
+            writePermission = false,
+            executePermission = true,
+            mcpPermission = false,
+            taskPermission = false,
+        )
+        val discarded = "Execute permission not migrated: the master auto-approval switch was not on"
+        fun settings(allowed: List<String>, denied: List<String>) = LegacySettings(
+            autoApprovalEnabled = false,
+            allowedCommands = allowed,
+            deniedCommands = denied,
+            alwaysAllowReadOnly = null,
+            alwaysAllowReadOnlyOutsideWorkspace = null,
+            alwaysAllowWrite = null,
+            alwaysAllowExecute = true,
+            alwaysAllowMcp = null,
+            alwaysAllowModeSwitch = null,
+            alwaysAllowSubtasks = null,
+            language = null,
+            autocomplete = null,
+        )
+
+        // No command lists: nothing is written for bash, and the dropped execute selection is
+        // reported instead of being passed off as migrated.
+        val bare = LegacyMigrationConverters.convertAutoApproval(settings(emptyList(), emptyList()), sel, emptyList())
+        assertNull(bare.config)
+        assertEquals(
+            listOf(
+                PermissionEntry("Command rules", MigrationItemStatus.success),
+                PermissionEntry("Execute permission", MigrationItemStatus.warning, discarded),
+            ),
+            bare.results,
+        )
+
+        // A deny list only: the bash rule map is written, the deny list itself is fully migrated,
+        // and only the execute selection's own reason warns.
+        val withDeny = LegacyMigrationConverters.convertAutoApproval(settings(emptyList(), listOf("rm")), sel, emptyList())
+        val perm = withDeny.config!!["permission"]!!.jsonObject
+        assertEquals(
+            buildJsonObject {
+                put("*", "ask")
+                put("rm *", "deny")
+            },
+            perm["bash"],
+        )
+        assertEquals(
+            listOf(
+                PermissionEntry("Command rules", MigrationItemStatus.success),
+                PermissionEntry("Execute permission", MigrationItemStatus.warning, discarded),
+            ),
+            withDeny.results,
+        )
     }
 
     @Test

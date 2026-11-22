@@ -685,6 +685,8 @@ object LegacyMigrationConverters {
 
         if (sel.executePermission) {
             if (!sel.commandRules) {
+                // Stays gated on the command rules: when the command-rules branch built a bash rule
+                // map, a scalar bash value would replace that map with an allow-all.
                 val approval = settings.autoApprovalEnabled == true && settings.alwaysAllowExecute == true
                 val refusal = settings.autoApprovalEnabled == true && settings.alwaysAllowExecute == false
                 if (approval) {
@@ -693,14 +695,13 @@ object LegacyMigrationConverters {
                     permission["bash"] = JsonPrimitive("ask")
                 }
             }
-            val discarded =
-                !sel.commandRules && settings.alwaysAllowExecute != null && settings.autoApprovalEnabled != true
+            val discarded = settings.alwaysAllowExecute != null && settings.autoApprovalEnabled != true
             results.add(
                 if (discarded) {
                     PermissionEntry(
                         "Execute permission",
                         MigrationItemStatus.warning,
-                        "Execute permission not migrated: the master auto-approval switch was off",
+                        "Execute permission not migrated: the master auto-approval switch was not on",
                     )
                 } else {
                     PermissionEntry("Execute permission", MigrationItemStatus.success)
