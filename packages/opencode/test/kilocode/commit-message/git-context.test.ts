@@ -28,30 +28,36 @@ async function stage(dir: string, files: Record<string, string>) {
 describe("commit-message.git-context", () => {
   describe("parseNameStatus", () => {
     test("parses added file", () => {
-      const result = parseNameStatus("A\tsrc/new-file.ts")
+      const result = parseNameStatus("A\0src/new-file.ts\0")
       expect(result).toEqual([{ status: "A", path: "src/new-file.ts" }])
     })
 
     test("parses modified file", () => {
-      const result = parseNameStatus("M\tsrc/existing.ts")
+      const result = parseNameStatus("M\0src/existing.ts\0")
       expect(result).toEqual([{ status: "M", path: "src/existing.ts" }])
     })
 
     test("parses deleted file", () => {
-      const result = parseNameStatus("D\tsrc/removed.ts")
+      const result = parseNameStatus("D\0src/removed.ts\0")
       expect(result).toEqual([{ status: "D", path: "src/removed.ts" }])
     })
 
     test("parses renamed file using new path", () => {
-      const result = parseNameStatus("R100\told-name.ts\tnew-name.ts")
+      const result = parseNameStatus("R100\0old-name.ts\0new-name.ts\0")
       expect(result).toEqual([{ status: "R100", path: "new-name.ts" }])
     })
 
     test("parses multiple entries", () => {
-      const result = parseNameStatus("M\tsrc/a.ts\nA\tsrc/b.ts")
-      expect(result).toHaveLength(2)
-      expect(result[0]!.path).toBe("src/a.ts")
-      expect(result[1]!.path).toBe("src/b.ts")
+      const result = parseNameStatus("M\0src/a.ts\0R090\0old.ts\0new.ts\0A\0src/b.ts\0")
+      expect(result.map((item) => item.path)).toEqual(["src/a.ts", "new.ts", "src/b.ts"])
+    })
+
+    test("keeps names with spaces and non-ASCII characters as-is", () => {
+      const result = parseNameStatus("M\0my file.ts\0A\0café.ts\0")
+      expect(result).toEqual([
+        { status: "M", path: "my file.ts" },
+        { status: "A", path: "café.ts" },
+      ])
     })
 
     test("returns empty array for empty input", () => {
@@ -61,12 +67,12 @@ describe("commit-message.git-context", () => {
 
   describe("parsePorcelain", () => {
     test("parses untracked file", () => {
-      const result = parsePorcelain("?? src/brand-new.ts")
+      const result = parsePorcelain("?? src/brand-new.ts\0")
       expect(result).toEqual([{ status: "??", path: "src/brand-new.ts" }])
     })
 
     test("parses modified file", () => {
-      const result = parsePorcelain(" M src/changed.ts")
+      const result = parsePorcelain(" M src/changed.ts\0")
       expect(result).toEqual([{ status: "M", path: "src/changed.ts" }])
     })
 
@@ -74,9 +80,20 @@ describe("commit-message.git-context", () => {
       expect(parsePorcelain("")).toEqual([])
     })
 
-    test("filters blank lines", () => {
-      const result = parsePorcelain("?? a.ts\n\n?? b.ts")
-      expect(result).toHaveLength(2)
+    test("skips the source path that follows a rename", () => {
+      const result = parsePorcelain("R  new.ts\0old.ts\0 M other.ts\0")
+      expect(result).toEqual([
+        { status: "R", path: "new.ts" },
+        { status: "M", path: "other.ts" },
+      ])
+    })
+
+    test("keeps names with spaces and non-ASCII characters as-is", () => {
+      const result = parsePorcelain(" M my file.ts\0?? résumé.md\0")
+      expect(result).toEqual([
+        { status: "M", path: "my file.ts" },
+        { status: "??", path: "résumé.md" },
+      ])
     })
   })
 
@@ -275,6 +292,73 @@ describe("commit-message.git-context", () => {
       const ctx = await getGitContext(tmp.path, ["src/nonexistent.ts"])
 
       expect(ctx.files).toHaveLength(0)
+    })
+  })
+
+  describe("paths that git quotes", () => {
+    // Git C-quotes these names in text output: spaces in `git status --porcelain`,
+    // non-ASCII bytes everywhere while core.quotepath is on (the default).
+    async function repo() {
+      const tmp = await tmpdir({ git: true })
+      await $`git config core.quotepath true`.cwd(tmp.path).quiet()
+      return tmp
+    }
+
+    test("reads unstaged diffs for names with spaces or non-ASCII characters", async () => {
+      await using tmp = await repo()
+      await stage(tmp.path, { "my file.ts": "one\n", "café.ts": "one\n" })
+      await $`git commit -m "add"`.cwd(tmp.path).quiet()
+      await Bun.write(path.join(tmp.path, "my file.ts"), "two\n")
+      await Bun.write(path.join(tmp.path, "café.ts"), "two\n")
+
+      const ctx = await getGitContext(tmp.path)
+
+      expect(ctx.files.map((f) => f.path).sort()).toEqual(["café.ts", "my file.ts"])
+      for (const file of ctx.files) expect(file.diff).toContain("+two")
+    })
+
+    test("reads staged diffs for non-ASCII names", async () => {
+      await using tmp = await repo()
+      await stage(tmp.path, { "café.ts": "one\n" })
+      await $`git commit -m "add"`.cwd(tmp.path).quiet()
+      await stage(tmp.path, { "café.ts": "two\n" })
+
+      const ctx = await getGitContext(tmp.path)
+
+      expect(ctx.files).toHaveLength(1)
+      expect(ctx.files[0]!.path).toBe("café.ts")
+      expect(ctx.files[0]!.diff).toContain("+two")
+    })
+
+    test("uses the real name of an untracked non-ASCII file", async () => {
+      await using tmp = await repo()
+      await Bun.write(path.join(tmp.path, "résumé.md"), "new\n")
+
+      const ctx = await getGitContext(tmp.path)
+
+      expect(ctx.files).toEqual([{ status: "added", path: "résumé.md", diff: "New untracked file: résumé.md" }])
+    })
+
+    test("keeps the new path of a staged rename", async () => {
+      await using tmp = await repo()
+      await stage(tmp.path, { "old name.ts": "same content\n".repeat(5) })
+      await $`git commit -m "add"`.cwd(tmp.path).quiet()
+      await $`git mv ${"old name.ts"} ${"new café.ts"}`.cwd(tmp.path).quiet()
+
+      const ctx = await getGitContext(tmp.path)
+
+      expect(ctx.files).toHaveLength(1)
+      expect(ctx.files[0]!.status).toBe("renamed")
+      expect(ctx.files[0]!.path).toBe("new café.ts")
+    })
+
+    test("matches selectedFiles against the real names", async () => {
+      await using tmp = await repo()
+      await stage(tmp.path, { "café.ts": "a\n", "b.ts": "b\n" })
+
+      const ctx = await getGitContext(tmp.path, ["café.ts"])
+
+      expect(ctx.files.map((f) => f.path)).toEqual(["café.ts"])
     })
   })
 
