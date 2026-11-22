@@ -219,6 +219,33 @@ try {
     assert.equal(saves().length, before, "a confirmed save leaves nothing for the next save to post")
   })
 
+  await check("an edit made while a save is pending survives its confirmation", async () => {
+    probe().updateConfig({ model: "pending-edit" })
+    await settle()
+    probe().saveConfig()
+    await settle()
+    const id = lastSave().requestId
+    assert.equal(probe().saving(), true, "the save is in flight before the answer")
+    probe().updateConfig({ share: "while-pending" })
+    await settle()
+    assert.equal(probe().isDirty(), true, "the second edit is staged")
+    post({ type: "configUpdated", config: { model: "pending-edit" }, features, requestId: id })
+    await settle()
+    assert.equal(probe().saving(), false, "the answer settles the save")
+    assert.equal(probe().config().model, "pending-edit", "the saved value shows the host's config")
+    assert.equal(probe().config().share, "while-pending", "the edit made after the save stays on screen")
+    assert.equal(probe().isDirty(), true, "the edit made after the save is still unsaved")
+    assert.equal(probe().saveError(), null, "the confirmation reports no error")
+    const before = saves().length
+    probe().saveConfig()
+    await settle()
+    assert.equal(saves().length, before + 1, "the kept edit is what the next save posts")
+    assert.deepEqual(lastSave().config, { share: "while-pending" }, "the confirmed value is not posted again")
+    probe().discardConfig()
+    await settle()
+    assert.equal(probe().isDirty(), false, "the discarded edit is gone")
+  })
+
   await check("a configUpdateFailed naming another request leaves the pending save alone", async () => {
     probe().updateConfig({ model: "second-draft" })
     await settle()
@@ -270,11 +297,46 @@ try {
       saveBound.ms = realBound
     }
   })
+
+  await check("a configUpdated answering the bound save late confirms it and keeps a later edit", async () => {
+    probe().discardConfig()
+    await settle()
+    assert.equal(probe().isDirty(), false, "the discarded retry is gone")
+    try {
+      saveBound.ms = 800
+      probe().updateConfig({ model: "late-answer" })
+      await settle()
+      probe().saveConfig()
+      await settle()
+      const id = lastSave().requestId
+      assert.equal(typeof id, "string", "the save names itself so its late answer can be told apart")
+      const settled = await until(() => probe().saving() === false, 5_000)
+      assert.ok(settled, "the save settled at the bound")
+      assert.equal(probe().isDirty(), true, "the unconfirmed draft stays before the answer lands")
+      assert.deepEqual(probe().saveError(), { key: "settings.saveBar.unconfirmedSave" })
+      probe().updateConfig({ share: "after-bound" })
+      await settle()
+      post({ type: "configUpdated", config: { model: "late-answer" }, features, requestId: id })
+      await settle()
+      assert.equal(probe().saving(), false, "the Save button is enabled")
+      assert.equal(probe().config().model, "late-answer", "the saved value shows the host's config")
+      assert.equal(probe().config().share, "after-bound", "the edit made after the bound stays on screen")
+      assert.equal(probe().isDirty(), true, "the edit made after the bound is still unsaved")
+      assert.equal(probe().saveError(), null, "the answer resolves the unconfirmed report")
+      const posted = saves().length
+      probe().saveConfig()
+      await settle()
+      assert.equal(saves().length, posted + 1, "the kept edit is what the next save posts")
+      assert.deepEqual(lastSave().config, { share: "after-bound" }, "the stored value is not posted again")
+    } finally {
+      saveBound.ms = realBound
+    }
+  })
 } finally {
   dispose()
 }
 
 if (failures.length > 0) console.error(failures.join("\n"))
 // A fixture that reached no case would exit 0 without proving anything.
-if (checked !== 7) failures.push(`ran ${checked} of 7 cases`)
+if (checked !== 9) failures.push(`ran ${checked} of 9 cases`)
 process.exit(failures.length === 0 ? 0 : 1)
