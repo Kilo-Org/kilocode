@@ -221,7 +221,6 @@ async function mount(root: string, boundary: string) {
     return {
       app,
       requests,
-      keymap: app.renderer,
       async redo() {
         app.mockInput.pressKey("x", { ctrl: true })
         await app.flush()
