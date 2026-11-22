@@ -336,7 +336,7 @@ export function makeService(ctx: Ctx, schedules: Automation.Interface, emit: () 
       const label = record.kind === "cron" ? "scheduled cron task" : "scheduled wakeup"
       const sentence =
         record.kind === "cron"
-          ? `You scheduled this recurring task yourself as ${record.id}, due ${iso(dueAt)}.`
+          ? `You scheduled this ${record.schedule === undefined ? "one-shot" : "recurring"} task yourself as ${record.id}, due ${iso(dueAt)}.`
           : `You scheduled this wakeup yourself as ${record.id}, due ${iso(dueAt)}.`
       // Deliver before the record is retired, with an id derived from the occurrence, so a retried delivery is the same
       // admission rather than a second message. A session that no longer exists retires the record. Any other failure
