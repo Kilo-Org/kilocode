@@ -809,6 +809,36 @@ describe("Config", () => {
       ),
     ),
   )
+
+  it.live("applies translated provider lists with document precedence, not key precedence", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) => {
+        const global = path.join(tmp.path, "global")
+        return Effect.gen(function* () {
+          yield* Effect.promise(async () => {
+            await fs.mkdir(global, { recursive: true })
+            await fs.writeFile(
+              path.join(global, "kilo.json"),
+              JSON.stringify({ enabled_providers: ["anthropic", "openai"] }),
+            )
+            await fs.writeFile(path.join(tmp.path, "kilo.json"), JSON.stringify({ enabled_providers: ["anthropic"] }))
+          })
+
+          return yield* Effect.gen(function* () {
+            const policy = yield* Policy.Service
+            // Policies resolve per document, so the user-global allow for openai
+            // decides the result even though the project list omits the provider.
+            expect(yield* policy.evaluate("provider.use", "anthropic", "allow")).toBe("allow")
+            expect(yield* policy.evaluate("provider.use", "openai", "allow")).toBe("allow")
+            expect(yield* policy.evaluate("provider.use", "google", "allow")).toBe("deny")
+          }).pipe(Effect.provide(testLayer(tmp.path, global)))
+        })
+      }),
+    ),
+  )
   // kilocode_change end
 
   it.live("ignores an invalid file while loading valid config values", () =>

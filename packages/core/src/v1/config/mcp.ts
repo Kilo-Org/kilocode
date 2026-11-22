@@ -31,7 +31,9 @@ const LocalCanonical = Schema.Struct({
 const LocalInput = Schema.Struct({
   type: Schema.Literal("local"),
   command: Schema.mutable(Schema.Array(Schema.String)),
-  cwd: Schema.optional(Schema.String),
+  cwd: Schema.optional(Schema.String).annotate({
+    description: "Working directory for the MCP server process. Relative paths resolve from the workspace directory.",
+  }),
   environment: Schema.optional(Schema.Record(Schema.String, Schema.String)),
   env: Schema.optional(Schema.Record(Schema.String, Schema.String)),
   enabled: Schema.optional(Schema.Boolean),
