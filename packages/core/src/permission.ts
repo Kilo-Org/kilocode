@@ -73,18 +73,18 @@ export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Per
 
 export type Error = BlockedError | CorrectedError
 
-// kilocode_change start - macOS volumes ignore case, so file-path rules must match it too
+// kilocode_change start - file-path rules follow the volume's case rules on macOS
 /** Actions whose resources are file paths. */
 export const pathActions = ["external_directory", "read", "edit"] as const
 
-/** macOS volumes ignore case by default, so `.ENV` opens `.env`; rules for file paths must match it too. */
+/** macOS volumes ignore case by default, so file-path rules must match the names such a volume resolves. */
 export function ignoresCase(action: string) {
   return process.platform === "darwin" && pathActions.some((item) => item === action)
 }
 // kilocode_change end
 
 export function evaluate(action: string, resource: string, ...rulesets: Permission.Ruleset[]): Permission.Rule {
-  // kilocode_change start - file-path rules match case-insensitively on macOS volumes
+  // kilocode_change start - file-path rules follow the volume's case rules on macOS
   const ignoreCase = ignoresCase(action)
   return (
     rulesets

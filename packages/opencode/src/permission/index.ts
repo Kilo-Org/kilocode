@@ -101,7 +101,7 @@ interface State {
 }
 
 export function evaluate(permission: string, pattern: string, ...rulesets: PermissionV1.Ruleset[]): PermissionV1.Rule {
-  // kilocode_change start - a case-insensitive volume resolves `.ENV` to `.env`, so file-path rules must fold case
+  // kilocode_change start - file-path rules follow the volume's case rules on macOS
   const fold = PermissionV2.ignoresCase(permission)
   return (
     rulesets

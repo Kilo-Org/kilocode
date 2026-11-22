@@ -3,8 +3,7 @@ import { PermissionV2 } from "@opencode-ai/core/permission"
 import { PermissionRule, type Rule } from "@/kilocode/permission/rule"
 
 function guard(pattern: string) {
-  // A case-insensitive volume resolves `.ENV` to `.env`, so the guard must fold case
-  // the same way the permission rules do. Ordinary paths keep exact matching.
+  // File-path rules follow the volume's case rules, so use the same decision the rules use.
   const fold = PermissionV2.ignoresCase("read")
   if (Wildcard.match(pattern, "*.env.example", fold)) return
   if (Wildcard.match(pattern, "*.env", fold)) return "*.env"
