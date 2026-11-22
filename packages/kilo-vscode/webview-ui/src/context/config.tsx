@@ -64,6 +64,19 @@ let writeCount = 0
  */
 const nextWriteId = () => `w${(writeCount += 1).toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
+/** One `updateSetting` write a chain is waiting on, with the chain order and id it was sent with. */
+interface AwaitingWrite {
+  order: number
+  value: unknown
+  writeId: string
+  /**
+   * Whether the write came from the save-bar draft (`saveConfig`) rather than an immediate
+   * control (`applySetting`). One chain can hold both kinds, so the kind is per write: a
+   * rejected draft write is staged again, a rejected immediate one is not.
+   */
+  staged: boolean
+}
+
 /** One chain of `updateSetting` writes to a single key, reconciled with the host's answers. */
 interface PendingWrite {
   /** The `settings()` property the key writes. */
@@ -76,7 +89,7 @@ interface PendingWrite {
   /** The rendered value before the chain's first write. */
   previous: unknown
   /** Writes still awaiting a terminal message, oldest first, with their chain order and id. */
-  awaiting: { order: number; value: unknown; writeId: string }[]
+  awaiting: AwaitingWrite[]
   /** The value the newest orderable success confirmed. */
   stored: unknown
   /** Tells a confirmed `undefined` apart from no confirmation. */
@@ -220,6 +233,10 @@ export const ConfigProvider: ParentComponent = (props) => {
   // answers settles it like a failure at `settleBound.ms` instead of holding the key
   // pending forever.
   const pendingWrites = new Map<string, PendingWrite>()
+  // The "not confirmed" error the most recent expiry raised, with the wire key it named. A
+  // confirmation that arrives after the chain expired adopts the value and resolves that
+  // error instead of leaving the page reporting a write the control has already taken.
+  let expiredWrite: { wire: string; error: SaveError } | undefined
   /** The value the host holds for a chain: its newest confirmed write, else what it replaced. */
   const heldValue = (pending: PendingWrite) => (pending.hasStored ? pending.stored : pending.previous)
   const updateCollections = (next: ConfigCollections | undefined) => {
@@ -256,23 +273,31 @@ export const ConfigProvider: ParentComponent = (props) => {
     const pending = dropWrite(writeKey)
     if (pending == null) return
     storeSetting(pending.property, pending.hasStored ? pending.stored : pending.previous)
-    setSaveError({ key: "settings.saveBar.unconfirmedWrite", params: { name: pending.label ?? pending.property } })
+    const error: SaveError = {
+      key: "settings.saveBar.unconfirmedWrite",
+      params: { name: pending.label ?? pending.property },
+    }
+    expiredWrite = { wire: writeKey, error }
+    setSaveError(error)
   }
   /**
    * Record a write before its optimistic update, so a rejected chain can restore what it
    * replaced, and return the id its outcome message must echo. Each write takes the chain's
-   * next order, binds that id to it, and restarts its settle bound. `label` names the control
-   * the write comes from; the newest named write names the chain.
+   * next order, binds that id to it, and restarts its settle bound. `staged` tells a
+   * `saveConfig` write apart from an immediate `applySetting` one; `label` names the control
+   * the write comes from, and the newest named write names the chain.
    */
-  const trackWrite = (writeKey: string, property: string, value: unknown, label?: string) => {
+  const trackWrite = (writeKey: string, property: string, value: unknown, staged: boolean, label?: string) => {
     const writeId = nextWriteId()
+    // A new write supersedes the "not confirmed" report an expiry raised for the same key.
+    if (expiredWrite != null && expiredWrite.wire === writeKey) expiredWrite = undefined
     const pending = pendingWrites.get(writeKey)
     if (pending == null) {
       const created: PendingWrite = {
         property,
         label,
         previous: savedSettings()[property],
-        awaiting: [{ order: 1, value, writeId }],
+        awaiting: [{ order: 1, value, writeId, staged }],
         stored: undefined,
         hasStored: false,
         order: 1,
@@ -287,7 +312,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     pending.property = property
     pending.label = label ?? pending.label
     pending.order += 1
-    pending.awaiting.push({ order: pending.order, value, writeId })
+    pending.awaiting.push({ order: pending.order, value, writeId, staged })
     armWrite(writeKey, pending)
     return writeId
   }
@@ -314,23 +339,26 @@ export const ConfigProvider: ParentComponent = (props) => {
    */
   const confirmWrite = (pending: PendingWrite, value: unknown, writeId?: string) => {
     const named = removeNamed(pending, writeId)
-    if (writeId != null && named == null) return
+    if (writeId != null && named == null) return false
     const index = pending.awaiting.findIndex((write) => write.value === value)
     const matched = named ?? pending.awaiting.splice(index < 0 ? 0 : index, 1)[0]
-    if (matched == null) return
-    if (pending.storedOrder != null && matched.order < pending.storedOrder) return
+    if (matched == null) return false
+    if (pending.storedOrder != null && matched.order < pending.storedOrder) return true
     pending.stored = value
     pending.hasStored = true
     pending.storedOrder = matched.order
+    return true
   }
   /**
    * Drop the write a rejection settles: the one its id names, or with no id the oldest
-   * pending write. An id that names no outstanding write leaves the chain untouched, so a
-   * duplicate answer cannot consume another write.
+   * pending write, and return it. An id that names no outstanding write leaves the chain
+   * untouched and returns nothing, so a duplicate answer cannot consume another write.
    */
   const rejectWrite = (pending: PendingWrite, writeId?: string) => {
-    if (removeNamed(pending, writeId) != null) return
-    if (writeId == null) pending.awaiting.shift()
+    const named = removeNamed(pending, writeId)
+    if (named != null) return named
+    if (writeId == null) return pending.awaiting.shift()
+    return undefined
   }
   /**
    * Adopt a host-stored value as both the rendered and the discard value. A newer draft edit
@@ -527,18 +555,41 @@ export const ConfigProvider: ParentComponent = (props) => {
       if (message.type === "settingUpdated") {
         const property = settingProperties[message.key] ?? message.key
         if (Object.hasOwn(savedSettings(), property)) storeSetting(property, message.value)
+        // The host confirmed after the chain expired and reported it unanswered: the control
+        // now shows the value the host holds, so that report no longer describes anything.
+        if (expiredWrite?.wire === message.key && saveError() === expiredWrite.error) {
+          expiredWrite = undefined
+          setSaveError(null)
+        }
         return
       }
+      // A failure that names a write id is this context's own write answering after its chain
+      // settled. The host is answering something already answered, so it reports nothing.
+      if (message.writeId != null) return
       setSaveError({ message: message.message, details: message.details })
       return
     }
-    if (message.type === "settingUpdated") confirmWrite(pending, message.value, message.writeId)
-    else {
+    if (message.type === "settingUpdated") {
+      if (!confirmWrite(pending, message.value, message.writeId)) return
+    } else {
+      const rejected = rejectWrite(pending, message.writeId)
+      // An answer that consumes no outstanding write is the host answering something already
+      // settled: it must not restart the bound, nor report a failure of a write that was
+      // already answered.
+      if (rejected == null) return
       // A rejection is reported at once, even while newer writes keep the chain pending.
-      rejectWrite(pending, message.writeId)
       setSaveError({ message: message.message, details: message.details })
+      // `saveConfig` cleared the draft before this answer landed, so a rejected staged write
+      // would otherwise be lost with no Save button to retry it. Stage its value again so the
+      // control shows the edit, `isDirty()` is true, and Discard returns to the stored value.
+      // A newer edit for the same property stays in front, as the stored value does below.
+      if (rejected.staged) {
+        const property = pending.property
+        setSettingsDraft((prev) => (Object.hasOwn(prev, property) ? prev : { ...prev, [property]: rejected.value }))
+      }
     }
-    // Every answer restarts the bound, so the timer only expires a chain that went quiet.
+    // Every answer that consumed a write restarts the bound, so the timer only expires a
+    // chain that went quiet.
     armWrite(message.key, pending)
     // Adopt as soon as nothing is left awaiting, using the value the host holds.
     if (pending.awaiting.length > 0) return
@@ -651,7 +702,7 @@ export const ConfigProvider: ParentComponent = (props) => {
    */
   function applySetting(key: string, value: unknown, writeKey?: string, label?: string) {
     const wire = writeKey ?? key
-    const writeId = trackWrite(wire, key, value, label)
+    const writeId = trackWrite(wire, key, value, false, label)
     setSavedSettings((prev) => ({ ...prev, [key]: value }))
     setSettings((prev) => ({ ...prev, [key]: value }))
     setSettingsDraft((prev) => {
@@ -679,7 +730,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSaveError(null)
     if (settingsDirty) {
       for (const [key, value] of Object.entries(pending)) {
-        const writeId = trackWrite(key, key, value)
+        const writeId = trackWrite(key, key, value, true)
         vscode.postMessage({ type: "updateSetting", key, value, writeId })
       }
       setSavedSettings((prev) => ({ ...prev, ...pending }))
@@ -715,6 +766,13 @@ export const ConfigProvider: ParentComponent = (props) => {
     setProjectDraft({})
     setSettings(savedSettings())
     setSettingsDraft({})
+    expiredWrite = undefined
+    setSaveError(null)
+  }
+
+  /** Dismiss the reported error; the expiry report it may stand for is dismissed with it. */
+  function clearSaveError() {
+    expiredWrite = undefined
     setSaveError(null)
   }
 
@@ -731,7 +789,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     isDirty,
     saving,
     saveError,
-    clearSaveError: () => setSaveError(null),
+    clearSaveError,
     updateConfig,
     updateGlobalConfig,
     updateProjectConfig,

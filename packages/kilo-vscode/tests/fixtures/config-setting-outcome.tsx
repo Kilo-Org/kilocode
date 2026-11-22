@@ -73,6 +73,8 @@ interface ConfigProbe {
   updateSetting: (key: string, value: unknown) => void
   applySetting: (key: string, value: unknown, writeKey?: string, label?: string) => void
   saveConfig: () => void
+  discardConfig: () => void
+  clearSaveError: () => void
 }
 
 const settle = async () => {
@@ -239,7 +241,7 @@ try {
     assert.deepEqual(probe().saveError(), { message: "rejected", details: undefined })
   })
 
-  await check("a failed saveConfig settings write restores the value it replaced", async () => {
+  await check("a failed saveConfig settings write stages the rejected edit again", async () => {
     probe().updateSetting("showShortcutHints", true)
     await settle()
     assert.equal(probe().isDirty(), true)
@@ -249,7 +251,12 @@ try {
     assert.equal(probe().isDirty(), false)
     post({ type: "settingUpdateFailed", key: "showShortcutHints", message: "rejected" })
     await settle()
-    assert.equal(probe().settings().showShortcutHints, undefined)
+    assert.equal(
+      probe().settings().showShortcutHints,
+      true,
+      "the rejected edit is staged again, so the control keeps showing it",
+    )
+    assert.equal(probe().isDirty(), true, "the rejected edit can be saved again")
     assert.deepEqual(probe().saveError(), { message: "rejected", details: undefined })
   })
 
@@ -515,6 +522,124 @@ try {
       "the control shows the value of the last write the host stored",
     )
     assert.deepEqual(probe().saveError(), { message: "rejected middle", details: undefined })
+  })
+
+  await check("a confirmation after the bound clears the report that the write was unanswered", async () => {
+    const key = "experimental.conversationPromptHistory"
+    const property = "conversationPromptHistory"
+    probe().applySetting(property, "delta", key)
+    post({ type: "settingUpdated", key, value: "delta" })
+    await settle()
+    assert.equal(probe().settings()[property], "delta", "the chain starts from a stored value")
+    settleBound.ms = 800
+    try {
+      probe().applySetting(property, "epsilon", key)
+      await Promise.resolve()
+      const settled = await until(() => probe().saveError() != null, 5800)
+      assert.ok(settled, "the unanswered chain settles within the bound")
+    } finally {
+      settleBound.ms = realBound
+    }
+    assert.deepEqual(
+      probe().saveError(),
+      { key: "settings.saveBar.unconfirmedWrite", params: { name: property } },
+      "the unanswered write reports the setting it wrote",
+    )
+    // The host answers after the chain expired. The control takes the value, so the report
+    // that the host never answered it no longer describes anything and must go away.
+    post({ type: "settingUpdated", key, value: "epsilon" })
+    await settle()
+    assert.equal(probe().settings()[property], "epsilon", "the late confirmation is adopted")
+    assert.equal(probe().saveError(), null, "the late confirmation clears the unanswered-write report")
+  })
+
+  await check("a duplicate terminal message leaves the answered chain and its error alone", async () => {
+    const key = "agentManager.browser.useSystemChrome"
+    const base = writes().length
+    probe().applySetting(key, true)
+    probe().applySetting(key, false)
+    await settle()
+    const ids = writes()
+      .slice(base)
+      .map((write) => write.writeId)
+    assert.equal(ids.length, 2, "two writes were posted")
+    post({ type: "settingUpdateFailed", key, writeId: ids[0], message: "rejected first" })
+    await settle()
+    assert.deepEqual(probe().saveError(), { message: "rejected first", details: undefined })
+    // The host repeats the answer for the write it already rejected, while the second write
+    // is still in flight. The repeat consumed nothing, so it must not report over the
+    // rejection the host already gave.
+    post({ type: "settingUpdateFailed", key, writeId: ids[0], message: "rejected repeat" })
+    await settle()
+    assert.deepEqual(
+      probe().saveError(),
+      { message: "rejected first", details: undefined },
+      "the duplicate answer does not report over the settled one",
+    )
+    post({ type: "settingUpdated", key, value: false, writeId: ids[1] })
+    await settle()
+    assert.equal(probe().settings()[key], false, "the remaining answer still settles the chain")
+    assert.deepEqual(
+      probe().saveError(),
+      { message: "rejected first", details: undefined },
+      "the settled chain keeps the rejection the host gave",
+    )
+    // The chain is gone now, so this answer names a write that is already settled. A failure
+    // that names its write cannot be a foreign write, so it reports nothing.
+    post({ type: "settingUpdateFailed", key, writeId: ids[1], message: "rejected after settle" })
+    await settle()
+    assert.deepEqual(
+      probe().saveError(),
+      { message: "rejected first", details: undefined },
+      "an answer for a settled chain does not replace the error it already raised",
+    )
+  })
+
+  await check("a rejected staged save puts the edit back so it can be saved again", async () => {
+    const key = "showTokenThroughput"
+    // Drop any stage an earlier case left behind, so the draft this case reads is its own.
+    probe().discardConfig()
+    await settle()
+    assert.equal(probe().isDirty(), false, "the case starts with nothing staged")
+    probe().updateSetting(key, true)
+    await settle()
+    assert.equal(probe().isDirty(), true)
+    probe().saveConfig()
+    await settle()
+    const write = lastWrite()
+    assert.deepEqual(write, { type: "updateSetting", key, value: true })
+    assert.equal(probe().isDirty(), false, "saveConfig hands the staged edit to the host")
+    post({ type: "settingUpdateFailed", key, writeId: write.writeId, message: "rejected staged" })
+    await settle()
+    assert.deepEqual(probe().saveError(), { message: "rejected staged", details: undefined })
+    assert.equal(probe().isDirty(), true, "the rejected edit is staged again so it can be retried")
+    assert.equal(probe().settings()[key], true, "the control shows the restored pending edit")
+    probe().discardConfig()
+    await settle()
+    assert.equal(probe().settings()[key], undefined, "discard returns the control to the stored value")
+    assert.equal(probe().isDirty(), false, "discard clears the restored draft")
+  })
+
+  await check("dismissing an error clears it while an unrelated edit stays staged", async () => {
+    probe().discardConfig()
+    await settle()
+    probe().updateSetting("showShortcutHints", true)
+    probe().applySetting("agentManagerBrowserOpenLinksIn", "external", "agentManager.browser.openLinksIn")
+    await settle()
+    assert.equal(probe().isDirty(), true, "the unrelated edit is staged")
+    post({
+      type: "settingUpdateFailed",
+      key: "agentManager.browser.openLinksIn",
+      message: "rejected while dirty",
+    })
+    await settle()
+    assert.deepEqual(probe().saveError(), { message: "rejected while dirty", details: undefined })
+    probe().clearSaveError()
+    await settle()
+    assert.equal(probe().saveError(), null, "the error clears while an edit is staged")
+    assert.equal(probe().isDirty(), true, "clearing the error does not discard the staged edit")
+    probe().discardConfig()
+    await settle()
   })
 } finally {
   dispose()

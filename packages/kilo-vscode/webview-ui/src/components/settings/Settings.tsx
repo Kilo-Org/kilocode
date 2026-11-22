@@ -610,14 +610,13 @@ const Settings: Component<SettingsProps> = (props) => {
                     <span class="settings-save-bar-error-firstline">{saveErrorText(err(), language.t)}</span>
                   </span>
                 </div>
-                {/* Outside the expander: a button inside `role="button"` is presentational to AT. */}
-                <Show when={!isDirty()}>
-                  <div class="settings-save-bar-error-actions">
-                    <Button variant="ghost" size="small" onClick={() => clearSaveError()}>
-                      {language.t("settings.saveBar.dismissError")}
-                    </Button>
-                  </div>
-                </Show>
+                {/* Outside the expander: a button inside `role="button"` is presentational to AT.
+                    Always rendered: a staged edit must not hide the only way to clear the error. */}
+                <div class="settings-save-bar-error-actions">
+                  <Button variant="ghost" size="small" onClick={() => clearSaveError()}>
+                    {language.t("settings.saveBar.dismissError")}
+                  </Button>
+                </div>
                 <Show when={errorExpanded()}>
                   <pre class="settings-save-bar-error-details">{saveErrorDetails(err(), language.t)}</pre>
                 </Show>
