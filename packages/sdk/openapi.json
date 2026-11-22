@@ -38818,6 +38818,9 @@
               "type": "string"
             }
           },
+          "cwd": {
+            "type": "string"
+          },
           "environment": {
             "type": "object",
             "additionalProperties": {

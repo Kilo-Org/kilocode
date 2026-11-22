@@ -2485,6 +2485,7 @@ export type ProviderConfig = {
 export type McpLocalConfig = {
   type: "local"
   command: Array<string>
+  cwd?: string
   environment?: {
     [key: string]: string
   }
