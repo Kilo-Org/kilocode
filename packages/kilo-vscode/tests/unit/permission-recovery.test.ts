@@ -241,7 +241,7 @@ describe("handlePermissionResponse", () => {
     const { fake, replies, permDirs } = ctx({ tracked: ["s1"] })
     permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
 
-    await handlePermissionResponse(fake, "p1", "s1", "reject", [], [], "use tabs, not spaces")
+    await handlePermissionResponse(fake, "p1", "s1", "reject", [], [], [], "use tabs, not spaces")
 
     expect(replies).toEqual([
       {
@@ -251,6 +251,26 @@ describe("handlePermissionResponse", () => {
         interactive: true,
         message: "use tabs, not spaces",
       },
+    ])
+  })
+
+  it("sends the cleared patterns with the save", async () => {
+    const { fake, saves, replies, permDirs } = ctx({ tracked: ["s1"] })
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", [], [], ["bun *"])
+
+    expect(saves).toEqual([
+      {
+        requestID: "p1",
+        directory: "/workspace/.kilo/worktrees/feature",
+        approvedAlways: [],
+        deniedAlways: [],
+        removedAlways: ["bun *"],
+      },
+    ])
+    expect(replies).toEqual([
+      { requestID: "p1", reply: "once", directory: "/workspace/.kilo/worktrees/feature", interactive: true },
     ])
   })
 

@@ -34,6 +34,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
+    testImplementation(libs.okhttp)
     testRuntimeOnly(libs.junit.vintage.engine)
 }
 

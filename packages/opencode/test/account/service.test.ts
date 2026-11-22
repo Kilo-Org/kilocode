@@ -715,6 +715,77 @@ it.live("poll stores the account and first org on success", () =>
     )
   }),
 )
+
+const reauthClient = (remoteID: string, orgs: unknown[]) =>
+  HttpClient.make((req) =>
+    Effect.succeed(
+      req.url === `${ONE}/auth/device/token`
+        ? json(req, {
+            access_token: "at_1",
+            refresh_token: "rt_1",
+            token_type: "Bearer",
+            expires_in: 60,
+          })
+        : req.url === `${ONE}/api/user`
+          ? json(req, { id: remoteID, email: "user@example.com" })
+          : req.url === `${ONE}/api/orgs`
+            ? json(req, orgs)
+            : json(req, {}, 404),
+    ),
+  )
+
+const seedSelection = (remoteID: string, orgID: Option.Option<OrgID>) =>
+  AccountRepo.Service.use((r) =>
+    r.persistAccount({
+      remoteID: RemoteID.make(remoteID),
+      email: "user@example.com",
+      url: ONE,
+      accessToken: AccessToken.make("at_old"),
+      refreshToken: RefreshToken.make("rt_old"),
+      expiry: Date.now() + outsideEagerRefreshWindow,
+      orgID,
+    }),
+  )
+
+it.live("poll keeps the stored org when the account signs in again", () =>
+  Effect.gen(function* () {
+    yield* seedSelection("user-1", Option.some(OrgID.make("org-2")))
+
+    const client = reauthClient("user-1", [org("org-1", "One"), org("org-2", "Two")])
+    const res = yield* Account.Service.use((s) => s.poll(login())).pipe(Effect.provide(live(client)))
+
+    expect(res._tag).toBe("PollSuccess")
+
+    const active = yield* AccountRepo.use.active()
+    expect(Option.getOrThrow(active).active_org_id).toBe(OrgID.make("org-2"))
+  }),
+)
+
+it.live("poll falls back to the first listed org when the stored org is gone", () =>
+  Effect.gen(function* () {
+    yield* seedSelection("user-1", Option.some(OrgID.make("org-2")))
+
+    const client = reauthClient("user-1", [org("org-1", "One"), org("org-3", "Three")])
+    const res = yield* Account.Service.use((s) => s.poll(login())).pipe(Effect.provide(live(client)))
+
+    expect(res._tag).toBe("PollSuccess")
+
+    const active = yield* AccountRepo.use.active()
+    expect(Option.getOrThrow(active).active_org_id).toBe(OrgID.make("org-1"))
+  }),
+)
+
+it.live("poll selects the first listed org for an account with no stored selection", () =>
+  Effect.gen(function* () {
+    const client = reauthClient("user-2", [org("org-1", "One"), org("org-2", "Two")])
+    const res = yield* Account.Service.use((s) => s.poll(login())).pipe(Effect.provide(live(client)))
+
+    expect(res._tag).toBe("PollSuccess")
+
+    const active = yield* AccountRepo.use.active()
+    expect(Option.getOrThrow(active).active_org_id).toBe(OrgID.make("org-1"))
+  }),
+)
 // kilocode_change end
 
 for (const [name, body, expectedTag] of [

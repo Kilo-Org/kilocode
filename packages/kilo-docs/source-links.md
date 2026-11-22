@@ -203,7 +203,7 @@
   <!-- packages/kilo-vscode/webview-ui/agent-manager/BrowserPanel.tsx -->
   <!-- packages/kilo-vscode/webview-ui/browser-tab/BrowserTabApp.tsx -->
 - <https://www.googleapis.com/auth/cloud-platform>
-  <!-- packages/opencode/src/provider/provider.ts -->
+  <!-- packages/opencode/src/kilocode/provider/provider.ts -->
 - <https://www.rfc-editor.org/rfc/rfc8628.html#section-3.5>
   <!-- packages/opencode/src/plugin/github-copilot/copilot.ts -->
 - <https://x.com>

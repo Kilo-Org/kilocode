@@ -1,4 +1,5 @@
 import * as path from "path"
+import { homedir } from "node:os"
 import { existsSync, readFileSync } from "fs"
 import * as vscode from "vscode"
 import { TRANSIENT as MEMORY_TRANSIENT } from "@kilocode/kilo-memory/schema"
@@ -272,6 +273,32 @@ type SandboxSupportClient = {
 type ConfigSnapshot = {
   effective: Config
   targets: { global: ConfigTarget; project: ConfigTarget }
+  /** Merged global scope: every global config file combined. */
+  mergedGlobal?: Config
+  /** Merged workspace scope: every project config file combined. */
+  project?: Config
+  /** Home directory of the machine that runs the rules. */
+  homeDir?: string
+}
+
+/**
+ * The overlay write response names the merged global scope `global` and the merged
+ * workspace scope `project`. Read both, so a settings save publishes the same view a
+ * refresh does.
+ */
+function fromOverlay(data: {
+  effective: Config
+  global: Config
+  project: Config
+  targets: { global: ConfigTarget; project: ConfigTarget }
+}): ConfigSnapshot {
+  return {
+    effective: data.effective,
+    targets: data.targets,
+    mergedGlobal: data.global,
+    project: data.project,
+    homeDir: homedir(),
+  }
 }
 
 function sandboxClient(client: KiloClient | null) {
@@ -1412,6 +1439,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.response,
             message.approvedAlways,
             message.deniedAlways,
+            message.removedAlways,
             message.feedback,
           )
           break
@@ -1456,11 +1484,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "logout":
           await handleLogout(this.authCtx)
           break
-        case "setOrganization":
+        case "setOrganization": {
+          const requestID =
+            typeof message.requestID === "string" && message.requestID.length > 0
+              ? message.requestID
+              : crypto.randomUUID()
           if (typeof message.organizationId === "string" || message.organizationId === null) {
-            await handleSetOrganization(this.authCtx, message.organizationId)
+            await handleSetOrganization(this.authCtx, message.organizationId, requestID)
+            break
           }
+          // A malformed id cannot be dispatched, but the caller still waits for its
+          // correlated outcome, so answer it rather than leaving the attempt pending.
+          // No message is attached, so the webview shows its localized failure copy.
+          this.postMessage({
+            type: "organizationSwitchResult",
+            requestID,
+            organizationId: null,
+            ok: false,
+            data: null,
+          })
           break
+        }
         case "openSettingsPanel":
           vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab, message.projectId)
           break
@@ -1611,6 +1655,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.projectUnset,
             message.globalBindingId,
             message.projectBindingId,
+            message.requestId,
           )
           break
         case "openSettingsTab":
@@ -1665,7 +1710,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleRenameSession(message.sessionID, message.title)
           break
         case "updateSetting":
-          await this.handleUpdateSetting(message.key, message.value)
+          // The handler answers every write itself, so this only logs a failure it could not
+          // report; posting here too would answer a write twice.
+          this.handleUpdateSetting(message.key, message.value, message.writeId).catch((e) =>
+            console.error("[Kilo New] handleUpdateSetting failed:", e),
+          )
           break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
@@ -4068,9 +4117,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     projectUnset: string[][] = [],
     globalBindingId?: string,
     projectBindingId?: string,
+    requestId?: string,
   ): Promise<void> {
     if (!this.client || this.connectionState !== "connected") {
-      this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
+      this.postMessage({
+        type: "configUpdateFailed",
+        message: "Not connected to CLI backend",
+        ...(requestId !== undefined ? { requestId } : {}),
+      })
       return
     }
 
@@ -4099,7 +4153,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         )
       : undefined
     if ((hasGlobal && !globalBinding) || (hasProject && !projectBinding)) {
-      this.postMessage({ type: "configUpdateFailed", message: "Settings changed or expired. Reload before saving." })
+      this.postMessage({
+        type: "configUpdateFailed",
+        message: "Settings changed or expired. Reload before saving.",
+        ...(requestId !== undefined ? { requestId } : {}),
+      })
       return
     }
 
@@ -4124,7 +4182,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           },
           { throwOnError: true },
         )
-        snapshot = result.data as ConfigSnapshot
+        snapshot = fromOverlay(result.data)
         completed.push("global")
       }
       if (hasProject) {
@@ -4141,7 +4199,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           },
           { throwOnError: true },
         )
-        snapshot = result.data as ConfigSnapshot
+        snapshot = fromOverlay(result.data)
         completed.push("project")
       }
     } catch (error) {
@@ -4149,7 +4207,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         if (globalBinding) this.configBindings.consume(globalBinding.id)
         if (projectBinding) this.configBindings.consume(projectBinding.id)
       }
-      this.postConfigFailure(error, completed, snapshot, dir)
+      this.postConfigFailure(error, completed, snapshot, dir, requestId)
       this.pending--
       return
     }
@@ -4163,6 +4221,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const bindings = this.bindingsFor(dir, snapshot.targets)
       const global = snapshot.targets.global.raw as Config
       const projectConfig = bindings.project ? (snapshot.targets.project.raw as Config) : undefined
+      // The overlay response carries the merged workspace scope as `project`; the
+      // config snapshot names the same data `workspaceConfig`.
+      const workspaceConfig = snapshot.project as Config | undefined
+      // The merged global scope is every global config file combined, which differs
+      // from the single file the delete targets.
+      const mergedGlobalConfig = (snapshot.mergedGlobal ?? global) as Config
+      const homeDir = snapshot.homeDir
       // Capture the previous source before cachedGlobalConfig moves, so a source
       // change still triggers a catalog refresh.
       const previousSpeech = this.speechToTextSource()
@@ -4171,7 +4236,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "configLoaded",
         config: snapshot.effective,
         globalConfig: global,
+        mergedGlobalConfig,
+        ...(homeDir !== undefined ? { homeDir } : {}),
         projectConfig,
+        workspaceConfig,
         bindings,
         settings: this.configSettings(),
         features,
@@ -4181,10 +4249,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "configUpdated",
         config: snapshot.effective,
         globalConfig: global,
+        mergedGlobalConfig,
+        ...(homeDir !== undefined ? { homeDir } : {}),
         projectConfig,
+        workspaceConfig,
         bindings,
         settings: this.configSettings(),
         features,
+        ...(requestId !== undefined ? { requestId } : {}),
       })
       const currentSpeech = this.speechToTextSource()
       // Re-discover the catalog only when the saved source changed, so a draft
@@ -4197,7 +4269,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         refreshSpeech ? this.fetchAndSendSpeechToTextModels() : Promise.resolve(),
       ]).catch((error) => console.error("[Kilo New] KiloProvider: Post-config refresh failed:", error))
     } catch (error) {
-      this.postConfigFailure(error, completed, snapshot, dir)
+      this.postConfigFailure(error, completed, snapshot, dir, requestId)
     } finally {
       this.pending--
     }
@@ -4210,11 +4282,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const projectConfig = bindings.project ? (snapshot.targets?.project.raw as Config) : undefined
     const previousSpeech = this.speechToTextSource()
     this.cachedGlobalConfig = globalConfig ?? null
+    const mergedGlobalConfig = (snapshot.mergedGlobal ?? snapshot.globalConfig ?? globalConfig) as Config
+    const workspaceConfig = snapshot.workspaceConfig
+    const homeDir = snapshot.homeDir
     this.cachedConfigMessage = {
       type: "configLoaded",
       config: snapshot.config,
       globalConfig,
+      mergedGlobalConfig,
+      ...(homeDir !== undefined ? { homeDir } : {}),
       projectConfig,
+      workspaceConfig,
       bindings,
       collections: snapshot.collections,
       settings: snapshot.settings,
@@ -4225,7 +4303,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       type,
       config: snapshot.config,
       globalConfig,
+      mergedGlobalConfig,
+      ...(homeDir !== undefined ? { homeDir } : {}),
       projectConfig,
+      workspaceConfig,
       bindings,
       collections: snapshot.collections,
       settings: snapshot.settings,
@@ -4244,6 +4325,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     completed: Array<"global" | "project"> = [],
     snapshot?: ConfigSnapshot,
     directory?: string,
+    requestId?: string,
   ): void {
     console.error("[Kilo New] KiloProvider: Failed to update config:", error)
     const bindings = snapshot && directory ? this.bindingsFor(directory, snapshot.targets) : undefined
@@ -4254,8 +4336,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       completedScopes: completed,
       config: snapshot?.effective,
       globalConfig: snapshot?.targets.global.raw,
+      mergedGlobalConfig: snapshot?.mergedGlobal ?? snapshot?.targets.global.raw,
+      ...(snapshot?.homeDir !== undefined ? { homeDir: snapshot.homeDir } : {}),
       projectConfig: bindings?.project ? snapshot?.targets.project.raw : undefined,
       bindings,
+      ...(requestId !== undefined ? { requestId } : {}),
     })
   }
   private async resolveSession(sessionID?: string, draftID?: string, context?: string, contextDirectory?: string) {
@@ -5213,34 +5298,72 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Handle a generic setting update from the webview.
    */
-  private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
-    if (key === "maxCost") {
-      const normalized = this.setMaxCost(value)
-      await vscode.workspace
-        .getConfiguration("kilo-code.new")
-        .update("maxCost", normalized, vscode.ConfigurationTarget.Global)
-      for (const sid of this.trackedSessionIds) {
-        const oldLimit = this.activeAlerts.get(sid)
-        if (oldLimit !== undefined) {
-          this.activeAlerts.delete(sid)
-          this.postMessage({ type: "sessionCostAlertResolved", sessionID: sid, limit: oldLimit })
+  private async handleUpdateSetting(key: string, value: unknown, writeId?: string): Promise<void> {
+    // Every write answers with exactly one terminal message so the webview can
+    // reconcile optimistic state: `settingUpdated` for a stored write and
+    // `settingUpdateFailed` for an invalid value or a rejected write. A write id
+    // from the request comes back unchanged on that message, so a sender can
+    // tell which write it settles; a request without one yields no id.
+    const echo = writeId == null ? {} : { writeId }
+    try {
+      if (key === "maxCost") {
+        const config = vscode.workspace.getConfiguration("kilo-code.new")
+        // The runtime limit takes effect before the write so in-flight sessions
+        // see the new limit immediately. When the write does not commit, the limit is
+        // re-read from the stored setting, so a concurrent write that did commit is not
+        // overwritten by a value captured before it.
+        const normalized = this.setMaxCost(value)
+        try {
+          await config.update("maxCost", normalized, vscode.ConfigurationTarget.Global)
+        } catch (error) {
+          this.setMaxCost(config.get<number>("maxCost", 0))
+          throw error
         }
-        this.costs.rearm(sid)
-        this.requestCostAlert(sid, this.costs.sessionCost(sid))
+        // Re-apply the committed limit so an older write that rejects in between
+        // cannot leave the runtime limit on the value it restored.
+        this.setMaxCost(normalized)
+        for (const sid of this.trackedSessionIds) {
+          const oldLimit = this.activeAlerts.get(sid)
+          if (oldLimit !== undefined) {
+            this.activeAlerts.delete(sid)
+            this.postMessage({ type: "sessionCostAlertResolved", sessionID: sid, limit: oldLimit })
+          }
+          this.costs.rearm(sid)
+          this.requestCostAlert(sid, this.costs.sessionCost(sid))
+        }
+        this.postMessage({ type: "settingUpdated", key, value: normalized, ...echo })
+        return
       }
-      return
+      const { section, leaf } = buildSettingPath(key)
+      const invalid =
+        (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) ||
+        (section === "indexing" && !validIndexingSetting(leaf, value)) ||
+        (section === "chat" && !validChatSetting(leaf, value))
+      if (invalid) {
+        this.postMessage({
+          type: "settingUpdateFailed",
+          key,
+          message: `Invalid value for the ${key} setting.`,
+          ...echo,
+        })
+        return
+      }
+      const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
+      // Normalize a webview-side clear to `undefined` so VS Code removes the
+      // key from settings.json rather than persisting a literal `null`. This
+      // lets the runtime fall back to the resolved default.
+      const next = value === null ? undefined : value
+      await config.update(leaf, next, vscode.ConfigurationTarget.Global)
+      if (isWorkStyleSetting(key)) this.sendWorkStyle()
+      this.postMessage({ type: "settingUpdated", key, value: next, ...echo })
+    } catch (error) {
+      this.postMessage({
+        type: "settingUpdateFailed",
+        key,
+        message: getErrorMessage(error) || `Failed to update the ${key} setting.`,
+        ...echo,
+      })
     }
-    const { section, leaf } = buildSettingPath(key)
-    if (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) return
-    if (section === "indexing" && !validIndexingSetting(leaf, value)) return
-    if (section === "chat" && !validChatSetting(leaf, value)) return
-    const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
-    // Normalize a webview-side clear to `undefined` so VS Code removes the
-    // key from settings.json rather than persisting a literal `null`. This
-    // lets the runtime fall back to the resolved default.
-    const next = value === null ? undefined : value
-    await config.update(leaf, next, vscode.ConfigurationTarget.Global)
-    if (isWorkStyleSetting(key)) this.sendWorkStyle()
   }
 
   /**

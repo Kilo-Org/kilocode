@@ -139,7 +139,8 @@ export const TaskTool = Tool.define(
         )
       }
 
-      if (!ctx.extra?.bypassAgentCheck) {
+      const named = ctx.extra?.namedAgentTypes // kilocode_change
+      if (!(Array.isArray(named) && named.includes(params.subagent_type))) { // kilocode_change
         yield* ctx.ask({
           permission: id,
           patterns: [params.subagent_type],

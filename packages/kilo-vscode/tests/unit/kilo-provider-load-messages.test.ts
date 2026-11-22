@@ -98,6 +98,7 @@ function createClient(options?: {
   const sandboxed: Array<Record<string, unknown>> = []
   const sandboxSupport: Array<Record<string, unknown>> = []
   const configReads: Array<Record<string, unknown>> = []
+  const switched: Array<Record<string, unknown>> = []
   return {
     calls,
     stopped,
@@ -110,6 +111,7 @@ function createClient(options?: {
     sandboxed,
     sandboxSupport,
     configReads,
+    switched,
     session: {
       list: async () => ({ data: [] }),
       create: async (params: Record<string, unknown>) => {
@@ -186,6 +188,12 @@ function createClient(options?: {
     kilo: {
       notifications: async () => ({ data: [] }),
       profile: async () => ({ data: {} }),
+      organization: {
+        set: async (params: Record<string, unknown>) => {
+          switched.push(params)
+          return { data: {} }
+        },
+      },
     },
     command: { list: async () => ({ data: [] }) },
   }
@@ -2016,5 +2024,37 @@ describe("KiloProvider.handleLoadMessages / prepend into deleted session", () =>
       (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
     )
     expect(loaded).toEqual([])
+  })
+})
+
+describe("KiloProvider setOrganization dispatch", () => {
+  it("answers a request whose organization id cannot be dispatched", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    const listener =
+      Promise.withResolvers<
+        (message: { type: string; organizationId?: unknown; requestID?: string }) => Promise<void>
+      >()
+    internal.setupWebviewMessageHandler({
+      onDidReceiveMessage: (handler: (message: never) => Promise<void>) => {
+        listener.resolve(handler)
+        return { dispose: () => {} }
+      },
+    })
+    const receive = await listener.promise
+
+    // Every dispatched switch must be answered, so a value the host cannot
+    // dispatch still reports a correlated failure instead of staying pending.
+    await receive({ type: "setOrganization", organizationId: 42, requestID: "request-bad" })
+
+    const results = sent.filter(
+      (msg) =>
+        typeof msg === "object" && msg !== null && (msg as { type?: unknown }).type === "organizationSwitchResult",
+    )
+    expect(results).toHaveLength(1)
+    expect(results[0]).toMatchObject({ requestID: "request-bad", ok: false, data: null })
+    // The reply carries no message of its own, so the webview stays localized.
+    expect("error" in (results[0] as object)).toBe(false)
+    expect(client.switched).toEqual([])
   })
 })

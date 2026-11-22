@@ -475,7 +475,7 @@ export const layer = Layer.effect(
           callID: part.callID,
           // kilocode_change start
           extra: {
-            bypassAgentCheck: true,
+            namedAgentTypes: [task.agent],
             promptOps,
             workflow, // kilocode_change
           },
@@ -1760,7 +1760,7 @@ export const layer = Layer.effect(
 
         const outcome: "break" | "continue" = yield* Effect.gen(function* () {
           const lastUserMsg = msgs.findLast((m) => m.info.role === "user")
-          const bypassAgentCheck = lastUserMsg?.parts.some((p) => p.type === "agent") ?? false
+          const namedAgentTypes = lastUserMsg?.parts.flatMap((p) => (p.type === "agent" ? [p.name] : [])) ?? [] // kilocode_change
           const promptOps = yield* ops(sessionID) // kilocode_change
 
           // kilocode_change start
@@ -1779,7 +1779,7 @@ export const layer = Layer.effect(
             session,
             model,
             processor: handle,
-            bypassAgentCheck,
+            namedAgentTypes, // kilocode_change
             messages: msgs,
             promptOps,
             goalOps: goals, // kilocode_change
