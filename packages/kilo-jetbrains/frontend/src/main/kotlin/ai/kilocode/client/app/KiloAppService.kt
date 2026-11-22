@@ -424,7 +424,10 @@ class KiloAppService internal constructor(
             return ManualRetentionResult.Complete(status)
         }
         if (updateConfig(ConfigPatchDto(retention = policy.copy(enabled = true))) == null) {
-            return ManualRetentionResult.NotStarted
+            // The write may have landed even though the call reported nothing, so put the saved
+            // policy back before reporting that the cleanup never started.
+            val restored = withContext(NonCancellable) { restoreRetention(policy) }
+            return if (restored) ManualRetentionResult.NotStarted else ManualRetentionResult.PolicyNotRestored
         }
         var status: RetentionStatusDto? = null
         var cancelled: CancellationException? = null
@@ -471,6 +474,11 @@ class KiloAppService internal constructor(
         done: (ManualRetentionResult) -> Unit,
     ): Job = cs.launch {
         done(runManualRetention(policy))
+    }
+
+    /** Run the saved-policy write-back on the app-lifetime scope, so it survives a closed page. */
+    internal fun restoreRetentionAsync(policy: RetentionPatchDto, done: (Boolean) -> Unit): Job = cs.launch {
+        done(restoreRetention(policy))
     }
 
     fun applyLogConfigAsync(config: LogConfigDto): Job = cs.launch {

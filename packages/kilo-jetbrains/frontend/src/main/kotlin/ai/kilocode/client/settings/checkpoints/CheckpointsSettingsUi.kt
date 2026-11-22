@@ -210,25 +210,31 @@ internal class CheckpointsSettingsUi(
     /** Write the saved disabled policy back after [ManualRetentionResult.PolicyNotRestored]. */
     @RequiresEdt
     private fun retryRestore() {
-        if (isDisposed) return
-        cleanup = Cleanup.Retrying
-        syncContent()
+        if (!isDisposed) {
+            cleanup = Cleanup.Retrying
+            syncContent()
+        }
         LOG.info("manual session cleanup: retrying retention restore")
         val policy = RetentionPatchDto(enabled = false, maxAgeDays = baseline.days)
-        jobs += scope.launch {
-            val restored = app.restoreRetention(policy)
-            withContext(UI) {
-                if (isDisposed) return@withContext
+        // The write-back runs on the app-lifetime scope, so closing settings mid-retry cannot cancel it.
+        val job = app.restoreRetentionAsync(policy) { restored ->
+            ApplicationManager.getApplication().invokeLater({
+                if (isDisposed) {
+                    // The notification outlives the page, so keep a retry offered when the write failed.
+                    if (!restored) notifyUnrestored()
+                    return@invokeLater
+                }
                 if (restored) {
                     cleanup = Cleanup.Idle
                     syncContent()
-                    return@withContext
+                    return@invokeLater
                 }
                 cleanup = Cleanup.Unrestored
                 syncContent()
                 notifyUnrestored()
-            }
+            }, ModalityState.any())
         }
+        if (!isDisposed) jobs += job
     }
 
     private fun notifyFailed() {

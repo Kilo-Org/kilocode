@@ -21,6 +21,7 @@ import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.fields.IntegerField
 import com.intellij.util.ui.UIUtil
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +33,7 @@ import java.awt.Component
 import java.awt.Container
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.JButton
+import kotlin.test.assertFailsWith
 
 @Suppress("UnstableApiUsage")
 class CheckpointsSettingsUiTest : BasePlatformTestCase() {
@@ -268,7 +270,7 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
         assertEquals(3, rpc.configUpdateFailedAttempts)
     }
 
-    fun `test failed enable stops the cleanup`() {
+    fun `test a rejected enable write still writes the saved policy back`() {
         start(ConfigDto(retention = RetentionConfigDto(enabled = false, maxAgeDays = 30)))
         rpc.configUpdateErrorWhen = { it.retention?.enabled == true }
 
@@ -276,8 +278,33 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
 
         assertTrue("expected NotStarted, got $result", result is ManualRetentionResult.NotStarted)
         assertTrue("no cleanup may be forced -> ${rpc.retentionForces}", rpc.retentionForces.isEmpty())
-        assertTrue("no write may land -> ${rpc.configPatches}", rpc.configPatches.isEmpty())
+        assertEquals(listOf(false), rpc.configPatches.map { it.retention?.enabled })
         assertEquals(1, rpc.configUpdateFailedAttempts)
+    }
+
+    fun `test cancelled cleanup still restores the saved policy`() {
+        start(ConfigDto(retention = RetentionConfigDto(enabled = false, maxAgeDays = 30)))
+        rpc.retentionError = CancellationException("stop")
+
+        assertFailsWith<CancellationException> {
+            runBlocking(Dispatchers.Default) {
+                app.runManualRetention(RetentionPatchDto(enabled = false, maxAgeDays = 30))
+            }
+        }
+
+        assertEquals(listOf(true, false), rpc.configPatches.map { it.retention?.enabled })
+    }
+
+    fun `test cancelled cleanup with a failed restore reports the unrestored policy`() {
+        start(ConfigDto(retention = RetentionConfigDto(enabled = false, maxAgeDays = 30)))
+        rpc.retentionError = CancellationException("stop")
+        rpc.configUpdateErrorWhen = { it.retention?.enabled == false }
+
+        val result = awaitManualRetention(RetentionPatchDto(enabled = false, maxAgeDays = 30))
+
+        assertTrue("expected PolicyNotRestored, got $result", result is ManualRetentionResult.PolicyNotRestored)
+        assertEquals(listOf(true), rpc.configPatches.map { it.retention?.enabled })
+        assertEquals(3, rpc.configUpdateFailedAttempts)
     }
 
     fun `test cleanup without a run result reports RunFailed`() {
