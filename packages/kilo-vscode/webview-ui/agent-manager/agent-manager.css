@@ -3773,9 +3773,8 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-dialog .am-prompt-input {
-  /* The highlight overlay paints the text, so the textarea stays transparent
-     and only its caret shows. Placeholder keeps its own color. */
-  color: transparent;
+  /* Paint plain text in the textarea to keep glyphs aligned with the native caret. */
+  color: var(--vscode-input-foreground);
   caret-color: var(--vscode-input-foreground, var(--text-base));
   resize: none;
   width: 100%;

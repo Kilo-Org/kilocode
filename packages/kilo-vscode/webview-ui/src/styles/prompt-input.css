@@ -364,7 +364,7 @@
   min-height: 54px;
   max-height: 200px;
   padding: 8px 8px calc(8px + 1.4em);
-  color: transparent;
+  color: var(--vscode-input-foreground);
   caret-color: var(--vscode-input-foreground);
   font-family: var(--vscode-font-family);
   font-size: var(--font-size-base);
@@ -466,11 +466,13 @@
   overflow-y: auto;
   scrollbar-gutter: stable;
   z-index: 2;
-  color: var(--vscode-input-foreground);
+  color: transparent;
 }
 
+/* The textarea paints a token's glyphs; the overlay keeps only its chip so
+   CJK width drift cannot show the token text twice. */
 .prompt-input-file-mention {
-  color: var(--vscode-textLink-foreground, #3794ff);
+  color: transparent;
   background-color: color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 15%, transparent);
   border-radius: 3px;
   box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 25%, transparent);
@@ -487,13 +489,13 @@
 .prompt-input-file-mention--file:hover {
   background-color: color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 25%, transparent);
   box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 40%, transparent);
-  text-decoration: underline;
+  text-decoration: underline var(--vscode-textLink-foreground, #3794ff);
 }
 
 /* Collapsed large paste. The text is identical to the textarea's placeholder, so
    the overlay stays aligned; only the chip decoration is added here. */
 .prompt-input-paste {
-  color: var(--vscode-textPreformat-foreground, var(--vscode-foreground));
+  color: transparent;
   background-color: color-mix(
     in srgb,
     var(--vscode-textPreformat-foreground, var(--vscode-foreground)) 12%,
@@ -517,7 +519,7 @@
   );
   box-shadow: 0 0 0 0.5px
     color-mix(in srgb, var(--vscode-textPreformat-foreground, var(--vscode-foreground)) 45%, transparent);
-  text-decoration: underline;
+  text-decoration: underline var(--vscode-textPreformat-foreground, var(--vscode-foreground));
 }
 
 .prompt-input-ghost-text {
