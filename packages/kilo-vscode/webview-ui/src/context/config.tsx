@@ -667,6 +667,10 @@ export const ConfigProvider: ParentComponent = (props) => {
       setConfig(resolveConfig(message.config, draft(), has(draft() as Record<string, unknown>)))
       setSaved(message.config)
     }
+    // A failed write still carries the scopes the host read, so the read-only view follows
+    // them here as it does on a successful push.
+    applyMergedGlobal(message)
+    applyHomeDir(message)
     if (message.bindings) setBindings(message.bindings)
     setSaveError({ message: message.message, details: message.details })
   })

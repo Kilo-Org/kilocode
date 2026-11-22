@@ -349,6 +349,11 @@ for (const item of cases) {
     root,
   )
   const row = () => root.querySelector('[data-slot="permission-rule-row"]')
+  const dock = root.querySelector('[data-component="permission-shortcuts"]')
+  assert(dock)
+  // Happy DOM returns a rect for an appended element, but the shortcut listener reads this
+  // value, so state it here as the shared loop does instead of relying on that default.
+  Object.defineProperty(dock, "getClientRects", { value: () => [{ width: 800, height: 400 }] })
   try {
     assert.equal(row()?.getAttribute("data-decision"), "pending")
     assert.equal(row()?.getAttribute("data-source"), null)
