@@ -172,7 +172,7 @@ const layer = Layer.effect(
               const info = yield* file.stat
               if (info.dev !== approved.dev || Option.getOrUndefined(info.ino) !== approved.ino)
                 return yield* Effect.fail(changed())
-              // kilocode_change start - collect the BOM prefix across short reads
+              // collect the BOM prefix across short reads
               const head = new Uint8Array(3)
               let size = 0
               while (size < 3) {
@@ -185,7 +185,6 @@ const layer = Layer.effect(
                 size += take
               }
               return hasUtf8Bom(head.subarray(0, size))
-              // kilocode_change end
             }),
           )
           // kilocode_change - the sandbox allows a read descriptor only, so the identity check and the write use separate opens
