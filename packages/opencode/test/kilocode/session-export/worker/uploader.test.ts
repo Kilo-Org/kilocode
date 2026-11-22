@@ -473,7 +473,9 @@ describe("Uploader", () => {
       endpoint: "https://example.test/ingest",
       fetch: async (_input, init) => {
         calls.push(init)
-        return new Response("", { status: new Headers(init.headers).get("authorization") === "Bearer fresh-token" ? 204 : 401 })
+        return new Response("", {
+          status: new Headers(init.headers).get("authorization") === "Bearer fresh-token" ? 204 : 401,
+        })
       },
       reportTelemetry: () => {},
       agentVersion: "v0",
@@ -509,7 +511,9 @@ describe("Uploader", () => {
 
     expect(telemetry.some((item) => item.name === "session_export.upload_retryable")).toBe(true)
     expect(telemetry.some((item) => item.name === "session_export.upload_auth_rejected")).toBe(false)
-    expect(storage.pendingEvents({ now: Date.now() + Config.retryBackoffMaxMs + 1, limitBytes: 1_000_000 }).length).toBe(1)
+    expect(
+      storage.pendingEvents({ now: Date.now() + Config.retryBackoffMaxMs + 1, limitBytes: 1_000_000 }).length,
+    ).toBe(1)
 
     uploader.dispose()
   })
