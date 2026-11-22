@@ -834,8 +834,9 @@ object LegacyMigrationConverters {
      *
      * A `#` starts a comment only when it is the first character of the line or is preceded by a
      * space or tab, and only outside a single-quoted or double-quoted scalar. Inside double quotes a
-     * backslash escapes the next character. The result keeps the text before that `#` with trailing
-     * whitespace removed; a line without a comment is returned unchanged.
+     * backslash escapes the next character, and inside single quotes a doubled `''` is one literal
+     * quote rather than the end of the scalar. The result keeps the text before that `#` with
+     * trailing whitespace removed; a line without a comment is returned unchanged.
      */
     private fun stripYamlComment(line: String): String {
         var inSingleQuotes = false
@@ -852,8 +853,9 @@ object LegacyMigrationConverters {
                 continue
             }
             if (inSingleQuotes) {
-                if (c == '\'') inSingleQuotes = false
-                i++
+                val run = singleQuoteRun(line, i)
+                inSingleQuotes = run != 1 // a lone quote closes the scalar
+                i += run.coerceAtLeast(1)
                 continue
             }
             when (c) {
@@ -877,17 +879,30 @@ object LegacyMigrationConverters {
     }
 
     /**
+     * Length of the quote run that starts at [index] in [text]: 2 for a doubled `''` pair, 1 for a
+     * lone `'` and 0 when the character is not a quote.
+     *
+     * Inside a single-quoted YAML scalar a doubled quote is one literal quote and the scalar goes
+     * on, so a scan of such a scalar skips both characters. Only a lone quote closes the scalar.
+     */
+    private fun singleQuoteRun(text: String, index: Int): Int {
+        if (text[index] != '\'') return 0
+        return if (index + 1 < text.length && text[index + 1] == '\'') 2 else 1
+    }
+
+    /**
      * Strip one pair of YAML quotes around [value] and decode the escapes inside double quotes.
      *
-     * Single-quoted text is literal. Inside double quotes only `\\` and `\"` are decoded; any other
-     * backslash sequence is kept, so a regex or a path is not rewritten.
+     * Single-quoted text decodes a doubled `''` to one `'` and is otherwise literal. Inside double
+     * quotes only `\\` and `\"` are decoded; any other backslash sequence is kept, so a regex or a
+     * path is not rewritten.
      */
     private fun stripYamlQuotes(value: String): String {
         if (value.length < 2) return value
         val quote = value.first()
         if (value.last() != quote || (quote != '"' && quote != '\'')) return value
         val body = value.substring(1, value.length - 1)
-        if (quote == '\'') return body
+        if (quote == '\'') return body.replace("''", "'")
         val out = StringBuilder(body.length)
         var i = 0
         while (i < body.length) {
@@ -908,8 +923,10 @@ object LegacyMigrationConverters {
      * Split the body of a YAML flow sequence or mapping at its top-level commas.
      *
      * A comma inside a single-quoted or double-quoted scalar, or inside `[...]` or `{...}` nesting,
-     * does not split. Returns null for an unterminated quote or a bracket or brace that does not
-     * close, so the caller treats the whole value as unread instead of taking a part of it.
+     * does not split. A doubled `''` inside a single-quoted scalar is a literal quote, so it neither
+     * closes the scalar nor exposes the comma after it. Returns null for an unterminated quote or a
+     * bracket or brace that does not close, so the caller treats the whole value as unread instead
+     * of taking a part of it.
      */
     private fun splitFlowSequence(body: String): List<String>? {
         val items = mutableListOf<String>()
@@ -929,8 +946,9 @@ object LegacyMigrationConverters {
                 continue
             }
             if (inSingleQuotes) {
-                if (c == '\'') inSingleQuotes = false
-                i++
+                val run = singleQuoteRun(body, i)
+                inSingleQuotes = run != 1 // a lone quote closes the scalar
+                i += run.coerceAtLeast(1)
                 continue
             }
             when (c) {
@@ -1015,7 +1033,8 @@ object LegacyMigrationConverters {
      *
      * YAML forbids `: ` inside a plain scalar, so such a colon starts a mapping entry. A colon
      * inside quotes, or one followed by a non-space such as the `:` in `https://`, is part of the
-     * scalar. A trailing `:` is the separator of an entry with an empty value.
+     * scalar, and a doubled `''` inside a single-quoted scalar keeps the scan inside it. A trailing
+     * `:` is the separator of an entry with an empty value.
      */
     private fun flowScalarSeparator(text: String): Int {
         var inSingleQuotes = false
@@ -1032,8 +1051,9 @@ object LegacyMigrationConverters {
                 continue
             }
             if (inSingleQuotes) {
-                if (c == '\'') inSingleQuotes = false
-                i++
+                val run = singleQuoteRun(text, i)
+                inSingleQuotes = run != 1 // a lone quote closes the scalar
+                i += run.coerceAtLeast(1)
                 continue
             }
             when (c) {

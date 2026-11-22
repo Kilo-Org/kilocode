@@ -990,6 +990,46 @@ class LegacyMigrationConversionTest {
         assertEquals("It's fine", mode.description)
     }
 
+    @Test
+    fun `parseCustomModesYaml - doubled quote in a single-quoted scalar keeps a trailing comment out and decodes the quote`() {
+        val yaml = """
+            customModes:
+              - slug: doubled
+                name: Doubled
+                roleDefinition: You are doubled.
+                description: 'It''s #1'
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals("It's #1", mode.description)
+    }
+
+    @Test
+    fun `parseCustomModesYaml - doubled quote in a quoted slug decodes to one quote`() {
+        val yaml = """
+            customModes:
+              - slug: 'pro''be'
+                name: 'Probe'
+                roleDefinition: You are a probe.
+        """.trimIndent()
+        val mode = LegacyMigrationConverters.parseCustomModesYaml(yaml).single()
+        assertEquals("pro'be", mode.slug)
+        assertEquals("Probe", mode.name)
+    }
+
+    @Test
+    fun `parseCustomModesYaml - doubled quote inside a flow sequence does not split the list`() {
+        val yaml = """
+            customModes:
+              - slug: flowquote
+                name: Flow Quote
+                roleDefinition: You are a flow quote.
+                groups: ['it''s', read]
+        """.trimIndent()
+        val modes = LegacyMigrationConverters.parseCustomModesYaml(yaml)
+        assertEquals(1, modes.size)
+        assertEquals(listOf<Any>("it's", "read"), modes[0].groups)
+    }
+
     // -----------------------------------------------------------------------
     // Auto-approval
     // -----------------------------------------------------------------------
