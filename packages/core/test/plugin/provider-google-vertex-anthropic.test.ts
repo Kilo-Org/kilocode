@@ -195,6 +195,7 @@ describe("GoogleVertexAnthropicPlugin", () => {
     }),
   )
 
+  // kilocode_change start - a blank endpoint option counts as unset
   it.effect("treats a blank Anthropic endpoint as unset and builds the regional endpoint", () =>
     withEnv({ GOOGLE_CLOUD_LOCATION: "europe-west4", VERTEX_LOCATION: undefined }, () =>
       Effect.gen(function* () {
@@ -216,6 +217,7 @@ describe("GoogleVertexAnthropicPlugin", () => {
       }),
     ),
   )
+  // kilocode_change end
 
   // kilocode_change start - the location is validated when the model is used
   it.effect("requires a Google Cloud region for the Anthropic location", () =>
