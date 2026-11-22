@@ -91,12 +91,13 @@ export function registerToggleAutoApprove(
 
   const approve = async (event: Asked, directory?: string) => {
     if (!active) return false
+    const snapshot = generation
     const client = tryGetClient(connectionService)
     if (!client) return false
     if (event.properties.metadata?.["sandboxEscalation"] === true) return false
     const dir =
       directory ?? connectionService.getPermissionDirectory(event.properties.id) ?? resolve(event.properties.sessionID)
-    return replyOnce(client, event.properties.id, dir)
+    return replyOnce(client, event.properties.id, dir, () => generation === snapshot)
   }
 
   context.subscriptions.push(

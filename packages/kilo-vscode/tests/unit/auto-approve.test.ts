@@ -342,6 +342,40 @@ describe("registerToggleAutoApprove", () => {
     expect(dirs).toEqual(["/one"])
     expect(replies).toEqual([])
   })
+
+  it("cancels a pending automatic reply when auto-approve is turned off", async () => {
+    const env = config(true)
+    const first = defer<void>()
+    const later: unknown[] = []
+    let calls = 0
+    const conn = connection(
+      client({
+        reply: async (args) => {
+          calls++
+          if (calls === 1) {
+            first.resolve()
+            throw new Error("fetch failed")
+          }
+          later.push(args)
+        },
+      }),
+    )
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    const pending = ctrl.approve(asked("perm_retry"))
+    await first.promise
+    env.active = false
+    env.emit()
+
+    expect(await pending).toBe(false)
+    expect(calls).toBe(1)
+    expect(later).toEqual([])
+  })
 })
 
 describe("auto-approve setting contribution", () => {
