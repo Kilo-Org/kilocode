@@ -649,7 +649,7 @@ object LegacyMigrationConverters {
                     PermissionEntry(
                         "Command rules",
                         MigrationItemStatus.warning,
-                        "Allow commands not migrated: execution auto-approval was not enabled",
+                        "Allow commands not migrated: the master auto-approval switch and the execute setting were not both on",
                     )
                 } else {
                     PermissionEntry("Command rules", MigrationItemStatus.success)
