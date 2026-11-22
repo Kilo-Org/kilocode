@@ -138,6 +138,21 @@ describe("handleSetOrganization", () => {
     expect(profiles(messages)).toBe(0)
   })
 
+  it("reports the sentence a rejected switch names in a data.message envelope", async () => {
+    const { fake, messages } = ctx({
+      set: {
+        status: 400,
+        body: { name: "BadRequestError", data: { message: "Organization is not available to this account" } },
+      },
+      profile: { status: 200, body: profile },
+    })
+    await handleSetOrganization(fake, "org-9", "request-10")
+
+    const result = only(messages)
+    expect(result).toMatchObject({ requestID: "request-10", ok: false })
+    expect(result.error).toBe("Organization is not available to this account")
+  })
+
   it("reports the sentence a rejected switch nests under error.message", async () => {
     const { fake, messages } = ctx({
       set: { status: 400, body: { error: { message: "Organization is not available to this account" } } },
