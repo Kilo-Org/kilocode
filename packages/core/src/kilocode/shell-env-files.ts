@@ -75,8 +75,9 @@ export function envGuards(
 
   for (const prefix of GIT) {
     if (!has(prefix)) continue
-    gated[`${prefix} *.env`] = level
-    gated[`${prefix} *.env.*`] = level
+    // A git command takes a revision spec first and a path after it, so one
+    // operand form covers the spec, a later path, and a path set off by `--`.
+    gated[`${prefix} *.env*`] = level
   }
 
   // `Wildcard.match` treats a trailing ` .*` as optional, so this covers the bare
