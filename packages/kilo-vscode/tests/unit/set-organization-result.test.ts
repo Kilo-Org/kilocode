@@ -62,8 +62,8 @@ function isSwitchResult(message: unknown): message is SwitchResult {
 
 const results = (messages: unknown[]) => messages.filter(isSwitchResult)
 
-/** Count the profile resets posted so consumers can clear a pending selection. */
-function resets(messages: unknown[]): number {
+/** Count the profile pushes, so a failed read can be asserted to keep the last-known one. */
+function profiles(messages: unknown[]): number {
   return messages.filter(
     (message) => typeof message === "object" && message !== null && "type" in message && message.type === "profileData",
   ).length
@@ -92,6 +92,25 @@ describe("handleSetOrganization", () => {
     expect(result.data).toMatchObject({ currentOrgId: "org-1" })
   })
 
+  it("posts one profile push before the result when the read succeeds", async () => {
+    const { fake, messages } = ctx({
+      set: { status: 200, body: {} },
+      profile: { status: 200, body: profile },
+    })
+    await handleSetOrganization(fake, "org-1", "request-6")
+
+    expect(profiles(messages)).toBe(1)
+    const index = messages.findIndex(
+      (message) =>
+        typeof message === "object" && message !== null && "type" in message && message.type === "profileData",
+    )
+    expect(messages[index]).toMatchObject({ type: "profileData", data: { currentOrgId: "org-1" } })
+    expect(messages.findIndex(isSwitchResult)).toBeGreaterThan(index)
+    const result = only(messages)
+    expect(result).toMatchObject({ requestID: "request-6", ok: true })
+    expect(result.data).toMatchObject({ currentOrgId: "org-1" })
+  })
+
   it("reports failure when the switch applies but the profile read fails", async () => {
     const { fake, messages } = ctx({
       set: { status: 200, body: {} },
@@ -102,7 +121,7 @@ describe("handleSetOrganization", () => {
     const result = only(messages)
     expect(result).toMatchObject({ requestID: "request-2", ok: false, data: null })
     expect(result.error).toBeTruthy()
-    expect(resets(messages)).toBe(1)
+    expect(profiles(messages)).toBe(0)
   })
 
   it("reports the switch error alongside the profile it read afterwards", async () => {

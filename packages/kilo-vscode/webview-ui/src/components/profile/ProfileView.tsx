@@ -1,4 +1,4 @@
-import { Component, Show, createSignal, createMemo, createEffect, onMount } from "solid-js"
+import { Component, Show, createSignal, createMemo, onMount, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -35,10 +35,13 @@ interface OrgOption {
   description?: string
 }
 
+/** One switch attempt: awaiting its correlated result, or failed and awaiting a retry. */
+type Attempt = { kind: "idle" } | { kind: "pending"; requestID: string; target: string } | { kind: "failed" }
+
 const ProfileView: Component<ProfileViewProps> = (props) => {
   const vscode = useVSCode()
   const language = useLanguage()
-  const [target, setTarget] = createSignal<string | null>(null)
+  const [attempt, setAttempt] = createSignal<Attempt>({ kind: "idle" })
 
   const personal = createMemo(() => props.profileData?.profile.hasPersonalAccount !== false)
 
@@ -48,11 +51,15 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     props.onRequestProviderUsage?.()
   })
 
-  // Reset pending target whenever profileData changes (success or failure both send a fresh profile)
-  createEffect(() => {
-    props.profileData // track
-    setTarget(null)
+  // The correlated result owns termination: only the reply to this component's
+  // request may clear the pending state, so a late reply is ignored.
+  const unsubscribe = vscode.onMessage((message) => {
+    if (message.type !== "organizationSwitchResult") return
+    const state = attempt()
+    if (state.kind !== "pending" || state.requestID !== message.requestID) return
+    setAttempt({ kind: message.ok ? "idle" : "failed" })
   })
+  onCleanup(unsubscribe)
 
   const orgOptions = createMemo<OrgOption[]>(() => {
     const orgs = props.profileData?.profile.organizations ?? []
@@ -68,9 +75,13 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   })
 
   const switching = createMemo(() => {
-    const t = target()
-    if (t === null) return false
-    return currentId() !== t
+    const state = attempt()
+    if (state.kind !== "pending") return false
+    return currentId() !== state.target
+  })
+
+  const failure = createMemo(() => {
+    return attempt().kind === "failed" ? language.t("profile.switchFailed") : undefined
   })
 
   const currentOrg = createMemo(() => {
@@ -80,10 +91,12 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   const selectOrg = (option: OrgOption | undefined) => {
     if (!option) return
     if (option.value === currentId()) return
-    setTarget(option.value)
+    const requestID = crypto.randomUUID()
+    setAttempt({ kind: "pending", requestID, target: option.value })
     vscode.postMessage({
       type: "setOrganization",
       organizationId: option.value === PERSONAL ? null : option.value,
+      requestID,
     })
   }
 
@@ -251,6 +264,20 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                     triggerVariant="settings"
                     disabled={switching()}
                   />
+                  <Show when={failure()}>
+                    {(message) => (
+                      <p
+                        role="alert"
+                        style={{
+                          "font-size": "var(--kilo-font-size-12)",
+                          color: "var(--vscode-errorForeground)",
+                          margin: "8px 0 0 0",
+                        }}
+                      >
+                        {message()}
+                      </p>
+                    )}
+                  </Show>
                 </Card>
               </Show>
 

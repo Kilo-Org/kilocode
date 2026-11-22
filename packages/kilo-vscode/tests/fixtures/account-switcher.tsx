@@ -292,33 +292,41 @@ try {
   })
   assert.equal(trigger().disabled, false)
 
-  // 5. The host resets the profile before reporting a failed read. The control
-  // stays mounted so the failure message and its retry remain reachable.
+  // 5. A failed confirmation leaves the last-known profile in place, so the
+  // control keeps naming the active account and its failure stays retryable.
   await open()
   row("Org Two").click()
   await settle()
   const unread = switchPost(switchPosts().length - 1)
-  await push({ type: "profileData", data: null })
-  assert(root.querySelector(".account-switcher"), "the control must stay mounted without profile data")
   await push({
     type: "organizationSwitchResult",
     requestID: unread.requestID,
-    organizationId: "org-1",
+    organizationId: "org-2",
     ok: false,
     data: null,
     error: "profile unavailable",
   })
-  assert.equal(alert()?.textContent?.includes("profile unavailable"), true, "the failure must still be visible")
+  assert.equal(trigger().textContent?.includes("Org One"), true, "the trigger must keep the last-known account")
+  assert.equal(
+    trigger().textContent?.includes("Personal Account"),
+    false,
+    "a failed read must not relabel an organization as personal",
+  )
+  assert.equal(alert()?.textContent?.includes("profile unavailable"), true, "the failure must be visible")
   assert.equal(trigger().disabled, false, "the trigger must be enabled after the failure")
+  await open()
+  assert.equal(rows().length, 3, "the dropdown must stay usable after a failed read")
+  await close()
   retryButton().click()
   await settle()
-  const afterReset = switchPost(switchPosts().length - 1)
-  assert.equal(afterReset.organizationId, "org-2", "Retry must stay available after a profile reset")
+  const afterFailure = switchPost(switchPosts().length - 1)
+  assert.equal(afterFailure.organizationId, "org-2", "Retry must re-post the same target")
+  assert.notEqual(afterFailure.requestID, unread.requestID, "Retry must use a fresh request id")
 
   // 6. Signing out after a failed attempt must not leave the control mounted.
   await push({
     type: "organizationSwitchResult",
-    requestID: afterReset.requestID,
+    requestID: afterFailure.requestID,
     organizationId: "org-2",
     ok: false,
     data: null,
