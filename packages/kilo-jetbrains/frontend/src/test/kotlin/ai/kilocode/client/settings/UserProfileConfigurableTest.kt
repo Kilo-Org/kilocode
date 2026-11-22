@@ -824,7 +824,8 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         flushUntil { text(panel).contains(notice) }
 
         // A background emission that publishes no account cannot tell an outage from a sign-out, so
-        // it must leave the notice standing.
+        // it must keep the held account on its card, with the notice, rather than fall back to the
+        // logged-out card (which also renders that same notice text and its own Refresh).
         edt {
             app._state.value = KiloAppStateDto(
                 KiloAppStatusDto.READY,
@@ -834,10 +835,10 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         }
         flush()
         edt {
-            assertTrue(
-                "an account-less background emission must not hide the notice",
-                text(panel).contains(notice) || buttons(panel).any { it.text == "Refresh" },
-            )
+            val t = text(panel)
+            assertTrue("the held account must stay on its card", t.contains("Alice"))
+            assertFalse("the card must not fall back to the signed-out view", t.contains("Not logged in"))
+            assertTrue("the notice must stay", t.contains(notice))
         }
 
         // The notice's own retry reports its read; when it answers signed out, the notice ends and the
