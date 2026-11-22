@@ -2,18 +2,38 @@ import { describe, expect, test } from "bun:test"
 import { ConfigProviderOptionsV1 } from "@opencode-ai/core/v1/config/provider-options"
 
 describe("ConfigProviderOptionsV1", () => {
-  test("keeps raw provider and request options unchanged", () => {
+  // kilocode_change start - request header placement in the fallback lowerer
+  test("reports authToken and headers as request headers and keeps apiKey as a request body option", () => {
     const lowerer = ConfigProviderOptionsV1.get("custom-provider")
 
     expect(lowerer.provider({ apiKey: "secret", headers: { "x-test": "1" }, nested: { camelCase: true } })).toEqual({
-      body: { apiKey: "secret", headers: { "x-test": "1" }, nested: { camelCase: true } },
+      headers: { "x-test": "1" },
+      body: { apiKey: "secret", nested: { camelCase: true } },
     })
-    expect(lowerer.request({ nested: { camelCase: true } })).toEqual({ nested: { camelCase: true } })
+    expect(lowerer.request({ authToken: "token", headers: { "x-test": "1" }, nested: { camelCase: true } })).toEqual({
+      nested: { camelCase: true },
+    })
+    expect(lowerer.headers?.({ authToken: "token", headers: { "x-test": "1" } })).toEqual({
+      Authorization: "Bearer token",
+      "x-test": "1",
+    })
+  })
+
+  // apiKey is the credential the runtime applies, so it takes precedence.
+  test("prefers apiKey over authToken when both are configured", () => {
+    expect(ConfigProviderOptionsV1.get("custom-provider").provider({ apiKey: "secret", authToken: "token" })).toEqual({
+      headers: undefined,
+      body: { apiKey: "secret" },
+    })
   })
 
   test("falls back to raw lowering for prototype property package names", () => {
-    expect(ConfigProviderOptionsV1.get("toString").provider({ enabled: true })).toEqual({ body: { enabled: true } })
+    expect(ConfigProviderOptionsV1.get("toString").provider({ enabled: true })).toEqual({
+      headers: undefined,
+      body: { enabled: true },
+    })
   })
+  // kilocode_change end
 
   test("lowers OpenAI provider and request options", () => {
     const lowerer = ConfigProviderOptionsV1.get("@ai-sdk/openai")
