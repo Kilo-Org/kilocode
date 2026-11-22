@@ -420,7 +420,7 @@ class KiloAppService internal constructor(
      */
     internal suspend fun runManualRetention(policy: RetentionPatchDto): ManualRetentionResult {
         if (policy.enabled == true) {
-            val status = runRetention(true) ?: return ManualRetentionResult.NotStarted
+            val status = runRetention(true) ?: return ManualRetentionResult.RunFailed
             return ManualRetentionResult.Complete(status)
         }
         if (updateConfig(ConfigPatchDto(retention = policy.copy(enabled = true))) == null) {

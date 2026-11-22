@@ -7,7 +7,7 @@ internal sealed interface ManualRetentionResult {
     /** The cleanup ran and the saved policy is confirmed back in place. */
     data class Complete(val status: RetentionStatusDto) : ManualRetentionResult
 
-    /** The policy could not be switched on, so no cleanup ran and nothing changed. */
+    /** Nothing was switched on and no cleanup ran: the policy write was not accepted. */
     data object NotStarted : ManualRetentionResult
 
     /** The policy is back in place, but the cleanup call itself reported no result. */
