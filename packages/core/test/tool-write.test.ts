@@ -25,6 +25,7 @@ const assertions: PermissionV2.AssertInput[] = []
 const writes: string[] = []
 let denyAction: string | undefined
 let duringApproval: (() => Promise<void>) | undefined // kilocode_change - run a change while the edit approval is outstanding
+let shortReads = false // kilocode_change - force short reads so the BOM prefix arrives in pieces
 
 const permission = Layer.succeed(
   PermissionV2.Service,
@@ -53,6 +54,7 @@ const reset = () => {
   writes.length = 0
   denyAction = undefined
   duringApproval = undefined // kilocode_change
+  shortReads = false // kilocode_change
 }
 
 const filesystem = Layer.effect(
@@ -68,6 +70,22 @@ const filesystem = Layer.effect(
         fs.writeFileString(target, content, options).pipe(Effect.tap(() => Effect.sync(() => writes.push(target)))),
       writeFile: (target, content, options) =>
         fs.writeFile(target, content, options).pipe(Effect.tap(() => Effect.sync(() => writes.push(target)))),
+      // kilocode_change end
+      // kilocode_change start - force short reads from the real file when the test asks for them
+      open: (target, options) =>
+        fs.open(target, options).pipe(
+          Effect.map((file) =>
+            !shortReads
+              ? file
+              : new Proxy(file, {
+                  get: (source, key) => {
+                    const value = Reflect.get(source, key, source)
+                    if (key !== "readAlloc") return value
+                    return (size: number) => source.readAlloc(Math.min(Number(size), 1))
+                  },
+                }),
+          ),
+        ),
       // kilocode_change end
     })
   }),
@@ -197,6 +215,35 @@ describe("WriteTool", () => {
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
   )
+
+  // kilocode_change start - the BOM prefix must be detected across short reads
+  it.live("preserves the BOM when the read of the existing prefix returns one byte at a time", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const target = path.join(tmp.path, "short.txt")
+        return Effect.promise(() => fs.writeFile(target, "\uFEFFbefore")).pipe(
+          Effect.andThen(
+            Effect.sync(() => {
+              shortReads = true
+            }),
+          ),
+          Effect.andThen(
+            withTool(tmp.path, (registry) => settleTool(registry, call({ path: "short.txt", content: "after" }))),
+          ),
+          Effect.andThen((settled) =>
+            Effect.gen(function* () {
+              expect(settled.result).toEqual({ type: "text", value: "Wrote file successfully: short.txt" })
+              expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("\uFEFFafter")
+            }),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+  // kilocode_change end
 
   it.live("accepts an absolute file path inside the active Location", () =>
     Effect.acquireUseRelease(

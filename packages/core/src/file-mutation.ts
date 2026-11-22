@@ -69,7 +69,10 @@ export interface RemoveResult {
 
 export interface Interface {
   // kilocode_change start - identity binding for approved writes
-  /** Observe the filesystem identity a write approval covers. */
+  /**
+   * Observe the filesystem identity a write approval covers. Fails with `TargetKindError` when the target is not a
+   * regular file or its filesystem identity is unavailable.
+   */
   readonly inspect: (target: Target) => Effect.Effect<Identity, FSUtil.Error | TargetKindError>
   // kilocode_change end
   /** Create without replacing an existing target. */
@@ -137,7 +140,7 @@ const layer = Layer.effect(
       if (info === undefined) return { type: "absent" } satisfies Identity
       if (info.type !== "File") return yield* Effect.fail(new TargetKindError({ path: target.canonical }))
       const ino = Option.getOrUndefined(info.ino)
-      if (ino === undefined) return yield* Effect.die(new Error("Filesystem identity is unavailable"))
+      if (ino === undefined) return yield* Effect.fail(new TargetKindError({ path: target.canonical })) // kilocode_change - typed failure, not a defect
       return { type: "file", dev: info.dev, ino } satisfies Identity
     })
     // kilocode_change end
@@ -169,8 +172,20 @@ const layer = Layer.effect(
               const info = yield* file.stat
               if (info.dev !== approved.dev || Option.getOrUndefined(info.ino) !== approved.ino)
                 return yield* Effect.fail(changed())
-              const head = yield* file.readAlloc(3)
-              return Option.match(head, { onNone: () => false, onSome: (bytes) => hasUtf8Bom(bytes) })
+              // kilocode_change start - collect the BOM prefix across short reads
+              const head = new Uint8Array(3)
+              let size = 0
+              while (size < 3) {
+                const chunk = yield* file.readAlloc(3 - size)
+                if (Option.isNone(chunk)) break
+                const bytes = chunk.value
+                if (bytes.length === 0) break
+                const take = Math.min(bytes.length, 3 - size)
+                head.set(bytes.subarray(0, take), size)
+                size += take
+              }
+              return hasUtf8Bom(head.subarray(0, size))
+              // kilocode_change end
             }),
           )
           // kilocode_change - the sandbox allows a read descriptor only, so the identity check and the write use separate opens
