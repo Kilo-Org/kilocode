@@ -16,6 +16,13 @@ describe("displayCommand", () => {
     expect(out).not.toMatch(/[\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/)
   })
 
+  it("escapes zero-width format characters as literals", () => {
+    // ZWSP (U+200B) and BOM (U+FEFF) occupy no width, so they must show as literals
+    const out = displayCommand("echo \u200bok\ufeff rm -rf /")
+    expect(out).toBe("echo \\u200bok\\ufeff rm -rf /")
+    expect(out).not.toMatch(/[\u200b-\u200f\ufeff]/)
+  })
+
   it("leaves ordinary commands unchanged", () => {
     expect(displayCommand("git status --short")).toBe("git status --short")
   })

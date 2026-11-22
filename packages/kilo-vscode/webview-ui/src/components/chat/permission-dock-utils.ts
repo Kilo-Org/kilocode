@@ -2,12 +2,15 @@ import type { PermissionRule } from "../../types/messages"
 
 export type RuleDecision = "approved" | "denied" | "pending"
 
-// Escape control and format characters for display, so each surface shows exactly the characters
-// the request carries. Both helpers serve every text surface of the approval card — skill-shell
-// commands, bash commands, pattern paths, tool names, rule text and diff file names. The webview
-// can't import from @kilocode/cli, so this mirrors displayCommand in
+// Escape control characters and invisible format characters for display, so each surface shows
+// exactly the characters the request carries. Invisible format characters belong to the same
+// display policy as control characters: each one is shown as its literal escape, so text never
+// depends on characters that render without width. Both helpers serve every text surface of the
+// approval card — skill-shell commands, bash commands, pattern paths, tool names, rule text and
+// diff file names. The webview can't import from @kilocode/cli, so this mirrors displayCommand in
 // packages/opencode/src/kilocode/skills/display.ts; keep them in sync.
-const CONTROL = /[\u0000-\u001f\u007f-\u009f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g
+const CONTROL =
+  /[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ufeff]/g
 
 function escape(ch: string) {
   if (ch === "\n") return "\\n"

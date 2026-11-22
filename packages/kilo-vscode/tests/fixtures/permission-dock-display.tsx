@@ -115,6 +115,24 @@ check({ ...base, toolName: "glob", patterns: [`src/**/${RAW}gnp.exe`], args: {} 
   escaped(hint, "Single pattern hint")
 })
 
+// Invisible format characters on the same surfaces: zero width space in a path, zero width joiner
+// in a description. Each shows its literal escape and never the raw character.
+const ZWSP = "\u200b"
+check({ ...base, toolName: "read", patterns: ["src/app.ts", `readme${ZWSP}.exe`], args: {} }, (root) => {
+  const paths = Array.from(root.querySelectorAll('[data-slot="permission-pattern"]'), (node) => node.textContent)
+  assert.deepEqual(paths, ["src/app.ts", "readme\\u200b.exe"])
+  assert(paths.join("\n").includes("\\u200b"), "Pattern paths lost the escaped invisible character")
+  assert(!paths.join("\n").includes(ZWSP), "Pattern paths showed the raw invisible character")
+})
+
+const ZWJ = "\u200d"
+check({ ...base, toolName: "bash", args: { command: "echo hi", description: `runs readme${ZWJ}.sh` } }, (root) => {
+  const hint = text(root, '[data-slot="permission-hint"]')
+  assert.equal(hint, "runs readme\\u200d.sh")
+  assert(hint.includes("\\u200d"), `Description hint lost the escaped invisible character: ${JSON.stringify(hint)}`)
+  assert(!hint.includes(ZWJ), `Description hint showed the raw invisible character: ${JSON.stringify(hint)}`)
+})
+
 // External-directory rule path.
 check(
   {

@@ -17,6 +17,20 @@ describe("displayText", () => {
   it("uses \\x for C0/C1 controls and \\u for higher code points", () => {
     expect(displayText("\u0000\u009f\u2066")).toBe("\\x00\\x9f\\u2066")
   })
+
+  it("escapes invisible format characters in single-line text", () => {
+    expect(displayText("\u200b\u200c\u200d\ufeff\u061c")).toBe(
+      "\\u200b\\u200c\\u200d\\ufeff\\u061c",
+    )
+  })
+
+  it("escapes each invisible format character without affecting its neighbours", () => {
+    expect(displayText("readme\u200b.exe")).toBe("readme\\u200b.exe")
+    expect(displayText("a\u200cb")).toBe("a\\u200cb")
+    expect(displayText("a\u200db")).toBe("a\\u200db")
+    expect(displayText("\ufeffname")).toBe("\\ufeffname")
+    expect(displayText("a\u061cb")).toBe("a\\u061cb")
+  })
 })
 
 describe("displayLines", () => {
@@ -30,6 +44,10 @@ describe("displayLines", () => {
 
   it("leaves ordinary multi-line text untouched", () => {
     expect(displayLines('{\n  "a": 1\n}')).toBe('{\n  "a": 1\n}')
+  })
+
+  it("escapes invisible format characters in block text", () => {
+    expect(displayLines("{\n  \"a\": \"x\u200by\ufeff\"\n}")).toBe("{\n  \"a\": \"x\\u200by\\ufeff\"\n}")
   })
 })
 
