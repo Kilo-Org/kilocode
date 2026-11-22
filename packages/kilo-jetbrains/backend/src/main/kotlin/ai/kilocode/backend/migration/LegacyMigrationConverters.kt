@@ -227,21 +227,22 @@ object LegacyMigrationConverters {
         val apiKey = settings[mapping.key]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             ?: return ProviderConversionResult(null, null, MigrationItemStatus.warning, "No API key found in profile")
 
-        // The Kilo gateway is the only provider whose static token is stored in an OAuth-shaped
+        // The gateway mapping is the only provider whose static token is stored in an OAuth-shaped
         // envelope: exactly the one the CLI's own Kilo sign-in writes (type=oauth, the token as both
         // access and refresh, a 1-year expiry, and the organization as accountId). Every other
         // provider stores an api credential, even when the legacy profile names an organization.
-        val auth = if (mapping.id == "kilo") {
-            val org = mapping.organizationIdField?.let { settings[it]?.jsonPrimitive?.content }
-            buildJsonObject {
-                put("type", "oauth")
-                put("access", apiKey)
-                put("refresh", apiKey)
-                put("expires", System.currentTimeMillis() + 365L * 24 * 60 * 60 * 1000)
-                org?.let { put("accountId", it) }
+        val auth = when (mapping.credentialShape) {
+            CredentialShape.Gateway -> {
+                val org = mapping.organizationIdField?.let { settings[it]?.jsonPrimitive?.content }
+                buildJsonObject {
+                    put("type", "oauth")
+                    put("access", apiKey)
+                    put("refresh", apiKey)
+                    put("expires", System.currentTimeMillis() + 365L * 24 * 60 * 60 * 1000)
+                    org?.let { put("accountId", it) }
+                }
             }
-        } else {
-            buildJsonObject {
+            CredentialShape.Api -> buildJsonObject {
                 put("type", "api")
                 put("key", apiKey)
             }

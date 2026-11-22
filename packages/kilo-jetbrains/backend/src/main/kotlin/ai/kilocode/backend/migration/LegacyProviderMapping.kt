@@ -1,5 +1,14 @@
 package ai.kilocode.backend.migration
 
+/** Stored credential record shape for a migrated provider. */
+enum class CredentialShape {
+    /** `{type: api, key}` — the CLI's static key record. */
+    Api,
+
+    /** `{type: oauth, access, refresh, expires[, accountId]}` — the CLI's own Kilo sign-in record. */
+    Gateway,
+}
+
 /**
  * Port of packages/kilo-vscode/src/legacy-migration/provider-mapping.ts
  *
@@ -18,6 +27,8 @@ data class ProviderMapping(
     val urlField: String? = null,
     /** Field holding organization/account ID */
     val organizationIdField: String? = null,
+    /** Stored credential record shape this provider's static key migrates to */
+    val credentialShape: CredentialShape = CredentialShape.Api,
     /** VS Code secret key holding OAuth credentials stored separately */
     val oauthSecretKey: String? = null,
     /** If true, skip auth.set — uses env/ADC-based auth (e.g. Vertex AI) */
@@ -59,7 +70,7 @@ val PROVIDER_MAP: Map<String, ProviderMapping> = mapOf(
     "sambanova" to ProviderMapping(id = "sambanova", key = "sambaNovaApiKey", name = "SambaNova"),
     "ollama" to ProviderMapping(id = "ollama", key = "ollamaApiKey", name = "Ollama", modelField = "ollamaModelId", urlField = "ollamaBaseUrl"),
     "lmstudio" to ProviderMapping(id = "lmstudio", key = "lmStudioBaseUrl", name = "LM Studio", modelField = "lmStudioModelId", urlField = "lmStudioBaseUrl"),
-    "kilocode" to ProviderMapping(id = "kilo", key = "kilocodeToken", name = "Kilo (Gateway)", modelField = "kilocodeModel", organizationIdField = "kilocodeOrganizationId"),
+    "kilocode" to ProviderMapping(id = "kilo", key = "kilocodeToken", name = "Kilo (Gateway)", modelField = "kilocodeModel", organizationIdField = "kilocodeOrganizationId", credentialShape = CredentialShape.Gateway),
     "litellm" to ProviderMapping(id = "litellm", key = "litellmApiKey", name = "LiteLLM", modelField = "litellmModelId", urlField = "litellmBaseUrl"),
     "deepinfra" to ProviderMapping(id = "deepinfra", key = "deepInfraApiKey", name = "DeepInfra", modelField = "deepInfraModelId", urlField = "deepInfraBaseUrl"),
     "chutes" to ProviderMapping(id = "chutes", key = "chutesApiKey", name = "Chutes"),

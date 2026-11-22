@@ -69,19 +69,25 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
-    fun `provider map - the gateway is the only mapping with an organization field`() {
-        val withOrg = PROVIDER_MAP.filterValues { it.organizationIdField != null }
+    fun `provider map - only the gateway mapping declares the gateway credential shape`() {
         assertEquals(
             setOf("kilocode"),
-            withOrg.keys,
-            message = "a provider profile reaches the gateway credential envelope only through the mapping that declares an organization field",
+            PROVIDER_MAP.filterValues { it.credentialShape == CredentialShape.Gateway }.keys,
+            message = "the gateway credential envelope is reachable only through the mapping that declares it",
         )
         assertEquals(
-            setOf("kilo"),
-            withOrg.values.map { it.id }.toSet(),
-            message = "the mapping that declares an organization field must be the gateway provider id",
+            "kilo",
+            PROVIDER_MAP.getValue("kilocode").id,
+            message = "the mapping that declares the gateway shape must target the gateway provider id",
         )
-        assertEquals("kilocodeOrganizationId", withOrg.getValue("kilocode").organizationIdField)
+        PROVIDER_MAP.filterValues { it.credentialShape != CredentialShape.Gateway }.values.forEach {
+            assertEquals(
+                CredentialShape.Api,
+                it.credentialShape,
+                message = "every mapping outside the gateway stores an api credential",
+            )
+        }
+        assertEquals("kilocodeOrganizationId", PROVIDER_MAP.getValue("kilocode").organizationIdField)
     }
 
     @Test
