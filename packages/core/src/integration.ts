@@ -5,6 +5,7 @@ import {
   Cause,
   Clock,
   Context,
+  Deferred, // kilocode_change
   Duration,
   Effect,
   Exit,
@@ -111,11 +112,18 @@ export class AttemptNotFoundError extends Schema.TaggedErrorClass<AttemptNotFoun
 ) {}
 // kilocode_change end
 
+// kilocode_change start - completing an attempt that is already in flight reports a typed conflict
+export class AttemptCompletingError extends Schema.TaggedErrorClass<AttemptCompletingError>()(
+  "Integration.AttemptCompleting",
+  { attemptID: AttemptID },
+) {}
+// kilocode_change end
+
 export class AuthorizationError extends Schema.TaggedErrorClass<AuthorizationError>()("Integration.Authorization", {
   cause: Schema.Defect(),
 }) {}
 
-export type Error = CodeRequiredError | AuthorizationError | AttemptNotFoundError
+export type Error = CodeRequiredError | AuthorizationError | AttemptNotFoundError | AttemptCompletingError
 
 export const Event = Integration.Event
 
@@ -198,7 +206,7 @@ export interface Interface extends State.Transformable<Draft> {
       readonly attemptID: AttemptID
       /** Authorization code required by attempts in code mode. */
       readonly code?: string
-    }) => Effect.Effect<void, CodeRequiredError | AuthorizationError | AttemptNotFoundError> // kilocode_change
+    }) => Effect.Effect<void, CodeRequiredError | AuthorizationError | AttemptNotFoundError | AttemptCompletingError> // kilocode_change
     /** Cancels an attempt and releases its resources. */
     readonly cancel: (attemptID: AttemptID) => Effect.Effect<void>
   }
@@ -210,6 +218,10 @@ const attemptLifetime = Duration.toMillis(Duration.minutes(10))
 const terminalRetention = Duration.toMillis(Duration.minutes(1))
 const scrubInterval = Duration.seconds(30)
 const settlementTimeout = Duration.seconds(30) // kilocode_change - bound retained OAuth attempt secrets
+// kilocode_change start - bound a detached credential refresh and share one expiry window
+const refreshTimeout = Duration.seconds(30)
+const refreshWindow = Duration.toMillis(Duration.minutes(5))
+// kilocode_change end
 
 type AttemptTime = { created: number; expires: number }
 type PendingAttempt = {
@@ -230,6 +242,9 @@ type TerminalAttempt = {
   time: AttemptTime
 }
 type AttemptEntry = PendingAttempt | TerminalAttempt
+// kilocode_change start - single-flight refresh per stored credential
+type Refresh = { owner: boolean; deferred: Deferred.Deferred<Credential.Value, AuthorizationError> }
+// kilocode_change end
 
 export const locationLayer = Layer.effect(
   Service,
@@ -238,6 +253,13 @@ export const locationLayer = Layer.effect(
     const events = yield* EventV2.Service
     const scope = yield* Scope.Scope
     const attempts = SynchronizedRef.makeUnsafe(new Map<AttemptID, AttemptEntry>())
+    // kilocode_change start - single-flight per stored credential: one refresh at a time, waiters share the owner's exit.
+    // The flight is process-local by design: two processes sharing one credential store can still
+    // refresh the same credential concurrently, which is the behavior every caller had before.
+    const refreshing = SynchronizedRef.makeUnsafe(
+      new Map<Credential.ID, Deferred.Deferred<Credential.Value, AuthorizationError>>(),
+    )
+    // kilocode_change end
     const state = State.create<Data, Draft>({
       initial: () => ({ integrations: new Map<ID, Entry>() }),
       draft: (draft) => ({
@@ -326,6 +348,71 @@ export const locationLayer = Layer.effect(
 
     const close = (attemptScope: Scope.Closeable) =>
       Scope.close(attemptScope, Exit.void).pipe(Effect.forkIn(scope, { startImmediately: true }), Effect.asVoid)
+    // kilocode_change start - one refresh per stored credential; callers share the owner's exit
+    const refresh = Effect.fnUntraced(function* (
+      credential: Credential.Info,
+      run: () => Effect.Effect<Credential.OAuth, AuthorizationError>,
+    ) {
+      return yield* Effect.uninterruptibleMask((restore) =>
+        Effect.gen(function* () {
+          const flight = yield* SynchronizedRef.modify(
+            refreshing,
+            (current): [Refresh, Map<Credential.ID, Deferred.Deferred<Credential.Value, AuthorizationError>>] => {
+              const existing = current.get(credential.id)
+              if (existing) return [{ owner: false, deferred: existing }, current]
+              const deferred = Deferred.makeUnsafe<Credential.Value, AuthorizationError>()
+              return [{ owner: true, deferred }, new Map(current).set(credential.id, deferred)]
+            },
+          )
+          if (!flight.owner) return yield* restore(Deferred.await(flight.deferred))
+          // kilocode_change - release the flight, then publish the result once the ref guard is free.
+          // Deferred completion resumes waiters on this stack, so it runs outside the modify callback:
+          // a waiter that re-enters this map then sees the entry already removed, and the state
+          // transition stays pure. The pair is uninterruptible so that the release and the publish
+          // cannot be split by an interrupt, which would leave waiters without a completion.
+          const finish = (exit: Exit.Exit<Credential.Value, AuthorizationError>) =>
+            Effect.uninterruptible(
+              Effect.flatMap(
+                SynchronizedRef.modify(refreshing, (current) => {
+                  if (current.get(credential.id) !== flight.deferred) return [false, current] as const
+                  const next = new Map(current)
+                  next.delete(credential.id)
+                  return [true, next] as const
+                }),
+                (mine) =>
+                  Effect.sync(() => {
+                    if (mine) Deferred.doneUnsafe(flight.deferred, exit)
+                  }),
+              ),
+            )
+          const outcome = Effect.exit(
+            Effect.gen(function* () {
+              const stored = yield* credentials.get(credential.id)
+              const now = yield* Clock.currentTimeMillis
+              if (stored?.value.type === "oauth" && stored.value.expires > now + refreshWindow) return stored.value
+              const value = yield* run()
+              yield* credentials.update(credential.id, { value })
+              return value
+            }).pipe(
+              Effect.timeout(refreshTimeout),
+              Effect.mapError((cause) =>
+                Cause.isTimeoutError(cause) ? new AuthorizationError({ cause }) : cause,
+              ),
+            ),
+          )
+          // kilocode_change - the publish must not live in the layer scope: teardown would interrupt
+          // it before it completes the deferred, and every caller would wait forever. Detached, it
+          // still publishes for callers that already joined the flight.
+          yield* outcome.pipe(
+            Effect.flatMap((exit) => finish(exit)),
+            Effect.onExit((exit) => (Exit.isFailure(exit) ? finish(Exit.interrupt()) : Effect.void)),
+            Effect.forkDetach({ startImmediately: true }),
+          )
+          return yield* restore(Deferred.await(flight.deferred))
+        })
+      )
+    })
+    // kilocode_change end
 
     const message = (cause: Cause.Cause<unknown>) => {
       const error = Cause.squash(cause)
@@ -438,16 +525,18 @@ export const locationLayer = Layer.effect(
           const credential = yield* credentials.get(connection.id)
           if (!credential) return undefined
           if (credential.value.type === "key") return credential.value
+          // kilocode_change start - single-flight refresh per stored credential
+          const oauth = credential.value
           const implementation = state
             .get()
             .integrations.get(credential.integrationID)
-            ?.implementations.get(credential.value.methodID)
-          if (!implementation?.refresh) return credential.value
+            ?.implementations.get(oauth.methodID)
+          const update = implementation?.refresh
+          if (!update) return oauth
           const now = yield* Clock.currentTimeMillis
-          if (credential.value.expires > now + Duration.toMillis(Duration.minutes(5))) return credential.value
-          const value = yield* authorize(implementation.refresh(credential.value))
-          yield* credentials.update(credential.id, { value })
-          return value
+          if (oauth.expires > now + refreshWindow) return oauth
+          return yield* refresh(credential, () => authorize(update(oauth)))
+          // kilocode_change end
         }),
         key: Effect.fn("Integration.connection.key")(function* (input) {
           const method = state
@@ -550,7 +639,7 @@ export const locationLayer = Layer.effect(
           if (attempt.authorization.mode === "code" && input.code === undefined) {
             return yield* new CodeRequiredError({ attemptID: input.attemptID })
           }
-          if (attempt.completing) return yield* Effect.die(`OAuth attempt already completing: ${input.attemptID}`)
+          if (attempt.completing) return yield* new AttemptCompletingError({ attemptID: input.attemptID }) // kilocode_change
           const callback =
             attempt.authorization.mode === "auto"
               ? attempt.authorization.callback

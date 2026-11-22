@@ -12,7 +12,9 @@ import {
 
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { AccountRepo, type AccountRow } from "./repo"
-import { normalizeServerUrl } from "./url"
+// kilocode_change start
+import { normalizeServerUrl } from "@opencode-ai/core/account/key"
+// kilocode_change end
 import {
   type AccountError,
   AccessToken,
@@ -32,6 +34,7 @@ import {
   type PollResult,
   PollSlow,
   PollSuccess,
+  RemoteID, // kilocode_change
   UserCode,
 } from "./schema"
 
@@ -56,6 +59,7 @@ export {
   PollDenied,
   PollError,
   PollResult,
+  RemoteID, // kilocode_change
 } from "./schema"
 
 export type AccountOrgs = {
@@ -116,7 +120,7 @@ class DeviceTokenError extends Schema.Class<DeviceTokenError>("DeviceTokenError"
 const DeviceToken = Schema.Union([DeviceTokenSuccess, DeviceTokenError])
 
 class User extends Schema.Class<User>("User")({
-  id: AccountID,
+  id: RemoteID, // kilocode_change
   email: Schema.String,
 }) {}
 
@@ -457,7 +461,7 @@ const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient.HttpCl
       const refreshToken = parsed.refresh_token
 
       yield* repo.persistAccount({
-        id: account.id,
+        remoteID: account.id, // kilocode_change
         email: account.email,
         url: input.server,
         accessToken,
