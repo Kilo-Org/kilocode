@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Show the account an organization switch actually applied, and report the outcome of every switch attempt so the control never stays disabled.
+Show the selected account from the platform's current organization, and report the outcome of each switch attempt with a retry.

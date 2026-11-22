@@ -62,6 +62,13 @@ function isSwitchResult(message: unknown): message is SwitchResult {
 
 const results = (messages: unknown[]) => messages.filter(isSwitchResult)
 
+/** Count the profile resets posted so consumers can clear a pending selection. */
+function resets(messages: unknown[]): number {
+  return messages.filter(
+    (message) => typeof message === "object" && message !== null && "type" in message && message.type === "profileData",
+  ).length
+}
+
 /** Assert exactly one outcome was posted and return it for field assertions. */
 function only(messages: unknown[]): SwitchResult {
   const posted = results(messages)
@@ -95,6 +102,7 @@ describe("handleSetOrganization", () => {
     const result = only(messages)
     expect(result).toMatchObject({ requestID: "request-2", ok: false, data: null })
     expect(result.error).toBeTruthy()
+    expect(resets(messages)).toBe(1)
   })
 
   it("reports the switch error alongside the profile it read afterwards", async () => {

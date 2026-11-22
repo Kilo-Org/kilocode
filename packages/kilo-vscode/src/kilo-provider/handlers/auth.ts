@@ -155,6 +155,9 @@ export async function handleSetOrganization(
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
     profileError = getErrorMessage(error) || "Failed to refresh profile"
+    // Consumers that reset their pending selection on a profile push need the
+    // same signal when the read fails, so they cannot stay busy indefinitely.
+    ctx.postMessage({ type: "profileData", data: null })
   }
 
   ctx.postMessage({
