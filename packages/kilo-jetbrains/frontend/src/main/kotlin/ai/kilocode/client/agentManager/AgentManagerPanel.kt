@@ -1194,8 +1194,12 @@ class AgentManagerPanel(
         } else {
             emptyList()
         }
+        // The tree is keyed by row key, so the primary checkout wins over any stale model row that
+        // spells the same key (a listing that flagged it as linked), and nothing here can hand the
+        // tree two entries for one key.
+        val items = (listOfNotNull(current) + local + hosted).distinctBy { it.key }
         tree.update(
-            ordering.nodes(listOfNotNull(current) + local + hosted, current?.key),
+            ordering.nodes(items, current?.key),
             ActiveSelection.Preserve,
         )
     }

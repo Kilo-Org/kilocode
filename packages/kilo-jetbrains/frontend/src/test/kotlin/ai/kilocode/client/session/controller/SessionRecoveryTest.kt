@@ -86,6 +86,38 @@ class SessionRecoveryTest : SessionControllerTestBase() {
         assertTrue(m.model.state is SessionState.Idle)
     }
 
+    fun `test hosted permission carries its hosted flag and replies without saved rules`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        collect(m)
+        flush()
+
+        emit(ChatEventDto.PermissionAsked(id, PermissionRequestDto(
+            id = "perm_hosted",
+            sessionID = id,
+            permission = "bash",
+            patterns = listOf("git *"),
+            rules = listOf("git *"),
+            always = listOf("git *"),
+        )))
+
+        val card = (m.model.state as SessionState.AwaitingPermission).permission
+        assertEquals("perm_hosted", card.id)
+        assertTrue(card.hosted)
+
+        // The card is the only producer of a rules payload, and a hosted one sends none.
+        edt { m.replyPermission("perm_hosted", PermissionReplyDto("once", interactive = true)) }
+        flush()
+
+        assertTrue(rpc.permissionRulesSaved.isEmpty())
+        assertTrue(projectRpc.refreshedConfigs.isEmpty())
+        assertEquals(1, rpc.permissionReplies.size)
+        assertEquals("perm_hosted", rpc.permissionReplies.single().first)
+        assertEquals("once", rpc.permissionReplies.single().third.reply)
+        assertTrue(rpc.permissionReplies.single().third.interactive)
+    }
+
     fun `test hosted newer live interaction wins over delayed empty snapshot probe`() {
         val id = "hosted:kilo-cloud:worktree_one:ses_one"
         projectRpc.state.value = workspaceReady()

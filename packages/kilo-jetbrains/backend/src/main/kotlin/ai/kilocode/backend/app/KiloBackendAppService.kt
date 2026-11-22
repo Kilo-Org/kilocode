@@ -2,7 +2,12 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.cli.KiloBackendCliManager
+import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.cli.KiloCliDataParser
+import ai.kilocode.backend.cli.ResponseFailure
+import ai.kilocode.backend.cli.bodyName
+import ai.kilocode.backend.cli.bodySummary
+import ai.kilocode.backend.cli.responseFailure
 import ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService
 import ai.kilocode.backend.migration.LegacyMigrationDetection
 import ai.kilocode.backend.migration.LegacyMigrationStatus
@@ -49,6 +54,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -101,6 +107,11 @@ class KiloBackendAppService private constructor(
         private const val RETRY_DELAY_MS = 1000L
         private const val APP_LOAD_TIMEOUT_MS = 30_000L
         private const val READY_TIMEOUT_MS = 120_000L
+        /** Sign-out must not wait on a stalled CLI; matches the provider-settings call bound. */
+        private const val DISPOSE_TIMEOUT_SECONDS = 15L
+
+        /** Sign-out waits at most this long for the lifecycle mutex before dropping state alone. */
+        private const val CLOSE_TIMEOUT_MS = 5_000L
 
         /** Test factory — no IntelliJ deps needed. */
         internal fun create(
@@ -615,18 +626,15 @@ class KiloBackendAppService private constructor(
                 logResponseBody("profile", e)
                 return FetchResult.ok(null)
             }
-            log.warn("Profile fetch failed: HTTP ${e.statusCode}", e)
-            logResponseBody("profile", e)
+            logFailure("Profile fetch failed", e)
             FetchResult.fail("profile", e)
         } catch (e: ServerException) {
             // 5xx from the CLI — profile endpoint is unreachable (no auth,
             // gateway down, etc.). Treat the same as not-logged-in.
-            log.warn("Profile fetch: server error (${e.statusCode}) — treating as unavailable", e)
-            logResponseBody("profile", e)
+            logFailure("Profile fetch: server error — treating as unavailable", e)
             FetchResult.ok(null)
         } catch (e: Exception) {
-            log.warn("Profile fetch failed: ${e.message}", e)
-            logResponseBody("profile", e)
+            logFailure("Profile fetch failed", e)
             FetchResult.fail("profile", e)
         }
     }
@@ -647,10 +655,7 @@ class KiloBackendAppService private constructor(
                     try {
                         val text = call.execute().use { response ->
                             val text = response.body?.string().orEmpty()
-                            if (!response.isSuccessful) {
-                                log.warn("Global config fetch failed: HTTP ${response.code} ${response.message} $text")
-                                throw IllegalStateException("Global config fetch failed: HTTP ${response.code} ${response.message}")
-                            }
+                            if (!response.isSuccessful) throw responseFailure(response.code, response.message, text)
                             text
                         }
                         if (cont.isActive) cont.resume(text)
@@ -663,7 +668,8 @@ class KiloBackendAppService private constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Global config fetch failed: ${e.message}", e)
+            val line = "Global config fetch failed: ${failureLogDetail(e)}"
+            if (e is ResponseFailure) log.warn(line) else log.warn(line, e)
             FetchResult.fail("config", e)
         }
     }
@@ -674,8 +680,7 @@ class KiloBackendAppService private constructor(
         return try {
             FetchResult.ok(client.kiloNotifications())
         } catch (e: Exception) {
-            log.warn("Notifications fetch failed: ${e.message}", e)
-            logResponseBody("notifications", e)
+            logFailure("Notifications fetch failed", e)
             FetchResult.fail("notifications", e)
         }
     }
@@ -695,7 +700,7 @@ class KiloBackendAppService private constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Experimental capabilities fetch failed: ${e.message}", e)
+            logFailure("Experimental capabilities fetch failed", e)
             false
         }
     }
@@ -795,20 +800,29 @@ class KiloBackendAppService private constructor(
     }
 
     /**
-     * Dump the HTTP response body from a failed API call for debugging.
+     * Log the resource, status and size of the response from a failed API call.
      * The generated client wraps the response in [ClientException.response]
      * or [ServerException.response] as a [ClientError] / [ServerError] with
-     * a `body` field containing the raw response string.
+     * a `body` field.
      */
     private fun logResponseBody(resource: String, e: Exception) {
-        val body = when (e) {
-            is ClientException -> (e.response as? ClientError<*>)?.body
-            is ServerException -> (e.response as? ServerError<*>)?.body
-            else -> null
+        val body = failureBody(e) ?: return
+        log.warn("$resource response failed: status=${failureStatus(e)} chars=${body.toString().length}")
+    }
+
+    /**
+     * Log a failed CLI call with its status and body size. The throwable is passed only when the
+     * call carried no response body and the body did not fail to decode — the formatter otherwise
+     * writes the throwable with its stack trace.
+     */
+    private fun logFailure(message: String, e: Exception) {
+        val line = "$message: ${failureLogDetail(e)}"
+        val bodyOnly = failureBody(e) != null || e is SerializationException || e is ResponseFailure
+        if (bodyOnly) {
+            log.warn(line)
+            return
         }
-        if (body != null) {
-            log.warn("$resource response body: $body")
-        }
+        log.warn(line, e)
     }
 
     private suspend fun <T> fetchWithRetry(
@@ -984,11 +998,42 @@ class KiloBackendAppService private constructor(
 
     /**
      * Log out from Kilo Gateway.
-     * Removes credentials and clears the profile from app state.
+     * Removes credentials and clears the profile from app state. A successful sign-out also drops
+     * the hosted session state derived from that credential — attachments, transcripts, statuses,
+     * retained owners — and asks the CLI to rebuild its global state, so the next sign-in starts
+     * from an empty hosted manager. A refused removal changes nothing.
      */
     suspend fun logout(): Boolean {
         val client = connection.api ?: throw IllegalStateException("Not connected")
         val result = client.authRemove(providerID = "kilo")
+        if (!result) return false
+        // Close before start: close() forgets retained owners, while start() on a started manager
+        // only rebinds transports and would restore the previous credential's continuity.
+        // Under the lifecycle mutex, so a concurrent CLI restart cannot swap the transport between
+        // the read below and the bind, which would leave the manager on a replaced client. That
+        // mutex is also held across a CLI download, so the wait is bounded: dropping the
+        // credential-derived state matters, binding to the replacement transport does not, and a
+        // later load() starts the manager on it.
+        var rebound = false
+        val bound = withTimeoutOrNull(CLOSE_TIMEOUT_MS) {
+            mutex.withLock {
+                hosted.close()
+                val api = connection.api
+                val http = connection.apiClient
+                val port = connection.port
+                // The CLI may already be gone; the manager just stays closed instead of throwing.
+                if (api != null && http != null && port != 0) hosted.start(api, http, port, chat)
+                rebound = true
+            }
+        }
+        if (bound == null && !rebound) {
+            // The wait expired before the block ran; dropping the credential-derived state is the
+            // part that matters, and the next load() starts the manager on its transport.
+            log.info("Sign-out: lifecycle busy, dropping hosted state without rebinding")
+            hosted.close()
+        }
+        // Clear the snapshot first: the CLI rebuild is best-effort, while the credential
+        // removal above is already final.
         synchronized(loadLock) {
             val current = _appState.value
             if (current is KiloAppState.Ready) {
@@ -996,7 +1041,36 @@ class KiloBackendAppService private constructor(
                 setAppReady(current.data.copy(profile = null))
             }
         }
+        // After the credential removal: the CLI rebuilds global state without the account. Reads the
+        // transport again, so a restart in between is rebuilt from as well.
+        disposeGlobal(connection.apiClient, connection.port)
         return result
+    }
+
+    /**
+     * Best-effort `POST /global/dispose` so the CLI rebuilds global state; a failure never blocks
+     * sign-out. The client is bounded, because the shared API client has no call timeout and a
+     * stalled CLI would otherwise hold sign-out open.
+     */
+    private suspend fun disposeGlobal(http: OkHttpClient?, port: Int) {
+        if (http == null || port == 0) return
+        val request = Request.Builder()
+            .url("http://127.0.0.1:$port/global/dispose")
+            .header("Accept", "application/json")
+            .post("{}".toRequestBody("application/json".toMediaType()))
+            .build()
+        try {
+            withContext(Dispatchers.IO) {
+                KiloBackendHttpClients.bounded(http, DISPOSE_TIMEOUT_SECONDS)
+                    .newCall(request)
+                    .execute()
+                    .use { it.body?.string() }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.debug { "Global dispose skipped after logout: ${e.message}" }
+        }
     }
 
     /**
@@ -1056,8 +1130,8 @@ private data class FetchResult<T>(val value: T?, val error: LoadError?) {
             value = null,
             error = LoadError(
                 resource = resource,
-                status = httpStatus(exception),
-                detail = httpDetail(exception),
+                status = failureStatus(exception),
+                detail = failureDetail(exception),
             ),
         )
 
@@ -1065,23 +1139,44 @@ private data class FetchResult<T>(val value: T?, val error: LoadError?) {
             value = null,
             error = LoadError(resource = resource, detail = detail),
         )
-
-        private fun httpStatus(e: Exception): Int? =
-            when (e) {
-                is ClientException -> e.statusCode
-                is ServerException -> e.statusCode
-                else -> null
-            }
-
-        private fun httpDetail(e: Exception): String? =
-            when (e) {
-                is ClientException -> "HTTP ${e.statusCode}: ${e.message}"
-                is ServerException -> "HTTP ${e.statusCode}: ${e.message}"
-                is ConnectException -> "Connection refused: ${e.message}"
-                is SocketTimeoutException -> "Timeout: ${e.message}"
-                else -> e.message
-            }
     }
+}
+
+/** HTTP status of a failed CLI call, or null when the call never reached the server. */
+private fun failureStatus(e: Exception): Int? = when (e) {
+    is ClientException -> e.statusCode
+    is ServerException -> e.statusCode
+    else -> null
+}
+
+/** Raw response body of a failed CLI call. */
+private fun failureBody(e: Exception): Any? = when (e) {
+    is ClientException -> (e.response as? ClientError<*>)?.body
+    is ServerException -> (e.response as? ServerError<*>)?.body
+    else -> null
+}
+
+/** User-facing detail of a failed call: the status and, when the body carries one, the error name. */
+private fun failureDetail(e: Exception): String? {
+    val status = failureStatus(e)
+    val name = bodyName(failureBody(e)?.toString().orEmpty())
+    return when {
+        status != null && name != null -> "HTTP $status $name"
+        status != null -> "HTTP $status"
+        e is ConnectException -> "Connection refused: ${e.message}"
+        e is SocketTimeoutException -> "Timeout: ${e.message}"
+        e is SerializationException -> "Response parse error: ${e.javaClass.simpleName}"
+        else -> e.message
+    }
+}
+
+/** Status and body size for the log line of a failed call. */
+private fun failureLogDetail(e: Exception): String {
+    if (e is ResponseFailure) return e.summary
+    val status = failureStatus(e)
+    val body = failureBody(e)
+    if (status != null && body != null) return "HTTP $status: ${bodySummary(body.toString())}"
+    return failureDetail(e).orEmpty()
 }
 
 /** Thrown when a required data fetch exhausts all retries. */

@@ -678,6 +678,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Valutazione prossimi passi...",
   "dialog.model.noProviders": "Nessun provider",
   "dialog.model.unavailable": "Modelli Kilo non disponibili",
+  "dialog.model.loadFailed": "Impossibile caricare i provider di questo progetto.",
   "prompt.placeholder.connecting": "Connessione al server...",
   "prompt.placeholder.default":
     "Scrivi un messaggio, @ per menzionare i file... (Invio per inviare, Maiusc+Invio per nuova riga)",

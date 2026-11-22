@@ -812,6 +812,7 @@ export const dict = {
 
   "dialog.model.noProviders": "プロバイダーなし",
   "dialog.model.unavailable": "Kilo モデルを利用できません",
+  "dialog.model.loadFailed": "このプロジェクトのプロバイダーを読み込めませんでした。",
 
   "prompt.placeholder.connecting": "サーバーに接続中...",
   "prompt.placeholder.error": "接続に失敗しました。出力パネルを確認するか、拡張機能を再起動してください。",
