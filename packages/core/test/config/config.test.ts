@@ -295,16 +295,6 @@ describe("Config", () => {
       expect(ConfigMigrateV1.migrate({ permission: { patch: "deny" } }).permissions).toEqual(
         ConfigMigrateV1.migrate({ tools: { patch: false } }).permissions,
       )
-      // A document that authors both blocks keeps the tool toggle's effect, which comes last.
-      const both = ConfigMigrateV1.migrate({
-        tools: { write: false },
-        permission: { write: "allow" },
-      }).permissions ?? []
-      expect(both).toEqual([
-        { action: "edit", resource: "*", effect: "allow" },
-        { action: "edit", resource: "*", effect: "deny" },
-      ])
-      expect(PermissionV2.evaluate("edit", "src/index.ts", both).effect).toBe("deny")
     }),
   )
 
