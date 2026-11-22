@@ -671,7 +671,6 @@ describe("GoogleVertexPlugin", () => {
     }),
   )
 
-  // kilocode_change start - a blank endpoint option counts as unset
   it.effect("treats a blank OpenAI-compatible endpoint as unset and resolves the region", () =>
     withEnv(
       { GOOGLE_VERTEX_LOCATION: "europe-west4", GOOGLE_CLOUD_LOCATION: undefined, VERTEX_LOCATION: undefined },
@@ -725,7 +724,6 @@ describe("GoogleVertexPlugin", () => {
         }),
     ),
   )
-  // kilocode_change end
 
   it.effect("persists a padded Vertex location in lowercase and expands the endpoint", () =>
     Effect.gen(function* () {
