@@ -46,7 +46,7 @@ describe("workflow tool gate", () => {
     expect(gate([]).refuse("mystery")).toBe("Tool not available: mystery")
   })
 
-  test("applies the edit permission to its aliases", () => {
+  test("applies the edit and read permissions to their aliases", () => {
     const result = KiloWorkflowTools.gate({
       tools: { edit: { execute }, write: { execute }, apply_patch: { execute }, bash: { execute } },
       ruleset: [{ permission: "edit", pattern: "*", action: "ask" }],
@@ -56,6 +56,20 @@ describe("workflow tool gate", () => {
     expect(result.preapproved).not.toContain("write")
     expect(result.preapproved).not.toContain("apply_patch")
     expect(result.preapproved).toContain("bash")
+  })
+
+  test("reads the resource tools through the read permission", () => {
+    const names = ["list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"]
+    const tools = Object.fromEntries(names.map((name) => [name, { execute }]))
+
+    const asked = KiloWorkflowTools.gate({ tools, ruleset: [{ permission: "read", pattern: "*", action: "ask" }] })
+    const denied = KiloWorkflowTools.gate({ tools, ruleset: [{ permission: "read", pattern: "*", action: "deny" }] })
+
+    expect(asked.preapproved).toEqual([])
+    for (const name of names) {
+      expect(denied.preapproved).not.toContain(name)
+      expect(denied.refuse(name)).toBe(`Permission denied for tool: ${name}`)
+    }
   })
 
   test("lets the last matching rule decide", () => {
