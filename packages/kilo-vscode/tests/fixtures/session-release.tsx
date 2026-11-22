@@ -46,6 +46,7 @@ const { ServerProvider } = await import("../../webview-ui/src/context/server")
 const { ConfigContext } = await import("../../webview-ui/src/context/config")
 const { LanguageContext } = await import("../../webview-ui/src/context/language")
 const { NotificationsProvider } = await import("../../webview-ui/src/context/notifications")
+const { DialogProvider } = await import("@kilocode/kilo-ui/context/dialog")
 const { ProviderProvider } = await import("../../webview-ui/src/context/provider")
 const { SessionProvider, useSession } = await import("../../webview-ui/src/context/session")
 const { post } = await import("../../webview-ui/src/utils/webview-message")
@@ -92,17 +93,19 @@ const dispose = render(
   () => (
     <VSCodeProvider>
       <ServerProvider>
-        <ProviderProvider>
-          <ConfigContext.Provider value={config as never}>
-            <LanguageContext.Provider value={language as never}>
-              <NotificationsProvider>
-                <SessionProvider>
-                  <Probe />
-                </SessionProvider>
-              </NotificationsProvider>
-            </LanguageContext.Provider>
-          </ConfigContext.Provider>
-        </ProviderProvider>
+        <DialogProvider>
+          <ProviderProvider>
+            <ConfigContext.Provider value={config as never}>
+              <LanguageContext.Provider value={language as never}>
+                <NotificationsProvider>
+                  <SessionProvider>
+                    <Probe />
+                  </SessionProvider>
+                </NotificationsProvider>
+              </LanguageContext.Provider>
+            </ConfigContext.Provider>
+          </ProviderProvider>
+        </DialogProvider>
       </ServerProvider>
     </VSCodeProvider>
   ),
