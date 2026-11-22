@@ -278,6 +278,20 @@ type ConfigSnapshot = {
   project?: Config
 }
 
+/**
+ * The overlay write response names the merged global scope `global` and the merged
+ * workspace scope `project`. Read both, so a settings save publishes the same view a
+ * refresh does.
+ */
+function fromOverlay(data: {
+  effective: Config
+  global: Config
+  project: Config
+  targets: { global: ConfigTarget; project: ConfigTarget }
+}): ConfigSnapshot {
+  return { effective: data.effective, targets: data.targets, mergedGlobal: data.global, project: data.project }
+}
+
 function sandboxClient(client: KiloClient | null) {
   const sandbox = client?.sandbox
   return sandbox as (typeof sandbox & SandboxSupportClient) | undefined
@@ -4129,7 +4143,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           },
           { throwOnError: true },
         )
-        snapshot = result.data as ConfigSnapshot
+        snapshot = fromOverlay(result.data)
         completed.push("global")
       }
       if (hasProject) {
@@ -4146,7 +4160,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           },
           { throwOnError: true },
         )
-        snapshot = result.data as ConfigSnapshot
+        snapshot = fromOverlay(result.data)
         completed.push("project")
       }
     } catch (error) {

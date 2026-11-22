@@ -80,6 +80,14 @@ const broaderAllow = {
   workspaceConfig: () => ({ permission: {} }),
 }
 const broaderRequest: PermissionRequest = { ...request, always: ["edit *"] }
+// The merged global scope supplies the row from a lower global file, so the row carries
+// a state indicator rather than editable controls.
+const otherFileAllow = {
+  config: () => ({ permission: { edit: { "*": "allow" } } }),
+  globalConfig: () => ({ permission: {} }),
+  mergedGlobalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
+  workspaceConfig: () => ({ permission: {} }),
+}
 
 type Mode =
   | "reject"
@@ -94,6 +102,7 @@ type Mode =
   | "both"
   | "workspaceDeny"
   | "broader"
+  | "otherFile"
 type Call = { response: string; approved: string[]; denied: string[]; removed: string[]; feedback?: string }
 
 const cases: Array<{ mode: Mode; ctx: typeof savedAllow; request?: PermissionRequest }> = [
@@ -109,6 +118,7 @@ const cases: Array<{ mode: Mode; ctx: typeof savedAllow; request?: PermissionReq
   { mode: "both", ctx: bothAllow },
   { mode: "workspaceDeny", ctx: workspaceDeny },
   { mode: "broader", ctx: broaderAllow, request: broaderRequest },
+  { mode: "otherFile", ctx: otherFileAllow },
 ]
 
 for (const item of cases) {
@@ -157,11 +167,18 @@ for (const item of cases) {
       "both",
       "workspaceDeny",
       "broader",
+      "otherFile",
     ].includes(mode)
     const denied = mode === "removeDenied" || mode === "workspaceDeny"
     assert.equal(row()?.getAttribute("data-decision"), denied ? "denied" : "approved")
 
-    if (mode === "workspace" || mode === "both" || mode === "workspaceDeny" || mode === "broader") {
+    if (
+      mode === "workspace" ||
+      mode === "both" ||
+      mode === "workspaceDeny" ||
+      mode === "broader" ||
+      mode === "otherFile"
+    ) {
       // A rule another scope supplies, shown with a state indicator.
       assert.equal(row()?.getAttribute("data-source"), "config")
       assert.equal(root.querySelector('[aria-label="ui.permission.rule.removeFromAllowed"]'), null)

@@ -79,17 +79,23 @@ function ruleCovers(entry: string, pattern: string): boolean {
  * the row, and no broader entry of the same merged global scope decides it too.
  *
  * `global` is the merged global scope — every global config file combined, later
- * files winning — because a deletion only reaches one file. An entry whose pattern
- * covers the row with the same action keeps deciding the row after that deletion, so
- * the row stays out of scope: the control would appear to do nothing. A scalar merged
- * value is the tool-wide `*` entry, and a `*` key covers every pattern.
+ * files winning — because a deletion has to reach every file that supplies the row.
+ * An entry whose pattern covers the row with the same action keeps deciding the row
+ * after that deletion, so the row stays out of scope: the control would appear to do
+ * nothing. A scalar merged value is the tool-wide `*` entry, and a `*` key covers
+ * every pattern.
  *
- * A row another scope decides is shown without the removal control, because this
- * write cannot change that scope.
+ * `target` is the primary global file, the one the removal writes to. A row is offered
+ * for removal when that file holds its pattern with the same action, so the removal
+ * deletes the entry the row shows.
+ *
+ * A row another scope decides is shown with a state indicator instead, because this
+ * write changes only the primary global file.
  */
 export function removableRuleIndices(input: {
   rules: string[]
   global: PermissionRule | undefined
+  target: PermissionRule | undefined
   workspace: PermissionRule | undefined
   effective: Record<number, RuleDecision>
 }): Set<number> {
@@ -100,6 +106,11 @@ export function removableRuleIndices(input: {
     const action =
       typeof input.global === "string" ? (pattern === "*" ? input.global : undefined) : input.global?.[pattern]
     if (action !== "allow" && action !== "deny") continue
+    // A row is removable when the primary global file holds that pattern with that
+    // action, so the removal deletes the entry the row shows.
+    const own =
+      typeof input.target === "string" ? pattern === "*" && input.target === action : input.target?.[pattern] === action
+    if (!own) continue
     if (coveredByWorkspace(input.workspace, pattern)) continue
     if (coveredByBroaderGlobal(input.global, pattern, action)) continue
     if (fromGlobal[i] === input.effective[i]) result.add(i)

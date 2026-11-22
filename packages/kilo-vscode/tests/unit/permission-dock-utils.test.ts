@@ -163,9 +163,14 @@ describe("removableRuleIndices", () => {
   const call = (input: {
     rules: string[]
     global?: Parameters<typeof savedRuleStates>[1]
+    target?: Parameters<typeof savedRuleStates>[1]
     workspace?: Parameters<typeof savedRuleStates>[1]
     effective: Record<number, "approved" | "denied">
-  }) => removableRuleIndices(input)
+  }) =>
+    removableRuleIndices({
+      ...input,
+      target: "target" in input ? input.target : input.global,
+    })
 
   it("marks a row the global config tiles", () => {
     expect(call({ rules: ["npm *", "git *"], global: { "npm *": "allow" }, effective: { 0: "approved" } })).toEqual(
@@ -337,5 +342,53 @@ describe("removableRuleIndices", () => {
         effective: { 0: "denied" },
       }),
     ).toEqual(new Set())
+  })
+
+  it("keeps a row in scope when the primary global file holds its pattern", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "*": "ask", "touch *": "allow" },
+        target: { "touch *": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("leaves a row alone when only a lower global file holds its pattern", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "*": "ask", "touch *": "allow" },
+        target: { "*": "ask" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves a row alone when the primary global file has no entry for the tool", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "*": "ask", "touch *": "allow" },
+        target: undefined,
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves the wildcard row alone when the merged scalar comes from a lower global file", () => {
+    expect(
+      call({
+        rules: ["*"],
+        global: "allow",
+        target: {},
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("keeps the wildcard row in scope when the primary global file holds the scalar", () => {
+    expect(call({ rules: ["*"], global: "allow", target: "allow", effective: { 0: "approved" } })).toEqual(new Set([0]))
   })
 })
