@@ -97,6 +97,27 @@ val UNSUPPORTED_PROVIDERS: Set<String> = setOf(
     "roo",
 )
 
+/**
+ * Outcome of resolving a legacy `apiProvider` value.
+ *
+ * One function decides both the verdict and the wording, so detection, conversion and migration
+ * cannot disagree about which providers migrate or why one does not.
+ */
+sealed interface ProviderResolution {
+    data class Resolved(val mapping: ProviderMapping) : ProviderResolution
+    data class Unresolved(val status: MigrationItemStatus, val message: String) : ProviderResolution
+}
+
+/** Resolves a legacy `apiProvider` value to the provider it migrates to, or to why it does not migrate. */
+fun resolveProvider(provider: String?): ProviderResolution = when {
+    provider == null -> ProviderResolution.Unresolved(MigrationItemStatus.error, "No provider type found")
+    provider in UNSUPPORTED_PROVIDERS ->
+        ProviderResolution.Unresolved(MigrationItemStatus.warning, "Provider \"$provider\" is not supported in the new version")
+    else -> PROVIDER_MAP[provider]
+        ?.let { ProviderResolution.Resolved(it) }
+        ?: ProviderResolution.Unresolved(MigrationItemStatus.warning, "Unknown provider \"$provider\"")
+}
+
 val DEFAULT_MODE_SLUGS: Set<String> = setOf(
     "code", "build", "architect", "ask", "debug", "orchestrator", "review"
 )

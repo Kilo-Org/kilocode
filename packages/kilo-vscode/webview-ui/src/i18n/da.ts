@@ -816,6 +816,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Ingen udbydere",
   "dialog.model.unavailable": "Kilo-modeller er ikke tilgængelige",
+  "dialog.model.loadFailed": "Kunne ikke indlæse udbydere for dette projekt.",
 
   "prompt.placeholder.connecting": "Opretter forbindelse til server...",
   "prompt.placeholder.error": "Forbindelse mislykkedes. Tjek outputpanelet eller genstart udvidelsen.",
@@ -1333,6 +1334,8 @@ export const dict = {
   "dialog.model.notSet": "Ikke angivet",
   "profile.personalAccount": "Personlig konto",
   "profile.switchingAccount": "Skifter konto…",
+  "profile.unavailableAccount": "Utilgængelig konto",
+  "profile.switchFailed": "Kunne ikke bekræfte kontoskiftet.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/da.ts
 
@@ -1418,6 +1421,9 @@ export const dict = {
   "settings.saveBar.cancel": "Annuller",
   "settings.saveBar.saving": "Gemmer…",
   "settings.saveBar.saveFailed": "Kunne ikke gemme indstillinger",
+  "settings.saveBar.dismissError": "Afvis",
+  "settings.saveBar.unconfirmedWrite": "„{{name}}“ blev ikke bekræftet af udvidelsesværten.",
+  "settings.saveBar.unconfirmedSave": "Gemningen blev ikke bekræftet af udvidelsesværten. Prøv igen.",
   "notifications.action.next": "Næste",
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",

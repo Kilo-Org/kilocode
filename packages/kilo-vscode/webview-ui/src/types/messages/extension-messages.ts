@@ -446,6 +446,19 @@ export interface ProfileDataMessage {
   data: ProfileData | null
 }
 
+/**
+ * Outcome of one `setOrganization` request, correlated by `requestID`.
+ * `data` is the profile read after the attempt, when that read succeeded.
+ */
+export interface OrganizationSwitchResultMessage {
+  type: "organizationSwitchResult"
+  requestID: string
+  organizationId: string | null
+  ok: boolean
+  data: ProfileData | null
+  error?: string
+}
+
 export interface DeviceAuthStartedMessage {
   type: "deviceAuthStarted"
   code?: string
@@ -564,6 +577,8 @@ export interface ProvidersLoadedMessage {
   kiloUnavailable?: boolean
   /** Typed reasons providers failed to load, so the UI can explain why instead of hiding them. */
   failures?: ProviderFailure[]
+  /** The provider read for this project failed, so the payload carries no provider data. */
+  loadFailed?: boolean
 }
 
 export interface AgentsLoadedMessage {
@@ -791,6 +806,8 @@ export interface ConfigUpdatedMessage {
   collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
+  /** The `requestId` of the request this answers, when the request carried one. */
+  requestId?: string
 }
 
 export interface ConfigUpdateFailedMessage {
@@ -802,6 +819,8 @@ export interface ConfigUpdateFailedMessage {
   globalConfig?: Config
   projectConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
+  /** The `requestId` of the request this answers, when the request carried one. */
+  requestId?: string
 }
 
 export interface ConfigBindingExpiredMessage {
@@ -905,6 +924,25 @@ export interface WorkStyleApplyFailedMessage {
   type: "workStyleApplyFailed"
   message: string
   rollbackFailed: boolean
+}
+
+/** The host stored a setting written with `updateSetting`. `key` is the write key as sent. */
+export interface SettingUpdatedMessage {
+  type: "settingUpdated"
+  key: string
+  value: unknown
+  /** The `writeId` of the request this answers, when the request carried one. */
+  writeId?: string
+}
+
+/** The host rejected a setting written with `updateSetting`. `key` is the write key as sent. */
+export interface SettingUpdateFailedMessage {
+  type: "settingUpdateFailed"
+  key: string
+  message: string
+  details?: string
+  /** The `writeId` of the request this answers, when the request carried one. */
+  writeId?: string
 }
 
 export interface NotificationsLoadedMessage {
@@ -1854,6 +1892,7 @@ export type ExtensionMessage =
   | GitRemoteUrlLoadedMessage
   | ActionMessage
   | ProfileDataMessage
+  | OrganizationSwitchResultMessage
   | ProviderUsageLoadedMessage
   | DeviceAuthStartedMessage
   | DeviceAuthCompleteMessage
@@ -1870,6 +1909,7 @@ export type ExtensionMessage =
   | SpeechToTextModelsLoadedMessage
   | ProvidersLoadedMessage
   | { type: "providersLoading" }
+  | { type: "providersReset" }
   | AgentsLoadedMessage
   | SkillsLoadedMessage
   | CommandsLoadedMessage
@@ -1913,6 +1953,8 @@ export type ExtensionMessage =
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
+  | SettingUpdatedMessage
+  | SettingUpdateFailedMessage
   | NotificationsLoadedMessage
   | AgentManagerRepoInfoMessage
   | AgentManagerWorktreeSetupMessage

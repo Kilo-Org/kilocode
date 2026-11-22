@@ -797,6 +797,7 @@ export const dict = {
 
   "dialog.model.noProviders": "هیچ ارائه‌دهنده‌ای وجود ندارد",
   "dialog.model.unavailable": "مدل‌های Kilo در دسترس نیستند",
+  "dialog.model.loadFailed": "بارگذاری ارائه‌دهندگان این پروژه ممکن نشد.",
 
   "prompt.placeholder.connecting": "در حال اتصال به سرور...",
   "prompt.placeholder.default": "پیامی بنویسید... (Enter برای ارسال، Shift+Enter برای خط جدید)",
@@ -1329,6 +1330,8 @@ export const dict = {
 
   "profile.personalAccount": "حساب شخصی",
   "profile.switchingAccount": "در حال تغییر حساب…",
+  "profile.unavailableAccount": "حساب در دسترس نیست",
+  "profile.switchFailed": "تغییر حساب تأیید نشد.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1414,6 +1417,9 @@ export const dict = {
   "settings.saveBar.saveAnyway": "در هر صورت ذخیره کن",
   "settings.saveBar.cancel": "لغو",
   "settings.saveBar.saveFailed": "ذخیره تنظیمات ممکن نشد",
+  "settings.saveBar.dismissError": "رد کردن",
+  "settings.saveBar.unconfirmedWrite": "میزبان افزونه «{{name}}» را تأیید نکرد.",
+  "settings.saveBar.unconfirmedSave": "میزبان افزونه ذخیره کردن را تأیید نکرد. دوباره تلاش کنید.",
 
   "notifications.action.next": "بعدی",
   "notifications.action.close": "بستن",

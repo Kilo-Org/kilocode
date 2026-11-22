@@ -806,6 +806,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Geen providers",
   "dialog.model.unavailable": "Kilo-modellen niet beschikbaar",
+  "dialog.model.loadFailed": "Kan de providers voor dit project niet laden.",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
   "prompt.placeholder.default":
@@ -1321,6 +1322,8 @@ export const dict = {
 
   "profile.personalAccount": "Persoonlijk Account",
   "profile.switchingAccount": "Account wisselen…",
+  "profile.unavailableAccount": "Niet-beschikbaar account",
+  "profile.switchFailed": "Kon de accountwissel niet bevestigen.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1407,6 +1410,9 @@ export const dict = {
   "settings.saveBar.cancel": "Annuleren",
   "settings.saveBar.saving": "Bezig met opslaan…",
   "settings.saveBar.saveFailed": "Instellingen konden niet worden opgeslagen",
+  "settings.saveBar.dismissError": "Negeren",
+  "settings.saveBar.unconfirmedWrite": "“{{name}}” is niet bevestigd door de extensiehost.",
+  "settings.saveBar.unconfirmedSave": "Het opslaan is niet bevestigd door de extensiehost. Probeer het opnieuw.",
   "notifications.action.next": "Volgende",
   "notifications.action.close": "Sluiten",
   "notifications.action.tryModel": "Probeer {{model}}",

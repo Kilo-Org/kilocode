@@ -831,6 +831,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Aucun fournisseur",
   "dialog.model.unavailable": "Modèles Kilo indisponibles",
+  "dialog.model.loadFailed": "Impossible de charger les fournisseurs de ce projet.",
 
   "prompt.placeholder.connecting": "Connexion au serveur...",
   "prompt.placeholder.error": "Échec de la connexion. Vérifiez le panneau de sortie ou redémarrez l'extension.",
@@ -1372,6 +1373,8 @@ export const dict = {
   "dialog.model.notSet": "Non défini",
   "profile.personalAccount": "Compte personnel",
   "profile.switchingAccount": "Changement de compte…",
+  "profile.unavailableAccount": "Compte indisponible",
+  "profile.switchFailed": "Impossible de confirmer le changement de compte.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/fr.ts
 
   "question.summary": "{{n}} sur {{total}} questions",
@@ -1458,6 +1461,9 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Enregistrer quand même",
   "settings.saveBar.saving": "Enregistrement…",
   "settings.saveBar.saveFailed": "Impossible d'enregistrer les paramètres",
+  "settings.saveBar.dismissError": "Ignorer",
+  "settings.saveBar.unconfirmedWrite": "L'hôte de l'extension n'a pas confirmé «\u00a0{{name}}\u00a0».",
+  "settings.saveBar.unconfirmedSave": "L'hôte de l'extension n'a pas confirmé l'enregistrement. Réessayez.",
   "settings.saveBar.cancel": "Annuler",
   "notifications.action.next": "Suivant",
   "notifications.action.close": "Fermer",

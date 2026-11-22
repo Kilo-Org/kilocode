@@ -161,6 +161,7 @@ export const ApplyPatchTool = Tool.define(
             }
 
             const movePath = hunk.move_path ? path.resolve(instance.directory, hunk.move_path) : undefined
+            if (movePath) assertMutablePath(movePath) // kilocode_change
             yield* assertExternalDirectoryEffect(ctx, movePath)
 
             fileChanges.push({
@@ -229,9 +230,20 @@ export const ApplyPatchTool = Tool.define(
 
       // Check permissions if needed
       const relativePaths = fileChanges.map((c) => path.relative(instance.worktree, c.filePath).replaceAll("\\", "/"))
+      // kilocode_change start
+      const patterns = [
+        ...new Set(
+          fileChanges.flatMap((change) =>
+            (change.movePath ? [change.filePath, change.movePath] : [change.filePath]).map((file) =>
+              path.relative(instance.worktree, file).replaceAll("\\", "/"),
+            ),
+          ),
+        ),
+      ]
+      // kilocode_change end
       yield* ctx.ask({
         permission: "edit",
-        patterns: relativePaths,
+        patterns, // kilocode_change
         always: ["*"],
         metadata: {
           filepath: relativePaths.join(", "),

@@ -58,6 +58,7 @@ function harness(worktrees: () => WorktreeReference[]) {
           return () => handlers.delete(handler)
         },
       },
+      () => "/repo",
       undefined,
       () => true,
       worktrees,

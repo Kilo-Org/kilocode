@@ -3,9 +3,13 @@ package ai.kilocode.client.app
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.LoadErrorDto
+import ai.kilocode.rpc.dto.LoadProgressDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
+import ai.kilocode.rpc.dto.ProfileStatusDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.SpeechModelDto
 import ai.kilocode.rpc.dto.SpeechResultDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -163,24 +167,67 @@ class KiloAppServiceTest : BasePlatformTestCase() {
         assertEquals("existing@test.com", app.state.value.profile?.email)
     }
 
+    // ------ refreshAccount ------
+
+    fun `test refreshAccount publishes the account on success`() = runBlocking(Dispatchers.Default) {
+        rpc.refreshAccountResult = ProfileSyncDto(profile = profile())
+        val result = app.refreshAccount()
+        assertEquals("alice@test.com", result.profile?.email)
+        assertEquals("alice@test.com", app.state.value.profile?.email)
+    }
+
+    fun `test refreshAccount leaves the published account on a failed read`() = runBlocking(Dispatchers.Default) {
+        val existing = profile(email = "existing@test.com")
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = existing)
+        rpc.refreshAccountResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 503))
+        val result = app.refreshAccount()
+        assertEquals(503, result.error?.status)
+        assertEquals("existing@test.com", app.state.value.profile?.email)
+    }
+
     // ------ completeLogin ------
 
     fun `test completeLogin updates app state profile on success`() = runBlocking(Dispatchers.Default) {
         rpc.fakeProfile = profile()
         val result = app.completeLogin("/my/dir")
-        assertNotNull(result)
-        assertEquals("alice@test.com", result!!.email)
+        assertNotNull(result.profile)
+        assertEquals("alice@test.com", result.profile!!.email)
         assertEquals("alice@test.com", app.state.value.profile?.email)
         assertEquals(listOf("/my/dir"), rpc.completeDirectories)
     }
 
-    fun `test completeLogin returns null on exception without clearing previous profile`() = runBlocking(Dispatchers.Default) {
+    fun `test completeLogin propagates an rpc failure and keeps the published profile`() = runBlocking(Dispatchers.Default) {
         val existing = profile(email = "existing@test.com")
         app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = existing)
         rpc.completeError = RuntimeException("complete failed")
-        val result = app.completeLogin("/dir")
-        assertNull(result)
+        val err = runCatching { app.completeLogin("/dir") }.exceptionOrNull()
+        assertEquals("complete failed", err?.message)
         assertEquals("existing@test.com", app.state.value.profile?.email)
+    }
+
+    fun `test completeLogin keeps the published profile when the follow-up profile read reports an error`() = runBlocking(Dispatchers.Default) {
+        val existing = profile(email = "existing@test.com")
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = existing)
+        rpc.completeResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+        val result = app.completeLogin("/dir")
+        assertNull(result.profile)
+        assertEquals("profile", result.error?.resource)
+        assertEquals(KiloAppStateDto(KiloAppStatusDto.READY, profile = existing), app.state.value)
+    }
+
+    fun `test completeLogin clears the published profile when nobody is signed in`() = runBlocking(Dispatchers.Default) {
+        val existing = profile(email = "existing@test.com")
+        app._state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            profile = existing,
+            progress = LoadProgressDto(profile = ProfileStatusDto.LOADED),
+        )
+        rpc.completeResult = ProfileSyncDto(profile = null)
+        val result = app.completeLogin("/dir")
+        assertNull(result.profile)
+        assertNull(result.error)
+        assertNull(app.state.value.profile)
+        assertEquals(ProfileStatusDto.NOT_LOGGED_IN, app.state.value.progress?.profile)
     }
 
     // ------ logout ------
@@ -223,8 +270,8 @@ class KiloAppServiceTest : BasePlatformTestCase() {
         val org = personal.copy(currentOrgId = "org_1")
         rpc.orgProfiles["org_1"] = org
         val result = app.setOrganization("org_1")
-        assertNotNull(result)
-        assertEquals("org_1", result!!.currentOrgId)
+        assertNotNull(result.profile)
+        assertEquals("org_1", result.profile!!.currentOrgId)
         assertEquals(listOf<String?>("org_1"), rpc.orgSelections)
         assertEquals("org_1", app.state.value.profile?.currentOrgId)
     }
@@ -237,18 +284,29 @@ class KiloAppServiceTest : BasePlatformTestCase() {
         rpc.orgProfiles[null] = personal
         app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = org)
         val result = app.setOrganization(null)
-        assertNotNull(result)
-        assertNull(result!!.currentOrgId)
+        assertNotNull(result.profile)
+        assertNull(result.profile!!.currentOrgId)
         assertEquals(listOf<String?>(null), rpc.orgSelections)
     }
 
-    fun `test setOrganization returns null on exception without changing profile`() = runBlocking(Dispatchers.Default) {
+    fun `test setOrganization propagates an rpc failure and keeps the published profile`() = runBlocking(Dispatchers.Default) {
         val existing = profile(email = "alice@test.com")
         app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = existing)
         rpc.organizationError = RuntimeException("org failed")
+        val err = runCatching { app.setOrganization("org_1") }.exceptionOrNull()
+        assertEquals("org failed", err?.message)
+        assertEquals(KiloAppStateDto(KiloAppStatusDto.READY, profile = existing), app.state.value)
+    }
+
+    fun `test setOrganization keeps the published profile when the follow-up profile read reports an error`() = runBlocking(Dispatchers.Default) {
+        val existing = profile(email = "alice@test.com")
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = existing)
+        rpc.organizationResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 503))
         val result = app.setOrganization("org_1")
-        assertNull(result)
-        assertEquals("alice@test.com", app.state.value.profile?.email)
+        assertNull(result.profile)
+        assertEquals(503, result.error?.status)
+        assertEquals(listOf<String?>("org_1"), rpc.orgSelections)
+        assertEquals(KiloAppStateDto(KiloAppStatusDto.READY, profile = existing), app.state.value)
     }
 
     // ------ startLogin / completeLogin directory forwarding ------

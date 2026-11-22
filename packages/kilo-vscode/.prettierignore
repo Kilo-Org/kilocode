@@ -2,3 +2,8 @@ node_modules
 dist
 out
 *.md
+# Bundles the unit-test harnesses write into the package root, kept out of the
+# formatting check so an interrupted run cannot fail it. The tracked config file
+# shares the dot-dash shape, so it is re-included.
+.*-*.mjs
+!.vscode-test.mjs

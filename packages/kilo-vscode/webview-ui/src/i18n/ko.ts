@@ -810,6 +810,7 @@ export const dict = {
 
   "dialog.model.noProviders": "공급자 없음",
   "dialog.model.unavailable": "Kilo 모델을 사용할 수 없음",
+  "dialog.model.loadFailed": "이 프로젝트의 공급자를 불러올 수 없습니다.",
 
   "prompt.placeholder.connecting": "서버에 연결 중...",
   "prompt.placeholder.error": "연결에 실패했습니다. 출력 패널을 확인하거나 확장 프로그램을 다시 시작하세요.",
@@ -1311,6 +1312,8 @@ export const dict = {
   "dialog.model.notSet": "설정되지 않음",
   "profile.personalAccount": "개인 계정",
   "profile.switchingAccount": "계정 전환 중…",
+  "profile.unavailableAccount": "사용할 수 없는 계정",
+  "profile.switchFailed": "계정 전환을 확인하지 못했습니다.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ko.ts
 
   "question.summary": "{{total}}개 질문 중 {{n}}번째",
@@ -1395,6 +1398,9 @@ export const dict = {
   "settings.saveBar.cancel": "취소",
   "settings.saveBar.saving": "저장 중…",
   "settings.saveBar.saveFailed": "설정을 저장할 수 없습니다",
+  "settings.saveBar.dismissError": "닫기",
+  "settings.saveBar.unconfirmedWrite": "확장 프로그램 호스트가 “{{name}}”을(를) 확인하지 않았습니다.",
+  "settings.saveBar.unconfirmedSave": "확장 프로그램 호스트가 저장을 확인하지 않았습니다. 다시 시도하세요.",
   "notifications.action.next": "다음",
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",

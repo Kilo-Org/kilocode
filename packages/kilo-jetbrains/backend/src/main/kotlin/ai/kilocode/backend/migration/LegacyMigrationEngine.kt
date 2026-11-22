@@ -135,16 +135,30 @@ class LegacyMigrationEngine(
                 results.add(LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, MigrationItemStatus.error, "Profile not found"))
                 continue
             }
-            sink.item(LegacyMigrationItemProgress(profileName, MigrationItemProgressStatus.migrating))
-            val conv = convertProvider(profileName, providerSettings) { store.oauthRaw(it) }
-            conv.auth?.let { backend.setAuth(PROVIDER_MAP[providerSettings["apiProvider"]?.jsonPrimitive?.content]?.id ?: "unknown", it) }
-            conv.config?.let { backend.updateGlobalConfig(it) }
-            val item = LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, conv.status, conv.message)
-            results.add(item)
-            sink.item(LegacyMigrationItemProgress(profileName, conv.status.toProgressStatus(), conv.message))
+            val legacyProvider = providerSettings["apiProvider"]?.jsonPrimitive?.content
+            when (val resolution = resolveProvider(legacyProvider)) {
+                is ProviderResolution.Unresolved -> {
+                    results.add(LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, resolution.status, resolution.message))
+                    sink.item(LegacyMigrationItemProgress(profileName, resolution.status.toProgressStatus(), resolution.message))
+                    continue
+                }
+
+                is ProviderResolution.Resolved -> {
+                    val mapping = resolution.mapping
+                    sink.item(LegacyMigrationItemProgress(profileName, MigrationItemProgressStatus.migrating))
+                    val conv = convertProvider(profileName, providerSettings) { store.oauthRaw(it) }
+                    conv.auth?.let { backend.setAuth(mapping.id, it) }
+                    conv.config?.let { backend.updateGlobalConfig(it) }
+                    val item = LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, conv.status, conv.message)
+                    results.add(item)
+                    sink.item(LegacyMigrationItemProgress(profileName, conv.status.toProgressStatus(), conv.message))
+                }
+            }
         }
 
         // MCP servers
+        val migratedServers = mutableListOf<String>()
+        val mcpAvailable = mcpServers?.isNotEmpty() == true
         if (selections.mcpServers.isNotEmpty() && mcpServers != null) {
             val mcpConfig = mutableMapOf<String, JsonObject>()
             for (name in selections.mcpServers) {
@@ -157,6 +171,7 @@ class LegacyMigrationEngine(
                 val converted = convertMcpServer(name, server)
                 if (converted != null) {
                     mcpConfig[name] = converted
+                    migratedServers.add(name)
                     results.add(LegacyMigrationResultItem(name, MigrationItemCategory.mcpServer, MigrationItemStatus.success))
                     sink.item(LegacyMigrationItemProgress(name, MigrationItemProgressStatus.success))
                 } else {
@@ -187,11 +202,18 @@ class LegacyMigrationEngine(
                     )
                     if (merged != null) {
                         sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.migrating))
-                        val agent = convertCustomMode(merged).toMutableMap()
+                        val conversion = convertCustomMode(merged, migratedServers, mcpAvailable)
+                        val agent = conversion.agent.toMutableMap()
                         agent["name"] = JsonPrimitive(info.name)
                         agentConfig[slug] = JsonObject(agent)
-                        results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
-                        sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.success))
+                        val msg = customModeMessage(conversion)
+                        if (conversion.warnings.isEmpty()) {
+                            results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.success, msg))
+                            sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.success, msg))
+                        } else {
+                            results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
+                            sink.item(LegacyMigrationItemProgress(info.name, MigrationItemProgressStatus.warning, msg))
+                        }
                     } else {
                         results.add(LegacyMigrationResultItem(info.name, MigrationItemCategory.customMode, MigrationItemStatus.error, "Failed to build merged mode"))
                     }
@@ -202,9 +224,16 @@ class LegacyMigrationEngine(
                         continue
                     }
                     sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.migrating))
-                    agentConfig[slug] = convertCustomMode(mode)
-                    results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.success))
-                    sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.success))
+                    val conversion = convertCustomMode(mode, migratedServers, mcpAvailable)
+                    agentConfig[slug] = conversion.agent
+                    val msg = customModeMessage(conversion)
+                    if (conversion.warnings.isEmpty()) {
+                        results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.success, msg))
+                        sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.success, msg))
+                    } else {
+                        results.add(LegacyMigrationResultItem(mode.name, MigrationItemCategory.customMode, MigrationItemStatus.warning, msg))
+                        sink.item(LegacyMigrationItemProgress(mode.name, MigrationItemProgressStatus.warning, msg))
+                    }
                 }
             }
             if (agentConfig.isNotEmpty()) {
@@ -329,11 +358,11 @@ class LegacyMigrationEngine(
         val anyAutoApproval = apSel.commandRules || apSel.readPermission || apSel.writePermission ||
                 apSel.executePermission || apSel.mcpPermission || apSel.taskPermission
         if (anyAutoApproval) {
-            val conv = convertAutoApproval(settings, apSel)
+            val conv = convertAutoApproval(settings, apSel, migratedServers)
             conv.config?.let { backend.updateGlobalConfig(it) }
-            for ((label, status) in conv.results) {
-                sink.item(LegacyMigrationItemProgress(label, status.toProgressStatus()))
-                results.add(LegacyMigrationResultItem(label, MigrationItemCategory.settings, status))
+            for (entry in conv.results) {
+                sink.item(LegacyMigrationItemProgress(entry.label, entry.status.toProgressStatus(), entry.message))
+                results.add(LegacyMigrationResultItem(entry.label, MigrationItemCategory.settings, entry.status, entry.message))
             }
         }
 
@@ -373,8 +402,10 @@ class LegacyMigrationEngine(
         if (profiles?.apiConfigs == null) return emptyList()
         return profiles.apiConfigs.entries.map { (profileName, settings) ->
             val provider: String = settings["apiProvider"]?.jsonPrimitive?.content ?: "unknown"
-            val mapping = PROVIDER_MAP[provider]
-            val unsupported = provider in UNSUPPORTED_PROVIDERS
+            val mapping = when (val resolution = resolveProvider(provider)) {
+                is ProviderResolution.Resolved -> resolution.mapping
+                is ProviderResolution.Unresolved -> null
+            }
             val modelField: String = mapping?.modelField ?: "apiModelId"
             val model: String? = settings[modelField]?.jsonPrimitive?.content
             val hasApiKey: Boolean = when {
@@ -391,7 +422,7 @@ class LegacyMigrationEngine(
                 provider = provider,
                 model = model,
                 hasApiKey = hasApiKey,
-                supported = mapping != null && !unsupported,
+                supported = mapping != null,
                 newProviderName = mapping?.name,
             )
         }
@@ -432,7 +463,10 @@ class LegacyMigrationEngine(
         profiles ?: return null
         val active = profiles.apiConfigs[profiles.currentApiConfigName] ?: return null
         val provider = active["apiProvider"]?.jsonPrimitive?.content ?: return null
-        val mapping = PROVIDER_MAP[provider] ?: return null
+        val mapping = when (val resolution = resolveProvider(provider)) {
+            is ProviderResolution.Resolved -> resolution.mapping
+            is ProviderResolution.Unresolved -> return null
+        }
         if (mapping.oauthSecretKey != null && provider !in oauthProviders) return null
         val modelField = mapping.modelField ?: "apiModelId"
         val model = active[modelField]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: return null
@@ -454,6 +488,21 @@ interface LegacyMigrationSink {
             override fun session(progress: LegacyMigrationSessionProgress) = Unit
         }
     }
+}
+
+// -----------------------------------------------------------------------
+// Custom mode item message
+// -----------------------------------------------------------------------
+
+/**
+ * Message for a converted custom mode: warnings first, then notes, joined with "; ".
+ *
+ * Warnings are conditions the user must act on; notes only explain the converted result, so
+ * they never change the item's status. Returns null when the mode has neither.
+ */
+private fun customModeMessage(conversion: LegacyMigrationConverters.ModeConversion): String? {
+    val parts = conversion.warnings + conversion.notes
+    return if (parts.isEmpty()) null else parts.joinToString("; ")
 }
 
 // -----------------------------------------------------------------------

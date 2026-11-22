@@ -812,6 +812,7 @@ export const dict = {
 
   "dialog.model.noProviders": "プロバイダーなし",
   "dialog.model.unavailable": "Kilo モデルを利用できません",
+  "dialog.model.loadFailed": "このプロジェクトのプロバイダーを読み込めませんでした。",
 
   "prompt.placeholder.connecting": "サーバーに接続中...",
   "prompt.placeholder.error": "接続に失敗しました。出力パネルを確認するか、拡張機能を再起動してください。",
@@ -1328,6 +1329,8 @@ export const dict = {
   "dialog.model.notSet": "未設定",
   "profile.personalAccount": "個人アカウント",
   "profile.switchingAccount": "アカウントを切り替え中…",
+  "profile.unavailableAccount": "利用できないアカウント",
+  "profile.switchFailed": "アカウントの切り替えを確認できませんでした。",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ja.ts
 
   "question.summary": "{{total}} 問中 {{n}} 問目",
@@ -1412,6 +1415,9 @@ export const dict = {
   "settings.saveBar.cancel": "キャンセル",
   "settings.saveBar.saving": "保存中…",
   "settings.saveBar.saveFailed": "設定を保存できませんでした",
+  "settings.saveBar.dismissError": "閉じる",
+  "settings.saveBar.unconfirmedWrite": "「{{name}}」 は拡張機能ホストによって確認されませんでした。",
+  "settings.saveBar.unconfirmedSave": "保存は拡張機能ホストによって確認されませんでした。もう一度お試しください。",
   "notifications.action.next": "次へ",
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",

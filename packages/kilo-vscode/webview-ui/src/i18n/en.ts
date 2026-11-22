@@ -792,6 +792,7 @@ export const dict = {
 
   "dialog.model.noProviders": "No providers",
   "dialog.model.unavailable": "Kilo models unavailable",
+  "dialog.model.loadFailed": "Could not load providers for this project.",
 
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
@@ -1330,6 +1331,8 @@ export const dict = {
 
   "profile.personalAccount": "Personal Account",
   "profile.switchingAccount": "Switching account…",
+  "profile.unavailableAccount": "Unavailable account",
+  "profile.switchFailed": "Could not confirm the account switch.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1413,6 +1416,9 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
   "settings.saveBar.saveFailed": "Couldn't save settings",
+  "settings.saveBar.dismissError": "Dismiss",
+  "settings.saveBar.unconfirmedWrite": 'The change to "{{name}}" was not confirmed by the extension host.',
+  "settings.saveBar.unconfirmedSave": "The save was not confirmed by the extension host. Try again.",
 
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",

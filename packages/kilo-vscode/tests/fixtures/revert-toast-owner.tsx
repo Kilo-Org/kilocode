@@ -4,6 +4,7 @@ import { harness } from "./comment-harness"
 
 const { mount, wait } = await harness<{ type: string }>()
 const { toaster } = await import("@kilocode/kilo-ui/toast")
+const { DialogProvider } = await import("@kilocode/kilo-ui/context/dialog")
 const { ServerProvider } = await import("../../webview-ui/src/context/server")
 const { ProviderProvider } = await import("../../webview-ui/src/context/provider")
 const { ConfigProvider } = await import("../../webview-ui/src/context/config")
@@ -22,13 +23,15 @@ toaster.show = (...args: Parameters<typeof show>) => {
 
 // The providers build their children inside the tree, so each view stays a function.
 const shell = (children: () => JSX.Element) => (
-  <ServerProvider>
-    <ProviderProvider>
-      <ConfigProvider>
-        <NotificationsProvider>{children()}</NotificationsProvider>
-      </ConfigProvider>
-    </ProviderProvider>
-  </ServerProvider>
+  <DialogProvider>
+    <ServerProvider>
+      <ProviderProvider>
+        <ConfigProvider>
+          <NotificationsProvider>{children()}</NotificationsProvider>
+        </ConfigProvider>
+      </ProviderProvider>
+    </ServerProvider>
+  </DialogProvider>
 )
 
 const revertFailure = async (where: string, view: () => JSX.Element) => {

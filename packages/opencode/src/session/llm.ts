@@ -21,13 +21,16 @@ import { Plugin } from "@/plugin"
 import { Permission } from "@/permission"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
-import { Wildcard } from "@/util/wildcard"
+// kilocode_change start - workflow tool calls resolve their permission through the shared map
+// import { Wildcard } from "@/util/wildcard"
+// kilocode_change end
 import { SessionID } from "@/session/schema"
 import { Auth } from "@/auth"
 // kilocode_change start
 import { InstanceState } from "@/effect/instance-state"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
+import { KiloWorkflowTools } from "@/kilocode/session/workflow-tools"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloToolSchema } from "@/kilocode/session/tool-schema"
 import { KiloMessageDiagnostics } from "@/kilocode/session/message-diagnostics"
@@ -221,11 +224,18 @@ const live: Layer.Layer<
         }
         workflowModel.sessionID = input.sessionID
         workflowModel.systemPrompt = prepared.system.join("\n")
+        // kilocode_change start - apply the session ruleset to workflow tool calls before dispatch
+        const ruleset = Permission.merge(input.agent.permission ?? [], input.permission ?? [])
+        const gate = KiloWorkflowTools.gate({ tools: prepared.tools, ruleset })
+        // kilocode_change end
         workflowModel.toolExecutor = async (toolName, argsJson, _requestID) => {
-          const t = prepared.tools[toolName]
-          if (!t || !t.execute) {
-            return { result: "", error: `Unknown tool: ${toolName}` }
+          // kilocode_change start
+          const refusal = gate.refuse(toolName)
+          if (refusal) {
+            return { result: "", error: refusal }
           }
+          const t = prepared.tools[toolName]
+          // kilocode_change end
           try {
             const result = await t.execute!(JSON.parse(argsJson), {
               toolCallId: _requestID,
@@ -243,11 +253,10 @@ const live: Layer.Layer<
           }
         }
 
-        const ruleset = Permission.merge(input.agent.permission ?? [], input.permission ?? [])
-        workflowModel.sessionPreapprovedTools = Object.keys(prepared.tools).filter((name) => {
-          const match = ruleset.findLast((rule) => Wildcard.match(name, rule.permission))
-          return !match || match.action !== "ask"
-        })
+        // kilocode_change start - the gate decides which tools need no prompt: a whole-tool
+        // deny or ask withholds the tool, and a path-scoped rule leaves it to the tool's own check
+        workflowModel.sessionPreapprovedTools = gate.preapproved
+        // kilocode_change end
 
         const approvedToolsForSession = new Set<string>()
         workflowModel.approvalHandler = bridge.bind(async (approvalTools) => {

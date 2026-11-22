@@ -99,7 +99,9 @@ const MOCK_PROVIDERS = {
 const MOCK_MODELS = flattenModels(MOCK_PROVIDERS as any)
 
 /** A synchronous mock ProviderContext — provides models without waiting for a postMessage round-trip. */
-const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boolean }> = (props) => {
+const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boolean; loadFailed?: boolean }> = (
+  props,
+) => {
   const models = createMemo(() =>
     MOCK_MODELS.map((model) => ({
       ...model,
@@ -120,6 +122,8 @@ const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boo
     isModelValid: () => true,
     kiloUnavailable: () => false,
     failures: () => [],
+    loadFailed: () => props.loadFailed === true,
+    trackDialog: () => {},
   }
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
 }
@@ -340,6 +344,8 @@ interface StoryProvidersProps {
   onOpenFile?: OpenFileFn
   kiloAuth?: boolean
   training?: boolean
+  /** When true, the mock provider context reports a failed provider read for this project. */
+  loadFailed?: boolean
   /** When true, renders children without the default 12px padding wrapper */
   noPadding?: boolean
 }
@@ -387,6 +393,7 @@ const ConfigWrapper: ParentComponent<{
       isDirty: dirty,
       saving: () => false,
       saveError: () => null,
+      clearSaveError: noop,
       updateConfig: (partial: Partial<Config>) => {
         setCfg((prev) => {
           const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config
@@ -457,7 +464,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
             onProjectConfigChange={props.onProjectConfigChange}
           >
             <DisplayProvider>
-              <MockProviderProvider kiloAuth={props.kiloAuth} training={props.training}>
+              <MockProviderProvider kiloAuth={props.kiloAuth} training={props.training} loadFailed={props.loadFailed}>
                 <DialogProvider>
                   <LanguageContext.Provider
                     value={{
