@@ -4,6 +4,7 @@ import { LLMClient } from "@opencode-ai/llm/route"
 import { DateTime, Effect } from "effect"
 import { Headers } from "effect/unstable/http"
 import { Credential } from "@opencode-ai/core/credential"
+import { ConfigMigrateV1 } from "@opencode-ai/core/v1/config/migrate" // kilocode_change
 import { Integration } from "@opencode-ai/core/integration"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -72,6 +73,57 @@ describe("SessionRunnerModel", () => {
       expect(JSON.stringify(prepared.body)).not.toContain("secret")
     }),
   )
+
+  // kilocode_change start - migration reports headers, so they must land as headers and not as body keys
+  it.effect("sends migrated provider headers and authToken as headers, not as body keys", () =>
+    Effect.gen(function* () {
+      const migrated = ConfigMigrateV1.migrate({
+        provider: {
+          custom: {
+            options: { apiKey: "migrated-key", authToken: "migrated-token", headers: { "x-tenant": "acme" } },
+            models: {
+              chat: {
+                provider: { npm: "@ai-sdk/openai-compatible", api: "https://custom.example/v1" },
+                options: { customField: "value" },
+              },
+            },
+          },
+        },
+      })
+
+      const provider = migrated.providers!["custom"]!
+      const config = provider.models!["chat"]!.request!
+      const resolved = yield* SessionRunnerModel.fromCatalogModel(
+        ModelV2.Info.make({
+          ...model({
+            type: "aisdk",
+            package: "@ai-sdk/openai-compatible",
+            url: "https://custom.example/v1",
+          }),
+          request: {
+            headers: { ...provider.request?.headers, ...config.headers },
+            body: { ...provider.request?.body, ...config.body },
+          },
+        }),
+      )
+      const prepared = yield* LLMClient.prepare(LLM.request({ model: resolved, prompt: "Hello" }))
+      const body = JSON.stringify(prepared.body)
+      const request = LLM.request({ model: resolved, prompt: "Hello" })
+      const headers = yield* resolved.route.auth.apply({
+        request,
+        method: "POST",
+        url: "https://custom.example/v1/chat/completions",
+        body: "{}",
+        headers: Headers.fromInput(resolved.route.defaults.http?.headers),
+      })
+
+      expect(body).not.toContain("migrated-token")
+      expect(body).not.toContain("acme")
+      expect(headers.authorization).toBe("Bearer migrated-key")
+      expect(headers["x-tenant"]).toBe("acme")
+    }),
+  )
+  // kilocode_change end
 
   it.effect("uses merged API settings for OpenAI-compatible auth and request defaults", () =>
     Effect.gen(function* () {
