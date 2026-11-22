@@ -163,7 +163,7 @@ export const GoogleVertexAnthropicPlugin = define({
           // kilocode_change end
           evt.provider.update(item.provider.id, (provider) => {
             if (project) provider.request.body.project = project
-            provider.request.body.location = normalized
+            provider.request.body.location = normalized // kilocode_change - the normalized region
           })
         }
       }),
