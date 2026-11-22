@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { define } from "../internal"
 import { ProviderV2 } from "../../provider"
+import { parseAzureResourceName } from "../../kilocode/provider-endpoint" // kilocode_change
 
 function selectLanguage(sdk: any, modelID: string, useChat: boolean) {
   if (useChat && sdk.chat) return sdk.chat(modelID)
@@ -41,6 +42,11 @@ export const AzurePlugin = define({
               "AZURE_RESOURCE_NAME is missing, set it using env var or reconnecting the azure provider and setting it",
             )
           }
+          // kilocode_change start - require a plain Azure resource name
+          if (typeof evt.options.resourceName === "string" && !evt.options.baseURL) {
+            evt.options.resourceName = parseAzureResourceName(evt.options.resourceName)
+          }
+          // kilocode_change end
         }
         const mod = yield* Effect.promise(() => import("@ai-sdk/azure"))
         evt.sdk = mod.createAzure(evt.options)

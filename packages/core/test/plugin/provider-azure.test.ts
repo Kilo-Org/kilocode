@@ -179,6 +179,29 @@ describe("AzurePlugin", () => {
     ),
   )
 
+  // kilocode_change start - a resource name must be a plain name
+  it.effect("requires a plain Azure resourceName", () =>
+    withEnv({ AZURE_RESOURCE_NAME: undefined }, () =>
+      Effect.gen(function* () {
+        const aisdk = yield* AISDK.Service
+        yield* addPlugin()
+        const exit = yield* aisdk
+          .runSDK({
+            model: ModelV2.Info.make({
+              ...ModelV2.Info.empty(ProviderV2.ID.azure, ModelV2.ID.make("deployment")),
+              api: { id: ModelV2.ID.make("deployment"), type: "aisdk", package: "test-provider" },
+            }),
+            package: "@ai-sdk/azure",
+            options: { name: "azure", resourceName: "proxy.example/" },
+          })
+          .pipe(Effect.exit)
+        expect(exit._tag).toBe("Failure")
+        expect(String(exit)).toContain("Invalid Azure resource name")
+      }),
+    ),
+  )
+  // kilocode_change end
+
   it.effect("selects chat only for completion URLs", () =>
     Effect.gen(function* () {
       const plugin = yield* PluginV2.Service

@@ -1,6 +1,9 @@
 import { Effect } from "effect"
 import { define } from "../internal"
 import { ProviderV2 } from "../../provider"
+// kilocode_change start - require a plain Vertex location and a Vertex API host
+import { isVertexHost, isVertexLocation, parseVertexLocation, requestHost } from "../../kilocode/provider-endpoint"
+// kilocode_change end
 
 function resolveProject(options: Record<string, any>) {
   // models.dev advertises GOOGLE_VERTEX_PROJECT for Vertex, while Google SDKs
@@ -42,6 +45,14 @@ function authFetch(fetchWithRuntimeOptions?: unknown) {
   // Native Vertex SDKs handle ADC internally. OpenAI-compatible Vertex endpoints
   // do not, so inject a Google access token into their fetch path.
   return async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+    // kilocode_change start - the access token is for a Vertex API host
+    const host = requestHost(input)
+    if (host === undefined || !isVertexHost(host)) {
+      return typeof fetchWithRuntimeOptions === "function"
+        ? fetchWithRuntimeOptions(input, init)
+        : fetch(input, init)
+    }
+    // kilocode_change end
     const { GoogleAuth } = await import("google-auth-library")
     const auth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/cloud-platform"] })
     const client = await auth.getClient()
@@ -71,6 +82,10 @@ export const GoogleVertexPlugin = define({
             continue
           const project = resolveProject(item.provider.request.body)
           const location = String(resolveLocation(item.provider.request.body))
+          // kilocode_change start - an invalid location is reported when the provider model is used,
+          // because a failing catalog transform would disable every provider.
+          if (!isVertexLocation(location)) continue
+          // kilocode_change end
           evt.provider.update(item.provider.id, (provider) => {
             if (project) provider.request.body.project = project
             provider.request.body.location = location
@@ -87,13 +102,14 @@ export const GoogleVertexPlugin = define({
     yield* ctx.aisdk.sdk(
       Effect.fn(function* (evt) {
         if (evt.model.providerID === ProviderV2.ID.googleVertex && evt.package.includes("@ai-sdk/openai-compatible")) {
+          parseVertexLocation(resolveLocation(evt.options)) // kilocode_change - fail with the location, not a host
           evt.options.fetch = authFetch(evt.options.fetch)
           return
         }
         if (evt.package !== "@ai-sdk/google-vertex") return
         const mod = yield* Effect.promise(() => import("@ai-sdk/google-vertex"))
         const project = resolveProject(evt.options)
-        const location = resolveLocation(evt.options)
+        const location = parseVertexLocation(resolveLocation(evt.options)) // kilocode_change
         const options = { ...evt.options }
         delete options.fetch
         evt.sdk = mod.createVertex({

@@ -51,6 +51,7 @@ import {
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 import { bedrockAuth, providerKey, vertexAuth, vertexCredentials, vertexOptions } from "@/kilocode/provider/cloud-auth"
+import { EndpointConfigError, isVertexHost, parseAzureResourceName, parseVertexLocation, requestHost } from "@opencode-ai/core/kilocode/provider-endpoint" // kilocode_change
 // kilocode_change end
 import { ProviderError } from "./error"
 
@@ -574,6 +575,10 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           location,
           ...(stored ? vertexCredentials(stored.credentials) : {}), // kilocode_change
           fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+            // kilocode_change start - the access token is for a Vertex API host
+            const host = requestHost(input)
+            if (host === undefined || !isVertexHost(host)) return fetch(input, init)
+            // kilocode_change end
             const { GoogleAuth } = await import("google-auth-library")
             // kilocode_change start - authenticate OpenAI-compatible Vertex endpoints with stored credentials
             const auth = new GoogleAuth({
@@ -1841,6 +1846,24 @@ const layer = Layer.effect(
         const options = { ...provider.options }
         vertexOptions(model.providerID, model.api.npm, options) // kilocode_change - hydrate stored credentials
 
+        // kilocode_change start - require a plain endpoint value
+        if (model.providerID === "google-vertex" && typeof options.baseURL !== "string") {
+          const derived =
+            model.api.npm.includes("@ai-sdk/google-vertex") ||
+            model.api.url === undefined ||
+            model.api.url === "" ||
+            model.api.url.includes("${GOOGLE_VERTEX_ENDPOINT}")
+          if (derived) options.location = parseVertexLocation(options.location ?? "global")
+        }
+        if (
+          model.providerID === "azure" &&
+          typeof options.baseURL !== "string" &&
+          typeof options.resourceName === "string"
+        ) {
+          options.resourceName = parseAzureResourceName(options.resourceName)
+        }
+        // kilocode_change end
+
         if (
           model.providerID === "google-vertex" &&
           model.api.npm === "@ai-sdk/google-vertex/anthropic" &&
@@ -1984,6 +2007,7 @@ const layer = Layer.effect(
         s.sdk.set(key, loaded)
         return loaded as SDK
       } catch (e) {
+        if (e instanceof EndpointConfigError) throw e // kilocode_change - show the endpoint error itself
         throw new InitError({ providerID: model.providerID, cause: e })
       }
     }

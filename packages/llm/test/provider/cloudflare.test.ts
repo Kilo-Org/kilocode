@@ -125,6 +125,95 @@ describe("Cloudflare", () => {
     }),
   )
 
+  // kilocode_change start - the gateway credential must accompany the provider key
+  it.effect("sends the environment gateway credential together with the provider key", () =>
+    Effect.gen(function* () {
+      yield* LLM.generate(
+        LLM.request({
+          model: CloudflareAIGateway.configure({
+            accountId: "test-account",
+            apiKey: "provider-token",
+          }).model("openai/gpt-4o-mini"),
+          prompt: "Say hello.",
+        }),
+      ).pipe(
+        withEnv({ CLOUDFLARE_API_TOKEN: "env-gateway-token" }),
+        Effect.provide(
+          dynamicResponse((input) =>
+            Effect.gen(function* () {
+              const web = yield* HttpClientRequest.toWeb(input.request).pipe(Effect.orDie)
+              expect(web.headers.get("cf-aig-authorization")).toBe("Bearer env-gateway-token")
+              expect(web.headers.get("authorization")).toBe("Bearer provider-token")
+              return input.respond(
+                sseEvents(deltaChunk({ role: "assistant", content: "Hello" }), deltaChunk({}, "stop")),
+                { headers: { "content-type": "text/event-stream" } },
+              )
+            }),
+          ),
+        ),
+      )
+    }),
+  )
+
+  it.effect("sends the CF_AIG_TOKEN gateway credential together with the provider key", () =>
+    Effect.gen(function* () {
+      yield* LLM.generate(
+        LLM.request({
+          model: CloudflareAIGateway.configure({
+            accountId: "test-account",
+            apiKey: "provider-token",
+          }).model("openai/gpt-4o-mini"),
+          prompt: "Say hello.",
+        }),
+      ).pipe(
+        withEnv({ CF_AIG_TOKEN: "alias-gateway-token" }),
+        Effect.provide(
+          dynamicResponse((input) =>
+            Effect.gen(function* () {
+              const web = yield* HttpClientRequest.toWeb(input.request).pipe(Effect.orDie)
+              expect(web.headers.get("cf-aig-authorization")).toBe("Bearer alias-gateway-token")
+              expect(web.headers.get("authorization")).toBe("Bearer provider-token")
+              return input.respond(
+                sseEvents(deltaChunk({ role: "assistant", content: "Hello" }), deltaChunk({}, "stop")),
+                { headers: { "content-type": "text/event-stream" } },
+              )
+            }),
+          ),
+        ),
+      )
+    }),
+  )
+
+  it.effect("keeps a gateway without its own authentication working with a provider key", () =>
+    Effect.gen(function* () {
+      yield* LLM.generate(
+        LLM.request({
+          model: CloudflareAIGateway.configure({
+            accountId: "test-account",
+            apiKey: "provider-token",
+          }).model("openai/gpt-4o-mini"),
+          prompt: "Say hello.",
+        }),
+      ).pipe(
+        withEnv({}),
+        Effect.provide(
+          dynamicResponse((input) =>
+            Effect.gen(function* () {
+              const web = yield* HttpClientRequest.toWeb(input.request).pipe(Effect.orDie)
+              expect(web.headers.get("cf-aig-authorization")).toBeNull()
+              expect(web.headers.get("authorization")).toBe("Bearer provider-token")
+              return input.respond(
+                sseEvents(deltaChunk({ role: "assistant", content: "Hello" }), deltaChunk({}, "stop")),
+                { headers: { "content-type": "text/event-stream" } },
+              )
+            }),
+          ),
+        ),
+      )
+    }),
+  )
+  // kilocode_change end
+
   it.effect("allows a fully configured baseURL override", () =>
     Effect.gen(function* () {
       const prepared = yield* LLMClient.prepare(
