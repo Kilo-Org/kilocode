@@ -218,28 +218,34 @@ try {
   })
 
   await check("an older success then a newer failure settles on the stored value", async () => {
-    const key = "experimental.conversationPromptHistory"
-    probe().applySetting("conversationPromptHistory", true, key)
-    probe().applySetting("conversationPromptHistory", false, key)
+    const key = "agentManager.browser.openLinksIn"
+    const property = "agentManagerBrowserOpenLinksIn"
+    assert.equal(probe().settings()[property], "external", "the chain starts from the previously stored value")
+    probe().applySetting(property, "integrated", key)
+    probe().applySetting(property, "external", key)
     await settle()
-    assert.equal(probe().settings().conversationPromptHistory, false, "the display holds the newer intent")
-    post({ type: "settingUpdated", key, value: true })
+    assert.equal(probe().settings()[property], "external", "the display holds the newer intent")
+    post({ type: "settingUpdated", key, value: "integrated" })
     await settle()
     assert.equal(
-      probe().settings().conversationPromptHistory,
-      false,
+      probe().settings()[property],
+      "external",
       "the older acknowledgement waits while a newer write is in flight",
     )
     post({ type: "settingUpdateFailed", key, message: "rejected" })
     await settle()
-    assert.equal(probe().settings().conversationPromptHistory, true, "the settle adopts the value the host stored")
+    assert.equal(
+      probe().settings()[property],
+      "integrated",
+      "the settle adopts the value the older write stored, not the newer intent",
+    )
     assert.deepEqual(probe().saveError(), { message: "rejected", details: undefined })
-    post({ type: "settingUpdated", key, value: "host-direct" })
+    post({ type: "settingUpdated", key, value: "external" })
     await settle()
     assert.equal(
-      probe().settings().conversationPromptHistory,
-      "host-direct",
-      "a settled key applies a later message as an unsolicited host value",
+      probe().settings()[property],
+      "external",
+      "the settled key applies a later message as an unsolicited host value",
     )
   })
 
@@ -248,19 +254,21 @@ try {
     probe().applySetting(key, true)
     post({ type: "settingUpdated", key, value: true })
     await settle()
-    assert.equal(probe().settings()[key], true)
+    assert.equal(probe().settings()[key], true, "the chain starts from a stored true")
     probe().applySetting(key, false)
     probe().applySetting(key, true)
     await settle()
     assert.equal(probe().settings()[key], true, "the display holds the newer intent")
     post({ type: "settingUpdateFailed", key, message: "rejected newer" })
     await settle()
-    assert.equal(probe().settings()[key], true, "the newer failure keeps the chain pending")
+    assert.equal(probe().settings()[key], true, "the newer failure leaves the chain pending")
     assert.deepEqual(probe().saveError(), { message: "rejected newer", details: undefined })
     post({ type: "settingUpdated", key, value: false })
     await settle()
-    assert.equal(probe().settings()[key], false, "the older stored value settles the chain")
-    assert.equal(probe().settings()[key], false, "the pending entry is gone")
+    assert.equal(probe().settings()[key], false, "the older write's stored value wins over the value before the chain")
+    post({ type: "settingUpdated", key, value: "host-direct" })
+    await settle()
+    assert.equal(probe().settings()[key], "host-direct", "the settled key applies a later message as unsolicited")
   })
 
   await check("two failed writes return to the value before the older write", async () => {
@@ -268,20 +276,20 @@ try {
     probe().applySetting("browserAutomation", false, key)
     post({ type: "settingUpdated", key, value: false })
     await settle()
-    assert.equal(probe().settings().browserAutomation, false)
+    assert.equal(probe().settings().browserAutomation, false, "the chain starts from a stored false")
     probe().applySetting("browserAutomation", true, key)
     probe().applySetting("browserAutomation", false, key)
     await settle()
     assert.equal(probe().settings().browserAutomation, false, "the display holds the newer intent")
     post({ type: "settingUpdateFailed", key, message: "rejected older" })
     await settle()
-    assert.equal(probe().settings().browserAutomation, false, "the older failure keeps the chain pending")
+    assert.equal(probe().settings().browserAutomation, false, "the older failure leaves the chain pending")
     post({ type: "settingUpdateFailed", key, message: "rejected newer" })
     await settle()
     assert.equal(
       probe().settings().browserAutomation,
       false,
-      "the display returns to the value from before the older write",
+      "the display returns to the value before the older write, not the intermediate true",
     )
     assert.deepEqual(probe().saveError(), { message: "rejected newer", details: undefined })
   })
@@ -292,21 +300,49 @@ try {
     probe().applySetting(property, false, key)
     post({ type: "settingUpdated", key, value: false })
     await settle()
-    assert.equal(probe().settings()[property], false)
+    assert.equal(probe().settings()[property], false, "the chain starts from a stored false")
     probe().applySetting(property, true, key)
     probe().applySetting(property, true, key)
     await settle()
     assert.equal(probe().settings()[property], true, "the display holds the newest intent")
     post({ type: "settingUpdateFailed", key, message: "rejected first" })
     await settle()
+    assert.equal(probe().settings()[property], true, "the first failure leaves the chain pending")
     post({ type: "settingUpdateFailed", key, message: "rejected second" })
     await settle()
     assert.equal(
       probe().settings()[property],
       false,
-      "the display returns to the value from before the first write",
+      "the display returns to the value before the first write, not the intermediate true",
     )
     assert.deepEqual(probe().saveError(), { message: "rejected second", details: undefined })
+  })
+
+  await check("a confirmed undefined is adopted instead of the value before the chain", async () => {
+    const key = "experimental.conversationPromptHistory"
+    const property = "conversationPromptHistory"
+    probe().applySetting(property, "alpha", key)
+    post({ type: "settingUpdated", key, value: "alpha" })
+    await settle()
+    assert.equal(probe().settings()[property], "alpha", "the chain starts from a stored value")
+    // The older write clears the setting, so the host confirms `undefined`, which a sentinel
+    // meaning "nothing confirmed" could not tell apart from a real confirmation.
+    probe().applySetting(property, undefined, key)
+    probe().applySetting(property, "gamma", key)
+    await settle()
+    assert.equal(probe().settings()[property], "gamma", "the display holds the newer intent")
+    post({ type: "settingUpdated", key, value: undefined })
+    await settle()
+    assert.equal(probe().settings()[property], "gamma", "the older acknowledgement waits")
+    post({ type: "settingUpdateFailed", key, message: "rejected" })
+    await settle()
+    assert.equal(probe().settings()[property], undefined, "the confirmed undefined is adopted")
+    assert.equal(
+      Object.hasOwn(probe().settings(), property),
+      false,
+      "adopting undefined deletes the property instead of restoring the value before the chain",
+    )
+    assert.deepEqual(probe().saveError(), { message: "rejected", details: undefined })
   })
 } finally {
   dispose()
