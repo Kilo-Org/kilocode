@@ -35,8 +35,11 @@ interface OrgOption {
   description?: string
 }
 
-/** One switch attempt: awaiting its correlated result, or failed and awaiting a retry. */
-type Attempt = { kind: "idle" } | { kind: "pending"; requestID: string; target: string } | { kind: "failed" }
+/** One switch attempt: awaiting its correlated result, or failed with its message and target kept for retry. */
+type Attempt =
+  | { kind: "idle" }
+  | { kind: "pending"; requestID: string; target: string }
+  | { kind: "failed"; message: string; target: string }
 
 const ProfileView: Component<ProfileViewProps> = (props) => {
   const vscode = useVSCode()
@@ -62,7 +65,11 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     if (message.type !== "organizationSwitchResult") return
     const state = attempt()
     if (state.kind !== "pending" || state.requestID !== message.requestID) return
-    setAttempt({ kind: message.ok ? "idle" : "failed" })
+    if (message.ok) {
+      setAttempt({ kind: "idle" })
+      return
+    }
+    setAttempt({ kind: "failed", message: message.error ?? "", target: state.target })
   })
   onCleanup(unsubscribe)
 
@@ -86,23 +93,36 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   })
 
   const failure = createMemo(() => {
-    return attempt().kind === "failed" ? language.t("profile.switchFailed") : undefined
+    const state = attempt()
+    if (state.kind !== "failed") return undefined
+    const message = state.message.trim()
+    return message || language.t("profile.switchFailed")
   })
 
   const currentOrg = createMemo(() => {
     return orgOptions().find((o) => o.value === currentId())
   })
 
+  const submit = (target: string) => {
+    const requestID = crypto.randomUUID()
+    setAttempt({ kind: "pending", requestID, target })
+    vscode.postMessage({
+      type: "setOrganization",
+      organizationId: target === PERSONAL ? null : target,
+      requestID,
+    })
+  }
+
   const selectOrg = (option: OrgOption | undefined) => {
     if (!option) return
     if (option.value === currentId()) return
-    const requestID = crypto.randomUUID()
-    setAttempt({ kind: "pending", requestID, target: option.value })
-    vscode.postMessage({
-      type: "setOrganization",
-      organizationId: option.value === PERSONAL ? null : option.value,
-      requestID,
-    })
+    submit(option.value)
+  }
+
+  const retry = () => {
+    const state = attempt()
+    if (state.kind !== "failed") return
+    submit(state.target)
   }
 
   const handleLogin = () => {
@@ -271,16 +291,28 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                   />
                   <Show when={failure()}>
                     {(message) => (
-                      <p
+                      <div
                         role="alert"
                         style={{
-                          "font-size": "var(--kilo-font-size-12)",
-                          color: "var(--vscode-errorForeground)",
+                          display: "flex",
+                          "align-items": "center",
+                          gap: "8px",
                           margin: "8px 0 0 0",
                         }}
                       >
-                        {message()}
-                      </p>
+                        <p
+                          style={{
+                            "font-size": "var(--kilo-font-size-12)",
+                            color: "var(--vscode-errorForeground)",
+                            margin: 0,
+                          }}
+                        >
+                          {message()}
+                        </p>
+                        <Button class="profile-switch-retry" variant="ghost" size="small" onClick={retry}>
+                          {language.t("common.retry")}
+                        </Button>
+                      </div>
                     )}
                   </Show>
                 </Card>

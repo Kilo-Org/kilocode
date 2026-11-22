@@ -121,6 +121,12 @@ const open = async () => {
 
 const alert = () => root.querySelector('[role="alert"]')
 
+const retryButton = () => {
+  const node = root.querySelector<HTMLButtonElement>(".profile-switch-retry")
+  assert(node, "the retry control was not rendered")
+  return node
+}
+
 const switchPosts = () => posted.filter((message) => message.type === "setOrganization")
 
 interface SwitchRequest {
@@ -174,19 +180,21 @@ try {
   })
   assert.equal(trigger().disabled, false, "a failed attempt must re-enable the selector")
   assert.equal(
-    alert()?.textContent?.includes("Could not confirm the account switch."),
+    alert()?.textContent?.includes("profile unavailable"),
     true,
-    "the failure text must be visible",
+    "the failure text must carry the concrete error",
   )
   assert.equal(trigger().textContent?.includes("Org One"), true, "the last-known account stays in place")
 
-  // The re-enabled selector is the retry path.
-  await open()
-  await press(option("Org Two"))
+  // Retry re-posts the failed target with a fresh request id and goes pending again.
+  retryButton().click()
+  await settle()
   const retried = switchPost()
-  assert.equal(switchPosts().length, 2, "picking again posts a new request")
-  assert.notEqual(retried.requestID, pending.requestID, "a retry must use a fresh request id")
-  assert.equal(trigger().disabled, true)
+  assert.equal(switchPosts().length, 2, "Retry must post again")
+  assert.equal(retried.organizationId, pending.organizationId, "Retry must target the same account")
+  assert.notEqual(retried.requestID, pending.requestID, "Retry must use a fresh request id")
+  assert.equal(trigger().disabled, true, "Retry must put the attempt back into pending")
+  assert.equal(alert(), null, "Retry must clear the previous failure")
 
   // A success clears the failure text without touching the pushed profile.
   await push({
@@ -198,6 +206,24 @@ try {
   })
   assert.equal(trigger().disabled, false, "a success must settle the attempt")
   assert.equal(alert(), null, "a success must clear the failure text")
+
+  // A result with no usable error falls back to the generic copy.
+  await open()
+  await press(option("Org Two"))
+  const blank = switchPost()
+  await push({
+    type: "organizationSwitchResult",
+    requestID: blank.requestID,
+    organizationId: "org-2",
+    ok: false,
+    data: null,
+    error: "",
+  })
+  assert.equal(
+    alert()?.textContent?.includes("Could not confirm the account switch."),
+    true,
+    "an empty error must fall back to the generic failure text",
+  )
 
   // Signing out ends any live attempt, so nothing returns after the next login.
   await open()
