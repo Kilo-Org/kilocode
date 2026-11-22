@@ -1414,6 +1414,8 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
   "settings.saveBar.saveFailed": "Couldn't save settings",
+  "settings.saveBar.dismissError": "Dismiss",
+  "settings.saveBar.unconfirmedWrite": 'The change to "{{name}}" was not confirmed by the extension host.',
 
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",

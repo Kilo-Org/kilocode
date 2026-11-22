@@ -1394,6 +1394,8 @@ export const dict = {
   "settings.saveBar.cancel": "Скасувати",
   "settings.saveBar.saving": "Збереження…",
   "settings.saveBar.saveFailed": "Не вдалося зберегти налаштування",
+  "settings.saveBar.dismissError": "Закрити",
+  "settings.saveBar.unconfirmedWrite": "Хост розширення не підтвердив «{{name}}».",
   "notifications.action.next": "Далі",
   "notifications.action.close": "Закрити",
   "notifications.action.tryModel": "Спробувати {{model}}",

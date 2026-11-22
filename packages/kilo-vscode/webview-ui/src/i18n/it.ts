@@ -1271,6 +1271,8 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Salva comunque",
   "settings.saveBar.cancel": "Annulla",
   "settings.saveBar.saveFailed": "Impossibile salvare le impostazioni",
+  "settings.saveBar.dismissError": "Ignora",
+  "settings.saveBar.unconfirmedWrite": "L'host dell'estensione non ha confermato “{{name}}”.",
   "notifications.action.next": "Avanti",
   "notifications.action.close": "Chiudi",
   "notifications.action.tryModel": "Prova {{model}}",

@@ -1408,6 +1408,8 @@ export const dict = {
   "settings.saveBar.cancel": "Annuleren",
   "settings.saveBar.saving": "Bezig met opslaan…",
   "settings.saveBar.saveFailed": "Instellingen konden niet worden opgeslagen",
+  "settings.saveBar.dismissError": "Negeren",
+  "settings.saveBar.unconfirmedWrite": "“{{name}}” is niet bevestigd door de extensiehost.",
   "notifications.action.next": "Volgende",
   "notifications.action.close": "Sluiten",
   "notifications.action.tryModel": "Probeer {{model}}",

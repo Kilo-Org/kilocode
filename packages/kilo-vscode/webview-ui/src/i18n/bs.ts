@@ -1425,6 +1425,8 @@ export const dict = {
   "settings.saveBar.cancel": "Otkaži",
   "settings.saveBar.saving": "Spremanje…",
   "settings.saveBar.saveFailed": "Postavke nije moguće spremiti",
+  "settings.saveBar.dismissError": "Odbaci",
+  "settings.saveBar.unconfirmedWrite": "Host ekstenzije nije potvrdio „{{name}}”.",
   "notifications.action.next": "Sljedeći",
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",

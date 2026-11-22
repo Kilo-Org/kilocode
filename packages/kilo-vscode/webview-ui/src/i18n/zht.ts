@@ -1345,6 +1345,8 @@ export const dict = {
   "settings.saveBar.cancel": "取消",
   "settings.saveBar.saving": "儲存中…",
   "settings.saveBar.saveFailed": "無法儲存設定",
+  "settings.saveBar.dismissError": "忽略",
+  "settings.saveBar.unconfirmedWrite": "擴充功能主機未確認「{{name}}」。",
   "notifications.action.next": "下一個",
   "notifications.action.close": "關閉",
   "notifications.action.tryModel": "嘗試 {{model}}",
