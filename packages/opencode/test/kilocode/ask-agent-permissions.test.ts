@@ -264,11 +264,15 @@ describe("Ask agent bash permissions", () => {
       ["git show HEAD:.env", "ask"],
       ["git cat-file -p HEAD:.env", "ask"],
       ["git diff HEAD~1 .env", "ask"],
+      ["git log -p -- .env", "ask"],
+      ["git blame .env", "ask"],
       ["git show HEAD:.env HEAD:.env.example", "ask"],
       ["git show HEAD:.env.example", "ask"],
       ["git diff HEAD~1 .env .env.example", "ask"],
       ["git show HEAD", "allow"],
       ["git diff HEAD~1", "allow"],
+      ["git log --oneline", "allow"],
+      ["git blame src/index.ts", "allow"],
     ]
 
     for (const [cmd, action] of cases) {

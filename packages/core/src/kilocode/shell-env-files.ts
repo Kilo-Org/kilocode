@@ -11,9 +11,9 @@ const READERS = ["cat", "head", "tail", "less", "diff", "sort", "uniq", "cut", "
 // can be the search term rather than a file.
 const SEARCHERS = ["grep", "rg", "ag"] as const
 
-// Git readers whose first argument is a revision spec, and whose path follows it
-// after a `:` or in a later argument.
-const GIT = ["git show", "git cat-file", "git diff"] as const
+// Git commands that print a file's lines from a revision or a worktree path: the
+// object readers, and the two that print a path's content or history.
+const GIT = ["git show", "git cat-file", "git diff", "git log", "git blame"] as const
 
 /**
  * Environment files are sensitive, so both surfaces that can open one apply the
@@ -24,8 +24,8 @@ const GIT = ["git show", "git cat-file", "git diff"] as const
  *
  * The shapes covered are: a reader's environment file at any operand position,
  * including a glob, a quoted operand and a nested path; a searcher's environment
- * file named as an operand or reached through a nested path; a git reader's
- * environment file in its revision spec.
+ * file named as an operand or reached through a nested path; and, for the git
+ * commands that print a file, the file named as a path or inside a revision spec.
  *
  * `.env.example` documents the format and is allowed only as the exact lone
  * operand of a reader or a searcher: one literal path. A nested sample path and
