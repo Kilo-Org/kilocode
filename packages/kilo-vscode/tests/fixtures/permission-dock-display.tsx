@@ -156,6 +156,30 @@ check(
   },
 )
 
+// Default-ignorable characters on the same surfaces: the shorthand format control U+1BCA0 in a
+// pattern path and the combining grapheme joiner U+034F in a description. Each shows its literal
+// escape and never the raw character.
+const SHORTHAND = "\u{1BCA0}"
+const CGJ = "\u034F"
+check(
+  {
+    ...base,
+    toolName: "read",
+    patterns: ["src/app.ts", `src/${SHORTHAND}gnp.exe`],
+    args: { description: `runs ${CGJ}harmless.sh` },
+  },
+  (root) => {
+    const hint = text(root, '[data-slot="permission-hint"]')
+    assert.equal(hint, "runs \\u034fharmless.sh")
+    assert(hint.includes("\\u034f"), `Description hint lost the escaped format control: ${JSON.stringify(hint)}`)
+    assert(!hint.includes(CGJ), `Description hint showed the raw format control: ${JSON.stringify(hint)}`)
+    const paths = Array.from(root.querySelectorAll('[data-slot="permission-pattern"]'), (node) => node.textContent)
+    assert.deepEqual(paths, ["src/app.ts", "src/\\u{1bca0}gnp.exe"])
+    assert(paths.join("\n").includes("\\u{1bca0}"), "Pattern paths lost the escaped shorthand format control")
+    assert(!paths.join("\n").includes(SHORTHAND), "Pattern paths showed the raw shorthand format control")
+  },
+)
+
 // External-directory rule path.
 check(
   {

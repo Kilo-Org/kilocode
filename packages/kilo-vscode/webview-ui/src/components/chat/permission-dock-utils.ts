@@ -5,14 +5,15 @@ export type RuleDecision = "approved" | "denied" | "pending"
 // Escape control characters and invisible format characters for display, so each surface shows
 // exactly the characters the request carries. Invisible format characters belong to the same
 // display policy as control characters: each one is shown as its literal escape, so text never
-// depends on characters that render without width. The class covers width-less characters in
-// every plane, including the supplementary-plane variation selectors and tag characters. Both
-// helpers serve every text surface of the approval card — skill-shell commands, bash commands,
-// pattern paths, tool names, rule text and diff file names. The webview can't import from
-// @kilocode/cli, so this mirrors displayCommand in
-// packages/opencode/src/kilocode/skills/display.ts; keep them in sync.
+// depends on characters that render without width. The class covers every character Unicode marks
+// Default_Ignorable or Format, plus the C0 and C1 controls and the line and paragraph separators.
+// Both helpers serve every text surface of the approval card — skill-shell commands, bash
+// commands, pattern paths, tool names, rule text and diff file names. Each escape writes `\x`
+// below 0x100, `\u` up to 0xffff and `\u{...}` above. The webview can't import from @kilocode/cli,
+// so this mirrors displayCommand in packages/opencode/src/kilocode/skills/display.ts; keep them in
+// sync.
 const CONTROL =
-  /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufe00-\ufe0f\ufeff\u{e0000}-\u{e007f}\u{e0100}-\u{e01ef}]/gu
+  /[\u0000-\u001f\u007f-\u009f\u00ad\u034f\u0600-\u0605\u061c\u06dd\u070f\u0890-\u0891\u08e2\u115f-\u1160\u17b4-\u17b5\u180b-\u180f\u200b-\u200f\u2028-\u202e\u2060-\u206f\u3164\ufe00-\ufe0f\ufeff\uffa0\ufff0-\ufffb\u{110bd}\u{110cd}\u{13430}-\u{1343f}\u{1bca0}-\u{1bca3}\u{1d173}-\u{1d17a}\u{e0000}-\u{e0fff}]/gu
 
 function escape(ch: string) {
   if (ch === "\n") return "\\n"

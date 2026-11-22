@@ -260,10 +260,13 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertFalse("Raw zero-width char must not reach the label", label.text.contains("\u2060"))
     }
 
-    fun `test skill-shell commands escape supplementary-plane format characters`() {
-        // A tag character (U+E0041) and a variation selector (U+FE0F) render without width.
+    fun `test skill-shell commands escape supplementary-plane and combining format characters`() {
+        // A tag character (U+E0041), a variation selector (U+FE0F), a shorthand format control
+        // (U+1BCA0) and the combining grapheme joiner (U+034F) render without width.
         val tag = String(Character.toChars(0xE0041))
         val vs = "\uFE0F"
+        val shorthand = String(Character.toChars(0x1BCA0))
+        val cgj = "\u034F"
         view.show(
             Permission(
                 id = "perm_skill_astral",
@@ -273,7 +276,12 @@ class PermissionViewTest : BasePlatformTestCase() {
                 always = emptyList(),
                 meta = PermissionMeta(
                     raw = mapOf("skillShell" to "true", "skill" to "git-status"),
-                    skillCommands = listOf("rm -rf ${tag}txt.exe", "rm -rf ${vs}txt.exe"),
+                    skillCommands = listOf(
+                        "rm -rf ${tag}txt.exe",
+                        "rm -rf ${vs}txt.exe",
+                        "rm -rf ${shorthand}txt.exe",
+                        "rm -rf ${cgj}txt.exe",
+                    ),
                 ),
             )
         )
@@ -287,8 +295,18 @@ class PermissionViewTest : BasePlatformTestCase() {
             "Expected escaped variation selector, got: ${label.text}",
             label.text.contains("rm -rf \\ufe0ftxt.exe"),
         )
+        assertTrue(
+            "Expected escaped shorthand format control, got: ${label.text}",
+            label.text.contains("rm -rf \\u{1bca0}txt.exe"),
+        )
+        assertTrue(
+            "Expected escaped combining grapheme joiner, got: ${label.text}",
+            label.text.contains("rm -rf \\u034ftxt.exe"),
+        )
         assertFalse("Raw supplementary character must not reach the label", label.text.contains(tag))
         assertFalse("Raw variation selector must not reach the label", label.text.contains(vs))
+        assertFalse("Raw shorthand format control must not reach the label", label.text.contains(shorthand))
+        assertFalse("Raw combining grapheme joiner must not reach the label", label.text.contains(cgj))
     }
 
     fun `test skill-shell header escapes control and bidi characters in the skill name`() {

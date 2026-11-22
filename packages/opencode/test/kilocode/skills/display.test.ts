@@ -24,7 +24,7 @@ describe("displayCommand", () => {
     expect(out).not.toMatch(/[\u200b-\u200f\u2060-\u2064\ufeff]/)
   })
 
-  it("escapes width-less format characters from every plane", () => {
+  it("escapes width-less format characters from several planes", () => {
     // The tags block (U+E0041), a variation selector (U+FE0F), a variation selector supplement
     // (U+E0100) and a soft hyphen (U+00AD) all render without width, so each shows as a literal
     const out = displayCommand("echo \u{E0041}\uFE0F\u{E0100}\u00AD rm -rf /")
@@ -33,6 +33,17 @@ describe("displayCommand", () => {
     expect(out).not.toContain("\uFE0F")
     expect(out).not.toContain("\u{E0100}")
     expect(out).not.toContain("\u00AD")
+  })
+
+  it("escapes the default-ignorable set as literals", () => {
+    // The combining grapheme joiner (U+034F), the Mongolian free variation selector (U+180E), a
+    // shorthand format control (U+1BCA0) and a musical symbol (U+1D173) all render without width
+    const out = displayCommand("echo \u034F\u180E\u{1BCA0}\u{1D173} rm -rf /")
+    expect(out).toBe("echo \\u034f\\u180e\\u{1bca0}\\u{1d173} rm -rf /")
+    expect(out).not.toContain("\u034F")
+    expect(out).not.toContain("\u180E")
+    expect(out).not.toContain("\u{1BCA0}")
+    expect(out).not.toContain("\u{1D173}")
   })
 
   it("leaves ordinary commands unchanged", () => {
