@@ -1554,6 +1554,68 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `successful organization switch starts a fresh hosted context`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        mock.pushFeed(
+            hostedNativeFeed,
+            """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""",
+        )
+        withTimeout(10_000) { svc.hosted.statuses.first { it[hostedSession]?.type == "busy" } }
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":"org_1"}"""
+        svc.setOrganization("org_1")
+
+        // A switch starts a fresh hosted context: the earlier streams stop and are not reused.
+        assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+        assertTrue(mock.awaitFeedClosed(hostedSystemFeed), "system stream stayed open")
+        assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the switch")
+        assertTrue(
+            mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1),
+            "attachment was not detached",
+        )
+
+        svc.hosted.retain(hostedSession, "org_1")
+        svc.hosted.messages(hostedSession, "org_1")
+
+        assertEquals(attaches + 1, mock.requestCount(hostedAttachPath))
+        assertTrue(mock.lastHostedAttachPath.orEmpty().contains("organizationID=org_1"))
+    }
+
+    @Test
+    fun `refused organization switch leaves hosted state intact`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        mock.pushFeed(
+            hostedNativeFeed,
+            """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""",
+        )
+        withTimeout(10_000) { svc.hosted.statuses.first { it[hostedSession]?.type == "busy" } }
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        mock.organizationSetStatus = 500
+        var thrown = false
+        try {
+            svc.setOrganization("org_1")
+        } catch (_: Exception) {
+            thrown = true
+        }
+
+        assertTrue(thrown, "setOrganization with 500 should throw")
+        assertEquals(0, mock.feedClosedCount(hostedNativeFeed))
+        assertEquals(0, mock.feedClosedCount(hostedSystemFeed))
+        assertEquals("busy", svc.hosted.statuses.value[hostedSession]?.type)
+        assertEquals(attaches, mock.requestCount(hostedAttachPath))
+    }
+
+    @Test
     fun `set organization failure leaves profile unchanged`() = runBlocking {
         mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
         val svc = create()
