@@ -124,8 +124,10 @@ function expandPermissions(rules: PermissionV2.Ruleset, home: string): Permissio
 }
 
 function isPathAction(action: string): action is PathAction {
-  // kilocode_change - reuse the shared path action list so both copies cannot drift
-  return (PermissionV2.pathActions satisfies readonly PathAction[]).some((item) => item === action)
+  // kilocode_change start - reuse the shared path action list so the two copies cannot drift
+  const names: readonly PathAction[] = PermissionV2.pathActions
+  return names.some((item) => item === action)
+  // kilocode_change end
 }
 
 function expandHome(resource: string, home: string) {
