@@ -233,7 +233,9 @@ export const {
       const task = recover(run, workspace).finally(() => {
         if (pending?.task === task) pending = undefined
       })
-      pending = { run, workspace, task }
+      // only the newest run owns the shared entry: a run that a newer one replaced must not evict
+      // the live recovery, or a later caller would start a duplicate fetch and join the wrong task
+      if (run === bootstrapRun) pending = { run, workspace, task }
       return task
     }
 
@@ -1028,14 +1030,21 @@ export const {
           })
         })
         .catch(async (e) => {
-          // kilocode_change start - a run that no longer owns the selection reports nothing and does not exit
-          if (!currentRun(run, workspace)) return
-          // kilocode_change end
+          // kilocode_change start - a run that a newer one replaced reports nothing and does not exit
+          if (run !== bootstrapRun) return
+          if (!currentRun(run, workspace)) {
+            // newest run, but the selection moved on before it failed: leave the status to the run
+            // that now owns it, and do not end the session for a selection nobody is looking at
+            return
+          }
+          // the newest run for the current selection failed: it must not leave the store waiting
           console.error("tui bootstrap failed", {
             error: e instanceof Error ? e.message : String(e),
             name: e instanceof Error ? e.name : undefined,
             stack: e instanceof Error ? e.stack : undefined,
           })
+          if (store.status === "loading") setStore("status", "partial")
+          // kilocode_change end
           if (fatal) {
             exit(e)
           } else {

@@ -137,15 +137,21 @@ describe("tui sync", () => {
   })
   // kilocode_change end
 
-  // kilocode_change start - the notification refresh names the active workspace
+  // kilocode_change start - the notification refresh names the active workspace and keeps its reply under that run
   test("a global config notification refreshes the workspace config with the active workspace", async () => {
     await using tmp = await tmpdir()
     await Bun.write(`${tmp.path}/kv.json`, "{}")
     const configs: URL[] = []
+    const held = deferred<Response>()
+    let reads = 0
+    let hold = false
     const { app, emit, project, sync } = await mount((url) => {
       if (url.pathname === "/experimental/workspace") return json([{ id: "ws_a" }])
       if (url.pathname !== "/config") return undefined
       configs.push(url)
+      reads += 1
+      // the read the notification starts stays in flight; bootstrap reads resolve normally
+      if (hold) return held.promise
       return json({ model: url.searchParams.get("workspace") ?? "default" })
     }, tmp.path)
 
@@ -154,13 +160,24 @@ describe("tui sync", () => {
       await wait(() => sync.data.config.model === "ws_a")
       const before = configs.length
 
+      hold = true
       emit(configEvent())
-      await wait(() => configs.length > before)
+      await wait(() => configs.length > before && reads > before)
 
       // the refresh must name the active workspace, not the control-plane default
       expect(configs.slice(before).some((url) => url.searchParams.get("workspace") === "ws_a")).toBe(true)
+
+      // a newer run takes ownership while the notification's reply is still in flight
+      hold = false
+      await sync.bootstrap()
+      await wait(() => sync.status === "complete")
+
+      held.resolve(json({ model: "reply-from-an-older-run" }))
+      await Bun.sleep(60)
+
       expect(sync.data.config.model).toBe("ws_a")
     } finally {
+      held.resolve(json({ model: "ws_a" }))
       app.renderer.destroy()
     }
   })
@@ -239,5 +256,33 @@ describe("tui sync", () => {
     }
   })
   // kilocode_change end
+
+  // kilocode_change start - a failed newest run must not leave the store waiting
+  test("a failed bootstrap for the current workspace reaches a settled status", async () => {
+    await using tmp = await tmpdir()
+    await Bun.write(`${tmp.path}/kv.json`, "{}")
+    let fail = false
+    const { app, sync } = await mount((url) => {
+      if (url.pathname !== "/config") return undefined
+      if (fail) return new Response("boom", { status: 500 })
+      return json({ model: "default" })
+    }, tmp.path)
+
+    try {
+      await wait(() => sync.status === "complete")
+
+      // the first run's state: the store is still loading, and this run fails non-fatally
+      sync.set("status", "loading")
+      fail = true
+      await sync.bootstrap({ fatal: false }).catch(() => undefined)
+
+      // a non-fatal failure must still settle, so the app is not stuck on its loading screen
+      expect(sync.status).not.toBe("loading")
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+  // kilocode_change end
+
 
 })
