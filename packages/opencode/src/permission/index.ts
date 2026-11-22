@@ -433,7 +433,14 @@ const layer = Layer.effect(
             const base: Record<string, ConfigPermissionV1.Action> =
               current === undefined ? {} : typeof current === "string" ? { "*": current } : { ...current }
             for (const pattern of removed) base[pattern] = null
-            patch[permission] = base
+            // Drop the tool entry only when the saved entry has nothing left. Rules the
+            // patch does not mention stay in the file, so judge emptiness against the
+            // saved entry, never against the patch alone.
+            const saved = (yield* config.getGlobal()).permission?.[permission]
+            const patterns = typeof saved === "string" ? ["*"] : Object.keys(saved ?? {})
+            const left = Object.entries(base).some(([pattern, action]) => action !== null)
+            const untouched = patterns.some((pattern) => !(pattern in base))
+            patch[permission] = left || untouched ? base : null
           }
         }
         if (Object.keys(patch).length > 0) {

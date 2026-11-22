@@ -915,8 +915,8 @@ describe("saveAlwaysRules", () => {
   it.live("ignores removals for patterns the request does not own", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
-        const asking = yield* ask({
-          id: PermissionV1.ID.make("permission_remove_foreign"),
+        const owner = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_owner"),
           sessionID: SessionID.make("session_test"),
           permission: "bash",
           patterns: ["npm install"],
@@ -926,19 +926,33 @@ describe("saveAlwaysRules", () => {
         }).pipe(Effect.forkScoped)
         yield* waitForPending(1)
         yield* saveAlwaysRules({
-          requestID: PermissionV1.ID.make("permission_remove_foreign"),
+          requestID: PermissionV1.ID.make("permission_remove_owner"),
           approvedAlways: ["npm *"],
         })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_owner"), reply: "once" })
+        yield* Fiber.join(owner)
+
+        // A different prompt for the same tool, whose own rule list does not carry
+        // "npm *", asks to clear it. The saved rule for the other pattern stays.
+        const other = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_foreign"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["git status"],
+          metadata: { rules: ["git *"] },
+          always: ["git *"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
         yield* saveAlwaysRules({
           requestID: PermissionV1.ID.make("permission_remove_foreign"),
-          removedAlways: ["curl http://evil.com"],
+          removedAlways: ["npm *"],
         })
         yield* reply({ requestID: PermissionV1.ID.make("permission_remove_foreign"), reply: "once" })
-        yield* Fiber.join(asking)
+        yield* Fiber.join(other)
 
-        const config = yield* Config.Service
-        const cfg = yield* config.get()
-        expect(cfg.permission?.bash).toMatchObject({ "npm *": "allow" })
+        const cfg = yield* Config.Service
+        expect((yield* cfg.get()).permission?.bash).toMatchObject({ "npm *": "allow" })
       }),
     ),
   )
@@ -990,6 +1004,21 @@ describe("saveAlwaysRules", () => {
         yield* Fiber.join(offer)
 
         expect((yield* cfg.get()).permission?.webfetch).toBeUndefined()
+
+        // The cleared entry also stops deciding requests in this process.
+        const after = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_wild_after"),
+          sessionID: SessionID.make("session_test"),
+          permission: "webfetch",
+          patterns: ["https://example.com/c"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        const items = yield* waitForPending(1)
+        expect(items.some((p) => String(p.id) === "permission_remove_wild_after")).toBe(true)
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_wild_after"), reply: "reject" })
+        yield* Fiber.await(after)
       }),
     ),
   )

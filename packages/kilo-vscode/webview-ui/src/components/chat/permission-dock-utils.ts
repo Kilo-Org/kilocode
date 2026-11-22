@@ -38,6 +38,8 @@ export function savedRuleStates(rules: string[], saved: PermissionRule | undefin
  * The rows whose displayed state is the global config's own rule. Only these can
  * be revoked from the prompt: a rule another config scope supplies survives any
  * global write, so offering removal on it would promise something it cannot do.
+ * A row needs a global entry of its own; two scopes that happen to agree still
+ * mean the global write is not what decides the row.
  */
 export function removableRuleIndices(
   rules: string[],
@@ -46,9 +48,10 @@ export function removableRuleIndices(
 ): Set<number> {
   const fromGlobal = savedRuleStates(rules, global)
   const result = new Set<number>()
-  for (const [index, state] of Object.entries(effective)) {
-    const i = Number(index)
-    if (fromGlobal[i] === state) result.add(i)
+  for (let i = 0; i < rules.length; i++) {
+    const action = typeof global === "string" ? (rules[i] === "*" ? global : undefined) : global?.[rules[i]]
+    if (action !== "allow" && action !== "deny") continue
+    if (fromGlobal[i] === effective[i]) result.add(i)
   }
   return result
 }

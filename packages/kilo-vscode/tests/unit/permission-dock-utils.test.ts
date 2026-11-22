@@ -1,5 +1,9 @@
 import { describe, it, expect } from "bun:test"
-import { displaySkillCommand, savedRuleStates } from "../../webview-ui/src/components/chat/permission-dock-utils"
+import {
+  displaySkillCommand,
+  removableRuleIndices,
+  savedRuleStates,
+} from "../../webview-ui/src/components/chat/permission-dock-utils"
 
 describe("displaySkillCommand", () => {
   it("leaves ordinary commands, including astral characters, untouched", () => {
@@ -80,5 +84,33 @@ describe("savedRuleStates", () => {
   it("returns empty map for empty config object", () => {
     const result = savedRuleStates(["npm *"], {})
     expect(result).toEqual({})
+  })
+})
+
+describe("removableRuleIndices", () => {
+  it("marks a row the global config tiles", () => {
+    expect(removableRuleIndices(["npm *", "git *"], { "npm *": "allow" }, { 0: "approved" })).toEqual(new Set([0]))
+  })
+
+  it("marks a denied row the global config tiles", () => {
+    expect(removableRuleIndices(["rm *"], { "rm *": "deny" }, { 0: "denied" })).toEqual(new Set([0]))
+  })
+
+  it("leaves a row alone when the global config has no entry for it, even if the states agree", () => {
+    // Both scopes happen to allow it, but only another scope supplies the entry,
+    // so a global write would not remove it.
+    expect(removableRuleIndices(["npm *"], { "git *": "allow" }, { 0: "approved" })).toEqual(new Set())
+  })
+
+  it("leaves a row alone when the effective state disagrees with the global entry", () => {
+    expect(removableRuleIndices(["npm *"], { "npm *": "allow" }, { 0: "denied" })).toEqual(new Set())
+  })
+
+  it("treats a scalar global rule as covering the wildcard row only", () => {
+    expect(removableRuleIndices(["*", "npm *"], "allow", { 0: "approved" })).toEqual(new Set([0]))
+  })
+
+  it("returns nothing for an absent global rule", () => {
+    expect(removableRuleIndices(["npm *"], undefined, { 0: "approved" })).toEqual(new Set())
   })
 })
