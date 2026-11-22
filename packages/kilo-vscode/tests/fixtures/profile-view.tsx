@@ -205,11 +205,7 @@ try {
   const abandoned = switchPost()
   assert.equal(trigger().disabled, true, "the attempt is pending before the session ends")
   await push({ type: "profileData", data: null })
-  assert.equal(
-    root.querySelector('[data-slot="select-select-trigger"]'),
-    null,
-    "signing out replaces the account card",
-  )
+  assert.equal(root.querySelector('[data-slot="select-select-trigger"]'), null, "signing out replaces the account card")
 
   // A result for the abandoned request, and the next sign-in, must not revive it.
   await push({
