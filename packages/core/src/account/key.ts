@@ -13,9 +13,11 @@ export const normalizeServerUrl = (input: string): string => {
 
 /**
  * Local account key. A stored account belongs to one server and one server-issued
- * user id, so the key carries both: the normalized URL, percent-encoded (which
+ * user id, so the key carries both: the percent-encoded server address (which
  * escapes the separator), joined with the remote id. The mapping is injective and
- * the key is never parsed back.
+ * the key is never parsed back. `server` must already be normalized by
+ * `normalizeServerUrl`, so a caller that must keep an unparseable stored address
+ * can pass that raw address here without this key derivation throwing again.
  */
-export const accountKey = (url: string, remote: string): AccountV2.ID =>
-  AccountV2.ID.make(`${encodeURIComponent(normalizeServerUrl(url))}:${remote}`)
+export const accountKey = (server: string, remote: string): AccountV2.ID =>
+  AccountV2.ID.make(`${encodeURIComponent(server)}:${remote}`)

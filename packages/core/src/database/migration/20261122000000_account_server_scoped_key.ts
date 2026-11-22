@@ -5,7 +5,10 @@ import { AccountV2 } from "../../account"
 import { accountKey, normalizeServerUrl } from "../../account/key"
 import type { DatabaseMigration } from "../migration"
 
-/** A stored address that cannot be parsed keeps its raw value, so the row survives the migration. */
+/**
+ * A stored address that cannot be normalized keeps its raw value, so the row survives the
+ * migration and still receives a derived key from that raw address.
+ */
 const parse = (url: string): string => {
   try {
     return normalizeServerUrl(url)
