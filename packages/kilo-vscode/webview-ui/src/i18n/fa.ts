@@ -1416,7 +1416,7 @@ export const dict = {
   "settings.saveBar.cancel": "لغو",
   "settings.saveBar.saveFailed": "ذخیره تنظیمات ممکن نشد",
   "settings.saveBar.dismissError": "رد کردن",
-  "settings.saveBar.unconfirmedWrite": "میزبان افزونه {{name}} را تأیید نکرد.",
+  "settings.saveBar.unconfirmedWrite": "میزبان افزونه «{{name}}» را تأیید نکرد.",
 
   "notifications.action.next": "بعدی",
   "notifications.action.close": "بستن",

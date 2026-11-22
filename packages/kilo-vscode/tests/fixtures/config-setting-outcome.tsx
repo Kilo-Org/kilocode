@@ -470,7 +470,7 @@ try {
     assert.ok(error)
     assert.equal(
       saveErrorText(error, (id, args) => resolveTemplate(text[id] ?? id, args)),
-      "Integrated Browser was not confirmed by the extension host.",
+      'The change to "Integrated Browser" was not confirmed by the extension host.',
     )
   })
 

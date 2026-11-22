@@ -1442,7 +1442,7 @@ export const dict = {
   "settings.saveBar.saving": "Guardando…",
   "settings.saveBar.saveFailed": "No se pudieron guardar los ajustes",
   "settings.saveBar.dismissError": "Descartar",
-  "settings.saveBar.unconfirmedWrite": "El host de la extensión no confirmó {{name}}.",
+  "settings.saveBar.unconfirmedWrite": "El host de la extensión no confirmó „{{name}}“.",
   "notifications.action.next": "Siguiente",
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",

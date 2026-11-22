@@ -1341,7 +1341,7 @@ export const dict = {
   "settings.saveBar.saving": "保存中…",
   "settings.saveBar.saveFailed": "无法保存设置",
   "settings.saveBar.dismissError": "忽略",
-  "settings.saveBar.unconfirmedWrite": "扩展宿主未确认 {{name}}。",
+  "settings.saveBar.unconfirmedWrite": "扩展宿主未确认「{{name}}」。",
   "settings.saveBar.cancel": "取消",
   "notifications.action.next": "下一个",
   "notifications.action.close": "关闭",
