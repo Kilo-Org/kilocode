@@ -422,17 +422,23 @@ const layer = Layer.effect(
       }
 
       if (newRules.length > 0 || removed.length > 0) {
-        const added = newRules.length > 0 ? toConfig(newRules)[permission] : undefined
-        const value: ConfigPermissionV1.Rule =
-          removed.length === 0 || SCALAR_ONLY_PERMISSIONS.has(permission)
-            ? (added ?? null)
-            : (() => {
-                const base: Record<string, ConfigPermissionV1.Action> =
-                  added === undefined ? {} : typeof added === "string" ? { "*": added } : { ...added }
-                for (const pattern of removed) base[pattern] = null
-                return base
-              })()
-        yield* config.updateGlobal({ permission: { [permission]: value } }, { dispose: false })
+        // Start from exactly what the additions can express, so a rule `toConfig`
+        // drops (a scalar-only permission with a concrete pattern) writes nothing,
+        // as before. Removals then add their delete sentinels.
+        const patch = toConfig(newRules)
+        if (removed.length > 0) {
+          if (SCALAR_ONLY_PERMISSIONS.has(permission)) patch[permission] = null
+          else {
+            const current = patch[permission]
+            const base: Record<string, ConfigPermissionV1.Action> =
+              current === undefined ? {} : typeof current === "string" ? { "*": current } : { ...current }
+            for (const pattern of removed) base[pattern] = null
+            patch[permission] = base
+          }
+        }
+        if (Object.keys(patch).length > 0) {
+          yield* config.updateGlobal({ permission: patch }, { dispose: false })
+        }
       }
 
       // kilocode_change - drain publishes replies through the same EventV2Bridge channel (was DeniedError)

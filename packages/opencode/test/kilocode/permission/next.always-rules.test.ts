@@ -994,6 +994,34 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
+  it.live("a rule the config cannot express writes nothing", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const asking = yield* ask({
+          id: PermissionV1.ID.make("permission_unexpressible"),
+          sessionID: SessionID.make("session_test"),
+          permission: "webfetch",
+          patterns: ["https://example.com/a"],
+          metadata: {},
+          always: ["https://example.com/a"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_unexpressible"),
+          approvedAlways: ["https://example.com/a"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_unexpressible"), reply: "once" })
+        yield* Fiber.join(asking)
+
+        // A scalar-only permission stores only its tool-wide action, so this request
+        // leaves the permission key untouched rather than deleting it.
+        const cfg = yield* Config.Service
+        expect((yield* cfg.get()).permission?.webfetch).toBeUndefined()
+      }),
+    ),
+  )
+
   it.live("multi-pattern: auto-resolves when new rule covers blocking pattern and ruleset covers the rest", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
