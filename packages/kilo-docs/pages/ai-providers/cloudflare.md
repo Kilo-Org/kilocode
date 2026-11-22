@@ -108,6 +108,18 @@ Then choose a gateway-backed model from the model picker, or set a default model
 
 If your organization provides a fully configured gateway URL, set `provider.<id>.options.baseURL`. When `baseURL` is configured, Kilo skips the built-in Account ID and Gateway ID checks because the URL already identifies the target service.
 
+```jsonc
+{
+  "provider": {
+    "cloudflare-ai-gateway": {
+      "options": {
+        "baseURL": "https://gateway.example.com/v1"
+      }
+    }
+  }
+}
+```
+
 The gateway credential from `CLOUDFLARE_API_TOKEN` or `CF_AIG_TOKEN` is sent when the request goes to the Cloudflare gateway host `gateway.ai.cloudflare.com`. For a gateway reached on another host, such as a Cloudflare custom domain, pass the credential in the provider headers:
 
 ```jsonc
@@ -117,18 +129,6 @@ The gateway credential from `CLOUDFLARE_API_TOKEN` or `CF_AIG_TOKEN` is sent whe
       "options": {
         "baseURL": "https://ai.example.com/compat",
         "headers": { "cf-aig-authorization": "Bearer <gateway-token>" }
-      }
-    }
-  }
-}
-```
-
-```jsonc
-{
-  "provider": {
-    "cloudflare-ai-gateway": {
-      "options": {
-        "baseURL": "https://gateway.example.com/v1"
       }
     }
   }

@@ -1929,6 +1929,30 @@ it.instance("Google Vertex Anthropic: uses REP endpoint for continental multi-re
   }),
 )
 
+// kilocode_change start - the configured region selects the regional endpoint
+it.instance(
+  "Google Vertex Anthropic: keeps the configured location working",
+  Effect.gen(function* () {
+    const provider = yield* Provider.Service
+    const model = yield* provider.getModel(
+      ProviderV2.ID.make("google-vertex-anthropic"),
+      ModelV2.ID.make("claude-sonnet-4-6@default"),
+    )
+    const language = yield* provider.getLanguage(model)
+    expect(languageBaseURL(language)).toBe(
+      "https://aiplatform.us.rep.googleapis.com/v1/projects/test-project/locations/us/publishers/anthropic/models",
+    )
+  }),
+  {
+    config: {
+      provider: {
+        "google-vertex-anthropic": { options: { project: "test-project", location: "us" } },
+      },
+    },
+  },
+)
+// kilocode_change end
+
 it.instance("Google Vertex: keeps regional Claude endpoints unchanged", () =>
   Effect.gen(function* () {
     yield* set("GOOGLE_CLOUD_PROJECT", "test-project")
