@@ -223,6 +223,8 @@ export interface PermissionErrorMessage {
   type: "permissionError"
   permissionID: string
   stale?: boolean
+  /** User-facing reason, shown in place of the generic toast title. */
+  message?: string
 }
 
 export interface TodoUpdatedMessage {

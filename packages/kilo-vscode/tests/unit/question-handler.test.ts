@@ -172,7 +172,7 @@ describe("question handlers", () => {
     expect(ok).toBe(false)
     expect(replies).toEqual([])
     expect(messages).toEqual([
-      { type: "error", message: SESSION_ROUTE_UNRESOLVED },
+      { type: "error", sessionID: "same", message: SESSION_ROUTE_UNRESOLVED },
       { type: "questionError", requestID: "req-ambiguous" },
     ])
   })

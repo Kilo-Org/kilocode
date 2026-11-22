@@ -109,8 +109,7 @@ function permissionRoute(
   const claimed = ctx.isPermissionResponseClaimed?.(permissionId) ?? false
   if (!recorded && !claimed && ctx.isSessionAmbiguous?.(target)) {
     console.error("[Kilo New] KiloProvider: Permission route has no single owning project:", target)
-    ctx.postMessage({ type: "error", message: SESSION_ROUTE_UNRESOLVED })
-    ctx.postMessage({ type: "permissionError", permissionID: permissionId })
+    ctx.postMessage({ type: "permissionError", permissionID: permissionId, message: SESSION_ROUTE_UNRESOLVED })
     return
   }
   const dir = recorded ?? (target ? ctx.getWorkspaceDirectory(target) : undefined)

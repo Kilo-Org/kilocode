@@ -133,7 +133,9 @@ async function resolve(
   const recorded = ctx.getQuestionDirectory(requestID)
   if (!recorded && sid && ctx.isSessionAmbiguous?.(sid)) {
     console.error("[Kilo New] KiloProvider: Question route has no single owning project:", sid)
-    ctx.postMessage({ type: "error", message: SESSION_ROUTE_UNRESOLVED })
+    // Scoped to the session so the notice settles that session, and the dock
+    // resets through questionError, which carries no text of its own.
+    ctx.postMessage({ type: "error", sessionID: sid, message: SESSION_ROUTE_UNRESOLVED })
     ctx.postMessage({ type: "questionError", requestID })
     return false
   }

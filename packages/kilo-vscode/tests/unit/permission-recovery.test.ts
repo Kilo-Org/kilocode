@@ -351,10 +351,7 @@ describe("handlePermissionResponse", () => {
 
     expect(saves).toEqual([])
     expect(replies).toEqual([])
-    expect(messages).toEqual([
-      { type: "error", message: SESSION_ROUTE_UNRESOLVED },
-      { type: "permissionError", permissionID: "p1" },
-    ])
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", message: SESSION_ROUTE_UNRESOLVED }])
   })
 
   it("keeps a recorded permission directory authoritative when the session maps to more than one project", async () => {
