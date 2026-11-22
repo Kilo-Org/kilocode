@@ -1428,7 +1428,7 @@ export const dict = {
   "settings.saveBar.saving": "Zapisywanie…",
   "settings.saveBar.saveFailed": "Nie można zapisać ustawień",
   "settings.saveBar.dismissError": "Odrzuć",
-  "settings.saveBar.unconfirmedWrite": "Host rozszerzenia nie potwierdził „{{name}}“.",
+  "settings.saveBar.unconfirmedWrite": "Host rozszerzenia nie potwierdził „{{name}}”.",
   "notifications.action.next": "Następny",
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",
