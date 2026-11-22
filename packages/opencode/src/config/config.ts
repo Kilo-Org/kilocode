@@ -246,10 +246,15 @@ function patchJsonc(input: string, patch: unknown, path: string[] = []): string 
     if (node && node.type !== "object") {
       const isPermissionKey = path[0] === "permission" && path.length === 2
       const replacement = isPermissionKey ? { "*": node.value, ...patch } : patch
-      const edits = modify(input, path, replacement, {
+      // kilocode_change start - a promotion whose every value is a delete sentinel
+      // leaves nothing to keep, so remove the key instead of writing an empty object.
+      const cleared =
+        isPermissionKey && Object.values(replacement).every((value) => value === null || value === undefined)
+      const edits = modify(input, path, cleared ? undefined : replacement, {
         formattingOptions: { insertSpaces: true, tabSize: 2 },
       })
       return applyEdits(input, edits)
+      // kilocode_change end
     }
   }
   // kilocode_change end

@@ -122,11 +122,15 @@ export namespace KilocodeConfigWriter {
       const tree = parseTree(input)
       const node = tree && findNodeAtLocation(tree, parts)
       if (node && node.type !== "object") {
-        const replacement = parts[0] === "permission" && parts.length === 2 ? { "*": node.value, ...patch } : patch
-        return applyEdits(
-          input,
-          modify(input, parts, replacement, { formattingOptions: { insertSpaces: true, tabSize: 2 } }),
-        )
+        const promotion = parts[0] === "permission" && parts.length === 2
+        const replacement = promotion ? { "*": node.value, ...patch } : patch
+        // A promotion whose every value is a delete sentinel leaves nothing to keep,
+        // so remove the key instead of writing an object of nulls.
+        const cleared = promotion && Object.values(replacement).every((value) => value === null || value === undefined)
+        const edits = modify(input, parts, cleared ? undefined : replacement, {
+          formattingOptions: { insertSpaces: true, tabSize: 2 },
+        })
+        return applyEdits(input, edits)
       }
     }
     return Object.entries(patch).reduce((text, [key, value]) => patchJsonc(text, value, [...parts, key]), input)

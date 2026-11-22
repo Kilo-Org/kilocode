@@ -28,7 +28,7 @@ const language = { t: (key: string) => key }
 const config = {
   config: () => ({ permission: {} }),
   globalConfig: () => ({ permission: {} }),
-  projectConfig: () => ({ permission: {} }),
+  collections: () => ({}),
 }
 Object.defineProperty(document, "hasFocus", { value: () => true })
 

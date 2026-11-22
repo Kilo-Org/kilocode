@@ -49,7 +49,7 @@ export const PermissionDock: Component<{
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
-  const { config, globalConfig, projectConfig } = useConfig()
+  const { config, globalConfig, collections } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
   // Skill shell batches are never persisted, so they show no auto-approve rules. The command
@@ -95,15 +95,15 @@ export const PermissionDock: Component<{
   // approved/denied patterns show their saved state immediately.
   const saved = config().permission?.[props.request.toolName]
   const loadState = savedRuleStates(rules(), saved)
-  // A saved rule is revocable from here only when the global config owns it.
-  // The effective config also merges workspace rules, and a global write cannot
+  // A saved rule is revocable from here only when the global config decides it.
+  // The effective config also merges workspace rules, and this write cannot
   // delete those, so their rows stay read-only.
-  const revocable = removableRuleIndices(
-    rules(),
-    globalConfig().permission?.[props.request.toolName],
-    projectConfig().permission?.[props.request.toolName],
-    loadState,
-  )
+  const revocable = removableRuleIndices({
+    rules: rules(),
+    global: globalConfig().permission?.[props.request.toolName],
+    source: collections().permission?.find((entry) => entry.key === props.request.toolName)?.source,
+    effective: loadState,
+  })
   const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})
   const [expanded, setExpanded] = createSignal(rulesExpandedPreference)
   // Rejecting is a two-step flow: Deny reveals an optional feedback field, then Reject confirms.

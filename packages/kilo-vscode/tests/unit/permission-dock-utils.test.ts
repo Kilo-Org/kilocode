@@ -88,46 +88,50 @@ describe("savedRuleStates", () => {
 })
 
 describe("removableRuleIndices", () => {
+  const call = (input: {
+    rules: string[]
+    global?: Parameters<typeof savedRuleStates>[1]
+    source?: "global" | "project" | "system" | "default"
+    effective: Record<number, "approved" | "denied">
+  }) => removableRuleIndices(input)
+
   it("marks a row the global config tiles", () => {
-    expect(removableRuleIndices(["npm *", "git *"], { "npm *": "allow" }, undefined, { 0: "approved" })).toEqual(
+    expect(call({ rules: ["npm *", "git *"], global: { "npm *": "allow" }, effective: { 0: "approved" } })).toEqual(
       new Set([0]),
     )
   })
 
   it("marks a denied row the global config tiles", () => {
-    expect(removableRuleIndices(["rm *"], { "rm *": "deny" }, {}, { 0: "denied" })).toEqual(new Set([0]))
+    expect(call({ rules: ["rm *"], global: { "rm *": "deny" }, source: "global", effective: { 0: "denied" } })).toEqual(
+      new Set([0]),
+    )
   })
 
-  it("leaves a row alone when the global config has no entry for it, even if the states agree", () => {
-    // Another scope supplies the entry, so the row is outside this prompt's scope.
-    expect(removableRuleIndices(["npm *"], { "git *": "allow" }, undefined, { 0: "approved" })).toEqual(new Set())
+  it("leaves a row alone when the global config has no entry for it", () => {
+    expect(call({ rules: ["npm *"], global: { "git *": "allow" }, effective: { 0: "approved" } })).toEqual(new Set())
   })
 
   it("leaves a row alone when the effective state disagrees with the global entry", () => {
-    expect(removableRuleIndices(["npm *"], { "npm *": "allow" }, undefined, { 0: "denied" })).toEqual(new Set())
+    expect(call({ rules: ["npm *"], global: { "npm *": "allow" }, effective: { 0: "denied" } })).toEqual(new Set())
   })
 
   it("treats a scalar global rule as covering the wildcard row only", () => {
-    expect(removableRuleIndices(["*", "npm *"], "allow", undefined, { 0: "approved" })).toEqual(new Set([0]))
+    expect(call({ rules: ["*", "npm *"], global: "allow", effective: { 0: "approved" } })).toEqual(new Set([0]))
   })
 
   it("returns nothing for an absent global rule", () => {
-    expect(removableRuleIndices(["npm *"], undefined, undefined, { 0: "approved" })).toEqual(new Set())
-  })
-})
-
-describe("removableRuleIndices with a workspace rule", () => {
-  it("leaves the row alone when the workspace config supplies the same pattern", () => {
-    // The workspace scope supplies the same pattern, so the row is outside the
-    // prompt's scope.
-    expect(removableRuleIndices(["npm *"], { "npm *": "allow" }, { "npm *": "allow" }, { 0: "approved" })).toEqual(
-      new Set(),
-    )
+    expect(call({ rules: ["npm *"], effective: { 0: "approved" } })).toEqual(new Set())
   })
 
-  it("still marks a row the workspace does not mention", () => {
-    expect(removableRuleIndices(["npm *"], { "npm *": "allow" }, { "git *": "allow" }, { 0: "approved" })).toEqual(
-      new Set([0]),
-    )
+  it("leaves every row alone when the workspace overlay defines the permission key", () => {
+    expect(
+      call({ rules: ["npm *"], global: { "npm *": "allow" }, source: "project", effective: { 0: "approved" } }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves every row alone when a runtime source defines the permission key", () => {
+    expect(
+      call({ rules: ["npm *"], global: { "npm *": "allow" }, source: "system", effective: { 0: "approved" } }),
+    ).toEqual(new Set())
   })
 })

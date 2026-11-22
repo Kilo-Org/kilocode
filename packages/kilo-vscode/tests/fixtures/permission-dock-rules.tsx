@@ -40,24 +40,24 @@ Object.defineProperty(document, "hasFocus", { value: () => true })
 const savedAllow = {
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
-  projectConfig: () => ({ permission: {} }),
+  collections: () => ({ permission: [{ key: "edit", source: "global" }] }),
 }
 const savedDeny = {
   config: () => ({ permission: { edit: { "*": "deny" } } }),
   globalConfig: () => ({ permission: { edit: { "*": "deny" } } }),
-  projectConfig: () => ({ permission: {} }),
+  collections: () => ({ permission: [{ key: "edit", source: "global" }] }),
 }
 // A rule that another config scope supplies.
 const workspaceAllow = {
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: {} }),
-  projectConfig: () => ({ permission: { edit: { "*": "allow" } } }),
+  collections: () => ({ permission: [{ key: "edit", source: "project" }] }),
 }
 // Both scopes save the same allow for the row.
 const bothAllow = {
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
-  projectConfig: () => ({ permission: { edit: { "*": "allow" } } }),
+  collections: () => ({ permission: [{ key: "edit", source: "project" }] }),
 }
 
 type Mode = "reject" | "once" | "approve" | "deny" | "keyboard" | "remove" | "removeDenied" | "workspace" | "both"

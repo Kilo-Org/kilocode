@@ -1,4 +1,4 @@
-import type { PermissionRule } from "../../types/messages"
+import type { ConfigOrigin, PermissionRule } from "../../types/messages"
 
 export type RuleDecision = "approved" | "denied" | "pending"
 
@@ -35,25 +35,27 @@ export function savedRuleStates(rules: string[], saved: PermissionRule | undefin
 }
 
 /**
- * The rows this prompt can change: the row's displayed state is the global
- * config's own entry for that pattern, and no other config scope supplies the
- * same pattern. Those rows carry the removal control; every other row is shown
- * without it.
+ * The rows this prompt can change: the global config supplies the pattern, the
+ * effective state matches that global entry, and the workspace overlay does not
+ * define the same permission key. `source` is the overlay's recorded origin for
+ * the permission key; when the workspace defines the key at all, the row stays
+ * out of scope because this write cannot tell which of its patterns wins.
  */
-export function removableRuleIndices(
-  rules: string[],
-  global: PermissionRule | undefined,
-  project: PermissionRule | undefined,
-  effective: Record<number, RuleDecision>,
-): Set<number> {
-  const fromGlobal = savedRuleStates(rules, global)
+export function removableRuleIndices(input: {
+  rules: string[]
+  global: PermissionRule | undefined
+  source: ConfigOrigin | undefined
+  effective: Record<number, RuleDecision>
+}): Set<number> {
+  if (input.source !== undefined && input.source !== "global") return new Set()
+  const fromGlobal = savedRuleStates(input.rules, input.global)
   const result = new Set<number>()
-  for (let i = 0; i < rules.length; i++) {
-    const action = typeof global === "string" ? (rules[i] === "*" ? global : undefined) : global?.[rules[i]]
+  for (let i = 0; i < input.rules.length; i++) {
+    const pattern = input.rules[i]
+    const action =
+      typeof input.global === "string" ? (pattern === "*" ? input.global : undefined) : input.global?.[pattern]
     if (action !== "allow" && action !== "deny") continue
-    const local = typeof project === "string" ? (rules[i] === "*" ? project : undefined) : project?.[rules[i]]
-    if (local === "allow" || local === "deny") continue
-    if (fromGlobal[i] === effective[i]) result.add(i)
+    if (fromGlobal[i] === input.effective[i]) result.add(i)
   }
   return result
 }
