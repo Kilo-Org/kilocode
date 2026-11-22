@@ -608,8 +608,14 @@ try {
     await settle()
     const write = lastWrite()
     assert.deepEqual(write, { type: "updateSetting", key, value: true })
+    // `lastWrite()` drops the generated id, but the answer must name the very write it
+    // rejects, so the id comes from the message the context actually posted.
+    const posted = writes().at(-1)
+    assert.ok(posted, "Expected a posted updateSetting message")
+    const writeId = posted.writeId
+    assert.ok(typeof writeId === "string", "the posted write carries the id its answer echoes")
     assert.equal(probe().isDirty(), false, "saveConfig hands the staged edit to the host")
-    post({ type: "settingUpdateFailed", key, writeId: write.writeId, message: "rejected staged" })
+    post({ type: "settingUpdateFailed", key, writeId, message: "rejected staged" })
     await settle()
     assert.deepEqual(probe().saveError(), { message: "rejected staged", details: undefined })
     assert.equal(probe().isDirty(), true, "the rejected edit is staged again so it can be retried")
@@ -618,6 +624,46 @@ try {
     await settle()
     assert.equal(probe().settings()[key], undefined, "discard returns the control to the stored value")
     assert.equal(probe().isDirty(), false, "discard clears the restored draft")
+  })
+
+  await check("a rejected older staged save leaves the newer save's value alone", async () => {
+    const key = "conversationPromptHistory"
+    // Drop any stage an earlier case left behind, so the draft this case reads is its own.
+    probe().discardConfig()
+    await settle()
+    assert.equal(probe().isDirty(), false, "the case starts with nothing staged")
+    probe().updateSetting(key, "alpha")
+    await settle()
+    probe().saveConfig()
+    await settle()
+    const first = writes().at(-1)?.writeId
+    assert.ok(typeof first === "string", "the first save posted a write carrying its id")
+    assert.deepEqual(written().at(-1), { type: "updateSetting", key, value: "alpha" })
+    probe().updateSetting(key, "beta")
+    await settle()
+    probe().saveConfig()
+    await settle()
+    const second = writes().at(-1)?.writeId
+    assert.ok(typeof second === "string", "the second save posted a write carrying its id")
+    assert.notEqual(first, second, "the two saves posted different writes")
+    assert.deepEqual(written().at(-1), { type: "updateSetting", key, value: "beta" })
+    // The first save's rejection arrives after the second save replaced that same intent, so
+    // the edit it carried no longer exists to be staged again.
+    post({ type: "settingUpdateFailed", key, writeId: first, message: "rejected older save" })
+    await settle()
+    assert.deepEqual(probe().saveError(), { message: "rejected older save", details: undefined })
+    assert.equal(probe().settings()[key], "beta", "the control keeps the newer save's value")
+    assert.equal(
+      probe().isDirty(),
+      false,
+      "the replaced edit is not staged again, so the save bar claims no unsaved change",
+    )
+    post({ type: "settingUpdated", key, value: "beta", writeId: second })
+    await settle()
+    assert.equal(probe().settings()[key], "beta", "the chain settles on the value the host stored")
+    assert.equal(probe().isDirty(), false, "the settle stages nothing")
+    probe().discardConfig()
+    await settle()
   })
 
   await check("dismissing an error clears it while an unrelated edit stays staged", async () => {

@@ -583,7 +583,11 @@ export const ConfigProvider: ParentComponent = (props) => {
       // would otherwise be lost with no Save button to retry it. Stage its value again so the
       // control shows the edit, `isDirty()` is true, and Discard returns to the stored value.
       // A newer edit for the same property stays in front, as the stored value does below.
-      if (rejected.staged) {
+      // Only the chain's newest write still carries the user's intent: a later write for the
+      // same key already replaced it, and the settle adopts the value the host holds for that
+      // later write, so re-staging this one would offer to write a value the host refused
+      // over the one it accepted.
+      if (rejected.staged && rejected.order === pending.order) {
         const property = pending.property
         setSettingsDraft((prev) => (Object.hasOwn(prev, property) ? prev : { ...prev, [property]: rejected.value }))
       }
