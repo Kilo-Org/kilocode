@@ -353,11 +353,20 @@ const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient.HttpCl
       yield* repo.remove(accountID)
       if (Option.isNone(active) || active.value.id !== accountID) return
 
-      const next = (yield* orgsByAccount()).flatMap((group) =>
-        group.orgs.map((org) => ({ accountID: group.account.id, orgID: org.id })),
-      )[0]
-      if (!next) return
-      yield* repo.use(next.accountID, Option.some(next.orgID))
+      // kilocode_change start
+      const groups = yield* orgsByAccount()
+      const next = groups
+        .flatMap((group) => group.orgs.map((org) => ({ accountID: group.account.id, orgID: org.id })))
+        .at(0)
+      if (next) {
+        yield* repo.use(next.accountID, Option.some(next.orgID))
+        return
+      }
+
+      const fallback = groups.at(0)?.account
+      if (!fallback) return
+      yield* repo.use(fallback.id, Option.none())
+      // kilocode_change end
     })
 
     const config = Effect.fn("Account.config")(function* (accountID: AccountID, orgID: OrgID) {
