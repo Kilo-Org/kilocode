@@ -5,19 +5,22 @@ export const SKILL_SHELL_UNTRUSTED = "[skill shell execution disabled for untrus
 
 // Render a skill command for a permission prompt as a single, tamper-evident line.
 // Escape control chars (CR/LF/ESC/etc.) so a command can't repaint the terminal, and invisible
-// format chars (bidi marks and overrides, line/paragraph separators, zero-width characters, BOM),
-// which belong to the same display policy: the prompt shows each one as its literal escape, so the
-// text presented matches the characters the command carries.
+// format chars (bidi marks and overrides, line/paragraph separators, zero-width characters,
+// variation selectors, tag characters, BOM), which belong to the same display policy: the prompt
+// shows each one as its literal escape, so the text presented matches the characters the command
+// carries. The class covers width-less characters in every plane, supplementary ones included.
 const CONTROL =
-  /[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/g
+  /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufe00-\ufe0f\ufeff\u{e0000}-\u{e007f}\u{e0100}-\u{e01ef}]/gu
 
 export function displayCommand(command: string) {
   return command.replace(CONTROL, (ch) => {
     if (ch === "\n") return "\\n"
     if (ch === "\r") return "\\r"
     if (ch === "\t") return "\\t"
-    const code = ch.charCodeAt(0)
-    return code <= 0xff ? "\\x" + code.toString(16).padStart(2, "0") : "\\u" + code.toString(16).padStart(4, "0")
+    const code = ch.codePointAt(0) ?? 0
+    if (code <= 0xff) return "\\x" + code.toString(16).padStart(2, "0")
+    if (code <= 0xffff) return "\\u" + code.toString(16).padStart(4, "0")
+    return "\\u{" + code.toString(16) + "}"
   })
 }
 

@@ -5,19 +5,23 @@ export type RuleDecision = "approved" | "denied" | "pending"
 // Escape control characters and invisible format characters for display, so each surface shows
 // exactly the characters the request carries. Invisible format characters belong to the same
 // display policy as control characters: each one is shown as its literal escape, so text never
-// depends on characters that render without width. Both helpers serve every text surface of the
-// approval card — skill-shell commands, bash commands, pattern paths, tool names, rule text and
-// diff file names. The webview can't import from @kilocode/cli, so this mirrors displayCommand in
+// depends on characters that render without width. The class covers width-less characters in
+// every plane, including the supplementary-plane variation selectors and tag characters. Both
+// helpers serve every text surface of the approval card — skill-shell commands, bash commands,
+// pattern paths, tool names, rule text and diff file names. The webview can't import from
+// @kilocode/cli, so this mirrors displayCommand in
 // packages/opencode/src/kilocode/skills/display.ts; keep them in sync.
 const CONTROL =
-  /[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/g
+  /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufe00-\ufe0f\ufeff\u{e0000}-\u{e007f}\u{e0100}-\u{e01ef}]/gu
 
 function escape(ch: string) {
   if (ch === "\n") return "\\n"
   if (ch === "\r") return "\\r"
   if (ch === "\t") return "\\t"
-  const code = ch.charCodeAt(0)
-  return code <= 0xff ? "\\x" + code.toString(16).padStart(2, "0") : "\\u" + code.toString(16).padStart(4, "0")
+  const code = ch.codePointAt(0) ?? 0
+  if (code <= 0xff) return "\\x" + code.toString(16).padStart(2, "0")
+  if (code <= 0xffff) return "\\u" + code.toString(16).padStart(4, "0")
+  return "\\u{" + code.toString(16) + "}"
 }
 
 /** Single-line surface: LF/CR/TAB become `\n`/`\r`/`\t`, every other control and format char escapes. */

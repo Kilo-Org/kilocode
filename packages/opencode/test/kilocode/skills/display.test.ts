@@ -24,6 +24,17 @@ describe("displayCommand", () => {
     expect(out).not.toMatch(/[\u200b-\u200f\u2060-\u2064\ufeff]/)
   })
 
+  it("escapes width-less format characters from every plane", () => {
+    // The tags block (U+E0041), a variation selector (U+FE0F), a variation selector supplement
+    // (U+E0100) and a soft hyphen (U+00AD) all render without width, so each shows as a literal
+    const out = displayCommand("echo \u{E0041}\uFE0F\u{E0100}\u00AD rm -rf /")
+    expect(out).toBe("echo \\u{e0041}\\ufe0f\\u{e0100}\\xad rm -rf /")
+    expect(out).not.toContain("\u{E0041}")
+    expect(out).not.toContain("\uFE0F")
+    expect(out).not.toContain("\u{E0100}")
+    expect(out).not.toContain("\u00AD")
+  })
+
   it("leaves ordinary commands unchanged", () => {
     expect(displayCommand("git status --short")).toBe("git status --short")
   })

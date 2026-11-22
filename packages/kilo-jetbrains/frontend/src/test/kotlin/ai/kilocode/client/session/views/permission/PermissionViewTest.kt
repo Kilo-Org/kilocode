@@ -260,6 +260,37 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertFalse("Raw zero-width char must not reach the label", label.text.contains("\u2060"))
     }
 
+    fun `test skill-shell commands escape supplementary-plane format characters`() {
+        // A tag character (U+E0041) and a variation selector (U+FE0F) render without width.
+        val tag = String(Character.toChars(0xE0041))
+        val vs = "\uFE0F"
+        view.show(
+            Permission(
+                id = "perm_skill_astral",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("printf hi"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status"),
+                    skillCommands = listOf("rm -rf ${tag}txt.exe", "rm -rf ${vs}txt.exe"),
+                ),
+            )
+        )
+
+        val label = view.codeLabelsForTest().single()
+        assertTrue(
+            "Expected escaped supplementary tag character, got: ${label.text}",
+            label.text.contains("rm -rf \\u{e0041}txt.exe"),
+        )
+        assertTrue(
+            "Expected escaped variation selector, got: ${label.text}",
+            label.text.contains("rm -rf \\ufe0ftxt.exe"),
+        )
+        assertFalse("Raw supplementary character must not reach the label", label.text.contains(tag))
+        assertFalse("Raw variation selector must not reach the label", label.text.contains(vs))
+    }
+
     fun `test skill-shell header escapes control and bidi characters in the skill name`() {
         view.show(
             Permission(

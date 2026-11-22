@@ -33,6 +33,18 @@ describe("displayText", () => {
     expect(displayText("a\u2060b")).toBe("a\\u2060b")
     expect(displayText("a\u2064b")).toBe("a\\u2064b")
   })
+
+  it("escapes width-less format characters from every plane", () => {
+    expect(displayText("\u{E0041}")).toBe("\\u{e0041}")
+    expect(displayText("\uFE0F")).toBe("\\ufe0f")
+    expect(displayText("\u{E0100}")).toBe("\\u{e0100}")
+    expect(displayText("\u00AD")).toBe("\\xad")
+  })
+
+  it("escapes supplementary-plane format characters without affecting their neighbours", () => {
+    expect(displayText("a\u{E0041}b")).toBe("a\\u{e0041}b")
+    expect(displayText("hi \u{1F600}")).toBe("hi \u{1F600}")
+  })
 })
 
 describe("displayLines", () => {
@@ -54,6 +66,13 @@ describe("displayLines", () => {
 
   it("escapes zero-width format characters in block text", () => {
     expect(displayLines('{\n  "a": "x\u2060y\u2064"\n}')).toBe('{\n  "a": "x\\u2060y\\u2064"\n}')
+  })
+
+  it("escapes width-less format characters from every plane in block text", () => {
+    expect(displayLines("\u{E0041}")).toBe("\\u{e0041}")
+    expect(displayLines("\uFE0F")).toBe("\\ufe0f")
+    expect(displayLines("\u{E0100}")).toBe("\\u{e0100}")
+    expect(displayLines("\u00AD")).toBe("\\xad")
   })
 })
 

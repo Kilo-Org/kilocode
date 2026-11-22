@@ -133,6 +133,29 @@ check({ ...base, toolName: "bash", args: { command: "echo hi", description: `run
   assert(!hint.includes(ZWJ), `Description hint showed the raw invisible character: ${JSON.stringify(hint)}`)
 })
 
+// Width-less format characters from other planes on the same surfaces: a tag character in the
+// description and a variation selector in a pattern path. Each shows its literal escape.
+const TAG = "\u{E0041}"
+const VS = "\uFE0F"
+check(
+  {
+    ...base,
+    toolName: "read",
+    patterns: ["src/app.ts", `src/${VS}gnp.exe`],
+    args: { description: `runs ${TAG}harmless.sh` },
+  },
+  (root) => {
+    const hint = text(root, '[data-slot="permission-hint"]')
+    assert.equal(hint, "runs \\u{e0041}harmless.sh")
+    assert(hint.includes("\\u{e0041}"), `Description hint lost the escaped tag character: ${JSON.stringify(hint)}`)
+    assert(!hint.includes(TAG), `Description hint showed the raw tag character: ${JSON.stringify(hint)}`)
+    const paths = Array.from(root.querySelectorAll('[data-slot="permission-pattern"]'), (node) => node.textContent)
+    assert.deepEqual(paths, ["src/app.ts", "src/\\ufe0fgnp.exe"])
+    assert(paths.join("\n").includes("\\ufe0f"), "Pattern paths lost the escaped variation selector")
+    assert(!paths.join("\n").includes(VS), "Pattern paths showed the raw variation selector")
+  },
+)
+
 // External-directory rule path.
 check(
   {

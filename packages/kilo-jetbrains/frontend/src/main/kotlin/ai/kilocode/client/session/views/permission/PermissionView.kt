@@ -315,17 +315,25 @@ class PermissionView(
 
     // Escape control chars (CR/LF/ESC/etc.) and bidi/format characters so a skill command can't
     // repaint the prompt or use Trojan-Source reordering to make the displayed text differ from
-    // what executes; newlines become a visible marker. Mirrors displayCommand in the CLI
+    // what executes; newlines become a visible marker. The traversal is by code point so
+    // supplementary-plane characters escape as a whole, and the ranges cover width-less
+    // characters in every plane. Mirrors displayCommand in the CLI
     // (packages/opencode/src/kilocode/skills/display.ts); keep the ranges in sync.
     private fun escapeControl(command: String): String = buildString {
-        for (ch in command) {
-            val code = ch.code
+        var index = 0
+        while (index < command.length) {
+            val cp = command.codePointAt(index)
+            index += Character.charCount(cp)
             when {
-                ch == '\n' -> append("\\n")
-                ch == '\r' -> append("\\r")
-                ch == '\t' -> append("\\t")
-                isEscapedControlOrFormat(code) -> append(if (code <= 0xff) "\\x%02x".format(code) else "\\u%04x".format(code))
-                else -> append(ch)
+                cp == 0x0a -> append("\\n")
+                cp == 0x0d -> append("\\r")
+                cp == 0x09 -> append("\\t")
+                isEscapedControlOrFormat(cp) -> when {
+                    cp <= 0xff -> append("\\x%02x".format(cp))
+                    cp <= 0xffff -> append("\\u%04x".format(cp))
+                    else -> append("\\u{%x}".format(cp))
+                }
+                else -> appendCodePoint(cp)
             }
         }
     }
@@ -333,13 +341,17 @@ class PermissionView(
     private fun isEscapedControlOrFormat(code: Int): Boolean =
         code < 0x20 ||
             code in 0x7f..0x9f ||
+            code == 0x00ad ||
             code == 0x061c ||
             code in 0x200b..0x200f ||
             code in 0x2028..0x2029 ||
             code in 0x202a..0x202e ||
             code in 0x2060..0x2064 ||
             code in 0x2066..0x2069 ||
-            code == 0xfeff
+            code in 0xfe00..0xfe0f ||
+            code == 0xfeff ||
+            code in 0xe0000..0xe007f ||
+            code in 0xe0100..0xe01ef
 
     private fun description(permission: Permission): String = if (permission.name == "bash") {
         permission.meta.raw["description"] ?: toolLabel(permission.name)
