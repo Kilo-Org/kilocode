@@ -635,6 +635,18 @@ object KiloCliDataParser {
     }
 
     /**
+     * Extracts the raw project-scope config object from a GET /config/overlay response.
+     *
+     * The overlay reports what each config file itself contains, whereas the resolved
+     * `/config` body repeats values inherited from the global file, so only this raw
+     * object can tell a workspace-scoped setting from a global one.
+     */
+    fun parseConfigOverlayProject(raw: String): String? {
+        val project = tryParseObject(raw)?.get("project").obj() ?: return null
+        return json.encodeToString(JsonObject.serializer(), project)
+    }
+
+    /**
      * Parse the `/global/config` response body into a [ConfigDto]. Tolerant of
      * the discriminated MCP union and the `env`/`environment` alias. Never
      * throws on malformed input so a bad config cannot block startup.
