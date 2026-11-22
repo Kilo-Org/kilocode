@@ -36,11 +36,11 @@ interface OrgOption {
 }
 
 /**
- * The account the selector shows: the explicit organization, else personal when
- * the profile has one, else the first organization the selector lists (and
- * personal when it lists none). This must stay in step with `currentId()` and
- * `orgOptions()` below, so that a recorded origin is the account the panel
- * actually displayed.
+ * The account the selector shows, and the one its options are compared against:
+ * the explicit organization, else personal when the profile has one, else the
+ * first organization the selector lists (and personal when it lists none).
+ * Both the displayed value and a switch attempt's recorded origin come from
+ * here, so the panel never compares one derivation against another.
  */
 const shownAccount = (profile: ProfileData | null | undefined): string => {
   if (profile?.currentOrgId) return profile.currentOrgId
@@ -107,9 +107,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     ]
   })
 
-  const currentId = createMemo(() => {
-    return props.profileData?.currentOrgId ?? (personal() ? PERSONAL : orgOptions()[0]?.value)
-  })
+  const currentId = createMemo(() => shownAccount(props.profileData))
 
   // The selector is locked for the whole attempt, not just until the refreshed
   // profile arrives: the host pushes that profile before the result, and an
