@@ -11,6 +11,7 @@ import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import kotlinx.coroutines.CoroutineScope
@@ -284,14 +285,38 @@ class KiloHostedRoutingTest {
     }
 
     @Test
-    fun `hosted permission rules are ignored so the reply can continue`() = runBlocking(Dispatchers.Default) {
+    fun `hosted permission rule saves are refused`() = runBlocking(Dispatchers.Default) {
         val app = app(TestLog())
         ready(app)
         val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
 
-        api.savePermissionRules("per_1", ref.key, PermissionAlwaysRulesDto(approvedAlways = listOf("pwd")))
+        val failure = assertFailsWith<UnsupportedOperationException> {
+            api.savePermissionRules("per_1", ref.key, PermissionAlwaysRulesDto(approvedAlways = listOf("pwd")))
+        }
 
+        assertTrue(failure.message.orEmpty().contains("savePermissionRules"))
         assertEquals(0, mock.requestCount("/permission/per_1/always-rules"))
+    }
+
+    @Test
+    fun `hosted permission replies answer through the attachment`() = runBlocking(Dispatchers.Default) {
+        mock.pendingPermissions = """[{"id":"per_1","sessionID":"ses_cloud","permission":"bash","patterns":[]}]"""
+        val app = app(TestLog())
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+        val events = launch { api.events(session, ref.key).collect {} }
+        assertTrue(mock.awaitFeed("/event?workspace=wrk_att_test"))
+
+        api.messages(session, ref.key)
+        assertEquals("per_1", api.pendingPermissions(ref.key).single().id)
+
+        api.replyPermission("per_1", ref.key, PermissionReplyDto(reply = "once", interactive = true))
+
+        assertEquals(1, mock.requestCount("/permission/per_1/reply"))
+        assertTrue(mock.paths.any { it.startsWith("/permission/per_1/reply") && it.contains("workspace=wrk_att_test") })
+        // The hosted transport accepts the decision only; the human-answered flag is local to this CLI.
+        assertEquals("""{"reply":"once"}""", mock.lastPermissionReplyBody)
+        events.cancelAndJoin()
     }
 
     @Test
