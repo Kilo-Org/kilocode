@@ -22,9 +22,7 @@ import { awaitWithTimeout } from "../../lib/effect"
 
 const previous = Flag.KILO_DB
 const dbfile = path.join(os.tmpdir(), `kilo-named-agent-${process.pid}-${crypto.randomUUID()}.db`)
-const layer = LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node]))
-const prompt = LayerNode.compile(LayerNode.group([SessionPrompt.node, SessionProjector.node]))
-const runtime = makeRuntime(Session.Service, layer)
+const both = LayerNode.compile(LayerNode.group([Session.node, SessionPrompt.node, SessionProjector.node]))
 
 beforeAll(async () => {
   await fs.rm(dbfile, { force: true })
@@ -32,7 +30,6 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await runtime.dispose()
   await disposeTestRuntime()
   Flag.KILO_DB = previous
   await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map(cleanup))
@@ -99,20 +96,16 @@ function task(args: { description: string; prompt: string; subagent_type: string
   })
 }
 
-const sessions = {
-  create: (input: Parameters<Session.Interface["create"]>[0]) =>
-    runtime.runPromise((svc) => svc.create(input)),
-  children: (sessionID: SessionID) => runtime.runPromise((svc) => svc.children(sessionID)),
-}
-
-function scoped<T>(dir: string, fn: (prompt: SessionPrompt.Interface) => Promise<T>) {
+function scoped<T, E>(
+  dir: string,
+  fn: (input: { prompt: SessionPrompt.Interface; sessions: Session.Interface }) => Effect.Effect<T, E>,
+) {
   return Effect.runPromise(
-    SessionPrompt.Service.use((svc) => Effect.promise(() => fn(svc))).pipe(
-      Effect.provide(prompt),
-      provideInstance(dir),
-      Effect.provide(testInstanceStoreLayer),
-      Effect.scoped,
-    ),
+    Effect.gen(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      return yield* fn({ prompt, sessions })
+    }).pipe(Effect.provide(both), provideInstance(dir), Effect.provide(testInstanceStoreLayer), Effect.scoped),
   )
 }
 
@@ -151,12 +144,12 @@ test(
       await provideTestInstance({
         directory: tmp.path,
         fn: () =>
-          scoped(tmp.path, async (svc) => {
-            const session = await sessions.create({ title: "Agent part names its subagent" })
-            const exit = await Effect.runPromise(
-              awaitWithTimeout(
+          scoped(tmp.path, ({ prompt, sessions }) =>
+            Effect.gen(function* () {
+              const session = yield* sessions.create({ title: "Agent part names its subagent" })
+              const exit = yield* awaitWithTimeout(
                 Effect.exit(
-                  svc.prompt({
+                  prompt.prompt({
                     sessionID: session.id,
                     agent: "code",
                     parts: [
@@ -167,12 +160,12 @@ test(
                 ),
                 "the task tool waited for a permission ask instead of using the agent part",
                 "25 seconds",
-              ),
-            )
-            if (Exit.isFailure(exit)) throw new Error("prompt failed: " + Cause.pretty(exit.cause))
-            const children = await sessions.children(session.id)
-            expect(children.map((child) => child.agent)).toEqual(["explore"])
-          }),
+              )
+              if (Exit.isFailure(exit)) throw new Error("prompt failed: " + Cause.pretty(exit.cause))
+              const children = yield* sessions.children(session.id)
+              expect(children.map((child) => child.agent)).toEqual(["explore"])
+            }),
+          ),
       })
     } finally {
       await server.stop(true)
