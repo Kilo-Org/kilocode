@@ -23,12 +23,17 @@ type Pkce = {
   challenge: string
 }
 
-type TokenResponse = {
+// kilocode_change start - sign-in and refresh read separate token shapes
+type Token = {
   id_token: string
   access_token: string
-  refresh_token: string
   expires_in?: number
 }
+
+type TokenResponse = Token & { refresh_token: string }
+
+type RefreshResponse = Token & { refresh_token?: string }
+// kilocode_change end
 
 type Claims = {
   chatgpt_account_id?: string
@@ -94,7 +99,7 @@ const browser = {
         instructions: "Complete authorization in your browser. This window will close automatically.",
         callback: Deferred.await(code).pipe(
           Effect.flatMap((value) => exchange(value, redirect, pkce)),
-          Effect.map((tokens) => credential(browserMethodID, tokens)),
+          Effect.map((tokens) => credential(browserMethodID, tokens, tokens.refresh_token)), // kilocode_change
         ),
       }
     }),
@@ -140,13 +145,13 @@ const headless = {
                 authorization_code: string
                 code_verifier: string
               }
-              return credential(
-                headlessMethodID,
-                yield* exchange(data.authorization_code, `${issuer}/deviceauth/callback`, {
-                  verifier: data.code_verifier,
-                  challenge: "",
-                }),
-              )
+              // kilocode_change start - sign-in passes the refresh secret from its own exchange
+              const tokens = yield* exchange(data.authorization_code, `${issuer}/deviceauth/callback`, {
+                verifier: data.code_verifier,
+                challenge: "",
+              })
+              return credential(headlessMethodID, tokens, tokens.refresh_token)
+              // kilocode_change end
             }
             if (response.status !== 403 && response.status !== 404) {
               return yield* Effect.fail(new Error(`Device authorization failed: ${response.status}`))
@@ -214,8 +219,9 @@ function exchange(code: string, redirect: string, pkce: Pkce) {
   })
 }
 
+// kilocode_change start - refresh reads its own token shape
 function refresh(methodID: Integration.MethodID, value: Pick<Credential.OAuth, "refresh" | "metadata">) {
-  return request<TokenResponse>(`${issuer}/oauth/token`, {
+  return request<RefreshResponse>(`${issuer}/oauth/token`, {
     method: "POST",
     headers: headers("application/x-www-form-urlencoded"),
     body: new URLSearchParams({
@@ -225,11 +231,13 @@ function refresh(methodID: Integration.MethodID, value: Pick<Credential.OAuth, "
     }).toString(),
   }).pipe(
     Effect.map((tokens) => {
-      const next = credential(methodID, tokens)
+      // keep the stored refresh secret unless the response supplies a replacement
+      const next = credential(methodID, tokens, tokens.refresh_token ?? value.refresh)
       return Credential.OAuth.make({ ...next, metadata: next.metadata ?? value.metadata })
     }),
   )
 }
+// kilocode_change end
 
 function request<A>(url: string, init: RequestInit) {
   return Effect.tryPromise({
@@ -242,17 +250,19 @@ function request<A>(url: string, init: RequestInit) {
   })
 }
 
-function credential(methodID: Integration.MethodID, tokens: TokenResponse) {
+// kilocode_change start - the refresh secret is an explicit argument
+function credential(methodID: Integration.MethodID, tokens: Token, refresh: string) {
   const accountID = extractAccountID(tokens)
   return Credential.OAuth.make({
     type: "oauth",
     methodID,
-    refresh: tokens.refresh_token,
+    refresh,
     access: tokens.access_token,
     expires: Date.now() + (tokens.expires_in ?? 3600) * 1000,
     metadata: accountID ? { accountID } : undefined,
   })
 }
+// kilocode_change end
 
 async function generatePKCE(): Promise<Pkce> {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
@@ -280,9 +290,11 @@ function authorizeURL(redirect: string, pkce: Pkce, state: string) {
   })}`
 }
 
-function extractAccountID(tokens: TokenResponse) {
+// kilocode_change start - reads the narrowed token shape shared by sign-in and refresh
+function extractAccountID(tokens: Token) {
   return claim(tokens.id_token) ?? claim(tokens.access_token)
 }
+// kilocode_change end
 
 function claim(token: string) {
   const part = token.split(".")[1]
