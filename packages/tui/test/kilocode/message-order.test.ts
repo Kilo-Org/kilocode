@@ -33,8 +33,8 @@ test("lookup by id is linear so time-ordered lists still find removals", () => {
   expect(at([old, next], "msg_missing")).toEqual({ found: false, index: -1 })
 })
 
-// The conversation below is in conversational order. Its ids are in the opposite
-// string order, so any answer taken from comparing ids is visibly wrong here.
+// The conversation below is in conversational order. Order comes from position,
+// so the expected answers below follow the array and nothing else.
 const conversation = [
   { id: "msg_ff0cb2300001Z6YIo5V52u114f", role: "user" },
   { id: "msg_ff0cb2300002Z6YIo5V52u114f", role: "assistant" },
@@ -59,12 +59,12 @@ test("redo with no later user message is the newest case, even past assistant tu
   expect(redoTarget(conversation.slice(0, 5), conversation[4]!.id)).toEqual({ kind: "newest" })
 })
 
-test("redo reports an absent boundary instead of restoring everything", () => {
+test("redo reports an absent boundary and changes nothing", () => {
   expect(redoTarget(conversation, "msg_not_in_window")).toEqual({ kind: "absent" })
   expect(redoTarget([], conversation[0]!.id)).toEqual({ kind: "absent" })
 })
 
-test("redo skips a boundary that is not a user message without looping", () => {
+test("redo advances past a boundary that is not a user message", () => {
   expect(redoTarget(conversation, conversation[1]!.id)).toEqual({ kind: "next", message: conversation[2] })
 })
 

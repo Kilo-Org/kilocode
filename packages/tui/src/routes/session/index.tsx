@@ -754,7 +754,7 @@ export function Session() {
         dialog.clear()
         const messageID = session()?.revert?.messageID
         if (!messageID) return
-        // kilocode_change start - step by conversation position, the order the message list guarantees
+        // kilocode_change start - advance the revert boundary in conversation order
         const target = redoTarget(messages(), messageID)
         if (target.kind === "absent") {
           toast.show({

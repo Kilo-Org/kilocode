@@ -23,7 +23,7 @@ export function recent<T extends Stamped>(list: readonly T[], cap = 100) {
 
 /**
  * Resolve the next user message after a revert boundary by its position in the
- * conversation list. Message order is conversation order; ids carry no order.
+ * conversation list.
  */
 export function redoTarget<T extends { id: string; role: string }>(list: readonly T[], boundary: string) {
   const hit = at(list, boundary)

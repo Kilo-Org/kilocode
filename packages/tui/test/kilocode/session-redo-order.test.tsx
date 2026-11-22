@@ -37,8 +37,8 @@ import { createEventSource, createFetch, directory, json } from "../fixture/tui-
 
 const sessionID = "ses_redo_order"
 
-// Conversational order is the array order. The ids run in the opposite string
-// order, so a boundary resolved by comparing id strings cannot answer correctly.
+// Conversational order is the array order. Order comes from position in this
+// list, so the tests below read the resulting request rather than any id.
 const conversation = [
   { id: "msg_ff0cb2300001Z6YIo5V52u114f", role: "user" as const, created: 1 },
   { id: "msg_ff0cb2300002Z6YIo5V52u114f", role: "assistant" as const, created: 2 },
@@ -228,6 +228,17 @@ async function mount(root: string, boundary: string) {
         app.mockInput.pressKey("r")
         await app.flush()
       },
+      async capture(text: string, timeout = 4000) {
+        const start = Date.now()
+        let frame = app.captureCharFrame()
+        while (!frame.includes(text)) {
+          if (Date.now() - start > timeout) throw new Error(`timed out waiting for "${text}" in frame:\n${frame}`)
+          await app.renderOnce()
+          await Bun.sleep(10)
+          frame = app.captureCharFrame()
+        }
+        return frame
+      },
       [Symbol.dispose]() {
         app.renderer.destroy()
       },
@@ -248,7 +259,7 @@ test("redo advances the boundary to the next user message in conversation order"
   ])
 })
 
-test("redo restores the session only when the boundary is the newest user message", async () => {
+test("redo restores the session when the boundary is the newest user message", async () => {
   await using tmp = await tmpdir()
   using scene = await mount(tmp.path, conversation[4]!.id)
   await scene.redo()
@@ -256,11 +267,11 @@ test("redo restores the session only when the boundary is the newest user messag
   expect(scene.requests).toEqual([{ path: `/session/${sessionID}/unrevert`, body: undefined }])
 })
 
-test("redo leaves the session untouched when the boundary is not in the loaded messages", async () => {
+test("redo reports an absent boundary and changes nothing", async () => {
   await using tmp = await tmpdir()
   using scene = await mount(tmp.path, "msg_000000000000detached")
   await scene.redo()
-  await Bun.sleep(120)
-  await scene.app.flush()
+  // The toast wraps at this width, so match the stable opening phrase.
+  await scene.capture("Cannot redo:")
   expect(scene.requests).toEqual([])
 })
