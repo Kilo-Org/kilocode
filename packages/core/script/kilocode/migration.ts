@@ -19,6 +19,9 @@ export function block(name: string | undefined, source: string, value: string) {
 
 export function line(name: string, value: string) {
   const kilo =
-    board(name) || continuation(name) || name.endsWith("_kilocode_model_usage_index") || name.endsWith("_account_server_scoped_key")
+    board(name) ||
+    continuation(name) ||
+    name.endsWith("_kilocode_model_usage_index") ||
+    name.endsWith("_account_server_scoped_key")
   return kilo ? `${value} // kilocode_change` : value
 }
