@@ -112,14 +112,16 @@ export function removableRuleIndices(input: {
  * action. Deleting the row's own entry cannot change the outcome then, because the
  * broader entry keeps deciding it.
  */
-function coveredByBroaderGlobal(global: PermissionRule | undefined, pattern: string, action: "allow" | "deny"): boolean {
+function coveredByBroaderGlobal(
+  global: PermissionRule | undefined,
+  pattern: string,
+  action: "allow" | "deny",
+): boolean {
   // The scalar form is the tool-wide entry, so it is the row itself for `*` and a
   // broader entry for every other pattern.
   if (typeof global === "string") return pattern !== "*" && action === global
   if (!global) return false
-  return Object.entries(global).some(
-    ([key, value]) => key !== pattern && value === action && ruleCovers(key, pattern),
-  )
+  return Object.entries(global).some(([key, value]) => key !== pattern && value === action && ruleCovers(key, pattern))
 }
 
 /** Whether the workspace scope supplies an allow/deny entry that decides the row. */

@@ -148,9 +148,16 @@ for (const item of cases) {
   const row = () => root.querySelector('[data-slot="permission-rule-row"]')
   try {
     // Removing a saved rule and answering without feedback are the plain paths.
-    const plain = ["once", "remove", "removeDenied", "undoDeny", "workspace", "both", "workspaceDeny", "broader"].includes(
-      mode,
-    )
+    const plain = [
+      "once",
+      "remove",
+      "removeDenied",
+      "undoDeny",
+      "workspace",
+      "both",
+      "workspaceDeny",
+      "broader",
+    ].includes(mode)
     const denied = mode === "removeDenied" || mode === "workspaceDeny"
     assert.equal(row()?.getAttribute("data-decision"), denied ? "denied" : "approved")
 
