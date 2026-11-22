@@ -3,6 +3,17 @@ import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Wildcard } from "@/util/wildcard"
 import { Permission } from "@/permission"
 
+// Tools that are gated by another permission's rules. Keep this in step with
+// Permission.disabled so the preapproval list and the refusal agree.
+const ALIASES: Record<string, string> = {
+  edit: "edit",
+  write: "edit",
+  apply_patch: "edit",
+  list_mcp_resources: "read",
+  list_mcp_resource_templates: "read",
+  read_mcp_resource: "read",
+}
+
 export namespace KiloWorkflowTools {
   /**
    * Applies the session permission ruleset to a GitLab workflow tool call.
@@ -12,14 +23,13 @@ export namespace KiloWorkflowTools {
    */
   export function gate(input: { tools: Record<string, { execute?: unknown }>; ruleset: PermissionV1.Ruleset }) {
     const names = Object.keys(input.tools)
-    // Edit aliases (write, apply_patch) share the edit permission, so a catch-all
-    // edit rule also covers a tool whose own name matches no rule.
     const denied = Permission.disabled(names, input.ruleset)
 
     return {
       preapproved: names.filter((name) => {
         if (denied.has(name)) return false
-        const rule = input.ruleset.findLast((rule) => Wildcard.match(name, rule.permission))
+        const permission = ALIASES[name] ?? name
+        const rule = input.ruleset.findLast((rule) => Wildcard.match(permission, rule.permission))
         return !rule || rule.action === "allow"
       }),
       refuse(name: string): string | undefined {

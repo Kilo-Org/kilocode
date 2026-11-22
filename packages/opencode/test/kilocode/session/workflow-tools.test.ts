@@ -44,6 +44,18 @@ describe("workflow tool gate", () => {
     expect(gate([]).refuse("mystery")).toBe("Tool not available: mystery")
   })
 
+  test("applies the edit permission to its aliases", () => {
+    const result = KiloWorkflowTools.gate({
+      tools: { edit: { execute }, write: { execute }, apply_patch: { execute }, bash: { execute } },
+      ruleset: [{ permission: "edit", pattern: "*", action: "ask" }],
+    })
+
+    expect(result.preapproved).not.toContain("edit")
+    expect(result.preapproved).not.toContain("write")
+    expect(result.preapproved).not.toContain("apply_patch")
+    expect(result.preapproved).toContain("bash")
+  })
+
   test("lets the last matching rule decide", () => {
     const result = gate([
       { permission: "bash", pattern: "*", action: "deny" },
