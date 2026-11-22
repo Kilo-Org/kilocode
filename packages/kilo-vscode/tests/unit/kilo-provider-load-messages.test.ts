@@ -98,6 +98,7 @@ function createClient(options?: {
   const sandboxed: Array<Record<string, unknown>> = []
   const sandboxSupport: Array<Record<string, unknown>> = []
   const configReads: Array<Record<string, unknown>> = []
+  const switched: Array<Record<string, unknown>> = []
   return {
     calls,
     stopped,
@@ -110,6 +111,7 @@ function createClient(options?: {
     sandboxed,
     sandboxSupport,
     configReads,
+    switched,
     session: {
       list: async () => ({ data: [] }),
       create: async (params: Record<string, unknown>) => {
@@ -186,6 +188,12 @@ function createClient(options?: {
     kilo: {
       notifications: async () => ({ data: [] }),
       profile: async () => ({ data: {} }),
+      organization: {
+        set: async (params: Record<string, unknown>) => {
+          switched.push(params)
+          return { data: {} }
+        },
+      },
     },
     command: { list: async () => ({ data: [] }) },
   }
@@ -2020,5 +2028,6 @@ describe("KiloProvider setOrganization dispatch", () => {
     expect(results).toHaveLength(1)
     expect(results[0]).toMatchObject({ requestID: "request-bad", ok: false, data: null })
     expect((results[0] as { error?: string }).error).toBeTruthy()
+    expect(client.switched).toEqual([])
   })
 })
