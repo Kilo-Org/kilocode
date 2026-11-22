@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect } from "bun:test"
-import { Deferred, Duration, Effect, Exit, Fiber, Scope, Stream } from "effect"
+import { Deferred, Duration, Effect, Exit, Fiber, Scope, Stream } from "effect" // kilocode_change - Deferred
 import * as TestClock from "effect/testing/TestClock"
 import { Credential } from "@opencode-ai/core/credential"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
