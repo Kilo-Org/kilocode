@@ -75,6 +75,7 @@ type Mode =
   | "keyboard"
   | "remove"
   | "removeDenied"
+  | "undoDeny"
   | "workspace"
   | "both"
   | "workspaceDeny"
@@ -88,6 +89,7 @@ const cases: Array<{ mode: Mode; ctx: typeof savedAllow }> = [
   { mode: "keyboard", ctx: savedAllow },
   { mode: "remove", ctx: savedAllow },
   { mode: "removeDenied", ctx: savedDeny },
+  { mode: "undoDeny", ctx: savedAllow },
   { mode: "workspace", ctx: workspaceAllow },
   { mode: "both", ctx: bothAllow },
   { mode: "workspaceDeny", ctx: workspaceDeny },
@@ -129,7 +131,7 @@ for (const { mode, ctx } of cases) {
   const row = () => root.querySelector('[data-slot="permission-rule-row"]')
   try {
     // Removing a saved rule and answering without feedback are the plain paths.
-    const plain = ["once", "remove", "removeDenied", "workspace", "both", "workspaceDeny"].includes(mode)
+    const plain = ["once", "remove", "removeDenied", "undoDeny", "workspace", "both", "workspaceDeny"].includes(mode)
     const denied = mode === "removeDenied" || mode === "workspaceDeny"
     assert.equal(row()?.getAttribute("data-decision"), denied ? "denied" : "approved")
 
@@ -160,6 +162,13 @@ for (const { mode, ctx } of cases) {
     if (mode === "removeDenied") {
       click('[aria-label="ui.permission.rule.removeFromDenied"]')
       assert.equal(row()?.getAttribute("data-decision"), "pending")
+      enter()
+    }
+    if (mode === "undoDeny") {
+      click('[aria-label="ui.permission.rule.addToDenied"]')
+      assert.equal(row()?.getAttribute("data-decision"), "denied")
+      click('[aria-label="ui.permission.rule.removeFromDenied"]')
+      assert.equal(row()?.getAttribute("data-decision"), "approved")
       enter()
     }
     if (mode === "once") enter()

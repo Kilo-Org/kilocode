@@ -35,10 +35,27 @@ export function savedRuleStates(rules: string[], saved: PermissionRule | undefin
 }
 
 /**
+ * Whether a workspace entry decides the commands of a row pattern. Mirrors
+ * `packages/opencode/src/util/wildcard.ts` `match`, kept local because the webview
+ * must not import backend modules: escape the entry, turn `*` into `.*` and `?`
+ * into `.`, anchor both ends, and make a trailing ` *` optional so `touch *` also
+ * covers `touch`.
+ */
+function ruleCovers(entry: string, pattern: string): boolean {
+  if (entry === "*" || entry === pattern) return true
+  let escaped = entry
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, ".*")
+    .replace(/\?/g, ".")
+  if (escaped.endsWith(" .*")) escaped = escaped.slice(0, -3) + "( .*)?"
+  return new RegExp("^" + escaped + "$", "s").test(pattern)
+}
+
+/**
  * The rows this prompt can change: the global config supplies the pattern, the
- * effective state matches that global entry, and the merged workspace scope does
- * not supply the same pattern. A row any other scope decides is shown without the
- * removal control, because this write cannot change that scope.
+ * effective state matches that global entry, and no workspace scope entry decides
+ * the row. A row another scope decides is shown without the removal control,
+ * because this write cannot change that scope.
  */
 export function removableRuleIndices(input: {
   rules: string[]
@@ -53,12 +70,22 @@ export function removableRuleIndices(input: {
     const action =
       typeof input.global === "string" ? (pattern === "*" ? input.global : undefined) : input.global?.[pattern]
     if (action !== "allow" && action !== "deny") continue
-    const local =
-      typeof input.workspace === "string" ? (pattern === "*" ? input.workspace : undefined) : input.workspace?.[pattern]
-    if (local === "allow" || local === "deny") continue
+    if (coveredByWorkspace(input.workspace, pattern)) continue
     if (fromGlobal[i] === input.effective[i]) result.add(i)
   }
   return result
+}
+
+/** Whether the workspace scope supplies an allow/deny entry that decides the row. */
+function coveredByWorkspace(workspace: PermissionRule | undefined, pattern: string): boolean {
+  // The scalar form is the tool-wide default, so it decides every row. A value that
+  // only asks decides nothing, like the per-pattern form.
+  if (typeof workspace === "string") return workspace === "allow" || workspace === "deny"
+  if (!workspace) return false
+  return Object.entries(workspace).some(([key, value]) => {
+    const decides = value === "allow" || value === "deny"
+    return decides && ruleCovers(key, pattern)
+  })
 }
 
 // ---------------------------------------------------------------------------

@@ -147,10 +147,16 @@ export const PermissionDock: Component<{
 
   const toggleRule = (index: number, decision: RuleDecision) => {
     const current = decisions()[index] ?? loadState[index] ?? "pending"
-    // Switching a saved rule off returns it to "pending"; `collectRules` reads that
-    // as a deletion request for the rule the row displays.
-    const next = current === decision ? "pending" : decision
-    const updated = { ...decisions(), [index]: next }
+    // Activating the active control undoes the row. Switching off the state the config
+    // saves keeps a "pending" slot, which `collectRules` reads as a deletion request;
+    // undoing a local change drops the slot so the row falls back to the saved state.
+    if (current !== decision) {
+      setDecisions({ ...decisions(), [index]: decision })
+      return
+    }
+    const updated = { ...decisions() }
+    if (loadState[index] === current) updated[index] = "pending"
+    else delete updated[index]
     setDecisions(updated)
   }
 

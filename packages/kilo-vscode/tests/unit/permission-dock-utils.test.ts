@@ -144,4 +144,70 @@ describe("removableRuleIndices", () => {
       }),
     ).toEqual(new Set([0]))
   })
+
+  it("leaves a row alone when the workspace scope holds a catch-all", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "touch *": "allow" },
+        workspace: { "*": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves a row alone when the workspace scope covers its pattern", () => {
+    expect(
+      call({
+        rules: ["touch"],
+        global: { touch: "allow" },
+        workspace: { "touch *": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves every row alone when the workspace scope is a scalar rule", () => {
+    expect(
+      call({
+        rules: ["npm *", "git *"],
+        global: { "npm *": "allow", "git *": "allow" },
+        workspace: "deny",
+        effective: { 0: "approved", 1: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("keeps a row in scope when the workspace catch-all only asks", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "touch *": "allow" },
+        workspace: { "*": "ask" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("keeps a row in scope when the scalar workspace rule only asks", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "touch *": "allow" },
+        workspace: "ask",
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("keeps an unrelated row in scope when the workspace scope covers another pattern", () => {
+    expect(
+      call({
+        rules: ["npm *"],
+        global: { "npm *": "allow" },
+        workspace: { "git *": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set([0]))
+  })
 })
