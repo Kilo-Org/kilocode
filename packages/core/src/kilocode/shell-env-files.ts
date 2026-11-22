@@ -24,8 +24,8 @@ const GIT = ["git show", "git cat-file", "git diff", "git log", "git blame"] as 
  *
  * The shapes covered are: a file reader's environment file at any operand position,
  * including a wildcard, a quoted operand and a nested path; a searcher's
- * environment file as a leading or trailing operand, or as a nested path; and,
- * for the git commands that print a file, the file named as a path anywhere in the
+ * environment file as a leading or trailing operand, or as a nested path; and, for
+ * the git commands that print a file, the file named as a path anywhere in the
  * command.
  *
  * `.env.example` documents the format and is allowed only as the exact lone
@@ -71,6 +71,11 @@ export function envGuards(
     }
     gated[`${command} * *.env`] = level
     gated[`${command} * *.env.*`] = level
+    // No trailing-operand form is emitted for these two shapes. Reaching a file
+    // that is neither the first nor the last operand needs a trailing wildcard,
+    // and a searcher compares text rather than operands, so that wildcard also
+    // reaches a search term that reads like a file name. The shell map cannot
+    // separate the two, so the shape stays at the command's existing level.
     samples[`${command} .env.example`] = "allow"
   }
 
