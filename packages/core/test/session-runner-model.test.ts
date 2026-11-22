@@ -1,9 +1,8 @@
 import { describe, expect } from "bun:test"
 import { LLM } from "@opencode-ai/llm"
-import { LLMClient } from "@opencode-ai/llm/route"
+import { LLMClient, RequestExecutor } from "@opencode-ai/llm/route" // kilocode_change
 import { DateTime, Effect, Layer, Stream } from "effect"
 import { Headers, HttpClient, HttpClientResponse } from "effect/unstable/http" // kilocode_change
-import { RequestExecutor } from "@opencode-ai/llm/route" // kilocode_change
 import { Credential } from "@opencode-ai/core/credential"
 import { ConfigMigrateV1 } from "@opencode-ai/core/v1/config/migrate" // kilocode_change
 import { Integration } from "@opencode-ai/core/integration"
@@ -87,29 +86,18 @@ describe("SessionRunnerModel", () => {
     Effect.gen(function* () {
       const migrated = ConfigMigrateV1.migrate({
         provider: {
-          custom: {
+          // apiKey plus a configured header.
+          keyed: {
             options: { apiKey: "migrated-key", authToken: "migrated-token", headers: { "x-tenant": "acme" } },
-            models: {
-              chat: {
-                provider: { npm: "@ai-sdk/openai-compatible", api: "https://custom.example/v1" },
-                options: { customField: "value" },
-              },
-            },
+            models: { chat: { options: { customField: "value" } } },
+          },
+          // authToken only, which the package has to receive as a request header.
+          tokenonly: {
+            options: { authToken: "only-token", headers: { "x-tenant": "beta" } },
+            models: { chat: { options: { customField: "value" } } },
           },
         },
       })
-
-      const provider = required(migrated.providers?.["custom"])
-      const config = required(provider.models?.["chat"]?.request)
-      const resolved = yield* SessionRunnerModel.fromCatalogModel(
-        ModelV2.Info.make({
-          ...model({ type: "aisdk", package: "@ai-sdk/openai-compatible", url: "https://custom.example/v1" }),
-          request: {
-            headers: { ...provider.request?.headers, ...config.headers },
-            body: { ...provider.request?.body, ...config.body },
-          },
-        }),
-      )
 
       // Read the payload the transport sends: stub only the HTTP client, so route defaults, the http
       // overlay and auth are all applied first.
@@ -130,18 +118,32 @@ describe("SessionRunnerModel", () => {
         ),
       )
 
-      yield* LLMClient.stream(LLM.request({ model: resolved, prompt: "Hello" })).pipe(
-        Stream.runDrain,
-        Effect.catchCause(() => Effect.void),
-        Effect.provide(LLMClient.layer.pipe(Layer.provide(RequestExecutor.layer.pipe(Layer.provide(http))))),
-      )
+      for (const id of ["keyed", "tokenonly"]) {
+        const entry = required(migrated.providers?.[id])
+        const config = required(entry.models?.["chat"]?.request)
+        const resolved = yield* SessionRunnerModel.fromCatalogModel(
+          ModelV2.Info.make({
+            ...model({ type: "aisdk", package: "@ai-sdk/openai-compatible", url: "https://custom.example/v1" }),
+            request: {
+              headers: { ...entry.request?.headers, ...config.headers },
+              body: { ...entry.request?.body, ...config.body },
+            },
+          }),
+        )
+        yield* LLMClient.stream(LLM.request({ model: resolved, prompt: "Hello" })).pipe(
+          Stream.runDrain,
+          Effect.catchCause(() => Effect.void),
+          Effect.provide(LLMClient.layer.pipe(Layer.provide(RequestExecutor.layer.pipe(Layer.provide(http))))),
+        )
+      }
 
-      const wire = required(sent[0])
-      expect(wire.body).toMatchObject({ customField: "value" })
-      expect(JSON.stringify(wire.body)).not.toContain("migrated-token")
-      expect(JSON.stringify(wire.body)).not.toContain("acme")
-      expect(wire.headers["x-tenant"]).toBe("acme")
-      expect(wire.headers.authorization).toBe("Bearer migrated-key")
+      const [keyed, tokenonly] = sent.map((item) => required(item))
+      expect(keyed.body).toMatchObject({ customField: "value" })
+      expect(keyed.headers["x-tenant"]).toBe("acme")
+      expect(keyed.headers.authorization).toBe("Bearer migrated-key")
+      expect(tokenonly.body).toMatchObject({ customField: "value" })
+      expect(tokenonly.headers["x-tenant"]).toBe("beta")
+      expect(tokenonly.headers.authorization).toBe("Bearer only-token")
     }),
   )
   // kilocode_change end

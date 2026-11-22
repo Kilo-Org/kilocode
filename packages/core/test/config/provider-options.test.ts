@@ -19,10 +19,10 @@ describe("ConfigProviderOptionsV1", () => {
     })
   })
 
-  // apiKey is the credential the runtime applies, so it takes precedence.
-  test("prefers apiKey over authToken when both are configured", () => {
+  // The package auth header comes from apiKey; a bearer header from authToken is reported alongside it.
+  test("reports both a bearer header and the apiKey body option when both are configured", () => {
     expect(ConfigProviderOptionsV1.get("custom-provider").provider({ apiKey: "secret", authToken: "token" })).toEqual({
-      headers: undefined,
+      headers: { Authorization: "Bearer token" },
       body: { apiKey: "secret" },
     })
   })

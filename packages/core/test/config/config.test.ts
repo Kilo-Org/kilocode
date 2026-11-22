@@ -159,7 +159,7 @@ describe("Config", () => {
 
       expect(migrated.providers?.custom?.request).toEqual({ headers: undefined, body: { apiKey: "secret" } })
       expect(migrated.providers?.custom?.models?.chat?.request).toEqual({
-        headers: undefined,
+        headers: { Authorization: "Bearer token" },
         body: { apiKey: "model-secret", custom: "value" },
       })
       expect(migrated.providers?.custom?.models?.other?.request).toEqual({
@@ -170,14 +170,17 @@ describe("Config", () => {
   )
   // kilocode_change end
 
-  // kilocode_change start - apiKey is the credential the runtime applies, so it takes precedence
-  it.effect("prefers apiKey over authToken when both are configured", () =>
+  // kilocode_change start - a bearer header from authToken is reported alongside the apiKey body option
+  it.effect("reports a bearer header alongside the apiKey body option", () =>
     Effect.sync(() => {
       const migrated = ConfigMigrateV1.migrate({
         provider: { custom: { options: { apiKey: "secret", authToken: "token" } } },
       })
 
-      expect(migrated.providers?.custom?.request).toEqual({ headers: undefined, body: { apiKey: "secret" } })
+      expect(migrated.providers?.custom?.request).toEqual({
+        headers: { Authorization: "Bearer token" },
+        body: { apiKey: "secret" },
+      })
     }),
   )
   // kilocode_change end

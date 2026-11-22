@@ -27,12 +27,12 @@ export function get(packageName?: string): Lowerer {
  * headers become request headers instead: `headers` passes through as headers, and `authToken` becomes a
  * bearer authorization header. `apiKey` stays a request body option because the v2 runtime reads that key
  * as the package credential, removes it before the request is sent and applies it as the package auth
- * header. The two credential spellings never target the same header: when `apiKey` is set it is the
- * credential and `authToken` is not emitted.
+ * header. The package auth header is the one the package authenticates with, so a bearer header reported
+ * here stays usable alongside it.
  */
 const requestHeaders = (options: Options) =>
   compact({
-    Authorization: options.apiKey === undefined ? bearer(options.authToken) : undefined,
+    Authorization: bearer(options.authToken),
     ...headers(options.headers),
   })
 
