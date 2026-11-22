@@ -579,8 +579,8 @@ const Settings: Component<SettingsProps> = (props) => {
         </Show>
       </Tabs>
 
-      {/* Save bar — slides in when there are unsaved config changes */}
-      <Show when={isDirty()}>
+      {/* Save bar — the error stays visible even when nothing is dirty */}
+      <Show when={saveError() || isDirty()}>
         <div class="settings-save-bar-wrap">
           <Show when={saveError()}>
             {(err) => (
@@ -609,15 +609,17 @@ const Settings: Component<SettingsProps> = (props) => {
               </div>
             )}
           </Show>
-          <div class="settings-save-bar">
-            <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
-            <Button variant="ghost" size="small" onClick={discardConfig} disabled={saving()}>
-              {language.t("settings.saveBar.discard")}
-            </Button>
-            <Button variant="primary" size="small" onClick={handleSave} disabled={saving()}>
-              {saving() ? language.t("settings.saveBar.saving") : language.t("settings.saveBar.save")}
-            </Button>
-          </div>
+          <Show when={isDirty()}>
+            <div class="settings-save-bar">
+              <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
+              <Button variant="ghost" size="small" onClick={discardConfig} disabled={saving()}>
+                {language.t("settings.saveBar.discard")}
+              </Button>
+              <Button variant="primary" size="small" onClick={handleSave} disabled={saving()}>
+                {saving() ? language.t("settings.saveBar.saving") : language.t("settings.saveBar.save")}
+              </Button>
+            </div>
+          </Show>
         </div>
       </Show>
     </div>

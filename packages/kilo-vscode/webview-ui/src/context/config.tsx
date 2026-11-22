@@ -35,6 +35,19 @@ function has(value: Record<string, unknown>) {
   return Object.keys(value).length > 0
 }
 
+/**
+ * VS Code configuration key → local `settings()` property, for the writes whose
+ * two names differ. Keys absent here are their own property name.
+ */
+const settingProperties: Record<string, string> = {
+  "agentManager.browser.openLinksIn": "agentManagerBrowserOpenLinksIn",
+  "agentManager.browser.useSystemChrome": "agentManagerBrowserUseSystemChrome",
+  "experimental.agentManagerSplash": "agentManagerSplash",
+  "experimental.browserAutomation": "browserAutomation",
+  "experimental.claudeMigration": "claudeMigration",
+  "experimental.conversationPromptHistory": "conversationPromptHistory",
+}
+
 export interface SaveError {
   message: string
   details?: string
@@ -136,8 +149,38 @@ export const ConfigProvider: ParentComponent = (props) => {
   // Error from the most recent saveConfig() attempt, or null if no error.
   // Cleared when the user edits the draft again or starts a new save.
   const [saveError, setSaveError] = createSignal<SaveError | null>(null)
+  // In-flight `updateSetting` writes, keyed by the write key the host echoes back. Every
+  // new write overwrites the entry, so `previous` is the value just before the newest
+  // write and `value` is the newest intent. `remaining` counts the writes to that key
+  // still awaiting a terminal message and `confirmed` records that the host stored the
+  // newest intent, so an older write's late message never replaces what the control shows.
+  const pendingWrites = new Map<
+    string,
+    { property: string; previous: unknown; value: unknown; remaining: number; confirmed: boolean }
+  >()
   const updateCollections = (next: ConfigCollections | undefined) => {
     if (next !== undefined) setCollections(next)
+  }
+  /** Record a write before its optimistic update, so a rejection can restore what it replaced. */
+  const trackWrite = (writeKey: string, property: string, value: unknown) => {
+    pendingWrites.set(writeKey, {
+      property,
+      previous: savedSettings()[property],
+      value,
+      remaining: (pendingWrites.get(writeKey)?.remaining ?? 0) + 1,
+      confirmed: false,
+    })
+  }
+  /** Adopt a host-stored value as both the rendered and the discard value. */
+  const storeSetting = (property: string, value: unknown) => {
+    const adopt = (prev: Record<string, unknown>) => {
+      const next = { ...prev }
+      if (value === undefined) delete next[property]
+      else next[property] = value
+      return next
+    }
+    setSettings(adopt)
+    setSavedSettings(adopt)
   }
 
   // Register handler immediately (not in onMount) so we never miss
@@ -305,6 +348,41 @@ export const ConfigProvider: ParentComponent = (props) => {
     if (message.bindings) setBindings(message.bindings)
     setSaveError({ message: message.message, details: message.details })
   })
+  const unsubscribeWrite = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "settingUpdated" && message.type !== "settingUpdateFailed") return
+    const pending = pendingWrites.get(message.key)
+    if (message.type === "settingUpdated") {
+      if (!pending) {
+        storeSetting(settingProperties[message.key] ?? message.key, message.value)
+        return
+      }
+      pending.remaining -= 1
+      // A value equal to the newest intent is that write (or one that agrees with it),
+      // so it can be adopted while older writes are still in flight.
+      if (pending.value === message.value) {
+        storeSetting(pending.property, message.value)
+        if (pending.remaining > 0) pending.confirmed = true
+        else pendingWrites.delete(message.key)
+        return
+      }
+      // A differing value belongs to an older write unless nothing newer is left; if the
+      // host already stored the newest intent, a later differing value is stale.
+      if (pending.remaining > 0) return
+      pendingWrites.delete(message.key)
+      if (!pending.confirmed) storeSetting(pending.property, message.value)
+      return
+    }
+    if (pending) {
+      pending.remaining -= 1
+      // Only the write nothing newer followed is rolled back to the value it found; a
+      // newer write owns the display, and a confirmed one is already stored.
+      if (pending.remaining === 0) {
+        pendingWrites.delete(message.key)
+        if (!pending.confirmed) storeSetting(pending.property, pending.previous)
+      }
+    }
+    setSaveError({ message: message.message, details: message.details })
+  })
   const unsubscribeIndexing = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "indexingSettingsLoaded") return
     mergeSettings({
@@ -328,6 +406,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     unsubscribe()
     unsubscribeExpired()
     unsubscribeFailure()
+    unsubscribeWrite()
     unsubscribeIndexing()
     unsubscribeChat()
   })
@@ -404,6 +483,8 @@ export const ConfigProvider: ParentComponent = (props) => {
    * configuration key when the two differ (e.g. namespaced experimental keys).
    */
   function applySetting(key: string, value: unknown, writeKey?: string) {
+    const wire = writeKey ?? key
+    trackWrite(wire, key, value)
     setSavedSettings((prev) => ({ ...prev, [key]: value }))
     setSettings((prev) => ({ ...prev, [key]: value }))
     setSettingsDraft((prev) => {
@@ -412,7 +493,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       return next
     })
     setSaveError(null)
-    vscode.postMessage({ type: "updateSetting", key: writeKey ?? key, value })
+    vscode.postMessage({ type: "updateSetting", key: wire, value })
   }
 
   function saveConfig() {
@@ -431,6 +512,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSaveError(null)
     if (settingsDirty) {
       for (const [key, value] of Object.entries(pending)) {
+        trackWrite(key, key, value)
         vscode.postMessage({ type: "updateSetting", key, value })
       }
       setSavedSettings((prev) => ({ ...prev, ...pending }))
