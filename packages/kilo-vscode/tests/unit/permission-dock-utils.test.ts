@@ -1,22 +1,35 @@
 import { describe, it, expect } from "bun:test"
-import { displaySkillCommand, savedRuleStates } from "../../webview-ui/src/components/chat/permission-dock-utils"
+import { displayLines, displayText, savedRuleStates } from "../../webview-ui/src/components/chat/permission-dock-utils"
 
-describe("displaySkillCommand", () => {
+describe("displayText", () => {
   it("leaves ordinary commands, including astral characters, untouched", () => {
-    expect(displaySkillCommand("git status && printf 'hi 😀'")).toBe("git status && printf 'hi 😀'")
+    expect(displayText("git status && printf 'hi 😀'")).toBe("git status && printf 'hi 😀'")
   })
 
   it("escapes whitespace controls with readable shorthands", () => {
-    expect(displaySkillCommand("a\nb\rc\td")).toBe("a\\nb\\rc\\td")
+    expect(displayText("a\nb\rc\td")).toBe("a\\nb\\rc\\td")
   })
 
-  it("escapes bidi/format controls so the visible text can't be reordered", () => {
-    // U+202E (RLO) would otherwise reverse the trailing text in the prompt.
-    expect(displaySkillCommand("rm \u202Etxt.exe")).toBe("rm \\u202etxt.exe")
+  it("escapes format controls in single-line text", () => {
+    expect(displayText("rm \u202Etxt.exe")).toBe("rm \\u202etxt.exe")
   })
 
   it("uses \\x for C0/C1 controls and \\u for higher code points", () => {
-    expect(displaySkillCommand("\u0000\u009f\u2066")).toBe("\\x00\\x9f\\u2066")
+    expect(displayText("\u0000\u009f\u2066")).toBe("\\x00\\x9f\\u2066")
+  })
+})
+
+describe("displayLines", () => {
+  it("keeps LF as a real newline while escaping other controls", () => {
+    expect(displayLines("a\nb\rc\td")).toBe("a\nb\\rc\\td")
+  })
+
+  it("escapes format controls in block text", () => {
+    expect(displayLines("rm \u202Etxt.exe")).toBe("rm \\u202etxt.exe")
+  })
+
+  it("leaves ordinary multi-line text untouched", () => {
+    expect(displayLines('{\n  "a": 1\n}')).toBe('{\n  "a": 1\n}')
   })
 })
 

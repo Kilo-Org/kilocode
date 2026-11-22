@@ -11,6 +11,7 @@ import { useWorktreeMode } from "../../context/worktree-mode"
 import { useDiffStyle } from "../../context/diff-style"
 import { dispatchAgentManagerEditPreview } from "../../utils/agent-manager-events"
 import { useLanguage } from "../../context/language"
+import { displayText } from "./permission-dock-utils"
 
 interface PermissionDiffProps {
   filediff: PermissionFileDiff
@@ -77,8 +78,10 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
             </svg>
           </div>
           <div data-slot="permission-diff-filename">
-            {directory() && <span data-slot="permission-diff-directory">{`\u2066${directory()}/\u2069`}</span>}
-            <span data-slot="permission-diff-name">{filename()}</span>
+            <Show when={directory()}>
+              {(dir) => <span data-slot="permission-diff-directory">{`\u2066${displayText(dir())}/\u2069`}</span>}
+            </Show>
+            <span data-slot="permission-diff-name">{displayText(filename())}</span>
           </div>
         </div>
         <div data-slot="permission-diff-actions">

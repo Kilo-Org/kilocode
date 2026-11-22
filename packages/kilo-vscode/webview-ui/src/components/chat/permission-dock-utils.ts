@@ -2,20 +2,29 @@ import type { PermissionRule } from "../../types/messages"
 
 export type RuleDecision = "approved" | "denied" | "pending"
 
-// Escape control and bidi/format characters when displaying a skill-shell command, so a
-// command can't repaint the prompt or use Trojan-Source reordering to make the visible text
-// differ from what executes. The webview can't import from @kilocode/cli, so this mirrors
-// displayCommand in packages/opencode/src/kilocode/skills/display.ts; keep them in sync.
+// Escape control and format characters for display, so each surface shows exactly the characters
+// the request carries. Both helpers serve every text surface of the approval card — skill-shell
+// commands, bash commands, pattern paths, tool names, rule text and diff file names. The webview
+// can't import from @kilocode/cli, so this mirrors displayCommand in
+// packages/opencode/src/kilocode/skills/display.ts; keep them in sync.
 const CONTROL = /[\u0000-\u001f\u007f-\u009f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g
 
-export function displaySkillCommand(command: string) {
-  return command.replace(CONTROL, (ch) => {
-    if (ch === "\n") return "\\n"
-    if (ch === "\r") return "\\r"
-    if (ch === "\t") return "\\t"
-    const code = ch.charCodeAt(0)
-    return code <= 0xff ? "\\x" + code.toString(16).padStart(2, "0") : "\\u" + code.toString(16).padStart(4, "0")
-  })
+function escape(ch: string) {
+  if (ch === "\n") return "\\n"
+  if (ch === "\r") return "\\r"
+  if (ch === "\t") return "\\t"
+  const code = ch.charCodeAt(0)
+  return code <= 0xff ? "\\x" + code.toString(16).padStart(2, "0") : "\\u" + code.toString(16).padStart(4, "0")
+}
+
+/** Single-line surface: LF/CR/TAB become `\n`/`\r`/`\t`, every other control and format char escapes. */
+export function displayText(text: string) {
+  return text.replace(CONTROL, escape)
+}
+
+/** Block surface: like displayText, but LF stays a real newline so multi-line text remains readable. */
+export function displayLines(text: string) {
+  return text.replace(CONTROL, (ch) => (ch === "\n" ? ch : escape(ch)))
 }
 
 /**
@@ -75,10 +84,11 @@ export function describeRule(
   t: (key: string, params?: Record<string, string>) => string,
 ): string {
   if (tool === "doom_loop") {
-    return t("ui.permission.doomLoop.rule", { tool: resolveLabel(rule, t) })
+    // The repeated tool name is model-supplied, so escape it; the label template is not.
+    return t("ui.permission.doomLoop.rule", { tool: displayText(resolveLabel(rule, t)) })
   }
   const label = resolveLabel(tool, t)
-  return rule === "*" ? label : `${label} ${displayPattern(tool, rule)}`
+  return rule === "*" ? label : `${label} ${displayText(displayPattern(tool, rule))}`
 }
 
 // Browser navigation patterns carry a "navigate:" prefix so the rule matches the
@@ -107,11 +117,16 @@ export function describePatterns(
   if (tool === "doom_loop") {
     return {
       kind: "single",
-      text: t("ui.permission.doomLoop.prompt", { tool: resolveLabel(filtered[0], t) }),
+      text: t("ui.permission.doomLoop.prompt", { tool: displayText(resolveLabel(filtered[0], t)) }),
     }
   }
 
   const label = resolveLabel(tool, t)
-  if (filtered.length === 1) return { kind: "single", text: `${label} ${displayPattern(tool, filtered[0])}` }
-  return { kind: "multi", title: `${label}:`, paths: filtered.map((pattern) => displayPattern(tool, pattern)) }
+  if (filtered.length === 1)
+    return { kind: "single", text: `${label} ${displayText(displayPattern(tool, filtered[0]))}` }
+  return {
+    kind: "multi",
+    title: `${label}:`,
+    paths: filtered.map((pattern) => displayText(displayPattern(tool, pattern))),
+  }
 }
