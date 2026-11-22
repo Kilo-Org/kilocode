@@ -48,6 +48,35 @@ const settingProperties: Record<string, string> = {
   "experimental.conversationPromptHistory": "conversationPromptHistory",
 }
 
+/**
+ * How long a settings write chain waits for the host's terminal message. A chain the host
+ * stops answering settles at this bound instead of holding its key open forever. It is a
+ * `const` binding with a mutable holder so a fixture can shorten it without waiting ten
+ * seconds; the app never changes it.
+ */
+export const settleBound = { ms: 10_000 }
+
+/** One chain of `updateSetting` writes to a single key, reconciled with the host's answers. */
+interface PendingWrite {
+  /** The `settings()` property the key writes. */
+  property: string
+  /** The rendered value before the chain's first write. */
+  previous: unknown
+  /** Writes still awaiting a terminal message, oldest first, with their chain order. */
+  awaiting: { order: number; value: unknown }[]
+  /** The value the newest orderable success confirmed. */
+  stored: unknown
+  /** Tells a confirmed `undefined` apart from no confirmation. */
+  hasStored: boolean
+  /** Order of the chain's newest write. */
+  order: number
+  /** Order of the write whose success set `stored`; `undefined` until one is matched. */
+  storedOrder: number | undefined
+  /** When the chain last heard from a write or a terminal message, in `Date.now()` ms. */
+  at: number
+  timer: ReturnType<typeof setTimeout> | undefined
+}
+
 export interface SaveError {
   message: string
   details?: string
@@ -67,6 +96,8 @@ interface ConfigContextValue {
   isDirty: Accessor<boolean>
   saving: Accessor<boolean>
   saveError: Accessor<SaveError | null>
+  /** Dismiss the reported save or settings-write error. */
+  clearSaveError: () => void
   updateConfig: (partial: Partial<Config>) => void
   updateGlobalConfig: (partial: Partial<Config>) => void
   updateProjectConfig: (partial: Partial<Config>) => void
@@ -150,50 +181,96 @@ export const ConfigProvider: ParentComponent = (props) => {
   // Cleared when the user edits the draft again or starts a new save.
   const [saveError, setSaveError] = createSignal<SaveError | null>(null)
   // In-flight `updateSetting` writes, keyed by the write key the host echoes back. A chain
-  // of writes to one key keeps the value before its first write as `previous` and holds the
-  // newest intent as `value`; `remaining` counts the writes still awaiting a terminal
-  // message. `stored` is the most recent value the host confirmed and `hasStored` tells that
-  // apart from a confirmed `undefined`, so the final settle adopts what the host holds.
-  const pendingWrites = new Map<
-    string,
-    {
-      property: string
-      previous: unknown
-      value: unknown
-      remaining: number
-      stored: unknown
-      hasStored: boolean
-    }
-  >()
+  // of writes to one key keeps the value before its first write as `previous`, the newest
+  // intent as `value`, and every write still awaiting a terminal message in `awaiting`.
+  // `stored` is the value of the newest write the host confirmed, `storedOrder` names that
+  // write, and `hasStored` tells a confirmed `undefined` from no confirmation, so the final
+  // settle adopts what the host holds. `at` and `timer` bound the chain: a host that never
+  // answers settles it like a failure at `settleBound.ms` instead of holding the key
+  // pending forever.
+  const pendingWrites = new Map<string, PendingWrite>()
+  /** The value the host holds for a chain: its newest confirmed write, else what it replaced. */
+  const heldValue = (pending: PendingWrite) => (pending.hasStored ? pending.stored : pending.previous)
   const updateCollections = (next: ConfigCollections | undefined) => {
     if (next !== undefined) setCollections(next)
   }
+  /** Forget a chain, stopping the settle timer that would expire it. */
+  const dropWrite = (writeKey: string) => {
+    const pending = pendingWrites.get(writeKey)
+    if (pending == null) return undefined
+    clearTimeout(pending.timer)
+    pendingWrites.delete(writeKey)
+    return pending
+  }
+  /**
+   * Restart the settle bound after a write or a terminal message. The callback only expires
+   * the chain it was armed for, so a timer that was cleared but still ran cannot settle a
+   * newer chain on the same key.
+   */
+  const armWrite = (writeKey: string, pending: PendingWrite) => {
+    clearTimeout(pending.timer)
+    pending.at = Date.now()
+    const armed = pending.at
+    pending.timer = setTimeout(() => {
+      if (pendingWrites.get(writeKey) !== pending || pending.at !== armed) return
+      expireWrite(writeKey)
+    }, settleBound.ms)
+  }
+  /**
+   * Settle a chain the host never answered the way a failure settles it — on the value the
+   * host confirmed, or the value the chain replaced — and report that the host did not
+   * answer.
+   */
+  const expireWrite = (writeKey: string) => {
+    const pending = dropWrite(writeKey)
+    if (pending == null) return
+    storeSetting(pending.property, pending.hasStored ? pending.stored : pending.previous)
+    setSaveError({ message: `${writeKey} was not confirmed by the extension host.` })
+  }
   /**
    * Record a write before its optimistic update, so a rejected chain can restore what it
-   * replaced. A chain keeps the value it found before its first write and how many writes
-   * are still awaiting a terminal message.
+   * replaced. Each write takes the chain's next order and restarts its settle bound.
    */
   const trackWrite = (writeKey: string, property: string, value: unknown) => {
-    const entry = pendingWrites.get(writeKey)
-    if (!entry) {
-      pendingWrites.set(writeKey, {
+    const pending = pendingWrites.get(writeKey)
+    if (pending == null) {
+      const created: PendingWrite = {
         property,
         previous: savedSettings()[property],
-        value,
-        remaining: 1,
+        awaiting: [{ order: 1, value }],
         stored: undefined,
         hasStored: false,
-      })
+        order: 1,
+        storedOrder: undefined,
+        at: 0,
+        timer: undefined,
+      }
+      pendingWrites.set(writeKey, created)
+      armWrite(writeKey, created)
       return
     }
-    pendingWrites.set(writeKey, {
-      property,
-      previous: entry.previous,
-      value,
-      remaining: entry.remaining + 1,
-      stored: entry.stored,
-      hasStored: entry.hasStored,
-    })
+    pending.property = property
+    pending.order += 1
+    pending.awaiting.push({ order: pending.order, value })
+    armWrite(writeKey, pending)
+  }
+  /**
+   * Record a success against the write it answers, matched by value to the writes still
+   * awaiting a terminal message. The host applies writes in order, so a success must not
+   * replace the value a newer success already confirmed: `stored` advances only when the
+   * arriving order is `storedOrder` or newer. A success whose value matches no awaiting
+   * write cannot be placed in the chain, so it keeps the rule that the last settled success
+   * wins and counts as the chain's newest order.
+   */
+  const confirmWrite = (pending: PendingWrite, value: unknown) => {
+    const matched = pending.awaiting.find((write) => write.value === value)
+    const order = matched?.order ?? pending.order
+    if (matched == null) pending.awaiting.shift()
+    else pending.awaiting.splice(pending.awaiting.indexOf(matched), 1)
+    if (pending.storedOrder != null && order < pending.storedOrder) return
+    pending.stored = value
+    pending.hasStored = true
+    pending.storedOrder = order
   }
   /** Adopt a host-stored value as both the rendered and the discard value. */
   const storeSetting = (property: string, value: unknown) => {
@@ -375,39 +452,27 @@ export const ConfigProvider: ParentComponent = (props) => {
   const unsubscribeWrite = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "settingUpdated" && message.type !== "settingUpdateFailed") return
     const pending = pendingWrites.get(message.key)
-    if (message.type === "settingUpdated") {
-      if (!pending) {
+    if (pending == null) {
+      // A write this context did not send: adopt a stored value, report a failure.
+      if (message.type === "settingUpdated") {
         storeSetting(settingProperties[message.key] ?? message.key, message.value)
         return
       }
-      pending.remaining -= 1
-      pending.stored = message.value
-      pending.hasStored = true
-      // A value equal to the newest intent is that write (or one that agrees with it),
-      // so it can be adopted while older writes are still in flight.
-      if (pending.value === message.value) {
-        storeSetting(pending.property, message.value)
-        if (pending.remaining > 0) return
-        pendingWrites.delete(message.key)
-        return
-      }
-      // A differing value may belong to an older write, so it waits; the last message to
-      // settle the chain is what the host holds, because the host applies writes in order.
-      if (pending.remaining > 0) return
-      pendingWrites.delete(message.key)
-      storeSetting(pending.property, pending.stored)
+      setSaveError({ message: message.message, details: message.details })
       return
     }
-    if (pending) {
-      pending.remaining -= 1
-      // The settle adopts what the host confirmed during the chain; with no confirmation it
-      // restores the value the chain found before its first write.
-      if (pending.remaining === 0) {
-        pendingWrites.delete(message.key)
-        storeSetting(pending.property, pending.hasStored ? pending.stored : pending.previous)
-      }
+    if (message.type === "settingUpdated") confirmWrite(pending, message.value)
+    else {
+      // A rejection is reported at once, even while newer writes keep the chain pending.
+      pending.awaiting.shift()
+      setSaveError({ message: message.message, details: message.details })
     }
-    setSaveError({ message: message.message, details: message.details })
+    // Every answer restarts the bound, so the timer only expires a chain that went quiet.
+    armWrite(message.key, pending)
+    // Adopt as soon as nothing is left awaiting, using the value the host holds.
+    if (pending.awaiting.length > 0) return
+    dropWrite(message.key)
+    storeSetting(pending.property, heldValue(pending))
   })
   const unsubscribeIndexing = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "indexingSettingsLoaded") return
@@ -435,6 +500,9 @@ export const ConfigProvider: ParentComponent = (props) => {
     unsubscribeWrite()
     unsubscribeIndexing()
     unsubscribeChat()
+    // A chain timer must not fire into a torn-down provider.
+    pendingWrites.forEach((pending) => clearTimeout(pending.timer))
+    pendingWrites.clear()
   })
 
   function mergeSettings(patch: Record<string, unknown>) {
@@ -590,6 +658,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     isDirty,
     saving,
     saveError,
+    clearSaveError: () => setSaveError(null),
     updateConfig,
     updateGlobalConfig,
     updateProjectConfig,

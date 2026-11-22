@@ -46,7 +46,9 @@ Object.assign(globalThis, {
 // The providers read browser globals at module scope, so they load after the stubs above.
 const { render } = await import("solid-js/web")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
-const { ConfigProvider, useConfig } = await import("../../webview-ui/src/context/config")
+const { ConfigProvider, useConfig, settleBound } = await import("../../webview-ui/src/context/config")
+// Shorten the bound so the fixture proves the settle without a ten-second wait.
+settleBound.ms = 800
 const { post } = await import("../../webview-ui/src/utils/webview-message")
 
 interface ProbeError {
@@ -295,9 +297,10 @@ try {
   })
 
   await check("two failures of the same value return to the value before the first write", async () => {
-    const key = "agentManager.browser.useSystemChrome"
-    const property = "agentManagerBrowserUseSystemChrome"
-    probe().applySetting(property, false, key)
+    const key = "experimental.claudeMigration"
+    const property = "claudeMigration"
+    assert.equal(probe().settings()[property], undefined, "the key starts with no stored value")
+    probe().applySetting(property, true, key)
     post({ type: "settingUpdated", key, value: false })
     await settle()
     assert.equal(probe().settings()[property], false, "the chain starts from a stored false")
@@ -344,6 +347,34 @@ try {
     )
     assert.deepEqual(probe().saveError(), { message: "rejected", details: undefined })
   })
+
+  await check("a chain the host never answers settles at the bound", async () => {
+    const key = "experimental.claudeMigration"
+    const property = "claudeMigration"
+    const before = probe().settings()[property]
+    probe().applySetting(property, true, key)
+    await Promise.resolve()
+    assert.equal(probe().settings()[property], true, "the display holds the optimistic value")
+    await new Promise((r) => setTimeout(r, 1200))
+    assert.equal(probe().settings()[property], before, "the chain settles on the value the host holds")
+    assert.ok(probe().saveError() != null, "an unanswered write reports that the host did not answer")
+  })
+
+  await check("a write after an unanswered chain restores its own previous value", async () => {
+    const key = "experimental.claudeMigration"
+    const property = "claudeMigration"
+    const before = probe().settings()[property]
+    probe().applySetting(property, true, key)
+    await Promise.resolve()
+    await new Promise((r) => setTimeout(r, 1200))
+    probe().applySetting(property, false, key)
+    await Promise.resolve()
+    post({ type: "settingUpdateFailed", key, message: "rejected after bound" })
+    await settle()
+    assert.equal(probe().settings()[property], before, "the new chain restores the value before its own write")
+    assert.deepEqual(probe().saveError(), { message: "rejected after bound", details: undefined })
+  })
+
 } finally {
   dispose()
 }
