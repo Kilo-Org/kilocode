@@ -5,8 +5,10 @@ import { Effect, Layer, Option, Schema, Context } from "effect"
 
 import { Database } from "@opencode-ai/core/database/database"
 import { AccountStateTable, AccountTable } from "@opencode-ai/core/account/sql"
-import { AccessToken, AccountID, AccountRepoError, Info, OrgID, RefreshToken } from "./schema"
-import { normalizeServerUrl } from "./url"
+// kilocode_change start
+import { accountKey, normalizeServerUrl } from "@opencode-ai/core/account/key"
+// kilocode_change end
+import { AccessToken, AccountID, AccountRepoError, Info, OrgID, RefreshToken, RemoteID } from "./schema" // kilocode_change
 
 export type AccountRow = (typeof AccountTable)["$inferSelect"]
 
@@ -25,7 +27,7 @@ export interface Interface {
     expiry: Option.Option<number>
   }) => Effect.Effect<void, AccountRepoError>
   readonly persistAccount: (input: {
-    id: AccountID
+    remoteID: RemoteID // kilocode_change
     email: string
     url: string
     accessToken: AccessToken
@@ -125,12 +127,14 @@ const layer = Layer.effect(
       query(
         db.transaction((tx) =>
           Effect.gen(function* () {
+            // kilocode_change start
             const url = normalizeServerUrl(input.url)
+            const id = accountKey(url, input.remoteID)
 
             yield* tx
               .insert(AccountTable)
               .values({
-                id: input.id,
+                id,
                 email: input.email,
                 url,
                 access_token: input.accessToken,
@@ -141,14 +145,14 @@ const layer = Layer.effect(
                 target: AccountTable.id,
                 set: {
                   email: input.email,
-                  url,
                   access_token: input.accessToken,
                   refresh_token: input.refreshToken,
                   token_expiry: input.expiry,
                 },
               })
               .run()
-            yield* state(input.id, input.orgID)
+            yield* state(id, input.orgID)
+            // kilocode_change end
           }),
         ),
       ).pipe(Effect.asVoid),
