@@ -21,8 +21,10 @@ internal enum class HostedWorkspaceStatus(private val value: String, private val
     UNKNOWN("unknown", UiStyle.Badge.Secondary),
     ;
 
+    fun label(): String = KiloBundle.message("hosted.workspace.status.$value")
+
     fun badge(): ActiveBadge = ActiveBadge(
-        text = KiloBundle.message("hosted.workspace.status.$value"),
+        text = label(),
         style = style,
         id = "cloud-compute",
     )

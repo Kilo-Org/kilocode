@@ -26,6 +26,7 @@ import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
+import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.components.service
@@ -71,6 +72,27 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
         assertEquals("feature/cloud", row(HostedWorkspaceRowData(dto)).description)
         assertNull(row(HostedWorkspaceRowData(dto.copy(branch = null))).description)
         assertNull(row(HostedWorkspaceRowData(dto.copy(branch = " \t"))).description)
+    }
+
+    fun `test compute status stays discoverable in the tooltip without tree badges`() {
+        val item = HostedWorkspaceDto(
+            HostedWorkspaceRefDto("cloud", "wrk_1"),
+            name = "Cloud workspace",
+            branch = "feature/cloud",
+        )
+        val cases = mapOf(
+            "failed" to "Failed",
+            "error" to "Unavailable",
+            "stopped" to "Stopped",
+            "sleeping" to "Sleeping",
+        )
+        for ((state, text) in cases) {
+            val status = HostedWorkspaceStatusDto(item.ref, "active", state, "detail", 100.0)
+            val row = row(HostedWorkspaceRowData(item, status))
+            assertEmpty(row.badges)
+            assertEquals(listOf("feature/cloud", item.ref.key, text), row.tooltip.orEmpty().lines())
+        }
+        assertEquals(listOf("feature/cloud", item.ref.key), row(HostedWorkspaceRowData(item)).tooltip.orEmpty().lines())
     }
 
     fun `test rows tabs and file types use the same cloud icon`() {

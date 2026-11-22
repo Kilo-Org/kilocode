@@ -1175,7 +1175,7 @@ class AgentManagerPanel(
             }
             val created = if (hostedState.signedOut) emptyList() else createdHosted.values
                 .filterNot { it.ref.key in keys || management?.excluded(it.ref) == true }
-                .map { HostedWorkspaceRowData(it) }
+                .map { HostedWorkspaceRowData(it, hostedState.presentation(it.ref)) }
             (pending + created + visible.map { dto ->
                 val kinds = activity.filterKeys { id ->
                     HostedIDs.parseSession(id)?.let {
@@ -1189,7 +1189,7 @@ class AgentManagerPanel(
                     HostedWorkspaceStatus.of(status).busy() || (!known && status?.hasActiveTurn == true)
                 }
                 val progress = if (dto.ref.key in deletingHosted) KiloBundle.message("common.deleting") else null
-                HostedWorkspaceRowData(dto, kind, progress)
+                HostedWorkspaceRowData(dto, status, kind, progress)
             }).distinctBy { it.dto.ref.key }.map { hostedWorkspaceRow(it, this) }
         } else {
             emptyList()
