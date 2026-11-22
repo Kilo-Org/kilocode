@@ -194,7 +194,14 @@ const AgentManagerTab: Component<{ projectId?: string }> = (props) => {
           >
             <Switch
               checked={(settings()["agentManager.worktreePool"] as boolean | undefined) ?? true}
-              onChange={(value) => applySetting("agentManager.worktreePool", value)}
+              onChange={(value) =>
+                applySetting(
+                  "agentManager.worktreePool",
+                  value,
+                  undefined,
+                  language.t("agentManager.settings.worktreePool.title"),
+                )
+              }
               hideLabel
             >
               {language.t("agentManager.settings.worktreePool.title")}

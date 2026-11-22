@@ -138,6 +138,41 @@ describe("handleUpdateSetting outcomes", () => {
 
     expect(internal.costLimit()).toBe(2)
   })
+
+  it("keeps the newest committed maxCost when an older overlapping write rejects", async () => {
+    const stored: Record<string, unknown> = { maxCost: 2 }
+    const pending = new Map<number, { resolve: () => void; reject: (error: unknown) => void }>()
+    vscode.workspace.getConfiguration = (() => {
+      // Each call captures the stored record as it is now, so a write that
+      // restores from this object reads the values visible at its own start.
+      const snapshot = { ...stored }
+      return {
+        get: (key: string, fallback: unknown) => snapshot[key] ?? fallback,
+        update: (key: string, value: number) => {
+          const deferred = Promise.withResolvers<void>()
+          pending.set(value, deferred)
+          return deferred.promise
+        },
+      }
+    }) as typeof original
+    const { internal, sent } = create()
+
+    const older = internal.handleUpdateSetting("maxCost", 9)
+    const newer = internal.handleUpdateSetting("maxCost", 3)
+
+    pending.get(9)!.reject(new Error("settings.json is read-only"))
+    await older
+    stored.maxCost = 3
+    pending.get(3)!.resolve()
+    await newer
+
+    expect(internal.costLimit()).toBe(3)
+    expect(sent).toEqual([
+      { type: "settingUpdateFailed", key: "maxCost", message: "settings.json is read-only" },
+      { type: "settingUpdated", key: "maxCost", value: 3 },
+    ])
+    expect(internal.costLimit()).toBe(vscode.workspace.getConfiguration("kilo-code.new").get<number>("maxCost", 0))
+  })
 })
 
 describe("handleUpdateSetting write ids", () => {

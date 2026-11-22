@@ -5237,6 +5237,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.setMaxCost(config.get<number>("maxCost", 0))
           throw error
         }
+        // Re-apply the committed limit so an older write that rejects in between
+        // cannot leave the runtime limit on the value it restored.
+        this.setMaxCost(normalized)
         for (const sid of this.trackedSessionIds) {
           const oldLimit = this.activeAlerts.get(sid)
           if (oldLimit !== undefined) {

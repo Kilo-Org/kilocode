@@ -68,6 +68,11 @@ const nextWriteId = () => `w${(writeCount += 1).toString(36)}-${Math.random().to
 interface PendingWrite {
   /** The `settings()` property the key writes. */
   property: string
+  /**
+   * The user-facing name of the control the chain writes, when the caller knows it. An
+   * unanswered chain reports this name instead of the internal `property`.
+   */
+  label: string | undefined
   /** The rendered value before the chain's first write. */
   previous: unknown
   /** Writes still awaiting a terminal message, oldest first, with their chain order and id. */
@@ -128,7 +133,7 @@ interface ConfigContextValue {
   updateGlobalConfig: (partial: Partial<Config>) => void
   updateProjectConfig: (partial: Partial<Config>) => void
   updateSetting: (key: string, value: unknown) => void
-  applySetting: (key: string, value: unknown, writeKey?: string) => void
+  applySetting: (key: string, value: unknown, writeKey?: string, label?: string) => void
   saveConfig: () => void
   discardConfig: () => void
 }
@@ -251,19 +256,21 @@ export const ConfigProvider: ParentComponent = (props) => {
     const pending = dropWrite(writeKey)
     if (pending == null) return
     storeSetting(pending.property, pending.hasStored ? pending.stored : pending.previous)
-    setSaveError({ key: "settings.saveBar.unconfirmedWrite", params: { name: pending.property } })
+    setSaveError({ key: "settings.saveBar.unconfirmedWrite", params: { name: pending.label ?? pending.property } })
   }
   /**
    * Record a write before its optimistic update, so a rejected chain can restore what it
    * replaced, and return the id its outcome message must echo. Each write takes the chain's
-   * next order, binds that id to it, and restarts its settle bound.
+   * next order, binds that id to it, and restarts its settle bound. `label` names the control
+   * the write comes from; the newest named write names the chain.
    */
-  const trackWrite = (writeKey: string, property: string, value: unknown) => {
+  const trackWrite = (writeKey: string, property: string, value: unknown, label?: string) => {
     const writeId = nextWriteId()
     const pending = pendingWrites.get(writeKey)
     if (pending == null) {
       const created: PendingWrite = {
         property,
+        label,
         previous: savedSettings()[property],
         awaiting: [{ order: 1, value, writeId }],
         stored: undefined,
@@ -278,6 +285,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       return writeId
     }
     pending.property = property
+    pending.label = label ?? pending.label
     pending.order += 1
     pending.awaiting.push({ order: pending.order, value, writeId })
     armWrite(writeKey, pending)
@@ -637,11 +645,13 @@ export const ConfigProvider: ParentComponent = (props) => {
    * For app-level feature gates whose effect lives outside the settings page,
    * where staging the change would make the control feel unresponsive.
    * `key` is the local settings() property; `writeKey` is the VS Code
-   * configuration key when the two differ (e.g. namespaced experimental keys).
+   * configuration key when the two differ (e.g. namespaced experimental keys);
+   * `label` is the control's user-facing name, which an unanswered write reports
+   * instead of the internal property name.
    */
-  function applySetting(key: string, value: unknown, writeKey?: string) {
+  function applySetting(key: string, value: unknown, writeKey?: string, label?: string) {
     const wire = writeKey ?? key
-    const writeId = trackWrite(wire, key, value)
+    const writeId = trackWrite(wire, key, value, label)
     setSavedSettings((prev) => ({ ...prev, [key]: value }))
     setSettings((prev) => ({ ...prev, [key]: value }))
     setSettingsDraft((prev) => {

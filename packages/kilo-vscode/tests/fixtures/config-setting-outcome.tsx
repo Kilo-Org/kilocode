@@ -46,7 +46,12 @@ Object.assign(globalThis, {
 // The providers read browser globals at module scope, so they load after the stubs above.
 const { render } = await import("solid-js/web")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
-const { ConfigProvider, useConfig, settleBound } = await import("../../webview-ui/src/context/config")
+const { ConfigProvider, useConfig, settleBound, saveErrorText } = await import("../../webview-ui/src/context/config")
+const { dict: en } = await import("../../webview-ui/src/i18n/en")
+const { resolveTemplate } = await import("../../webview-ui/src/context/language-utils")
+// The shipping dictionary is a literal object, so this widens it to the lookup the render
+// site uses without changing what it holds.
+const text: Record<string, string> = en
 // The bound cases shorten this so they prove the settle without a ten-second wait; every
 // other case keeps the real bound.
 const realBound = settleBound.ms
@@ -66,7 +71,7 @@ interface ConfigProbe {
   saveError: () => ProbeSaveError | null
   isDirty: () => boolean
   updateSetting: (key: string, value: unknown) => void
-  applySetting: (key: string, value: unknown, writeKey?: string) => void
+  applySetting: (key: string, value: unknown, writeKey?: string, label?: string) => void
   saveConfig: () => void
 }
 
@@ -443,6 +448,30 @@ try {
     }
     assert.equal(probe().settings()[property], first, "the new chain restores the value before its own write")
     assert.deepEqual(probe().saveError(), { message: "rejected after bound", details: undefined })
+  })
+
+  await check("an unanswered write names the control in the user's language", async () => {
+    const key = "experimental.browserAutomation"
+    const property = "browserAutomation"
+    settleBound.ms = 800
+    try {
+      probe().applySetting(property, true, key, "Integrated Browser")
+      await Promise.resolve()
+      const settled = await until(() => probe().saveError() != null, 5800)
+      assert.ok(settled, "the chain settles within the bound")
+    } finally {
+      settleBound.ms = realBound
+    }
+    assert.deepEqual(probe().saveError(), {
+      key: "settings.saveBar.unconfirmedWrite",
+      params: { name: "Integrated Browser" },
+    })
+    const error = probe().saveError()
+    assert.ok(error)
+    assert.equal(
+      saveErrorText(error, (id, args) => resolveTemplate(text[id] ?? id, args)),
+      "Integrated Browser was not confirmed by the extension host.",
+    )
   })
 
   await check("a stored value does not overwrite a newer draft edit", async () => {
