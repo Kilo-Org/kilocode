@@ -46,8 +46,8 @@ const { ServerProvider } = await import("../../webview-ui/src/context/server")
 const { ConfigContext } = await import("../../webview-ui/src/context/config")
 const { LanguageContext } = await import("../../webview-ui/src/context/language")
 const { NotificationsProvider } = await import("../../webview-ui/src/context/notifications")
-const { DialogProvider } = await import("@kilocode/kilo-ui/context/dialog")
 const { ProviderProvider } = await import("../../webview-ui/src/context/provider")
+const { DialogProvider } = await import("@kilocode/kilo-ui/context/dialog")
 const { SessionProvider, useSession } = await import("../../webview-ui/src/context/session")
 const { post } = await import("../../webview-ui/src/utils/webview-message")
 const { drafts, savePromptDraft } = await import("../../webview-ui/src/utils/draft-store")
@@ -91,8 +91,8 @@ const host = document.createElement("div")
 document.body.append(host)
 const dispose = render(
   () => (
-    <VSCodeProvider>
-      <DialogProvider>
+    <DialogProvider>
+      <VSCodeProvider>
         <ServerProvider>
           <ProviderProvider>
             <ConfigContext.Provider value={config as never}>
@@ -106,8 +106,8 @@ const dispose = render(
             </ConfigContext.Provider>
           </ProviderProvider>
         </ServerProvider>
-      </DialogProvider>
-    </VSCodeProvider>
+      </VSCodeProvider>
+    </DialogProvider>
   ),
   host,
 )
