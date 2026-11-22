@@ -19,6 +19,10 @@ export interface Interface {
   readonly list: () => Effect.Effect<Info[], AccountRepoError>
   readonly remove: (accountID: AccountID) => Effect.Effect<void, AccountRepoError>
   readonly use: (accountID: AccountID, orgID: Option.Option<OrgID>) => Effect.Effect<void, AccountRepoError>
+  // kilocode_change start
+  /** The organization stored for the account that holds the account state, or none otherwise. */
+  readonly selected: (accountID: AccountID) => Effect.Effect<Option.Option<OrgID>, AccountRepoError>
+  // kilocode_change end
   readonly getRow: (accountID: AccountID) => Effect.Effect<Option.Option<AccountRow>, AccountRepoError>
   readonly persistToken: (input: {
     accountID: AccountID
@@ -103,6 +107,19 @@ const layer = Layer.effect(
       query(state(accountID, orgID)).pipe(Effect.asVoid),
     )
 
+    // kilocode_change start
+    const selected = Effect.fn("AccountRepo.selected")((accountID: AccountID) =>
+      query(db.select().from(AccountStateTable).where(eq(AccountStateTable.id, ACCOUNT_STATE_ID)).get()).pipe(
+        Effect.map((row) => {
+          if (!row) return Option.none<OrgID>()
+          if (row.active_account_id !== accountID) return Option.none<OrgID>()
+          if (row.active_org_id === null || row.active_org_id === undefined) return Option.none<OrgID>()
+          return Option.some(row.active_org_id)
+        }),
+      ),
+    )
+    // kilocode_change end
+
     const getRow = Effect.fn("AccountRepo.getRow")((accountID: AccountID) =>
       query(db.select().from(AccountTable).where(eq(AccountTable.id, accountID)).get()).pipe(
         Effect.map(Option.fromNullishOr),
@@ -163,6 +180,7 @@ const layer = Layer.effect(
       list,
       remove,
       use,
+      selected, // kilocode_change
       getRow,
       persistToken,
       persistAccount,

@@ -478,3 +478,42 @@ it.live("getRow returns none for nonexistent account", () =>
     expect(Option.isNone(row)).toBe(true)
   }),
 )
+
+// kilocode_change start
+it.live("selected returns the stored org only for the account that holds the state", () =>
+  Effect.gen(function* () {
+    const id1 = storedKey("user-1")
+    const id2 = storedKey("user-2")
+
+    yield* AccountRepo.Service.use((r) =>
+      r.persistAccount({
+        remoteID: RemoteID.make("user-1"),
+        email: "first@example.com",
+        url: CONTROL_URL,
+        accessToken: AccessToken.make("at_1"),
+        refreshToken: RefreshToken.make("rt_1"),
+        expiry: Date.now() + 3600_000,
+        orgID: Option.some(OrgID.make("org-1")),
+      }),
+    )
+
+    yield* AccountRepo.Service.use((r) =>
+      r.persistAccount({
+        remoteID: RemoteID.make("user-2"),
+        email: "second@example.com",
+        url: CONTROL_URL,
+        accessToken: AccessToken.make("at_2"),
+        refreshToken: RefreshToken.make("rt_2"),
+        expiry: Date.now() + 3600_000,
+        orgID: Option.some(OrgID.make("org-2")),
+      }),
+    )
+
+    const first = yield* AccountRepo.Service.use((r) => r.selected(id1))
+    expect(Option.isNone(first)).toBe(true)
+
+    const second = yield* AccountRepo.Service.use((r) => r.selected(id2))
+    expect(Option.getOrThrow(second)).toBe(OrgID.make("org-2"))
+  }),
+)
+// kilocode_change end

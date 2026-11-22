@@ -13,7 +13,7 @@ import {
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { AccountRepo, type AccountRow } from "./repo"
 // kilocode_change start
-import { normalizeServerUrl } from "@opencode-ai/core/account/key"
+import { accountKey, normalizeServerUrl } from "@opencode-ai/core/account/key"
 // kilocode_change end
 import {
   type AccountError,
@@ -453,8 +453,17 @@ const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient.HttpCl
 
       const [account, remoteOrgs] = yield* Effect.all([user, orgs], { concurrency: 2 })
 
-      // TODO: When there are multiple orgs, let the user choose
-      const firstOrgID = remoteOrgs.length > 0 ? Option.some(remoteOrgs[0].id) : Option.none<OrgID>()
+      // kilocode_change start
+      // An account that signs in again keeps the organization it already selected, as long as
+      // the server still lists it for that account.
+      const stored = yield* repo.selected(accountKey(normalizeServerUrl(input.server), account.id))
+
+      // TODO: When an account with several orgs signs in without a stored selection, let the user choose
+      const selectedOrgID = stored.pipe(
+        Option.filter((orgID) => remoteOrgs.some((org) => org.id === orgID)),
+        Option.orElse(() => Option.fromNullishOr(remoteOrgs[0]?.id)),
+      )
+      // kilocode_change end
 
       const now = yield* Clock.currentTimeMillis
       const expiry = now + Duration.toMillis(parsed.expires_in)
@@ -467,7 +476,7 @@ const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient.HttpCl
         accessToken,
         refreshToken,
         expiry,
-        orgID: firstOrgID,
+        orgID: selectedOrgID, // kilocode_change
       })
 
       return new PollSuccess({ email: account.email })
