@@ -40,6 +40,12 @@ describe("resolveEndpointOptions", () => {
     expect(vertexHost.location).toBe("proxy.example/x")
   })
 
+  test("treats an empty baseURL as unset when a concrete model URL is given", () => {
+    const options: Record<string, unknown> = { baseURL: "", location: "proxy.example/x" }
+    resolveEndpointOptions("google-vertex", "https://proxy.example/v1", options)
+    expect(options.location).toBe("proxy.example/x")
+  })
+
   test("leaves the location untouched when a concrete Vertex host baseURL is given", () => {
     const options: Record<string, unknown> = {
       baseURL: "https://us-central1-aiplatform.googleapis.com/v1/projects/p/locations/us-central1",
