@@ -81,17 +81,15 @@ describe("SessionRunnerModel", () => {
     }),
   )
 
-  // kilocode_change start - migrated request headers reach the sent request as headers
-  it.effect("sends migrated request headers and bearer token as request headers", () =>
+  // kilocode_change start - fallback options report request headers
+  it.effect("lowers fallback options into the sent request", () =>
     Effect.gen(function* () {
       const migrated = ConfigMigrateV1.migrate({
         provider: {
-          // apiKey plus a configured header.
           keyed: {
             options: { apiKey: "migrated-key", authToken: "migrated-token", headers: { "x-tenant": "acme" } },
             models: { chat: { options: { customField: "value" } } },
           },
-          // authToken only, which the package has to receive as a request header.
           tokenonly: {
             options: { authToken: "only-token", headers: { "x-tenant": "beta" } },
             models: { chat: { options: { customField: "value" } } },
@@ -99,8 +97,6 @@ describe("SessionRunnerModel", () => {
         },
       })
 
-      // Read the payload the transport sends: stub only the HTTP client, so route defaults, the http
-      // overlay and auth are all applied first.
       const sent: Array<{ headers: Record<string, string>; body: unknown }> = []
       const http = Layer.succeed(
         HttpClient.HttpClient,
@@ -138,12 +134,59 @@ describe("SessionRunnerModel", () => {
       }
 
       const [keyed, tokenonly] = sent.map((item) => required(item))
-      expect(keyed.body).toMatchObject({ customField: "value" })
+      const protocol = ["messages", "model", "stream", "stream_options"]
+      expect(Object.keys(keyed.body as object).sort()).toEqual([...protocol, "customField"].sort())
+      expect((keyed.body as Record<string, unknown>).customField).toBe("value")
       expect(keyed.headers["x-tenant"]).toBe("acme")
       expect(keyed.headers.authorization).toBe("Bearer migrated-key")
-      expect(tokenonly.body).toMatchObject({ customField: "value" })
+
+      expect(Object.keys(tokenonly.body as object).sort()).toEqual([...protocol, "customField"].sort())
+      expect((tokenonly.body as Record<string, unknown>).customField).toBe("value")
       expect(tokenonly.headers["x-tenant"]).toBe("beta")
       expect(tokenonly.headers.authorization).toBe("Bearer only-token")
+    }),
+  )
+
+  it.effect("lowers fallback options for a package with its own header", () =>
+    Effect.gen(function* () {
+      const migrated = ConfigMigrateV1.migrate({
+        provider: { both: { options: { apiKey: "both-key", authToken: "both-token" } } },
+      })
+      const entry = required(migrated.providers?.["both"])
+      const resolved = yield* SessionRunnerModel.fromCatalogModel(
+        ModelV2.Info.make({
+          ...model({ type: "aisdk", package: "@ai-sdk/anthropic", url: "https://anthropic.example/v1" }),
+          request: { headers: { ...entry.request?.headers }, body: { ...entry.request?.body } },
+        }),
+      )
+
+      const sent: Array<{ headers: Record<string, string>; body: unknown }> = []
+      const http = Layer.succeed(
+        HttpClient.HttpClient,
+        HttpClient.make((request) =>
+          Effect.sync(() => {
+            sent.push({
+              headers: { ...request.headers },
+              body:
+                request.body && "body" in request.body && request.body.body instanceof Uint8Array
+                  ? JSON.parse(new TextDecoder().decode(request.body.body))
+                  : request.body,
+            })
+            return HttpClientResponse.fromWeb(request, new Response("", { status: 200 }))
+          }),
+        ),
+      )
+
+      yield* LLMClient.stream(LLM.request({ model: resolved, prompt: "Hello" })).pipe(
+        Stream.runDrain,
+        Effect.catchCause(() => Effect.void),
+        Effect.provide(LLMClient.layer.pipe(Layer.provide(RequestExecutor.layer.pipe(Layer.provide(http))))),
+      )
+
+      const wire = required(sent[0])
+      expect(wire.headers["x-api-key"]).toBe("both-key")
+      expect(wire.headers.authorization).toBe("Bearer both-token")
+      expect(Object.keys(wire.body as object).sort()).toEqual(["max_tokens", "messages", "model", "stream"])
     }),
   )
   // kilocode_change end
