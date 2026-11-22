@@ -53,18 +53,24 @@ jobs:
               - '!packages/extensions/zed/**'
               - '!specs/**'
               - '!perf/**'
+            migration:
+              - 'packages/kilo-jetbrains/backend/src/test/resources/migration/**'
 
       - name: Configure unit matrix
         id: matrix
         env:
           GENERAL: ${{ github.event_name != 'pull_request' || steps.filter.outputs.general == 'true' }}
+          MIGRATION: ${{ github.event_name != 'pull_request' || steps.filter.outputs.migration == 'true' }}
         run: |
-          if [ "$GENERAL" != "true" ]; then
-            echo 'general=false' >> "$GITHUB_OUTPUT"
+          # A migration fixture is also read by a CLI suite, so a change that touches only the
+          # fixture runs the unit matrix while the general jobs stay off.
+          run="$GENERAL"
+          if [ "$MIGRATION" = "true" ]; then run=true; fi
+          echo "general=$GENERAL" >> "$GITHUB_OUTPUT"
+          if [ "$run" != "true" ]; then
             echo 'settings=[{"os":"linux","index":1,"total":1,"host":"blacksmith-4vcpu-ubuntu-2404","run":false,"packages":false,"pty":false}]' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo 'general=true' >> "$GITHUB_OUTPUT"
           # kilocode_change - Windows runs 6 shards at KILO_TEST_CONCURRENCY=2. Measured: a
           # 5-shard matrix was worse on both wall-clock (slowest job 9.3m vs 6.7m) and machine
           # minutes (43 vs 37) — with 2 workers per shard, packing more work per shard loses.
