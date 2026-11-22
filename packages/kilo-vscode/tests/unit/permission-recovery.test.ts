@@ -441,7 +441,7 @@ describe("replyOnce", () => {
   })
 
   it("confirms a request that settled after a transport error", async () => {
-    const { client, attempts } = fake({
+    const { client, attempts, lists } = fake({
       reply: async (attempt) => {
         if (attempt < 3) throw terminated()
         return { data: true }
@@ -454,6 +454,7 @@ describe("replyOnce", () => {
       log.mockRestore()
     }
     expect(attempts()).toBe(3)
+    expect(lists).toEqual(["/workspace"])
   })
 
   it("confirms a request the directory dropped after a failed reply", async () => {
@@ -468,6 +469,22 @@ describe("replyOnce", () => {
     } finally {
       log.mockRestore()
     }
+    expect(lists).toEqual(["/workspace"])
+  })
+
+  it("confirms a request that settled after the retry budget ran out", async () => {
+    const { client, attempts, lists } = fake({
+      reply: async () => {
+        throw terminated()
+      },
+    })
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(true)
+    } finally {
+      log.mockRestore()
+    }
+    expect(attempts()).toBe(3)
     expect(lists).toEqual(["/workspace"])
   })
 

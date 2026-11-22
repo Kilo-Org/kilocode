@@ -312,11 +312,16 @@ describe("registerToggleAutoApprove", () => {
 
   it("returns unhandled when an automatic reply fails and the request stays pending", async () => {
     config({ globalValue: true })
+    const options: unknown[] = []
+    const lists: string[] = []
     const conn = connection(
       client({
-        list: async () => ({ data: [{ id: "perm_1" }] }),
-        reply: async (_args, options) => {
-          expect(options).toEqual({ throwOnError: true })
+        list: async (dir) => {
+          lists.push(dir)
+          return { data: [{ id: "perm_1" }] }
+        },
+        reply: async (_args, opts) => {
+          options.push(opts)
           throw new Error("offline")
         },
       }),
@@ -329,6 +334,8 @@ describe("registerToggleAutoApprove", () => {
     )
 
     expect(await quiet(() => ctrl.approve(asked("perm_1")))).toBe(false)
+    expect(options).toEqual([{ throwOnError: true }])
+    expect(lists).toEqual(["/workspace"])
   })
 
   it("cancels pending permission drains when disabled during an enable generation", async () => {
@@ -499,7 +506,15 @@ describe("registerToggleAutoApprove", () => {
 
   it("serialises two quick toggles so the later intent wins", async () => {
     const gate = defer<void>()
-    const env = config({ globalValue: false, hold: (value) => (value === true ? gate.promise : undefined) })
+    const started = defer<void>()
+    const env = config({
+      globalValue: false,
+      hold: (value) => {
+        if (value !== true) return undefined
+        started.resolve()
+        return gate.promise
+      },
+    })
     const conn = connection(client({}))
     const ctrl = registerToggleAutoApprove(
       context(),
@@ -509,6 +524,9 @@ describe("registerToggleAutoApprove", () => {
     )
 
     const enable = ctrl.toggle()
+    await started.promise
+    expect(env.updates).toHaveLength(1)
+
     const disable = ctrl.toggle()
     gate.resolve()
     await Promise.all([enable, disable])

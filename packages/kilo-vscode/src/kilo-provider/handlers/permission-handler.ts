@@ -54,9 +54,9 @@ export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string
  * transient on purpose, so the retry helper stops instead of looping.
  *
  * Returns true only when the directory's instance no longer holds the request.
- * A successful reply call is not itself the answer: one `permission.list` on the
- * same directory confirms it, so the prompt still reaches the user whenever the
- * reply did not take effect. A not-found reply reports false for the same reason:
+ * A successful reply call is not itself the answer: one bounded `permission.list`
+ * on the same directory confirms it, so the prompt still reaches the user whenever
+ * the reply did not take effect. A not-found reply reports false for the same reason:
  * a directory without that request answers with the same empty list a settled
  * request produces, so it cannot confirm one.
  */
@@ -66,16 +66,6 @@ export async function replyOnce(
   directory: string,
   shouldContinue?: () => boolean,
 ): Promise<boolean> {
-  const confirm = async (): Promise<boolean> => {
-    try {
-      const { data } = await client.permission.list({ directory }, { throwOnError: true })
-      return !data.some((request) => request.id === requestID)
-    } catch (error) {
-      console.error("[Kilo New] permission-handler: failed to confirm the reply:", error)
-      return false
-    }
-  }
-
   try {
     await retry(() => {
       if (shouldContinue && !shouldContinue()) throw new Error(CANCELLED)
@@ -86,7 +76,12 @@ export async function replyOnce(
     if (isNotFoundError(error)) return false
     console.error("[Kilo New] permission-handler: failed to reply once:", error)
   }
-  return confirm()
+  try {
+    return await permissionSettled(client, directory, requestID)
+  } catch (error) {
+    console.error("[Kilo New] permission-handler: failed to confirm the reply:", error)
+    return false
+  }
 }
 
 export function recoverablePermissions(
