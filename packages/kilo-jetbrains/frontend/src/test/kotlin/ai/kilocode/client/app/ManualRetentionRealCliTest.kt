@@ -14,6 +14,7 @@ import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.RetentionConfigDto
 import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.RetentionPolicyDto
@@ -239,9 +240,10 @@ class ManualRetentionRealCliTest {
         override suspend fun transcriptionModels(directory: String?): List<SpeechModelDto> = unused()
         override suspend fun transcribe(directory: String?, request: SpeechRequestDto): SpeechResultDto = unused()
         override suspend fun startLogin(directory: String?): DeviceAuthDto = unused()
-        override suspend fun completeLogin(directory: String?): ProfileDto? = unused()
+        override suspend fun completeLogin(directory: String?): ProfileSyncDto = unused()
         override suspend fun logout(): Boolean = unused()
-        override suspend fun setOrganization(organizationId: String?): ProfileDto? = unused()
+        override suspend fun setOrganization(organizationId: String?): ProfileSyncDto = unused()
+        override suspend fun refreshAccount(): ProfileSyncDto = unused()
         override suspend fun captureTelemetry(capture: TelemetryCaptureDto): Unit = unused()
 
         private fun unused(): Nothing = error("unused in retention harness")
