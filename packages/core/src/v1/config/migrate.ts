@@ -86,34 +86,38 @@ function policies(info: typeof ConfigV1.Info.Type) {
 // kilocode_change end
 
 function permissions(info?: ConfigPermissionV1.Info, tools?: Readonly<Record<string, boolean>>) {
-  const rules: Array<{ action: string; resource: string; effect: "allow" | "ask" | "deny" }> = Object.entries(
-    tools ?? {},
-  ).map(([action, enabled]) => ({
-    action: normalizeAction(action),
-    resource: "*",
-    effect: enabled ? ("allow" as const) : ("deny" as const),
-  }))
-  // kilocode_change start - v1 write and patch keys assert as edit, so a document authoring both spellings
-  // would let the authored order decide; the legacy spellings come first so the current spelling wins the
-  // last match in the emitted ruleset.
+  // kilocode_change start - v1 write and patch keys assert as edit, so a document that also authors the
+  // current spelling would let the authored order decide. The rules go out in the order legacy permission
+  // keys, tool toggles, current permission keys, so the current spelling wins the last match, and a
+  // deprecated tool toggle keeps the effect it has today when the permission block maps onto its action.
+  const rules: Array<{ action: string; resource: string; effect: "allow" | "ask" | "deny" }> = []
   const entries = Object.entries(info ?? {})
-  const legacy = entries.filter(([name]) => normalizeAction(name) !== name)
-  const current = entries.filter(([name]) => normalizeAction(name) === name)
-  for (const [name, rule] of [...legacy, ...current]) {
-    // kilocode_change end
-    if (!rule) continue
-    const action = normalizeAction(name) // kilocode_change - v1 write and patch keys assert as edit
-    if (typeof rule === "string") {
-      rules.push({ action, resource: "*", effect: rule }) // kilocode_change
-      continue
+  const emit = (list: typeof entries) => {
+    for (const [name, rule] of list) {
+      if (!rule) continue
+      const action = normalizeAction(name)
+      if (typeof rule === "string") {
+        rules.push({ action, resource: "*", effect: rule })
+        continue
+      }
+      // per-resource effect may also be null (delete sentinel); skip those entries
+      rules.push(
+        ...Object.entries(rule)
+          .filter((entry): entry is [string, "allow" | "ask" | "deny"] => entry[1] !== null)
+          .map(([resource, effect]) => ({ action, resource, effect })),
+      )
     }
-    // kilocode_change - per-resource effect may also be null (delete sentinel); skip those entries
-    rules.push(
-      ...Object.entries(rule)
-        .filter((entry): entry is [string, "allow" | "ask" | "deny"] => entry[1] !== null)
-        .map(([resource, effect]) => ({ action, resource, effect })), // kilocode_change
-    )
   }
+  emit(entries.filter(([name]) => normalizeAction(name) !== name))
+  rules.push(
+    ...Object.entries(tools ?? {}).map(([action, enabled]) => ({
+      action: normalizeAction(action),
+      resource: "*",
+      effect: enabled ? ("allow" as const) : ("deny" as const),
+    })),
+  )
+  emit(entries.filter(([name]) => normalizeAction(name) === name))
+  // kilocode_change end
   return rules.length ? rules : undefined
 }
 

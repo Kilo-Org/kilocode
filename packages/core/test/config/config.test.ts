@@ -9,6 +9,7 @@ import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { ConfigMigrateV1 } from "@opencode-ai/core/v1/config/migrate"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
+import { ConfigRecover } from "@opencode-ai/core/config/recover" // kilocode_change - decode a fixture as the loader does
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
 import { Location } from "@opencode-ai/core/location"
@@ -21,6 +22,14 @@ import { tmpdir } from "../fixture/tmpdir"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(Layer.empty)
+
+// kilocode_change start - the loader decodes a v1 document before migrating it, so a fixture does the same
+function v1(input: unknown) {
+  const recovered = ConfigRecover.recover(ConfigV1.Info, input)
+  if (recovered.type === "rejected") throw new Error("fixture must decode as a v1 document")
+  return ConfigMigrateV1.migrate(recovered.value)
+}
+// kilocode_change end
 
 function testLayer(
   directory: string,
@@ -286,18 +295,39 @@ describe("Config", () => {
       expect(ConfigMigrateV1.migrate({ permission: { patch: "deny" } }).permissions).toEqual(
         ConfigMigrateV1.migrate({ tools: { patch: false } }).permissions,
       )
-      // A document that authors both blocks keeps the permission block's effect, which comes last.
+      // A document that authors both blocks keeps the tool toggle's effect, which comes last.
       const both = ConfigMigrateV1.migrate({
         tools: { write: false },
         permission: { write: "allow" },
       }).permissions ?? []
       expect(both).toEqual([
-        { action: "edit", resource: "*", effect: "deny" },
         { action: "edit", resource: "*", effect: "allow" },
+        { action: "edit", resource: "*", effect: "deny" },
       ])
-      expect(PermissionV2.evaluate("edit", "src/index.ts", both).effect).toBe("allow")
+      expect(PermissionV2.evaluate("edit", "src/index.ts", both).effect).toBe("deny")
     }),
   )
+
+  // kilocode_change start - the deprecated toggle decides where the permission block maps onto its action
+  it.effect("keeps the v1 tool toggle ahead of a permission key for the same capability", () =>
+    Effect.sync(() => {
+      const blocked = v1({ tools: { write: false }, permission: { write: "allow" } })
+      expect(PermissionV2.evaluate("edit", "src/index.ts", blocked.permissions ?? []).effect).toBe("deny")
+
+      const open = v1({ tools: { write: true }, permission: { write: "deny" } })
+      expect(PermissionV2.evaluate("edit", "src/index.ts", open.permissions ?? []).effect).toBe("allow")
+
+      // An agent entry converts its tool toggle into the current spelling, so it decides there too.
+      const agent = v1({ agent: { scoped: { tools: { write: false }, permission: { write: "allow" } } } })
+      const rules = agent.agents?.scoped?.permissions ?? []
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
+
+      // The permission block's own current spelling still decides over the toggle.
+      const current = v1({ tools: { write: true }, permission: { edit: "deny" } })
+      expect(PermissionV2.evaluate("edit", "src/index.ts", current.permissions ?? []).effect).toBe("deny")
+    }),
+  )
+  // kilocode_change end
 
   it.effect("migrates per-resource v1 write and patch permission maps to the edit action", () =>
     Effect.sync(() => {
