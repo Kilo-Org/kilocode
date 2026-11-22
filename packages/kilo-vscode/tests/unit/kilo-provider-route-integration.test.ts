@@ -952,9 +952,14 @@ describe("KiloProvider route integration", () => {
     connect(internal)
     const posted: unknown[] = []
     internal.webview = { postMessage: async (message) => posted.push(message) }
+    // A queued retry loop keeps its controller here; the refusal must still settle it locally.
+    const controller = new AbortController()
+    internal.retryAbortControllers.set("same", controller)
 
     await internal.handleAbort("same")
 
+    expect(controller.signal.aborted).toBe(true)
+    expect(posted).toContainEqual({ type: "sessionStatus", sessionID: "same", status: "idle" })
     expect(abortCalls).toEqual([])
     expect(posted).toContainEqual(refusal("same"))
   })
