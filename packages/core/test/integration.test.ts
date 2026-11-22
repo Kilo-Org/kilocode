@@ -391,6 +391,101 @@ describe("Integration", () => {
       expect(exit).toBeInstanceOf(Integration.AttemptNotFoundError)
     }),
   )
+
+  it.effect("reports a failed attempt as not found when completing", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const credentials = yield* Credential.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("chatgpt")
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "code" as const,
+              url: "https://example.com/authorize",
+              instructions: "Paste the code",
+              callback: () => Effect.fail(new Error("access denied")),
+            }),
+        }),
+      )
+
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
+      const failure = yield* integrations.attempt
+        .complete({ attemptID: attempt.attemptID, code: "1234" })
+        .pipe(Effect.flip)
+      expect(failure).toBeInstanceOf(Integration.AuthorizationError)
+      const exit = yield* integrations.attempt
+        .complete({ attemptID: attempt.attemptID, code: "1234" })
+        .pipe(Effect.flip)
+      expect(exit).toBeInstanceOf(Integration.AttemptNotFoundError)
+      expect(yield* credentials.list(integrationID)).toEqual([])
+    }),
+  )
+
+  it.effect("reports an expired attempt as not found when completing", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("chatgpt")
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "code" as const,
+              url: "https://example.com/authorize",
+              instructions: "Paste the code",
+              callback: () => Effect.die("unexpected callback"),
+            }),
+        }),
+      )
+
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
+      yield* TestClock.adjust(Duration.minutes(10))
+      yield* Effect.yieldNow
+      expect(yield* integrations.attempt.status(attempt.attemptID)).toEqual({
+        status: "expired",
+        time: attempt.time,
+      })
+      const exit = yield* integrations.attempt
+        .complete({ attemptID: attempt.attemptID, code: "1234" })
+        .pipe(Effect.flip)
+      expect(exit).toBeInstanceOf(Integration.AttemptNotFoundError)
+    }),
+  )
+
+  it.effect("reports an attempt as completing when it is still in flight", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const credentials = yield* Credential.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("browser")
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "Browser" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "auto" as const,
+              url: "https://example.com/authorize",
+              instructions: "Sign in",
+              callback: Effect.never,
+            }),
+        }),
+      )
+
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
+      const first = yield* integrations.attempt.complete({ attemptID: attempt.attemptID }).pipe(Effect.flip)
+      expect(first).toBeInstanceOf(Integration.AttemptCompletingError)
+      const second = yield* integrations.attempt.complete({ attemptID: attempt.attemptID }).pipe(Effect.flip)
+      expect(second).toBeInstanceOf(Integration.AttemptCompletingError)
+      expect(yield* credentials.list(integrationID)).toEqual([])
+    }),
+  )
   // kilocode_change end
 
   it.effect("projects credential and env connections", () => {

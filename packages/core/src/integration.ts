@@ -111,11 +111,18 @@ export class AttemptNotFoundError extends Schema.TaggedErrorClass<AttemptNotFoun
 ) {}
 // kilocode_change end
 
+// kilocode_change start - completing an attempt that is already in flight reports a typed conflict
+export class AttemptCompletingError extends Schema.TaggedErrorClass<AttemptCompletingError>()(
+  "Integration.AttemptCompleting",
+  { attemptID: AttemptID },
+) {}
+// kilocode_change end
+
 export class AuthorizationError extends Schema.TaggedErrorClass<AuthorizationError>()("Integration.Authorization", {
   cause: Schema.Defect(),
 }) {}
 
-export type Error = CodeRequiredError | AuthorizationError | AttemptNotFoundError
+export type Error = CodeRequiredError | AuthorizationError | AttemptNotFoundError | AttemptCompletingError
 
 export const Event = Integration.Event
 
@@ -198,7 +205,7 @@ export interface Interface extends State.Transformable<Draft> {
       readonly attemptID: AttemptID
       /** Authorization code required by attempts in code mode. */
       readonly code?: string
-    }) => Effect.Effect<void, CodeRequiredError | AuthorizationError | AttemptNotFoundError> // kilocode_change
+    }) => Effect.Effect<void, CodeRequiredError | AuthorizationError | AttemptNotFoundError | AttemptCompletingError> // kilocode_change
     /** Cancels an attempt and releases its resources. */
     readonly cancel: (attemptID: AttemptID) => Effect.Effect<void>
   }
@@ -550,7 +557,7 @@ export const locationLayer = Layer.effect(
           if (attempt.authorization.mode === "code" && input.code === undefined) {
             return yield* new CodeRequiredError({ attemptID: input.attemptID })
           }
-          if (attempt.completing) return yield* Effect.die(`OAuth attempt already completing: ${input.attemptID}`)
+          if (attempt.completing) return yield* new AttemptCompletingError({ attemptID: input.attemptID }) // kilocode_change
           const callback =
             attempt.authorization.mode === "auto"
               ? attempt.authorization.callback
