@@ -2481,6 +2481,7 @@ export const SessionProvider: ParentComponent = (props) => {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    removedAlways: string[],
     feedback?: string,
   ): boolean {
     // The rendered request must still exist in this provider. Never fall back to
@@ -2502,6 +2503,7 @@ export const SessionProvider: ParentComponent = (props) => {
       response,
       approvedAlways,
       deniedAlways,
+      removedAlways,
       ...(message ? { feedback: message } : {}),
     })
     return true

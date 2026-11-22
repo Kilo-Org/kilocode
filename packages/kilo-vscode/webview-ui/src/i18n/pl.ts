@@ -315,6 +315,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Usuń z listy dozwolonych",
   "ui.permission.rule.addToDenied": "Dodaj do listy zablokowanych",
   "ui.permission.rule.removeFromDenied": "Usuń z listy zablokowanych",
+  "ui.permission.rule.fromConfig": "Zarządzana przez plik konfiguracji",
   "ui.permission.toolLabel.read": "Czytaj",
   "ui.permission.toolLabel.edit": "Edytuj",
   "ui.permission.toolLabel.write": "Zapisz",

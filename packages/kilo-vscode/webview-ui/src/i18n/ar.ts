@@ -306,6 +306,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "أزل من قائمة المسموح",
   "ui.permission.rule.addToDenied": "أضف إلى قائمة المرفوض",
   "ui.permission.rule.removeFromDenied": "أزل من قائمة المرفوض",
+  "ui.permission.rule.fromConfig": "تتم الإدارة بواسطة ملف تكوين",
   "ui.permission.toolLabel.read": "قراءة",
   "ui.permission.toolLabel.edit": "تعديل",
   "ui.permission.toolLabel.write": "كتابة",

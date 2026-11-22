@@ -71,7 +71,7 @@ In the feedback field, describe what the agent should change before it retries. 
 
 Use the shield button in the prompt controls to toggle runtime auto-approve for permission prompts without opening Settings. When enabled, the shield is highlighted and pending permission prompts are approved automatically. The runtime state stays synced across the sidebar, open Kilo tabs, and Agent Manager session views.
 
-Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file.
+Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file. Selecting a saved rule's check or cross control again removes it from the global config, so the pattern asks again. A rule that a workspace config file supplies stays visible but read-only, because this prompt cannot change that file.
 
 For the `agent_manager` tool, runtime approvals use the requested capability as the pattern: `worktree`, `local`, `overview`, `prompt`, `stop`, `move`, or `answer`. Prompting, stopping, moving, or answering a managed session requires its own explicit capability approval the first time, even when a broad Agent Manager allow rule already exists.
 

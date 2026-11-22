@@ -4050,7 +4050,7 @@ export class Permission extends HeyApiClient {
   /**
    * Save always-allow/deny permission rules
    *
-   * Save approved/denied always-rules for a pending permission request.
+   * Save approved/denied always-rules for a pending permission request, and delete the rules named in removedAlways.
    */
   public saveAlwaysRules<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4059,6 +4059,7 @@ export class Permission extends HeyApiClient {
       workspace?: string
       approvedAlways?: Array<string>
       deniedAlways?: Array<string>
+      removedAlways?: Array<string>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4072,6 +4073,7 @@ export class Permission extends HeyApiClient {
             { in: "query", key: "workspace" },
             { in: "body", key: "approvedAlways" },
             { in: "body", key: "deniedAlways" },
+            { in: "body", key: "removedAlways" },
           ],
         },
       ],

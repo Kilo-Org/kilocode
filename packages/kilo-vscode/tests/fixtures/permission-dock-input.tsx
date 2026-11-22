@@ -25,7 +25,7 @@ const { ConfigContext } = await import("../../webview-ui/src/context/config")
 const { PermissionDock } = await import("../../webview-ui/src/components/chat/PermissionDock")
 
 const language = { t: (key: string) => key }
-const config = { config: () => ({ permission: {} }) }
+const config = { config: () => ({ permission: {} }), globalConfig: () => ({ permission: {} }) }
 Object.defineProperty(document, "hasFocus", { value: () => true })
 
 function mount(request: PermissionRequest) {

@@ -400,11 +400,11 @@ try {
   })
 
   await check("unknown-permission-returns-false", () => {
-    assert.equal(session().respondToPermission("missing", "once", [], []), false, "unknown permission should fail")
+    assert.equal(session().respondToPermission("missing", "once", [], [], []), false, "unknown permission should fail")
   })
   await check("unknown-permission-posts-nothing", () => {
     const before = sent.length
-    session().respondToPermission("missing-again", "once", [], [])
+    session().respondToPermission("missing-again", "once", [], [], [])
     assert.equal(sent.length, before, "an unknown permission must not post a response")
   })
 

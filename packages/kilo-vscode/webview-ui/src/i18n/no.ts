@@ -320,6 +320,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Fjern fra tillatt-listen",
   "ui.permission.rule.addToDenied": "Legg til i blokkert-listen",
   "ui.permission.rule.removeFromDenied": "Fjern fra blokkert-listen",
+  "ui.permission.rule.fromConfig": "Styrt av en konfigurasjonsfil",
   "ui.permission.toolLabel.read": "Les",
   "ui.permission.toolLabel.edit": "Rediger",
   "ui.permission.toolLabel.write": "Skriv",

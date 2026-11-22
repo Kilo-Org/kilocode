@@ -34,23 +34,51 @@ const request: PermissionRequest = {
 }
 const session = { currentSessionID: () => request.sessionID }
 const language = { t: (key: string) => key }
-const config = { config: () => ({ permission: { edit: { "*": "allow" } } }) }
 Object.defineProperty(document, "hasFocus", { value: () => true })
 
-for (const mode of ["reject", "once", "approve", "deny", "keyboard"] as const) {
+// The same rule saved in the global config: the dock can delete it.
+const savedAllow = {
+  config: () => ({ permission: { edit: { "*": "allow" } } }),
+  globalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
+}
+const savedDeny = {
+  config: () => ({ permission: { edit: { "*": "deny" } } }),
+  globalConfig: () => ({ permission: { edit: { "*": "deny" } } }),
+}
+// A rule the effective config supplies from another scope: a global write cannot remove it.
+const workspaceAllow = {
+  config: () => ({ permission: { edit: { "*": "allow" } } }),
+  globalConfig: () => ({ permission: {} }),
+}
+
+type Mode = "reject" | "once" | "approve" | "deny" | "keyboard" | "remove" | "removeDenied" | "workspace"
+type Call = { response: string; approved: string[]; denied: string[]; removed: string[]; feedback?: string }
+
+const cases: Array<{ mode: Mode; ctx: typeof savedAllow }> = [
+  { mode: "reject", ctx: savedAllow },
+  { mode: "once", ctx: savedAllow },
+  { mode: "approve", ctx: savedAllow },
+  { mode: "deny", ctx: savedAllow },
+  { mode: "keyboard", ctx: savedAllow },
+  { mode: "remove", ctx: savedAllow },
+  { mode: "removeDenied", ctx: savedDeny },
+  { mode: "workspace", ctx: workspaceAllow },
+]
+
+for (const { mode, ctx } of cases) {
   const root = document.createElement("div")
   document.body.append(root)
-  const calls: Array<{ response: string; approved: string[]; denied: string[]; feedback?: string }> = []
+  const calls: Call[] = []
   const dispose = render(
     () => (
       <SessionContext.Provider value={session as never}>
         <LanguageContext.Provider value={language as never}>
-          <ConfigContext.Provider value={config as never}>
+          <ConfigContext.Provider value={ctx as never}>
             <PermissionDock
               request={request}
               responding={false}
-              onDecide={(_id, response, approved, denied, feedback) => {
-                calls.push({ response, approved, denied, feedback })
+              onDecide={(_id, response, approved, denied, removed, feedback) => {
+                calls.push({ response, approved, denied, removed, feedback })
               }}
             />
           </ConfigContext.Provider>
@@ -70,18 +98,37 @@ for (const mode of ["reject", "once", "approve", "deny", "keyboard"] as const) {
     assert(button, `Missing button: ${selector}`)
     button.click()
   }
+  const row = () => root.querySelector('[data-slot="permission-rule-row"]')
   try {
-    assert.equal(root.querySelector('[data-slot="permission-rule-row"]')?.getAttribute("data-decision"), "approved")
+    assert.equal(row()?.getAttribute("data-decision"), mode === "removeDenied" ? "denied" : "approved")
+
+    if (mode === "workspace") {
+      // Revealed by a config scope this control cannot write, so it offers no removal.
+      assert.equal(row()?.getAttribute("data-source"), "config")
+      assert.equal(root.querySelector('[aria-label="ui.permission.rule.removeFromAllowed"]'), null)
+      assert.equal(root.querySelector('[data-slot="permission-rule-toggle"]'), null)
+      assert(root.querySelector('[aria-label="ui.permission.rule.fromConfig"]'))
+      enter()
+    }
     if (mode === "approve") {
       click('[aria-label="ui.permission.rule.removeFromAllowed"]')
-      assert.equal(root.querySelector('[data-slot="permission-rule-row"]')?.getAttribute("data-decision"), "pending")
+      assert.equal(row()?.getAttribute("data-decision"), "pending")
       click('[aria-label="ui.permission.rule.addToAllowed"]')
     }
     if (mode === "deny") click('[aria-label="ui.permission.rule.addToDenied"]')
-    if (mode === "once") {
+    if (mode === "remove") {
+      click('[aria-label="ui.permission.rule.removeFromAllowed"]')
+      assert.equal(row()?.getAttribute("data-decision"), "pending")
       enter()
     }
-    if (mode !== "once") {
+    if (mode === "removeDenied") {
+      click('[aria-label="ui.permission.rule.removeFromDenied"]')
+      assert.equal(row()?.getAttribute("data-decision"), "pending")
+      enter()
+    }
+    if (mode === "once") enter()
+
+    if (mode !== "once" && mode !== "remove" && mode !== "removeDenied" && mode !== "workspace") {
       click('[data-slot="permission-actions"] button:last-child')
       assert.equal(calls.length, 0, "Opening feedback must not submit a response")
       const input = root.querySelector<HTMLTextAreaElement>('[data-slot="permission-feedback-input"]')
@@ -96,12 +143,20 @@ for (const mode of ["reject", "once", "approve", "deny", "keyboard"] as const) {
       }
       click('[data-slot="permission-reject-confirm"]')
     }
+
+    const removed = mode === "remove" || mode === "removeDenied" ? ["*"] : []
+    const feedback =
+      mode === "once" || mode === "remove" || mode === "removeDenied" || mode === "workspace"
+        ? undefined
+        : "Use spaces, not tabs"
     assert.deepEqual(calls, [
       {
-        response: mode === "once" ? "once" : "reject",
+        response:
+          mode === "once" || mode === "remove" || mode === "removeDenied" || mode === "workspace" ? "once" : "reject",
         approved: mode === "approve" ? ["*"] : [],
         denied: mode === "deny" ? ["*"] : [],
-        feedback: mode === "once" ? undefined : "Use spaces, not tabs",
+        removed,
+        feedback,
       },
     ])
   } finally {

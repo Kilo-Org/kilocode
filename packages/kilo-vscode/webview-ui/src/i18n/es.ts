@@ -317,6 +317,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Quitar de la lista de permitidos",
   "ui.permission.rule.addToDenied": "Añadir a la lista de denegados",
   "ui.permission.rule.removeFromDenied": "Quitar de la lista de denegados",
+  "ui.permission.rule.fromConfig": "Gestionada por un archivo de configuración",
   "ui.permission.toolLabel.read": "Leer",
   "ui.permission.toolLabel.edit": "Editar",
   "ui.permission.toolLabel.write": "Escribir",

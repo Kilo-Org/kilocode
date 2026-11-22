@@ -14027,6 +14027,7 @@ export type PermissionSaveAlwaysRulesData = {
   body?: {
     approvedAlways?: Array<string>
     deniedAlways?: Array<string>
+    removedAlways?: Array<string>
   }
   path: {
     requestID: string

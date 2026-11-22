@@ -5692,7 +5692,7 @@
             }
           }
         },
-        "description": "Save approved/denied always-rules for a pending permission request.",
+        "description": "Save approved/denied always-rules for a pending permission request, and delete the rules named in removedAlways.",
         "summary": "Save always-allow/deny permission rules",
         "requestBody": {
           "content": {
@@ -5707,6 +5707,12 @@
                     }
                   },
                   "deniedAlways": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "removedAlways": {
                     "type": "array",
                     "items": {
                       "type": "string"
@@ -46878,6 +46884,9 @@
             "type": "string",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
             "format": "uuid"
+          },
+          "organizationID": {
+            "$ref": "#/components/schemas/SessionHostOrganizationID"
           }
         },
         "required": ["id"],

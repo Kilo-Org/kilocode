@@ -22,6 +22,7 @@ import {
   describePatterns,
   describeRule,
   displaySkillCommand,
+  removableRuleIndices,
   savedRuleStates,
   type RuleDecision,
 } from "./permission-dock-utils"
@@ -42,12 +43,13 @@ export const PermissionDock: Component<{
     response: "once" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    removedAlways: string[],
     feedback?: string,
   ) => void
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
-  const { config } = useConfig()
+  const { config, globalConfig } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
   // Skill shell batches are never persisted, so they show no auto-approve rules. The command
@@ -93,7 +95,10 @@ export const PermissionDock: Component<{
   // approved/denied patterns show their saved state immediately.
   const saved = config().permission?.[props.request.toolName]
   const loadState = savedRuleStates(rules(), saved)
-  // Saved rules are display-only; only explicit toggles can grant new permissions.
+  // A saved rule is revocable from here only when the global config owns it.
+  // The effective config also merges workspace rules, and a global write cannot
+  // delete those, so their rows stay read-only.
+  const revocable = removableRuleIndices(rules(), globalConfig().permission?.[props.request.toolName], loadState)
   const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})
   const [expanded, setExpanded] = createSignal(rulesExpandedPreference)
   // Rejecting is a two-step flow: Deny reveals an optional feedback field, then Reject confirms.
@@ -121,17 +126,24 @@ export const PermissionDock: Component<{
     const all = rules()
     const approved: string[] = []
     const denied: string[] = []
+    const removed: string[] = []
     for (const [i, d] of Object.entries(decisions())) {
-      const rule = all[Number(i)]
+      const index = Number(i)
+      const rule = all[index]
       if (!rule) continue
       if (d === "approved") approved.push(rule)
       else if (d === "denied") denied.push(rule)
+      // Switching off a saved rule asks the host to delete it. A slot that was
+      // never saved has nothing to delete, so it stays a plain cancel.
+      else if (revocable.has(index) && loadState[index]) removed.push(rule)
     }
-    return { approved, denied }
+    return { approved, denied, removed }
   }
 
   const toggleRule = (index: number, decision: RuleDecision) => {
     const current = decisions()[index] ?? loadState[index] ?? "pending"
+    // Switching a saved rule off returns it to "pending"; `collectRules` reads that
+    // as a deletion request for the rule the row displays.
     const next = current === decision ? "pending" : decision
     const updated = { ...decisions(), [index]: next }
     setDecisions(updated)
@@ -171,8 +183,15 @@ export const PermissionDock: Component<{
 
   const submit = (response: "once" | "reject") => {
     if (props.responding) return
-    const { approved, denied } = collectRules()
-    props.onDecide(props.request.id, response, approved, denied, response === "reject" ? feedback() : undefined)
+    const { approved, denied, removed } = collectRules()
+    props.onDecide(
+      props.request.id,
+      response,
+      approved,
+      denied,
+      removed,
+      response === "reject" ? feedback() : undefined,
+    )
     setRejecting(false)
     setFeedback("")
     focusPrompt()
@@ -295,36 +314,58 @@ export const PermissionDock: Component<{
                   <div data-slot="permission-rules">
                     <For each={rules()}>
                       {(rule, index) => (
-                        <div data-slot="permission-rule-row" data-decision={decision(index())}>
+                        <div
+                          data-slot="permission-rule-row"
+                          data-decision={decision(index())}
+                          data-source={!revocable.has(index()) && loadState[index()] ? "config" : undefined}
+                        >
                           <div data-slot="permission-rule-actions">
-                            <Tooltip value={approveTooltip(index())} placement="top">
-                              <IconButton
-                                icon="check-small"
-                                variant="ghost"
-                                size="small"
-                                data-slot="permission-rule-toggle"
-                                tone="success"
-                                data-active={decision(index()) === "approved" ? "" : undefined}
-                                aria-pressed={decision(index()) === "approved"}
-                                disabled={props.responding}
-                                onClick={() => toggleRule(index(), "approved")}
-                                aria-label={approveTooltip(index())}
-                              />
-                            </Tooltip>
-                            <Tooltip value={denyTooltip(index())} placement="top">
-                              <IconButton
-                                icon="close-small"
-                                variant="ghost"
-                                size="small"
-                                data-slot="permission-rule-toggle"
-                                tone="danger"
-                                data-active={decision(index()) === "denied" ? "" : undefined}
-                                aria-pressed={decision(index()) === "denied"}
-                                disabled={props.responding}
-                                onClick={() => toggleRule(index(), "denied")}
-                                aria-label={denyTooltip(index())}
-                              />
-                            </Tooltip>
+                            <Show
+                              when={revocable.has(index()) || !loadState[index()]}
+                              fallback={
+                                <Tooltip value={language.t("ui.permission.rule.fromConfig")} placement="top">
+                                  <span
+                                    data-slot="permission-rule-source"
+                                    role="img"
+                                    aria-label={language.t("ui.permission.rule.fromConfig")}
+                                  >
+                                    <Icon
+                                      name={loadState[index()] === "approved" ? "check-small" : "close-small"}
+                                      size="small"
+                                    />
+                                  </span>
+                                </Tooltip>
+                              }
+                            >
+                              <Tooltip value={approveTooltip(index())} placement="top">
+                                <IconButton
+                                  icon="check-small"
+                                  variant="ghost"
+                                  size="small"
+                                  data-slot="permission-rule-toggle"
+                                  tone="success"
+                                  data-active={decision(index()) === "approved" ? "" : undefined}
+                                  aria-pressed={decision(index()) === "approved"}
+                                  disabled={props.responding}
+                                  onClick={() => toggleRule(index(), "approved")}
+                                  aria-label={approveTooltip(index())}
+                                />
+                              </Tooltip>
+                              <Tooltip value={denyTooltip(index())} placement="top">
+                                <IconButton
+                                  icon="close-small"
+                                  variant="ghost"
+                                  size="small"
+                                  data-slot="permission-rule-toggle"
+                                  tone="danger"
+                                  data-active={decision(index()) === "denied" ? "" : undefined}
+                                  aria-pressed={decision(index()) === "denied"}
+                                  disabled={props.responding}
+                                  onClick={() => toggleRule(index(), "denied")}
+                                  aria-label={denyTooltip(index())}
+                                />
+                              </Tooltip>
+                            </Show>
                           </div>
                           <code data-slot="permission-rule" data-wrap={external() ? "" : undefined} title={text(rule)}>
                             <Show when={external() && rule !== "*"} fallback={text(rule)}>

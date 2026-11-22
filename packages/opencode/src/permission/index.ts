@@ -54,6 +54,8 @@ export const SaveAlwaysRulesInput = z.object({
   requestID: zod(PermissionV1.ID),
   approvedAlways: z.string().array().optional(),
   deniedAlways: z.string().array().optional(),
+  // Patterns whose saved rule the user cleared, so their config entry is deleted.
+  removedAlways: z.string().array().optional(),
 })
 
 export const AllowEverythingInput = z.object({
@@ -390,16 +392,47 @@ const layer = Layer.effect(
 
       const approvedSet = new Set(input.approvedAlways ?? [])
       const deniedSet = new Set(input.deniedAlways ?? [])
+      const removedSet = new Set(input.removedAlways ?? [])
       const newRules: Rule[] = []
       for (const pattern of validRules) {
         if (approvedSet.has(pattern)) newRules.push({ permission, pattern, action: "allow" })
         if (deniedSet.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
       }
+      // A cleared pattern deletes its config entry. An explicit approval or denial
+      // for the same pattern in this response always wins over the deletion.
+      const removed = [...removedSet].filter(
+        (pattern) =>
+          validRules.has(pattern) &&
+          !approvedSet.has(pattern) &&
+          !deniedSet.has(pattern) &&
+          (!SCALAR_ONLY_PERMISSIONS.has(permission) || pattern === "*"),
+      )
       s.approved.push(...newRules)
       existing.saved = true
 
-      if (newRules.length > 0) {
-        yield* config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false })
+      if (removed.length > 0) {
+        // The running instance resolves against its in-memory approvals as well as
+        // config, so drop the removed rules here or they keep auto-approving.
+        const drop = new Set(removed)
+        s.approved.splice(
+          0,
+          s.approved.length,
+          ...s.approved.filter((rule) => !(rule.permission === permission && drop.has(rule.pattern))),
+        )
+      }
+
+      if (newRules.length > 0 || removed.length > 0) {
+        const added = newRules.length > 0 ? toConfig(newRules)[permission] : undefined
+        const value: ConfigPermissionV1.Rule =
+          removed.length === 0 || SCALAR_ONLY_PERMISSIONS.has(permission)
+            ? (added ?? null)
+            : (() => {
+                const base: Record<string, ConfigPermissionV1.Action> =
+                  added === undefined ? {} : typeof added === "string" ? { "*": added } : { ...added }
+                for (const pattern of removed) base[pattern] = null
+                return base
+              })()
+        yield* config.updateGlobal({ permission: { [permission]: value } }, { dispose: false })
       }
 
       // kilocode_change - drain publishes replies through the same EventV2Bridge channel (was DeniedError)

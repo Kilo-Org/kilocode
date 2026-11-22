@@ -1415,6 +1415,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.response,
             message.approvedAlways,
             message.deniedAlways,
+            message.removedAlways,
             message.feedback,
           )
           break

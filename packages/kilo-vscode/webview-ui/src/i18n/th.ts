@@ -311,6 +311,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "นำออกจากรายการที่อนุญาต",
   "ui.permission.rule.addToDenied": "เพิ่มไปยังรายการที่ถูกปฏิเสธ",
   "ui.permission.rule.removeFromDenied": "นำออกจากรายการที่ถูกปฏิเสธ",
+  "ui.permission.rule.fromConfig": "จัดการโดยไฟล์การตั้งค่า",
   "ui.permission.toolLabel.read": "อ่าน",
   "ui.permission.toolLabel.edit": "แก้ไข",
   "ui.permission.toolLabel.write": "เขียน",

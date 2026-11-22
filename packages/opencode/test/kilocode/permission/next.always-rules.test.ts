@@ -31,7 +31,10 @@ afterAll(async () => {
     await fs.rm(path.join(dir, file), { force: true }).catch(() => {})
   }
   await Effect.runPromise(
-    Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(AppNodeBuilder.build(Config.node))),
+    Config.Service.use((svc) => svc.invalidate()).pipe(
+      Effect.scoped,
+      Effect.provide(AppNodeBuilder.build(Config.node)),
+    ),
   )
   await InstanceRuntime.disposeAllInstances()
 })
@@ -807,6 +810,135 @@ describe("saveAlwaysRules", () => {
         yield* reply({ requestID: PermissionV1.ID.make("permission_a5"), reply: "once" })
         yield* Fiber.join(fiberA)
         expectFailure(yield* Fiber.await(fiberB), Permission.RejectedError)
+      }),
+    ),
+  )
+
+  it.live("removed rules stop auto-allowing in the same process", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const saved = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_seed"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install"],
+          metadata: { rules: ["npm *", "npm install"] },
+          always: ["npm install *"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_seed"),
+          approvedAlways: ["npm install"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_seed"), reply: "once" })
+        yield* Fiber.join(saved)
+
+        const auto = yield* ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        })
+        expect(auto.manual).toBe(false)
+
+        // A later prompt for another command of the same tool shows the saved rule.
+        // Clearing it there must stop the auto-approval without a process restart.
+        const cleared = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_offer"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm test"],
+          metadata: { rules: ["npm *", "npm install", "npm test"] },
+          always: ["npm install *"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_offer"),
+          removedAlways: ["npm install"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_offer"), reply: "once" })
+        yield* Fiber.join(cleared)
+
+        const next = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_after"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        const items = yield* waitForPending(1)
+        expect(items.some((p) => String(p.id) === "permission_remove_after")).toBe(true)
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_after"), reply: "once" })
+        yield* Fiber.join(next)
+      }),
+    ),
+  )
+
+  it.live("removing one pattern deletes only that entry from config", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const asking = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_partial"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install"],
+          metadata: { rules: ["npm *", "npm install"] },
+          always: ["npm install *"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_partial"),
+          approvedAlways: ["npm *", "npm install"],
+        })
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_partial"),
+          removedAlways: ["npm install"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_partial"), reply: "once" })
+        yield* Fiber.join(asking)
+
+        const config = yield* Config.Service
+        const cfg = yield* config.get()
+        expect(cfg.permission?.bash).toMatchObject({ "npm *": "allow" })
+        expect(cfg.permission?.bash).not.toMatchObject({ "npm install": "allow" })
+      }),
+    ),
+  )
+
+  it.live("ignores removals for patterns the request does not own", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const asking = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_foreign"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install"],
+          metadata: { rules: ["npm *"] },
+          always: ["npm *"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_foreign"),
+          approvedAlways: ["npm *"],
+        })
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_foreign"),
+          removedAlways: ["curl http://evil.com"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_foreign"), reply: "once" })
+        yield* Fiber.join(asking)
+
+        const config = yield* Config.Service
+        const cfg = yield* config.get()
+        expect(cfg.permission?.bash).toMatchObject({ "npm *": "allow" })
       }),
     ),
   )

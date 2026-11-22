@@ -298,6 +298,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "从允许列表移除",
   "ui.permission.rule.addToDenied": "添加到拒绝列表",
   "ui.permission.rule.removeFromDenied": "从拒绝列表移除",
+  "ui.permission.rule.fromConfig": "由配置文件管理",
   "ui.permission.toolLabel.read": "读取",
   "ui.permission.toolLabel.edit": "编辑",
   "ui.permission.toolLabel.write": "写入",

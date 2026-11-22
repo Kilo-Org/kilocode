@@ -312,6 +312,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "حذف از لیست مجاز",
   "ui.permission.rule.addToDenied": "افزودن به لیست مسدود",
   "ui.permission.rule.removeFromDenied": "حذف از لیست مسدود",
+  "ui.permission.rule.fromConfig": "توسط یک فایل پیکربندی مدیریت می‌شود",
   "ui.permission.toolLabel.read": "خواندن",
   "ui.permission.toolLabel.edit": "ویرایش",
   "ui.permission.toolLabel.write": "نوشتن",

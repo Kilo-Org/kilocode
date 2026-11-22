@@ -316,6 +316,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Видалити з дозволених",
   "ui.permission.rule.addToDenied": "Додати до заблокованих",
   "ui.permission.rule.removeFromDenied": "Видалити із заблокованих",
+  "ui.permission.rule.fromConfig": "Керується файлом конфігурації",
   "ui.permission.toolLabel.read": "Читати",
   "ui.permission.toolLabel.edit": "Редагувати",
   "ui.permission.toolLabel.write": "Записати",

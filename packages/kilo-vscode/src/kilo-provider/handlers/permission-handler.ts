@@ -98,6 +98,7 @@ export async function handlePermissionResponse(
   response: PermissionResponse,
   approvedAlways: string[],
   deniedAlways: string[],
+  removedAlways: string[] = [],
   feedback?: string,
 ): Promise<void> {
   const client = ctx.client
@@ -127,6 +128,7 @@ export async function handlePermissionResponse(
       reply: response,
       approvedAlways,
       deniedAlways,
+      removedAlways,
       message: feedback,
     })
     if (error) {
