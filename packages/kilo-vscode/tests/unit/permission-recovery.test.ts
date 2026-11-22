@@ -9,6 +9,7 @@ import {
   type PermissionContext,
 } from "../../src/kilo-provider/handlers/permission-handler"
 import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
+import { SESSION_ROUTE_UNRESOLVED } from "../../src/shared/session-route-error"
 
 /** Transient transport failures carry no HTTP status and are safe to retry. */
 function terminated() {
@@ -65,6 +66,7 @@ function ctx(opts: {
   workspace?: string
   errors?: { list?: Record<string, unknown>; save?: unknown; reply?: unknown }
   extra?: string[]
+  ambiguous?: boolean
 }) {
   const messages: unknown[] = []
   const queries: string[] = []
@@ -90,6 +92,7 @@ function ctx(opts: {
       revision += 1
     },
     getPermissionRevision: () => revision,
+    isSessionAmbiguous: () => opts.ambiguous ?? false,
     prunePermissionDirectories: (active, dirs) => {
       for (const [key, dir] of permDirs) {
         if (active.has(key)) {
@@ -357,6 +360,68 @@ describe("handlePermissionResponse", () => {
 
     expect(permDirs.has("p1")).toBe(true)
     expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
+  })
+
+  it("reports a permission reply when the session maps to more than one project and no directory is recorded", async () => {
+    const { fake, messages, replies, saves } = ctx({ tracked: ["same"], ambiguous: true })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+
+    await handlePermissionResponse(fake, "p1", "same", "once", ["bun *"], [])
+    spy.mockRestore()
+
+    expect(saves).toEqual([])
+    expect(replies).toEqual([])
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", message: SESSION_ROUTE_UNRESOLVED }])
+  })
+
+  it("keeps a recorded permission directory authoritative when the session maps to more than one project", async () => {
+    const dir = "/workspace/.kilo/worktrees/feature"
+    const { fake, messages, replies, permDirs } = ctx({
+      tracked: ["same"],
+      ambiguous: true,
+      permsPerDir: { [dir]: [pending("p1", "same")] },
+    })
+    permDirs.set("p1", dir)
+
+    await handlePermissionResponse(fake, "p1", "same", "once", [], [])
+
+    expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: dir, interactive: true }])
+    expect(messages).toEqual([{ type: "permissionResolved", permissionID: "p1", sessionID: "same", response: "once" }])
+  })
+
+  it("refuses an already claimed permission replay with no recorded directory on an ambiguous session", async () => {
+    const { fake, messages, replies, saves } = ctx({ tracked: ["same"], ambiguous: true })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    const claimed: PermissionContext = {
+      ...fake,
+      isPermissionResponseClaimed: (id) => id === "p1",
+    }
+
+    await handlePermissionResponse(claimed, "p1", "same", "once", [], [])
+    spy.mockRestore()
+
+    expect(saves).toEqual([])
+    expect(replies).toEqual([])
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", message: SESSION_ROUTE_UNRESOLVED }])
+  })
+
+  it("replies for an already claimed permission that still has a recorded directory", async () => {
+    const dir = "/workspace/.kilo/worktrees/feature"
+    const { fake, messages, replies, permDirs } = ctx({
+      tracked: ["same"],
+      ambiguous: true,
+      permsPerDir: { [dir]: [pending("p1", "same")] },
+    })
+    permDirs.set("p1", dir)
+    const claimed: PermissionContext = {
+      ...fake,
+      isPermissionResponseClaimed: (id) => id === "p1",
+    }
+
+    await handlePermissionResponse(claimed, "p1", "same", "once", [], [])
+
+    expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: dir, interactive: true }])
+    expect(messages).toEqual([{ type: "permissionResolved", permissionID: "p1", sessionID: "same", response: "once" }])
   })
 })
 

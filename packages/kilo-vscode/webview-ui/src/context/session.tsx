@@ -726,7 +726,7 @@ export const SessionProvider: ParentComponent = (props) => {
         handlePermissionResolved(message.permissionID)
         break
       case "permissionError":
-        handlePermissionError(message.permissionID, message.stale)
+        handlePermissionError(message.permissionID, message.stale, message.message)
         break
     }
   })
@@ -1583,7 +1583,7 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function handlePermissionError(permissionID: string, stale?: boolean) {
+  function handlePermissionError(permissionID: string, stale?: boolean, message?: string) {
     setRespondingPermissions((prev) => {
       if (!prev.has(permissionID)) return prev
       const next = new Set(prev)
@@ -1595,10 +1595,7 @@ export const SessionProvider: ParentComponent = (props) => {
       setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
       return
     }
-    showToast({
-      variant: "error",
-      title: language.t("settings.permissions.toast.updateFailed.title"),
-    })
+    showToast({ variant: "error", title: message ?? language.t("settings.permissions.toast.updateFailed.title") })
   }
 
   function handleQuestionRequest(question: QuestionRequest) {
