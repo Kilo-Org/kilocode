@@ -12,6 +12,7 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
 import { BoardEnabled } from "@/kilocode/board/enabled"
+import { pattern } from "@/kilocode/mcp/tool-id"
 import { KilocodeConfigSources } from "../config/sources"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
@@ -359,8 +360,7 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
 export function getMcpRules(cfg: Config.Info): Record<string, "allow" | "ask" | "deny"> {
   const rules: Record<string, "allow" | "ask" | "deny"> = {}
   for (const key of Object.keys(cfg.mcp ?? {})) {
-    const sanitized = key.replace(/[^a-zA-Z0-9_-]/g, "_")
-    rules[sanitized + "_*"] = "ask"
+    rules[pattern(key)] = "ask"
   }
   return rules
 }

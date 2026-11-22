@@ -5,9 +5,16 @@
 // the CLI registers. The module is a leaf on purpose: the legacy migrator reads it without
 // loading the MCP client, the SDK, or `effect`.
 
-/** Replace every character the tool-id syntax cannot carry with `_`. */
+/**
+ * Replace every character the tool-id syntax cannot carry with `_`.
+ *
+ * The `u` flag makes the replacement count a whole code point, matching the plugin's
+ * `String.replaceAll("[^a-zA-Z0-9_-]", "_")`, which also works per code point. Without it a
+ * name holding a character outside the Basic Multilingual Plane (two UTF-16 units) would lose
+ * one `_` per unit here and one `_` per character in the plugin, so the two keys would differ.
+ */
 export function sanitize(value: string): string {
-  return value.replace(/[^a-zA-Z0-9_-]/g, "_")
+  return value.replace(/[^a-zA-Z0-9_-]/gu, "_")
 }
 
 /** The name the CLI registers for a tool of an MCP server. */
