@@ -32,7 +32,7 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
   const personal = () => profile()?.profile.hasPersonalAccount !== false
   /** The account context the platform is scoped to; `null` means personal. */
   const active = () => profile()?.currentOrgId ?? null
-  const visible = () => !!profile() && (orgs().length > 0 || active() !== null)
+  const visible = () => (!!profile() && (orgs().length > 0 || active() !== null)) || current().kind !== "idle"
 
   const selected = createMemo(() => orgs().find((org) => org.id === active()))
 

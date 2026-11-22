@@ -291,6 +291,29 @@ try {
     data: profile("org-2", true),
   })
   assert.equal(trigger().disabled, false)
+
+  // 5. The host resets the profile before reporting a failed read. The control
+  // stays mounted so the failure message and its retry remain reachable.
+  await open()
+  row("Org Two").click()
+  await settle()
+  const unread = switchPost(switchPosts().length - 1)
+  await push({ type: "profileData", data: null })
+  assert(root.querySelector(".account-switcher"), "the control must stay mounted without profile data")
+  await push({
+    type: "organizationSwitchResult",
+    requestID: unread.requestID,
+    organizationId: "org-1",
+    ok: false,
+    data: null,
+    error: "profile unavailable",
+  })
+  assert.equal(alert()?.textContent?.includes("profile unavailable"), true, "the failure must still be visible")
+  assert.equal(trigger().disabled, false, "the trigger must be enabled after the failure")
+  retryButton().click()
+  await settle()
+  const afterReset = switchPost(switchPosts().length - 1)
+  assert.equal(afterReset.organizationId, "org-2", "Retry must stay available after a profile reset")
 } finally {
   dispose()
   root.remove()
