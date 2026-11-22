@@ -537,6 +537,8 @@ export interface UpdateSettingRequest {
   type: "updateSetting"
   key: string
   value: unknown
+  /** Echoed unchanged on the outcome message so the sender can match it to this write. */
+  writeId?: string
 }
 
 export interface RequestTimelineSettingMessage {

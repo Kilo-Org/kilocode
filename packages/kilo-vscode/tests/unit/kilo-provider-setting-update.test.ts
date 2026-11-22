@@ -6,7 +6,7 @@ const { KiloProvider } = await import("../../src/KiloProvider")
 
 type Internals = {
   postMessage: (message: unknown) => void
-  handleUpdateSetting: (key: string, value: unknown) => Promise<void>
+  handleUpdateSetting: (key: string, value: unknown, writeId?: string) => Promise<void>
   costLimit: () => number | undefined
   trackedSessionIds: Set<string>
   activeAlerts: Map<string, number>
@@ -137,5 +137,83 @@ describe("handleUpdateSetting outcomes", () => {
     await internal.handleUpdateSetting("maxCost", 9)
 
     expect(internal.costLimit()).toBe(2)
+  })
+})
+
+describe("handleUpdateSetting write ids", () => {
+  it("echoes the write id on a stored write", async () => {
+    const writes: Write[] = []
+    install(writes)
+    const { internal, sent } = create()
+
+    await internal.handleUpdateSetting("agentManager.autoBranchNaming", true, "w-1")
+
+    expect(sent).toEqual([
+      { type: "settingUpdated", key: "agentManager.autoBranchNaming", value: true, writeId: "w-1" },
+    ])
+  })
+
+  it("echoes the write id on an invalid value", async () => {
+    const writes: Write[] = []
+    install(writes)
+    const { internal, sent } = create()
+
+    await internal.handleUpdateSetting("chat.shiftTabCyclesVariant", "yes", "w-2")
+
+    expect(writes).toEqual([])
+    expect(sent).toEqual([
+      {
+        type: "settingUpdateFailed",
+        key: "chat.shiftTabCyclesVariant",
+        message: "Invalid value for the chat.shiftTabCyclesVariant setting.",
+        writeId: "w-2",
+      },
+    ])
+  })
+
+  it("echoes the write id on a rejected write", async () => {
+    install([], new Error("settings.json is read-only"))
+    const { internal, sent } = create()
+
+    await internal.handleUpdateSetting("agentManager.pushFixes", false, "w-3")
+
+    expect(sent).toEqual([
+      {
+        type: "settingUpdateFailed",
+        key: "agentManager.pushFixes",
+        message: "settings.json is read-only",
+        writeId: "w-3",
+      },
+    ])
+  })
+
+  it("echoes the write id on a stored maxCost and on a rejected one", async () => {
+    const writes: Write[] = []
+    install(writes)
+    const { internal, sent } = create()
+
+    await internal.handleUpdateSetting("maxCost", 5.2, "w-4")
+
+    expect(sent).toEqual([{ type: "settingUpdated", key: "maxCost", value: 6, writeId: "w-4" }])
+
+    install([], new Error("settings unavailable"))
+    const rejected = create()
+
+    await rejected.internal.handleUpdateSetting("maxCost", 5, "w-5")
+
+    expect(rejected.sent).toEqual([
+      { type: "settingUpdateFailed", key: "maxCost", message: "settings unavailable", writeId: "w-5" },
+    ])
+  })
+
+  it("sends no writeId when the request carried none", async () => {
+    const writes: Write[] = []
+    install(writes)
+    const { internal, sent } = create()
+
+    await internal.handleUpdateSetting("agentManager.autoBranchNaming", true)
+
+    expect(sent).toHaveLength(1)
+    expect(sent[0]!).not.toHaveProperty("writeId")
   })
 })

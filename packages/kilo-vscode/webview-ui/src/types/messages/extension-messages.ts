@@ -914,6 +914,8 @@ export interface SettingUpdatedMessage {
   type: "settingUpdated"
   key: string
   value: unknown
+  /** The `writeId` of the request this answers, when the request carried one. */
+  writeId?: string
 }
 
 /** The host rejected a setting written with `updateSetting`. `key` is the write key as sent. */
@@ -922,6 +924,8 @@ export interface SettingUpdateFailedMessage {
   key: string
   message: string
   details?: string
+  /** The `writeId` of the request this answers, when the request carried one. */
+  writeId?: string
 }
 
 export interface NotificationsLoadedMessage {

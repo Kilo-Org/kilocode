@@ -1664,11 +1664,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleRenameSession(message.sessionID, message.title)
           break
         case "updateSetting":
-          await this.handleUpdateSetting(message.key, message.value).catch((error: unknown) => {
+          await this.handleUpdateSetting(message.key, message.value, message.writeId).catch((error: unknown) => {
             this.postMessage({
               type: "settingUpdateFailed",
               key: message.key,
               message: getErrorMessage(error) || `Failed to update the ${message.key} setting.`,
+              ...(message.writeId == null ? {} : { writeId: message.writeId }),
             })
           })
           break
@@ -5218,21 +5219,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Handle a generic setting update from the webview.
    */
-  private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
+  private async handleUpdateSetting(key: string, value: unknown, writeId?: string): Promise<void> {
     // Every write answers with exactly one terminal message so the webview can
     // reconcile optimistic state: `settingUpdated` for a stored write and
-    // `settingUpdateFailed` for an invalid value or a rejected write.
+    // `settingUpdateFailed` for an invalid value or a rejected write. A write id
+    // from the request comes back unchanged on that message, so a sender can
+    // tell which write it settles; a request without one yields no id.
+    const echo = writeId == null ? {} : { writeId }
     try {
       if (key === "maxCost") {
         const config = vscode.workspace.getConfiguration("kilo-code.new")
         // The runtime limit takes effect before the write so in-flight sessions
-        // see the new limit immediately; a rejected write restores the stored one.
-        const previous = this.setMaxCost(config.get<number>("maxCost", 0))
+        // see the new limit immediately. When the write does not commit, the limit is
+        // re-read from the stored setting, so a concurrent write that did commit is not
+        // overwritten by a value captured before it.
         const normalized = this.setMaxCost(value)
         try {
           await config.update("maxCost", normalized, vscode.ConfigurationTarget.Global)
         } catch (error) {
-          this.setMaxCost(previous)
+          this.setMaxCost(config.get<number>("maxCost", 0))
           throw error
         }
         for (const sid of this.trackedSessionIds) {
@@ -5244,7 +5249,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.costs.rearm(sid)
           this.requestCostAlert(sid, this.costs.sessionCost(sid))
         }
-        this.postMessage({ type: "settingUpdated", key, value: normalized })
+        this.postMessage({ type: "settingUpdated", key, value: normalized, ...echo })
         return
       }
       const { section, leaf } = buildSettingPath(key)
@@ -5257,6 +5262,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           type: "settingUpdateFailed",
           key,
           message: `Invalid value for the ${key} setting.`,
+          ...echo,
         })
         return
       }
@@ -5267,12 +5273,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const next = value === null ? undefined : value
       await config.update(leaf, next, vscode.ConfigurationTarget.Global)
       if (isWorkStyleSetting(key)) this.sendWorkStyle()
-      this.postMessage({ type: "settingUpdated", key, value: next })
+      this.postMessage({ type: "settingUpdated", key, value: next, ...echo })
     } catch (error) {
       this.postMessage({
         type: "settingUpdateFailed",
         key,
         message: getErrorMessage(error) || `Failed to update the ${key} setting.`,
+        ...echo,
       })
     }
   }
