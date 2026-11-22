@@ -23,6 +23,9 @@ export class Uploader {
   private active: Promise<void> | undefined
   private requested = false
   private next = 0
+  // Credential identity the ingest endpoint rejected, plus the status that paused delivery, so a batch
+  // is not re-sent while that same credential is in effect.
+  private rejected: { fingerprint: string; status: number } | undefined
 
   constructor(private readonly deps: UploaderDeps) {
     this.periodic = setInterval(() => this.scheduleFlush("periodic"), Config.flushIntervalMs)
@@ -70,6 +73,19 @@ export class Uploader {
     let rows: ReturnType<Storage["pendingEvents"]> = []
     try {
       while (true) {
+        const cred = await credential(this.deps)
+        const rejected = this.rejected
+        if (rejected) {
+          // A rejected credential suspends the queue: nothing can be delivered until it changes, so
+          // the pause is decided before any batch is read, and delivery resuming is reported once.
+          if (rejected.fingerprint === cred.fingerprint) return
+          this.rejected = undefined
+          this.deps.reportTelemetry({
+            kind: "telemetry",
+            name: "session_export.upload_auth_released",
+            props: { status: rejected.status },
+          })
+        }
         const now = Date.now()
         rows = sessionRows(this.deps.storage.pendingEvents({ now, limitBytes: Config.flushSizeBytes }))
         if (rows.length === 0) return
@@ -111,15 +127,16 @@ export class Uploader {
         await this.throttle()
         const res = await this.deps.fetch(this.deps.endpoint, {
           method: "POST",
-          headers: await headers({
-            rows,
-            body,
-            batchId,
-            agentVersion: this.deps.agentVersion,
-            surface: this.deps.surface,
-            anonId: this.deps.anonId,
-            anonIdPath: this.deps.anonIdPath,
-          }),
+          headers: await headers(
+            {
+              rows,
+              body,
+              batchId,
+              agentVersion: this.deps.agentVersion,
+              surface: this.deps.surface,
+            },
+            cred,
+          ),
           body,
         })
         const eventIds = rows.map((row) => row.id)
@@ -141,6 +158,17 @@ export class Uploader {
             props: { status: res.status, batchId },
           })
           continue
+        }
+        if (res.status === 401 || res.status === 403) {
+          // The endpoint refused the credential. Keep the rows pending and stop draining until the
+          // credential changes, so a rejected batch is not retransmitted and nothing is discarded.
+          this.rejected = { fingerprint: cred.fingerprint, status: res.status }
+          this.deps.reportTelemetry({
+            kind: "telemetry",
+            name: "session_export.upload_auth_rejected",
+            props: { status: res.status, batchId },
+          })
+          return
         }
         const retryAt = Date.now()
         const delay = retryAfter(res.headers) ?? backoffFor(rows[0]?.uploadAttempts ?? 0)
@@ -205,11 +233,20 @@ type HeaderArgs = {
   batchId: string
   agentVersion: string
   surface: string
-  anonId?: string
-  anonIdPath?: string
 }
 
-async function headers(args: HeaderArgs): Promise<Headers> {
+// The credential a request carries, plus a fingerprint that changes only when that credential changes.
+// Holding the fingerprint, not the credential text, keeps a rejected value from being retried.
+type Credential = { token?: string; anon?: string; fingerprint: string }
+
+async function credential(deps: UploaderDeps): Promise<Credential> {
+  const token = process.env.KILO_SESSION_EXPORT_AUTH_TOKEN
+  const anon = token ? undefined : (deps.anonId ?? (await anonId(deps.anonIdPath)))
+  const identity = token ? `bearer:${token}` : anon ? `anon:${anon}` : "none"
+  return { token, anon, fingerprint: await sha256Hex(identity) }
+}
+
+async function headers(args: HeaderArgs, cred: Credential): Promise<Headers> {
   const seqs = args.rows.map((row) => row.seq)
   const first = args.rows[0]
   const out = new Headers({
@@ -228,10 +265,8 @@ async function headers(args: HeaderArgs): Promise<Headers> {
     "x-kilo-export-client-sent-at": new Date().toISOString(),
     "x-kilo-export-content-encoding": "identity",
   })
-  const token = process.env.KILO_SESSION_EXPORT_AUTH_TOKEN
-  if (token) out.set("authorization", `Bearer ${token}`)
-  const anon = args.anonId ?? (await anonId(args.anonIdPath))
-  if (!token && anon) out.set("x-kilo-anon-id", anon)
+  if (cred.token) out.set("authorization", `Bearer ${cred.token}`)
+  if (!cred.token && cred.anon) out.set("x-kilo-anon-id", cred.anon)
   return out
 }
 
