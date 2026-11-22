@@ -1076,6 +1076,7 @@ class KiloBackendAppService private constructor(
     /**
      * Switch the active account context.
      * Pass null for personal account, an organization ID for org context.
+     * A successful switch starts a fresh hosted context; a refused switch changes nothing.
      * Returns the updated profile after the switch.
      */
     suspend fun setOrganization(organizationId: String?): KiloProfile200Response? {
@@ -1095,6 +1096,7 @@ class KiloBackendAppService private constructor(
                 }
             }
         }
+        hosted.resetContext()
         return refreshProfile()
     }
 

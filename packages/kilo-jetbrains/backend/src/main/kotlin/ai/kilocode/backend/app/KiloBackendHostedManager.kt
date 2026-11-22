@@ -314,6 +314,11 @@ class KiloBackendHostedManager(
         if (started && !changed) return
         if (started) rebind(previous)
         started = true
+        begin(chat)
+        log.info("Hosted session manager started")
+    }
+
+    private fun begin(chat: KiloBackendChatManager) {
         lifecycle = CoroutineScope(cs.coroutineContext + SupervisorJob(cs.coroutineContext[Job]))
         statusJob = lifecycle!!.launch(start = CoroutineStart.UNDISPATCHED) {
             chat.events.collect { event ->
@@ -350,10 +355,9 @@ class KiloBackendHostedManager(
                 }
             }
         }
-        // A restart calls stop() first, which keeps retained owners but closes transports. Reattach
-        // them here even though the manager was not "started" at entry.
-        if (changed || continuity.isNotEmpty()) continuity.entries.forEach { restore(it.key, it.value) }
-        log.info("Hosted session manager started")
+        // A restart calls stop() first, which keeps retained owners but closes transports; a context
+        // reset drops them. Either way, reattach whatever continuity is present.
+        continuity.entries.forEach { restore(it.key, it.value) }
     }
 
     /**
@@ -376,6 +380,18 @@ class KiloBackendHostedManager(
         base = null
         chat = null
         log.info("Hosted session manager stopped")
+    }
+
+    /**
+     * Starts a fresh hosted context on the bound CLI transport: attachments, retained owners and
+     * statuses are dropped, and the manager keeps serving on the same transport.
+     */
+    @Synchronized
+    fun resetContext() {
+        if (!started) return
+        val chat = this.chat ?: return
+        reset(detach = true)
+        begin(chat)
     }
 
     /** Full teardown for application disposal, where no RPC collector can survive the service. */
@@ -645,7 +661,7 @@ class KiloBackendHostedManager(
                 continuity.computeIfAbsent(composite) { Continuity() }.also {
                     it.subscribe(collector)
                     it.subscribers++
-                    it.organizationID = organizationID ?: it.organizationID
+                    it.organizationID = organizationID
                 }
             }
             try {
@@ -883,7 +899,7 @@ class KiloBackendHostedManager(
         val state = lock.withLock {
             continuity.computeIfAbsent(id) { Continuity() }.also {
                 it.retainers++
-                it.organizationID = organizationID ?: it.organizationID
+                it.organizationID = organizationID
             }
         }
         try {
@@ -934,7 +950,9 @@ class KiloBackendHostedManager(
             val state = continuity.computeIfAbsent(id) { Continuity() }
             val existing = attachments[id]
             // expiresAt describes the provider descriptor, not the opaque CLI attachment lease.
-            if (existing != null && !existing.invalid) {
+            // Each lease serves the organization it was minted for, so a call for another
+            // organization mints its own lease.
+            if (existing != null && !existing.invalid && existing.organizationID == organizationID) {
                 if (state.retained && existing.events == null) startNative(existing)
                 if (state.subscribers > 0 && existing.system == null) startSystem(existing)
                 return@withLock existing
@@ -975,7 +993,7 @@ class KiloBackendHostedManager(
         val state = lock.withLock {
             continuity.computeIfAbsent(id) { Continuity() }.also {
                 it.calls++
-                it.organizationID = organizationID ?: it.organizationID
+                it.organizationID = organizationID
             }
         }
         try {
