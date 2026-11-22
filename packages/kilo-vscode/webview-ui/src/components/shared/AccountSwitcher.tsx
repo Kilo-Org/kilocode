@@ -74,9 +74,11 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
       settle(message)
       return
     }
-    // A null profile means the session ended (logout or disconnect), so a prior
-    // failure must not keep the control mounted for a signed-out user.
-    if (message.type === "profileData" && message.data === null && current().kind === "failed") {
+    // A null profile means the session ended (logout or disconnect), so no
+    // attempt may outlive it: a pending one would hang and a failed one would
+    // show a retry to a signed-out user. `settle` ignores a late result once
+    // the state is idle, so an answer that arrives later changes nothing.
+    if (message.type === "profileData" && message.data === null && current().kind !== "idle") {
       setSwitch({ kind: "idle" })
     }
   })

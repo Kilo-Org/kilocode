@@ -335,6 +335,28 @@ try {
   assert(root.querySelector(".account-switcher"), "a failure must keep the control mounted")
   await push({ type: "profileData", data: null })
   assert.equal(root.querySelector(".account-switcher"), null, "a signed-out session must not show the control")
+
+  // 7. Signing out during a pending attempt ends that attempt, so the next
+  // session starts interactive and a late answer changes nothing.
+  await push({ type: "profileData", data: profile("org-1", true) })
+  await open()
+  row("Org Two").click()
+  await settle()
+  const abandoned = switchPost(switchPosts().length - 1)
+  assert.equal(trigger().disabled, true, "the attempt is pending before the session ends")
+  await push({ type: "profileData", data: null })
+  await push({
+    type: "organizationSwitchResult",
+    requestID: abandoned.requestID,
+    organizationId: "org-2",
+    ok: false,
+    data: null,
+    error: "late",
+  })
+  await push({ type: "profileData", data: profile("org-1", true) })
+  assert.equal(trigger().disabled, false, "the next session starts interactive")
+  assert.equal(alert(), null, "the next session must not carry the abandoned attempt")
+  assert.equal(trigger().textContent?.includes("Org One"), true, "the next session shows its own account")
 } finally {
   dispose()
   root.remove()

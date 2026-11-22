@@ -198,6 +198,31 @@ try {
   })
   assert.equal(trigger().disabled, false, "a success must settle the attempt")
   assert.equal(alert(), null, "a success must clear the failure text")
+
+  // Signing out ends any live attempt, so nothing returns after the next login.
+  await open()
+  await press(option("Org Two"))
+  const abandoned = switchPost()
+  assert.equal(trigger().disabled, true, "the attempt is pending before the session ends")
+  await push({ type: "profileData", data: null })
+  assert.equal(
+    root.querySelector('[data-slot="select-select-trigger"]'),
+    null,
+    "signing out replaces the account card",
+  )
+
+  // A result for the abandoned request, and the next sign-in, must not revive it.
+  await push({
+    type: "organizationSwitchResult",
+    requestID: abandoned.requestID,
+    organizationId: "org-2",
+    ok: false,
+    data: null,
+    error: "late",
+  })
+  await push({ type: "profileData", data: profile("org-1") })
+  assert.equal(trigger().disabled, false, "the next session starts interactive")
+  assert.equal(alert(), null, "the next session must not carry the previous failure")
 } finally {
   dispose()
   root.remove()

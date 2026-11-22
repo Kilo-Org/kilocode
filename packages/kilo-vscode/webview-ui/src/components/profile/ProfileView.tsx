@@ -52,8 +52,13 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   })
 
   // The correlated result owns termination: only the reply to this component's
-  // request may clear the pending state, so a late reply is ignored.
+  // request may clear the pending state, so a late reply is ignored. A null
+  // profile means the session ended, so no attempt may outlive it either.
   const unsubscribe = vscode.onMessage((message) => {
+    if (message.type === "profileData" && message.data === null) {
+      setAttempt({ kind: "idle" })
+      return
+    }
     if (message.type !== "organizationSwitchResult") return
     const state = attempt()
     if (state.kind !== "pending" || state.requestID !== message.requestID) return
