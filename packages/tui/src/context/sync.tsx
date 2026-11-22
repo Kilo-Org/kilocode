@@ -674,7 +674,14 @@ export const {
 
         case "lsp.updated": {
           const workspace = project.workspace.current()
-          void sdk.client.lsp.status({ workspace }).then((x) => setStore("lsp", x.data ?? []))
+          // kilocode_change start - the status applies only while its workspace is still selected
+          void sdk.client
+            .lsp.status({ workspace })
+            .then((x) => {
+              if (workspace !== project.workspace.current()) return
+              setStore("lsp", x.data ?? [])
+            })
+          // kilocode_change end
           break
         }
 
