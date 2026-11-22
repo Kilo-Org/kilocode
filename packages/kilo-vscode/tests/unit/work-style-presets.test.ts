@@ -24,6 +24,17 @@ describe("work style presets", () => {
     expect(cfg.permission?.edit).toBe("ask")
     expect(bash).toMatchObject({ "*": "ask", "rg *": "allow", "*>*": "ask" })
     expect(Object.keys(bash).at(-1)).toBe("*>*")
+    // The shell readers apply the same level as the read rule for environment
+    // files, including the operand-first shape; the sample file stays allowed.
+    for (const command of ["cat", "head", "tail", "less", "diff", "grep", "rg", "ag", "uniq", "cut", "jq"]) {
+      expect(bash[`${command} .env`]).toBe("ask")
+      expect(bash[`${command} .env *`]).toBe("ask")
+      expect(bash[`${command} * .env`]).toBe("ask")
+      expect(bash[`${command} */.env`]).toBe("ask")
+      expect(bash[`${command} .env.*`]).toBe("ask")
+      expect(bash[`${command} .env.example`]).toBe("allow")
+    }
+    expect(bash["printenv *"]).toBe("ask")
     for (const command of [
       "touch *",
       "mkdir *",

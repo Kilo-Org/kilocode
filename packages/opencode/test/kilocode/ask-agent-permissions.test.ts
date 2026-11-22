@@ -211,6 +211,48 @@ describe("Ask agent bash permissions", () => {
     expect(Permission.evaluate("bash", "gh issue list", ruleset).action).toBe("allow")
     expect(Permission.evaluate("bash", "gh api repos/org/repo", ruleset).action).toBe("ask")
   })
+
+  // An environment file gets the same level from the shell as from the read rule.
+  // Both operand positions count, because a pattern matches the whole command.
+  describe("environment files keep the read level", () => {
+    const commands = [
+      "cat .env",
+      "cat .env.local",
+      "cat .env notes.txt",
+      "head -n5 .env a.txt",
+      "tail -f .env",
+      "less .env",
+      "diff .env src/index.ts",
+      "grep x .env src/",
+      "rg TOKEN .env",
+      "ag KEY .env",
+      "sort .env",
+      "uniq .env",
+      "cut -d= -f1 .env",
+      "jq . .env",
+      "printenv HOME",
+      // A sample file is a later operand here, and the first operand sets the level.
+      "diff .env .env.example",
+      "cat .env.example .env",
+    ]
+
+    for (const cmd of commands) {
+      test(`"${cmd}" → ask`, () => {
+        expect(Permission.evaluate("bash", cmd, ruleset).action).toBe("ask")
+      })
+    }
+
+    test("environment sample files stay allowed", () => {
+      expect(Permission.evaluate("bash", "cat .env.example", ruleset).action).toBe("allow")
+    })
+
+    test("ordinary reads keep their allow", () => {
+      expect(Permission.evaluate("bash", "cat README.md", ruleset).action).toBe("allow")
+      expect(Permission.evaluate("bash", "diff a.txt b.txt", ruleset).action).toBe("allow")
+      // A search for the identifier is not a read of an environment file.
+      expect(Permission.evaluate("bash", "rg process.env", ruleset).action).toBe("allow")
+    })
+  })
 })
 
 describe("Ask agent tool disabled checks", () => {

@@ -13,6 +13,7 @@ import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
 import { BoardEnabled } from "@/kilocode/board/enabled"
 import { KilocodeConfigSources } from "../config/sources"
+import { envGuards } from "@opencode-ai/core/kilocode/shell-env-files"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
@@ -55,6 +56,7 @@ const readable: Record<string, "allow"> = {
 export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "ask",
   ...readable,
+  ...envGuards(readable, "ask"),
   "touch *": "allow",
   "mkdir *": "allow",
   "cp *": "allow",
@@ -87,6 +89,8 @@ const gh: Record<string, "allow"> = {
 export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "deny",
   ...readable,
+  // The same level the read rule applies to an environment file.
+  ...envGuards(readable, "ask"),
   "git *": "deny",
   "git log *": "allow",
   "git show *": "allow",
@@ -147,6 +151,8 @@ const exploreBash: Record<string, "allow" | "ask" | "deny"> = {
   ...readOnlyBash,
   // Explore runs as a delegated agent, so it cannot answer permission prompts.
   "gh *": "deny",
+  // A delegated agent cannot answer a prompt, so it refuses instead.
+  ...envGuards(readable, "deny"),
   // `find` can mutate through `-delete` and `-exec`; use glob/list instead.
   "find *": "deny",
 }
