@@ -341,62 +341,82 @@ describe("handlePermissionResponse", () => {
 })
 
 describe("replyOnce", () => {
-  it("retries a transient transport drop", async () => {
-    let calls = 0
-    const client = {
-      permission: {
-        reply: async () => {
-          calls += 1
-          if (calls === 1) throw terminated()
-          return { data: true }
+  /**
+   * Reply plus pending-list fakes. The list records each directory it was asked about,
+   * so a case can prove a refused reply never listed.
+   */
+  function fake(opts: {
+    reply?: (attempt: number) => Promise<unknown>
+    pending?: () => RecoverablePermission[]
+    listError?: unknown
+  }) {
+    let attempts = 0
+    const lists: string[] = []
+    return {
+      lists,
+      attempts: () => attempts,
+      client: {
+        permission: {
+          reply: async () => {
+            attempts += 1
+            return opts.reply ? opts.reply(attempts) : { data: true }
+          },
+          list: async (args: { directory: string }) => {
+            lists.push(args.directory)
+            if (opts.listError) throw opts.listError
+            return { data: opts.pending ? opts.pending() : [] }
+          },
         },
-      },
+      } as never,
     }
+  }
+
+  it("retries a transient transport drop", async () => {
+    const { client, attempts, lists } = fake({
+      reply: async (attempt) => {
+        if (attempt === 1) throw terminated()
+        return { data: true }
+      },
+    })
     const log = spyOn(console, "error").mockImplementation(() => {})
     try {
-      expect(await replyOnce(client as never, "p1", "/workspace")).toBe(true)
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(true)
     } finally {
       log.mockRestore()
     }
-    expect(calls).toBe(2)
+    expect(attempts()).toBe(2)
+    expect(lists).toEqual(["/workspace"])
   })
 
-  it("does not retry a decisive not-found reply", async () => {
-    let calls = 0
-    const client = {
-      permission: {
-        reply: async () => {
-          calls += 1
-          throw new Error("Permission request not found: p1", { cause: { status: 404 } })
-        },
+  it("does not retry a decisive not-found reply and stays unconfirmed", async () => {
+    const { client, attempts, lists } = fake({
+      reply: async () => {
+        throw new Error("Permission request not found: p1", { cause: { status: 404 } })
       },
-    }
+    })
     const log = spyOn(console, "error").mockImplementation(() => {})
     try {
-      expect(await replyOnce(client as never, "p1", "/workspace")).toBe(false)
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(false)
     } finally {
       log.mockRestore()
     }
-    expect(calls).toBe(1)
+    expect(attempts()).toBe(1)
+    expect(lists).toEqual([])
   })
 
   it("stops retrying when the caller cancels", async () => {
-    let calls = 0
     let checks = 0
     let allowed = true
-    const client = {
-      permission: {
-        reply: async () => {
-          calls += 1
-          allowed = false
-          throw terminated()
-        },
+    const { client, attempts, lists } = fake({
+      reply: async () => {
+        allowed = false
+        throw terminated()
       },
-    }
+    })
     const log = spyOn(console, "error").mockImplementation(() => {})
     try {
       expect(
-        await replyOnce(client as never, "p1", "/workspace", () => {
+        await replyOnce(client, "p1", "/workspace", () => {
           checks += 1
           return allowed
         }),
@@ -404,8 +424,61 @@ describe("replyOnce", () => {
     } finally {
       log.mockRestore()
     }
-    expect(calls).toBe(1)
+    expect(attempts()).toBe(1)
     expect(checks).toBe(2)
+    expect(lists).toEqual([])
+  })
+
+  it("confirms a reply the directory no longer holds", async () => {
+    const { client, lists } = fake({})
+    expect(await replyOnce(client, "p1", "/workspace")).toBe(true)
+    expect(lists).toEqual(["/workspace"])
+  })
+
+  it("reports an unanswered reply the directory still holds", async () => {
+    const { client } = fake({ pending: () => [pending("p1", "s1")] })
+    expect(await replyOnce(client, "p1", "/workspace")).toBe(false)
+  })
+
+  it("confirms a request that settled after a transport error", async () => {
+    const { client, attempts } = fake({
+      reply: async (attempt) => {
+        if (attempt < 3) throw terminated()
+        return { data: true }
+      },
+    })
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(true)
+    } finally {
+      log.mockRestore()
+    }
+    expect(attempts()).toBe(3)
+  })
+
+  it("confirms a request the directory dropped after a failed reply", async () => {
+    const { client, lists } = fake({
+      reply: async () => {
+        throw new Error("boom")
+      },
+    })
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(true)
+    } finally {
+      log.mockRestore()
+    }
+    expect(lists).toEqual(["/workspace"])
+  })
+
+  it("reports unconfirmed when the pending list cannot be read", async () => {
+    const { client } = fake({ listError: new Error("offline") })
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(false)
+    } finally {
+      log.mockRestore()
+    }
   })
 })
 

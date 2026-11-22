@@ -6,9 +6,11 @@ import type { KiloConnectionService } from "../services/cli-backend/connection-s
 
 /**
  * Callback that resolves the correct working directory for a session.
- * For worktree sessions this returns the worktree path; otherwise the workspace root.
+ * For worktree sessions this returns the worktree path; for a session in the workspace
+ * root, the workspace path. It returns `undefined` when no directory is known, so the
+ * caller refuses instead of guessing.
  */
-export type DirectoryResolver = (sessionId?: string) => string
+export type DirectoryResolver = (sessionId?: string) => string | undefined
 
 /**
  * Returns every unique directory the extension tracks
@@ -35,7 +37,9 @@ const KEY = "enabled"
  * issues (merged vs global, sparse defaults) and works even when the sidebar is closed.
  *
  * The setting is user scoped: the controller follows the user value, and the toggle is
- * written to the user setting.
+ * written to the user setting. Enabling saves that setting first, so a save that fails
+ * leaves auto-approve off and says so. Disabling takes effect in memory at once and
+ * still reports a rejected write.
  */
 export function registerToggleAutoApprove(
   context: vscode.ExtensionContext,
@@ -52,26 +56,61 @@ export function registerToggleAutoApprove(
     for (const listener of listeners) listener(active)
   }
 
-  const setActive = async (next: boolean) => {
+  // The config-change listener can apply the same value after our own write lands.
+  const apply = (next: boolean) => {
+    if (next === active) return
     active = next
     generation++
     notify()
-    await vscode.workspace.getConfiguration(CONFIG).update(KEY, active, vscode.ConfigurationTarget.Global)
   }
 
-  const toggle = async () => {
-    await setActive(!active)
-    const snapshot = generation
+  // One state transition at a time: a click during the settings write must see the
+  // state that write leaves, not the value it replaced.
+  let transitions: Promise<unknown> = Promise.resolve()
+  const transition = <T>(run: () => Promise<T>): Promise<T> => {
+    const next = transitions.then(run, run)
+    transitions = next.then(
+      () => undefined,
+      () => undefined,
+    )
+    return next
+  }
 
-    if (!active) {
-      vscode.window.showInformationMessage("Auto-approve disabled")
-      return active
+  const save = async (next: boolean): Promise<boolean> => {
+    try {
+      await vscode.workspace.getConfiguration(CONFIG).update(KEY, next, vscode.ConfigurationTarget.Global)
+      return true
+    } catch (error) {
+      console.error("[Kilo New] toggleAutoApprove: failed to save the setting:", error)
+      vscode.window.showErrorMessage(
+        next
+          ? "Kilo Code could not save the auto-approve setting, so auto-approve stays off."
+          : "Kilo Code could not save the auto-approve setting, so auto-approve is off until that setting is saved.",
+      )
+      return false
     }
+  }
 
-    vscode.window.showInformationMessage("Auto-approve enabled. Sandbox escalation prompts are excluded.")
+  const setActive = async (next: boolean): Promise<boolean> => {
+    if (next) {
+      if (await save(true)) {
+        apply(true)
+        return true
+      }
+      // The setting still says off. Tell every listener the state it now holds.
+      active = false
+      generation++
+      notify()
+      return false
+    }
+    apply(false)
+    return save(false)
+  }
+
+  const drain = async (snapshot: number) => {
     // Drain any already-pending permission requests across all tracked directories
     const client = tryGetClient(connectionService)
-    if (!client) return active
+    if (!client) return
     for (const dir of directories()) {
       if (generation !== snapshot) break
       try {
@@ -85,7 +124,21 @@ export function registerToggleAutoApprove(
         console.error("[Kilo New] toggleAutoApprove: failed to list pending permissions:", err)
       }
     }
+  }
 
+  const toggle = async () => {
+    const turned = await transition(async () => {
+      const next = !active
+      const saved = await setActive(next)
+      return { next, saved, snapshot: generation }
+    })
+    if (!turned.saved) return active
+    if (turned.next) {
+      vscode.window.showInformationMessage("Auto-approve enabled. Sandbox escalation prompts are excluded.")
+      await drain(turned.snapshot)
+    } else {
+      vscode.window.showInformationMessage("Auto-approve disabled")
+    }
     return active
   }
 
@@ -95,19 +148,21 @@ export function registerToggleAutoApprove(
     const client = tryGetClient(connectionService)
     if (!client) return false
     if (event.properties.metadata?.["sandboxEscalation"] === true) return false
+    // Answer only where the request is known to live: the event's own directory, the
+    // recorded route, or a session this extension holds a directory for. Without one,
+    // the request stays with the attention path.
     const dir =
-      directory ?? connectionService.getPermissionDirectory(event.properties.id) ?? resolve(event.properties.sessionID)
+      directory ??
+      connectionService.getPermissionDirectory(event.properties.id) ??
+      resolve(event.properties.sessionID)
+    if (!dir) return false
     return replyOnce(client, event.properties.id, dir, () => generation === snapshot)
   }
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (!event.affectsConfiguration(`${CONFIG}.${KEY}`)) return
-      const next = readActive()
-      if (next === active) return
-      active = next
-      generation++
-      notify()
+      apply(readActive())
     }),
   )
 

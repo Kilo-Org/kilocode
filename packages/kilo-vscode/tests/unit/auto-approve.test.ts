@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it, spyOn } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import * as vscode from "vscode"
@@ -25,11 +25,24 @@ function defer<T>() {
 }
 
 type Layers = { globalValue?: boolean; workspaceValue?: boolean; workspaceFolderValue?: boolean }
+type Configure = Layers & { fail?: boolean; hold?: (value: unknown) => Promise<void> | undefined }
 
-function config(layers: Layers = {}) {
+/** Runs a case with `console.error` muted, for the writes a case rejects on purpose. */
+async function quiet<T>(run: () => Promise<T>): Promise<T> {
+  const log = spyOn(console, "error").mockImplementation(() => {})
+  try {
+    return await run()
+  } finally {
+    log.mockRestore()
+  }
+}
+
+function config(options: Configure = {}) {
+  const { fail = false, hold, ...layers } = options
   const handlers: Array<(event: ConfigEvent) => void> = []
   const updates: Array<{ key: string; value: unknown; target: unknown }> = []
   const messages: string[] = []
+  const errors: string[] = []
   const commands = new Map<string, (...args: unknown[]) => unknown>()
   const state: Layers = { ...layers }
   const api = vscode as unknown as {
@@ -41,7 +54,10 @@ function config(layers: Layers = {}) {
       }
       onDidChangeConfiguration: (listener: (event: ConfigEvent) => void) => { dispose(): void }
     }
-    window: { showInformationMessage: (message: string) => Promise<undefined> }
+    window: {
+      showInformationMessage: (message: string) => Promise<undefined>
+      showErrorMessage: (message: string) => Promise<undefined>
+    }
     commands: { registerCommand: (command: string, callback: (...args: unknown[]) => unknown) => { dispose(): void } }
   }
 
@@ -62,6 +78,9 @@ function config(layers: Layers = {}) {
     },
     update: async (key, value, target) => {
       updates.push({ key, value, target })
+      const waiting = hold?.(value)
+      if (waiting) await waiting
+      if (fail) throw new Error("settings write rejected")
       state[slot(target)] = Boolean(value)
     },
   })
@@ -78,6 +97,10 @@ function config(layers: Layers = {}) {
     messages.push(message)
     return undefined
   }
+  api.window.showErrorMessage = async (message) => {
+    errors.push(message)
+    return undefined
+  }
   api.commands.registerCommand = (command, callback) => {
     commands.set(command, callback)
     return { dispose: () => undefined }
@@ -87,6 +110,7 @@ function config(layers: Layers = {}) {
     layers: state,
     updates,
     messages,
+    errors,
     commands,
     emit(key = "kilo-code.new.autoApprove.enabled") {
       for (const handler of handlers) handler({ affectsConfiguration: (name) => name === key })
@@ -286,10 +310,11 @@ describe("registerToggleAutoApprove", () => {
     ])
   })
 
-  it("returns unhandled when an automatic reply fails", async () => {
+  it("returns unhandled when an automatic reply fails and the request stays pending", async () => {
     config({ globalValue: true })
     const conn = connection(
       client({
+        list: async () => ({ data: [{ id: "perm_1" }] }),
         reply: async (_args, options) => {
           expect(options).toEqual({ throwOnError: true })
           throw new Error("offline")
@@ -303,7 +328,7 @@ describe("registerToggleAutoApprove", () => {
       () => ["/workspace"],
     )
 
-    expect(await ctrl.approve(asked("perm_1"))).toBe(false)
+    expect(await quiet(() => ctrl.approve(asked("perm_1")))).toBe(false)
   })
 
   it("cancels pending permission drains when disabled during an enable generation", async () => {
@@ -350,6 +375,7 @@ describe("registerToggleAutoApprove", () => {
     let calls = 0
     const conn = connection(
       client({
+        list: async (dir) => (dir === "/workspace" ? { data: [{ id: "perm_retry" }] } : { data: [] }),
         reply: async (args) => {
           calls++
           if (calls === 1) {
@@ -375,6 +401,123 @@ describe("registerToggleAutoApprove", () => {
     expect(await pending).toBe(false)
     expect(calls).toBe(1)
     expect(later).toEqual([])
+  })
+
+  it("leaves auto-approve off when the setting cannot be saved", async () => {
+    const env = config({ globalValue: false, fail: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+    const changes: boolean[] = []
+    ctrl.onChange((active) => changes.push(active))
+
+    expect(await quiet(() => ctrl.toggle())).toBe(false)
+    expect(ctrl.active()).toBe(false)
+    expect(changes).toEqual([false])
+    expect(env.errors).toEqual(["Kilo Code could not save the auto-approve setting, so auto-approve stays off."])
+    expect(env.messages).toEqual([])
+
+    expect(await ctrl.approve(asked("perm_1"), "/workspace")).toBe(false)
+    expect(replies).toEqual([])
+  })
+
+  it("restates the off state when a rejected enable write follows an off state", async () => {
+    const env = config({ fail: true })
+    const conn = connection(client({}))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+    const changes: boolean[] = []
+    ctrl.onChange((active) => changes.push(active))
+
+    await quiet(() => ctrl.toggle())
+
+    expect(changes).toEqual([false])
+    expect(ctrl.active()).toBe(false)
+  })
+
+  it("takes effect at once and reports a rejected off write", async () => {
+    const env = config({ globalValue: true, fail: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(await quiet(() => ctrl.toggle())).toBe(false)
+    expect(ctrl.active()).toBe(false)
+    expect(env.errors).toEqual([
+      "Kilo Code could not save the auto-approve setting, so auto-approve is off until that setting is saved.",
+    ])
+
+    expect(await ctrl.approve(asked("perm_1"), "/workspace")).toBe(false)
+    expect(replies).toEqual([])
+  })
+
+  it("refuses a request whose directory is unknown", async () => {
+    config({ globalValue: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => undefined,
+      () => ["/workspace"],
+    )
+
+    expect(await ctrl.approve(asked("perm_unknown", "ses_unknown"))).toBe(false)
+    expect(replies).toEqual([])
+  })
+
+  it("refuses a request the directory still holds", async () => {
+    config({ globalValue: true })
+    const replies: unknown[] = []
+    const conn = connection(
+      client({ list: async () => ({ data: [{ id: "perm_1" }] }), reply: async (args) => replies.push(args) }),
+    )
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(await ctrl.approve(asked("perm_1"), "/workspace")).toBe(false)
+    expect(replies).toHaveLength(1)
+  })
+
+  it("serialises two quick toggles so the later intent wins", async () => {
+    const gate = defer<void>()
+    const env = config({ globalValue: false, hold: (value) => (value === true ? gate.promise : undefined) })
+    const conn = connection(client({}))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    const enable = ctrl.toggle()
+    const disable = ctrl.toggle()
+    gate.resolve()
+    await Promise.all([enable, disable])
+
+    // Serialised, the second click reads the state the first write left and asks for
+    // off again, so the stored value matches the later intent.
+    expect(env.updates.map((entry) => entry.value)).toEqual([true, false])
+    expect(env.layers.globalValue).toBe(false)
+    expect(ctrl.active()).toBe(false)
   })
 })
 
