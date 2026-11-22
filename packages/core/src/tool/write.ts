@@ -97,7 +97,7 @@ const layer = Layer.effectDiscard(
                     })
                   if (error instanceof FileMutation.TargetKindError)
                     return new ToolFailure({
-                      message: `Unable to write ${input.path}: the target is not a regular file, or the filesystem does not report its identity.`,
+                      message: `Unable to write ${input.path}: the target is not a regular file, or the filesystem does not report a usable identity.`,
                     })
                   return new ToolFailure({ message: `Unable to write ${input.path}` })
                 }),

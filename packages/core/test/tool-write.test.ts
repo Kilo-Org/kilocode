@@ -493,7 +493,7 @@ describe("WriteTool", () => {
               expect(result).toEqual({
                 type: "error",
                 value:
-                  "Unable to write directory: the target is not a regular file, or the filesystem does not report its identity.",
+                  "Unable to write directory: the target is not a regular file, or the filesystem does not report a usable identity.",
               })
               expect(writes).toEqual([])
             }),
