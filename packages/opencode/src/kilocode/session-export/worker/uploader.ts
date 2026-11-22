@@ -72,15 +72,16 @@ export class Uploader {
     let rows: ReturnType<Storage["pendingEvents"]> = []
     try {
       while (true) {
-        const now = Date.now()
-        rows = sessionRows(this.deps.storage.pendingEvents({ now, limitBytes: Config.flushSizeBytes }))
-        if (rows.length === 0) return
         const cred = await credential(this.deps)
         if (this.rejected !== undefined) {
-          // A rejected credential suspends the queue: nothing can be delivered until it changes.
+          // A rejected credential suspends the queue: nothing can be delivered until it changes, so
+          // the pause is decided before any batch is read.
           if (this.rejected === cred.fingerprint) return
           this.rejected = undefined
         }
+        const now = Date.now()
+        rows = sessionRows(this.deps.storage.pendingEvents({ now, limitBytes: Config.flushSizeBytes }))
+        if (rows.length === 0) return
         const batchId = await sha256Hex(rows.map((row) => row.id).join("\n"))
         const chunks = this.deps.storage.chunksForEvents(rows.map((row) => row.id))
         const compact = await compactEvents(
