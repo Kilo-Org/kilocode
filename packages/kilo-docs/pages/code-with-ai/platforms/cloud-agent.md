@@ -56,6 +56,10 @@ If a compute billing check fails, follow the recovery action next to the compose
 
 Automatic commit and push depends on your session settings. If it is disabled, review, commit, and push the changes you want to keep.
 
+### Multiple repositories in a workspace
+
+A hosted workspace can include more than one repository. Choose the primary repository, then add up to five others from the same GitHub installation. Kilo checks out each repository into the workspace, so a session can read and change files across all of them. The additional repositories must come from the same installation as the primary, and the set is fixed when the workspace is created. The primary repository's ref, the profile you select, the billing origin, and the single-repository create path are unchanged.
+
 ## Favorite models
 
 In the Cloud Agent model pickers — the new-session panel and the session composer — select the star on a model row to add it to a leading **Favorites** group that spans providers, so the models you use most stay at the top. The star is keyboard reachable: Tab to it, then press Enter or Space to toggle it without selecting the model. Stars are saved to your account and shared with the [mobile app](/docs/code-with-ai/platforms/mobile), so a favorite you set in one appears in the other.

@@ -67,9 +67,12 @@ Local MCP servers run on your machine and communicate via standard input/output.
 |---|---|---|---|
 | `type` | String | Yes | Must be `"local"`. |
 | `command` | Array | Yes | Command and arguments to run the MCP server. |
+| `cwd` | String | No | Working directory for the MCP server process. Relative paths resolve from the workspace directory. |
 | `environment` | Object | No | Environment variables to set when running the server. |
 | `enabled` | Boolean | No | Enable or disable the MCP server on startup. |
 | `timeout` | Number | No | Timeout in ms for fetching tools from the MCP server. Default: 5000. |
+
+Set `cwd` when the server expects to start from a specific directory instead of the workspace root — for example, a project subfolder that holds the server's configuration. A relative value resolves from the workspace directory.
 
 ### Remote Servers
 
