@@ -1,9 +1,10 @@
 import { describe, expect } from "bun:test"
-import { ConfigProvider, Effect, Schema } from "effect"
+import { ConfigProvider, Effect, Exit, Schema } from "effect"
 import { HttpClientRequest } from "effect/unstable/http"
 import { LLM } from "../../src"
 import { CloudflareAIGateway, CloudflareWorkersAI } from "../../src/providers/cloudflare"
-import { LLMClient } from "../../src/route"
+import { Auth, LLMClient } from "../../src/route"
+import type { Model } from "../../src/schema"
 import { it } from "../lib/effect"
 import { dynamicResponse } from "../lib/http"
 import { sseEvents } from "../lib/sse"
@@ -11,6 +12,37 @@ import { sseEvents } from "../lib/sse"
 const Json = Schema.fromJsonString(Schema.Unknown)
 const decodeJson = Schema.decodeUnknownSync(Json)
 const withEnv = (env: Record<string, string>) => Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env })))
+
+const gateway = (options: Parameters<typeof CloudflareAIGateway.configure>[0]) =>
+  CloudflareAIGateway.configure({ accountId: "test-account", ...options }).model("openai/gpt-4o-mini")
+
+const authHeaders = (headers: Record<string, string>) =>
+  Object.fromEntries(
+    ["cf-aig-authorization", "authorization", "x-explicit"].flatMap((name) =>
+      headers[name] === undefined ? [] : [[name, headers[name]]],
+    ),
+  )
+
+const gatewayRequest = (model: Model, env: Record<string, string>) =>
+  Effect.gen(function* () {
+    let captured: Record<string, string> | undefined
+    const exit = yield* LLM.generate(LLM.request({ model, prompt: "Say hello." })).pipe(
+      withEnv(env),
+      Effect.provide(
+        dynamicResponse((input) =>
+          Effect.gen(function* () {
+            const web = yield* HttpClientRequest.toWeb(input.request).pipe(Effect.orDie)
+            captured = authHeaders(Object.fromEntries(web.headers))
+            return input.respond(sseEvents(deltaChunk({ role: "assistant", content: "Hello" }), deltaChunk({}, "stop")), {
+              headers: { "content-type": "text/event-stream" },
+            })
+          }),
+        ),
+      ),
+      Effect.exit,
+    )
+    return { exit, headers: captured }
+  })
 
 const deltaChunk = (delta: object, finishReason: string | null = null) => ({
   id: "chatcmpl_fixture",
@@ -122,6 +154,93 @@ describe("Cloudflare", () => {
           ),
         ),
       )
+    }),
+  )
+
+  it.effect("attaches the gateway header and the provider bearer for every credential combination", () =>
+    Effect.gen(function* () {
+      const cases: ReadonlyArray<{
+        name: string
+        model: Model
+        env: Record<string, string>
+        headers: Record<string, string>
+      }> = [
+        {
+          name: "gateway environment token with a provider key",
+          model: gateway({ accountId: "test-account", apiKey: "provider-token" }),
+          env: { CLOUDFLARE_API_TOKEN: "gateway-token" },
+          headers: { "cf-aig-authorization": "Bearer gateway-token", authorization: "Bearer provider-token" },
+        },
+        {
+          name: "alternate gateway environment token with a provider key",
+          model: gateway({ accountId: "test-account", apiKey: "provider-token" }),
+          env: { CF_AIG_TOKEN: "gateway-token" },
+          headers: { "cf-aig-authorization": "Bearer gateway-token", authorization: "Bearer provider-token" },
+        },
+        {
+          name: "gateway key with a provider key",
+          model: gateway({ accountId: "test-account", gatewayApiKey: "gateway-token", apiKey: "provider-token" }),
+          env: {},
+          headers: { "cf-aig-authorization": "Bearer gateway-token", authorization: "Bearer provider-token" },
+        },
+        {
+          name: "gateway key alone",
+          model: gateway({ accountId: "test-account", gatewayApiKey: "gateway-token" }),
+          env: {},
+          headers: { "cf-aig-authorization": "Bearer gateway-token" },
+        },
+        {
+          name: "gateway environment token alone",
+          model: gateway({ accountId: "test-account" }),
+          env: { CLOUDFLARE_API_TOKEN: "gateway-token" },
+          headers: { "cf-aig-authorization": "Bearer gateway-token" },
+        },
+        {
+          name: "provider key alone",
+          model: gateway({ accountId: "test-account", apiKey: "provider-token" }),
+          env: {},
+          headers: { authorization: "Bearer provider-token" },
+        },
+        {
+          name: "empty gateway key with a gateway environment token",
+          model: gateway({ accountId: "test-account", gatewayApiKey: "", apiKey: "provider-token" }),
+          env: { CLOUDFLARE_API_TOKEN: "gateway-token" },
+          headers: { "cf-aig-authorization": "Bearer gateway-token", authorization: "Bearer provider-token" },
+        },
+      ]
+
+      for (const item of cases) {
+        const result = yield* gatewayRequest(item.model, item.env)
+        expect({ case: item.name, ok: Exit.isSuccess(result.exit) }).toEqual({ case: item.name, ok: true })
+        expect({ case: item.name, headers: result.headers }).toEqual({
+          case: item.name,
+          headers: item.headers,
+        })
+      }
+    }),
+  )
+
+  it.effect("reports a missing gateway credential when no credential resolves", () =>
+    Effect.gen(function* () {
+      const result = yield* gatewayRequest(gateway({ accountId: "test-account" }), {})
+
+      expect(Exit.isFailure(result.exit)).toBe(true)
+      expect(result.headers).toBeUndefined()
+    }),
+  )
+
+  it.effect("honors an explicit auth override", () =>
+    Effect.gen(function* () {
+      const result = yield* gatewayRequest(
+        gateway({
+          accountId: "test-account",
+          gatewayApiKey: "gateway-token",
+          auth: Auth.header("x-explicit", "explicit-token"),
+        }),
+        { CLOUDFLARE_API_TOKEN: "gateway-token" },
+      )
+
+      expect(result.headers).toEqual({ "x-explicit": "explicit-token" })
     }),
   )
 

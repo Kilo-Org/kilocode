@@ -46,8 +46,11 @@ const aiGatewayAuth = (input: AIGatewayOptions) => {
     .orElse(Auth.config("CF_AIG_TOKEN"))
     .pipe(Auth.bearerHeader("cf-aig-authorization"))
   if (!("apiKey" in input) || input.apiKey === undefined) return gateway
-  if (input.gatewayApiKey === undefined) return Auth.bearer(input.apiKey)
-  return Auth.bearerHeader("cf-aig-authorization", input.gatewayApiKey).andThen(Auth.bearer(input.apiKey))
+  // Gateway and provider credentials are resolved separately: `cf-aig-authorization`
+  // carries the gateway token from `gatewayApiKey` or a gateway environment variable,
+  // and `authorization` carries the provider key. When the gateway token does not resolve,
+  // the request carries the provider bearer alone.
+  return gateway.orElse(Auth.none).andThen(Auth.bearer(input.apiKey))
 }
 
 export const workersAIBaseURL = (input: WorkersAIURL) => {
