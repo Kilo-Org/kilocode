@@ -3,7 +3,7 @@ import { createAnthropic } from "@ai-sdk/anthropic"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { generateText } from "ai"
 import { AceCatalog } from "@/kilocode/provider/acedatacloud"
-import { patchConfigModel } from "@/kilocode/provider/provider"
+import { customProviderVariants, patchConfigModel } from "@/kilocode/provider/provider"
 import { Effect } from "effect"
 
 const chat = {
@@ -209,6 +209,17 @@ describe("Ace live model catalog", () => {
     expect(model.unpublished).toEqual(["context", "output", "pricing", "tools"])
     expect(patchConfigModel({ tool_call: false }, model).unpublished).not.toContain("tools")
     expect(AceCatalog.identity({}).acedatacloud?.env).toEqual(["ACEDATACLOUD_API_KEY"])
+  })
+
+  test("does not generate reasoning efforts for discovered models with explicit SDK config", async () => {
+    const cache = AceCatalog.create(async () => Response.json({ items: [item("reasoning")] }))
+    const model = (await cache.get()).provider.models.reasoning!
+    const generated = { high: { reasoningEffort: "high" } }
+    expect(customProviderVariants(model, "@ai-sdk/openai-compatible", () => generated)).toEqual({})
+    const configured = { low: { reasoningEffort: "low" } }
+    expect(
+      customProviderVariants({ ...model, variants: configured }, "@ai-sdk/openai-compatible", () => generated),
+    ).toEqual(configured)
   })
 
   test("Anthropic SDK sends Messages to the verified path with Bearer auth", async () => {

@@ -117,6 +117,8 @@ type Generate = (model: Provider.Model) => Variants
 
 export function customProviderVariants(model: Provider.Model, npm: unknown, generate: Generate): Variants {
   if (model.variants && Object.keys(model.variants).length > 0) return model.variants
+  // An empty discovered variant set is intentional; explicit user variants were accepted above.
+  if (model.providerID === "acedatacloud" && model.unpublished) return {}
 
   const supported = typeof npm === "string" && CUSTOM_PROVIDER_PACKAGES.has(npm) && model.api.npm === npm
   const variants = generate(model)
