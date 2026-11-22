@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Turn recovery now leaves a turn's tail in place while another Kilo process on the same data directory is still serving it.
+Kilo keeps a reply that another Kilo process on the same data directory is still producing, so a session shared between processes stays complete while both work in it.

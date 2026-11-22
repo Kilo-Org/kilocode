@@ -101,7 +101,7 @@ const seed = Effect.fnUntraced(function* (input: {
 
 const dir = path.join(Global.Path.state, "session-turn")
 
-/** Writes a turn marker the way another live Kilo process does, and returns a remover for it. */
+/** Writes a turn marker the way another live Kilo process does, and returns the file so a test can remove it. */
 const markForeign = Effect.fnUntraced(function* (sessionID: Session.Info["id"], pid: number) {
   const file = path.join(dir, `${sessionID}.${pid}`)
   yield* Effect.promise(async () => {
