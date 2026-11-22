@@ -433,14 +433,10 @@ const layer = Layer.effect(
             const base: Record<string, ConfigPermissionV1.Action> =
               current === undefined ? {} : typeof current === "string" ? { "*": current } : { ...current }
             for (const pattern of removed) base[pattern] = null
-            // Drop the tool entry only when the saved entry has nothing left. Rules the
-            // patch does not mention stay in the file, so judge emptiness against the
-            // saved entry, never against the patch alone.
-            const saved = (yield* config.getGlobal()).permission?.[permission]
-            const patterns = typeof saved === "string" ? ["*"] : Object.keys(saved ?? {})
-            const left = Object.entries(base).some(([pattern, action]) => action !== null)
-            const untouched = patterns.some((pattern) => !(pattern in base))
-            patch[permission] = left || untouched ? base : null
+            // The patch only names the rows this prompt can change. Leaving the tool
+            // entry in place keeps every other saved pattern, and an entry that ends
+            // up holding only sentinels is inert: rule resolution ignores them.
+            patch[permission] = base
           }
         }
         if (Object.keys(patch).length > 0) {

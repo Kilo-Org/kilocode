@@ -40,18 +40,27 @@ Object.defineProperty(document, "hasFocus", { value: () => true })
 const savedAllow = {
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
+  projectConfig: () => ({ permission: {} }),
 }
 const savedDeny = {
   config: () => ({ permission: { edit: { "*": "deny" } } }),
   globalConfig: () => ({ permission: { edit: { "*": "deny" } } }),
+  projectConfig: () => ({ permission: {} }),
 }
-// A rule the effective config supplies from another scope: a global write cannot remove it.
+// A rule that another config scope supplies.
 const workspaceAllow = {
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: {} }),
+  projectConfig: () => ({ permission: { edit: { "*": "allow" } } }),
+}
+// Both scopes save the same allow for the row.
+const bothAllow = {
+  config: () => ({ permission: { edit: { "*": "allow" } } }),
+  globalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
+  projectConfig: () => ({ permission: { edit: { "*": "allow" } } }),
 }
 
-type Mode = "reject" | "once" | "approve" | "deny" | "keyboard" | "remove" | "removeDenied" | "workspace"
+type Mode = "reject" | "once" | "approve" | "deny" | "keyboard" | "remove" | "removeDenied" | "workspace" | "both"
 type Call = { response: string; approved: string[]; denied: string[]; removed: string[]; feedback?: string }
 
 const cases: Array<{ mode: Mode; ctx: typeof savedAllow }> = [
@@ -63,6 +72,7 @@ const cases: Array<{ mode: Mode; ctx: typeof savedAllow }> = [
   { mode: "remove", ctx: savedAllow },
   { mode: "removeDenied", ctx: savedDeny },
   { mode: "workspace", ctx: workspaceAllow },
+  { mode: "both", ctx: bothAllow },
 ]
 
 for (const { mode, ctx } of cases) {
@@ -102,8 +112,8 @@ for (const { mode, ctx } of cases) {
   try {
     assert.equal(row()?.getAttribute("data-decision"), mode === "removeDenied" ? "denied" : "approved")
 
-    if (mode === "workspace") {
-      // Revealed by a config scope this control cannot write, so it offers no removal.
+    if (mode === "workspace" || mode === "both") {
+      // A rule another scope supplies, shown with a state indicator.
       assert.equal(row()?.getAttribute("data-source"), "config")
       assert.equal(root.querySelector('[aria-label="ui.permission.rule.removeFromAllowed"]'), null)
       assert.equal(root.querySelector('[data-slot="permission-rule-toggle"]'), null)
@@ -128,7 +138,7 @@ for (const { mode, ctx } of cases) {
     }
     if (mode === "once") enter()
 
-    if (mode !== "once" && mode !== "remove" && mode !== "removeDenied" && mode !== "workspace") {
+    if (!["once", "remove", "removeDenied", "workspace", "both"].includes(mode)) {
       click('[data-slot="permission-actions"] button:last-child')
       assert.equal(calls.length, 0, "Opening feedback must not submit a response")
       const input = root.querySelector<HTMLTextAreaElement>('[data-slot="permission-feedback-input"]')
@@ -144,19 +154,15 @@ for (const { mode, ctx } of cases) {
       click('[data-slot="permission-reject-confirm"]')
     }
 
-    const removed = mode === "remove" || mode === "removeDenied" ? ["*"] : []
-    const feedback =
-      mode === "once" || mode === "remove" || mode === "removeDenied" || mode === "workspace"
-        ? undefined
-        : "Use spaces, not tabs"
+    // Removing a saved rule and answering without feedback are the plain paths.
+    const plain = ["once", "remove", "removeDenied", "workspace", "both"].includes(mode)
     assert.deepEqual(calls, [
       {
-        response:
-          mode === "once" || mode === "remove" || mode === "removeDenied" || mode === "workspace" ? "once" : "reject",
+        response: plain ? "once" : "reject",
         approved: mode === "approve" ? ["*"] : [],
         denied: mode === "deny" ? ["*"] : [],
-        removed,
-        feedback,
+        removed: mode === "remove" || mode === "removeDenied" ? ["*"] : [],
+        feedback: plain ? undefined : "Use spaces, not tabs",
       },
     ])
   } finally {
