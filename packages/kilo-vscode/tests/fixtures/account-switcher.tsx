@@ -357,7 +357,7 @@ try {
   await push({ type: "profileData", data: profile("org-2", true) })
   assert(alert(), "a push for a different account must keep the failure")
 
-  // 7. Signing out after a failed attempt must not leave the control mounted.
+  // Signing out after a failed attempt must not leave the control mounted.
   await push({ type: "profileData", data: null })
   assert.equal(root.querySelector(".account-switcher"), null, "a signed-out session must not show the control")
 
