@@ -457,7 +457,7 @@ describe("McpMigrator", () => {
       expect(result.available).toBe(true)
     })
 
-    test("reports which converted servers won from a project file", async () => {
+    test("merges a project server with a global store server", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
           const settingsDir = path.join(dir, ".kilo")
@@ -480,7 +480,6 @@ describe("McpMigrator", () => {
 
         const result = await McpMigrator.migrate({ projectDir: tmp.path })
 
-        expect(result.project).toEqual(["projectserver"])
         expect(Object.keys(result.mcp).sort()).toEqual(["globalserver", "projectserver"])
         expect(result.available).toBe(true)
       } finally {

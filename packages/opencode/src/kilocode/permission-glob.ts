@@ -30,12 +30,68 @@ const HOME = /^(?:~(?:\/|$)|\$HOME)/
 /**
  * Translate a legacy `fileRegex` pattern into permission wildcard globs.
  *
+ * A top-level `|` is the same alternation a group carries, with each alternative holding its
+ * own anchors, so `^src/.*|^test/.*` grants exactly what `^(src/.*|test/.*)$` grants. One
+ * alternative the glob syntax cannot express rejects the whole pattern: a rule that kept only
+ * the other alternatives would deny files the legacy pattern allowed, so the caller reports it
+ * instead.
+ *
  * Returns null when the pattern uses a construct that the glob syntax cannot express,
  * when every alternative is empty while both anchors are present, when an arm consists
  * only of digits, or when an arm names a home-relative path, so the caller can report it
  * instead of writing a rule whose meaning changes when the CLI expands it.
  */
 export function regexToGlobs(regex: string): string[] | null {
+  const parts = split(regex)
+  if (!parts) return null
+  if (parts.length === 1) return translate(parts[0])
+
+  const arms = new Set<string>()
+  for (const part of parts) {
+    // An empty alternative matches the empty string, and no path is empty. Split at the top
+    // level it carries no anchor, so it matches every path, which is the rule the existing
+    // empty-alternative handling applies inside a group.
+    const globs = part.length === 0 ? ["*"] : translate(part)
+    if (!globs) return null
+    for (const glob of globs) arms.add(glob)
+  }
+  return check([...arms])
+}
+
+/**
+ * Split a pattern at its top-level `|` alternatives.
+ *
+ * A `|` escaped by an odd number of backslashes is a literal and never splits, and a `|` inside
+ * parentheses belongs to the group parser. The empty string between two adjacent separators is
+ * kept as a part, because it is a real empty alternative. Returns null for a `)` outside any
+ * group, which no supported pattern contains.
+ */
+function split(text: string): string[] | null {
+  const parts: string[] = []
+  let depth = 0
+  let start = 0
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (c === "|" && depth === 0 && !escaped(text, i)) {
+      parts.push(text.slice(start, i))
+      start = i + 1
+      continue
+    }
+    if (escaped(text, i)) continue
+    if (c === "(") depth += 1
+    if (c === ")") {
+      if (depth === 0) return null
+      depth -= 1
+    }
+  }
+
+  parts.push(text.slice(start))
+  return parts
+}
+
+/** Translate one alternative, which carries its own `^` and `$` anchors. */
+function translate(regex: string): string[] | null {
   if (regex.length === 0) return null
 
   let body = regex
@@ -74,6 +130,17 @@ export function regexToGlobs(regex: string): string[] | null {
     ),
   ]
 
+  return check(arms)
+}
+
+/**
+ * Apply the arm-level limits shared by one translated alternative and a union of them.
+ *
+ * The arm count stays under [MAX_ARMS], an arm ending in a literal space is rejected, and so are
+ * a home-relative arm and an all-digit one.
+ */
+function check(arms: string[]): string[] | null {
+  if (arms.length > MAX_ARMS) return null
   // A pattern ending in `" .*"` is rewritten by `Wildcard.match` into `"( .*)?"`, so an arm
   // ending in ` *` also matches the text before the space. A pattern ending in a literal
   // space (`^docs ` becomes `docs *`) is expressible but is rejected here, so that group

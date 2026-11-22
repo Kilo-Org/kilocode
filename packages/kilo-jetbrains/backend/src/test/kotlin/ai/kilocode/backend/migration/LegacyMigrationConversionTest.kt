@@ -577,6 +577,29 @@ class LegacyMigrationConversionTest {
         }
     }
 
+    @Test
+    fun `permissionRuleKey matches the shared key fixture`() {
+        // The same file is read by the TypeScript suite
+        // (packages/opencode/test/kilocode/permission-glob.test.ts), which asserts the CLI's
+        // `pattern(server)`. The CLI's tool-id naming is the authority, so a server name the two
+        // languages sanitize differently fails a suite on one side.
+        val resource = "/migration/permission-key-cases.json"
+        val stream = assertNotNull(
+            LegacyMigrationConversionTest::class.java.getResourceAsStream(resource),
+            "missing test resource $resource",
+        )
+        val cases = stream.bufferedReader().use { reader ->
+            Json.parseToJsonElement(reader.readText()).jsonArray
+        }
+        assertTrue(cases.isNotEmpty(), "fixture $resource is empty")
+        for (element in cases) {
+            val row = element.jsonObject
+            val server = row.getValue("server").jsonPrimitive.content
+            val key = row.getValue("key").jsonPrimitive.content
+            assertEquals(key, LegacyMigrationConverters.permissionRuleKey(server), "fixture server: $server")
+        }
+    }
+
     // -----------------------------------------------------------------------
     // custom_modes.yaml parser
     // -----------------------------------------------------------------------

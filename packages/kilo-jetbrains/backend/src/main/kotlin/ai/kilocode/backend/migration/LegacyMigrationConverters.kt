@@ -410,7 +410,16 @@ object LegacyMigrationConverters {
 
     private val PERMISSION_KEY_UNSAFE = Regex("[^a-zA-Z0-9_-]")
 
-    private fun sanitizePermissionKey(name: String): String = name.replace(PERMISSION_KEY_UNSAFE, "_")
+    /**
+     * The permission rule key covering every tool of one MCP server, `<key>_*`.
+     *
+     * The CLI's tool-id naming is the authority: its one definition is
+     * `packages/opencode/src/kilocode/mcp/tool-id.ts`, which builds both the name a tool is
+     * registered under and a migrated mode's `<server>_*` permission key. `permission-key-cases.json`
+     * ties the two languages together, so a server name the two sanitize differently fails a suite
+     * on one side.
+     */
+    internal fun permissionRuleKey(server: String): String = server.replace(PERMISSION_KEY_UNSAFE, "_") + "_*"
 
     private fun hasUnreadableOptions(options: Map<String, String>?): Boolean =
         options != null && options.keys.any { it !in KNOWN_GROUP_OPTIONS }
@@ -503,7 +512,7 @@ object LegacyMigrationConverters {
                     else -> "allow"
                 }
                 for (server in mcpServers) {
-                    val key = "${sanitizePermissionKey(server)}_*"
+                    val key = permissionRuleKey(server)
                     allowed.add(key)
                     val merged = mergeRepeatedRule(key, permission[key], JsonPrimitive(mcpValue))
                     if (merged.warning != null) warnings.add(merged.warning)
@@ -553,7 +562,7 @@ object LegacyMigrationConverters {
 
         if (!mcpGroupSeen) {
             for (server in mcpServers) {
-                val key = "${sanitizePermissionKey(server)}_*"
+                val key = permissionRuleKey(server)
                 if (key !in allowed) permission[key] = JsonPrimitive("deny")
             }
         }
@@ -705,7 +714,7 @@ object LegacyMigrationConverters {
                 }
                 else -> {
                     for (server in mcpServers) {
-                        permission["${sanitizePermissionKey(server)}_*"] = JsonPrimitive(mcpValue)
+                        permission[permissionRuleKey(server)] = JsonPrimitive(mcpValue)
                     }
                     results.add(PermissionEntry("MCP permission", MigrationItemStatus.success))
                 }
@@ -1359,6 +1368,11 @@ private val ESCAPABLE: Set<Char> = "!\"#\$%&'()+,-./:;<=>@[]^_`{|}~".toSet()
 /**
  * Translate a legacy `fileRegex` pattern into permission wildcard globs.
  *
+ * A top-level `|` is the same alternation a group carries, with each alternative holding its own
+ * anchors, so `^src/.*|^test/.*` grants exactly what `^(src/.*|test/.*)$` grants. One alternative
+ * the glob syntax cannot express rejects the whole pattern: a rule that kept only the other
+ * alternatives would deny files the legacy pattern allowed, so the caller reports it instead.
+ *
  * Returns null when the pattern uses a construct that the glob syntax cannot
  * express, or when every alternative is empty while both anchors are present,
  * so the caller can report it instead of writing an unmatched rule.
@@ -1374,6 +1388,60 @@ private val ESCAPABLE: Set<Char> = "!\"#\$%&'()+,-./:;<=>@[]^_`{|}~".toSet()
  * rule stops meaning what the legacy pattern meant.
  */
 internal fun fileRegexToGlobs(regex: String): List<String>? {
+    val parts = splitTopLevel(regex) ?: return null
+    if (parts.size == 1) return translateFileRegex(parts[0])
+
+    val arms = mutableSetOf<String>()
+    for (part in parts) {
+        // An empty alternative matches the empty string, and no path is empty. Split at the top
+        // level it carries no anchor, so it matches every path, which is the rule the existing
+        // empty-alternative handling applies inside a group.
+        if (part.isEmpty()) {
+            arms.add("*")
+            continue
+        }
+        val globs = translateFileRegex(part) ?: return null
+        arms.addAll(globs)
+    }
+    return checkGlobArms(arms.toList())
+}
+
+/**
+ * Split a pattern at its top-level `|` alternatives.
+ *
+ * A `|` escaped by an odd number of backslashes is a literal and never splits, and a `|` inside
+ * parentheses belongs to the group parser. The empty string between two adjacent separators is
+ * kept as a part, because it is a real empty alternative. Returns null for a `)` outside any
+ * group, which no supported pattern contains.
+ */
+private fun splitTopLevel(text: String): List<String>? {
+    val parts = mutableListOf<String>()
+    var depth = 0
+    var start = 0
+    var i = 0
+    while (i < text.length) {
+        val c = text[i]
+        if (c == '|' && depth == 0 && !isEscapedAt(text, i)) {
+            parts.add(text.substring(start, i))
+            start = i + 1
+            i += 1
+            continue
+        }
+        if (!isEscapedAt(text, i)) {
+            if (c == '(') depth += 1
+            if (c == ')') {
+                if (depth == 0) return null
+                depth -= 1
+            }
+        }
+        i += 1
+    }
+    parts.add(text.substring(start))
+    return parts
+}
+
+/** Translate one alternative, which carries its own `^` and `$` anchors. */
+private fun translateFileRegex(regex: String): List<String>? {
     if (regex.isEmpty()) return null
     var body = regex
     val anchoredStart = body.startsWith("^")
@@ -1403,6 +1471,17 @@ internal fun fileRegexToGlobs(regex: String): List<String>? {
         result
     }.distinct()
 
+    return checkGlobArms(arms)
+}
+
+/**
+ * Apply the arm-level limits shared by one translated alternative and a union of them.
+ *
+ * The arm count stays under [MAX_GLOB_ARMS], an arm ending in a literal space is rejected, and so
+ * are a home-relative arm and an all-digit one.
+ */
+private fun checkGlobArms(arms: List<String>): List<String>? {
+    if (arms.size > MAX_GLOB_ARMS) return null
     // `Wildcard.match` rewrites a pattern ending in `" .*"` into `"( .*)?"`, so an arm ending in
     // ` *` also matches the text before the space. A pattern ending in a literal space (`^docs `
     // becomes `docs *`) is expressible but is rejected here, so that group asks and the

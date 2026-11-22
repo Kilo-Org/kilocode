@@ -287,7 +287,7 @@ describe("KilocodeConfigInjector", () => {
       expect(config.permission.read[".env.example"]).toBe("allow")
     })
 
-    test("grants the tools of the project's MCP servers", async () => {
+    test("grants the tools of every converted MCP server, project and global", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
           await Bun.write(
@@ -318,17 +318,19 @@ describe("KilocodeConfigInjector", () => {
         await fs.mkdir(path.dirname(settings), { recursive: true })
         await Bun.write(settings, JSON.stringify({ mcpServers: { otherserver: { command: "npx" } } }))
 
-        // The caller omits skipGlobalPaths, and the injected permissions still name only the
-        // project's server although a global settings file declares another.
+        // A legacy mode's `mcp` group meant all MCP tools, so the grant follows every server
+        // the same migration converted, whether it came from a project file or a global store.
         const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path })
         const config = JSON.parse(result.configJson)
         const permission = config.agent.mcpmode.permission
 
         expect(permission["projectserver_*"]).toBe("allow")
+        expect(permission["otherserver_*"]).toBe("allow")
         expect(Object.keys(permission).sort()).toEqual([
           "bash",
           "browser_open",
           "edit",
+          "otherserver_*",
           "projectserver_*",
           "read",
         ])
@@ -387,7 +389,7 @@ describe("KilocodeConfigInjector", () => {
       }
     })
 
-    test("warns about an mcp group when only a global MCP store declared a server", async () => {
+    test("grants a server that only a global MCP store declared", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
           await Bun.write(
@@ -412,15 +414,13 @@ describe("KilocodeConfigInjector", () => {
         await fs.mkdir(path.dirname(settings), { recursive: true })
         await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
 
-        // The mode migration reads global paths here, so the declared server makes the empty
-        // grant reportable; the injected keys stay project-scoped, so no global key is written.
+        // The same migration writes the global server to `mcp`, so the mode's grant names it and
+        // there is nothing to report: the rule follows every converted server, not just project ones.
         const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path })
         const permission = JSON.parse(result.configJson).agent.mcpmode.permission
 
-        expect(Object.keys(permission).some((key) => key.endsWith("_*"))).toBe(false)
-        expect(
-          result.warnings.filter((warning) => warning.includes("MCP access not migrated: no MCP server was migrated")),
-        ).toEqual(["Mode 'mcpmode': MCP access not migrated: no MCP server was migrated"])
+        expect(permission["globalserver_*"]).toBe("allow")
+        expect(result.warnings.some((warning) => warning.includes("MCP access not migrated"))).toBe(false)
       } finally {
         homedir.mockRestore()
         if (appdata === undefined) delete process.env.APPDATA

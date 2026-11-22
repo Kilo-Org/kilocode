@@ -6,6 +6,7 @@ import type { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { ConfigPermissionV1 as ConfigPermission } from "@opencode-ai/core/v1/config/permission"
 import { KilocodePaths } from "./paths"
 import { regexToGlobs } from "./permission-glob"
+import { pattern } from "./mcp/tool-id"
 import type { OrganizationMode } from "@kilocode/kilo-gateway"
 
 export namespace ModesMigrator {
@@ -53,8 +54,6 @@ export namespace ModesMigrator {
 
   /** Option keys a legacy group can carry. */
   const KNOWN_OPTIONS = /^(fileRegex|description)$/
-
-  const UNSAFE_KEY = /[^a-zA-Z0-9_-]/g
 
   export function isDefaultMode(slug: string): boolean {
     return DEFAULT_MODE_SLUGS.has(slug)
@@ -170,7 +169,7 @@ export namespace ModesMigrator {
           action = "ask"
         }
         for (const server of mcpServers) {
-          const key = `${server.replace(UNSAFE_KEY, "_")}_*`
+          const key = pattern(server)
           allowed.add(key)
           permission[key] = mergeRule(key, permission[key], action, warnings)
         }
@@ -191,11 +190,11 @@ export namespace ModesMigrator {
       }
 
       let value: ConfigPermission.Rule = "allow"
-      const pattern = opts?.fileRegex
-      if (pattern != null) {
-        const globs = regexToGlobs(pattern)
+      const regex = opts?.fileRegex
+      if (regex != null) {
+        const globs = regexToGlobs(regex)
         if (globs == null) {
-          warnings.push(`File restriction not migrated; ${permKey} set to ask: ${pattern}`)
+          warnings.push(`File restriction not migrated; ${permKey} set to ask: ${regex}`)
           value = "ask"
         } else {
           // Deny first: the CLI resolves the last matching rule, so the allows come after.
@@ -215,7 +214,7 @@ export namespace ModesMigrator {
 
     if (!seen) {
       for (const server of mcpServers) {
-        const key = `${server.replace(UNSAFE_KEY, "_")}_*`
+        const key = pattern(server)
         if (!allowed.has(key)) permission[key] = "deny"
       }
     }

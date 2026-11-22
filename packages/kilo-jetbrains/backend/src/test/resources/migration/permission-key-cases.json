@@ -1,0 +1,9 @@
+[
+  { "server": "github", "key": "github_*" },
+  { "server": "my server", "key": "my_server_*" },
+  { "server": "a.b", "key": "a_b_*" },
+  { "server": "a_b", "key": "a_b_*" },
+  { "server": "srv/one", "key": "srv_one_*" },
+  { "server": "a-b_c", "key": "a-b_c_*" },
+  { "server": "sérv", "key": "s_rv_*" }
+]

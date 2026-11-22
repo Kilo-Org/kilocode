@@ -35,8 +35,6 @@ export namespace McpMigrator {
 
   export interface MigrationResult {
     mcp: Record<string, ConfigMCP.Info>
-    /** Names of converted servers whose winning source was a project file. */
-    project: string[]
     /** Whether the legacy store declared at least one MCP server, converted or not. */
     available: boolean
     warnings: string[]
@@ -97,7 +95,7 @@ export namespace McpMigrator {
     const skipped: Array<{ name: string; reason: string }> = []
     const mcp: Record<string, ConfigMCP.Info> = {}
 
-    const allServers: Array<{ name: string; server: KilocodeMcpServer; project: boolean }> = []
+    const allServers: Array<{ name: string; server: KilocodeMcpServer }> = []
 
     if (!options?.skipGlobalPaths) {
       // 1. VSCode extension global storage (primary location for global MCP settings)
@@ -105,7 +103,7 @@ export namespace McpMigrator {
       const vscodeSettings = await readMcpSettings(vscodeSettingsPath)
       if (vscodeSettings?.mcpServers) {
         for (const [name, server] of Object.entries(vscodeSettings.mcpServers)) {
-          allServers.push({ name, server, project: false })
+          allServers.push({ name, server })
         }
       }
     }
@@ -120,25 +118,19 @@ export namespace McpMigrator {
         const projectSettings = await readMcpSettings(projectSettingsPath)
         if (projectSettings?.mcpServers) {
           for (const [name, server] of Object.entries(projectSettings.mcpServers)) {
-            allServers.push({ name, server, project: true }) // Later entries win in deduplication
+            allServers.push({ name, server }) // Later entries win in deduplication
           }
         }
       }
     }
 
     // Deduplicate by name (later entries win - project overrides global)
-    // A name wins from the file that supplied its surviving entry, so the scope set
-    // follows that entry: a project entry adds it, an overriding global entry removes it.
     const serversByName = new Map<string, KilocodeMcpServer>()
-    const projectNames = new Set<string>()
-    for (const { name, server, project: scoped } of allServers) {
+    for (const { name, server } of allServers) {
       serversByName.set(name, server)
-      if (scoped) projectNames.add(name)
-      else projectNames.delete(name)
     }
 
     // Convert each server
-    const project: string[] = []
     for (const [name, server] of serversByName) {
       // Warn about alwaysAllow permissions that cannot be migrated
       if (server.alwaysAllow && server.alwaysAllow.length > 0) {
@@ -150,23 +142,21 @@ export namespace McpMigrator {
       const converted = convertServer(name, server)
       if (converted) {
         mcp[name] = converted
-        if (projectNames.has(name)) project.push(name)
       }
     }
 
-    return { mcp, project, available: serversByName.size > 0, warnings, skipped }
+    return { mcp, available: serversByName.size > 0, warnings, skipped }
   }
 
   /**
    * Load Kilocode MCP servers and report whether the legacy store declared any.
    * `available` is true when the legacy store had at least one MCP server, even if
-   * none of them could be converted. `project` names the converted servers whose
-   * winning source was a project file. This function handles all logging internally.
+   * none of them could be converted. This function handles all logging internally.
    */
   export async function loadMcpConfig(
     projectDir: string,
     skipGlobalPaths?: boolean,
-  ): Promise<{ mcp: Record<string, ConfigMCP.Info>; project: string[]; available: boolean }> {
+  ): Promise<{ mcp: Record<string, ConfigMCP.Info>; available: boolean }> {
     try {
       const result = await migrate({ projectDir, skipGlobalPaths })
 
@@ -185,10 +175,10 @@ export namespace McpMigrator {
         log.warn("kilocode MCP migration warning", { warning })
       }
 
-      return { mcp: result.mcp, project: result.project, available: result.available }
+      return { mcp: result.mcp, available: result.available }
     } catch (err) {
       log.warn("failed to load kilocode MCP servers", { error: err })
-      return { mcp: {}, project: [], available: false }
+      return { mcp: {}, available: false }
     }
   }
 }
