@@ -420,7 +420,8 @@ const layer = Layer.effect(
 
       if (removed.length > 0) {
         // The running instance resolves against its in-memory approvals as well as
-        // config, so drop the removed rules here or they keep auto-approving.
+        // config, so drop the removed rules here and the next matching call is
+        // evaluated against the new state.
         const drop = new Set(removed)
         s.approved.splice(
           0,
@@ -430,9 +431,9 @@ const layer = Layer.effect(
       }
 
       if (newRules.length > 0 || removed.length > 0) {
-        // Start from exactly what the additions can express, so a rule `toConfig`
-        // drops (a scalar-only permission with a concrete pattern) writes nothing,
-        // as before. Removals then add their delete sentinels.
+        // Start from what the additions can express, so a rule `toConfig` leaves out (a
+        // scalar-only permission with a concrete pattern) writes no entry, as before.
+        // Removals then add their delete sentinels.
         const patch = toConfig(newRules)
         if (removed.length > 0) {
           if (SCALAR_ONLY_PERMISSIONS.has(permission)) patch[permission] = null
@@ -552,12 +553,27 @@ export function merge(...rulesets: PermissionV1.Ruleset[]): PermissionV1.Rule[] 
   return rulesets.flat()
 }
 
+// kilocode_change start - the one map from a tool name to the permission that governs it
+// A Map keeps the lookup to entries this file defines, so a name inherited from
+// Object.prototype resolves to itself instead of to a built-in member.
+const ALIASES = new Map<string, string>([
+  ["edit", "edit"],
+  ["write", "edit"],
+  ["apply_patch", "edit"],
+  ["list_mcp_resources", "read"],
+  ["list_mcp_resource_templates", "read"],
+  ["read_mcp_resource", "read"],
+])
+
+export function permissionFor(tool: string): string {
+  return ALIASES.get(tool) ?? tool
+}
+// kilocode_change end
+
 export function disabled(tools: string[], ruleset: PermissionV1.Ruleset): Set<string> {
-  const edits = ["edit", "write", "apply_patch"]
-  const reads = ["list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"]
   return new Set(
     tools.filter((tool) => {
-      const permission = edits.includes(tool) ? "edit" : reads.includes(tool) ? "read" : tool
+      const permission = permissionFor(tool) // kilocode_change - shared tool-to-permission map
       const rule = ruleset.findLast((rule) => Wildcard.match(permission, rule.permission))
       return rule?.pattern === "*" && rule.action === "deny"
     }),

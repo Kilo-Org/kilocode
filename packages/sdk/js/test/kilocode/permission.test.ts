@@ -28,7 +28,7 @@ describe("respondToPermission", () => {
     }
   })
 
-  it("sends removals with the rule save", async () => {
+  it("sends the cleared patterns with the rule save", async () => {
     const bodies: unknown[] = []
     const paths: string[] = []
     const server = Bun.serve({

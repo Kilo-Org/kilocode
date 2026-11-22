@@ -20,3 +20,14 @@ export function slot<T extends Stamped>(list: readonly T[], item: T) {
 export function recent<T extends Stamped>(list: readonly T[], cap = 100) {
   return list.toSorted(older).slice(-cap)
 }
+
+/**
+ * Resolve the next user message after a revert boundary by its position in the
+ * conversation list.
+ */
+export function redoTarget<T extends { id: string; role: string }>(list: readonly T[], boundary: string) {
+  const hit = at(list, boundary)
+  if (!hit.found) return { kind: "absent" as const }
+  const message = list.slice(hit.index + 1).find((item) => item.role === "user")
+  return message ? { kind: "next" as const, message } : { kind: "newest" as const }
+}

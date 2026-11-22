@@ -254,7 +254,7 @@ describe("handlePermissionResponse", () => {
     ])
   })
 
-  it("sends cleared rules with the save", async () => {
+  it("sends the cleared patterns with the save", async () => {
     const { fake, saves, replies, permDirs } = ctx({ tracked: ["s1"] })
     permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
 

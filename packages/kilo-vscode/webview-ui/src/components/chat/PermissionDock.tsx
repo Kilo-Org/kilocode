@@ -97,10 +97,11 @@ export const PermissionDock: Component<{
   // approved/denied patterns show their saved state immediately.
   const saved = config().permission?.[props.request.toolName]
   const loadState = savedRuleStates(rules(), saved)
-  // A row is revocable from here only when the merged global scope decides it. The
-  // removal write deletes one entry from the primary global file, so a grant another
-  // global file still supplies cannot be revoked. The effective config also merges
-  // workspace rules, and this write cannot delete those, so their rows stay read-only.
+  // A row carries its removal control when the merged global scope supplies the saved
+  // action and no other scope or broader entry decides the pattern. A named pattern is
+  // removed from every global file that holds it; a wildcard row also requires the
+  // primary global file to hold its own entry. Rows from the workspace scope show a
+  // state indicator because this write changes global files only.
   const revocable = removableRuleIndices({
     rules: rules(),
     global: mergedGlobalConfig().permission?.[props.request.toolName],

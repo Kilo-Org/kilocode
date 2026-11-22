@@ -76,22 +76,21 @@ function ruleCovers(entry: string, pattern: string): boolean {
 /**
  * The rows this prompt can change: the merged global scope supplies the pattern,
  * the effective state matches that global entry, no workspace scope entry decides
- * the row, and no broader entry of the same merged global scope decides it too.
+ * the row, and no broader entry of the same merged global scope supplies the same
+ * action for it.
  *
  * `global` is the merged global scope — every global config file combined, later
- * files winning — because a deletion has to reach every file that supplies the row.
- * An entry whose pattern covers the row with the same action keeps deciding the row
- * after that deletion, so the row stays out of scope: the control would appear to do
- * nothing. A scalar merged value is the tool-wide `*` entry, and a `*` key covers
- * every pattern.
+ * files winning. A broader entry with the same action continues to decide the
+ * pattern, so such a row shows a state indicator and keeps that control off. A
+ * scalar merged value is the tool-wide `*` entry, and a `*` key covers every pattern.
  *
  * `target` is the primary global file, the one the removal writes to first. A named
- * pattern is also deleted from every other global file that holds it, so a named row
- * needs no ownership check. A wildcard row does: when another global file holds a bare
- * scalar, that file has no `*` path to delete, so the row shows a state indicator
- * instead of a control.
+ * pattern is deleted from every global file that holds it, so a named row carries its
+ * removal control wherever the pattern is saved. A wildcard row carries that control
+ * when the primary global file holds its own entry, and shows a state indicator
+ * otherwise.
  *
- * A row another scope decides is shown with a state indicator instead.
+ * A row another scope decides shows a state indicator instead.
  */
 export function removableRuleIndices(input: {
   rules: string[]
@@ -107,8 +106,8 @@ export function removableRuleIndices(input: {
     const action =
       typeof input.global === "string" ? (pattern === "*" ? input.global : undefined) : input.global?.[pattern]
     if (action !== "allow" && action !== "deny") continue
-    // Named patterns are removed from every global file that holds them, so only the
-    // wildcard row needs the primary file to hold its own `*` entry.
+    // A named pattern is deleted from every global file that holds it, so only the
+    // wildcard row consults the primary file's own entry.
     const own =
       pattern !== "*" ||
       (typeof input.target === "string" ? input.target === action : input.target?.[pattern] === action)
@@ -121,9 +120,8 @@ export function removableRuleIndices(input: {
 }
 
 /**
- * Whether another entry of the merged global scope covers the pattern with the same
- * action. Deleting the row's own entry cannot change the outcome then, because the
- * broader entry keeps deciding it.
+ * Whether another entry of the merged global scope supplies the pattern with the same
+ * action. The broader entry decides the pattern, so the row shows a state indicator.
  */
 function coveredByBroaderGlobal(
   global: PermissionRule | undefined,

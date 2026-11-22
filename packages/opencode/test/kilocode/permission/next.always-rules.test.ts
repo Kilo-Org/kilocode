@@ -814,7 +814,7 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
-  it.live("removed rules stop auto-allowing in the same process", () =>
+  it.live("a cleared rule asks again in the same process", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
         const saved = yield* ask({
@@ -845,7 +845,7 @@ describe("saveAlwaysRules", () => {
         expect(auto.manual).toBe(false)
 
         // A later prompt for another command of the same tool shows the saved rule.
-        // Clearing it there must stop the auto-approval without a process restart.
+        // Clearing it there applies to the running process at once.
         const cleared = yield* ask({
           id: PermissionV1.ID.make("permission_remove_offer"),
           sessionID: SessionID.make("session_test"),
@@ -880,7 +880,7 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
-  it.live("removing one pattern deletes only that entry from config", () =>
+  it.live("clearing one pattern edits only that entry in the config", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
         const asking = yield* ask({
@@ -912,7 +912,7 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
-  it.live("ignores removals for patterns the request does not own", () =>
+  it.live("a clearance only reaches patterns the request carries", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
         const owner = yield* ask({
@@ -957,7 +957,7 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
-  it.live("removing a tool-wide rule clears its scalar config entry", () =>
+  it.live("clearing a tool-wide rule removes its scalar config entry", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
         const seed = yield* ask({
@@ -1055,7 +1055,7 @@ describe("saveAlwaysRules", () => {
         yield* reply({ requestID: PermissionV1.ID.make("permission_scalar_remove"), reply: "once" })
         yield* Fiber.join(asking)
 
-        // The saved default survives, and the file holds no literal sentinel.
+        // The saved default stays, and the file holds no literal sentinel.
         const text = yield* Effect.promise(() => fs.readFile(path.join(dir, "kilo.jsonc"), "utf8"))
         expect(text).not.toContain("null")
         expect(text).not.toContain("/tmp/b.txt")

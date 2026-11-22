@@ -4,6 +4,7 @@ out/
 storybook-static/
 test-results/
 playwright-report/
-# Fixture tests esbuild a bundle beside the package while they run and delete it
-# after; a killed run can leave one behind. Never treat them as source.
-**/.*-????????-????-????-????-????????????.mjs
+# Bundles the unit-test harnesses write into the package root. The tracked config
+# file shares the dot-dash shape, so it is re-included.
+.*-*.mjs
+!.vscode-test.mjs

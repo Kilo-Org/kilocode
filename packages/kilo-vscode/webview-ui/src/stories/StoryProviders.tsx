@@ -402,6 +402,7 @@ const ConfigWrapper: ParentComponent<{
       isDirty: dirty,
       saving: () => false,
       saveError: () => null,
+      clearSaveError: noop,
       updateConfig: (partial: Partial<Config>) => {
         setCfg((prev) => {
           const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config

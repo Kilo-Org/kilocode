@@ -1341,6 +1341,8 @@ export const dict = {
   "dialog.model.notSet": "Nije postavljeno",
   "profile.personalAccount": "Osobni račun",
   "profile.switchingAccount": "Prebacivanje računa…",
+  "profile.unavailableAccount": "Nedostupan račun",
+  "profile.switchFailed": "Nije moguće potvrditi promjenu računa.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/bs.ts
 
@@ -1426,6 +1428,8 @@ export const dict = {
   "settings.saveBar.cancel": "Otkaži",
   "settings.saveBar.saving": "Spremanje…",
   "settings.saveBar.saveFailed": "Postavke nije moguće spremiti",
+  "settings.saveBar.dismissError": "Odbaci",
+  "settings.saveBar.unconfirmedWrite": "Host ekstenzije nije potvrdio „{{name}}”.",
   "notifications.action.next": "Sljedeći",
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",

@@ -72,7 +72,7 @@ const bothAllow = {
   workspaceConfig: () => ({ permission: { edit: { "*": "allow" } } }),
 }
 // The primary global file holds the row, and a broader entry of the same merged scope
-// holds the same action, so deleting the row cannot change the outcome.
+// supplies the same action, so the broader entry decides the pattern.
 const broaderAllow = {
   config: () => ({ permission: { edit: { "edit *": "allow" } } }),
   globalConfig: () => ({ permission: { edit: { "edit *": "allow" } } }),
@@ -81,7 +81,7 @@ const broaderAllow = {
 }
 const broaderRequest: PermissionRequest = { ...request, always: ["edit *"] }
 // The merged global scope supplies the wildcard row from a lower global file, so the row
-// carries a state indicator rather than editable controls.
+// carries a state indicator.
 const otherFileAllow = {
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: {} }),

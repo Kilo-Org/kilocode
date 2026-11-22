@@ -1332,6 +1332,8 @@ export const dict = {
 
   "profile.personalAccount": "Personal Account",
   "profile.switchingAccount": "Switching account…",
+  "profile.unavailableAccount": "Unavailable account",
+  "profile.switchFailed": "Could not confirm the account switch.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1415,6 +1417,8 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
   "settings.saveBar.saveFailed": "Couldn't save settings",
+  "settings.saveBar.dismissError": "Dismiss",
+  "settings.saveBar.unconfirmedWrite": 'The change to "{{name}}" was not confirmed by the extension host.',
 
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",

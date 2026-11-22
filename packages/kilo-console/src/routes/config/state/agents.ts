@@ -4,7 +4,7 @@ import type { AgentBuilderPreviewResponse, Model, Provider } from "@kilocode/sdk
 import { previewAgent, saveAgent, type AgentPayload, type Scope, type Snapshot } from "../../../client"
 import { useConfig } from "../../../context/config"
 import { clean, friendly, sorted, toMode, toolCapabilities, toolName } from "../../../shared/utils"
-import { addRule, removeRule } from "./agent-permissions"
+import { addRule, removeRule, split } from "./agent-permissions"
 import { available, choices } from "./models"
 import {
   defaults,
@@ -101,29 +101,6 @@ function source(item: AgentItem) {
   const value = item.options.source
   if (typeof value === "string") return value
   return undefined
-}
-
-function split(input: unknown) {
-  const entries = Object.entries(perms(input))
-  return {
-    tools: sorted(entries.filter(([, value]) => value === "allow").map(([key]) => key)),
-    permission: Object.fromEntries(entries.filter(([, value]) => value !== "allow")) as Permission,
-  }
-}
-
-function perms(input: unknown): Permission {
-  if (!Array.isArray(input)) return record(input) as Permission
-  return input.reduce((result, item) => {
-    const rule = record(item)
-    const tool = string(rule.permission)
-    const action = string(rule.action)
-    if (!tool || !action) return result
-    const pattern = string(rule.pattern) || "*"
-    if (pattern === "*") return { ...result, [tool]: action }
-    const cur = result[tool]
-    const map = cur && typeof cur === "object" && !Array.isArray(cur) ? cur : {}
-    return { ...result, [tool]: { ...map, [pattern]: action } }
-  }, {} as Permission)
 }
 
 export function agentMeta(data: Snapshot, id: string) {
