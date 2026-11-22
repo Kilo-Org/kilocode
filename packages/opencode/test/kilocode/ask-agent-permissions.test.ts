@@ -1,6 +1,7 @@
 import { test, expect, describe } from "bun:test"
 import { Permission } from "../../src/permission"
 import { readOnlyBash } from "../../src/kilocode/agent"
+import { pattern } from "../../src/kilocode/mcp/tool-id"
 
 /** Build the Ask agent ruleset without MCP servers */
 function askRuleset() {
@@ -26,8 +27,7 @@ function askRuleset() {
 function askRulesetWithMcp(servers: string[], user: Permission.Ruleset = []) {
   const mcpRules: Record<string, "allow" | "ask" | "deny"> = {}
   for (const key of servers) {
-    const sanitized = key.replace(/[^a-zA-Z0-9_-]/g, "_")
-    mcpRules[sanitized + "_*"] = "ask"
+    mcpRules[pattern(key)] = "ask"
   }
   // Mirrors Ask agent merge order: defaults, ask-specific guard, user config, user denies last.
   return Permission.merge(
