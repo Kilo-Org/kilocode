@@ -57,10 +57,13 @@ interface ProbeError {
   details?: string
 }
 
+/** The same union `SaveError` exports: a host-worded message, or a key to translate. */
+type ProbeSaveError = ProbeError | { key: string; params?: Record<string, string | number>; details?: string }
+
 /** The slice of the config context these assertions drive. */
 interface ConfigProbe {
   settings: () => Record<string, unknown>
-  saveError: () => ProbeError | null
+  saveError: () => ProbeSaveError | null
   isDirty: () => boolean
   updateSetting: (key: string, value: unknown) => void
   applySetting: (key: string, value: unknown, writeKey?: string) => void
@@ -70,6 +73,22 @@ interface ConfigProbe {
 const settle = async () => {
   await Promise.resolve()
   await window.happyDOM.waitUntilComplete()
+}
+
+/**
+ * Wait until `ready` holds, returning whether it did before `timeout` ms elapsed. The bound
+ * cases shorten the settle bound, so they observe the settle when it lands instead of
+ * guessing how long a loaded runner needs for it.
+ */
+const until = async (ready: () => boolean, timeout: number) => {
+  const deadline = Date.now() + timeout
+  while (!ready()) {
+    if (Date.now() > deadline) return false
+    const { promise, resolve } = Promise.withResolvers<void>()
+    setTimeout(resolve, 20)
+    await promise
+  }
+  return true
 }
 
 const ui: { value?: ConfigProbe } = {}
@@ -369,12 +388,21 @@ try {
     const before = probe().settings()[property]
     assert.equal(before, true, "the chain starts from a stored true")
     settleBound.ms = 800
-    probe().applySetting(property, false, key)
-    await Promise.resolve()
-    assert.equal(probe().settings()[property], false, "the display holds the optimistic value")
-    await new Promise((r) => setTimeout(r, 1200))
+    try {
+      probe().applySetting(property, false, key)
+      await Promise.resolve()
+      assert.equal(probe().settings()[property], false, "the display holds the optimistic value")
+      const settled = await until(() => probe().saveError() != null, 5800)
+      assert.ok(settled, "the chain settles within the bound")
+    } finally {
+      settleBound.ms = realBound
+    }
     assert.equal(probe().settings()[property], before, "the chain settles on the value the host holds")
-    assert.ok(probe().saveError() != null, "an unanswered write reports that the host did not answer")
+    assert.deepEqual(
+      probe().saveError(),
+      { key: "settings.saveBar.unconfirmedWrite", params: { name: key } },
+      "an unanswered write reports that the host did not answer",
+    )
   })
 
   await check("a write after an unanswered chain restores its own previous value", async () => {
@@ -386,15 +414,20 @@ try {
     const first = probe().settings()[property]
     assert.equal(first, true, "the chain starts from a stored true")
     settleBound.ms = 800
-    probe().applySetting(property, false, key)
-    await Promise.resolve()
-    await new Promise((r) => setTimeout(r, 1200))
-    settleBound.ms = realBound
-    // A value different from `first`, so a rejection that restores nothing is visible.
-    probe().applySetting(property, false, key)
-    await Promise.resolve()
-    post({ type: "settingUpdateFailed", key, message: "rejected after bound" })
-    await settle()
+    try {
+      probe().applySetting(property, false, key)
+      await Promise.resolve()
+      const settled = await until(() => probe().saveError() != null, 5800)
+      assert.ok(settled, "the unanswered chain settles within the bound")
+      assert.equal(probe().settings()[property], first, "the unanswered chain returns to the stored value")
+      // A value different from `first`, so a rejection that restores nothing is visible.
+      probe().applySetting(property, false, key)
+      await Promise.resolve()
+      post({ type: "settingUpdateFailed", key, message: "rejected after bound" })
+      await settle()
+    } finally {
+      settleBound.ms = realBound
+    }
     assert.equal(probe().settings()[property], first, "the new chain restores the value before its own write")
     assert.deepEqual(probe().saveError(), { message: "rejected after bound", details: undefined })
   })

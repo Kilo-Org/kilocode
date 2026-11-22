@@ -7,7 +7,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
-import { useConfig } from "../../context/config"
+import { useConfig, saveErrorDetails, saveErrorText } from "../../context/config"
 import { useSession } from "../../context/session"
 import ModelsTab from "./ModelsTab"
 import * as Sandboxing from "./sandboxing"
@@ -600,7 +600,7 @@ const Settings: Component<SettingsProps> = (props) => {
                   </span>
                   <span class="settings-save-bar-error-title">
                     {language.t("settings.saveBar.saveFailed")}:{" "}
-                    <span class="settings-save-bar-error-firstline">{err().message}</span>
+                    <span class="settings-save-bar-error-firstline">{saveErrorText(err(), language.t)}</span>
                   </span>
                 </div>
                 {/* Outside the expander: a button inside `role="button"` is presentational to AT. */}
@@ -612,7 +612,7 @@ const Settings: Component<SettingsProps> = (props) => {
                   </div>
                 </Show>
                 <Show when={errorExpanded()}>
-                  <pre class="settings-save-bar-error-details">{err().details ?? err().message}</pre>
+                  <pre class="settings-save-bar-error-details">{saveErrorDetails(err(), language.t)}</pre>
                 </Show>
               </div>
             )}

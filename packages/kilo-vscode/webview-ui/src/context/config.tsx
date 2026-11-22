@@ -85,9 +85,27 @@ interface PendingWrite {
   timer: ReturnType<typeof setTimeout> | undefined
 }
 
-export interface SaveError {
-  message: string
-  details?: string
+/**
+ * A reported save or settings-write error. An error the host worded already carries its
+ * `message`; one this context raises itself carries a translation `key` and the params to
+ * resolve it with, so it is shown in the user's language. `ConfigProvider` mounts outside
+ * `LanguageProvider`, so the key is resolved at the render site instead of here.
+ */
+export type SaveError =
+  | { message: string; details?: string }
+  | { key: string; params?: SaveErrorParams; details?: string }
+
+export type SaveErrorParams = Record<string, string | number>
+
+/** The sentence an error reports, translated when it carries a key and verbatim otherwise. */
+export function saveErrorText(error: SaveError, t: (key: string, params?: SaveErrorParams) => string): string {
+  if ("message" in error) return error.message
+  return t(error.key, error.params)
+}
+
+/** The detail block an error shows, falling back to its own sentence when it carries none. */
+export function saveErrorDetails(error: SaveError, t: (key: string, params?: SaveErrorParams) => string): string {
+  return error.details ?? saveErrorText(error, t)
 }
 
 interface ConfigContextValue {
@@ -233,7 +251,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     const pending = dropWrite(writeKey)
     if (pending == null) return
     storeSetting(pending.property, pending.hasStored ? pending.stored : pending.previous)
-    setSaveError({ message: `${writeKey} was not confirmed by the extension host.` })
+    setSaveError({ key: "settings.saveBar.unconfirmedWrite", params: { name: writeKey } })
   }
   /**
    * Record a write before its optimistic update, so a rejected chain can restore what it

@@ -1396,6 +1396,7 @@ export const dict = {
   "settings.saveBar.saving": "Kaydediliyor…",
   "settings.saveBar.saveFailed": "Ayarlar kaydedilemedi",
   "settings.saveBar.dismissError": "Kapat",
+  "settings.saveBar.unconfirmedWrite": "{{name}} uzantı ana bilgisayarı tarafından onaylanmadı.",
   "notifications.action.next": "Sonraki",
   "notifications.action.close": "Kapat",
   "notifications.action.tryModel": "Dene {{model}}",

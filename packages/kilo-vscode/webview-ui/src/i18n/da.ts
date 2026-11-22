@@ -1420,6 +1420,7 @@ export const dict = {
   "settings.saveBar.saving": "Gemmer…",
   "settings.saveBar.saveFailed": "Kunne ikke gemme indstillinger",
   "settings.saveBar.dismissError": "Afvis",
+  "settings.saveBar.unconfirmedWrite": "{{name}} blev ikke bekræftet af udvidelsesværten.",
   "notifications.action.next": "Næste",
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",

@@ -1460,6 +1460,7 @@ export const dict = {
   "settings.saveBar.saving": "Enregistrement…",
   "settings.saveBar.saveFailed": "Impossible d'enregistrer les paramètres",
   "settings.saveBar.dismissError": "Ignorer",
+  "settings.saveBar.unconfirmedWrite": "L'hôte de l'extension n'a pas confirmé {{name}}.",
   "settings.saveBar.cancel": "Annuler",
   "notifications.action.next": "Suivant",
   "notifications.action.close": "Fermer",

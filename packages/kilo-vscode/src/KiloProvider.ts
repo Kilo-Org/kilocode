@@ -1664,14 +1664,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleRenameSession(message.sessionID, message.title)
           break
         case "updateSetting":
-          await this.handleUpdateSetting(message.key, message.value, message.writeId).catch((error: unknown) => {
-            this.postMessage({
-              type: "settingUpdateFailed",
-              key: message.key,
-              message: getErrorMessage(error) || `Failed to update the ${message.key} setting.`,
-              ...(message.writeId == null ? {} : { writeId: message.writeId }),
-            })
-          })
+          // The handler answers every write itself, so this only logs a failure it could not
+          // report; posting here too would answer a write twice.
+          this.handleUpdateSetting(message.key, message.value, message.writeId).catch((e) =>
+            console.error("[Kilo New] handleUpdateSetting failed:", e),
+          )
           break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
