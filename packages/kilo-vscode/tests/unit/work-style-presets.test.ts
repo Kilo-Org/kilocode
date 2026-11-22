@@ -65,13 +65,22 @@ describe("work style presets", () => {
     expect(resolve("grep -n KEY .env config/.env.example")).toBe("ask")
     for (const command of derived(SEARCHERS)) {
       for (const file of [".env", ".env.*"]) {
-        expect(bash[`${command} ${file}`]).toBe("ask")
-        expect(bash[`${command} ${file} *`]).toBe("ask")
+        // A searcher's first operand is its pattern, so a bare name there is not
+        // gated and the keys naming it must not exist.
+        expect(bash[`${command} ${file}`]).toBeUndefined()
+        expect(bash[`${command} ${file} *`]).toBeUndefined()
         expect(bash[`${command} * ${file}`]).toBe("ask")
         expect(bash[`${command} * ${file} *`]).toBe("ask")
+        expect(resolve(`${command} ${file}`)).toBe("allow")
       }
       expect(bash[`${command} * *.env`]).toBe("ask")
       expect(bash[`${command} * *.env.*`]).toBe("ask")
+      expect(bash[`${command} * */.env *`]).toBe("ask")
+      expect(bash[`${command} * */.env.* *`]).toBe("ask")
+      // A nested name in a middle position is gated, while an ordinary search
+      // term that merely mentions `process.env` stays allowed.
+      expect(resolve(`${command} KEY config/.env src/`)).toBe("ask")
+      expect(resolve(`${command} -n process.env src/`)).toBe("allow")
       expect(bash[`${command} .env.example`]).toBe("allow")
       // A sample allow carries no wildcard before the sample name, and the
       // searcher stays name-anchored: a lone search term that merely contains

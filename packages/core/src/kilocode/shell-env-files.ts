@@ -24,9 +24,12 @@ const GIT = ["git show", "git cat-file", "git diff", "git log", "git blame"] as 
  *
  * The shapes covered are: a file reader's environment file at any operand position,
  * including a wildcard, a quoted operand and a nested path; a searcher's
- * environment file as a leading or trailing operand, or as a nested path; and, for
- * the git commands that print a file, the file named as a path anywhere in the
- * command.
+ * environment file when it follows the search term, at any operand position and
+ * including a name behind a directory; a name ending in `.env` as the last operand
+ * and behind a directory in a middle position; and, for the git commands that print
+ * a file, the file named as a path anywhere in the command. A searcher's first
+ * operand is its search pattern, so a bare pattern that reads like a file name is
+ * not gated.
  *
  * `.env.example` documents the format and is allowed only as the exact lone
  * operand of a reader or a searcher: one literal path. A nested sample path and
@@ -61,22 +64,25 @@ export function envGuards(
 
   for (const command of SEARCHERS) {
     if (!has(command)) continue
-    // A searcher takes a pattern first, so its forms stay name-anchored: a lone
-    // search term that merely contains `.env` (`grep process.env`) is not gated.
+    // A searcher takes its pattern as the first operand, so the name must follow
+    // an argument: a bare pattern that reads like a file name (`grep .env`) is a
+    // search, not a read of that file.
     for (const file of [".env", ".env.*"]) {
-      gated[`${command} ${file}`] = level
-      gated[`${command} ${file} *`] = level
       gated[`${command} * ${file}`] = level
       gated[`${command} * ${file} *`] = level
     }
     gated[`${command} * *.env`] = level
     gated[`${command} * *.env.*`] = level
-    // The two suffix shapes above stop at the trailing operand. A third form that
-    // also reached a file in the middle of the command would need a trailing
-    // wildcard, and a searcher compares text rather than operands, so that
-    // wildcard would also reach a search term that reads like a file name. The
-    // shell map cannot separate the two, so those shapes stay at the command's
-    // existing level rather than prompt for an ordinary search.
+    // A name behind a directory in a middle position: the `.env` shapes above
+    // need the name to follow a space, and the two suffix shapes above need it to
+    // be the last operand. A `*` before the slash keeps an ordinary search term
+    // (`rg -n process.env src/`) out of these rules.
+    gated[`${command} * */.env *`] = level
+    gated[`${command} * */.env.* *`] = level
+    // A middle-position name with no directory before it would need a trailing
+    // wildcard, and `*` spans spaces, so `cmd * *.env *` also matches an ordinary
+    // search term (`rg -n process.env src/`). Only the directory-prefixed forms
+    // above separate the two.
     samples[`${command} .env.example`] = "allow"
   }
 

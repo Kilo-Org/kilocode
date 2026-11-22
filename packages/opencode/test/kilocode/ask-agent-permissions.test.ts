@@ -213,8 +213,8 @@ describe("Ask agent bash permissions", () => {
   })
 
   // An environment file gets the same level from the shell as from the read rule.
-  // A reader's file counts at any operand position, a searcher's only when the name
-  // is an operand, and a git reader's inside the revision spec.
+  // A reader's file counts at any operand position, a searcher's once the name
+  // follows its search term, and a git reader's inside the revision spec.
   describe("environment files keep the read level", () => {
     const cases: [string, "allow" | "ask"][] = [
       // A reader: any operand position, a glob, a quoted operand, a nested path.
@@ -251,11 +251,18 @@ describe("Ask agent bash permissions", () => {
       ["grep -n KEY .env", "ask"],
       ["grep -rn KEY .env.local", "ask"],
       ["grep x .env src/", "ask"],
+      ["rg KEY config/.env src/", "ask"],
+      ["grep -n KEY app/.env.local src/", "ask"],
       ["grep -n KEY .env .env.example", "ask"],
       ["grep -n KEY .env config/.env.example", "ask"],
-      // A search term that merely contains `.env` is not a file read.
+      // A search term that merely contains `.env` is not a file read, and a bare
+      // term that reads like a file name is the searcher's pattern, so it is not
+      // a read of that file either.
       ["grep process.env", "allow"],
       ["rg -n process.env src/foo.ts", "allow"],
+      ["grep .env", "allow"],
+      ["rg .env", "allow"],
+      ["ag .env", "allow"],
       // A process environment dump.
       ["printenv", "ask"],
       ["printenv HOME", "ask"],
