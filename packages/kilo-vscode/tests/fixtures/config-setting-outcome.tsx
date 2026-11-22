@@ -377,6 +377,19 @@ try {
     assert.deepEqual(probe().saveError(), { message: "rejected", details: undefined })
   })
 
+  await check("a stored value for a write this context did not send adds no property", async () => {
+    // The control that keeps its own state (here `fontSize`) posts `updateSetting` itself,
+    // so this answer reaches the context with no chain behind it. It must not become a
+    // property of `settings()`, where nobody reads it and `discardConfig` would keep it.
+    post({ type: "settingUpdated", key: "fontSize", value: 15 })
+    await settle()
+    assert.equal(
+      Object.hasOwn(probe().settings(), "fontSize"),
+      false,
+      "the control keeps its own state, so the context gains no wire-key-named property",
+    )
+  })
+
   await check("a chain the host never answers settles at the bound", async () => {
     const key = "experimental.claudeMigration"
     const property = "claudeMigration"
@@ -400,8 +413,8 @@ try {
     assert.equal(probe().settings()[property], before, "the chain settles on the value the host holds")
     assert.deepEqual(
       probe().saveError(),
-      { key: "settings.saveBar.unconfirmedWrite", params: { name: key } },
-      "an unanswered write reports that the host did not answer",
+      { key: "settings.saveBar.unconfirmedWrite", params: { name: property } },
+      "an unanswered write names the setting it wrote, not the raw configuration key",
     )
   })
 

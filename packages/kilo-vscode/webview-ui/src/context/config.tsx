@@ -251,7 +251,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     const pending = dropWrite(writeKey)
     if (pending == null) return
     storeSetting(pending.property, pending.hasStored ? pending.stored : pending.previous)
-    setSaveError({ key: "settings.saveBar.unconfirmedWrite", params: { name: writeKey } })
+    setSaveError({ key: "settings.saveBar.unconfirmedWrite", params: { name: pending.property } })
   }
   /**
    * Record a write before its optimistic update, so a rejected chain can restore what it
@@ -298,6 +298,11 @@ export const ConfigProvider: ParentComponent = (props) => {
    * normalized that value; that write's own order is what the success confirms, so the
    * fallback cannot advance `stored` past a value another success already confirmed. Either
    * way `stored` only moves forward, to the newest write a success has confirmed.
+   *
+   * An id-less answer cannot be told apart from another write that carries the same value,
+   * so the fallback matches primitives by value and otherwise takes the oldest outstanding
+   * write; every write this context sends carries an id, so the fallback exists for a
+   * message built elsewhere.
    */
   const confirmWrite = (pending: PendingWrite, value: unknown, writeId?: string) => {
     const named = removeNamed(pending, writeId)
@@ -508,8 +513,12 @@ export const ConfigProvider: ParentComponent = (props) => {
     const pending = pendingWrites.get(message.key)
     if (pending == null) {
       // A write this context did not send: adopt a stored value, report a failure.
+      // A late answer for one of this context's own keys resolves through the mapping and
+      // must still land, but a control that keeps its own state must not gain a
+      // wire-key-named property here, so only a property this context already holds is set.
       if (message.type === "settingUpdated") {
-        storeSetting(settingProperties[message.key] ?? message.key, message.value)
+        const property = settingProperties[message.key] ?? message.key
+        if (Object.hasOwn(savedSettings(), property)) storeSetting(property, message.value)
         return
       }
       setSaveError({ message: message.message, details: message.details })
