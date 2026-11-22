@@ -100,6 +100,8 @@ export interface PermissionResponseRequest {
   response: "once" | "always" | "reject"
   approvedAlways: string[]
   deniedAlways: string[]
+  /** Patterns whose saved rule the user cleared; the host deletes them. */
+  removedAlways?: string[]
   feedback?: string
 }
 

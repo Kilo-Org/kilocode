@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Ukloni sa liste dozvoljenih",
   "ui.permission.rule.addToDenied": "Dodaj na listu odbijenih",
   "ui.permission.rule.removeFromDenied": "Ukloni sa liste odbijenih",
+  "ui.permission.rule.fromConfig": "Upravlja se konfiguracijskom datotekom",
   "ui.permission.toolLabel.read": "Čitaj",
   "ui.permission.toolLabel.edit": "Uredi",
   "ui.permission.toolLabel.write": "Piši",

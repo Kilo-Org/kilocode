@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "허용 목록에서 제거",
   "ui.permission.rule.addToDenied": "거부 목록에 추가",
   "ui.permission.rule.removeFromDenied": "거부 목록에서 제거",
+  "ui.permission.rule.fromConfig": "구성 파일에서 관리됨",
   "ui.permission.toolLabel.read": "읽기",
   "ui.permission.toolLabel.edit": "편집",
   "ui.permission.toolLabel.write": "쓰기",

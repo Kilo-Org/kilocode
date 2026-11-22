@@ -312,6 +312,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "İzin listesinden kaldır",
   "ui.permission.rule.addToDenied": "Engel listesine ekle",
   "ui.permission.rule.removeFromDenied": "Engel listesinden kaldır",
+  "ui.permission.rule.fromConfig": "Yapılandırma dosyası tarafından yönetilir",
   "ui.permission.toolLabel.read": "Oku",
   "ui.permission.toolLabel.edit": "Düzenle",
   "ui.permission.toolLabel.write": "Yaz",
