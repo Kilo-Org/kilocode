@@ -693,7 +693,19 @@ object LegacyMigrationConverters {
                     permission["bash"] = JsonPrimitive("ask")
                 }
             }
-            results.add(PermissionEntry("Execute permission", MigrationItemStatus.success))
+            val discarded =
+                !sel.commandRules && settings.alwaysAllowExecute != null && settings.autoApprovalEnabled != true
+            results.add(
+                if (discarded) {
+                    PermissionEntry(
+                        "Execute permission",
+                        MigrationItemStatus.warning,
+                        "Execute permission not migrated: the master auto-approval switch was off",
+                    )
+                } else {
+                    PermissionEntry("Execute permission", MigrationItemStatus.success)
+                }
+            )
         }
 
         if (sel.mcpPermission) {

@@ -1259,6 +1259,50 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
+    fun `convertAutoApproval - execute permission reports a discarded selection`() {
+        fun convert(master: Boolean?, execute: Boolean?): LegacySettings = LegacySettings(
+            autoApprovalEnabled = master,
+            allowedCommands = null,
+            deniedCommands = null,
+            alwaysAllowReadOnly = null,
+            alwaysAllowReadOnlyOutsideWorkspace = null,
+            alwaysAllowWrite = null,
+            alwaysAllowExecute = execute,
+            alwaysAllowMcp = null,
+            alwaysAllowModeSwitch = null,
+            alwaysAllowSubtasks = null,
+            language = null,
+            autocomplete = null,
+        )
+
+        val sel = MigrationAutoApprovalSelections(false, false, false, executePermission = true, false, false)
+        val discarded = "Execute permission not migrated: the master auto-approval switch was off"
+
+        fun assertCase(
+            master: Boolean?,
+            execute: Boolean?,
+            status: MigrationItemStatus,
+            message: String?,
+            bash: String?,
+        ) {
+            val case = "master=$master execute=$execute"
+            val conv = LegacyMigrationConverters.convertAutoApproval(convert(master, execute), sel, emptyList())
+            val entry = conv.results.single { it.label == "Execute permission" }
+            assertEquals(status, entry.status, case)
+            assertEquals(message, entry.message, case)
+            val rule = conv.config?.get("permission")?.jsonObject?.get("bash")?.jsonPrimitive?.content
+            assertEquals(bash, rule, case)
+        }
+
+        assertCase(true, true, MigrationItemStatus.success, null, "allow")
+        assertCase(true, false, MigrationItemStatus.success, null, "ask")
+        assertCase(false, true, MigrationItemStatus.warning, discarded, null)
+        assertCase(null, true, MigrationItemStatus.warning, discarded, null)
+        assertCase(false, false, MigrationItemStatus.warning, discarded, null)
+        assertCase(true, null, MigrationItemStatus.success, null, null)
+    }
+
+    @Test
     fun `convertAutoApproval - read permission`() {
         val settings = LegacySettings(null, null, null, alwaysAllowReadOnly = true, alwaysAllowReadOnlyOutsideWorkspace = true, null, null, null, null, null, null, null)
         val sel = MigrationAutoApprovalSelections(false, readPermission = true, false, false, false, false)

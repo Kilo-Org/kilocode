@@ -33,7 +33,11 @@
     "@kilocode/cli#test:ci": {
       "dependsOn": ["^build"],
       "env": ["KILO_TEST_PROFILE", "KILO_TEST_SHARD"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.github/workflows/test.yml"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.github/workflows/test.yml",
+        "$TURBO_ROOT$/packages/kilo-jetbrains/backend/src/test/resources/migration/**"
+      ],
       "outputs": [".artifacts/unit/junit.xml"],
       "passThroughEnv": ["*"]
     },
