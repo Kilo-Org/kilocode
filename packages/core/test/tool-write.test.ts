@@ -415,6 +415,38 @@ describe("WriteTool", () => {
     ),
   )
 
+  it.live("writes nothing when the approved file is removed while the approval is pending", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const gone = path.join(tmp.path, "gone.txt")
+        return Effect.promise(() => fs.writeFile(gone, "original")).pipe(
+          Effect.andThen(() =>
+            Effect.sync(() => {
+              duringApproval = async () => {
+                await fs.unlink(gone)
+              }
+            }),
+          ),
+          Effect.andThen(
+            withTool(tmp.path, (registry) => executeTool(registry, call({ path: "gone.txt", content: "over" }))),
+          ),
+          Effect.andThen((result) =>
+            Effect.gen(function* () {
+              expect(result).toEqual({
+                type: "error",
+                value: "Unable to write gone.txt: file changed after permission approval. Read it again before writing.",
+              })
+              expect(writes).toEqual([])
+            }),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+
   it.live("writes nothing when a file appears at an approved missing target", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),

@@ -186,6 +186,38 @@ describe("FileMutation", () => {
       }),
     ),
   )
+
+  it.live("fails inspect when the filesystem reports a zero inode for an existing regular file", () =>
+    withTmp((directory) =>
+      Effect.gen(function* () {
+        const zeroed = path.join(directory, "zero-inode.txt")
+        const kept = path.join(directory, "some-inode.txt")
+        yield* Effect.promise(() => Promise.all([fs.writeFile(zeroed, "content"), fs.writeFile(kept, "content")]))
+        const real = yield* Effect.promise(() => fs.stat(kept))
+        const filesystem = instrumentStat(
+          (target) => target === zeroed,
+          (info) => (info.type === "File" ? { ...info, ino: Option.some(0) } : info),
+        )
+
+        yield* Effect.gen(function* () {
+          const mutation = yield* LocationMutation.Service
+          const files = yield* FileMutation.Service
+          const zero = yield* mutation.resolve({ path: "zero-inode.txt" })
+          const whole = yield* mutation.resolve({ path: "some-inode.txt" })
+
+          expect(yield* files.inspect(zero).pipe(Effect.flip)).toMatchObject({
+            _tag: "FileMutation.TargetKindError",
+            path: zero.canonical,
+          })
+          expect(yield* files.inspect(whole)).toEqual({
+            type: "file",
+            dev: real.dev,
+            ino: real.ino,
+          })
+        }).pipe(provide(directory, filesystem))
+      }),
+    ),
+  )
   // kilocode_change end
 
   it.live("rejects create when a prospective target appears after resolution", () =>

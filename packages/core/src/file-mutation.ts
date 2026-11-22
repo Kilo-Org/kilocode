@@ -140,7 +140,9 @@ const layer = Layer.effect(
       if (info === undefined) return { type: "absent" } satisfies Identity
       if (info.type !== "File") return yield* Effect.fail(new TargetKindError({ path: target.canonical }))
       const ino = Option.getOrUndefined(info.ino)
-      if (ino === undefined) return yield* Effect.fail(new TargetKindError({ path: target.canonical })) // kilocode_change - typed failure, not a defect
+      // kilocode_change - a zero inode is not a usable identity: some filesystems report it for every file on the
+      // volume, so a dev/ino comparison would match any of them. Fail as a typed error, not a defect.
+      if (ino === undefined || ino === 0) return yield* Effect.fail(new TargetKindError({ path: target.canonical }))
       return { type: "file", dev: info.dev, ino } satisfies Identity
     })
     // kilocode_change end
