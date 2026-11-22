@@ -250,9 +250,7 @@ export const {
         sdk.client.permission.list({ workspace }, { throwOnError: true }).then((x) => x.data ?? []),
         sdk.client.question.list({ workspace }, { throwOnError: true }).then((x) => x.data ?? []),
       ])
-      // answers and store writes apply only while this run still owns the selection
-      if (!currentRun(run, workspace)) return
-      // kilocode_change end
+      // auto mode answers asks on the server, so its replies go out even after the selection moved
       if (permission.mode === "auto") {
         for (const request of permissions) {
           // skill shell batches and sandbox escalations cannot be settled by a
@@ -262,6 +260,11 @@ export const {
           if (terminal.has(request.id)) continue // kilocode_change - already answered, ignore straggler events
           void sdk.client.permission.reply({ requestID: request.id, reply: "once", workspace })
         }
+      }
+      // store writes apply only while this run still owns the selection
+      if (!currentRun(run, workspace)) return
+      // kilocode_change end
+      if (permission.mode === "auto") {
         // keep protected asks visible; clear only what was settled
         const protectedList = permissions.filter((request) => temporaryPermission(request))
         const protectedCurrent: Record<string, PermissionRequest[]> = {}

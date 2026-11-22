@@ -225,6 +225,52 @@ describe("tui sync", () => {
   })
   // kilocode_change end
 
+  // kilocode_change start - auto-mode replies act on the server, so a superseded recovery still sends them
+  test("an auto-mode reply still reaches the server when the selection moved during a pending-ask recovery", async () => {
+    await using tmp = await tmpdir()
+    await Bun.write(`${tmp.path}/kv.json`, "{}")
+    const lists: URL[] = []
+    const replies: URL[] = []
+    const held = deferred<Response>()
+    const { app, project, sync } = await mount(
+      (url) => {
+        if (url.pathname === "/experimental/workspace") return json([{ id: "ws_a" }, { id: "ws_b" }])
+        if (url.pathname === "/config") return json({ model: url.searchParams.get("workspace") ?? "default" })
+        if (/^\/permission\/[^/]+\/reply$/.test(url.pathname)) {
+          replies.push(url)
+          return json(true)
+        }
+        if (url.pathname !== "/permission") return undefined
+        lists.push(url)
+        if (url.searchParams.get("workspace") === "ws_a") return held.promise
+        return json([])
+      },
+      tmp.path,
+      { auto: true },
+    )
+
+    try {
+      project.workspace.set("ws_a")
+      await wait(() => lists.some((url) => url.searchParams.get("workspace") === "ws_a"))
+
+      project.workspace.set("ws_b")
+      await wait(() => sync.data.config.model === "ws_b")
+
+      // the earlier selection's list resolves after the switch: its run no longer owns the store,
+      // but auto mode answers on the server and that reply must still go out, under its own workspace
+      held.resolve(json([ask("perm_a", "ses_a")]))
+      await wait(() => replies.length === 1)
+
+      expect(replies[0].pathname).toBe("/permission/perm_a/reply")
+      expect(replies[0].searchParams.get("workspace")).toBe("ws_a")
+      expect(sync.data.permission["ses_a"]).toBeUndefined()
+    } finally {
+      held.resolve(json([]))
+      app.renderer.destroy()
+    }
+  })
+  // kilocode_change end
+
   // kilocode_change start - a failed run that no longer owns the selection does not exit the TUI
   test("a failed bootstrap for a previous workspace does not exit the app", async () => {
     await using tmp = await tmpdir()
