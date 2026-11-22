@@ -86,11 +86,10 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     return props.profileData?.currentOrgId ?? (personal() ? PERSONAL : orgOptions()[0]?.value)
   })
 
-  const switching = createMemo(() => {
-    const state = attempt()
-    if (state.kind !== "pending") return false
-    return currentId() !== state.target
-  })
+  // The selector is locked for the whole attempt, not just until the refreshed
+  // profile arrives: the host pushes that profile before the result, and an
+  // early second pick would replace the attempt and discard the first reply.
+  const switching = createMemo(() => attempt().kind === "pending")
 
   const failure = createMemo(() => {
     const state = attempt()

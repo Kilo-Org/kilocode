@@ -1992,3 +1992,33 @@ describe("KiloProvider.handleLoadMessages / prepend into deleted session", () =>
     expect(loaded).toEqual([])
   })
 })
+
+describe("KiloProvider setOrganization dispatch", () => {
+  it("answers a request whose organization id cannot be dispatched", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    const listener =
+      Promise.withResolvers<
+        (message: { type: string; organizationId?: unknown; requestID?: string }) => Promise<void>
+      >()
+    internal.setupWebviewMessageHandler({
+      onDidReceiveMessage: (handler: (message: never) => Promise<void>) => {
+        listener.resolve(handler)
+        return { dispose: () => {} }
+      },
+    })
+    const receive = await listener.promise
+
+    // Every dispatched switch must be answered, so a value the host cannot
+    // dispatch still reports a correlated failure instead of staying pending.
+    await receive({ type: "setOrganization", organizationId: 42, requestID: "request-bad" })
+
+    const results = sent.filter(
+      (msg) =>
+        typeof msg === "object" && msg !== null && (msg as { type?: unknown }).type === "organizationSwitchResult",
+    )
+    expect(results).toHaveLength(1)
+    expect(results[0]).toMatchObject({ requestID: "request-bad", ok: false, data: null })
+    expect((results[0] as { error?: string }).error).toBeTruthy()
+  })
+})

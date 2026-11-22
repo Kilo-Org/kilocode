@@ -157,6 +157,14 @@ try {
   assert.equal(pending.organizationId, "org-2")
   assert.equal(trigger().disabled, true, "the selector is disabled while the attempt is pending")
 
+  // The host pushes the refreshed profile before the correlated result. That push
+  // must not unlock the selector, or a second pick would discard this attempt.
+  await push({ type: "profileData", data: profile("org-2") })
+  assert.equal(trigger().disabled, true, "a profile push must not unlock a pending attempt")
+  assert.equal(switchPosts().length, 1, "a profile push must not post another request")
+  await push({ type: "profileData", data: profile("org-1") })
+  assert.equal(trigger().disabled, true, "the selector stays locked until the result arrives")
+
   // 2. A stale result must not settle the attempt this component made.
   await push({
     type: "organizationSwitchResult",
