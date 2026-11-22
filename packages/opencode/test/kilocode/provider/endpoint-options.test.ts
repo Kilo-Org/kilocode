@@ -26,6 +26,20 @@ describe("resolveEndpointOptions", () => {
     expect(options.location).toBe("proxy.example/x")
   })
 
+  test("leaves the location untouched when a concrete model URL is given", () => {
+    const options: Record<string, unknown> = { location: "proxy.example/x" }
+    resolveEndpointOptions("google-vertex", "https://proxy.example/v1", options)
+    expect(options.location).toBe("proxy.example/x")
+
+    const vertexHost: Record<string, unknown> = { location: "proxy.example/x" }
+    resolveEndpointOptions(
+      "google-vertex",
+      "https://us-central1-aiplatform.googleapis.com/v1/projects/p/locations/us-central1",
+      vertexHost,
+    )
+    expect(vertexHost.location).toBe("proxy.example/x")
+  })
+
   test("leaves the location untouched when a concrete Vertex host baseURL is given", () => {
     const options: Record<string, unknown> = {
       baseURL: "https://us-central1-aiplatform.googleapis.com/v1/projects/p/locations/us-central1",
