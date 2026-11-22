@@ -359,6 +359,43 @@ Use native v2 fields.`,
     ),
   )
   // kilocode_change end
+  // kilocode_change start - a migrated v1 agent write policy must reach the edit action
+  it.effect("applies a migrated v1 agent write and patch permission to the edit action", () =>
+    Effect.gen(function* () {
+      const agents = yield* AgentV2.Service
+      const config = Config.Service.of({
+        entries: () =>
+          Effect.succeed([
+            new Config.Document({
+              type: "document",
+              info: decode(
+                ConfigMigrateV1.migrate({
+                  agent: {
+                    reviewer: { permission: { write: "deny" } },
+                    patcher: { permission: { patch: "ask" } },
+                  },
+                }),
+              ),
+            }),
+          ]),
+      })
+
+      yield* ConfigAgentPlugin.Plugin.effect(host({ agent: agentHost(agents) })).pipe(
+        Effect.provideService(Config.Service, config),
+      )
+
+      const reviewer = yield* agents.get(AgentV2.ID.make("reviewer"))
+      if (!reviewer) throw new Error("expected a configured reviewer agent")
+      expect(reviewer.permissions).toContainEqual({ action: "edit", resource: "*", effect: "deny" })
+      expect(PermissionV2.evaluate("edit", "src/index.ts", reviewer.permissions).effect).toBe("deny")
+
+      const patcher = yield* agents.get(AgentV2.ID.make("patcher"))
+      if (!patcher) throw new Error("expected a configured patcher agent")
+      expect(patcher.permissions).toContainEqual({ action: "edit", resource: "*", effect: "ask" })
+      expect(PermissionV2.evaluate("edit", "src/index.ts", patcher.permissions).effect).toBe("ask")
+    }),
+  )
+  // kilocode_change end
 })
 
 function loadHomePermissions(home: string) {

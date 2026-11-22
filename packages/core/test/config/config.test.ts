@@ -12,6 +12,7 @@ import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
 import { Location } from "@opencode-ai/core/location"
+import { PermissionV2 } from "@opencode-ai/core/permission" // kilocode_change - assert migrated rules against the evaluator
 import { Policy } from "@opencode-ai/core/policy"
 import { Project } from "@opencode-ai/core/project"
 import { AbsolutePath } from "@opencode-ai/core/schema"
@@ -256,6 +257,73 @@ describe("Config", () => {
         ],
       })
       expect(ConfigMigrateV1.migrate({}).experimental).toBeUndefined()
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - v1 write and patch permission keys reach the edit action every write tool asserts
+  it.effect("migrates v1 write and patch permission keys to the edit action", () =>
+    Effect.sync(() => {
+      expect(ConfigMigrateV1.migrate({ permission: { write: "deny" } }).permissions).toEqual([
+        { action: "edit", resource: "*", effect: "deny" },
+      ])
+      expect(ConfigMigrateV1.migrate({ permission: { patch: "ask" } }).permissions).toEqual([
+        { action: "edit", resource: "*", effect: "ask" },
+      ])
+
+      const write = ConfigMigrateV1.migrate({ permission: { write: "deny" } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "src/index.ts", write).effect).toBe("deny")
+      const patch = ConfigMigrateV1.migrate({ permission: { patch: "ask" } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "src/index.ts", patch).effect).toBe("ask")
+    }),
+  )
+
+  it.effect("migrates v1 tool toggles and permission effects to the same ruleset", () =>
+    Effect.sync(() => {
+      expect(ConfigMigrateV1.migrate({ permission: { write: "deny" } }).permissions).toEqual(
+        ConfigMigrateV1.migrate({ tools: { write: false } }).permissions,
+      )
+      expect(ConfigMigrateV1.migrate({ permission: { patch: "deny" } }).permissions).toEqual(
+        ConfigMigrateV1.migrate({ tools: { patch: false } }).permissions,
+      )
+    }),
+  )
+
+  it.effect("migrates per-resource v1 write and patch permission maps to the edit action", () =>
+    Effect.sync(() => {
+      const expected = [
+        { action: "edit", resource: "*.md", effect: "allow" as const },
+        { action: "edit", resource: "*", effect: "deny" as const },
+      ]
+      expect(ConfigMigrateV1.migrate({ permission: { write: { "*.md": "allow", "*": "deny" } } }).permissions).toEqual(
+        expected,
+      )
+      expect(ConfigMigrateV1.migrate({ permission: { patch: { "*.md": "allow", "*": "deny" } } }).permissions).toEqual(
+        expected,
+      )
+
+      const rules =
+        ConfigMigrateV1.migrate({ permission: { write: { "*": "deny", "*.md": "allow" } } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "README.md", rules).effect).toBe("allow")
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
+      // Rules apply in authored order and the last match wins, so the trailing wildcard denies markdown too.
+      const wildcardLast =
+        ConfigMigrateV1.migrate({ permission: { write: { "*.md": "allow", "*": "deny" } } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "README.md", wildcardLast).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("migrates a v1 agent write and patch permission to the edit action", () =>
+    Effect.sync(() => {
+      const write = ConfigMigrateV1.migrate({ agent: { custom: { permission: { write: "deny" } } } }).agents
+      expect(write?.custom?.permissions).toEqual([{ action: "edit", resource: "*", effect: "deny" }])
+      const patch = ConfigMigrateV1.migrate({ agent: { custom: { permission: { patch: "ask" } } } }).agents
+      expect(patch?.custom?.permissions).toEqual([{ action: "edit", resource: "*", effect: "ask" }])
+
+      const rules = ConfigMigrateV1.migrateAgent({ permission: { write: "deny" } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
+      const ask = ConfigMigrateV1.migrateAgent({ permission: { patch: "ask" } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "src/index.ts", ask).effect).toBe("ask")
     }),
   )
   // kilocode_change end

@@ -95,15 +95,16 @@ function permissions(info?: ConfigPermissionV1.Info, tools?: Readonly<Record<str
   }))
   for (const [action, rule] of Object.entries(info ?? {})) {
     if (!rule) continue
+    const key = normalizeAction(action) // kilocode_change - v1 write and patch keys assert as edit
     if (typeof rule === "string") {
-      rules.push({ action, resource: "*", effect: rule })
+      rules.push({ action: key, resource: "*", effect: rule }) // kilocode_change
       continue
     }
     // kilocode_change - per-resource effect may also be null (delete sentinel); skip those entries
     rules.push(
       ...Object.entries(rule)
         .filter((entry): entry is [string, "allow" | "ask" | "deny"] => entry[1] !== null)
-        .map(([resource, effect]) => ({ action, resource, effect })),
+        .map(([resource, effect]) => ({ action: key, resource, effect })), // kilocode_change
     )
   }
   return rules.length ? rules : undefined
