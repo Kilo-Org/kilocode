@@ -116,6 +116,12 @@ const nextSaveId = () => `s${(saveCount += 1).toString(36)}-${Math.random().toSt
 /**
  * Plain-object config state machine — mirrors the SolidJS ConfigProvider
  * logic without signals so the message-handling behavior is unit-testable.
+ *
+ * It models the message-shaped parts: which push settles which write, and what
+ * stays pending after a failure. Like the settings-write chains, it keeps no
+ * timers, so the bound that lets the provider settle a save the host never
+ * answers lives only in the provider; a save this model marks `saving` stays
+ * that way until an answer settles it.
  */
 export class ConfigState {
   config: Config = {}
@@ -177,9 +183,14 @@ export class ConfigState {
     this.saved = this.config
   }
 
-  /** Handle an explicit save failure from the extension. */
-  handleConfigSaveFailed(server: Config) {
+  /**
+   * Handle an explicit save failure from the extension. A failure that names another
+   * writer's request cannot be the answer to this save, so while a save is in flight it
+   * leaves `saving`, the draft, and `dirty` alone — the same guard the provider applies.
+   */
+  handleConfigSaveFailed(server: Config, requestId?: string) {
     if (!this.saving) return
+    if (requestId != null && requestId !== this.request) return
     this.saving = false
     this.request = undefined
     this.saved = server

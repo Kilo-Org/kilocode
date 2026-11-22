@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Settle each settings save on the extension host's answer to that write, so the settings page keeps pending changes and the save bar in step until the save it started is confirmed.
+Settings keeps your unsaved changes and the save bar in place until the extension host confirms the save, and reports a save the host never confirms so you can retry it.

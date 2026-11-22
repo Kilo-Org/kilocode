@@ -350,7 +350,10 @@ describe("ConfigState", () => {
       s.updateConfig({ default_agent: null })
       s.saveConfig()
 
-      s.handleConfigSaveFailed({ agent: { code: { prompt: "Review", temperature: 0.7 } }, default_agent: "code" })
+      s.handleConfigSaveFailed(
+        { agent: { code: { prompt: "Review", temperature: 0.7 } }, default_agent: "code" },
+        s.request,
+      )
 
       expect(s.saving).toBe(false)
       expect(s.dirty).toBe(true)
@@ -360,6 +363,29 @@ describe("ConfigState", () => {
       expect(s.config.agent?.code?.prompt).toBeUndefined()
       expect(s.config.agent?.code?.temperature).toBeUndefined()
       expect(s.config.default_agent).toBeUndefined()
+    })
+
+    it("keeps the save and its draft when the failure names another write", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ snapshot: true, username: "alice" })
+      s.updateConfig({ snapshot: false })
+      s.saveConfig()
+
+      // Another webview's failed write is not the answer to ours.
+      s.handleConfigSaveFailed({ snapshot: true, username: "bob" }, "someone-else")
+
+      expect(s.saving).toBe(true)
+      expect(s.dirty).toBe(true)
+      expect(typeof s.request).toBe("string")
+      expect(s.config.snapshot).toBe(false)
+      expect(Object.keys(s.draft).length).toBe(1)
+
+      // The failure that echoes our id still settles the save, keeping the draft for a retry.
+      s.handleConfigSaveFailed({ snapshot: true, username: "bob" }, s.request)
+      expect(s.saving).toBe(false)
+      expect(s.dirty).toBe(true)
+      expect(s.config.snapshot).toBe(false)
+      expect(s.config.username).toBe("bob")
     })
   })
 
