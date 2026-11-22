@@ -957,9 +957,14 @@ describe("KiloProvider route integration", () => {
     internal.retryAbortControllers.set("same", controller)
 
     await internal.handleAbort("same")
+    await internal.handleAbort("same")
 
     expect(controller.signal.aborted).toBe(true)
-    expect(posted).toContainEqual({ type: "sessionStatus", sessionID: "same", status: "idle" })
+    const idle = posted.filter((message) => {
+      if (typeof message !== "object" || message === null || !("type" in message)) return false
+      return message.type === "sessionStatus"
+    })
+    expect(idle).toEqual([{ type: "sessionStatus", sessionID: "same", status: "idle" }])
     expect(abortCalls).toEqual([])
     expect(posted).toContainEqual(refusal("same"))
   })

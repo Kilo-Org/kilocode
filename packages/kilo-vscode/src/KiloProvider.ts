@@ -4447,10 +4447,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Cancel an active retry loop for a session */
   private cancelRetry(sid: string): void {
     const controller = this.retryAbortControllers.get(sid)
-    if (controller) {
-      controller.abort()
-      this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
-    }
+    // More than one caller can cancel the same retry; only the first one reports the idle state.
+    if (!controller || controller.signal.aborted) return
+    controller.abort()
+    this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
   }
 
   private maxCostSetting(): number {
