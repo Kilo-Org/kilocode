@@ -833,6 +833,15 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals("src/A.kt", perm.meta.fileDiffs[0].file)
     }
 
+    fun `test local PermissionAsked maps as not hosted`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))
+
+        val perm = (m.model.state as SessionState.AwaitingPermission).permission
+        assertFalse(perm.hosted)
+    }
+
     fun `test replyPermission without rules leaves rulesSaved empty`() {
         val (m, _, _) = prompted()
         emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))

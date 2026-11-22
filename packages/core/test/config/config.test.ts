@@ -143,6 +143,53 @@ describe("Config", () => {
     }),
   )
 
+  // kilocode_change start - v1 provider lists migrate into provider.use policies
+  it.effect("migrates v1 provider selection into provider use policies", () =>
+    Effect.sync(() => {
+      expect(ConfigMigrateV1.migrate({ enabled_providers: ["anthropic", "openai"] }).experimental).toEqual({
+        policies: [
+          { effect: "deny", action: "provider.use", resource: "*" },
+          { effect: "allow", action: "provider.use", resource: "anthropic" },
+          { effect: "allow", action: "provider.use", resource: "openai" },
+        ],
+      })
+      expect(ConfigMigrateV1.migrate({ disabled_providers: ["google"] }).experimental).toEqual({
+        policies: [{ effect: "deny", action: "provider.use", resource: "google" }],
+      })
+      // An empty allowlist disables every provider, as the v1 filter did.
+      expect(ConfigMigrateV1.migrate({ enabled_providers: [] }).experimental).toEqual({
+        policies: [{ effect: "deny", action: "provider.use", resource: "*" }],
+      })
+      // A provider in both lists stays disabled, so the deny statement comes last.
+      expect(
+        ConfigMigrateV1.migrate({ enabled_providers: ["anthropic", "google"], disabled_providers: ["google"] })
+          .experimental,
+      ).toEqual({
+        policies: [
+          { effect: "deny", action: "provider.use", resource: "*" },
+          { effect: "allow", action: "provider.use", resource: "anthropic" },
+          { effect: "allow", action: "provider.use", resource: "google" },
+          { effect: "deny", action: "provider.use", resource: "google" },
+        ],
+      })
+      // The translated restriction wins over an authored policy in the same document.
+      expect(
+        ConfigMigrateV1.migrate({
+          enabled_providers: ["anthropic"],
+          experimental: { policies: [{ effect: "allow", action: "provider.use", resource: "openai" }] },
+        }).experimental,
+      ).toEqual({
+        policies: [
+          { effect: "allow", action: "provider.use", resource: "openai" },
+          { effect: "deny", action: "provider.use", resource: "*" },
+          { effect: "allow", action: "provider.use", resource: "anthropic" },
+        ],
+      })
+      expect(ConfigMigrateV1.migrate({}).experimental).toBeUndefined()
+    }),
+  )
+  // kilocode_change end
+
   it.live("returns an empty configuration when directory files do not exist", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -705,6 +752,94 @@ describe("Config", () => {
       ),
     ),
   )
+
+  // kilocode_change start - the v1 CLI configuration service decodes documents with ConfigV1.Info directly
+  it.effect("keeps a local MCP working directory on the v1 configuration schema", () =>
+    Effect.sync(() => {
+      const info = Schema.decodeUnknownSync(ConfigV1.Info, { onExcessProperty: "ignore" })({
+        mcp: { probe: { type: "local", command: ["node", "server.js"], cwd: "./srv" } },
+      })
+
+      expect(info.mcp?.probe).toMatchObject({ type: "local", cwd: "./srv" })
+    }),
+  )
+
+  it.live("carries a local MCP working directory and the provider selection out of a v1 document", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            fs.writeFile(
+              path.join(tmp.path, "kilo.json"),
+              JSON.stringify({
+                enabled_providers: ["anthropic"],
+                disabled_providers: ["google"],
+                mcp: {
+                  probe: {
+                    type: "local",
+                    command: ["node", "server.js"],
+                    cwd: "./srv",
+                    environment: { PROBE: "1" },
+                  },
+                },
+              }),
+            ),
+          )
+
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            const policy = yield* Policy.Service
+            const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
+
+            expect(documents).toHaveLength(1)
+            expect(documents[0]?.info.mcp?.servers?.probe).toMatchObject({
+              type: "local",
+              command: ["node", "server.js"],
+              cwd: "./srv",
+              environment: { PROBE: "1" },
+            })
+            expect(yield* policy.evaluate("provider.use", "anthropic", "allow")).toBe("allow")
+            expect(yield* policy.evaluate("provider.use", "openai", "allow")).toBe("deny")
+            expect(yield* policy.evaluate("provider.use", "google", "allow")).toBe("deny")
+          }).pipe(Effect.provide(testLayer(tmp.path)))
+        }),
+      ),
+    ),
+  )
+
+  it.live("applies translated provider lists with document precedence, not key precedence", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) => {
+        const global = path.join(tmp.path, "global")
+        return Effect.gen(function* () {
+          yield* Effect.promise(async () => {
+            await fs.mkdir(global, { recursive: true })
+            await fs.writeFile(
+              path.join(global, "kilo.json"),
+              JSON.stringify({ enabled_providers: ["anthropic", "openai"] }),
+            )
+            await fs.writeFile(path.join(tmp.path, "kilo.json"), JSON.stringify({ enabled_providers: ["anthropic"] }))
+          })
+
+          return yield* Effect.gen(function* () {
+            const policy = yield* Policy.Service
+            // Policies resolve per document, so the user-global allow for openai
+            // decides the result even though the project list omits the provider.
+            expect(yield* policy.evaluate("provider.use", "anthropic", "allow")).toBe("allow")
+            expect(yield* policy.evaluate("provider.use", "openai", "allow")).toBe("allow")
+            expect(yield* policy.evaluate("provider.use", "google", "allow")).toBe("deny")
+          }).pipe(Effect.provide(testLayer(tmp.path, global)))
+        })
+      }),
+    ),
+  )
+  // kilocode_change end
 
   it.live("ignores an invalid file while loading valid config values", () =>
     Effect.acquireRelease(

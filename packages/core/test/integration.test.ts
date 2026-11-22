@@ -243,6 +243,12 @@ describe("Integration", () => {
       expect(closed).toBe(false)
       yield* integrations.attempt.cancel(attempt.attemptID)
       expect(closed).toBe(true)
+      // kilocode_change start - a cancelled handle stays observable through its retention window
+      expect(yield* integrations.attempt.status(attempt.attemptID)).toEqual({
+        status: "cancelled",
+        time: attempt.time,
+      })
+      // kilocode_change end
       expect(yield* credentials.list(integrationID)).toEqual([])
     }),
   )
@@ -314,6 +320,78 @@ describe("Integration", () => {
       expect(yield* credentials.list(integrationID)).toEqual([])
     }),
   )
+
+  // kilocode_change start - a cancelled attempt stays observable until its retention window ends
+  it.effect("reports a cancelled attempt until its retention window ends", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("chatgpt")
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "code" as const,
+              url: "https://example.com/authorize",
+              instructions: "Paste the code",
+              callback: () => Effect.die("unexpected callback"),
+            }),
+        }),
+      )
+
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
+      yield* integrations.attempt.cancel(attempt.attemptID)
+      expect(yield* integrations.attempt.status(attempt.attemptID)).toEqual({
+        status: "cancelled",
+        time: attempt.time,
+      })
+
+      yield* TestClock.adjust(Duration.minutes(2))
+      yield* Effect.yieldNow
+      expect(yield* integrations.attempt.status(attempt.attemptID)).toEqual({ status: "unknown" })
+    }),
+  )
+
+  it.effect("reports an absent attempt as not found when completing", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const exit = yield* integrations.attempt
+        .complete({ attemptID: Integration.AttemptID.make("con_missing"), code: "1234" })
+        .pipe(Effect.flip)
+      expect(exit).toBeInstanceOf(Integration.AttemptNotFoundError)
+    }),
+  )
+
+  it.effect("reports a cancelled attempt as not found when completing", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("chatgpt")
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "code" as const,
+              url: "https://example.com/authorize",
+              instructions: "Paste the code",
+              callback: () => Effect.die("unexpected callback"),
+            }),
+        }),
+      )
+
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
+      yield* integrations.attempt.cancel(attempt.attemptID)
+      const exit = yield* integrations.attempt
+        .complete({ attemptID: attempt.attemptID, code: "1234" })
+        .pipe(Effect.flip)
+      expect(exit).toBeInstanceOf(Integration.AttemptNotFoundError)
+    }),
+  )
+  // kilocode_change end
 
   it.effect("projects credential and env connections", () => {
     const integrationID = Integration.ID.make("acme")
