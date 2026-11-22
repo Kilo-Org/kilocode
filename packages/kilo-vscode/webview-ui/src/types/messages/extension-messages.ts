@@ -820,6 +820,8 @@ export interface ConfigUpdatedMessage {
   collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
+  /** The `requestId` of the request this answers, when the request carried one. */
+  requestId?: string
 }
 
 export interface ConfigUpdateFailedMessage {
@@ -836,6 +838,8 @@ export interface ConfigUpdateFailedMessage {
   homeDir?: string
   projectConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
+  /** The `requestId` of the request this answers, when the request carried one. */
+  requestId?: string
 }
 
 export interface ConfigBindingExpiredMessage {

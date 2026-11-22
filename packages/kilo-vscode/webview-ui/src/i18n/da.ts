@@ -1424,6 +1424,7 @@ export const dict = {
   "settings.saveBar.saveFailed": "Kunne ikke gemme indstillinger",
   "settings.saveBar.dismissError": "Afvis",
   "settings.saveBar.unconfirmedWrite": "„{{name}}“ blev ikke bekræftet af udvidelsesværten.",
+  "settings.saveBar.unconfirmedSave": "Gemningen blev ikke bekræftet af udvidelsesværten. Prøv igen.",
   "notifications.action.next": "Næste",
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",

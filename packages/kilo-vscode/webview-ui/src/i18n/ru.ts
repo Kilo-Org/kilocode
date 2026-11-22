@@ -1424,6 +1424,7 @@ export const dict = {
   "settings.saveBar.saveFailed": "Не удалось сохранить настройки",
   "settings.saveBar.dismissError": "Закрыть",
   "settings.saveBar.unconfirmedWrite": "Хост расширения не подтвердил «{{name}}».",
+  "settings.saveBar.unconfirmedSave": "Хост расширения не подтвердил сохранение. Повторите попытку.",
   "notifications.action.next": "Далее",
   "notifications.action.close": "Закрыть",
   "notifications.action.tryModel": "Попробовать {{model}}",

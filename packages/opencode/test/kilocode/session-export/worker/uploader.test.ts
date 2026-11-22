@@ -404,6 +404,128 @@ describe("Uploader", () => {
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(0)
   })
 
+  test("401 response keeps rows pending and stops resending the same credential", async () => {
+    const telemetry: Array<{ name: string; props?: Record<string, unknown> }> = []
+    const calls: RequestInit[] = []
+    process.env.KILO_SESSION_EXPORT_AUTH_TOKEN = "stale-token"
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async (_input, init) => {
+        calls.push(init)
+        return new Response("", { status: 401 })
+      },
+      reportTelemetry: (msg) => telemetry.push(msg),
+      agentVersion: "v0",
+      surface: "test",
+    })
+
+    await uploader.flush("test")
+
+    expect(calls.length).toBe(1)
+    const afterRetryWindow = Date.now() + Config.retryBackoffMaxMs + 1
+    expect(storage.pendingEvents({ now: afterRetryWindow, limitBytes: 1_000_000 }).length).toBe(1)
+    const auth = telemetry.filter((item) => item.name === "session_export.upload_auth_rejected")
+    expect(auth.length).toBe(1)
+    expect(auth[0].props?.status).toBe(401)
+    expect(typeof auth[0].props?.batchId).toBe("string")
+    expect(telemetry.some((item) => item.name === "session_export.upload_retryable")).toBe(false)
+    expect(telemetry.some((item) => item.name === "session_export.upload_4xx")).toBe(false)
+
+    await uploader.flush("test")
+    await uploader.flush("test")
+    expect(calls.length).toBe(1)
+    expect(telemetry.some((item) => item.name === "session_export.upload_auth_released")).toBe(false)
+
+    uploader.dispose()
+  })
+
+  test("403 response is treated as a rejected credential", async () => {
+    const telemetry: Array<{ name: string; props?: Record<string, unknown> }> = []
+    let calls = 0
+    process.env.KILO_SESSION_EXPORT_AUTH_TOKEN = "stale-token"
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async () => {
+        calls++
+        return new Response("", { status: 403 })
+      },
+      reportTelemetry: (msg) => telemetry.push(msg),
+      agentVersion: "v0",
+      surface: "test",
+    })
+
+    await uploader.flush("test")
+    await uploader.flush("test")
+
+    expect(calls).toBe(1)
+    expect(telemetry.find((item) => item.name === "session_export.upload_auth_rejected")?.props?.status).toBe(403)
+    expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(1)
+
+    uploader.dispose()
+  })
+
+  test("a changed credential resumes uploads after a rejection", async () => {
+    const telemetry: Array<{ name: string; props?: Record<string, unknown> }> = []
+    const calls: RequestInit[] = []
+    process.env.KILO_SESSION_EXPORT_AUTH_TOKEN = "stale-token"
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async (_input, init) => {
+        calls.push(init)
+        return new Response("", {
+          status: new Headers(init.headers).get("authorization") === "Bearer fresh-token" ? 204 : 401,
+        })
+      },
+      reportTelemetry: (msg) => telemetry.push(msg),
+      agentVersion: "v0",
+      surface: "test",
+    })
+
+    await uploader.flush("test")
+    expect(calls.length).toBe(1)
+    expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(1)
+
+    process.env.KILO_SESSION_EXPORT_AUTH_TOKEN = "fresh-token"
+    await uploader.flush("test")
+
+    expect(calls.length).toBe(2)
+    expect(new Headers(calls[1].headers).get("authorization")).toBe("Bearer fresh-token")
+    expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(0)
+    expect(telemetry.map((item) => item.name)).toEqual([
+      "session_export.upload_auth_rejected",
+      "session_export.upload_auth_released",
+      "session_export.uploaded",
+    ])
+    expect(telemetry[1].props).toEqual({ status: 401 })
+
+    uploader.dispose()
+  })
+
+  test("other 4xx responses keep the retryable path", async () => {
+    const telemetry: Array<{ name: string }> = []
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async () => new Response("", { status: 404 }),
+      reportTelemetry: (msg) => telemetry.push(msg),
+      agentVersion: "v0",
+      surface: "test",
+    })
+
+    await uploader.flush("test")
+
+    expect(telemetry.some((item) => item.name === "session_export.upload_retryable")).toBe(true)
+    expect(telemetry.some((item) => item.name === "session_export.upload_auth_rejected")).toBe(false)
+    expect(
+      storage.pendingEvents({ now: Date.now() + Config.retryBackoffMaxMs + 1, limitBytes: 1_000_000 }).length,
+    ).toBe(1)
+
+    uploader.dispose()
+  })
+
   test("does not combine retried rows across uploaded sequence gaps", async () => {
     storage.markRetry("01", Date.now() + 60_000)
     storage.insertEvent({

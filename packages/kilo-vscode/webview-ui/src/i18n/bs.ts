@@ -1430,6 +1430,7 @@ export const dict = {
   "settings.saveBar.saveFailed": "Postavke nije moguće spremiti",
   "settings.saveBar.dismissError": "Odbaci",
   "settings.saveBar.unconfirmedWrite": "Host ekstenzije nije potvrdio „{{name}}”.",
+  "settings.saveBar.unconfirmedSave": "Host ekstenzije nije potvrdio spremanje. Pokušaj ponovo.",
   "notifications.action.next": "Sljedeći",
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",

@@ -1398,6 +1398,7 @@ export const dict = {
   "settings.saveBar.saveFailed": "Ayarlar kaydedilemedi",
   "settings.saveBar.dismissError": "Kapat",
   "settings.saveBar.unconfirmedWrite": "“{{name}}” uzantı ana bilgisayarı tarafından onaylanmadı.",
+  "settings.saveBar.unconfirmedSave": "Kaydetme uzantı ana bilgisayarı tarafından onaylanmadı. Tekrar deneyin.",
   "notifications.action.next": "Sonraki",
   "notifications.action.close": "Kapat",
   "notifications.action.tryModel": "Dene {{model}}",

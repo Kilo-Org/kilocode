@@ -19,6 +19,7 @@ import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.PermissionConfigDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.RetentionConfigDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
@@ -433,10 +434,42 @@ class FakeAppRpcApi : KiloAppRpcApi {
     var completes = 0
         private set
 
+    /** When set, [completeLogin] returns this result instead of the profile-derived one. */
+    var completeResult: ProfileSyncDto? = null
+
+    /** When set, [refreshAccount] returns this result instead of the profile-derived one. */
+    var refreshAccountResult: ProfileSyncDto? = null
+
+    /** When set, [refreshAccount] will throw this exception. */
+    var refreshAccountError: Exception? = null
+
+    /** When set, [setOrganization] returns this result instead of the profile-derived one. */
+    var organizationResult: ProfileSyncDto? = null
+
+    /** Number of [refreshProfile] calls, so a test can tell the tolerant read from [refreshAccount]. */
+    var profileReads = 0
+        private set
+
+    /** Number of [refreshAccount] calls, the reporting read the account notice offers. */
+    var accountReads = 0
+        private set
+
     override suspend fun refreshProfile(): ProfileDto? {
         assertNotEdt("refreshProfile")
+        profileReads++
         refreshError?.let { throw it }
         return fakeProfile
+    }
+
+    override suspend fun refreshAccount(): ProfileSyncDto {
+        assertNotEdt("refreshAccount")
+        accountReads++
+        refreshAccountError?.let { throw it }
+        refreshAccountResult?.let { result ->
+            result.profile?.let { p -> fakeProfile = p }
+            return result
+        }
+        return ProfileSyncDto(profile = fakeProfile)
     }
 
     override suspend fun startLogin(directory: String?): DeviceAuthDto {
@@ -447,13 +480,17 @@ class FakeAppRpcApi : KiloAppRpcApi {
         return fakeDeviceAuth
     }
 
-    override suspend fun completeLogin(directory: String?): ProfileDto? {
+    override suspend fun completeLogin(directory: String?): ProfileSyncDto {
         assertNotEdt("completeLogin")
         completes++
         completeDirectories.add(directory)
         completeGate?.await()
         completeError?.let { throw it }
-        return fakeProfile
+        completeResult?.let { result ->
+            result.profile?.let { p -> fakeProfile = p }
+            return result
+        }
+        return ProfileSyncDto(profile = fakeProfile)
     }
 
     override suspend fun logout(): Boolean {
@@ -463,12 +500,13 @@ class FakeAppRpcApi : KiloAppRpcApi {
         return logoutResult
     }
 
-    override suspend fun setOrganization(organizationId: String?): ProfileDto? {
+    override suspend fun setOrganization(organizationId: String?): ProfileSyncDto {
         assertNotEdt("setOrganization")
         organizationError?.let { throw it }
         orgSelections.add(organizationId)
+        organizationResult?.let { return it }
         if (orgProfiles.containsKey(organizationId)) fakeProfile = orgProfiles[organizationId]
-        return fakeProfile
+        return ProfileSyncDto(profile = fakeProfile)
     }
 
     override suspend fun captureTelemetry(capture: TelemetryCaptureDto) {

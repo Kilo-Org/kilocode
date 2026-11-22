@@ -1398,6 +1398,7 @@ export const dict = {
   "settings.saveBar.saveFailed": "ไม่สามารถบันทึกการตั้งค่าได้",
   "settings.saveBar.dismissError": "ปิด",
   "settings.saveBar.unconfirmedWrite": "โฮสต์ของส่วนขยายไม่ได้ยืนยัน “{{name}}”",
+  "settings.saveBar.unconfirmedSave": "โฮสต์ของส่วนขยายไม่ได้ยืนยันการบันทึก ลองอีกครั้ง",
   "notifications.action.next": "ถัดไป",
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",

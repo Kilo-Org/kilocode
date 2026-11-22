@@ -22,6 +22,7 @@ import {
   configUnsetPaths,
   deepMerge,
   hideRemovedMcp,
+  isRecord,
   mergeScopedConfig,
   pruneConfigSet,
   removeMcpConfig,
@@ -33,6 +34,44 @@ import { splitConfigByScope } from "../utils/config-scope"
 
 function has(value: Record<string, unknown>) {
   return Object.keys(value).length > 0
+}
+
+/** Deep equality over the draft's shape: records, arrays, and leaves, without serialising. */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false
+    return a.every((item, index) => sameValue(item, b[index]))
+  }
+  if (!isRecord(a) || !isRecord(b)) return false
+  const keys = Object.keys(a)
+  if (keys.length !== Object.keys(b).length) return false
+  return keys.every((key) => Object.hasOwn(b, key) && sameValue(a[key], b[key]))
+}
+
+/**
+ * Remove from `draft` every path whose value a save posted unchanged, keeping the rest. A
+ * confirmation clears what the save carried and leaves an edit the user made after posting
+ * staged, so that edit stays on screen and dirty instead of being dropped with the draft.
+ */
+function prunePosted(draft: Partial<Config>, posted: Partial<Config>): Partial<Config> {
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(draft)) {
+    const source = posted as Record<string, unknown>
+    if (!Object.hasOwn(source, key)) {
+      result[key] = value
+      continue
+    }
+    const saved = source[key]
+    if (sameValue(value, saved)) continue
+    if (isRecord(value) && isRecord(saved)) {
+      const left = prunePosted(value as Config, saved as Partial<Config>)
+      if (has(left as Record<string, unknown>)) result[key] = left
+      continue
+    }
+    result[key] = value
+  }
+  return result as Partial<Config>
 }
 
 /**
@@ -56,6 +95,14 @@ const settingProperties: Record<string, string> = {
  */
 export const settleBound = { ms: 10_000 }
 
+/**
+ * How long a `saveConfig` write waits for the host's answering message. A save the host never
+ * answers settles at this bound instead of leaving the Save button disabled forever. It is a
+ * `const` binding with a mutable holder so a fixture can shorten it without waiting ten
+ * seconds; the app never changes it.
+ */
+export const saveBound = { ms: 10_000 }
+
 let writeCount = 0
 /**
  * A fresh id for one `updateSetting` write. The host echoes it on that write's terminal
@@ -63,6 +110,13 @@ let writeCount = 0
  * value, or both.
  */
 const nextWriteId = () => `w${(writeCount += 1).toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
+let saveCount = 0
+/**
+ * A fresh id for one `saveConfig` write. The host echoes it on the one message that answers
+ * that write, so a `configUpdated` from another writer cannot be mistaken for its confirmation.
+ */
+const nextSaveId = () => `s${(saveCount += 1).toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
 /** One `updateSetting` write a chain is waiting on, with the chain order and id it was sent with. */
 interface AwaitingWrite {
@@ -247,6 +301,24 @@ export const ConfigProvider: ParentComponent = (props) => {
   // confirmation that arrives after the chain expired adopts the value and resolves that
   // error instead of leaving the page reporting a write the control has already taken.
   let expiredWrite: { wire: string; error: SaveError } | undefined
+  // The id of the `saveConfig` write the Save button is waiting on, if any. Only the
+  // `configUpdated` or `configUpdateFailed` that echoes it settles that save; an answer
+  // without it came from another writer and must leave the save, and its draft, alone.
+  let saveRequest: string | undefined
+  // The "not confirmed" error the most recent save expiry raised, with the id it named. The
+  // answer that arrives after the bound adopts the saved config and resolves that error
+  // instead of leaving the page reporting a save the host has already stored.
+  let expiredSave: { id: string; error: SaveError } | undefined
+  // The drafts the in-flight save posted. Its confirmation clears only the paths they carry,
+  // so an edit the user made after posting the save stays staged instead of being dropped.
+  let postedSave: { config: Partial<Config>; global: Partial<Config>; project: Partial<Config> } | undefined
+  // The bound that settles a save the host never answers.
+  let saveTimer: ReturnType<typeof setTimeout> | undefined
+  /** Stop the bound that would settle an unanswered save. */
+  const disarmSave = () => {
+    clearTimeout(saveTimer)
+    saveTimer = undefined
+  }
   /** The value the host holds for a chain: its newest confirmed write, else what it replaced. */
   const heldValue = (pending: PendingWrite) => (pending.hasStored ? pending.stored : pending.previous)
   const updateCollections = (next: ConfigCollections | undefined) => {
@@ -436,6 +508,75 @@ export const ConfigProvider: ParentComponent = (props) => {
   const applyWorkspace = (message: { workspaceConfig?: Config }) => {
     if (message.workspaceConfig !== undefined) setWorkspaceConfig(message.workspaceConfig)
   }
+  /**
+   * Apply a `configUpdated` push. The message that echoes the id of the save the Save button
+   * is waiting on confirms that save and clears the paths it posted, and the same holds for a
+   * save that already settled at the bound: its answer still adopts the stored config. Every
+   * other push — another webview's save, a provider action, or the SSE-driven refresh —
+   * re-applies the draft on top and leaves the in-flight save alone.
+   */
+  const applyConfigUpdated = (message: Extract<ExtensionMessage, { type: "configUpdated" }>) => {
+    const pending = saveRequest != null && message.requestId === saveRequest
+    const late = !pending && saveRequest == null && expiredSave != null && message.requestId === expiredSave.id
+    const confirming = pending || late
+    let leftConfig = draft()
+    let leftGlobal = globalDraft()
+    let leftProject = projectDraft()
+    if (confirming) {
+      saveRequest = undefined
+      disarmSave()
+      setSaving(false)
+      // Clear only the paths the save posted. An edit the user made after posting it has a
+      // different value, so it survives here, stays on screen, and keeps `isDirty()` true.
+      const posted = postedSave
+      postedSave = undefined
+      if (posted != null) {
+        leftConfig = prunePosted(leftConfig, posted.config)
+        leftGlobal = prunePosted(leftGlobal, posted.global)
+        leftProject = prunePosted(leftProject, posted.project)
+      }
+      setDraft(leftConfig)
+      setGlobalDraft(leftGlobal)
+      setProjectDraft(leftProject)
+      if (pending) {
+        expiredSave = undefined
+        setSaveError(null)
+      } else if (expiredSave != null) {
+        // The host stored the save the bound had reported as unconfirmed. Resolve that report
+        // only while it is the one on screen, so a newer error survives it.
+        if (saveError() === expiredSave.error) setSaveError(null)
+        expiredSave = undefined
+      }
+    }
+    setConfig(
+      resolveConfig(
+        hideRemovedMcp(message.config, removedMcp()),
+        hideRemovedMcp(leftConfig as Config, removedMcp()),
+        has(leftConfig as Record<string, unknown>),
+      ),
+    )
+    if (message.globalConfig !== undefined) {
+      const global = hideRemovedMcp(message.globalConfig, removedMcp())
+      setGlobalConfig(mergeScopedConfig(global, hideRemovedMcp(leftGlobal as Config, removedMcp())))
+      setSavedGlobal(global)
+    }
+    if (message.projectConfig !== undefined) {
+      const project = hideRemovedMcp(message.projectConfig, removedMcp())
+      setProjectConfig(mergeScopedConfig(project, hideRemovedMcp(leftProject as Config, removedMcp())))
+      setSavedProject(project)
+    }
+    // The read-only scopes describe the same config every write publishes, so each push
+    // refreshes them whatever settled the save.
+    applyMergedGlobal(message)
+    applyHomeDir(message)
+    applyWorkspace(message)
+    updateCollections(message.collections)
+    setFeatures(message.features)
+    setBindings(message.bindings ?? bindings())
+    if (message.settings) mergeSettings(message.settings)
+    setSaved(hideRemovedMcp(message.config, removedMcp()))
+  }
+
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
@@ -477,63 +618,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       setSavedGlobal(server)
       return
     }
-    if (message.type === "configUpdated") {
-      if (saving()) {
-        // This configUpdated is the confirmation of our saveConfig() write.
-        // Clear the draft now that the server has confirmed the write.
-        setSaving(false)
-        setDraft({})
-        setGlobalDraft({})
-        setProjectDraft({})
-        setSaveError(null)
-        setConfig(hideRemovedMcp(message.config, removedMcp()))
-        if (message.globalConfig !== undefined) {
-          const global = hideRemovedMcp(message.globalConfig, removedMcp())
-          setGlobalConfig(global)
-          setSavedGlobal(global)
-        }
-        if (message.projectConfig !== undefined) {
-          const project = hideRemovedMcp(message.projectConfig, removedMcp())
-          setProjectConfig(project)
-          setSavedProject(project)
-        }
-        applyMergedGlobal(message)
-        applyHomeDir(message)
-        applyWorkspace(message)
-        updateCollections(message.collections)
-        setFeatures(message.features)
-        setBindings(message.bindings ?? bindings())
-      } else {
-        // configUpdated from a different source (e.g. PermissionDock save).
-        // Re-apply the draft on top so pending settings changes are preserved.
-        setConfig(
-          resolveConfig(
-            hideRemovedMcp(message.config, removedMcp()),
-            hideRemovedMcp(draft() as Config, removedMcp()),
-            has(draft() as Record<string, unknown>),
-          ),
-        )
-        if (message.globalConfig !== undefined) {
-          const global = hideRemovedMcp(message.globalConfig, removedMcp())
-          setGlobalConfig(mergeScopedConfig(global, hideRemovedMcp(globalDraft() as Config, removedMcp())))
-          setSavedGlobal(global)
-        }
-        if (message.projectConfig !== undefined) {
-          const project = hideRemovedMcp(message.projectConfig, removedMcp())
-          setProjectConfig(mergeScopedConfig(project, hideRemovedMcp(projectDraft() as Config, removedMcp())))
-          setSavedProject(project)
-        }
-        applyMergedGlobal(message)
-        applyHomeDir(message)
-        applyWorkspace(message)
-        updateCollections(message.collections)
-        setFeatures(message.features)
-        setBindings(message.bindings ?? bindings())
-      }
-      if (message.settings) mergeSettings(message.settings)
-      setSaved(hideRemovedMcp(message.config, removedMcp()))
-      return
-    }
+    if (message.type === "configUpdated") applyConfigUpdated(message)
   })
   const unsubscribeExpired = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "configBindingExpired") return
@@ -546,6 +631,14 @@ export const ConfigProvider: ParentComponent = (props) => {
   })
   const unsubscribeFailure = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "configUpdateFailed") return
+    // A failure that names another writer's request cannot be the answer to our save: while a
+    // save is in flight it must not settle ours, nor report over it.
+    if (saving() && message.requestId !== undefined && message.requestId !== saveRequest) return
+    // The host answered the save the bound had reported as unconfirmed, and answered it with
+    // a failure: that answer is reported below, so the expiry report no longer stands for it.
+    if (expiredSave != null && message.requestId === expiredSave.id) expiredSave = undefined
+    saveRequest = undefined
+    disarmSave()
     setSaving(false)
     if (message.completedScopes?.length) {
       const split = splitConfigByScope(draft())
@@ -662,6 +755,8 @@ export const ConfigProvider: ParentComponent = (props) => {
     // A chain timer must not fire into a torn-down provider.
     pendingWrites.forEach((pending) => clearTimeout(pending.timer))
     pendingWrites.clear()
+    saveRequest = undefined
+    disarmSave()
   })
 
   function mergeSettings(patch: Record<string, unknown>) {
@@ -765,6 +860,10 @@ export const ConfigProvider: ParentComponent = (props) => {
     // If the write fails, the save bar stays visible so the user can retry.
     setSaving(true)
     setSaveError(null)
+    // A newer save supersedes the report an expiry raised for an older one, and the drafts it
+    // posted, because only this save's answer settles it.
+    expiredSave = undefined
+    postedSave = undefined
     if (settingsDirty) {
       for (const [key, value] of Object.entries(pending)) {
         const writeId = trackWrite(key, key, value, true)
@@ -783,6 +882,32 @@ export const ConfigProvider: ParentComponent = (props) => {
     const split = splitConfigByScope(changes)
     const next = deepMerge(split.global as Config, globals)
     const project = deepMerge(split.project as Config, projects)
+    // Name this write so only the host's answer to it clears the save and its draft; a
+    // configUpdated from another writer that lands in the meantime leaves both alone.
+    const requestId = nextSaveId()
+    saveRequest = requestId
+    // What this save carries, per scope, so its confirmation clears exactly these paths. The
+    // config payload spans both scopes, so the global and project drafts together are it.
+    postedSave = {
+      config: deepMerge(next, project),
+      global: next,
+      project,
+    }
+    disarmSave()
+    saveTimer = setTimeout(() => {
+      // Only the write this timer was armed for settles here: a newer save disarmed it, and a
+      // stale callback must not clear a save the user started afterwards.
+      if (saveRequest !== requestId) return
+      saveRequest = undefined
+      saveTimer = undefined
+      setSaving(false)
+      const error: SaveError = { key: "settings.saveBar.unconfirmedSave" }
+      // Remember which save went unanswered, so the host's late answer for it still adopts
+      // the stored config and resolves this report instead of reading as another writer's push.
+      expiredSave = { id: requestId, error }
+      // Every draft stays, so the save bar keeps showing the unconfirmed edit for a retry.
+      setSaveError(error)
+    }, saveBound.ms)
     vscode.postMessage({
       type: "updateConfig",
       config: pruneConfigSet(next) as Config,
@@ -791,6 +916,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       projectUnset: configUnsetPaths(project),
       globalBindingId: bindings().global?.id,
       projectBindingId: bindings().project?.id,
+      requestId,
     })
   }
 
@@ -804,10 +930,16 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSettings(savedSettings())
     setSettingsDraft({})
     expiredWrite = undefined
+    saveRequest = undefined
+    expiredSave = undefined
+    disarmSave()
     setSaveError(null)
   }
 
-  /** Dismiss the reported error; the expiry report it may stand for is dismissed with it. */
+  /**
+   * Dismiss the reported error. The settings-write expiry goes with it, but the save expiry
+   * stays: a dismissed report must not disable the answer that resolves it.
+   */
   function clearSaveError() {
     expiredWrite = undefined
     setSaveError(null)
