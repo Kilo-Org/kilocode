@@ -282,6 +282,18 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
         assertEquals(1, rpc.configUpdateFailedAttempts)
     }
 
+    fun `test a rejected enable write with a failed restore reports the policy is still on`() {
+        start(ConfigDto(retention = RetentionConfigDto(enabled = false, maxAgeDays = 30)))
+        rpc.configUpdateErrorWhen = { true }
+
+        val result = awaitManualRetention(RetentionPatchDto(enabled = false, maxAgeDays = 30))
+
+        assertTrue("expected NotStartedWithPolicyOn, got $result", result is ManualRetentionResult.NotStartedWithPolicyOn)
+        assertTrue("no cleanup may be forced -> ${rpc.retentionForces}", rpc.retentionForces.isEmpty())
+        // One rejected enabling write plus the three bounded write-back attempts.
+        assertEquals(4, rpc.configUpdateFailedAttempts)
+    }
+
     fun `test cancelled cleanup still restores the saved policy`() {
         start(ConfigDto(retention = RetentionConfigDto(enabled = false, maxAgeDays = 30)))
         rpc.retentionError = CancellationException("stop")

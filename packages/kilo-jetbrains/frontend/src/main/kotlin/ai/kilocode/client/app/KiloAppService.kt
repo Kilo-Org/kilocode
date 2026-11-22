@@ -427,7 +427,7 @@ class KiloAppService internal constructor(
             // The write may have landed even though the call reported nothing, so put the saved
             // policy back before reporting that the cleanup never started.
             val restored = withContext(NonCancellable) { restoreRetention(policy) }
-            return if (restored) ManualRetentionResult.NotStarted else ManualRetentionResult.PolicyNotRestored
+            return if (restored) ManualRetentionResult.NotStarted else ManualRetentionResult.NotStartedWithPolicyOn
         }
         var status: RetentionStatusDto? = null
         var cancelled: CancellationException? = null

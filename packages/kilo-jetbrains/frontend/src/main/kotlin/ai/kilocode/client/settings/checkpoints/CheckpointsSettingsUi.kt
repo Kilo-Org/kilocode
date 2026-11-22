@@ -192,6 +192,10 @@ internal class CheckpointsSettingsUi(
                         cleanup = Cleanup.Unrestored
                         notifyUnrestored()
                     }
+                    ManualRetentionResult.NotStartedWithPolicyOn -> {
+                        cleanup = Cleanup.Unrestored
+                        notifyUnrestoredWithoutRun()
+                    }
                 }
                 syncContent()
             }, ModalityState.any())
@@ -251,6 +255,18 @@ internal class CheckpointsSettingsUi(
             null,
             KiloBundle.message("settings.checkpoints.cleanup.unrestored.title"),
             KiloBundle.message("settings.checkpoints.cleanup.unrestored.message"),
+            KiloBundle.message("common.retry"),
+        ) {
+            ApplicationManager.getApplication().invokeLater({ retryRestore() }, ModalityState.any())
+        }
+    }
+
+    /** The cleanup never ran, so the message must not say it did. */
+    private fun notifyUnrestoredWithoutRun() {
+        KiloNotifications.error(
+            null,
+            KiloBundle.message("settings.checkpoints.cleanup.unrestored.title"),
+            KiloBundle.message("settings.checkpoints.cleanup.unrestored.notRun.message"),
             KiloBundle.message("common.retry"),
         ) {
             ApplicationManager.getApplication().invokeLater({ retryRestore() }, ModalityState.any())

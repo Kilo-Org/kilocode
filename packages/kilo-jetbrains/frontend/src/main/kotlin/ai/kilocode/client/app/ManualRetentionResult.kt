@@ -15,4 +15,7 @@ internal sealed interface ManualRetentionResult {
 
     /** The cleanup ran, but the saved policy could not be confirmed back in place. */
     data object PolicyNotRestored : ManualRetentionResult
+
+    /** The cleanup never ran, and the saved policy could not be confirmed back in place. */
+    data object NotStartedWithPolicyOn : ManualRetentionResult
 }
