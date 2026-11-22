@@ -44,9 +44,11 @@ export namespace McpMigrator {
      * it held, its servers never enter `mcp`, and each of them this load could have granted but
      * did not is a loss a mode's `mcp` group cannot honour.
      *
-     * A server is a loss when it is not disabled, the conversion would accept it, and the final
-     * `mcp` does not hold its name: a same-named entry of a store this load read wins the dedup,
-     * so that entry is the one converted or dropped.
+     * A server is a loss when it is not disabled, the conversion would accept it, and no
+     * converted server's `<server>_*` permission key covers it. Coverage is by permission key
+     * rather than raw name because two names the CLI's tool-id rule folds together (`a.b` and
+     * `a_b`) share one key, so a converted one covers the other. A same-named entry of a store
+     * this load read wins the dedup, so that entry is the one converted or dropped.
      *
      * Only the caller that asked for the report (`reportSkippedGlobal`) gets that store opened.
      * An empty list therefore means "not checked" when the report was not asked for, and
