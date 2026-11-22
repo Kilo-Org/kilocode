@@ -16,6 +16,12 @@ import eventSourcedSessionInputMigration from "@opencode-ai/core/database/migrat
 import contextEpochAgentMigration from "@opencode-ai/core/database/migration/20260605042240_add_context_epoch_agent"
 import simplifyIntegrationCredentialsMigration from "@opencode-ai/core/database/migration/20260611192811_lush_chimera"
 import simplifySessionInputMigration from "@opencode-ai/core/database/migration/20260622202450_simplify_session_input"
+// kilocode_change start
+import blueHarpoonMigration from "@opencode-ai/core/database/migration/20260228203230_blue_harpoon"
+import moveOrgToStateMigration from "@opencode-ai/core/database/migration/20260309230000_move_org_to_state"
+import accountKeyMigration from "@opencode-ai/core/database/migration/20261122000000_account_server_scoped_key"
+import { accountKey } from "@opencode-ai/core/account/key"
+// kilocode_change end
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -218,6 +224,58 @@ describe("DatabaseMigration", () => {
       }),
     )
   })
+
+  // kilocode_change start
+  test("keys stored accounts by normalized server URL and remote user id", async () => {
+    await run(
+      Effect.gen(function* () {
+        const db = yield* makeDb
+        yield* db.run(sql`PRAGMA foreign_keys = ON`)
+        yield* DatabaseMigration.applyOnly(db, [blueHarpoonMigration, moveOrgToStateMigration])
+
+        yield* db.run(sql`
+          INSERT INTO account (id, email, url, access_token, refresh_token, token_expiry, time_created, time_updated)
+          VALUES
+            ('user-1', 'one@example.com', 'https://one.example.com', 'at_one', 'rt_one', 1000, 1, 1),
+            ('user-2', 'two@example.com', 'https://two.example.com/inner/', 'at_two', 'rt_two', 2000, 2, 2)
+        `)
+        yield* db.run(sql`
+          INSERT INTO account_state (id, active_account_id, active_org_id)
+          VALUES (1, 'user-2', 'org-two')
+        `)
+
+        yield* DatabaseMigration.applyOnly(db, [accountKeyMigration])
+
+        const firstKey = accountKey("https://one.example.com", "user-1")
+        const secondKey = accountKey("https://two.example.com/inner", "user-2")
+
+        expect(yield* db.all(sql`SELECT id, email, url, access_token, refresh_token, token_expiry FROM account ORDER BY email`)).toEqual([
+          {
+            id: firstKey,
+            email: "one@example.com",
+            url: "https://one.example.com",
+            access_token: "at_one",
+            refresh_token: "rt_one",
+            token_expiry: 1000,
+          },
+          {
+            id: secondKey,
+            email: "two@example.com",
+            url: "https://two.example.com/inner",
+            access_token: "at_two",
+            refresh_token: "rt_two",
+            token_expiry: 2000,
+          },
+        ])
+        expect(yield* db.get(sql`SELECT active_account_id, active_org_id FROM account_state WHERE id = 1`)).toEqual({
+          active_account_id: secondKey,
+          active_org_id: "org-two",
+        })
+        expect(yield* db.all(sql`PRAGMA foreign_key_check`)).toEqual([])
+      }),
+    )
+  })
+  // kilocode_change end
 
   test("resets beta history and rebuilds event-sourced Session input storage", async () => {
     await run(
