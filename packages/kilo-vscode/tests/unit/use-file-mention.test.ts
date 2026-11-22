@@ -102,6 +102,9 @@ function key(key: "ArrowLeft" | "ArrowRight") {
   }
 }
 
+/** Workspace root the harness reports, matching the `dir` of its search replies. */
+const repoRoot = () => "/repo"
+
 describe("useFileMention", () => {
   it("keeps previous file results visible while the next search is pending", async () => {
     const posted: WebviewMessage[] = []
@@ -117,7 +120,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@e", 2)
@@ -172,7 +175,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@read", 5)
@@ -209,7 +212,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@my report", 10)
@@ -244,7 +247,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const path = "packages/sdk/js/src/gen/types.gen.ts"
@@ -281,7 +284,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const input = editor("@term")
@@ -313,7 +316,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@fix", 4)
@@ -364,7 +367,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const input = editor("@mod")
@@ -398,7 +401,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false, undefined, modelKeys)
+      return useFileMention(ctx, repoRoot, undefined, () => false, undefined, modelKeys)
     })
 
     mention.seedFromText("use @anthropic/claude-sonnet-4 for the subagent")
@@ -417,7 +420,7 @@ describe("useFileMention", () => {
       return new Set(["anthropic/claude-sonnet-4"])
     }
     createRoot((dispose) => {
-      const mention = useFileMention(ctx, undefined, undefined, undefined, keys)
+      const mention = useFileMention(ctx, repoRoot, undefined, undefined, undefined, keys)
       const text = "@src/my file.ts @Earlier chat @anthropic/claude-sonnet-4"
       mention.seedFromText("@anthropic/claude-sonnet-4")
       mention.seedFromParts(["src/my file.ts"], text)
@@ -453,7 +456,7 @@ describe("useFileMention", () => {
       throw new Error("Mention classification must not scan the model catalog")
     }
     createRoot((dispose) => {
-      const mention = useFileMention(ctx, undefined, undefined, undefined, () => catalog)
+      const mention = useFileMention(ctx, repoRoot, undefined, undefined, undefined, () => catalog)
       const text = "@src/file.ts @anthropic/claude-sonnet-4"
       mention.seedFromParts(["src/file.ts", "anthropic/claude-sonnet-4"], text)
       expect([...mention.mentionedPaths()]).toEqual(["src/file.ts"])
@@ -474,7 +477,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false, undefined, modelKeys)
+      return useFileMention(ctx, repoRoot, undefined, () => false, undefined, modelKeys)
     })
 
     const text = "use @anthropic/claude-sonnet-4 for the subagent"
@@ -501,12 +504,12 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false, undefined, modelKeys)
+      return useFileMention(ctx, repoRoot, undefined, () => false, undefined, modelKeys)
     })
 
     const text = "use @anthropic/claude-sonnet-4 for the subagent"
     mention.seedFromText(text)
-    mention.addPaths(["anthropic/claude-sonnet-4"], "/workspace")
+    mention.addPaths(["anthropic/claude-sonnet-4"])
     catalog = new Set(["anthropic/claude-sonnet-4"])
 
     expect(mention.parseFileAttachments(text)).toEqual([])
@@ -528,7 +531,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@fix auth", 9)
@@ -576,7 +579,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@README.md and", 14)
@@ -619,7 +622,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@past chats", 11)
@@ -643,14 +646,14 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     // "my" is a folder mentioned earlier in the session, so it stays in the
     // sticky known set. Typing a longer, distinct path that begins with it must
     // still search while a result extends it, instead of being mistaken for
     // prose after a mention.
-    mention.addPaths(["my"], "/repo")
+    mention.addPaths(["my"])
     mention.onInput("@my", 3)
     await wait(170)
     const search = posted.findLast((message) => message.type === "requestFileSearch")
@@ -679,10 +682,10 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
-    mention.addPaths(["src/a.ts"], "/repo")
+    mention.addPaths(["src/a.ts"])
     mention.onInput("@src/a.ts and @b", 16)
 
     expect(mention.showMention()).toBe(true)
@@ -704,7 +707,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@README.md and", 14)
@@ -757,7 +760,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@chevron", 8)
@@ -822,7 +825,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     // The trailing dots belong to the label, so this spaced query is a choice
@@ -868,7 +871,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@browse f", 9)
@@ -907,7 +910,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@browse f", 9)
@@ -946,7 +949,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@fix auth", 9)
@@ -992,7 +995,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@browse files", 13)
@@ -1058,7 +1061,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     // Prose leaves Browse files as the only offer, and it takes the focus for
@@ -1089,7 +1092,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     // The folder is typed by hand, never picked from the dropdown.
@@ -1138,7 +1141,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@my", 3)
@@ -1181,7 +1184,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     // Typed too fast for the folder to be on offer when the space lands.
@@ -1229,7 +1232,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const input = editor("@REA")
@@ -1260,7 +1263,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const input = editor("@sr")
@@ -1291,7 +1294,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const input = editor("@sr")
@@ -1323,7 +1326,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@agents", 7)
@@ -1363,7 +1366,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@agents asdf", 12)
@@ -1419,7 +1422,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@my rep", 7)
@@ -1457,7 +1460,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     // Before seeding, no paths are known
@@ -1480,7 +1483,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.seedFromText("check @src/a.ts and @src/b.tsx")
@@ -1500,7 +1503,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.seedFromText("no mentions here")
@@ -1523,13 +1526,69 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.seedFromText("Say hi to @mention-test/my quarterly report.txt !")
 
     expect(mention.mentionedPaths().has("mention-test/my")).toBe(true)
     expect(mention.mentionedPaths().has("mention-test/my quarterly report.txt")).toBe(false)
+
+    dispose.fn?.()
+  })
+
+  it("keeps seeded mentions unattached while the workspace root is unknown", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(
+        ctx,
+        () => "",
+        undefined,
+        () => false,
+      )
+    })
+
+    const text = "look at @/etc/passwd and @src/foo.ts"
+    mention.seedFromParts(["/etc/passwd"], text)
+    mention.seedFromText(text)
+
+    // Both mentions are known, so only the unknown root can withhold them.
+    expect(mention.mentionedPaths().has("/etc/passwd")).toBe(true)
+    expect(mention.mentionedPaths().has("src/foo.ts")).toBe(true)
+    expect(mention.parseFileAttachments(text)).toEqual([])
+
+    dispose.fn?.()
+  })
+
+  it("attaches a seeded mention that lives under a known workspace root", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(
+        ctx,
+        () => "/repo",
+        undefined,
+        () => false,
+      )
+    })
+
+    const text = "look at @/repo/src/foo.ts"
+    mention.seedFromText(text)
+
+    const files = mention.parseFileAttachments(text)
+    expect(files).toHaveLength(1)
+    expect(files[0]!.url).toContain("/repo/src/foo.ts")
 
     dispose.fn?.()
   })
@@ -1543,7 +1602,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const text = "Say hi to @mention-test/my quarterly report.txt !"
@@ -1564,7 +1623,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.seedFromParts(["mention-test/gone.ts"], "no mentions here anymore")
@@ -1583,7 +1642,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const text = "Compare @a data.ts and @b data.ts please"
@@ -1609,7 +1668,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@g", 2)
@@ -1644,11 +1703,11 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const text = "See @src/main.ts now"
-    mention.addPaths(["src/main.ts"], "/repo")
+    mention.addPaths(["src/main.ts"])
 
     const right = key("ArrowRight")
     const input = textarea(text, "See ".length, "ltr")
@@ -1681,11 +1740,11 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const text = "فایل @src/main.ts را ببین"
-    mention.addPaths(["src/main.ts"], "/repo")
+    mention.addPaths(["src/main.ts"])
 
     const left = key("ArrowLeft")
     const input = textarea(text, "فایل ".length, "rtl")
@@ -1718,11 +1777,11 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const text = "See @src/main.ts now"
-    mention.addPaths(["src/main.ts"], "/repo")
+    mention.addPaths(["src/main.ts"])
 
     const right = key("ArrowRight")
     const input = textarea(text, "See ".length, "ltr")
@@ -1751,14 +1810,14 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const path = "README.md"
     const text = `A @${path} B`
     const start = text.indexOf("@")
     const end = start + path.length + 1
-    mention.addPaths([path], "/repo")
+    mention.addPaths([path])
 
     const input = textarea(text, end - 1, "ltr", { end: text.length, direction: "backward" })
     mention.snapSelection(input)
@@ -1783,14 +1842,14 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const path = "README.md"
     const text = `ی @${path} س`
     const start = text.indexOf("@")
     const end = start + path.length + 1
-    mention.addPaths([path], "/repo")
+    mention.addPaths([path])
 
     const input = textarea(text, end - 1, "rtl", { end: text.length, direction: "backward" })
     mention.snapSelection(input)
@@ -1816,7 +1875,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const state = { value: "hello @b", cursor: 8 }
@@ -1868,7 +1927,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const state = { value: "hello @b", cursor: 8, textSet: "" }
@@ -1928,7 +1987,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const state = { value: "hello @b", cursor: 8, textSet: "" }
@@ -1987,7 +2046,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const input = {
@@ -2022,7 +2081,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     const input = {
@@ -2061,7 +2120,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
     mention.onInput("@", 1)
     const refresh = posted.at(-1)
@@ -2119,7 +2178,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
     mention.onInput("@", 1)
     const prewarm = posted.at(-1)
@@ -2173,7 +2232,7 @@ describe("useFileMention", () => {
     const state = createRoot((root) => {
       dispose.fn = root
       const [session, setSession] = createSignal("session-a")
-      return { mention: useFileMention(ctx, session, () => false), setSession }
+      return { mention: useFileMention(ctx, repoRoot, session, () => false), setSession }
     })
     state.mention.onInput("@", 1)
     const first = posted.at(-1)
@@ -2213,7 +2272,7 @@ describe("useFileMention", () => {
     const state = createRoot((root) => {
       dispose.fn = root
       const [session, setSession] = createSignal("session-0")
-      return { mention: useFileMention(ctx, session, () => false), setSession }
+      return { mention: useFileMention(ctx, repoRoot, session, () => false), setSession }
     })
 
     const reply = (request: WebviewMessage | undefined, dir: string) => {
@@ -2265,7 +2324,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
     mention.onInput("@", 1)
     const prewarm = posted.at(-1)
@@ -2319,7 +2378,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@old", 4)
@@ -2357,7 +2416,7 @@ describe("useFileMention", () => {
     const dispose: { fn?: () => void } = {}
     const mention = createRoot((root) => {
       dispose.fn = root
-      return useFileMention(ctx, undefined, () => false)
+      return useFileMention(ctx, repoRoot, undefined, () => false)
     })
 
     mention.onInput("@", 1)
@@ -2409,6 +2468,7 @@ describe("useFileMention reference drops", () => {
       dispose.fn = root
       mention = useFileMention(
         ctx,
+        repoRoot,
         () => "s1",
         () => false,
         worktrees ? () => worktrees : undefined,
